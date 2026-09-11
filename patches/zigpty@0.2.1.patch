@@ -1,0 +1,13 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 8272f163ff3554fed4763aa2141b1f12ddf46615..61fa3efc159c9ce29bc164f2378ebeb1f27ccd1e 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -21,7 +21,7 @@ function loadNative() {
+ 		return null;
+ 	}
+ }
+-const native$1 = loadNative();
++const native$1 = process.env.ZIGPTY_DISABLE_NATIVE === "1" ? null : loadNative();
+ const hasNative = native$1 !== null;
+ var WriteQueue = class {
+ 	_queue = [];

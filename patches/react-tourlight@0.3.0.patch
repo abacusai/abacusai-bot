@@ -1,0 +1,90 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 37ade50d3eb38dfa48dbde2908047d416b9efee0..6e00ca15c2c4fc9103165313343f0cdb034a04e0 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -110,8 +110,27 @@ function SpotlightOverlay({ targetRect, padding = 0, radius = 0, overlayColor =
+ 		onClick: passthrough ? void 0 : handleClick,
+ 		"aria-hidden": "true"
+ 	});
+-	if (!passthrough || !targetRect) return visual;
+-	return /* @__PURE__ */ jsxs(Fragment, { children: [visual, buildBlockers(targetRect, onClick)] });
++	const ringMargin = 2;
++	const ringBounds = targetRect ? {
++		left: Math.max(ringMargin, targetRect.x),
++		top: Math.max(ringMargin, targetRect.y),
++		right: Math.min(window.innerWidth - ringMargin, targetRect.x + targetRect.width),
++		bottom: Math.min(window.innerHeight - ringMargin, targetRect.y + targetRect.height)
++	} : null;
++	const ring = ringBounds ? /* @__PURE__ */ jsx("div", {
++		className: "spotlight-ring",
++		style: {
++			left: ringBounds.left,
++			top: ringBounds.top,
++			width: Math.max(0, ringBounds.right - ringBounds.left),
++			height: Math.max(0, ringBounds.bottom - ringBounds.top),
++			borderRadius: radius,
++			transitionDuration: `${transitionDuration}ms`
++		},
++		"aria-hidden": "true"
++	}) : null;
++	if (!passthrough || !targetRect) return /* @__PURE__ */ jsxs(Fragment, { children: [visual, ring] });
++	return /* @__PURE__ */ jsxs(Fragment, { children: [visual, ring, buildBlockers(targetRect, onClick)] });
+ }
+ 
+ //#endregion
+@@ -719,8 +738,9 @@ function SpotlightProvider({ children, theme: themeProp = "light", overlayColor,
+ 		if (!step) return;
+ 		let cancelled = false;
+ 		const expectedIndex = currentStepIndex;
++		// Hide the old tooltip while resolving, but keep its measured rect so the
++		// cutout and ring do not flash back to a full-screen loading overlay.
+ 		setTargetElement(null);
+-		setTargetRect(null);
+ 		(async () => {
+ 			await step.onBeforeStep?.();
+ 			if (cancelled) return;
+diff --git a/dist/styles/spotlight.css b/dist/styles/spotlight.css
+index c1ba0f7641194a0565f0dc987da581205b318804..8d9f6b69620207c8744b537458a7b3792d9ae69e 100644
+--- a/dist/styles/spotlight.css
++++ b/dist/styles/spotlight.css
+@@ -20,6 +20,23 @@
+   transition: clip-path var(--spotlight-duration) var(--spotlight-easing);
+ }
+ 
++.spotlight-ring {
++  position: fixed;
++  box-sizing: border-box;
++  z-index: calc(var(--spotlight-z-overlay) + 1);
++  pointer-events: none;
++  border: 2px solid var(--primary, rgba(99, 102, 241, 0.95));
++  box-shadow:
++    0 0 0 1px var(--background, rgba(255, 255, 255, 0.8)),
++    0 0 0 5px color-mix(in oklab, var(--primary, #6366f1) 20%, transparent),
++    0 8px 28px color-mix(in oklab, var(--primary, #6366f1) 26%, transparent);
++  transition:
++    left var(--spotlight-duration) var(--spotlight-easing),
++    top var(--spotlight-duration) var(--spotlight-easing),
++    width var(--spotlight-duration) var(--spotlight-easing),
++    height var(--spotlight-duration) var(--spotlight-easing);
++}
++
+ /* Interactive pass-through: transparent rectangles drawn around the target so
+    the spotlight hole is a genuine gap in the pointer-capture surface. Real
+    pointer/keyboard/focus/scroll events reach the highlighted element, while
+@@ -36,7 +53,7 @@
+    SpotlightProvider) — avoids painting a fully opaque, tooltip-less
+    backdrop while we wait for a lazily-rendered target. */
+ .spotlight-overlay--loading {
+-  opacity: 0.4;
++  opacity: 1;
+   transition:
+     clip-path var(--spotlight-duration) var(--spotlight-easing),
+     opacity var(--spotlight-duration) var(--spotlight-easing);
+@@ -45,6 +62,7 @@
+ /* ---- Loading indicator (shown while waiting for a step's target) ---- */
+ 
+ .spotlight-loading {
++  display: none;
+   position: fixed;
+   top: 50%;
+   left: 50%;

@@ -1,0 +1,60 @@
+/*
+ * Signal — a product or engineering brief.
+ *
+ * Tight sans type, a strong accent, and headings that announce themselves. Built
+ * for a document somebody scans on a laptop before a meeting: the structure has
+ * to be visible from a scroll, so sections carry a coloured marker and figures
+ * are set large.
+ */
+:root {
+  --ink: #10141c;
+  --ink-soft: #48505f;
+  --ink-faint: #8b93a4;
+  --rule: #dfe3ea;
+  --accent: #0b62f5;
+  --paper: #ffffff;
+}
+
+body {
+  font-family: var(--sans);
+  font-size: 10.5pt;
+  line-height: 1.58;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+h1 { font-weight: 800; letter-spacing: -0.03em; }
+
+.standfirst { color: var(--ink-soft); font-weight: 450; }
+
+.cover .meta { border-top: 3px solid var(--accent); }
+
+/* The marker is what makes structure visible at a glance. */
+h2 {
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  padding-left: 5mm;
+  border-left: 3px solid var(--accent);
+}
+
+h3 { color: var(--accent); font-weight: 700; font-size: 10.5pt; letter-spacing: 0.01em; }
+
+code, pre {
+  font-family: var(--mono);
+  background: #f4f6fa;
+}
+
+th {
+  background: #f4f6fa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 8pt;
+}
+
+.callout { border-left: 3px solid var(--accent); background: #f2f7ff; }
+
+.figure .value { color: var(--accent); font-weight: 800; }

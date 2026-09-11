@@ -1,0 +1,13 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "experience": {
+      "dependsOn": [
+        "build",
+        "@abacus-ai/agent#build",
+        "@abacus-ai/updater#build"
+      ],
+      "outputs": ["dist/experience/**", "dist/experience-agent/**"]
+    }
+  }
+}

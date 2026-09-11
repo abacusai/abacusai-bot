@@ -1,0 +1,79 @@
+/*
+ * Atlas — a briefing that means it.
+ *
+ * A display sans for the headings over a serif text face, which is the pairing
+ * most institutional documents use and the reason they read as considered: the
+ * headings carry authority, the body carries the argument, and the two do not
+ * compete. Sections are numbered by CSS counter, so the structure is legible from
+ * the page rather than from the writing.
+ */
+:root {
+  --ink: #191b1f;
+  --ink-soft: #4e535b;
+  --ink-faint: #8b9099;
+  --rule: #d5d8de;
+  --accent: #1f4b99;
+  --paper: #ffffff;
+}
+
+body {
+  font-family: var(--serif);
+  font-size: 11pt;
+  line-height: 1.66;
+  /* Old-style figures sit inside serif prose instead of shouting over it. */
+  font-variant-numeric: oldstyle-nums proportional-nums;
+}
+
+.eyebrow {
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  font-size: 8pt;
+  color: var(--accent);
+}
+
+h1 {
+  font-family: var(--sans);
+  font-size: 31pt;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+}
+
+.standfirst { font-size: 12.5pt; line-height: 1.5; color: var(--ink-soft); max-width: 30em; }
+
+.cover { border-bottom: 1px solid var(--rule); padding-bottom: 7mm; }
+.cover .meta { border-top: none; }
+
+/* Numbered sections, counted by the stylesheet so the writing never has to. */
+.doc { counter-reset: section; }
+
+h2 {
+  font-family: var(--sans);
+  font-size: 14pt;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  counter-increment: section;
+}
+
+h2::before {
+  content: counter(section, decimal-leading-zero) '  ';
+  color: var(--accent);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+h3 {
+  font-family: var(--sans);
+  font-size: 10.5pt;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+table {
+  font-family: var(--sans);
+  font-size: 9pt;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+th { border-bottom: 1.5px solid var(--ink); letter-spacing: 0.05em; }
+
+blockquote { border-left: 2px solid var(--accent); font-size: 12pt; color: var(--ink); }

@@ -1,0 +1,10 @@
+{
+  "extends": "@abacus-ai/config/typescript/node",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": true,
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.tmp/test-support.tsbuildinfo"
+  },
+  "include": ["src"]
+}

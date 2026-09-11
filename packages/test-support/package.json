@@ -1,0 +1,20 @@
+{
+  "name": "@abacus-ai/test-support",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Test doubles for the agent suites: a fake model provider, a fake pi runtime, and a fake MCP server. Imported as TypeScript source; Vitest is the only thing that loads it.",
+  "type": "module",
+  "exports": {
+    "./fake-mcp-server": "./src/fake-mcp-server.ts",
+    "./fake-pi": "./src/fake-pi.ts",
+    "./fake-provider": "./src/fake-provider.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@abacus-ai/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

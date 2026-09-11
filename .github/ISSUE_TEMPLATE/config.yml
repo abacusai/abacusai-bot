@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation and support
+    url: https://github.com/abacusai/abacusai-bot/blob/main/SUPPORT.md
+    about: Find setup help, diagnostics guidance, and the right place for account or provider questions.
+  - name: Security vulnerability
+    url: https://github.com/abacusai/abacusai-bot/security/advisories/new
+    about: Report privately. Please do not open a public issue.

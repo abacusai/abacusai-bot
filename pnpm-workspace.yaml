@@ -1,0 +1,66 @@
+packages:
+  - apps/*
+  - packages/agent
+  - packages/config
+  - packages/test-support
+
+catalog:
+  "@types/node": ^26.2.0
+  "@types/react": ^19.2.18
+  "@types/react-dom": ^19.2.4
+  "@vitejs/plugin-react": ^6.0.5
+  "@vitest/coverage-v8": ^4.1.11
+  oxfmt: ^0.64.0
+  oxlint: ^1.79.0
+  turbo: ^2.10.11
+  react: ^19.2.8
+  react-dom: ^19.2.8
+  tsdown: ^0.22.14
+  typescript: ^7.0.2
+  ultracite: ^7.10.5
+  vite: ^8.2.1
+  vitest: ^4.1.11
+
+# Electron and the native addons resolve their own binaries by walking up from
+# wherever they are linked, which a symlinked store breaks.
+nodeLinker: hoisted
+
+allowBuilds:
+  "@ast-grep/lang-python": true
+  "@tailwindcss/oxide": true
+  "@google/genai": false
+  electron: true
+  electron-winstaller: false
+  protobufjs: false
+  zigpty: true
+  "@tsparticles/engine": true
+  # esbuild only verifies its platform binary on install.
+  esbuild: true
+
+# dompurify below 3.4.13 carries known XSS bypasses and arrives transitively
+# through the markdown pipeline. deepmerge-ts below 8 breaks CJS/ESM interop.
+# fast-uri below 3.1.6 (via electron-store > conf > ajv) has four high SSRF /
+# host-confusion advisories (GHSA-5jgf-p345-68v8 and siblings).
+overrides:
+  dompurify: ^3.4.13
+  deepmerge-ts: ^8.0.0
+  fast-uri: ^3.1.6
+  # Packaging only, through electron-builder's plist reader: injection and
+  # quadratic-parsing advisories against 0.8.x (GHSA-c7q8-3ch8-vqpv and five
+  # siblings).
+  "@xmldom/xmldom": ^0.8.15
+  # electron-updater's feed parser: GHSA-2883-xcg3-v3hh, unbounded CPU on
+  # empty merge sources.
+  js-yaml: ^4.3.2
+
+minimumReleaseAgeExclude:
+  # Pinned exact in apps/desktop, so the age gate could only block that one
+  # pinned install — every bump is already an individual, human-reviewed PR.
+  - electron@43.4.1
+  # Younger than the age window when #217 pinned it; the exclusion names the
+  # exact version, so it lapses on its own at the next bump.
+  - typebox@1.3.16
+
+patchedDependencies:
+  react-tourlight@0.3.0: patches/react-tourlight@0.3.0.patch
+  zigpty@0.2.1: patches/zigpty@0.2.1.patch

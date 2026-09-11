@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "note": "Each component is a block a screen is composed from. `slots` are the text the design component's model supplies; `{{name}}` interpolates one, `{{#list}}…{{/list}}` repeats a block per item. Structural tags carry data-design-id, added by the renderer, so elements keep a stable identity across edits.",
+  "components": [
+    {
+      "name": "navbar",
+      "category": "navigation",
+      "frames": "desktop",
+      "description": "Top navigation: wordmark, links, and a primary action.",
+      "slots": { "brand": "text", "links": "list of text", "cta": "text" },
+      "html": "<nav class=\"between section tight\" style=\"border-bottom:1px solid var(--line);padding-top:20px;padding-bottom:20px\"><div class=\"rowline\" style=\"gap:34px\"><span class=\"h3\">{{brand}}</span><div class=\"rowline\" style=\"gap:24px\">{{#links}}<span class=\"small\">{{.}}</span>{{/links}}</div></div><div class=\"rowline\"><span class=\"small\">Sign in</span><span class=\"btn primary\">{{cta}}</span></div></nav>"
+    },
+    {
+      "name": "sidebar-shell",
+      "category": "navigation",
+      "frames": "desktop",
+      "description": "App shell: left sidebar with sections, and a titled content area. Put dashboard blocks after it.",
+      "slots": { "brand": "text", "items": "list of text", "active": "text", "title": "text", "action": "text" },
+      "html": "<div style=\"display:grid;grid-template-columns:248px 1fr;min-height:900px\"><aside class=\"stack\" style=\"border-right:1px solid var(--line);background:var(--surface);padding:24px 16px;gap:6px\"><span class=\"h3\" style=\"padding:0 10px 14px\">{{brand}}</span>{{#items}}<span class=\"rowline small\" style=\"padding:9px 12px;border-radius:8px;gap:10px\"><svg class=\"icon sm\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/></svg>{{.}}</span>{{/items}}</aside><main><header class=\"between\" style=\"padding:22px 32px;border-bottom:1px solid var(--line)\"><span class=\"h2\">{{title}}</span><span class=\"btn primary\">{{action}}</span></header><div class=\"stack\" style=\"padding:28px 32px;gap:24px\">"
+    },
+    {
+      "name": "sidebar-shell-end",
+      "category": "navigation",
+      "frames": "desktop",
+      "description": "Closes sidebar-shell. Always the last block on a screen that opened one.",
+      "slots": {},
+      "html": "</div></main></div>"
+    },
+    {
+      "name": "hero-split",
+      "category": "hero",
+      "frames": "desktop",
+      "description": "Headline and copy on the left, a product surface on the right.",
+      "slots": { "eyebrow": "text", "headline": "text", "sub": "text", "cta": "text", "cta2": "text" },
+      "html": "<section class=\"section cols two\" style=\"align-items:center;gap:56px;padding-top:76px;padding-bottom:76px\"><div class=\"stack\"><span class=\"eyebrow\">{{eyebrow}}</span><h1 class=\"display\">{{headline}}</h1><p class=\"body measure\">{{sub}}</p><div class=\"rowline\" style=\"margin-top:8px\"><span class=\"btn primary lg\">{{cta}}</span><span class=\"btn lg\">{{cta2}}</span></div></div><div class=\"card raised\" style=\"padding:0;overflow:hidden\"><div class=\"rowline\" style=\"gap:6px;padding:12px 14px;border-bottom:1px solid var(--line)\"><span style=\"width:9px;height:9px;border-radius:50%;background:var(--line)\"></span><span style=\"width:9px;height:9px;border-radius:50%;background:var(--line)\"></span><span style=\"width:9px;height:9px;border-radius:50%;background:var(--line)\"></span></div><div class=\"thumb\" style=\"height:320px;border-radius:0\"></div></div></section>"
+    },
+    {
+      "name": "hero-centered",
+      "category": "hero",
+      "frames": "both",
+      "description": "Centred headline, sub-line and one action. Good for launches and marketing openers.",
+      "slots": { "eyebrow": "text", "headline": "text", "sub": "text", "cta": "text" },
+      "html": "<section class=\"section center stack\" style=\"align-items:center;padding-top:88px;padding-bottom:72px;gap:20px\"><span class=\"eyebrow\">{{eyebrow}}</span><h1 class=\"display\" style=\"max-width:20ch\">{{headline}}</h1><p class=\"body measure\">{{sub}}</p><span class=\"btn primary lg\" style=\"margin-top:6px\">{{cta}}</span></section>"
+    },
+    {
+      "name": "feature-grid",
+      "category": "content",
+      "frames": "both",
+      "description": "Three or four short value propositions with icons.",
+      "slots": { "title": "text", "items": "list of {title, body}" },
+      "html": "<section class=\"section stack\" style=\"gap:28px\"><h2 class=\"h1\">{{title}}</h2><div class=\"cols three\">{{#items}}<div class=\"stack tight\"><svg class=\"icon\" viewBox=\"0 0 24 24\" style=\"color:var(--accent);margin-bottom:6px\"><path d=\"M12 3l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 17.3 6.2 20.8l1.6-6.6L2.6 9.8l6.8-.5z\"/></svg><h3 class=\"h3\">{{title}}</h3><p class=\"small\">{{body}}</p></div>{{/items}}</div></section>"
+    },
+    {
+      "name": "metric-row",
+      "category": "dashboard",
+      "frames": "desktop",
+      "description": "A row of headline numbers. Use at the top of a dashboard.",
+      "slots": { "items": "list of {label, value, delta, direction}" },
+      "html": "<div class=\"cols four\">{{#items}}<div class=\"card metric stack tight\"><span class=\"k\">{{label}}</span><span class=\"n\">{{value}}</span><span class=\"d {{direction}}\">{{delta}}</span></div>{{/items}}</div>"
+    },
+    {
+      "name": "chart-card",
+      "category": "dashboard",
+      "frames": "desktop",
+      "description": "A titled bar chart. Values are relative; the tallest fills the card.",
+      "slots": { "title": "text", "caption": "text", "bars": "list of {label, value}" },
+      "html": "<div class=\"card stack\"><div class=\"between\"><h3 class=\"h3\">{{title}}</h3><span class=\"tiny\">{{caption}}</span></div><div class=\"chart\">{{#bars}}<div class=\"b\" style=\"height:{{pct}}%\"></div>{{/bars}}</div><div class=\"rowline\" style=\"justify-content:space-between\">{{#bars}}<span class=\"tiny grow center\">{{label}}</span>{{/bars}}</div></div>"
+    },
+    {
+      "name": "data-table",
+      "category": "dashboard",
+      "frames": "desktop",
+      "description": "A table of records. A Status column is appended automatically from each row's status and tone (good/warn/bad/plain).",
+      "slots": { "title": "text", "columns": "list of text (do NOT include Status — it is added for you)", "rows": "list of {cells, status, tone}" },
+      "html": "<div class=\"card\" style=\"padding:0\"><div class=\"between\" style=\"padding:18px 20px;border-bottom:1px solid var(--line)\"><h3 class=\"h3\">{{title}}</h3><span class=\"rowline\"><span class=\"input small\" style=\"width:200px\">Search…</span></span></div><table class=\"table\"><thead><tr>{{#columns}}<th>{{.}}</th>{{/columns}}<th>Status</th></tr></thead><tbody>{{#rows}}<tr>{{#cells}}<td>{{.}}</td>{{/cells}}<td><span class=\"pill {{tone}}\">{{status}}</span></td></tr>{{/rows}}</tbody></table></div>"
+    },
+    {
+      "name": "list-detail",
+      "category": "dashboard",
+      "frames": "desktop",
+      "description": "A list beside a detail panel — inbox, records, review queues.",
+      "slots": { "items": "list of {title, sub}", "detail_title": "text", "detail_body": "text", "fields": "list of {label, value}" },
+      "html": "<div class=\"cols\" style=\"grid-template-columns:340px 1fr;gap:20px\"><div class=\"card\" style=\"padding:6px\">{{#items}}<div class=\"rowline\" style=\"padding:13px 14px;gap:12px;border-bottom:1px solid var(--line)\"><span class=\"avatar\">{{initial}}</span><span class=\"stack tight grow\"><span class=\"h3\" style=\"font-size:14px\">{{title}}</span><span class=\"tiny\">{{sub}}</span></span></div>{{/items}}</div><div class=\"card stack\"><h2 class=\"h2\">{{detail_title}}</h2><p class=\"body\">{{detail_body}}</p><div class=\"divider\"></div><div class=\"cols two\">{{#fields}}<div class=\"stack tight\"><span class=\"tiny\">{{label}}</span><span class=\"small\" style=\"color:var(--ink)\">{{value}}</span></div>{{/fields}}</div></div></div>"
+    },
+    {
+      "name": "pricing",
+      "category": "content",
+      "frames": "desktop",
+      "description": "Three plans, the middle one emphasised.",
+      "slots": { "title": "text", "plans": "list of {name, price, note, features}" },
+      "html": "<section class=\"section stack alt\" style=\"gap:30px\"><h2 class=\"h1 center\">{{title}}</h2><div class=\"cols three\">{{#plans}}<div class=\"card stack\"><span class=\"h3\">{{name}}</span><span class=\"display\" style=\"font-size:38px\">{{price}}</span><span class=\"tiny\">{{note}}</span><div class=\"divider\"></div><div class=\"stack tight\">{{#features}}<span class=\"rowline small\" style=\"gap:8px\"><svg class=\"icon sm\" viewBox=\"0 0 24 24\" style=\"color:var(--good)\"><path d=\"M4 12.5l5 5L20 6.5\"/></svg>{{.}}</span>{{/features}}</div><span class=\"btn primary block\" style=\"margin-top:6px\">Choose</span></div>{{/plans}}</div></section>"
+    },
+    {
+      "name": "form-card",
+      "category": "forms",
+      "frames": "both",
+      "description": "A form: sign-up, settings, a create dialog.",
+      "slots": { "title": "text", "sub": "text", "fields": "list of {label, placeholder}", "submit": "text" },
+      "html": "<section class=\"section\" style=\"display:grid;place-items:center\"><div class=\"card raised stack\" style=\"width:420px;max-width:100%\"><div class=\"stack tight\"><h2 class=\"h1\" style=\"font-size:26px\">{{title}}</h2><p class=\"small\">{{sub}}</p></div>{{#fields}}<div><span class=\"label\">{{label}}</span><div class=\"input\" style=\"width:100%\">{{placeholder}}</div></div>{{/fields}}<span class=\"btn primary block lg\">{{submit}}</span></div></section>"
+    },
+    {
+      "name": "testimonial",
+      "category": "content",
+      "frames": "both",
+      "description": "One quote with attribution. Never more than one per screen.",
+      "slots": { "quote": "text", "name": "text", "role": "text" },
+      "html": "<section class=\"section center stack alt\" style=\"align-items:center;gap:18px\"><p class=\"h1\" style=\"max-width:24ch;font-weight:600\">“{{quote}}”</p><div class=\"rowline\"><span class=\"avatar\">{{initial}}</span><span class=\"stack tight\" style=\"text-align:left\"><span class=\"h3\" style=\"font-size:14px\">{{name}}</span><span class=\"tiny\">{{role}}</span></span></div></section>"
+    },
+    {
+      "name": "cta-band",
+      "category": "content",
+      "frames": "desktop",
+      "description": "A closing call to action across the width.",
+      "slots": { "headline": "text", "sub": "text", "cta": "text" },
+      "html": "<section class=\"section between\" style=\"background:var(--accent);color:var(--accent-ink)\"><div class=\"stack tight\"><h2 class=\"h1\" style=\"color:var(--accent-ink)\">{{headline}}</h2><p class=\"body\" style=\"color:var(--accent-ink);opacity:0.85\">{{sub}}</p></div><span class=\"btn\" style=\"background:var(--accent-ink);border-color:var(--accent-ink)\">{{cta}}</span></section>"
+    },
+    {
+      "name": "footer",
+      "category": "navigation",
+      "frames": "desktop",
+      "description": "Closing footer with link columns.",
+      "slots": { "brand": "text", "columns": "list of {title, links}" },
+      "html": "<footer class=\"section\" style=\"border-top:1px solid var(--line);padding-top:40px;padding-bottom:40px\"><div class=\"cols four\"><span class=\"h3\">{{brand}}</span>{{#columns}}<div class=\"stack tight\"><span class=\"tiny\" style=\"font-weight:650\">{{title}}</span>{{#links}}<span class=\"small\">{{.}}</span>{{/links}}</div>{{/columns}}</div></footer>"
+    },
+    {
+      "name": "phone-screen",
+      "category": "mobile",
+      "frames": "phone",
+      "description": "A phone screen: status bar, title, a list of rows, and a tab bar.",
+      "slots": { "title": "text", "action": "text", "rows": "list of {title, sub, meta}", "tabs": "list of text" },
+      "html": "<div class=\"statusbar\"><span>9:41</span><span>▮▮▮</span></div><header class=\"between\" style=\"padding:8px 20px 14px\"><span class=\"h1\">{{title}}</span><span class=\"pill\">{{action}}</span></header><div class=\"stack tight\" style=\"padding:0 16px 120px\">{{#rows}}<div class=\"card rowline\" style=\"padding:14px;gap:12px\"><span class=\"avatar\">{{initial}}</span><span class=\"stack tight grow\"><span class=\"h3\" style=\"font-size:14px\">{{title}}</span><span class=\"tiny\">{{sub}}</span></span><span class=\"tiny\">{{meta}}</span></div>{{/rows}}</div><nav class=\"tabbar\">{{#tabs}}<span class=\"tab\"><svg class=\"icon sm\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg>{{.}}</span>{{/tabs}}</nav>"
+    },
+    {
+      "name": "phone-detail",
+      "category": "mobile",
+      "frames": "phone",
+      "description": "A phone detail view: hero block, title, body, and a sticky action.",
+      "slots": { "title": "text", "sub": "text", "body": "text", "facts": "list of {label, value}", "cta": "text" },
+      "html": "<div class=\"statusbar\"><span>9:41</span><span>▮▮▮</span></div><div class=\"thumb\" style=\"height:220px;margin:6px 16px;border-radius:14px\"></div><div class=\"stack\" style=\"padding:18px 20px 120px\"><div class=\"stack tight\"><span class=\"h1\">{{title}}</span><span class=\"small\">{{sub}}</span></div><p class=\"body\">{{body}}</p><div class=\"cols two\">{{#facts}}<div class=\"card flat stack tight\" style=\"padding:14px\"><span class=\"tiny\">{{label}}</span><span class=\"h3\" style=\"font-size:15px\">{{value}}</span></div>{{/facts}}</div></div><div style=\"position:absolute;bottom:0;left:0;right:0;padding:16px 20px 30px;border-top:1px solid var(--line);background:var(--paper)\"><span class=\"btn primary block lg\">{{cta}}</span></div>"
+    },
+    {
+      "name": "empty-state",
+      "category": "content",
+      "frames": "both",
+      "description": "The state before there is data. Designs that skip this always look better than the product.",
+      "slots": { "title": "text", "body": "text", "cta": "text" },
+      "html": "<section class=\"section center stack\" style=\"align-items:center;gap:14px;padding-top:80px\"><div class=\"thumb\" style=\"width:92px;height:92px;border-radius:20px\"></div><h2 class=\"h2\">{{title}}</h2><p class=\"small measure\">{{body}}</p><span class=\"btn primary\">{{cta}}</span></section>"
+    }
+  ]
+}

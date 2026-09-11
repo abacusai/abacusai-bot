@@ -1,0 +1,20 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/desktop"
+    },
+    {
+      "path": "./apps/updater"
+    },
+    {
+      "path": "./packages/agent"
+    },
+    {
+      "path": "./packages/config"
+    },
+    {
+      "path": "./packages/test-support"
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+/*
+ * Document styles for the PDF component.
+ *
+ * Three looks, one stylesheet, chosen by a class on <body>. They share the
+ * same structure so the component can pick a look without the writing
+ * changing: a cover block, headings, body copy, lists, tables, callouts.
+ *
+ * Written for paper, not screens. Measure is set in characters rather than
+ * pixels, headings avoid breaking away from what follows them, and tables
+ * repeat their header when they run over a page. Colour is used sparingly:
+ * a PDF gets printed, and a design that depends on a tint fails in grey.
+ */
+
+:root {
+  --ink: #16181d;
+  --ink-soft: #4a4f5a;
+  --ink-faint: #8b9099;
+  --rule: #d9dce1;
+  --accent: #1c4ed8;
+  --paper: #ffffff;
+}
+
+/*
+ * Dark, and why it is a class on <body> rather than a second stylesheet.
+ *
+ * The palette is the only thing that changes: every rule below draws from these
+ * variables, so a look is a palette swap and nothing else has to know.
+ *
+ * A dark document must also be printed full-bleed — see `.bleed` — because the
+ * page margins are painted by Chromium, not by this stylesheet, and no rule here
+ * can reach them. A dark text column inside white margins is the failure this
+ * pairing exists to prevent.
+ */
+body.dark {
+  --ink: #e8eaef;
+  --ink-soft: #b3b9c4;
+  --ink-faint: #7f8794;
+  --rule: #2c313a;
+  --accent: #7db1ff;
+  --paper: #14171c;
+}
+
+/*
+ * Full-bleed: the exporter prints with zero page margins and the inset moves
+ * here, so the background covers the whole sheet instead of stopping where the
+ * text column does.
+ *
+ * The values match the margins the exporter uses otherwise (document-pdf.ts), so
+ * a bled document sits on the page exactly where an unbled one does.
+ */
+body.bleed .doc {
+  padding: 0.7in 0.75in 0.6in;
+}
+
+/*
+ * Larger type, for reading on a screen rather than on paper.
+ *
+ * Every size that carries meaning is restated rather than scaled with a factor:
+ * the cover, the headings and the body have different amounts of room to grow,
+ * and multiplying them all by the same number is what makes a document look
+ * merely zoomed.
+ */
+body.large { font-size: 12pt; line-height: 1.6; }
+body.large h1 { font-size: 30pt; }
+body.large .standfirst { font-size: 13.5pt; }
+body.large h2 { font-size: 16pt; }
+body.large h3 { font-size: 12.5pt; }
+body.large table { font-size: 11pt; }
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+}
+
+/* The page box itself is set by the exporter; this is the text column. */
+.doc { max-width: 100%; }
+
+/* ── Cover ──────────────────────────────────────────────────────────────── */
+
+.cover {
+  /* A cover is its own page, but a one-page memo should not be forced to two. */
+  break-after: page;
+  padding-top: 18mm;
+}
+.cover.compact { break-after: auto; padding-top: 0; }
+
+.eyebrow {
+  font-size: 8.5pt;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6mm;
+}
+
+h1 {
+  font-size: 26pt;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 5mm;
+  max-width: 22em;
+}
+
+.standfirst {
+  font-size: 12pt;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 34em;
+  margin: 0 0 8mm;
+}
+
+.meta {
+  font-size: 9pt;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  padding-top: 3mm;
+}
+.meta span + span::before { content: ' · '; }
+
+/* ── Structure ──────────────────────────────────────────────────────────── */
+
+h2 {
+  font-size: 14pt;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 9mm 0 3mm;
+  /* A heading alone at the foot of a page is the classic paged-media defect. */
+  break-after: avoid;
+  break-inside: avoid;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 650;
+  color: var(--ink);
+  margin: 6mm 0 2mm;
+  break-after: avoid;
+}
+
+p { margin: 0 0 3.5mm; max-width: 38em; orphans: 2; widows: 2; }
+
+ul, ol { margin: 0 0 4mm; padding-left: 5mm; max-width: 38em; }
+li { margin-bottom: 1.5mm; }
+li::marker { color: var(--ink-faint); }
+
+strong { font-weight: 650; }
+em { font-style: italic; }
+
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(28, 78, 216, 0.3); }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 8mm 0; }
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 5mm;
+  font-size: 9.5pt;
+}
+thead { display: table-header-group; }  /* repeat the header across pages */
+th {
+  text-align: left;
+  font-weight: 650;
+  border-bottom: 1.5px solid var(--ink);
+  padding: 2mm 3mm 2mm 0;
+}
+td {
+  border-bottom: 1px solid var(--rule);
+  padding: 2mm 3mm 2mm 0;
+  vertical-align: top;
+}
+tr { break-inside: avoid; }
+
+/* ── Callouts and quotes ────────────────────────────────────────────────── */
+
+blockquote {
+  margin: 0 0 5mm;
+  padding-left: 4mm;
+  border-left: 2px solid var(--accent);
+  color: var(--ink-soft);
+  font-size: 11pt;
+  break-inside: avoid;
+}
+
+.callout {
+  background: #f4f6fb;
+  border: 1px solid var(--rule);
+  border-radius: 2mm;
+  padding: 4mm 5mm;
+  margin: 0 0 5mm;
+  break-inside: avoid;
+}
+.callout > :last-child { margin-bottom: 0; }
+
+.figures {
+  display: flex;
+  gap: 6mm;
+  margin: 0 0 6mm;
+  break-inside: avoid;
+}
+.figure { flex: 1; }
+.figure .value {
+  font-size: 22pt;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  line-height: 1.1;
+}
+.figure .label { font-size: 9pt; color: var(--ink-soft); }
+
+code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 9pt;
+  background: #f2f3f5;
+  padding: 0.5mm 1mm;
+  border-radius: 1mm;
+}
+pre {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 8.5pt;
+  line-height: 1.45;
+  background: #f2f3f5;
+  border: 1px solid var(--rule);
+  border-radius: 2mm;
+  padding: 3mm 4mm;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  break-inside: avoid;
+  margin: 0 0 5mm;
+}
+
+img { max-width: 100%; height: auto; }
+
+/* ── Look: report (default) ─────────────────────────────────────────────── */
+/* The base rules above are the report look. */
+
+/* ── Look: editorial ────────────────────────────────────────────────────── */
+
+body.editorial {
+  --ink: #22201c;
+  --ink-soft: #55504a;
+  --ink-faint: #8d867c;
+  --rule: #ddd6c9;
+  --accent: #8a5a2b;
+  --paper: #fbf9f4;
+  font-family: 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  font-size: 11.5pt;
+  line-height: 1.62;
+}
+body.editorial h1,
+body.editorial h2,
+body.editorial h3 { font-family: inherit; letter-spacing: 0; }
+body.editorial h1 { font-size: 28pt; font-weight: 600; }
+body.editorial h2 { font-size: 15pt; font-weight: 600; }
+body.editorial .eyebrow { font-family: -apple-system, sans-serif; color: var(--ink-faint); }
+body.editorial p { max-width: 34em; }
+
+/* ── Look: memo ─────────────────────────────────────────────────────────── */
+
+body.memo {
+  --accent: #16181d;
+  font-size: 10pt;
+}
+body.memo h1 { font-size: 17pt; margin-bottom: 3mm; }
+body.memo .standfirst { font-size: 10.5pt; margin-bottom: 4mm; }
+body.memo .eyebrow { color: var(--ink-faint); }
+body.memo h2 { font-size: 11.5pt; margin: 6mm 0 2mm; }
