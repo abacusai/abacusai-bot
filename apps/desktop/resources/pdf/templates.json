@@ -1,0 +1,34 @@
+{
+  "templates": [
+    {
+      "slug": "ledger",
+      "name": "Ledger",
+      "best_for": "Reports and deliverables meant to be printed and kept \u2014 analyses, reviews, annual write-ups. Warm paper, serif text, rules doing the organising.",
+      "mood": "classic, considered, printed"
+    },
+    {
+      "slug": "signal",
+      "name": "Signal",
+      "best_for": "Product and engineering briefs somebody scans on a laptop before a meeting. Tight sans, strong accent, structure visible from a scroll.",
+      "mood": "modern, direct, technical"
+    },
+    {
+      "slug": "press",
+      "name": "Press",
+      "best_for": "Essays, arguments and long-form pieces read top to bottom. Narrow measure, magazine opener, large standfirst.",
+      "mood": "editorial, literary, unhurried"
+    },
+    {
+      "slug": "slate",
+      "name": "Slate",
+      "best_for": "Technical notes carrying code, tables or measurements. Cool greys, monospace labels, hairline rules, small dense type.",
+      "mood": "precise, cool, engineered"
+    },
+    {
+      "slug": "atlas",
+      "name": "Atlas",
+      "best_for": "Briefings and strategy documents that need to feel authoritative without being stuffy. Large display sans over a serif text face, generous leading, numbered sections.",
+      "mood": "confident, institutional, spacious"
+    }
+  ]
+}

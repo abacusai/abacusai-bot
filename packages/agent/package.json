@@ -1,0 +1,59 @@
+{
+  "name": "@abacus-ai/agent",
+  "version": "1.0.1",
+  "private": true,
+  "description": "The private agent process used by the AbacusAIBot desktop app.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./usage": {
+      "types": "./dist/usage-stats.d.ts",
+      "default": "./dist/usage-stats.js"
+    },
+    "./custom-instructions": {
+      "types": "./dist/custom-instructions.d.ts",
+      "default": "./dist/custom-instructions.js"
+    },
+    "./model-catalog": {
+      "types": "./dist/model-catalog.d.ts",
+      "default": "./dist/model-catalog.js"
+    },
+    "./main": {
+      "types": "./dist/main.d.ts",
+      "default": "./dist/main.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run --project unit",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "vendor": "node scripts/download-tools.js"
+  },
+  "dependencies": {
+    "@ast-grep/lang-python": "^0.0.6",
+    "@ast-grep/napi": "^0.45.1"
+  },
+  "devDependencies": {
+    "@abacus-ai/config": "workspace:*",
+    "@abacus-ai/test-support": "workspace:*",
+    "@anthropic-ai/sdk": "^0.117.1",
+    "@earendil-works/pi-coding-agent": "^0.85.1",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "tsdown": "catalog:",
+    "typebox": "^1.3.16",
+    "typescript": "catalog:",
+    "undici": "^7.29.0",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

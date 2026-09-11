@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a problem with the desktop app
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues before opening a new report. Report vulnerabilities
+        [privately](https://github.com/abacusai/abacusai-bot/security/advisories/new).
+        Remove credentials and private data from logs and screenshots.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include a small example if possible.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Find this in the app's settings. For a source build, include the commit.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: macOS, Windows, or Linux version; Apple Silicon, ARM64, or x64
+  - type: textarea
+    id: details
+    attributes:
+      label: Additional details
+      description: Screenshots or relevant logs. For agent issues, include the provider/model and permission mode; for connector issues, include the connector or MCP server.
