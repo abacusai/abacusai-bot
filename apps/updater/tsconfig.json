@@ -1,0 +1,12 @@
+{
+  "extends": "@abacus-ai/config/typescript/node",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "composite": true,
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "tsBuildInfoFile": "../../node_modules/.cache/updater.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

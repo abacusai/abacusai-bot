@@ -1,0 +1,149 @@
+appId: ai.abacus.bot
+productName: AbacusAI-Bot
+directories:
+  buildResources: build
+  # Not dist/ — that is where Vite builds to.
+  output: release
+
+files:
+  - dist/**
+  - "!dist/THIRD-PARTY-NOTICES.txt"
+  - package.json
+
+beforePack: scripts/before-pack.cjs
+
+# Runtime resources and license notices live outside app.asar.
+extraResources:
+  - from: ../../LICENSE
+    to: LICENSE
+  - from: dist/THIRD-PARTY-NOTICES.txt
+    to: THIRD-PARTY-NOTICES.txt
+  # This app's resources directory, verbatim: deck templates, the design
+  # catalog and mockup stylesheet, the PDF stylesheet and the script the PDF
+  # component shells out to, the skills seeded into the user's own skills
+  # directory on first run, and the third-party binaries under vendor/.
+  # resolvePath() in main/resources.ts joins these same subpaths in
+  # development, so there is one layout to keep in step rather than two.
+  - from: resources/
+    to: ./
+  # The agent, one process per session: spawned, so it cannot live in the asar.
+  # Its build metadata is not: source maps are 24 MB of the 39 MB here and
+  # nothing reads them, because the agent is never spawned with
+  # --enable-source-maps; the declarations and the incremental-build stamp are
+  # inputs to compiling this package, not to running it. Shipping them cost
+  # every user on every platform a download they cannot use.
+  - from: ../../packages/agent/dist/
+    to: agent/
+    filter:
+      - "**/*"
+      - "!**/*.map"
+      - "!**/*.d.ts"
+      - "!**/*.tsbuildinfo"
+      # Matched separately: the stamp is a dotfile, and the glob above does not
+      # cross a leading dot.
+      - "!**/.tsbuildinfo"
+  # The ripgrep and fd binaries its `grep` and `find` spawn, which it resolves
+  # as `vendor/` beside the bundle (see bundled-tools.ts).
+  - from: ../../packages/agent/vendor/
+    to: agent/vendor/
+  # The ast-grep parser, left out of the agent bundle because it loads a native
+  # addon. Its platform binding is a sibling in the same scope directory, so the
+  # scope is copied whole.
+  - from: ../../node_modules/@ast-grep/
+    to: agent/node_modules/@ast-grep/
+  # The terminal UI that pi-coding-agent draws with. It loads a .node addon, so
+  # the agent bundle leaves it external (see @abacus-ai/config/native-packages)
+  # and it has to be a real package beside the agent — with the two
+  # dependencies of its own that nothing else here puts on disk. The desktop
+  # never draws a TUI, but the import is in the chunk every entry shares, so a
+  # missing copy is not a missing feature: the agent fails to spawn at all.
+  # agent-runtime-deps.test.ts pins this list to what the bundle imports.
+  - from: ../../node_modules/@earendil-works/pi-tui/
+    to: agent/node_modules/@earendil-works/pi-tui/
+  - from: ../../node_modules/marked/
+    to: agent/node_modules/marked/
+  - from: ../../node_modules/get-east-asian-width/
+    to: agent/node_modules/get-east-asian-width/
+  # Loaded only when the agent works on an image, and loaded dynamically — so
+  # unlike pi-tui its absence does not stop the agent from starting. It stops
+  # the first image operation instead, which is a worse way to find out.
+  - from: ../../node_modules/@silvia-odwyer/photon-node/
+    to: agent/node_modules/@silvia-odwyer/photon-node/
+
+# Only native modules need to be on the real filesystem. Unpacking all of
+# node_modules forced thousands of nested pure-JS files onto disk and blew past
+# Windows' 260-char MAX_PATH during install, leaving files in the asar header but
+# missing on disk — the "ENOENT ... app.asar.unpacked" main-process crash.
+asarUnpack:
+  - "**/*.node"
+  - "**/node_modules/zigpty/**"
+  # @ff-labs/fff-node loads a Rust dylib through ffi-rs (dlopen), so both must be
+  # real files. See main/services/workspace/file-search-service.ts
+  - "**/node_modules/ffi-rs/**"
+  - "**/node_modules/@ff-labs/**"
+
+# Every native dependency ships a prebuilt N-API binding (see asarUnpack above),
+# so the packager does not rebuild them.
+npmRebuild: false
+
+# Named from ${productName}, not ${name}: the package is scoped
+# (@abacus-ai/desktop), and a scoped name carries a slash, which every
+# artifact target reads as a directory separator — the AppImage build fails
+# outright trying to write through a directory that does not exist.
+#
+# Every artifactName carries ${arch}. Releases publish x64 and arm64 for each
+# platform into one flat CDN directory, so a name without it means the second
+# build silently overwrites the first — visible only later, as users on one
+# architecture downloading a binary that will not run.
+win:
+  executableName: AbacusBot
+  icon: resources/icon.ico
+nsis:
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+
+mac:
+  # The dmg is what a human downloads; the zip is what electron-updater installs
+  # updates from — it ignores the dmg entirely, so dropping the zip target
+  # silently breaks auto-updates.
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  hardenedRuntime: true
+  icon: resources/icon.icns
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+linux:
+  target:
+    - AppImage
+    - deb
+  executableName: abacusai-bot
+  category: Development
+  icon: build/icons
+  desktop:
+    entry: |
+      Name=AbacusAI-Bot
+      StartupWMClass=AbacusAI-Bot
+appImage:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+deb:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+# The updater reads this same prefix (see main/updates/UpdateService.ts). CI runs
+# `--publish never`: electron-builder only generates the latest*.yml feed files,
+# and the release pipeline uploads them after rewriting their `url:` fields to
+# absolute paths under `<cdn>/abacusai-bot/releases/<version>/`. That keeps
+# published artifacts immutable while this prefix stays fixed.
+#
+# Signed, notarized releases are built from a separate private repo holding the
+# Apple and Azure credentials. Building here produces unsigned artifacts, which
+# is correct for a fork or a local build.
+publish:
+  provider: generic
+  url: https://downloads.abacus.ai/abacusai-bot/latest

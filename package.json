@@ -1,0 +1,41 @@
+{
+  "name": "abacusai-bot",
+  "version": "1.0.12",
+  "private": true,
+  "description": "AbacusAIBot — an open-source desktop coding agent that runs on your machine, with your models.",
+  "homepage": "https://github.com/abacusai/abacusai-bot",
+  "license": "MIT",
+  "author": "Abacus.AI, Inc. <support@abacus.ai>",
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build vendor",
+    "check": "turbo run format:check lint typecheck test check:i18n check:locales check:audit --concurrency=1",
+    "check:audit": "node scripts/check-audit.js",
+    "dev": "pnpm run dev:desktop",
+    "dev:desktop": "turbo run dev --filter=@abacus-ai/desktop",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
+    "lint:all": "oxlint --config packages/config/oxlint/all.ts .",
+    "lint:fix": "oxlint --fix .",
+    "package": "turbo run package",
+    "test": "turbo run test --concurrency=1",
+    "test:coverage": "turbo run test:coverage",
+    "test:unit": "turbo run test:unit",
+    "typecheck": "turbo run typecheck",
+    "typecheck:tools": "tsc -p tsconfig.tools.json",
+    "changelog": "node scripts/sync-changelog.js"
+  },
+  "devDependencies": {
+    "@abacus-ai/config": "workspace:*",
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621"
+}

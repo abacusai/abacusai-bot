@@ -1,0 +1,14 @@
+{
+  "extends": "@abacus-ai/config/typescript/node",
+  "compilerOptions": {
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "types": ["node", "electron"],
+    "strictNullChecks": false,
+    "noImplicitOverride": false,
+    "noImplicitAny": false,
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.tmp/desktop.main.tsbuildinfo"
+  },
+  "include": ["src/main", "src/shared", "src/agent-host", "src/preload/*.d.ts"]
+}

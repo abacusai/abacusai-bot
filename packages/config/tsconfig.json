@@ -1,0 +1,16 @@
+{
+  "extends": "./typescript/node.json",
+  "compilerOptions": {
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.tmp/config.tsbuildinfo"
+  },
+  "include": [
+    "build-output-ignores.ts",
+    "native-packages.ts",
+    "oxlint/**/*.ts",
+    "oxfmt/**/*.ts"
+  ]
+}

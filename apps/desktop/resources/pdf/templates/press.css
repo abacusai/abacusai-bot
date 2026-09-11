@@ -1,0 +1,67 @@
+/*
+ * Press — long-form editorial.
+ *
+ * A narrow measure, a large standfirst, and a cover that behaves like a magazine
+ * opener. For essays and argument: the reader is expected to start at the top and
+ * go to the bottom, so the page is built for continuous reading rather than for
+ * scanning.
+ */
+:root {
+  --ink: #17181a;
+  --ink-soft: #4c4e52;
+  --ink-faint: #8a8d93;
+  --rule: #e0e0e2;
+  --accent: #b3261e;
+  --paper: #fffefb;
+}
+
+body {
+  font-family: var(--serif);
+  font-size: 11.5pt;
+  line-height: 1.7;
+}
+
+/* Editorial lives or dies on measure — 32em is the readable column. */
+p, ul, ol, blockquote { max-width: 32em; }
+
+.eyebrow {
+  font-family: var(--sans);
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  font-size: 8pt;
+}
+
+h1 {
+  font-size: 34pt;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  max-width: 20em;
+}
+
+.standfirst {
+  font-size: 14pt;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  max-width: 28em;
+}
+
+.cover { border-bottom: 1px solid var(--rule); padding-bottom: 8mm; }
+
+h2 {
+  font-family: var(--sans);
+  font-size: 11pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+h3 { font-weight: 600; font-style: italic; }
+
+blockquote {
+  border-left: 2px solid var(--accent);
+  font-size: 13pt;
+  line-height: 1.5;
+  color: var(--ink);
+}

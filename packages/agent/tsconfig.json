@@ -1,0 +1,24 @@
+{
+  "extends": "@abacus-ai/config/typescript/node",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    // Declarations only. dist/ belongs to tsdown, which bundles this package
+    // into the few files the desktop app copies beside its asar and spawns.
+    // tsc emitting there too would be harmless if it stopped at .d.ts, but its
+    // JS is one unbundled file per source with every dependency left as a bare
+    // import — and a downstream `tsc -b` re-emits it after the bundle is
+    // built, overwriting it. The app then
+    // ships loose modules importing packages that are not there, and every
+    // agent spawn dies on ERR_MODULE_NOT_FOUND.
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "noUncheckedIndexedAccess": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

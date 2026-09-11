@@ -1,0 +1,19 @@
+{
+  "extends": "@abacus-ai/config/typescript/node",
+  "compilerOptions": {
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
+  },
+  "include": [
+    "oxlint.config.ts",
+    "oxfmt.config.ts",
+    "packages/config/oxlint/*.ts",
+    "packages/config/oxfmt/*.ts",
+    "packages/config/vendor-fetch.js",
+    "scripts/check-audit.js"
+  ]
+}

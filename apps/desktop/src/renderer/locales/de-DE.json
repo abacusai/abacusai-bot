@@ -1,0 +1,1987 @@
+{
+  "about": {
+    "checkFailed": "Suche nach Updates fehlgeschlagen",
+    "checkForUpdates": "Nach Updates suchen",
+    "checking": "Wird gesucht…",
+    "upToDate": "Du hast die neueste Version"
+  },
+  "apiKeys": {
+    "configured": "Configured",
+    "connectAbacus": "Connect Abacus.AI",
+    "connectOpenRouter": "Connect OpenRouter",
+    "connecting": "Finish signing in in your browser…",
+    "filterPlaceholder": "Search model providers…",
+    "getKey": "Open provider site",
+    "invalidKey": "This does not look like an API key. Paste the key only.",
+    "moreProviders": "Other providers",
+    "noMatches": "No model providers match this search.",
+    "notVerified": "Saved, not checked",
+    "notVerifiedHint": "The app checks this key when you send a message.",
+    "remove": "Remove key",
+    "removeDescription": "Deletes the saved key from ~/.abacusai-bot/config.json. Existing chats keep using it until they are restarted.",
+    "removeTitle": "Remove the {{provider}} key?",
+    "saveChanges": "Save",
+    "title": "Models"
+  },
+  "artifacts": {
+    "columns": {
+      "location": "Ort",
+      "session": "Sitzung",
+      "title": "Titel / Name"
+    },
+    "copied": "Copied",
+    "copyPath": "Copy path",
+    "copyUrl": "Copy URL",
+    "emptyDescription": "Dateien, die der Agent schreibt, und Seiten, die er öffnet, sammeln sich hier.",
+    "emptyTitle": "Noch keine Artefakte",
+    "filters": {
+      "all": "Alle",
+      "files": "Dateien",
+      "images": "Bilder",
+      "links": "Links"
+    },
+    "itemCount_one": "{{count}} Eintrag",
+    "itemCount_other": "{{count}} Einträge",
+    "missingFile": "This file is no longer on disk.",
+    "noMatchesDescription": "Versuch einen anderen Namen, Pfad oder Sitzungstitel.",
+    "noMatchesTitle": "Keine Treffer",
+    "openedFolder": "Opened in your file manager.",
+    "refresh": "Aktualisieren",
+    "revealInFolder": "Reveal in folder",
+    "searchPlaceholder": "Artefakte und Sitzungen durchsuchen…",
+    "unknownSession": "Gelöschte Sitzung"
+  },
+  "bots": {
+    "avatarColor": "Color",
+    "avatarLabel": "Avatar variant",
+    "botOptions": "Bot options",
+    "cancel": "Abbrechen",
+    "changeAvatar": "Try another avatar",
+    "create": "Erstellen",
+    "delete": "Löschen",
+    "deleteBody": "Dies löscht {{name}} und seinen Chat. Das kann nicht rückgängig gemacht werden.",
+    "deleteBot": "Bot löschen",
+    "deleteError": "Der Bot konnte nicht gelöscht werden.",
+    "deleteTitle": "Bot löschen",
+    "descriptionLabel": "Mission",
+    "descriptionPlaceholder": "Was soll dieser Bot für dich tun?",
+    "descriptionRequired": "Eine Mission ist erforderlich.",
+    "editBot": "Bot bearbeiten",
+    "editTitle": "Bot bearbeiten",
+    "emptyDescription": "Erstelle einen benannten Bot mit eigener Mission und einem Chat, der seinen Verlauf behält.",
+    "emptyTitle": "Noch keine Bots",
+    "home": {
+      "categories": {
+        "featured": "Featured",
+        "finance": "Finance",
+        "marketing": "Marketing",
+        "personal-assistant": "Personal Assistant",
+        "productivity": "Productivity",
+        "recruiting": "Recruiting",
+        "research": "Research",
+        "social-media": "Social Media"
+      },
+      "categoriesLabel": "Template categories",
+      "createCta": "Create Bot",
+      "getStarted": "Los geht's",
+      "heading": "Create your",
+      "headingAccent": "Bot",
+      "namePlaceholder": "Neuer Bot",
+      "subtitle": "Name your bot and get started in seconds.",
+      "suggestions": "Vorschläge",
+      "templatesDivider": "Or start with a template"
+    },
+    "modelDefault": "App default",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models — the bot loop is built for them.",
+    "modelLabel": "Model",
+    "nameLabel": "Name",
+    "namePlaceholder": "z. B. Scout",
+    "nameRequired": "Ein Name ist erforderlich.",
+    "newBot": "Neuer Bot",
+    "newDialog": {
+      "checkIn": {
+        "daily": "Daily",
+        "hourly": "Hourly",
+        "off": "Off",
+        "weekdays": "Weekdays",
+        "weekly": "Weekly"
+      },
+      "checkInDayLabel": "Day",
+      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
+      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
+      "checkInLabel": "Scheduled check-ins",
+      "checkInRoutineName": "{{name}} check-in",
+      "checkInTimeLabel": "Time",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Keeps track of my research topics",
+      "instructionsLabel": "Instructions",
+      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
+      "moreOptions": "More options: description, scheduled check-ins, model",
+      "namePlaceholder": "Research Buddy",
+      "title": "New bot"
+    },
+    "openError": "Der Chat des Bots konnte nicht geöffnet werden.",
+    "personaLabel": "Persona",
+    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "save": "Speichern",
+    "saveError": "Der Bot konnte nicht gespeichert werden.",
+    "senderChat": "Auto-Antwort-Chat mit {{sender}} auf {{platform}}",
+    "senderChatReadOnly": "Auto-Antwort-Unterhaltung — {{bot}} antwortet {{sender}} hier in Ihrem Namen. Sie können mitlesen, aber nicht schreiben; Anweisungen geben Sie {{bot}} im eigenen Chat.",
+    "templates": {
+      "appointment-assistant": {
+        "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
+        "name": "Appointment Assistant"
+      },
+      "bills-renewal-watch": {
+        "description": "Catches upcoming bills, renewals, free-trial endings, and price increases before they surprise you.",
+        "name": "Bills & Renewal Watch"
+      },
+      "calendar-concierge": {
+        "description": "Handles scheduling back-and-forth and finds meeting times that actually fit your day.",
+        "name": "Calendar Concierge"
+      },
+      "campaign-performance-digest": {
+        "description": "Turns campaign numbers into a short weekly read on what worked, what did not, and what to try next.",
+        "name": "Campaign Performance Digest"
+      },
+      "candidate-follow-up": {
+        "description": "Keeps candidates from falling through the cracks when feedback, scheduling, or next steps stall.",
+        "name": "Candidate Follow-Up"
+      },
+      "candidate-sourcer": {
+        "description": "Finds candidates with clear job-relevant evidence and prepares personalized outreach for recruiter review.",
+        "name": "Candidate Sourcer"
+      },
+      "chief-of-staff": {
+        "description": "Organisiert deinen Tag über Mail, Kalender und Slack und holt dich für Entscheidungen dazu.",
+        "name": "Chief of Staff"
+      },
+      "comment-mention-assistant": {
+        "description": "Helps you respond quickly to the social comments and mentions that are actually worth your time.",
+        "name": "Comment & Mention Assistant"
+      },
+      "competitor-campaign-watch": {
+        "description": "Tracks how competitors are positioning themselves and what campaigns they are pushing right now.",
+        "name": "Competitor Campaign Watch"
+      },
+      "competitor-watch": {
+        "description": "Tracks meaningful competitor moves without flooding you with every small update.",
+        "name": "Competitor Watch"
+      },
+      "content-calendar-manager": {
+        "description": "Keeps your content pipeline full and moving from idea to draft to publish-ready.",
+        "name": "Content Calendar Manager"
+      },
+      "content-repurposer": {
+        "description": "Turns one strong idea into platform-native X and LinkedIn content without sounding copy-pasted.",
+        "name": "Content Repurposer"
+      },
+      "customer-voice-miner": {
+        "description": "Turns real customer language from Gmail, Slack, and docs into sharper messaging and content ideas.",
+        "name": "Customer Voice Miner"
+      },
+      "daily-focus-planner": {
+        "description": "Turns your meetings, messages, and deadlines into a realistic plan for the day.",
+        "name": "Daily Focus Planner"
+      },
+      "daily-post-writer": {
+        "description": "Finds one thing worth saying today and turns it into a polished post in your voice.",
+        "name": "Daily Post Writer"
+      },
+      "daily-stock-recommender": {
+        "description": "Surfaces a few stocks worth researching today with the thesis, catalyst, risks, and downside case.",
+        "name": "Daily Stock Recommender"
+      },
+      "decision-researcher": {
+        "description": "Compares your real options on the criteria that matter and recommends the strongest choice.",
+        "name": "Decision Researcher"
+      },
+      "deep-researcher": {
+        "description": "Turns a complex question into a decision-ready brief with evidence, uncertainty, and sources.",
+        "name": "Deep Researcher"
+      },
+      "discord-agent": {
+        "description": "Your agent in Discord - DM it or add it to a server",
+        "name": "Discord Agent"
+      },
+      "earnings-watch": {
+        "description": "Tracks upcoming earnings and explains the numbers, surprises, guidance, and what changed after results.",
+        "name": "Earnings Watch"
+      },
+      "email-drafting": {
+        "description": "Finds emails that need a response and creates clear, context-aware Gmail drafts in your voice.",
+        "name": "Email Drafting"
+      },
+      "follow-up-tracker": {
+        "description": "Tracks who owes you a reply, who you owe, and when it is time to follow up.",
+        "name": "Follow-Up Tracker"
+      },
+      "hiring-manager-brief": {
+        "description": "Prepares the hiring manager before each interview with the role, candidate context, and areas to probe.",
+        "name": "Hiring Manager Brief"
+      },
+      "inbox-to-calendar": {
+        "description": "Turns confirmed plans in Gmail into clean Google Calendar events so important dates never get lost.",
+        "name": "Inbox to Calendar"
+      },
+      "interview-coordinator": {
+        "description": "Handles interview scheduling across candidates and interviewers without endless back-and-forth.",
+        "name": "Interview Coordinator"
+      },
+      "knowledge-finder": {
+        "description": "Finds the answer buried in your Gmail, Slack, or Google Drive history.",
+        "name": "Knowledge Finder"
+      },
+      "launch-command-center": {
+        "description": "Keeps a launch moving by surfacing blockers, missing approvals, and commitments before they slip.",
+        "name": "Launch Command Center"
+      },
+      "meeting-notes-actions": {
+        "description": "Turns meeting notes into decisions, owners, deadlines, and follow-ups you can act on.",
+        "name": "Meeting Notes & Actions"
+      },
+      "meeting-prep-bot": {
+        "description": "Creates a one-page meeting brief with the context, open issues, and questions you need before the call.",
+        "name": "Meeting Prep Bot"
+      },
+      "morning-brief": {
+        "description": "Starts your day with meetings, urgent messages, priorities, and the news worth knowing.",
+        "name": "Morning Brief"
+      },
+      "news-radar": {
+        "description": "Delivers the most important developments from the last 24 hours without the duplicate headlines and noise.",
+        "name": "News Radar"
+      },
+      "personal-admin": {
+        "description": "Handles the life-admin sitting in your inbox—forms, renewals, appointments, and follow-ups.",
+        "name": "Personal Admin"
+      },
+      "portfolio-pulse": {
+        "description": "Alerts you only when something materially changes the story for a stock you care about.",
+        "name": "Portfolio Pulse"
+      },
+      "project-pulse": {
+        "description": "Gives you a clean project status without making you chase people for updates.",
+        "name": "Project Pulse"
+      },
+      "research-paper-scout": {
+        "description": "Finds new papers worth reading and explains the contribution without making you read every abstract.",
+        "name": "Research Paper Scout"
+      },
+      "resume-review-assistant": {
+        "description": "Maps each resume to the job requirements so a recruiter can review the evidence consistently.",
+        "name": "Resume Review Assistant"
+      },
+      "social-inbox-manager": {
+        "description": "Pulls important comments, mentions, and DMs to the top so high-value conversations do not get missed.",
+        "name": "Social Inbox Manager"
+      },
+      "spending-digest": {
+        "description": "Turns Gmail receipts into a simple weekly spending summary and flags unusual purchases.",
+        "name": "Spending Digest"
+      },
+      "telegram-agent": {
+        "description": "Your agent in Telegram - message it anytime",
+        "name": "Telegram Agent"
+      },
+      "travel-planner": {
+        "description": "Turns your bookings and preferences into a realistic day-by-day trip plan.",
+        "name": "Travel Planner"
+      },
+      "trend-scout": {
+        "description": "Finds fast-growing conversations in your niche and gives you an original angle before everyone piles in.",
+        "name": "Trend Scout"
+      },
+      "weekly-review": {
+        "description": "Closes the week with what moved forward, what slipped, and what matters next.",
+        "name": "Weekly Review"
+      },
+      "whats-hot": {
+        "description": "Finds fast-rising stories and conversations across the internet before they become old news.",
+        "name": "What's Hot?"
+      },
+      "whatsapp-agent": {
+        "description": "Your agent in WhatsApp - message it anytime",
+        "name": "WhatsApp Agent"
+      }
+    },
+    "title": "Bots",
+    "titleLabel": "Rolle",
+    "titlePlaceholder": "z. B. Research Scout",
+    "unpin": "Unpin",
+    "viewBots": "Bots",
+    "viewSessions": "Sitzungen",
+    "channelChatReadOnly": "This conversation lives in {{app}} — message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp — message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+  },
+  "browserPermission": {
+    "allow": "Zulassen",
+    "deny": "Ablehnen",
+    "never": "Nie fragen",
+    "session": "Bis zum Beenden erlauben",
+    "title": "Browser-Aktion"
+  },
+  "browserSettings": {
+    "approval": {
+      "always": "Nie fragen",
+      "ask": "Immer fragen"
+    },
+    "approvalSubtitle": "Lege fest, ob der Agent vor dem Browsen um Bestätigung bittet.",
+    "approvalTitle": "Genehmigung",
+    "clearAction": "Alle Browser-Daten löschen",
+    "clearSubtitle": "Sitedaten und Cache des In-App-Browsers löschen",
+    "clearTitle": "Browser-Daten",
+    "cleared": "Browser-Daten gelöscht.",
+    "dataSection": "Daten",
+    "done": "Fertig",
+    "masterSubtitle": "Dem Agenten die Steuerung des integrierten Browsers erlauben",
+    "masterTitle": "Browser",
+    "permissionsSection": "Berechtigungen",
+    "subtitle": "Den integrierten Browser des Agenten verwalten.",
+    "title": "Browser",
+    "homepageInvalid": "Enter a valid web address.",
+    "homepageSave": "Save",
+    "homepageSaved": "Home page saved.",
+    "homepageTitle": "Home page"
+  },
+  "capabilities": {
+    "skills": {
+      "emptyDescription": "Installierte Skills erscheinen hier. Vorerst verwaltest du sie in den Einstellungen.",
+      "emptyTitle": "Noch keine Skills"
+    },
+    "tabs": {
+      "label": "Capabilities",
+      "mcp": "MCP",
+      "connectors": "Konnektoren",
+      "skills": "Skills",
+      "tools": "Werkzeuge"
+    },
+    "toolDescriptions": {
+      "ast_edit": "Structural search-and-replace that cannot break the syntax.",
+      "auto_reply": "Eingehende Chat-Nachrichten ausgewählter Personen automatisch beantworten (nur Bots).",
+      "bash": "Einen Shell-Befehl im Arbeitsordner ausführen.",
+      "batch_edit": "Change several places in one file in a single edit.",
+      "batch_file_read": "Read several files in one go.",
+      "bfl_flux3_get_result": "Check whether a submitted job has finished.",
+      "bfl_flux3_image_to_video": "Start a video generation from a still image.",
+      "bfl_flux3_keyframes_to_video": "Start a video generation from keyframes.",
+      "bfl_flux3_prompting_guide": "Read the prompting guide for better results.",
+      "bfl_flux3_text_to_video": "Start a video generation from a prompt.",
+      "bfl_flux3_video_continuation": "Continue an existing video.",
+      "browser_execute": "JavaScript auf der geöffneten Seite ausführen.",
+      "browser_interact": "Auf der Seite klicken, tippen, scrollen oder hovern.",
+      "browser_navigate": "Eine URL im integrierten Browser öffnen.",
+      "browser_snapshot": "Die Seite als Liste interaktiver Elemente auslesen.",
+      "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
+      "code_map": "Index the functions and classes in a file or folder.",
+      "create_bot": "Erstelle einen neuen benannten Bot mit eigener Mission.",
+      "cronjob": "Create, list, pause, or run scheduled tasks.",
+      "deck_export_pdf": "Render an HTML slide deck to PDF, one page per slide.",
+      "delegate_task": "Hand a piece of work to a sub-agent.",
+      "design": "Design screens and export them as mockups.",
+      "device_app": "Eine App installieren, starten, beenden oder entfernen.",
+      "device_boot": "Einen Simulator oder Emulator starten.",
+      "device_build": "Den Arbeitsordner für die Zielplattform bauen.",
+      "device_interact": "Auf dem Gerät tippen, wischen, scrollen oder schreiben.",
+      "device_list": "iOS-Simulatoren und Android-Geräte auflisten.",
+      "device_logs": "Die letzten Logausgaben des Geräts lesen.",
+      "device_screenshot": "Den Gerätebildschirm als Bild aufnehmen.",
+      "device_shutdown": "Einen laufenden Simulator oder Emulator beenden.",
+      "device_snapshot": "Den Bildschirm als Liste von Elementen auslesen.",
+      "discord_auto_reply": "Discord-Nachrichten ausgewählter Personen automatisch beantworten (nur Bots).",
+      "document": "Write a document and print it as a PDF.",
+      "edit": "Eine exakte Textstelle in einer Datei ersetzen.",
+      "exit_plan_mode": "Ask to leave plan mode and start carrying out the plan.",
+      "fetch_background_output": "Read what a background command has printed, while it runs or after it finishes.",
+      "glob": "Dateien anhand eines Namensmusters finden.",
+      "grep": "Dateiinhalte mit einem regulären Ausdruck durchsuchen.",
+      "ha_call_service": "Call a service to change something.",
+      "ha_get_state": "Read the current state of an entity.",
+      "ha_list_entities": "List Home Assistant entities.",
+      "ha_list_services": "List the services that can be called.",
+      "image_generate": "Generate an image from a prompt.",
+      "kill_process": "Stop a command running in the background.",
+      "list_chats": "Verbundene Plattformen und erreichbare Chats auflisten.",
+      "list_discord_chats": "Discord-Chats und Kontakte auflisten.",
+      "list_telegram_chats": "Telegram-Chats und Kontakte auflisten.",
+      "list_whatsapp_chats": "WhatsApp-Chats und Kontakte auflisten.",
+      "ls": "Den Inhalt eines Verzeichnisses auflisten.",
+      "memory": "Save and recall notes that outlive the session.",
+      "message_bot": "Sende eine Nachricht in den Chat eines anderen Bots.",
+      "pdf": "Write, read, merge, split or fill a PDF.",
+      "ppt": "Build a slide deck from a brief and save it as a PDF.",
+      "present_deliverable": "Present the finished files, most important first, and open the top one.",
+      "read": "Eine Datei von der Festplatte lesen.",
+      "read_chat_messages": "Aktuelle Nachrichten aus verbundenen Chat-Apps auf Nachfrage lesen.",
+      "read_discord_messages": "Aktuelle Discord-Nachrichten auf Anfrage lesen.",
+      "read_output": "Read back output that was too large to show in full.",
+      "read_telegram_messages": "Aktuelle Telegram-Nachrichten auf Anfrage lesen.",
+      "read_whatsapp_messages": "Aktuelle WhatsApp-Nachrichten auf Anfrage lesen.",
+      "run_tests": "Run the project's tests and report what passed and failed.",
+      "send_chat_message": "Eine Nachricht an eine Person oder einen Chat auf einer verbundenen Plattform senden.",
+      "send_discord_message": "Eine Nachricht über Discord senden.",
+      "send_telegram_message": "Eine Nachricht über Telegram senden.",
+      "send_whatsapp_message": "Eine Nachricht über WhatsApp senden.",
+      "serve": "Einen Ordner über HTTP bereitstellen, damit eine geschriebene Webseite geöffnet werden kann.",
+      "session_search": "Search past conversations.",
+      "skill_add": "Install a skill from the marketplace.",
+      "skill_manage": "Create, edit, or remove a skill.",
+      "skill_view": "Read a skill's full instructions.",
+      "skills_list": "List the skills available to load.",
+      "spotify_albums": "Look up album details.",
+      "spotify_devices": "List and pick a playback device.",
+      "spotify_library": "Read and update your saved library.",
+      "spotify_playback": "Play, pause, skip, and control volume.",
+      "spotify_playlists": "Read and modify playlists.",
+      "spotify_queue": "See and add to the play queue.",
+      "spotify_search": "Search tracks, albums, artists, and playlists.",
+      "telegram_auto_reply": "Telegram-Nachrichten ausgewählter Personen automatisch beantworten (nur Bots).",
+      "text_to_speech": "Turn text into spoken audio.",
+      "todo": "Keep a plan for multi-step work and tick items off.",
+      "video_analyze": "Describe or answer questions about a video.",
+      "video_generate": "Generate a video from a prompt, image, or reference.",
+      "vision_analyze": "Describe or answer questions about an image.",
+      "web_extract": "Pull the readable content out of a page.",
+      "web_fetch": "Fetch a web page and read it as text.",
+      "web_search": "Search the web and return ranked results.",
+      "whatsapp_auto_reply": "WhatsApp-Nachrichten ausgewählter Personen automatisch beantworten (nur Bots).",
+      "write": "Eine Datei anlegen oder eine bestehende überschreiben.",
+      "x_search": "Search public posts and threads on X.",
+      "xai_video_edit": "Edit an already generated video.",
+      "xai_video_extend": "Extend a generated video further."
+    },
+    "tools": {
+      "alwaysOn": "Always on",
+      "disabledDetail": "Off. The agent isn't told these tools exist.",
+      "enabledDetail": "On. The agent can call these tools.",
+      "mcpNote": "Verbundene MCP-Server bringen zusätzlich eigene Werkzeuge mit.",
+      "noMatches": "No toolset matches that.",
+      "noModelTools": "This capability doesn't add any tools the model calls directly.",
+      "planned": "Not available yet",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned — this isn't a missing API key.",
+      "restartNote": "Changes apply to the next session — the agent is handed its tool list when a session starts.",
+      "resizePanels": "Resize toolsets and details",
+      "searchPlaceholder": "Search toolsets and tools…",
+      "toolCount_one": "{{count}} tool",
+      "toolCount_other": "{{count}} tools"
+    },
+    "toolsets": {
+      "a2a": {
+        "description": "Agent-to-agent protocol support, so other agents can call this one and it can call them.",
+        "label": "A2A"
+      },
+      "bfl": {
+        "description": "Black Forest Labs FLUX 3 video generation. Jobs take minutes, so submitting returns an id to poll.",
+        "label": "BFL FLUX 3 Video"
+      },
+      "browser": {
+        "description": "Drive the built-in browser: open pages, read them, click and type.",
+        "label": "Browser Automation"
+      },
+      "connectors": {
+        "description": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
+        "label": "Connectors"
+      },
+      "cronjob": {
+        "description": "Create and manage scheduled tasks that run on their own.",
+        "label": "Cron Jobs"
+      },
+      "delegation": {
+        "description": "Hand a self-contained piece of work to a sub-agent.",
+        "label": "Task Delegation"
+      },
+      "deliverables": {
+        "description": "Hand finished files to you as clickable links, open the first one in the preview pane, and file them all under Artifacts.",
+        "label": "Deliverables"
+      },
+      "design": {
+        "description": "Design product screens as mockups or wireframes.",
+        "label": "Design"
+      },
+      "device": {
+        "description": "Build for and control iOS simulators and Android emulators.",
+        "label": "Devices"
+      },
+      "file": {
+        "description": "Read, write, and edit files, and search the workspace by name or contents.",
+        "label": "File Operations"
+      },
+      "homeassistant": {
+        "description": "Read and control smart home devices through Home Assistant.",
+        "label": "Home Assistant"
+      },
+      "image_gen": {
+        "description": "Generate images from a prompt.",
+        "label": "Image Generation"
+      },
+      "memory": {
+        "description": "Remember things across sessions instead of starting cold every time.",
+        "label": "Memory"
+      },
+      "messaging": {
+        "description": "Nachrichten über verbundene Chat-Apps senden – WhatsApp, Telegram, Discord – als Nutzer oder über dessen Bot.",
+        "label": "Messaging"
+      },
+      "pdf": {
+        "description": "Write, read and edit PDF documents.",
+        "label": "PDFs"
+      },
+      "plan_mode": {
+        "description": "Lets the agent ask to leave plan mode and start carrying out the plan it showed you.",
+        "label": "Plan mode"
+      },
+      "ppt": {
+        "description": "Build a designed slide deck from a brief and show it in the preview pane.",
+        "label": "Slide decks"
+      },
+      "process": {
+        "description": "Start a command that keeps running, read what it has printed, and stop it. Also reads output that was too large to show in full.",
+        "label": "Background processes"
+      },
+      "session_search": {
+        "description": "Search past conversations and recall what was decided.",
+        "label": "Session Search"
+      },
+      "skills": {
+        "description": "List, read, and manage skills as tools, rather than only loading them as context.",
+        "label": "Skills"
+      },
+      "spotify": {
+        "description": "Playback, search, playlists, and library access.",
+        "label": "Spotify"
+      },
+      "terminal": {
+        "description": "Run shell commands in the workspace.",
+        "label": "Terminal & Processes"
+      },
+      "todo": {
+        "description": "Plan and track multi-step work so long tasks don't drift.",
+        "label": "Task Planning"
+      },
+      "tts": {
+        "description": "Turn text into audio.",
+        "label": "Text-to-Speech"
+      },
+      "video": {
+        "description": "Analyse video content. Needs a video-capable model.",
+        "label": "Video Analysis"
+      },
+      "video_gen": {
+        "description": "Generate video from a prompt, an image, or a reference.",
+        "label": "Video Generation"
+      },
+      "vision": {
+        "description": "Look at images and describe or reason about what's in them.",
+        "label": "Vision / Image Analysis"
+      },
+      "web": {
+        "description": "Search the web and pull readable content out of pages.",
+        "label": "Web Search & Scraping"
+      },
+      "x_search": {
+        "description": "Search public posts and threads on X.",
+        "label": "X (Twitter) Search"
+      }
+    }
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Schließen",
+    "loading": "Loading",
+    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "sidebar": "Sidebar",
+    "toggleSidebar": "Toggle sidebar"
+  },
+  "connectorRequest": {
+    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
+    "connect": "Connect {{provider}}",
+    "connecting": "Connecting…",
+    "decline": "Not now",
+    "failed": "Could not connect {{provider}}.",
+    "stop": "Verbindung abbrechen",
+    "title": "{{provider}} is not connected"
+  },
+  "connectors": {
+    "abacusConnectCancelled": "Stopped adding {{name}}.",
+    "abacusConnectFailed": "Couldn't add {{name}} — try again.",
+    "abacusConnected": "{{name}} connected",
+    "abacusConnecting": "Finish connecting {{name}} in your browser…",
+    "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
+    "abacusDisconnected": "{{name}} disconnected",
+    "abacusSignInFailed": "Could not sign in to Abacus.AI. Please try again.",
+    "abacusSigningIn": "Sign in to Abacus.AI in your browser to continue…",
+    "add": "Add",
+    "addFailed": "Could not add {{name}}.",
+    "added": "{{name}} added.",
+    "adding": "Adding…",
+    "auth": {
+      "key": "API key",
+      "oauth": "Sign-in",
+      "oauth-client": "Sign-in + app",
+      "token": "Token",
+      "abacus": "Abacus account"
+    },
+    "cancel": "Cancel",
+    "categories": {
+      "data": "Data & Analytics",
+      "development": "Development",
+      "featured": "Featured",
+      "infrastructure": "Infrastructure",
+      "payments": "Payments",
+      "productivity": "Productivity",
+      "support": "Customer Support",
+      "web": "Web & Browsers",
+      "abacus-connectors": "Abacus.AI Connectors"
+    },
+    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
+    "clientId": "Client ID",
+    "clientSecret": "Client secret (if issued)",
+    "connect": "Connect {{name}}",
+    "connectAction": "Connect",
+    "credentialHint": "Stored in this app's MCP configuration on your machine, and sent only to this Konnektor's server.",
+    "docs": "Open documentation",
+    "marketplace": "Marketplace",
+    "mcpSignInFailed": "Sign-in failed: {{error}}",
+    "noMatches": "No Konnektoren match that search.",
+    "noneInstalled": "No Konnektoren added yet.",
+    "notInstalled": "Nicht installiert",
+    "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
+    "redirectUrlLabel": "Redirect URL — add this to your app",
+    "remove": "Remove",
+    "removeFailed": "Could not remove {{name}}.",
+    "removed": "{{name}} removed.",
+    "search": "Search Konnektoren",
+    "signInAction": "Sign in",
+    "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
+    "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
+    "signingIn": "{{name}} added — opening your browser to sign in…",
+    "signingInAction": "Signing in…",
+    "token": "Token",
+    "whereToGet": "Where do I get this?",
+    "yours": "Yours"
+  },
+  "devicePanel": {
+    "axPermissionNeeded": "Für die Spiegelung des Simulators ohne sichtbares Fenster wird die Bedienungshilfen-Berechtigung benötigt.",
+    "boot": "Starten",
+    "bootFailed": "Gerät konnte nicht gestartet werden",
+    "buildDone": "App wurde auf dem Gerät gestartet",
+    "buildFailed": "Build fehlgeschlagen",
+    "buildRun": "Erstellen & Ausführen",
+    "buildRunHint": "Workspace erstellen und auf diesem Gerät ausführen",
+    "buildRunUnavailable": "Dieser Workspace enthält kein {{platform}}-Projekt zum Erstellen",
+    "captureFailed": "Gerätebildschirm konnte nicht erfasst werden",
+    "createDevice": "{{platform}}-Gerät erstellen",
+    "createDeviceFailed": "Gerät konnte nicht erstellt werden",
+    "creatingDevice": "Wird erstellt…",
+    "deviceCreated": "{{name}} erstellt",
+    "grantAccess": "Zugriff erlauben",
+    "howToAddDevice": "So fügen Sie ein {{platform}}-Gerät hinzu",
+    "installingMaestro": "Maestro wird installiert…",
+    "interactMaestroHint": "Installieren Sie Maestro, um mit iOS-Simulatoren zu interagieren",
+    "keyBack": "Zurück",
+    "keyHome": "Home",
+    "keyRecents": "Letzte Apps",
+    "maestroInstallFailed": "Maestro-Installation fehlgeschlagen",
+    "maestroInstalled": "Maestro installiert — Sie können jetzt mit iOS-Simulatoren interagieren",
+    "modeLive": "Live",
+    "modePoll": "Langsam (Screenshots)",
+    "noDevices": "Keine Geräte",
+    "noPlatformDevices": "Keine {{platform}}-Geräte gefunden.",
+    "notBooted": "Dieses Gerät läuft nicht. Starten Sie es, um den Bildschirm zu sehen.",
+    "openNative": "Natives Simulator-Fenster öffnen",
+    "phase": {
+      "booting": "Gerät wird gestartet…",
+      "building": "Wird erstellt…",
+      "installing": "Wird installiert…",
+      "launching": "Wird gestartet…"
+    },
+    "refresh": "Geräte aktualisieren",
+    "screenAlt": "Bildschirm von {{name}}",
+    "screenPermissionNeeded": "Für eine flüssige Spiegelung des Simulators wird die Bildschirmaufnahme-Berechtigung benötigt.",
+    "selectDevice": "Gerät auswählen",
+    "stateShutdown": "aus",
+    "typeHint": "Auf den Bildschirm klicken, dann über die Tastatur tippen"
+  },
+  "devicePermission": {
+    "title": "Geräteaktion"
+  },
+  "deviceSettings": {
+    "approvalSubtitle": "Wann der Agent Geräteaktionen ausführen darf",
+    "approvalTitle": "Tool-Freigabe",
+    "detected": "Erkannt",
+    "maestroHint": "Installieren Sie Maestro, damit der Agent auf iOS-Simulatoren tippen und Text eingeben kann.",
+    "masterSubtitle": "Erlaubt dem Agenten, Apps auf Simulatoren und Emulatoren zu erstellen, zu installieren und zu testen",
+    "masterTitle": "Geräte-Tools aktivieren",
+    "notDetected": "Nicht erkannt",
+    "subtitle": "iOS-Simulator- und Android-Emulator-Tools für den Code-Agenten",
+    "title": "Geräte",
+    "toolchainAndroid": "Android (adb)",
+    "toolchainIos": "iOS-Simulator (Xcode)",
+    "toolchainMaestro": "Maestro (iOS-Interaktion)",
+    "toolchainSection": "Erkannte Toolchains"
+  },
+  "deviceSetup": {
+    "androidAvdDesc": "Android SDK gefunden, aber keine virtuellen Geräte. Erstellen Sie eines in Android Studio unter Tools → Device Manager.",
+    "androidDesc": "Installieren Sie Android Studio und erstellen Sie dann ein virtuelles Gerät unter Tools → Device Manager.",
+    "androidTitle": "Android · Android Studio",
+    "download": "Herunterladen",
+    "iosDesc": "Installieren Sie Xcode aus dem Mac App Store und öffnen Sie es einmal, um die Einrichtung abzuschließen — Simulatoren erscheinen dann hier.",
+    "iosRuntimeDesc": "Xcode ist installiert, aber es wurden keine Simulatoren gefunden. Öffnen Sie Xcode → Einstellungen → Komponenten und laden Sie eine iOS-Runtime herunter.",
+    "iosTitle": "iOS · Xcode",
+    "recheck": "Erneut prüfen"
+  },
+  "diff": {
+    "noChanges": "Keine Änderungen anzuzeigen"
+  },
+  "error": {
+    "keepsCrashing": "In der App tritt wiederholt derselbe Fehler auf. Das Zurücksetzen der lokalen Daten kann das Problem beheben.",
+    "ouch": "Autsch!",
+    "reloadApp": "App neu laden",
+    "resetLocalData": "Lokale Daten zurücksetzen",
+    "somethingWrong": "Etwas ist schiefgelaufen",
+    "tryAgain": "Erneut versuchen",
+    "unexpected": "Ein unerwarteter Fehler ist aufgetreten."
+  },
+  "execBackends": {
+    "daytona": {
+      "description": "Run commands in a Daytona cloud sandbox.",
+      "label": "Daytona"
+    },
+    "docker": {
+      "description": "Run commands in a container with the workspace mounted at the same path.",
+      "label": "Docker"
+    },
+    "fellBack": "{{selected}} isn't usable right now, so commands are running {{effective}}.",
+    "inUse": "In use",
+    "local": {
+      "description": "Run commands directly on this machine. No isolation.",
+      "label": "Local"
+    },
+    "missingBinary": "{{command}} wasn't found on your PATH.",
+    "missingEnv": "Set {{vars}} to use this backend.",
+    "modal": {
+      "description": "Run commands in a Modal cloud sandbox.",
+      "label": "Modal"
+    },
+    "singularity": {
+      "description": "Run commands in a Singularity/Apptainer container (HPC-friendly, rootless).",
+      "label": "Singularity / Apptainer"
+    },
+    "ssh": {
+      "description": "Run commands on a remote host over SSH.",
+      "label": "SSH"
+    },
+    "title": "Execution backend",
+    "unimplemented": "AbacusAIBot can't run commands here yet.",
+    "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
+  },
+  "greeting": {
+    "afternoon": {
+      "1": "Guten Nachmittag",
+      "2": "Nachmittagsarbeit",
+      "3": "Zeit für Tiefenarbeit",
+      "4": "Läuft super",
+      "5": "Stetiger Fortschritt"
+    },
+    "dawn": {
+      "1": "Frühaufsteher",
+      "2": "Morgenpatrouille",
+      "3": "Auf mit der Sonne",
+      "4": "Sonnenaufgangs-Session",
+      "5": "Vor der Welt wach"
+    },
+    "earlyEvening": {
+      "1": "Abendschicht",
+      "2": "Goldene Stunde",
+      "3": "Feierabend naht",
+      "4": "Letzter Endspurt",
+      "5": "Fast geschafft"
+    },
+    "earlyMorning": {
+      "1": "Kaffeezeit",
+      "2": "Morgenenergie",
+      "3": "Frischer Start",
+      "4": "Aufstehen und loslegen",
+      "5": "Morgenschwung"
+    },
+    "evening": {
+      "1": "Guten Abend",
+      "2": "Abendsession",
+      "3": "Nachtmodus",
+      "4": "Ausklang",
+      "5": "Entspannte Produktivität"
+    },
+    "lateNight": {
+      "1": "Tiefe Nacht",
+      "2": "Geisterstunde",
+      "3": "Nachtschicht",
+      "4": "Hingabe-Modus",
+      "5": "Während die Welt schläft"
+    },
+    "lunch": {
+      "1": "Mittagscheck",
+      "2": "Nachmittags-Kickoff",
+      "3": "Power nach dem Mittagessen",
+      "4": "Aufladen und weiter",
+      "5": "Zweiter Wind beginnt"
+    },
+    "midMorning": {
+      "1": "Guten Morgen",
+      "2": "Maximale Produktivität",
+      "3": "Morgenflow",
+      "4": "Lass uns etwas bauen",
+      "5": "In der Zone"
+    },
+    "night": {
+      "1": "Nachteule",
+      "2": "Nachtarbeit",
+      "3": "Spätabend-Arbeit",
+      "4": "Ruhige Stunden",
+      "5": "Nach Feierabend"
+    },
+    "preDawn": {
+      "1": "Immer noch dabei",
+      "2": "Die frühen Stunden",
+      "3": "Vor der Dämmerung",
+      "4": "Engagiert",
+      "5": "Wahre Hingabe"
+    }
+  },
+  "jobs": {
+    "delete": "Löschen",
+    "empty": "Nichts geplant. Bitte den Agenten im Chat darum — „jeden Werktag um 9 mein Postfach zusammenfassen“ — und der Job erscheint hier.",
+    "enabled": "Aktiviert",
+    "lastRun": "zuletzt {{time}}",
+    "nextRun": "nächster {{time}}",
+    "runNow": "Jetzt ausführen",
+    "startFailed": "Der Lauf konnte nicht gestartet werden.",
+    "started": "Gestartet — läuft in einer eigenen Sitzung."
+  },
+  "logs": {
+    "saveFailed": "Could not save logs: {{error}}",
+    "saved": "Logs saved to {{path}}"
+  },
+  "mcpManagement": {
+    "add": "Hinzufügen",
+    "addFailed": "Server konnte nicht hinzugefügt werden.",
+    "addServer": "Server hinzufügen",
+    "authRequiredHint": "Melden Sie sich an, um die Tools von {{name}} zu nutzen.",
+    "cancel": "Abbrechen",
+    "commandRequired": "Befehl ist erforderlich.",
+    "disable": "Deaktivieren",
+    "done": "Fertig",
+    "edit": "Bearbeiten",
+    "enable": "Aktivieren",
+    "form": {
+      "addArgument": "Argument hinzufügen",
+      "addEnv": "Umgebungsvariable hinzufügen",
+      "addHeader": "Header hinzufügen",
+      "argumentPlaceholder": "Argument",
+      "arguments": "Argumente",
+      "clientIdPlaceholder": "OAuth-Client-ID",
+      "clientSecretPlaceholder": "OAuth-Client-Secret (optional)",
+      "command": "Befehl zum Starten",
+      "commandPlaceholder": "z. B. npx, node, uvx",
+      "env": "Umgebungsvariablen",
+      "headers": "Header",
+      "kvKey": "Schlüssel",
+      "kvValue": "Wert",
+      "name": "Name",
+      "oauthHint": "Nur für Server erforderlich, die eine Anmeldung verlangen. Lassen Sie die Client-ID leer für die automatische Registrierung; setzen Sie sie, wenn der Server keine automatische Registrierung unterstützt.",
+      "oauthSection": "OAuth (optional)",
+      "scopePlaceholder": "Scopes (durch Leerzeichen getrennt, optional)",
+      "titleAdd": "Mit einem benutzerdefinierten MCP verbinden",
+      "titleEdit": "MCP-Server bearbeiten — {{name}}",
+      "transportHttp": "Streamable HTTP",
+      "transportStdio": "STDIO",
+      "url": "URL",
+      "urlPlaceholder": "https://mcp.example.com/mcp"
+    },
+    "hideLogs": "Protokolle ausblenden",
+    "import": {
+      "button": "Importieren",
+      "claude": "Aus Claude Code importieren",
+      "cursor": "Aus Cursor importieren",
+      "file": "Aus Datei importieren…",
+      "paste": "JSON aus Zwischenablage einfügen",
+      "success": "{{count}} Server importiert.",
+      "deepagent": "Import from DeepAgent"
+    },
+    "namePlaceholder": "Servername",
+    "nameRequired": "Servername ist erforderlich.",
+    "noLogs": "Noch keine Protokollausgabe erfasst.",
+    "noServers": "Keine MCP-Server konfiguriert.",
+    "refresh": "Aktualisieren",
+    "refreshDone": "MCP-Server neu geladen.",
+    "refreshFailed": "Aktualisierung fehlgeschlagen: {{error}}",
+    "refreshHint": "MCP-Server in der laufenden Sitzung neu laden.",
+    "refreshNoSession": "Starten Sie eine Sitzung, um die MCP-Server zu aktualisieren.",
+    "remove": "Entfernen",
+    "removeFailed": "Server konnte nicht entfernt werden.",
+    "restart": "Neu starten",
+    "restartFailed": "Neustart fehlgeschlagen: {{error}}",
+    "runtimeStatus": {
+      "authRequired": "Authentifizierung erforderlich",
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "disconnected": "Off",
+      "error": "Error",
+      "idle": "Not connected"
+    },
+    "save": "Speichern",
+    "signIn": "Anmelden",
+    "signInDone": "Signed in to {{name}}.",
+    "signInFailed": "Sign-in failed: {{error}}",
+    "signingIn": "Waiting for the browser…",
+    "title": "MCP-Server",
+    "toggleFailed": "Server konnte nicht aktualisiert werden.",
+    "toolCount": "{{count}} Werkzeug",
+    "urlRequired": "URL ist erforderlich.",
+    "viewLogs": "Protokolle",
+    "abacusConnectors": {
+      "title_one": "{{count}} Abacus connector, served through this server:",
+      "title_other": "{{count}} Abacus connectors, served through this server:",
+      "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
+      "loading": "Reading which connectors are attached…",
+      "unavailable": "Which connectors are attached could not be read right now — sign in to Abacus.AI, or try again."
+    }
+  },
+  "memory": {
+    "clear": "Clear all",
+    "clearConfirm": "Forget everything here?",
+    "clearNo": "Keep",
+    "clearYes": "Forget all",
+    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions — a preference of yours, a fact about your setup.",
+    "forget": "Forget this",
+    "loading": "Reading memory…",
+    "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
+    "storeEmpty": "Nothing here yet.",
+    "stores": {
+      "memory": {
+        "help": "Environment facts, project conventions, and tool quirks it worked out for itself.",
+        "title": "The agent's own notes"
+      },
+      "remember": {
+        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here — and in every prompt from the next message on.",
+        "title": "Always remember"
+      },
+      "user": {
+        "help": "Preferences, habits, and how you like to work.",
+        "title": "About you"
+      }
+    },
+    "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
+    "title": "Memory",
+    "writeFailed": "Es wurde nichts gelöscht — eine Sitzung hat im selben Moment in den Speicher geschrieben. Bitte erneut versuchen.",
+    "instructions": {
+      "title": "Custom instructions",
+      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with — tone, language, house style, things to never do.",
+      "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
+      "save": "Save",
+      "saveFailed": "Could not save. Check that the settings folder is writable.",
+      "unsaved": "Unsaved",
+      "applies": "Applies to your next message, including in a chat already open."
+    },
+    "rememberedToast": "Added to my AI brain.",
+    "sections": {
+      "sessions": "Sessions",
+      "bots": "Bots"
+    },
+    "bots": {
+      "notes": "{{count}} day(s) of working notes on disk.",
+      "empty": "This bot has not saved any core memories yet."
+    }
+  },
+  "messaging": {
+    "advanced": "Erweitert ({{count}})",
+    "approve": "Genehmigen",
+    "approvedUsers": "Genehmigt ({{count}})",
+    "cancelConnect": "Cancel",
+    "clearField": "Diesen Wert löschen",
+    "descriptions": {
+      "discord": "Chatte mit dem Agenten über dein eigenes Discord und lass ihn als du schreiben. Verbindung per QR-Code.",
+      "telegram": "Chatte über dein eigenes Telegram mit dem Agenten und lass ihn als du Nachrichten senden. Verbindung per QR-Scan mit dem Handy.",
+      "whatsapp": "Den Agenten aus WhatsApp-Chats heraus verwenden."
+    },
+    "discordConnected": "Verbunden — der Agent schreibt als dein Discord-Konto.",
+    "discordOpenLogin": "Discord-Anmeldung öffnen",
+    "discordScan": "Ein Discord-Anmeldefenster ist offen — scanne den QR mit der Discord-App oder melde dich mit E-Mail und Passwort an.",
+    "doneConnect": "Continue",
+    "enablePlatform": "Plattform aktivieren",
+    "fields": {
+      "discordBotToken": "Bot-Token",
+      "telegramBotToken": "Bot token"
+    },
+    "fromEnvironment": "Durch {{key}} in Ihrer Umgebung gesetzt",
+    "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
+    "getCredentials": "Zugangsdaten holen",
+    "needsSetup": "Einrichtung erforderlich",
+    "openSetupGuide": "Einrichtungsanleitung öffnen",
+    "pendingRequests": "Warten auf Genehmigung ({{count}})",
+    "platforms": {
+      "discord": "Discord",
+      "telegram": "Telegram",
+      "whatsapp": "WhatsApp",
+      "abacusDiscord": "Abacus AI bot on Discord",
+      "abacusTelegram": "Telegram"
+    },
+    "recommended": "Empfohlen",
+    "reject": "Ablehnen",
+    "required": "Erforderlich",
+    "revoke": "Widerrufen",
+    "saveChanges": "Änderungen speichern",
+    "saved": "Gespeichert",
+    "saving": "Wird gespeichert…",
+    "settings": {
+      "autoApprove": "Anfragen aus anderen Apps unbeaufsichtigt ausführen",
+      "autoApproveHelp": "Wenn eine Nachricht aus einer anderen App eintrifft, sitzt niemand am Rechner, um ein Werkzeug freizugeben. Ist diese Option an, dürfen genehmigte Absender jedes Werkzeug auf diesem Rechner ausführen. Ist sie aus, warten riskante Werkzeuge hier auf Ihre Freigabe.",
+      "gatewayEnabled": "Messaging aktiviert",
+      "gatewayEnabledHelp": "Schalten Sie alle Connectors auf einmal ab, ohne Ihre Einrichtung zu verlieren.",
+      "respondToInbound": "Auf eingehende Nachrichten reagieren",
+      "respondToInboundHelp": "Aus: eingehende Chats werden nur aufgezeichnet, damit der Agent sie auf Nachfrage lesen kann — nichts läuft, nichts antwortet. An: freigegebene Absender können den Agenten aus der Ferne steuern.",
+      "workspace": "Arbeitsbereich",
+      "workspaceActive": "Dem aktiven Arbeitsbereich folgen",
+      "workspaceHelp": "In welchem Projekt eingehende Nachrichten ausgeführt werden.",
+      "deliverToBot": "Deliver messages to a bot",
+      "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
+      "deliverToBotNone": "No bot — one session per sender"
+    },
+    "setup": {
+      "discord": "Klicke auf Verbinden, dann öffnet sich ein Discord-Anmeldefenster. Scanne den QR mit der Discord-App oder melde dich mit E-Mail und Passwort an. AbacusAIBot schreibt dann als dein eigenes Discord-Konto — kein Bot, kein Token.",
+      "telegram": "Klicke auf Verbinden, dann öffnet sich ein Telegram-Anmeldefenster. Melde dich dort wie gewohnt an — scanne den QR-Code mit dem Handy (Einstellungen, Geräte, Gerät hinzufügen) oder nutze Telefonnummer bzw. Passkey. AbacusAIBot schreibt dann als dein eigenes Telegram-Konto. Keine API-Schlüssel, kein Bot.",
+      "whatsapp": "Aktivieren Sie dies und scannen Sie dann den QR-Code unten mit WhatsApp auf Ihrem Telefon (Einstellungen, Verknüpfte Geräte, Gerät verknüpfen). Damit wird AbacusAI Bot als Gerät mit diesem Konto verknüpft — verwenden Sie deshalb besser eine eigene Nummer und nicht Ihre private."
+    },
+    "stepSignIn": "First — sign in to {{app}}",
+    "states": {
+      "connected": "Verbunden",
+      "connecting": "Verbindung wird hergestellt",
+      "disabled": "Deaktiviert",
+      "error": "Fehler",
+      "linking": "Linking…",
+      "needs_link": "Finish linking",
+      "needs_login": "Waiting for login",
+      "not_configured": "Nicht konfiguriert",
+      "pending_restart": "Neustart ausstehend",
+      "rate_limited": "Rate limited",
+      "syncing": "Synchronisiert"
+    },
+    "telegramBotSetupPending": "Telegram is connected. Your AbacusAI Bot assistant is still being set up — this can take a minute or two, and you'll get a \"linked\" message in Telegram when it's ready.",
+    "telegramConnected": "Verbunden — der Agent schreibt als dein Telegram-Konto.",
+    "telegramOpenLogin": "Telegram-Anmeldung öffnen",
+    "telegramScan": "Ein Telegram-Anmeldefenster wurde geöffnet — scanne den QR-Code mit deinem Handy (Einstellungen, Geräte, Gerät hinzufügen) oder melde dich dort per Telefon an.",
+    "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
+    "unsavedChanges": "Nicht gespeicherte Änderungen",
+    "whatsappConnected": "Verbunden — der Agent schreibt als dein WhatsApp-Konto.",
+    "whatsappOpenLogin": "WhatsApp-Anmeldung öffnen",
+    "whatsappScan": "Ein WhatsApp-Anmeldefenster wurde geöffnet — scanne dessen QR-Code mit WhatsApp auf deinem Telefon: Einstellungen, Verknüpfte Geräte, Gerät verknüpfen.",
+    "whatsappSyncing": "Verknüpft — WhatsApp synchronisiert deine Chats auf dieses Gerät. Beim ersten Mal dauert das einige Minuten. Lass WhatsApp auf dem Handy und diese App geöffnet, bis es fertig ist.",
+    "sharedLink": {
+      "title": "Abacus AI bot",
+      "stepLink": "Then — link the Abacus AI bot",
+      "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
+      "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
+      "link": "Link Abacus AI bot",
+      "step1": "1. Add Abacus AI to your Discord (Add to My Apps).",
+      "addToDiscord": "Add to Discord",
+      "step2Copy": "2. Copy this command:",
+      "step3Dm": "3. Open your chat with the bot (message icon on its profile), paste, and send:",
+      "openDm": "Open Abacus AI's chat",
+      "copy": "Copy",
+      "copied": "Copied",
+      "preparing": "Getting your link code…",
+      "retry": "Try again",
+      "waiting": "Waiting for the command to land in Discord…",
+      "linked": "Linked. DM the Abacus AI bot in Discord to talk to your agent.",
+      "linkedAs": "Linked as {{name}}. DM the Abacus AI bot in Discord to talk to your agent.",
+      "unlink": "Unlink",
+      "telegramStep": "Scan this with your phone's camera app (not the scanner inside Telegram), or open the link on your phone, then tap Start.",
+      "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
+    }
+  },
+  "notificationSettings": {
+    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
+    "enableTitle": "Notify me",
+    "soundSubtitle": "Uses your system notification sound.",
+    "soundTitle": "Play a sound",
+    "subtitle": "What AbacusAIBot tells you while you are looking elsewhere",
+    "title": "Notifications"
+  },
+  "notifications": {
+    "codeSessionFallback": "Code-Sitzung",
+    "permissionRequired": "🔔 Berechtigung erforderlich",
+    "taskCompleted": "✅ Aufgabe abgeschlossen",
+    "toolFallback": "Werkzeug",
+    "waitingForApproval": "Warten auf Genehmigung: {{toolName}}"
+  },
+  "onboarding": {
+    "abacusConnected": "Abacus.AI is successfully connected",
+    "connectBody": "Dein Browser öffnet sich zum Anmelden — oder Registrieren. Die App erhält ihren eigenen API-Schlüssel; dein Passwort erreicht sie nie.",
+    "connectCta": "Registrieren / Anmelden",
+    "connectTitle": "Abacus.AI verbinden",
+    "connectorsContinueCta": "Continue",
+    "connectorsSkipCta": "Continue without connectors",
+    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
+    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
+    "setupConnectorsCta": "Browse connectors",
+    "setupConnectorsTitle": "Connectors",
+    "setupDoneCta": "Continue to AbacusAIBot",
+    "setupKeyHint": "Stored on this machine only.",
+    "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
+    "setupKeyPlaceholder": "Paste your {{provider}} API key",
+    "setupSaveCta": "Save",
+    "setupSignInCta": "Sign in / Create Free Account",
+    "signInCta": "Bei Abacus.AI anmelden",
+    "skipCta": "Not now",
+    "welcomeCapabilityModels": "Access",
+    "welcomeFreeBadge": "Free to start",
+    "welcomeTagline": "Dein persönlicher Open-Source-KI-Kollege mit dauerhaftem Gedächtnis",
+    "welcomeTitle": "Welcome to AbacusAIBot",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors",
+    "connectedPromiseAgent": "The best-in-class open-source AI agent",
+    "connectedPromiseModels": "Access to free models",
+    "connectedPromiseWork": "Gets your work done, and connects to all your services",
+    "connectedCta": "Continue",
+    "setupExistingTitle": "Existing subscriptions",
+    "setupExistingBody": "Bring your paid models and tools into one place",
+    "setupExistingLater": "Connect later",
+    "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
+    "connectedTitleLead": "Welcome to",
+    "connectedTitleName": "Abacus AI Bot",
+    "connectedPromiseAgentLead": "Best-in-class,",
+    "connectedPromiseModelsLead": "Access",
+    "connectedPromiseWorkLead": "Get work done",
+    "connectedPromiseLocalLead": "Runs locally.",
+    "connectedPromiseLocal": "Chat with it wherever you work.",
+    "connectorsTitleLead": "Connect with your",
+    "connectorsTitleAccent": "tools & services",
+    "connectorsSubtitle": "Chat where you work",
+    "connectorsConnectCta": "Connect",
+    "connectorsConnectedCta": "Connected",
+    "connectorsMore": "{{count}}+ more in Settings",
+    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved — please try signing in again.",
+    "setupTitleLead": "Hook up your",
+    "setupTitleAccent": "AI",
+    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
+    "setupBlurbAbacusLead": "Get world-class models free",
+    "setupBlurbAbacusAccent": "2000 free credits",
+    "setupBlurbOpenrouterLead": "Unlock",
+    "setupBlurbOpenrouterAccent": "FREE models",
+    "setupBlurbOpenrouterTail": "with one connection",
+    "setupBlurbGeminiLead": "Use Gemini",
+    "setupBlurbGeminiAccent": "free to create anything",
+    "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
+    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
+    "setupKeyDialogLink": "Open {{provider}}"
+  },
+  "openFile": {
+    "failed": "Diese Datei konnte nicht geöffnet werden.",
+    "refusedInvalid": "Dieser Link benennt keine Datei.",
+    "refusedMissing": "Diese Datei ist nicht mehr vorhanden.",
+    "refusedOutside": "Diese Datei liegt außerhalb Ihrer Arbeitsordner und wurde nicht geöffnet.",
+    "revealed": "Beim Öffnen würde diese Datei ausgeführt werden. Sie wurde stattdessen im Dateimanager angezeigt."
+  },
+  "profile": {
+    "title": "Profile",
+    "connectedAccount": "Abacus.AI account",
+    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
+    "organization": "Organization",
+    "plan": "Plan",
+    "credits": "Credits this month",
+    "creditsValue": "{{used}} of {{granted}} used",
+    "members": "Team members",
+    "dangerZone": "Danger zone",
+    "deleteAll": "Delete all data",
+    "deleteAllDescription": "Removes ~/.abacusai-bot — your API keys, every conversation, what the agent remembers about you, your profiles and installed skills. Uninstalling the app leaves this folder alone; this is the way to erase it.",
+    "deleteAllConfirmTitle": "Delete all data?",
+    "deleteAllConfirmBody": "Your API keys, conversations, memory, profiles and installed skills are deleted from this computer and cannot be recovered. Files in your projects are untouched. The app restarts as if it were newly installed.",
+    "deleteAllCancel": "Keep my data",
+    "deleteAllConfirm": "Delete everything",
+    "deleteAllPending": "Deleting and restarting…",
+    "deleteAllFailed": "Could not delete the data directory. Your data is unchanged.",
+    "notSignedInShort": "Nicht angemeldet"
+  },
+  "routines": {
+    "atLabel": "At",
+    "autoRepliesLeadSidebar": "Each chat a bot answers on its own is listed under Routines in the sidebar, with its conversation. Pause keeps the grant and stops the answers.",
+    "autoRepliesTitle": "Auto-Antworten",
+    "autoReplyLine": "{{bot}} answers here on {{platform}}. You can read; the sender drives the conversation.",
+    "autoReplyOn": "An",
+    "autoReplyPaused": "Pausiert",
+    "autoReplyRowTitle": "{{bot}} auto-replies to {{sender}} on {{platform}}",
+    "cancel": "Abbrechen",
+    "copyWebhook": "Webhook-URL kopieren",
+    "create": "Erstellen",
+    "createTitle": "Routine erstellen",
+    "cronLabel": "Cron expression",
+    "delete": "Löschen",
+    "deleteBody": "Dies löscht „{{name}}“ und den Verlauf ihrer Läufe.",
+    "deleteError": "Die Routine konnte nicht gelöscht werden.",
+    "deleteTitle": "Routine löschen",
+    "edit": "Bearbeiten",
+    "editTitle": "Routine bearbeiten",
+    "editorPlaceholder": "Tell the routine how to change: \"every morning at 9 instead\", \"stop\"",
+    "editorSend": "Send",
+    "editorThinking": "Changing…",
+    "empty": "Noch keine Routinen. Lege eine an oder bitte einen Bot, etwas zu planen.",
+    "enabled": "Aktiviert",
+    "firedByCreate": "on creation",
+    "firedByManual": "manuell",
+    "firedBySchedule": "Zeitplan",
+    "firedByWebhook": "Webhook",
+    "lastRun": "Letzte: {{time}}",
+    "lead": "Was von allein läuft: geplante Jobs, Webhook-Auslösungen und was sie getan haben.",
+    "madeBy": "made by {{bot}}",
+    "nameLabel": "Name",
+    "namePlaceholder": "z. B. Morgenbriefing",
+    "newRoutine": "Neue Routine",
+    "nextRun": "Nächste: {{time}}",
+    "noRunsYet": "This routine has not fired yet. Run it now, or wait for its next fire.",
+    "onLabel": "On",
+    "pageMissing": "This routine is gone.",
+    "pause": "Pausieren",
+    "pausedTitle": "Paused",
+    "presetCustom": "Custom",
+    "presetDaily": "Täglich",
+    "presetHourly": "Stündlich",
+    "presetManual": "Manual",
+    "presetOnce": "Once",
+    "presetWeekdays": "Wochentags",
+    "presetWeekly": "Weekly",
+    "promptLabel": "Anweisung",
+    "promptPlaceholder": "Was soll laufen? Formuliere es eigenständig verständlich.",
+    "promptRequired": "Eine Anweisung ist erforderlich.",
+    "ranNow": "Routine gestartet.",
+    "resume": "Fortsetzen",
+    "runAtLabel": "Run at",
+    "runAtPast": "That time has already passed.",
+    "runAtRequired": "Pick a date and time to run at.",
+    "runError": "Die Routine konnte nicht gestartet werden.",
+    "runHistory": "{{count}} letzte Läufe",
+    "runNow": "Jetzt ausführen",
+    "runOutcome": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "running": "Running"
+    },
+    "runReadOnly": "Routine-Lauf — diese Session ist der Bericht der Routine. Du kannst lesen, aber nicht antworten; der nächste Lauf startet neu. Um das Verhalten zu ändern, bearbeite die Routine.",
+    "runsEmpty": "No runs yet.",
+    "runsIn": "runs in {{folder}}",
+    "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
+    "runsTitle": "Runs",
+    "save": "Speichern",
+    "saveError": "Die Routine konnte nicht gespeichert werden.",
+    "scheduleDaily": "Daily at {{time}}",
+    "scheduleHint": "Local time. Fires only while the app is running.",
+    "scheduleHourly": "Every hour",
+    "scheduleLabel": "Zeitplan",
+    "scheduleManual": "On demand",
+    "scheduleManualHint": "Runs only when you press Run now or fire the webhook.",
+    "scheduleOnce": "Once on {{when}}",
+    "scheduleOnceHint": "Fires once at that time, then turns itself off. Local time; a moment the app slept through fires when it wakes.",
+    "scheduleRequired": "Ein Zeitplan ist erforderlich.",
+    "scheduleWeekdays": "Weekdays at {{time}}",
+    "scheduleWeekly": "{{day}}s at {{time}}",
+    "statActive": "Aktiv",
+    "statFiredToday": "Heute ausgelöst",
+    "statPaused": "Pausiert",
+    "templateWorksWith": "Reads from {{names}}",
+    "templates": {
+      "morning-brief": {
+        "description": "What today needs from you: the calendar, the mail worth a reply, and anything addressed to you.",
+        "name": "Morning brief"
+      },
+      "inbox-triage": {
+        "description": "Sorts new mail into reply, read, and noise, and drafts the replies for you to send.",
+        "name": "Inbox triage"
+      },
+      "pr-digest": {
+        "description": "Open pull requests on this workspace, with the ones going stale first.",
+        "name": "Pull request digest"
+      },
+      "failing-tests": {
+        "description": "Runs the test suite and reports only what changed since the last run.",
+        "name": "Test watch"
+      },
+      "dependency-watch": {
+        "description": "Security advisories worth acting on, kept apart from version bumps that can wait.",
+        "name": "Dependency watch"
+      },
+      "week-in-review": {
+        "description": "What shipped this week from the commit history, grouped by theme, ending with what looks stuck.",
+        "name": "Week in review"
+      }
+    },
+    "templatesLead": "Or start from one of these",
+    "testRunHint": "Fire it right after creating, so you can see it work before the schedule does.",
+    "testRunLabel": "Run once now",
+    "title": "Routinen",
+    "updateError": "Die Routine konnte nicht aktualisiert werden.",
+    "webhookCopied": "Webhook-URL kopiert.",
+    "webhookHint": "Löse diese Routine per HTTP-POST aus.",
+    "webhookLabel": "Webhook",
+    "webhookPublicPending": "Setting up the public link — this local one works meanwhile…",
+    "workspaceAddError": "That folder could not be added.",
+    "workspaceChoose": "Choose a folder…",
+    "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
+    "workspaceLabel": "Folder",
+    "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
+    "workspaceOwnFolder": "Its own folder"
+  },
+  "sandbox": {
+    "description": "Ask the operating system to stop commands writing outside this workspace. Off by default. Applies to new sessions.",
+    "label": "Confine shell commands",
+    "title": "Sandbox",
+    "unsupported": "No sandbox backend on this platform yet — commands run unconfined even when this is on."
+  },
+  "sessions": {
+    "delete": "Delete session",
+    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
+    "deleteError": "Could not delete that session. Try again.",
+    "deleteTitle": "Delete this session?",
+    "newSession": "New session",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "sessionOptions": "Session options",
+    "title": "Sessions",
+    "unpin": "Unpin",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}} days ago"
+  },
+  "sidebarNav": {
+    "app": "App",
+    "artifacts": "Artefakte",
+    "capabilities": "Fähigkeiten",
+    "connectors": "Konnektoren",
+    "memory": "Memory",
+    "messaging": "Messaging",
+    "newSession": "Neue Sitzung",
+    "routines": "Routines",
+    "usage": "Nutzung",
+    "whatsNew": "What's new"
+  },
+  "skills": {
+    "appliesToBoth": "Skills stehen dem Agenten in jedem Workspace zur Verfügung.",
+    "back": "Zurück",
+    "browseMarketplace": "Marktplatz durchsuchen",
+    "cancel": "Abbrechen",
+    "done": "Fertig",
+    "edit": "Skill-Datei bearbeiten",
+    "install": "Installieren",
+    "installFailed": "Installation fehlgeschlagen",
+    "installGlobalTitle": "Global installieren",
+    "installed": "Installiert",
+    "installs": "{{count}} Installationen",
+    "marketplaceTitle": "Skills-Marktplatz",
+    "noResults": "Keine Skills gefunden.",
+    "noSkills": "Keine Skills verfügbar.",
+    "openFailed": "Skill-Datei konnte nicht geöffnet werden.",
+    "poweredBy": "Bereitgestellt von",
+    "removeFailed": "Skill konnte nicht entfernt werden.",
+    "restartBanner": "Starten Sie die App neu, um Ihre neu hinzugefügten Skills zu verwenden.",
+    "restartNote": "Neue Skills werden nach einem Neustart der App übernommen.",
+    "restartNow": "Jetzt neu starten",
+    "searchError": "Der Marktplatz konnte nicht erreicht werden.",
+    "searchPlaceholder": "Skills suchen…",
+    "searchPrompt": "Suchen Sie nach Skills zum Installieren.",
+    "sources": {
+      "global": "Global",
+      "project": "Arbeitsbereich"
+    },
+    "title": "Skills",
+    "uninstall": "Skill deinstallieren",
+    "uninstallConfirm": "Skill \"{{id}}\" entfernen? Dadurch wird die Skill-Datei gelöscht.",
+    "upload": "Hochladen",
+    "uploadFailed": "Der ausgewählte Skill konnte nicht importiert werden.",
+    "uploadFromFile": "Aus Datei…",
+    "uploadFromFolder": "Aus Ordner…",
+    "uploadTitle": "Einen Skill von Ihrem Computer importieren"
+  },
+  "theme": {
+    "dark": "Dunkel",
+    "light": "Hell",
+    "system": "System"
+  },
+  "tour": {
+    "finish": "Loslegen",
+    "next": "Weiter",
+    "optional": "Optional",
+    "progress": "Schritt {{current}} von {{total}}",
+    "replay": "Tour ansehen",
+    "skip": "Tour überspringen",
+    "steps": {
+      "artifacts": {
+        "title": "Artefakte",
+        "body": "Die Dateien, die eine Sitzung erzeugt hat — Dokumente, Bilder, Berichte — an einem Ort statt verstreut im Verlauf."
+      },
+      "bots": {
+        "body": "Ständige Agenten mit eigenen Anweisungen, Zeitplänen und Chats. Lege einen für Aufgaben an, die du öfter abgibst.",
+        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
+        "bulletSessions": "Use sessions for one-off tasks and quick work.",
+        "title": "Deine Bots"
+      },
+      "capabilities": {
+        "title": "Fähigkeiten",
+        "body": "Alles, worauf der Agent zugreifen kann — Konnektoren, Skills, Tools und MCP-Server. Was du hier aktivierst, steht der nächsten Sitzung zur Verfügung."
+      },
+      "changes": {
+        "title": "Änderungen",
+        "body": "Jede Bearbeitung des Agenten als Diff, das du lesen kannst, bevor es irgendwohin geht. Daneben liegen deine Dateien und laufende Subagenten."
+      },
+      "connectors": {
+        "title": "Konnektoren",
+        "body": "Verbinde die Tools, mit denen du ohnehin arbeitest. Ein kostenloses Abacus.AI-Konto hängt gleich einen ganzen Satz davon mit einem Klick an."
+      },
+      "makeBot": {
+        "title": "Make a bot",
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect — with a chat and a memory of its own."
+      },
+      "memory": {
+        "title": "Gedächtnis",
+        "body": "Was der Agent zwischen Sitzungen behält und welchen dauerhaften Anweisungen er folgt. Lies es, ändere es, lösche, was überholt ist."
+      },
+      "messaging": {
+        "title": "Messaging",
+        "body": "Erreiche den Agenten vom Handy aus. Verbinde eine Chat-App und entscheide, wer ihm Aufgaben schicken darf."
+      },
+      "newSession": {
+        "title": "Sitzung starten",
+        "body": "Öffnet ein leeres Eingabefeld im aktuellen Workspace. Eine Sitzung pro Aufgabe hält den Kontext bei der Sache, zu der er gehört."
+      },
+      "preview": {
+        "title": "Vorschau",
+        "body": "Browser und Dateiansicht direkt neben dem Chat. Der Agent öffnet hier, was er gerade gebaut hat — ohne dass du die App verlässt."
+      },
+      "sidebar": {
+        "title": "Deine Workspaces",
+        "body": "Jeder geöffnete Ordner und jede Unterhaltung darin. Hier wechselst du den Workspace oder öffnest eine Sitzung von letzter Woche erneut."
+      },
+      "terminal": {
+        "title": "Terminal",
+        "body": "Eine echte Shell in deinem Workspace, im selben Ordner, in dem der Agent arbeitet. Der Terminal-Knopf in der Titelleiste blendet sie ein und aus.",
+        "audience": "For developers & technical users"
+      },
+      "usage": {
+        "title": "Nutzung",
+        "body": "Tokens und Kosten nach Modell und Sitzung, damit der Preis eines Laufs hinterher nie überrascht."
+      },
+      "welcome": {
+        "title": "Willkommen bei AbacusAIBot",
+        "body": "Eine kurze Runde durch das Fenster: was jedes Panel ist und wofür es da ist. Fünfzehn kurze Stationen, und du kannst jederzeit aussteigen."
+      }
+    }
+  },
+  "updateBanner": {
+    "dismiss": "Dismiss",
+    "stalled": "Automatischer Neustart nicht möglich – beenden Sie die App und öffnen Sie sie erneut, um das Update abzuschließen.",
+    "subtitle": "Relaunch to get the latest improvements and fixes.",
+    "title": "A new version is ready",
+    "whatsChanged": "See what changed"
+  },
+  "updateCritical": {
+    "body": "This release fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
+    "bodyWithVersion": "Version {{version}} fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
+    "countdown": "Restarting automatically in {{time}}",
+    "restartNow": "Restart now",
+    "restarting": "Restarting…",
+    "title": "A required update is ready"
+  },
+  "updatePill": {
+    "downloading": "Update wird geladen… {{percent}} %",
+    "failed": "Update download failed — retry",
+    "installing": "Restarting…",
+    "relaunch": "Relaunch to update",
+    "retrying": "Retrying…",
+    "tooltip": "Version {{version}} is ready to install"
+  },
+  "usage": {
+    "cardDetail": "{{requests}} Anfragen · {{tokens}} Tokens",
+    "dailyTitle": "Tägliche Aktivität",
+    "empty": "Noch keine Nutzung aufgezeichnet. Führe eine Unterhaltung und komm zurück.",
+    "errorCount": "{{count}} Fehler",
+    "errorsHint": "Provider-Fehler — meist Free-Tier-Rate-Limits, an denen RouteLLM - Open vorbeirotiert ist.",
+    "loading": "Sitzungsprotokolle werden gelesen…",
+    "notBilled": "Nicht berechnet",
+    "openrouterCard": "OpenRouter-Guthaben",
+    "openrouterFreeTier": "Free-Tier · geteiltes Tageslimit",
+    "openrouterPaid": "Guthaben gekauft",
+    "paidTitle": "Andere Modelle",
+    "poolSubtitle": "Die freien Modelle, zu denen RouteLLM - Open geroutet hat, und wie oft jedes ausgewichen ist.",
+    "poolTitle": "RouteLLM - Open-Pool",
+    "priceUnknown": "Preis unbekannt",
+    "readFailed": "Die Sitzungsprotokolle konnten nicht gelesen werden.",
+    "refresh": "Aktualisieren",
+    "requestCount": "{{count}} Anfr.",
+    "subtitle": "Was dieser Rechner verbraucht hat, pro Modell — aus den lokalen Sitzungsprotokollen gelesen. Nichts verlässt deinen Computer.",
+    "title": "Nutzung",
+    "today": "Heute",
+    "unpricedHint": "Für einige Modelle ist kein Preis bekannt; ihre Tokens werden gezählt, ihre Kosten nicht.",
+    "window": "Letzte {{days}} Tage",
+    "abacusPlan": "Abacus.AI plan",
+    "abacusCredits": "{{used}} / {{granted}} credits"
+  },
+  "userMenu": {
+    "about": "Über...",
+    "browserSettings": "Browser",
+    "deviceSettings": "Geräte",
+    "dumpLogs": "Dump logs",
+    "keepAwake": "Beim Arbeiten wach halten",
+    "language": "Sprache",
+    "mcpManagement": "MCP-Server",
+    "notificationSettings": "Notifications",
+    "settings": "Einstellungen",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signedOutRunningSessions": "Signed out. A chat that is already running keeps the key it started with until you start a new one.",
+    "skillsManagement": "Skills",
+    "theme": "Design",
+    "whatsNew": "What's new"
+  },
+  "visualizer": {
+    "loading": "Visualisierung wird geladen …"
+  },
+  "workspace": {
+    "addWorkspace": "Arbeitsbereich hinzufügen",
+    "ageDays": "{{count}} T",
+    "ageHours": "{{count}} Std",
+    "ageMinutes": "{{count}} Min",
+    "ageNow": "jetzt",
+    "agents": {
+      "emptyHint": "Sub-agents launched during a turn appear here.",
+      "emptyTitle": "No sub-agents yet",
+      "kind": {
+        "browser": "Browser",
+        "component": "Component",
+        "delegate": "Delegate"
+      },
+      "mainAgent": "Main agent"
+    },
+    "allPinned": "Hier ist alles angeheftet. Lösen Sie einen Chat, damit er unter den letzten erscheint.",
+    "attach": {
+      "cancel": "Abbrechen",
+      "done": "Fertig",
+      "files": "Files or images…",
+      "folder": "Ordner…",
+      "mentionTip": "Tipp: Tippe @, um Dateien direkt zu referenzieren.",
+      "menuLabel": "Anhängen",
+      "noWorkspacePath": "Bilder können nicht angehängt werden: Pfad des Arbeitsbereichs nicht verfügbar.",
+      "readFailed": "{{name}} konnte nicht gelesen werden: {{error}}",
+      "saveFailed": "Anhänge konnten nicht gespeichert werden: {{error}}",
+      "unknownError": "unbekannter Fehler"
+    },
+    "autoWorkspace": "Auto workspace",
+    "branch": {
+      "create": "Create “{{branch}}”",
+      "createFailed": "Branch konnte nicht erstellt werden.",
+      "description": "Choose the Git branch this checkout uses. Switching changes the files the agent works on.",
+      "createdAndSwitched": "{{name}} erstellt und dorthin gewechselt",
+      "loading": "Loading branches…",
+      "noResults": "No branches found.",
+      "searchOrCreate": "Branch suchen oder erstellen…",
+      "showing": "Showing {{count}} of {{total}} refs",
+      "stopAgentFirst": "Agent vor dem Wechsel stoppen",
+      "switchFailed": "Branch konnte nicht gewechselt werden.",
+      "switched": "Zu {{name}} gewechselt"
+    },
+    "cancel": "Abbrechen",
+    "chat": {
+      "conversation": "Conversation",
+      "continueBelow": "Sie können unten trotzdem weiterchatten.",
+      "historyLoadFailed": "Konversationsverlauf konnte nicht geladen werden.",
+      "scrollToBottom": "Scroll to bottom"
+    },
+    "chatDeleted": "Chat gelöscht",
+    "chatRenamed": "Chat umbenannt",
+    "clearSearch": "Suche zurücksetzen",
+    "cliStartFailed": "Der lokale Agent konnte nicht gestartet werden. Stellen Sie sicher, dass die App vollständig installiert ist, und versuchen Sie es erneut.",
+    "cliStartRetry": "Erneut versuchen",
+    "composerNeedsModel": "Verbinden Sie ein Modell, um zu starten",
+    "composerNeedsWorkspace": "Wählen Sie einen Arbeitsordner aus, um zu starten",
+    "composerPlaceholder": "Stellen Sie Fragen zu Ihrer Codebasis…",
+    "composerPlaceholderBusy": "Send now to steer the agent — it lands at its next step",
+    "composerTasks": {
+      "dismiss": "Dismiss tasks for this turn",
+      "now": "now",
+      "progressLabel": "Tasks: {{completed}} of {{total}} complete. Current task: {{current}}",
+      "title": "Tasks"
+    },
+    "confirmDelete": "Löschen",
+    "createBotToSend": "Erstelle einen Bot, um eine Nachricht zu senden",
+    "credits": {
+      "thisTurn": "This turn: {{credits}} credits",
+      "total": "Conversation total: {{credits}} credits",
+      "used": "{{credits}} credits used"
+    },
+    "currentCheckout": "Current checkout",
+    "deleteChat": "Chat löschen",
+    "deleteChatDescription": "Dieser Chat und sein Verlauf werden dauerhaft gelöscht.",
+    "deleteWorkspace": "Arbeitsbereich löschen",
+    "deleteWorkspaceConfirmLabel": "Geben Sie den Arbeitsbereichsnamen zur Bestätigung ein:",
+    "deleteWorkspaceConfirmPlaceholder": "{{name}}",
+    "deleteWorkspaceDescription": "Dies entfernt „{{name}}“ und die zugehörigen Chats aus AbacusAIBot. Deine Dateien und der Ordner auf der Festplatte werden nicht gelöscht und bleiben unverändert. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteWorkspaceNameMismatch": "Name stimmt nicht überein",
+    "deleteWorkspacePermanently": "Delete Permanently",
+    "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
+    "deletedWorkspaceBadge": "Deleted",
+    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
+    "deliverable": {
+      "delivered": "Delivered",
+      "delivering": "Delivering",
+      "itemCount_one": "{{count}} deliverable",
+      "itemCount_other": "{{count}} deliverables"
+    },
+    "dropFilesHint": "Ablegen, um Bilder anzuhängen oder Dateien zu erwähnen",
+    "explorer": {
+      "loadFailed": "Dateien des Arbeitsbereichs konnten nicht geladen werden.",
+      "noFiles": "Keine Dateien in diesem Arbeitsbereich verfügbar.",
+      "noWorkspace": "Kein Arbeitsbereich ausgewählt."
+    },
+    "feedback": {
+      "copied": "Copied",
+      "copy": "Copy"
+    },
+    "fewerModels": "Weniger Modelle",
+    "fileEditor": {
+      "edit": "Bearbeiten",
+      "loading": "Editor wird geladen…",
+      "readOnly": "Schreibgeschützt",
+      "save": "Speichern",
+      "saveError": "Datei konnte nicht gespeichert werden",
+      "saveSuccess": "Datei gespeichert",
+      "unsavedChanges": "Nicht gespeicherte Änderungen"
+    },
+    "hideRightPanel": "Panel ausblenden",
+    "hideSidebar": "Seitenleiste ausblenden",
+    "hideTerminal": "Terminal ausblenden",
+    "inspectorDescription": "Changes, files, agents, previews, and devices",
+    "inspectorTitle": "Workspace inspector",
+    "messageBot": "Nachricht an {{name}}",
+    "modelPicker": {
+      "addFavorite": "Add {{model}} to favorites",
+      "compact": "Compact UI",
+      "configure": "Configure",
+      "configureBeforeSending": "Connect a model before sending a message.",
+      "configureProviders": "Configure model providers",
+      "connectGoogleAi": "Google AI Studio verbinden",
+      "connectGoogleAiNote": "Kostenloses Gemini-Kontingent — API-Schlüssel holen und hier einfügen",
+      "connectModels": "Connect models",
+      "connectOpenRouter": "OpenRouter verbinden",
+      "connectOpenRouterNote": "Kostenlose Modelle mit einer Browser-Anmeldung — sie erscheinen in RouteLLM - Open und dieser Liste",
+      "favorites": "Favorites",
+      "noFavorites": "Favorite models appear here.",
+      "noResults": "No models found.",
+      "removeFavorite": "Remove {{model}} from favorites",
+      "search": "Search models…",
+      "title": "Choose a model"
+    },
+    "modelPlaceholder": "Model",
+    "modelProviderLocked": "Dieses Modell stammt von einem anderen Anbieter. Starte einen neuen Chat, um es zu verwenden.",
+    "modelSwitchFailed": "Das Modell konnte nicht gewechselt werden. Der Chat läuft weiterhin mit dem bisherigen Modell.",
+    "modelTier": {
+      "default": "Recommended",
+      "fast": "Fast & cheap",
+      "free": "Free",
+      "local": "Local / custom",
+      "strong": "For harder tasks"
+    },
+    "moreModels": "Weitere Modelle ({{count}})",
+    "navigationDescription": "Workspaces, conversations, and application settings",
+    "navigationTitle": "Workspace navigation",
+    "newBot": "New bot",
+    "newChat": "Neuer Chat",
+    "noChats": "Noch keine Chats",
+    "noSessionsMatch": "Keine Sitzung passt zu \"{{query}}\"",
+    "noWorkspaces": "Noch keine Arbeitsbereiche hinzugefügt",
+    "noWorkspacesDescription": "Fügen Sie einen Ordner hinzu, um mit dem Agenten zu programmieren",
+    "openPathInPreview": "Open in the preview pane",
+    "pendingSteer": {
+      "edit": "Edit",
+      "permission": "Sends after you answer the permission prompt",
+      "remove": "Remove",
+      "step": "Sends at the agent's next step",
+      "turn": "Sends when this turn ends"
+    },
+    "perm": {
+      "addContext": "Kontext oder Anweisungen hinzufügen…",
+      "allowWithContext": "Mit Kontext erlauben",
+      "denyReason": "Grund der Ablehnung…",
+      "denyWithReason": "Mit Begründung ablehnen",
+      "noQuestions": "Keine Fragen zu beantworten",
+      "optionalContext": "Optionaler Kontext für den Agenten…",
+      "readyToImplement": "Bereit, den Plan umzusetzen?"
+    },
+    "pinChat": "Chat anheften",
+    "pinHint": "Chat mit Umschalt-Klick anheften",
+    "pinnedSessions": "Angeheftet",
+    "prStatus": {
+      "approved": "Genehmigt",
+      "changes_requested": "Änderungen angefordert",
+      "checksSummary": "{{passed}} bestanden · {{failed}} fehlgeschlagen · {{running}} laufend",
+      "closed": "Geschlossen",
+      "draft": "Entwurf",
+      "label": "PR #{{number}}",
+      "merged": "Zusammengeführt",
+      "none": "No PR",
+      "noneDescription": "No pull request for the current branch",
+      "open": "Open PR #{{number}}",
+      "openAction": "Open pull request",
+      "pending": "Offen",
+      "reviews": "{{approved}} genehmigt · {{changes}} Änderungen angefordert · {{requested}} ausstehend"
+    },
+    "premiumUpgrade": {
+      "cta": "Upgrade",
+      "exhaustedNote": "Upgrade to get premium models and more premium features",
+      "exhaustedTitle": "You've used up your free credits",
+      "note": "Claude Opus, Fable, GPT & more premium features",
+      "title": "Upgrade to use Premium Models"
+    },
+    "preview": {
+      "addSurface": "Add surface",
+      "address": "Browser address",
+      "addressPlaceholder": "URL oder Dateipfad eingeben…",
+      "back": "Zurück",
+      "browserProfile": "Browserprofil",
+      "browserProfileClear": "Auf saubere Sitzung zurücksetzen",
+      "browserProfileCleared": "Profilsitzung gelöscht",
+      "browserProfileImportError": "Profil konnte nicht importiert werden",
+      "browserProfileImported": "Profil erfolgreich importiert",
+      "browserProfileNone": "Standard (kein Profil)",
+      "browserProfileRefresh": "Profile aktualisieren",
+      "clearSiteData": "Clear site data",
+      "closeSurface": "Close {{title}}",
+      "developerTools": "Developer tools",
+      "emptyDescription": "Öffnen Sie eine Datei aus dem Explorer, klicken Sie auf einen Link im Chat oder durchsuchen Sie das Web.",
+      "emptyTitle": "Keine Vorschau geöffnet",
+      "forward": "Vorwärts",
+      "hardReload": "Hard reload",
+      "htmlShowRendered": "Show rendered deck",
+      "htmlShowSource": "Show source",
+      "imageError": "Could not show this image here ({{error}}).",
+      "loading": "Wird geladen…",
+      "mdShowRendered": "Show rendered markdown",
+      "moreActions": "More browser actions",
+      "noProfiles": "Keine Browser-Profile gefunden",
+      "openBrowser": "Browser öffnen",
+      "openExternal": "In externer App öffnen",
+      "pageUnavailable": "This page is unavailable",
+      "pptxError": "This presentation could not be read ({{error}}).",
+      "pptxMoreWarnings": "+{{count}} more",
+      "pptxNoNotes": "No speaker notes on this slide.",
+      "pptxNotes": "Notes",
+      "pptxSlideCount": "Slide {{current}} of {{total}}",
+      "pptxSlideFailed": "Slide {{number}} could not be rendered",
+      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
+      "pptxWarnings": "{{count}} rendering warning",
+      "pptxWarnings_other": "{{count}} rendering warnings",
+      "refresh": "Aktualisieren",
+      "reload": "Reload",
+      "sectionFileCount": "{{count}} Dateien",
+      "sourceError": "Could not read this file ({{error}}).",
+      "split": "Geteilt",
+      "stop": "Laden stoppen",
+      "toggleTooltip": "Vorschau umschalten",
+      "tryAgain": "Try again",
+      "truncatedFile": "This file is too large to open in full — only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "unified": "Vereinheitlicht",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomReset": "Reset zoom"
+    },
+    "refreshModels": "Refresh models",
+    "renameChat": "Chat umbenennen",
+    "renameChatPlaceholder": "Neuen Chat-Namen eingeben",
+    "renameEmptyName": "Name darf nicht leer sein",
+    "renameError": "Umbenennen fehlgeschlagen",
+    "renameWorkspace": "Arbeitsbereich umbenennen",
+    "renameWorkspacePlaceholder": "Neuen Arbeitsbereichsnamen eingeben",
+    "resizeInspector": "Resize workspace inspector",
+    "resizeSidebar": "Resize workspace sidebar",
+    "resizeTerminal": "Resize terminal",
+    "results": "Ergebnisse",
+    "retry": "Erneut versuchen",
+    "retryMessage": "Fahre dort fort, wo du aufgehört hast",
+    "revealInFinder": "Im Finder anzeigen",
+    "rightPanel": {
+      "agentsDescription": "Follow subagents and workflows.",
+      "browser": "Browser",
+      "browserDescription": "Open a local app or URL.",
+      "close": "Panel schließen",
+      "deviceUnavailable": "No device or simulator is available.",
+      "deviceDescription": "Preview the connected device.",
+      "emptyDescription": "Choose what to show in the right panel.",
+      "emptyTitle": "Open a surface",
+      "explorerDescription": "Browse and read workspace files.",
+      "files": "Files",
+      "open": "Open",
+      "tabs": "Inspector panels",
+      "terminal": "Terminal",
+      "terminalDescription": "Start a shell in this workspace."
+    },
+    "rightTab": {
+      "agents": "Agents",
+      "device": "Gerät",
+      "explorer": "Explorer",
+      "preview": "Vorschau"
+    },
+    "runtimeMode": {
+      "acceptEdits": "Auto-accept edits",
+      "acceptEditsDescription": "Apply file edits automatically and ask before other actions.",
+      "fullAccess": "Full access",
+      "fullAccessDescription": "Allow commands and edits without approval prompts.",
+      "plan": "Plan",
+      "planDescription": "Plan the work before making changes.",
+      "supervised": "Supervised",
+      "supervisedDescription": "Ask before edits and commands."
+    },
+    "save": "Speichern",
+    "searchSessions": "Sitzungen durchsuchen…",
+    "selectWorkspaceToSend": "Bitte wählen Sie einen Arbeitsbereich aus, bevor Sie eine Nachricht senden.",
+    "sendGate": {
+      "workspaceTitle": "Zuerst einen Workspace wählen",
+      "workspaceBody": "Nachrichten laufen gegen einen Ordner auf deinem Rechner.",
+      "workspaceCta": "Workspace wählen",
+      "modelTitle": "Zuerst ein Modell verbinden",
+      "modelBody": "Noch kann nichts antworten. Verbinde ein Modell, um dies zu senden.",
+      "modelCta": "Modell wählen"
+    },
+    "sendMessage": "Senden (Enter)",
+    "sendUndeliverable": "Couldn't reach the agent for this chat — your message is back in the box. Try sending it again.",
+    "sessionOptions": "Sitzungsoptionen",
+    "sessions": "Sitzungen",
+    "showRightPanel": "Panel anzeigen",
+    "showSidebar": "Seitenleiste anzeigen",
+    "showTerminal": "Terminal anzeigen",
+    "startSessionToSend": "Describe the work and press send to start a session",
+    "steerMessage": "Send to the running turn",
+    "stopAgent": "Stoppen",
+    "subtask": {
+      "agent": "Agent",
+      "backToMain": "Back to the main agent",
+      "didNotFinish": "did not finish",
+      "main": "Main",
+      "toolCount_one": "{{count}} tool",
+      "toolCount_other": "{{count}} tools",
+      "viewTranscript": "View this sub-agent's full transcript",
+      "working": "working"
+    },
+    "switchModel": "Switch model",
+    "terminal": {
+      "closeTab": "Close terminal tab",
+      "hide": "Terminal ausblenden",
+      "newTab": "New terminal",
+      "tabs": "Terminal tabs"
+    },
+    "terminalRequiresWorkspace": "Wählen Sie einen Arbeitsbereich aus, um das Terminal zu verwenden",
+    "thinking": {
+      "hide": "Hide the thought process",
+      "inProgress": "Thinking…",
+      "label": "Thinking",
+      "show": "Show the thought process"
+    },
+    "unpinChat": "Chat lösen",
+    "welcome": {
+      "addWorkspace": "Neuen Arbeitsbereich hinzufügen",
+      "defaultWorkspace": "Default workspace: {{path}}",
+      "letsBuild": "Los geht's",
+      "noWorkspacesFound": "Keine Arbeitsbereiche gefunden",
+      "searchWorkspaces": "Arbeitsbereiche durchsuchen…",
+      "selectWorkspace": "Arbeitsbereich auswählen",
+      "starters": {
+        "build-a-store": {
+          "name": "Build an online store",
+          "description": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+        },
+        "design-an-infographic": {
+          "name": "Turn a repo into an infographic",
+          "description": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+        },
+        "find-flights": {
+          "name": "Find me flights",
+          "description": "Opens the browser, checks a couple of sites, and comes back with three real options and links. Books nothing."
+        },
+        "process-a-spreadsheet": {
+          "name": "Clean up a spreadsheet",
+          "description": "Reads every sheet, fixes the headers, types and duplicates, and saves a summarised copy beside the original."
+        },
+        "restyle-a-repo": {
+          "name": "Restyle Excalidraw",
+          "description": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+        },
+        "review-pull-requests": {
+          "name": "Review my pull requests",
+          "description": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+        }
+      },
+      "switchWorkspace": "Switch workspace from {{workspace}}",
+      "whatShouldWeBuild": "What should we build in {{workspace}}?",
+      "whatShouldWeBuildPrefix": "What should we build in"
+    },
+    "workspaceDeleted": "Arbeitsbereich gelöscht",
+    "workspaceMissing": {
+      "delete": "Workspace löschen",
+      "deleteBody": "Ihre Chats bleiben in Threads und können in einen anderen Workspace verschoben werden.",
+      "deleteTitle": "„{{name}}“ löschen?",
+      "description": "{{path}} existiert nicht mehr. Wählen Sie einen anderen Ordner für diesen Workspace oder löschen Sie ihn.",
+      "relocate": "Ordner wählen",
+      "relocated": "Workspace-Ordner aktualisiert",
+      "sendBlocked": "Senden nicht möglich — {{path}} existiert nicht mehr.",
+      "title": "Ordner nicht gefunden"
+    },
+    "workspaceOptions": "Arbeitsbereich-Optionen",
+    "workspaceRenamed": "Arbeitsbereich umbenannt",
+    "workspaces": "Workspaces",
+    "worktree": {
+      "create": "New worktree",
+      "currentCheckout": "Current checkout",
+      "description": "Choose which checkout the agent will read and change for this chat.",
+      "error": "Worktree operation failed",
+      "select": "Select worktree"
+    },
+    "yesterday": "Gestern"
+  },
+  "xaiSearch": {
+    "description": "Send X searches to xAI's Live Search, which reads X's own index. Your search text goes to api.x.ai and an XAI_API_KEY is needed. Off by default: with it off, the agent searches x.com through its normal web search and nothing extra leaves.",
+    "envNote": "Applies to new sessions. An XAI_API_KEY exported in your shell switches this on regardless.",
+    "label": "Search X through xAI",
+    "title": "X search engine"
+  },
+  "deepAgentCard": {
+    "body": "Open DeepAgent on the web",
+    "cta": "Go to Abacus AI Agent",
+    "title": "Go to DeepAgent"
+  },
+  "firstBot": {
+    "title": "We set up your first bot"
+  },
+  "deliverables": {
+    "files": "Files",
+    "openInBrowser": "Open in browser",
+    "showInFolder": "Show in folder",
+    "showLess": "Show less",
+    "showMore": "+{{count}} more"
+  },
+  "changelog": {
+    "current": "This version",
+    "empty": "No releases to show yet.",
+    "subtitle": "Every release, newest first. The version you are running is marked."
+  },
+  "creditsCard": {
+    "body": "Unlock the full potential",
+    "cta": "Upgrade",
+    "dismiss": "Dismiss",
+    "or": "or",
+    "paidBody": "Top up your account to keep going.",
+    "paidTitle": "You've used all your Pro Abacus.AI credits",
+    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
+    "switchTitle": "You've used all your free Abacus.AI credits",
+    "title": "You've used all your free Abacus.AI credits",
+    "topUpCta": "Top up",
+    "upsellBody": "Get access to premium models",
+    "upsellTitle": "Unlock the full potential"
+  }
+}

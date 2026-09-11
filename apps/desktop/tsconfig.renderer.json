@@ -1,0 +1,12 @@
+{
+  "extends": "@abacus-ai/config/typescript/react",
+  "compilerOptions": {
+    "types": ["vite/client", "electron"],
+    "strictNullChecks": true,
+    "noImplicitOverride": false,
+    "noImplicitAny": false,
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.tmp/desktop.renderer.tsbuildinfo"
+  },
+  "include": ["src/renderer", "src/shared", "src/preload/*.d.ts"]
+}
