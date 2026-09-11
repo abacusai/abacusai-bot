@@ -1,0 +1,52 @@
+/*
+ * Slate — a technical note.
+ *
+ * Cool greys, a monospace accent for labels, and hairline rules. Suits anything
+ * that carries code, tables or measurements: the type is small, the grid is
+ * tight, and nothing decorative competes with the content.
+ */
+:root {
+  --ink: #14181d;
+  --ink-soft: #4a545f;
+  --ink-faint: #8894a1;
+  --rule: #dde3e9;
+  --accent: #0f766e;
+  --paper: #fcfdfe;
+}
+
+body {
+  font-family: var(--sans);
+  font-size: 10pt;
+  line-height: 1.55;
+}
+
+.eyebrow, .meta, th, .figure .label {
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.eyebrow { color: var(--accent); font-size: 8pt; }
+
+h1 { font-weight: 700; letter-spacing: -0.02em; font-size: 24pt; }
+
+.standfirst { color: var(--ink-soft); font-size: 11pt; }
+
+h2 {
+  font-family: var(--mono);
+  font-size: 11pt;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 2mm;
+}
+
+h3 { font-size: 10pt; font-weight: 700; letter-spacing: 0.02em; }
+
+table { font-size: 8.5pt; }
+th { text-transform: none; font-size: 8pt; border-bottom: 1px solid var(--ink); }
+td { border-bottom: 1px solid var(--rule); }
+
+code, pre { font-family: var(--mono); background: #f1f5f8; }
+
+.callout { background: #f0faf8; border-left: 2px solid var(--accent); }

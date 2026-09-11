@@ -1,0 +1,64 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "ui": "stream",
+  "globalPassThroughEnv": [
+    "ABACUSAI_BOT_DEBUG_PORT",
+    "ABACUSAI_BOT_ABACUS_HOST",
+    "ABACUSAI_BOT_LOG_SYNC_URL",
+    "ABACUSAI_BOT_DEBUG_SYNC_URL",
+    "ABACUSAI_BOT_DIAGNOSTICS_SYNC_URL",
+    "CI",
+    "HOME",
+    "TMPDIR",
+    "TMP",
+    "TEMP"
+  ],
+  "tasks": {
+    "//#format": {
+      "cache": false
+    },
+    "//#format:check": {
+      "cache": false
+    },
+    "//#lint": {
+      "dependsOn": ["//#typecheck:tools"],
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": ["dist/**"]
+    },
+    "check:i18n": {},
+    "check:locales": {},
+    "//#check:audit": {
+      "cache": false
+    },
+    "dev": {
+      "dependsOn": ["^build", "^vendor", "vendor"],
+      "cache": false,
+      "persistent": true
+    },
+    "package": {
+      "dependsOn": ["build", "^vendor", "vendor"],
+      "outputs": ["release/**"],
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build", "build", "vendor"]
+    },
+    "test:unit": {
+      "dependsOn": ["^build", "build", "vendor"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build", "build", "vendor"],
+      "outputs": ["coverage/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck", "^build"]
+    },
+    "vendor": {
+      "outputs": ["vendor/**", "resources/vendor/**"]
+    },
+    "//#typecheck:tools": {}
+  }
+}

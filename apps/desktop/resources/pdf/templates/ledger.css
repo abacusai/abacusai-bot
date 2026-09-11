@@ -1,0 +1,55 @@
+/*
+ * Ledger — a classic printed report.
+ *
+ * Warm paper, a serif text face, and rules doing the organising rather than
+ * colour. The look of an annual report or a consultancy deliverable: quiet,
+ * dense, and clearly meant to be read on paper rather than skimmed on a screen.
+ */
+:root {
+  --ink: #1a1714;
+  --ink-soft: #514a42;
+  --ink-faint: #8c8377;
+  --rule: #d8d0c4;
+  --accent: #7a4b28;
+  --paper: #fbf8f3;
+}
+
+body {
+  font-family: var(--serif);
+  font-size: 11pt;
+  line-height: 1.62;
+}
+
+.eyebrow {
+  font-family: var(--sans);
+  letter-spacing: 0.18em;
+  font-size: 8pt;
+}
+
+h1 { font-weight: 600; letter-spacing: -0.01em; }
+
+.standfirst { font-style: italic; color: var(--ink-soft); }
+
+.cover { border-bottom: 2px solid var(--ink); padding-bottom: 6mm; }
+
+/* A rule above each section, the way a printed report separates its parts. */
+h2 {
+  font-size: 13pt;
+  font-weight: 600;
+  border-top: 1px solid var(--rule);
+  padding-top: 4mm;
+  letter-spacing: 0;
+}
+
+h3 { font-style: italic; font-weight: 600; }
+
+table { font-family: var(--sans); font-size: 9pt; }
+th { border-bottom: 1.5px solid var(--ink); }
+
+blockquote {
+  border-left: none;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  font-style: italic;
+  padding: 3mm 0;
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "file": "devicon-LICENSE",
+    "asset": "Playwright connector icon paths from devicon",
+    "source": "https://github.com/devicons/devicon/blob/7330accdbc47e2dc0c19789a48533c4a3c50fe58/LICENSE"
+  },
+  {
+    "file": "lobe-icons-LICENSE",
+    "asset": "Exa, Firecrawl, and Tavily connector icon paths from LobeHub Icons",
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/LICENSE"
+  },
+  {
+    "file": "ripgrep-LICENSE-MIT",
+    "asset": "ripgrep 15.2.0 (MIT option)",
+    "source": "https://github.com/BurntSushi/ripgrep/blob/15.2.0/LICENSE-MIT"
+  },
+  {
+    "file": "fd-LICENSE-MIT",
+    "asset": "fd 10.3.0 (MIT option)",
+    "source": "https://github.com/sharkdp/fd/blob/v10.3.0/LICENSE-MIT"
+  },
+  {
+    "file": "scrcpy-LICENSE",
+    "asset": "scrcpy server 2.7",
+    "source": "https://github.com/Genymobile/scrcpy/blob/v2.7/LICENSE"
+  },
+  {
+    "file": "wa-js-LICENSE",
+    "asset": "wa-js 4.6.0",
+    "source": "https://github.com/wppconnect-team/wa-js/blob/v4.6.0/LICENSE"
+  }
+]

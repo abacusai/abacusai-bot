@@ -1,0 +1,29 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Grouped weekly updates, so dependency PRs arrive as one reviewable batch instead of a drip. Majors stay individual — a major is a decision, not a batch item.",
+  "extends": ["config:recommended", ":semanticCommitsDisabled"],
+  "schedule": ["before 8am on monday"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "One weekly PR for all non-major bumps, except the packages called out below.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dependencies"
+    },
+    {
+      "description": "Electron updates ship a new runtime to every user's machine — each one gets its own PR and a human decision, whatever the semver level says.",
+      "matchPackageNames": ["electron"],
+      "groupName": null
+    },
+    {
+      "description": "electron-store stays on 8.x deliberately. The old CJS constraint is gone (the main process is ESM now and imports it; it is externalized from the bundle via ELECTRON_NATIVE in apps/desktop/vite.config.ts), but the workspace and session registries persist through it on disk, so a major is a hand-checked data-migration decision, not an automated bump.",
+      "matchPackageNames": ["electron-store"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "description": "Security fixes do not wait for Monday.",
+    "schedule": ["at any time"]
+  }
+}

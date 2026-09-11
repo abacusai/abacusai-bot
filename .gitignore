@@ -1,0 +1,38 @@
+node_modules
+dist
+release
+*.tsbuildinfo
+.turbo
+coverage/
+.tmp/
+
+# Build output and lint cache from before the oxlint/vite migrations; upgraded
+# checkouts still carry them.
+out/
+.eslintcache
+
+.DS_Store
+*.log*
+.env
+.env.*
+
+# Local Claude Code state: settings, skills, and scratch worktrees.
+.claude/
+# Git worktrees kept beside the repository. Whole checkouts of this project, so
+# committing one adds every branch anyone has open as a gitlink.
+worktrees/
+
+# Third-party binaries fetched at build time, not committed. Every package that
+# has them keeps them in a `vendor/`, the same name everywhere.
+vendor/
+
+# Local agent state.
+.abacusai-bot/
+
+# The document component's working directory, named after whatever it printed.
+# This repository is where the agent gets developed, so it is also where the
+# agent's output lands.
+*-source/
+
+# The PDF component shells out to a Python script under resources/.
+__pycache__/

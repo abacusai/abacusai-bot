@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Allow read/write access to user-selected files (shared folders) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- Allow app to inherit the sandbox entitlements from parent process -->
+    <key>com.apple.security.inherit</key>
+    <true/>
+
+    <!-- Allow network access (for downloading IPSW) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <!-- V8 / Electron JIT -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- Often needed alongside JIT for Electron/V8 -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- Only enable if you truly need to load non-Apple-signed dylibs/plugins -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <!-- Required by vm-helper for Apple Virtualization.framework -->
+    <key>com.apple.security.virtualization</key>
+    <true/>
+</dict>
+</plist>

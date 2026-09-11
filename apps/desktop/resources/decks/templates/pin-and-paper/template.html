@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Pin &amp; Paper — Slide Template</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --paper:    #EFE56A;
+  --paper-2:  #F5ECA0;
+  --paper-3:  #E8D85A;
+  --cream:    #F8F1D6;
+  --kraft:    #C9A66B;
+  --ink:      #1F3A8A;
+  --ink-soft: #2D4FB8;
+  --ink-line: #3457C4;
+  --black:    #0E1430;
+  --red:      #C2342B;
+  --olive:    #6B7A2E;
+  --orange:   #D8702A;
+}
+
+html, body { margin:0; padding:0; background:#1a1a1a; }
+body { font-family: "Space Grotesk", "Helvetica Neue", Arial, sans-serif; color: var(--ink); }
+deck-stage { background: #1a1a1a; }
+
+section.slide {
+  background:
+    radial-gradient(120% 90% at 20% 10%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(140% 100% at 80% 95%, rgba(0,0,0,.05), transparent 55%),
+    var(--paper);
+  color: var(--ink);
+  overflow: hidden;
+  position: relative;
+}
+section.slide.cream { background:
+    radial-gradient(120% 90% at 20% 10%, rgba(255,255,255,.5), transparent 60%),
+    var(--cream); }
+section.slide.deep  { background:
+    radial-gradient(120% 90% at 30% 10%, rgba(255,255,255,.18), transparent 60%),
+    var(--paper-3); }
+section.slide.ink {
+  background:
+    radial-gradient(120% 90% at 20% 10%, rgba(255,255,255,.06), transparent 60%),
+    var(--ink);
+  color: var(--paper);
+}
+
+/* paper grain */
+section.slide::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: .35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.45  0 0 0 0 0.2  0 0 0 .25 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+section.slide.ink::before { opacity: .25; mix-blend-mode: screen; }
+
+/* chrome */
+.top {
+  position: absolute; top: 44px; left: 64px; right: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-weight: 500; font-size: 18px;
+  letter-spacing: .12em; text-transform: uppercase; line-height: 1;
+}
+.top .lockup { display: flex; align-items: center; gap: 14px; }
+.top .lockup svg { width: 32px; height: 16px; }
+.top .meta { display: flex; gap: 36px; opacity: .7; }
+section.slide.ink .top { color: var(--paper); }
+
+.footer {
+  position: absolute; left: 64px; right: 64px; bottom: 36px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-weight: 500; font-size: 15px;
+  letter-spacing: .14em; text-transform: uppercase;
+  opacity: .65;
+}
+section.slide.ink .footer { color: var(--paper); opacity: .75; }
+
+.scribble {
+  font-family: "Caveat", cursive;
+  color: var(--ink);
+  line-height: 1.05;
+}
+
+.stamp {
+  display: inline-block;
+  border: 3px solid var(--red);
+  color: var(--red);
+  padding: 6px 16px;
+  font-family: "DM Mono", monospace;
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+}
+
+/* ============ 01 COVER ============ */
+.s-cover { padding: 0; }
+.s-cover .stage {
+  position: absolute; inset: 0;
+  padding: 110px 64px 80px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 24px;
+  z-index: 2;
+}
+.s-cover .super {
+  font-family: "DM Mono", monospace;
+  font-weight: 500;
+  font-size: 18px; letter-spacing: .22em; text-transform: uppercase;
+  opacity: .85;
+}
+.s-cover h1 {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 196px;
+  line-height: 1.08;
+  letter-spacing: -.04em;
+  color: var(--ink);
+  margin: 0;
+  align-self: center;
+  max-width: 14ch;
+}
+.s-cover .pin-1 {
+  position: absolute; top: 130px; right: 80px;
+  width: 420px; transform: rotate(-8deg);
+  color: var(--ink); z-index: 1;
+}
+.s-cover .pin-2 {
+  position: absolute; bottom: 200px; right: 140px;
+  width: 360px; transform: rotate(14deg);
+  color: var(--ink); z-index: 1;
+}
+.s-cover .handwritten {
+  position: absolute;
+  right: 80px; bottom: 360px;
+  font-family: "Caveat", cursive;
+  font-size: 38px;
+  line-height: 1.1;
+  color: var(--ink);
+  transform: rotate(-3deg);
+  transform-origin: right bottom;
+  text-align: right;
+  z-index: 3;
+}
+.s-cover .handwritten .underline {
+  border-bottom: 2px solid var(--ink);
+}
+.s-cover .row {
+  display: flex; align-items: end; justify-content: space-between;
+  gap: 32px;
+}
+.s-cover .row .who {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .18em; text-transform: uppercase;
+}
+.s-cover .row .who small {
+  display: block; opacity: .7; margin-top: 6px; letter-spacing: .14em;
+}
+.s-cover .row .date {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .18em; text-transform: uppercase;
+  text-align: right;
+}
+
+/* ============ 02 AGENDA ============ */
+.s-agenda h2 {
+  position: absolute; left: 64px; top: 110px;
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 96px; line-height: 1.05; letter-spacing: -.03em;
+  margin: 0; color: var(--ink);
+}
+.s-agenda .list {
+  position: absolute; left: 64px; right: 64px; top: 340px; bottom: 100px;
+  display: flex; flex-direction: column;
+}
+.s-agenda .row {
+  display: grid;
+  grid-template-columns: 90px 1fr 140px 240px;
+  align-items: center;
+  gap: 32px;
+  padding: 22px 0;
+  border-bottom: 1.5px dashed rgba(31,58,138,.45);
+}
+.s-agenda .row:last-child { border-bottom: 0; }
+.s-agenda .row .num {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 22px; letter-spacing: .14em;
+}
+.s-agenda .row .lab {
+  font-family: "Space Grotesk", sans-serif; font-weight: 600;
+  font-size: 44px; letter-spacing: -.02em; line-height: 1;
+}
+.s-agenda .row .pin {
+  width: 120px; height: 28px; color: var(--ink);
+  transform: rotate(-3deg);
+}
+.s-agenda .row .meta {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 15px; letter-spacing: .14em; text-transform: uppercase;
+  opacity: .7; text-align: right;
+}
+
+/* ============ 03 NOTECARDS ============ */
+.s-notes .head { position: absolute; left: 64px; right: 64px; top: 110px; }
+.s-notes h2 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 84px; line-height: 1.05; letter-spacing: -.03em; margin: 0;
+}
+.s-notes .sub {
+  margin-top: 14px;
+  font-size: 22px; line-height: 1.45; max-width: 60ch; opacity: .85;
+}
+.s-notes .grid {
+  position: absolute; left: 64px; right: 64px; top: 430px; bottom: 100px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+}
+.s-notes .card {
+  background: var(--cream);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 36px 28px 28px;
+  display: flex; flex-direction: column;
+  position: relative;
+  box-shadow: 5px 6px 0 0 var(--ink);
+}
+.s-notes .card.alt  { background: var(--paper-2); }
+.s-notes .card.alt2 { background: #FBE6A4; transform: rotate(.6deg); }
+.s-notes .card .pin {
+  position: absolute; top: -16px; left: 28px;
+  width: 110px; height: 32px;
+  color: var(--ink);
+  transform: rotate(-10deg);
+}
+.s-notes .card .num {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .2em; text-transform: uppercase;
+  opacity: .65; margin-top: 8px;
+}
+.s-notes .card h3 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 38px; line-height: 1.02; letter-spacing: -.02em;
+  margin: 14px 0 16px;
+}
+.s-notes .card p { font-size: 20px; line-height: 1.45; margin: 0; }
+.s-notes .card .scribble {
+  margin-top: auto; padding-top: 18px;
+  font-size: 32px; line-height: 1.05;
+  transform: rotate(-1.5deg);
+  transform-origin: left;
+}
+.s-notes .card .scribble .underline { border-bottom: 2px solid var(--ink); }
+
+/* ============ 04 SECTION DIVIDER (ink) ============ */
+.s-sec { padding: 0; }
+.s-sec .marker {
+  position: absolute; left: 64px; top: 110px;
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--paper); opacity: .8;
+}
+.s-sec .label {
+  position: absolute; right: 64px; top: 110px;
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--paper); opacity: .8; text-align: right;
+}
+.s-sec h2 {
+  position: absolute;
+  left: 64px; right: 480px; bottom: 180px;
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 168px; line-height: 1.05; letter-spacing: -.04em;
+  color: var(--paper); margin: 0;
+}
+.s-sec .pin-big {
+  position: absolute; right: 64px; top: 280px;
+  width: 640px; color: var(--paper);
+  transform: rotate(-14deg); opacity: .85;
+}
+.s-sec .scribble {
+  position: absolute; left: 64px; bottom: 90px;
+  font-size: 36px; color: var(--paper); opacity: .9;
+  transform: rotate(-2deg);
+}
+
+/* ============ 05 NOTICE (text-dense) ============ */
+.s-notice .head {
+  position: absolute; left: 64px; right: 64px; top: 110px;
+  display: grid; grid-template-columns: auto 1fr; gap: 32px; align-items: start;
+}
+.s-notice .head .pre {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .2em; text-transform: uppercase;
+  border-right: 2px solid var(--ink);
+  padding-right: 28px; padding-top: 14px;
+  white-space: nowrap;
+}
+.s-notice .head h2 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 50px; line-height: 1.05; letter-spacing: -.02em; margin: 0;
+}
+.s-notice .grid {
+  position: absolute; left: 64px; right: 64px; top: 320px; bottom: 90px;
+  display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 28px;
+}
+.s-notice .col {
+  background: var(--cream);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 28px 28px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 4px 5px 0 0 var(--ink);
+}
+.s-notice .col.b { background: var(--paper-2); }
+.s-notice .col h3 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 28px; letter-spacing: -.01em;
+  border-bottom: 1.5px solid var(--ink); padding-bottom: 12px; margin: 0;
+}
+.s-notice .col .meta {
+  font-family: "Caveat", cursive; font-weight: 600;
+  font-size: 38px; line-height: 1.05;
+}
+.s-notice .col p { font-size: 19px; line-height: 1.5; margin: 0; }
+.s-notice .col ul { margin: 0; padding-left: 20px; font-size: 19px; line-height: 1.45; }
+.s-notice .col ul li { margin-bottom: 8px; }
+.s-notice .col .src {
+  margin-top: auto;
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 14px; letter-spacing: .14em; text-transform: uppercase;
+  border-top: 1px dashed rgba(31,58,138,.45); padding-top: 10px; opacity: .75;
+}
+
+/* ============ 06 CHART ============ */
+.s-chart { padding: 0; }
+.s-chart .left {
+  position: absolute; left: 64px; top: 200px; bottom: 110px; width: 600px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.s-chart .left h2 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 110px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
+  color: var(--paper);
+}
+.s-chart .left p { font-size: 21px; line-height: 1.5; color: var(--paper); opacity: .85; max-width: 36ch; }
+.s-chart .left .legend { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.s-chart .left .legend .li {
+  display: flex; align-items: center; gap: 14px;
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .12em; text-transform: uppercase; color: var(--paper);
+}
+.s-chart .left .legend .li i { width: 32px; height: 4px; }
+.s-chart .right {
+  position: absolute; right: 64px; top: 180px; bottom: 110px; left: 720px;
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 28px 32px 24px 76px;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 6px 7px 0 0 rgba(239,229,106,.25);
+}
+.s-chart .right .yhead {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 14px; letter-spacing: .16em; text-transform: uppercase;
+  margin-bottom: 8px; opacity: .7;
+}
+.s-chart .plot { flex: 1; min-height: 0; position: relative;
+  border-left: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.s-chart .plot .gline { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(31,58,138,.25); }
+.s-chart .plot .yticks {
+  position: absolute; left: -48px; top: 0; bottom: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  font-family: "DM Mono", monospace; font-weight: 500; font-size: 14px;
+}
+.s-chart .plot svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.s-chart .right .xticks {
+  display: flex; justify-content: space-between; padding-top: 8px;
+  font-family: "DM Mono", monospace; font-weight: 500; font-size: 14px; letter-spacing: .1em;
+}
+.s-chart .pin-deco {
+  position: absolute; top: 110px; right: 60px;
+  width: 240px; color: var(--paper);
+  transform: rotate(20deg); opacity: .35;
+}
+
+/* ============ 07 PROCESS (5 pinned cards) ============ */
+.s-process .head {
+  position: absolute; left: 64px; right: 64px; top: 110px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;
+}
+.s-process .head h2 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 88px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
+}
+.s-process .head .sub {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 19px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
+}
+.s-process .flow {
+  position: absolute; left: 64px; right: 64px; top: 460px; bottom: 200px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 22px;
+}
+.s-process .node {
+  background: var(--cream);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 32px 22px 22px;
+  display: flex; flex-direction: column; gap: 8px; position: relative;
+  box-shadow: 4px 5px 0 0 var(--ink);
+}
+.s-process .node.alt  { background: var(--paper-2); }
+.s-process .node.alt2 { background: #FBE6A4; }
+.s-process .node .pin {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%) rotate(-6deg);
+  width: 96px; height: 28px; color: var(--ink);
+}
+.s-process .node .n {
+  font-family: "Caveat", cursive; font-weight: 700;
+  font-size: 70px; line-height: .9; color: var(--ink);
+}
+.s-process .node h3 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 28px; line-height: 1.05; letter-spacing: -.015em; margin: 0;
+}
+.s-process .node p { font-size: 18px; line-height: 1.4; margin: 0; }
+.s-process .node .arr {
+  position: absolute; right: -16px; top: 44%;
+  width: 28px; height: 28px; z-index: 2; color: var(--ink);
+}
+.s-process .node:last-child .arr { display: none; }
+.s-process .timeline {
+  position: absolute; left: 64px; right: 64px; bottom: 110px; height: 48px;
+  background: transparent;
+  border-top: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--ink);
+  padding: 0 24px; display: flex; align-items: center; justify-content: space-between;
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .12em; text-transform: uppercase;
+}
+
+/* ============ 08 LEDGER (comparison) ============ */
+.s-matrix .head {
+  position: absolute; left: 64px; right: 64px; top: 110px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;
+}
+.s-matrix .head h2 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 88px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
+}
+.s-matrix .head .sub {
+  font-size: 19px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
+}
+.s-matrix .table {
+  position: absolute; left: 64px; right: 64px; top: 460px; bottom: 110px;
+  background: var(--cream);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  grid-auto-rows: 1fr; overflow: hidden;
+  box-shadow: 5px 6px 0 0 var(--ink);
+}
+.s-matrix .cell {
+  padding: 18px 22px; display: flex; align-items: center;
+  font-size: 21px; line-height: 1.35;
+  border-bottom: 1.5px solid rgba(31,58,138,.5);
+  border-right: 1.5px solid rgba(31,58,138,.5);
+}
+.s-matrix .cell:nth-child(4n) { border-right: 0; }
+.s-matrix .cell.last { border-bottom: 0; }
+.s-matrix .cell.head-row {
+  background: var(--ink); color: var(--paper);
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 22px; letter-spacing: -.005em;
+  border-right-color: rgba(239,229,106,.3);
+}
+.s-matrix .cell.row-label {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 24px; letter-spacing: -.01em;
+}
+.s-matrix .pill {
+  display: inline-block;
+  font-family: "Caveat", cursive; font-weight: 600;
+  font-size: 28px; line-height: 1;
+  padding: 4px 14px; border-radius: 999px;
+  border: 1.5px solid var(--ink);
+}
+.s-matrix .pill.yes  { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.s-matrix .pill.part { background: var(--paper-2); color: var(--ink); }
+.s-matrix .pill.no   {
+  background: transparent; color: var(--red); border-color: var(--red);
+  font-family: "DM Mono", monospace; font-weight: 500; font-size: 16px;
+  letter-spacing: .14em; text-transform: uppercase;
+}
+.s-matrix .pill.note { background: transparent; }
+
+/* ============ 09 STATS ============ */
+.s-stats .head {
+  position: absolute; left: 64px; right: 64px; top: 110px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;
+}
+.s-stats .head h2 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 92px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
+}
+.s-stats .head .sub {
+  font-size: 19px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
+}
+.s-stats .grid {
+  position: absolute; left: 64px; right: 64px; top: 460px; bottom: 110px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
+}
+.s-stats .stat {
+  background: var(--cream);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 32px 30px;
+  display: flex; flex-direction: column; gap: 14px;
+  position: relative;
+  box-shadow: 5px 6px 0 0 var(--ink);
+}
+.s-stats .stat.alt  { background: var(--paper-2); }
+.s-stats .stat.alt2 { background: #FBE6A4; }
+.s-stats .stat .pin {
+  position: absolute; top: -14px; left: 32px;
+  width: 110px; height: 32px;
+  color: var(--ink);
+  transform: rotate(-8deg);
+}
+.s-stats .stat .big {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 168px; line-height: .85; letter-spacing: -.04em;
+  margin-top: 16px;
+}
+.s-stats .stat .big small {
+  font-family: "Caveat", cursive; font-weight: 700;
+  font-size: 60px; vertical-align: top; margin-left: 6px;
+}
+.s-stats .stat h3 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 26px; letter-spacing: -.015em;
+  margin: auto 0 0; line-height: 1.05;
+}
+.s-stats .stat p { font-size: 19px; line-height: 1.45; margin: 0; }
+
+/* ============ 10 QUOTE ============ */
+.s-quote { padding: 0; }
+.s-quote .panel {
+  position: absolute; left: 80px; right: 80px; top: 140px; bottom: 130px;
+  background: var(--cream);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 60px 80px;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 60px;
+  align-items: center;
+  box-shadow: 8px 9px 0 0 var(--ink);
+}
+.s-quote .panel .qmark {
+  font-family: "Caveat", cursive; font-weight: 700;
+  font-size: 360px; line-height: .8; color: var(--ink);
+  margin-top: -100px;
+}
+.s-quote .panel blockquote {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif; font-weight: 500;
+  font-size: 50px; line-height: 1.1;
+  color: var(--ink);
+  letter-spacing: -.02em;
+}
+.s-quote .panel .who {
+  margin-top: 32px;
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 18px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink);
+}
+.s-quote .panel .who small {
+  display: block; font-weight: 500; font-size: 16px; opacity: .7; margin-top: 6px;
+}
+.s-quote .panel .pin {
+  position: absolute; top: -22px; left: 90px;
+  width: 160px; color: var(--ink);
+  transform: rotate(-12deg);
+}
+
+/* ============ 11 CTA ============ */
+.s-cta { padding: 0; }
+.s-cta .stage {
+  position: absolute; inset: 0;
+  padding: 110px 64px 90px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+}
+.s-cta .pane {
+  border-radius: 4px;
+  padding: 40px;
+  display: flex; flex-direction: column; gap: 20px;
+  position: relative;
+}
+.s-cta .pane.l {
+  background: var(--ink); color: var(--paper);
+  justify-content: space-between;
+}
+.s-cta .pane.r {
+  background: var(--cream);
+  border: 1.5px solid var(--ink);
+  box-shadow: 5px 6px 0 0 var(--ink);
+}
+.s-cta .pane.l .super {
+  font-family: "DM Mono", monospace; font-weight: 500;
+  font-size: 16px; letter-spacing: .22em; text-transform: uppercase;
+  opacity: .8;
+}
+.s-cta .pane.l h2 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 130px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
+}
+.s-cta .pane.l p { font-size: 21px; line-height: 1.5; opacity: .9; max-width: 30ch; }
+.s-cta .pane.l .pin {
+  position: absolute; bottom: 40px; right: 40px;
+  width: 220px; color: var(--paper); opacity: .9;
+  transform: rotate(-12deg);
+}
+.s-cta .pane.r h3 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 32px; letter-spacing: -.015em; margin: 0;
+}
+.s-cta .pane.r .step {
+  display: grid; grid-template-columns: 70px 1fr; gap: 14px; align-items: start;
+  padding: 12px 0;
+  border-top: 1.5px dashed rgba(31,58,138,.45);
+}
+.s-cta .pane.r .step:first-of-type { border-top: 0; }
+.s-cta .pane.r .step .n {
+  font-family: "Caveat", cursive; font-weight: 700;
+  font-size: 60px; line-height: .9; color: var(--ink);
+}
+.s-cta .pane.r .step h4 {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 22px; letter-spacing: -.005em; margin: 0 0 4px;
+}
+.s-cta .pane.r .step p { font-size: 18px; line-height: 1.4; margin: 0; }
+</style>
+<script src="deck-stage.js"></script>
+
+<!-- reusable safety pin svg, used via <use href="#pin"> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- closed safety pin: coil on right, shaft sweeping left, clasp cap on the left holding the point -->
+    <symbol id="pin" viewBox="0 0 360 110">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <!-- coiled spring (one continuous loop) -->
+        <path d="M312 38 C 296 32, 290 50, 304 58 C 320 66, 340 60, 342 44 C 344 28, 322 18, 300 24"/>
+        <!-- top shaft running from coil to clasp -->
+        <path d="M300 24 C 240 14, 140 14, 70 30"/>
+        <!-- bottom shaft (the part holding the point) curving back under -->
+        <path d="M312 56 C 250 78, 150 82, 80 70"/>
+        <!-- clasp cap (oval) covering where the two shafts meet on the left -->
+        <ellipse cx="58" cy="50" rx="24" ry="14"/>
+      </g>
+    </symbol>
+
+    <!-- open safety pin: clasp lifted, sharp point exposed pointing left -->
+    <symbol id="pin-open" viewBox="0 0 360 130">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <!-- coiled spring -->
+        <path d="M312 48 C 296 42, 290 60, 304 68 C 320 76, 340 70, 342 54 C 344 38, 322 28, 300 34"/>
+        <!-- top shaft -->
+        <path d="M300 34 C 240 24, 140 24, 70 40"/>
+        <!-- bottom shaft (the pointed one), now extending past where the clasp would be, into a sharp point -->
+        <path d="M312 66 C 250 90, 150 96, 80 86 L 24 78 L 38 70 M24 78 L 38 88"/>
+        <!-- clasp, lifted above where the point used to sit -->
+        <ellipse cx="82" cy="32" rx="22" ry="12" transform="rotate(-18 82 32)"/>
+      </g>
+    </symbol>
+
+    <!-- arrow for process flow -->
+    <symbol id="arr" viewBox="0 0 32 32">
+      <g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 16 H26 M19 9 L26 16 L19 23"/>
+      </g>
+    </symbol>
+
+    <!-- small inline mark for the top-chrome lockup -->
+    <symbol id="mark" viewBox="0 0 32 16">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="26" cy="8" r="5"/>
+        <path d="M21 8 H 6 M6 5 L 3 8 L 6 11"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<script type="application/json" id="speaker-notes">[]</script>
+</head>
+<body>
+
+<deck-stage>
+
+  <!-- ============ 01 COVER ============ -->
+  <section class="slide s-cover" data-screen-label="01 Cover" data-om-validate="false">
+    <svg class="pin-1" viewBox="0 0 360 110"><use href="#pin"/></svg>
+    <svg class="pin-2" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
+    <div class="stage">
+      <div class="super">A field guide · Vol. I</div>
+      <h1>Kept<br/>things</h1>
+      <div class="row">
+        <div class="who">Presented by <span class="underline-thin">A. Speaker</span>
+          <small>Role · Team · Spring 2026</small>
+        </div>
+        <div class="date">29 · IV · 2026</div>
+      </div>
+    </div>
+    <div class="handwritten">
+      <span class="underline">For:</span> the room.<br/>
+      Two pages. One ask.
+    </div>
+  </section>
+
+  <!-- ============ 02 AGENDA ============ -->
+  <section class="slide s-agenda" data-screen-label="02 Agenda" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> Pin &amp; Paper</span>
+      <span class="meta"><span>North Field Office</span><span>Phase I</span></span>
+    </div>
+    <h2>What's inside</h2>
+    <div class="list">
+      <div class="row">
+        <span class="num">01</span>
+        <span class="lab">The trust gap</span>
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <span class="meta">Findings · 12 min</span>
+      </div>
+      <div class="row">
+        <span class="num">02</span>
+        <span class="lab">Three pilots, scored</span>
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <span class="meta">Evidence · 9 min</span>
+      </div>
+      <div class="row">
+        <span class="num">03</span>
+        <span class="lab">A way of working</span>
+        <svg class="pin" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
+        <span class="meta">Method · 7 min</span>
+      </div>
+      <div class="row">
+        <span class="num">04</span>
+        <span class="lab">What we ship next</span>
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <span class="meta">Decisions · 8 min</span>
+      </div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>02 / 11</span></div>
+  </section>
+
+  <!-- ============ 03 NOTECARDS ============ -->
+  <section class="slide s-notes" data-screen-label="03 Principles" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> Principles</span>
+      <span class="meta"><span>North Field Office</span><span>Phase II</span></span>
+    </div>
+    <div class="head">
+      <h2>Three rules we're keeping</h2>
+      <div class="sub">Pinned to the wall above every desk. We refer back to them when a decision feels too big to make from the seat we're in.</div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <span class="num">Rule · 01</span>
+        <h3>Write the<br/>real sentence</h3>
+        <p>If a customer wouldn't read the email, the email is not the work. Plain words, signed by a person, sent on a Tuesday.</p>
+        <div class="scribble">— write it <span class="underline">by hand</span> first.</div>
+      </div>
+      <div class="card alt">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <span class="num">Rule · 02</span>
+        <h3>Earn the<br/>second look</h3>
+        <p>Every interaction in the first 72 hours is doing four times the work of one in week three. Spend accordingly.</p>
+        <div class="scribble">no autoresponder, ever.</div>
+      </div>
+      <div class="card alt2">
+        <svg class="pin" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
+        <span class="num">Rule · 03</span>
+        <h3>Keep the<br/>handwriting</h3>
+        <p>The system is allowed to grow, but the voice on the other end stays small enough to know who you wrote to last week.</p>
+        <div class="scribble">200 names, max.</div>
+      </div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>03 / 11</span></div>
+  </section>
+
+  <!-- ============ 04 SECTION DIVIDER ============ -->
+  <section class="slide s-sec ink" data-screen-label="04 Section · Direction" data-om-validate="false">
+    <div class="marker">Section II</div>
+    <div class="label">Direction<br/>&amp; doctrine</div>
+    <svg class="pin-big" viewBox="0 0 360 110"><use href="#pin"/></svg>
+    <h2>Where we<br/>are going,<br/>and why</h2>
+    <div class="scribble">— turn the page —</div>
+    <div class="footer"><span>North Field Office</span><span>04 / 11</span></div>
+  </section>
+
+  <!-- ============ 05 NOTICE ============ -->
+  <section class="slide s-notice" data-screen-label="05 Findings · Detail" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> Findings · detail</span>
+      <span class="meta"><span>North Field Office</span><span>Phase III</span></span>
+    </div>
+    <div class="head">
+      <div class="pre">Notice · 05<br/>Action title</div>
+      <h2>The trust gap is built in the first 72 hours, not the first 7 days — and the cost compounds for the rest of the lifecycle</h2>
+    </div>
+    <div class="grid">
+      <div class="col">
+        <h3>What we found</h3>
+        <p><strong>Three behavioural signals</strong> in the first 72 hours predict 18-month retention better than any feature-usage metric we tracked.</p>
+        <ul>
+          <li><strong>Email open #2</strong> — opening the second lifecycle email lifts D90 retention by 19 points.</li>
+          <li><strong>Personal salutation</strong> — accounts that received a written welcome retained 2.4× the cohort.</li>
+          <li><strong>Reply received</strong> — a single human reply within 24 hours is the single largest lever measured.</li>
+        </ul>
+        <div class="src">N = 14,200 · Q1 2026</div>
+      </div>
+      <div class="col b">
+        <h3>Why it matters</h3>
+        <div class="meta">$4.1M projected retained ARR — current cohort.</div>
+        <p>The first three days are the only window where customers are both paying attention and willing to write back. Every interaction here does the work of roughly four interactions in week three.</p>
+        <p>The cost of getting this wrong is not refunds — it is the long, quiet churn of an account that never returns to the inbox.</p>
+        <div class="src">Modelled on FY24 cohort behaviour</div>
+      </div>
+      <div class="col">
+        <h3>What to do</h3>
+        <ul>
+          <li><strong>Rewrite emails 1–3</strong> in human voice; ship behind a 50/50 holdout. Owner: lifecycle. Due: May 17.</li>
+          <li><strong>Route every signup</strong> to a named human for one personal reply within 24h, capped at the top 200 accounts/day. Owner: success. Due: May 24.</li>
+          <li><strong>Instrument the 72-hour window</strong> as a first-class metric in the weekly review. Owner: analytics. Due: June 1.</li>
+        </ul>
+        <div class="src">Pilot scope: top-decile signups</div>
+      </div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>05 / 11</span></div>
+  </section>
+
+  <!-- ============ 06 CHART ============ -->
+  <section class="slide s-chart ink" data-screen-label="06 Retention Curve" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> Retention, by cohort</span>
+      <span class="meta"><span>Phase III</span><span>Evidence</span></span>
+    </div>
+    <svg class="pin-deco" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
+    <div class="left">
+      <h2>Curve<br/>bends at<br/>day three</h2>
+      <p>Cohorts that received a written welcome and a human reply within 24 hours retain at roughly 2× the rate of the templated cohort, and the gap holds steady for ninety days.</p>
+      <div class="legend">
+        <div class="li"><i style="background:rgba(239,229,106,.5)"></i> Templated welcome (control)</div>
+        <div class="li"><i style="background:#F5ECA0"></i> Written welcome</div>
+        <div class="li"><i style="background:#EFE56A"></i> Written + human reply</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="yhead">% of cohort active, by day</div>
+      <div class="plot">
+        <div class="yticks">
+          <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
+        </div>
+        <div class="gline" style="top:0%"></div>
+        <div class="gline" style="top:25%"></div>
+        <div class="gline" style="top:50%"></div>
+        <div class="gline" style="top:75%"></div>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polyline fill="none" stroke="#1F3A8A" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2,1.5"
+            points="0,4 16,30 32,50 48,64 64,76 80,84 100,90" />
+          <polyline fill="none" stroke="#2D4FB8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"
+            points="0,4 16,18 32,28 48,38 64,46 80,52 100,56" />
+          <polyline fill="none" stroke="#1F3A8A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+            points="0,4 16,10 32,16 48,22 64,28 80,32 100,36" />
+        </svg>
+      </div>
+      <div class="xticks">
+        <span>D0</span><span>D7</span><span>D14</span><span>D30</span><span>D45</span><span>D60</span><span>D90</span>
+      </div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>06 / 11</span></div>
+  </section>
+
+  <!-- ============ 07 PROCESS ============ -->
+  <section class="slide s-process" data-screen-label="07 Process" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> How we'll work</span>
+      <span class="meta"><span>North Field Office</span><span>Phase IV</span></span>
+    </div>
+    <div class="head">
+      <h2>From insight to default,<br/>in five moves</h2>
+      <div class="sub">A repeatable path each pilot follows, end to end, before it is allowed to graduate to the default experience for every customer.</div>
+    </div>
+    <div class="flow">
+      <div class="node">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <div class="n">1</div>
+        <h3>Frame</h3>
+        <p>Translate the insight into a single behavioural hypothesis we can falsify in a sprint.</p>
+        <svg class="arr" viewBox="0 0 32 32"><use href="#arr"/></svg>
+      </div>
+      <div class="node alt">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <div class="n">2</div>
+        <h3>Design</h3>
+        <p>Smallest end-to-end change that lets the hypothesis be tested cleanly in one cycle.</p>
+        <svg class="arr" viewBox="0 0 32 32"><use href="#arr"/></svg>
+      </div>
+      <div class="node alt2">
+        <svg class="pin" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
+        <div class="n">3</div>
+        <h3>Pilot</h3>
+        <p>Ship to a 50/50 holdout in one segment. Hold the line for two cycles before reading.</p>
+        <svg class="arr" viewBox="0 0 32 32"><use href="#arr"/></svg>
+      </div>
+      <div class="node alt">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <div class="n">4</div>
+        <h3>Read</h3>
+        <p>Pre-registered metrics only. Kill, scale, or extend — not three of three.</p>
+        <svg class="arr" viewBox="0 0 32 32"><use href="#arr"/></svg>
+      </div>
+      <div class="node">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <div class="n">5</div>
+        <h3>Default</h3>
+        <p>Promote to the default surface and retire the legacy path inside the same release.</p>
+      </div>
+    </div>
+    <div class="timeline">
+      <span>Week 1 · Frame</span>
+      <span>Week 2–3 · Design</span>
+      <span>Week 3–6 · Pilot</span>
+      <span>Week 7 · Read</span>
+      <span>Week 8 · Default</span>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>07 / 11</span></div>
+  </section>
+
+  <!-- ============ 08 LEDGER ============ -->
+  <section class="slide s-matrix" data-screen-label="08 Comparison" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> Three pilots, side by side</span>
+      <span class="meta"><span>North Field Office</span><span>Phase IV</span></span>
+    </div>
+    <div class="head">
+      <h2>Where each pilot<br/>earns its keep</h2>
+      <div class="sub">Scored against the four levers that matter most this cycle. We will only carry forward bets that win on at least two.</div>
+    </div>
+    <div class="table">
+      <div class="cell head-row">Lever</div>
+      <div class="cell head-row">Rewrite welcome</div>
+      <div class="cell head-row">Quiet upgrades</div>
+      <div class="cell head-row">Inbox-as-search</div>
+
+      <div class="cell row-label">Time-to-impact</div>
+      <div class="cell"><span class="pill yes">≤ 4 weeks</span></div>
+      <div class="cell"><span class="pill part">6–8 weeks</span></div>
+      <div class="cell"><span class="pill yes">≤ 4 weeks</span></div>
+
+      <div class="cell row-label">Build cost</div>
+      <div class="cell"><span class="pill yes">low</span></div>
+      <div class="cell"><span class="pill part">medium</span></div>
+      <div class="cell"><span class="pill yes">low</span></div>
+
+      <div class="cell row-label">Retention lift (model)</div>
+      <div class="cell"><span class="pill yes">+19 pts D90</span></div>
+      <div class="cell"><span class="pill part">+7 pts D90</span></div>
+      <div class="cell"><span class="pill part">+5 pts D90</span></div>
+
+      <div class="cell row-label last">Risk to power users</div>
+      <div class="cell last"><span class="pill yes">none</span></div>
+      <div class="cell last"><span class="pill no">Material</span></div>
+      <div class="cell last"><span class="pill part">soft, reversible</span></div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>08 / 11</span></div>
+  </section>
+
+  <!-- ============ 09 STATS ============ -->
+  <section class="slide s-stats" data-screen-label="09 In Numbers" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> In numbers</span>
+      <span class="meta"><span>Phase III</span><span>Evidence</span></span>
+    </div>
+    <div class="head">
+      <h2>The case,<br/>by the numbers</h2>
+      <div class="sub">Three figures we will report against every cycle. If one of these stops moving, the bet is over.</div>
+    </div>
+    <div class="grid">
+      <div class="stat">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <div class="big">2.4<small>×</small></div>
+        <h3>Retention<br/>multiple</h3>
+        <p>Cohort with written welcome + human reply, vs. templated control. Sustained through D90.</p>
+      </div>
+      <div class="stat alt">
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+        <div class="big">$4.1<small>M</small></div>
+        <h3>Projected<br/>retained ARR</h3>
+        <p>Modelled on the current quarter's signup cohort, holding all other inputs constant.</p>
+      </div>
+      <div class="stat alt2">
+        <svg class="pin" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
+        <div class="big">72<small>hr</small></div>
+        <h3>The window<br/>that matters</h3>
+        <p>Behaviour after the first 72 hours predicts 18-month retention better than any feature metric.</p>
+      </div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>09 / 11</span></div>
+  </section>
+
+  <!-- ============ 10 QUOTE ============ -->
+  <section class="slide s-quote" data-screen-label="10 Voice" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> Client voice</span>
+      <span class="meta"><span>Phase III</span><span>Evidence</span></span>
+    </div>
+    <div class="panel">
+      <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+      <div class="qmark">"</div>
+      <div>
+        <blockquote>Three days in, someone wrote me a real sentence. I'd been a customer of theirs for nine months before I noticed I'd never been a customer anywhere else again.</blockquote>
+        <div class="who">Margaux Lévêque
+          <small>CFO · mid-market retailer · 14 months in</small>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>10 / 11</span></div>
+  </section>
+
+  <!-- ============ 11 CTA ============ -->
+  <section class="slide s-cta" data-screen-label="11 Next" data-om-validate="false">
+    <div class="top">
+      <span class="lockup"><svg><use href="#mark"/></svg> What's next</span>
+      <span class="meta"><span>North Field Office</span><span>Phase V</span></span>
+    </div>
+    <div class="stage">
+      <div class="pane l">
+        <div class="super">From here</div>
+        <h2>Pick the<br/>three<br/>bets</h2>
+        <p>Three pilots in eight weeks. We'll bring back evidence the quarter after, and the question won't be whether to ship — it'll be which two to default.</p>
+        <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
+      </div>
+      <div class="pane r">
+        <h3>How we move this week</h3>
+        <div class="step">
+          <div class="n">1</div>
+          <div>
+            <h4>Pick the pilots</h4>
+            <p>Confirm two of three by Friday. Owners named in the same conversation; calendars cleared.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="n">2</div>
+          <div>
+            <h4>Pre-register the read</h4>
+            <p>Lock the metric, the holdout, and the kill criteria before any code ships. Analytics writes it; both sides sign.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="n">3</div>
+          <div>
+            <h4>Stand a Friday review</h4>
+            <p>One slide each pilot, every Friday, until the bet defaults or dies. No exceptions, no makeup decks.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>North Field Office</span><span>11 / 11</span></div>
+  </section>
+
+</deck-stage>
+
+</body>
+</html>
