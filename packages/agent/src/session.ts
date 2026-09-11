@@ -1878,6 +1878,15 @@ export class AbacusBotSession {
       return;
     }
 
+    // A request over a tier's size cap fails the same way every time; the
+    // terminal message says what to do, and "retrying" would be a false hope.
+    if (
+      /^\s*413\b/.test(text) ||
+      REQUEST_TOO_LARGE_PATTERN.test(text.toLowerCase())
+    ) {
+      return;
+    }
+
     this.retriedCalls += 1;
     this.retryNoticeKey ??= `provider-retry-${++this.retryNoticeEpisodes}`;
     this.emitAgentEvent({
@@ -3059,6 +3068,14 @@ const MAX_MALFORMED_CONTINUATIONS = 1;
 const CONTEXT_LENGTH_PATTERN =
   /context length|context window|maximum input token limit|input is longer than|maximum context length|too many tokens/;
 
+/**
+ * A provider refusing the request for its size against a tier limit rather
+ * than the model's window: a 413, or the sentence Groq puts on one. Retrying
+ * sends the same bytes again, so it is not narrated as a retry.
+ */
+const REQUEST_TOO_LARGE_PATTERN =
+  /request too large|request entity too large|payload too large|reduce your message size/;
+
 /** Marks the continuation in the session log as ours rather than the user's. */
 const MALFORMED_CONTINUATION_TYPE = "abacusai-bot:malformed-tool-call";
 
@@ -3248,6 +3265,17 @@ export function classifyProviderFailure(raw: string): {
     return {
       summary: "You're out of credits",
       remedy: `Upgrade your plan at ${ABACUS_PLAN_URL}, or switch to a model with its own key.`,
+    };
+  }
+
+  // Before the rate-limit branch too: Groq's free tier answers a request over
+  // its per-minute token cap with a 413 whose sentence mentions "tokens per
+  // minute", and no amount of waiting makes the same request smaller.
+  if (status === 413 || REQUEST_TOO_LARGE_PATTERN.test(text)) {
+    return {
+      summary: "This request is too large for the model's limit",
+      remedy:
+        "Start a new chat, switch to a model with a higher limit, or raise the limit with the provider.",
     };
   }
 
