@@ -26,6 +26,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     enforcement: "auto",
     workspaceRoot: "C:\\work\\repo",
     writableTemp: ["C:\\Users\\dev\\AppData\\Local\\Temp"],
+    toolHomes: [],
     secrets: { denied: [], allowed: [], promptable: [] },
     approvedWrites: [],
     network: { kind: "open" },

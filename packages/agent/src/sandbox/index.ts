@@ -18,6 +18,7 @@ export type {
   SandboxEnforcement,
 } from "./policy.js";
 export {
+  canonicalize,
   modeToSandboxMode,
   resolvePolicy,
   sandboxEnforcement,

@@ -738,6 +738,14 @@ function SandboxDeniedPermissionUI({
           </li>
         ))}
       </ul>
+      {request?.note != null && request.note.length > 0 && (
+        <span
+          className="text-xs text-amber-600 dark:text-amber-400"
+          data-id="permission-sandbox-denied-note"
+        >
+          {request.note}
+        </span>
+      )}
       <span className="text-muted-foreground text-xs">
         {t("permissions.sandboxDeniedRerun")}
       </span>

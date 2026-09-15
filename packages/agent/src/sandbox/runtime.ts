@@ -156,6 +156,22 @@ export function baseConfig(
   };
 }
 
+/**
+ * A write grant the kernel can apply. A grant is usually a file that does not
+ * exist yet (the refused create, the file about to be made): bubblewrap
+ * skips a nonexistent bind outright, and creating a file is a write to its
+ * directory anyway, so the grant is the nearest existing ancestor.
+ */
+export function writableRoot(target: string): string {
+  let current = target;
+  for (;;) {
+    if (fs.existsSync(current)) return current;
+    const parent = path.dirname(current);
+    if (parent === current) return current;
+    current = parent;
+  }
+}
+
 /** What one command may touch, from its policy. */
 export function commandConfig(
   policy: SandboxPolicy
@@ -167,7 +183,8 @@ export function commandConfig(
       allowWrite: [
         ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
         ...policy.writableTemp,
-        ...policy.approvedWrites,
+        ...(policy.mode === "workspace-write" ? policy.toolHomes : []),
+        ...policy.approvedWrites.map(writableRoot),
       ],
       denyWrite: [],
     },
@@ -354,6 +371,7 @@ export async function probeCommands(
     enforcement: "auto",
     workspaceRoot: writable,
     writableTemp: [],
+    toolHomes: [],
     secrets: { denied: [], allowed: [], promptable: [] },
     approvedWrites: [],
     network: { kind: "filtered" },

@@ -1,3 +1,4 @@
+import { spawn } from "child_process";
 /**
  * Where the agent's shell commands actually run. A backend overrides pi's
  * `BashOperations` (designed for exactly this), so pi's tool keeps its schema,
@@ -5,7 +6,7 @@
  * beyond local and docker are declared but not implemented, so the selector
  * can show them with an honest reason.
  */
-import { spawn } from "child_process";
+import * as fs from "node:fs";
 
 import {
   createBashToolDefinition,
@@ -29,12 +30,14 @@ import {
   type Denial,
   type SandboxApprovals,
 } from "./sandbox/index.js";
+import { classifyCommand } from "./sandbox/intent.js";
 import {
   fallbackShell,
   loginEnvironment,
   mergePath,
   settleOnExit,
 } from "./sandbox/shell.js";
+import { zoneContext } from "./sandbox/zones.js";
 
 export type BackendId =
   | "local"
@@ -223,9 +226,23 @@ function localSandboxedOperations(
     options: Parameters<BashOperations["exec"]>[2],
     retried: boolean
   ): Promise<{ exitCode: number }> => {
-    const policy = resolvePolicy(currentMode(), cwd, {
+    const mode = currentMode();
+    // What the command's own text says it will do outside the workspace: a
+    // benign line (a new file on the Desktop) is granted for this run, the
+    // rest is left to the kernel and the card (sandbox/intent.ts).
+    const intent =
+      sandboxEnforcement(mode) === "off"
+        ? null
+        : classifyCommand(command, cwd, {
+            context: zoneContext(cwd),
+            ledger: approvals?.created,
+          });
+    const policy = resolvePolicy(mode, cwd, {
       approvedReads: approvals?.reads.consume(command) ?? [],
-      approvedWrites: approvals?.writes.consume(command) ?? [],
+      approvedWrites: [
+        ...(approvals?.writes.consume(command) ?? []),
+        ...(intent?.grants ?? []),
+      ],
       filteredNetwork: networkConfinable(),
     });
 
@@ -342,6 +359,12 @@ function localSandboxedOperations(
       });
     });
 
+    // What a granted command made is the session's own from here on.
+    if (decision.kind === "confined" && approvals != null && intent != null) {
+      for (const made of intent.creates)
+        if (fs.existsSync(made)) approvals.created.add(made);
+    }
+
     if (
       decision.kind !== "confined" ||
       retried ||
@@ -353,7 +376,13 @@ function localSandboxedOperations(
     // then succeeded: ask, and run once more with the answer.
     const refused = denials(commandId);
     if (refused.length === 0) return result;
-    const answer = await approvals.askDenials(command, refused);
+    const answer = await approvals.askDenials(
+      command,
+      refused,
+      intent != null && intent.concerns.length > 0
+        ? `The command ${intent.concerns.join("; ")}.`
+        : null
+    );
     if (answer == null) return result;
 
     approvals.apply(command, answer);

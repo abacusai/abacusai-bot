@@ -292,6 +292,8 @@ export type PermissionRequest =
         | { kind: "write"; path: string }
         | { kind: "host"; host: string; port: number }
       >;
+      /** What the command's own text said it would do outside the workspace. */
+      note?: string;
     })
   | (PermissionRequestBase & {
       type: "generic";

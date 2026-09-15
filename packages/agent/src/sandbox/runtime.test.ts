@@ -12,6 +12,7 @@ import {
   configuredHosts,
   DEFAULT_HOSTS,
   parseDenials,
+  writableRoot,
 } from "./runtime.js";
 
 function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
@@ -20,6 +21,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     enforcement: "auto",
     workspaceRoot: "/work/repo",
     writableTemp: ["/private/tmp", "/private/var/folders/x/T"],
+    toolHomes: [],
     secrets: {
       denied: ["/Users/dev/.ssh", "/Users/dev/.netrc"],
       allowed: ["/Users/dev/.ssh/config"],
@@ -125,9 +127,20 @@ describe("what the runtime refused", () => {
   });
 
   it("adds an approved write to the command's writable paths", () => {
+    // An existing path goes on as itself.
     expect(
-      commandConfig(policy({ approvedWrites: ["/Users/dev/Desktop/out.txt"] }))
+      commandConfig(policy({ approvedWrites: [import.meta.dirname] }))
         .filesystem?.allowWrite
-    ).toContain("/Users/dev/Desktop/out.txt");
+    ).toContain(import.meta.dirname);
+  });
+
+  it("widens a grant for a file that does not exist yet to where it will be made", () => {
+    // bubblewrap skips a nonexistent bind, and the refused create is always
+    // nonexistent; the directory that will hold it is what the kernel needs.
+    const target = `${import.meta.dirname}/no-such-dir/out.txt`;
+    expect(
+      commandConfig(policy({ approvedWrites: [target] })).filesystem?.allowWrite
+    ).toContain(import.meta.dirname);
+    expect(writableRoot(target)).toBe(import.meta.dirname);
   });
 });

@@ -8,20 +8,14 @@ import * as path from "node:path";
  *
  * Guardrails for cheap-model sloppiness: `write` over an existing file keeps
  * a copy; `edit` needs a read first; protected paths are refused; bash is
- * denied destructive commands and `>` onto an existing file. Paths outside
- * the workspace are refused only in the ask-first modes, and never in a
- * folder the host pre-allowed: Full access means the whole machine, and a
- * fence the permission layer does not apply here only sends the model to the
- * shell, which is not fenced. ABACUSAI_BOT_ALLOW_OUTSIDE_CWD=1 lifts it too.
+ * denied destructive commands and `>` onto an existing file. Whether a write
+ * may leave the workspace is the permission gate's question, not this one's.
  */
 import {
   type ExtensionAPI,
   isToolCallEventType,
 } from "@earendil-works/pi-coding-agent";
 
-import { allowedPathsFromEnv } from "../allowed-paths.js";
-import { currentMode } from "../current-mode.js";
-import { AgentMode } from "../protocol.js";
 import { isInsideDirectory, realPathOf } from "../workspace-path.js";
 
 /**
@@ -303,14 +297,6 @@ export default function (pi: ExtensionAPI) {
   const isInsideWorkspace = (abs: string, cwd: string) =>
     isInsideDirectory(abs, cwd);
 
-  const isOutsideWorkspace = (abs: string, cwd: string) => {
-    if (process.env.ABACUSAI_BOT_ALLOW_OUTSIDE_CWD === "1") return false;
-    if (currentMode() === AgentMode.Yolo) return false;
-    if (allowedPathsFromEnv().some((dir) => isInsideDirectory(abs, dir)))
-      return false;
-    return !isInsideWorkspace(abs, cwd) && !isRealScratch(abs);
-  };
-
   pi.on("tool_call", async (event, ctx) => {
     if (isToolCallEventType("read", event)) {
       knownFiles.add(path.resolve(ctx.cwd, event.input.path));
@@ -336,12 +322,6 @@ export default function (pi: ExtensionAPI) {
         return {
           block: true,
           reason: `${event.input.path} is a protected path; do not modify it.`,
-        };
-      }
-      if (isOutsideWorkspace(abs, ctx.cwd)) {
-        return {
-          block: true,
-          reason: `${event.input.path} is outside the workspace. Work inside ${ctx.cwd}.`,
         };
       }
       if (fs.existsSync(abs) && fs.statSync(abs).isFile()) {
@@ -383,12 +363,6 @@ export default function (pi: ExtensionAPI) {
           reason: `${requested} is a protected path; do not modify it.`,
         };
       }
-      if (isOutsideWorkspace(abs, ctx.cwd)) {
-        return {
-          block: true,
-          reason: `${requested} is outside the workspace. Work inside ${ctx.cwd}.`,
-        };
-      }
       if (fs.existsSync(abs) && !knownFiles.has(abs)) {
         return {
           block: true,
@@ -407,12 +381,6 @@ export default function (pi: ExtensionAPI) {
           return {
             block: true,
             reason: `${input.path} is a protected path; do not modify it.`,
-          };
-        }
-        if (isOutsideWorkspace(abs, ctx.cwd)) {
-          return {
-            block: true,
-            reason: `${input.path} is outside the workspace. Work inside ${ctx.cwd}.`,
           };
         }
       }

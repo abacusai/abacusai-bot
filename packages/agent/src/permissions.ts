@@ -16,6 +16,7 @@ import {
   type ToolRequest,
 } from "./protocol.js";
 import { isWithin, namedSecretPaths } from "./sandbox/secrets.js";
+import { zoneContext, zoneOf } from "./sandbox/zones.js";
 import { isInsideDirectory, realPathOf } from "./workspace-path.js";
 
 /** Tools that change something on disk or run code. */
@@ -145,10 +146,15 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
 
   // Auto skips the approval prompts, not the sandbox: a hidden credential
   // store a command names is still the OS refusing, and still worth a card.
+  // A file tool leaving the workspace follows the same rule as a confined
+  // command (sandbox/intent.ts): a new file in the user's own folders is
+  // fine, touching an existing one or a sensitive place asks.
   if (mode === AgentMode.Auto) {
-    return tool.name === "bash"
-      ? (credentialGate(tool, options) ?? { kind: "allow" })
-      : { kind: "allow" };
+    if (tool.name === "bash")
+      return credentialGate(tool, options) ?? { kind: "allow" };
+    if (WRITE_TOOLS.has(tool.name)) return autoWriteGate(tool, options);
+
+    return { kind: "allow" };
   }
 
   // The one call plan mode must let through: it is how the user is asked to
@@ -279,7 +285,19 @@ function gateWebFetch(tool: ToolRequest, options: GateOptions): Gate {
  * through, one outside asks in every mode but Yolo, as the
  * `write_outside_directory` / `edit_outside_directory` request types.
  */
-function gateWrite(tool: ToolRequest, options: GateOptions): Gate {
+const WRITE_TOOLS = new Set([
+  "write",
+  "edit",
+  "batch_edit",
+  "notebook_edit",
+  "ast_edit",
+]);
+
+/** Where a file tool's path lands, resolved for the card and the check. */
+function writeTarget(
+  tool: ToolRequest,
+  options: GateOptions
+): { requested: string; resolved: string; inside: boolean } {
   const requested = String(tool.input.path ?? tool.input.notebookPath ?? "");
   const resolved = pathToShow(
     path.resolve(options.cwd, requested),
@@ -289,37 +307,71 @@ function gateWrite(tool: ToolRequest, options: GateOptions): Gate {
     isInside(resolved, options.cwd) ||
     options.allowedWritePaths.some((dir) => isInside(resolved, dir));
 
-  if (!inside) {
-    const deducedDirectory = path.dirname(resolved);
-    const base = {
-      tool,
-      filePath: requested,
-      resolvedPath: resolved,
-      deducedDirectory,
+  return { requested, resolved, inside };
+}
+
+/** The card for a file tool leaving the workspace. */
+function outsideWriteRequest(
+  tool: ToolRequest,
+  requested: string,
+  resolved: string
+): PermissionRequest {
+  const base = {
+    tool,
+    filePath: requested,
+    resolvedPath: resolved,
+    deducedDirectory: path.dirname(resolved),
+  };
+
+  if (tool.name === "write") {
+    return {
+      ...base,
+      type: "write_outside_directory",
+      displayName: "Write file outside the workspace",
+      isNewFile: !fs.existsSync(resolved),
     };
+  }
 
-    if (tool.name === "write") {
-      return {
-        kind: "ask",
-        request: {
-          ...base,
-          type: "write_outside_directory",
-          displayName: "Write file outside the workspace",
-          isNewFile: !fs.existsSync(resolved),
-        },
-      };
-    }
+  return {
+    ...base,
+    type:
+      tool.name === "notebook_edit"
+        ? "notebook_edit_outside_directory"
+        : "edit_outside_directory",
+    displayName: "Edit file outside the workspace",
+  };
+}
 
+/**
+ * Auto's answer for a file tool: inside the workspace, scratch, or a tool
+ * home, go ahead; a NEW file in the user's own folders too, since "save it on
+ * my Desktop" is the request; anything else outside asks, because changing
+ * or replacing what is already there is what the user would want to hear
+ * about first.
+ */
+function autoWriteGate(tool: ToolRequest, options: GateOptions): Gate {
+  const { requested, resolved, inside } = writeTarget(tool, options);
+  if (inside) return { kind: "allow" };
+
+  const zone = zoneOf(resolved, zoneContext(options.cwd));
+  if (zone === "workspace" || zone === "scratch" || zone === "toolhome")
+    return { kind: "allow" };
+  if (zone === "user" && tool.name === "write" && !fs.existsSync(resolved))
+    return { kind: "allow" };
+
+  return {
+    kind: "ask",
+    request: outsideWriteRequest(tool, requested, resolved),
+  };
+}
+
+function gateWrite(tool: ToolRequest, options: GateOptions): Gate {
+  const { requested, resolved, inside } = writeTarget(tool, options);
+
+  if (!inside) {
     return {
       kind: "ask",
-      request: {
-        ...base,
-        type:
-          tool.name === "notebook_edit"
-            ? "notebook_edit_outside_directory"
-            : "edit_outside_directory",
-        displayName: "Edit file outside the workspace",
-      },
+      request: outsideWriteRequest(tool, requested, resolved),
     };
   }
 
