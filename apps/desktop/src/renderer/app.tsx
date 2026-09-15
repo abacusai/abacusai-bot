@@ -1,9 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { Outlet, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster } from "sonner";
-
-import { canSignOutOfAbacus } from "#shared/settings";
 
 import { BrowserPermissionPrompt } from "./components/browser/browser-permission-prompt";
 import { CriticalUpdateDialog } from "./components/common/critical-update-dialog";
@@ -14,13 +11,13 @@ import { WelcomeTourGate } from "./components/onboarding/welcome-tour";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useConversationActivator } from "./components/workspace/workspace-activation";
 import { useWorkspaceConversationBridge } from "./conversation/store";
+import { useAbacusCredentialQuery } from "./hooks/use-abacus-credential";
 import { useKeepAwake } from "./hooks/use-keep-awake";
 import { useNotifications } from "./hooks/use-notifications";
 import { useTheme } from "./hooks/use-theme";
 import { useWindowFullScreen } from "./hooks/use-window-fullscreen";
 import { useCredentialRefresh } from "./lib/credential-refresh";
 import { defaultWorkspaceSearch } from "./lib/route-search";
-import { settingsQueryKeys } from "./lib/settings-query-keys";
 import {
   isMacOS,
   TITLEBAR_DEFAULT_START_INSET,
@@ -69,14 +66,7 @@ function App(): React.JSX.Element {
   const loadAccount = useAccountStore((state) => state.load);
   const accountLoaded = useAccountStore((state) => state.loaded);
   const onboarded = useAccountStore((state) => state.onboarded);
-  // The stored key, not the /v1/account fetch: local, offline-safe, and
-  // refreshed by useCredentialRefresh on every credentials-changed event.
-  const credentialQuery = useQuery({
-    queryKey: settingsQueryKeys.models.abacusCredential,
-    queryFn: async () =>
-      canSignOutOfAbacus(await window.api.agent.getSettings()),
-    staleTime: 60_000,
-  });
+  const credentialQuery = useAbacusCredentialQuery();
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
   // The flow opens the tour on its last step; the app behind it must render.
   const tourRunning = useTourStore((state) => state.isOpen);

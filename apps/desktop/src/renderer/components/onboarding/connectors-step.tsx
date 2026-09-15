@@ -20,17 +20,12 @@ import {
 import { Button } from "../ui";
 
 /**
- * Attach the tools you already work in. Every tile attaches in place, one
- * browser hop each; signed out, the tap runs the sign-in hop first. The grid
- * is the catalog's own connector list, so there is no second place to update.
+ * Attach the tools you already work in. Every tile attaches in place: a
+ * browser hop for the account connectors, the gateway dialog for messaging.
+ * The tiles come from the connector catalog, so there is no second list.
  */
 
-/**
- * What the account buys, as pills above the logos: signed out, the logos alone
- * say nothing about the built-in tools or the price.
- */
-/** The four this step offers, in order; the rest are in Settings. */
-
+/** The four this step leads with; messaging first, since an agent you can text is a different product. */
 const OFFERED_IDS = [
   "messaging-whatsapp",
   "messaging-telegram",
@@ -38,18 +33,17 @@ const OFFERED_IDS = [
   "abacus-gmailuser",
 ] as const;
 
-/**
- * The three messaging platforms, then Gmail. Messaging leads: an agent you can
- * text is a different product from one you visit.
- */
-const OFFERED: ConnectorDefinition[] = OFFERED_IDS.map((id) =>
-  CONNECTORS.find((connector) => connector.id === id)!
-).filter(Boolean);
+const isOffered = (connector: ConnectorDefinition): boolean =>
+  (OFFERED_IDS as readonly string[]).includes(connector.id);
 
-/** Everything this screen does not lead with, opened in place on request. */
+const OFFERED: ConnectorDefinition[] = OFFERED_IDS.flatMap((id) =>
+  CONNECTORS.filter((connector) => connector.id === id)
+);
+
+/** The rest of the account connectors, shown in place on request. */
 const MORE_CONNECTORS = CONNECTORS.filter(
-  (connector) =>
-    connector.auth === "abacus" && !OFFERED_IDS.includes(connector.id as never)
+  (connector): connector is AbacusConnector =>
+    connector.auth === "abacus" && !isOffered(connector)
 );
 
 export const ConnectorsStep = ({
@@ -65,7 +59,6 @@ export const ConnectorsStep = ({
   dots: ReactNode;
 }): JSX.Element => {
   const { t } = useTranslation();
-  const moreLogos = MORE_CONNECTORS;
 
   const [connected, setConnected] = useState<Set<string>>(new Set());
   const [available, setAvailable] = useState<Set<string> | null>(null);
@@ -80,7 +73,7 @@ export const ConnectorsStep = ({
   const [messagingDialog, setMessagingDialog] =
     useState<MessagingPlatformId | null>(null);
 
-  /** What the platform says is attached — the source of truth, not the ping. */
+  /** What the platform says is attached. */
   const refresh = async (): Promise<void> => {
     const snapshot = await window.api.agent.listAbacusConnectors();
     if (snapshot.ok !== true) return;
@@ -131,16 +124,8 @@ export const ConnectorsStep = ({
 
   const openMessaging = (connector: MessagingConnector): void => {
     if (attaching != null) cancelAttach();
-    // WhatsApp, Telegram and Discord are linked-device platforms: connecting is
-    // what starts them, so enable on open.
-    if (
-      connector.messagingPlatform === "whatsapp" ||
-      connector.messagingPlatform === "telegram" ||
-      connector.messagingPlatform === "discord" ||
-      connector.messagingPlatform === "abacus_discord" ||
-      connector.messagingPlatform === "abacus_telegram"
-    )
-      void messaging.connectPlatform(connector.messagingPlatform);
+    // Connecting is what starts a linked-device platform, so enable on open.
+    void messaging.connectPlatform(connector.messagingPlatform);
     setMessagingDialog(connector.messagingPlatform);
   };
 
@@ -164,9 +149,7 @@ export const ConnectorsStep = ({
       available.has(connector.abacusService)
   );
 
-  // Any connector counts: the messaging tiles live in the gateway snapshot,
-  // not in `connected`.
-
+  // The messaging tiles live in the gateway snapshot, not in `connected`.
   const hasConnected = connected.size > 0 || tiles.some(isTileConnected);
 
   return (
@@ -184,10 +167,7 @@ export const ConnectorsStep = ({
       </div>
 
       <div className="flex flex-col items-center text-center">
-        {/* No mark and no product name here. The user is inside the app, three
-            screens into its first run — the window has already said whose it
-            is, and repeating it on every step spends the top of the screen on
-            what they already know instead of on what the step is asking. */}
+        {/* No logo or product name: three screens in, the window has said whose it is. */}
         <h1 className="text-foreground text-4xl font-bold tracking-tight text-balance">
           {t("onboarding.connectorsTitleLead")}{" "}
           <span className="text-primary">
@@ -226,9 +206,8 @@ export const ConnectorsStep = ({
                 {connector.name}
               </span>
 
-              {/* The control lives in the card rather than the card being the
-                  control: four cards that are each one big button read as a
-                  choice of one, and these are meant to be picked together. */}
+              {/* A button in the card, not a card that is a button: these are
+                  picked together, not chosen between. */}
               <Button
                 variant="outline"
                 size="sm"
@@ -281,9 +260,8 @@ export const ConnectorsStep = ({
           className="mt-4 grid max-h-56 grid-cols-2 gap-2 overflow-y-auto @xl:grid-cols-4"
           data-id="onboarding-connectors-all"
         >
-          {moreLogos.map((connector) => {
-            const service = (connector as AbacusConnector).abacusService;
-            const isConnected = connected.has(service);
+          {MORE_CONNECTORS.map((connector) => {
+            const isConnected = connected.has(connector.abacusService);
 
             return (
               <Button
@@ -292,7 +270,7 @@ export const ConnectorsStep = ({
                 size="sm"
                 data-id={`onboarding-connector-${connector.id}-connect`}
                 disabled={isConnected}
-                onClick={() => void attach(connector as AbacusConnector)}
+                onClick={() => void attach(connector)}
                 className="h-auto justify-start gap-2 py-2"
               >
                 <span className="flex size-5 items-center justify-center [&_img]:size-5 [&_svg]:size-5">
@@ -327,9 +305,7 @@ export const ConnectorsStep = ({
         />
       )}
 
-      {/* One way on. Skip and Continue called the same handler — two buttons
-          for one action, which only asks the user to wonder what the
-          difference is. The label carries the difference instead. */}
+      {/* One button on; the label says whether anything was attached. */}
       <div className="mt-8 flex flex-col items-center gap-5">
         <Button
           size="lg"
@@ -343,8 +319,7 @@ export const ConnectorsStep = ({
           <ArrowRight className="size-5" />
         </Button>
 
-        {/* Only while a hop is out: a permanent cancel would be a control for
-            a state the user is not in. */}
+        {/* Only while a hop is out. */}
         {attaching != null && (
           <Button
             variant="link"
