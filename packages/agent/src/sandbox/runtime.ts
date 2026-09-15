@@ -59,9 +59,6 @@ export const DEFAULT_HOSTS: readonly string[] = [
   "registry-1.docker.io",
   "auth.docker.io",
   "production.cloudflare.docker.com",
-  // Web scaffolds fetch fonts at build time; font files carry nothing out.
-  "fonts.googleapis.com",
-  "fonts.gstatic.com",
 ];
 
 /** Hosts the environment pre-approves, comma-separated. */
