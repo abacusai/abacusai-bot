@@ -57,6 +57,7 @@ describe("mode parsing", () => {
   it.each([
     ["ACCEPTEDITS", AgentMode.AcceptEdits],
     ["PLAN", AgentMode.PlanMode],
+    ["AUTO", AgentMode.Auto],
     ["YOLO", AgentMode.Yolo],
     ["DEFAULT", AgentMode.Normal],
   ])("parses %s", (raw, expected) => {
@@ -72,15 +73,18 @@ describe("mode parsing", () => {
 });
 
 describe("bypass mode", () => {
-  it("allows everything, including what Plan would refuse", () => {
-    for (const tool of ["bash", "write", "edit", "web_fetch", "read"]) {
-      const gate = gateToolCall(
-        call(tool, { command: "rm -rf /", path: "x", url: "http://x.test" }),
-        options({ mode: AgentMode.Yolo })
-      );
-      expect(gate.kind, tool).toBe("allow");
+  it.each([AgentMode.Yolo, AgentMode.Auto])(
+    "%s allows everything, including what Plan would refuse",
+    (mode) => {
+      for (const tool of ["bash", "write", "edit", "web_fetch", "read"]) {
+        const gate = gateToolCall(
+          call(tool, { command: "rm -rf /", path: "x", url: "http://x.test" }),
+          options({ mode })
+        );
+        expect(gate.kind, tool).toBe("allow");
+      }
     }
-  });
+  );
 });
 
 describe("plan mode", () => {
@@ -562,6 +566,7 @@ describe("strict mode parsing", () => {
     ["DEFAULT", AgentMode.Normal],
     ["acceptedits", AgentMode.AcceptEdits],
     ["plan", AgentMode.PlanMode],
+    ["auto", AgentMode.Auto],
     ["yolo", AgentMode.Yolo],
     ["  plan  ", AgentMode.PlanMode],
   ])("reads %s", (raw, expected) => {
@@ -1160,16 +1165,25 @@ describe("a hidden credential store named by a command", () => {
     expect(gate.request.credentialPaths).toBeUndefined();
   });
 
-  it("still asks in bypass mode, which skips approvals but not the sandbox", () => {
+  it("still asks in Auto, which skips approvals but not the sandbox", () => {
     const gate = gateToolCall(
       call("bash", { command: "cat /Users/someone/.netrc" }),
-      options({ mode: AgentMode.Yolo, promptableCredentialPaths: stores })
+      options({ mode: AgentMode.Auto, promptableCredentialPaths: stores })
     );
     expect(gate.kind).toBe("ask");
-    // And an ordinary command in bypass still runs without a card.
+    // And an ordinary command in Auto still runs without a card.
     expect(
       gateToolCall(
         call("bash", { command: "git push" }),
+        options({ mode: AgentMode.Auto, promptableCredentialPaths: stores })
+      ).kind
+    ).toBe("allow");
+  });
+
+  it("never asks in Full access, which has no sandbox to hide the store", () => {
+    expect(
+      gateToolCall(
+        call("bash", { command: "cat /Users/someone/.netrc" }),
         options({ mode: AgentMode.Yolo, promptableCredentialPaths: stores })
       ).kind
     ).toBe("allow");

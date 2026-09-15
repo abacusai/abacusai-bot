@@ -181,12 +181,6 @@ export class AgentCommunicationService {
     if (event.event.type === "model_changed") {
       statePatch.model = event.event.model;
     }
-    if (event.event.type === "sandbox_status") {
-      statePatch.sandbox = {
-        active: event.event.active,
-        reason: event.event.reason,
-      };
-    }
     if (event.event.type === "turn_complete") {
       statePatch.agentStatus = AgentStatus.Idle;
     }

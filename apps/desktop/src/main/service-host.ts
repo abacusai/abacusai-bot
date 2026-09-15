@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 /**
  * Composition root for the desktop services: constructs them, wires their
  * callbacks and routes handler requests. Substantive behavior lives in
@@ -7,14 +6,10 @@ import os from "node:os";
  */
 import path from "path";
 
-import {
-  MINIMUM_WINDOWS_BUILD,
-  sandboxBackendFor,
-} from "@abacus-ai/agent/sandbox-support";
 import { connectorById } from "@abacus-ai/connectors/registry";
 import { app } from "electron";
 
-import { AgentMode, AgentStatus, type DesktopEvent } from "#shared/agent-types";
+import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
 import type {
   BotChangeNotice,
   Bot,
@@ -51,6 +46,7 @@ import type {
   AgentMcpLogEntry,
   AgentMcpServer,
   McpBrowserStatus,
+  DefaultAgentMode,
   SandboxSupport,
   DeviceStatus,
   LocalDeviceInfo,
@@ -246,8 +242,8 @@ import {
 import {
   readExecBackend,
   readToolsetPreferences,
-  readSandboxEnabled,
-  setSandboxEnabled,
+  readDefaultAgentMode,
+  setDefaultAgentMode,
   readXaiSearchPreference,
   setXaiSearchEnabled,
   readNotificationSettings,
@@ -316,6 +312,7 @@ import {
   cachedRecommendedModelId,
   recommendedModelId,
 } from "./services/providers/models";
+import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
@@ -841,6 +838,10 @@ export class ServiceHost {
   private readonly workspaceService = new WorkspaceService();
   private readonly browserProfilesService = new BrowserProfilesService();
   private readonly artifactResolverService = new ArtifactResolverService();
+
+  private readonly sandboxProbeService = new SandboxProbeService(() =>
+    this.artifactResolverService.resolveBundledCliPath()
+  );
   private readonly fileTreeService = new FileTreeService();
   private readonly fileSearchService = new FileSearchService();
   private readonly gitService = new GitService();
@@ -2323,7 +2324,13 @@ export class ServiceHost {
         : request.model != null && request.model.length > 0
           ? request.model
           : await recommendedModelId();
-    const withModel = model != null ? { ...request, model } : request;
+    // A start with no mode is main's own (a bot's chat brought back to
+    // deliver a notice, say): it runs in the mode the Profile page chose.
+    const withModel = {
+      ...request,
+      ...(model != null ? { model } : {}),
+      ...(request.mode == null ? { mode: readDefaultAgentMode() } : {}),
+    };
 
     // The new agent sees the environment as it stands; nothing owed until then.
     environmentNoticeService.markSessionStarted(request.sessionId);
@@ -3376,7 +3383,7 @@ export class ServiceHost {
     const started = await this.startAgentSession({
       workspaceId,
       sessionId: editor.id,
-      mode: AgentMode.Yolo,
+      mode: readDefaultAgentMode(),
     });
     if (!started.success)
       throw new Error(started.error ?? "The editor could not start.");
@@ -3588,7 +3595,7 @@ export class ServiceHost {
     const started = await this.startAgentSession({
       workspaceId: target,
       sessionId: session.id,
-      mode: AgentMode.Yolo,
+      mode: readDefaultAgentMode(),
     });
 
     if (!started.success) {
@@ -3736,23 +3743,20 @@ export class ServiceHost {
     return setNotificationSettings(next);
   }
 
-  getSandboxEnabled(): boolean {
-    return readSandboxEnabled();
+  getDefaultAgentMode(): DefaultAgentMode {
+    return readDefaultAgentMode();
   }
 
-  /** What the Settings page says when the toggle is on but nothing confines. */
-  getSandboxSupport(): SandboxSupport {
-    return {
-      backend: sandboxBackendFor(process.platform, os.release()),
-      minimumWindowsBuild: MINIMUM_WINDOWS_BUILD,
-    };
+  /** Whether Auto is worth offering here: probed once, by the agent. */
+  getSandboxSupport(): Promise<SandboxSupport> {
+    return this.sandboxProbeService.support();
   }
 
-  /** Read back, not echoed: "on" over a failed write misstates confinement. */
-  setSandboxEnabled(enabled: boolean): boolean {
-    setSandboxEnabled(enabled);
+  /** Read back, not echoed: a failed write must not show as the new mode. */
+  setDefaultAgentMode(mode: DefaultAgentMode): DefaultAgentMode {
+    setDefaultAgentMode(mode);
 
-    return readSandboxEnabled();
+    return readDefaultAgentMode();
   }
 
   /**

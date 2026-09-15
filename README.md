@@ -97,11 +97,13 @@ One-off supervised sessions remain available for work that does not need a persi
 
 ## Permissions and data
 
-Default, Auto-Accept, Plan, and Bypass modes control supervised sessions. Bot chats and routine runs always use Bypass and do not show the mode picker. They run as your operating-system user and can reach files and connected accounts without an approval prompt. Routine instructions include their own folder and every workspace registered in the app.
+Default, Auto-Accept, Plan, Auto, and Full access modes control supervised sessions. Bot chats and routine runs use the default mode and do not show the mode picker. They run as your operating-system user and can reach files and connected accounts without an approval prompt. Routine instructions include their own folder and every workspace registered in the app.
 
-Remote messaging also uses Bypass when "Run remote turns unattended" is on. That setting is on by default, although inbound responses remain off until you enable them. Turning it off makes risky actions wait for approval in the desktop app.
+The default mode is Full access: no approval prompts and no sandbox. The Profile page can change it to Auto, which is the same inside a kernel sandbox: shell commands cannot write outside the workspace, read credential stores such as SSH keys, or reach hosts you have not allowed, and a card asks when one tries. Auto is offered on macOS, Linux with bubblewrap, and Windows 11 24H2 or newer.
 
-The optional command sandbox limits shell writes on supported macOS and Linux systems. It does not confine reads or network access. Windows commands are not kernel-confined. Read [Permissions and execution](docs/permissions.md) before enabling a bot, routine, or remote sender.
+Remote messaging also uses the default mode when "Run remote turns unattended" is on. That setting is on by default, although inbound responses remain off until you enable them. Turning it off makes risky actions wait for approval in the desktop app.
+
+Read [Permissions and execution](docs/permissions.md) before enabling a bot, routine, or remote sender.
 
 Bot settings, memory, conversations, and app settings are stored locally. Requests and attachments go to the model provider you choose. Connectors send data to their configured services. With a saved Abacus.AI API key, the app automatically sends transcripts, logs, and diagnostics to Abacus.AI over HTTPS for product improvement and troubleshooting. See [Privacy and local storage](docs/privacy.md) for what is collected and how log redaction works.
 

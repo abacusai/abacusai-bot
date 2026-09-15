@@ -71,9 +71,21 @@ describe("mode mapping", () => {
     expect(modeToSandboxMode(AgentMode.PlanMode)).toBe("read-only");
     expect(modeToSandboxMode(AgentMode.Normal)).toBe("workspace-write");
     expect(modeToSandboxMode(AgentMode.AcceptEdits)).toBe("workspace-write");
-    // Bypass turns the asking off, not the kernel: the app starts in it, so
-    // it is where the bounds matter most.
-    expect(modeToSandboxMode(AgentMode.Yolo)).toBe("workspace-write");
+    // Auto turns the asking off, not the kernel: it is where the bounds
+    // matter most.
+    expect(modeToSandboxMode(AgentMode.Auto)).toBe("workspace-write");
+  });
+
+  it("switches the sandbox off for Full access, and only for Full access", () => {
+    for (const mode of [
+      AgentMode.Normal,
+      AgentMode.AcceptEdits,
+      AgentMode.PlanMode,
+      AgentMode.Auto,
+    ]) {
+      expect(resolvePolicy(mode, "/tmp").enforcement, mode).toBe("auto");
+    }
+    expect(resolvePolicy(AgentMode.Yolo, "/tmp").enforcement).toBe("off");
   });
 
   it("canonicalizes the workspace, because the kernel matches resolved paths", () => {
@@ -583,9 +595,9 @@ describe.runIf(onRuntime)("egress against the real kernel", () => {
 /**
  * The default, which nothing pinned before.
  *
- * It is the whole contract of this switch: off unless something asks, so a
- * change of heart about it has to be deliberate rather than a one-word edit
- * that no test notices.
+ * It is the whole contract of this switch: on unless Full access or the
+ * environment says otherwise, so a change of heart about it has to be
+ * deliberate rather than a one-word edit that no test notices.
  */
 describe("enforcement default", () => {
   const previous = process.env.ABACUSAI_BOT_SANDBOX;
@@ -595,20 +607,20 @@ describe("enforcement default", () => {
     else process.env.ABACUSAI_BOT_SANDBOX = previous;
   });
 
-  it("is off when nothing sets it", () => {
+  it("is on when nothing sets it", () => {
     delete process.env.ABACUSAI_BOT_SANDBOX;
-    expect(sandboxEnforcement()).toBe("off");
+    expect(sandboxEnforcement()).toBe("auto");
   });
 
-  it("is off for a value it does not recognise, rather than guessing", () => {
+  it("stays on for a value it does not recognise, rather than guessing", () => {
     process.env.ABACUSAI_BOT_SANDBOX = "yes please";
-    expect(sandboxEnforcement()).toBe("off");
+    expect(sandboxEnforcement()).toBe("auto");
   });
 
-  it("turns on for what the desktop toggle writes, and its plain synonyms", () => {
-    for (const value of ["auto", "1", "true", "AUTO"]) {
+  it("turns off for the plain spellings of off", () => {
+    for (const value of ["off", "0", "false", "OFF"]) {
       process.env.ABACUSAI_BOT_SANDBOX = value;
-      expect(sandboxEnforcement()).toBe("auto");
+      expect(sandboxEnforcement()).toBe("off");
     }
   });
 
@@ -617,9 +629,17 @@ describe("enforcement default", () => {
     expect(sandboxEnforcement()).toBe("strict");
   });
 
-  it("an unconfined decision follows from the default alone", async () => {
+  it("Full access wins over the environment, since the user chose it", () => {
+    process.env.ABACUSAI_BOT_SANDBOX = "strict";
+    expect(sandboxEnforcement(AgentMode.Yolo)).toBe("off");
+  });
+
+  it("an unconfined decision follows from Full access alone", async () => {
     delete process.env.ABACUSAI_BOT_SANDBOX;
-    const resolved = resolvePolicy(AgentMode.Normal, "/tmp");
-    expect((await decide(resolved, "echo hi", "/tmp")).kind).toBe("unconfined");
+    const resolved = resolvePolicy(AgentMode.Yolo, "/tmp");
+    expect(await decide(resolved, "echo hi", "/tmp")).toEqual({
+      kind: "unconfined",
+      reason: "mode",
+    });
   });
 });

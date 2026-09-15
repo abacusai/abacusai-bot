@@ -5,10 +5,11 @@ import type { PermissionRequest } from "../conversation/agent-types";
 /**
  * Whether the mode the user picked answers a queued prompt on its own.
  * `set_mode` only governs what the agent has yet to ask, so the prompt that
- * made the user switch would otherwise stay up: Bypass settles it as "allow",
- * Auto-Accept settles an edit.
+ * made the user switch would otherwise stay up: Full access settles it as
+ * "allow", Auto lets it through once (the agent asks nothing more in Auto,
+ * and "allowYolo" would drop the sandbox too), Auto-Accept settles an edit.
  *
- * Never a sandbox card. Bypass skips the tool approvals, not the sandbox, so a
+ * Never a sandbox card. Auto skips the tool approvals, not the sandbox, so a
  * hidden credential store, a host off the allow list, or something the OS
  * refused is still the user's to answer, in every mode.
  */
@@ -19,6 +20,7 @@ export function autoResolution(
   if (isSandboxCard(request)) return null;
 
   if (mode === AgentMode.Yolo) return "allowYolo";
+  if (mode === AgentMode.Auto) return "accept";
 
   const isEdit =
     request.type === "edit_file" ||

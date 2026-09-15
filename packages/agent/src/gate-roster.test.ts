@@ -348,12 +348,14 @@ describe("the gate, tool by tool", () => {
     }
   );
 
-  it("lets everything through in yolo, which is what yolo means", () => {
+  it("lets everything through in Full access and Auto, which is what they mean", () => {
     for (const entry of CASES) {
-      expect(
-        gateToolCall(call(entry.name, entry.input), options(AgentMode.Yolo))
-          .kind
-      ).toBe("allow");
+      for (const mode of [AgentMode.Yolo, AgentMode.Auto]) {
+        expect(
+          gateToolCall(call(entry.name, entry.input), options(mode)).kind,
+          `${entry.name} in ${mode}`
+        ).toBe("allow");
+      }
     }
   });
 });

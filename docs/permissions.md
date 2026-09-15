@@ -3,35 +3,46 @@
 Supervised sessions have a permission mode. A session keeps its mode when you
 move between conversations.
 
-| Mode        | File changes               | Shell commands     |
-| ----------- | -------------------------- | ------------------ |
-| Default     | Ask first                  | Ask first          |
-| Auto-Accept | Apply inside the workspace | Ask first          |
-| Plan        | Refuse                     | Refuse             |
-| Bypass      | Apply without asking       | Run without asking, inside the sandbox |
+| Mode        | File changes               | Shell commands                          |
+| ----------- | -------------------------- | --------------------------------------- |
+| Default     | Ask first                  | Ask first, inside the sandbox           |
+| Auto-Accept | Apply inside the workspace | Ask first, inside the sandbox           |
+| Plan        | Refuse                     | Refuse                                  |
+| Auto        | Apply without asking       | Run without asking, inside the sandbox  |
+| Full access | Apply without asking       | Run without asking, with no sandbox     |
 
 Plan mode is read-only. The agent can inspect files and prepare a plan, but its
-tools reject mutations. Bypass removes the approval gate and should only be used
-when the workspace and request are trusted. It does not remove the kernel
-sandbox: shell commands stay bounded to the workspace, credential stores stay
-hidden, and the two sandbox cards (a hidden store a command names, a host not
-on the allow list) still appear.
+tools reject mutations. Auto and Full access remove the approval gate and
+should only be used when the workspace and request are trusted. Auto keeps the
+kernel sandbox: shell commands stay bounded to the workspace, credential stores
+stay hidden, and the sandbox cards (a hidden store a command names, a host not
+on the allow list, something the OS refused) still appear. Full access has
+nothing behind it: no prompts and no sandbox. Auto is offered only on a machine
+whose sandbox works (see below).
+
+## The default mode
+
+Every session starts in the mode the picker shows, and the picker remembers the
+last choice. Bots and routines have no picker; they run in the default mode.
+The default is Full access. The Profile page, under Danger zone, can change it
+to Auto for new sessions, bots and routines; the picker follows. The choice is
+shown only on a machine whose sandbox works.
 
 ## Bots, routines, and remote messages
 
-Bot chats run in Bypass mode. They do not show the session mode picker. A bot
-can use enabled tools, connected accounts, and any files available to the
+Bot chats run in the default mode. They do not show the session mode picker. A
+bot can use enabled tools, connected accounts, and any files available to the
 operating-system user without asking for each action.
 
-Routine runs also use Bypass mode. Their instructions give them the routine
-folder and every workspace registered in the app. Bypass can reach other paths
-available to the operating-system user. New routines normally run once when
-created, then follow their saved schedule or webhook trigger.
+Routine runs also use the default mode. Their instructions give them the
+routine folder and every workspace registered in the app. Full access can reach
+other paths available to the operating-system user. New routines normally run
+once when created, then follow their saved schedule or webhook trigger.
 
 Messaging accounts record incoming messages but do not start agent turns by
 default. If you enable inbound responses, only approved senders can start a
-turn. "Run remote turns unattended" is on by default and gives those turns
-Bypass mode. Turn it off to use Auto-Accept instead. Workspace edits then
+turn. "Run remote turns unattended" is on by default and gives those turns the
+default mode. Turn it off to use Auto-Accept instead. Workspace edits then
 proceed, while shell commands and other risky actions wait for approval in the
 desktop app.
 
@@ -41,7 +52,7 @@ approved senders, bot assignment, and unattended-tools setting together.
 ## Workspace boundary
 
 Reads inside the workspace do not prompt. Reads and writes outside it require
-approval in every mode except Bypass. Auto-Accept grants write access to the
+approval in every mode except Auto and Full access. Auto-Accept grants write access to the
 workspace, not to the rest of the machine.
 
 Some paths remain protected from agent file tools, including `.git`, `.env`, and
@@ -82,13 +93,14 @@ call that started it.
 ### Kernel sandbox
 
 macOS, Linux and Windows 11 24H2 or newer run commands under a kernel
-sandbox, on by default and switchable off in Settings under Capabilities. macOS and Linux use Anthropic's sandbox runtime (Seatbelt and
-bubblewrap, with its loopback proxies for the network); Windows uses a
-Microsoft process container run by the `wxc-exec` runner the app ships. Plan
-mode allows no writes. Default and Auto-Accept allow writes to the workspace
-and temporary directories. So does Bypass. Only the Settings toggle turns the
-sandbox off. Bots and routines run in Bypass without a card to answer, so for
-them a hidden store stays hidden and an unlisted host is refused outright.
+sandbox in every mode but Full access. macOS and Linux use Anthropic's sandbox
+runtime (Seatbelt and bubblewrap, with its loopback proxies for the network);
+Windows uses a Microsoft process container run by the `wxc-exec` runner the
+app ships. Plan mode allows no writes. Default, Auto-Accept and Auto allow
+writes to the workspace and temporary directories. Full access is the one
+mode with no sandbox. Bots and routines run in the default mode without a card
+to answer, so in Auto a hidden store stays hidden and an unlisted host is
+refused outright.
 
 Reads are allowed everywhere except a short list of credential stores: SSH
 private keys, GPG private keys, cloud CLI credential and token caches (AWS,
@@ -130,17 +142,16 @@ not confined yet.
 
 Linux needs `bubblewrap` and `socat` installed, and unprivileged user
 namespaces with capabilities (Ubuntu 24.04 restricts them by default; see the
-runtime's notes on `kernel.apparmor_restrict_unprivileged_userns`). Without
-them, or on a Windows older than 24H2, commands still run, unconfined, and a
-notice at the top of the chat says so with the reason; it can be dismissed
-for the machine. `ABACUSAI_BOT_SANDBOX=strict` refuses commands instead.
+runtime's notes on `kernel.apparmor_restrict_unprivileged_userns`). The app
+probes this once at launch. Where the sandbox cannot run, or on a Windows
+older than 24H2 (build 26100), Auto is not offered: the picker and the Profile
+page show Full access alone, which is what such a machine has. A confined mode
+picked anyway (Default, say) still runs its commands, unconfined.
+`ABACUSAI_BOT_SANDBOX=strict` refuses them instead; `off` never confines.
 
 The sandbox applies to shell commands, including commands started by delegated
 agents and verification tools. It does not confine Electron, model requests,
-MCP tools, device tools, or service connectors. A Windows older than 24H2
-(build 26100) has no backend. `ABACUSAI_BOT_SANDBOX=strict` refuses commands
-when no sandbox is available; `auto`, the default, runs them unconfined and
-shows the notice.
+MCP tools, device tools, or service connectors.
 
 ### Docker
 

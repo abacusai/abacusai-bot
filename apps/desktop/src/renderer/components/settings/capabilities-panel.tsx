@@ -117,9 +117,6 @@ export const ToolsPanel = (): JSX.Element => {
         </InputGroup>
       </FocusedPageToolbar>
       <FocusedPageBody>
-        {/* Up here as well as inside Terminal & Processes: it is the one
-            switch a user goes looking for, and four clicks deep is too far. */}
-        {query.trim().length === 0 && <SandboxToggle />}
         {matches.length > 0 ? (
           <ItemGroup className="gap-2">
             {matches.map((toolset) => (
@@ -294,7 +291,6 @@ const ToolsetDetail = ({
       )}
 
       {/* Terminal & Processes has a target as well as a switch. */}
-      {toolset.id === "terminal" && !planned && <SandboxToggle />}
       {toolset.id === "terminal" && !planned && <ExecBackendPicker />}
 
       {/* X search has a choice of engine behind it. */}
@@ -311,77 +307,6 @@ const ToolsetDetail = ({
       )}
 
       <McpToolsNote />
-    </div>
-  );
-};
-
-/**
- * Whether the OS confines what a command can do. On by default. A machine
- * with no backend (a Windows older than 24H2) sees the caveat rather than a
- * hidden toggle: a user who leaves it on there should know it does nothing.
- */
-const SandboxToggle = (): JSX.Element => {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-
-  const enabledQuery = useQuery({
-    queryKey: settingsQueryKeys.capabilities.sandbox,
-    queryFn: async () =>
-      (await window.api?.agent?.getSandboxEnabled?.()) ?? false,
-    staleTime: 10_000,
-  });
-
-  const flip = useMutation({
-    mutationFn: async (next: boolean) =>
-      (await window.api?.agent?.setSandboxEnabled?.(next)) ?? false,
-    onSuccess: (state) =>
-      queryClient.setQueryData(settingsQueryKeys.capabilities.sandbox, state),
-  });
-
-  const supportQuery = useQuery({
-    queryKey: settingsQueryKeys.capabilities.sandboxSupport,
-    queryFn: async () =>
-      (await window.api?.agent?.getSandboxSupport?.()) ?? null,
-    staleTime: Infinity,
-  });
-
-  const enabled = enabledQuery.data ?? false;
-  const support = supportQuery.data;
-  const unsupported = support != null && support.backend === null;
-
-  return (
-    <div className="space-y-2" data-id="sandbox-toggle">
-      <h3 className="text-secondary-foreground text-xs font-semibold tracking-wide uppercase">
-        {t("sandbox.title")}
-      </h3>
-
-      <div className="border-border flex items-start gap-3 rounded-lg border px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-foreground text-xs">{t("sandbox.label")}</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {t("sandbox.description")}
-          </p>
-          {enabled && unsupported && (
-            <p
-              className="mt-1 text-xs text-amber-500"
-              data-id="sandbox-unsupported"
-            >
-              {t("sandbox.unsupported", {
-                build: support?.minimumWindowsBuild ?? 0,
-              })}
-            </p>
-          )}
-        </div>
-
-        <Switch
-          checked={enabled}
-          onCheckedChange={() => flip.mutate(!enabled)}
-          disabled={flip.isPending}
-          aria-label={t("sandbox.label")}
-          data-id="sandbox-enabled-toggle"
-          onClick={(event) => event.stopPropagation()}
-        />
-      </div>
     </div>
   );
 };

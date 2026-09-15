@@ -86,7 +86,7 @@ describe("reading a config file that is not what it should be", () => {
     const settings = await load();
 
     expect(settings.readExecBackend()).toBeUndefined();
-    expect(settings.readSandboxEnabled()).toBe(true);
+    expect(settings.readDefaultAgentMode()).toBe("YOLO");
     expect(settings.readDockerImage()).toBeUndefined();
     expect(settings.readToolsetPreferences()).toEqual({});
     expect(settings.credentialEnv()).toEqual({});
@@ -249,35 +249,36 @@ describe("the execution backend", () => {
   );
 });
 
-describe("the sandbox switch", () => {
-  it("is on when nothing has been stored", async () => {
-    const { readSandboxEnabled } = await load();
+describe("the default permission mode", () => {
+  it("is Full access when nothing has been stored", async () => {
+    const { readDefaultAgentMode } = await load();
 
-    expect(readSandboxEnabled()).toBe(true);
+    expect(readDefaultAgentMode()).toBe("YOLO");
   });
 
   it.each([
-    ["a string that looks false", "false"],
+    ["a mode that is not a default", "PLAN"],
+    ["a lower-case spelling", "auto"],
     ["a number", 0],
     ["null", null],
   ])(
-    "stays on for %s, since only the boolean false switches it off",
+    "reads %s as Full access rather than guessing at Auto",
     async (_label, stored) => {
-      writeConfig({ sandbox: stored });
-      const { readSandboxEnabled } = await load();
+      writeConfig({ defaultMode: stored });
+      const { readDefaultAgentMode } = await load();
 
-      expect(readSandboxEnabled()).toBe(true);
+      expect(readDefaultAgentMode()).toBe("YOLO");
     }
   );
 
-  it("records being switched on, and back off", async () => {
-    const { setSandboxEnabled, readSandboxEnabled } = await load();
+  it("records a switch to Auto, and back", async () => {
+    const { setDefaultAgentMode, readDefaultAgentMode } = await load();
 
-    setSandboxEnabled(true);
-    expect(readSandboxEnabled()).toBe(true);
+    setDefaultAgentMode("AUTO" as never);
+    expect(readDefaultAgentMode()).toBe("AUTO");
 
-    setSandboxEnabled(false);
-    expect(readSandboxEnabled()).toBe(false);
+    setDefaultAgentMode("YOLO" as never);
+    expect(readDefaultAgentMode()).toBe("YOLO");
   });
 });
 

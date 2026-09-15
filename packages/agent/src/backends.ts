@@ -419,7 +419,9 @@ export function hiddenStoreNote(
 /**
  * Operations for the selected backend, or null to use pi's own local shell,
  * which handles shell resolution and platform differences better than a
- * reimplementation would; `off` returns null for the same reason.
+ * reimplementation would; ABACUSAI_BOT_SANDBOX=off returns null for the same
+ * reason. Full access is per command (decide), since the mode can change
+ * mid-session.
  */
 export function backendOperations(
   /** The session's sandbox approvals; absent for a caller with no card. */
