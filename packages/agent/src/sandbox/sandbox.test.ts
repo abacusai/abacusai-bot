@@ -13,8 +13,10 @@
  * That is here as a regression test, not as an illustration: a sandbox with no
  * test that tries to break out is a sandbox that quietly stops working.
  */
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import * as fs from "node:fs";
+import * as http from "node:http";
+import * as net from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -22,13 +24,16 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { AgentMode } from "../protocol.js";
 import {
+  bridgedShell,
   buildArgs,
   busNeutralizingArgs,
   execFailureStatus,
+  networkBridgeArgs,
   runProbe,
   tmpPathBinds,
   xdgRuntimeDir,
 } from "./bubblewrap.js";
+import { EgressProxy, proxyEnvironment } from "./egress.js";
 import { backendName, decide, unavailableBackendMessage } from "./index.js";
 import {
   canonicalize,
@@ -51,6 +56,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     workspaceRoot: "/tmp/ws",
     writableTemp: ["/private/tmp"],
     secrets: { denied: [], allowed: [], promptable: [] },
+    network: { kind: "open" },
     ...overrides,
   };
 }
@@ -1048,6 +1054,137 @@ describe.runIf(onMac || onLinux)(
     });
   }
 );
+
+// ---------------------------------------------------------------------------
+// Outbound network through the egress proxy.
+// ---------------------------------------------------------------------------
+
+describe("the network policy", () => {
+  it("leaves Seatbelt's network alone when the policy is open", () => {
+    expect(buildProfile(policy())).not.toContain("network-outbound");
+  });
+
+  it("lets Seatbelt out only to loopback and unix sockets under the proxy", () => {
+    const lines = buildProfile(
+      policy({ network: { kind: "proxy", port: 4321 } })
+    ).split("\n");
+    const deny = lines.indexOf("(deny network-outbound)");
+    expect(deny).toBeGreaterThan(-1);
+    // Later rules win: the loopback allow must follow the denial.
+    expect(
+      lines.indexOf('(allow network-outbound (remote ip "localhost:*"))')
+    ).toBeGreaterThan(deny);
+    expect(
+      lines.indexOf("(allow network-outbound (remote unix-socket))")
+    ).toBeGreaterThan(deny);
+  });
+
+  it("gives bubblewrap its own network only when socat can bridge it", () => {
+    expect(networkBridgeArgs("/tmp/egress.sock", "/usr/bin/socat")).toEqual([
+      "--unshare-net",
+      "--ro-bind",
+      "/tmp/egress.sock",
+      "/tmp/egress.sock",
+    ]);
+    // Without the bridge the namespace would cut the command off entirely.
+    expect(networkBridgeArgs("/tmp/egress.sock", null)).toEqual([]);
+  });
+
+  it("hands the command to bash as arguments behind socat, unquoted", () => {
+    const argv = bridgedShell(4321, 'echo "hi" && curl x', "/usr/bin/socat");
+    expect(argv[0]).toBe("/bin/bash");
+    expect(argv[2]).toContain("TCP-LISTEN:4321,bind=127.0.0.1,fork,reuseaddr");
+    expect(argv[2]).toContain('exec /bin/bash "$@"');
+    expect(argv.slice(-2)).toEqual(["-c", 'echo "hi" && curl x']);
+  });
+
+  it("is open unless a proxy port is known", () => {
+    expect(resolvePolicy(AgentMode.Normal, "/tmp").network).toEqual({
+      kind: "open",
+    });
+    expect(
+      resolvePolicy(AgentMode.Normal, "/tmp", { egressPort: 9 }).network
+    ).toEqual({ kind: "proxy", port: 9 });
+  });
+});
+
+describe.runIf(onMac)("egress against the real kernel", () => {
+  let workspace: string;
+  let proxy: EgressProxy;
+  let port: number;
+  let origin: http.Server;
+  let originPort: number;
+
+  beforeAll(async () => {
+    workspace = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), "sbx-egress-"))
+    );
+    proxy = new EgressProxy([]);
+    proxy.decider = async () => false;
+    port = await proxy.start();
+    origin = http.createServer((_request, response) => response.end("ok"));
+    await new Promise<void>((resolve) =>
+      origin.listen(0, "127.0.0.1", () => resolve())
+    );
+    originPort = (origin.address() as net.AddressInfo).port;
+  });
+
+  afterAll(() => {
+    proxy.stop();
+    origin.close();
+    fs.rmSync(workspace, { recursive: true, force: true });
+  });
+
+  /** Asynchronous: the proxy and origin live in this process's event loop. */
+  function run(command: string): Promise<number> {
+    const decision = decide(
+      policy({
+        workspaceRoot: workspace,
+        writableTemp: [canonicalize(os.tmpdir())],
+        network: { kind: "proxy", port },
+      }),
+      command,
+      workspace
+    );
+    if (decision.kind !== "confined")
+      throw new Error(`expected confinement, got ${decision.kind}`);
+
+    return new Promise((resolve) => {
+      execFile(
+        decision.argv[0]!,
+        decision.argv.slice(1),
+        {
+          cwd: workspace,
+          timeout: 30_000,
+          env: { ...process.env, ...proxyEnvironment(port, "darwin", {}) },
+        },
+        (error) =>
+          resolve(error == null ? 0 : ((error as { code?: number }).code ?? 1))
+      );
+    });
+  }
+
+  it("cannot reach the network directly, even when told not to use the proxy", async () => {
+    // curl 6 or 7: no resolution, no connection. The kernel refuses the
+    // socket before any packet leaves, so this needs no internet.
+    expect([6, 7]).toContain(
+      await run("curl -sf --noproxy '*' --max-time 10 http://example.com/")
+    );
+  });
+
+  it("is refused by the proxy for a host the user did not allow", async () => {
+    // curl 22: an HTTP error, the proxy's 403.
+    expect(await run("curl -sf --max-time 10 http://example.com/")).toBe(22);
+  });
+
+  it("still reaches a server on loopback", async () => {
+    expect(
+      await run(
+        `curl -sf --noproxy '*' --max-time 10 http://127.0.0.1:${originPort}/`
+      )
+    ).toBe(0);
+  });
+});
 
 /**
  * The default, which nothing pinned before.

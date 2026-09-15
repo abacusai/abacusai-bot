@@ -1324,7 +1324,7 @@
     "workspaceOwnFolder": "Its own folder"
   },
   "sandbox": {
-    "description": "Ask the operating system to stop commands writing outside this workspace or reading credential stores such as SSH keys. Off by default. Applies to new sessions.",
+    "description": "Ask the operating system to stop commands writing outside this workspace, reading credential stores such as SSH keys, or reaching hosts you have not allowed. Off by default. Applies to new sessions.",
     "label": "Confine shell commands",
     "title": "Sandbox",
     "unsupported": "No sandbox on this machine — commands run unconfined even when this is on. Windows needs Windows 11 24H2 (build {{build}}) or newer."
@@ -1978,6 +1978,8 @@
   },
   "permissions": {
     "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:"
+    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
+    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
+    "networkHostAlways": "Always allow {{host}} this session"
   }
 }

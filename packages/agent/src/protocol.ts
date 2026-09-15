@@ -296,6 +296,13 @@ export type PermissionRequest =
       origin: string;
     })
   | (PermissionRequestBase & {
+      // A confined command reached for a host nobody listed; the connection
+      // waits on the answer.
+      type: "network_host";
+      host: string;
+      port: number;
+    })
+  | (PermissionRequestBase & {
       type: "generic";
       toolName: string;
       inputSummary: string;

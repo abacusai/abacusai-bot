@@ -17,7 +17,10 @@ import { currentMode } from "./current-mode.js";
 import {
   backendName,
   decide,
+  egressProxy,
   mentionedSecretPaths,
+  networkConfinable,
+  proxyEnvironment,
   resolvePolicy,
   sandboxEnforcement,
   type CredentialApprovals,
@@ -202,19 +205,24 @@ function localSandboxedOperations(
 ): BashOperations {
   return {
     exec: async (command, cwd, options) => {
-      const policy = resolvePolicy(
-        currentMode(),
-        cwd,
-        approvals?.consume(command) ?? []
-      );
+      const policy = resolvePolicy(currentMode(), cwd, {
+        approvedReads: approvals?.consume(command) ?? [],
+        egressPort: networkConfinable() ? egressProxy().listeningPort : null,
+      });
 
       // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
       // inheriting this process's env would mean the launchd PATH.
       const shell = loginEnvironment();
-      const childEnv =
+      const inherited =
         options.env != null
           ? withMergedPath(options.env, shell.PATH ?? shell.Path)
           : shell;
+      // Tools find the proxy through the environment; the sandbox makes it the
+      // only way out.
+      const childEnv =
+        policy.network.kind === "proxy"
+          ? { ...inherited, ...proxyEnvironment(policy.network.port) }
+          : inherited;
 
       // Built first: the sandbox binds back the PATH entries the CHILD will
       // use.
@@ -302,6 +310,8 @@ function localSandboxedOperations(
           if (code !== 0 && decision.kind === "confined") {
             const note = hiddenStoreNote(tail, policy.secrets.promptable);
             if (note != null) options.onData(Buffer.from(note));
+            const refused = refusedHostNote(tail);
+            if (refused != null) options.onData(Buffer.from(refused));
           }
           resolve({ exitCode: code ?? 1 });
         });
@@ -317,6 +327,21 @@ const OUTPUT_TAIL_CHARS = 16_384;
  * prompt is raised by naming the path, so the model is pointed at that rather
  * than at a workaround.
  */
+/**
+ * What a failed command is told when the proxy refused a host: the user said
+ * no, or could not be asked, and the answer is theirs to change.
+ */
+export function refusedHostNote(output: string): string | null {
+  const match = /(\S+) is not allowed by the sandbox/.exec(output);
+  if (match == null) return null;
+
+  return (
+    `\n[sandbox] The connection to ${match[1]} was refused: the user did not ` +
+    `allow it, or could not be asked. Do not route around the sandbox; ` +
+    `tell the user which host the command needs.\n`
+  );
+}
+
 export function hiddenStoreNote(
   output: string,
   promptable: readonly string[]

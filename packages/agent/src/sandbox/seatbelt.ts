@@ -85,6 +85,17 @@ export function buildProfile(policy: SandboxPolicy): string {
     }
   }
 
+  // Outbound only to loopback, where the egress proxy listens (and a dev
+  // server the command started). Unix sockets stay open: ssh-agent, gpg-agent,
+  // the keychain. DNS goes through mDNSResponder's Mach port, not a socket.
+  if (policy.network.kind === "proxy") {
+    lines.push(
+      "(deny network-outbound)",
+      '(allow network-outbound (remote ip "localhost:*"))',
+      "(allow network-outbound (remote unix-socket))"
+    );
+  }
+
   // Credential stores. A later rule wins in Seatbelt, so the files read back
   // must follow the denials.
   for (const denied of policy.secrets.denied) {

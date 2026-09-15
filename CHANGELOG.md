@@ -10,6 +10,11 @@
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
+On macOS and Linux, a sandboxed command's outbound connections now go through
+a local proxy. Package registries and code hosts are allowed; any other host
+asks first, and the connection waits for the answer. `ABACUSAI_BOT_SANDBOX_HOSTS`
+pre-approves hosts. Linux needs `socat` for this.
+
 The kernel sandbox now runs on Windows 11 24H2 and newer, through a Microsoft
 process container. The Settings toggle says so on an older Windows instead of
 claiming the whole platform is unsupported.

@@ -1978,6 +1978,8 @@
   },
   "permissions": {
     "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:"
+    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
+    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
+    "networkHostAlways": "Always allow {{host}} this session"
   }
 }

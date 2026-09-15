@@ -115,6 +115,8 @@ import { buildRoster } from "./roster.js";
 import {
   backendName,
   CredentialApprovals,
+  egressProxy,
+  networkConfinable,
   resolveSecretPaths,
   sandboxEnforcement,
 } from "./sandbox/index.js";
@@ -951,6 +953,8 @@ export class AbacusBotSession {
 
     // A switched-off toolset is withheld, not hidden: the model never sees it.
     const excluded = excludedTools();
+
+    await this.prepareEgress();
 
     // The browser sub-agent may run on a stronger model than the chat.
     const browserModelRef = (
@@ -2656,33 +2660,7 @@ export class AbacusBotSession {
         status: AgentStatus.WaitingForToolPermission,
       });
 
-      const decision = await new Promise<PermissionDecision>((resolve) => {
-        const budget = approvalTimeoutMs();
-        // Infinity is the opt-out and must not reach setTimeout, which treats
-        // an out-of-range delay as 1ms.
-        const timer = Number.isFinite(budget)
-          ? setTimeout(() => {
-              // Drop it first, so a late answer racing the expiry finds nothing.
-              this.pending.delete(permissionId);
-              this.emitAgentEvent({ type: "permission_cleared", permissionId });
-              resolve({
-                type: "reject_with_message",
-                message:
-                  `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
-                  `Do not retry the same call — say what you need approved and stop.`,
-              });
-            }, budget)
-          : undefined;
-        // A pending approval should never be the reason the process survives.
-        timer?.unref?.();
-
-        this.pending.set(permissionId, {
-          resolve: (answer) => {
-            if (timer) clearTimeout(timer);
-            resolve(answer);
-          },
-        });
-      });
+      const decision = await this.awaitDecision(permissionId);
 
       this.recordApproval(pi, {
         stage: "decided",
@@ -2705,6 +2683,123 @@ export class AbacusBotSession {
    * protocol: a durable record, excluded from the model's context. Every ask
    * gets a matching decision, including the ones no human made.
    */
+  /** The user's answer to a card, or a rejection once the budget runs out. */
+  private awaitDecision(permissionId: string): Promise<PermissionDecision> {
+    return new Promise<PermissionDecision>((resolve) => {
+      const budget = approvalTimeoutMs();
+      // Infinity is the opt-out and must not reach setTimeout, which treats
+      // an out-of-range delay as 1ms.
+      const timer = Number.isFinite(budget)
+        ? setTimeout(() => {
+            // Drop it first, so a late answer racing the expiry finds nothing.
+            this.pending.delete(permissionId);
+            this.emitAgentEvent({ type: "permission_cleared", permissionId });
+            resolve({
+              type: "reject_with_message",
+              message:
+                `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
+                `Do not retry the same call — say what you need approved and stop.`,
+            });
+          }, budget)
+        : undefined;
+      // A pending approval should never be the reason the process survives.
+      timer?.unref?.();
+
+      this.pending.set(permissionId, {
+        resolve: (answer) => {
+          if (timer) clearTimeout(timer);
+          resolve(answer);
+        },
+      });
+    });
+  }
+
+  /**
+   * Start the egress proxy and route its questions to the user. Only when a
+   * sandbox will actually force traffic through it; otherwise a proxy that
+   * confines nothing would still be prompting.
+   */
+  private async prepareEgress(): Promise<void> {
+    if (sandboxEnforcement() === "off" || backendName() === null) return;
+    if (!networkConfinable()) return;
+
+    const proxy = egressProxy();
+    try {
+      await proxy.start();
+    } catch {
+      // No port means the policy stays open, which resolvePolicy reports.
+      return;
+    }
+    proxy.decider = (host, port) => this.askNetworkHost(host, port);
+  }
+
+  /**
+   * A confined command reached for a host nobody listed. The connection is
+   * held while the card is up; "always" lists the host for the session.
+   */
+  private async askNetworkHost(host: string, port: number): Promise<boolean> {
+    if (!this.canReachUser() || this.mode === AgentMode.Yolo) return false;
+
+    const permissionId = `perm-${++this.permissionCounter}`;
+    const input = { host, port };
+    const request: PermissionRequest = {
+      type: "network_host",
+      tool: {
+        id: permissionId,
+        name: "network",
+        type: "tool",
+        input,
+        args: input,
+      },
+      displayName: "Reach a host",
+      host,
+      port,
+    };
+
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "asked",
+        permissionId,
+        toolName: "network",
+        detail: `${host}:${port}`,
+      });
+    }
+    this.options.emit({ type: "permission_needed", permissionId, request });
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.WaitingForToolPermission,
+    });
+
+    const decision = await this.awaitDecision(permissionId);
+    // The command that asked is still running.
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.ExecutingTool,
+    });
+
+    const answer = typeof decision === "string" ? decision : decision.type;
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "decided",
+        permissionId,
+        toolName: "network",
+        outcome: answer,
+      });
+    }
+
+    if (isAlwaysDecision(decision) || answer === "allowYolo") {
+      egressProxy().allowForSession(host);
+
+      return true;
+    }
+
+    return (
+      answer === "accept" ||
+      answer === "accept_with_message" ||
+      answer === "background"
+    );
+  }
+
   private recordApproval(
     pi: ExtensionAPI,
     record: {

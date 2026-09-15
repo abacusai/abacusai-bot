@@ -700,6 +700,38 @@ function BashPermissionUI({
   );
 }
 
+/** A sandboxed command reached for a host nobody listed; it waits on this. */
+function NetworkHostPermissionUI({
+  tool,
+  onDecide,
+}: {
+  tool: PendingPermissionInfo;
+  onDecide: (d: PermissionDecisionInput) => void;
+}): JSX.Element {
+  const { t } = useTranslation();
+  const request = tool.request?.type === "network_host" ? tool.request : null;
+  const host = request?.host ?? getProp<string>(tool.toolInput, "host") ?? "";
+  const port = request?.port ?? getProp<number>(tool.toolInput, "port") ?? 0;
+  return (
+    <div className="flex flex-col gap-2" data-id="permission-network-host">
+      <div className="flex items-start gap-2">
+        <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+        <span className="text-foreground text-xs font-medium">
+          {t("permissions.networkHost")}
+        </span>
+      </div>
+      <pre className="text-muted-foreground bg-muted border-border rounded-lg border px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap">
+        {host}:{port}
+      </pre>
+      <PermActionList
+        onDecide={onDecide}
+        showAllowAlways={true}
+        alwaysAllowLabel={t("permissions.networkHostAlways", { host })}
+      />
+    </div>
+  );
+}
+
 function EditFilePermissionUI({
   tool,
   onDecide,
@@ -1334,6 +1366,8 @@ const PermissionPane = ({
     content = (
       <OutsideDirPermissionUI tool={permission} onDecide={decide} verb="read" />
     );
+  } else if (permissionType === "network_host") {
+    content = <NetworkHostPermissionUI tool={permission} onDecide={decide} />;
   } else if (permissionType === "exit_plan_mode") {
     content = <ExitPlanModePermissionUI tool={permission} onDecide={decide} />;
   } else if (permissionType === "ask_user_question") {
