@@ -15,6 +15,7 @@ import {
 import { useEffect, useState, useMemo, type JSX } from "react";
 
 import type { StreamingNestedToolCall } from "#shared/agent-types";
+import { presentedDeliverables } from "#shared/deliverables";
 
 import { useResolveWorkspacePath } from "../../hooks/use-workspace-root";
 import i18n from "../../i18n";
@@ -132,7 +133,8 @@ function truncate(s: string, max = 60): string {
 function componentToolLabel(
   base: ComponentToolBase,
   input: Record<string, unknown>,
-  running: boolean
+  running: boolean,
+  resultText?: string
 ): ReturnType<typeof getToolLabel> | null {
   const str = (k: string): string => String(input[k] ?? "").trim();
   const action = str("action");
@@ -175,7 +177,11 @@ function componentToolLabel(
   if (base === "present_deliverable") {
     // The deliverables themselves render as the turn's files card (see
     // deliverables-pill.tsx), so the header stays a plain count.
-    const items = deliverableItems(input);
+    // While running, the count is what was asked for; once settled, what the
+    // tool accepted.
+    const items = running
+      ? deliverableItems(input)
+      : presentedDeliverables(input, resultText);
     const action = running
       ? i18n.t("workspace.deliverable.delivering")
       : i18n.t("workspace.deliverable.delivered");
@@ -538,7 +544,12 @@ function getToolLabel(tool: ToolRenderItem): {
     default: {
       const component = componentToolBase(tool.name);
       if (component != null) {
-        const label = componentToolLabel(component, inp, running);
+        const label = componentToolLabel(
+          component,
+          inp,
+          running,
+          tool.result?.content
+        );
         if (label != null) return label;
       }
       return {

@@ -26,6 +26,9 @@ interface PiToolDefinitionLike {
 
 export const PRESENT_DELIVERABLE_TOOL_NAME = "present_deliverable";
 
+/** Mirrors the desktop's shared/deliverables.ts: one line per accepted item. */
+const ARTIFACT_PATH_MARKER = "[artifact]";
+
 const text = (body: string, isError = false) => ({
   content: [{ type: "text" as const, text: body }],
   details: null,
@@ -173,6 +176,10 @@ export function buildPresentDeliverableTool(
           `Not presented, because there is no file at these paths: ${missing.join(", ")}`
         );
       }
+      lines.push(
+        "",
+        ...valid.map((item) => `${ARTIFACT_PATH_MARKER} ${item.target}`)
+      );
 
       return text(lines.join("\n"));
     },

@@ -390,9 +390,10 @@ const SELF_LANE_BOTS: Record<
 
 /**
  * Early-compaction threshold for routine sessions: every fire replays the chat
- * so far, so an uncapped routine's per-fire cost grows forever.
+ * so far, so an uncapped routine's per-fire cost grows forever. Wide enough
+ * that a run of connector reads finishes between compactions.
  */
-const ROUTINE_CONTEXT_CAP_TOKENS = 50_000;
+const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 
 export class ServiceHost {
   private initializedAt: string | null = null;

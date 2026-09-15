@@ -93,6 +93,32 @@ describe("presenting from a bot's chat", () => {
   });
 });
 
+describe("what the result declares", () => {
+  it("is exactly the items that exist, one marker line each", async () => {
+    const result = await (server() as unknown as Executable).executeTool(
+      "present_deliverable",
+      {
+        items: [
+          { path: "http://localhost:5173", label: "The app" },
+          { path: "/nowhere/user@a.com_user@b.com", label: "placeholder" },
+          { path: "http://localhost:4000" },
+        ],
+      },
+      "session-1"
+    );
+
+    const text = result.content.map((part) => part.text ?? "").join("");
+    const declared = text
+      .split("\n")
+      .filter((line) => line.startsWith("[artifact] "));
+    expect(declared).toEqual([
+      "[artifact] http://localhost:5173",
+      "[artifact] http://localhost:4000",
+    ]);
+    expect(text).toContain("Not presented, because there is no file");
+  });
+});
+
 describe("presenting nothing that exists", () => {
   it("opens no pane and says so", async () => {
     const result = await (
