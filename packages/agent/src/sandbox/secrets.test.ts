@@ -7,10 +7,13 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { CredentialApprovals } from "./approvals.js";
 import { secretHidingArgs } from "./bubblewrap.js";
 import { buildProfile, policyRefusal } from "./seatbelt.js";
 import {
   isWithin,
+  mentionedSecretPaths,
+  namedSecretPaths,
   readableExemptions,
   resolveSecretPaths,
   secretEntries,
@@ -99,6 +102,19 @@ describe("the deny-list", () => {
     expect(result.denied).toEqual([]);
   });
 
+  it("reads an exempted file back from inside a hidden directory", () => {
+    const result = resolve(
+      {
+        "/home/dev/.ssh": ["id_rsa", "id_dsa"],
+        "/home/dev/.ssh/id_rsa": null,
+        "/home/dev/.ssh/id_dsa": null,
+      },
+      { exemptions: ["/home/dev/.ssh/id_rsa"] }
+    );
+    expect(result.denied).toEqual(["/home/dev/.ssh"]);
+    expect(result.allowed).toEqual(["/home/dev/.ssh/id_rsa"]);
+  });
+
   it("skips anything under an exemption", () => {
     const result = resolve(
       {
@@ -171,12 +187,15 @@ describe("the Seatbelt rules", () => {
   it("denies each store and allows the readable files after it", () => {
     const lines = buildProfile({
       ...base,
-      deniedReads: ["/Users/dev/.ssh", "/Users/dev/.netrc"],
-      allowedReads: ["/Users/dev/.ssh/config"],
+      secrets: {
+        denied: ["/Users/dev/.ssh", "/Users/dev/.netrc"],
+        allowed: ["/Users/dev/.ssh/config"],
+        promptable: [],
+      },
     }).split("\n");
     const deny = lines.indexOf('(deny file-read* (subpath "/Users/dev/.ssh"))');
     const allow = lines.indexOf(
-      '(allow file-read* (literal "/Users/dev/.ssh/config"))'
+      '(allow file-read* (subpath "/Users/dev/.ssh/config"))'
     );
     expect(deny).toBeGreaterThan(-1);
     expect(lines).toContain('(deny file-read* (subpath "/Users/dev/.netrc"))');
@@ -188,8 +207,7 @@ describe("the Seatbelt rules", () => {
     const profile = buildProfile({
       ...base,
       mode: "read-only",
-      deniedReads: ["/Users/dev/.ssh"],
-      allowedReads: [],
+      secrets: { denied: ["/Users/dev/.ssh"], allowed: [], promptable: [] },
     });
     expect(profile).toContain('(deny file-read* (subpath "/Users/dev/.ssh"))');
   });
@@ -198,8 +216,7 @@ describe("the Seatbelt rules", () => {
     expect(
       policyRefusal({
         ...base,
-        deniedReads: ["/Users/dev/.s\nsh"],
-        allowedReads: [],
+        secrets: { denied: ["/Users/dev/.s\nsh"], allowed: [], promptable: [] },
       })
     ).toMatch(/control characters/);
   });
@@ -212,7 +229,7 @@ describe("the bubblewrap arguments", () => {
 
   it("covers a directory with a tmpfs and a file with /dev/null", () => {
     const args = secretHidingArgs(
-      { deniedReads: ["/home/dev/.ssh", "/home/dev/.netrc"], allowedReads: [] },
+      { denied: ["/home/dev/.ssh", "/home/dev/.netrc"], allowed: [] },
       isDirectory
     );
     expect(args).toEqual([
@@ -226,14 +243,121 @@ describe("the bubblewrap arguments", () => {
 
   it("binds the readable files back after the tmpfs that hid them", () => {
     const args = secretHidingArgs(
-      {
-        deniedReads: ["/home/dev/.ssh"],
-        allowedReads: ["/home/dev/.ssh/config"],
-      },
+      { denied: ["/home/dev/.ssh"], allowed: ["/home/dev/.ssh/config"] },
       isDirectory
     ).join(" ");
     expect(args.indexOf("--ro-bind /home/dev/.ssh/config")).toBeGreaterThan(
       args.indexOf("--tmpfs /home/dev/.ssh")
     );
+  });
+});
+
+describe("stores a command names", () => {
+  const promptable = ["/home/dev/.ssh", "/home/dev/.netrc"];
+  const named = (command: string, cwd = "/home/dev/project"): string[] =>
+    namedSecretPaths(command, { cwd, promptable, home: "/home/dev" });
+
+  it("finds a store spelled with ~, absolutely, or relative to cwd", () => {
+    expect(named("cat ~/.ssh/id_ed25519")).toEqual([
+      "/home/dev/.ssh/id_ed25519",
+    ]);
+    expect(named("cat /home/dev/.netrc")).toEqual(["/home/dev/.netrc"]);
+    expect(named("cat .ssh/id_rsa", "/home/dev")).toEqual([
+      "/home/dev/.ssh/id_rsa",
+    ]);
+  });
+
+  it("treats a glob as naming the directory it lives in", () => {
+    expect(named("cat ~/.ssh/*")).toEqual(["/home/dev/.ssh"]);
+  });
+
+  it("sees through quotes and key=value flags", () => {
+    expect(named(`cat "~/.ssh/id_ed25519"`)).toEqual([
+      "/home/dev/.ssh/id_ed25519",
+    ]);
+    expect(named("scp -i ~/.ssh/id_rsa a b")).toEqual([
+      "/home/dev/.ssh/id_rsa",
+    ]);
+    expect(named("ssh --identity=~/.ssh/id_rsa host")).toEqual([
+      "/home/dev/.ssh/id_rsa",
+    ]);
+  });
+
+  it("ignores paths beside a store and files read back from it", () => {
+    // The gate asks only about the hidden part; config is readable anyway.
+    expect(named("cat ~/.ssh/config")).toEqual(["/home/dev/.ssh/config"]);
+    expect(named("cat ~/.sshx/key ~/.bashrc /etc/hosts")).toEqual([]);
+  });
+
+  it("does not name a store a command reaches without naming it", () => {
+    // Left to the kernel, and the failure note, on purpose.
+    expect(named("tar czf out.tgz ~")).toEqual([]);
+    expect(named("cat $HOME/.netrc")).toEqual([]);
+  });
+
+  it("is empty when nothing is hidden", () => {
+    expect(
+      namedSecretPaths("cat ~/.netrc", { cwd: "/", promptable: [] })
+    ).toEqual([]);
+  });
+});
+
+describe("stores a failure mentions", () => {
+  it("returns the stores that appear in the output, in list order", () => {
+    expect(
+      mentionedSecretPaths("cat: /home/dev/.netrc: Operation not permitted", [
+        "/home/dev/.ssh",
+        "/home/dev/.netrc",
+      ])
+    ).toEqual(["/home/dev/.netrc"]);
+  });
+});
+
+describe("approvals", () => {
+  it("hand a one-off grant to the next run of that command only", () => {
+    const approvals = new CredentialApprovals();
+    approvals.approveOnce("cat ~/.netrc", ["/home/dev/.netrc"]);
+    expect(approvals.consume("cat ~/.ssh/id_rsa")).toEqual([]);
+    expect(approvals.consume("cat ~/.netrc")).toEqual(["/home/dev/.netrc"]);
+    expect(approvals.consume("cat ~/.netrc")).toEqual([]);
+  });
+
+  it("keep a session grant for every later command", () => {
+    const approvals = new CredentialApprovals();
+    approvals.approveForSession(["/home/dev/.netrc"]);
+    expect(approvals.consume("anything")).toEqual(["/home/dev/.netrc"]);
+    expect(approvals.consume("anything else")).toEqual(["/home/dev/.netrc"]);
+    expect(approvals.isApprovedForSession("/home/dev/.netrc")).toBe(true);
+    expect(approvals.isApprovedForSession("/home/dev/.ssh/id_rsa")).toBe(false);
+  });
+
+  it("merge repeated grants without duplicates", () => {
+    const approvals = new CredentialApprovals();
+    approvals.approveOnce("x", ["/a"]);
+    approvals.approveOnce("x", ["/a", "/b"]);
+    approvals.approveForSession(["/b", "/c"]);
+    approvals.approveForSession(["/c"]);
+    expect(approvals.consume("x")).toEqual(["/a", "/b", "/c"]);
+    expect(approvals.sessionPaths).toEqual(["/b", "/c"]);
+  });
+});
+
+describe("the policy honours an approved read", () => {
+  it("drops the approved store from the deny-list for that run", () => {
+    const withGrant = resolve(
+      { "/home/dev/.netrc": null, "/home/dev/.aws/credentials": null },
+      { exemptions: ["/home/dev/.netrc"] }
+    );
+    expect(withGrant.denied).toEqual(["/home/dev/.aws/credentials"]);
+    expect(withGrant.promptable).toEqual(["/home/dev/.aws/credentials"]);
+  });
+
+  it("never marks the app's own settings as promptable", () => {
+    const result = resolve(
+      { "/srv/bot/config.json": null, "/home/dev/.netrc": null },
+      { env: { ABACUSAI_BOT_HOME: "/srv/bot" } }
+    );
+    expect(result.denied).toContain("/srv/bot/config.json");
+    expect(result.promptable).toEqual(["/home/dev/.netrc"]);
   });
 });

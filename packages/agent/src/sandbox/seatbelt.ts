@@ -87,11 +87,11 @@ export function buildProfile(policy: SandboxPolicy): string {
 
   // Credential stores. A later rule wins in Seatbelt, so the files read back
   // must follow the denials.
-  for (const denied of policy.deniedReads) {
+  for (const denied of policy.secrets.denied) {
     lines.push(`(deny file-read* (subpath ${schemeString(denied)}))`);
   }
-  for (const allowed of policy.allowedReads) {
-    lines.push(`(allow file-read* (literal ${schemeString(allowed)}))`);
+  for (const allowed of policy.secrets.allowed) {
+    lines.push(`(allow file-read* (subpath ${schemeString(allowed)}))`);
   }
 
   return lines.join("\n");
@@ -109,8 +109,8 @@ export function policyRefusal(policy: SandboxPolicy): string | null {
     ...(policy.mode === "workspace-write" || policy.mode === "read-only"
       ? policy.writableTemp
       : []),
-    ...policy.deniedReads,
-    ...policy.allowedReads,
+    ...policy.secrets.denied,
+    ...policy.secrets.allowed,
   ];
 
   for (const value of interpolated) {

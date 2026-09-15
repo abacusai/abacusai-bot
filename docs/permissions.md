@@ -89,10 +89,19 @@ Google Cloud, Azure), `~/.kube/config`, `~/.docker/config.json`, `~/.netrc`,
 `~/.pypirc`, browser profiles, the macOS keychain files, and this app's own
 settings and browser data. Configuration beside them stays readable, so
 `~/.ssh/config`, known hosts, public keys and `~/.aws/config` still work.
-`git push` over SSH needs the key loaded in an agent. A tool that must read one
-of these can be exempted with `ABACUSAI_BOT_SANDBOX_READABLE`, a
-path-delimited list; `~` expands to the home directory. Credential helpers that
-talk to a daemon, such as the macOS keychain, keep working.
+Credential helpers that talk to a daemon, such as the macOS keychain, keep
+working. `git push` over SSH needs the key loaded in an agent.
+
+A command that names one of the developer stores (SSH and GPG keys, cloud
+credentials, kube and docker config, `.netrc`, `.pypirc`) asks first, even
+when the command itself was already allowed. The card lists the paths.
+"Allow once" unhides them for that command; "Always" keeps them readable for
+the rest of the session. The app's own settings, browser data and keychain
+files are never offered. A command that reaches a store without naming it,
+through a script or a variable, fails at the kernel and is told to name the
+path so the prompt can be raised. `ABACUSAI_BOT_SANDBOX_READABLE`, a
+path-delimited list where `~` expands to the home directory, exempts a path
+without prompting.
 
 The sandbox applies to shell commands, including commands started by delegated
 agents and verification tools. It does not confine Electron, model requests,

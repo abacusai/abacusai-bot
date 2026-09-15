@@ -50,8 +50,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     enforcement: "auto",
     workspaceRoot: "/tmp/ws",
     writableTemp: ["/private/tmp"],
-    deniedReads: [],
-    allowedReads: [],
+    secrets: { denied: [], allowed: [], promptable: [] },
     ...overrides,
   };
 }
@@ -983,18 +982,16 @@ describe.runIf(onMac || onLinux)(
     });
 
     /** Exit code under confinement, or -1 when no backend can be established. */
-    function run(command: string): number {
-      const secrets = resolveSecretPaths({
-        home,
-        workspaceRoot: workspace,
-        exemptions: [],
-      });
+    function run(command: string, approved: string[] = []): number {
       const decision = decide(
         policy({
           workspaceRoot: workspace,
           writableTemp: [canonicalize(os.tmpdir())],
-          deniedReads: secrets.denied,
-          allowedReads: secrets.allowed,
+          secrets: resolveSecretPaths({
+            home,
+            workspaceRoot: workspace,
+            exemptions: approved,
+          }),
         }),
         command,
         workspace
@@ -1032,6 +1029,12 @@ describe.runIf(onMac || onLinux)(
 
     it("still reads the ssh config beside the key", () => {
       const code = run(`grep -q example ${JSON.stringify(config)}`);
+      if (code === -1) return;
+      expect(code).toBe(0);
+    });
+
+    it("reads the key once the user approved it on the card", () => {
+      const code = run(`grep -q PRIVATE ${JSON.stringify(key)}`, [key]);
       if (code === -1) return;
       expect(code).toBe(0);
     });

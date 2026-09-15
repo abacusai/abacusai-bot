@@ -645,8 +645,13 @@ function BashPermissionUI({
   tool: PendingPermissionInfo;
   onDecide: (d: PermissionDecisionInput) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const command = String(tool.toolInput.command ?? "").trim();
   const displayName = getProp<string>(tool.toolInput, "_displayName") ?? "Bash";
+  const credentialPaths =
+    tool.request?.type === "run_terminal"
+      ? (tool.request.credentialPaths ?? [])
+      : [];
   const alwaysAllowRule =
     getProp<string>(tool.toolInput, "_alwaysAllowRule") ?? null;
   const alwaysAllowRules =
@@ -667,6 +672,24 @@ function BashPermissionUI({
         <pre className="text-muted-foreground bg-muted border-border max-h-20 overflow-y-auto rounded-lg border px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap">
           {command}
         </pre>
+      )}
+      {credentialPaths.length > 0 && (
+        <div
+          className="flex flex-col gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-2 text-xs"
+          data-id="permission-credential-read"
+        >
+          <span className="text-foreground font-medium">
+            {t("permissions.credentialRead")}
+          </span>
+          <ul className="text-muted-foreground list-disc pl-4 font-mono break-all">
+            {credentialPaths.map((store) => (
+              <li key={store}>{store}</li>
+            ))}
+          </ul>
+          <span className="text-muted-foreground">
+            {t("permissions.credentialAlways")}
+          </span>
+        </div>
       )}
       <PermActionList
         onDecide={onDecide}

@@ -1103,3 +1103,69 @@ describe("executing JavaScript in a page", () => {
     }
   });
 });
+
+describe("a hidden credential store named by a command", () => {
+  const stores = ["/Users/someone/.ssh", "/Users/someone/.netrc"];
+
+  it("asks even when the command prefix was approved, and names the store", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "cat /Users/someone/.ssh/id_ed25519" }),
+      options({
+        allowedCommands: ["cat"],
+        promptableCredentialPaths: stores,
+      })
+    );
+    expect(gate.kind).toBe("ask");
+    if (gate.kind !== "ask" || gate.request.type !== "run_terminal") return;
+    expect(gate.request.credentialPaths).toEqual([
+      "/Users/someone/.ssh/id_ed25519",
+    ]);
+  });
+
+  it("allows once the store was always-allowed, and says which to unhide", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "cat /Users/someone/.netrc" }),
+      options({
+        allowedCommands: ["cat"],
+        promptableCredentialPaths: stores,
+        allowedCredentialPaths: ["/Users/someone/.netrc"],
+      })
+    );
+    expect(gate).toEqual({
+      kind: "allow",
+      credentialPaths: ["/Users/someone/.netrc"],
+    });
+  });
+
+  it("still asks when only some named stores were always-allowed", () => {
+    const gate = gateToolCall(
+      call("bash", {
+        command: "cat /Users/someone/.netrc /Users/someone/.ssh/id_rsa",
+      }),
+      options({
+        allowedCommands: ["cat"],
+        promptableCredentialPaths: stores,
+        allowedCredentialPaths: ["/Users/someone/.netrc"],
+      })
+    );
+    expect(gate.kind).toBe("ask");
+  });
+
+  it("mentions no store on an ordinary command", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "git push" }),
+      options({ promptableCredentialPaths: stores })
+    );
+    if (gate.kind !== "ask" || gate.request.type !== "run_terminal") return;
+    expect(gate.request.credentialPaths).toBeUndefined();
+  });
+
+  it("does not apply in bypass mode, where nothing is hidden", () => {
+    expect(
+      gateToolCall(
+        call("bash", { command: "cat /Users/someone/.netrc" }),
+        options({ mode: AgentMode.Yolo, promptableCredentialPaths: stores })
+      ).kind
+    ).toBe("allow");
+  });
+});

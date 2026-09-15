@@ -42,8 +42,9 @@ a description for both connector tools.
 The kernel sandbox now hides credential stores from shell commands: SSH and
 GPG private keys, cloud CLI credential caches, browser profiles, the macOS
 keychain files and the app's own settings. Configuration beside them stays
-readable. `ABACUSAI_BOT_SANDBOX_READABLE` exempts a path for a tool that needs
-one.
+readable. A command that names one of the developer stores asks first, and
+the approval card lists the paths; "Always" keeps them readable for the
+session. `ABACUSAI_BOT_SANDBOX_READABLE` exempts a path without a prompt.
 
 Telegram no longer creates an assistant bot of its own through BotFather.
 Messages to you arrive from the shared Abacus AI bot, which the Telegram setup

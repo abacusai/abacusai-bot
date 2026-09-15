@@ -11,6 +11,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import type { SandboxPolicy } from "./policy.js";
+import type { SecretPaths } from "./secrets.js";
 import { POSIX_SHELL, shellArgs } from "./shell.js";
 
 /**
@@ -142,7 +143,7 @@ export function buildArgs(
   }
 
   // After the workspace bind, so a workspace under $HOME cannot expose them.
-  args.push(...secretHidingArgs(policy, isDirectorySync));
+  args.push(...secretHidingArgs(policy.secrets, isDirectorySync));
 
   args.push("--chdir", cwd, "--", POSIX_SHELL, ...shellArgs(command));
 
@@ -163,15 +164,15 @@ function isDirectorySync(candidate: string): boolean {
  * sources on the host, so /dev/null here is the real device.
  */
 export function secretHidingArgs(
-  policy: Pick<SandboxPolicy, "deniedReads" | "allowedReads">,
+  secrets: Pick<SecretPaths, "denied" | "allowed">,
   isDirectory: (candidate: string) => boolean
 ): string[] {
   const args: string[] = [];
-  for (const denied of policy.deniedReads) {
+  for (const denied of secrets.denied) {
     if (isDirectory(denied)) args.push("--tmpfs", denied);
     else args.push("--ro-bind", "/dev/null", denied);
   }
-  for (const allowed of policy.allowedReads) {
+  for (const allowed of secrets.allowed) {
     args.push("--ro-bind", allowed, allowed);
   }
 
