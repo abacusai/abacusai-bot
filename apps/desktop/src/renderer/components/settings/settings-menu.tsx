@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
@@ -26,12 +25,10 @@ import { useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { canSignOutOfAbacus } from "#shared/settings";
-
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
+import { useAbacusCredentialQuery } from "../../hooks/use-abacus-credential";
 import { useTheme } from "../../hooks/use-theme";
 import { defaultWorkspaceSearch } from "../../lib/route-search";
-import { settingsQueryKeys } from "../../lib/settings-query-keys";
 import { displayName, useAccountStore } from "../../stores/account-store";
 import { useLanguageStore } from "../../stores/language-store";
 import { useTourStore } from "../../stores/tour-store";
@@ -74,12 +71,7 @@ export const SettingsMenu = (): JSX.Element => {
   const signOutAccount = useAccountStore((state) => state.signOut);
   const forgetAccount = useAccountStore((state) => state.forget);
   const [isOpen, setIsOpen] = useState(false);
-  const credentialQuery = useQuery({
-    queryKey: settingsQueryKeys.models.abacusCredential,
-    queryFn: async () =>
-      canSignOutOfAbacus(await window.api.agent.getSettings()),
-    staleTime: 60_000,
-  });
+  const credentialQuery = useAbacusCredentialQuery();
   const abacusSignedIn = credentialQuery.data ?? false;
 
   const signOutOfAbacus = async (): Promise<void> => {
