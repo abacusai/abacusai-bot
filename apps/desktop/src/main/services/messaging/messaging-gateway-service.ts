@@ -79,6 +79,9 @@ const DEFERRAL = "let me get back to you on that";
 
 /** Who the transcript's second bubble is from, matching the sender's label. */
 const RESPONSE_LABEL = "[Response from AbacusAI Bot]";
+/** What a phone hears when the desktop has no model to answer with. */
+const NO_MODEL_REPLY =
+  "The desktop app is not signed in to Abacus.AI right now. Open the app and sign in, then message me again.";
 
 /**
  * The words for the other person, out of everything the model wrote. Asking
@@ -1207,10 +1210,19 @@ export class MessagingGatewayService {
     // per round of tool calls); the only authoritative terminators are
     // `status_changed: idle` and `error`.
     if (event.type === "error") {
-      const detail =
+      const raw =
         event.error?.message ??
         event.error?.segmentData?.message ??
         "The agent hit an error.";
+      // "No model provider is configured" and pi's own /login hint, with
+      // filesystem paths, went out to a phone as the bot's reply. Nothing on
+      // that side can act on it; the pane and the log keep the real text.
+      const detail =
+        event.error?.code === "model_unavailable" ? NO_MODEL_REPLY : raw;
+      if (detail !== raw)
+        console.log(
+          `[messaging] ${route.platform}:${route.chatId} model unavailable, replied generically: ${raw}`
+        );
 
       // Some provider failures are reported after the turn's idle event.
       // Forwarding one would send the remote user raw provider text about a

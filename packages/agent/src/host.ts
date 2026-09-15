@@ -103,6 +103,19 @@ export class NdjsonHost {
         process.stderr.write(
           `[abacusai-bot-agent] ignoring malformed command line: ${trimmed.slice(0, 200)}\n`
         );
+        // Said out loud: a dropped `send` otherwise shows as a turn that never
+        // starts, and the desktop reports it as a ten-minute hang.
+        this.emit({
+          type: "event",
+          event: {
+            type: "error",
+            error: {
+              message:
+                "A message could not be read by the agent and was not sent. Try sending it again.",
+              code: "malformed_command",
+            },
+          },
+        });
 
         continue;
       }

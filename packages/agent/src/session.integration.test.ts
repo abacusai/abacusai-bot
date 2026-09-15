@@ -19,6 +19,10 @@ import {
 } from "@abacus-ai/test-support/fake-provider";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+// A model call that goes quiet is given up on after this long; the real
+// window is two minutes, which no test should sit through.
+process.env.ABACUSAI_BOT_MODEL_STALL_MS = "700";
+
 import {
   AgentMode,
   AgentStatus,
@@ -222,6 +226,82 @@ describe("starting", () => {
     } finally {
       named.dispose();
     }
+  });
+});
+
+describe("a model call that goes silent", () => {
+  it("is abandoned and asked once more on the same model", async () => {
+    const harness = session({ mode: "yolo" });
+
+    provider.scriptSequence([
+      { stall: { say: "Starting" } },
+      { say: "finished after all" },
+    ]);
+    await harness.session.start();
+    await harness.session.send("hi");
+    await harness.until(
+      () => harness.agent("turn_complete").length > 0,
+      10_000
+    );
+
+    expect(harness.text).toContain("finished after all");
+    expect(harness.agent("error")).toHaveLength(0);
+    expect(
+      harness.agent("notification").map((event) => event.message)
+    ).toContain("fake/fake-1 stopped answering after 0.7s — asking it again.");
+    // Two calls: the one that stalled and the one that answered.
+    expect(provider.calls).toHaveLength(2);
+  });
+
+  it("ends the turn saying so when the second attempt is silent too", async () => {
+    const harness = session({ mode: "yolo" });
+
+    provider.script(() => ({ stall: {} }));
+    await harness.session.start();
+    await harness.session.send("hi");
+    await harness.until(() => harness.agent("error").length > 0, 10_000);
+
+    const failure = harness.agent("error").at(-1);
+    expect(failure?.error?.message).toBe(
+      "The model stopped answering (no output for 0.7s). Try again, or switch to a different model."
+    );
+    expect(failure?.error?.code).toBe("turn_failed");
+    // The chat is idle again, not busy forever behind a withheld idle event.
+    expect(harness.agent("status_changed").at(-1)?.status).toBe(
+      AgentStatus.Idle
+    );
+    expect(provider.calls).toHaveLength(2);
+  });
+
+  it("leaves a running tool alone, however long it takes", async () => {
+    // Tools have their own limits, and a sub-agent legitimately runs for
+    // minutes; the watchdog only covers the model's own silence.
+    const harness = session({ mode: "yolo" });
+
+    provider.scriptSequence([
+      {
+        call: {
+          name: "bash",
+          args: { command: "sleep 1.5; echo slow-tool-done" },
+        },
+      },
+      { say: "the tool finished" },
+    ]);
+    await harness.session.start();
+    await harness.session.send("run it");
+    await harness.until(
+      () => harness.agent("turn_complete").length > 0,
+      15_000
+    );
+
+    expect(harness.text).toContain("the tool finished");
+    expect(harness.agent("error")).toHaveLength(0);
+    expect(
+      harness
+        .agent("notification")
+        .map((event) => event.message)
+        .join("\n")
+    ).not.toMatch(/stopped answering/);
   });
 });
 
@@ -869,6 +949,37 @@ describe("OpenLLM", () => {
         .map((event) => event.message)
         .join("\n")
     ).not.toMatch(/Routing to/);
+  });
+
+  it("gives up on a model that goes silent and moves to the next", async () => {
+    // A Windows user's first message: the pool's first model opened a stream
+    // and never sent another byte. Nothing in the stack ended it before the
+    // desktop's ten-minute watchdog, so her first turn was two minutes of
+    // nothing and then an error. The stalled call is abandoned and the pool
+    // moves on, the same as for a model that answered with a failure.
+    const harness = session({ mode: "yolo" });
+
+    provider.scriptSequence([
+      { stall: {} },
+      { say: "answered by the next model" },
+    ]);
+    await harness.session.start();
+    await harness.session.send("hi");
+    await harness.until(
+      () => harness.agent("turn_complete").length > 0,
+      10_000
+    );
+
+    expect(harness.text).toContain("answered by the next model");
+    expect(harness.agent("error")).toHaveLength(0);
+    expect(
+      harness
+        .agent("notification")
+        .map((event) => event.message)
+        .join("\n")
+    ).toMatch(/failed \(no reply in 1s\) — routing to ollama\/small/);
+    // Still the router in the picker: which model answered is its business.
+    expect(harness.agent("model_changed").at(-1)?.model).toBe("openllm/auto");
   });
 
   it("moves the turn to the next model when the provider fails", async () => {

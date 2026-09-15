@@ -15,6 +15,7 @@ import {
   AgentManagerService,
   killWithEscalation,
   type ExecFileLike,
+  serializeCommand,
 } from "./cli-manager-service";
 
 /** A child that stays up until it is told to go. */
@@ -244,5 +245,50 @@ describe("diagnostics for a session that has gone", () => {
     expect(record?.live).toBe(false);
     expect(record?.command).toBe("(agent artifact unresolved)");
     expect(record?.state.error).toContain("agent entry not found");
+  });
+});
+
+describe("a command on its way to the agent", () => {
+  // The agent reads stdin with readline, which ends a line on U+2028 and
+  // U+2029 as well as "\n". JSON leaves both raw inside a string, so a
+  // persona pasted from Apple Notes split the command in two: the agent
+  // dropped both halves as malformed and the routine never ran.
+  const readsBackAsOneLine = async (payload: string): Promise<string[]> => {
+    const readline = await import("node:readline");
+    const { Readable } = await import("node:stream");
+    const lines: string[] = [];
+    const input = readline.createInterface({
+      input: Readable.from([`${payload}\n`]),
+    });
+    for await (const line of input) lines.push(line);
+    return lines;
+  };
+
+  it("survives a line separator in the message", async () => {
+    const command = {
+      type: "send",
+      message:
+        "You are Chief of staff.\nYour voice: Proactive, decisive, concise\u2028Instruction\n\n[routine] fired",
+    };
+
+    const lines = await readsBackAsOneLine(serializeCommand(command));
+
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "")).toEqual(command);
+  });
+
+  it("survives a paragraph separator too", async () => {
+    const command = { type: "send", message: "one\u2029two" };
+
+    const lines = await readsBackAsOneLine(serializeCommand(command));
+
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "")).toEqual(command);
+  });
+
+  it("is plain JSON.stringify for everything else", () => {
+    const command = { type: "send", message: "tabs\tand\nnewlines" };
+
+    expect(serializeCommand(command)).toBe(JSON.stringify(command));
   });
 });

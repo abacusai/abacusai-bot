@@ -169,6 +169,18 @@ export type ExecFileLike = (
  * Windows kill() is TerminateProcess and leaves children alive, so taskkill
  * /T takes the tree; if that fails, terminate directly rather than do nothing.
  */
+/**
+ * One command, one line. JSON leaves U+2028 and U+2029 unescaped (they are
+ * legal inside a JSON string) but the agent reads stdin with readline, which
+ * ends a line on either — so a persona pasted from Apple Notes arrived as two
+ * malformed lines and the routine never ran. Both are valid JSON escapes.
+ */
+export function serializeCommand(command: unknown): string {
+  return JSON.stringify(command)
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 export function killWithEscalation(
   child: KillableChild,
   platform: NodeJS.Platform = process.platform,
@@ -745,7 +757,7 @@ export class AgentManagerService {
     if (runtime.process.stdin == null || runtime.process.stdin.destroyed) {
       return false;
     }
-    const payload = `${JSON.stringify(command)}\n`;
+    const payload = `${serializeCommand(command)}\n`;
     try {
       runtime.process.stdin.write(payload);
       return true;

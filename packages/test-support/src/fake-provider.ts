@@ -28,7 +28,13 @@ export type Reply =
   /** Text and a call together, which is what a narrating model sends. */
   | { say?: string; call: { name: string; args: Record<string, unknown> } }
   /** A provider error, as a status and the body a provider would send with it. */
-  | { fail: { status: number; message: string } };
+  | { fail: { status: number; message: string } }
+  /**
+   * A stream that opens, says this much, and then never sends another byte
+   * or closes — the shape of a connection the server has finished with but
+   * the client is still waiting on.
+   */
+  | { stall: { say?: string } };
 
 /** Text of a message whether the content is a string or a block array. */
 function textOf(content: unknown): string {
@@ -46,6 +52,8 @@ function textOf(content: unknown): string {
 
 export class FakeProvider {
   readonly calls: RecordedCall[] = [];
+  /** Responses left open by a `stall` reply, closed with the server. */
+  private readonly stalled: http.ServerResponse[] = [];
   private responder: Responder = () => ({ say: "ok" });
 
   private constructor(
@@ -93,6 +101,8 @@ export class FakeProvider {
   }
 
   async close(): Promise<void> {
+    // server.close waits for open responses; a stalled one would wait forever.
+    for (const response of this.stalled.splice(0)) response.destroy();
     await new Promise<void>((resolve) => this.server.close(() => resolve()));
   }
 
@@ -154,6 +164,15 @@ export class FakeProvider {
     };
 
     frame({ role: "assistant", content: "" });
+
+    if ("stall" in reply) {
+      if (reply.stall.say != null && reply.stall.say.length > 0)
+        frame({ content: reply.stall.say });
+      // Held open on purpose; the caller's abort is what ends it.
+      this.stalled.push(response);
+
+      return;
+    }
 
     if ("call" in reply) {
       if (reply.say != null && reply.say.length > 0)

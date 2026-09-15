@@ -291,6 +291,27 @@ describe("a turn", () => {
       (event) => event.type === "event" && event.event.type === "turn_complete"
     );
   });
+
+  it("says when it could not read a command, rather than dropping it silently", async () => {
+    // A dropped `send` looked like a turn that never started: ten minutes
+    // of nothing, then the desktop's watchdog calling it a hang.
+    const host = start(workspace(), ["--permission-mode", "YOLO"]);
+
+    await host.waitFor((event) => event.type === "ready");
+    host.sendRaw('{"type":"send","message":"half a comm');
+
+    const reported = await host.waitFor(
+      (event) =>
+        event.type === "event" &&
+        event.event.type === "error" &&
+        event.event.error?.code === "malformed_command"
+    );
+    expect(
+      reported.type === "event" && reported.event.type === "error"
+        ? reported.event.error?.message
+        : ""
+    ).toContain("could not be read");
+  });
 });
 
 describe("host services", () => {
