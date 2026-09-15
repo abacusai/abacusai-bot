@@ -61,6 +61,7 @@ import {
   getMentionAtCursor,
   tokenize,
 } from "../../lib/mentions";
+import { modeAfterDecision } from "../../lib/permission-auto-resolve";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { filterSkills } from "../../utils/skill-utils";
 import { Button, Spinner, Textarea } from "../ui";
@@ -1381,11 +1382,13 @@ const PermissionPane = ({
   if (permission == null) return null;
 
   const decide = (decision: PermissionDecisionInput): void => {
-    // If decision triggers a mode change, update the local UI too
-    if (decision === "allowAlways" && onModeChange != null)
-      onModeChange(AgentMode.AcceptEdits);
-    if (decision === "allowYolo" && onModeChange != null)
-      onModeChange(AgentMode.Yolo);
+    // A decision that moves the mode moves the picker too; never from a
+    // sandbox card (lib/permission-auto-resolve.ts).
+    const nextMode =
+      permission.request != null && typeof decision === "string"
+        ? modeAfterDecision(permission.request, decision)
+        : null;
+    if (nextMode != null && onModeChange != null) onModeChange(nextMode);
     // The transport owns the toolCallId -> permissionId join and retires the
     // prompt as soon as the decision is sent, so the pane closes on click.
     void workspaceConversationTransport.respondToPermission(
