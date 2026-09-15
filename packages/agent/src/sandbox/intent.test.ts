@@ -107,6 +107,11 @@ describe.skipIf(!onPosix)("what a benign line is granted", () => {
     expect(classify(`chmod 600 ${own}`, options).grants).toEqual([own]);
   });
 
+  it("a trailing exit-status echo does not spoil the read", () => {
+    const intent = classify('echo hi > ~/Desktop/notes.txt; echo "exit=$?"');
+    expect(intent.grants).toEqual([path.join(DESKTOP, "notes.txt")]);
+  });
+
   it("a create earlier in the same line counts as the session's own", () => {
     const own = path.join(DESKTOP, "tmp.txt");
     const intent = classify(`touch ${own} && echo x > ${own} && rm ${own}`);

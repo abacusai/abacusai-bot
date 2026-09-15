@@ -44,8 +44,10 @@ const SEGMENT_SPLIT = /\|\||&&|[;|\n]|&(?![>\d])/;
 /**
  * Text whose meaning is not in the text: substitution, expansion, process
  * substitution. A path built from these cannot be granted from its spelling.
+ * `$?`, `$$`, `$#` and `$!` are numbers and stay plain: a model likes to
+ * finish a line with `echo "exit=$?"`, and that must not spoil the read.
  */
-const OPAQUE = /\$\(|`|\$\{|<\(|>\(|\$[A-Za-z_@*#?!0-9]/;
+const OPAQUE = /\$\(|`|\$\{|<\(|>\(|\$[A-Za-z_@*0-9]/;
 
 /** Runs code from an argument, so the verb says nothing about the writes. */
 const INTERPRETERS = new Set([

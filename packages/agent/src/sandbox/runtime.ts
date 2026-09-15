@@ -350,6 +350,38 @@ export function denials(commandId: string): Denial[] {
   );
 }
 
+/** Output that reads like the kernel said no. */
+const REFUSAL_WORDS =
+  /Operation not permitted|Permission denied|Read-only file system|EPERM|EACCES|EROFS/;
+
+/**
+ * The denials for a command once the runtime has had time to hear them. On
+ * macOS they arrive through `log stream`, a beat after the process exits,
+ * so read at exit a short command shows none and no card can be raised.
+ * A run that looks refused (a non-zero exit, or the words for it in the
+ * output) is waited on longer than one that does not.
+ */
+export async function settledDenials(
+  commandId: string,
+  outcome: { exitCode: number; tail: string }
+): Promise<Denial[]> {
+  const suspicious = outcome.exitCode !== 0 || REFUSAL_WORDS.test(outcome.tail);
+  const budget = suspicious ? 2500 : 400;
+  const started = Date.now();
+  let found = denials(commandId);
+  while (found.length === 0 && Date.now() - started < budget) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    found = denials(commandId);
+  }
+  if (found.length > 0) {
+    // A refusal seldom comes alone; give the rest of the burst a moment.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    found = denials(commandId);
+  }
+
+  return found;
+}
+
 /** Tests only. */
 export async function resetRuntime(): Promise<void> {
   await SandboxManager.reset();
