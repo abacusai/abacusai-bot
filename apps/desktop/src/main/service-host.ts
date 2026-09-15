@@ -291,6 +291,10 @@ import {
   clearBackendProbeCache,
   resolveBackend,
 } from "./services/providers/exec-backend-service";
+import {
+  cachedRecommendedModelId,
+  recommendedModelId,
+} from "./services/providers/models";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
@@ -905,7 +909,10 @@ export class ServiceHost {
     updateSessionModel: (workspaceId, sessionId, model) => {
       this.setAgentSessionModel(workspaceId, sessionId, model);
     },
-    defaultModel: () => readSettings().defaultModel ?? null,
+    // A bot with no model of its own runs on the user's pick, else the tier
+    // default the last catalog read established.
+    defaultModel: () =>
+      readSettings().defaultModel ?? cachedRecommendedModelId(),
     onBotRemoved: (botId) => {
       // Its routines stay (the user can delete those themselves); only the
       // provenance is cleared.
@@ -2147,11 +2154,11 @@ export class ServiceHost {
     this.transcriptService.write(sessionId, segments);
   }
 
-  startAgentSession(
+  async startAgentSession(
     request: StartAgentSessionRequest
   ): Promise<StartAgentSessionResult> {
     if (this.isWorkspaceDeleted(request.workspaceId)) {
-      return Promise.resolve({
+      return {
         success: false,
         created: false,
         state: this.agentManagerService.getSessionState(
@@ -2159,23 +2166,28 @@ export class ServiceHost {
           request.sessionId
         ),
         error: "Workspace was deleted; its chats are read-only.",
-      });
+      };
     }
     // The chat's remembered model beats the composer's: the renderer starts a
     // session before its list has loaded, and the agent would then report the
-    // wrong model back over the record that should have chosen it.
+    // wrong model back over the record that should have chosen it. With
+    // neither, the plan tier's default — not the agent's own fallback, which
+    // is the free pool whatever the tier.
     const remembered = this.agentSessionManagerService.get(
       request.sessionId
     )?.model;
-    const withRememberedModel =
+    const model =
       remembered != null && remembered.length > 0
-        ? { ...request, model: remembered }
-        : request;
+        ? remembered
+        : request.model != null && request.model.length > 0
+          ? request.model
+          : await recommendedModelId();
+    const withModel = model != null ? { ...request, model } : request;
 
     // The new agent sees the environment as it stands; nothing owed until then.
     environmentNoticeService.markSessionStarted(request.sessionId);
 
-    return this.agentManagerService.startSession(withRememberedModel);
+    return this.agentManagerService.startSession(withModel);
   }
 
   stopAgentSession(

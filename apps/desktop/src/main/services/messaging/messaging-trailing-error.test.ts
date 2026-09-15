@@ -88,8 +88,39 @@ const harness = () => {
     say: (content: string) => emit({ type: "text_delta", content }),
     idle: () => emit({ type: "status_changed", status: AgentStatus.Idle }),
     fail: (message: string) => emit({ type: "error", error: { message } }),
+    failWith: (error: Record<string, unknown>) =>
+      emit({ type: "error", error }),
   };
 };
+
+describe("a model the desktop cannot run", () => {
+  it("tells the phone to sign in, not what pi said", async () => {
+    const h = harness();
+    await h.inbound("Hey");
+
+    // What a bot spawned during sign-out produced: pi's /login hint, with
+    // the profile's filesystem paths, went out as the bot's reply.
+    h.failWith({
+      message:
+        "No API key found for the selected model.\n\nUse /login to log into a provider via OAuth or API key. See:\n  /Users/x/.abacusai-bot/profiles/p/agent/docs/providers.md",
+      code: "model_unavailable",
+    });
+
+    expect(h.sent).toHaveLength(1);
+    expect(h.sent[0]).toContain("not signed in to Abacus.AI");
+    expect(h.sent[0]).not.toContain("/login");
+    expect(h.sent[0]).not.toContain("providers.md");
+  });
+
+  it("still relays an error that is not about the model", async () => {
+    const h = harness();
+    await h.inbound("Hey");
+
+    h.failWith({ message: "402: out of credit" });
+
+    expect(h.sent).toEqual(["402: out of credit"]);
+  });
+});
 
 describe("an error that arrives after the turn ended", () => {
   it("does not send the raw provider text as its own message", async () => {

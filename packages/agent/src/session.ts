@@ -658,6 +658,19 @@ export class AbacusBotSession {
   private continuingPastMalformedToolCall = false;
   /** Whether a user turn is in flight — a refresh landing now is mid-turn. */
   private turnRunning = false;
+  /**
+   * A model call that has gone silent. Nothing in the stack ends a stalled
+   * stream before the desktop's ten-minute watchdog: a response the server
+   * had finished and billed sat undelivered for fourteen minutes, then was
+   * reported as a hang. Armed while a model call is expected to be producing
+   * output, never while a tool runs (tools have their own limits).
+   */
+  private stallTimer: NodeJS.Timeout | null = null;
+  private awaitingModel = false;
+  private pendingStall: { modelId: string } | null = null;
+  private stallRecoveriesThisTurn = 0;
+  /** The turn already ended on the stall error; pi's aborted state is not a second one. */
+  private stallFailureReported = false;
   /** MCP tools registered while this turn ran; pi offers them next turn. */
   private toolsArrivedThisTurn: string[] = [];
   /** The arrivals a continuation is about to name, once per turn. */
@@ -1349,6 +1362,9 @@ export class AbacusBotSession {
     this.toolsArrivedThisTurn = [];
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
+    this.stallRecoveriesThisTurn = 0;
+    this.pendingStall = null;
+    this.stallFailureReported = false;
     this.turnRunning = true;
     // A rotation left over from a stopped turn must not fire here.
     this.pendingOpenLlmRotation = null;
@@ -1396,7 +1412,7 @@ export class AbacusBotSession {
    * same way and is skipped, or every Stop would paint a terminal error.
    */
   private reportTurnFailure(): void {
-    if (this.interrupted) {
+    if (this.interrupted || this.stallFailureReported) {
       return;
     }
 
@@ -1485,7 +1501,8 @@ export class AbacusBotSession {
       this.pendingContextCompaction != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingLanguageRepair != null ||
-      this.pendingToolArrival != null
+      this.pendingToolArrival != null ||
+      this.pendingStall != null
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
       // to go out or the session stays busy forever.
@@ -1495,9 +1512,18 @@ export class AbacusBotSession {
         this.pendingOpenLlmRotation = null;
         this.pendingLanguageRepair = null;
         this.pendingToolArrival = null;
+        this.pendingStall = null;
         this.finishTurn();
 
         return;
+      }
+
+      if (this.pendingStall != null) {
+        const stalled = this.pendingStall.modelId;
+        this.pendingStall = null;
+        await this.recoverFromStall(stalled);
+
+        continue;
       }
 
       if (this.pendingToolArrival != null) {
@@ -1573,6 +1599,118 @@ export class AbacusBotSession {
 
       await this.rotateOpenLlmModel();
     }
+  }
+
+  /**
+   * The call went quiet for the stall window and was aborted. On the router the
+   * model sits out and the next one takes over, as for any failure; a pinned
+   * model is asked once more, then the turn ends saying why.
+   */
+  private async recoverFromStall(modelId: string): Promise<void> {
+    const seconds = modelStallMs() / 1000;
+    const registry = this.registry;
+
+    if (this.openLlmActive && registry != null) {
+      this.openLlmRotation.markFailed(modelId);
+      const next = this.openLlmRotation.pick(
+        openLlmCandidates(listModels(registry)),
+        new Set([modelId])
+      );
+
+      if (next != null) {
+        this.pendingOpenLlmRotation = {
+          // No "." in this: the routing line keeps the first sentence only.
+          failure: `no reply in ${Math.round(seconds)}s`,
+          nextId: next.id,
+        };
+
+        return;
+      }
+    }
+
+    if (this.stallRecoveriesThisTurn < MAX_STALL_RECOVERIES_PER_TURN) {
+      this.stallRecoveriesThisTurn += 1;
+      this.emitAgentEvent({
+        type: "notification",
+        severity: "warning",
+        message: `${modelId} stopped answering after ${seconds}s — asking it again.`,
+      });
+      await this.session?.sendCustomMessage(
+        {
+          customType: STALL_CONTINUATION_TYPE,
+          content: STALL_CONTINUATION_PROMPT,
+          display: false,
+        },
+        { triggerTurn: true }
+      );
+
+      return;
+    }
+
+    this.stallFailureReported = true;
+    this.emitAgentEvent({
+      type: "error",
+      error: {
+        message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
+        code: "turn_failed",
+        actions: [{ type: "switch-model" }],
+      },
+    });
+    this.finishTurn();
+  }
+
+  /** Which pi events mean a model call is (still) being waited on. */
+  private noteModelActivity(type: string): void {
+    switch (type) {
+      case "agent_start":
+      case "message_start":
+      case "tool_execution_end":
+        this.awaitingModel = true;
+        this.armStallTimer();
+
+        return;
+      case "message_end":
+      case "tool_execution_start":
+      case "agent_end":
+        this.awaitingModel = false;
+        this.clearStallTimer();
+
+        return;
+      default:
+        // A delta of any kind is proof of life.
+        if (this.awaitingModel) this.armStallTimer();
+    }
+  }
+
+  private armStallTimer(): void {
+    this.clearStallTimer();
+
+    if (!this.turnRunning) return;
+
+    this.stallTimer = setTimeout(() => {
+      this.stallTimer = null;
+      void this.onModelStall();
+    }, modelStallMs());
+  }
+
+  private clearStallTimer(): void {
+    if (this.stallTimer != null) clearTimeout(this.stallTimer);
+    this.stallTimer = null;
+  }
+
+  private async onModelStall(): Promise<void> {
+    if (!this.turnRunning || this.interrupted || !this.awaitingModel) return;
+
+    const model = this.session?.model;
+    const modelId = model ? `${model.provider}/${model.id}` : "the model";
+
+    this.awaitingModel = false;
+    this.pendingStall = { modelId };
+    process.stderr.write(
+      `[abacusai-bot-agent] ${modelId} produced nothing for ${modelStallMs() / 1000}s — aborting the call\n`
+    );
+    // Not Stop: `interrupted` stays false so the continuation can run.
+    await this.session?.abort();
   }
 
   /**
@@ -1742,6 +1880,12 @@ export class AbacusBotSession {
       this.interrupted ||
       this.openLlmRotationsThisTurn >= MAX_OPENLLM_ROTATIONS_PER_TURN
     ) {
+      if (this.openLlmActive && !this.interrupted) {
+        process.stderr.write(
+          `[abacusai-bot-agent] pool not rotating: ${this.openLlmRotationsThisTurn} rotations already this turn\n`
+        );
+      }
+
       return null;
     }
 
@@ -1765,6 +1909,12 @@ export class AbacusBotSession {
             currentId != null ? new Set([currentId]) : undefined
           )
         : undefined;
+
+    if (next == null) {
+      process.stderr.write(
+        `[abacusai-bot-agent] pool not rotating after "${failure.slice(0, 80)}": no other candidate (current ${currentId ?? "?"})\n`
+      );
+    }
 
     return next != null ? { failure, nextId: next.id } : null;
   }
@@ -1898,6 +2048,8 @@ export class AbacusBotSession {
    */
   private finishTurn(): void {
     this.turnRunning = false;
+    this.clearStallTimer();
+    this.awaitingModel = false;
     for (const subtaskId of this.componentSubtasks.values()) {
       this.emitAgentEvent({
         type: "subtask_end",
@@ -2298,6 +2450,8 @@ export class AbacusBotSession {
       process.stderr.write(`[pi] ${event.type}\n`);
     }
 
+    this.noteModelActivity(event.type);
+
     switch (event.type) {
       case "agent_start":
         this.emitAgentEvent({
@@ -2445,6 +2599,14 @@ export class AbacusBotSession {
       }
 
       case "agent_end": {
+        // The end of a call this session aborted for going silent; the loop
+        // in `send` decides what runs next, and the idle event waits for it.
+        if (this.pendingStall != null) {
+          this.lastTurnUsage = turnUsage(event.messages as never);
+
+          return;
+        }
+
         // Decided here: a continuation must suppress the idle event emitted below.
         this.continuingPastMalformedToolCall =
           this.shouldContinuePastMalformedToolCall(event.messages);
@@ -2497,6 +2659,15 @@ export class AbacusBotSession {
       }
 
       case "auto_retry_start":
+        // On the router the cap in capRetriesWhileRouting should leave one
+        // attempt; a session in the field showed three and never rotated.
+        // Enough on stderr (synced with the logs) to settle that next time.
+        if (this.openLlmActive) {
+          const current = this.session?.model;
+          process.stderr.write(
+            `[abacusai-bot-agent] pool retry ${event.attempt}/${event.maxAttempts} on ${current ? `${current.provider}/${current.id}` : "?"} (routing=${this.openLlmActive}): ${event.errorMessage.slice(0, 120)}\n`
+          );
+        }
         this.emitAgentEvent({
           type: "retry",
           attempt: event.attempt,
@@ -3083,6 +3254,21 @@ const COMPACTION_CONTINUATION_PROMPT =
   "The conversation was too long for your context window, so the history above was summarized to fit. Continue the task from it — do not restart it or repeat work that already completed.";
 
 /** Marks an OpenLLM model switch in the session log as ours. */
+/**
+ * How long a model call may go without a byte before it is given up on. The
+ * server's own first-token limit is well under this, so silence this long is
+ * a connection that will never finish, not a slow model.
+ */
+const MODEL_STALL_MS = 120_000;
+
+/** Read per arming, so a test can shorten the window after the import. */
+const modelStallMs = (): number =>
+  Number(process.env.ABACUSAI_BOT_MODEL_STALL_MS) || MODEL_STALL_MS;
+const MAX_STALL_RECOVERIES_PER_TURN = 1;
+const STALL_CONTINUATION_TYPE = "abacusai-bot:stall-recovery";
+const STALL_CONTINUATION_PROMPT =
+  "The previous provider call produced no output and was abandoned. Continue the task from the transcript above — do not restart it or repeat work that already completed.";
+
 const OPENLLM_CONTINUATION_TYPE = "abacusai-bot:openllm-rotation";
 
 /**

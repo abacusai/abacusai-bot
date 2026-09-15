@@ -16,7 +16,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { FakeProvider } from "@abacus-ai/test-support/fake-provider";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { type DesktopEvent } from "../protocol.js";
 import { BotSession } from "./bot-session.js";
@@ -195,5 +195,111 @@ describe("a switch that cannot be made", () => {
       .filter((event) => event.type === "model_changed");
 
     expect(changed.at(-1)).toMatchObject({ model: "ollama/big" });
+  });
+});
+
+/**
+ * A bot spawned while the account was signed out.
+ *
+ * Sign-out drops the Abacus key for the seconds it takes to re-identify the
+ * account. A message that arrives inside that window spawns a bot with no
+ * model, and that bot kept answering "no API key" after the key was back,
+ * until someone opened its chat and picked a model by hand. Meanwhile pi's
+ * own /login hint, filesystem paths and all, went out as the reply.
+ */
+describe("a bot that started without a key", () => {
+  const configWith = (apiKey: boolean): string =>
+    JSON.stringify({
+      defaultModel: "ollama/small",
+      customProviders: [
+        {
+          id: "ollama",
+          baseUrl: provider.baseUrl,
+          ...(apiKey ? { apiKey: "test-key" } : {}),
+          models: [{ id: "small", contextWindow: 65536 }],
+        },
+      ],
+    });
+  const writeConfig = (apiKey: boolean): void => {
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      configWith(apiKey),
+      "utf8"
+    );
+  };
+  const agentEvents = (events: DesktopEvent[]) =>
+    events
+      .filter(
+        (event): event is Extract<DesktopEvent, { type: "event" }> =>
+          event.type === "event"
+      )
+      .map((event) => event.event);
+  const unavailable = (events: DesktopEvent[]): number =>
+    agentEvents(events).filter(
+      (event) =>
+        event.type === "error" && event.error?.code === "model_unavailable"
+    ).length;
+
+  afterEach(() => {
+    fs.writeFileSync(path.join(home, "config.json"), openLlmConfig(), "utf8");
+  });
+
+  it("says so, and never hands the turn to pi", async () => {
+    writeConfig(false);
+    const { session, events } = botSession("ollama/small");
+    await session.start();
+
+    expect(unavailable(events)).toBe(1);
+    const before = provider.calls.length;
+
+    await session.send("hey");
+
+    // The reply is ours, with a code the gateway can reword; pi never saw
+    // the message, so its /login hint was never produced.
+    expect(unavailable(events)).toBe(2);
+    expect(provider.calls.length).toBe(before);
+  });
+
+  it("picks the model up when the keys are refreshed", async () => {
+    writeConfig(false);
+    const { session, events } = botSession("ollama/small");
+    await session.start();
+
+    writeConfig(true);
+    await session.refreshProviders();
+
+    expect(
+      agentEvents(events)
+        .filter((event) => event.type === "model_changed")
+        .at(-1)
+    ).toMatchObject({ model: "ollama/small" });
+
+    provider.script(() => ({ say: "back" }));
+    const before = provider.calls.length;
+    await session.send("hey");
+
+    expect(provider.calls.length).toBe(before + 1);
+    expect(unavailable(events)).toBe(1);
+  });
+
+  it("reads the key on its own at the next message, refresh or not", async () => {
+    // The incident exactly: the key came back, no refresh reached this bot,
+    // and the next message still had to be answered.
+    writeConfig(false);
+    const { session, events } = botSession("ollama/small");
+    await session.start();
+
+    writeConfig(true);
+    provider.script(() => ({ say: "back" }));
+    const before = provider.calls.length;
+    await session.send("hey");
+
+    expect(provider.calls.length).toBe(before + 1);
+    expect(unavailable(events)).toBe(1);
+    expect(
+      agentEvents(events)
+        .filter((event) => event.type === "status_changed")
+        .at(-1)
+    ).toMatchObject({ status: "idle" });
   });
 });
