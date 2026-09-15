@@ -92,6 +92,7 @@ import {
   composerDraftForKeyChange,
   writeComposerDraft,
 } from "../../lib/composer-draft";
+import { autoResolution } from "../../lib/permission-auto-resolve";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { isAppInternalWorkspace } from "../../lib/workspace-utils";
 import {
@@ -1852,28 +1853,18 @@ export const ChatPanel = (): JSX.Element => {
     [permissionPrompt, activeWorkspaceId, activeSessionId]
   );
 
-  // Switching to a more permissive mode settles whatever is already queued:
-  // `set_mode` only governs permissions the CLI has yet to ask for, so the
-  // prompt that made the user switch would otherwise stay up.
+  // Switching to a more permissive mode settles whatever is already queued
+  // (lib/permission-auto-resolve.ts); a sandbox card is never settled this way.
   const autoResolvedPermissionRef = useRef<string | null>(null);
   useEffect(() => {
     if (permissionPrompt == null || activeSessionId == null) return;
     const toolCallId = permissionPrompt.request.tool.id;
     if (autoResolvedPermissionRef.current === toolCallId) return;
 
-    const requestType = permissionPrompt.request.type;
-    const isEdit =
-      requestType === "edit_file" ||
-      requestType === "write_file" ||
-      requestType === "edit_outside_directory" ||
-      requestType === "write_outside_directory";
-
-    const decision =
-      selectedModeValue === AgentMode.Yolo
-        ? ("allowYolo" as const)
-        : selectedModeValue === AgentMode.AcceptEdits && isEdit
-          ? ("accept" as const)
-          : null;
+    const decision = autoResolution(
+      permissionPrompt.request,
+      selectedModeValue
+    );
     if (decision == null) return;
 
     autoResolvedPermissionRef.current = toolCallId;

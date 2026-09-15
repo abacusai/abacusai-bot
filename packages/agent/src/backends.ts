@@ -362,7 +362,7 @@ function localSandboxedOperations(
       if (denial.kind === "host") allowHostForSession(denial.host);
     options.onData(
       Buffer.from(
-        `\n[sandbox] The user allowed ${describeDenials([...answer.once, ...answer.session])}; running the command again.\n`
+        `\n[sandbox] The user allowed ${describeDenials(answer.once, answer.session)}; running the command again.\n`
       )
     );
 
@@ -374,14 +374,20 @@ function localSandboxedOperations(
   };
 }
 
-/** `write /a, read /b, host x:443`, for the note between the two runs. */
-export function describeDenials(list: readonly Denial[]): string {
-  return list
+/** `write /a, read /b, host x:443`, once each, for the note between the runs. */
+export function describeDenials(
+  ...lists: readonly (readonly Denial[])[]
+): string {
+  const seen = new Set<string>();
+
+  return lists
+    .flat()
     .map((denial) =>
       denial.kind === "host"
         ? `${denial.kind} ${denial.host}:${denial.port}`
         : `${denial.kind} ${denial.path}`
     )
+    .filter((text) => !seen.has(text) && seen.add(text) !== undefined)
     .join(", ");
 }
 
