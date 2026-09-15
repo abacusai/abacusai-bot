@@ -433,8 +433,7 @@ export class BotSession {
       return fallback != null
         ? { model: fallback }
         : {
-            error:
-              "No model provider is configured. Add an API key in Settings.",
+            error: NO_MODEL_CONFIGURED,
           };
     }
 
@@ -447,9 +446,7 @@ export class BotSession {
     return model != null
       ? { model }
       : {
-          error:
-            resolved.error ??
-            "No model provider is configured. Add an API key in Settings.",
+          error: resolved.error ?? NO_MODEL_CONFIGURED,
         };
   }
 
@@ -457,6 +454,18 @@ export class BotSession {
 
   async send(text: string): Promise<void> {
     const session = this.requireSession();
+
+    // A bot spawned while the account was signed out has no model. The key
+    // may have arrived since; read it and pick a model before prompting, or
+    // pi answers with its own /login hint and that reaches the user's phone.
+    if (!(await this.ensureUsableModel())) {
+      this.emitAgentEvent({
+        type: "error",
+        error: { message: NO_MODEL_CONFIGURED, code: "model_unavailable" },
+      });
+
+      return;
+    }
 
     await this.refreshStandingPrompt();
 
@@ -796,8 +805,47 @@ export class BotSession {
     this.emitAgentEvent({ type: "mode_changed", mode: next, source: "bot" });
   }
 
-  /** The bot lane's half of the desktop's `refresh_providers`. */
+  /**
+   * The bot lane's half of the desktop's `refresh_providers`: re-read the
+   * keys, then give a bot that started without a model the one it can now
+   * run. Re-registering alone left such a bot answering "no API key" until
+   * someone opened its chat and picked a model by hand.
+   */
   async refreshProviders(): Promise<void> {
+    await this.refreshProviderRegistrations();
+    await this.ensureUsableModel({ refreshed: true });
+  }
+
+  /**
+   * True when the session has a model it can call. Otherwise re-read the
+   * stored keys once and resolve again, the way start did; false only when
+   * there is still nothing to run on.
+   */
+  private async ensureUsableModel(
+    options: { refreshed?: boolean } = {}
+  ): Promise<boolean> {
+    const session = this.session;
+    const registry = this.registry;
+
+    if (session == null || registry == null) return false;
+    if (session.model != null && registry.hasConfiguredAuth(session.model))
+      return true;
+    if (!options.refreshed) await this.refreshProviderRegistrations();
+
+    const resolved = this.resolveStartModel(registry);
+
+    if (resolved.model == null) return false;
+
+    await session.setModel(resolved.model);
+    this.emitAgentEvent({
+      type: "model_changed",
+      model: this.currentModelReference(),
+    });
+
+    return true;
+  }
+
+  private async refreshProviderRegistrations(): Promise<void> {
     const registry = this.registry;
     const runtime = this.modelRuntime;
 
@@ -1537,6 +1585,10 @@ function estimateChars(messages: readonly unknown[]): number {
 }
 
 /** Out of paid-for capacity, as providers phrase it — not a mere rate limit. */
+/** Said in the chat, never sent to a phone as-is: the gateway rewords it. */
+const NO_MODEL_CONFIGURED =
+  "No model provider is configured. Add an API key in Settings.";
+
 function isOutOfCredits(raw: string): boolean {
   const status = raw.match(/^\s*(\d{3})\b/)?.[1];
   if (status === "402") return true;

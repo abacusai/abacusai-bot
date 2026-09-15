@@ -221,7 +221,12 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     }
 
     credentialsChanged("abacus", key);
-    serviceHost.restoreSessionsForAccount(accountStashKey(account.email, key));
+    const restored = serviceHost.restoreSessionsForAccount(
+      accountStashKey(account.email, key)
+    );
+    console.log(
+      `[account] signed in as ${account.email ?? "?"}: restored ${restored} session(s)`
+    );
     return { ok: true };
   };
 
@@ -246,6 +251,11 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     const settings = saveApiKey("abacus", "");
     clearLocalAccount();
     credentialsChanged("abacus", "");
+    // The one event that takes every session down at once; without this line
+    // the log showed five SIGTERMs and no reason.
+    console.log(
+      `[account] signed out${account?.email ? ` (${account.email})` : ""}: stashed ${stashedSessions} session(s)`
+    );
     return { stashedSessions, settings };
   };
 
