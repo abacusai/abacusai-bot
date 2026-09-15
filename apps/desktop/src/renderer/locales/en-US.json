@@ -1327,7 +1327,7 @@
     "description": "Ask the operating system to stop commands writing outside this workspace or reading credential stores such as SSH keys. Off by default. Applies to new sessions.",
     "label": "Confine shell commands",
     "title": "Sandbox",
-    "unsupported": "No sandbox backend on this platform yet — commands run unconfined even when this is on."
+    "unsupported": "No sandbox on this machine — commands run unconfined even when this is on. Windows needs Windows 11 24H2 (build {{build}}) or newer."
   },
   "sessions": {
     "delete": "Delete session",

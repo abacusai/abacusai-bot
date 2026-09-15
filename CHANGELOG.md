@@ -10,6 +10,10 @@
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
+The kernel sandbox now runs on Windows 11 24H2 and newer, through a Microsoft
+process container. The Settings toggle says so on an older Windows instead of
+claiming the whole platform is unsupported.
+
 The kernel sandbox now hides credential stores from shell commands: SSH and
 GPG private keys, cloud CLI credential caches, browser profiles, the macOS
 keychain files and the app's own settings. Configuration beside them stays

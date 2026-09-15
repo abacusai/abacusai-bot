@@ -1071,6 +1071,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     return serviceHost.getSandboxEnabled();
   });
 
+  ipcMain.handle(IpcChannels.GetSandboxSupport, () => {
+    return serviceHost.getSandboxSupport();
+  });
+
   ipcMain.handle(IpcChannels.SetSandboxEnabled, (_event, enabled: boolean) => {
     return serviceHost.setSandboxEnabled(enabled);
   });

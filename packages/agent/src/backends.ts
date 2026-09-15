@@ -218,12 +218,7 @@ function localSandboxedOperations(
 
       // Built first: the sandbox binds back the PATH entries the CHILD will
       // use.
-      const decision = decide(
-        policy,
-        command,
-        cwd,
-        childEnv.PATH ?? childEnv.Path
-      );
+      const decision = decide(policy, command, cwd, childEnv);
 
       if (decision.kind === "refused") {
         options.onData(Buffer.from(`${decision.message}\n`));

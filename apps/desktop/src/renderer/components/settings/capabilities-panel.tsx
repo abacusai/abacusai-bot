@@ -313,9 +313,9 @@ const ToolsetDetail = ({
 };
 
 /**
- * Whether the OS confines what a command can write. Windows has no backend yet,
- * so the caveat is shown rather than the toggle hidden: a user who turns it on
- * there should know it does nothing.
+ * Whether the OS confines what a command can do. A machine with no backend (a
+ * Windows older than 24H2) sees the caveat rather than a hidden toggle: a user
+ * who turns it on there should know it does nothing.
  */
 const SandboxToggle = (): JSX.Element => {
   const { t } = useTranslation();
@@ -335,8 +335,16 @@ const SandboxToggle = (): JSX.Element => {
       queryClient.setQueryData(settingsQueryKeys.capabilities.sandbox, state),
   });
 
+  const supportQuery = useQuery({
+    queryKey: settingsQueryKeys.capabilities.sandboxSupport,
+    queryFn: async () =>
+      (await window.api?.agent?.getSandboxSupport?.()) ?? null,
+    staleTime: Infinity,
+  });
+
   const enabled = enabledQuery.data ?? false;
-  const unsupported = navigator.userAgent.includes("Windows");
+  const support = supportQuery.data;
+  const unsupported = support != null && support.backend === null;
 
   return (
     <div className="space-y-2" data-id="sandbox-toggle">
@@ -355,7 +363,9 @@ const SandboxToggle = (): JSX.Element => {
               className="mt-1 text-xs text-amber-500"
               data-id="sandbox-unsupported"
             >
-              {t("sandbox.unsupported")}
+              {t("sandbox.unsupported", {
+                build: support?.minimumWindowsBuild ?? 0,
+              })}
             </p>
           )}
         </div>

@@ -21,6 +21,10 @@
       "types": "./dist/model-catalog.d.ts",
       "default": "./dist/model-catalog.js"
     },
+    "./sandbox-support": {
+      "types": "./dist/sandbox-support.d.ts",
+      "default": "./dist/sandbox-support.js"
+    },
     "./main": {
       "types": "./dist/main.d.ts",
       "default": "./dist/main.js"

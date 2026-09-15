@@ -38,6 +38,9 @@ const REQUIRED = [
   // fails outright on a machine that cannot reach it.
   `agent/vendor/rg${EXE}`,
   `agent/vendor/fd${EXE}`,
+  // The Windows sandbox runner (packages/agent/src/sandbox/mxc.ts); without it
+  // every confined command is refused on a Windows 11 24H2 machine.
+  ...(process.platform === "win32" ? ["agent/vendor/mxc/wxc-exec.exe"] : []),
   "vendor/scrcpy-server.jar",
   "skills",
 ];

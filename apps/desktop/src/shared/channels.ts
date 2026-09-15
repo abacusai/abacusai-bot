@@ -94,6 +94,7 @@ export enum IpcChannels {
   GetMcpBrowserStatus = "agent:get-mcp-browser-status",
   SetMcpBrowserEnabled = "agent:set-mcp-browser-enabled",
   GetSandboxEnabled = "agent:get-sandbox-enabled",
+  GetSandboxSupport = "agent:get-sandbox-support",
   SetSandboxEnabled = "agent:set-sandbox-enabled",
   GetXaiSearchEnabled = "agent:get-xai-search-enabled",
   SetXaiSearchEnabled = "agent:set-xai-search-enabled",
