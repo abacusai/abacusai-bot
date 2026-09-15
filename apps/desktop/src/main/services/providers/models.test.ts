@@ -9,6 +9,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const credentials = vi.hoisted(() => ({ current: new Set<string>() }));
+const groqLive = vi.hoisted(() => ({ current: null as Set<string> | null }));
 
 vi.mock("../config/settings", () => ({
   hasCredential: (name: string) => credentials.current.has(name),
@@ -25,6 +26,11 @@ vi.mock("./openrouter", () => ({
   clearOpenRouterCache: () => {},
   fetchFreeOpenRouterModels: async () => [],
 }));
+vi.mock("./groq", () => ({
+  cachedLiveGroqModelIds: () => null,
+  clearGroqCache: () => {},
+  fetchLiveGroqModelIds: async () => groqLive.current,
+}));
 vi.mock("./ollama-service", () => ({
   ensureManagedOllamaServer: async () => {},
 }));
@@ -39,6 +45,7 @@ const forProvider = (
 
 beforeEach(() => {
   credentials.current = new Set();
+  groqLive.current = null;
 });
 
 describe("a provider the user has a key for", () => {
@@ -103,5 +110,37 @@ describe("a provider the user has a key for", () => {
 
     expect(forProvider(models, "gemini").length).toBeLessThan(5);
     expect(forProvider(models, "gemini").every((m) => m.configured)).toBe(true);
+  });
+});
+
+describe("a Groq model the provider has retired", () => {
+  // pi's data still lists the Llama 3.x line; Groq answers each with a 404.
+  const retired = "groq/llama-3.3-70b-versatile";
+
+  it("is dropped when the live list does not carry it", async () => {
+    credentials.current = new Set(["GROQ_API_KEY"]);
+    groqLive.current = new Set(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+    const groq = forProvider(await listAvailableModels(), "groq");
+
+    expect(groq.map((model) => model.id)).not.toContain(retired);
+    expect(groq.map((model) => model.id)).toContain("groq/openai/gpt-oss-120b");
+    expect(groq.every((model) => model.configured)).toBe(true);
+  });
+
+  it("stays when the live list did not answer", async () => {
+    credentials.current = new Set(["GROQ_API_KEY"]);
+    groqLive.current = null;
+    const groq = forProvider(await listAvailableModels(), "groq");
+
+    // Offline is not evidence of retirement; the catalog stands as it is.
+    expect(groq.map((model) => model.id)).toContain(retired);
+  });
+
+  it("is not consulted for another provider's rows", async () => {
+    credentials.current = new Set(["GROQ_API_KEY", "OPENAI_API_KEY"]);
+    groqLive.current = new Set(["openai/gpt-oss-120b"]);
+    const models = await listAvailableModels();
+
+    expect(forProvider(models, "openai").length).toBeGreaterThan(10);
   });
 });

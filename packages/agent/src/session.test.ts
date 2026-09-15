@@ -617,3 +617,42 @@ describe("a provider timeout in the chat", () => {
     ).toContain("switch");
   });
 });
+
+describe("a request the provider's tier will not take", () => {
+  // Groq's free tier: an 8,000 tokens-per-minute cap on a prompt that is
+  // 14,000 tokens before the user says a word. Its sentence names a per-minute
+  // limit, which used to read as a rate limit and promise a retry that cannot
+  // succeed.
+  const groq =
+    "413: Request too large for model `openai/gpt-oss-120b` in organization `org_x` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Requested 14144, please reduce your message size and try again.";
+
+  it("is told apart from a rate limit by its status", () => {
+    const { summary, remedy } = classifyProviderFailure(groq);
+
+    expect(summary).toBe("This request is too large for the model's limit");
+    expect(summary).not.toContain("rate-limited");
+    // A different model is the way out, so the switch action stays offered.
+    expect(remedy).toContain("switch");
+    expect(remedy).not.toContain("Try again in a moment");
+  });
+
+  it("is told apart by the sentence when the status is generic", () => {
+    expect(
+      classifyProviderFailure("400: Request Entity Too Large").summary
+    ).toContain("too large");
+  });
+
+  it("does not turn a real rate limit into a size complaint", () => {
+    expect(
+      classifyProviderFailure(
+        "429: Rate limit reached for model `x` on tokens per minute (TPM)"
+      ).summary
+    ).toBe("The model provider is rate-limited");
+  });
+
+  it("keeps the status on the terminal message", () => {
+    expect(terminalProviderMessage(groq)).toMatch(
+      /^This request is too large for the model's limit \(413\)\./
+    );
+  });
+});
