@@ -1316,7 +1316,7 @@
     "workspaceOwnFolder": "Its own folder"
   },
   "sandbox": {
-    "description": "Ask the operating system to stop commands writing outside this workspace. Off by default. Applies to new sessions.",
+    "description": "Ask the operating system to stop commands writing outside this workspace or reading credential stores such as SSH keys. Off by default. Applies to new sessions.",
     "label": "Confine shell commands",
     "title": "Sandbox",
     "unsupported": "No sandbox backend on this platform yet — commands run unconfined even when this is on."

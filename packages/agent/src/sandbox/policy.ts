@@ -10,6 +10,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { AgentMode } from "../protocol.js";
+import { resolveSecretPaths } from "./secrets.js";
 
 /**
  * What the OS is asked to enforce. File effects only: network confinement has
@@ -37,6 +38,10 @@ export interface SandboxPolicy {
   workspaceRoot: string;
   /** Temp directories a build is entitled to, fully resolved. */
   writableTemp: string[];
+  /** Credential stores hidden from every confined command (secrets.ts). */
+  deniedReads: string[];
+  /** Files under a denied directory that stay readable. */
+  allowedReads: string[];
 }
 
 /**
@@ -89,10 +94,15 @@ export function resolvePolicy(mode: AgentMode, cwd: string): SandboxPolicy {
     if (candidate) temps.add(canonicalize(candidate));
   }
 
+  const workspaceRoot = canonicalize(cwd);
+  const secrets = resolveSecretPaths({ workspaceRoot });
+
   return {
     mode: modeToSandboxMode(mode),
     enforcement: sandboxEnforcement(),
-    workspaceRoot: canonicalize(cwd),
+    workspaceRoot,
     writableTemp: [...temps],
+    deniedReads: secrets.denied,
+    allowedReads: secrets.allowed,
   };
 }

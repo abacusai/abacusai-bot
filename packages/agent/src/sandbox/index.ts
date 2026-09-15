@@ -19,6 +19,7 @@ export {
   resolvePolicy,
   sandboxEnforcement,
 } from "./policy.js";
+export { readableExemptions, resolveSecretPaths } from "./secrets.js";
 
 export type SandboxDecision =
   /** Run this argv instead of the bare command. */

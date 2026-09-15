@@ -38,6 +38,7 @@ import {
   type SandboxPolicy,
 } from "./policy.js";
 import { buildProfile, policyRefusal } from "./seatbelt.js";
+import { resolveSecretPaths } from "./secrets.js";
 
 const onMac = process.platform === "darwin";
 const onLinux = process.platform === "linux";
@@ -49,6 +50,8 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     enforcement: "auto",
     workspaceRoot: "/tmp/ws",
     writableTemp: ["/private/tmp"],
+    deniedReads: [],
+    allowedReads: [],
     ...overrides,
   };
 }
@@ -943,6 +946,105 @@ describe.runIf(onLinux)("bus confinement against the real kernel", () => {
     expect(code).not.toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Live credential hiding, on either backend. A fake home stands in for the
+// real one so the test never touches actual keys.
+// ---------------------------------------------------------------------------
+
+describe.runIf(onMac || onLinux)(
+  "credential stores against the real kernel",
+  () => {
+    let workspace: string;
+    let home: string;
+    let key: string;
+    let config: string;
+    let netrc: string;
+
+    beforeAll(() => {
+      workspace = fs.realpathSync(
+        fs.mkdtempSync(path.join(os.tmpdir(), "sbx-secret-ws-"))
+      );
+      home = fs.realpathSync(
+        fs.mkdtempSync(path.join(os.tmpdir(), "sbx-secret-home-"))
+      );
+      fs.mkdirSync(path.join(home, ".ssh"));
+      key = path.join(home, ".ssh", "id_ed25519");
+      config = path.join(home, ".ssh", "config");
+      netrc = path.join(home, ".netrc");
+      fs.writeFileSync(key, "PRIVATE\n");
+      fs.writeFileSync(config, "Host example\n");
+      fs.writeFileSync(netrc, "password hunter2\n");
+    });
+
+    afterAll(() => {
+      fs.rmSync(workspace, { recursive: true, force: true });
+      fs.rmSync(home, { recursive: true, force: true });
+    });
+
+    /** Exit code under confinement, or -1 when no backend can be established. */
+    function run(command: string): number {
+      const secrets = resolveSecretPaths({
+        home,
+        workspaceRoot: workspace,
+        exemptions: [],
+      });
+      const decision = decide(
+        policy({
+          workspaceRoot: workspace,
+          writableTemp: [canonicalize(os.tmpdir())],
+          deniedReads: secrets.denied,
+          allowedReads: secrets.allowed,
+        }),
+        command,
+        workspace
+      );
+      if (decision.kind !== "confined") return -1;
+
+      try {
+        execFileSync(decision.argv[0]!, decision.argv.slice(1), {
+          cwd: workspace,
+          stdio: "ignore",
+          timeout: 20_000,
+        });
+
+        return 0;
+      } catch (error) {
+        return (error as { status?: number }).status ?? 1;
+      }
+    }
+
+    it("cannot read a private key", () => {
+      // Bubblewrap serves an empty tmpfs, Seatbelt refuses the open; either way
+      // the contents never come out.
+      const code = run(
+        `test ! -s ${JSON.stringify(key)} || ! cat ${JSON.stringify(key)}`
+      );
+      if (code === -1) return;
+      expect(code).toBe(0);
+    });
+
+    it("cannot read a credential file", () => {
+      const code = run(`grep -q hunter2 ${JSON.stringify(netrc)}`);
+      if (code === -1) return;
+      expect(code).not.toBe(0);
+    });
+
+    it("still reads the ssh config beside the key", () => {
+      const code = run(`grep -q example ${JSON.stringify(config)}`);
+      if (code === -1) return;
+      expect(code).toBe(0);
+    });
+
+    it("cannot get around it by copying into the workspace", () => {
+      const code = run(
+        `cp ${JSON.stringify(key)} ./stolen && grep -q PRIVATE ./stolen`
+      );
+      if (code === -1) return;
+      expect(code).not.toBe(0);
+    });
+  }
+);
 
 /**
  * The default, which nothing pinned before.

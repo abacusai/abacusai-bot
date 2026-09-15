@@ -3,12 +3,12 @@
 Supervised sessions have a permission mode. A session keeps its mode when you
 move between conversations.
 
-| Mode | File changes | Shell commands |
-| --- | --- | --- |
-| Default | Ask first | Ask first |
-| Auto-Accept | Apply inside the workspace | Ask first |
-| Plan | Refuse | Refuse |
-| Bypass | Apply without asking | Run without asking |
+| Mode        | File changes               | Shell commands     |
+| ----------- | -------------------------- | ------------------ |
+| Default     | Ask first                  | Ask first          |
+| Auto-Accept | Apply inside the workspace | Ask first          |
+| Plan        | Refuse                     | Refuse             |
+| Bypass      | Apply without asking       | Run without asking |
 
 Plan mode is read-only. The agent can inspect files and prepare a plan, but its
 tools reject mutations. Bypass removes the approval gate and should only be used
@@ -80,8 +80,19 @@ call that started it.
 
 macOS and Linux can run commands under an optional kernel sandbox. Plan mode
 allows no writes. Default and Auto-Accept allow writes to the workspace and
-temporary directories. Bypass remains unconfined. Reads and network access are
-not restricted.
+temporary directories. Bypass remains unconfined. Network access is not
+restricted.
+
+Reads are allowed everywhere except a short list of credential stores: SSH
+private keys, GPG private keys, cloud CLI credential and token caches (AWS,
+Google Cloud, Azure), `~/.kube/config`, `~/.docker/config.json`, `~/.netrc`,
+`~/.pypirc`, browser profiles, the macOS keychain files, and this app's own
+settings and browser data. Configuration beside them stays readable, so
+`~/.ssh/config`, known hosts, public keys and `~/.aws/config` still work.
+`git push` over SSH needs the key loaded in an agent. A tool that must read one
+of these can be exempted with `ABACUSAI_BOT_SANDBOX_READABLE`, a
+path-delimited list; `~` expands to the home directory. Credential helpers that
+talk to a daemon, such as the macOS keychain, keep working.
 
 The sandbox applies to shell commands, including commands started by delegated
 agents and verification tools. It does not confine Electron, model requests,

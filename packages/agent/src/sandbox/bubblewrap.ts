@@ -141,7 +141,39 @@ export function buildArgs(
     args.push(...tmpPathBinds(childPath, fs.existsSync));
   }
 
+  // After the workspace bind, so a workspace under $HOME cannot expose them.
+  args.push(...secretHidingArgs(policy, isDirectorySync));
+
   args.push("--chdir", cwd, "--", POSIX_SHELL, ...shellArgs(command));
+
+  return args;
+}
+
+function isDirectorySync(candidate: string): boolean {
+  try {
+    return fs.statSync(candidate).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Hide credential stores: an empty tmpfs over a directory, /dev/null over a
+ * file, then the readable files bound back on top. bwrap resolves bind
+ * sources on the host, so /dev/null here is the real device.
+ */
+export function secretHidingArgs(
+  policy: Pick<SandboxPolicy, "deniedReads" | "allowedReads">,
+  isDirectory: (candidate: string) => boolean
+): string[] {
+  const args: string[] = [];
+  for (const denied of policy.deniedReads) {
+    if (isDirectory(denied)) args.push("--tmpfs", denied);
+    else args.push("--ro-bind", "/dev/null", denied);
+  }
+  for (const allowed of policy.allowedReads) {
+    args.push("--ro-bind", allowed, allowed);
+  }
 
   return args;
 }
