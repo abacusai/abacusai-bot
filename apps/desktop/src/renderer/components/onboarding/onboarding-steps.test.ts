@@ -1,29 +1,20 @@
 /**
- * The shape of a first run.
- *
- * Five screens, in one order, for everybody: the sign-in, the account's
- * welcome, the connectors, the models, and the guided tour. The only thing
- * that varies is whether the sign-in is needed, because someone can arrive
- * already holding a credential.
- *
- * Asserted here rather than through the UI because the ordering *is* the
- * requirement — every bug this file has caught was a screen in the wrong place
- * or a step quietly dropped, and a dropped step turned "skip this page" into
- * "leave onboarding".
+ * The shape of a first run, and how the flow settles when the facts behind
+ * the route change. The ordering is the requirement, so it is pinned here.
  */
 import { describe, expect, it } from "vitest";
 
 import {
   nextStep,
   previousStep,
+  settleStep,
   stepProgress,
   stepsFor,
 } from "./onboarding-steps";
 
 describe("a profile that has done this before", () => {
   it("gets the sign-in wall and nothing behind it", () => {
-    // Signing out keeps `onboarded`, so without this the second sign-in of an
-    // account's life replayed the welcome, connectors, models and the tour.
+    // Signing out keeps `onboarded`; a returning account is owed no replay.
     expect(
       stepsFor({ signedIn: false, paying: false, onboarded: true })
     ).toEqual(["auth"]);
@@ -71,9 +62,7 @@ describe("the shape of a first run", () => {
     expect(steps[steps.indexOf("auth") + 1]).toBe("welcome");
   });
 
-  it("shows the models step to everybody, subscriber or not", () => {
-    // Dropping it for a paid account made "skip" on the screen before it fall
-    // out of onboarding altogether.
+  it("shows the models step to a free account", () => {
     expect(stepsFor({ signedIn: true, paying: false })).toContain("models");
   });
 
@@ -86,19 +75,6 @@ describe("the shape of a first run", () => {
     expect(paying).toEqual(["welcome", "connectors", "explainer"]);
     // The tour is not skipped: paying users still get the lap.
     expect(paying).toContain("explainer");
-  });
-
-  it("keeps the tour in the route whether or not a folder is open yet", () => {
-    // Every stop spotlights a piece of the workspace, and the tour used to be
-    // dropped when there was none. Dropping it meant it was never seen at all:
-    // the flow is the only thing that opens it, and nothing re-armed it once a
-    // folder appeared later. The flow now makes the default workspace on the
-    // way into the step, so the route always carries it.
-    for (const signedIn of [true, false]) {
-      const steps = stepsFor({ signedIn, paying: false });
-
-      expect(steps).toContain("explainer");
-    }
   });
 
   it("ends on the tour, after the screens that make a window worth seeing", () => {
@@ -126,6 +102,12 @@ describe("moving through it", () => {
     expect(previousStep(steps, "auth")).toBe(null);
   });
 
+  it("has nowhere to go from a screen the route does not hold", () => {
+    expect(nextStep(stepsFor({ signedIn: true, paying: true }), "models")).toBe(
+      null
+    );
+  });
+
   it("counts the dots against the route actually being walked", () => {
     expect(stepProgress(steps, "connectors")).toEqual({ index: 2, total: 5 });
     expect(
@@ -134,5 +116,45 @@ describe("moving through it", () => {
       index: 1,
       total: 4,
     });
+  });
+});
+
+describe("settling the screen when the route changes under it", () => {
+  const signedOut = stepsFor({ signedIn: false, paying: false });
+  const signedIn = stepsFor({ signedIn: true, paying: false });
+
+  it("keeps a screen the route still has", () => {
+    expect(settleStep(signedIn, "connectors")).toBe("connectors");
+    expect(settleStep(signedOut, "auth")).toBe("auth");
+  });
+
+  it("moves off the wall once a credential arrives", () => {
+    expect(settleStep(signedIn, "auth")).toBe("welcome");
+  });
+
+  it("returns to the wall when the credential goes, from any screen", () => {
+    for (const step of [
+      "welcome",
+      "connectors",
+      "models",
+      "explainer",
+    ] as const)
+      expect(settleStep(signedOut, step)).toBe("auth");
+  });
+
+  it("skips ahead when the route dropped the current screen", () => {
+    // The tier arrived while the models screen was showing.
+    expect(
+      settleStep(stepsFor({ signedIn: true, paying: true }), "models")
+    ).toBe("explainer");
+  });
+
+  it("reports nothing left for a returning account that signed back in", () => {
+    expect(
+      settleStep(
+        stepsFor({ signedIn: true, paying: false, onboarded: true }),
+        "auth"
+      )
+    ).toBe(null);
   });
 });

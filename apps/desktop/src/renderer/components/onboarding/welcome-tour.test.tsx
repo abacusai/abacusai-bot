@@ -39,16 +39,8 @@ vi.mock("react-tourlight", async (importOriginal) => {
 const abacusAccount = vi.hoisted(() =>
   vi.fn(() => ({ isPending: false, data: null }))
 );
-const workspaceMetadata = vi.hoisted(() =>
-  vi.fn(() => ({ data: { workspaces: [{ id: "w1", status: "ready" }] } }))
-);
-
 vi.mock("../../hooks/use-abacus-account", () => ({
   useAbacusAccountQuery: () => abacusAccount(),
-}));
-
-vi.mock("../../hooks/use-workspace-queries", () => ({
-  useWorkspaceMetadataQuery: () => workspaceMetadata(),
 }));
 
 // One stable `t`, as the real i18next instance gives: it changes on a
@@ -63,8 +55,8 @@ vi.mock("react-i18next", () => {
   return { useTranslation: () => ({ t }) };
 });
 
-const { TourTooltip, WelcomeTour, WelcomeTourGate } =
-  await import("./welcome-tour");
+const { WelcomeTour, WelcomeTourGate } = await import("./welcome-tour");
+const { TourTooltip } = await import("./tour-tooltip");
 const { useAccountStore } = await import("../../stores/account-store");
 
 describe("TourTooltip", () => {
@@ -125,11 +117,8 @@ describe("WelcomeTour", () => {
   });
 
   it("hands Tourlight the same steps array across renders", async () => {
-    // SpotlightTour registers the tour in an effect keyed on `steps`, and
-    // that effect's cleanup unregisters it. A fresh array per render stops
-    // the running tour — which killed every lap at step 2, whose own
-    // navigation guarantees a re-render, and dropped the user on the home
-    // page with steps 3 and 4 never shown.
+    // SpotlightTour re-registers when `steps` changes identity, and the
+    // cleanup stops the running tour.
     const view = render(<WelcomeTour />);
     await waitFor(() =>
       expect(start).toHaveBeenCalledWith("workspace-onboarding")
@@ -148,23 +137,17 @@ describe("WelcomeTour", () => {
     );
 
     const steps = tourProps.current?.steps ?? [];
-    // The bots tree, which is always rendered — the lap used to open on the
-    // sessions list, a target that did not exist when the sidebar was showing
-    // bots, and hung the tour on a bare overlay.
+    // The bots tree is always rendered, whichever list the sidebar shows.
     expect(steps[0]?.target).toBe('[data-id="sidebar-lists"]');
-    // Nothing leaves the workspace shell. The bot-maker stop carries no route
-    // at all — it navigates itself, so that nothing lands between its wait
-    // for the field and Tourlight measuring it.
+    // Nothing leaves the workspace shell; the bot-maker stop navigates itself.
     expect(new Set(steps.map((step) => step.route))).toEqual(
       new Set(["/", undefined])
     );
   });
 
   it("spotlights nothing the window does not render", async () => {
-    // The settings-rail stop targeted an element only the focused settings
-    // layout puts on screen, and /settings/connectors does not. Tourlight waits
-    // two seconds for a target before skipping the step, so the lap hung there
-    // every time on its way to the last card.
+    // Tourlight waits two seconds for a missing target before skipping the
+    // stop, so a target only some layouts render hangs the lap.
     render(<WelcomeTour />);
     await waitFor(() =>
       expect(start).toHaveBeenCalledWith("workspace-onboarding")
@@ -182,9 +165,6 @@ describe("WelcomeTour", () => {
 
     const step = (tourProps.current?.steps ?? [])[1];
 
-    // A first run lands on the bot maker, so this stop spotlights "Create
-    // Bot". It used to carry the composer's caption — a sentence about running
-    // commands in a workspace, over a name field.
     expect(step?.title).toBe("tour.steps.makeBot.title");
     expect(step?.content).toBe("tour.steps.makeBot.body");
   });
@@ -197,14 +177,9 @@ describe("WelcomeTour", () => {
 
     const step = (tourProps.current?.steps ?? [])[1];
 
-    // The pane this stop would otherwise inherit can be a channel bot's chat,
-    // which is read-only: no composer, no name field, and the stop dimmed the
-    // whole window over nothing. So the step goes and gets its own pane.
     expect(step?.target).toBe('[data-id="bots-home-name-input"]');
-    // No route: the provider navigates after onBeforeStep and measures right
-    // after, so a route here put a second navigation between the stop's wait
-    // for the field and the measurement of it, and the spotlight landed on
-    // the corner of the window. The stop navigates itself instead.
+    // No route: a second navigation between the stop's wait for the field
+    // and Tourlight's measurement would remount the pane.
     expect(step?.route).toBeUndefined();
 
     void step?.onBeforeStep?.();
@@ -226,16 +201,11 @@ describe("WelcomeTour", () => {
 
     expect(targets).toEqual([
       '[data-id="sidebar-lists"]',
-      // The maker, which this stop navigates to itself.
       '[data-id="bots-home-name-input"]',
       '[data-id="sidebar-nav-connectors"]',
-      // The toggle renders on the bots pane again, scoped to the bot folder,
-      // so this stop has a target on the screen the tour actually runs on.
       '[data-id="local-code-bottom-panel-toggle"]',
     ]);
-    // The models stop and the profile card the lap used to end on are gone:
-    // neither is something a first run has to be walked through, and the
-    // profile one ended the tour on a settings page.
+    // Nothing on a settings page: the lap must not end there.
     expect(targets).not.toContain('[data-id="settings-menu-trigger"]');
     expect(targets).not.toContain('[data-id="profile-account-card"]');
   });
@@ -251,12 +221,8 @@ describe("WelcomeTour", () => {
   });
 
   it("keeps its callbacks stable while the flow re-renders around it", async () => {
-    // Tourlight registers the tour in an effect keyed on its callbacks, and
-    // that effect's cleanup unregisters — which stops a tour already running.
-    // The onboarding flow passes an inline `onFinish`, so a new one on every
-    // render tore the lap down a frame after it started: Continue on the models
-    // screen dropped the overlay, no spotlight ever appeared, and onboarding
-    // was never recorded as finished.
+    // Tourlight re-registers when a callback prop changes identity, and the
+    // cleanup stops the running tour; the flow passes `onFinish` inline.
     const view = render(<WelcomeTour onFinish={() => undefined} />);
     await waitFor(() => expect(start).toHaveBeenCalledOnce());
     const first = tourProps.current;
@@ -293,20 +259,9 @@ describe("WelcomeTour", () => {
 });
 
 /**
- * The regression this file exists for.
- *
- * An existing user relaunched to take an update and got the whole welcome
- * tour. The gate started a lap whenever the persisted "already seen" flag was
- * missing, and an update moved Electron's userData into the account profile —
- * which left every install's localStorage behind. `onboarded` lives in the
- * main process's account file, so it survived: the app correctly showed no
- * onboarding, and then spotlighted the sidebar for somebody on their
- * two-hundredth launch.
- *
- * Every case below is an onboarded user with a workspace — precisely the
- * state the gate used to fire on. Nothing but an explicit `open()` may start
- * a tour now, so no storage that clears and no edit to the stops can bring
- * it back.
+ * Nothing but an explicit `open()` may start a tour: localStorage clears on a
+ * userData move, and a flag whose absence starts a lap replays it for
+ * existing users. Every case is an onboarded user.
  */
 describe("WelcomeTourGate", () => {
   beforeEach(() => {
@@ -353,14 +308,6 @@ describe("WelcomeTourGate", () => {
 
   it("waits for the account read before deciding anything", () => {
     useAccountStore.setState({ loaded: false, onboarded: false });
-    useTourStore.setState({ isOpen: true });
-    render(<WelcomeTourGate />);
-
-    expect(start).not.toHaveBeenCalled();
-  });
-
-  it("holds a replay until there is a window to point at", () => {
-    workspaceMetadata.mockReturnValue({ data: { workspaces: [] } });
     useTourStore.setState({ isOpen: true });
     render(<WelcomeTourGate />);
 

@@ -1,58 +1,78 @@
 /**
- * Which screens a first run is made of, and in what order. One sequence for
- * everybody, minus auth for someone already signed in and minus the models
- * screen for a subscriber whose plan already covers them.
+ * The first-run state chart: which screens a route is made of, in what order,
+ * and where the flow stands once the facts behind the route change under it.
  */
-export type OnboardingStep =
-  | "auth"
-  | "welcome"
-  | "explainer"
-  | "connectors"
-  | "models";
+
+/** Every screen, in the only order they ever appear. */
+export const STEP_ORDER = [
+  "auth",
+  "welcome",
+  "connectors",
+  "models",
+  "explainer",
+] as const;
+
+export type OnboardingStep = (typeof STEP_ORDER)[number];
+
+export const isOnboardingStep = (value: unknown): value is OnboardingStep =>
+  STEP_ORDER.includes(value as OnboardingStep);
 
 export interface OnboardingRoute {
   /** Does the app already hold an Abacus.AI credential? */
   signedIn: boolean;
-  /** A paying tier (Basic/Go/Pro/Max)? Their plan already covers the models. */
+  /** A paying tier, whose plan already covers the models. */
   paying: boolean;
   /**
-   * Has this profile been through first-run before? Someone who signed out is
-   * still onboarded: they need the sign-in wall back, not the whole tour.
+   * Has this profile been through first-run before? Signing out keeps this,
+   * so a returning account gets the sign-in wall back and nothing behind it.
    */
   onboarded?: boolean;
 }
 
+/** The screens a given user is owed. */
 export const stepsFor = ({
   signedIn,
   paying,
   onboarded = false,
-}: OnboardingRoute): OnboardingStep[] =>
-  // A returning user with no credential: the wall, and nothing behind it.
-  // Signing out keeps `onboarded`, so without this the second sign-in of an
-  // account's life replayed the welcome, the connectors, the models and the
-  // tour — a first run for someone who had already had one.
-  onboarded
-    ? signedIn
-      ? []
-      : ["auth"]
-    : [
-        ...(signedIn ? [] : (["auth"] as const)),
-        "welcome",
-        "connectors",
-        // Free tier only: a paying plan covers the catalog and RouteLLM arrives
-        // preselected, so the screen would be a detour.
-        ...(paying ? [] : (["models"] as const)),
-        // Last, and unconditional: the tour spotlights the real workspace, and the
-        // flow guarantees one exists via `ensureDefaultWorkspace` (an empty folder
-        // of the app's own, never the user's home directory).
-        "explainer",
-      ];
+}: OnboardingRoute): OnboardingStep[] => {
+  if (onboarded) return signedIn ? [] : ["auth"];
+
+  return [
+    ...(signedIn ? [] : (["auth"] as const)),
+    "welcome",
+    "connectors",
+    // A paying plan covers the catalog, so the screen would be a detour.
+    ...(paying ? [] : (["models"] as const)),
+    // Last: the tour spotlights the live window the earlier screens set up.
+    "explainer",
+  ];
+};
+
+/**
+ * Where the flow stands after the route changed under `current`. No
+ * credential means the wall, whatever was showing, since every later screen
+ * assumes an account. A screen the route still has is kept; one it dropped
+ * gives way to the next it does have. Null when nothing is left to show.
+ */
+export const settleStep = (
+  steps: OnboardingStep[],
+  current: OnboardingStep
+): OnboardingStep | null => {
+  if (steps.includes("auth")) return "auth";
+  const from = STEP_ORDER.indexOf(current);
+
+  return steps.find((step) => STEP_ORDER.indexOf(step) >= from) ?? null;
+};
 
 /** The next screen, or null at the end of the flow. */
 export const nextStep = (
   steps: OnboardingStep[],
   current: OnboardingStep
-): OnboardingStep | null => steps[steps.indexOf(current) + 1] ?? null;
+): OnboardingStep | null => {
+  const index = steps.indexOf(current);
+
+  return index >= 0 ? (steps[index + 1] ?? null) : null;
+};
 
 /** The previous screen, or null at the first one. */
 export const previousStep = (
@@ -60,10 +80,11 @@ export const previousStep = (
   current: OnboardingStep
 ): OnboardingStep | null => {
   const index = steps.indexOf(current);
+
   return index > 0 ? (steps[index - 1] ?? null) : null;
 };
 
-/** How far along to draw the dots: position of `current`, and how many there are. */
+/** Position of `current` in the route, and how many screens there are. */
 export const stepProgress = (
   steps: OnboardingStep[],
   current: OnboardingStep
