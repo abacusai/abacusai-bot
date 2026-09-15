@@ -5,6 +5,10 @@
  */
 import * as path from "node:path";
 
+// The fixtures are POSIX paths by construction; Windows resolves them onto a
+// drive and every expectation is off. The Windows backend has its own tests.
+const onWindows = process.platform === "win32";
+
 import { describe, expect, it } from "vitest";
 
 import { SandboxApprovals } from "./approvals.js";
@@ -44,7 +48,7 @@ function resolve(
   });
 }
 
-describe("the deny-list", () => {
+describe.skipIf(onWindows)("the deny-list", () => {
   it("names only paths that exist on this machine", () => {
     const result = resolve({
       "/home/dev/.netrc": null,
@@ -152,7 +156,7 @@ describe("the deny-list", () => {
   });
 });
 
-describe("exemptions", () => {
+describe.skipIf(onWindows)("exemptions", () => {
   it("are empty when the variable is unset", () => {
     expect(readableExemptions({}, home)).toEqual([]);
   });
@@ -174,7 +178,7 @@ describe("isWithin", () => {
   });
 });
 
-describe("stores a command names", () => {
+describe.skipIf(onWindows)("stores a command names", () => {
   const promptable = ["/home/dev/.ssh", "/home/dev/.netrc"];
   const named = (command: string, cwd = "/home/dev/project"): string[] =>
     namedSecretPaths(command, { cwd, promptable, home: "/home/dev" });
@@ -284,7 +288,7 @@ describe("a card's answer", () => {
   });
 });
 
-describe("the policy honours an approved read", () => {
+describe.skipIf(onWindows)("the policy honours an approved read", () => {
   it("drops the approved store from the deny-list for that run", () => {
     const withGrant = resolve(
       { "/home/dev/.netrc": null, "/home/dev/.aws/credentials": null },

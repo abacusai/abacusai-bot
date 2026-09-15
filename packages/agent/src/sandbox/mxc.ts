@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { bundledToolsDir } from "../bundled-tools.js";
 import { MINIMUM_WINDOWS_BUILD, windowsBuild } from "../sandbox-support.js";
 import type { SandboxPolicy } from "./policy.js";
+import { posixShell } from "../posix-shell.js";
 import { probeVerdict, type ProbeExec } from "./probe.js";
 import type { SecretPaths } from "./secrets.js";
 
@@ -114,11 +115,55 @@ function listSync(dir: string): string[] {
 }
 
 /** The runner's config for one command. Exported for the tests. */
+/**
+ * A string argument as Windows' own parser (CommandLineToArgv) reads it back:
+ * quotes escaped, and the backslashes before a quote or the end doubled.
+ */
+export function quoteWindowsArgument(value: string): string {
+  let out = "";
+  let backslashes = 0;
+  for (const char of value) {
+    if (char === "\\") {
+      backslashes += 1;
+      continue;
+    }
+    if (char === '"') {
+      out += "\\".repeat(backslashes * 2 + 1) + '"';
+      backslashes = 0;
+      continue;
+    }
+    out += "\\".repeat(backslashes) + char;
+    backslashes = 0;
+  }
+  out += "\\".repeat(backslashes * 2);
+
+  return `"${out}"`;
+}
+
+/**
+ * What runs inside the container. The bundled POSIX shell where it is
+ * installed, since that is what the model writes for (posix-shell.ts);
+ * cmd.exe only on a machine without its payload. /d skips AutoRun, /s keeps
+ * cmd's quoting predictable. ComSpec carries no space, which the runner's
+ * parser refuses in an unquoted program path.
+ */
+export function containerCommandLine(
+  command: string,
+  env: NodeJS.ProcessEnv,
+  shell: { sh: string } | undefined
+): string {
+  if (shell != null)
+    return `${quoteWindowsArgument(shell.sh)} -c ${quoteWindowsArgument(command)}`;
+
+  return `${env.ComSpec ?? "cmd.exe"} /d /s /c "${command}"`;
+}
+
 export function buildConfig(
   policy: SandboxPolicy,
   command: string,
   cwd: string,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  shell: { sh: string } | undefined = posixShell()
 ): Record<string, unknown> {
   const writable = [
     ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
@@ -133,10 +178,7 @@ export function buildConfig(
     containment: "processcontainer",
     lifecycle: { destroyOnExit: true, preservePolicy: false },
     process: {
-      // cmd.exe, as the unconfined path uses; /d skips AutoRun, /s keeps the
-      // quoting predictable. ComSpec carries no space, which the runner's
-      // parser refuses in an unquoted program path.
-      commandLine: `${env.ComSpec ?? "cmd.exe"} /d /s /c "${command}"`,
+      commandLine: containerCommandLine(command, env, shell),
       cwd,
     },
     filesystem: {

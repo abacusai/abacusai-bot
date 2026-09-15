@@ -204,6 +204,9 @@ describe("a platform with no sandbox backend (Windows)", () => {
     Object.defineProperty(process, "platform", { value: "win32" });
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "local");
     vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
+    // A Windows new enough for the runner but without the vendored binary
+    // (a checkout, the CI runner) is the same case: nothing here can confine.
+    vi.stubEnv("ABACUSAI_BOT_MXC_EXEC", "");
 
     // Null on a host with no busybox payload (this suite off Windows); the
     // shell's operations on one — either way, never /bin/bash.

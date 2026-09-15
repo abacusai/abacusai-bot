@@ -12,6 +12,8 @@
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import * as path from "node:path";
 
+import { posixShell } from "../posix-shell.js";
+
 /**
  * The interpreter every confined command runs under. Shared so the sandbox
  * probe exercises the same binary; probing a different shell can pass on a host
@@ -38,9 +40,17 @@ export function shellArgs(command: string): string[] {
 export function fallbackShell(
   command: string,
   platform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  /** The bundled POSIX shell on Windows, where it is installed (posix-shell.ts). */
+  bundled: { sh: string } | undefined = platform === "win32"
+    ? posixShell()
+    : undefined
 ): { file: string; args: string[]; windowsVerbatimArguments?: boolean } {
   if (platform === "win32") {
+    // The model writes for the POSIX shell it was told it has; cmd.exe is
+    // only for a machine with no bundled shell payload.
+    if (bundled != null) return { file: bundled.sh, args: ["-c", command] };
+
     return {
       file: env.ComSpec ?? "cmd.exe",
       args: ["/d", "/s", "/c", command],

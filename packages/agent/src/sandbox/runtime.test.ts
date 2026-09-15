@@ -53,22 +53,25 @@ describe("the per-process config", () => {
     expect(config.network.allowAllUnixSockets).toBe(false);
   });
 
-  it("finds the ssh and gpg agent sockets that exist", () => {
-    const exists = (candidate: string): boolean =>
-      candidate === "/run/user/1000/keyring/ssh" ||
-      candidate === "/home/dev/.gnupg";
-    expect(
-      agentSockets(
-        {
-          SSH_AUTH_SOCK: "/run/user/1000/keyring/ssh",
-          XDG_RUNTIME_DIR: "/run/user/1000",
-        },
-        "/home/dev",
-        exists
-      )
-    ).toEqual(["/run/user/1000/keyring/ssh", "/home/dev/.gnupg"]);
-    expect(agentSockets({}, "/home/dev", () => false)).toEqual([]);
-  });
+  it.skipIf(process.platform === "win32")(
+    "finds the ssh and gpg agent sockets that exist",
+    () => {
+      const exists = (candidate: string): boolean =>
+        candidate === "/run/user/1000/keyring/ssh" ||
+        candidate === "/home/dev/.gnupg";
+      expect(
+        agentSockets(
+          {
+            SSH_AUTH_SOCK: "/run/user/1000/keyring/ssh",
+            XDG_RUNTIME_DIR: "/run/user/1000",
+          },
+          "/home/dev",
+          exists
+        )
+      ).toEqual(["/run/user/1000/keyring/ssh", "/home/dev/.gnupg"]);
+      expect(agentSockets({}, "/home/dev", () => false)).toEqual([]);
+    }
+  );
 
   it("reads extra hosts from the environment", () => {
     expect(

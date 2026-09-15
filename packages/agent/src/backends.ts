@@ -15,11 +15,15 @@ import {
 
 import { registerForegroundProcess } from "./background-processes.js";
 import { currentMode } from "./current-mode.js";
-import { posixShellOperations } from "./posix-shell.js";
+import {
+  posixShell,
+  posixShellEnv,
+  posixShellOperations,
+} from "./posix-shell.js";
 import {
   allowHostForSession,
   allowHostOnce,
-  backendName,
+  backendPresent,
   decide,
   mentionedSecretPaths,
   networkConfinable,
@@ -261,7 +265,12 @@ function localSandboxedOperations(
         : inherited;
 
     const commandId = `command-${++commandCounter}`;
-    const decision = await decide(policy, command, cwd, childEnv, commandId);
+    // On Windows the command runs under the bundled POSIX shell, confined or
+    // not, and its children must find the applets (posix-shell.ts).
+    const bundledShell = process.platform === "win32" ? posixShell() : undefined;
+    const spawnEnv =
+      bundledShell != null ? posixShellEnv(childEnv, bundledShell) : childEnv;
+    const decision = await decide(policy, command, cwd, spawnEnv, commandId);
 
     if (decision.kind === "refused") {
       options.onData(Buffer.from(`${decision.message}\n`));
@@ -286,7 +295,7 @@ function localSandboxedOperations(
         // started too; a leftover subshell is what keeps the output pipes
         // open.
         detached: process.platform !== "win32",
-        env: childEnv,
+        env: spawnEnv,
         // Written for the platform's shell; must not be re-quoted
         // (sandbox/shell.ts).
         ...(decision.kind !== "confined" &&
@@ -482,17 +491,21 @@ export function backendOperations(
   // paths.
   if (backend !== "local") return null;
 
-  // No kernel backend (Windows): the shell there is the bundled POSIX one,
-  // sandbox setting or not — it is a shell, not a confinement — and null
-  // without its payload lets pi's own path run. `strict` keeps the
-  // operations so its refusal reaches the model.
-  if (backendName() === null) {
+  // No kernel backend, or none that can run here (a Windows without the
+  // vendored runner): the shell there is the bundled POSIX one, sandbox
+  // setting or not — it is a shell, not a confinement — and null without its
+  // payload lets pi's own path run. `strict` keeps the operations so its
+  // refusal reaches the model.
+  if (!backendPresent()) {
     return sandboxEnforcement() === "strict"
-      ? localSandboxedOperations()
+      ? localSandboxedOperations(approvals)
       : posixShellOperations();
   }
 
-  if (sandboxEnforcement() === "off") return null;
+  // Switched off by the environment: pi's own path, under the bundled shell
+  // where that is the shell there is.
+  if (sandboxEnforcement() === "off")
+    return process.platform === "win32" ? posixShellOperations() : null;
 
   return localSandboxedOperations(approvals);
 }
