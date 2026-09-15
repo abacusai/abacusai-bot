@@ -1,4 +1,6 @@
 /** Which files a settled tool call adds to the artifacts ledger. */
+import path from "path";
+
 import { describe, expect, it } from "vitest";
 
 import { artifactPathLine } from "#shared/deliverables";
@@ -65,7 +67,10 @@ describe("present_deliverable", () => {
       WORKSPACE
     );
 
-    expect(drafts.map((draft) => draft.location)).toEqual([REPORT]);
+    // Resolved by the platform's path module, so `D:\tmp\…` on Windows.
+    expect(drafts.map((draft) => draft.location)).toEqual([
+      path.resolve(WORKSPACE, "report.md"),
+    ]);
   });
 
   it("files nothing from a call the tool refused", () => {
