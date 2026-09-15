@@ -1422,7 +1422,6 @@ export interface McpAgentToolsServerOptions {
     livePlatforms?: () => MessagingPlatformId[];
     /** The chat id meaning "me" on each platform. */
     selfChats?: () => Array<{ platform: MessagingPlatformId; chatId: string }>;
-    selfPending?: () => MessagingPlatformId[];
     startingPlatforms?: () => MessagingPlatformId[];
     /** Bounded. */
     awaitReady?: (platform?: MessagingPlatformId) => Promise<void>;
@@ -3223,20 +3222,9 @@ export class McpAgentToolsServer {
 
     // Linked but unable to say who as. Say so, or the model asks the user for
     // the number of the phone they just paired.
-    const pending = messaging.selfPending?.() ?? [];
     const selfless = live.filter(
-      (id) =>
-        !selves.some((row) => row.platform === id) && !pending.includes(id)
+      (id) => !selves.some((row) => row.platform === id)
     );
-    // Setup-in-progress has an ETA and a next step; tell the model both.
-    const pendingLive = live.filter((id) => pending.includes(id));
-    const pendingNote =
-      pendingLive.length > 0
-        ? `\n\n${pendingLive.join(", ")}: connected, but the assistant bot that ` +
-          "delivers messages to the user is still being set up — this " +
-          "usually finishes within a few minutes. If asked to message the " +
-          "user there, say exactly that and offer to try again shortly."
-        : "";
     const selfNote =
       selfless.length > 0
         ? `\n\nWho the user is on ${selfless.join(", ")} is not known yet. ` +
@@ -3256,7 +3244,7 @@ export class McpAgentToolsServer {
             connectedLine,
             "",
             ...(selfRows.length > 0 ? [...selfRows, ""] : []),
-            "Nothing to list YET." + startingNote + downNote + pendingNote,
+            "Nothing to list YET." + startingNote + downNote,
           ].join("\n")
         );
       }
@@ -3272,7 +3260,6 @@ export class McpAgentToolsServer {
               "user has to be messaged first, or message in. On WhatsApp you can still " +
               "send to a phone number." +
               downNote +
-              pendingNote +
               selfNote,
           ].join("\n")
         );
@@ -3290,7 +3277,6 @@ export class McpAgentToolsServer {
             "through the platform's own search. Omit the query here to see every " +
             "name. On WhatsApp you can still send to a phone number." +
             downNote +
-            pendingNote +
             selfNote,
         ].join("\n")
       );
@@ -3315,7 +3301,7 @@ export class McpAgentToolsServer {
           "read tools — on WhatsApp a contact's or group's name IS its " +
           "chat id; there is no other id to look for." +
           hiddenNote,
-        downNote + pendingNote + selfNote,
+        downNote + selfNote,
       ]
         .join("\n")
         .trimEnd()

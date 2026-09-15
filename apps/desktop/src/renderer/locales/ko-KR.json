@@ -1012,8 +1012,7 @@
     "doneConnect": "Continue",
     "enablePlatform": "플랫폼 활성화",
     "fields": {
-      "discordBotToken": "봇 토큰",
-      "telegramBotToken": "Bot token"
+      "discordBotToken": "봇 토큰"
     },
     "fromEnvironment": "환경 변수 {{key}}에서 설정됨",
     "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
@@ -1060,7 +1059,6 @@
       "connecting": "연결 중",
       "disabled": "비활성화됨",
       "error": "오류",
-      "linking": "Linking…",
       "needs_link": "Finish linking",
       "needs_login": "Waiting for login",
       "not_configured": "구성되지 않음",
@@ -1068,7 +1066,6 @@
       "rate_limited": "Rate limited",
       "syncing": "동기화 중"
     },
-    "telegramBotSetupPending": "Telegram is connected. Your AbacusAI Bot assistant is still being set up — this can take a minute or two, and you'll get a \"linked\" message in Telegram when it's ready.",
     "telegramConnected": "연결됨 — 에이전트가 당신의 Telegram 계정으로 메시지를 보냅니다.",
     "telegramOpenLogin": "Telegram 로그인 열기",
     "telegramScan": "Telegram 로그인 창이 열렸습니다 — 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 거기서 전화번호로 로그인하세요.",

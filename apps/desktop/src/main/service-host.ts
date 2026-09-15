@@ -333,22 +333,6 @@ const SELF_LANE_BOTS: Record<
     description: string;
   }
 > = {
-  telegram: {
-    name: "Telegram AbacusAI Bot <-> You",
-    channel: "telegram",
-    // Earlier auto-created names, renamed in place; a user's own is left alone.
-    aliases: ["AbacusAI Bot <-> You", "AbacusAI Bot on Telegram <-> You"],
-    description:
-      "You are the user's personal assistant living in their Telegram " +
-      "AbacusAI Bot chat. Every message they send to that chat comes " +
-      "to you, and every reply you write is delivered straight back to " +
-      'them there — replying IS messaging them, so when they say "send ' +
-      'me X" or "message me", just answer with X; never say you ' +
-      "cannot reach them and never ask which chat is theirs. They can " +
-      "ask you for anything you can do — questions, tasks with your " +
-      "tools, code, documents, schedules, messages to other people. Be " +
-      "a helpful, concise assistant and keep replies chat-sized.",
-  },
   abacus_discord: {
     name: "Discord AbacusAI Bot <-> You",
     channel: "discord",
@@ -381,10 +365,11 @@ const SELF_LANE_BOTS: Record<
       "tools, code, documents, schedules, messages to other people. Be " +
       "a helpful, concise assistant and keep replies chat-sized.",
   },
-  // The same bot as the BotFather lane's: one Telegram, one conversation.
   abacus_telegram: {
     name: "Telegram AbacusAI Bot <-> You",
     channel: "telegram",
+    // The retired own-account Telegram bootstrap's names, adopted in place:
+    // one Telegram, one conversation, and the user's history stays with it.
     aliases: ["AbacusAI Bot <-> You", "AbacusAI Bot on Telegram <-> You"],
     description:
       "You are the user's personal assistant living in their Telegram chat " +
@@ -633,7 +618,6 @@ export class ServiceHost {
         this.messagingGatewayService.listKnownChatsDetailed(query, platform),
       livePlatforms: () => this.messagingGatewayService.livePlatforms(),
       selfChats: () => this.messagingGatewayService.selfChats(),
-      selfPending: () => this.messagingGatewayService.selfPendingPlatforms(),
       startingPlatforms: () => this.messagingGatewayService.startingPlatforms(),
       awaitReady: (platform) =>
         this.messagingGatewayService.awaitReady(platform),
@@ -785,28 +769,6 @@ export class ServiceHost {
       } catch (err) {
         console.error("[bots] auto-reply bot creation failed:", err);
         return null;
-      }
-    },
-    stampChannelBot: (botId, platform) => {
-      try {
-        const bot = this.botService.list().find((entry) => entry.id === botId);
-        const spec = SELF_LANE_BOTS[platform];
-        if (bot == null) return;
-        // Rename only an auto-created name; a user's own stays.
-        const rename =
-          bot.name === spec.name || spec.aliases.includes(bot.name);
-        if (
-          bot.channel !== spec.channel ||
-          (rename && bot.name !== spec.name) ||
-          bot.description !== spec.description
-        )
-          this.botService.update(botId, {
-            channel: spec.channel,
-            description: spec.description,
-            ...(rename ? { name: spec.name } : {}),
-          });
-      } catch (err) {
-        console.error("[bots] channel stamp failed:", err);
       }
     },
     updateSessionLabel: (workspaceId, sessionId, label) => {
