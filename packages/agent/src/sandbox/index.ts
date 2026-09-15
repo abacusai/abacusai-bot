@@ -36,6 +36,7 @@ export {
   denials,
   ensureRuntime,
   setHostDecider,
+  settledDenials,
   violations,
   type HostDecider,
 } from "./runtime.js";

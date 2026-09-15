@@ -43,6 +43,7 @@ vi.mock("./sandbox/index.js", async (importOriginal) => ({
   decide,
   violations: () => null,
   denials: () => refusedByRuntime.list,
+  settledDenials: async () => refusedByRuntime.list,
   allowHostOnce: (host: string) => hostsAllowed.once.push(host),
   allowHostForSession: (host: string) => hostsAllowed.session.push(host),
 }));

@@ -20,11 +20,11 @@ import {
   allowHostOnce,
   backendName,
   decide,
-  denials,
   mentionedSecretPaths,
   networkConfinable,
   resolvePolicy,
   sandboxEnforcement,
+  settledDenials,
   violations,
   type Denial,
   type SandboxApprovals,
@@ -276,6 +276,8 @@ function localSandboxedOperations(
         ? decision.argv
         : [fallback.file, ...fallback.args];
 
+    // The tail of the output, to name a hidden store on failure.
+    let tail = "";
     const result = await new Promise<{ exitCode: number }>((resolve) => {
       const child = spawn(argv[0]!, argv.slice(1), {
         cwd,
@@ -321,8 +323,6 @@ function localSandboxedOperations(
 
       const timer = deadline(options.timeout, terminate);
 
-      // The tail of the output, to name a hidden store on failure.
-      let tail = "";
       const collect = (data: Buffer): void => {
         options.onData(data);
         tail = (tail + data.toString()).slice(-OUTPUT_TAIL_CHARS);
@@ -344,19 +344,25 @@ function localSandboxedOperations(
         if (timer != null) clearTimeout(timer);
         options.signal?.removeEventListener("abort", onAbort);
         unregister();
-        // Whatever the exit code: `rm x; echo done` exits 0 with the rm
-        // refused, and a model that never hears of the refusal guesses at
-        // the cause. The runtime's own account first, then the way to a
-        // prompt for a hidden store.
-        if (decision.kind === "confined") {
-          const denied = violations(commandId);
-          if (denied != null) options.onData(Buffer.from(`\n${denied}\n`));
-          const note = hiddenStoreNote(tail, policy.secrets.promptable);
-          if (note != null) options.onData(Buffer.from(note));
-        }
         resolve({ exitCode: code ?? 1 });
       });
     });
+
+    // The runtime hears a refusal a beat after the exit; wait for it, then
+    // tell the model. Whatever the exit code: `rm x; echo done` exits 0 with
+    // the rm refused, and a model that never hears of the refusal guesses at
+    // the cause. The runtime's own account first, then the way to a prompt
+    // for a hidden store.
+    const refused =
+      decision.kind === "confined"
+        ? await settledDenials(commandId, { exitCode: result.exitCode, tail })
+        : [];
+    if (decision.kind === "confined") {
+      const denied = violations(commandId);
+      if (denied != null) options.onData(Buffer.from(`\n${denied}\n`));
+      const note = hiddenStoreNote(tail, policy.secrets.promptable);
+      if (note != null) options.onData(Buffer.from(note));
+    }
 
     // What a granted command made is the session's own from here on.
     if (decision.kind === "confined" && approvals != null && intent != null) {
@@ -373,7 +379,6 @@ function localSandboxedOperations(
 
     // The sandbox refused something, whether or not the command's last step
     // then succeeded: ask, and run once more with the answer.
-    const refused = denials(commandId);
     if (refused.length === 0) return result;
     const answer = await approvals.askDenials(
       command,
