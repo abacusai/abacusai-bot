@@ -120,9 +120,30 @@ the rest of the session. `ABACUSAI_BOT_SANDBOX_READABLE`, a path-delimited
 list where `~` expands to the home directory, exempts a path without
 prompting.
 
+Beyond the workspace and temp, a confined command may also write to the
+caches and toolchains a build uses (`~/.npm`, `~/.cache`, `~/.cargo`, `~/go`,
+`~/.m2`, `~/Library/Caches` and the like, where they exist).
+
+The command's own text decides one more thing before it runs. A plainly
+written command that only makes new things in the user's own folders (a file
+on the Desktop, a directory beside the project, a `git clone` there) gets
+those paths added to its write list for that run, and a command may change or
+remove again what this session made. Nothing else is granted: deleting or
+replacing something that is not the session's, appending to an existing file,
+changing permissions, anything under a dotfile, `~/Library`, the system, or
+another volume, and any line that cannot be read with confidence (command or
+variable substitution, `eval`, `sh -c`, `xargs`, `find -exec`, an interpreter
+with inline code, `sudo`, unbalanced quotes) all go to the kernel as before,
+and one refused step means nothing on the line is granted. The reading is
+static and can only add the literal paths the command names; a wrong reading
+costs a card, never grants a write the text did not spell out. The same rule
+applies to the file tools in Auto: a new file in the user's folders is
+written, an edit outside the workspace asks.
+
 When the sandbox refuses something a command tried, a write outside the
 workspace, a read of a hidden store the command did not name, or a host the
-proxy turned down, a card lists exactly what was refused. "Allow" runs the
+proxy turned down, a card lists exactly what was refused, and says what the
+command's text meant to do there ("deletes …", "replaces …"). "Allow" runs the
 same command again with that access; "Always" keeps it for the session;
 "Deny" leaves the refusal. The card cannot help a tool that ignores the proxy
 variables, since its connection never reached the proxy; Node tools are told

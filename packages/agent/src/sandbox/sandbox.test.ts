@@ -24,6 +24,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { AgentMode } from "../protocol.js";
 import { backendName, decide, unavailableBackendMessage } from "./index.js";
+import { classifyCommand } from "./intent.js";
 import {
   canonicalize,
   modeToSandboxMode,
@@ -43,6 +44,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     enforcement: "auto",
     workspaceRoot: "/tmp/ws",
     writableTemp: ["/private/tmp"],
+    toolHomes: [],
     secrets: { denied: [], allowed: [], promptable: [] },
     approvedWrites: [],
     network: { kind: "filtered" },
@@ -223,6 +225,7 @@ describe.runIf(onRuntime)("confinement against the real kernel", () => {
         mode,
         workspaceRoot: workspace,
         writableTemp: [canonicalize("/tmp")],
+        toolHomes: [],
       }),
       command,
       workspace
@@ -471,6 +474,7 @@ describe.runIf(onRuntime)("credential stores against the real kernel", () => {
       policy({
         workspaceRoot: workspace,
         writableTemp: [canonicalize(os.tmpdir())],
+        toolHomes: [],
         secrets: resolveSecretPaths({
           home,
           workspaceRoot: workspace,
@@ -556,6 +560,7 @@ describe.runIf(onRuntime)("egress against the real kernel", () => {
       policy({
         workspaceRoot: workspace,
         writableTemp: [canonicalize(os.tmpdir())],
+        toolHomes: [],
       }),
       command,
       workspace
@@ -641,5 +646,117 @@ describe("enforcement default", () => {
       kind: "unconfined",
       reason: "mode",
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The pre-grant, through the real kernel: what the classifier lets through
+// must actually work, and what it withholds must actually be refused.
+// ---------------------------------------------------------------------------
+
+describe.runIf(onRuntime)("pre-granted writes against the real kernel", () => {
+  let workspace: string;
+  /** A folder of the user's, made under home so it is not scratch. */
+  let userDir: string;
+  let usable = true;
+
+  beforeAll(async () => {
+    setHostDecider(async () => false);
+    workspace = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), "sbx-grant-ws-"))
+    );
+    userDir = fs.mkdtempSync(
+      path.join(os.homedir(), "abacusai-bot-grant-test-")
+    );
+    fs.mkdirSync(path.join(userDir, "Desktop"));
+    const decision = await decide(
+      policy({ workspaceRoot: workspace }),
+      "true",
+      workspace
+    );
+    usable = decision.kind === "confined";
+  }, 120_000);
+
+  afterAll(() => {
+    fs.rmSync(workspace, { recursive: true, force: true });
+    fs.rmSync(userDir, { recursive: true, force: true });
+  });
+
+  /** Run a command with exactly what the classifier granted it. */
+  async function runGranted(
+    command: string,
+    ledger: ReadonlySet<string> = new Set()
+  ): Promise<{ code: number; grants: string[] }> {
+    const intent = classifyCommand(command, workspace, {
+      context: {
+        workspaceRoot: workspace,
+        writableTemp: [canonicalize("/tmp"), canonicalize(os.tmpdir())],
+        toolHomes: [],
+      },
+      ledger,
+    });
+    const decision = await decide(
+      policy({
+        workspaceRoot: workspace,
+        writableTemp: [canonicalize("/tmp"), canonicalize(os.tmpdir())],
+        toolHomes: [],
+        approvedWrites: intent.grants,
+      }),
+      command,
+      workspace
+    );
+    if (decision.kind !== "confined")
+      throw new Error(`expected confinement, got ${decision.kind}`);
+
+    return {
+      code: await exitCode(decision.argv, workspace),
+      grants: intent.grants,
+    };
+  }
+
+  it("a new file in the user's folder is made, with no card", async () => {
+    if (!usable) return;
+    const target = path.join(userDir, "Desktop", "notes.txt");
+    const { code, grants } = await runGranted(`echo hello > ${target}`);
+
+    expect(grants).toEqual([canonicalize(target)]);
+    expect(code).toBe(0);
+    expect(fs.readFileSync(target, "utf8")).toBe("hello\n");
+  });
+
+  it("a file that is not the session's is not deleted", async () => {
+    if (!usable) return;
+    const target = path.join(userDir, "Desktop", "important.txt");
+    fs.writeFileSync(target, "keep");
+    const { code, grants } = await runGranted(`rm ${target}`);
+
+    expect(grants).toEqual([]);
+    expect(code).not.toBe(0);
+    expect(fs.existsSync(target)).toBe(true);
+  });
+
+  it("a file the session made can be removed again", async () => {
+    if (!usable) return;
+    const target = path.join(userDir, "Desktop", "own.txt");
+    fs.writeFileSync(target, "mine");
+    const { code } = await runGranted(
+      `rm ${target}`,
+      new Set([canonicalize(target)])
+    );
+
+    expect(code).toBe(0);
+    expect(fs.existsSync(target)).toBe(false);
+  });
+
+  it("a benign create beside a delete gets nothing, so the delete is refused", async () => {
+    if (!usable) return;
+    const keep = path.join(userDir, "Desktop", "keep.txt");
+    const fresh = path.join(userDir, "Desktop", "fresh.txt");
+    fs.writeFileSync(keep, "keep");
+    const { grants } = await runGranted(`touch ${fresh} && rm ${keep}`);
+
+    expect(grants).toEqual([]);
+    expect(fs.existsSync(keep)).toBe(true);
+    expect(fs.existsSync(fresh)).toBe(false);
   });
 });

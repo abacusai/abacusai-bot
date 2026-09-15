@@ -1,3 +1,5 @@
+import * as path from "node:path";
+
 import {
   createAgentSession,
   createLocalBashOperations,
@@ -115,6 +117,7 @@ import { buildRoster } from "./roster.js";
 import {
   allowHostForSession,
   backendName,
+  canonicalize,
   ensureRuntime,
   networkConfinable,
   resolveSecretPaths,
@@ -131,6 +134,7 @@ import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
 import { searchAvailable, xaiSearchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
+import { isInsideDirectory } from "./workspace-path.js";
 
 /** The answers that mean "and keep allowing this for the session". */
 function isAlwaysDecision(decision: PermissionDecision): boolean {
@@ -2407,6 +2411,7 @@ export class AbacusBotSession {
 
         this.toolInputs.delete(event.toolCallId);
         this.heartbeat.ended(event.toolCallId);
+        this.rememberCreated(tool, event.isError === true);
         this.emitAgentEvent({
           type: "tool_execution_complete",
           tool,
@@ -2727,9 +2732,22 @@ export class AbacusBotSession {
     if (!networkConfinable()) return;
 
     setHostDecider((host, port) => this.askNetworkHost(host, port));
-    this.sandboxApprovals.askDenials = (command, refused) =>
-      this.askDenials(command, refused);
+    this.sandboxApprovals.askDenials = (command, refused, note) =>
+      this.askDenials(command, refused, note);
     await ensureRuntime();
+  }
+
+  /**
+   * A file the write tool made outside the workspace is the session's own:
+   * a later command may change or remove it without a card (intent.ts).
+   */
+  private rememberCreated(tool: ToolRequest, failed: boolean): void {
+    if (failed || tool.name !== "write") return;
+    const requested = tool.input.path;
+    if (typeof requested !== "string" || requested.length === 0) return;
+    const resolved = canonicalize(path.resolve(this.options.cwd, requested));
+    if (isInsideDirectory(resolved, this.options.cwd)) return;
+    this.sandboxApprovals.created.add(resolved);
   }
 
   /**
@@ -2739,7 +2757,8 @@ export class AbacusBotSession {
    */
   private async askDenials(
     command: string,
-    refused: Denial[]
+    refused: Denial[],
+    note: string | null
   ): Promise<DenialDecision | null> {
     if (!this.canReachUser()) return null;
 
@@ -2757,6 +2776,7 @@ export class AbacusBotSession {
       displayName: "Allow what the sandbox refused",
       command,
       denials: refused,
+      ...(note != null ? { note } : {}),
     };
 
     if (this.pi != null) {

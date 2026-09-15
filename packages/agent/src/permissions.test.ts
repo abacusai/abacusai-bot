@@ -534,6 +534,71 @@ describe("writes outside the workspace", () => {
       ).kind
     ).toBe("allow");
   });
+
+  describe.skipIf(process.platform === "win32")("in Auto", () => {
+    // Auto follows the same rule as a confined command (sandbox/intent.ts):
+    // a new file in the user's own folders goes through, the rest asks.
+    const desktopFile = path.join(
+      os.homedir(),
+      "Desktop",
+      "abacusai-bot-no-such-file-9f1c.md"
+    );
+
+    it("lets a new file onto the Desktop without a card", () => {
+      expect(
+        gateToolCall(
+          call("write", { path: desktopFile, content: "x" }),
+          options({ mode: AgentMode.Auto })
+        ).kind
+      ).toBe("allow");
+    });
+
+    it("asks before touching a sensitive place, new or not", () => {
+      for (const target of [
+        outside,
+        path.join(os.homedir(), ".zshrc"),
+        path.join(os.homedir(), "loose-file-9f1c.txt"),
+      ]) {
+        const gate = gateToolCall(
+          call("write", { path: target, content: "x" }),
+          options({ mode: AgentMode.Auto })
+        );
+        expect(gate.kind, target).toBe("ask");
+        expect(gate.kind === "ask" && gate.request.type, target).toBe(
+          "write_outside_directory"
+        );
+      }
+    });
+
+    it("asks before editing anything outside, since that changes what is there", () => {
+      const gate = gateToolCall(
+        call("edit", { path: desktopFile, edits: [] }),
+        options({ mode: AgentMode.Auto })
+      );
+      expect(gate.kind).toBe("ask");
+      expect(gate.kind === "ask" && gate.request.type).toBe(
+        "edit_outside_directory"
+      );
+    });
+
+    it("lets scratch and the workspace through", () => {
+      expect(
+        gateToolCall(
+          call("write", {
+            path: path.join(os.tmpdir(), "x.txt"),
+            content: "x",
+          }),
+          options({ mode: AgentMode.Auto })
+        ).kind
+      ).toBe("allow");
+      expect(
+        gateToolCall(
+          call("edit", { path: "src/app.ts", edits: [] }),
+          options({ mode: AgentMode.Auto })
+        ).kind
+      ).toBe("allow");
+    });
+  });
 });
 
 describe("shell prefix matching", () => {

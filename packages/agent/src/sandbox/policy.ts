@@ -10,11 +10,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { AgentMode } from "../protocol.js";
+import { realPathOf } from "../workspace-path.js";
 import {
   readableExemptions,
   resolveSecretPaths,
   type SecretPaths,
 } from "./secrets.js";
+import { existingToolHomes } from "./zones.js";
 
 /** What the OS is asked to enforce on files. */
 export type SandboxMode = "read-only" | "workspace-write";
@@ -35,6 +37,8 @@ export interface SandboxPolicy {
   workspaceRoot: string;
   /** Temp directories a build is entitled to, fully resolved. */
   writableTemp: string[];
+  /** Caches and toolchains a build writes to as a matter of course (zones.ts). */
+  toolHomes: string[];
   /** Credential stores hidden from the command, and what is read back. */
   secrets: SecretPaths;
   /** Paths outside the workspace the user let this command write. */
@@ -79,13 +83,15 @@ export function modeToSandboxMode(mode: AgentMode): SandboxMode {
 /**
  * Resolve a path to what the kernel will see: on macOS `/tmp` IS
  * `/private/tmp`, and a profile naming the symlink grants nothing. A path
- * that does not exist yet is normalized lexically so `mkdir && cd` still works.
+ * that does not exist yet is resolved through its nearest existing ancestor
+ * (`/var/folders/…/new.txt` is `/private/var/folders/…/new.txt`), so a file
+ * about to be made is judged where it will land.
  */
 export function canonicalize(target: string): string {
   try {
     return fs.realpathSync.native(target);
   } catch {
-    return path.resolve(target);
+    return realPathOf(target) ?? path.resolve(target);
   }
 }
 
@@ -112,6 +118,7 @@ export function resolvePolicy(
     enforcement: sandboxEnforcement(mode),
     workspaceRoot,
     writableTemp: [...temps],
+    toolHomes: existingToolHomes(),
     secrets: resolveSecretPaths({
       workspaceRoot,
       exemptions: [...readableExemptions(), ...(options.approvedReads ?? [])],

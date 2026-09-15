@@ -21,10 +21,16 @@ export type DenialDecision = {
   session: Denial[];
 };
 
-/** Asked after a confined command failed; null when nothing may be allowed. */
+/**
+ * Asked after a confined command failed; null when nothing may be allowed.
+ * `note` is what the command's own text said it would do outside the
+ * workspace (intent.ts), so the card can say "deletes X" rather than only
+ * "write X".
+ */
 export type DenialAsker = (
   command: string,
-  denials: Denial[]
+  denials: Denial[],
+  note: string | null
 ) => Promise<DenialDecision | null>;
 
 class PathGrants {
@@ -65,6 +71,11 @@ export class SandboxApprovals {
   readonly reads = new PathGrants();
   /** Directories outside the workspace the user let a command write. */
   readonly writes = new PathGrants();
+  /**
+   * What this session made outside the workspace, by command or file tool:
+   * its own to change or remove again without a card (intent.ts).
+   */
+  readonly created = new Set<string>();
   /** Installed by the session; absent where nobody can answer a card. */
   askDenials: DenialAsker | null = null;
 

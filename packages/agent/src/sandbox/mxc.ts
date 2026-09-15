@@ -123,6 +123,7 @@ export function buildConfig(
   const writable = [
     ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
     ...policy.writableTemp,
+    ...(policy.mode === "workspace-write" ? policy.toolHomes : []),
     ...policy.approvedWrites,
   ];
   const denied = deniedPaths(policy.secrets, listSync);

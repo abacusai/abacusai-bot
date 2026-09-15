@@ -838,10 +838,11 @@ describe("asking about what the sandbox refused", () => {
     expect(exitCode).toBe(0);
     expect(asked).toHaveLength(1);
     expect(output).toContain("running the command again");
-    // The write was handed to the retry's policy, the host to the proxy.
-    expect(decide.mock.calls[1]?.[0]).toMatchObject({
-      approvedWrites: ["/Users/dev/Desktop/out.txt"],
-    });
+    // The write was handed to the retry's policy (beside whatever the
+    // command's own text was granted, sandbox/intent.ts), the host to the proxy.
+    expect(
+      (decide.mock.calls[1]![0] as { approvedWrites: string[] }).approvedWrites
+    ).toContain("/Users/dev/Desktop/out.txt");
     expect(hostsAllowed.once).toEqual(["api.test"]);
     expect(hostsAllowed.session).toEqual([]);
   });
