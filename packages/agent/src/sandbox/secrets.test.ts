@@ -7,7 +7,7 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { CredentialApprovals } from "./approvals.js";
+import { SandboxApprovals } from "./approvals.js";
 import {
   isWithin,
   mentionedSecretPaths,
@@ -237,7 +237,7 @@ describe("stores a failure mentions", () => {
 
 describe("approvals", () => {
   it("hand a one-off grant to the next run of that command only", () => {
-    const approvals = new CredentialApprovals();
+    const approvals = new SandboxApprovals().reads;
     approvals.approveOnce("cat ~/.netrc", ["/home/dev/.netrc"]);
     expect(approvals.consume("cat ~/.ssh/id_rsa")).toEqual([]);
     expect(approvals.consume("cat ~/.netrc")).toEqual(["/home/dev/.netrc"]);
@@ -245,7 +245,7 @@ describe("approvals", () => {
   });
 
   it("keep a session grant for every later command", () => {
-    const approvals = new CredentialApprovals();
+    const approvals = new SandboxApprovals().reads;
     approvals.approveForSession(["/home/dev/.netrc"]);
     expect(approvals.consume("anything")).toEqual(["/home/dev/.netrc"]);
     expect(approvals.consume("anything else")).toEqual(["/home/dev/.netrc"]);
@@ -254,13 +254,33 @@ describe("approvals", () => {
   });
 
   it("merge repeated grants without duplicates", () => {
-    const approvals = new CredentialApprovals();
+    const approvals = new SandboxApprovals().reads;
     approvals.approveOnce("x", ["/a"]);
     approvals.approveOnce("x", ["/a", "/b"]);
     approvals.approveForSession(["/b", "/c"]);
     approvals.approveForSession(["/c"]);
     expect(approvals.consume("x")).toEqual(["/a", "/b", "/c"]);
     expect(approvals.sessionPaths).toEqual(["/b", "/c"]);
+  });
+});
+
+describe("a card's answer", () => {
+  it("is applied once for the command and for the session as chosen", () => {
+    const approvals = new SandboxApprovals();
+    approvals.apply("cp secret out", {
+      once: [
+        { kind: "read", path: "/home/dev/.netrc" },
+        { kind: "host", host: "x.test", port: 443 },
+      ],
+      session: [{ kind: "write", path: "/home/dev/Desktop/out.txt" }],
+    });
+    expect(approvals.reads.consume("cp secret out")).toEqual([
+      "/home/dev/.netrc",
+    ]);
+    expect(approvals.reads.consume("cp secret out")).toEqual([]);
+    expect(approvals.writes.consume("anything")).toEqual([
+      "/home/dev/Desktop/out.txt",
+    ]);
   });
 });
 

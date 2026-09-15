@@ -15,14 +15,18 @@ import {
 import { registerForegroundProcess } from "./background-processes.js";
 import { currentMode } from "./current-mode.js";
 import {
+  allowHostForSession,
+  allowHostOnce,
   backendName,
   decide,
+  denials,
   mentionedSecretPaths,
   networkConfinable,
   resolvePolicy,
   sandboxEnforcement,
   violations,
-  type CredentialApprovals,
+  type Denial,
+  type SandboxApprovals,
 } from "./sandbox/index.js";
 import {
   fallbackShell,
@@ -202,122 +206,181 @@ function dockerOperations(image: string): BashOperations {
  * only because pi's local path has no seam for wrapping the argv. A refusal is
  * output plus a non-zero exit, not a throw, so the model reads why and adapts.
  */
+/**
+ * Run commands on this machine, confined by the OS. Exists only because pi's
+ * local path has no seam for wrapping the argv. A refusal is output plus a
+ * non-zero exit, not a throw, so the model reads why and adapts. When the
+ * sandbox refused something and a card can be shown, the user is asked and
+ * the command runs once more with what they allowed.
+ */
 function localSandboxedOperations(
-  approvals: CredentialApprovals | undefined
+  approvals: SandboxApprovals | undefined
 ): BashOperations {
-  return {
-    exec: async (command, cwd, options) => {
-      const policy = resolvePolicy(currentMode(), cwd, {
-        approvedReads: approvals?.consume(command) ?? [],
-        filteredNetwork: networkConfinable(),
+  const attempt = async (
+    command: string,
+    cwd: string,
+    options: Parameters<BashOperations["exec"]>[2],
+    retried: boolean
+  ): Promise<{ exitCode: number }> => {
+    const policy = resolvePolicy(currentMode(), cwd, {
+      approvedReads: approvals?.reads.consume(command) ?? [],
+      approvedWrites: approvals?.writes.consume(command) ?? [],
+      filteredNetwork: networkConfinable(),
+    });
+
+    // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
+    // inheriting this process's env would mean the launchd PATH.
+    const shell = loginEnvironment();
+    const inherited =
+      options.env != null
+        ? withMergedPath(options.env, shell.PATH ?? shell.Path)
+        : shell;
+    // Node's own fetch ignores the proxy variables unless told; without this a
+    // Node tool's request goes direct, is refused, and no card can be raised.
+    const childEnv =
+      policy.network.kind === "filtered"
+        ? { ...inherited, NODE_USE_ENV_PROXY: "1" }
+        : inherited;
+
+    const commandId = `command-${++commandCounter}`;
+    const decision = await decide(policy, command, cwd, childEnv, commandId);
+
+    if (decision.kind === "refused") {
+      options.onData(Buffer.from(`${decision.message}\n`));
+
+      // 126, "found but not executable": the closest standard code to
+      // refused.
+      return { exitCode: 126 };
+    }
+
+    const fallback = fallbackShell(command);
+    const argv =
+      decision.kind === "confined"
+        ? decision.argv
+        : [fallback.file, ...fallback.args];
+
+    const result = await new Promise<{ exitCode: number }>((resolve) => {
+      const child = spawn(argv[0]!, argv.slice(1), {
+        cwd,
+        // Its own process group, so a deadline takes down what the command
+        // started too; a leftover subshell is what keeps the output pipes
+        // open.
+        detached: process.platform !== "win32",
+        env: childEnv,
+        // Written for the platform's shell; must not be re-quoted
+        // (sandbox/shell.ts).
+        ...(decision.kind !== "confined" &&
+        fallback.windowsVerbatimArguments === true
+          ? { windowsVerbatimArguments: true }
+          : {}),
       });
 
-      // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
-      // inheriting this process's env would mean the launchd PATH.
-      const shell = loginEnvironment();
-      const childEnv =
-        options.env != null
-          ? withMergedPath(options.env, shell.PATH ?? shell.Path)
-          : shell;
+      // A command that reads stdin would otherwise hang until the timeout.
+      child.stdin.end();
 
-      const commandId = `command-${++commandCounter}`;
-      const decision = await decide(policy, command, cwd, childEnv, commandId);
-
-      if (decision.kind === "refused") {
-        options.onData(Buffer.from(`${decision.message}\n`));
-
-        // 126, "found but not executable": the closest standard code to
-        // refused.
-        return { exitCode: 126 };
-      }
-
-      const fallback = fallbackShell(command);
-      const argv =
-        decision.kind === "confined"
-          ? decision.argv
-          : [fallback.file, ...fallback.args];
-
-      return new Promise((resolve) => {
-        const child = spawn(argv[0]!, argv.slice(1), {
-          cwd,
-          // Its own process group, so a deadline takes down what the command
-          // started too; a leftover subshell is what keeps the output pipes
-          // open.
-          detached: process.platform !== "win32",
-          env: childEnv,
-          // Written for the platform's shell; must not be re-quoted
-          // (sandbox/shell.ts).
-          ...(decision.kind !== "confined" &&
-          fallback.windowsVerbatimArguments === true
-            ? { windowsVerbatimArguments: true }
-            : {}),
-        });
-
-        // A command that reads stdin would otherwise hang until the timeout.
-        child.stdin.end();
-
-        const terminate = (): void => {
-          // Negative pid is the whole group; it fails only when already gone.
-          if (child.pid != null && process.platform !== "win32") {
-            try {
-              process.kill(-child.pid, "SIGKILL");
-              return;
-            } catch {
-              /* group already reaped — fall through to the direct kill */
-            }
+      const terminate = (): void => {
+        // Negative pid is the whole group; it fails only when already gone.
+        if (child.pid != null && process.platform !== "win32") {
+          try {
+            process.kill(-child.pid, "SIGKILL");
+            return;
+          } catch {
+            /* group already reaped — fall through to the direct kill */
           }
-          child.kill("SIGKILL");
-        };
+        }
+        child.kill("SIGKILL");
+      };
 
-        // Shutdown must take the process group with it, as a deadline would.
-        const unregister = registerForegroundProcess({ kill: terminate });
+      // Shutdown must take the process group with it, as a deadline would.
+      const unregister = registerForegroundProcess({ kill: terminate });
 
-        const onAbort = (): void => {
-          terminate();
-        };
-        // The decision above is asynchronous; an abort that landed meanwhile
-        // must still take the command down.
-        if (options.signal?.aborted === true) terminate();
-        else options.signal?.addEventListener("abort", onAbort, { once: true });
+      const onAbort = (): void => {
+        terminate();
+      };
+      // The decision above is asynchronous; an abort that landed meanwhile
+      // must still take the command down.
+      if (options.signal?.aborted === true) terminate();
+      else options.signal?.addEventListener("abort", onAbort, { once: true });
 
-        const timer = deadline(options.timeout, terminate);
+      const timer = deadline(options.timeout, terminate);
 
-        // The tail of the output, to name a hidden store on failure.
-        let tail = "";
-        const collect = (data: Buffer): void => {
-          options.onData(data);
-          tail = (tail + data.toString()).slice(-OUTPUT_TAIL_CHARS);
-        };
-        child.stdout.on("data", collect);
-        child.stderr.on("data", collect);
+      // The tail of the output, to name a hidden store on failure.
+      let tail = "";
+      const collect = (data: Buffer): void => {
+        options.onData(data);
+        tail = (tail + data.toString()).slice(-OUTPUT_TAIL_CHARS);
+      };
+      child.stdout.on("data", collect);
+      child.stderr.on("data", collect);
 
-        child.on("error", (error) => {
-          options.onData(
-            Buffer.from(`Failed to run command: ${error.message}\n`)
-          );
-          if (timer != null) clearTimeout(timer);
-          options.signal?.removeEventListener("abort", onAbort);
-          unregister();
-          resolve({ exitCode: 127 });
-        });
-
-        settleOnExit(child, (code) => {
-          if (timer != null) clearTimeout(timer);
-          options.signal?.removeEventListener("abort", onAbort);
-          unregister();
-          if (code !== 0 && decision.kind === "confined") {
-            // The runtime's own account first (what was denied and why),
-            // then the way to a prompt for a hidden store.
-            const denied = violations(commandId);
-            if (denied != null) options.onData(Buffer.from(`\n${denied}\n`));
-            const note = hiddenStoreNote(tail, policy.secrets.promptable);
-            if (note != null) options.onData(Buffer.from(note));
-          }
-          resolve({ exitCode: code ?? 1 });
-        });
+      child.on("error", (error) => {
+        options.onData(
+          Buffer.from(`Failed to run command: ${error.message}\n`)
+        );
+        if (timer != null) clearTimeout(timer);
+        options.signal?.removeEventListener("abort", onAbort);
+        unregister();
+        resolve({ exitCode: 127 });
       });
-    },
+
+      settleOnExit(child, (code) => {
+        if (timer != null) clearTimeout(timer);
+        options.signal?.removeEventListener("abort", onAbort);
+        unregister();
+        if (code !== 0 && decision.kind === "confined") {
+          // The runtime's own account first (what was denied and why),
+          // then the way to a prompt for a hidden store.
+          const denied = violations(commandId);
+          if (denied != null) options.onData(Buffer.from(`\n${denied}\n`));
+          const note = hiddenStoreNote(tail, policy.secrets.promptable);
+          if (note != null) options.onData(Buffer.from(note));
+        }
+        resolve({ exitCode: code ?? 1 });
+      });
+    });
+
+    if (
+      result.exitCode === 0 ||
+      decision.kind !== "confined" ||
+      retried ||
+      approvals?.askDenials == null
+    )
+      return result;
+
+    // The sandbox refused something: ask, and run once more with the answer.
+    const refused = denials(commandId);
+    if (refused.length === 0) return result;
+    const answer = await approvals.askDenials(command, refused);
+    if (answer == null) return result;
+
+    approvals.apply(command, answer);
+    for (const denial of answer.once)
+      if (denial.kind === "host") allowHostOnce(denial.host);
+    for (const denial of answer.session)
+      if (denial.kind === "host") allowHostForSession(denial.host);
+    options.onData(
+      Buffer.from(
+        `\n[sandbox] The user allowed ${describeDenials([...answer.once, ...answer.session])}; running the command again.\n`
+      )
+    );
+
+    return attempt(command, cwd, options, true);
   };
+
+  return {
+    exec: (command, cwd, options) => attempt(command, cwd, options, false),
+  };
+}
+
+/** `write /a, read /b, host x:443`, for the note between the two runs. */
+export function describeDenials(list: readonly Denial[]): string {
+  return list
+    .map((denial) =>
+      denial.kind === "host"
+        ? `${denial.kind} ${denial.host}:${denial.port}`
+        : `${denial.kind} ${denial.path}`
+    )
+    .join(", ");
 }
 
 const OUTPUT_TAIL_CHARS = 16_384;
@@ -350,8 +413,8 @@ export function hiddenStoreNote(
  * reimplementation would; `off` returns null for the same reason.
  */
 export function backendOperations(
-  /** The session's credential approvals; absent for a caller with no card. */
-  approvals?: CredentialApprovals
+  /** The session's sandbox approvals; absent for a caller with no card. */
+  approvals?: SandboxApprovals
 ): BashOperations | null {
   const backend = selectedBackend();
 

@@ -10,6 +10,11 @@
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
+When the sandbox refuses something a command tried, a card now lists it and
+"Allow" runs the command again with that access, instead of the agent working
+around the refusal. Google Fonts is on the allow list, and Node tools are told
+to use the proxy.
+
 The kernel sandbox is now on by default and applies in Bypass mode too, which
 the app starts in; Settings > Capabilities switches it off. Bypass still asks
 about a hidden credential store a command names and a host not on the allow

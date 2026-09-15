@@ -11,6 +11,7 @@ import {
   commandConfig,
   configuredHosts,
   DEFAULT_HOSTS,
+  parseDenials,
 } from "./runtime.js";
 
 function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
@@ -24,6 +25,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
       allowed: ["/Users/dev/.ssh/config"],
       promptable: ["/Users/dev/.ssh", "/Users/dev/.netrc"],
     },
+    approvedWrites: [],
     network: { kind: "filtered" },
     ...overrides,
   };
@@ -88,5 +90,44 @@ describe("the per-command config", () => {
     expect(
       commandConfig(policy({ mode: "read-only" })).filesystem?.allowWrite
     ).toEqual(["/private/tmp", "/private/var/folders/x/T"]);
+  });
+});
+
+describe("what the runtime refused", () => {
+  it("reads a refused write, read and proxied host out of the violation lines", () => {
+    expect(
+      parseDenials([
+        "bash(1) deny(1) sysctl-read kern.iossupportversion",
+        "bash(1) deny(1) file-write-create /Users/dev/Desktop/out.txt",
+        "ls(2) deny(1) file-read-data /Users/dev/Library/Keychains",
+        "ls(2) deny(1) file-read-data /Users/dev/Library/Keychains",
+        "deny network-outbound example.com:443 (user denied)",
+        "curl(3) deny(1) mach-lookup com.apple.SystemConfiguration.configd",
+      ])
+    ).toEqual([
+      { kind: "write", path: "/Users/dev/Desktop/out.txt" },
+      { kind: "read", path: "/Users/dev/Library/Keychains" },
+      { kind: "host", host: "example.com", port: 443 },
+    ]);
+  });
+
+  it("reads the Linux observer's write line", () => {
+    expect(parseDenials(["deny write /home/dev/out.txt"])).toEqual([
+      { kind: "write", path: "/home/dev/out.txt" },
+    ]);
+  });
+
+  it("offers nothing for a direct connection the kernel refused", () => {
+    // Allowing the host would change nothing: the tool never used the proxy.
+    expect(
+      parseDenials(["curl(3) deny(1) network-outbound 93.184.216.34:443"])
+    ).toEqual([]);
+  });
+
+  it("adds an approved write to the command's writable paths", () => {
+    expect(
+      commandConfig(policy({ approvedWrites: ["/Users/dev/Desktop/out.txt"] }))
+        .filesystem?.allowWrite
+    ).toContain("/Users/dev/Desktop/out.txt");
   });
 });

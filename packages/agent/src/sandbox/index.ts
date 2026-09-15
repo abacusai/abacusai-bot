@@ -23,10 +23,17 @@ export {
   resolvePolicy,
   sandboxEnforcement,
 } from "./policy.js";
-export { CredentialApprovals } from "./approvals.js";
+export {
+  SandboxApprovals,
+  type Denial,
+  type DenialAsker,
+  type DenialDecision,
+} from "./approvals.js";
 export {
   allowHostForSession,
+  allowHostOnce,
   DEFAULT_HOSTS,
+  denials,
   ensureRuntime,
   setHostDecider,
   violations,

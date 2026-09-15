@@ -700,6 +700,56 @@ function BashPermissionUI({
   );
 }
 
+/** The sandbox refused what a command tried; allowing runs the command again. */
+function SandboxDeniedPermissionUI({
+  tool,
+  onDecide,
+}: {
+  tool: PendingPermissionInfo;
+  onDecide: (d: PermissionDecisionInput) => void;
+}): JSX.Element {
+  const { t } = useTranslation();
+  const request = tool.request?.type === "sandbox_denied" ? tool.request : null;
+  const command = request?.command ?? "";
+  const denials = request?.denials ?? [];
+  return (
+    <div className="flex flex-col gap-2" data-id="permission-sandbox-denied">
+      <div className="flex items-start gap-2">
+        <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+        <span className="text-foreground text-xs font-medium">
+          {t("permissions.sandboxDenied")}
+        </span>
+      </div>
+      {command.length > 0 && (
+        <pre className="text-muted-foreground bg-muted border-border max-h-20 overflow-y-auto rounded-lg border px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap">
+          {command}
+        </pre>
+      )}
+      <ul className="text-muted-foreground list-disc pl-4 font-mono text-xs break-all">
+        {denials.map((denial) => (
+          <li key={JSON.stringify(denial)}>
+            {denial.kind === "host"
+              ? t("permissions.sandboxDeniedHost", {
+                  host: `${denial.host}:${denial.port}`,
+                })
+              : denial.kind === "read"
+                ? t("permissions.sandboxDeniedRead", { path: denial.path })
+                : t("permissions.sandboxDeniedWrite", { path: denial.path })}
+          </li>
+        ))}
+      </ul>
+      <span className="text-muted-foreground text-xs">
+        {t("permissions.sandboxDeniedRerun")}
+      </span>
+      <PermActionList
+        onDecide={onDecide}
+        showAllowAlways={true}
+        alwaysAllowLabel={t("permissions.sandboxDeniedAlways")}
+      />
+    </div>
+  );
+}
+
 /** A sandboxed command reached for a host nobody listed; it waits on this. */
 function NetworkHostPermissionUI({
   tool,
@@ -1368,6 +1418,8 @@ const PermissionPane = ({
     );
   } else if (permissionType === "network_host") {
     content = <NetworkHostPermissionUI tool={permission} onDecide={decide} />;
+  } else if (permissionType === "sandbox_denied") {
+    content = <SandboxDeniedPermissionUI tool={permission} onDecide={decide} />;
   } else if (permissionType === "exit_plan_mode") {
     content = <ExitPlanModePermissionUI tool={permission} onDecide={decide} />;
   } else if (permissionType === "ask_user_question") {

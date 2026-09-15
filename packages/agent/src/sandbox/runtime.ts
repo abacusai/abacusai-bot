@@ -15,6 +15,7 @@ import {
   type SandboxRuntimeConfig,
 } from "@anthropic-ai/sandbox-runtime";
 
+import type { Denial } from "./approvals.js";
 import type { SandboxPolicy } from "./policy.js";
 import { probeVerdict, type ProbeExec } from "./probe.js";
 import { POSIX_SHELL } from "./shell.js";
@@ -58,6 +59,9 @@ export const DEFAULT_HOSTS: readonly string[] = [
   "registry-1.docker.io",
   "auth.docker.io",
   "production.cloudflare.docker.com",
+  // Web scaffolds fetch fonts at build time; font files carry nothing out.
+  "fonts.googleapis.com",
+  "fonts.gstatic.com",
 ];
 
 /** Hosts the environment pre-approves, comma-separated. */
@@ -163,10 +167,11 @@ export function commandConfig(
     filesystem: {
       denyRead: [...policy.secrets.denied],
       allowRead: [...policy.secrets.allowed],
-      allowWrite:
-        policy.mode === "workspace-write"
-          ? [policy.workspaceRoot, ...policy.writableTemp]
-          : [...policy.writableTemp],
+      allowWrite: [
+        ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
+        ...policy.writableTemp,
+        ...policy.approvedWrites,
+      ],
       denyWrite: [],
     },
   };
@@ -178,6 +183,13 @@ let starting: Promise<void> | null = null;
 let failure: string | null = null;
 let decider: HostDecider = async () => false;
 const sessionHosts: string[] = [];
+/** Hosts allowed for one connection each, from a card answered after a refusal. */
+const onceHosts = new Set<string>();
+
+/** Let the next connection to `host` through without another card. */
+export function allowHostOnce(host: string): void {
+  onceHosts.add(host.trim().toLowerCase());
+}
 
 /** Why the runtime could not start, once it has been tried; null before. */
 export function runtimeFailure(): string | null {
@@ -204,7 +216,10 @@ export async function ensureRuntime(): Promise<boolean> {
   if (starting === null) {
     starting = SandboxManager.initialize(
       baseConfig([...DEFAULT_HOSTS, ...configuredHosts()], agentSockets()),
-      ({ host, port }) => decider(host, port ?? 0),
+      ({ host, port }) =>
+        onceHosts.delete(host.trim().toLowerCase())
+          ? Promise.resolve(true)
+          : decider(host, port ?? 0),
       true
     ).catch((error: unknown) => {
       failure = error instanceof Error ? error.message : String(error);
@@ -276,6 +291,51 @@ export function violations(commandId: string): string | null {
   return body.length > 0 ? lines.join("\n").trim() : null;
 }
 
+/**
+ * What the runtime refused during one command, as things a card can offer.
+ * Seatbelt lines read `x(pid) deny(1) file-write-create /path`, the proxy's
+ * `deny network-outbound host:port (reason)`, Linux's observer `deny write
+ * /path`. A direct connection the kernel refused is not offered: allowing
+ * the host would change nothing, since the tool never used the proxy.
+ */
+export function parseDenials(lines: readonly string[]): Denial[] {
+  const found: Denial[] = [];
+  const seen = new Set<string>();
+  const add = (denial: Denial): void => {
+    const key = JSON.stringify(denial);
+    if (seen.has(key)) return;
+    seen.add(key);
+    found.push(denial);
+  };
+
+  for (const line of lines) {
+    const write =
+      /deny(?:\(\d+\))? (?:file-write-\S+|write|\S+) (\/\S.*)$/.exec(line);
+    const read = /deny\(\d+\) file-read-\S+ (\/\S.*)$/.exec(line);
+    const host = /deny network-outbound ([^\s:]+):(\d+) \(/.exec(line);
+    if (host != null)
+      add({ kind: "host", host: host[1]!, port: Number(host[2]) });
+    else if (read != null) add({ kind: "read", path: read[1]!.trim() });
+    else if (
+      write != null &&
+      /file-write|deny write|deny (?:open|creat|mkdir|rename|unlink|truncate)/.test(
+        line
+      )
+    )
+      add({ kind: "write", path: write[1]!.trim() });
+  }
+
+  return found;
+}
+
+export function denials(commandId: string): Denial[] {
+  return parseDenials(
+    SandboxManager.getSandboxViolationStore()
+      .getViolationsForCommand(commandId)
+      .map((violation) => violation.line)
+  );
+}
+
 /** Tests only. */
 export async function resetRuntime(): Promise<void> {
   await SandboxManager.reset();
@@ -298,6 +358,7 @@ export async function probeCommands(
     workspaceRoot: writable,
     writableTemp: [],
     secrets: { denied: [], allowed: [], promptable: [] },
+    approvedWrites: [],
     network: { kind: "filtered" },
   };
   const options = { commandId: "abacusai-bot-probe", commandText: "probe" };

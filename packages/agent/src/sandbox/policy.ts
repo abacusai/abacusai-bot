@@ -37,6 +37,8 @@ export interface SandboxPolicy {
   writableTemp: string[];
   /** Credential stores hidden from the command, and what is read back. */
   secrets: SecretPaths;
+  /** Paths outside the workspace the user let this command write. */
+  approvedWrites: string[];
   /** Where the command's outbound connections may go. */
   network: NetworkPolicy;
 }
@@ -91,6 +93,8 @@ export function resolvePolicy(
   options: {
     /** Stores the user approved for this command, on top of the environment's. */
     approvedReads?: readonly string[];
+    /** Paths the user let this command write, from a card after a refusal. */
+    approvedWrites?: readonly string[];
     /** Whether the backend can force connections through the asking proxy. */
     filteredNetwork?: boolean;
   } = {}
@@ -110,6 +114,7 @@ export function resolvePolicy(
       workspaceRoot,
       exemptions: [...readableExemptions(), ...(options.approvedReads ?? [])],
     }),
+    approvedWrites: [...(options.approvedWrites ?? [])],
     network:
       options.filteredNetwork === true
         ? { kind: "filtered" }
