@@ -115,13 +115,24 @@ describe("the decision table", () => {
     ).toBe("unconfined");
   });
 
-  it("never runs unconfined when the platform has a backend, working or not", async () => {
+  it("under strict, refuses rather than running unconfined when the backend cannot start", async () => {
     if (backendName() === null) return;
-    // The security-critical half: an unusable backend must refuse, never
-    // silently fall through to an unconfined command.
-    expect((await decide(policy(), "echo hi", "/tmp/ws")).kind).not.toBe(
-      "unconfined"
+    const decision = await decide(
+      policy({ enforcement: "strict" }),
+      "echo hi",
+      "/tmp/ws"
     );
+    // A working backend confines; a broken one refuses. Never a bare run.
+    expect(decision.kind).not.toBe("unconfined");
+  });
+
+  it("under auto, runs unconfined and says why when the backend cannot start", async () => {
+    if (backendName() === null) return;
+    const decision = await decide(policy(), "echo hi", "/tmp/ws");
+    // Whichever this machine is, the answer is one of the two honest ones.
+    expect(["confined", "unconfined"]).toContain(decision.kind);
+    if (decision.kind === "unconfined")
+      expect(decision.reason).toBe("backend-unavailable");
   });
 
   it("refuses rather than running unconfined when strict has no backend", async () => {

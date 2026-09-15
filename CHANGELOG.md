@@ -39,6 +39,10 @@ files card finds such a file the same way, and lists it under its real name.
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
+Where the sandbox cannot run (Linux without bubblewrap and socat, a Windows
+older than 24H2), commands run unconfined and a dismissible notice at the top
+of the chat says so, instead of every command being refused.
+
 When the sandbox refuses something a command tried, a card now lists it and
 "Allow" runs the command again with that access, instead of the agent working
 around the refusal. Node tools are told to use the proxy.

@@ -270,6 +270,13 @@ export type AgentSessionStatus =
   | "stopping"
   | "error";
 
+/** Whether a session's shell commands run under the kernel sandbox. */
+export interface SandboxStatus {
+  active: boolean;
+  /** Why not, in a sentence, when `active` is false. */
+  reason: string | null;
+}
+
 export interface AgentSessionSnapshot {
   workspaceId: string;
   sessionId: string;
@@ -282,6 +289,8 @@ export interface AgentSessionSnapshot {
   model: string | null;
   mode: AgentMode | null;
   agentStatus: AgentStatus;
+  /** Unknown until the agent reports it at startup. */
+  sandbox?: SandboxStatus | null;
 }
 
 /** The last message in a bot's chat, as its sidebar row shows it. */

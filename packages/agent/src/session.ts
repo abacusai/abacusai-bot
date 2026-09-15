@@ -124,6 +124,7 @@ import {
   networkConfinable,
   resolveSecretPaths,
   SandboxApprovals,
+  sandboxAvailability,
   sandboxEnforcement,
   setHostDecider,
   type Denial,
@@ -1063,6 +1064,12 @@ export class AbacusBotSession {
 
     this.emitSkills(resourceLoader);
     this.emitMcpServers();
+
+    // Not awaited on the ready path: the probe can take a second, and a
+    // command sent meanwhile makes the same decision on its own.
+    void sandboxAvailability().then((availability) =>
+      this.emitAgentEvent({ type: "sandbox_status", ...availability })
+    );
   }
 
   private emitReady(): void {

@@ -473,6 +473,7 @@ export type AgentEvent =
   | { type: "tool_output_update"; toolCallId: string; output: string }
   | { type: "tool_user_message"; toolCallId: string; message: string }
   | { type: "mode_changed"; mode: PermissionMode }
+  | { type: "sandbox_status"; active: boolean; reason: string | null }
   | { type: "turn_complete" }
   | { type: "user_message_dequeued"; content: string }
   | { type: "user_message_steered"; content: string }

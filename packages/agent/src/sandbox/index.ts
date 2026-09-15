@@ -1,15 +1,14 @@
 /**
  * Selecting a confinement backend, and deciding what to do without one.
- * A backend that works confines; a backend that fails refuses, because a
- * sandbox that silently degrades to unconfined is worse than none; no backend
- * at all (an older Windows) depends on enforcement: `auto` runs and says so,
- * `strict` refuses.
+ * A backend that works confines. Without one, or with one that cannot start
+ * (no bubblewrap or socat, an older Windows), `auto` runs the command
+ * unconfined and the session says so on screen; `strict` refuses instead.
  */
 import * as os from "node:os";
 
 import { sandboxBackendFor, type SandboxBackend } from "../sandbox-support.js";
 import * as mxc from "./mxc.js";
-import type { SandboxPolicy } from "./policy.js";
+import { sandboxEnforcement, type SandboxPolicy } from "./policy.js";
 import * as runtime from "./runtime.js";
 
 export type {
@@ -55,6 +54,8 @@ export type SandboxDecision =
   | { kind: "unconfined"; reason: "mode" }
   /** No backend on this platform, and enforcement permits running anyway. */
   | { kind: "unconfined"; reason: "unsupported-platform" }
+  /** A backend exists but could not start, and enforcement permits running. */
+  | { kind: "unconfined"; reason: "backend-unavailable" }
   /** Do not run. `message` is written where the model will read it. */
   | { kind: "refused"; message: string };
 
@@ -134,15 +135,70 @@ export async function decide(
       : mxc.wrap(policy, command, cwd, childEnv);
 
   if (argv === null) {
-    // Backend present but would not start: never fall through to running.
-    return {
-      kind: "refused",
-      message: unavailableBackendMessage(
-        backend,
-        backend === "sandbox-runtime" ? runtime.runtimeFailure() : null
-      ),
-    };
+    if (policy.enforcement === "strict") {
+      return {
+        kind: "refused",
+        message: unavailableBackendMessage(
+          backend,
+          backend === "sandbox-runtime" ? runtime.runtimeFailure() : null
+        ),
+      };
+    }
+
+    return { kind: "unconfined", reason: "backend-unavailable" };
   }
 
   return { kind: "confined", argv, backend };
+}
+
+/** Whether shell commands will actually be confined here, and why not. */
+export interface SandboxAvailability {
+  active: boolean;
+  reason: string | null;
+}
+
+/**
+ * Asked once per session so the screen can say when nothing confines. The
+ * probe runs here rather than on the first command, so the answer is known
+ * before the user asks for anything.
+ */
+export async function sandboxAvailability(): Promise<SandboxAvailability> {
+  if (sandboxEnforcement() === "off")
+    return { active: false, reason: "switched off in Settings" };
+
+  const backend = backendName();
+  if (backend === null)
+    return {
+      active: false,
+      reason:
+        process.platform === "win32"
+          ? "needs Windows 11 24H2 or newer"
+          : `no sandbox backend for ${process.platform}`,
+    };
+
+  if (backend === "mxc") {
+    return mxc.probe()
+      ? { active: true, reason: null }
+      : { active: false, reason: "the Windows sandbox runner could not start" };
+  }
+
+  if (!(await runtime.ensureRuntime()))
+    return {
+      active: false,
+      reason:
+        runtime.runtimeFailure() ??
+        (process.platform === "linux"
+          ? "bubblewrap or socat is not installed"
+          : "the sandbox runtime could not start"),
+    };
+  if (!(await runtime.probe()))
+    return {
+      active: false,
+      reason:
+        process.platform === "linux"
+          ? "bubblewrap cannot create a namespace here"
+          : "the sandbox did not hold in a probe",
+    };
+
+  return { active: true, reason: null };
 }

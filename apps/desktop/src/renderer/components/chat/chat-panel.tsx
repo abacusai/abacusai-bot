@@ -156,6 +156,7 @@ import { ConnectorRequestCard } from "./connector-request-card";
 import { Greeting } from "./greeting";
 import { PendingSteers } from "./pending-steers";
 import { buildChatItems, getAgentStatusLabel } from "./render-utils";
+import { SandboxNotice } from "./sandbox-notice";
 import { SESSION_STARTERS } from "./session-starters";
 import { SubtaskScopeHeader } from "./subtask-card";
 import { ThinkingLoader } from "./thinking-loader";
@@ -1990,6 +1991,10 @@ export const ChatPanel = (): JSX.Element => {
       className="bg-background relative flex h-full min-h-0 flex-col"
       data-id="local-code-chat-panel"
     >
+      {/* Commands run with no kernel sandbox here; the user should know. The
+          live session state, not the list item: the agent reports a second
+          after it starts, and only the state query is refreshed on it. */}
+      <SandboxNotice sandbox={sessionStateQuery.data?.sandbox} />
       {/* Message / welcome area — also a drop zone for path-mentions */}
       <MessageScrollerProvider
         key={activeSessionId ?? "new-session"}
