@@ -844,6 +844,31 @@ describe("asking about what the sandbox refused", () => {
     expect(hostsAllowed.session).toEqual([]);
   });
 
+  it("asks even when the command's last step exited 0", async () => {
+    // `rm x; echo done` succeeds as far as bash is concerned; the refusal is
+    // still real and still the user's to lift.
+    const { backendOperations } = await load();
+    const { SandboxApprovals } = await import("./sandbox/approvals.js");
+    const approvals = new SandboxApprovals();
+    let asked = 0;
+    approvals.askDenials = async (_command, refused) => {
+      asked += 1;
+
+      return { once: refused, session: [] };
+    };
+    const operations = backendOperations(approvals);
+    if (operations == null) throw new Error("expected local operations");
+    const [first, second] = twoRuns();
+
+    const running = exec(operations, "rm ~/Desktop/x; echo done");
+    first!.finish(0);
+    await vi.waitFor(() => expect(spawn).toHaveBeenCalledTimes(2));
+    second!.finish(0);
+    await running;
+
+    expect(asked).toBe(1);
+  });
+
   it("keeps the refusal when the user says no", async () => {
     const { backendOperations } = await load();
     const { SandboxApprovals } = await import("./sandbox/approvals.js");
