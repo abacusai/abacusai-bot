@@ -70,6 +70,20 @@ export function backendName(): SandboxBackend | null {
   return sandboxBackendFor(process.platform, os.release());
 }
 
+/**
+ * Whether the backend's own program is here to run. The Windows runner is a
+ * vendored binary that a checkout without the download step lacks; with it
+ * missing, `auto` hands the shell back to pi's own platform-correct path
+ * rather than run every command through a fallback written for bash. The
+ * runtime on macOS and Linux is probed asynchronously instead (ensureRuntime).
+ */
+export function backendPresent(): boolean {
+  const backend = backendName();
+  if (backend === null) return false;
+
+  return backend === "mxc" ? mxc.runnerPath() != null : true;
+}
+
 /** Whether the backend forces outbound connections through the asking proxy. */
 export function networkConfinable(): boolean {
   return backendName() === "sandbox-runtime";

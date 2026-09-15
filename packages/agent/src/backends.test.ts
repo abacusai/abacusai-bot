@@ -99,8 +99,11 @@ describe("a command that leaves something running behind it", () => {
   const ops = backendOperations();
   // Only the local backend spawns processes here; docker needs a daemon and
   // `off` hands the work back to pi, whose own path already does this.
+  // And POSIX only: the command is bash and the check is pgrep.
   const withLocalBackend =
-    ops != null && selectedBackend() === "local" ? it : it.skip;
+    ops != null && selectedBackend() === "local" && process.platform !== "win32"
+      ? it
+      : it.skip;
 
   let scratch: string;
   const realPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
@@ -198,6 +201,9 @@ describe("a platform with no sandbox backend (Windows)", () => {
     Object.defineProperty(process, "platform", { value: "win32" });
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "local");
     vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
+    // A Windows new enough for the runner but without the vendored binary
+    // (a checkout, the CI runner) is the same case: nothing here can confine.
+    vi.stubEnv("ABACUSAI_BOT_MXC_EXEC", "");
 
     expect(backendOperations()).toBeNull();
   });

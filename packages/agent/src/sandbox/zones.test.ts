@@ -56,10 +56,12 @@ describe("tool homes", () => {
       fs.mkdirSync(path.join(home, ".cache"));
       const found = existingToolHomes(home, {});
 
+      // Compared canonical, as the list is: on Windows realpath's plain and
+      // native forms differ (a short `RUNNER~1` against the long name).
       expect(found.sort()).toEqual(
         [
-          fs.realpathSync(path.join(home, ".npm")),
-          fs.realpathSync(path.join(home, ".cache")),
+          canonicalize(path.join(home, ".npm")),
+          canonicalize(path.join(home, ".cache")),
         ].sort()
       );
     } finally {
@@ -77,7 +79,7 @@ describe("tool homes", () => {
           XDG_CACHE_HOME: cache,
           XDG_DATA_HOME: "relative",
         })
-      ).toEqual([fs.realpathSync(cache)]);
+      ).toEqual([canonicalize(cache)]);
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }

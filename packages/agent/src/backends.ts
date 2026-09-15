@@ -18,7 +18,7 @@ import { currentMode } from "./current-mode.js";
 import {
   allowHostForSession,
   allowHostOnce,
-  backendName,
+  backendPresent,
   decide,
   mentionedSecretPaths,
   networkConfinable,
@@ -483,10 +483,10 @@ export function backendOperations(
 
   if (sandboxEnforcement() === "off") return null;
 
-  // Windows has no backend and no /bin/bash, so under `auto` null lets pi's
-  // local path run; `strict` keeps the operations so its refusal reaches the
-  // model.
-  if (backendName() === null && sandboxEnforcement() !== "strict") return null;
+  // A Windows with no backend, or without the vendored runner, has no
+  // /bin/bash either, so under `auto` null lets pi's local path run; `strict`
+  // keeps the operations so its refusal reaches the model.
+  if (!backendPresent() && sandboxEnforcement() !== "strict") return null;
 
   return localSandboxedOperations(approvals);
 }
