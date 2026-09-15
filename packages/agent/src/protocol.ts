@@ -279,6 +279,8 @@ export type PermissionRequest =
       cwd: string;
       background: boolean;
       unmatchedPatterns?: string[];
+      /** Hidden credential stores the command names; approving unhides them. */
+      credentialPaths?: string[];
     })
   | (PermissionRequestBase & {
       type: "browser_action";

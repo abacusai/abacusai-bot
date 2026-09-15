@@ -15,6 +15,7 @@ import {
   type PermissionRequest,
   type ToolRequest,
 } from "./protocol.js";
+import { isWithin, namedSecretPaths } from "./sandbox/secrets.js";
 import { isInsideDirectory, realPathOf } from "./workspace-path.js";
 
 /** Tools that change something on disk or run code. */
@@ -94,7 +95,8 @@ export function shellSegments(command: string): string[] {
 }
 
 export type Gate =
-  | { kind: "allow" }
+  /** `credentialPaths`: hidden stores the user already approved, to unhide. */
+  | { kind: "allow"; credentialPaths?: string[] }
   /** Refused outright without asking — PLAN mode's answer to a mutation. */
   | { kind: "refuse"; reason: string }
   | { kind: "ask"; request: PermissionRequest };
@@ -112,6 +114,10 @@ export interface GateOptions {
   allowedWritePaths: readonly string[];
   /** Origins the user chose to always allow web_fetch for, this session. */
   allowedOrigins: readonly string[];
+  /** Credential stores the sandbox hides that a command may ask to read. */
+  promptableCredentialPaths?: readonly string[];
+  /** Hidden stores the user chose to always allow reading, this session. */
+  allowedCredentialPaths?: readonly string[];
 }
 
 export function isMutatingTool(toolName: string): boolean {
@@ -392,9 +398,22 @@ function gateRead(tool: ToolRequest, options: GateOptions): Gate {
 function gateBash(tool: ToolRequest, options: GateOptions): Gate {
   const command = String(tool.input.command ?? "");
 
+  // A hidden credential store the command names asks even when the command
+  // prefix was approved: `cat` being allowed says nothing about the key.
+  const named = namedSecretPaths(command, {
+    cwd: options.cwd,
+    promptable: options.promptableCredentialPaths ?? [],
+  });
+  const allowedStores = options.allowedCredentialPaths ?? [];
+  const approved = named.filter((store) =>
+    allowedStores.some((allowed) => isWithin(store, allowed))
+  );
+  const unapproved = named.filter((store) => !approved.includes(store));
+
   const segments = shellSegments(command);
 
   if (
+    unapproved.length === 0 &&
     segments.length > 0 &&
     segments.every(
       (segment) =>
@@ -404,7 +423,9 @@ function gateBash(tool: ToolRequest, options: GateOptions): Gate {
         )
     )
   ) {
-    return { kind: "allow" };
+    return approved.length > 0
+      ? { kind: "allow", credentialPaths: approved }
+      : { kind: "allow" };
   }
 
   return {
@@ -417,6 +438,7 @@ function gateBash(tool: ToolRequest, options: GateOptions): Gate {
       cwd: options.cwd,
       // `bash` can background a command too; the card must say so.
       background: tool.input.background === true,
+      ...(named.length > 0 ? { credentialPaths: named } : {}),
     },
   };
 }

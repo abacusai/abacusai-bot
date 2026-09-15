@@ -17,8 +17,10 @@ import { currentMode } from "./current-mode.js";
 import {
   backendName,
   decide,
+  mentionedSecretPaths,
   resolvePolicy,
   sandboxEnforcement,
+  type CredentialApprovals,
 } from "./sandbox/index.js";
 import {
   fallbackShell,
@@ -195,10 +197,16 @@ function dockerOperations(image: string): BashOperations {
  * only because pi's local path has no seam for wrapping the argv. A refusal is
  * output plus a non-zero exit, not a throw, so the model reads why and adapts.
  */
-function localSandboxedOperations(): BashOperations {
+function localSandboxedOperations(
+  approvals: CredentialApprovals | undefined
+): BashOperations {
   return {
     exec: async (command, cwd, options) => {
-      const policy = resolvePolicy(currentMode(), cwd);
+      const policy = resolvePolicy(
+        currentMode(),
+        cwd,
+        approvals?.consume(command) ?? []
+      );
 
       // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
       // inheriting this process's env would mean the launchd PATH.
@@ -273,8 +281,14 @@ function localSandboxedOperations(): BashOperations {
 
         const timer = deadline(options.timeout, terminate);
 
-        child.stdout.on("data", (data: Buffer) => options.onData(data));
-        child.stderr.on("data", (data: Buffer) => options.onData(data));
+        // The tail of the output, to name a hidden store on failure.
+        let tail = "";
+        const collect = (data: Buffer): void => {
+          options.onData(data);
+          tail = (tail + data.toString()).slice(-OUTPUT_TAIL_CHARS);
+        };
+        child.stdout.on("data", collect);
+        child.stderr.on("data", collect);
 
         child.on("error", (error) => {
           options.onData(
@@ -290,6 +304,10 @@ function localSandboxedOperations(): BashOperations {
           if (timer != null) clearTimeout(timer);
           options.signal?.removeEventListener("abort", onAbort);
           unregister();
+          if (code !== 0 && decision.kind === "confined") {
+            const note = hiddenStoreNote(tail, policy.secrets.promptable);
+            if (note != null) options.onData(Buffer.from(note));
+          }
           resolve({ exitCode: code ?? 1 });
         });
       });
@@ -297,12 +315,37 @@ function localSandboxedOperations(): BashOperations {
   };
 }
 
+const OUTPUT_TAIL_CHARS = 16_384;
+
+/**
+ * What a failed command is told when its output names a hidden store. The
+ * prompt is raised by naming the path, so the model is pointed at that rather
+ * than at a workaround.
+ */
+export function hiddenStoreNote(
+  output: string,
+  promptable: readonly string[]
+): string | null {
+  const mentioned = mentionedSecretPaths(output, promptable);
+  if (mentioned.length === 0) return null;
+
+  return (
+    `\n[sandbox] ${mentioned.join(", ")} is a credential store the sandbox ` +
+    `hides. If the user should allow reading it, run the command again with ` +
+    `that path written out so they can approve it on the prompt. Do not work ` +
+    `around the sandbox.\n`
+  );
+}
+
 /**
  * Operations for the selected backend, or null to use pi's own local shell,
  * which handles shell resolution and platform differences better than a
  * reimplementation would; `off` returns null for the same reason.
  */
-export function backendOperations(): BashOperations | null {
+export function backendOperations(
+  /** The session's credential approvals; absent for a caller with no card. */
+  approvals?: CredentialApprovals
+): BashOperations | null {
   const backend = selectedBackend();
 
   if (backend === "docker") {
@@ -331,7 +374,7 @@ export function backendOperations(): BashOperations | null {
   // model.
   if (backendName() === null && sandboxEnforcement() !== "strict") return null;
 
-  return localSandboxedOperations();
+  return localSandboxedOperations(approvals);
 }
 
 /**

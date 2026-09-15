@@ -14,6 +14,12 @@ export interface SecretEntry {
   path: string;
   /** Relative to `path`. Names, or `*.ext` for a suffix. */
   except?: string[];
+  /**
+   * A developer sometimes legitimately needs this one, so a command naming it
+   * asks the user instead of failing. Stores nothing a coding task needs (the
+   * app's own keys, browser cookies) are hidden without a prompt.
+   */
+  prompt?: boolean;
 }
 
 /** What is denied, as concrete existing paths the backends can name. */
@@ -22,6 +28,8 @@ export interface SecretPaths {
   denied: string[];
   /** Files under a denied directory that stay readable. */
   allowed: string[];
+  /** The subset of `denied` a command may ask to read. */
+  promptable: string[];
 }
 
 /** Where the app keeps its own settings, API keys included. */
@@ -51,25 +59,29 @@ export function secretEntries(
         "authorized_keys",
         "*.pub",
       ],
+      prompt: true,
     },
-    { path: at(".gnupg", "private-keys-v1.d") },
-    { path: at(".gnupg", "secring.gpg") },
+    { path: at(".gnupg", "private-keys-v1.d"), prompt: true },
+    { path: at(".gnupg", "secring.gpg"), prompt: true },
     // Cloud CLIs: the credential and token caches, not the config.
-    { path: at(".aws", "credentials") },
-    { path: at(".aws", "sso", "cache") },
-    { path: at(".aws", "cli", "cache") },
-    { path: at(".config", "gcloud", "credentials.db") },
-    { path: at(".config", "gcloud", "access_tokens.db") },
-    { path: at(".config", "gcloud", "application_default_credentials.json") },
-    { path: at(".config", "gcloud", "legacy_credentials") },
-    { path: at(".azure", "msal_token_cache.json") },
-    { path: at(".azure", "msal_token_cache.bin") },
-    { path: at(".azure", "accessTokens.json") },
-    { path: at(".azure", "service_principal_entries.json") },
-    { path: at(".kube", "config") },
-    { path: at(".docker", "config.json") },
-    { path: at(".netrc") },
-    { path: at(".pypirc") },
+    { path: at(".aws", "credentials"), prompt: true },
+    { path: at(".aws", "sso", "cache"), prompt: true },
+    { path: at(".aws", "cli", "cache"), prompt: true },
+    { path: at(".config", "gcloud", "credentials.db"), prompt: true },
+    { path: at(".config", "gcloud", "access_tokens.db"), prompt: true },
+    {
+      path: at(".config", "gcloud", "application_default_credentials.json"),
+      prompt: true,
+    },
+    { path: at(".config", "gcloud", "legacy_credentials"), prompt: true },
+    { path: at(".azure", "msal_token_cache.json"), prompt: true },
+    { path: at(".azure", "msal_token_cache.bin"), prompt: true },
+    { path: at(".azure", "accessTokens.json"), prompt: true },
+    { path: at(".azure", "service_principal_entries.json"), prompt: true },
+    { path: at(".kube", "config"), prompt: true },
+    { path: at(".docker", "config.json"), prompt: true },
+    { path: at(".netrc"), prompt: true },
+    { path: at(".pypirc"), prompt: true },
     // This app's own settings hold provider API keys, and the Electron
     // partition holds the in-app browser's cookies.
     { path: path.join(app, "config.json") },
@@ -189,6 +201,7 @@ export function resolveSecretPaths(options: {
 
   const denied: string[] = [];
   const allowed: string[] = [];
+  const promptable: string[] = [];
 
   for (const entry of secretEntries(home, options.platform, options.env)) {
     if (!exists(entry.path)) continue;
@@ -199,8 +212,17 @@ export function resolveSecretPaths(options: {
     if (denied.includes(resolved)) continue;
 
     denied.push(resolved);
+    if (entry.prompt === true) promptable.push(resolved);
 
-    if (entry.except == null || !isDirectory(resolved)) continue;
+    if (!isDirectory(resolved)) continue;
+
+    // An exemption inside a hidden directory (one approved key) is read back.
+    for (const exempt of exemptions) {
+      if (exempt !== resolved && isWithin(exempt, resolved) && exists(exempt))
+        allowed.push(exempt);
+    }
+
+    if (entry.except == null) continue;
 
     for (const name of list(resolved)) {
       const child = path.join(resolved, name);
@@ -214,5 +236,68 @@ export function resolveSecretPaths(options: {
     }
   }
 
-  return { denied, allowed };
+  return { denied, allowed, promptable };
+}
+
+const GLOB_CHARS = /[*?[]/;
+
+/** Shell words that look like paths, `~` expanded and resolved against cwd. */
+function pathWords(command: string, cwd: string, home: string): string[] {
+  const words = command.match(/"[^"]*"|'[^']*'|[^\s;&|<>()]+/g) ?? [];
+  const paths: string[] = [];
+
+  for (const raw of words) {
+    let word = raw.replace(/^["']|["']$/g, "");
+    // `--identity=~/.ssh/id_rsa`, `key=~/.netrc`.
+    const eq = word.indexOf("=");
+    if (eq > 0 && (word[eq + 1] === "~" || word[eq + 1] === "/"))
+      word = word.slice(eq + 1);
+    if (word === "~" || word.startsWith("~/")) word = home + word.slice(1);
+    if (!word.includes("/") && !word.startsWith(".")) continue;
+    if (word.startsWith("-")) continue;
+
+    // `~/.ssh/*` names the directory as far as the kernel is concerned.
+    let resolved = path.resolve(cwd, word);
+    while (GLOB_CHARS.test(path.basename(resolved)) && resolved !== "/") {
+      resolved = path.dirname(resolved);
+    }
+
+    paths.push(canonical(resolved));
+  }
+
+  return paths;
+}
+
+/**
+ * The promptable stores a command names, as the paths it named. Syntactic on
+ * purpose: a command that reaches a store without naming it is stopped by the
+ * kernel, and told so afterwards.
+ */
+export function namedSecretPaths(
+  command: string,
+  options: { cwd: string; promptable: readonly string[]; home?: string }
+): string[] {
+  if (options.promptable.length === 0) return [];
+
+  const home = options.home ?? os.homedir();
+  const named: string[] = [];
+
+  for (const candidate of pathWords(command, options.cwd, home)) {
+    if (
+      options.promptable.some((store) => isWithin(candidate, store)) &&
+      !named.includes(candidate)
+    ) {
+      named.push(candidate);
+    }
+  }
+
+  return named;
+}
+
+/** Stores mentioned in a command's output, for the note appended on failure. */
+export function mentionedSecretPaths(
+  output: string,
+  promptable: readonly string[]
+): string[] {
+  return promptable.filter((store) => output.includes(store));
 }

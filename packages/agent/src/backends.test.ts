@@ -18,7 +18,12 @@ import * as path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { backendOperations, deadline, selectedBackend } from "./backends.js";
+import {
+  backendOperations,
+  deadline,
+  hiddenStoreNote,
+  selectedBackend,
+} from "./backends.js";
 import { currentMode, setCurrentMode } from "./current-mode.js";
 import { budgetSecondsFor } from "./extensions/tool-timeouts.js";
 import { AgentMode } from "./protocol.js";
@@ -223,5 +228,21 @@ describe("a platform with no sandbox backend (Windows)", () => {
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "docker");
 
     expect(backendOperations()).not.toBeNull();
+  });
+});
+
+describe("the note on a failed command that hit a hidden store", () => {
+  it("names the store and points at the prompt, not a workaround", () => {
+    const note = hiddenStoreNote(
+      "cat: /home/dev/.netrc: Operation not permitted\n",
+      ["/home/dev/.ssh", "/home/dev/.netrc"]
+    );
+    expect(note).toContain("/home/dev/.netrc");
+    expect(note).toContain("approve");
+    expect(note).not.toContain("/home/dev/.ssh");
+  });
+
+  it("is silent when the output mentions no store", () => {
+    expect(hiddenStoreNote("npm ERR! 404", ["/home/dev/.netrc"])).toBeNull();
   });
 });

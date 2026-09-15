@@ -10,7 +10,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { AgentMode } from "../protocol.js";
-import { resolveSecretPaths } from "./secrets.js";
+import {
+  readableExemptions,
+  resolveSecretPaths,
+  type SecretPaths,
+} from "./secrets.js";
 
 /**
  * What the OS is asked to enforce. File effects only: network confinement has
@@ -38,10 +42,8 @@ export interface SandboxPolicy {
   workspaceRoot: string;
   /** Temp directories a build is entitled to, fully resolved. */
   writableTemp: string[];
-  /** Credential stores hidden from every confined command (secrets.ts). */
-  deniedReads: string[];
-  /** Files under a denied directory that stay readable. */
-  allowedReads: string[];
+  /** Credential stores hidden from the command, and what is read back. */
+  secrets: SecretPaths;
 }
 
 /**
@@ -88,21 +90,26 @@ export function canonicalize(target: string): string {
   }
 }
 
-export function resolvePolicy(mode: AgentMode, cwd: string): SandboxPolicy {
+export function resolvePolicy(
+  mode: AgentMode,
+  cwd: string,
+  /** Stores the user approved for this command, on top of the environment's. */
+  approvedReads: readonly string[] = []
+): SandboxPolicy {
   const temps = new Set<string>();
   for (const candidate of ["/tmp", os.tmpdir()]) {
     if (candidate) temps.add(canonicalize(candidate));
   }
 
   const workspaceRoot = canonicalize(cwd);
-  const secrets = resolveSecretPaths({ workspaceRoot });
-
   return {
     mode: modeToSandboxMode(mode),
     enforcement: sandboxEnforcement(),
     workspaceRoot,
     writableTemp: [...temps],
-    deniedReads: secrets.denied,
-    allowedReads: secrets.allowed,
+    secrets: resolveSecretPaths({
+      workspaceRoot,
+      exemptions: [...readableExemptions(), ...approvedReads],
+    }),
   };
 }
