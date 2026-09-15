@@ -6,6 +6,10 @@
 import path from "path";
 
 import type { SessionArtifactKind } from "#shared/contracts";
+import {
+  declaredArtifactTargets,
+  presentedDeliverables,
+} from "#shared/deliverables";
 
 const IMAGE_EXTENSIONS = new Set([
   ".apng",
@@ -72,16 +76,6 @@ const MEDIA_TOOLS = new Set([
   "text_to_speech",
   "bfl_flux3_get_result",
 ]);
-
-/**
- * The line a builtin tool result uses to declare a file it wrote. A marker,
- * not a regex over prose, so a wording change cannot break extraction.
- */
-export const ARTIFACT_PATH_MARKER = "[artifact]";
-
-/** The declaration line a tool result adds for a file it wrote. */
-export const artifactPathLine = (absolutePath: string): string =>
-  `${ARTIFACT_PATH_MARKER} ${absolutePath}`;
 
 /** First defined string among the arg aliases a file tool might have used. */
 const PATH_ARG_KEYS = [
@@ -319,41 +313,34 @@ function componentArtifacts(
 }
 
 /**
- * The deliverables a `present_deliverable` call handed over, from its
- * arguments (the result is chat prose). Model ordering is kept: it leads with
- * the most important item. Paths are taken at their word, since these rules
- * stay pure; the tool refuses a call in which nothing exists.
+ * The deliverables a `present_deliverable` call handed over: the items the
+ * tool declared after checking the disk, labelled as the call named them. A
+ * path the model invented is turned away by the tool and so never filed.
  */
 function presentedArtifacts(
   name: string,
   args: Record<string, unknown>,
+  output: string,
   resolve: (raw: string) => string | null
 ): ArtifactDraft[] {
-  const items = Array.isArray(args.items) ? args.items : [];
   const drafts: ArtifactDraft[] = [];
 
-  for (const entry of items) {
-    if (typeof entry !== "object" || entry == null) continue;
-    const item = entry as Record<string, unknown>;
-    const target = firstString(item, ["path"]);
-    if (target == null) continue;
-    const label = firstString(item, ["label"]);
-
-    if (/^https?:\/\//i.test(target)) {
+  for (const item of presentedDeliverables(args, output)) {
+    if (item.isUrl) {
       drafts.push({
         kind: "link",
-        title: label ?? linkTitle(target),
-        location: target,
+        title: item.label ?? linkTitle(item.path),
+        location: item.path,
         toolName: name,
       });
       continue;
     }
 
-    const absolute = resolve(target);
+    const absolute = resolve(item.path);
     if (absolute == null) continue;
     drafts.push({
       kind: fileKind(absolute),
-      title: label ?? path.basename(absolute),
+      title: item.label ?? path.basename(absolute),
       location: absolute,
       toolName: name,
     });
@@ -367,18 +354,11 @@ function presentedArtifacts(
  * media tools are mined, so a `bash` call printing the marker cannot file one.
  */
 function declaredArtifacts(name: string, output: string): ArtifactDraft[] {
-  if (
-    !MEDIA_TOOLS.has(builtinToolName(name)) ||
-    !output.includes(ARTIFACT_PATH_MARKER)
-  )
-    return [];
+  if (!MEDIA_TOOLS.has(builtinToolName(name))) return [];
 
   const drafts: ArtifactDraft[] = [];
-  for (const line of output.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith(ARTIFACT_PATH_MARKER)) continue;
-    const location = trimmed.slice(ARTIFACT_PATH_MARKER.length).trim();
-    if (location.length === 0 || !path.isAbsolute(location)) continue;
+  for (const location of declaredArtifactTargets(output)) {
+    if (!path.isAbsolute(location)) continue;
     drafts.push({
       kind: fileKind(location),
       title: path.basename(location),
@@ -455,7 +435,7 @@ export function extractArtifacts(
   // `present_deliverable` states outright what the turn produced; it is the
   // only source for a file written by `bash`.
   if (builtinToolName(call.name) === "present_deliverable") {
-    return presentedArtifacts(call.name, call.args, resolve);
+    return presentedArtifacts(call.name, call.args, call.output, resolve);
   }
 
   return [];

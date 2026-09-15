@@ -260,6 +260,7 @@ describe("starting", () => {
 describe("a model call that goes silent", () => {
   it("is abandoned and asked once more on the same model", async () => {
     const harness = session({ mode: "yolo" });
+    const log = captureLog();
 
     provider.scriptSequence([
       { stall: { say: "Starting" } },
@@ -274,11 +275,13 @@ describe("a model call that goes silent", () => {
 
     expect(harness.text).toContain("finished after all");
     expect(harness.agent("error")).toHaveLength(0);
-    expect(
-      harness.agent("notification").map((event) => event.message)
-    ).toContain("fake/fake-1 stopped answering after 0.7s — asking it again.");
+    expect(log.lines.join("")).toContain(
+      "fake/fake-1 stopped answering after 0.7s — asking it again."
+    );
+    expect(chatNotices(harness).join("\n")).not.toMatch(/asking it again/);
     // Two calls: the one that stalled and the one that answered.
     expect(provider.calls).toHaveLength(2);
+    log.restore();
   });
 
   it("ends the turn saying so when the second attempt is silent too", async () => {

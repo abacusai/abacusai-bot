@@ -19,13 +19,13 @@ const HEAD_CHARS = 18_000;
 const TAIL_CHARS = 6_000;
 
 /**
- * Connector results inline far less: a Gmail search returns whole bodies, and
- * the model needs subjects, senders and snippets. The rest is on disk.
+ * Connector results inline less: a Gmail search returns whole bodies, and a
+ * run of them fills a routine's window. The rest is on disk.
  */
 const CONNECTOR_TOOL_PREFIX = "abacus-connectors_";
-const CONNECTOR_MAX_INLINE_CHARS = 6_000;
-const CONNECTOR_HEAD_CHARS = 4_500;
-const CONNECTOR_TAIL_CHARS = 1_000;
+const CONNECTOR_MAX_INLINE_CHARS = 16_000;
+const CONNECTOR_HEAD_CHARS = 12_000;
+const CONNECTOR_TAIL_CHARS = 3_000;
 
 /** How much of a result stays inline, by tool. */
 export const inlineBudget = (

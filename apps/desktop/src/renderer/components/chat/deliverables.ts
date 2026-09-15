@@ -5,12 +5,16 @@
  * code turn's twelve `.ts` edits do not show up as twelve deliverables.
  */
 import {
+  declaredArtifactTargets,
+  isDeliverableUrl,
+  presentedDeliverables,
+} from "#shared/deliverables";
+
+import {
   basename,
   componentOutputPath,
   componentToolBase,
-  deliverableItems,
   getFilePath,
-  isDeliverableUrl,
 } from "./component-tools";
 import type { AgentRenderItem, ToolRenderItem } from "./render-utils";
 
@@ -39,7 +43,6 @@ const MEDIA_TOOLS = new Set([
   "text_to_speech",
   "bfl_flux3_get_result",
 ]);
-const ARTIFACT_LINE_RE = /^\[artifact\]\s+(.+?)\s*$/gm;
 
 /**
  * What counts as a deliverable when the agent did not say: never source code,
@@ -101,8 +104,7 @@ function writtenPaths(tool: ToolRenderItem): string[] {
     ? tool.name.slice("agent-tools_".length)
     : tool.name;
   if (MEDIA_TOOLS.has(bare)) {
-    const content = tool.result?.content ?? "";
-    return [...content.matchAll(ARTIFACT_LINE_RE)].map((match) => match[1]!);
+    return declaredArtifactTargets(tool.result?.content ?? "");
   }
   return [];
 }
@@ -129,7 +131,8 @@ export function turnDeliverables(items: AgentRenderItem[]): TurnDeliverable[] {
 
   for (const tool of tools) {
     if (componentToolBase(tool.name) !== "present_deliverable") continue;
-    for (const item of deliverableItems(tool.input)) add(item.path, item.label);
+    for (const item of presentedDeliverables(tool.input, tool.result?.content))
+      add(item.path, item.label);
   }
   if (out.length > 0) return out;
 

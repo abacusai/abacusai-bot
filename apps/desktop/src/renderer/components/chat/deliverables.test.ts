@@ -50,6 +50,37 @@ describe("a declared handover", () => {
     ]);
   });
 
+  it("shows what the tool accepted, not everything the model listed", () => {
+    // The tool checks the disk and declares each item it kept. A path the
+    // model made up is named in prose only, and must not become a row.
+    const items = turnDeliverables(
+      turn(
+        tool(
+          "agent-tools_present_deliverable",
+          {
+            items: [
+              { path: "/w/report.md", label: "Morning Brief" },
+              { path: "/w/a@b.com_c@d.com", label: "placeholder" },
+            ],
+          },
+          {
+            result: {
+              id: "r",
+              content:
+                "- [Morning Brief](file:///w/report.md)\n\n" +
+                "Not presented, because there is no file at these paths: /w/a@b.com_c@d.com\n\n" +
+                "[artifact] /w/report.md",
+            },
+          }
+        )
+      )
+    );
+
+    expect(items).toEqual([
+      { path: "/w/report.md", label: "Morning Brief", isUrl: false },
+    ]);
+  });
+
   it("counts for nothing when it was rejected or is still running", () => {
     const rejected = tool(
       "present_deliverable",

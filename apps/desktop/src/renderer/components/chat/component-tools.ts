@@ -104,30 +104,8 @@ export function componentOutputPath(
 
 // ─── present_deliverable ─────────────────────────────────────────────────────
 
-/** One entry of `present_deliverable`'s ORDERED `items` argument. */
-export type DeliverableItem = { path: string; label?: string };
-
-/** A generated app is served on localhost, so a deliverable can be a URL. */
-export const isDeliverableUrl = (value: string): boolean =>
-  /^https?:\/\//i.test(value);
-
-/**
- * The tool's `items` argument, read defensively: it is streamed model output,
- * and one malformed entry must not take the transcript down. Order is kept.
- */
-
-export function deliverableItems(
-  input: Record<string, unknown>
-): DeliverableItem[] {
-  const raw = Array.isArray(input.items) ? input.items : [];
-  const items: DeliverableItem[] = [];
-  for (const entry of raw) {
-    if (typeof entry !== "object" || entry == null) continue;
-    const record = entry as Record<string, unknown>;
-    const path = String(record.path ?? "").trim();
-    if (path.length === 0) continue;
-    const label = String(record.label ?? "").trim();
-    items.push(label.length > 0 ? { path, label } : { path });
-  }
-  return items;
-}
+export {
+  isDeliverableUrl,
+  requestedDeliverables as deliverableItems,
+  type DeliverableItem,
+} from "#shared/deliverables";

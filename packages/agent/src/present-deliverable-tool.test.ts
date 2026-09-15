@@ -105,6 +105,26 @@ describe("handing the work over", () => {
     expect(text).toContain("ghost.txt");
   });
 
+  it("declares exactly the items that exist, for the files card to read", async () => {
+    const real = write("real.txt");
+
+    const text = (
+      await run({
+        items: [
+          { path: "real.txt" },
+          { path: "ghost.txt" },
+          { path: "http://localhost:5173" },
+        ],
+      })
+    ).content[0]!.text;
+
+    const declared = text
+      .split("\n")
+      .filter((line) => line.startsWith("[artifact] "))
+      .map((line) => line.slice("[artifact] ".length));
+    expect(declared).toEqual([real, "http://localhost:5173"]);
+  });
+
   it("fails when nothing named exists, rather than reporting a successful handover", async () => {
     const result = await run({ items: [{ path: "ghost.txt" }] });
 

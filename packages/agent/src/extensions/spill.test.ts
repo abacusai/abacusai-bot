@@ -121,11 +121,10 @@ describe("trimming", () => {
     expect(result).toBeUndefined();
   });
 
-  it("inlines only a few thousand chars of a connector result", async () => {
-    // A Gmail search returns whole bodies; the brief needs subjects and
-    // snippets, and the rest is a read_output away.
+  it("inlines a connector result at a lower cap than other tools", async () => {
+    // A Gmail search returns whole bodies; the rest is a read_output away.
     const email = JSON.stringify({
-      results: Array.from({ length: 40 }, (_, i) => ({
+      results: Array.from({ length: 50 }, (_, i) => ({
         subject: `Message ${i}`,
         body: "y".repeat(500),
       })),
@@ -137,7 +136,7 @@ describe("trimming", () => {
     const text = result.content[0]!.text;
 
     expect(email.length).toBeLessThan(30_000);
-    expect(text.length).toBeLessThan(7_000);
+    expect(text.length).toBeLessThan(17_000);
     expect(text.startsWith('{"results":[{"subject":"Message 0"')).toBe(true);
     expect(text).toMatch(/out-\d+/);
   });
@@ -145,7 +144,7 @@ describe("trimming", () => {
   it("leaves a connector result under its budget alone", async () => {
     const result = await pi.fire(
       "tool_result",
-      toolResult("abacus-connectors_Gmail_Tool", "x".repeat(5_000))
+      toolResult("abacus-connectors_Gmail_Tool", "x".repeat(15_000))
     );
     expect(result).toBeUndefined();
   });
