@@ -10,8 +10,10 @@
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
-The kernel sandbox is now on by default; Settings > Capabilities switches it
-off.
+The kernel sandbox is now on by default and applies in Bypass mode too, which
+the app starts in; Settings > Capabilities switches it off. Bypass still asks
+about a hidden credential store a command names and a host not on the allow
+list.
 
 On macOS and Linux the kernel sandbox now runs on Anthropic's sandbox
 runtime. A sandboxed command's outbound connections go through its proxies:

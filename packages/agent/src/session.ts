@@ -2733,7 +2733,7 @@ export class AbacusBotSession {
    * held while the card is up; "always" lists the host for the session.
    */
   private async askNetworkHost(host: string, port: number): Promise<boolean> {
-    if (!this.canReachUser() || this.mode === AgentMode.Yolo) return false;
+    if (!this.canReachUser()) return false;
 
     const permissionId = `perm-${++this.permissionCounter}`;
     const input = { host, port };
@@ -2957,7 +2957,6 @@ export class AbacusBotSession {
    */
   private promptableCredentialPaths(cwd: string): string[] {
     if (sandboxEnforcement() === "off" || backendName() === null) return [];
-    if (this.mode === AgentMode.Yolo) return [];
 
     return resolveSecretPaths({ workspaceRoot: cwd }).promptable;
   }

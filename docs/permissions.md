@@ -8,11 +8,14 @@ move between conversations.
 | Default     | Ask first                  | Ask first          |
 | Auto-Accept | Apply inside the workspace | Ask first          |
 | Plan        | Refuse                     | Refuse             |
-| Bypass      | Apply without asking       | Run without asking |
+| Bypass      | Apply without asking       | Run without asking, inside the sandbox |
 
 Plan mode is read-only. The agent can inspect files and prepare a plan, but its
 tools reject mutations. Bypass removes the approval gate and should only be used
-when the workspace and request are trusted.
+when the workspace and request are trusted. It does not remove the kernel
+sandbox: shell commands stay bounded to the workspace, credential stores stay
+hidden, and the two sandbox cards (a hidden store a command names, a host not
+on the allow list) still appear.
 
 ## Bots, routines, and remote messages
 
@@ -83,7 +86,9 @@ sandbox, on by default and switchable off in Settings under Capabilities. macOS 
 bubblewrap, with its loopback proxies for the network); Windows uses a
 Microsoft process container run by the `wxc-exec` runner the app ships. Plan
 mode allows no writes. Default and Auto-Accept allow writes to the workspace
-and temporary directories. Bypass remains unconfined.
+and temporary directories. So does Bypass. Only the Settings toggle turns the
+sandbox off. Bots and routines run in Bypass without a card to answer, so for
+them a hidden store stays hidden and an unlisted host is refused outright.
 
 Reads are allowed everywhere except a short list of credential stores: SSH
 private keys, GPG private keys, cloud CLI credential and token caches (AWS,

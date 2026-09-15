@@ -1160,10 +1160,16 @@ describe("a hidden credential store named by a command", () => {
     expect(gate.request.credentialPaths).toBeUndefined();
   });
 
-  it("does not apply in bypass mode, where nothing is hidden", () => {
+  it("still asks in bypass mode, which skips approvals but not the sandbox", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "cat /Users/someone/.netrc" }),
+      options({ mode: AgentMode.Yolo, promptableCredentialPaths: stores })
+    );
+    expect(gate.kind).toBe("ask");
+    // And an ordinary command in bypass still runs without a card.
     expect(
       gateToolCall(
-        call("bash", { command: "cat /Users/someone/.netrc" }),
+        call("bash", { command: "git push" }),
         options({ mode: AgentMode.Yolo, promptableCredentialPaths: stores })
       ).kind
     ).toBe("allow");

@@ -24,9 +24,7 @@ import {
   hiddenStoreNote,
   selectedBackend,
 } from "./backends.js";
-import { currentMode, setCurrentMode } from "./current-mode.js";
 import { budgetSecondsFor } from "./extensions/tool-timeouts.js";
-import { AgentMode } from "./protocol.js";
 
 describe("deadline", () => {
   it("reads its argument as seconds, not milliseconds", () => {
@@ -105,22 +103,22 @@ describe("a command that leaves something running behind it", () => {
     ops != null && selectedBackend() === "local" ? it : it.skip;
 
   let scratch: string;
-  let restoreMode: AgentMode;
+  const realPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
 
   beforeEach(() => {
     scratch = fs.mkdtempSync(path.join(os.tmpdir(), "backends-test-"));
     // What is under test is how the spawn is waited on, which is the same
     // whether or not the command ends up confined. Running unconfined is what
     // makes that reachable everywhere: the Linux runner has a sandbox runtime
-    // that cannot start, and its (correct) answer to any other mode is to
-    // refuse the command outright — which would leave this covered on macOS
-    // only, and the hang it pins is not platform-specific.
-    restoreMode = currentMode();
-    setCurrentMode(AgentMode.Yolo);
+    // that cannot start, and its (correct) answer is to refuse the command
+    // outright. A platform with no backend runs unconfined under `auto`.
+    Object.defineProperty(process, "platform", { value: "freebsd" });
+    vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
   });
 
   afterEach(() => {
-    setCurrentMode(restoreMode);
+    Object.defineProperty(process, "platform", realPlatform);
+    vi.unstubAllEnvs();
     fs.rmSync(scratch, { recursive: true, force: true });
   });
 
