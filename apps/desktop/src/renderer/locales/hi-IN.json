@@ -1012,8 +1012,7 @@
     "doneConnect": "Continue",
     "enablePlatform": "प्लेटफ़ॉर्म सक्षम करें",
     "fields": {
-      "discordBotToken": "बॉट टोकन",
-      "telegramBotToken": "Bot token"
+      "discordBotToken": "बॉट टोकन"
     },
     "fromEnvironment": "आपके एनवायरनमेंट में {{key}} द्वारा सेट किया गया",
     "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
@@ -1060,7 +1059,6 @@
       "connecting": "कनेक्ट हो रहा है",
       "disabled": "अक्षम",
       "error": "त्रुटि",
-      "linking": "Linking…",
       "needs_link": "Finish linking",
       "needs_login": "Waiting for login",
       "not_configured": "कॉन्फ़िगर नहीं किया गया",
@@ -1068,7 +1066,6 @@
       "rate_limited": "Rate limited",
       "syncing": "सिंक हो रहा है"
     },
-    "telegramBotSetupPending": "Telegram is connected. Your AbacusAI Bot assistant is still being set up — this can take a minute or two, and you'll get a \"linked\" message in Telegram when it's ready.",
     "telegramConnected": "जुड़ा — एजेंट आपके Telegram खाते के रूप में संदेश भेजता है।",
     "telegramOpenLogin": "Telegram लॉगिन खोलें",
     "telegramScan": "एक Telegram लॉगिन विंडो खुली — इसके QR को अपने फ़ोन से स्कैन करें (Settings, Devices, Add Device), या वहीं फ़ोन से लॉगिन करें।",

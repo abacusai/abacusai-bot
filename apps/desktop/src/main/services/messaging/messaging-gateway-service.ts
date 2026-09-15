@@ -201,8 +201,6 @@ type GatewayOptions = {
   onToolAvailabilityChanged?: () => void;
   /** Create the self-lane bot for one platform; once ever per lane. */
   createAutoReplyBot?: (platform: SelfLanePlatform) => string | null;
-  /** Re-assert a self-lane bot's channel stamp and auto-created name. */
-  stampChannelBot?: (botId: string, platform: SelfLanePlatform) => void;
   /** Resolve a bot's forever chat, creating or reviving it as needed. */
   openBotChat?: (
     botId: string
@@ -235,37 +233,36 @@ type GatewayOptions = {
   }>;
 };
 
-/** Platforms whose own chat with the user gets a dedicated bot on link. */
+/**
+ * Platforms whose own chat with the user gets a dedicated bot on link, keyed
+ * by platform in `selfBotIds`. The older single `selfBotId` slot belonged to
+ * the retired own-account Telegram bootstrap.
+ */
 export type SelfLanePlatform =
-  | "telegram"
   | "abacus_discord"
   | "abacus_telegram"
   | "whatsapp";
-/**
- * Lanes with a self bot of their own, keyed by platform in `selfBotIds`.
- * Telegram's own-account lane keeps the older single `selfBotId` slot.
- */
-const OWN_SLOT_SELF_LANES: readonly SelfLanePlatform[] = [
+const SELF_LANES: readonly SelfLanePlatform[] = [
   "abacus_discord",
   "abacus_telegram",
   "whatsapp",
 ];
-type OwnSlotSelfLane = "abacus_discord" | "abacus_telegram" | "whatsapp";
-const hasOwnSelfSlot = (
+const isSelfLane = (
   platformId: MessagingPlatformId
-): platformId is OwnSlotSelfLane =>
-  (OWN_SLOT_SELF_LANES as readonly MessagingPlatformId[]).includes(platformId);
+): platformId is SelfLanePlatform =>
+  (SELF_LANES as readonly MessagingPlatformId[]).includes(platformId);
 
 /**
  * Which bot answers the user's own chat on a platform. Each lane reads its
  * own slot, so a Discord DM never lands in the user's Telegram conversation;
- * WhatsApp with an empty slot falls back to the Telegram bot until relinked.
+ * WhatsApp with an empty slot falls back to the older single slot until
+ * relinked.
  */
 const selfBotFor = (
   settings: ReturnType<typeof readGatewaySettings>,
   platformId: MessagingPlatformId
 ): string | null => {
-  if (hasOwnSelfSlot(platformId)) {
+  if (isSelfLane(platformId)) {
     const own = settings.selfBotIds?.[platformId] ?? null;
     if (own != null || platformId !== "whatsapp") return own;
   }
@@ -610,8 +607,7 @@ export class MessagingGatewayService {
       },
       onSelfLinked: () => {
         if (!current()) return;
-        if (platformId === "telegram" || hasOwnSelfSlot(platformId))
-          this.maybeBootstrapAutoReply(platformId);
+        if (isSelfLane(platformId)) this.maybeBootstrapSelfLane(platformId);
       },
     };
 
@@ -1577,50 +1573,12 @@ export class MessagingGatewayService {
 
   /**
    * The first time a platform proves which chat is the user's own, mint a
-   * dedicated self bot for it. Once ever: the stored flag survives relinks, so
-   * a user who deletes the bot or configured auto-reply themselves is left be.
+   * dedicated self bot for it. Once ever: the stored flag survives relinks,
+   * so a user who deleted the bot is left be. The global switch and general
+   * bot stay untouched: that switch answers every chat on every platform as
+   * the user, and the bootstrap's promise is only the self chat.
    */
-  private maybeBootstrapAutoReply(platform: SelfLanePlatform): void {
-    if (hasOwnSelfSlot(platform)) {
-      this.maybeBootstrapOwnSelfLane(platform);
-      return;
-    }
-    const settings = readGatewaySettings();
-    if (settings.autoReplyBootstrapped) {
-      // A bootstrap bot parked in the general botId slot routes every
-      // approved sender; move it to the self slot.
-      if (settings.selfBotId == null && settings.botId != null) {
-        saveGatewaySettings({ selfBotId: settings.botId, botId: null });
-        console.log(
-          "[messaging] moved the bootstrap bot to the self lane — group and contact auto-replies no longer route to it"
-        );
-      }
-      // Bring an existing bot up to the current name and channel stamp.
-      const selfId = settings.selfBotId ?? settings.botId;
-      if (selfId != null) this.options.stampChannelBot?.(selfId, "telegram");
-      return;
-    }
-    if (settings.respondToInbound || settings.botId != null) {
-      saveGatewaySettings({ autoReplyBootstrapped: true });
-      return;
-    }
-    const botId = this.options.createAutoReplyBot?.("telegram") ?? null;
-    // Never respondToInbound: that switch answers every chat on every
-    // platform as the user, with every sender who wrote while it was off
-    // silently pre-approved. The bootstrap's promise is only the self chat.
-    saveGatewaySettings({ autoReplyBootstrapped: true, selfBotId: botId });
-    if (botId == null) return;
-    console.log(
-      "[messaging] telegram linked — auto-reply bot ready in the self chat"
-    );
-    this.options.emitChanged();
-  }
-
-  /**
-   * A lane with its own slot gets its own bot, once ever. The global switch
-   * and general bot stay untouched.
-   */
-  private maybeBootstrapOwnSelfLane(platform: OwnSlotSelfLane): void {
+  private maybeBootstrapSelfLane(platform: SelfLanePlatform): void {
     const settings = readGatewaySettings();
     if ((settings.autoReplyBootstrappedFor ?? []).includes(platform)) return;
     const botId = this.options.createAutoReplyBot?.(platform) ?? null;
@@ -1856,17 +1814,6 @@ export class MessagingGatewayService {
     if (/^(me|myself|self)$/i.test(target)) {
       const self = this.connectors.get(platformId)?.selfChatId?.() ?? null;
       if (self != null && self.length > 0) return self;
-      // Setup-in-progress has an ETA and a next step; "unknown" does not.
-      // Naming which keeps the model from improvising a wrong explanation.
-      if (this.botSetupPending(platformId))
-        throw new Error(
-          `${platformLabel(platformId)} is connected, but the assistant bot that ` +
-            "delivers messages to the user is still being set up — this " +
-            "usually finishes within a couple of minutes. Tell the user " +
-            "exactly that, and offer to try again shortly. If it still is " +
-            "not ready after several minutes, reconnecting Telegram from " +
-            "the Connectors page restarts the setup."
-        );
       throw new Error(
         `${platformLabel(platformId)} has not said which account it is connected as yet. ` +
           "Wait for it to finish connecting, or give a phone number."
@@ -2090,7 +2037,6 @@ export class MessagingGatewayService {
   startingPlatforms(): MessagingPlatformId[] {
     return [...this.connectors.entries()]
       .filter(([id, connector]) => {
-        if (this.botSetupPending(id)) return false;
         const state = this.states.get(id)?.state;
         if (state === "connecting") return true;
         if (state !== "connected") return false;
@@ -2159,11 +2105,6 @@ export class MessagingGatewayService {
     this.syncWatchers.set(platformId, timer);
   }
 
-  /** Platforms whose "me" is missing because setup is still in progress. */
-  selfPendingPlatforms(): MessagingPlatformId[] {
-    return [...this.connectors.keys()].filter((id) => this.botSetupPending(id));
-  }
-
   private isSharedBotChat(
     platformId: MessagingPlatformId,
     userName: string | null
@@ -2182,14 +2123,6 @@ export class MessagingGatewayService {
     return connector instanceof AbacusChannelsConnector
       ? connector.sharedLink()
       : undefined;
-  }
-
-  /** See MessagingPlatformInfo.botSetupPending. */
-  private botSetupPending(platformId: MessagingPlatformId): boolean {
-    const connector = this.connectors.get(platformId);
-    return connector instanceof TelegramWebConnector
-      ? connector.botSetupPending()
-      : false;
   }
 
   private appendLog(entry: ChatLogEntry): void {
@@ -2227,9 +2160,9 @@ export class MessagingGatewayService {
           docsUrl: entry.docsUrl,
           enabled,
           configured,
-          // The pane wears "linking" and "syncing" for the stretches where a
-          // green badge would be wrong; the gateway's own state stays
-          // connected, since the web lane genuinely works.
+          // The pane wears "syncing" for the stretch where a green badge
+          // would be wrong; the gateway's own state stays connected, since
+          // the web lane genuinely works.
           state: ((): MessagingPlatformState => {
             const resolved = resolveState({
               enabled,
@@ -2239,7 +2172,6 @@ export class MessagingGatewayService {
               live: live?.state ?? null,
             });
             if (resolved !== "connected") return resolved;
-            if (this.botSetupPending(entry.id)) return "linking";
             if (this.startingPlatforms().includes(entry.id)) return "syncing";
             return resolved;
           })(),
@@ -2262,7 +2194,6 @@ export class MessagingGatewayService {
           pendingCount: pairing.filter(
             (row) => row.platform === entry.id && row.status === "pending"
           ).length,
-          botSetupPending: this.botSetupPending(entry.id),
           sharedLink: this.sharedLink(entry.id),
         };
       }

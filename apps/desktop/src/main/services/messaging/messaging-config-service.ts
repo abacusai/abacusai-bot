@@ -30,13 +30,14 @@ type StoredConfig = {
   respondToInbound?: boolean;
   workspaceId?: string | null;
   botId?: string | null;
-  /** The dedicated bot for the user's OWN chat (the Telegram bootstrap's). */
+  /** The retired own-account Telegram bootstrap's self bot; WhatsApp still
+   * falls back to it until relinked. */
   selfBotId?: string | null;
   /** Self-lane bots keyed by platform, for platforms that get their own. */
   selfBotIds?: Partial<Record<MessagingPlatformId, string | null>>;
   platforms?: Partial<Record<MessagingPlatformId, StoredPlatform>>;
   pairing?: MessagingPairedUser[];
-  /** The one-time Telegram auto-reply bot bootstrap has run. */
+  /** The retired own-account Telegram bootstrap ran; kept as written. */
   autoReplyBootstrapped?: boolean;
   /** Platforms whose own self-lane bootstrap has run (see selfBotIds). */
   autoReplyBootstrappedFor?: MessagingPlatformId[];

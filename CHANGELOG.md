@@ -5,6 +5,15 @@
      `## Unreleased`. Sections here are kept as written; a release nobody
      wrote up says "Bug fixes, improvements in quality and speed." -->
 
+## Unreleased
+
+Telegram no longer creates an assistant bot of its own through BotFather.
+Messages to you arrive from the shared Abacus AI bot, which the Telegram setup
+links; the connected account still reads chats and messages other people. The
+optional bot-token field is gone, and a token the app minted earlier is removed
+from disk on the next launch. Sending files on Telegram is not available for
+now.
+
 ## 1.0.61 — 2026-09-08
 
 Bug fixes, improvements in quality and speed.

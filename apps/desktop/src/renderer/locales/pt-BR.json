@@ -1012,8 +1012,7 @@
     "doneConnect": "Continue",
     "enablePlatform": "Ativar plataforma",
     "fields": {
-      "discordBotToken": "Token do bot",
-      "telegramBotToken": "Bot token"
+      "discordBotToken": "Token do bot"
     },
     "fromEnvironment": "Definido por {{key}} no seu ambiente",
     "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
@@ -1060,7 +1059,6 @@
       "connecting": "Conectando",
       "disabled": "Desativado",
       "error": "Erro",
-      "linking": "Linking…",
       "needs_link": "Finish linking",
       "needs_login": "Waiting for login",
       "not_configured": "Não configurado",
@@ -1068,7 +1066,6 @@
       "rate_limited": "Rate limited",
       "syncing": "Sincronizando"
     },
-    "telegramBotSetupPending": "Telegram is connected. Your AbacusAI Bot assistant is still being set up — this can take a minute or two, and you'll get a \"linked\" message in Telegram when it's ready.",
     "telegramConnected": "Conectado — o agente envia mensagens como sua conta do Telegram.",
     "telegramOpenLogin": "Abrir login do Telegram",
     "telegramScan": "Uma janela de login do Telegram abriu — escaneie o QR com seu celular (Configurações, Dispositivos, Vincular Dispositivo) ou entre por telefone ali.",

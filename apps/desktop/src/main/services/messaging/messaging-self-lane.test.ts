@@ -1,10 +1,10 @@
 /**
- * The self lane: the user typing at their own chat (Telegram's bot chat,
- * WhatsApp's message-yourself) is answered whenever the auto-reply bot
- * exists — and ONLY the user. The global respondToInbound switch governs
- * other people, and the Telegram bootstrap no longer touches it: its first
- * cut flipped it, and a friend's WhatsApp "hi" got answered as the user the
- * moment Telegram finished linking.
+ * The self lane: the user typing at their own chat (WhatsApp's
+ * message-yourself, a shared Abacus AI bot's DM) is answered whenever the
+ * auto-reply bot exists — and ONLY the user. The global respondToInbound
+ * switch governs other people, and no bootstrap touches it: the first cut
+ * flipped it, and a friend's WhatsApp "hi" got answered as the user the
+ * moment a link finished.
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -29,8 +29,8 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
   saveGatewaySettings: (patch: Partial<typeof settings>) => {
     Object.assign(settings, patch);
   },
-  isPlatformEnabled: (id: MessagingPlatformId) => id === "telegram",
-  isPlatformConfigured: (id: MessagingPlatformId) => id === "telegram",
+  isPlatformEnabled: (id: MessagingPlatformId) => id === "whatsapp",
+  isPlatformConfigured: (id: MessagingPlatformId) => id === "whatsapp",
   approvedUserIds: () =>
     pairing.status === "approved" ? new Set<string>(["ME"]) : new Set<string>(),
   findPairing: () => ({ status: pairing.status }),
@@ -59,9 +59,9 @@ const harness = (): {
   } as never);
 
   (gateway as unknown as { connectors: Map<string, unknown> }).connectors.set(
-    "telegram",
+    "whatsapp",
     {
-      id: "telegram",
+      id: "whatsapp",
       start: async () => {},
       stop: async () => {},
       sendText: async () => {},
@@ -79,7 +79,7 @@ const harness = (): {
   return {
     prompts,
     inbound: (userId: string, text: string) =>
-      internals.handleInbound("telegram", {
+      internals.handleInbound("whatsapp", {
         userId,
         userName: userId,
         chatId: userId,
