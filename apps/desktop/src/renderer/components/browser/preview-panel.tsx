@@ -166,10 +166,12 @@ const ImageContent = ({
         data-id="preview-image-error"
       >
         <div className="border-border text-muted-foreground max-w-md rounded-md border px-3 py-2 text-center text-xs">
-          {t("workspace.preview.imageError", {
-            error,
-            defaultValue: `Could not show this image here ({{error}}).`,
-          })}
+          {error === "outside-root"
+            ? t("workspace.preview.imageOutsideWorkspace")
+            : t("workspace.preview.imageError", {
+                error,
+                defaultValue: `Could not show this image here ({{error}}).`,
+              })}
         </div>
         <Button
           variant="outline"

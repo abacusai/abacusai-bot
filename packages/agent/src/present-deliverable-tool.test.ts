@@ -105,6 +105,20 @@ describe("handing the work over", () => {
     expect(text).toContain("ghost.txt");
   });
 
+  it("finds a file whose name the model wrote with a plain space where the disk has a narrow one", async () => {
+    // macOS screenshots carry U+202F before "AM"; the model never does.
+    const real = write("Screenshot 2026-09-14 at 12.55.59\u202fAM.png");
+
+    const text = (
+      await run({
+        items: [{ path: "Screenshot 2026-09-14 at 12.55.59 AM.png" }],
+      })
+    ).content[0]!.text;
+
+    expect(text).toContain(`[artifact] ${real}`);
+    expect(text).not.toContain("Not presented");
+  });
+
   it("declares exactly the items that exist, for the files card to read", async () => {
     const real = write("real.txt");
 

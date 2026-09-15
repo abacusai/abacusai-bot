@@ -42,11 +42,28 @@ const text = (body: string, isError = false) => ({
 const fileUrl = (absolutePath: string): string =>
   pathToFileURL(absolutePath).href;
 
-const exists = (candidate: string): boolean => {
+/** Mirrors the desktop's host-path.ts: any Unicode space reads as a space. */
+const SPACE_VARIANTS_RE = /[\u00a0\u1680\u2000-\u200b\u202f\u205f\u3000]/g;
+const foldName = (name: string): string =>
+  name.normalize("NFC").replace(SPACE_VARIANTS_RE, " ");
+
+/**
+ * The path that exists for the one the model named: itself, or the one entry
+ * in its directory that reads the same. The model transcribes names from
+ * tool output and loses the characters a person cannot see.
+ */
+const locate = (candidate: string): string | null => {
   try {
-    return fs.existsSync(candidate);
+    if (fs.existsSync(candidate)) return candidate;
+    const wanted = foldName(path.basename(candidate));
+    const matches = fs
+      .readdirSync(path.dirname(candidate))
+      .filter((entry) => foldName(entry) === wanted);
+    return matches.length === 1
+      ? path.join(path.dirname(candidate), matches[0]!)
+      : null;
   } catch {
-    return false;
+    return null;
   }
 };
 
@@ -130,12 +147,12 @@ export function buildPresentDeliverableTool(
         if (raw.length === 0) continue;
 
         const isUrl = /^https?:\/\//i.test(raw);
-        const target = isUrl ? raw : resolve(raw);
-
-        // A served URL cannot be stat'ed; a path can, and is checked so a bad
-        // path never reports as shown.
-        if (!isUrl && !exists(target)) {
-          missing.push(target);
+        // A served URL cannot be stat'ed; a path is located on disk, so the
+        // item carries the file's real name and a bad path never reports as
+        // shown.
+        const target = isUrl ? raw : locate(resolve(raw));
+        if (target == null) {
+          missing.push(resolve(raw));
           continue;
         }
 

@@ -67,6 +67,7 @@ import {
   resolveSender,
   type SenderCandidate,
 } from "../messaging/sender-resolution";
+import { locateHostFile } from "../workspace/host-path";
 import type { SkillsService } from "../workspace/skills-service";
 import { localMcpServerToken } from "./mcp-config-service";
 import { agentTool, AGENT_TOOLS } from "./tools";
@@ -1235,10 +1236,10 @@ export class McpAgentToolsServer {
     }
   }
 
-  presentDeliverable(
+  async presentDeliverable(
     args: Record<string, unknown>,
     callerSession?: string
-  ): ToolResult {
+  ): Promise<ToolResult> {
     const rawItems = Array.isArray(args.items) ? args.items : [];
 
     if (rawItems.length === 0)
@@ -1258,11 +1259,14 @@ export class McpAgentToolsServer {
       if (raw.length === 0) continue;
 
       const isUrl = /^https?:\/\//i.test(raw);
-      const target = isUrl ? raw : this.resolveOutputPath(raw);
-
-      // A URL cannot be stat'ed; a path is, so a bad one never reports as shown.
-      if (!isUrl && !this.fileExists(target)) {
-        missing.push(target);
+      // A URL cannot be stat'ed; a path is located on disk, by how its name
+      // reads if need be, so the item carries the file's real name and a bad
+      // path never reports as shown.
+      const target = isUrl
+        ? raw
+        : await locateHostFile(this.resolveOutputPath(raw));
+      if (target == null) {
+        missing.push(this.resolveOutputPath(raw));
         continue;
       }
 

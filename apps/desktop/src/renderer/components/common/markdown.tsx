@@ -23,7 +23,7 @@ import {
   highlightMarkdownCode,
   markdownHighlighter,
 } from "./markdown-highlighter";
-import { localPathFromUrl } from "./markdown-local-links";
+import { localPathFromHref } from "./markdown-local-links";
 import { VisualizerSegment } from "./visualizer-segment";
 
 const MATH_INLINE_PREFIX = "TANSTACK_MATH_INLINE_";
@@ -151,21 +151,11 @@ const STREAMING_EXTENSIONS = [
   streamingMarkdownExtension(),
 ];
 
-const isLocalHref = (href: string): boolean =>
-  href.startsWith("/") ||
-  href.startsWith("./") ||
-  href.startsWith("../") ||
-  href.startsWith("~/") ||
-  /^[A-Za-z]:[\\/]/.test(href) ||
-  (!/^[a-z][a-z0-9+.-]*:/i.test(href) &&
-    !href.startsWith("//") &&
-    !href.startsWith("#"));
-
 const decodedLocalPath = (href: string): string | null => {
   if (href.startsWith(LOCAL_FILE_PREFIX)) {
     return decodePayload(href.slice(LOCAL_FILE_PREFIX.length));
   }
-  return localPathFromUrl(href) ?? (isLocalHref(href) ? href : null);
+  return localPathFromHref(href);
 };
 
 const Anchor = ({ href, children, ...props }: MarkdownComponentProps<"a">) => {
