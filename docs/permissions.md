@@ -131,15 +131,16 @@ not confined yet.
 Linux needs `bubblewrap` and `socat` installed, and unprivileged user
 namespaces with capabilities (Ubuntu 24.04 restricts them by default; see the
 runtime's notes on `kernel.apparmor_restrict_unprivileged_userns`). Without
-them the backend exists but cannot start, and commands are refused rather than
-run unconfined.
+them, or on a Windows older than 24H2, commands still run, unconfined, and a
+notice at the top of the chat says so with the reason; it can be dismissed
+for the machine. `ABACUSAI_BOT_SANDBOX=strict` refuses commands instead.
 
 The sandbox applies to shell commands, including commands started by delegated
 agents and verification tools. It does not confine Electron, model requests,
 MCP tools, device tools, or service connectors. A Windows older than 24H2
 (build 26100) has no backend. `ABACUSAI_BOT_SANDBOX=strict` refuses commands
-when no sandbox is available; `auto` runs them unconfined on a platform with
-no backend, and refuses when the platform's backend exists but cannot start.
+when no sandbox is available; `auto`, the default, runs them unconfined and
+shows the notice.
 
 ### Docker
 

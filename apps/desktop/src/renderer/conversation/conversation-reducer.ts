@@ -1607,6 +1607,7 @@ function reduceLoopEvent(
 
     // Consumed by products; no conversation-state effect.
     case "mode_changed":
+    case "sandbox_status":
       break;
 
     case "segments_cleared":

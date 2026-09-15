@@ -581,6 +581,11 @@
       }
     }
   },
+  "changelog": {
+    "current": "This version",
+    "empty": "No releases to show yet.",
+    "subtitle": "Every release, newest first. The version you are running is marked."
+  },
   "common": {
     "back": "Back",
     "cancel": "Cancel",
@@ -657,6 +662,32 @@
     "token": "Token",
     "whereToGet": "Where do I get this?",
     "yours": "Yours"
+  },
+  "creditsCard": {
+    "body": "Unlock the full potential",
+    "cta": "Upgrade",
+    "dismiss": "Dismiss",
+    "or": "or",
+    "paidBody": "Top up your account to keep going.",
+    "paidTitle": "You've used all your Pro Abacus.AI credits",
+    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
+    "switchTitle": "You've used all your free Abacus.AI credits",
+    "title": "You've used all your free Abacus.AI credits",
+    "topUpCta": "Top up",
+    "upsellBody": "Get access to premium models",
+    "upsellTitle": "Unlock the full potential"
+  },
+  "deepAgentCard": {
+    "body": "Open DeepAgent on the web",
+    "cta": "Go to Abacus AI Agent",
+    "title": "Go to DeepAgent"
+  },
+  "deliverables": {
+    "files": "Files",
+    "openInBrowser": "Open in browser",
+    "showInFolder": "Show in folder",
+    "showLess": "Show less",
+    "showMore": "+{{count}} more"
   },
   "devicePanel": {
     "axPermissionNeeded": "Se necesita permiso de Accesibilidad para reflejar el simulador sin mostrar su ventana.",
@@ -772,6 +803,9 @@
     "title": "Execution backend",
     "unimplemented": "AbacusAIBot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
+  },
+  "firstBot": {
+    "title": "We set up your first bot"
   },
   "greeting": {
     "afternoon": {
@@ -1176,6 +1210,18 @@
     "refusedOutside": "Ese archivo está fuera de tus espacios de trabajo, así que no se abrió.",
     "revealed": "Abrir ese archivo lo ejecutaría, así que se mostró en tu gestor de archivos."
   },
+  "permissions": {
+    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
+    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
+    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
+    "networkHostAlways": "Always allow {{host}} this session",
+    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
+    "sandboxDeniedAlways": "Always allow these this session",
+    "sandboxDeniedHost": "Reach {{host}}",
+    "sandboxDeniedRead": "Read {{path}}",
+    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
+    "sandboxDeniedWrite": "Write {{path}}"
+  },
   "profile": {
     "title": "Profile",
     "connectedAccount": "Abacus.AI account",
@@ -1328,6 +1374,10 @@
     "label": "Confine shell commands",
     "title": "Sandbox",
     "unsupported": "No sandbox backend on this platform yet — commands run unconfined even when this is on."
+  },
+  "sandboxNotice": {
+    "body": "Shell commands in this session run with no sandbox: the agent can read and write anything you can and reach any host. Be careful what you ask it to do.",
+    "dismiss": "Dismiss"
   },
   "sessions": {
     "delete": "Delete session",
@@ -1941,51 +1991,5 @@
     "envNote": "Applies to new sessions. An XAI_API_KEY exported in your shell switches this on regardless.",
     "label": "Search X through xAI",
     "title": "X search engine"
-  },
-  "deepAgentCard": {
-    "body": "Open DeepAgent on the web",
-    "cta": "Go to Abacus AI Agent",
-    "title": "Go to DeepAgent"
-  },
-  "firstBot": {
-    "title": "We set up your first bot"
-  },
-  "deliverables": {
-    "files": "Files",
-    "openInBrowser": "Open in browser",
-    "showInFolder": "Show in folder",
-    "showLess": "Show less",
-    "showMore": "+{{count}} more"
-  },
-  "changelog": {
-    "current": "This version",
-    "empty": "No releases to show yet.",
-    "subtitle": "Every release, newest first. The version you are running is marked."
-  },
-  "creditsCard": {
-    "body": "Unlock the full potential",
-    "cta": "Upgrade",
-    "dismiss": "Dismiss",
-    "or": "or",
-    "paidBody": "Top up your account to keep going.",
-    "paidTitle": "You've used all your Pro Abacus.AI credits",
-    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
-    "switchTitle": "You've used all your free Abacus.AI credits",
-    "title": "You've used all your free Abacus.AI credits",
-    "topUpCta": "Top up",
-    "upsellBody": "Get access to premium models",
-    "upsellTitle": "Unlock the full potential"
-  },
-  "permissions": {
-    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
-    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session",
-    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
-    "sandboxDeniedAlways": "Always allow these this session",
-    "sandboxDeniedHost": "Reach {{host}}",
-    "sandboxDeniedRead": "Read {{path}}",
-    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
-    "sandboxDeniedWrite": "Write {{path}}"
   }
 }

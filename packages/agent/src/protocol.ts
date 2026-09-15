@@ -148,6 +148,9 @@ export type AgentEvent =
       source: "startup" | "user" | "approval" | "bot";
     }
   | { type: "model_changed"; model: string }
+  // Whether this session's shell commands run under a kernel sandbox, sent
+  // once at startup; `reason` says why not.
+  | { type: "sandbox_status"; active: boolean; reason: string | null }
   | {
       type: "turn_complete";
       /**
