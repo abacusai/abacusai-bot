@@ -208,9 +208,7 @@ export const MessagingConnectorDialog = ({
     // backs out like any other unfinished connect.
     const unfinished =
       linkPending ||
-      (platform.state !== "connected" &&
-        platform.state !== "linking" &&
-        platform.state !== "syncing");
+      (platform.state !== "connected" && platform.state !== "syncing");
     if (CANCELLABLE_CONNECT.has(platform.id) && unfinished) {
       void messaging.updatePlatform({
         platformId: platform.id,
@@ -292,8 +290,7 @@ const CANCELLABLE_CONNECT = new Set<MessagingPlatformId>([
 /**
  * Platforms whose setup is unfinished until the shared Abacus AI bot lane is
  * linked too: signing in lets the agent act as you, linking lets you reach it
- * from a phone. Telegram's automatic assistant-bot handshake (botSetupPending)
- * is a separate lane from this shared bot.
+ * from a phone.
  */
 const SHARED_LINK_REQUIRED = new Set<MessagingPlatformId>([
   "discord",
@@ -439,9 +436,7 @@ const PlatformDetail = ({
               linkRequired ? t("messaging.stepSignIn", { app: appName }) : null
             }
             connected={
-              platform.state === "connected" ||
-              platform.state === "linking" ||
-              platform.state === "syncing"
+              platform.state === "connected" || platform.state === "syncing"
             }
           />
         )}
@@ -456,26 +451,6 @@ const PlatformDetail = ({
           required={linkRequired}
         />
       )}
-
-      {/* The stretch between "Telegram is connected" and "the assistant's
-          bot can reach you": say it is still being set up — and nothing
-          more. No manual finish-linking step: the automatic handshake is
-          the only path a user sees, because a manual button shown next to
-          an automation that is about to succeed reads as required, and on
-          desktops without the Telegram app its t.me link swallowed the
-          click. Setup that truly stalls is retried by reconnecting. */}
-      {platform.id === "telegram" &&
-        platform.enabled &&
-        platform.botSetupPending === true && (
-          <section
-            className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-center"
-            data-id="messaging-telegram-bot-setup"
-          >
-            <p className="text-xs text-amber-700 dark:text-amber-300">
-              {t("messaging.telegramBotSetupPending")}
-            </p>
-          </section>
-        )}
 
       {/* Linked, still syncing: WhatsApp Web hands over the account and its
           chats over the first minutes. Said plainly, with what to do, so a
@@ -516,9 +491,7 @@ const PlatformDetail = ({
             </p>
           )}
           {!setupIncomplete &&
-          (platform.state === "connected" ||
-            platform.state === "linking" ||
-            platform.state === "syncing") ? (
+          (platform.state === "connected" || platform.state === "syncing") ? (
             <Button
               size="sm"
               data-id={`messaging-done-connect-${platform.id}`}
@@ -1259,10 +1232,7 @@ export const isMessagingPlatformConnected = (
   const state = snapshot?.platforms.find(
     (entry) => entry.id === platformId
   )?.state;
-  // "linking" is a connected session whose assistant bot is still being set
-  // up — installed and usable, so the connect flow counts it as connected.
-  if (state === "connected" || state === "linking" || state === "syncing")
-    return true;
+  if (state === "connected" || state === "syncing") return true;
   const shared = SHARED_BOT_PLATFORM_OF[platformId];
   return shared != null && isMessagingPlatformConnected(snapshot, shared);
 };

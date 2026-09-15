@@ -73,11 +73,11 @@ WhatsApp's terms. Use a separate account if that risk is unacceptable.
 
 ### Telegram
 
-Telegram opens its web app for sign-in, then provisions or reuses a bot through
-BotFather. Direct messages to that bot can drive an approved bot conversation.
-In groups, it responds to approved users who mention it or reply to one of its
-messages. The setup also links the shared Abacus AI bot so you can reach the
-agent from another device.
+Telegram opens its web app for sign-in and keeps the session in a separate app
+partition. The connected account reads its chats and messages other people.
+Messages to you arrive from the shared Abacus AI bot, which the setup links as
+well; that bot is also how you reach the agent from another device. The app
+does not create a Telegram bot of its own.
 
 ### Discord
 

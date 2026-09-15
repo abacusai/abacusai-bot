@@ -1012,8 +1012,7 @@
     "doneConnect": "Continue",
     "enablePlatform": "プラットフォームを有効にする",
     "fields": {
-      "discordBotToken": "ボットトークン",
-      "telegramBotToken": "Bot token"
+      "discordBotToken": "ボットトークン"
     },
     "fromEnvironment": "環境変数 {{key}} で設定されています",
     "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
@@ -1060,7 +1059,6 @@
       "connecting": "接続中",
       "disabled": "無効",
       "error": "エラー",
-      "linking": "Linking…",
       "needs_link": "Finish linking",
       "needs_login": "Waiting for login",
       "not_configured": "未設定",
@@ -1068,7 +1066,6 @@
       "rate_limited": "Rate limited",
       "syncing": "同期中"
     },
-    "telegramBotSetupPending": "Telegram is connected. Your AbacusAI Bot assistant is still being set up — this can take a minute or two, and you'll get a \"linked\" message in Telegram when it's ready.",
     "telegramConnected": "接続済み — エージェントはあなたのTelegramアカウントとして送信します。",
     "telegramOpenLogin": "Telegramログインを開く",
     "telegramScan": "Telegramのログインウィンドウが開きました。スマホでQRをスキャンするか（設定、デバイス、デバイスを追加）、電話番号でログインしてください。",

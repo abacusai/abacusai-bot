@@ -87,7 +87,6 @@ export type MessagingPlatformState =
   | "connecting"
   | "needs_login"
   | "rate_limited"
-  | "linking"
   | "syncing"
   | "connected"
   | "error";
@@ -143,8 +142,6 @@ export type MessagingPlatformInfo = {
   fields: MessagingFieldInfo[];
   /** Senders waiting for approval, for the list-row badge. */
   pendingCount: number;
-  /** Telegram only: the account is up but the assistant's bot is not linked yet. */
-  botSetupPending?: boolean;
   /** Shared-bot platforms only. */
   sharedLink?: SharedChannelLink;
 };
@@ -222,19 +219,10 @@ export const MESSAGING_PLATFORM_CATALOG: {
   {
     id: "telegram",
     nameKey: "telegram",
-    // Signs in through Telegram's own web app. The one field is the way out
-    // when the automatic /newbot conversation with BotFather fails.
+    // Signs in through Telegram's own web app; no stored token. Messages to
+    // the user travel the shared Abacus AI bot's lane (abacus_telegram).
     docsUrl: "https://web.telegram.org",
-    fields: [
-      {
-        key: "TELEGRAM_BOT_TOKEN",
-        labelKey: "telegramBotToken",
-        required: false,
-        secret: true,
-        advanced: true,
-        placeholder: "123456789:AA... (from @BotFather, optional)",
-      },
-    ],
+    fields: [],
   },
   {
     id: "discord",

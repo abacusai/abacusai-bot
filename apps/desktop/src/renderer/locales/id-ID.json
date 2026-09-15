@@ -1012,8 +1012,7 @@
     "doneConnect": "Continue",
     "enablePlatform": "Aktifkan platform",
     "fields": {
-      "discordBotToken": "Token bot",
-      "telegramBotToken": "Bot token"
+      "discordBotToken": "Token bot"
     },
     "fromEnvironment": "Diatur oleh {{key}} di environment Anda",
     "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
@@ -1060,7 +1059,6 @@
       "connecting": "Menghubungkan",
       "disabled": "Nonaktif",
       "error": "Kesalahan",
-      "linking": "Linking…",
       "needs_link": "Finish linking",
       "needs_login": "Waiting for login",
       "not_configured": "Belum dikonfigurasi",
@@ -1068,7 +1066,6 @@
       "rate_limited": "Rate limited",
       "syncing": "Menyinkronkan"
     },
-    "telegramBotSetupPending": "Telegram is connected. Your AbacusAI Bot assistant is still being set up — this can take a minute or two, and you'll get a \"linked\" message in Telegram when it's ready.",
     "telegramConnected": "Terhubung — agen mengirim pesan sebagai akun Telegram Anda.",
     "telegramOpenLogin": "Buka login Telegram",
     "telegramScan": "Jendela login Telegram terbuka — pindai QR-nya dengan ponsel Anda (Setelan, Perangkat, Tautkan Perangkat), atau masuk di sana lewat nomor telepon.",

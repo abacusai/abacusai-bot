@@ -1,17 +1,21 @@
 /**
- * Connecting Telegram must leave the user with a working conversation, not a
+ * Linking a self lane — the shared Abacus AI bots, WhatsApp's "Message
+ * yourself" — must leave the user with a working conversation, not a
  * dashboard of switches: the moment the link proves which chat is theirs, a
- * dedicated bot is created and the SELF LANE — the user's own chat — starts
- * answering. Only the self lane: the first cut of this feature flipped the
- * global respondToInbound switch, and a friend's WhatsApp "hi" got an
- * auto-reply as the user the moment Telegram finished linking. The bootstrap
- * must never touch the switch that governs other people.
+ * dedicated bot is created and that chat starts answering. Only the self
+ * lane: the first cut of this feature flipped the global respondToInbound
+ * switch, and a friend's WhatsApp "hi" got an auto-reply as the user the
+ * moment the link finished. The bootstrap must never touch the switch that
+ * governs other people.
  *
  * The invariant pinned here is ONCE EVER. The link callback re-fires on every
  * app start (restored links) and every relink, and the bootstrap must not ride
- * it into recreating a bot the user deleted or flipping switches they turned
- * off — the stored flag absorbs every firing after the first, including the
- * case where the user had already configured auto-reply themselves.
+ * it into recreating a bot the user deleted — the stored per-lane flag absorbs
+ * every firing after the first.
+ *
+ * The own-account Telegram lane once minted its own bot through BotFather and
+ * bootstrapped into the single `selfBotId` slot; that lane is gone, and the
+ * slot is only read as WhatsApp's fallback.
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -49,9 +53,15 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
       ];
   },
   isPlatformEnabled: (id: MessagingPlatformId) =>
-    id === "telegram" || id === "abacus_discord" || id === "whatsapp",
+    id === "telegram" ||
+    id === "abacus_discord" ||
+    id === "abacus_telegram" ||
+    id === "whatsapp",
   isPlatformConfigured: (id: MessagingPlatformId) =>
-    id === "telegram" || id === "abacus_discord" || id === "whatsapp",
+    id === "telegram" ||
+    id === "abacus_discord" ||
+    id === "abacus_telegram" ||
+    id === "whatsapp",
 }));
 
 const { MessagingGatewayService } = await import("./messaging-gateway-service");
@@ -79,8 +89,8 @@ const service = (): {
     emitChanged: () => {},
     createAutoReplyBot: (platform: string) => {
       createCalls.push(platform);
-      return platform === "telegram"
-        ? "bot-auto-reply"
+      return platform === "abacus_telegram"
+        ? "bot-telegram"
         : platform === "whatsapp"
           ? "bot-whatsapp"
           : "bot-discord";
@@ -124,153 +134,126 @@ const linked = async (): Promise<{
   return built;
 };
 
-describe("the Telegram auto-reply bootstrap", () => {
-  it("creates the bot for the self lane on first link, once ever", async () => {
-    settings.respondToInbound = false;
-    settings.botId = null;
-    settings.selfBotId = null;
-    settings.autoReplyBootstrapped = false;
+const reset = (): void => {
+  settings.respondToInbound = false;
+  settings.botId = null;
+  settings.selfBotId = null;
+  settings.selfBotIds = {};
+  settings.autoReplyBootstrapped = false;
+  settings.autoReplyBootstrappedFor = [];
+};
 
-    const { captured, createCalls } = await linked();
-    captured[0]!.onSelfLinked?.();
+describe("the Abacus AI Telegram self-lane bootstrap", () => {
+  it("creates its own bot on first link, once ever", async () => {
+    reset();
+    const { byId, createCalls } = await linked();
+    const telegram = byId.get("abacus_telegram")!;
+    telegram.onSelfLinked?.();
 
-    expect(createCalls).toEqual(["telegram"]);
-    // The SELF slot, never the general one: the general botId routes every
-    // approved sender, and the bootstrap bot parked there once collected a
-    // WhatsApp group's auto-reply conversations.
-    expect(settings.selfBotId).toBe("bot-auto-reply");
-    expect(settings.botId).toBeNull();
+    expect(createCalls).toEqual(["abacus_telegram"]);
+    expect(settings.selfBotIds.abacus_telegram).toBe("bot-telegram");
     // The global switch answers every chat as the user — the bootstrap must
-    // leave it exactly where the user had it.
+    // leave it exactly where the user had it, and the general bot alone.
+    expect(settings.botId).toBeNull();
     expect(settings.respondToInbound).toBe(false);
-    expect(settings.autoReplyBootstrapped).toBe(true);
+    expect(settings.autoReplyBootstrappedFor).toEqual(["abacus_telegram"]);
 
     // Restored links and relinks re-fire the callback; nothing happens.
-    captured[0]!.onSelfLinked?.();
-    captured[0]!.onSelfLinked?.();
+    telegram.onSelfLinked?.();
+    telegram.onSelfLinked?.();
     expect(createCalls).toHaveLength(1);
   });
 
-  it("moves a legacy bootstrap bot out of the general slot", async () => {
-    settings.respondToInbound = false;
-    settings.botId = "bootstrap-bot";
-    settings.selfBotId = null;
-    settings.autoReplyBootstrapped = true;
-
-    const { captured, createCalls } = await linked();
-    captured[0]!.onSelfLinked?.();
+  it("is not triggered by the user's own Telegram account linking", async () => {
+    // The own-account lane reads and sends as the user; it has no self chat
+    // of its own any more, so it mints nothing and touches no slot.
+    reset();
+    const { byId, createCalls } = await linked();
+    byId.get("telegram")!.onSelfLinked?.();
 
     expect(createCalls).toHaveLength(0);
-    expect(settings.selfBotId).toBe("bootstrap-bot");
-    expect(settings.botId).toBeNull();
+    expect(settings.selfBotId).toBeNull();
+    expect(settings.selfBotIds).toEqual({});
+    expect(settings.autoReplyBootstrapped).toBe(false);
   });
 
-  it("leaves a user who already configured auto-reply alone", async () => {
-    settings.respondToInbound = true;
-    settings.botId = "their-own-bot";
-    settings.selfBotId = null;
-    settings.autoReplyBootstrapped = false;
+  it("leaves the retired bootstrap's slot as it found it", async () => {
+    // The old own-account bootstrap parked its bot in selfBotId. The shared
+    // lane's bootstrap adopts that bot by name in service-host; here it must
+    // simply not rewrite the slot, so WhatsApp's fallback keeps working.
+    reset();
+    settings.selfBotId = "bot-auto-reply";
+    settings.autoReplyBootstrapped = true;
 
-    const { captured, createCalls } = await linked();
-    captured[0]!.onSelfLinked?.();
+    const { byId, createCalls } = await linked();
+    byId.get("abacus_telegram")!.onSelfLinked?.();
 
-    expect(createCalls).toHaveLength(0);
-    expect(settings.botId).toBe("their-own-bot");
-    // The flag still burns, so a later reset of their config doesn't
-    // resurrect the bootstrap behind their back.
+    expect(createCalls).toEqual(["abacus_telegram"]);
+    expect(settings.selfBotIds.abacus_telegram).toBe("bot-telegram");
+    expect(settings.selfBotId).toBe("bot-auto-reply");
     expect(settings.autoReplyBootstrapped).toBe(true);
-  });
-
-  it("does not re-run after the user turned auto-reply off", async () => {
-    settings.respondToInbound = false;
-    settings.botId = null;
-    settings.selfBotId = null;
-    settings.autoReplyBootstrapped = true;
-
-    const { captured, createCalls } = await linked();
-    captured[0]!.onSelfLinked?.();
-
-    expect(createCalls).toHaveLength(0);
-    expect(settings.respondToInbound).toBe(false);
   });
 });
 
 /**
  * The Abacus AI Discord bot's chat is a lane of its own. The first cut fed
- * it through the Telegram bootstrap, so the Discord DM turned up in the app
- * under "AbacusAI Bot <-> You" — a bot whose brief says it lives in Telegram.
+ * it through the old Telegram bootstrap, so the Discord DM turned up in the
+ * app under "AbacusAI Bot <-> You" — a bot whose brief said it lived in
+ * Telegram.
  */
 describe("the Abacus AI Discord self-lane bootstrap", () => {
-  const reset = (): void => {
-    settings.respondToInbound = false;
-    settings.botId = null;
-    settings.selfBotId = null;
-    settings.selfBotIds = {};
-    settings.autoReplyBootstrapped = false;
-    settings.autoReplyBootstrappedFor = [];
-  };
-  const discordOf = (captured: Callbacks[]): Callbacks => captured[1]!;
-
   it("creates its own bot on first link, once ever", async () => {
     reset();
-    const { captured, createCalls } = await linked();
-    discordOf(captured).onSelfLinked?.();
+    const { byId, createCalls } = await linked();
+    const discord = byId.get("abacus_discord")!;
+    discord.onSelfLinked?.();
 
     expect(createCalls).toEqual(["abacus_discord"]);
     expect(settings.selfBotIds.abacus_discord).toBe("bot-discord");
-    // Telegram's slots are not its business.
+    // The other slots are not its business.
     expect(settings.selfBotId).toBeNull();
     expect(settings.botId).toBeNull();
     expect(settings.autoReplyBootstrapped).toBe(false);
     expect(settings.respondToInbound).toBe(false);
     expect(settings.autoReplyBootstrappedFor).toEqual(["abacus_discord"]);
 
-    discordOf(captured).onSelfLinked?.();
-    discordOf(captured).onSelfLinked?.();
+    discord.onSelfLinked?.();
+    discord.onSelfLinked?.();
     expect(createCalls).toEqual(["abacus_discord"]);
   });
 
-  it("still gets its own bot when Telegram already bootstrapped", async () => {
+  it("still gets its own bot when the retired bootstrap had run", async () => {
     reset();
     settings.selfBotId = "bot-auto-reply";
     settings.autoReplyBootstrapped = true;
 
-    const { captured, createCalls } = await linked();
-    discordOf(captured).onSelfLinked?.();
+    const { byId, createCalls } = await linked();
+    byId.get("abacus_discord")!.onSelfLinked?.();
 
     expect(createCalls).toEqual(["abacus_discord"]);
     expect(settings.selfBotIds.abacus_discord).toBe("bot-discord");
     expect(settings.selfBotId).toBe("bot-auto-reply");
   });
 
-  it("leaves Telegram's bootstrap untouched when it links later", async () => {
+  it("keeps its slot when the Telegram lane links later", async () => {
     reset();
-    const { captured, createCalls } = await linked();
-    discordOf(captured).onSelfLinked?.();
-    captured[0]!.onSelfLinked?.();
+    const { byId, createCalls } = await linked();
+    byId.get("abacus_discord")!.onSelfLinked?.();
+    byId.get("abacus_telegram")!.onSelfLinked?.();
 
-    expect(createCalls).toEqual(["abacus_discord", "telegram"]);
-    expect(settings.selfBotId).toBe("bot-auto-reply");
+    expect(createCalls).toEqual(["abacus_discord", "abacus_telegram"]);
     expect(settings.selfBotIds.abacus_discord).toBe("bot-discord");
+    expect(settings.selfBotIds.abacus_telegram).toBe("bot-telegram");
   });
 });
 
 /**
  * WhatsApp's "Message yourself" chat is a self lane like the others: the link
  * proving the user's own number mints its bot and that chat starts answering,
- * with nothing to switch on. It used to ride Telegram's bootstrap bot, so a
- * WhatsApp-only user got no bot at all — and the global switch stays off.
+ * with nothing to switch on. It used to ride the old Telegram bootstrap bot,
+ * so a WhatsApp-only user got no bot at all — and the global switch stays off.
  */
 describe("the WhatsApp self-lane bootstrap", () => {
-  const reset = (): void => {
-    settings.respondToInbound = false;
-    settings.botId = null;
-    settings.selfBotId = null;
-    settings.selfBotIds = {};
-    settings.autoReplyBootstrapped = false;
-    settings.autoReplyBootstrappedFor = [];
-  };
-
   it("creates its own bot on first link, once ever", async () => {
     reset();
     const { byId, createCalls } = await linked();
@@ -287,7 +270,7 @@ describe("the WhatsApp self-lane bootstrap", () => {
     expect(createCalls).toEqual(["whatsapp"]);
   });
 
-  it("gets its own bot even when Telegram already bootstrapped", async () => {
+  it("gets its own bot even when the retired bootstrap had run", async () => {
     reset();
     settings.selfBotId = "bot-auto-reply";
     settings.autoReplyBootstrapped = true;
