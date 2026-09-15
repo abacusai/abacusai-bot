@@ -1316,7 +1316,7 @@
     "workspaceOwnFolder": "Its own folder"
   },
   "sandbox": {
-    "description": "Ask the operating system to stop commands writing outside this workspace, reading credential stores such as SSH keys, or reaching hosts you have not allowed. Off by default. Applies to new sessions.",
+    "description": "Ask the operating system to stop commands writing outside this workspace, reading credential stores such as SSH keys, or reaching hosts you have not allowed. On by default. Applies to new sessions.",
     "label": "Confine shell commands",
     "title": "Sandbox",
     "unsupported": "No sandbox on this machine — commands run unconfined even when this is on. Windows needs Windows 11 24H2 (build {{build}}) or newer."

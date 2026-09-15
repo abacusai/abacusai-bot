@@ -78,8 +78,8 @@ call that started it.
 
 ### Kernel sandbox
 
-macOS, Linux and Windows 11 24H2 or newer can run commands under an optional
-kernel sandbox. macOS and Linux use Anthropic's sandbox runtime (Seatbelt and
+macOS, Linux and Windows 11 24H2 or newer run commands under a kernel
+sandbox, on by default and switchable off in Settings under Capabilities. macOS and Linux use Anthropic's sandbox runtime (Seatbelt and
 bubblewrap, with its loopback proxies for the network); Windows uses a
 Microsoft process container run by the `wxc-exec` runner the app ships. Plan
 mode allows no writes. Default and Auto-Accept allow writes to the workspace

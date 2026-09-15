@@ -39,6 +39,9 @@ files card finds such a file the same way, and lists it under its real name.
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
+The kernel sandbox is now on by default; Settings > Capabilities switches it
+off.
+
 On macOS and Linux the kernel sandbox now runs on Anthropic's sandbox
 runtime. A sandboxed command's outbound connections go through its proxies:
 package registries and code hosts are allowed, any other host asks first and
