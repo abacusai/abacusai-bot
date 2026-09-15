@@ -1,0 +1,76 @@
+import type { ToolDefinition } from "./definition";
+
+/**
+ * Attaching and detaching Abacus.AI connector accounts.
+ */
+export const CONNECTORS_TOOLS: ToolDefinition[] = [
+  {
+    name: "connect_connector",
+    toolsets: ["connectors"],
+    description: [
+      "The user's connectors — Slack, Gmail, Calendar, Drive and the rest — and the",
+      "way to get one connected without ending the turn.",
+      "",
+      "The chat apps — WhatsApp, Telegram and Discord — are in this list",
+      "too, with whether they are linked, and asking for one puts the same Connect",
+      "button in the chat. Linking one opens its own sign-in, usually a QR code the",
+      "user scans with their phone, so the call waits longer than most.",
+      "",
+      "Call it with no arguments to see every connector on this machine, each marked",
+      "connected or not, and each connected one named with the account behind it —",
+      'that account is who the user means by "me", so read it here instead of asking.',
+      "Call it with a service to ask for that one: the user gets a",
+      "Connect button in the chat and this call waits for them, then tells you what",
+      "happened. Every connector is available to every chat — do not report that you",
+      "cannot do something for want of a connector until you have asked for it this way.",
+      "",
+      "When the task plainly needs a missing service, call this immediately — the",
+      "button is the question. Do not ask permission first, do not offer",
+      '"connect X" as one item in a menu, and do not end the turn saying something',
+      "is missing without the button already up.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        service: {
+          type: "string",
+          description:
+            'The service to ask for, e.g. "slack". Omit to list what exists.',
+        },
+        reason: {
+          type: "string",
+          description:
+            "One line on why you need it, shown to the user under the button.",
+        },
+      },
+    },
+    run: (host, args, callerSession) =>
+      host.connectConnector(args, callerSession),
+  },
+  {
+    name: "disconnect_connector",
+    toolsets: ["connectors"],
+    description: [
+      "Disconnect one connector, when the user asks for that: an account",
+      "connector (Gmail, Google Calendar, Drive, ...) is detached from their",
+      "account; a chat app (WhatsApp, Telegram, Discord) is switched off.",
+      "",
+      "Only ever on the user's explicit request — never disconnect anything on",
+      "your own judgement. It undoes cleanly: connect_connector reattaches an",
+      "account connector, and switches a chat app back on. Before disconnecting",
+      "something a routine of yours depends on, say what will break.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        service: {
+          type: "string",
+          description:
+            'The service to disconnect, e.g. "googlecalendar" or "whatsapp".',
+        },
+      },
+      required: ["service"],
+    },
+    run: (host, args) => host.disconnectConnector(args),
+  },
+];

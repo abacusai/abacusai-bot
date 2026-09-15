@@ -19,20 +19,12 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TOOL_NAME_ALIASES } from "./excluded-tools.js";
+import { NOT_SWITCHABLE } from "./roster.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "..", "..", "..");
 /** The NDJSON host the desktop spawns, built. */
 const HOST = path.join(REPO_ROOT, "packages", "agent", "dist", "main.js");
-
-/**
- * Tools that are deliberately not switchable, so their absence from the
- * Capabilities registry is correct.
- *
- * `exit_plan_mode` is a mode's only exit, and must not depend on which toolsets
- * are on. `current_time` is a clock, not a capability.
- */
-const NOT_SWITCHABLE = ["exit_plan_mode", "current_time"];
 
 /** The table every tool's permission decision is pinned in. */
 const GATE_ROSTER = path.join(
