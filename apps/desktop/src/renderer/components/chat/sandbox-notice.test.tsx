@@ -34,6 +34,22 @@ describe("the no-sandbox notice", () => {
     );
   });
 
+  it("offers the way to the switch when the panel provides one", () => {
+    let opened = 0;
+    render(
+      <SandboxNotice
+        sandbox={{ active: false, reason: null }}
+        onOpenSettings={() => {
+          opened += 1;
+        }}
+      />
+    );
+    fireEvent.click(
+      document.querySelector('[data-id="sandbox-notice-settings"]')!
+    );
+    expect(opened).toBe(1);
+  });
+
   it("stays dismissed for the machine once crossed out", () => {
     const { unmount } = render(
       <SandboxNotice sandbox={{ active: false, reason: null }} />

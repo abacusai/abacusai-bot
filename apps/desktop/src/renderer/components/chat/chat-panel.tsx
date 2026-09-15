@@ -490,6 +490,7 @@ const WelcomeScreen = ({
 
 export const ChatPanel = (): JSX.Element => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const activeWorkspaceId = useWorkspaceActiveWorkspaceId();
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1940,7 +1941,15 @@ export const ChatPanel = (): JSX.Element => {
       {/* Commands run with no kernel sandbox here; the user should know. The
           live session state, not the list item: the agent reports a second
           after it starts, and only the state query is refreshed on it. */}
-      <SandboxNotice sandbox={sessionStateQuery.data?.sandbox} />
+      <SandboxNotice
+        sandbox={sessionStateQuery.data?.sandbox}
+        onOpenSettings={() =>
+          void navigate({
+            to: "/settings/tools/$toolsetId",
+            params: { toolsetId: "terminal" },
+          })
+        }
+      />
       {/* Message / welcome area — also a drop zone for path-mentions */}
       <MessageScrollerProvider
         key={activeSessionId ?? "new-session"}

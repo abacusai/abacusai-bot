@@ -22,8 +22,11 @@ const readDismissed = (): boolean => {
  */
 export const SandboxNotice = ({
   sandbox,
+  onOpenSettings,
 }: {
   sandbox: SandboxStatus | null | undefined;
+  /** Opens the page with the sandbox switch, so the user is not left hunting. */
+  onOpenSettings?: () => void;
 }): JSX.Element | null => {
   const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(readDismissed);
@@ -41,6 +44,19 @@ export const SandboxNotice = ({
         {t("sandboxNotice.body")}
         {sandbox.reason != null && sandbox.reason.length > 0 && (
           <span className="opacity-80"> ({sandbox.reason})</span>
+        )}
+        {onOpenSettings != null && (
+          <>
+            {" "}
+            <button
+              type="button"
+              data-id="sandbox-notice-settings"
+              className="underline underline-offset-2 hover:opacity-80"
+              onClick={onOpenSettings}
+            >
+              {t("sandboxNotice.settings")}
+            </button>
+          </>
         )}
       </span>
       <button

@@ -117,6 +117,9 @@ export const ToolsPanel = (): JSX.Element => {
         </InputGroup>
       </FocusedPageToolbar>
       <FocusedPageBody>
+        {/* Up here as well as inside Terminal & Processes: it is the one
+            switch a user goes looking for, and four clicks deep is too far. */}
+        {query.trim().length === 0 && <SandboxToggle />}
         {matches.length > 0 ? (
           <ItemGroup className="gap-2">
             {matches.map((toolset) => (

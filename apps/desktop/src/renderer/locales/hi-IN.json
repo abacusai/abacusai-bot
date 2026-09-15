@@ -1377,7 +1377,8 @@
   },
   "sandboxNotice": {
     "body": "Shell commands in this session run with no sandbox: the agent can read and write anything you can and reach any host. Be careful what you ask it to do.",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "settings": "Sandbox settings"
   },
   "sessions": {
     "delete": "Delete session",
