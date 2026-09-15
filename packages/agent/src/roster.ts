@@ -75,7 +75,8 @@ export interface RosterContext {
   mode: () => AgentMode;
   sessionId: () => string | undefined;
   emit: (event: AgentEvent) => void;
-  reloadSkills: () => void;
+  /** Awaited by `skill_add` before it answers, so the new skill is live. */
+  reloadSkills: () => Promise<void> | void;
 }
 
 /** Whatever pi accepts as a custom tool; the builders return several shapes. */

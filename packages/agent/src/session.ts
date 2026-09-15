@@ -969,7 +969,7 @@ export class AbacusBotSession {
         mode: () => this.mode,
         sessionId: () => this.session?.sessionId,
         emit: (event) => this.emitAgentEvent(event),
-        reloadSkills: () => void this.reloadSkills(),
+        reloadSkills: () => this.reloadSkills(),
       },
       isSupersededWebTool
     );
