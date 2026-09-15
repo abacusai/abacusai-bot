@@ -21,6 +21,7 @@ import { notifyConversationQueueCleared } from "./background-processes.js";
  * the user decides; edit diffs are computed from the on-disk "before".
  */
 import { timezonePrompt } from "./bot/bot-time-tool.js";
+import { anchorCompactions } from "./compaction-anchor.js";
 import {
   agentDir,
   applyStoredApiKeys,
@@ -47,6 +48,7 @@ import batchReadTool from "./extensions/batch-read-tool.js";
 import budgets, { budgetStopReason } from "./extensions/budgets.js";
 import compactionPruner from "./extensions/compaction-pruner.js";
 import editTool from "./extensions/edit-tool.js";
+import emailFormat from "./extensions/email-format.js";
 import guardrails from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
@@ -605,10 +607,6 @@ export class AbacusBotSession {
   );
   /** Provider calls that failed and were retried this turn — see reportFailedCall. */
   private retriedCalls = 0;
-  /** Key for this turn's retry line; a later turn gets a line of its own. */
-  private retryNoticeKey: string | null = null;
-  /** Retry lines opened so far, so each turn's key is distinct. */
-  private retryNoticeEpisodes = 0;
   /** The turn in flight was stopped by the user — see reportTurnFailure. */
   private interrupted = false;
   /** Continuations spent on a malformed tool call this turn. */
@@ -670,17 +668,15 @@ export class AbacusBotSession {
   private pendingOpenLlmRotation: { failure: string; nextId: string } | null =
     null;
   /**
-   * The one transcript line the router writes to, or null once routing has
-   * settled. The desktop overwrites the line carrying this key, so four
-   * rate-limited models read as one line counting down. A key per episode: a
-   * rotation two turns later is its own line, not an edit above the last answer.
+   * A routing episode is open from the first attempt until a model answers
+   * or the pool runs out. While open, provider failures are the router's to
+   * narrate and reportFailedCall stays quiet.
    */
-  private openLlmRoutingKey: string | null = null;
-  private openLlmRoutingEpisodes = 0;
-  /** The model the open routing line is currently trying. */
+  private openLlmRouting = false;
+  /** The model the open routing episode is currently trying. */
   private openLlmRoutingTarget: string | null = null;
   /**
-   * The pool model OpenLLM is on, so the routing line can open when a turn
+   * The pool model OpenLLM is on, so the routing episode can open when a turn
    * starts rather than when the session does.
    */
   private openLlmModelId: string | null = null;
@@ -808,6 +804,10 @@ export class AbacusBotSession {
             {
               name: "abacusai-bot-background",
               factory: background as unknown as (pi: ExtensionAPI) => void,
+            },
+            {
+              name: "abacusai-bot-email-format",
+              factory: emailFormat as unknown as (pi: ExtensionAPI) => void,
             },
             {
               name: "abacusai-bot-compaction-pruner",
@@ -1001,13 +1001,14 @@ export class AbacusBotSession {
     });
 
     this.session = created.session;
+    anchorCompactions(this.session.sessionManager);
     this.unsubscribe = this.session.subscribe((event) => this.onPiEvent(event));
 
     this.emitReady();
 
     if (model != null && this.openLlmActive) {
       // Noted, not announced: the desktop starts a session whenever an old
-      // chat is reopened. The routing line belongs to the turn; `send` opens it.
+      // chat is reopened. The routing episode belongs to the turn; `send` opens it.
       this.openLlmModelId = `${model.provider}/${model.id}`;
     }
 
@@ -1147,7 +1148,6 @@ export class AbacusBotSession {
 
     // Per turn: the same provider failing next turn is news again.
     this.retriedCalls = 0;
-    this.retryNoticeKey = null;
     this.interrupted = false;
     this.malformedContinuations = 0;
     this.contextCompactions = 0;
@@ -1168,7 +1168,7 @@ export class AbacusBotSession {
     this.planDeclinedThisTurn = false;
 
     // Where this turn is routed, said as it starts, unless a line is open.
-    if (this.openLlmActive && this.openLlmRoutingKey == null) {
+    if (this.openLlmActive && !this.openLlmRouting) {
       const model = this.session?.model;
       this.openRoutingLine(
         this.openLlmModelId ??
@@ -1415,7 +1415,7 @@ export class AbacusBotSession {
 
       if (next != null) {
         this.pendingOpenLlmRotation = {
-          // No "." in this: the routing line keeps the first sentence only.
+          // No "." in this: the routing log line keeps the first sentence only.
           failure: `no reply in ${Math.round(seconds)}s`,
           nextId: next.id,
         };
@@ -1426,11 +1426,10 @@ export class AbacusBotSession {
 
     if (this.stallRecoveriesThisTurn < MAX_STALL_RECOVERIES_PER_TURN) {
       this.stallRecoveriesThisTurn += 1;
-      this.emitAgentEvent({
-        type: "notification",
-        severity: "warning",
-        message: `${modelId} stopped answering after ${seconds}s — asking it again.`,
-      });
+      // Logged, not shown: the chat carries the answer, not the retry.
+      process.stderr.write(
+        `[provider] ${modelId} stopped answering after ${seconds}s — asking it again.\n`
+      );
       await this.session?.sendCustomMessage(
         {
           customType: STALL_CONTINUATION_TYPE,
@@ -1733,9 +1732,9 @@ export class AbacusBotSession {
   }
 
   /**
-   * Start the routing line on the model about to be tried. Open until the
+   * Start the routing episode on the model about to be tried. Open until the
    * model proves it is answering (`settleRoutingLine`) or the pool runs out
-   * (`closeRoutingLine`); re-opening keeps the same key.
+   * (`closeRoutingLine`).
    */
   private openRoutingLine(modelId: string): void {
     this.openLlmRoutingTarget = modelId;
@@ -1743,20 +1742,13 @@ export class AbacusBotSession {
     this.emitRoutingLine(`Routing to ${modelId}…`, "info");
   }
 
-  /** Write the routing line, opening a new one if the last has settled. */
+  /** Record a routing step, opening an episode if none is. */
   private emitRoutingLine(message: string, severity: "info" | "warning"): void {
-    this.openLlmRoutingKey ??= `openllm-routing-${++this
-      .openLlmRoutingEpisodes}`;
-    // Which model the pool picked is the router's business: the user chose
-    // "openllm/auto" so as not to think about it. Only the display is dropped;
-    // warnings still show, because a stall with no explanation reads as a hang.
-    if (severity === "info") return;
-    this.emitAgentEvent({
-      type: "notification",
-      severity,
-      message,
-      notificationKey: this.openLlmRoutingKey,
-    });
+    this.openLlmRouting = true;
+    // Which model the pool picked, and which one failed, is the router's
+    // business: the user chose "openllm/auto" so as not to think about it.
+    // The step goes to the log, never the chat.
+    process.stderr.write(`[openllm] ${severity}: ${message}\n`);
   }
 
   /**
@@ -1764,7 +1756,7 @@ export class AbacusBotSession {
    * ran. Called on the first token or tool call rather than at turn end.
    */
   private settleRoutingLine(): void {
-    if (this.openLlmRoutingKey == null) return;
+    if (!this.openLlmRouting) return;
     const target = this.openLlmRoutingTarget;
 
     // Proof this model works; otherwise its failure count only ever climbs.
@@ -1773,7 +1765,7 @@ export class AbacusBotSession {
       target == null ? "Routed." : `Routed to ${target}.`,
       "info"
     );
-    this.openLlmRoutingKey = null;
+    this.openLlmRouting = false;
     this.openLlmRoutingTarget = null;
   }
 
@@ -1783,15 +1775,14 @@ export class AbacusBotSession {
     severity: "info" | "warning"
   ): void {
     this.emitRoutingLine(message, severity);
-    this.openLlmRoutingKey = null;
+    this.openLlmRouting = false;
     this.openLlmRoutingTarget = null;
   }
 
   /**
-   * Say when a provider call failed even though the turn went on: a retried
-   * call otherwise leaves no trace but a silent pause. A notification, not an
-   * `error` (the desktop finalizes on those), and one line per turn rewritten
-   * in place with an attempt count; the provider's text stays in the session
+   * Log a provider call that failed even though the turn went on: a retried
+   * call otherwise leaves no trace but a silent pause. The chat shows the
+   * turn's outcome, not its retries; the provider's text stays in the session
    * file.
    */
   private reportFailedCall(message: unknown): void {
@@ -1813,8 +1804,8 @@ export class AbacusBotSession {
       return;
     }
 
-    // OpenLLM narrates its own failures on the routing line.
-    if (this.openLlmRoutingKey != null) {
+    // OpenLLM narrates its own failures during a routing episode.
+    if (this.openLlmRouting) {
       return;
     }
 
@@ -1834,16 +1825,9 @@ export class AbacusBotSession {
     }
 
     this.retriedCalls += 1;
-    this.retryNoticeKey ??= `provider-retry-${++this.retryNoticeEpisodes}`;
-    this.emitAgentEvent({
-      type: "notification",
-      severity: "warning",
-      message:
-        this.retriedCalls === 1
-          ? `${providerFailureSummary(text)} — retrying.`
-          : `${providerFailureSummary(text)} — retrying (attempt ${this.retriedCalls + 1}).`,
-      notificationKey: this.retryNoticeKey,
-    });
+    process.stderr.write(
+      `[provider] ${providerFailureSummary(text)} — retrying (attempt ${this.retriedCalls + 1}).\n`
+    );
   }
 
   /**
@@ -2230,6 +2214,7 @@ export class AbacusBotSession {
       });
 
       this.session = created.session;
+      anchorCompactions(this.session.sessionManager);
       this.unsubscribe = this.session.subscribe((event) =>
         this.onPiEvent(event)
       );

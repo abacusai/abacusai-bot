@@ -13,6 +13,7 @@ import { sendToRenderer } from "#main/renderer-host";
  */
 import { IpcChannels } from "#shared/channels";
 import type { ConversationKey } from "#shared/conversation-scope";
+import { artifactPathLine } from "#shared/deliverables";
 import {
   AGENT_LINKABLE_CHAT_APPS,
   isMessagingPlatformId,
@@ -66,7 +67,6 @@ import {
   resolveSender,
   type SenderCandidate,
 } from "../messaging/sender-resolution";
-import { artifactPathLine } from "../session/session-artifacts.utils";
 import type { SkillsService } from "../workspace/skills-service";
 import { localMcpServerToken } from "./mcp-config-service";
 import { agentTool, AGENT_TOOLS } from "./tools";
@@ -1308,6 +1308,8 @@ export class McpAgentToolsServer {
         `Not presented, because there is no file at these paths: ${missing.join(", ")}`
       );
     }
+    // The files card and the artifacts ledger read these, not the arguments.
+    lines.push("", ...valid.map((item) => artifactPathLine(item.target)));
 
     return this.ok(lines.join("\n"));
   }
