@@ -327,9 +327,11 @@ function localSandboxedOperations(
         if (timer != null) clearTimeout(timer);
         options.signal?.removeEventListener("abort", onAbort);
         unregister();
-        if (code !== 0 && decision.kind === "confined") {
-          // The runtime's own account first (what was denied and why),
-          // then the way to a prompt for a hidden store.
+        // Whatever the exit code: `rm x; echo done` exits 0 with the rm
+        // refused, and a model that never hears of the refusal guesses at
+        // the cause. The runtime's own account first, then the way to a
+        // prompt for a hidden store.
+        if (decision.kind === "confined") {
           const denied = violations(commandId);
           if (denied != null) options.onData(Buffer.from(`\n${denied}\n`));
           const note = hiddenStoreNote(tail, policy.secrets.promptable);
@@ -340,14 +342,14 @@ function localSandboxedOperations(
     });
 
     if (
-      result.exitCode === 0 ||
       decision.kind !== "confined" ||
       retried ||
       approvals?.askDenials == null
     )
       return result;
 
-    // The sandbox refused something: ask, and run once more with the answer.
+    // The sandbox refused something, whether or not the command's last step
+    // then succeeded: ask, and run once more with the answer.
     const refused = denials(commandId);
     if (refused.length === 0) return result;
     const answer = await approvals.askDenials(command, refused);
