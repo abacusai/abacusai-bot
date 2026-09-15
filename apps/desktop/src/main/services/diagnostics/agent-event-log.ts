@@ -96,9 +96,6 @@ const fromLoopEvent = (event: AgentEvent, sessionId: string): string | null => {
     case "mode_changed":
       return `mode=${event.mode}`;
 
-    case "sandbox_status":
-      return `sandbox=${event.active ? "on" : `off (${event.reason ?? "no reason"})`}`;
-
     case "notification":
       return `notification[${event.severity}] ${clip(event.message, 400)}`;
 

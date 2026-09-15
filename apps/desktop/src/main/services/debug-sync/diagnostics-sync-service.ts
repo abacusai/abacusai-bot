@@ -128,7 +128,8 @@ export class DiagnosticsSyncService {
       configured_providers: safe(() => storedKeyProviders(), []),
       toggles: {
         serverDebugSync: settings.serverDebugSync ?? true,
-        sandbox: settings.sandbox ?? null,
+        autoDefaultMode:
+          settings.defaultMode == null ? null : settings.defaultMode === "AUTO",
         xaiSearch: settings.xaiSearch ?? null,
         notificationsDisabled: settings.notificationsDisabled ?? null,
       },

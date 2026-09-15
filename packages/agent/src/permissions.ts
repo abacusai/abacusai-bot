@@ -140,9 +140,12 @@ export function isMutatingCall(tool: ToolRequest): boolean {
 export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   const { mode } = options;
 
-  // Bypass skips the approval prompts, not the sandbox: a hidden credential
+  // Full access means exactly that: no prompts and no sandbox.
+  if (mode === AgentMode.Yolo) return { kind: "allow" };
+
+  // Auto skips the approval prompts, not the sandbox: a hidden credential
   // store a command names is still the OS refusing, and still worth a card.
-  if (mode === AgentMode.Yolo) {
+  if (mode === AgentMode.Auto) {
     return tool.name === "bash"
       ? (credentialGate(tool, options) ?? { kind: "allow" })
       : { kind: "allow" };
@@ -639,7 +642,13 @@ function summarize(input: Record<string, unknown>): string {
 }
 
 /** The modes a user can name, for help text and error messages. */
-export const MODE_NAMES = ["default", "acceptedits", "plan", "yolo"] as const;
+export const MODE_NAMES = [
+  "default",
+  "acceptedits",
+  "plan",
+  "auto",
+  "yolo",
+] as const;
 
 /**
  * A mode name, or null when it is not one. `parseMode` falls back to Normal
@@ -656,6 +665,8 @@ export function parseModeStrict(raw: string | undefined): AgentMode | null {
       return AgentMode.AcceptEdits;
     case "PLAN":
       return AgentMode.PlanMode;
+    case "AUTO":
+      return AgentMode.Auto;
     case "YOLO":
       return AgentMode.Yolo;
     default:

@@ -50,7 +50,7 @@ export type { SandboxBackend } from "../sandbox-support.js";
 export type SandboxDecision =
   /** Run this argv instead of the bare command. */
   | { kind: "confined"; argv: string[]; backend: SandboxBackend }
-  /** No confinement needed — the mode asked for none. */
+  /** No confinement wanted: Full access, or switched off by the environment. */
   | { kind: "unconfined"; reason: "mode" }
   /** No backend on this platform, and enforcement permits running anyway. */
   | { kind: "unconfined"; reason: "unsupported-platform" }
@@ -158,13 +158,14 @@ export interface SandboxAvailability {
 }
 
 /**
- * Asked once per session so the screen can say when nothing confines. The
- * probe runs here rather than on the first command, so the answer is known
- * before the user asks for anything.
+ * Whether a confined mode would actually confine here. The desktop asks
+ * once (`--sandbox-probe`) to decide whether to offer Auto at all: a machine
+ * that cannot sandbox gets Full access alone, plainly, rather than an Auto
+ * that quietly runs everything unconfined.
  */
 export async function sandboxAvailability(): Promise<SandboxAvailability> {
   if (sandboxEnforcement() === "off")
-    return { active: false, reason: "switched off" };
+    return { active: false, reason: "switched off by ABACUSAI_BOT_SANDBOX" };
 
   const backend = backendName();
   if (backend === null)

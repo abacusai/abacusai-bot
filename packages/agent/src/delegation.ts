@@ -114,8 +114,10 @@ export async function runDelegatedTask(
     await resourceLoader.reload();
 
     // The SAME confined shell as the main session; pi's built-in bash is
-    // neither
-    // sandboxed nor gated, so a sub-agent would walk around the sandbox.
+    // neither sandboxed nor gated, so a sub-agent would walk around the
+    // sandbox. A custom tool of the same name replaces the built-in; naming
+    // `bash` in excludeTools as well would drop the custom one too and leave
+    // the sub-agent with no shell (roster.ts, replacesBash).
     const confinedBash = confinedBashTool(context.cwd);
 
     const created = await createAgentSession({
@@ -126,11 +128,7 @@ export async function runDelegatedTask(
       settingsManager: context.settingsManager,
       // The no-nesting rule plus the user's Capabilities choices, which must
       // reach sub-agents or the shell comes back off-switch.
-      excludeTools: [
-        "delegate_task",
-        ...excludedTools(),
-        ...(confinedBash != null ? ["bash"] : []),
-      ],
+      excludeTools: ["delegate_task", ...excludedTools()],
       customTools: (confinedBash != null ? [confinedBash] : []) as never,
       ...(context.model != null ? { model: context.model as never } : {}),
     });

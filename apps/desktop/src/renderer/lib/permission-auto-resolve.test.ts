@@ -20,8 +20,12 @@ const terminal = (extra: Partial<PermissionRequest> = {}): PermissionRequest =>
   }) as unknown as PermissionRequest;
 
 describe("what a chosen mode answers on the user's behalf", () => {
-  it("lets Bypass settle an ordinary tool approval", () => {
+  it("lets Full access settle an ordinary tool approval", () => {
     expect(autoResolution(terminal(), AgentMode.Yolo)).toBe("allowYolo");
+  });
+
+  it("lets Auto through once, never as the switch that drops the sandbox", () => {
+    expect(autoResolution(terminal(), AgentMode.Auto)).toBe("accept");
   });
 
   it("lets Auto-Accept settle an edit and nothing else", () => {
@@ -61,6 +65,7 @@ describe("what a chosen mode answers on the user's behalf", () => {
 
     for (const mode of [
       AgentMode.Yolo,
+      AgentMode.Auto,
       AgentMode.AcceptEdits,
       AgentMode.Normal,
     ]) {

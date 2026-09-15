@@ -30,6 +30,7 @@ const GROUPS = [
   "messaging",
   "pptx",
   "providers",
+  "sandbox",
   "session",
   "updates",
   "workspace",

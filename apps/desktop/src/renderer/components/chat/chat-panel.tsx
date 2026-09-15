@@ -77,6 +77,7 @@ import {
   useOpenBotChatMutation,
   useBotSenderChatsQuery,
 } from "../../hooks/use-bots";
+import { useDefaultAgentModeQuery } from "../../hooks/use-sandbox";
 import {
   useAgentSessionStateQuery,
   useWorkspaceAgentSessionsQuery,
@@ -157,7 +158,6 @@ import { ConnectorRequestCard } from "./connector-request-card";
 import { Greeting } from "./greeting";
 import { PendingSteers } from "./pending-steers";
 import { buildChatItems, getAgentStatusLabel } from "./render-utils";
-import { SandboxNotice } from "./sandbox-notice";
 import { SESSION_STARTERS } from "./session-starters";
 import { SubtaskScopeHeader } from "./subtask-card";
 import { ThinkingLoader } from "./thinking-loader";
@@ -491,7 +491,6 @@ const WelcomeScreen = ({
 
 export const ChatPanel = (): JSX.Element => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const activeWorkspaceId = useWorkspaceActiveWorkspaceId();
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -834,10 +833,11 @@ export const ChatPanel = (): JSX.Element => {
   const isSenderChat = senderChatForSession != null;
   /** A routine fire's session: a report, not a conversation to reply into. */
   const isRoutineRun = activeSession?.routineId != null;
-  // A bot is always full access and never reads or writes the session mode.
-  // Every session shares one sticky mode, so the welcome screen's picker shows
-  // what the send spawns with.
-  const selectedModeValue = isBotChat ? AgentMode.Yolo : globalSelectedMode;
+  // A bot runs in the Profile page's default and never reads or writes the
+  // session mode. Every session shares one sticky mode, so the welcome
+  // screen's picker shows what the send spawns with.
+  const defaultAgentMode = useDefaultAgentModeQuery().data ?? AgentMode.Yolo;
+  const selectedModeValue = isBotChat ? defaultAgentMode : globalSelectedMode;
 
   // Pick a model when none is chosen or the stored one is not offered (an old
   // id, a removed key). Never one whose key is missing: it fails on the first
@@ -1929,18 +1929,6 @@ export const ChatPanel = (): JSX.Element => {
       className="bg-background relative flex h-full min-h-0 flex-col"
       data-id="local-code-chat-panel"
     >
-      {/* Commands run with no kernel sandbox here; the user should know. The
-          live session state, not the list item: the agent reports a second
-          after it starts, and only the state query is refreshed on it. */}
-      <SandboxNotice
-        sandbox={sessionStateQuery.data?.sandbox}
-        onOpenSettings={() =>
-          void navigate({
-            to: "/settings/tools/$toolsetId",
-            params: { toolsetId: "terminal" },
-          })
-        }
-      />
       {/* Message / welcome area — also a drop zone for path-mentions */}
       <MessageScrollerProvider
         key={activeSessionId ?? "new-session"}

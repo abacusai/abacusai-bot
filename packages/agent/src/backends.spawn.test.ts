@@ -230,11 +230,12 @@ describe("deciding whether to replace pi's own local shell", () => {
     ["modal", "auto", "darwin", false],
     ["daytona", "auto", "darwin", false],
     ["ssh", "auto", "darwin", false],
-    // Local with the sandbox switched off: pi's path handles shell resolution,
-    // login shells and platform differences better than anything here.
-    ["local", undefined, "darwin", false],
+    // Local with the sandbox switched off by the environment: pi's path
+    // handles shell resolution, login shells and platform differences better
+    // than anything here. The mode decides per command, not here.
     ["local", "off", "darwin", false],
     // Local with a backend on this platform.
+    ["local", undefined, "darwin", true],
     ["local", "auto", "darwin", true],
     ["local", "auto", "linux", true],
     ["local", "strict", "darwin", true],
@@ -259,10 +260,10 @@ describe("deciding whether to replace pi's own local shell", () => {
     onPlatform("darwin");
     const { confinedBashTool } = await load();
 
-    expect(confinedBashTool("/work/project")).toBeNull();
-
-    process.env.ABACUSAI_BOT_SANDBOX = "auto";
     expect(confinedBashTool("/work/project")).not.toBeNull();
+
+    process.env.ABACUSAI_BOT_SANDBOX = "off";
+    expect(confinedBashTool("/work/project")).toBeNull();
   });
 });
 
@@ -730,6 +731,7 @@ describe("running a project command through the backend", () => {
 
   it("declines when there is no backend, so the caller uses pi's own exec", async () => {
     process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
+    process.env.ABACUSAI_BOT_SANDBOX = "off";
     onPlatform("darwin");
     const { execConfined } = await load();
 

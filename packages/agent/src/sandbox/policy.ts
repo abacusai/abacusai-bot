@@ -21,9 +21,9 @@ export type SandboxMode = "read-only" | "workspace-write";
 
 /** How hard to insist on a sandbox. */
 export type SandboxEnforcement =
-  /** Never sandbox. The default — see sandboxEnforcement. */
+  /** Never sandbox: Full access, or ABACUSAI_BOT_SANDBOX=off. */
   | "off"
-  /** Sandbox where a backend exists, run unconfined where none does. */
+  /** Sandbox where a backend exists, run unconfined where none does. The default. */
   | "auto"
   /** Require a working sandbox. No sandbox, no command. */
   | "strict";
@@ -50,25 +50,27 @@ export interface SandboxPolicy {
 export type NetworkPolicy = { kind: "open" } | { kind: "filtered" };
 
 /**
- * Off unless something asks for it: the agent does not decide on its own. The
- * desktop sets ABACUSAI_BOT_SANDBOX=auto while its Settings toggle is on,
- * which it is by default, and nothing when the user switched it off. Off
- * means bash is bounded only by the permission gate and guardrails.
+ * The mode decides: Full access is the one mode with no sandbox, and every
+ * other mode is confined where a backend exists. ABACUSAI_BOT_SANDBOX in the
+ * environment overrides for the deliberate: `off` never confines, `strict`
+ * refuses a command rather than run it unconfined.
  */
-export function sandboxEnforcement(): SandboxEnforcement {
+export function sandboxEnforcement(mode?: AgentMode): SandboxEnforcement {
+  if (mode === AgentMode.Yolo) return "off";
+
   const raw = (process.env.ABACUSAI_BOT_SANDBOX ?? "").trim().toLowerCase();
 
   if (raw === "strict") return "strict";
-  if (raw === "auto" || raw === "1" || raw === "true") return "auto";
+  if (raw === "off" || raw === "0" || raw === "false") return "off";
 
-  return "off";
+  return "auto";
 }
 
 /**
  * Plan's gate-level read-only becomes true at the OS level; every other mode
- * gets the workspace. Bypass included: it skips the approval prompts, and the
- * app starts in it, so it is exactly where the kernel bounds matter most.
- * Only the Settings toggle turns the sandbox off.
+ * gets the workspace. Auto included: it skips the approval prompts, so it is
+ * exactly where the kernel bounds matter most. Full access is off entirely
+ * (sandboxEnforcement), so what it maps to never applies.
  */
 export function modeToSandboxMode(mode: AgentMode): SandboxMode {
   return mode === AgentMode.PlanMode ? "read-only" : "workspace-write";
@@ -107,7 +109,7 @@ export function resolvePolicy(
   const workspaceRoot = canonicalize(cwd);
   return {
     mode: modeToSandboxMode(mode),
-    enforcement: sandboxEnforcement(),
+    enforcement: sandboxEnforcement(mode),
     workspaceRoot,
     writableTemp: [...temps],
     secrets: resolveSecretPaths({
