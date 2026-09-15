@@ -79,36 +79,21 @@ call that started it.
 ### Kernel sandbox
 
 macOS, Linux and Windows 11 24H2 or newer can run commands under an optional
-kernel sandbox: Seatbelt, bubblewrap, and a Microsoft process container run by
-the `wxc-exec` runner the app ships. Plan mode allows no writes. Default and
-Auto-Accept allow writes to the workspace and temporary directories. Bypass
-remains unconfined.
-
-On macOS and Linux, outbound connections from a confined command go only
-through a loopback proxy the agent runs. Package registries and code hosts
-(npm, PyPI, crates.io, Go, RubyGems, Maven, GitHub, GitLab, Docker Hub,
-Hugging Face, Debian and Ubuntu mirrors) are allowed without asking; any other
-host raises a prompt while the connection waits. "Allow once" lets that
-connection through, "Always" allows the host for the session. Connections to
-loopback are direct, so a dev server the command starts still answers.
-`ABACUSAI_BOT_SANDBOX_HOSTS`, a comma-separated list where `*.example.com`
-allows a domain, pre-approves hosts. Tools find the proxy through
-`HTTP_PROXY`, `HTTPS_PROXY` and `ALL_PROXY`; git's SSH transport is routed
-through it with a `ProxyCommand` unless `GIT_SSH_COMMAND` is already set. A
-tool that ignores those variables cannot connect at all. On Linux the bridge
-into the sandbox's own network namespace needs `socat`; without it the
-network stays open. A server started by an earlier background command is in
-another namespace there and cannot be reached from a later command. On
-Windows the network is not confined yet.
+kernel sandbox. macOS and Linux use Anthropic's sandbox runtime (Seatbelt and
+bubblewrap, with its loopback proxies for the network); Windows uses a
+Microsoft process container run by the `wxc-exec` runner the app ships. Plan
+mode allows no writes. Default and Auto-Accept allow writes to the workspace
+and temporary directories. Bypass remains unconfined.
 
 Reads are allowed everywhere except a short list of credential stores: SSH
 private keys, GPG private keys, cloud CLI credential and token caches (AWS,
 Google Cloud, Azure), `~/.kube/config`, `~/.docker/config.json`, `~/.netrc`,
-`~/.pypirc`, browser profiles, the macOS keychain files, and this app's own
-settings and browser data. Configuration beside them stays readable, so
-`~/.ssh/config`, known hosts, public keys and `~/.aws/config` still work.
-Credential helpers that talk to a daemon, such as the macOS keychain, keep
-working. `git push` over SSH needs the key loaded in an agent.
+`~/.pypirc`, browser profiles, the macOS keychain files, Windows credential
+stores, and this app's own settings and browser data. Configuration beside
+them stays readable, so `~/.ssh/config`, known hosts, public keys and
+`~/.aws/config` still work. The ssh and gpg agent sockets stay reachable, so
+`git push` and signed commits work with the keys hidden; other unix sockets
+(the session bus, Docker) do not.
 
 A command that names one of the developer stores (SSH and GPG keys, cloud
 credentials, kube and docker config, `.netrc`, `.pypirc`) asks first, even
@@ -120,6 +105,24 @@ through a script or a variable, fails at the kernel and is told to name the
 path so the prompt can be raised. `ABACUSAI_BOT_SANDBOX_READABLE`, a
 path-delimited list where `~` expands to the home directory, exempts a path
 without prompting.
+
+On macOS and Linux, outbound connections from a confined command go only
+through the runtime's HTTP and SOCKS proxies. Package registries and code
+hosts (npm, PyPI, crates.io, Go, RubyGems, Maven, GitHub, GitLab, Docker Hub,
+Hugging Face, Debian and Ubuntu mirrors) are allowed without asking; any other
+host raises a prompt while the connection waits. "Allow once" lets that
+connection through, "Always" allows the host for the session. Connections to
+loopback are direct, so a dev server the command starts still answers.
+`ABACUSAI_BOT_SANDBOX_HOSTS`, a comma-separated list where `*.example.com`
+allows a domain, pre-approves hosts. A tool that ignores `HTTP_PROXY`,
+`HTTPS_PROXY` and `ALL_PROXY` cannot connect at all. On Windows the network is
+not confined yet.
+
+Linux needs `bubblewrap` and `socat` installed, and unprivileged user
+namespaces with capabilities (Ubuntu 24.04 restricts them by default; see the
+runtime's notes on `kernel.apparmor_restrict_unprivileged_userns`). Without
+them the backend exists but cannot start, and commands are refused rather than
+run unconfined.
 
 The sandbox applies to shell commands, including commands started by delegated
 agents and verification tools. It does not confine Electron, model requests,

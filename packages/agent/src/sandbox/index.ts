@@ -8,12 +8,12 @@
 import * as os from "node:os";
 
 import { sandboxBackendFor, type SandboxBackend } from "../sandbox-support.js";
-import * as bubblewrap from "./bubblewrap.js";
 import * as mxc from "./mxc.js";
 import type { SandboxPolicy } from "./policy.js";
-import * as seatbelt from "./seatbelt.js";
+import * as runtime from "./runtime.js";
 
 export type {
+  NetworkPolicy,
   SandboxMode,
   SandboxPolicy,
   SandboxEnforcement,
@@ -25,12 +25,13 @@ export {
 } from "./policy.js";
 export { CredentialApprovals } from "./approvals.js";
 export {
-  EgressProxy,
-  egressProxy,
-  proxyEnvironment,
-  resetEgressProxy,
+  allowHostForSession,
+  DEFAULT_HOSTS,
+  ensureRuntime,
+  setHostDecider,
+  violations,
   type HostDecider,
-} from "./egress.js";
+} from "./runtime.js";
 export {
   mentionedSecretPaths,
   namedSecretPaths,
@@ -38,7 +39,6 @@ export {
   resolveSecretPaths,
   type SecretPaths,
 } from "./secrets.js";
-
 export type { SandboxBackend } from "../sandbox-support.js";
 
 export type SandboxDecision =
@@ -60,15 +60,23 @@ export function backendName(): SandboxBackend | null {
   return sandboxBackendFor(process.platform, os.release());
 }
 
+/** Whether the backend forces outbound connections through the asking proxy. */
+export function networkConfinable(): boolean {
+  return backendName() === "sandbox-runtime";
+}
+
 /**
  * What the model is told when the backend is there but would not start. One
  * retry is allowed (a timed-out probe is not cached, so a loaded machine gets
  * another chance); routing around the sandbox is not.
  */
-export function unavailableBackendMessage(backend: SandboxBackend): string {
+export function unavailableBackendMessage(
+  backend: SandboxBackend,
+  detail: string | null = null
+): string {
   const hint =
-    backend === "bubblewrap"
-      ? ` (Install bubblewrap, or check that unprivileged user namespaces are enabled.)`
+    backend === "sandbox-runtime" && process.platform === "linux"
+      ? ` (Install bubblewrap and socat, and check that unprivileged user namespaces are enabled.)`
       : backend === "mxc"
         ? ` (The Windows process container runner shipped with the app could not start; reinstalling the app restores it.)`
         : "";
@@ -79,33 +87,20 @@ export function unavailableBackendMessage(backend: SandboxBackend): string {
     `the command. Tell the user. A machine that was merely busy may answer ` +
     `differently next time, so one retry is reasonable; if it keeps happening ` +
     `the sandbox needs fixing, and must not be worked around.` +
-    hint
+    hint +
+    (detail != null ? ` Reported: ${detail}` : "")
   );
 }
 
-/**
- * Whether outbound connections can be forced through the egress proxy here.
- * Seatbelt needs nothing extra; bubblewrap needs socat to bridge into its
- * network namespace; the Windows container is not wired to the proxy yet.
- */
-export function networkConfinable(): boolean {
-  switch (backendName()) {
-    case "seatbelt":
-      return true;
-    case "bubblewrap":
-      return bubblewrap.socatPath() !== null;
-    default:
-      return false;
-  }
-}
-
-export function decide(
+export async function decide(
   policy: SandboxPolicy,
   command: string,
   cwd: string,
   /** The environment the command will be spawned with, when not this process's. */
-  childEnv: NodeJS.ProcessEnv = process.env
-): SandboxDecision {
+  childEnv: NodeJS.ProcessEnv = process.env,
+  /** Correlates the runtime's violation records with this run. */
+  commandId: string = `command-${Date.now()}-${Math.random().toString(16).slice(2)}`
+): Promise<SandboxDecision> {
   if (policy.enforcement === "off" || policy.mode === "danger-full-access") {
     return { kind: "unconfined", reason: "mode" };
   }
@@ -126,23 +121,20 @@ export function decide(
     return { kind: "unconfined", reason: "unsupported-platform" };
   }
 
-  if (backend === "seatbelt") {
-    // A policy the profile language cannot express is a readable refusal, not
-    // an exception.
-    const refusal = seatbelt.policyRefusal(policy);
-    if (refusal !== null) return { kind: "refused", message: refusal };
-  }
-
   const argv =
-    backend === "seatbelt"
-      ? seatbelt.wrap(policy, command)
-      : backend === "bubblewrap"
-        ? bubblewrap.wrap(policy, command, cwd, childEnv.PATH)
-        : mxc.wrap(policy, command, cwd, childEnv);
+    backend === "sandbox-runtime"
+      ? await runtime.wrap(policy, command, cwd, commandId)
+      : mxc.wrap(policy, command, cwd, childEnv);
 
   if (argv === null) {
     // Backend present but would not start: never fall through to running.
-    return { kind: "refused", message: unavailableBackendMessage(backend) };
+    return {
+      kind: "refused",
+      message: unavailableBackendMessage(
+        backend,
+        backend === "sandbox-runtime" ? runtime.runtimeFailure() : null
+      ),
+    };
   }
 
   return { kind: "confined", argv, backend };

@@ -5,15 +5,14 @@
  * the SDK itself is not used, since it would bring node-pty and 60 MB of
  * binaries for every platform. Needs Windows 11 24H2 (build 26100) or newer.
  */
-import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
 import { bundledToolsDir } from "../bundled-tools.js";
 import { MINIMUM_WINDOWS_BUILD, windowsBuild } from "../sandbox-support.js";
-import { execFailureStatus } from "./bubblewrap.js";
 import type { SandboxPolicy } from "./policy.js";
+import { probeVerdict, type ProbeExec } from "./probe.js";
 import type { SecretPaths } from "./secrets.js";
 
 /** `isWithin` for Windows paths: backslashes, and case does not matter. */
@@ -176,25 +175,6 @@ export function wrap(
 
 let probed: boolean | undefined;
 
-const PROBE_TIMEOUT_MS = 20_000;
-
-type ExecStatus = (binary: string, args: string[]) => number | "timeout" | null;
-
-const execStatus: ExecStatus = (binary, args) => {
-  try {
-    execFileSync(binary, args, { stdio: "ignore", timeout: PROBE_TIMEOUT_MS });
-
-    return 0;
-  } catch (error) {
-    return execFailureStatus(
-      error as NodeJS.ErrnoException & {
-        status?: number | null;
-        signal?: NodeJS.Signals | null;
-      }
-    );
-  }
-};
-
 /** A minimal container: reads everywhere, writes only under `writable`. */
 function probeConfig(
   commandLine: string,
@@ -226,24 +206,22 @@ export function runProbe(
   runner: string,
   writable: string,
   target: string,
-  exec: ExecStatus = execStatus,
+  exec?: ProbeExec,
   env: NodeJS.ProcessEnv = process.env
 ): boolean | null {
   const shell = env.ComSpec ?? "cmd.exe";
-  const control = exec(runner, [
+  const control = [
+    runner,
     ...configArgs(probeConfig(`${shell} /d /s /c "exit 0"`, writable, env)),
-  ]);
-  if (control === "timeout") return null;
-  if (control !== 0) return false;
-
-  const canary = exec(runner, [
+  ];
+  const canary = [
+    runner,
     ...configArgs(
       probeConfig(`${shell} /d /s /c "echo x > \\"${target}\\""`, writable, env)
     ),
-  ]);
-  if (canary === "timeout") return null;
+  ];
 
-  return canary !== null && canary !== 0;
+  return probeVerdict(control, canary, exec);
 }
 
 /** Confirm the runner confines here, not merely that it exists. */

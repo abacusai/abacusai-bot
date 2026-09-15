@@ -160,8 +160,8 @@ describe("the probe", () => {
 
   it("passes only when the control succeeds and the canary is refused", () => {
     const calls: string[] = [];
-    const exec = (_binary: string, args: string[]): number => {
-      const command = (decode(args).process as { commandLine: string })
+    const exec = (argv: string[]): number => {
+      const command = (decode(argv.slice(1)).process as { commandLine: string })
         .commandLine;
       calls.push(command);
 
@@ -191,8 +191,8 @@ describe("the probe", () => {
       runner,
       writable,
       target,
-      (_binary, args) => {
-        seen = decode(args).filesystem as typeof seen;
+      (argv) => {
+        seen = decode(argv.slice(1)).filesystem as typeof seen;
 
         return 0;
       },

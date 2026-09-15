@@ -31,7 +31,9 @@ export default defineConfig({
     "src/sandbox-support.ts",
   ],
   deps: {
-    neverBundle: [...NATIVE_PACKAGES],
+    // The sandbox runtime finds its vendored seccomp filters and Java agent
+    // relative to its own files, so it ships as a package beside the agent.
+    neverBundle: [...NATIVE_PACKAGES, "@anthropic-ai/sandbox-runtime"],
     onlyBundle: false,
   },
   format: "esm",

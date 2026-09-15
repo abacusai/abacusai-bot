@@ -22,7 +22,6 @@ import {
   backendOperations,
   deadline,
   hiddenStoreNote,
-  refusedHostNote,
   selectedBackend,
 } from "./backends.js";
 import { currentMode, setCurrentMode } from "./current-mode.js";
@@ -112,8 +111,8 @@ describe("a command that leaves something running behind it", () => {
     scratch = fs.mkdtempSync(path.join(os.tmpdir(), "backends-test-"));
     // What is under test is how the spawn is waited on, which is the same
     // whether or not the command ends up confined. Running unconfined is what
-    // makes that reachable everywhere: the Linux runner has a bubblewrap that
-    // cannot be established, and its (correct) answer to any other mode is to
+    // makes that reachable everywhere: the Linux runner has a sandbox runtime
+    // that cannot start, and its (correct) answer to any other mode is to
     // refuse the command outright — which would leave this covered on macOS
     // only, and the hang it pins is not platform-specific.
     restoreMode = currentMode();
@@ -245,19 +244,5 @@ describe("the note on a failed command that hit a hidden store", () => {
 
   it("is silent when the output mentions no store", () => {
     expect(hiddenStoreNote("npm ERR! 404", ["/home/dev/.netrc"])).toBeNull();
-  });
-});
-
-describe("the note on a command the proxy refused", () => {
-  it("names the host and sends the model to the user", () => {
-    const note = refusedHostNote(
-      "curl: (22) evil.test is not allowed by the sandbox"
-    );
-    expect(note).toContain("evil.test");
-    expect(note).toContain("tell the user");
-  });
-
-  it("is silent otherwise", () => {
-    expect(refusedHostNote("curl: (7) Failed to connect")).toBeNull();
   });
 });

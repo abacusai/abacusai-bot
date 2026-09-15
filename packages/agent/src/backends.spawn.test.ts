@@ -41,17 +41,39 @@ class FakeStream extends EventEmitter {
   destroy = vi.fn();
 }
 
-/** A child process that emits nothing until a test tells it to. */
+/**
+ * A child process that emits nothing until a test tells it to, and even then
+ * only once the backend is listening: the sandbox decision is asynchronous, so
+ * the spawn happens a tick after `exec` is called, as with a real child.
+ */
 class FakeChild extends EventEmitter {
   stdout = new FakeStream();
   stderr = new FakeStream();
   stdin = { end: vi.fn() };
   kill = vi.fn();
   pid = 4242;
+  private readonly attached = new Promise<void>((resolve) => {
+    this.on("newListener", (name: string) => {
+      if (name === "close") resolve();
+    });
+  });
 
   /** Finish the command the way a clean exit does. */
   finish(code: number | null): void {
-    this.emit("close", code);
+    void this.attached.then(() => this.emit("close", code));
+  }
+
+  /** Fail to start, the way ENOENT does. */
+  fail(error: Error): void {
+    void this.attached.then(() => this.emit("error", error));
+  }
+
+  output(text: string): void {
+    void this.attached.then(() => this.stdout.emit("data", Buffer.from(text)));
+  }
+
+  errorOutput(text: string): void {
+    void this.attached.then(() => this.stderr.emit("data", Buffer.from(text)));
   }
 }
 
@@ -65,6 +87,10 @@ const onPlatform = (platform: NodeJS.Platform): void => {
     configurable: true,
   });
 };
+
+/** Resolves once the backend has spawned the child, a tick after `exec`. */
+const spawned = (): Promise<void> =>
+  vi.waitFor(() => expect(spawn).toHaveBeenCalled());
 
 /** The argv of the last spawn, as one array. */
 const lastSpawn = (): { file: string; args: string[]; options: unknown } => {
@@ -305,8 +331,8 @@ describe("running a command in a container", () => {
   it("streams both stdout and stderr to the caller", async () => {
     const operations = await dockerOperations();
     const running = exec(operations, "ls");
-    child.stdout.emit("data", Buffer.from("out\n"));
-    child.stderr.emit("data", Buffer.from("err\n"));
+    child.output("out\n");
+    child.errorOutput("err\n");
     child.finish(0);
 
     expect((await running).output).toBe("out\nerr\n");
@@ -315,7 +341,7 @@ describe("running a command in a container", () => {
   it("tells the model docker is missing rather than tearing the turn down", async () => {
     const operations = await dockerOperations();
     const running = exec(operations, "ls");
-    child.emit("error", new Error("spawn docker ENOENT"));
+    child.fail(new Error("spawn docker ENOENT"));
     const { exitCode, output } = await running;
 
     // 127: command not found, which is what actually happened.
@@ -517,7 +543,7 @@ describe("running a command on this machine", () => {
     const operations = await localOperations();
 
     const running = exec(operations, "ls");
-    child.emit("error", new Error("EACCES"));
+    child.fail(new Error("EACCES"));
     const { exitCode, output } = await running;
 
     expect(exitCode).toBe(127);
@@ -536,7 +562,29 @@ describe("running a command on this machine", () => {
     const running = exec(operations, "sleep 1000", "/work", {
       signal: controller.signal,
     });
+    await spawned();
     controller.abort();
+
+    expect(kill).toHaveBeenCalledWith(-child.pid, "SIGKILL");
+
+    child.finish(null);
+    await running;
+    kill.mockRestore();
+  });
+
+  it("still kills a command whose abort landed while the sandbox was deciding", async () => {
+    // The decision is asynchronous; an abort in that gap used to be missed.
+    onPlatform("darwin");
+    setCurrentMode(AgentMode.Yolo);
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
+    const operations = await localOperations();
+    const controller = new AbortController();
+
+    const running = exec(operations, "sleep 1000", "/work", {
+      signal: controller.signal,
+    });
+    controller.abort();
+    await spawned();
 
     expect(kill).toHaveBeenCalledWith(-child.pid, "SIGKILL");
 
@@ -557,6 +605,7 @@ describe("running a command on this machine", () => {
     const running = exec(operations, "sleep 1000", "/work", {
       signal: controller.signal,
     });
+    await spawned();
     controller.abort();
 
     expect(child.kill).toHaveBeenCalledWith("SIGKILL");
@@ -606,7 +655,7 @@ describe("settling when the command finishes rather than when its pipes close", 
     // Output keeps arriving, re-arming the grace period each time.
     for (let i = 0; i < 5; i++) {
       await vi.advanceTimersByTimeAsync(50);
-      child.stdout.emit("data", Buffer.from(`chunk${i}`));
+      child.output(`chunk${i}`);
     }
     await vi.advanceTimersByTimeAsync(200);
 
@@ -646,8 +695,8 @@ describe("running a project command through the backend", () => {
     const { execConfined } = await load();
 
     const running = execConfined("npm test", "/work");
-    child.stdout.emit("data", Buffer.from("passing\n"));
-    child.stderr.emit("data", Buffer.from("warning\n"));
+    child.output("passing\n");
+    child.errorOutput("warning\n");
     child.finish(0);
 
     expect(await running).toEqual({

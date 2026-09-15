@@ -41,6 +41,7 @@
     "vendor": "node scripts/download-tools.js"
   },
   "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "0.0.76",
     "@ast-grep/lang-python": "^0.0.6",
     "@ast-grep/napi": "^0.45.1"
   },

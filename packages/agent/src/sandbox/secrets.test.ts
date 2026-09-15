@@ -8,8 +8,6 @@ import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { CredentialApprovals } from "./approvals.js";
-import { secretHidingArgs } from "./bubblewrap.js";
-import { buildProfile, policyRefusal } from "./seatbelt.js";
 import {
   isWithin,
   mentionedSecretPaths,
@@ -173,83 +171,6 @@ describe("isWithin", () => {
     expect(isWithin("/a/b", "/a/b")).toBe(true);
     expect(isWithin("/a/bc", "/a/b")).toBe(false);
     expect(isWithin("/a", "/a/b")).toBe(false);
-  });
-});
-
-describe("the Seatbelt rules", () => {
-  const base = {
-    mode: "workspace-write" as const,
-    enforcement: "auto" as const,
-    workspaceRoot: "/private/tmp/ws",
-    writableTemp: ["/private/tmp"],
-    network: { kind: "open" as const },
-  };
-
-  it("denies each store and allows the readable files after it", () => {
-    const lines = buildProfile({
-      ...base,
-      secrets: {
-        denied: ["/Users/dev/.ssh", "/Users/dev/.netrc"],
-        allowed: ["/Users/dev/.ssh/config"],
-        promptable: [],
-      },
-    }).split("\n");
-    const deny = lines.indexOf('(deny file-read* (subpath "/Users/dev/.ssh"))');
-    const allow = lines.indexOf(
-      '(allow file-read* (subpath "/Users/dev/.ssh/config"))'
-    );
-    expect(deny).toBeGreaterThan(-1);
-    expect(lines).toContain('(deny file-read* (subpath "/Users/dev/.netrc"))');
-    // A later rule wins, so the allow must follow the deny.
-    expect(allow).toBeGreaterThan(deny);
-  });
-
-  it("keeps the denials in read-only mode too", () => {
-    const profile = buildProfile({
-      ...base,
-      mode: "read-only",
-      secrets: { denied: ["/Users/dev/.ssh"], allowed: [], promptable: [] },
-    });
-    expect(profile).toContain('(deny file-read* (subpath "/Users/dev/.ssh"))');
-  });
-
-  it("refuses a store path with control characters rather than mis-compiling", () => {
-    expect(
-      policyRefusal({
-        ...base,
-        secrets: { denied: ["/Users/dev/.s\nsh"], allowed: [], promptable: [] },
-      })
-    ).toMatch(/control characters/);
-  });
-});
-
-describe("the bubblewrap arguments", () => {
-  const directories = new Set(["/home/dev/.ssh"]);
-  const isDirectory = (candidate: string): boolean =>
-    directories.has(candidate);
-
-  it("covers a directory with a tmpfs and a file with /dev/null", () => {
-    const args = secretHidingArgs(
-      { denied: ["/home/dev/.ssh", "/home/dev/.netrc"], allowed: [] },
-      isDirectory
-    );
-    expect(args).toEqual([
-      "--tmpfs",
-      "/home/dev/.ssh",
-      "--ro-bind",
-      "/dev/null",
-      "/home/dev/.netrc",
-    ]);
-  });
-
-  it("binds the readable files back after the tmpfs that hid them", () => {
-    const args = secretHidingArgs(
-      { denied: ["/home/dev/.ssh"], allowed: ["/home/dev/.ssh/config"] },
-      isDirectory
-    ).join(" ");
-    expect(args.indexOf("--ro-bind /home/dev/.ssh/config")).toBeGreaterThan(
-      args.indexOf("--tmpfs /home/dev/.ssh")
-    );
   });
 });
 

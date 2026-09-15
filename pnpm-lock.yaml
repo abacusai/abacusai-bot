@@ -324,6 +324,9 @@ importers:
 
   packages/agent:
     dependencies:
+      '@anthropic-ai/sandbox-runtime':
+        specifier: 0.0.76
+        version: 0.0.76
       '@ast-grep/lang-python':
         specifier: ^0.0.6
         version: 0.0.6
@@ -394,6 +397,11 @@ importers:
         version: 7.0.2
 
 packages:
+
+  '@anthropic-ai/sandbox-runtime@0.0.76':
+    resolution: {integrity: sha512-wIC++TvCopRPJcX/v/PCp/SjYOWk/cAVq+VF9v6E3WwkriFP9uu2wvPJ2E+wMrNa3i3h3ew9zTpHcmyGLBKo0w==}
+    engines: {node: '>=20.11.0'}
+    hasBin: true
 
   '@anthropic-ai/sdk@0.117.1':
     resolution: {integrity: sha512-Yn2QlXfyCiKJ5YGCOOay7ZE78ISvII2XY621WMCiflmG8IYgwx59IBwPExxki3Xk9jKUtnD/Sj6UvplWr0rZxg==}
@@ -1568,6 +1576,9 @@ packages:
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
+
+  '@pondwader/socks5-server@1.0.10':
+    resolution: {integrity: sha512-bQY06wzzR8D2+vVCUoBsr5QS2U6UgPUQRmErNwtsuI6vLcyRKkafjkr3KxbtGFf9aBBIV2mcvlsKD1UYaIV+sg==}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -3019,6 +3030,10 @@ packages:
     resolution: {integrity: sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==}
     engines: {node: '>=16'}
 
+  commander@12.1.0:
+    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
+    engines: {node: '>=18'}
+
   commander@14.0.3:
     resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
     engines: {node: '>=20'}
@@ -4441,6 +4456,10 @@ packages:
     resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  node-forge@1.4.0:
+    resolution: {integrity: sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==}
+    engines: {node: '>= 6.13.0'}
+
   node-gyp@12.4.0:
     resolution: {integrity: sha512-OMcPNvqTCFUnNaBlmdgq+lfNqY7gTiSmNRDjY3uAXRyudeKZEZxu3CLtjMQrx4zZxCX2b/mpNqTtwuCJgXhHkw==}
     engines: {node: ^20.17.0 || >=22.9.0}
@@ -5809,6 +5828,13 @@ packages:
 
 snapshots:
 
+  '@anthropic-ai/sandbox-runtime@0.0.76':
+    dependencies:
+      '@pondwader/socks5-server': 1.0.10
+      commander: 12.1.0
+      node-forge: 1.4.0
+      zod: 3.25.76
+
   '@anthropic-ai/sdk@0.117.1(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
@@ -7018,6 +7044,8 @@ snapshots:
       - '@pierre/theme'
       - '@shikijs/themes'
       - shiki
+
+  '@pondwader/socks5-server@1.0.10': {}
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -8273,6 +8301,8 @@ snapshots:
     optional: true
 
   commander@11.1.0: {}
+
+  commander@12.1.0: {}
 
   commander@14.0.3: {}
 
@@ -9725,6 +9755,8 @@ snapshots:
       data-uri-to-buffer: 4.0.1
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
+
+  node-forge@1.4.0: {}
 
   node-gyp@12.4.0:
     dependencies:

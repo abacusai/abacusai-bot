@@ -819,7 +819,7 @@ export interface McpBrowserStatus {
 
 /** Which kernel sandbox this machine has; null means commands run unconfined. */
 export interface SandboxSupport {
-  backend: "seatbelt" | "bubblewrap" | "mxc" | null;
+  backend: "sandbox-runtime" | "mxc" | null;
   /** The Windows build the sandbox needs, for the message on an older one. */
   minimumWindowsBuild: number;
 }
