@@ -64,6 +64,19 @@ extraResources:
     to: agent/node_modules/marked/
   - from: ../../node_modules/get-east-asian-width/
     to: agent/node_modules/get-east-asian-width/
+  # The sandbox runtime that confines shell commands on macOS and Linux. Left
+  # out of the bundle because it locates its vendored seccomp filters and Java
+  # proxy agent relative to itself; its four dependencies come with it.
+  - from: ../../node_modules/@anthropic-ai/sandbox-runtime/
+    to: agent/node_modules/@anthropic-ai/sandbox-runtime/
+  - from: ../../node_modules/@pondwader/socks5-server/
+    to: agent/node_modules/@pondwader/socks5-server/
+  - from: ../../node_modules/commander/
+    to: agent/node_modules/commander/
+  - from: ../../node_modules/node-forge/
+    to: agent/node_modules/node-forge/
+  - from: ../../node_modules/zod/
+    to: agent/node_modules/zod/
   # Loaded only when the agent works on an image, and loaded dynamically — so
   # unlike pi-tui its absence does not stop the agent from starting. It stops
   # the first image operation instead, which is a worse way to find out.

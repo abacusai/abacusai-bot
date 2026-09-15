@@ -118,12 +118,14 @@ import {
 } from "./reply-language.js";
 import { buildRoster } from "./roster.js";
 import {
+  allowHostForSession,
   backendName,
   CredentialApprovals,
-  egressProxy,
+  ensureRuntime,
   networkConfinable,
   resolveSecretPaths,
   sandboxEnforcement,
+  setHostDecider,
 } from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { conversationSessionManager } from "./session-file.js";
@@ -959,7 +961,7 @@ export class AbacusBotSession {
     // A switched-off toolset is withheld, not hidden: the model never sees it.
     const excluded = excludedTools();
 
-    await this.prepareEgress();
+    await this.prepareSandboxRuntime();
 
     // The browser sub-agent may run on a stronger model than the chat.
     const browserModelRef = (
@@ -2734,22 +2736,15 @@ export class AbacusBotSession {
   }
 
   /**
-   * Start the egress proxy and route its questions to the user. Only when a
-   * sandbox will actually force traffic through it; otherwise a proxy that
-   * confines nothing would still be prompting.
+   * Start the sandbox runtime's proxies and route their questions to the
+   * user. A failure is not fatal here: the first confined command reports it.
    */
-  private async prepareEgress(): Promise<void> {
+  private async prepareSandboxRuntime(): Promise<void> {
     if (sandboxEnforcement() === "off" || backendName() === null) return;
     if (!networkConfinable()) return;
 
-    const proxy = egressProxy();
-    try {
-      await proxy.start();
-    } catch {
-      // No port means the policy stays open, which resolvePolicy reports.
-      return;
-    }
-    proxy.decider = (host, port) => this.askNetworkHost(host, port);
+    setHostDecider((host, port) => this.askNetworkHost(host, port));
+    await ensureRuntime();
   }
 
   /**
@@ -2807,7 +2802,7 @@ export class AbacusBotSession {
     }
 
     if (isAlwaysDecision(decision) || answer === "allowYolo") {
-      egressProxy().allowForSession(host);
+      allowHostForSession(host);
 
       return true;
     }

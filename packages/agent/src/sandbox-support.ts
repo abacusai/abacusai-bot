@@ -4,7 +4,7 @@
  * the same question the agent answers (see sandbox/index.ts).
  */
 
-export type SandboxBackend = "seatbelt" | "bubblewrap" | "mxc";
+export type SandboxBackend = "sandbox-runtime" | "mxc";
 
 /** The first Windows build whose process containers the MXC runner supports. */
 export const MINIMUM_WINDOWS_BUILD = 26100;
@@ -24,8 +24,7 @@ export function sandboxBackendFor(
   platform: NodeJS.Platform,
   release: string
 ): SandboxBackend | null {
-  if (platform === "darwin") return "seatbelt";
-  if (platform === "linux") return "bubblewrap";
+  if (platform === "darwin" || platform === "linux") return "sandbox-runtime";
   if (platform === "win32" && windowsBuild(release) >= MINIMUM_WINDOWS_BUILD)
     return "mxc";
 

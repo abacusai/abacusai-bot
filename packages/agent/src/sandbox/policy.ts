@@ -45,11 +45,10 @@ export interface SandboxPolicy {
 }
 
 /**
- * Outbound network, either open or only through the loopback egress proxy
- * (egress.ts), which holds an unlisted host while the user is asked. Open
- * carries the reason when confinement was wanted but not possible.
+ * Outbound network: open, or only through the runtime's proxies, which hold
+ * an unlisted host while the user is asked (runtime.ts).
  */
-export type NetworkPolicy = { kind: "open" } | { kind: "proxy"; port: number };
+export type NetworkPolicy = { kind: "open" } | { kind: "filtered" };
 
 /**
  * Off unless something asks for it. The desktop sets ABACUSAI_BOT_SANDBOX=auto
@@ -101,8 +100,8 @@ export function resolvePolicy(
   options: {
     /** Stores the user approved for this command, on top of the environment's. */
     approvedReads?: readonly string[];
-    /** The egress proxy's port; null when none is listening. */
-    egressPort?: number | null;
+    /** Whether the backend can force connections through the asking proxy. */
+    filteredNetwork?: boolean;
   } = {}
 ): SandboxPolicy {
   const temps = new Set<string>();
@@ -121,8 +120,8 @@ export function resolvePolicy(
       exemptions: [...readableExemptions(), ...(options.approvedReads ?? [])],
     }),
     network:
-      options.egressPort != null
-        ? { kind: "proxy", port: options.egressPort }
+      options.filteredNetwork === true
+        ? { kind: "filtered" }
         : { kind: "open" },
   };
 }

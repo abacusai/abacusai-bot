@@ -18,12 +18,11 @@ import { posixShellOperations } from "./posix-shell.js";
 import {
   backendName,
   decide,
-  egressProxy,
   mentionedSecretPaths,
   networkConfinable,
-  proxyEnvironment,
   resolvePolicy,
   sandboxEnforcement,
+  violations,
   type CredentialApprovals,
 } from "./sandbox/index.js";
 import {
@@ -165,7 +164,10 @@ function dockerOperations(image: string): BashOperations {
         const onAbort = (): void => {
           terminate();
         };
-        options.signal?.addEventListener("abort", onAbort, { once: true });
+        // The decision above is asynchronous; an abort that landed meanwhile
+        // must still take the command down.
+        if (options.signal?.aborted === true) terminate();
+        else options.signal?.addEventListener("abort", onAbort, { once: true });
 
         const timer = deadline(options.timeout, terminate);
 
@@ -208,26 +210,19 @@ function localSandboxedOperations(
     exec: async (command, cwd, options) => {
       const policy = resolvePolicy(currentMode(), cwd, {
         approvedReads: approvals?.consume(command) ?? [],
-        egressPort: networkConfinable() ? egressProxy().listeningPort : null,
+        filteredNetwork: networkConfinable(),
       });
 
       // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
       // inheriting this process's env would mean the launchd PATH.
       const shell = loginEnvironment();
-      const inherited =
+      const childEnv =
         options.env != null
           ? withMergedPath(options.env, shell.PATH ?? shell.Path)
           : shell;
-      // Tools find the proxy through the environment; the sandbox makes it the
-      // only way out.
-      const childEnv =
-        policy.network.kind === "proxy"
-          ? { ...inherited, ...proxyEnvironment(policy.network.port) }
-          : inherited;
 
-      // Built first: the sandbox binds back the PATH entries the CHILD will
-      // use.
-      const decision = decide(policy, command, cwd, childEnv);
+      const commandId = `command-${++commandCounter}`;
+      const decision = await decide(policy, command, cwd, childEnv, commandId);
 
       if (decision.kind === "refused") {
         options.onData(Buffer.from(`${decision.message}\n`));
@@ -281,7 +276,10 @@ function localSandboxedOperations(
         const onAbort = (): void => {
           terminate();
         };
-        options.signal?.addEventListener("abort", onAbort, { once: true });
+        // The decision above is asynchronous; an abort that landed meanwhile
+        // must still take the command down.
+        if (options.signal?.aborted === true) terminate();
+        else options.signal?.addEventListener("abort", onAbort, { once: true });
 
         const timer = deadline(options.timeout, terminate);
 
@@ -309,10 +307,12 @@ function localSandboxedOperations(
           options.signal?.removeEventListener("abort", onAbort);
           unregister();
           if (code !== 0 && decision.kind === "confined") {
+            // The runtime's own account first (what was denied and why),
+            // then the way to a prompt for a hidden store.
+            const denied = violations(commandId);
+            if (denied != null) options.onData(Buffer.from(`\n${denied}\n`));
             const note = hiddenStoreNote(tail, policy.secrets.promptable);
             if (note != null) options.onData(Buffer.from(note));
-            const refused = refusedHostNote(tail);
-            if (refused != null) options.onData(Buffer.from(refused));
           }
           resolve({ exitCode: code ?? 1 });
         });
@@ -323,26 +323,13 @@ function localSandboxedOperations(
 
 const OUTPUT_TAIL_CHARS = 16_384;
 
+let commandCounter = 0;
+
 /**
  * What a failed command is told when its output names a hidden store. The
  * prompt is raised by naming the path, so the model is pointed at that rather
  * than at a workaround.
  */
-/**
- * What a failed command is told when the proxy refused a host: the user said
- * no, or could not be asked, and the answer is theirs to change.
- */
-export function refusedHostNote(output: string): string | null {
-  const match = /(\S+) is not allowed by the sandbox/.exec(output);
-  if (match == null) return null;
-
-  return (
-    `\n[sandbox] The connection to ${match[1]} was refused: the user did not ` +
-    `allow it, or could not be asked. Do not route around the sandbox; ` +
-    `tell the user which host the command needs.\n`
-  );
-}
-
 export function hiddenStoreNote(
   output: string,
   promptable: readonly string[]
