@@ -137,6 +137,7 @@ import type { ExperienceRuntime } from "./services/updates/experience/runtime";
 import { consumeRelaunchHidden } from "./services/updates/relaunch-hidden";
 import { registerUpdateHandlers } from "./services/updates/update-handler";
 import { UpdateService } from "./services/updates/update-service";
+import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 
 const legacyUserDataDir = app.getPath("userData");
@@ -1236,7 +1237,6 @@ app
         ".tiff": "image/tiff",
       };
       const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
-      const GUEST_WORKSPACE_PREFIX = "/workspace";
 
       ipcMain.handle(
         "files:read-image-as-data-url",
@@ -1251,56 +1251,15 @@ app
               };
             }
 
-            // Guest paths are POSIX (the guest is Linux); the host may not be.
-            let resolved: string;
-            if (
-              filePath.startsWith(GUEST_WORKSPACE_PREFIX + "/") ||
-              filePath === GUEST_WORKSPACE_PREFIX
-            ) {
-              const rel = path.posix.relative(GUEST_WORKSPACE_PREFIX, filePath);
-              resolved = rel
-                ? path.join(hostRoot, ...rel.split("/"))
-                : hostRoot;
-            } else if (path.isAbsolute(filePath)) {
-              resolved = filePath;
-            } else {
-              resolved = path.join(hostRoot, ...filePath.split(/[\\/]/));
-            }
-
-            const ext = path.extname(resolved).toLowerCase();
+            const ext = path.extname(filePath).toLowerCase();
             const mimeType = IMAGE_MIME[ext];
             if (!mimeType) {
               return { success: false, error: "unsupported-extension" };
             }
 
-            let realFile: string;
-            let realRoot: string;
-            try {
-              realFile = await fs.realpath(resolved);
-              realRoot = await fs.realpath(hostRoot);
-            } catch (err) {
-              return {
-                success: false,
-                error:
-                  (err as NodeJS.ErrnoException | null)?.code === "ENOENT"
-                    ? "not-found"
-                    : err instanceof Error
-                      ? err.message
-                      : "realpath-failed",
-              };
-            }
-
-            const rel = path.relative(realRoot, realFile);
-            const escapes =
-              !rel || rel.startsWith("..") || path.isAbsolute(rel);
-            if (escapes && realFile !== realRoot) {
-              return { success: false, error: "outside-root" };
-            }
-
-            const stat = await fs.stat(realFile);
-            if (!stat.isFile()) {
-              return { success: false, error: "not-a-file" };
-            }
+            const file = await openHostFile(filePath, hostRoot);
+            if (file.ok === false) return { success: false, error: file.error };
+            const { realFile, stat } = file;
             if (stat.size > MAX_IMAGE_BYTES) {
               return {
                 success: false,
@@ -1325,7 +1284,6 @@ app
     // Same path resolution and sandboxing as the image reader above.
     {
       const MAX_TEXT_BYTES_DEFAULT = 524288; // 512 KB
-      const GUEST_WS = "/workspace";
 
       ipcMain.handle(
         "files:read-file-as-text",
@@ -1345,46 +1303,9 @@ app
 
             const maxBytes = args?.maxBytes ?? MAX_TEXT_BYTES_DEFAULT;
 
-            let resolved: string;
-            if (filePath.startsWith(GUEST_WS + "/") || filePath === GUEST_WS) {
-              const rel = path.posix.relative(GUEST_WS, filePath);
-              resolved = rel
-                ? path.join(hostRoot, ...rel.split("/"))
-                : hostRoot;
-            } else if (path.isAbsolute(filePath)) {
-              resolved = filePath;
-            } else {
-              resolved = path.join(hostRoot, ...filePath.split(/[\\/]/));
-            }
-
-            let realFile: string;
-            let realRoot: string;
-            try {
-              realFile = await fs.realpath(resolved);
-              realRoot = await fs.realpath(hostRoot);
-            } catch (err) {
-              return {
-                success: false,
-                error:
-                  (err as NodeJS.ErrnoException | null)?.code === "ENOENT"
-                    ? "not-found"
-                    : err instanceof Error
-                      ? err.message
-                      : "realpath-failed",
-              };
-            }
-
-            const rel = path.relative(realRoot, realFile);
-            const escapes =
-              !rel || rel.startsWith("..") || path.isAbsolute(rel);
-            if (escapes && realFile !== realRoot) {
-              return { success: false, error: "outside-root" };
-            }
-
-            const stat = await fs.stat(realFile);
-            if (!stat.isFile()) {
-              return { success: false, error: "not-a-file" };
-            }
+            const file = await openHostFile(filePath, hostRoot);
+            if (file.ok === false) return { success: false, error: file.error };
+            const { realFile, stat } = file;
 
             const sizeBytes = stat.size;
 
@@ -1432,7 +1353,6 @@ app
       // Embedded images come back as base64 data URLs, so the payload lands
       // several times larger than the file; 200 MB wedged the renderer.
       const MAX_PPTX_BYTES = 60 * 1024 * 1024; // 60 MB
-      const GUEST_WS_PREFIX = "/workspace";
 
       ipcMain.handle(
         "files:read-pptx",
@@ -1447,47 +1367,9 @@ app
               };
             }
 
-            let resolved: string;
-            if (
-              filePath.startsWith(GUEST_WS_PREFIX + "/") ||
-              filePath === GUEST_WS_PREFIX
-            ) {
-              const rel = path.posix.relative(GUEST_WS_PREFIX, filePath);
-              resolved = rel
-                ? path.join(hostRoot, ...rel.split("/"))
-                : hostRoot;
-            } else if (path.isAbsolute(filePath)) {
-              resolved = filePath;
-            } else {
-              resolved = path.join(hostRoot, ...filePath.split(/[\\/]/));
-            }
-
-            let realFile: string;
-            let realRoot: string;
-            try {
-              realFile = await fs.realpath(resolved);
-              realRoot = await fs.realpath(hostRoot);
-            } catch (err) {
-              return {
-                success: false,
-                error:
-                  (err as NodeJS.ErrnoException | null)?.code === "ENOENT"
-                    ? "not-found"
-                    : err instanceof Error
-                      ? err.message
-                      : "realpath-failed",
-              };
-            }
-
-            const rel = path.relative(realRoot, realFile);
-            const escapes =
-              !rel || rel.startsWith("..") || path.isAbsolute(rel);
-            if (escapes && realFile !== realRoot) {
-              return { success: false, error: "outside-root" };
-            }
-
-            const stat = await fs.stat(realFile);
-            if (!stat.isFile()) return { success: false, error: "not-a-file" };
+            const file = await openHostFile(filePath, hostRoot);
+            if (file.ok === false) return { success: false, error: file.error };
+            const { realFile, stat } = file;
             if (stat.size > MAX_PPTX_BYTES) {
               return {
                 success: false,

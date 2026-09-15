@@ -135,7 +135,8 @@ describe("replacing an existing file", () => {
     expect(blocked?.block).toBe(true);
     expect(blocked.reason).toContain("too large");
     expect(backupsIn()).toHaveLength(0);
-  });
+    // Writing 26 MB is the point of the test, and a CI disk can take seconds.
+  }, 20_000);
 
   it("says nothing about backups when the file is new", async () => {
     const blocked = await pi.fire(
