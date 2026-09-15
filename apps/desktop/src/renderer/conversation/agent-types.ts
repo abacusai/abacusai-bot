@@ -604,6 +604,16 @@ export type PermissionRequest =
       port: number;
     })
   | (PermissionRequestBase & {
+      // The sandbox refused what a command tried; allowing runs it again.
+      type: "sandbox_denied";
+      command: string;
+      denials: Array<
+        | { kind: "read"; path: string }
+        | { kind: "write"; path: string }
+        | { kind: "host"; host: string; port: number }
+      >;
+    })
+  | (PermissionRequestBase & {
       type: "generic";
       toolName: string;
       inputSummary: string;

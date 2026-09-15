@@ -120,10 +120,11 @@ export function buildConfig(
   cwd: string,
   env: NodeJS.ProcessEnv = process.env
 ): Record<string, unknown> {
-  const writable =
-    policy.mode === "workspace-write"
-      ? [policy.workspaceRoot, ...policy.writableTemp]
-      : [...policy.writableTemp];
+  const writable = [
+    ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
+    ...policy.writableTemp,
+    ...policy.approvedWrites,
+  ];
   const denied = deniedPaths(policy.secrets, listSync);
 
   return {

@@ -44,6 +44,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     workspaceRoot: "/tmp/ws",
     writableTemp: ["/private/tmp"],
     secrets: { denied: [], allowed: [], promptable: [] },
+    approvedWrites: [],
     network: { kind: "filtered" },
     ...overrides,
   };

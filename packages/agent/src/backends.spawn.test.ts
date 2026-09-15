@@ -31,10 +31,20 @@ vi.mock("child_process", () => ({ spawn }));
  */
 const decide = vi.hoisted(() => vi.fn());
 
+/** What the runtime says it refused for the last command; empty by default. */
+const refusedByRuntime = vi.hoisted(() => ({ list: [] as unknown[] }));
+const hostsAllowed = vi.hoisted(() => ({
+  once: [] as string[],
+  session: [] as string[],
+}));
+
 vi.mock("./sandbox/index.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./sandbox/index.js")>()),
   decide,
   violations: () => null,
+  denials: () => refusedByRuntime.list,
+  allowHostOnce: (host: string) => hostsAllowed.once.push(host),
+  allowHostForSession: (host: string) => hostsAllowed.session.push(host),
 }));
 
 /** Run the command confined under a plain bash, the shape every backend yields. */
@@ -423,6 +433,9 @@ describe("running a command on this machine", () => {
     process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
     process.env.ABACUSAI_BOT_SANDBOX = "strict";
     confined();
+    refusedByRuntime.list = [];
+    hostsAllowed.once = [];
+    hostsAllowed.session = [];
   });
 
   const localOperations = async (): Promise<BashOperations> => {
@@ -484,7 +497,10 @@ describe("running a command on this machine", () => {
     child.finish(0);
     await running;
 
-    expect((lastSpawn().options as { env: unknown }).env).toEqual(SHELL_ENV);
+    expect((lastSpawn().options as { env: unknown }).env).toEqual({
+      ...SHELL_ENV,
+      NODE_USE_ENV_PROXY: "1",
+    });
   });
 
   it("keeps the caller's PATH in front of the shell's, and reaches both", async () => {
@@ -514,7 +530,11 @@ describe("running a command on this machine", () => {
 
     const { env } = lastSpawn().options as { env: Record<string, string> };
 
-    expect(env).toEqual({ TOKEN: "abc", PATH: SHELL_ENV.PATH });
+    expect(env).toEqual({
+      TOKEN: "abc",
+      PATH: SHELL_ENV.PATH,
+      NODE_USE_ENV_PROXY: "1",
+    });
   });
 
   it("merges into the caller's own spelling of PATH", async () => {
@@ -766,5 +786,90 @@ describe("running a project command through the backend", () => {
 
     child.finish(null);
     await running;
+  });
+});
+
+describe("asking about what the sandbox refused", () => {
+  beforeEach(() => {
+    process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
+    process.env.ABACUSAI_BOT_SANDBOX = "strict";
+    onPlatform("darwin");
+    confined();
+    refusedByRuntime.list = [
+      { kind: "write", path: "/Users/dev/Desktop/out.txt" },
+      { kind: "host", host: "api.test", port: 443 },
+    ];
+    hostsAllowed.once = [];
+    hostsAllowed.session = [];
+  });
+
+  /** Two children in turn: the refused run, then the retry. */
+  const twoRuns = (): FakeChild[] => {
+    const first = child;
+    const second = new FakeChild();
+    let calls = 0;
+    spawn.mockImplementation(() => (++calls === 1 ? first : second));
+
+    return [first, second];
+  };
+
+  it("asks once, then runs the command again with what was allowed", async () => {
+    const { backendOperations } = await load();
+    const { SandboxApprovals } = await import("./sandbox/approvals.js");
+    const approvals = new SandboxApprovals();
+    const asked: unknown[] = [];
+    approvals.askDenials = async (command, refused) => {
+      asked.push({ command, refused });
+
+      return { once: refused, session: [] };
+    };
+    const operations = backendOperations(approvals);
+    if (operations == null) throw new Error("expected local operations");
+    const [first, second] = twoRuns();
+
+    const running = exec(operations, "cp x ~/Desktop/out.txt");
+    first!.finish(1);
+    await vi.waitFor(() => expect(spawn).toHaveBeenCalledTimes(2));
+    second!.finish(0);
+    const { exitCode, output } = await running;
+
+    expect(exitCode).toBe(0);
+    expect(asked).toHaveLength(1);
+    expect(output).toContain("running the command again");
+    // The write was handed to the retry's policy, the host to the proxy.
+    expect(decide.mock.calls[1]?.[0]).toMatchObject({
+      approvedWrites: ["/Users/dev/Desktop/out.txt"],
+    });
+    expect(hostsAllowed.once).toEqual(["api.test"]);
+    expect(hostsAllowed.session).toEqual([]);
+  });
+
+  it("keeps the refusal when the user says no", async () => {
+    const { backendOperations } = await load();
+    const { SandboxApprovals } = await import("./sandbox/approvals.js");
+    const approvals = new SandboxApprovals();
+    approvals.askDenials = async () => null;
+    const operations = backendOperations(approvals);
+    if (operations == null) throw new Error("expected local operations");
+
+    const running = exec(operations, "cp x ~/Desktop/out.txt");
+    child.finish(1);
+    const { exitCode } = await running;
+
+    expect(exitCode).toBe(1);
+    expect(spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not ask when nobody can answer, and never retries twice", async () => {
+    const { backendOperations } = await load();
+    const operations = backendOperations();
+    if (operations == null) throw new Error("expected local operations");
+
+    const running = exec(operations, "cp x ~/Desktop/out.txt");
+    child.finish(1);
+    const { exitCode } = await running;
+
+    expect(exitCode).toBe(1);
+    expect(spawn).toHaveBeenCalledTimes(1);
   });
 });

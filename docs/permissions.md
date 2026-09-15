@@ -104,12 +104,17 @@ A command that names one of the developer stores (SSH and GPG keys, cloud
 credentials, kube and docker config, `.netrc`, `.pypirc`) asks first, even
 when the command itself was already allowed. The card lists the paths.
 "Allow once" unhides them for that command; "Always" keeps them readable for
-the rest of the session. The app's own settings, browser data and keychain
-files are never offered. A command that reaches a store without naming it,
-through a script or a variable, fails at the kernel and is told to name the
-path so the prompt can be raised. `ABACUSAI_BOT_SANDBOX_READABLE`, a
-path-delimited list where `~` expands to the home directory, exempts a path
-without prompting.
+the rest of the session. `ABACUSAI_BOT_SANDBOX_READABLE`, a path-delimited
+list where `~` expands to the home directory, exempts a path without
+prompting.
+
+When the sandbox refuses something a command tried, a write outside the
+workspace, a read of a hidden store the command did not name, or a host the
+proxy turned down, a card lists exactly what was refused. "Allow" runs the
+same command again with that access; "Always" keeps it for the session;
+"Deny" leaves the refusal. The card cannot help a tool that ignores the proxy
+variables, since its connection never reached the proxy; Node tools are told
+to honour them (`NODE_USE_ENV_PROXY=1`, which Node 22.21 and 24 understand).
 
 On macOS and Linux, outbound connections from a confined command go only
 through the runtime's HTTP and SOCKS proxies. Package registries and code

@@ -1974,6 +1974,12 @@
     "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
     "credentialRead": "Reads a credential store the sandbox otherwise hides:",
     "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session"
+    "networkHostAlways": "Always allow {{host}} this session",
+    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
+    "sandboxDeniedAlways": "Always allow these this session",
+    "sandboxDeniedHost": "Reach {{host}}",
+    "sandboxDeniedRead": "Read {{path}}",
+    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
+    "sandboxDeniedWrite": "Write {{path}}"
   }
 }

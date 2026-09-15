@@ -120,12 +120,14 @@ import { buildRoster } from "./roster.js";
 import {
   allowHostForSession,
   backendName,
-  CredentialApprovals,
   ensureRuntime,
   networkConfinable,
   resolveSecretPaths,
+  SandboxApprovals,
   sandboxEnforcement,
   setHostDecider,
+  type Denial,
+  type DenialDecision,
 } from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { conversationSessionManager } from "./session-file.js";
@@ -570,8 +572,8 @@ export class AbacusBotSession {
   private readonly sessionAllowedTools = new Set<string>();
   /** Origins the user chose to always allow web_fetch for, this session. */
   private readonly sessionAllowedOrigins: string[] = [];
-  /** Hidden credential stores the user let commands read, once or for the session. */
-  private readonly credentialApprovals = new CredentialApprovals();
+  /** What the user let commands do beyond the sandbox, once or for the session. */
+  private readonly sandboxApprovals = new SandboxApprovals();
   /** Directories outside the workspace the user allowed reads from, this session. */
   private readonly sessionAllowedReadPaths: string[] = allowedPathsFromEnv();
   /**
@@ -992,7 +994,7 @@ export class AbacusBotSession {
         // Background runs go through the same operations as the foreground
         // ones, so `background: true` cannot become a way around the sandbox.
         operations:
-          backendOperations(this.credentialApprovals) ??
+          backendOperations(this.sandboxApprovals) ??
           createLocalBashOperations(),
         // A getter: refreshMcp swaps `this.mcp`, and captured routes would
         // call closed clients forever.
@@ -2609,7 +2611,7 @@ export class AbacusBotSession {
         allowedWritePaths: [...this.sessionAllowedWritePaths],
         allowedOrigins: [...this.sessionAllowedOrigins],
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
-        allowedCredentialPaths: this.credentialApprovals.sessionPaths,
+        allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
       });
 
       if (gate.kind === "allow") {
@@ -2744,7 +2746,78 @@ export class AbacusBotSession {
     if (!networkConfinable()) return;
 
     setHostDecider((host, port) => this.askNetworkHost(host, port));
+    this.sandboxApprovals.askDenials = (command, refused) =>
+      this.askDenials(command, refused);
     await ensureRuntime();
+  }
+
+  /**
+   * The sandbox refused what a command tried. The card lists it; "allow"
+   * lets the command run once more with those, "always" keeps them for the
+   * session. Null means the command stays refused.
+   */
+  private async askDenials(
+    command: string,
+    refused: Denial[]
+  ): Promise<DenialDecision | null> {
+    if (!this.canReachUser()) return null;
+
+    const permissionId = `perm-${++this.permissionCounter}`;
+    const input = { command, denials: refused };
+    const request: PermissionRequest = {
+      type: "sandbox_denied",
+      tool: {
+        id: permissionId,
+        name: "sandbox",
+        type: "tool",
+        input,
+        args: input,
+      },
+      displayName: "Allow what the sandbox refused",
+      command,
+      denials: refused,
+    };
+
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "asked",
+        permissionId,
+        toolName: "sandbox",
+        detail: refused.map((denial) => denial.kind).join(","),
+      });
+    }
+    this.options.emit({ type: "permission_needed", permissionId, request });
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.WaitingForToolPermission,
+    });
+
+    const decision = await this.awaitDecision(permissionId);
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.ExecutingTool,
+    });
+
+    const answer = typeof decision === "string" ? decision : decision.type;
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "decided",
+        permissionId,
+        toolName: "sandbox",
+        outcome: answer,
+      });
+    }
+
+    if (isAlwaysDecision(decision) || answer === "allowYolo")
+      return { once: refused, session: refused };
+    if (
+      answer === "accept" ||
+      answer === "accept_with_message" ||
+      answer === "background"
+    )
+      return { once: refused, session: [] };
+
+    return null;
   }
 
   /**
@@ -2895,9 +2968,9 @@ export class AbacusBotSession {
       request.credentialPaths != null
     ) {
       const command = String(tool.input.command ?? "");
-      this.credentialApprovals.approveOnce(command, request.credentialPaths);
+      this.sandboxApprovals.reads.approveOnce(command, request.credentialPaths);
       if (isAlwaysDecision(decision))
-        this.credentialApprovals.approveForSession(request.credentialPaths);
+        this.sandboxApprovals.reads.approveForSession(request.credentialPaths);
     }
 
     return verdict;
