@@ -21,6 +21,7 @@ import { notifyConversationQueueCleared } from "./background-processes.js";
  * the user decides; edit diffs are computed from the on-disk "before".
  */
 import { timezonePrompt } from "./bot/bot-time-tool.js";
+import { anchorCompactions } from "./compaction-anchor.js";
 import {
   agentDir,
   applyStoredApiKeys,
@@ -47,6 +48,7 @@ import batchReadTool from "./extensions/batch-read-tool.js";
 import budgets, { budgetStopReason } from "./extensions/budgets.js";
 import compactionPruner from "./extensions/compaction-pruner.js";
 import editTool from "./extensions/edit-tool.js";
+import emailFormat from "./extensions/email-format.js";
 import guardrails from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
@@ -605,10 +607,6 @@ export class AbacusBotSession {
   );
   /** Provider calls that failed and were retried this turn — see reportFailedCall. */
   private retriedCalls = 0;
-  /** Key for this turn's retry line; a later turn gets a line of its own. */
-  private retryNoticeKey: string | null = null;
-  /** Retry lines opened so far, so each turn's key is distinct. */
-  private retryNoticeEpisodes = 0;
   /** The turn in flight was stopped by the user — see reportTurnFailure. */
   private interrupted = false;
   /** Continuations spent on a malformed tool call this turn. */
@@ -810,6 +808,10 @@ export class AbacusBotSession {
               factory: background as unknown as (pi: ExtensionAPI) => void,
             },
             {
+              name: "abacusai-bot-email-format",
+              factory: emailFormat as unknown as (pi: ExtensionAPI) => void,
+            },
+            {
               name: "abacusai-bot-compaction-pruner",
               factory: compactionPruner as unknown as (
                 pi: ExtensionAPI
@@ -1001,6 +1003,7 @@ export class AbacusBotSession {
     });
 
     this.session = created.session;
+    anchorCompactions(this.session.sessionManager);
     this.unsubscribe = this.session.subscribe((event) => this.onPiEvent(event));
 
     this.emitReady();
@@ -1147,7 +1150,6 @@ export class AbacusBotSession {
 
     // Per turn: the same provider failing next turn is news again.
     this.retriedCalls = 0;
-    this.retryNoticeKey = null;
     this.interrupted = false;
     this.malformedContinuations = 0;
     this.contextCompactions = 0;
@@ -1747,16 +1749,10 @@ export class AbacusBotSession {
   private emitRoutingLine(message: string, severity: "info" | "warning"): void {
     this.openLlmRoutingKey ??= `openllm-routing-${++this
       .openLlmRoutingEpisodes}`;
-    // Which model the pool picked is the router's business: the user chose
-    // "openllm/auto" so as not to think about it. Only the display is dropped;
-    // warnings still show, because a stall with no explanation reads as a hang.
-    if (severity === "info") return;
-    this.emitAgentEvent({
-      type: "notification",
-      severity,
-      message,
-      notificationKey: this.openLlmRoutingKey,
-    });
+    // Which model the pool picked, and which one failed, is the router's
+    // business: the user chose "openllm/auto" so as not to think about it.
+    // The line goes to the log, never the chat.
+    process.stderr.write(`[openllm] ${severity}: ${message}\n`);
   }
 
   /**
@@ -1834,16 +1830,11 @@ export class AbacusBotSession {
     }
 
     this.retriedCalls += 1;
-    this.retryNoticeKey ??= `provider-retry-${++this.retryNoticeEpisodes}`;
-    this.emitAgentEvent({
-      type: "notification",
-      severity: "warning",
-      message:
-        this.retriedCalls === 1
-          ? `${providerFailureSummary(text)} — retrying.`
-          : `${providerFailureSummary(text)} — retrying (attempt ${this.retriedCalls + 1}).`,
-      notificationKey: this.retryNoticeKey,
-    });
+    // A retry is the agent's business; the chat shows the turn's outcome. The
+    // provider's text is in the log and the session file.
+    process.stderr.write(
+      `[provider] ${providerFailureSummary(text)} — retrying (attempt ${this.retriedCalls + 1}).\n`
+    );
   }
 
   /**
@@ -2230,6 +2221,7 @@ export class AbacusBotSession {
       });
 
       this.session = created.session;
+      anchorCompactions(this.session.sessionManager);
       this.unsubscribe = this.session.subscribe((event) =>
         this.onPiEvent(event)
       );

@@ -17,7 +17,15 @@ import {
   FakeProvider,
   fakeProviderConfig,
 } from "@abacus-ai/test-support/fake-provider";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 // A model call that goes quiet is given up on after this long; the real
 // window is two minutes, which no test should sit through.
@@ -105,6 +113,26 @@ class Harness {
 }
 
 let harnesses: Harness[] = [];
+
+/**
+ * What the session wrote to its log. Routing and retry lines go there and
+ * never to the chat, so the tests read them back from here.
+ */
+function captureLog(): { lines: string[]; restore: () => void } {
+  const lines: string[] = [];
+  const spy = vi.spyOn(process.stderr, "write").mockImplementation(((
+    chunk: unknown
+  ) => {
+    lines.push(String(chunk));
+    return true;
+  }) as never);
+
+  return { lines, restore: () => spy.mockRestore() };
+}
+
+/** The notices the chat would draw. */
+const chatNotices = (harness: Harness): string[] =>
+  harness.agent("notification").map((event) => event.message);
 
 function session(
   options: { mode?: string; hostServices?: boolean } = {}
@@ -958,6 +986,7 @@ describe("OpenLLM", () => {
     // nothing and then an error. The stalled call is abandoned and the pool
     // moves on, the same as for a model that answered with a failure.
     const harness = session({ mode: "yolo" });
+    const log = captureLog();
 
     provider.scriptSequence([
       { stall: {} },
@@ -972,18 +1001,19 @@ describe("OpenLLM", () => {
 
     expect(harness.text).toContain("answered by the next model");
     expect(harness.agent("error")).toHaveLength(0);
-    expect(
-      harness
-        .agent("notification")
-        .map((event) => event.message)
-        .join("\n")
-    ).toMatch(/failed \(no reply in 1s\) — routing to ollama\/small/);
+    // The rotation is logged, not shown: the chat carries the answer.
+    expect(log.lines.join("")).toMatch(
+      /failed \(no reply in 1s\) — routing to ollama\/small/
+    );
+    expect(chatNotices(harness).join("\n")).not.toMatch(/routing to/);
     // Still the router in the picker: which model answered is its business.
     expect(harness.agent("model_changed").at(-1)?.model).toBe("openllm/auto");
+    log.restore();
   });
 
   it("moves the turn to the next model when the provider fails", async () => {
     const harness = session({ mode: "yolo" });
+    const log = captureLog();
 
     provider.scriptSequence([
       { fail: { status: 429, message: "rate limited upstream" } },
@@ -997,20 +1027,16 @@ describe("OpenLLM", () => {
     // terminal error painted over it.
     expect(harness.text).toContain("recovered on the second model");
     expect(harness.agent("error")).toHaveLength(0);
-    // The failure is a warning, and warnings still show: a stall with no
-    // explanation reads as the app hanging.
-    expect(
-      harness
-        .agent("notification")
-        .map((event) => event.message)
-        .join("\n")
-    ).toMatch(/routing to ollama\/small/);
+    expect(log.lines.join("")).toMatch(/routing to ollama\/small/);
+    expect(chatNotices(harness).join("\n")).not.toMatch(/routing to/);
     // The picker keeps highlighting the router, not the model of the day.
     expect(harness.agent("model_changed").at(-1)?.model).toBe("openllm/auto");
+    log.restore();
   });
 
-  it("writes every routing step to one line, and settles it on the model that answers", async () => {
+  it("keeps the whole routing episode out of the chat", async () => {
     const harness = session({ mode: "yolo" });
+    const log = captureLog();
 
     provider.scriptSequence([
       { fail: { status: 429, message: "rate limited upstream" } },
@@ -1020,22 +1046,19 @@ describe("OpenLLM", () => {
     await harness.session.send("hi");
     await harness.until(() => harness.agent("turn_complete").length > 0);
 
-    const routing = harness
-      .agent("notification")
-      .filter((event) => event.notificationKey != null);
-
-    // One line, and only the part worth reading: the failure it routed
-    // around. The opening and the settling are info, and info about which
-    // model won is withheld — so what is left is the warning alone, still on
-    // its own single line.
-    expect(new Set(routing.map((event) => event.notificationKey)).size).toBe(1);
-    expect(routing.map((event) => event.message)).toEqual([
-      "ollama/big failed (429) — routing to ollama/small…",
-    ]);
+    // Opening, failure and settling are all the router's business.
+    expect(
+      harness.agent("notification").filter((e) => e.notificationKey != null)
+    ).toEqual([]);
+    expect(log.lines.join("")).toContain(
+      "ollama/big failed (429) — routing to ollama/small…"
+    );
+    log.restore();
   });
 
   it("says the code, not the provider's paragraph about it", async () => {
     const harness = session({ mode: "yolo" });
+    const log = captureLog();
 
     provider.scriptSequence([
       {
@@ -1051,14 +1074,13 @@ describe("OpenLLM", () => {
     await harness.session.send("hi");
     await harness.until(() => harness.agent("turn_complete").length > 0);
 
-    const failure = harness
-      .agent("notification")
-      .filter((event) => event.notificationKey != null)
-      .map((event) => event.message)
-      .find((message) => message.includes("failed"));
+    const failure = log.lines.find((line) => line.includes("failed"));
 
-    expect(failure).toBe("ollama/big failed (429) — routing to ollama/small…");
+    expect(failure).toContain(
+      "ollama/big failed (429) — routing to ollama/small…"
+    );
     expect(failure).not.toMatch(/openrouter\.ai|retry shortly/);
+    log.restore();
   });
 
   it("surfaces the failure once the whole pool is exhausted", async () => {
@@ -1147,12 +1169,6 @@ describe("OpenLLM", () => {
       expect(harness.agent("retry").at(0)?.maxAttempts).toBe(1);
       expect(harness.text).toContain("recovered after one retry");
       expect(harness.agent("error")).toHaveLength(0);
-      expect(
-        harness
-          .agent("notification")
-          .map((event) => event.message)
-          .join("\n")
-      ).toMatch(/routing to ollama\/small/);
     });
 
     it("keeps the full budget on a concrete model, which has no fallback", async () => {
@@ -1177,8 +1193,9 @@ describe("OpenLLM", () => {
 });
 
 describe("a provider failure the turn recovered from", () => {
-  it("says what went wrong in a line, not the provider's paragraph", async () => {
+  it("is logged in a line, not the provider's paragraph, and never shown", async () => {
     const harness = session({ mode: "yolo" });
+    const log = captureLog();
 
     provider.scriptSequence([
       {
@@ -1194,17 +1211,17 @@ describe("a provider failure the turn recovered from", () => {
     await harness.session.send("hi");
     await harness.until(() => harness.agent("turn_complete").length > 0);
 
-    const retries = harness
-      .agent("notification")
-      .map((event) => event.message)
-      .filter((message) => message.includes("retrying"));
+    const retries = log.lines.filter((line) => line.includes("retrying"));
 
-    expect(retries.at(0)).toBe(
-      "The model provider is rate-limited — retrying."
+    expect(retries.at(0)).toContain(
+      "The model provider is rate-limited — retrying (attempt 2)."
     );
     expect(retries.join("\n")).not.toMatch(
       /openrouter\.ai|429|add your own key/
     );
+    // The chat sees the recovered turn, not the retry.
+    expect(chatNotices(harness).join("\n")).not.toMatch(/retrying/);
+    log.restore();
   });
 });
 

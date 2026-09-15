@@ -18,6 +18,27 @@ const MAX_INLINE_CHARS = 30_000;
 const HEAD_CHARS = 18_000;
 const TAIL_CHARS = 6_000;
 
+/**
+ * Connector results inline far less: a Gmail search returns whole bodies, and
+ * the model needs subjects, senders and snippets. The rest is on disk.
+ */
+const CONNECTOR_TOOL_PREFIX = "abacus-connectors_";
+const CONNECTOR_MAX_INLINE_CHARS = 6_000;
+const CONNECTOR_HEAD_CHARS = 4_500;
+const CONNECTOR_TAIL_CHARS = 1_000;
+
+/** How much of a result stays inline, by tool. */
+export const inlineBudget = (
+  toolName: string
+): { max: number; head: number; tail: number } =>
+  toolName.startsWith(CONNECTOR_TOOL_PREFIX)
+    ? {
+        max: CONNECTOR_MAX_INLINE_CHARS,
+        head: CONNECTOR_HEAD_CHARS,
+        tail: CONNECTOR_TAIL_CHARS,
+      }
+    : { max: MAX_INLINE_CHARS, head: HEAD_CHARS, tail: TAIL_CHARS };
+
 /** Cap on one read_output response, so retrieval can't undo the spill. */
 const MAX_RETRIEVAL_CHARS = 20_000;
 const DEFAULT_LINE_LIMIT = 200;
@@ -150,15 +171,16 @@ export default function (pi: ExtensionAPI) {
     // read_output's own result is already bounded; spilling it would nest.
     if (event.toolName === "read_output") return;
 
+    const budget = inlineBudget(event.toolName);
     let changed = false;
     const content = event.content.map((block) => {
-      if (block.type !== "text" || block.text.length <= MAX_INLINE_CHARS)
+      if (block.type !== "text" || block.text.length <= budget.max)
         return block;
       changed = true;
 
-      const head = block.text.slice(0, HEAD_CHARS);
-      const tail = block.text.slice(-TAIL_CHARS);
-      const dropped = block.text.length - HEAD_CHARS - TAIL_CHARS;
+      const head = block.text.slice(0, budget.head);
+      const tail = block.text.slice(-budget.tail);
+      const dropped = block.text.length - budget.head - budget.tail;
       const id = spill(event.toolName, block.text);
 
       // The path is given outright. "Saved as out-1" read as a file name, and
