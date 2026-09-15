@@ -69,6 +69,20 @@ async function siblingReadingAs(
   return matches.length === 1 ? path.join(dir, matches[0]!) : null;
 }
 
+/**
+ * The path that exists for a path the agent named: the path itself, or the
+ * one entry in its directory that reads the same. Null when neither does.
+ */
+export async function locateHostFile(resolved: string): Promise<string | null> {
+  try {
+    await fs.access(resolved);
+    return resolved;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException | null)?.code !== "ENOENT") return null;
+  }
+  return siblingReadingAs(path.dirname(resolved), path.basename(resolved));
+}
+
 export type HostFile =
   | { ok: true; realFile: string; stat: Stats }
   | {
@@ -92,17 +106,9 @@ export async function openHostFile(
   let realRoot: string;
   try {
     realRoot = await fs.realpath(hostRoot);
-    try {
-      realFile = await fs.realpath(resolved);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException | null)?.code !== "ENOENT") throw err;
-      const sibling = await siblingReadingAs(
-        path.dirname(resolved),
-        path.basename(resolved)
-      );
-      if (sibling == null) return { ok: false, error: "not-found" };
-      realFile = await fs.realpath(sibling);
-    }
+    const located = await locateHostFile(resolved);
+    if (located == null) return { ok: false, error: "not-found" };
+    realFile = await fs.realpath(located);
   } catch (err) {
     return {
       ok: false,

@@ -6,6 +6,10 @@
  * sends nothing to the pane at all. Opening the pane is a notification rather
  * than a call, so what is asserted here is the broadcast.
  */
+import fs from "fs";
+import os from "os";
+import path from "path";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { sessionConversationKey } from "#shared/conversation-scope";
@@ -90,6 +94,32 @@ describe("presenting from a bot's chat", () => {
     const text = result.content.map((part) => part.text ?? "").join("");
     expect(text).toContain("http://localhost:5173");
     expect(text).not.toContain("preview pane");
+  });
+});
+
+describe("a name the model transcribed", () => {
+  it("is located by how it reads, and declared under its real name", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "present-"));
+    const real = path.join(
+      dir,
+      "Screenshot 2026-09-14 at 12.55.59\u202fAM.png"
+    );
+    fs.writeFileSync(real, "png");
+
+    const result = await (server() as unknown as Executable).executeTool(
+      "present_deliverable",
+      {
+        items: [
+          { path: path.join(dir, "Screenshot 2026-09-14 at 12.55.59 AM.png") },
+        ],
+      },
+      "session-1"
+    );
+
+    const text = result.content.map((part) => part.text ?? "").join("");
+    expect(text).toContain(`[artifact] ${real}`);
+    expect(text).not.toContain("Not presented");
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });
 
