@@ -78,10 +78,11 @@ call that started it.
 
 ### Kernel sandbox
 
-macOS and Linux can run commands under an optional kernel sandbox. Plan mode
-allows no writes. Default and Auto-Accept allow writes to the workspace and
-temporary directories. Bypass remains unconfined. Network access is not
-restricted.
+macOS, Linux and Windows 11 24H2 or newer can run commands under an optional
+kernel sandbox: Seatbelt, bubblewrap, and a Microsoft process container run by
+the `wxc-exec` runner the app ships. Plan mode allows no writes. Default and
+Auto-Accept allow writes to the workspace and temporary directories. Bypass
+remains unconfined. Network access is not restricted.
 
 Reads are allowed everywhere except a short list of credential stores: SSH
 private keys, GPG private keys, cloud CLI credential and token caches (AWS,
@@ -105,9 +106,10 @@ without prompting.
 
 The sandbox applies to shell commands, including commands started by delegated
 agents and verification tools. It does not confine Electron, model requests,
-MCP tools, device tools, or service connectors. Windows does not provide this
-backend. `ABACUSAI_BOT_SANDBOX=strict` refuses commands when no sandbox is
-available; `auto` runs them unconfined on a platform with no backend.
+MCP tools, device tools, or service connectors. A Windows older than 24H2
+(build 26100) has no backend. `ABACUSAI_BOT_SANDBOX=strict` refuses commands
+when no sandbox is available; `auto` runs them unconfined on a platform with
+no backend, and refuses when the platform's backend exists but cannot start.
 
 ### Docker
 

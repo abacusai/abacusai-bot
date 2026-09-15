@@ -54,6 +54,7 @@ export const settingsQueryKeys = {
     all: ["settings", "capabilities"] as const,
     toolsets: ["settings", "capabilities", "toolsets"] as const,
     sandbox: ["settings", "capabilities", "sandbox"] as const,
+    sandboxSupport: ["settings", "capabilities", "sandbox-support"] as const,
     xaiSearch: ["settings", "capabilities", "xai-search"] as const,
     execBackend: ["settings", "capabilities", "exec-backend"] as const,
   },

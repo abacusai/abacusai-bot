@@ -143,7 +143,7 @@ describe("the decision table", () => {
   it("does not tell the model to give up, since a later attempt may work", () => {
     // A probe that ran out of time is deliberately left uncached so the next
     // command tries again; a refusal saying "do not retry" contradicts that.
-    for (const backend of ["seatbelt", "bubblewrap"] as const) {
+    for (const backend of ["seatbelt", "bubblewrap", "mxc"] as const) {
       const message = unavailableBackendMessage(backend);
 
       expect(message).not.toContain("do not retry");

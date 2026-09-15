@@ -91,7 +91,21 @@ export function secretEntries(
     { path: path.join(app, "electron") },
   ];
 
-  if (platform === "darwin") {
+  if (platform === "win32") {
+    const local = env.LOCALAPPDATA ?? at("AppData", "Local");
+    const roaming = env.APPDATA ?? at("AppData", "Roaming");
+    entries.push(
+      // DPAPI master keys and the Credential Manager vault.
+      { path: path.join(roaming, "Microsoft", "Protect") },
+      { path: path.join(roaming, "Microsoft", "Credentials") },
+      { path: path.join(local, "Microsoft", "Credentials") },
+      { path: path.join(local, "Google", "Chrome", "User Data") },
+      { path: path.join(local, "Chromium", "User Data") },
+      { path: path.join(local, "BraveSoftware", "Brave-Browser", "User Data") },
+      { path: path.join(local, "Microsoft", "Edge", "User Data") },
+      { path: path.join(roaming, "Mozilla", "Firefox", "Profiles") }
+    );
+  } else if (platform === "darwin") {
     entries.push(
       { path: at("Library", "Keychains") },
       { path: at("Library", "Cookies") },

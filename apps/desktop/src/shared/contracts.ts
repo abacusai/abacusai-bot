@@ -848,6 +848,13 @@ export interface McpBrowserStatus {
   approval: BrowserApproval;
 }
 
+/** Which kernel sandbox this machine has; null means commands run unconfined. */
+export interface SandboxSupport {
+  backend: "seatbelt" | "bubblewrap" | "mxc" | null;
+  /** The Windows build the sandbox needs, for the message on an older one. */
+  minimumWindowsBuild: number;
+}
+
 /** A local simulator, emulator or device; mirrors main's DeviceInfo. */
 export interface LocalDeviceInfo {
   platform: "ios" | "android";
@@ -1795,6 +1802,8 @@ export interface AgentApi {
   setMcpBrowserEnabled: (enabled: boolean) => Promise<McpBrowserStatus>;
   /** Whether shell commands run confined by the OS sandbox. Off by default. */
   getSandboxEnabled: () => Promise<boolean>;
+  /** Which kernel sandbox this machine has, if any. */
+  getSandboxSupport: () => Promise<SandboxSupport>;
   getNotificationSettings: () => Promise<NotificationSettings>;
   setNotificationSettings: (
     next: NotificationSettings

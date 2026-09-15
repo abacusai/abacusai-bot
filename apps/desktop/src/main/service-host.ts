@@ -7,6 +7,10 @@ import os from "node:os";
  */
 import path from "path";
 
+import {
+  MINIMUM_WINDOWS_BUILD,
+  sandboxBackendFor,
+} from "@abacus-ai/agent/sandbox-support";
 import { connectorById } from "@abacus-ai/connectors/registry";
 import { app } from "electron";
 
@@ -47,6 +51,7 @@ import type {
   AgentMcpLogEntry,
   AgentMcpServer,
   McpBrowserStatus,
+  SandboxSupport,
   DeviceStatus,
   LocalDeviceInfo,
   CaptureDeviceScreenshotRequest,
@@ -3733,6 +3738,14 @@ export class ServiceHost {
 
   getSandboxEnabled(): boolean {
     return readSandboxEnabled();
+  }
+
+  /** What the Settings page says when the toggle is on but nothing confines. */
+  getSandboxSupport(): SandboxSupport {
+    return {
+      backend: sandboxBackendFor(process.platform, os.release()),
+      minimumWindowsBuild: MINIMUM_WINDOWS_BUILD,
+    };
   }
 
   /** Read back, not echoed: "on" over a failed write misstates confinement. */

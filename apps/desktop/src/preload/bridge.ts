@@ -93,6 +93,7 @@ import type {
   GetGitCurrentBranchResult,
   PrInfo,
   McpBrowserStatus,
+  SandboxSupport,
   McpServerInfo,
   SessionTurnStateSnapshot,
   SetMcpServerDisabledRequest,
@@ -723,6 +724,10 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       >,
     getSandboxEnabled: () =>
       ipcRenderer.invoke(IpcChannels.GetSandboxEnabled) as Promise<boolean>,
+    getSandboxSupport: () =>
+      ipcRenderer.invoke(
+        IpcChannels.GetSandboxSupport
+      ) as Promise<SandboxSupport>,
     setSandboxEnabled: (enabled: boolean) =>
       ipcRenderer.invoke(
         IpcChannels.SetSandboxEnabled,
