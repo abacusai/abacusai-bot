@@ -86,7 +86,7 @@ describe("reading a config file that is not what it should be", () => {
     const settings = await load();
 
     expect(settings.readExecBackend()).toBeUndefined();
-    expect(settings.readSandboxEnabled()).toBe(false);
+    expect(settings.readSandboxEnabled()).toBe(true);
     expect(settings.readDockerImage()).toBeUndefined();
     expect(settings.readToolsetPreferences()).toEqual({});
     expect(settings.credentialEnv()).toEqual({});
@@ -250,23 +250,23 @@ describe("the execution backend", () => {
 });
 
 describe("the sandbox switch", () => {
-  it("is off when nothing has been stored", async () => {
+  it("is on when nothing has been stored", async () => {
     const { readSandboxEnabled } = await load();
 
-    expect(readSandboxEnabled()).toBe(false);
+    expect(readSandboxEnabled()).toBe(true);
   });
 
   it.each([
-    ["a string that looks true", "true"],
-    ["a number", 1],
+    ["a string that looks false", "false"],
+    ["a number", 0],
     ["null", null],
   ])(
-    "is off for %s, which is not the boolean it stores",
+    "stays on for %s, since only the boolean false switches it off",
     async (_label, stored) => {
       writeConfig({ sandbox: stored });
       const { readSandboxEnabled } = await load();
 
-      expect(readSandboxEnabled()).toBe(false);
+      expect(readSandboxEnabled()).toBe(true);
     }
   );
 

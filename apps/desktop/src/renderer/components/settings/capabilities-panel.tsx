@@ -313,9 +313,9 @@ const ToolsetDetail = ({
 };
 
 /**
- * Whether the OS confines what a command can do. A machine with no backend (a
- * Windows older than 24H2) sees the caveat rather than a hidden toggle: a user
- * who turns it on there should know it does nothing.
+ * Whether the OS confines what a command can do. On by default. A machine
+ * with no backend (a Windows older than 24H2) sees the caveat rather than a
+ * hidden toggle: a user who leaves it on there should know it does nothing.
  */
 const SandboxToggle = (): JSX.Element => {
   const { t } = useTranslation();

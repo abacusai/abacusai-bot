@@ -20,7 +20,7 @@ export interface AbacusBotSettings {
   execBackend?: string;
   /** Image used by the Docker backend. Absent means a small Debian base. */
   execDockerImage?: string;
-  /** Shell commands confined by the OS sandbox. Absent means off. */
+  /** Shell commands confined by the OS sandbox. Absent means on. */
   sandbox?: boolean;
   /**
    * Stored as what the user turned OFF, so a settings file written before this

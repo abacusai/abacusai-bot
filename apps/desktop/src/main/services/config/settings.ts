@@ -128,9 +128,9 @@ export const readExecBackend = (): BackendId | undefined => {
 export const setExecBackend = (backend: BackendId): AbacusBotSettings =>
   writeSettings({ ...readSettings(), execBackend: backend });
 
-/** Whether the OS sandbox is switched on. Absent means off. */
+/** Whether the OS sandbox is switched on. On unless the user stored `false`. */
 export const readSandboxEnabled = (): boolean =>
-  readSettings().sandbox === true;
+  readSettings().sandbox !== false;
 
 export const setSandboxEnabled = (enabled: boolean): AbacusBotSettings =>
   writeSettings({ ...readSettings(), sandbox: enabled });

@@ -51,10 +51,10 @@ export interface SandboxPolicy {
 export type NetworkPolicy = { kind: "open" } | { kind: "filtered" };
 
 /**
- * Off unless something asks for it. The desktop sets ABACUSAI_BOT_SANDBOX=auto
- * when the Settings toggle is on and nothing when off, so the stored
- * preference and this default agree. Off means bash is bounded only by the
- * permission gate and guardrails.
+ * Off unless something asks for it: the agent does not decide on its own. The
+ * desktop sets ABACUSAI_BOT_SANDBOX=auto while its Settings toggle is on,
+ * which it is by default, and nothing when the user switched it off. Off
+ * means bash is bounded only by the permission gate and guardrails.
  */
 export function sandboxEnforcement(): SandboxEnforcement {
   const raw = (process.env.ABACUSAI_BOT_SANDBOX ?? "").trim().toLowerCase();
