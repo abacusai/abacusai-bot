@@ -164,7 +164,7 @@ export interface SandboxAvailability {
  */
 export async function sandboxAvailability(): Promise<SandboxAvailability> {
   if (sandboxEnforcement() === "off")
-    return { active: false, reason: "switched off in Settings" };
+    return { active: false, reason: "switched off" };
 
   const backend = backendName();
   if (backend === null)
