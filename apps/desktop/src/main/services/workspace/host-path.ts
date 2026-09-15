@@ -28,7 +28,8 @@ export function resolveHostPath(
     return rel ? path.join(hostRoot, ...rel.split("/")) : hostRoot;
   }
 
-  if (filePath === "~" || filePath.startsWith("~/")) {
+  if (filePath === "~") return home;
+  if (filePath.startsWith("~/")) {
     return path.join(home, ...filePath.slice(2).split("/"));
   }
 

@@ -63,7 +63,9 @@ describe("opening the file behind a path the agent named", () => {
     );
 
     expect(file.ok).toBe(true);
-    if (file.ok) expect(file.realFile).toBe(fs.realpathSync(onDisk));
+    // The async realpath, as the code uses: on Windows the sync one can keep
+    // the temp dir's 8.3 short name and the two disagree.
+    if (file.ok) expect(file.realFile).toBe(await fs.promises.realpath(onDisk));
   });
 
   it("matches a decomposed name against its composed form", async () => {
