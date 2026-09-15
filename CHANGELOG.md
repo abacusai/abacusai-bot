@@ -7,6 +7,9 @@
 
 ## Unreleased
 
+The Capabilities page now lists `disconnect_connector` under Connectors, with
+a description for both connector tools.
+
 Telegram no longer creates an assistant bot of its own through BotFather.
 Messages to you arrive from the shared Abacus AI bot, which the Telegram setup
 links; the connected account still reads chats and messages other people. The

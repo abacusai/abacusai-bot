@@ -20,6 +20,7 @@ import { SettingsManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
 import { AgentStatus, type AgentEvent } from "./protocol.js";
+import { replacesBash } from "./roster.js";
 import {
   AbacusBotSession,
   capRetriesWhileRouting,
@@ -31,7 +32,6 @@ import {
   providerDetail,
   terminalProviderMessage,
   isSupersededWebTool,
-  replacesBash,
 } from "./session.js";
 
 describe("replacing bash with our own", () => {

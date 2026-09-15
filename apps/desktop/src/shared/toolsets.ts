@@ -208,7 +208,7 @@ export const TOOLSETS: Toolset[] = [
     labelKey: "connectors",
     status: "ready",
     delivery: "mcp-agent-tools",
-    tools: [tool("connect_connector")],
+    tools: [tool("connect_connector"), tool("disconnect_connector")],
     // On by default: it asks the user rather than acting, so it grants nothing,
     // and without it the agent can only report that a service is not attached.
     defaultEnabled: true,

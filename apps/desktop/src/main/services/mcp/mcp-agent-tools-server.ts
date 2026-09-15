@@ -45,7 +45,6 @@ import {
   generateSpeech,
   pollVideo,
   submitVideo,
-  videoPromptingGuide,
 } from "../agent-tools/media-generation";
 import {
   applyMemoryAction,
@@ -70,12 +69,9 @@ import {
 import { artifactPathLine } from "../session/session-artifacts.utils";
 import type { SkillsService } from "../workspace/skills-service";
 import { localMcpServerToken } from "./mcp-config-service";
+import { agentTool, AGENT_TOOLS } from "./tools";
+import type { ToolDefinition, ToolResult } from "./tools/definition";
 import { readTranscriptTail } from "./transcript-tail";
-
-interface ToolResult {
-  content: Array<{ type: string; text?: string }>;
-  isError?: boolean;
-}
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -93,105 +89,6 @@ interface JsonRpcResponse {
 
 const SERVER_NAME = "agent-tools";
 const SERVER_VERSION = "1.0.0";
-
-/**
- * Which toolset(s) each tool belongs to. A tool under several toolsets is
- * available when any is on, which keeps `bfl_flux3_get_result` reachable
- * beside every submitter that polls it. `ALWAYS_ENABLED` tools are absent.
- */
-const TOOL_TOOLSET: Record<string, string | string[]> = {
-  skills_list: "skills",
-  skill_view: "skills",
-  skill_manage: "skills",
-  todo: "todo",
-  memory: "memory",
-  cronjob: "cronjob",
-  vision_analyze: "vision",
-  video_analyze: "video",
-  image_generate: "image_gen",
-  text_to_speech: "tts",
-  video_generate: "video_gen",
-  xai_video_edit: "video_gen",
-  xai_video_extend: "video_gen",
-  bfl_flux3_text_to_video: "bfl",
-  bfl_flux3_image_to_video: "bfl",
-  bfl_flux3_keyframes_to_video: "bfl",
-  bfl_flux3_video_continuation: "bfl",
-  bfl_flux3_get_result: ["bfl", "video_gen"],
-  bfl_flux3_prompting_guide: ["bfl", "video_gen"],
-  x_search: "x_search",
-  ha_list_entities: "homeassistant",
-  ha_get_state: "homeassistant",
-  ha_list_services: "homeassistant",
-  ha_call_service: "homeassistant",
-  deck_export_pdf: "ppt",
-  pdf: "pdf",
-  send_chat_message: "messaging",
-  list_chats: "messaging",
-  list_whatsapp_chats: "messaging",
-  list_telegram_chats: "messaging",
-  list_discord_chats: "messaging",
-  send_whatsapp_message: "messaging",
-  read_whatsapp_messages: "messaging",
-  whatsapp_auto_reply: "messaging",
-  send_telegram_message: "messaging",
-  read_telegram_messages: "messaging",
-  telegram_auto_reply: "messaging",
-  send_discord_message: "messaging",
-  read_discord_messages: "messaging",
-  discord_auto_reply: "messaging",
-  read_chat_messages: "messaging",
-  auto_reply: "messaging",
-  connect_connector: "connectors",
-  disconnect_connector: "connectors",
-};
-
-/**
- * On regardless of the toggles: they are how the agent shows what `write` or
- * `bash` produced, and gating them left deliverables the user found by path.
- * `serve` because `bash` runs to completion and kills a dev server as it
- * becomes ready. my_activity answers only a bot's own chat.
- */
-const ALWAYS_ENABLED = new Set(["present_deliverable", "serve", "my_activity"]);
-
-const toolsetsFor = (name: string): string[] => {
-  const mapped = TOOL_TOOLSET[name];
-
-  if (mapped == null) return [];
-
-  return Array.isArray(mapped) ? mapped : [mapped];
-};
-
-const isKnownTool = (name: string): boolean =>
-  ALWAYS_ENABLED.has(name) || toolsetsFor(name).length > 0;
-
-const isToolEnabled = (name: string, enabled: Set<string>): boolean =>
-  ALWAYS_ENABLED.has(name) ||
-  toolsetsFor(name).some((toolset) => enabled.has(toolset));
-
-/**
- * Tools only a bot may call. Enforced by leaving them out of the caller's
- * tool list rather than only refusing the call, so a session's model never
- * sees a tool it cannot use.
- */
-const BOTS_ONLY = new Set([
-  "auto_reply",
-  "whatsapp_auto_reply",
-  "telegram_auto_reply",
-  "discord_auto_reply",
-]);
-
-/**
- * Never shown to the model: the cross-platform originals the per-platform
- * tools delegate to. They stay callable, but a platform's contacts and
- * messages must never appear beside another platform's in one result.
- */
-const HIDDEN_FROM_MODEL = new Set([
-  "send_chat_message",
-  "read_chat_messages",
-  "list_chats",
-  "auto_reply",
-]);
 
 /** Chats an "everything unread" read opens before pointing at the list. */
 const UNREAD_CHATS_READ_CAP = 10;
@@ -211,42 +108,15 @@ type UnreadFetch =
 const describeUnread = (count: number): string =>
   count < 0 ? "marked unread" : `${count} unread`;
 
-/** Per-platform tools are listed only while their platform runs. */
-const TOOL_PLATFORM: Record<string, MessagingPlatformId> = {
-  list_whatsapp_chats: "whatsapp",
-  list_telegram_chats: "telegram",
-  list_discord_chats: "discord",
-  send_whatsapp_message: "whatsapp",
-  send_telegram_message: "telegram",
-  send_discord_message: "discord",
-  read_whatsapp_messages: "whatsapp",
-  read_telegram_messages: "telegram",
-  read_discord_messages: "discord",
-  whatsapp_auto_reply: "whatsapp",
-  telegram_auto_reply: "telegram",
-  discord_auto_reply: "discord",
-};
+const toolsetsFor = (definition: ToolDefinition): readonly string[] =>
+  definition.toolsets === "always" ? [] : definition.toolsets;
 
-/**
- * Tools a bot gets whatever the toggles say. `cronjob` defaults off for
- * sessions because unattended runs are reach nobody signed up for; a bot's
- * routines are asked for in its chat and listed under Routines.
- */
-const BOT_ALWAYS = new Set(["cronjob", "my_activity"]);
-
-/**
- * Whether a tool that needs a third-party credential has one. Consulted only
- * when listing, so a toolset can be on by default and cost no prompt budget
- * until it works. `tools/call` does not check: a model holding an older list
- * should get the setup hint, not "unknown tool".
- */
-const READINESS: Record<string, () => boolean> = {
-  x_search: xSearchReady,
-  ha_list_entities: homeAssistantReady,
-  ha_get_state: homeAssistantReady,
-  ha_list_services: homeAssistantReady,
-  ha_call_service: homeAssistantReady,
-};
+const isToolEnabled = (
+  definition: ToolDefinition,
+  enabled: Set<string>
+): boolean =>
+  definition.toolsets === "always" ||
+  definition.toolsets.some((toolset) => enabled.has(toolset));
 
 /**
  * A `file://` URL the chat's markdown renderer will linkify. pathToFileURL,
@@ -255,1136 +125,6 @@ const READINESS: Record<string, () => boolean> = {
  */
 const fileUrl = (absolutePath: string): string =>
   pathToFileURL(absolutePath).href;
-
-const TOOLS_SCHEMA: Record<
-  string,
-  { description: string; inputSchema: Record<string, unknown> }
-> = {
-  skills_list: {
-    description:
-      "List the skills available in this workspace and globally, with their descriptions.",
-    inputSchema: { type: "object", properties: {} },
-  },
-  skill_view: {
-    description:
-      "Read a skill's full instructions. Use skills_list first to find its id.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "The skill id from skills_list." },
-      },
-      required: ["id"],
-    },
-  },
-  skill_manage: {
-    description:
-      "Open a skill file for editing. Returns the path so it can be read or written with the file tools.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "The skill id from skills_list." },
-      },
-      required: ["id"],
-    },
-  },
-  todo: {
-    description: [
-      "Track a plan for multi-step work.",
-      "",
-      "Actions:",
-      '  "set"  — replace the whole plan (required: todos).',
-      '  "list" — read the current plan.',
-      "",
-      "Write the full list every time rather than editing single items. Exactly one item may be in_progress.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: { type: "string", enum: ["set", "list"] },
-        todos: {
-          type: "array",
-          description: 'The complete plan, required for "set".',
-          items: {
-            type: "object",
-            properties: {
-              content: { type: "string" },
-              status: {
-                type: "string",
-                enum: ["pending", "in_progress", "completed"],
-              },
-            },
-            required: ["content", "status"],
-          },
-        },
-      },
-      required: ["action"],
-    },
-  },
-  memory: {
-    description: [
-      "Remember something across sessions.",
-      "",
-      "Targets:",
-      '  "memory" — your own notes: environment facts, project conventions, tool quirks.',
-      '  "user"   — what you know about the person: preferences, habits, how they work.',
-      "",
-      "Actions:",
-      '  "add"     — store a new entry (required: content).',
-      '  "replace" — swap an entry out (required: match, content).',
-      '  "remove"  — forget an entry (required: match).',
-      "",
-      '"match" is a short fragment that identifies exactly one entry — not the whole text.',
-      "Writes land on disk immediately but only reach your system prompt next session.",
-      "Keep this curated: store what stays true, not what merely happened.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        target: { type: "string", enum: ["memory", "user"] },
-        action: { type: "string", enum: ["add", "replace", "remove"] },
-        content: {
-          type: "string",
-          description: "The entry text, for add and replace.",
-        },
-        match: {
-          type: "string",
-          description: "A short unique fragment, for replace and remove.",
-        },
-      },
-      required: ["target", "action"],
-    },
-  },
-  cronjob: {
-    description: [
-      "Schedule the agent to run a prompt on its own — on a clock, on an incoming webhook, or both.",
-      "",
-      'Actions: "create" (prompt, and schedule and/or webhook: true; optional name), "list",',
-      '"update" (id, and any of name/schedule/prompt/enabled), "pause" (id), "resume" (id),',
-      '"remove" (id), "run" (id, to fire it now).',
-      "",
-      "When an update changes what a routine does, change its name to match in the same call.",
-      'The name is what the user sees in the Routines panel and what you read back in "list";',
-      "one that describes the old job is a routine both of you will misread later.",
-      "",
-      'Schedules are five-field cron in local time: "minute hour day month weekday".',
-      '  "0 9 * * *"    every day at 09:00',
-      '  "*/15 * * * *" every fifteen minutes',
-      '  "0 9 * * 1"    Mondays at 09:00',
-      "Names like MON are not supported, and neither is a seconds field.",
-      "Reach for sensible defaults: pin loose asks to weekdays and waking hours unless the",
-      "routine is about the user's life rather than their work, and inherit the current minute",
-      'when the user names only an hour — asked at 1:32, "daily at 2" means "32 2 * * *".',
-      "",
-      "A routine with a schedule also fires once the moment it is created, whatever its",
-      "schedule says, so the user sees it work instead of waiting out the first gap. Tell them",
-      "so, and write the prompt so an off-schedule first run still makes sense.",
-      "",
-      "webhook: true makes the routine firable by an outside POST; the user copies its URL",
-      "from the Routines panel. The request body arrives as data in the fire prompt.",
-      "",
-      "In a bot's own chat, routines you create belong to the bot and their fires are",
-      "delivered back into this conversation. Everywhere else a fire starts a fresh session",
-      "with no memory of this conversation, so write the prompt to stand alone.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: [
-            "create",
-            "list",
-            "update",
-            "pause",
-            "resume",
-            "remove",
-            "run",
-          ],
-        },
-        id: { type: "string" },
-        name: {
-          type: "string",
-          description:
-            "Short display name for the Routines panel, on create or update.",
-        },
-        schedule: {
-          type: "string",
-          description: "Five-field cron expression.",
-        },
-        webhook: {
-          type: "boolean",
-          description:
-            "create: also mint a webhook URL that fires this routine.",
-        },
-        prompt: {
-          type: "string",
-          description: "What to ask the agent when it fires.",
-        },
-        enabled: {
-          type: "boolean",
-          description: "update: enable or pause the job.",
-        },
-      },
-      required: ["action"],
-    },
-  },
-  vision_analyze: {
-    description:
-      "Look at an image and answer a question about it. Accepts a local file path or an http(s) URL.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        source: { type: "string", description: "Image path or URL." },
-        prompt: {
-          type: "string",
-          description:
-            "What you want to know. Defaults to a general description.",
-        },
-      },
-      required: ["source"],
-    },
-  },
-  video_analyze: {
-    description:
-      "Watch a video and answer a question about it. Needs a video-capable model — not every vision provider accepts video.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        source: { type: "string", description: "Video path or URL." },
-        prompt: { type: "string", description: "What you want to know." },
-      },
-      required: ["source"],
-    },
-  },
-  image_generate: {
-    description:
-      "Generate an image from a prompt. Returns the path to the saved file, which you should show to the user as a markdown image so it renders in the chat. Never link to an image on a third-party site instead of generating one.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        prompt: { type: "string" },
-        size: {
-          type: "string",
-          description: 'Provider-specific, e.g. "1024x1024".',
-        },
-      },
-      required: ["prompt"],
-    },
-  },
-  text_to_speech: {
-    description:
-      "Turn text into spoken audio. Returns the path to the saved file.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        text: { type: "string" },
-        voice: {
-          type: "string",
-          description: "Provider-specific voice name or id.",
-        },
-      },
-      required: ["text"],
-    },
-  },
-  video_generate: {
-    description:
-      "Start generating a video from a prompt, optionally driven by a still image. Returns a job id — generation takes minutes, so poll with bfl_flux3_get_result.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        prompt: { type: "string" },
-        image_url: {
-          type: "string",
-          description: "Optional still to animate.",
-        },
-      },
-      required: ["prompt"],
-    },
-  },
-  xai_video_edit: {
-    description:
-      "Re-generate an existing video against a new prompt. Returns a job id to poll.",
-    inputSchema: {
-      type: "object",
-      properties: { prompt: { type: "string" }, video_url: { type: "string" } },
-      required: ["prompt", "video_url"],
-    },
-  },
-  xai_video_extend: {
-    description:
-      "Continue an existing video past its end. Returns a job id to poll.",
-    inputSchema: {
-      type: "object",
-      properties: { prompt: { type: "string" }, video_url: { type: "string" } },
-      required: ["prompt", "video_url"],
-    },
-  },
-  bfl_flux3_text_to_video: {
-    description:
-      "Start a video generation from a prompt alone. Returns a job id to poll.",
-    inputSchema: {
-      type: "object",
-      properties: { prompt: { type: "string" } },
-      required: ["prompt"],
-    },
-  },
-  bfl_flux3_image_to_video: {
-    description:
-      "Start a video generation from a still image. Returns a job id to poll.",
-    inputSchema: {
-      type: "object",
-      properties: { prompt: { type: "string" }, image_url: { type: "string" } },
-      required: ["prompt", "image_url"],
-    },
-  },
-  bfl_flux3_keyframes_to_video: {
-    description:
-      "Start a video generation that passes through given keyframes. Returns a job id to poll.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        prompt: { type: "string" },
-        keyframes: {
-          type: "array",
-          items: { type: "string" },
-          description: "Image URLs, in order.",
-        },
-      },
-      required: ["prompt", "keyframes"],
-    },
-  },
-  bfl_flux3_video_continuation: {
-    description: "Continue an existing video. Returns a job id to poll.",
-    inputSchema: {
-      type: "object",
-      properties: { prompt: { type: "string" }, video_url: { type: "string" } },
-      required: ["prompt", "video_url"],
-    },
-  },
-  bfl_flux3_get_result: {
-    description:
-      "Check a video job. Returns the file path once it is done, or how long it has been running. Poll every 20-30 seconds rather than in a tight loop.",
-    inputSchema: {
-      type: "object",
-      properties: { job_id: { type: "string" } },
-      required: ["job_id"],
-    },
-  },
-  bfl_flux3_prompting_guide: {
-    description:
-      "Read guidance on writing video prompts before generating. Costs nothing and improves results.",
-    inputSchema: { type: "object", properties: {} },
-  },
-  x_search: {
-    description:
-      "Search public posts and threads on X. Returns a summary with links.",
-    inputSchema: {
-      type: "object",
-      properties: { query: { type: "string" } },
-      required: ["query"],
-    },
-  },
-  ha_list_entities: {
-    description:
-      "List Home Assistant entities and their current state. Filter to avoid a wall of output.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        filter: {
-          type: "string",
-          description: "Substring to match on id or friendly name.",
-        },
-      },
-    },
-  },
-  ha_get_state: {
-    description: "Read one entity's state and full attributes.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        entity_id: { type: "string", description: "e.g. light.kitchen" },
-      },
-      required: ["entity_id"],
-    },
-  },
-  ha_list_services: {
-    description: "List services that can be called, optionally for one domain.",
-    inputSchema: {
-      type: "object",
-      properties: { domain: { type: "string", description: "e.g. light" } },
-    },
-  },
-  pdf: {
-    description: [
-      "Work with a PDF that already exists: read it, or change it.",
-      "",
-      "To WRITE a new document, use `document` instead — it plans and writes one and prints",
-      "it. This tool does not author content.",
-      "",
-      "Actions:",
-      '  "reprint"— print a document again from its HTML source (html_path).',
-      "             Every document leaves an editable `document.html` beside its PDF. Edit",
-      "             that file to change what the document says, then reprint it: the PDF is",
-      "             updated in place. This is how you edit a document — the other actions",
-      "             move pages around and cannot change a word of the text.",
-      '  "read"   — text per page (path, optional pages).',
-      '  "tables" — tables as rows, per page (path, optional pages).',
-      '  "info"   — page count, metadata, and whether the text is extractable at all.',
-      "             Run this first on a PDF you did not make: a scanned one yields no",
-      "             text and needs OCR.",
-      '  "merge"  — concatenate several PDFs (inputs, output_path).',
-      '  "split"  — write one PDF per page range (path, output_dir, optional ranges).',
-      '  "rotate" — rotate pages (path, output_path, degrees, optional pages).',
-      '  "stamp"  — draw a watermark across every page (path, output_path, text).',
-      '  "forms"  — list AcroForm fields (path).',
-      '  "fill"   — fill form fields (path, output_path, data).',
-      "",
-      'Pages are 1-based and accept ranges: "1-3,7". Hand a result over with present_deliverable.',
-      "Every path here may be relative — it resolves against the workspace directory.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: [
-            "reprint",
-            "read",
-            "tables",
-            "info",
-            "merge",
-            "split",
-            "rotate",
-            "stamp",
-            "forms",
-            "fill",
-          ],
-        },
-        path: { type: "string", description: "The PDF to read or change." },
-        html_path: {
-          type: "string",
-          description:
-            "reprint: the document's HTML source, e.g. report-source/document.html.",
-        },
-        inputs: {
-          type: "array",
-          items: { type: "string" },
-          description: "merge: the PDFs to join, in order.",
-        },
-        output_path: {
-          type: "string",
-          description: "Where to write the result.",
-        },
-        output_dir: {
-          type: "string",
-          description: "split: the directory for the pieces.",
-        },
-        pages: {
-          type: "string",
-          description: 'Page selection, 1-based, e.g. "1-3,7".',
-        },
-        ranges: {
-          type: "string",
-          description: 'split: comma-separated ranges, e.g. "1-3,4-9".',
-        },
-        degrees: { type: "number", description: "rotate: 90, 180 or 270." },
-        text: { type: "string", description: "stamp: the watermark text." },
-        data: { type: "object", description: "fill: field name to value." },
-      },
-      required: ["action"],
-    },
-  },
-  serve: {
-    description: [
-      "Serve a directory over http and get back a URL, so a web page you wrote can actually",
-      "be opened. Static files only — html, css, js, images.",
-      "",
-      "Use it the moment you have written a page the user is meant to look at. `bash` cannot",
-      "do this: it runs a command to completion, so a dev server started there is killed as",
-      "soon as it reports being ready, and the URL answers nothing.",
-      "",
-      "Then hand the URL to present_deliverable — that is what opens the preview pane. A URL",
-      "in prose is not previewed and not recorded.",
-      "",
-      "Actions:",
-      '  "start" — serve a directory (directory). Serving it again returns the same URL.',
-      '  "stop"  — stop serving one (directory).',
-      '  "list"  — what is being served right now.',
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: ["start", "stop", "list"],
-          description: "What to do.",
-        },
-        directory: {
-          type: "string",
-          description:
-            "The directory to serve. A relative path resolves against the workspace directory.",
-        },
-      },
-      required: ["action"],
-    },
-  },
-  present_deliverable: {
-    description: [
-      "Hand the finished work over. Call this at the end of a turn that produced files,",
-      "listing what the user asked for — most important first.",
-      "",
-      "The items become a files card in the chat and are filed as artifacts; in a session",
-      "the first one also opens in the preview pane. Naming a path in prose does none of",
-      "that, and a file written with `bash` is not recorded anywhere unless it is declared",
-      "here. To hand a file to a person on a messaging channel, use send_chat_message with",
-      "attachment_path as well.",
-      "",
-      "List the deliverables, not the workings: the report, not the six scratch files it",
-      "was assembled from.",
-      "",
-      "Call it again whenever the user asks to see, show, open, or look at something you",
-      "already made. The pane may have been closed or the app restarted since, and this is",
-      "the only way to put the file back on screen — describing it, or rendering its pages",
-      "into the chat, does not show it. Presenting the same file twice is cheap and safe.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        items: {
-          type: "array",
-          description:
-            "The deliverables, most important first. The first one is opened in the preview pane.",
-          items: {
-            type: "object",
-            properties: {
-              path: {
-                type: "string",
-                description:
-                  "Path to the file, or an http(s) URL (a served app). A relative path resolves against " +
-                  "the workspace directory. Files must exist — this reports the ones that do not.",
-              },
-              label: {
-                type: "string",
-                description:
-                  'Short human name, e.g. "Q3 deck (PDF)". Defaults to the file name.',
-              },
-            },
-            required: ["path"],
-          },
-        },
-        summary: {
-          type: "string",
-          description: "One line about what was produced.",
-        },
-      },
-      required: ["items"],
-    },
-  },
-  deck_export_pdf: {
-    description:
-      "Render an HTML slide deck to PDF, one page per slide at the deck's own size. Use after building a deck from the Slide decks skill. Returns the PDF path and the page count.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        html_path: {
-          type: "string",
-          description: "Path to the deck's HTML file.",
-        },
-        output_path: {
-          type: "string",
-          description:
-            "Where to write the PDF. Defaults to the HTML path with a .pdf suffix.",
-        },
-        width_px: {
-          type: "number",
-          description: "Overrides the detected slide width, in CSS pixels.",
-        },
-        height_px: {
-          type: "number",
-          description: "Overrides the detected slide height, in CSS pixels.",
-        },
-      },
-      required: ["html_path"],
-    },
-  },
-  send_chat_message: {
-    description: [
-      "Send a message to a person or chat on a connected messaging platform.",
-      "",
-      "On WhatsApp this sends from the USER'S OWN account — the recipient sees it as them.",
-      "Telegram and Discord send as the user's bot. Either way you are messaging a",
-      "real person on their behalf: ONLY send when the user asked you to in this",
-      "conversation, only what they asked, to who they asked — never on your own",
-      "initiative — and quote the message back to them if there is any doubt.",
-      "",
-      '"to" can be a contact NAME ("Mom", "Ravi") — it resolves against the known contacts',
-      "and errors if the name is ambiguous or unknown — or a chat id from list_chats, or on",
-      'WhatsApp a phone number in international format (e.g. "+14155551234"). It can also be',
-      '"me", which the platform resolves to the user\'s own account — so a message to',
-      "themselves needs no number from them.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        platform: {
-          type: "string",
-          enum: ["whatsapp", "telegram", "discord"],
-        },
-        to: {
-          type: "string",
-          description:
-            "A contact name, a chat id from list_chats, or a phone number for WhatsApp.",
-        },
-        message: { type: "string", description: "The text to send." },
-        attachment_path: {
-          type: "string",
-          description:
-            "Absolute path of a file to send with the message (the message becomes its caption). Up to 25MB.",
-        },
-      },
-      required: ["platform", "to", "message"],
-    },
-  },
-  connect_connector: {
-    description: [
-      "The user's connectors — Slack, Gmail, Calendar, Drive and the rest — and the",
-      "way to get one connected without ending the turn.",
-      "",
-      "The chat apps — WhatsApp, Telegram and Discord — are in this list",
-      "too, with whether they are linked, and asking for one puts the same Connect",
-      "button in the chat. Linking one opens its own sign-in, usually a QR code the",
-      "user scans with their phone, so the call waits longer than most.",
-      "",
-      "Call it with no arguments to see every connector on this machine, each marked",
-      "connected or not, and each connected one named with the account behind it —",
-      'that account is who the user means by "me", so read it here instead of asking.',
-      "Call it with a service to ask for that one: the user gets a",
-      "Connect button in the chat and this call waits for them, then tells you what",
-      "happened. Every connector is available to every chat — do not report that you",
-      "cannot do something for want of a connector until you have asked for it this way.",
-      "",
-      "When the task plainly needs a missing service, call this immediately — the",
-      "button is the question. Do not ask permission first, do not offer",
-      '"connect X" as one item in a menu, and do not end the turn saying something',
-      "is missing without the button already up.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        service: {
-          type: "string",
-          description:
-            'The service to ask for, e.g. "slack". Omit to list what exists.',
-        },
-        reason: {
-          type: "string",
-          description:
-            "One line on why you need it, shown to the user under the button.",
-        },
-      },
-    },
-  },
-  my_activity: {
-    description: [
-      "Your own recent activity, across YOUR other conversations: your main",
-      "chat with the user, your auto-reply chats, and your routine runs.",
-      'Call it when the user asks what you have done, or when "so far"',
-      "plainly reaches beyond this conversation — this chat's context does",
-      "not follow you between conversations, but your work does.",
-    ].join("\n"),
-    inputSchema: { type: "object", properties: {} },
-  },
-  disconnect_connector: {
-    description: [
-      "Disconnect one connector, when the user asks for that: an account",
-      "connector (Gmail, Google Calendar, Drive, ...) is detached from their",
-      "account; a chat app (WhatsApp, Telegram, Discord) is switched off.",
-      "",
-      "Only ever on the user's explicit request — never disconnect anything on",
-      "your own judgement. It undoes cleanly: connect_connector reattaches an",
-      "account connector, and switches a chat app back on. Before disconnecting",
-      "something a routine of yours depends on, say what will break.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        service: {
-          type: "string",
-          description:
-            'The service to disconnect, e.g. "googlecalendar" or "whatsapp".',
-        },
-      },
-      required: ["service"],
-    },
-  },
-  list_chats: {
-    description:
-      "The cross-platform overview: which messaging platforms are connected, who the user " +
-      "is on each, and a capped sample of contacts. For a platform's contacts use its own " +
-      "tool — list_whatsapp_chats, list_telegram_chats, list_discord_chats " +
-      "— where nothing from another platform can crowd them out. Lists the synced " +
-      "address book plus everyone who has messaged in — with the chat id to reach them. " +
-      "Pass a query to search by name, or a platform to list that platform's chats on " +
-      "their own — output is capped, with a share kept for every platform, and it says " +
-      "how many more each platform has. A platform missing from the rows is NOT a platform " +
-      "with no chats: scope to it before concluding that. The user's own " +
-      'account is listed too, marked (the user — "me"): that is who they mean by "me" or ' +
-      '"myself", so never ask them for their own number. It also says when a platform is ' +
-      "connected but not reachable right now, which is why a list can come back empty.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description:
-            'Name to search for, e.g. "mom". A name that matches a contact ' +
-            "exactly lists only that contact — that is who a send goes to. " +
-            "Omit to list.",
-        },
-        platform: {
-          type: "string",
-          enum: ["whatsapp", "telegram", "discord"],
-          description:
-            "List only this platform's chats — the way to see a small platform in full.",
-        },
-      },
-    },
-  },
-  list_whatsapp_chats: {
-    description:
-      "List the user's WhatsApp chats and contacts — this platform only, with the `to:` " +
-      "value to reach each. Use this rather than list_chats when the user means WhatsApp: " +
-      "one platform's address book can never crowd another's out here. Pass a query to " +
-      "search by name. On WhatsApp, a contact's or group's name IS its chat id, so the `to:` value is the name; a phone number in international format also works. " +
-      "Pass `only_unread` to list just the chats and groups with messages waiting, each with " +
-      'its unread count — the answer to "which groups have new messages?".',
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description:
-            'Name to search for, e.g. "mom". A name that matches a contact ' +
-            "exactly lists only that contact — that is who a send goes to. " +
-            "Omit to list.",
-        },
-        only_unread: {
-          type: "boolean",
-          description:
-            "Only chats with unread messages, with the count for each, read " +
-            "live from WhatsApp. Reading the counts does not mark anything read.",
-        },
-      },
-    },
-  },
-  list_telegram_chats: {
-    description:
-      "List the user's Telegram chats and contacts — this platform only, with the `to:` " +
-      "value to reach each. Use this rather than list_chats when the user means Telegram: " +
-      "one platform's address book can never crowd another's out here. Pass a query to " +
-      "search by name. On Telegram, the `to:` value is the chat id shown.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description:
-            'Name to search for, e.g. "mom". A name that matches a contact ' +
-            "exactly lists only that contact — that is who a send goes to. " +
-            "Omit to list.",
-        },
-      },
-    },
-  },
-  list_discord_chats: {
-    description:
-      "List the user's Discord chats and contacts — this platform only, with the `to:` " +
-      "value to reach each. Use this rather than list_chats when the user means Discord: " +
-      "one platform's address book can never crowd another's out here. Pass a query to " +
-      "search by name. On Discord, the `to:` value is the DM or `guild/channel` id shown; names are usernames, not display names.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description:
-            'Name to search for, e.g. "mom". A name that matches a contact ' +
-            "exactly lists only that contact — that is who a send goes to. " +
-            "Omit to list.",
-        },
-      },
-    },
-  },
-  send_whatsapp_message: {
-    description: [
-      "Send a message to a person or chat on WhatsApp.",
-      "",
-      'Sends from the USER\'S OWN WhatsApp account — the recipient sees it as them. `to` is a contact or group NAME as WhatsApp shows it (the name IS the chat id), a phone number in international format ("+14155551234"), or "me" for the user\'s own chat.',
-      "",
-      "You are messaging a real person on the user's behalf: ONLY send when the user",
-      "asked you to in this conversation, only what they asked, to who they asked —",
-      "never on your own initiative — and quote the message back to them if there is",
-      "any doubt. A name that is ambiguous or unknown errors rather than guessing.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        to: {
-          type: "string",
-          description: "Who to send to, on WhatsApp — see the description.",
-        },
-        message: { type: "string", description: "The text to send." },
-      },
-      required: ["to", "message"],
-    },
-  },
-  read_whatsapp_messages: {
-    description: [
-      "Read recent WhatsApp messages — what came in and what was sent — newest",
-      "last. Read-only, and only when the user asks you to check their messages;",
-      "do not poll it on your own.",
-      "",
-      "Two ways in. `chat_id` reads ONE chat by its name or id. `query` finds",
-      "messages CONTAINING words — a topic, a place, a thing, something someone",
-      'said ("taco bell", "the invoice") — across chats, through the platform\'s',
-      "own search; use it whenever the user names something that is not a",
-      "contact. Without `query`, this covers messages received while the app has",
-      "been running, not the full history. `query` searches WhatsApp's own full history — archived chats and unsaved numbers included.",
-      "",
-      "`only_unread` reads what is waiting: every chat with unread messages, and",
-      'the newest messages in each, up to its unread count. Use it for "what did',
-      'I miss?" and "any new messages?". Reading does not mark anything read.',
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        chat_id: {
-          type: "string",
-          description:
-            "Only this chat (a `to:` value from list_whatsapp_chats). Omit for all.",
-        },
-        query: {
-          type: "string",
-          description:
-            "Find messages CONTAINING this text; follow up with chat_id to read the whole thread.",
-        },
-        only_unread: {
-          type: "boolean",
-          description:
-            "The unread messages across chats, grouped by chat, read live " +
-            "from WhatsApp. Ignores chat_id and query.",
-        },
-        limit: {
-          type: "number",
-          description: "Most recent N messages. Default 50.",
-        },
-      },
-    },
-  },
-  whatsapp_auto_reply: {
-    description: [
-      "Make this bot answer WhatsApp messages from chosen people automatically.",
-      "Only works in a bot's own chat.",
-      "",
-      'Actions: "on" (start answering; optional sender to allow in the same call),',
-      '"allow_sender" (sender), "remove_sender" (sender), "off" (stop answering),',
-      '"status".',
-      "",
-      "Once on, each allowed sender gets a separate conversation where you answer",
-      "them; everything written there is delivered to them, as the user. Replies go out from the user's own WhatsApp account.",
-      "This chat stays the user's own. Anyone not allowed is only logged — never",
-      "answered. Senders resolve by name against WhatsApp's contacts and people who",
-      "have messaged before; if a name does not resolve, ask the user for the exact",
-      "contact name, or have that person send one message and allow them from the log.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
-        },
-        sender: {
-          type: "string",
-          description: "The person, by contact name (or id) on WhatsApp.",
-        },
-      },
-      required: ["action"],
-    },
-  },
-  send_telegram_message: {
-    description: [
-      "Send a message to a person or chat on Telegram.",
-      "",
-      "Sends as the user's Telegram bot. `to` is a contact name or a chat id from list_telegram_chats, or \"me\" for the user's own chat with the bot.",
-      "",
-      "You are messaging a real person on the user's behalf: ONLY send when the user",
-      "asked you to in this conversation, only what they asked, to who they asked —",
-      "never on your own initiative — and quote the message back to them if there is",
-      "any doubt. A name that is ambiguous or unknown errors rather than guessing.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        to: {
-          type: "string",
-          description: "Who to send to, on Telegram — see the description.",
-        },
-        message: { type: "string", description: "The text to send." },
-      },
-      required: ["to", "message"],
-    },
-  },
-  read_telegram_messages: {
-    description: [
-      "Read recent Telegram messages — what came in and what was sent — newest",
-      "last. Read-only, and only when the user asks you to check their messages;",
-      "do not poll it on your own.",
-      "",
-      "Two ways in. `chat_id` reads ONE chat by its name or id. `query` finds",
-      "messages CONTAINING words — a topic, a place, a thing, something someone",
-      'said ("taco bell", "the invoice") — across chats, through the platform\'s',
-      "own search; use it whenever the user names something that is not a",
-      "contact. Without `query`, this covers messages received while the app has",
-      "been running, not the full history. `query` searches through Telegram's own search.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        chat_id: {
-          type: "string",
-          description:
-            "Only this chat (a `to:` value from list_telegram_chats). Omit for all.",
-        },
-        query: {
-          type: "string",
-          description:
-            "Find messages CONTAINING this text; follow up with chat_id to read the whole thread.",
-        },
-        limit: {
-          type: "number",
-          description: "Most recent N messages. Default 50.",
-        },
-      },
-    },
-  },
-  telegram_auto_reply: {
-    description: [
-      "Make this bot answer Telegram messages from chosen people automatically.",
-      "Only works in a bot's own chat.",
-      "",
-      'Actions: "on" (start answering; optional sender to allow in the same call),',
-      '"allow_sender" (sender), "remove_sender" (sender), "off" (stop answering),',
-      '"status".',
-      "",
-      "Once on, each allowed sender gets a separate conversation where you answer",
-      "them; everything written there is delivered to them, as the user. Replies go out as the user's Telegram bot.",
-      "This chat stays the user's own. Anyone not allowed is only logged — never",
-      "answered. Senders resolve by name against Telegram's contacts and people who",
-      "have messaged before; if a name does not resolve, ask the user for the exact",
-      "contact name, or have that person send one message and allow them from the log.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
-        },
-        sender: {
-          type: "string",
-          description: "The person, by contact name (or id) on Telegram.",
-        },
-      },
-      required: ["action"],
-    },
-  },
-  send_discord_message: {
-    description: [
-      "Send a message to a person or chat on Discord.",
-      "",
-      "Sends as the user's Discord account. `to` is a DM id or a `guild/channel` id from list_discord_chats, or a username; display names are not ids. \"me\" reaches the user too: it is delivered through the Abacus AI bot's DM when that is linked.",
-      "",
-      "You are messaging a real person on the user's behalf: ONLY send when the user",
-      "asked you to in this conversation, only what they asked, to who they asked —",
-      "never on your own initiative — and quote the message back to them if there is",
-      "any doubt. A name that is ambiguous or unknown errors rather than guessing.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        to: {
-          type: "string",
-          description: "Who to send to, on Discord — see the description.",
-        },
-        message: { type: "string", description: "The text to send." },
-      },
-      required: ["to", "message"],
-    },
-  },
-  read_discord_messages: {
-    description: [
-      "Read recent Discord messages — what came in and what was sent — newest",
-      "last. Read-only, and only when the user asks you to check their messages;",
-      "do not poll it on your own.",
-      "",
-      "Two ways in. `chat_id` reads ONE chat by its name or id. `query` finds",
-      "messages CONTAINING words — a topic, a place, a thing, something someone",
-      'said ("taco bell", "the invoice") — across chats, through the platform\'s',
-      "own search; use it whenever the user names something that is not a",
-      "contact. Without `query`, this covers messages received while the app has",
-      "been running, not the full history. `query` runs per server: pass chat_id (a server or chat) to scope it; without one the joined servers are searched in order, capped at a few. Reads open the channel and can take a while; a read that would queue behind others is refused at once with the stored copy as the fallback.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        chat_id: {
-          type: "string",
-          description:
-            "Only this chat (a `to:` value from list_discord_chats). Omit for all.",
-        },
-        query: {
-          type: "string",
-          description:
-            "Find messages CONTAINING this text; follow up with chat_id to read the whole thread.",
-        },
-        limit: {
-          type: "number",
-          description: "Most recent N messages. Default 50.",
-        },
-      },
-    },
-  },
-  discord_auto_reply: {
-    description: [
-      "Make this bot answer Discord messages from chosen people automatically.",
-      "Only works in a bot's own chat.",
-      "",
-      'Actions: "on" (start answering; optional sender to allow in the same call),',
-      '"allow_sender" (sender), "remove_sender" (sender), "off" (stop answering),',
-      '"status".',
-      "",
-      "Once on, each allowed sender gets a separate conversation where you answer",
-      "them; everything written there is delivered to them, as the user. Replies go out as the user's Discord account.",
-      "This chat stays the user's own. Anyone not allowed is only logged — never",
-      "answered. Senders resolve by name against Discord's contacts and people who",
-      "have messaged before; if a name does not resolve, ask the user for the exact",
-      "contact name, or have that person send one message and allow them from the log.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
-        },
-        sender: {
-          type: "string",
-          description: "The person, by contact name (or id) on Discord.",
-        },
-      },
-      required: ["action"],
-    },
-  },
-  read_chat_messages: {
-    description: [
-      "Read recent messages from the user's connected messaging platforms — what came in",
-      "and what was sent — newest last. Read-only, and only when the user asks you to",
-      "check their messages; do not poll it on your own.",
-      "",
-      "Covers messages received while the app has been running, not the platform's full",
-      "history — except `query`, which searches by content through the platform's own",
-      "search (WhatsApp: full history, archived chats and unsaved numbers included).",
-      "Use `query` when the user asks about a sender or topic that no chat is named",
-      "after — a bank, a delivery, 'the message about X'. Incoming messages never start",
-      "agent turns by themselves; this tool is how they get read.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        platform: {
-          type: "string",
-          enum: ["whatsapp", "telegram", "discord"],
-          description: "Only this platform. Omit for all.",
-        },
-        chat_id: {
-          type: "string",
-          description: "Only this chat (an id from list_chats). Omit for all.",
-        },
-        query: {
-          type: "string",
-          description:
-            "Find messages CONTAINING this text. Returns the matching chats " +
-            "with the matching snippet; follow up with chat_id to read the " +
-            "whole thread. On Discord, search runs per server: pass chat_id " +
-            "(a server or chat) to scope it; without one the joined servers " +
-            "are searched in order, capped at a few.",
-        },
-        limit: {
-          type: "number",
-          description: "Most recent N messages. Default 50.",
-        },
-      },
-    },
-  },
-  auto_reply: {
-    description: [
-      "Make this bot answer chat messages from chosen people automatically. Only works",
-      "in a bot's own chat.",
-      "",
-      'Actions: "on" (start answering; optional sender to allow in the same call),',
-      '"allow_sender" (sender, and platform when more than one is connected),',
-      '"remove_sender" (sender, platform likewise), "off" (stop answering), "status".',
-      "",
-      "Once on, each allowed sender gets a separate conversation where you answer",
-      "them; everything written there is delivered to them, as the user (on WhatsApp",
-      "from the user's own account, elsewhere as their linked bot). This chat stays",
-      "the user's own. Works on every connected platform. Anyone not allowed is only",
-      "logged — never answered.",
-      "",
-      "Senders resolve by name against the platform's contacts and people who have",
-      "messaged before. If a name does not resolve, ask the user for the exact contact",
-      "name, or have that person send one message and allow them from the log.",
-    ].join("\n"),
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: {
-          type: "string",
-          enum: ["on", "off", "allow_sender", "remove_sender", "status"],
-        },
-        sender: {
-          type: "string",
-          description: "The person, by contact name (or id) on the platform.",
-        },
-        platform: {
-          type: "string",
-          enum: ["whatsapp", "telegram", "discord"],
-          description:
-            "Which platform the sender is on. Optional when only one is connected.",
-        },
-      },
-      required: ["action"],
-    },
-  },
-  ha_call_service: {
-    description:
-      "Call a Home Assistant service to change something. This affects real devices in the user's home — be sure before calling it.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        domain: { type: "string", description: "e.g. light" },
-        service: { type: "string", description: "e.g. turn_on" },
-        entity_id: { type: "string" },
-        data: {
-          type: "object",
-          description: "Extra service data, e.g. brightness.",
-        },
-      },
-      required: ["domain", "service"],
-    },
-  },
-};
 
 export interface McpAgentToolsServerOptions {
   skillsService: SkillsService;
@@ -1606,13 +346,9 @@ export class McpAgentToolsServer {
 
   /** The always-on tools guarantee this. */
   hasEnabledTools(): boolean {
-    if (ALWAYS_ENABLED.size > 0) return true;
-
     const enabled = this.options.enabledToolsets();
 
-    return Object.keys(TOOL_TOOLSET).some((name) =>
-      isToolEnabled(name, enabled)
-    );
+    return AGENT_TOOLS.some((definition) => isToolEnabled(definition, enabled));
   }
 
   private async findAvailablePort(): Promise<number> {
@@ -1813,17 +549,15 @@ export class McpAgentToolsServer {
           jsonrpc: "2.0",
           id: id ?? null,
           result: {
-            tools: Object.entries(TOOLS_SCHEMA)
-              .filter(([name]) =>
-                forEditor
-                  ? name === "cronjob"
-                  : this.isListed(name, enabled, forBot)
-              )
-              .map(([name, schema]) => ({
-                name,
-                description: schema.description,
-                inputSchema: schema.inputSchema,
-              })),
+            tools: AGENT_TOOLS.filter((definition) =>
+              forEditor
+                ? definition.name === "cronjob"
+                : this.isListed(definition.name, enabled, forBot)
+            ).map((definition) => ({
+              name: definition.name,
+              description: definition.description,
+              inputSchema: definition.inputSchema,
+            })),
           },
         };
       }
@@ -1865,136 +599,41 @@ export class McpAgentToolsServer {
     return this.options.botIdForSession?.(callerSession) != null;
   }
 
-  private async executeTool(
+  /**
+   * `tools/call`, gated the same way `tools/list` is — re-checked here, so a
+   * toolset switched off mid-session stops working even while the model
+   * holds an older tool list. Public for the tests that call tools directly.
+   */
+  async executeTool(
     name: string,
     args: Record<string, unknown>,
     callerSession?: string
   ): Promise<ToolResult> {
-    const toolsets = toolsetsFor(name);
+    const definition = agentTool(name);
 
-    if (!isKnownTool(name)) return this.err(`Unknown tool: ${name}`);
+    if (definition == null) return this.err(`Unknown tool: ${name}`);
 
-    // Re-checked at call time: a toolset switched off mid-session must stop
-    // working even while the model holds an older tool list.
     const forEditor = this.isRoutineEditor(callerSession);
     if (forEditor && name !== "cronjob")
       return this.err("This session can only change its routine.");
     if (
       !forEditor &&
-      !isToolEnabled(name, this.options.enabledToolsets()) &&
-      !(BOT_ALWAYS.has(name) && this.isBotCaller(callerSession))
+      !isToolEnabled(definition, this.options.enabledToolsets()) &&
+      !(definition.botAlways === true && this.isBotCaller(callerSession))
     ) {
       return this.err(
-        `The ${toolsets.join("/")} toolset is switched off in Capabilities.`
+        `The ${toolsetsFor(definition).join("/")} toolset is switched off in Capabilities.`
       );
     }
 
-    // Re-checked at call time for the same reason as the toolset gate above.
-    if (BOTS_ONLY.has(name) && !this.isBotCaller(callerSession)) {
+    if (definition.botsOnly === true && !this.isBotCaller(callerSession)) {
       return this.err(
         `${name} is only available in a bot's chat. Carry on and use your best judgement.`
       );
     }
 
     try {
-      switch (name) {
-        case "skills_list":
-          return await this.skillsList();
-        case "skill_view":
-          return await this.skillView(String(args.id ?? ""));
-        case "skill_manage":
-          return await this.skillManage(String(args.id ?? ""));
-        case "todo":
-          return this.todo(args);
-        case "memory":
-          return await this.memory(args);
-        case "cronjob":
-          return await this.cronjob(args, callerSession);
-        case "vision_analyze":
-          return await this.analyze(args, "image");
-        case "video_analyze":
-          return await this.analyze(args, "video");
-        case "image_generate":
-          return await this.imageGenerate(args);
-        case "text_to_speech":
-          return await this.textToSpeech(args);
-        case "deck_export_pdf":
-          return await this.deckExportPdf(args);
-        case "pdf":
-          return await this.pdf(args);
-        case "serve":
-          return await this.serve(args);
-        case "present_deliverable":
-          return this.presentDeliverable(args, callerSession);
-        case "bfl_flux3_prompting_guide":
-          return this.ok(videoPromptingGuide());
-        case "bfl_flux3_get_result":
-          return await this.pollVideoJob(args);
-        case "video_generate":
-        case "xai_video_edit":
-        case "xai_video_extend":
-        case "bfl_flux3_text_to_video":
-        case "bfl_flux3_image_to_video":
-        case "bfl_flux3_keyframes_to_video":
-        case "bfl_flux3_video_continuation":
-          return await this.submitVideoJob(args);
-        case "x_search":
-          return await this.xSearch(args);
-        case "send_chat_message":
-          return await this.sendChatMessage(args);
-        case "connect_connector":
-          return await this.connectConnector(args, callerSession);
-        case "disconnect_connector":
-          return await this.disconnectConnector(args);
-        case "my_activity":
-          return this.myActivity(callerSession);
-        case "list_chats":
-          return await this.listChats(args);
-        case "list_whatsapp_chats":
-          return await this.listChats({ ...args, platform: "whatsapp" });
-        case "list_telegram_chats":
-          return await this.listChats({ ...args, platform: "telegram" });
-        case "list_discord_chats":
-          return await this.listChats({ ...args, platform: "discord" });
-        case "send_whatsapp_message":
-          return await this.sendChatMessage({ ...args, platform: "whatsapp" });
-        case "read_whatsapp_messages":
-          return await this.readChatMessages({ ...args, platform: "whatsapp" });
-        case "whatsapp_auto_reply":
-          return this.autoReply(
-            { ...args, platform: "whatsapp" },
-            callerSession
-          );
-        case "send_telegram_message":
-          return await this.sendChatMessage({ ...args, platform: "telegram" });
-        case "read_telegram_messages":
-          return await this.readChatMessages({ ...args, platform: "telegram" });
-        case "telegram_auto_reply":
-          return this.autoReply(
-            { ...args, platform: "telegram" },
-            callerSession
-          );
-        case "send_discord_message":
-          return await this.sendChatMessage({ ...args, platform: "discord" });
-        case "read_discord_messages":
-          return await this.readChatMessages({ ...args, platform: "discord" });
-        case "discord_auto_reply":
-          return this.autoReply(
-            { ...args, platform: "discord" },
-            callerSession
-          );
-        case "read_chat_messages":
-          return await this.readChatMessages(args);
-        case "auto_reply":
-          return this.autoReply(args, callerSession);
-        case "ha_list_entities":
-        case "ha_get_state":
-        case "ha_list_services":
-        case "ha_call_service":
-          return await this.homeAssistant(name, args);
-        default:
-          return this.err(`Unknown tool: ${name}`);
-      }
+      return await definition.run(this, args, callerSession);
     } catch (error) {
       return this.err(error instanceof Error ? error.message : String(error));
     }
@@ -2002,7 +641,7 @@ export class McpAgentToolsServer {
 
   // ── Skills ───────────────────────────────────────────────────────────────
 
-  private async skillsList(): Promise<ToolResult> {
+  async skillsList(): Promise<ToolResult> {
     const workspacePath = this.options.workspacePath();
     const { skills } = await this.options.skillsService.listInstalled(
       workspacePath != null ? { workspacePath } : {}
@@ -2032,7 +671,7 @@ export class McpAgentToolsServer {
     return match != null ? { path: match.path, name: match.name } : null;
   }
 
-  private async skillView(id: string): Promise<ToolResult> {
+  async skillView(id: string): Promise<ToolResult> {
     if (id.trim().length === 0) return this.err("A skill id is required.");
 
     const skill = await this.findSkill(id);
@@ -2050,7 +689,7 @@ export class McpAgentToolsServer {
     return this.ok(fs.readFileSync(target, "utf8"));
   }
 
-  private async skillManage(id: string): Promise<ToolResult> {
+  async skillManage(id: string): Promise<ToolResult> {
     if (id.trim().length === 0) return this.err("A skill id is required.");
 
     const skill = await this.findSkill(id);
@@ -2086,7 +725,7 @@ export class McpAgentToolsServer {
 
   // ── Task planning ────────────────────────────────────────────────────────
 
-  private todo(args: Record<string, unknown>): ToolResult {
+  todo(args: Record<string, unknown>): ToolResult {
     const action = String(args.action ?? "");
 
     if (action === "list") return this.ok(renderTodos(readTodos()));
@@ -2102,7 +741,7 @@ export class McpAgentToolsServer {
 
   // ── Memory ───────────────────────────────────────────────────────────────
 
-  private async memory(args: Record<string, unknown>): Promise<ToolResult> {
+  async memory(args: Record<string, unknown>): Promise<ToolResult> {
     const target = String(args.target ?? "") as MemoryTarget;
     const action = String(args.action ?? "") as MemoryAction;
 
@@ -2146,7 +785,7 @@ export class McpAgentToolsServer {
     }
   }
 
-  private async cronjob(
+  async cronjob(
     args: Record<string, unknown>,
     callerSession?: string
   ): Promise<ToolResult> {
@@ -2318,7 +957,7 @@ export class McpAgentToolsServer {
 
   // ── Vision and video analysis ────────────────────────────────────────────
 
-  private async analyze(
+  async analyze(
     args: Record<string, unknown>,
     kind: "image" | "video"
   ): Promise<ToolResult> {
@@ -2360,9 +999,7 @@ export class McpAgentToolsServer {
 
   // ── Media generation ─────────────────────────────────────────────────────
 
-  private async imageGenerate(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  async imageGenerate(args: Record<string, unknown>): Promise<ToolResult> {
     const prompt = String(args.prompt ?? "").trim();
 
     if (prompt.length === 0) return this.err("A prompt is required.");
@@ -2382,9 +1019,7 @@ export class McpAgentToolsServer {
     );
   }
 
-  private async textToSpeech(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  async textToSpeech(args: Record<string, unknown>): Promise<ToolResult> {
     const text = String(args.text ?? "").trim();
 
     if (text.length === 0) return this.err("There is no text to speak.");
@@ -2395,7 +1030,7 @@ export class McpAgentToolsServer {
     return this.ok(`Saved to ${file}\n${artifactPathLine(file)}`);
   }
 
-  private async pdf(args: Record<string, unknown>): Promise<ToolResult> {
+  async pdf(args: Record<string, unknown>): Promise<ToolResult> {
     const action = String(args.action ?? "").trim();
     const str = (key: string): string => String(args[key] ?? "").trim();
 
@@ -2542,7 +1177,7 @@ export class McpAgentToolsServer {
    * named and an empty result is an error: a success with nothing behind it
    * is worse than a failure the model can correct.
    */
-  private async serve(args: Record<string, unknown>): Promise<ToolResult> {
+  async serve(args: Record<string, unknown>): Promise<ToolResult> {
     const action = String(args.action ?? "").trim();
     const directory = String(args.directory ?? "").trim();
 
@@ -2600,7 +1235,7 @@ export class McpAgentToolsServer {
     }
   }
 
-  private presentDeliverable(
+  presentDeliverable(
     args: Record<string, unknown>,
     callerSession?: string
   ): ToolResult {
@@ -2677,9 +1312,7 @@ export class McpAgentToolsServer {
     return this.ok(lines.join("\n"));
   }
 
-  private async deckExportPdf(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  async deckExportPdf(args: Record<string, unknown>): Promise<ToolResult> {
     const htmlPath = String(args.html_path ?? "").trim();
 
     if (htmlPath.length === 0)
@@ -2715,9 +1348,7 @@ export class McpAgentToolsServer {
     }
   }
 
-  private async submitVideoJob(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  async submitVideoJob(args: Record<string, unknown>): Promise<ToolResult> {
     const prompt = String(args.prompt ?? "").trim();
 
     if (prompt.length === 0) return this.err("A prompt is required.");
@@ -2742,9 +1373,7 @@ export class McpAgentToolsServer {
     );
   }
 
-  private async pollVideoJob(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  async pollVideoJob(args: Record<string, unknown>): Promise<ToolResult> {
     const jobId = String(args.job_id ?? "").trim();
 
     if (jobId.length === 0) return this.err("A job id is required.");
@@ -2766,34 +1395,40 @@ export class McpAgentToolsServer {
     );
   }
 
-  /** See READINESS. An instance method because messaging readiness lives on the gateway. */
-  private isToolConfigured(name: string): boolean {
-    if (HIDDEN_FROM_MODEL.has(name)) {
+  /**
+   * See ToolDefinition.ready. An instance method because messaging readiness
+   * lives on the gateway.
+   */
+  private isToolConfigured(definition: ToolDefinition): boolean {
+    if (definition.hidden === true) {
       return (this.options.messaging?.runningPlatforms().length ?? 0) > 0;
     }
     // No Discord tools on a machine that never connected Discord.
-    const platform = TOOL_PLATFORM[name];
-    if (platform != null)
+    if (definition.platform != null)
       return (
-        this.options.messaging?.runningPlatforms().includes(platform) ?? false
+        this.options.messaging
+          ?.runningPlatforms()
+          .includes(definition.platform) ?? false
       );
-    return READINESS[name]?.() ?? true;
+    return definition.ready?.() ?? true;
   }
 
   /** Whether `tools/list` shows a tool to this caller. */
   isListed(name: string, enabled: Set<string>, forBot: boolean): boolean {
-    if (HIDDEN_FROM_MODEL.has(name)) return false;
+    const definition = agentTool(name);
+    if (definition == null || definition.hidden === true) return false;
     return (
-      (isToolEnabled(name, enabled) || (forBot && BOT_ALWAYS.has(name))) &&
-      this.isToolConfigured(name) &&
-      (forBot || !BOTS_ONLY.has(name))
+      (isToolEnabled(definition, enabled) ||
+        (forBot && definition.botAlways === true)) &&
+      this.isToolConfigured(definition) &&
+      (forBot || definition.botsOnly !== true)
     );
   }
 
   /** For tests and diagnostics. */
   listedToolNames(forBot = false): string[] {
     const enabled = this.options.enabledToolsets();
-    return Object.keys(TOOLS_SCHEMA).filter((name) =>
+    return AGENT_TOOLS.map((definition) => definition.name).filter((name) =>
       this.isListed(name, enabled, forBot)
     );
   }
@@ -2829,9 +1464,7 @@ export class McpAgentToolsServer {
     );
   }
 
-  private async sendChatMessage(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  async sendChatMessage(args: Record<string, unknown>): Promise<ToolResult> {
     const messaging = this.options.messaging;
     if (messaging == null || messaging.runningPlatforms().length === 0)
       return this.messagingSetupHint();
@@ -2884,7 +1517,7 @@ export class McpAgentToolsServer {
    * as well as ids, forgivingly: Gmail's id is `gmailuser`, and any name the
    * tool can print the model may ask for.
    */
-  private async connectConnector(
+  async connectConnector(
     args: Record<string, unknown>,
     callerSession?: string
   ): Promise<ToolResult> {
@@ -3058,7 +1691,7 @@ export class McpAgentToolsServer {
     );
   }
 
-  private async disconnectConnector(
+  async disconnectConnector(
     args: Record<string, unknown>
   ): Promise<ToolResult> {
     const asked = String(args.service ?? "")
@@ -3118,7 +1751,7 @@ export class McpAgentToolsServer {
    * What this bot has been doing in its other conversations, from the tail of
    * each owned agent log; the calling conversation is already in context.
    */
-  private myActivity(callerSession?: string): ToolResult {
+  myActivity(callerSession?: string): ToolResult {
     const botId =
       callerSession != null
         ? (this.options.botIdForSession?.(callerSession) ?? null)
@@ -3151,7 +1784,7 @@ export class McpAgentToolsServer {
     );
   }
 
-  private async listChats(args: Record<string, unknown>): Promise<ToolResult> {
+  async listChats(args: Record<string, unknown>): Promise<ToolResult> {
     const messaging = this.options.messaging;
     if (messaging == null) return this.messagingSetupHint();
 
@@ -3308,9 +1941,7 @@ export class McpAgentToolsServer {
     );
   }
 
-  private async readChatMessages(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  async readChatMessages(args: Record<string, unknown>): Promise<ToolResult> {
     const messaging = this.options.messaging;
     if (messaging == null || messaging.runningPlatforms().length === 0)
       return this.messagingSetupHint();
@@ -3486,10 +2117,7 @@ export class McpAgentToolsServer {
    * "Reply whenever X messages me" as one call. The user asking in the bot's
    * chat is the approval the pairing queue exists to collect.
    */
-  private autoReply(
-    args: Record<string, unknown>,
-    callerSession?: string
-  ): ToolResult {
+  autoReply(args: Record<string, unknown>, callerSession?: string): ToolResult {
     const messaging = this.options.messaging;
     const gateway = messaging?.autoReply;
     if (
@@ -3525,7 +2153,7 @@ export class McpAgentToolsServer {
       );
     }
 
-    // BOTS_ONLY already guarantees a calling bot; this is the belt.
+    // `botsOnly` already guarantees a calling bot; this is the belt.
     const botId =
       callerSession != null
         ? (this.options.botIdForSession?.(callerSession) ?? null)
@@ -3616,7 +2244,7 @@ export class McpAgentToolsServer {
 
   // ── Integrations ─────────────────────────────────────────────────────────
 
-  private async xSearch(args: Record<string, unknown>): Promise<ToolResult> {
+  async xSearch(args: Record<string, unknown>): Promise<ToolResult> {
     if (!xSearchReady()) return this.err(xSearchSetupHint);
 
     const query = String(args.query ?? "").trim();
@@ -3626,7 +2254,7 @@ export class McpAgentToolsServer {
     return this.ok(await xSearch(query));
   }
 
-  private async homeAssistant(
+  async homeAssistant(
     name: string,
     args: Record<string, unknown>
   ): Promise<ToolResult> {
@@ -3670,7 +2298,7 @@ export class McpAgentToolsServer {
 
   // ── Result helpers ───────────────────────────────────────────────────────
 
-  private ok(text: string): ToolResult {
+  ok(text: string): ToolResult {
     return { content: [{ type: "text", text }] };
   }
 
