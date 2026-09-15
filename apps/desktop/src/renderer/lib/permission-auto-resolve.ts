@@ -31,6 +31,24 @@ export function autoResolution(
   return mode === AgentMode.AcceptEdits && isEdit ? "accept" : null;
 }
 
+/**
+ * The mode a card's answer moves the session to, if any. "Always" on a tool
+ * approval is a request to stop asking about edits, "allow all" to stop
+ * asking at all. On a sandbox card neither is being said: "always" there
+ * keeps those paths or that host for the session, and the mode must stay
+ * where it is, or one click on a card would drop Auto to Auto-Accept.
+ */
+export function modeAfterDecision(
+  request: PermissionRequest,
+  decision: string
+): AgentMode | null {
+  if (isSandboxCard(request)) return null;
+  if (decision === "allowAlways") return AgentMode.AcceptEdits;
+  if (decision === "allowYolo") return AgentMode.Yolo;
+
+  return null;
+}
+
 /** The prompts the sandbox raises, as opposed to the tool approvals. */
 export function isSandboxCard(request: PermissionRequest): boolean {
   return (
