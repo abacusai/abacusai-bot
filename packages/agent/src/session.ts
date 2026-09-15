@@ -1,10 +1,6 @@
 import {
   createAgentSession,
-  createBashToolDefinition,
-  createFindToolDefinition,
-  createGrepToolDefinition,
   createLocalBashOperations,
-  createLsToolDefinition,
   DefaultResourceLoader,
   type AgentSession,
   type AgentSessionEvent,
@@ -17,7 +13,6 @@ import {
 
 import { allowedPathsFromEnv } from "./allowed-paths.js";
 import { backendOperations } from "./backends.js";
-import { withBackgroundOption } from "./background-bash.js";
 import { notifyConversationQueueCleared } from "./background-processes.js";
 /**
  * The bridge: one pi `AgentSession`, presented as the desktop's event stream.
@@ -25,11 +20,7 @@ import { notifyConversationQueueCleared } from "./background-processes.js";
  * inside pi's async `tool_call` hook, so the loop is genuinely suspended while
  * the user decides; edit diffs are computed from the on-disk "before".
  */
-import { buildBotTimeTool, timezonePrompt } from "./bot/bot-time-tool.js";
-import {
-  browserTaskEnabled,
-  buildBrowserTaskTool,
-} from "./browser-task-tool.js";
+import { timezonePrompt } from "./bot/bot-time-tool.js";
 import {
   agentDir,
   applyStoredApiKeys,
@@ -37,7 +28,6 @@ import {
   loadConfig,
   PROVIDER_API_KEY_ENV,
   skillDirs,
-  skillDirsByScope,
   userProfilePrompt,
   type AbacusBotConfig,
 } from "./config.js";
@@ -46,12 +36,11 @@ import {
   customInstructionsPrompt,
   readCustomInstructions,
 } from "./custom-instructions.js";
-import { buildDeckTool, deckToolEnabled } from "./deck-tool.js";
-import { buildDelegateTool, delegationEnabled } from "./delegate-tool.js";
-import { buildDesignTool, designToolEnabled } from "./design-tool.js";
-import { buildDocumentTool, documentToolEnabled } from "./document-tool.js";
+import { deckToolEnabled } from "./deck-tool.js";
+import { designToolEnabled } from "./design-tool.js";
+import { documentToolEnabled } from "./document-tool.js";
 import { excludedTools, TOOL_NAME_ALIASES } from "./excluded-tools.js";
-import { buildExitPlanTool, EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
+import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
 import astTools from "./extensions/ast-tools.js";
 import background from "./extensions/background.js";
 import batchReadTool from "./extensions/batch-read-tool.js";
@@ -80,7 +69,6 @@ import {
   memorySnapshot as readMemorySnapshot,
   rememberSnapshot,
 } from "./memory-store.js";
-import { buildMemoryTool, MEMORY_TOOL_NAME } from "./memory-tool.js";
 import { fileCooldownStore } from "./openllm-cooldowns.js";
 import {
   OPENLLM_ID,
@@ -98,10 +86,6 @@ import {
   shellSegments,
 } from "./permissions.js";
 import { personaPrompt, readPersona } from "./persona.js";
-import {
-  buildPresentDeliverableTool,
-  PRESENT_DELIVERABLE_TOOL_NAME,
-} from "./present-deliverable-tool.js";
 import {
   AgentMode,
   AgentStatus,
@@ -127,15 +111,9 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "./reply-language.js";
-import { buildServeTool, SERVE_TOOL_NAME } from "./serve-tool.js";
+import { buildRoster } from "./roster.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { conversationSessionManager } from "./session-file.js";
-import {
-  buildSessionSearchTool,
-  sessionSearchEnabled,
-} from "./session-search-tool.js";
-import { buildSkillAddTool, skillAddEnabled } from "./skill-add-tool.js";
-import { buildTodoTool, TODO_TOOL_NAME } from "./todo-tool.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
@@ -451,16 +429,6 @@ function approvalTimeoutMs(): number {
   }
 
   return Number.isFinite(raw) && raw > 0 ? raw : 15 * 60_000;
-}
-
-/**
- * Whether this session registers its own `bash` (which carries `background`)
- * over pi's built-in; a custom tool of the same name replaces it. Skipped only
- * when the user switched `bash` off. It must NOT also be named in
- * `excludeTools`: pi applies that to custom tools too, leaving no shell.
- */
-export function replacesBash(excluded: readonly string[]): boolean {
-  return !excluded.includes("bash");
 }
 
 /** The slice of a settings manager the retry cap reads and replaces. */
@@ -962,53 +930,9 @@ export class AbacusBotSession {
       }
     }
 
-    // A getter: refreshMcp swaps `this.mcp`, and captured routes would call
-    // closed clients forever.
-    const mcpTools = buildMcpToolDefinitions(() => this.mcp);
     // A switched-off toolset is withheld, not hidden: the model never sees it.
     const excluded = excludedTools();
 
-    // Background runs go through the same operations as the foreground ones, so
-    // `background: true` cannot become a way around the sandbox.
-    const operations = backendOperations() ?? createLocalBashOperations();
-    const backendBash = replacesBash(excluded)
-      ? [
-          withBackgroundOption(
-            createBashToolDefinition(this.options.cwd, { operations }) as never,
-            this.options.cwd,
-            operations
-          ),
-        ]
-      : [];
-
-    // Delegation lives here, not in the desktop's tool server: a sub-agent
-    // needs the model runtime and resource loader, which only exist here.
-    const delegationTools = delegationEnabled()
-      ? [
-          buildDelegateTool(
-            {
-              cwd: this.options.cwd,
-              agentDir: dir,
-              modelRuntime: this.modelRuntime,
-              settingsManager: subAgentSettingsManager,
-              skillPaths: skillDirs(this.options.cwd),
-              ...(model ? { model } : {}),
-            },
-            (event) => this.emitAgentEvent(event)
-          ),
-        ]
-      : [];
-
-    // Browser tools go to a sub-agent (browser-task.ts) and the parent gets one
-    // `browser_task` tool: a page walk is dozens of element trees the main
-    // transcript would carry forever, and driving a real site needs a prompt
-    // about nothing else.
-    const isBrowserTool = (tool: { name: string }): boolean =>
-      tool.name.startsWith("browser_");
-    const browserTools = mcpTools.filter(isBrowserTool);
-    const otherMcpTools = mcpTools.filter(
-      (tool) => !isBrowserTool(tool) && !isSupersededWebTool(tool)
-    );
     // The browser sub-agent may run on a stronger model than the chat.
     const browserModelRef = (
       process.env.ABACUSAI_BOT_BROWSER_MODEL ??
@@ -1023,165 +947,37 @@ export class AbacusBotSession {
             this.maxOutputTokens
           ).model ?? model)
         : model;
-    const browserTaskTools =
-      browserTools.length > 0 && browserTaskEnabled()
-        ? [
-            buildBrowserTaskTool(
-              {
-                cwd: this.options.cwd,
-                agentDir: dir,
-                modelRuntime: this.modelRuntime,
-                settingsManager: subAgentSettingsManager,
-                // Resolved per run so a reconnect reaches the sub-agent too.
-                browserTools: () =>
-                  buildMcpToolDefinitions(() => this.mcp).filter(isBrowserTool),
-                ...(browserModel ? { model: browserModel } : {}),
-              },
-              (event) => this.emitAgentEvent(event)
-            ),
-          ]
-        : [];
 
-    // With `browser_task` switched off the raw tools come back.
-    const passthroughBrowserTools =
-      browserTaskTools.length > 0 ? [] : browserTools;
-
-    // The document component, here for the same reason as delegation; only
-    // its printing stays on the desktop as a host service (document-task.ts).
-    const documentTools =
-      hostServices && documentToolEnabled()
-        ? [
-            buildDocumentTool(
-              {
-                cwd: this.options.cwd,
-                agentDir: dir,
-                modelRuntime: this.modelRuntime,
-                settingsManager: subAgentSettingsManager,
-                hostServices: this.hostServices,
-                skillPaths: skillDirs(this.options.cwd),
-                ...(model ? { model } : {}),
-              },
-              (event) => this.emitAgentEvent(event)
-            ),
-          ]
-        : [];
-
-    // The design component, on the same split (design-task.ts).
-    const designTools =
-      hostServices && designToolEnabled()
-        ? [
-            buildDesignTool(
-              {
-                cwd: this.options.cwd,
-                agentDir: dir,
-                modelRuntime: this.modelRuntime,
-                settingsManager: subAgentSettingsManager,
-                hostServices: this.hostServices,
-                skillPaths: skillDirs(this.options.cwd),
-                ...(model ? { model } : {}),
-              },
-              (event) => this.emitAgentEvent(event)
-            ),
-          ]
-        : [];
-
-    // The deck component: template markup never crosses into this process, so
-    // slides are filled by slot (deck-task.ts).
-    const deckTools =
-      hostServices && deckToolEnabled()
-        ? [
-            buildDeckTool(
-              {
-                cwd: this.options.cwd,
-                agentDir: dir,
-                modelRuntime: this.modelRuntime,
-                settingsManager: subAgentSettingsManager,
-                hostServices: this.hostServices,
-                skillPaths: skillDirs(this.options.cwd),
-                ...(model ? { model } : {}),
-              },
-              (event) => this.emitAgentEvent(event)
-            ),
-          ]
-        : [];
-
-    // Always registered: the one way out of plan mode must not depend on
-    // which toolsets are switched on.
-    const planTools = [buildExitPlanTool(() => this.mode)];
-
-    // `createAgentSession` registers only pi's coding set, not its read-only
-    // search tools; without these, plan mode could investigate with nothing
-    // but `read`. Custom tools, so `excludeTools` covers them like the rest.
-    const searchTools = [
-      createGrepToolDefinition(this.options.cwd),
-      createFindToolDefinition(this.options.cwd),
-      createLsToolDefinition(this.options.cwd),
-    ];
-
-    // Here rather than on the desktop's tool server: the CLI has no such
-    // server and no other way to add a skill.
-    const skillTools = skillAddEnabled()
-      ? [
-          buildSkillAddTool({
-            skillDirs: () => skillDirsByScope(this.options.cwd),
-            onInstalled: () => this.reloadSkills(),
-          }),
-        ]
-      : [];
-
-    // Recall over past conversations; it reads files, not app state, so the
-    // CLI can have it too.
-    const sessionSearchTools = sessionSearchEnabled()
-      ? [buildSessionSearchTool(() => this.session?.sessionId)]
-      : [];
-
-    // The desktop serves `todo` over MCP; the CLI has no MCP server. Added
-    // only when nothing provides it, so the Capabilities toggle stays the
-    // single answer to whether it is on.
-    const todoTools = toolNames.has(TODO_TOOL_NAME) ? [] : [buildTodoTool()];
-
-    // Same shape, same reason, for `memory`.
-    const memoryTools = toolNames.has(MEMORY_TOOL_NAME)
-      ? []
-      : [buildMemoryTool()];
-
-    // The tool every handover instruction names; the CLI must have one too.
-    const deliverableTools = toolNames.has(PRESENT_DELIVERABLE_TOOL_NAME)
-      ? []
-      : [buildPresentDeliverableTool(() => this.options.cwd)];
-
-    // The other half of that workflow: a page is only a deliverable once
-    // something is serving it, and `bash` cannot hold a server open.
-    const serveTools = toolNames.has(SERVE_TOOL_NAME)
-      ? []
-      : [buildServeTool(() => this.options.cwd)];
-
-    for (const tool of [...otherMcpTools, ...passthroughBrowserTools]) {
-      this.registeredMcpTools.add(tool.name);
+    // The roster is a table (roster.ts) so it can be read without a session.
+    const roster = buildRoster(
+      {
+        cwd: this.options.cwd,
+        agentDir: dir,
+        modelRuntime: this.modelRuntime,
+        subAgentSettingsManager,
+        model,
+        browserModel,
+        hostServices: hostServices ? this.hostServices : null,
+        excluded,
+        // Background runs go through the same operations as the foreground
+        // ones, so `background: true` cannot become a way around the sandbox.
+        operations: backendOperations() ?? createLocalBashOperations(),
+        // A getter: refreshMcp swaps `this.mcp`, and captured routes would
+        // call closed clients forever.
+        mcp: () => this.mcp,
+        provided: toolNames,
+        mode: () => this.mode,
+        sessionId: () => this.session?.sessionId,
+        emit: (event) => this.emitAgentEvent(event),
+        reloadSkills: () => this.reloadSkills(),
+      },
+      isSupersededWebTool
+    );
+    for (const name of roster.mcpToolNames) {
+      this.registeredMcpTools.add(name);
     }
-
-    this.browserTaskRegistered = browserTaskTools.length > 0;
-
-    const customTools = [
-      // A `date` shell round trip is one the model rarely bothers with.
-      buildBotTimeTool(),
-      ...planTools,
-      ...searchTools,
-      ...skillTools,
-      ...sessionSearchTools,
-      ...todoTools,
-      ...memoryTools,
-      ...deliverableTools,
-      ...serveTools,
-      ...otherMcpTools,
-      ...passthroughBrowserTools,
-      ...backendBash,
-      ...delegationTools,
-      ...browserTaskTools,
-      ...documentTools,
-      ...designTools,
-      ...deckTools,
-    ];
+    this.browserTaskRegistered = roster.browserTaskRegistered;
+    const customTools = roster.tools;
 
     // Resumes the chat where the last process left it; undefined keeps pi's
     // default.
