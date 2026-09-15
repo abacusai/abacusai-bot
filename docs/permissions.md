@@ -82,7 +82,24 @@ macOS, Linux and Windows 11 24H2 or newer can run commands under an optional
 kernel sandbox: Seatbelt, bubblewrap, and a Microsoft process container run by
 the `wxc-exec` runner the app ships. Plan mode allows no writes. Default and
 Auto-Accept allow writes to the workspace and temporary directories. Bypass
-remains unconfined. Network access is not restricted.
+remains unconfined.
+
+On macOS and Linux, outbound connections from a confined command go only
+through a loopback proxy the agent runs. Package registries and code hosts
+(npm, PyPI, crates.io, Go, RubyGems, Maven, GitHub, GitLab, Docker Hub,
+Hugging Face, Debian and Ubuntu mirrors) are allowed without asking; any other
+host raises a prompt while the connection waits. "Allow once" lets that
+connection through, "Always" allows the host for the session. Connections to
+loopback are direct, so a dev server the command starts still answers.
+`ABACUSAI_BOT_SANDBOX_HOSTS`, a comma-separated list where `*.example.com`
+allows a domain, pre-approves hosts. Tools find the proxy through
+`HTTP_PROXY`, `HTTPS_PROXY` and `ALL_PROXY`; git's SSH transport is routed
+through it with a `ProxyCommand` unless `GIT_SSH_COMMAND` is already set. A
+tool that ignores those variables cannot connect at all. On Linux the bridge
+into the sandbox's own network namespace needs `socat`; without it the
+network stays open. A server started by an earlier background command is in
+another namespace there and cannot be reached from a later command. On
+Windows the network is not confined yet.
 
 Reads are allowed everywhere except a short list of credential stores: SSH
 private keys, GPG private keys, cloud CLI credential and token caches (AWS,

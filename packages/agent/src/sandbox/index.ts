@@ -25,6 +25,13 @@ export {
 } from "./policy.js";
 export { CredentialApprovals } from "./approvals.js";
 export {
+  EgressProxy,
+  egressProxy,
+  proxyEnvironment,
+  resetEgressProxy,
+  type HostDecider,
+} from "./egress.js";
+export {
   mentionedSecretPaths,
   namedSecretPaths,
   readableExemptions,
@@ -74,6 +81,22 @@ export function unavailableBackendMessage(backend: SandboxBackend): string {
     `the sandbox needs fixing, and must not be worked around.` +
     hint
   );
+}
+
+/**
+ * Whether outbound connections can be forced through the egress proxy here.
+ * Seatbelt needs nothing extra; bubblewrap needs socat to bridge into its
+ * network namespace; the Windows container is not wired to the proxy yet.
+ */
+export function networkConfinable(): boolean {
+  switch (backendName()) {
+    case "seatbelt":
+      return true;
+    case "bubblewrap":
+      return bubblewrap.socatPath() !== null;
+    default:
+      return false;
+  }
 }
 
 export function decide(

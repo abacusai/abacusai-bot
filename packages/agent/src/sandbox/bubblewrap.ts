@@ -10,6 +10,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { egressSocketPath } from "./egress.js";
 import type { SandboxPolicy } from "./policy.js";
 import type { SecretPaths } from "./secrets.js";
 import { POSIX_SHELL, shellArgs } from "./shell.js";
@@ -145,9 +146,73 @@ export function buildArgs(
   // After the workspace bind, so a workspace under $HOME cannot expose them.
   args.push(...secretHidingArgs(policy.secrets, isDirectorySync));
 
-  args.push("--chdir", cwd, "--", POSIX_SHELL, ...shellArgs(command));
+  if (policy.network.kind === "proxy") {
+    args.push(...networkBridgeArgs(egressSocketPath(), socatPath()));
+    args.push(
+      "--chdir",
+      cwd,
+      "--",
+      ...bridgedShell(policy.network.port, command)
+    );
+  } else {
+    args.push("--chdir", cwd, "--", POSIX_SHELL, ...shellArgs(command));
+  }
 
   return args;
+}
+
+/**
+ * A private network namespace has its own loopback, so the host's proxy port
+ * is out of reach; its unix socket is bound in instead and socat inside the
+ * sandbox turns the port the tools were given back into that socket.
+ */
+export function networkBridgeArgs(
+  socket: string,
+  socat: string | null
+): string[] {
+  if (socat === null) return [];
+
+  return ["--unshare-net", "--ro-bind", socket, socket];
+}
+
+/** The command behind socat, handed to bash as arguments so it is not re-quoted. */
+export function bridgedShell(
+  port: number,
+  command: string,
+  socat: string | null = socatPath()
+): string[] {
+  if (socat === null) return [POSIX_SHELL, ...shellArgs(command)];
+
+  const listen = `TCP-LISTEN:${port},bind=127.0.0.1,fork,reuseaddr`;
+
+  return [
+    POSIX_SHELL,
+    "-c",
+    `${socat} ${listen} UNIX-CONNECT:${egressSocketPath()} & exec ${POSIX_SHELL} "$@"`,
+    POSIX_SHELL,
+    ...shellArgs(command),
+  ];
+}
+
+const SOCAT_CANDIDATES = [
+  "/usr/bin/socat",
+  "/bin/socat",
+  "/usr/local/bin/socat",
+];
+
+/** socat, never from PATH, for the same reason as bwrap below. */
+export function socatPath(): string | null {
+  for (const candidate of SOCAT_CANDIDATES) {
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+
+      return candidate;
+    } catch {
+      // Try the next one.
+    }
+  }
+
+  return null;
 }
 
 function isDirectorySync(candidate: string): boolean {

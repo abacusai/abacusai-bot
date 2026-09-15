@@ -22,6 +22,7 @@ import {
   backendOperations,
   deadline,
   hiddenStoreNote,
+  refusedHostNote,
   selectedBackend,
 } from "./backends.js";
 import { currentMode, setCurrentMode } from "./current-mode.js";
@@ -251,5 +252,19 @@ describe("the note on a failed command that hit a hidden store", () => {
 
   it("is silent when the output mentions no store", () => {
     expect(hiddenStoreNote("npm ERR! 404", ["/home/dev/.netrc"])).toBeNull();
+  });
+});
+
+describe("the note on a command the proxy refused", () => {
+  it("names the host and sends the model to the user", () => {
+    const note = refusedHostNote(
+      "curl: (22) evil.test is not allowed by the sandbox"
+    );
+    expect(note).toContain("evil.test");
+    expect(note).toContain("tell the user");
+  });
+
+  it("is silent otherwise", () => {
+    expect(refusedHostNote("curl: (7) Failed to connect")).toBeNull();
   });
 });

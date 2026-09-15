@@ -16,11 +16,7 @@ import {
   type SecretPaths,
 } from "./secrets.js";
 
-/**
- * What the OS is asked to enforce. File effects only: network confinement has
- * its own failure modes (a blocked `npm install` looks like a broken machine),
- * and promising it without enforcing it everywhere is worse than not claiming.
- */
+/** What the OS is asked to enforce on files. */
 export type SandboxMode =
   | "read-only"
   | "workspace-write"
@@ -44,7 +40,16 @@ export interface SandboxPolicy {
   writableTemp: string[];
   /** Credential stores hidden from the command, and what is read back. */
   secrets: SecretPaths;
+  /** Where the command's outbound connections may go. */
+  network: NetworkPolicy;
 }
+
+/**
+ * Outbound network, either open or only through the loopback egress proxy
+ * (egress.ts), which holds an unlisted host while the user is asked. Open
+ * carries the reason when confinement was wanted but not possible.
+ */
+export type NetworkPolicy = { kind: "open" } | { kind: "proxy"; port: number };
 
 /**
  * Off unless something asks for it. The desktop sets ABACUSAI_BOT_SANDBOX=auto
@@ -93,8 +98,12 @@ export function canonicalize(target: string): string {
 export function resolvePolicy(
   mode: AgentMode,
   cwd: string,
-  /** Stores the user approved for this command, on top of the environment's. */
-  approvedReads: readonly string[] = []
+  options: {
+    /** Stores the user approved for this command, on top of the environment's. */
+    approvedReads?: readonly string[];
+    /** The egress proxy's port; null when none is listening. */
+    egressPort?: number | null;
+  } = {}
 ): SandboxPolicy {
   const temps = new Set<string>();
   for (const candidate of ["/tmp", os.tmpdir()]) {
@@ -109,7 +118,11 @@ export function resolvePolicy(
     writableTemp: [...temps],
     secrets: resolveSecretPaths({
       workspaceRoot,
-      exemptions: [...readableExemptions(), ...approvedReads],
+      exemptions: [...readableExemptions(), ...(options.approvedReads ?? [])],
     }),
+    network:
+      options.egressPort != null
+        ? { kind: "proxy", port: options.egressPort }
+        : { kind: "open" },
   };
 }

@@ -182,6 +182,7 @@ describe("the Seatbelt rules", () => {
     enforcement: "auto" as const,
     workspaceRoot: "/private/tmp/ws",
     writableTemp: ["/private/tmp"],
+    network: { kind: "open" as const },
   };
 
   it("denies each store and allows the readable files after it", () => {
