@@ -137,7 +137,7 @@ import type { ExperienceRuntime } from "./services/updates/experience/runtime";
 import { consumeRelaunchHidden } from "./services/updates/relaunch-hidden";
 import { registerUpdateHandlers } from "./services/updates/update-handler";
 import { UpdateService } from "./services/updates/update-service";
-import { resolveHostPath } from "./services/workspace/host-path";
+import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 
 const legacyUserDataDir = app.getPath("userData");
@@ -1251,42 +1251,15 @@ app
               };
             }
 
-            const resolved = resolveHostPath(filePath, hostRoot);
-
-            const ext = path.extname(resolved).toLowerCase();
+            const ext = path.extname(filePath).toLowerCase();
             const mimeType = IMAGE_MIME[ext];
             if (!mimeType) {
               return { success: false, error: "unsupported-extension" };
             }
 
-            let realFile: string;
-            let realRoot: string;
-            try {
-              realFile = await fs.realpath(resolved);
-              realRoot = await fs.realpath(hostRoot);
-            } catch (err) {
-              return {
-                success: false,
-                error:
-                  (err as NodeJS.ErrnoException | null)?.code === "ENOENT"
-                    ? "not-found"
-                    : err instanceof Error
-                      ? err.message
-                      : "realpath-failed",
-              };
-            }
-
-            const rel = path.relative(realRoot, realFile);
-            const escapes =
-              !rel || rel.startsWith("..") || path.isAbsolute(rel);
-            if (escapes && realFile !== realRoot) {
-              return { success: false, error: "outside-root" };
-            }
-
-            const stat = await fs.stat(realFile);
-            if (!stat.isFile()) {
-              return { success: false, error: "not-a-file" };
-            }
+            const file = await openHostFile(filePath, hostRoot);
+            if (file.ok === false) return { success: false, error: file.error };
+            const { realFile, stat } = file;
             if (stat.size > MAX_IMAGE_BYTES) {
               return {
                 success: false,
@@ -1330,36 +1303,9 @@ app
 
             const maxBytes = args?.maxBytes ?? MAX_TEXT_BYTES_DEFAULT;
 
-            const resolved = resolveHostPath(filePath, hostRoot);
-
-            let realFile: string;
-            let realRoot: string;
-            try {
-              realFile = await fs.realpath(resolved);
-              realRoot = await fs.realpath(hostRoot);
-            } catch (err) {
-              return {
-                success: false,
-                error:
-                  (err as NodeJS.ErrnoException | null)?.code === "ENOENT"
-                    ? "not-found"
-                    : err instanceof Error
-                      ? err.message
-                      : "realpath-failed",
-              };
-            }
-
-            const rel = path.relative(realRoot, realFile);
-            const escapes =
-              !rel || rel.startsWith("..") || path.isAbsolute(rel);
-            if (escapes && realFile !== realRoot) {
-              return { success: false, error: "outside-root" };
-            }
-
-            const stat = await fs.stat(realFile);
-            if (!stat.isFile()) {
-              return { success: false, error: "not-a-file" };
-            }
+            const file = await openHostFile(filePath, hostRoot);
+            if (file.ok === false) return { success: false, error: file.error };
+            const { realFile, stat } = file;
 
             const sizeBytes = stat.size;
 
@@ -1421,34 +1367,9 @@ app
               };
             }
 
-            const resolved = resolveHostPath(filePath, hostRoot);
-
-            let realFile: string;
-            let realRoot: string;
-            try {
-              realFile = await fs.realpath(resolved);
-              realRoot = await fs.realpath(hostRoot);
-            } catch (err) {
-              return {
-                success: false,
-                error:
-                  (err as NodeJS.ErrnoException | null)?.code === "ENOENT"
-                    ? "not-found"
-                    : err instanceof Error
-                      ? err.message
-                      : "realpath-failed",
-              };
-            }
-
-            const rel = path.relative(realRoot, realFile);
-            const escapes =
-              !rel || rel.startsWith("..") || path.isAbsolute(rel);
-            if (escapes && realFile !== realRoot) {
-              return { success: false, error: "outside-root" };
-            }
-
-            const stat = await fs.stat(realFile);
-            if (!stat.isFile()) return { success: false, error: "not-a-file" };
+            const file = await openHostFile(filePath, hostRoot);
+            if (file.ok === false) return { success: false, error: file.error };
+            const { realFile, stat } = file;
             if (stat.size > MAX_PPTX_BYTES) {
               return {
                 success: false,

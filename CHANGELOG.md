@@ -11,7 +11,10 @@ A file link written with `~`, such as a screenshot on the Desktop, now opens
 in the preview pane's file reader instead of reporting the file missing. A
 file outside the workspace says so, rather than "not found". A link whose
 name has spaces, which markdown writes as `%20`, opens too: the preview was
-asking for a file literally named with the escapes.
+asking for a file literally named with the escapes. And a file whose name the
+agent transcribed with an ordinary space where the disk has an invisible one
+(macOS screenshots have a narrow no-break space before "AM") now opens, where
+before every screenshot link the agent wrote reported the file missing.
 
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
