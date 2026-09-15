@@ -7,6 +7,10 @@
 
 ## Unreleased
 
+A file link written with `~`, such as a screenshot on the Desktop, now opens
+in the preview pane's file reader instead of reporting the file missing. A
+file outside the workspace says so, rather than "not found".
+
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
