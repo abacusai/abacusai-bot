@@ -14,6 +14,11 @@ import {
   fetchAbacusModels,
 } from "./abacus";
 import {
+  cachedLiveGroqModelIds,
+  clearGroqCache,
+  fetchLiveGroqModelIds,
+} from "./groq";
+import {
   cachedFreeOpenRouterModels,
   clearOpenRouterCache,
   fetchFreeOpenRouterModels,
@@ -55,22 +60,29 @@ export const listAvailableModels = async (
   if (refresh) {
     clearOpenRouterCache();
     clearAbacusCache();
+    clearGroqCache();
   }
 
   // Live catalogs, each gated on its own key, fetched in parallel so the
   // picker does not wait for them in series.
-  const [openRouterFree, abacusModels, abacusAccount] = await Promise.all([
-    refresh || cachedFreeOpenRouterModels().length === 0
-      ? fetchFreeOpenRouterModels()
-      : cachedFreeOpenRouterModels(),
-    // Abacus's catalog is per-account (org policy gates models).
-    refresh || cachedAbacusModels().length === 0
-      ? fetchAbacusModels()
-      : cachedAbacusModels(),
-    // The plan tier picks the recommended default; null (signed out, or the
-    // host unreachable) simply leaves no recommendation.
-    fetchAbacusAccount(),
-  ]);
+  const [openRouterFree, abacusModels, abacusAccount, groqLive] =
+    await Promise.all([
+      refresh || cachedFreeOpenRouterModels().length === 0
+        ? fetchFreeOpenRouterModels()
+        : cachedFreeOpenRouterModels(),
+      // Abacus's catalog is per-account (org policy gates models).
+      refresh || cachedAbacusModels().length === 0
+        ? fetchAbacusModels()
+        : cachedAbacusModels(),
+      // The plan tier picks the recommended default; null (signed out, or the
+      // host unreachable) simply leaves no recommendation.
+      fetchAbacusAccount(),
+      // Groq retires models faster than pi's catalog is regenerated; the live
+      // list says which of the catalog's rows still answer.
+      refresh || cachedLiveGroqModelIds() == null
+        ? fetchLiveGroqModelIds()
+        : cachedLiveGroqModelIds(),
+    ]);
 
   const config = readConfig();
 
@@ -138,7 +150,20 @@ export const listAvailableModels = async (
       };
     }
   );
-  const expandedProviders = new Set(expanded.map((model) => model.provider));
+  // A Groq row the live list does not carry is a retired model: pi's data
+  // still names the Llama 3.x line, and each of those 404s on the first turn.
+  // No live answer (no key, offline) leaves the catalog alone.
+  const withoutRetiredGroq =
+    groqLive == null
+      ? expanded
+      : expanded.filter(
+          (model) =>
+            model.provider !== "groq" ||
+            groqLive.has(model.id.slice("groq/".length))
+        );
+  const expandedProviders = new Set(
+    withoutRetiredGroq.map((model) => model.provider)
+  );
 
   // The live list and an expanded catalog supersede the curated rows they
   // cover, or the same model would show twice under two labels.
@@ -179,7 +204,7 @@ export const listAvailableModels = async (
   const liveIds = new Set(openRouterFree.map((model) => model.id));
   const composed = [
     ...presented,
-    ...expanded.filter((model) => !liveIds.has(model.id)),
+    ...withoutRetiredGroq.filter((model) => !liveIds.has(model.id)),
     ...openRouterFree,
     ...abacusModels,
     ...custom,
