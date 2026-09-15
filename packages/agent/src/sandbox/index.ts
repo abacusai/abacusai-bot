@@ -101,7 +101,7 @@ export async function decide(
   /** Correlates the runtime's violation records with this run. */
   commandId: string = `command-${Date.now()}-${Math.random().toString(16).slice(2)}`
 ): Promise<SandboxDecision> {
-  if (policy.enforcement === "off" || policy.mode === "danger-full-access") {
+  if (policy.enforcement === "off") {
     return { kind: "unconfined", reason: "mode" };
   }
 

@@ -26,6 +26,42 @@ const spawn = vi.hoisted(() => vi.fn());
 vi.mock("child_process", () => ({ spawn }));
 
 /**
+ * The sandbox decision, stubbed: what is under test here is the spawn that
+ * follows it, and the real decision would start the sandbox runtime.
+ */
+const decide = vi.hoisted(() => vi.fn());
+
+vi.mock("./sandbox/index.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./sandbox/index.js")>()),
+  decide,
+  violations: () => null,
+}));
+
+/** Run the command confined under a plain bash, the shape every backend yields. */
+const confined = (): void => {
+  decide.mockImplementation(async (_policy: unknown, command: string) => ({
+    kind: "confined",
+    argv: ["/bin/bash", "-c", command],
+    backend: "sandbox-runtime",
+  }));
+};
+
+/** No backend here: the platform's own shell, unconfined. */
+const unconfined = (): void => {
+  decide.mockResolvedValue({
+    kind: "unconfined",
+    reason: "unsupported-platform",
+  });
+};
+
+const refused = (): void => {
+  decide.mockResolvedValue({
+    kind: "refused",
+    message: "Command refused: the sandbox could not be established.",
+  });
+};
+
+/**
  * The login shell's environment, stubbed. The real one shells out to source the
  * user's profile, which is both slow and different on every machine.
  */
@@ -386,6 +422,7 @@ describe("running a command on this machine", () => {
   beforeEach(() => {
     process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
     process.env.ABACUSAI_BOT_SANDBOX = "strict";
+    confined();
   });
 
   const localOperations = async (): Promise<BashOperations> => {
@@ -400,6 +437,7 @@ describe("running a command on this machine", () => {
     // strict on a platform with no backend: reported as output plus a non-zero
     // exit so the model reads why and adapts.
     onPlatform("win32");
+    refused();
     const operations = await localOperations();
 
     const { exitCode, output } = await exec(operations, "ls");
@@ -412,7 +450,6 @@ describe("running a command on this machine", () => {
 
   it("hands the command to bash when the mode asked for no confinement", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "echo hi", "/work/project");
@@ -428,7 +465,6 @@ describe("running a command on this machine", () => {
 
   it("runs the command in its own process group, so a deadline can take down what it started", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls");
@@ -442,7 +478,6 @@ describe("running a command on this machine", () => {
     // Inheriting would mean the launchd PATH, which cannot find the user's
     // toolchain — the profile is sourced once, not per command.
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls");
@@ -454,7 +489,6 @@ describe("running a command on this machine", () => {
 
   it("keeps the caller's PATH in front of the shell's, and reaches both", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls", "/work", {
@@ -472,7 +506,6 @@ describe("running a command on this machine", () => {
 
   it("gives the caller's environment the shell's PATH when it brought none", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls", "/work", { env: { TOKEN: "abc" } });
@@ -490,7 +523,7 @@ describe("running a command on this machine", () => {
     // spellings side by side — libuv keeps one, and it may be the one without
     // pi's bin directory.
     onPlatform("win32");
-    setCurrentMode(AgentMode.Yolo);
+    unconfined();
     const operations = await localOperations();
 
     const running = exec(operations, "dir", "C:\\work", {
@@ -512,7 +545,7 @@ describe("running a command on this machine", () => {
     // Node's default Windows quoting is the C runtime's, and cmd.exe does not
     // undo it — `git commit -m "msg"` reached cmd with the backslashes in.
     onPlatform("win32");
-    setCurrentMode(AgentMode.Yolo);
+    unconfined();
     const operations = await localOperations();
 
     const running = exec(operations, 'git commit -m "msg"', "C:\\work");
@@ -527,7 +560,6 @@ describe("running a command on this machine", () => {
 
   it("closes stdin so a command that reads it does not hang", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "cat");
@@ -539,7 +571,6 @@ describe("running a command on this machine", () => {
 
   it("surfaces a spawn failure as command output", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls");
@@ -554,7 +585,6 @@ describe("running a command on this machine", () => {
     // Killing the shell alone leaves a backgrounded descendant running — and it
     // is that descendant which keeps the turn's output pipes open.
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
     const operations = await localOperations();
     const controller = new AbortController();
@@ -575,7 +605,6 @@ describe("running a command on this machine", () => {
   it("still kills a command whose abort landed while the sandbox was deciding", async () => {
     // The decision is asynchronous; an abort in that gap used to be missed.
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
     const operations = await localOperations();
     const controller = new AbortController();
@@ -595,7 +624,6 @@ describe("running a command on this machine", () => {
 
   it("falls back to killing the child when its group is already gone", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const kill = vi.spyOn(process, "kill").mockImplementation(() => {
       throw new Error("ESRCH");
     });

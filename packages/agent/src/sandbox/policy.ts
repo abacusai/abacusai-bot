@@ -17,10 +17,7 @@ import {
 } from "./secrets.js";
 
 /** What the OS is asked to enforce on files. */
-export type SandboxMode =
-  | "read-only"
-  | "workspace-write"
-  | "danger-full-access";
+export type SandboxMode = "read-only" | "workspace-write";
 
 /** How hard to insist on a sandbox. */
 export type SandboxEnforcement =
@@ -66,19 +63,13 @@ export function sandboxEnforcement(): SandboxEnforcement {
 }
 
 /**
- * The sandbox follows the permission mode rather than adding a second control
- * that can disagree with it: Plan's gate-level read-only becomes true at the
- * OS level, and Bypass is a deliberate request to run unimpeded.
+ * Plan's gate-level read-only becomes true at the OS level; every other mode
+ * gets the workspace. Bypass included: it skips the approval prompts, and the
+ * app starts in it, so it is exactly where the kernel bounds matter most.
+ * Only the Settings toggle turns the sandbox off.
  */
 export function modeToSandboxMode(mode: AgentMode): SandboxMode {
-  switch (mode) {
-    case AgentMode.PlanMode:
-      return "read-only";
-    case AgentMode.Yolo:
-      return "danger-full-access";
-    default:
-      return "workspace-write";
-  }
+  return mode === AgentMode.PlanMode ? "read-only" : "workspace-write";
 }
 
 /**

@@ -140,8 +140,12 @@ export function isMutatingCall(tool: ToolRequest): boolean {
 export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   const { mode } = options;
 
+  // Bypass skips the approval prompts, not the sandbox: a hidden credential
+  // store a command names is still the OS refusing, and still worth a card.
   if (mode === AgentMode.Yolo) {
-    return { kind: "allow" };
+    return tool.name === "bash"
+      ? (credentialGate(tool, options) ?? { kind: "allow" })
+      : { kind: "allow" };
   }
 
   // The one call plan mode must let through: it is how the user is asked to
@@ -395,11 +399,11 @@ function gateRead(tool: ToolRequest, options: GateOptions): Gate {
   };
 }
 
-function gateBash(tool: ToolRequest, options: GateOptions): Gate {
-  const command = String(tool.input.command ?? "");
-
-  // A hidden credential store the command names asks even when the command
-  // prefix was approved: `cat` being allowed says nothing about the key.
+/** The hidden stores a command names, split by whether the session allowed them. */
+function namedCredentialStores(
+  command: string,
+  options: GateOptions
+): { named: string[]; approved: string[]; unapproved: string[] } {
   const named = namedSecretPaths(command, {
     cwd: options.cwd,
     promptable: options.promptableCredentialPaths ?? [],
@@ -408,7 +412,52 @@ function gateBash(tool: ToolRequest, options: GateOptions): Gate {
   const approved = named.filter((store) =>
     allowedStores.some((allowed) => isWithin(store, allowed))
   );
-  const unapproved = named.filter((store) => !approved.includes(store));
+
+  return {
+    named,
+    approved,
+    unapproved: named.filter((store) => !approved.includes(store)),
+  };
+}
+
+/**
+ * The card for a command that names a hidden credential store the session has
+ * not allowed, or the allowance to unhide the ones it has; null when the
+ * command names none.
+ */
+function credentialGate(tool: ToolRequest, options: GateOptions): Gate | null {
+  const command = String(tool.input.command ?? "");
+  const { named, approved, unapproved } = namedCredentialStores(
+    command,
+    options
+  );
+  if (named.length === 0) return null;
+  if (unapproved.length === 0)
+    return { kind: "allow", credentialPaths: approved };
+
+  return {
+    kind: "ask",
+    request: {
+      type: "run_terminal",
+      tool,
+      displayName: "Run command",
+      command,
+      cwd: options.cwd,
+      background: tool.input.background === true,
+      credentialPaths: named,
+    },
+  };
+}
+
+function gateBash(tool: ToolRequest, options: GateOptions): Gate {
+  const command = String(tool.input.command ?? "");
+
+  // A hidden credential store the command names asks even when the command
+  // prefix was approved: `cat` being allowed says nothing about the key.
+  const { named, approved, unapproved } = namedCredentialStores(
+    command,
+    options
+  );
 
   const segments = shellSegments(command);
 

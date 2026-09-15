@@ -70,9 +70,9 @@ describe("mode mapping", () => {
     expect(modeToSandboxMode(AgentMode.PlanMode)).toBe("read-only");
     expect(modeToSandboxMode(AgentMode.Normal)).toBe("workspace-write");
     expect(modeToSandboxMode(AgentMode.AcceptEdits)).toBe("workspace-write");
-    // Bypass means the user turned the asking off deliberately. Enforcing a
-    // sandbox against that would be overriding them.
-    expect(modeToSandboxMode(AgentMode.Yolo)).toBe("danger-full-access");
+    // Bypass turns the asking off, not the kernel: the app starts in it, so
+    // it is where the bounds matter most.
+    expect(modeToSandboxMode(AgentMode.Yolo)).toBe("workspace-write");
   });
 
   it("canonicalizes the workspace, because the kernel matches resolved paths", () => {
@@ -108,13 +108,9 @@ describe("mode mapping", () => {
 });
 
 describe("the decision table", () => {
-  it("does not confine when the user asked for no confinement", async () => {
+  it("does not confine when the sandbox is switched off", async () => {
     expect(
       (await decide(policy({ enforcement: "off" }), "ls", "/tmp/ws")).kind
-    ).toBe("unconfined");
-    expect(
-      (await decide(policy({ mode: "danger-full-access" }), "ls", "/tmp/ws"))
-        .kind
     ).toBe("unconfined");
   });
 
