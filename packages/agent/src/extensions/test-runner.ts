@@ -11,6 +11,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 import { execConfined } from "../backends.js";
+import { posixShell } from "../posix-shell.js";
 import { runFallbackShell } from "../sandbox/shell.js";
 
 export interface Framework {
@@ -44,21 +45,32 @@ function cmdQuote(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-/** Quote a value for whichever shell `fallbackShell` will hand it to. */
-function shellQuote(value: string, platform: NodeJS.Platform): string {
-  return platform === "win32" ? cmdQuote(value) : posixQuote(value);
+/**
+ * The shell a command line is written for. cmd.exe only on a Windows machine
+ * without the bundled POSIX shell (posix-shell.ts); with it, `execConfined`
+ * runs the command under ash, which takes POSIX quoting and `./` paths.
+ */
+export type ShellFlavor = "posix" | "cmd";
+
+function shellQuote(value: string, shell: ShellFlavor): string {
+  return shell === "cmd" ? cmdQuote(value) : posixQuote(value);
 }
 
 /**
  * The framework a project uses, and the command line that runs it. `platform`
- * decides quoting and command shape (`./gradlew` is a switch to cmd.exe).
+ * decides what the OS has (`python`, `gradlew.bat`); `shell` decides quoting
+ * and path shape.
  */
 export function detectFramework(
   cwd: string,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  shell: ShellFlavor = platform === "win32" && posixShell() == null
+    ? "cmd"
+    : "posix"
 ): Framework | undefined {
   const windows = platform === "win32";
-  const quote = (value: string): string => shellQuote(value, platform);
+  const cmd = shell === "cmd";
+  const quote = (value: string): string => shellQuote(value, shell);
   const exists = (p: string) => fs.existsSync(path.join(cwd, p));
   const readIfExists = (p: string): string => {
     try {
@@ -210,9 +222,10 @@ export function detectFramework(
     return {
       name: "gradle test",
       // The extensionless wrapper is a shell script Windows cannot run;
-      // `gradlew.bat` ships beside it for exactly this.
+      // `gradlew.bat` ships beside it for exactly this (ash hands a batch
+      // file to cmd.exe itself).
       command: (filter) =>
-        `${windows ? ".\\gradlew.bat" : "./gradlew"} test --console=plain --no-daemon${filter ? ` --tests ${quote(filter)}` : ""}`,
+        `${cmd ? ".\\gradlew.bat" : windows ? "./gradlew.bat" : "./gradlew"} test --console=plain --no-daemon${filter ? ` --tests ${quote(filter)}` : ""}`,
       parse: (out) => {
         const m = out.match(/(\d+) tests? completed(?:, (\d+) failed)?/);
         if (!m) return undefined;
@@ -227,8 +240,12 @@ export function detectFramework(
   if (exists("CMakeLists.txt")) {
     const target = path.basename(path.resolve(cwd));
     // Quoted because the directory name may contain spaces; cmd still appends
-    // the PATHEXT extension to a path-qualified command.
-    const binary = windows ? `".\\build\\${target}"` : `./build/${target}`;
+    // the PATHEXT extension to a path-qualified command, and so does ash.
+    const binary = cmd
+      ? `".\\build\\${target}"`
+      : windows
+        ? posixQuote(`./build/${target}`)
+        : `./build/${target}`;
     return {
       name: "cmake+catch",
       command: (filter) =>
@@ -308,7 +325,7 @@ export default function (pi: ExtensionAPI) {
 
       const timeoutMs = (params.timeout ?? 300) * 1000;
       // The command comes from project config the model can write, so it goes
-      // through the sandbox; without a backend (Windows), the platform shell.
+      // through the sandbox; without a backend, the platform shell.
       const result =
         (await execConfined(command, ctx.cwd, {
           timeout: timeoutMs,

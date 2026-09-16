@@ -26,6 +26,16 @@ Look for a permission request in the conversation. The model loop pauses inside
 the tool call until you answer or the request expires. Also check background
 processes and MCP logs for a tool that is still running.
 
+## Shell commands on Windows
+
+`bash` on Windows runs in a POSIX shell the app ships (busybox-w32's ash), so
+pipes, redirects, heredocs and the usual coreutils work without Git Bash or
+WSL. It is not GNU bash: arrays and `**` globs are missing, and busybox's
+tools lack some GNU flags. Paths are native Windows paths, written with
+forward slashes. Installed programs on PATH — node, python, git, `npm.cmd` —
+run as themselves. The shell is installed on first use under
+`%LOCALAPPDATA%\abacusai-bot\posix-shell`; delete that directory to reset it.
+
 ## Docker execution fails
 
 Run `docker info` and confirm that the daemon is available through the same

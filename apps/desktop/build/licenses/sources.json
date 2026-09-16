@@ -28,5 +28,10 @@
     "file": "wa-js-LICENSE",
     "asset": "wa-js 4.6.0",
     "source": "https://github.com/wppconnect-team/wa-js/blob/v4.6.0/LICENSE"
+  },
+  {
+    "file": "busybox-w32-GPL-2.0.txt",
+    "asset": "busybox-w32 FRP-6075-g169694ebd (the POSIX shell bundled for Windows; spawned as a separate process, never linked)",
+    "source": "https://frippery.org/files/busybox/busybox-w32-FRP-6075-g169694ebd.tgz"
   }
 ]

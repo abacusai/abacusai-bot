@@ -152,6 +152,50 @@ jobs:
           "packages/agent/vendor/rg${suffix}" --version
           "packages/agent/vendor/fd${suffix}" --version
 
+      # The `bash` tool on Windows is the bundled busybox shell, installed and
+      # launched by the agent itself (src/posix-shell.ts). A unit test cannot
+      # run a Windows executable anywhere else, so the built bundle is asked
+      # to do the real thing here: install the payload, then run a pipeline,
+      # a heredoc, a quoted path and a failing command through the same
+      # operations the tool uses. Green on Windows means a stock machine gets
+      # a shell.
+      - name: The bundled Windows shell installs and runs
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          LOCALAPPDATA: ${{ runner.temp }}/posix-shell-cache
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import { posixShell, posixShellOperations } from "./packages/agent/dist/index.js";
+
+          const shell = posixShell();
+          if (shell == null) throw new Error("the bundled shell did not install");
+          const ops = posixShellOperations(shell);
+
+          const run = async (command) => {
+            let output = "";
+            const { exitCode } = await ops.exec(command, process.cwd(), {
+              onData: (data) => { output += data; },
+            });
+            return { exitCode, output: output.trim() };
+          };
+          const expect = async (command, output, exitCode = 0) => {
+            const got = await run(command);
+            if (got.output !== output || got.exitCode !== exitCode)
+              throw new Error(`${command}\n  expected ${JSON.stringify({ output, exitCode })}\n  got      ${JSON.stringify(got)}`);
+            console.log(`ok: ${command.split("\n")[0]}`);
+          };
+
+          await expect("printf 'b\\na\\n' | sort | head -1", "a");
+          await expect("cat <<'EOF'\nquotes ' and \" and $HOME\nEOF", "quotes ' and \" and $HOME");
+          await expect("false && echo wrong; false || printf recovered", "recovered");
+          await expect("mkdir -p 'dir with space' && printf x > 'dir with space/f.txt' && grep -c x 'dir with space/f.txt'", "1");
+          await expect("exit 7", "", 7);
+          await expect("node -e \"console.log(process.argv[1])\" 'C:/Users/Some One'", "C:/Users/Some One");
+          await expect("printf '%s' \"$BB_OVERRIDE_APPLETS\" | cut -c1-1", ";");
+          JS
+
       # The desktop app spawns the agent and speaks NDJSON to it. This asserts
       # the host still answers on stdout in the protocol, whatever it has to
       # say — a stack trace on stderr and silence on stdout is a dead app.

@@ -88,6 +88,7 @@ import {
   shellSegments,
 } from "./permissions.js";
 import { personaPrompt, readPersona } from "./persona.js";
+import { windowsShellPrompt } from "./posix-shell.js";
 import {
   AgentMode,
   AgentStatus,
@@ -743,6 +744,8 @@ export class AbacusBotSession {
         REPLY_LANGUAGE_PROMPT,
         // Both prompts name tools, so both read the same roster.
         displayPrompt(),
+        // Null everywhere the tool is a real bash.
+        windowsShellPrompt(),
         planModePrompt(toolNames),
         githubPrompt(),
         serviceRoutingPrompt(),

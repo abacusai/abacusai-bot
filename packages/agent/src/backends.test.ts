@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { backendOperations, deadline, selectedBackend } from "./backends.js";
 import { currentMode, setCurrentMode } from "./current-mode.js";
 import { budgetSecondsFor } from "./extensions/tool-timeouts.js";
+import { posixShell } from "./posix-shell.js";
 import { AgentMode } from "./protocol.js";
 
 describe("deadline", () => {
@@ -95,9 +96,13 @@ describe("deadline", () => {
 describe("a command that leaves something running behind it", () => {
   const ops = backendOperations();
   // Only the local backend spawns processes here; docker needs a daemon and
-  // `off` hands the work back to pi, whose own path already does this.
+  // `off` hands the work back to pi, whose own path already does this. Not on
+  // Windows either: the checks lean on pgrep/pkill, and the bundled shell's
+  // operations are pi's own, whose deadline throws rather than returning.
   const withLocalBackend =
-    ops != null && selectedBackend() === "local" ? it : it.skip;
+    ops != null && selectedBackend() === "local" && process.platform !== "win32"
+      ? it
+      : it.skip;
 
   let scratch: string;
   let restoreMode: AgentMode;
@@ -188,7 +193,7 @@ describe("a platform with no sandbox backend (Windows)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("hands `auto` back to pi's local path instead of spawning /bin/bash", () => {
+  it("hands `auto` the bundled POSIX shell when it is there, else pi's local path", () => {
     // The local operations' unconfined fallback is a /bin/bash argv, which
     // does not exist on Windows — every command would fail ENOENT. Null means
     // pi's own platform-correct local path runs instead.
@@ -196,7 +201,9 @@ describe("a platform with no sandbox backend (Windows)", () => {
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "local");
     vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
 
-    expect(backendOperations()).toBeNull();
+    // Null on a host with no busybox payload (this suite off Windows); the
+    // shell's operations on one — either way, never /bin/bash.
+    expect(backendOperations() == null).toBe(posixShell() == null);
   });
 
   it("keeps the operations under `strict`, so the refusal reaches the model", () => {

@@ -26,11 +26,13 @@ const write = (file: string, contents = ""): void => {
 
 const name = (): string | undefined => detectFramework(cwd)?.name;
 // Pinned rather than left to the host: these are the off-Windows forms, and on
-// a Windows runner the default would build the Windows ones.
+// a Windows runner the default would build the Windows ones. The Windows block
+// documents cmd.exe's rules, so it names that shell: on a runner with the
+// bundled POSIX shell the default flavour would be POSIX.
 const command = (filter?: string): string | undefined =>
   detectFramework(cwd, "linux")?.command(filter);
 const winCommand = (filter?: string): string | undefined =>
-  detectFramework(cwd, "win32")?.command(filter);
+  detectFramework(cwd, "win32", "cmd")?.command(filter);
 
 beforeEach(() => {
   cwd = fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-detect-"));

@@ -38,6 +38,9 @@ const REQUIRED = [
   // fails outright on a machine that cannot reach it.
   `agent/vendor/rg${EXE}`,
   `agent/vendor/fd${EXE}`,
+  // The POSIX shell `bash` runs under on Windows; without it every command
+  // the model writes fails on a machine with no Git Bash.
+  ...(process.platform === "win32" ? ["agent/vendor/busybox.exe"] : []),
   "vendor/scrcpy-server.jar",
   "skills",
 ];
@@ -131,6 +134,21 @@ function main() {
       console.log(
         `[packaged-resources] ${tool}: ${probe.stdout.trim().split("\n")[0]}`
       );
+    }
+  }
+
+  if (process.platform === "win32") {
+    const binary = path.join(resources, "agent", "vendor", "busybox.exe");
+    const probe = spawnSync(binary, ["sh", "-c", "printf ok"], {
+      encoding: "utf8",
+    });
+
+    if (probe.status !== 0 || probe.stdout !== "ok") {
+      dead.push(
+        `busybox — ${(probe.error?.message ?? probe.stderr ?? `exit ${probe.status}`).trim()}`
+      );
+    } else {
+      console.log(`[packaged-resources] busybox: sh -c works`);
     }
   }
 
