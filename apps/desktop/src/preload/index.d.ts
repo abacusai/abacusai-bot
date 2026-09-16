@@ -77,12 +77,6 @@ interface CustomAPI {
   signOutAccount: () => Promise<AccountState>;
   /** Sign-out plus forgetting onboarding: the flow runs again from the top. */
   forgetAccount: () => Promise<AccountState>;
-  /**
-   * Deletes `~/.abacusai-bot` and relaunches. Does not resolve on success: the
-   * process exits instead.
-   */
-  deleteAllUserData: () => Promise<void>;
-
   savePastedTempFiles: (
     baseFolder: string,
     files: Array<{ name: string; data: Uint8Array }>

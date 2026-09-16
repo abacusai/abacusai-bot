@@ -100,11 +100,6 @@ const api = {
   forgetAccount: (): Promise<AccountState> =>
     ipcRenderer.invoke("account:forget"),
 
-  // Does not resolve on success: main deletes the directory and exits, so the
-  // caller shows a pending state rather than wait for a result.
-  deleteAllUserData: (): Promise<void> =>
-    ipcRenderer.invoke("app:delete-all-user-data"),
-
   // Saved under ~/.abacusai-bot/temp; baseFolder kept for API compat.
   savePastedTempFiles: (
     baseFolder: string,
