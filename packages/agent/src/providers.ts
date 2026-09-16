@@ -198,6 +198,7 @@ interface AbacusPiModel {
   };
   contextWindow: number;
   maxTokens: number;
+  compat: { supportsDeveloperRole: false };
 }
 
 interface AbacusCatalogEntry {
@@ -232,6 +233,11 @@ const abacusModel = (
   contextWindow,
   maxTokens,
   poolEligible,
+  // pi sends a reasoning model's system prompt as role `developer`, which only
+  // OpenAI's o-series takes; the hosts behind routellm (Together, Novita)
+  // reject the whole request, so a picked Qwen or Kimi model failed every turn
+  // with a 400. Every catalog model is reasoning, so say it once here.
+  compat: { supportsDeveloperRole: false },
 });
 
 /**
