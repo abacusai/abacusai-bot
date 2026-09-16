@@ -469,10 +469,10 @@ export async function probe(exec?: ProbeExec): Promise<boolean> {
     }
   }
 
-  // A timeout is not a verdict: refuse this command but try again next time.
-  if (result === null) return false;
-
-  probed = result;
+  // A timeout is remembered: without this every command paid it again. The
+  // desktop's launch probe decides whether Auto is offered; a relaunch is the
+  // retry.
+  probed = result ?? false;
 
   return probed;
 }
