@@ -172,6 +172,7 @@ import {
   recordRun,
   removeJob,
   updateJob,
+  type CronJob,
   type CronTrigger,
 } from "./services/agent-tools/cron-store";
 import {
@@ -211,6 +212,7 @@ import {
   recordRoutineRun,
   removeRoutineDir,
   routineDir,
+  routineDirInWorkspace,
 } from "./services/agent-tools/routine-runs-store";
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
@@ -2169,6 +2171,32 @@ export class ServiceHost {
     return this.ensureHomeWorkspace(routineDir(routineId), "routine");
   }
 
+  /**
+   * The project a routine was set up for, or null: a real workspace, not one
+   * of the app's own home folders, which are not a project anyone chose.
+   */
+  private routineProject(job: CronJob): { id: string; path: string } | null {
+    const named = this.workspaceService
+      .getWorkspaces()
+      .find(
+        (entry) => entry.id === job.workspaceId && entry.status !== "deleted"
+      );
+    return named != null &&
+      named.kind !== "auto" &&
+      named.kind !== "routine" &&
+      named.kind !== "bot"
+      ? { id: named.id, path: named.path }
+      : null;
+  }
+
+  /** Where a routine keeps its records: inside its project, else its own folder. */
+  private routineHome(job: CronJob): string {
+    const project = this.routineProject(job);
+    return project != null
+      ? routineDirInWorkspace(project.path, job.id)
+      : routineDir(job.id);
+  }
+
   private async ensureHomeWorkspace(
     dir: string,
     kind?: "auto" | "routine" | "bot"
@@ -3196,13 +3224,19 @@ export class ServiceHost {
     const text = this.routineRunText.get(sessionId);
     if (session?.routineId == null || text == null) return;
     this.routineRunText.delete(sessionId);
-    recordRoutineRun(session.routineId, {
-      sessionId,
-      startedAt: session.createdAt,
-      endedAt: new Date().toISOString(),
-      outcome,
-      reply: text.join("").trim(),
-    });
+    const finishedJob = getJob(session.routineId);
+    recordRoutineRun(
+      finishedJob != null
+        ? this.routineHome(finishedJob)
+        : routineDir(session.routineId),
+      {
+        sessionId,
+        startedAt: session.createdAt,
+        endedAt: new Date().toISOString(),
+        outcome,
+        reply: text.join("").trim(),
+      }
+    );
     if (outcome === "failed") this.pauseIfFailingRepeatedly(session.routineId);
   }
 
@@ -3233,7 +3267,7 @@ export class ServiceHost {
         this.agentSessionManagerService.setRunOutcome(run.sessionId, "failed");
         const text = this.routineRunText.get(run.sessionId) ?? [];
         this.routineRunText.delete(run.sessionId);
-        recordRoutineRun(job.id, {
+        recordRoutineRun(this.routineHome(job), {
           sessionId: run.sessionId,
           startedAt: run.startedAt,
           endedAt: new Date(now).toISOString(),
@@ -3449,8 +3483,14 @@ export class ServiceHost {
   }
 
   removeRoutine(id: string): void {
+    const job = getJob(id);
     removeJob(id);
-    removeRoutineDir(id);
+    // Both homes: the records moved if the routine was given a project later.
+    removeRoutineDir(routineDir(id));
+    if (job != null) {
+      const home = this.routineHome(job);
+      if (home !== routineDir(id)) removeRoutineDir(home);
+    }
     // Its runs go with it; nothing else lists them.
     for (const run of this.agentSessionManagerService.listByRoutine(id)) {
       this.removeAgentSession(run.workspaceId, run.id);
@@ -3485,27 +3525,21 @@ export class ServiceHost {
     }
 
     const workspaces = this.workspaceService.getWorkspaces();
-    // A routine made against a real project runs there; every other runs in
-    // its own folder. The app's home folders are not a project anyone chose.
-    const named = workspaces.find(
-      (entry) => entry.id === job.workspaceId && entry.status !== "deleted"
-    );
-    const project =
-      named != null &&
-      named.kind !== "auto" &&
-      named.kind !== "routine" &&
-      named.kind !== "bot"
-        ? named.id
-        : null;
-    const target = project ?? (await this.ensureRoutineWorkspace(job.id));
+    // A routine made against a real project runs there, records included;
+    // every other runs in its own folder.
+    const project = this.routineProject(job);
+    const target = project?.id ?? (await this.ensureRoutineWorkspace(job.id));
+    const home = this.routineHome(job);
 
     const prompt = this.withBotVoice(
       job.botId,
       buildRoutineFirePrompt(job, trigger, payload, {
-        dir: routineDir(job.id),
-        runs: countRoutineRuns(job.id),
-        lastRun: readLastRoutineRun(job.id),
-        isWorkingDirectory: project == null,
+        dir: home,
+        // The project when there is one; the run's cwd is that folder and its
+        // records sit inside it. Otherwise the routine's own folder is both.
+        workingDirectory: project?.path ?? routineDir(job.id),
+        runs: countRoutineRuns(home),
+        lastRun: readLastRoutineRun(home),
         workspaces: workspaces
           .filter(
             (entry) => entry.status !== "deleted" && entry.kind !== "routine"
@@ -3654,8 +3688,9 @@ export class ServiceHost {
       this.agentSessionManagerService.get(sessionId)?.routineId ?? null;
     if (routineId == null) return {};
 
+    const job = getJob(routineId);
     const paths = [
-      routineDir(routineId),
+      job != null ? this.routineHome(job) : routineDir(routineId),
       ...this.workspaceService
         .getWorkspaces()
         .filter((entry) => entry.status !== "deleted")

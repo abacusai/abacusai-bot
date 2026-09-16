@@ -62,7 +62,7 @@ describe("the fire prompt", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/home/me/.abacusai-bot/routines/job-1",
       runs: 3,
-      isWorkingDirectory: true,
+      workingDirectory: "/home/me/.abacusai-bot/routines/job-1",
       workspaces: ["/home/me/project"],
       lastRun: {
         sessionId: "s3",
@@ -83,7 +83,7 @@ describe("the fire prompt", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",
       runs: 0,
-      isWorkingDirectory: true,
+      workingDirectory: "/x/routines/job-1",
       workspaces: ["/home/me/project"],
       lastRun: null,
     });
@@ -95,7 +95,7 @@ describe("the fire prompt", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",
       runs: 1,
-      isWorkingDirectory: true,
+      workingDirectory: "/x/routines/job-1",
       workspaces: ["/home/me/project"],
       lastRun: {
         sessionId: "s",
@@ -122,7 +122,7 @@ describe("the fire prompt", () => {
       dir: "/home/me/.abacusai-bot/routines/job-1",
       runs: 2,
       lastRun: null,
-      isWorkingDirectory: true,
+      workingDirectory: "/home/me/.abacusai-bot/routines/job-1",
       workspaces: ["/home/me/project", "/home/me/.abacusai-bot/bot-home"],
     });
 
@@ -139,7 +139,7 @@ describe("the fire prompt", () => {
       dir: "/home/me/.abacusai-bot/routines/job-1",
       runs: 2,
       lastRun: null,
-      isWorkingDirectory: true,
+      workingDirectory: "/home/me/.abacusai-bot/routines/job-1",
       workspaces: [],
     });
 
@@ -150,18 +150,28 @@ describe("the fire prompt", () => {
 
   // A routine created against a project runs in the project, and reaches its
   // own folder by path.
-  it("gives the path instead when the run stands in a project", () => {
+  it("names the project as the working directory when the run stands in one", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
-      dir: "/home/me/.abacusai-bot/routines/job-1",
+      dir: "/home/me/project/.abacusai-bot/routines/job-1",
       runs: 2,
       lastRun: null,
-      isWorkingDirectory: false,
+      workingDirectory: "/home/me/project",
       workspaces: ["/home/me/project"],
     });
 
-    expect(prompt).toContain("you are working in a project");
-    expect(prompt).toContain("/home/me/.abacusai-bot/routines/job-1/runs");
-    expect(prompt).toContain("/home/me/.abacusai-bot/routines/job-1/notes.md");
+    // Output goes to the project: told only about its own folder, a run wrote
+    // its files into that instead.
+    expect(prompt).toContain(
+      "Your working directory is /home/me/project, the project"
+    );
+    expect(prompt).toContain("anything you create goes there");
+    expect(prompt).toContain("records live inside");
+    expect(prompt).toContain(
+      "/home/me/project/.abacusai-bot/routines/job-1/runs"
+    );
+    expect(prompt).toContain(
+      "/home/me/project/.abacusai-bot/routines/job-1/notes.md"
+    );
   });
 
   // One run's wrong refusal was fed to the next as the previous reply, and
@@ -170,7 +180,7 @@ describe("the fire prompt", () => {
     const prompt = buildRoutineFirePrompt(job(), "schedule", null, {
       dir: "/x/routines/job-1",
       runs: 1,
-      isWorkingDirectory: true,
+      workingDirectory: "/x/routines/job-1",
       workspaces: ["/home/me/project"],
       lastRun: {
         sessionId: "s",
