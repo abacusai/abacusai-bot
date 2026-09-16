@@ -267,9 +267,10 @@ export function probe(): boolean {
     }
   }
 
-  if (result === null) return false;
-
-  probed = result;
+  // A runner that hangs is not one to wait on again: without this every
+  // command paid the timeout. The desktop's launch probe is what decides
+  // whether Auto is offered; a relaunch is the retry.
+  probed = result ?? false;
 
   return probed;
 }

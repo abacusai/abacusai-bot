@@ -91,8 +91,8 @@ export function networkConfinable(): boolean {
 
 /**
  * What the model is told when the backend is there but would not start. One
- * retry is allowed (a timed-out probe is not cached, so a loaded machine gets
- * another chance); routing around the sandbox is not.
+ * retry is allowed (the runtime may have been starting); routing around the
+ * sandbox is not.
  */
 export function unavailableBackendMessage(
   backend: SandboxBackend,

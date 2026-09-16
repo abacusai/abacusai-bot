@@ -11,7 +11,13 @@ export type ProbeStatus = number | "timeout" | null;
 /** Runs argv and reports its exit status; the default uses execFileSync. */
 export type ProbeExec = (argv: string[]) => ProbeStatus;
 
-const PROBE_TIMEOUT_MS = 20_000;
+/**
+ * Long enough for a container on a busy machine; short enough that a runner
+ * that hangs (a Windows without container support) does not stall the
+ * first command for long. A timeout is remembered by the callers, so it is
+ * paid once per process.
+ */
+const PROBE_TIMEOUT_MS = 10_000;
 
 /**
  * execFileSync enforces the deadline with SIGTERM, so that signal is the
