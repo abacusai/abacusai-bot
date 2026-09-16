@@ -124,6 +124,19 @@ describe("asking for one", () => {
     expect(text).toContain("already in your tool list");
   });
 
+  it("sends GitHub to the token card, never to a platform connect flow", async () => {
+    for (const service of ["github", "GitHub", "githubuser"]) {
+      vi.clearAllMocks();
+
+      const text = await call({ service, reason: "to open a pull request" });
+
+      expect(request).not.toHaveBeenCalled();
+      expect(text).toContain("personal access token");
+      expect(text).toContain("GitHub card");
+      expect(text).toMatch(/`gh` and git are authenticated/);
+    }
+  });
+
   it("says so when the service does not exist at all", async () => {
     vi.clearAllMocks();
 
