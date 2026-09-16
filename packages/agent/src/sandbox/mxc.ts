@@ -10,9 +10,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { bundledToolsDir } from "../bundled-tools.js";
+import { posixShell } from "../posix-shell.js";
 import { MINIMUM_WINDOWS_BUILD, windowsBuild } from "../sandbox-support.js";
 import type { SandboxPolicy } from "./policy.js";
-import { posixShell } from "../posix-shell.js";
 import { probeVerdict, type ProbeExec } from "./probe.js";
 import type { SecretPaths } from "./secrets.js";
 

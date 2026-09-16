@@ -6,6 +6,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  containerCommandLine,
+  quoteWindowsArgument,
   buildConfig,
   buildSupported,
   deniedPaths,
@@ -202,5 +204,26 @@ describe("the probe", () => {
     );
     expect(seen?.readwritePaths).toEqual([writable]);
     expect(seen?.readonlyPaths).toEqual(["C:\\"]);
+  });
+});
+
+describe("the container's command line", () => {
+  it("runs under the bundled POSIX shell where it is installed", () => {
+    expect(
+      containerCommandLine('echo "hi" > out.txt', {}, { sh: "C:\\bb\\sh.exe" })
+    ).toBe('"C:\\bb\\sh.exe" -c "echo \\"hi\\" > out.txt"');
+  });
+
+  it("falls back to cmd.exe without the payload", () => {
+    expect(
+      containerCommandLine("dir", { ComSpec: "C:\\W\\cmd.exe" }, undefined)
+    ).toBe('C:\\W\\cmd.exe /d /s /c "dir"');
+  });
+
+  it("quotes as Windows reads it back: quotes escaped, trailing backslashes doubled", () => {
+    expect(quoteWindowsArgument("plain")).toBe('"plain"');
+    expect(quoteWindowsArgument('say "hi"')).toBe('"say \\"hi\\""');
+    expect(quoteWindowsArgument("C:\\dir\\")).toBe('"C:\\dir\\\\"');
+    expect(quoteWindowsArgument('a\\"b')).toBe('"a\\\\\\"b"');
   });
 });

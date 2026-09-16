@@ -267,7 +267,8 @@ function localSandboxedOperations(
     const commandId = `command-${++commandCounter}`;
     // On Windows the command runs under the bundled POSIX shell, confined or
     // not, and its children must find the applets (posix-shell.ts).
-    const bundledShell = process.platform === "win32" ? posixShell() : undefined;
+    const bundledShell =
+      process.platform === "win32" ? posixShell() : undefined;
     const spawnEnv =
       bundledShell != null ? posixShellEnv(childEnv, bundledShell) : childEnv;
     const decision = await decide(policy, command, cwd, spawnEnv, commandId);

@@ -26,7 +26,6 @@ import {
 } from "./backends.js";
 import { budgetSecondsFor } from "./extensions/tool-timeouts.js";
 import { posixShell } from "./posix-shell.js";
-import { AgentMode } from "./protocol.js";
 import { sandboxBackendFor } from "./sandbox-support.js";
 import { runnerPath } from "./sandbox/mxc.js";
 
@@ -215,7 +214,9 @@ describe("a platform with no sandbox backend (Windows)", () => {
     // Confined operations where the runner is there; the bundled shell's
     // where only its payload is; null on a host with neither (this suite off
     // Windows) — either way, never /bin/bash.
-    expect(backendOperations() == null).toBe(!canConfine && posixShell() == null);
+    expect(backendOperations() == null).toBe(
+      !canConfine && posixShell() == null
+    );
   });
 
   it("keeps the operations under `strict`, so the refusal reaches the model", () => {

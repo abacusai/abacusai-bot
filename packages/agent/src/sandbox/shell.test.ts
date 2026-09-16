@@ -247,7 +247,17 @@ describe("the shell a command falls back to without a sandbox backend", () => {
   });
 
   it("still finds cmd.exe when ComSpec is unset", () => {
-    expect(fallbackShell("npm test", "win32", {}).file).toBe("cmd.exe");
+    expect(fallbackShell("npm test", "win32", {}, undefined).file).toBe(
+      "cmd.exe"
+    );
+  });
+
+  it("runs under the bundled POSIX shell on Windows where it is installed", () => {
+    // What the model was told it has (posix-shell.ts); cmd.exe only without
+    // the payload. A plain -c argument: Node quotes it, and sh reads it back.
+    expect(
+      fallbackShell("npm test && ls", "win32", {}, { sh: "C:\\bb\\sh.exe" })
+    ).toEqual({ file: "C:\\bb\\sh.exe", args: ["-c", "npm test && ls"] });
   });
 
   it("keeps the command as one argument on both platforms", () => {
