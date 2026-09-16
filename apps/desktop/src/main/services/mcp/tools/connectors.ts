@@ -8,8 +8,8 @@ export const CONNECTORS_TOOLS: ToolDefinition[] = [
     name: "connect_connector",
     toolsets: ["connectors"],
     description: [
-      "The user's connectors — Slack, Gmail, Calendar, Drive and the rest — and the",
-      "way to get one connected without ending the turn.",
+      "The user's connectors — Slack, Gmail, Calendar, Drive, GitHub and the rest — and",
+      "the way to get one connected without ending the turn.",
       "",
       "The chat apps — WhatsApp, Telegram and Discord — are in this list",
       "too, with whether they are linked, and asking for one puts the same Connect",

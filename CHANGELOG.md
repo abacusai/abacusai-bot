@@ -7,6 +7,11 @@
 
 ## Unreleased
 
+When the agent needs GitHub, it puts a Connect button in the chat like any
+other connector, and that button opens the same personal-access-token dialog
+as the GitHub card in Connectors. Before, the agent could only tell you to go
+and find the card.
+
 A file link written with `~`, such as a screenshot on the Desktop, now opens
 in the preview pane's file reader instead of reporting the file missing. A
 file outside the workspace says so, rather than "not found". A link whose

@@ -33,12 +33,15 @@ const request = vi.fn(async () => "Slack is connected now. Carry on.");
 let live: string[] = [];
 /** Started connectors — a superset of live: needs_login still counts here. */
 let running: string[] | null = null;
+/** Providers with a stored credential (the GitHub token), per test. */
+let storedKeys: string[] = [];
 
 const server = (): McpAgentToolsServer =>
   new McpAgentToolsServer({
     skillsService: {} as never,
     enabledToolsets: () => new Set(["connectors"]),
     workspacePath: () => null,
+    hasStoredKey: (provider) => storedKeys.includes(provider),
     conversationKeyForSession: (sessionId) =>
       sessionId === "nowhere"
         ? null
@@ -124,17 +127,37 @@ describe("asking for one", () => {
     expect(text).toContain("already in your tool list");
   });
 
-  it("sends GitHub to the token card, never to a platform connect flow", async () => {
+  it("asks for GitHub with a Connect button that opens its token dialog", async () => {
+    // Not a platform connector: the ask is filed under the "github" service the
+    // renderer's catalog knows as an agent-key card, and the model is told what
+    // became usable on connect — `gh` in bash, not a tool.
     for (const service of ["github", "GitHub", "githubuser"]) {
       vi.clearAllMocks();
+      storedKeys = [];
 
-      const text = await call({ service, reason: "to open a pull request" });
+      await call({ service, reason: "to open a pull request" });
 
-      expect(request).not.toHaveBeenCalled();
-      expect(text).toContain("personal access token");
-      expect(text).toContain("GitHub card");
-      expect(text).toMatch(/`gh` and git are authenticated/);
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          service: "github",
+          label: "GitHub",
+          reason: "to open a pull request",
+          connectedHint: expect.stringMatching(/`gh` and git/),
+        })
+      );
     }
+  });
+
+  it("says GitHub is connected once a token is stored, and where to use it", async () => {
+    vi.clearAllMocks();
+    storedKeys = ["github"];
+
+    const text = await call({ service: "github" });
+
+    expect(request).not.toHaveBeenCalled();
+    expect(text).toContain("GitHub is already connected");
+    expect(text).toMatch(/`gh` and git/);
+    expect(text).toContain("no GitHub tool");
   });
 
   it("says so when the service does not exist at all", async () => {

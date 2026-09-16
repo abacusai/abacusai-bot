@@ -89,17 +89,16 @@ interface JsonRpcResponse {
 }
 
 /**
- * What `connect_connector("github")` answers. There is no platform GitHub
- * connector in this app: the GitHub card takes a personal access token, which
- * authenticates `gh` and git in bash — private repos included, nothing billed
- * per call.
+ * GitHub is not a platform connector here: its card takes a personal access
+ * token, which authenticates `gh` and git in bash — private repos included,
+ * nothing billed per call. The Connect button in the chat opens that card's
+ * token dialog, and this is what the model reads once the token is in.
  */
-const GITHUB_IS_A_TOKEN =
-  "GitHub is not connected through the account. It is set up on the GitHub card in " +
-  "Connectors with a personal access token (github.com/settings/tokens — fine-grained " +
-  "with Contents, Pull requests and Issues on the repositories they want, or classic " +
-  "with `repo`). Ask the user to add the token there; once it is in, `gh` and git are " +
-  "authenticated in bash and you work GitHub from there. Do not ask to connect it.";
+const GITHUB_SERVICE = "github";
+const GITHUB_CONNECTED_HINT =
+  "The token is in your environment: `gh` and git over HTTPS are authenticated in bash, " +
+  "so work GitHub from there (`gh repo`, `gh pr`, `gh issue`, `gh api`). There is no " +
+  "GitHub tool to call.";
 
 const SERVER_NAME = "agent-tools";
 const SERVER_VERSION = "1.0.0";
@@ -146,6 +145,8 @@ export interface McpAgentToolsServerOptions {
   enabledToolsets: () => Set<string>;
   workspacePath: () => string | null;
   workspaceId?: () => string | null;
+  /** Is a credential stored for this provider (the GitHub token, say)? */
+  hasStoredKey?: (provider: string) => boolean;
   /** `trigger` lets the run log tell "Run now" from the first fire at creation. */
   runCronJob?: (jobId: string, trigger?: "manual" | "create") => Promise<void>;
   /**
@@ -275,6 +276,8 @@ export interface McpAgentToolsServerOptions {
       reason?: string;
       /** The conversation that asked, so the button appears only in it. */
       conversationKey: ConversationKey;
+      /** What the model reads on connect, when it is not "tools are in your list". */
+      connectedHint?: string;
     }) => Promise<string>;
     /** Resolves to null or an error sentence. */
     disconnect?: (service: string) => Promise<string | null>;
@@ -1585,8 +1588,25 @@ export class McpAgentToolsServer {
 
     const asked = String(args.service ?? "").trim();
 
-    // Not a platform connector here: GitHub is a token on its own card.
-    if (/^git ?hub(user)?$/i.test(asked)) return this.ok(GITHUB_IS_A_TOKEN);
+    // Not a platform connector: the Connect button opens the token dialog.
+    if (/^git ?hub(user)?$/i.test(asked)) {
+      if (this.options.hasStoredKey?.(GITHUB_SERVICE) === true)
+        return this.ok(
+          `GitHub is already connected: a token is stored. ${GITHUB_CONNECTED_HINT} ` +
+            "Do not ask the user to connect it."
+        );
+      return this.ok(
+        await connectors.request({
+          service: GITHUB_SERVICE,
+          label: "GitHub",
+          conversationKey,
+          connectedHint: GITHUB_CONNECTED_HINT,
+          ...(typeof args.reason === "string" && args.reason.trim().length > 0
+            ? { reason: args.reason.trim() }
+            : {}),
+        })
+      );
+    }
 
     if (asked.length === 0) {
       if (available.length === 0) {

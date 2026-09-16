@@ -240,6 +240,7 @@ import {
   setExecBackend,
   setToolsetEnabled,
   readSettings,
+  storedKeyProviders,
 } from "./services/config/settings";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
 import {
@@ -548,6 +549,7 @@ export class ServiceHost {
       const workspace = this.workspaceService.getActiveWorkspace();
       return workspace?.isRemote === true ? null : (workspace?.path ?? null);
     },
+    hasStoredKey: (provider) => storedKeyProviders().includes(provider),
     connectors: {
       list: async () => {
         const snapshot = await listAbacusConnectors();
