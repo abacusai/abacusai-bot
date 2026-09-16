@@ -18,6 +18,7 @@ import {
 import { confinedBashTool } from "./backends.js";
 import { excludedTools } from "./excluded-tools.js";
 import guardrails from "./extensions/guardrails.js";
+import { windowsShellPrompt } from "./posix-shell.js";
 import type { AgentEvent } from "./protocol.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
@@ -81,6 +82,9 @@ export async function runDelegatedTask(
     stoppedBy: "completed",
   };
 
+  // The sub-agent runs commands through the same shell as its parent.
+  const shellPrompt = windowsShellPrompt();
+
   try {
     const resourceLoader = new DefaultResourceLoader({
       cwd: context.cwd,
@@ -100,6 +104,7 @@ export async function runDelegatedTask(
           "your intermediate steps. Make it complete and self-contained: state what you found, name",
           "the files and identifiers that matter, and say plainly if you could not determine something.",
         ].join("\n"),
+        ...(shellPrompt == null ? [] : [shellPrompt]),
       ],
       // Guardrails only: the permission gate would prompt a user who is not
       // watching, and budgets and the verify loop belong to the parent.
@@ -114,8 +119,10 @@ export async function runDelegatedTask(
     await resourceLoader.reload();
 
     // The SAME confined shell as the main session; pi's built-in bash is
-    // neither
-    // sandboxed nor gated, so a sub-agent would walk around the sandbox.
+    // neither sandboxed nor gated, so a sub-agent would walk around the
+    // sandbox. A custom tool replaces the built-in by name; it must NOT also
+    // go in `excludeTools`, which pi applies to custom tools too — that left
+    // a sub-agent with no shell at all wherever a backend was active.
     const confinedBash = confinedBashTool(context.cwd);
 
     const created = await createAgentSession({
@@ -126,11 +133,7 @@ export async function runDelegatedTask(
       settingsManager: context.settingsManager,
       // The no-nesting rule plus the user's Capabilities choices, which must
       // reach sub-agents or the shell comes back off-switch.
-      excludeTools: [
-        "delegate_task",
-        ...excludedTools(),
-        ...(confinedBash != null ? ["bash"] : []),
-      ],
+      excludeTools: ["delegate_task", ...excludedTools()],
       customTools: (confinedBash != null ? [confinedBash] : []) as never,
       ...(context.model != null ? { model: context.model as never } : {}),
     });

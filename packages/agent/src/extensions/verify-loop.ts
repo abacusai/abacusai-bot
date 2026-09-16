@@ -67,7 +67,7 @@ export default function (pi: ExtensionAPI) {
     const framework = detectFramework(ctx.cwd);
     if (!framework) return;
     // The command comes from project config, so never the unconfined path;
-    // without a sandbox backend (Windows) fall back to the platform shell.
+    // without a sandbox backend fall back to the platform shell.
     const command = framework.command();
     const result =
       (await execConfined(command, ctx.cwd, { timeout: 300_000 })) ??

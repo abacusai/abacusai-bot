@@ -4,6 +4,14 @@
  */
 export { bundledToolsDir, useBundledTools } from "./bundled-tools.js";
 export {
+  BUSYBOX_VERSION,
+  installPosixShell,
+  posixShell,
+  posixShellOperations,
+  windowsShellPrompt,
+} from "./posix-shell.js";
+export type { PosixShell } from "./posix-shell.js";
+export {
   MAX_CUSTOM_INSTRUCTIONS,
   customInstructionsPath,
   readCustomInstructions,
