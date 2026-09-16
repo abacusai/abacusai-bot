@@ -9,7 +9,7 @@
 export const serviceRoutingPrompt = (): string =>
   "Route by service, not by website: repositories, pull requests, commits " +
   "and issues → `gh` and git in bash, authenticated by the user's GitHub " +
-  "token (without one, connect_connector \"github\" puts up the button that " +
+  'token (without one, connect_connector "github" puts up the button that ' +
   "takes it); mail → " +
   "Gmail; events and availability → Google Calendar; files → Google Drive. " +
   "If a connector is not attached, connect it with connect_connector rather " +
