@@ -234,9 +234,12 @@ describe("the shell a command falls back to without a sandbox backend", () => {
     // The regression: a hardcoded bash spawn fails ENOENT on stock Windows,
     // which callers read as the command failing with empty output.
     expect(
-      fallbackShell("npm test", "win32", {
-        ComSpec: "C:\\Windows\\system32\\cmd.exe",
-      })
+      fallbackShell(
+        "npm test",
+        "win32",
+        { ComSpec: "C:\\Windows\\system32\\cmd.exe" },
+        null
+      )
     ).toEqual({
       file: "C:\\Windows\\system32\\cmd.exe",
       args: ["/d", "/s", "/c", "npm test"],
@@ -247,9 +250,7 @@ describe("the shell a command falls back to without a sandbox backend", () => {
   });
 
   it("still finds cmd.exe when ComSpec is unset", () => {
-    expect(fallbackShell("npm test", "win32", {}, undefined).file).toBe(
-      "cmd.exe"
-    );
+    expect(fallbackShell("npm test", "win32", {}, null).file).toBe("cmd.exe");
   });
 
   it("runs under the bundled POSIX shell on Windows where it is installed", () => {
@@ -264,7 +265,7 @@ describe("the shell a command falls back to without a sandbox backend", () => {
     const command = 'echo "a b" && echo done';
 
     expect(fallbackShell(command, "darwin", {}).args.at(-1)).toBe(command);
-    expect(fallbackShell(command, "win32", {}).args.at(-1)).toBe(command);
+    expect(fallbackShell(command, "win32", {}, null).args.at(-1)).toBe(command);
   });
 });
 

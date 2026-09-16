@@ -281,7 +281,12 @@ function localSandboxedOperations(
       return { exitCode: 126 };
     }
 
-    const fallback = fallbackShell(command);
+    const fallback = fallbackShell(
+      command,
+      process.platform,
+      process.env,
+      bundledShell ?? null
+    );
     const argv =
       decision.kind === "confined"
         ? decision.argv

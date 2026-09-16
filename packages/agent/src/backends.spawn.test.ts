@@ -78,6 +78,17 @@ const refused = (): void => {
  */
 const SHELL_ENV = { PATH: "/opt/homebrew/bin:/usr/bin", LANG: "en_US.UTF-8" };
 
+/** The bundled Windows shell as the test decides; none unless a test says. */
+const bundledShell = vi.hoisted(() => ({
+  value: undefined as
+    | { sh: string; bin: string; overrideApplets: string }
+    | undefined,
+}));
+vi.mock("./posix-shell.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./posix-shell.js")>()),
+  posixShell: () => bundledShell.value,
+}));
+
 vi.mock("./sandbox/shell.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./sandbox/shell.js")>()),
   loginEnvironment: () => SHELL_ENV,
@@ -578,6 +589,37 @@ describe("running a command on this machine", () => {
       windowsVerbatimArguments: true,
     });
     expect(lastSpawn().args.at(-1)).toBe('git commit -m "msg"');
+  });
+
+  it("runs under the bundled POSIX shell on Windows where it is installed", async () => {
+    // What the model was told it has (posix-shell.ts): sh -c, Node's own
+    // quoting, and the applet directory first on the child's PATH.
+    onPlatform("win32");
+    unconfined();
+    bundledShell.value = {
+      sh: "C:\\bb\\bin\\sh.exe",
+      bin: "C:\\bb\\bin",
+      overrideApplets: "",
+    };
+    try {
+      const operations = await localOperations();
+
+      const running = exec(operations, 'git commit -m "msg"', "C:\\work", {
+        env: { Path: "C:\\pi\\bin" },
+      });
+      child.finish(0);
+      await running;
+
+      expect(lastSpawn().file).toBe("C:\\bb\\bin\\sh.exe");
+      expect(lastSpawn().args).toEqual(["-c", 'git commit -m "msg"']);
+      expect(lastSpawn().options).not.toMatchObject({
+        windowsVerbatimArguments: true,
+      });
+      const { env } = lastSpawn().options as { env: Record<string, string> };
+      expect(env.Path?.startsWith("C:\\bb\\bin")).toBe(true);
+    } finally {
+      bundledShell.value = undefined;
+    }
   });
 
   it("closes stdin so a command that reads it does not hang", async () => {

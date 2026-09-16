@@ -41,10 +41,13 @@ export function fallbackShell(
   command: string,
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,
-  /** The bundled POSIX shell on Windows, where it is installed (posix-shell.ts). */
-  bundled: { sh: string } | undefined = platform === "win32"
+  /**
+   * The bundled POSIX shell on Windows, where it is installed
+   * (posix-shell.ts). Null says there is none; leaving it out looks one up.
+   */
+  bundled: { sh: string } | null = (platform === "win32"
     ? posixShell()
-    : undefined
+    : undefined) ?? null
 ): { file: string; args: string[]; windowsVerbatimArguments?: boolean } {
   if (platform === "win32") {
     // The model writes for the POSIX shell it was told it has; cmd.exe is

@@ -101,7 +101,8 @@ describe("the config", () => {
       policy(),
       'echo "hi"',
       "C:\\work\\repo",
-      env
+      env,
+      null
     ) as {
       process: { commandLine: string; cwd: string };
     };
@@ -216,7 +217,7 @@ describe("the container's command line", () => {
 
   it("falls back to cmd.exe without the payload", () => {
     expect(
-      containerCommandLine("dir", { ComSpec: "C:\\W\\cmd.exe" }, undefined)
+      containerCommandLine("dir", { ComSpec: "C:\\W\\cmd.exe" }, null)
     ).toBe('C:\\W\\cmd.exe /d /s /c "dir"');
   });
 
