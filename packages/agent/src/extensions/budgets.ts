@@ -5,7 +5,9 @@
  * (ABACUSAI_BOT_TURN_CAP, default 250): at 100 turns short of it the model is
  * told to wrap up and present what it has, at 50 short it is told again and
  * harder, past it the run is stopped with a message that says so.
- * Repetition: the third identical tool call in a run is blocked. Temperature
+ * Repetition: the third identical tool call in a run is blocked. Connector
+ * calls: every fifth one, the model is reminded what they cost and asked
+ * whether it already has enough — no cap, a nudge. Temperature
  * (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off" to disable) when unset.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -14,6 +16,12 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 const WRAP_UP_MARGIN = 100;
 const FINAL_MARGIN = 50;
 const REPEAT_LIMIT = 3;
+
+/** Tools served by the Abacus connector MCP server (Gmail, Calendar, Slack…). */
+const CONNECTOR_TOOL_PREFIX = "abacus-connectors_";
+/** Billed per call, flat; a cheap model treats them like a free grep unless told. */
+const CONNECTOR_CALL_CREDITS = 10;
+const CONNECTOR_REMINDER_EVERY = 5;
 
 /** Why the budget stopped the current run, or null. Cleared as the next run starts. */
 let stoppedBecause: string | null = null;
@@ -55,6 +63,13 @@ const finalPrompt = (turns: number, cap: number): string =>
   `no chance to finish. Present what exists now with present_deliverable, then write your closing ` +
   `message: what is done, where it is, and what is left. No more building, fixing or exploring.`;
 
+const connectorPrompt = (calls: number): string =>
+  `Cost check: this run has made ${calls} connector calls, and each one costs ` +
+  `${CONNECTOR_CALL_CREDITS} credits. Make sure you are being efficient — do not redo searches ` +
+  `or re-fetch what you already have — and check whether you can complete the task now with the ` +
+  `information you already hold. If you can, finish; if not, make the fewest further calls that ` +
+  `get you there.`;
+
 /** What the user reads when the run is stopped. */
 const stoppedMessage = (cap: number): string =>
   `This run made ${cap} model calls without finishing, so it was probably going in circles, and ` +
@@ -71,10 +86,12 @@ function temperatureSetting(): number | undefined {
 
 export default function (pi: ExtensionAPI) {
   let turns = 0;
+  let connectorCalls = 0;
   const callCounts = new Map<string, number>();
 
   pi.on("agent_start", async () => {
     turns = 0;
+    connectorCalls = 0;
     stoppedBecause = null;
     callCounts.clear();
   });
@@ -114,6 +131,19 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if (RESAMPLES_LIVE_STATE.has(event.toolName)) return;
+
+    if (event.toolName.startsWith(CONNECTOR_TOOL_PREFIX)) {
+      connectorCalls++;
+      if (connectorCalls % CONNECTOR_REMINDER_EVERY === 0)
+        pi.sendMessage(
+          {
+            customType: "calite-budget",
+            content: connectorPrompt(connectorCalls),
+            display: true,
+          },
+          { deliverAs: "steer" }
+        );
+    }
 
     const key = `${event.toolName}:${inputKey}`;
     const count = (callCounts.get(key) ?? 0) + 1;
