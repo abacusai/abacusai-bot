@@ -24,6 +24,7 @@ vi.mock("@anthropic-ai/sdk", () => ({
 /** Every key that can select a provider — cleared together, or a developer
  * with one exported in their shell gets a different suite than CI. */
 const PROVIDER_KEYS = [
+  "ABACUS_API_KEY",
   "ANTHROPIC_API_KEY",
   "DEEPSEEK_API_KEY",
   "OPENAI_API_KEY",

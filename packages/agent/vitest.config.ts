@@ -1,4 +1,12 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { defineConfig } from "vitest/config";
+
+// An empty agent home for every suite: the code under test reads the keys the
+// desktop stores at sign-in, and a test must never spend them.
+const EMPTY_HOME = mkdtempSync(join(tmpdir(), "abacusai-bot-test-home-"));
 
 /**
  * Suites that spawn a process, bind a socket, or ask the kernel something.
@@ -23,6 +31,7 @@ const SPAWNS_SOMETHING = [
 
 export default defineConfig({
   test: {
+    env: { ABACUSAI_BOT_HOME: EMPTY_HOME },
     projects: [
       {
         test: {
