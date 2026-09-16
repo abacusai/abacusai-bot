@@ -28,7 +28,10 @@ export default defineConfig({
               // import of them in a packaged app fails at startup. Pinned
               // explicitly because the plugin otherwise leaves them
               // external, and the packaged-startup guard test enforces it.
-              include: ["extract-zip", "tuf-js"],
+              // The connector registry is TypeScript source shared with the
+              // agent (a devDependency, like every workspace package); it
+              // has no dist to resolve from the asar and must be inlined.
+              include: ["extract-zip", "tuf-js", "@abacus-ai/connectors"],
             },
           },
           options: { build: { outDir: "dist/main" } },

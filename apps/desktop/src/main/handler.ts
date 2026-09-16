@@ -95,7 +95,6 @@ import {
   setDefaultModel,
   storedKeyProviders,
 } from "./services/config/settings";
-import { signInToMcpServer } from "./services/mcp/mcp-oauth-service";
 import {
   abacusCredentialRejected,
   clearAbacusCache,
@@ -105,12 +104,7 @@ import {
   cancelAbacusAuth,
   startAbacusAuth,
 } from "./services/providers/abacus-auth-service";
-import {
-  cancelConnectorConnect,
-  disconnectAbacusConnector,
-  listAbacusConnectors,
-  startConnectorConnect,
-} from "./services/providers/abacus-connector-service";
+import { cancelConnectorConnect } from "./services/providers/abacus-connector-service";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import { signOut as clearLocalAccount } from "./services/providers/account-service";
 import { listAvailableModels } from "./services/providers/models";
@@ -163,7 +157,19 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
       ...(key == null ? {} : { configured: key.trim().length > 0 }),
       emittedAt: new Date().toISOString(),
     });
+    // A credential connector's status is exactly whether its key is stored.
+    dispatchEvent({
+      type: "connector-status-changed",
+      emittedAt: new Date().toISOString(),
+    });
   };
+
+  // The connector flow stores agent credentials through the same path a
+  // pasted key takes, so the announcement above happens for those too.
+  serviceHost.setCredentialSaver((provider, value) => {
+    saveApiKey(provider, value);
+    credentialsChanged(provider, value);
+  });
 
   // A profile relaunch bypasses the credential-save IPC; reconcile from disk.
   syncAbacusGateway(
@@ -681,34 +687,28 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     cancelOpenRouterAuth();
   });
 
-  ipcMain.handle(IpcChannels.ListAbacusConnectors, () =>
-    listAbacusConnectors()
+  ipcMain.handle(IpcChannels.ListConnectorStatuses, () =>
+    serviceHost.listConnectorStatuses()
+  );
+
+  ipcMain.handle(IpcChannels.ConnectConnector, (_event, connectorId: string) =>
+    serviceHost.connectConnector(connectorId)
   );
 
   ipcMain.handle(
-    IpcChannels.ConnectAbacusConnector,
-    async (_event, service: string) => {
-      const result = await startConnectorConnect(service);
-      if (result.ok) {
-        // The MCP file is user-editable, so the url and headers under the
-        // app's own name are rewritten rather than assumed.
-        serviceHost.ensureMcpServer({
-          mode: "code",
-          name: ABACUS_CONNECTORS_SERVER_NAME,
-          config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
-        });
-      }
-      return result;
-    }
+    IpcChannels.SubmitConnectorFields,
+    (_event, connectorId: string, values: Record<string, string>) =>
+      serviceHost.submitConnectorFields(connectorId, values ?? {})
   );
 
-  ipcMain.handle(IpcChannels.CancelAbacusConnector, () => {
+  ipcMain.handle(IpcChannels.CancelConnectorConnect, () => {
     cancelConnectorConnect();
   });
 
   ipcMain.handle(
-    IpcChannels.DisconnectAbacusConnector,
-    (_event, service: string) => disconnectAbacusConnector(service)
+    IpcChannels.DisconnectConnector,
+    (_event, connectorId: string) =>
+      serviceHost.disconnectConnector(connectorId)
   );
 
   ipcMain.handle(IpcChannels.GetMessagingSnapshot, () => {
@@ -1004,37 +1004,8 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
 
   ipcMain.handle(
     IpcChannels.McpOAuthSignIn,
-    async (_event, request: McpOAuthSignInRequest) => {
-      // The renderer names the server but never supplies the URL, so a
-      // compromised page cannot point the flow at an attacker's endpoints.
-      const server = serviceHost
-        .listMcpServers({ mode: request.mode })
-        .find((entry) => entry.id === request.name);
-
-      if (server?.config.url == null) {
-        return { success: false, error: "No such HTTP server is configured." };
-      }
-
-      if (server.config.oauth === false) {
-        return { success: false, error: "OAuth is disabled for this server." };
-      }
-
-      const result = await signInToMcpServer(
-        server.config.url,
-        server.config.oauth != null ? { oauth: server.config.oauth } : {}
-      );
-
-      if (result.ok) {
-        await serviceHost.notifyMcpSignedIn(request.mode);
-        return { success: true };
-      }
-
-      return {
-        success: false,
-        error: result.error,
-        ...(result.cancelled === true ? { cancelled: true } : {}),
-      };
-    }
+    (_event, request: McpOAuthSignInRequest) =>
+      serviceHost.mcpOAuthSignIn(request)
   );
 
   ipcMain.handle(

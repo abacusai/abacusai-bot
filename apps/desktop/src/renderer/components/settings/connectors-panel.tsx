@@ -1,4 +1,3 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ExternalLink,
   Key,
@@ -13,7 +12,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type JSX,
   type ReactNode,
@@ -21,30 +19,26 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { McpServerEntry, McpServerInfo } from "#shared/contracts";
 import {
   SHARED_BOT_PLATFORM_OF,
   type MessagingPlatformId,
 } from "#shared/messaging";
 
 import {
-  type AgentKeyConnector,
-  HOME_PLACEHOLDER,
   CONNECTORS,
-  type AbacusConnector,
-  type McpServerConnector,
-  type MessagingConnector,
+  connectUi,
   type ConnectorDefinition,
+  type MessagingConnector,
 } from "../../connectors";
 import {
-  abacusConnectorsQueryOptions,
-  type AbacusConnectorState,
-} from "../../hooks/use-connected-connectors";
+  isConnected,
+  statusOf,
+  useConnectorStatuses,
+} from "../../hooks/use-connector-statuses";
 import { useMcpRuntime } from "../../hooks/use-mcp-runtime";
 import { useWorkspaceMetadataQuery } from "../../hooks/use-workspace-queries";
-import { signInToAbacus } from "../../lib/abacus-sign-in";
-import { settingsQueryKeys } from "../../lib/settings-query-keys";
 import { useWorkspaceStore } from "../../stores/code-store";
+import { useConnectFlow } from "../connectors/connect-flow";
 import {
   FocusedPage,
   FocusedPageBody,
@@ -68,70 +62,41 @@ import {
   Spinner,
 } from "../ui";
 import { Badge } from "../ui/badge";
-import { useAgentKeySaver } from "./agent-key";
 import { ConnectorLogo } from "./connector-logo";
-import { CredentialPrompt } from "./credential-prompt";
 import {
   MessagingConnectorDialog,
   MessagingSettingsDialog,
   MessagingStateBadge,
   sharedLinkPending,
-  isMessagingPlatformInstalled,
   useMessaging,
 } from "./messaging-connectors";
 
 /**
- * Connectors — the catalog, and what is installed from it.
+ * Connectors — the registry, and what is connected from it.
  *
- * Adding one writes the same MCP config the MCP panel writes, under the
- * connector's id; "installed" means the id is in the server list. Credentials
- * are asked for before anything is written.
+ * Every card is a registry entry; its status comes from main's one table and
+ * connecting runs the one flow per kind (connect-flow.tsx). This panel knows
+ * nothing about what a platform hop or an MCP install is — it renders cards
+ * and reports outcomes.
  */
 
-// Connectors install into the coding agent's MCP config, the same mode the MCP tab
-// manages.
-const MODE = "code" as const;
 /** How long the card waits on the browser hop before giving the user back the button. */
 const CONNECT_WATCHDOG_MS = 3 * 60 * 1000;
 
-const EMPTY_PROVIDER_IDS = new Set<string>();
+// The connectors install into the coding agent's MCP config, the same mode
+// the MCP tab manages.
+const MODE = "code" as const;
 
 export const ConnectorsPanel = (): JSX.Element => {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
-
-  const installedQuery = useQuery({
-    queryKey: settingsQueryKeys.connectors.installed,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const servers = (await window.api?.agent?.listMcpServers?.({
-        mode: MODE,
-      })) as McpServerInfo[] | undefined;
-      return new Set((servers ?? []).map((server) => server.id));
-    },
-  });
-  const connectorsQuery = useQuery(abacusConnectorsQueryOptions);
-  // Agent-key cards are "installed" when the credential is stored; no MCP entry.
-  const storedKeysQuery = useQuery({
-    queryKey: settingsQueryKeys.connectors.storedKeys,
-    staleTime: 60_000,
-    queryFn: async () =>
-      new Set((await window.api?.agent?.listStoredKeyProviders?.()) ?? []),
-  });
-  const storedKeys = storedKeysQuery.data ?? EMPTY_PROVIDER_IDS;
-  const installed = installedQuery.data ?? EMPTY_PROVIDER_IDS;
-  const abacusConnected = connectorsQuery.data?.connected ?? EMPTY_PROVIDER_IDS;
-  const abacusAvailable = connectorsQuery.data?.available ?? null;
+  const { statuses, loaded, refresh } = useConnectorStatuses();
+  const flow = useConnectFlow();
   const [busy, setBusy] = useState<string | null>(null);
-  // The connector browser hop is single-flight in the main process; this is
-  // which service holds the slot. Other cards stay clickable: a click elsewhere
+  // The browser hop is single-flight in the main process; this is which
+  // connector holds the slot. Other cards stay clickable: a click elsewhere
   // cancels the hop in flight, a click on the running card is a fresh attempt.
-  const [connectingService, setConnectingService] = useState<string | null>(
-    null
-  );
-  // The same, readable from inside a click handler without a stale closure.
-  const connectingServiceRef = useRef<string | null>(null);
+  const [connecting, setConnecting] = useState<string | null>(null);
   // The card of a connect that came back failed, so it can say so in place
   // rather than only in a toast that is gone by the time the user looks.
   const [connectError, setConnectError] = useState<{
@@ -140,9 +105,6 @@ export const ConnectorsPanel = (): JSX.Element => {
   } | null>(null);
   // Which MCP server a sign-in is in flight for.
   const [signingIn, setSigningIn] = useState<string | null>(null);
-  const [credentialFor, setCredentialFor] = useState<
-    AgentKeyConnector | McpServerConnector | null
-  >(null);
 
   // The messaging platforms: their live state, and which dialogs are open.
   const messaging = useMessaging();
@@ -158,13 +120,9 @@ export const ConnectorsPanel = (): JSX.Element => {
   }, []);
 
   // Leaving the panel abandons any connect still in flight. Without this the
-  // loopback listener holds its port and sits out the full five-minute window
-  // for a flow the user has walked away from.
-  useEffect(() => {
-    return () => {
-      void window.api?.agent?.cancelAbacusConnector?.();
-    };
-  }, []);
+  // loopback listener holds its port and sits out the full window for a flow
+  // the user has walked away from.
+  useEffect(() => () => flow.cancel(), [flow]);
 
   // Reconnect the running agent to the servers as they are now. Its MCP
   // clients connect once at session start with the credentials of that moment,
@@ -198,103 +156,82 @@ export const ConnectorsPanel = (): JSX.Element => {
     });
   }, [activeWorkspaceId, getActiveSessionId]);
 
-  const refreshInstalled = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: settingsQueryKeys.connectors.installed,
-    });
-  }, [queryClient]);
-
-  const refreshConnectors = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: settingsQueryKeys.connectors.connectors,
-    });
-  }, [queryClient]);
-
-  const storeAgentKey = useAgentKeySaver();
-  const saveAgentKey = useCallback(
-    async (connector: AgentKeyConnector, value: string) => {
-      setBusy(connector.id);
-      try {
-        await storeAgentKey(connector, value);
-      } finally {
-        setBusy(null);
+  const connect = useCallback(
+    async (connector: ConnectorDefinition) => {
+      const hop = connectUi(connector) === "browser-hop";
+      // A second click on an adding card is a retry; a click on another card
+      // cancels this one and says so.
+      if (hop && connecting != null) {
+        flow.cancel();
+        if (connecting !== connector.id) {
+          const other = CONNECTORS.find((entry) => entry.id === connecting);
+          toast.info(
+            t("connectors.abacusConnectCancelled", {
+              name: other?.name ?? connecting,
+            })
+          );
+        }
       }
-    },
-    [storeAgentKey]
-  );
-
-  // Takes the server variant, not any connector: `connector.entry` is what gets
-  // installed, and only that variant is guaranteed to have one.
-  const add = useCallback(
-    async (
-      connector: McpServerConnector,
-      credentials: Record<string, string>
-    ) => {
       setBusy(connector.id);
-      const previousInstalled = queryClient.getQueryData<Set<string>>(
-        settingsQueryKeys.connectors.installed
+      if (hop) setConnecting(connector.id);
+      setConnectError((current) =>
+        current?.id === connector.id ? null : current
       );
-      let added = false;
+      let connected = false;
       try {
-        const entry: McpServerEntry = { ...connector.entry };
-
-        if (entry.args?.includes(HOME_PLACEHOLDER) === true) {
-          const home = await window.api?.getHomeDir?.();
-          entry.args = entry.args.map((arg) =>
-            arg === HOME_PLACEHOLDER ? (home ?? ".") : arg
+        if (hop)
+          toast.info(
+            t("connectors.abacusConnecting", { name: connector.name })
           );
-        }
-
-        if (connector.token != null && credentials.token != null) {
-          entry.headers = {
-            ...entry.headers,
-            [connector.token.header]:
-              `${connector.token.scheme} ${credentials.token}`.trim(),
-          };
-        }
-
-        if (connector.env != null && connector.env.length > 0) {
-          entry.env = { ...entry.env };
-          for (const name of connector.env)
-            entry.env[name] = credentials[name] ?? "";
-        }
-
-        // The client the sign-in authorizes with, for providers that will not
-        // register one for us; the main process reads it back from the entry.
-        if (connector.auth === "oauth-client") {
-          const clientId = (credentials.clientId ?? "").trim();
-          const clientSecret = (credentials.clientSecret ?? "").trim();
-
-          entry.oauth = {
-            ...(clientId.length > 0 ? { clientId } : {}),
-            ...(clientSecret.length > 0 ? { clientSecret } : {}),
-          };
-        }
-
-        queryClient.setQueryData<Set<string>>(
-          settingsQueryKeys.connectors.installed,
-          (current = new Set()) => new Set(current).add(connector.id)
-        );
-        const result = await window.api?.agent?.addMcpServer?.({
-          mode: MODE,
-          name: connector.id,
-          config: entry,
-        });
-
-        if (result?.success !== true) {
-          toast.error(
-            result?.error ?? t("connectors.addFailed", { name: connector.name })
-          );
+        // The main process waits twenty minutes for the browser; the card
+        // gives up sooner so a hung flow does not leave it "adding" for good.
+        const result = await (hop
+          ? Promise.race([
+              flow.start(connector),
+              new Promise<{ ok: false; error: string; timedOut: true }>(
+                (resolve) =>
+                  setTimeout(
+                    () =>
+                      resolve({
+                        ok: false,
+                        error: "timed out",
+                        timedOut: true,
+                      }),
+                    CONNECT_WATCHDOG_MS
+                  )
+              ),
+            ])
+          : flow.start(connector));
+        if (result.ok !== true) {
+          const timedOut = "timedOut" in result;
+          if (timedOut) flow.cancel();
+          // Cancelled by the next click is not this card's failure to report.
+          const cancelled = !timedOut && result.cancelled === true;
+          if (!cancelled) {
+            setConnectError({
+              id: connector.id,
+              message:
+                connector.kind === "mcp" && result.error != null
+                  ? t("connectors.signInFailed", {
+                      name: connector.name,
+                      error: result.error,
+                    })
+                  : t("connectors.abacusConnectFailed", {
+                      name: connector.name,
+                    }),
+            });
+          }
           return;
         }
-
-        added = true;
-        await refreshInstalled();
+        connected = true;
+        await refresh();
         await reconnectRunningAgent();
-
-        // Added either way: the server itself is fine, its first browser call
-        // is what fails, and a warning now beats a stack trace in a chat later.
-        if (connector.requires === "google-chrome") {
+        // Added either way: the server itself is fine, its first browser
+        // call is what fails, and a warning now beats a stack trace later.
+        if (
+          connector.kind === "mcp" &&
+          connector.requires === "google-chrome"
+        ) {
           const present = await window.api?.hasGoogleChrome?.();
           if (present === false)
             toast.warning(
@@ -302,242 +239,47 @@ export const ConnectorsPanel = (): JSX.Element => {
               { duration: 15_000 }
             );
         }
-
-        // An OAuth connector without its sign-in 401s on first use, so roll
-        // straight into the browser flow.
-        if (connector.auth === "oauth" || connector.auth === "oauth-client") {
-          toast.info(t("connectors.signingIn", { name: connector.name }));
-          const signIn = await window.api.agent.mcpOAuthSignIn({
-            mode: MODE,
-            name: connector.id,
-          });
-
-          if (signIn.success) {
-            // The token lands only once the browser flow finishes, so the
-            // reconnect above ran without it.
-            await reconnectRunningAgent();
-            toast.success(t("connectors.signedIn", { name: connector.name }));
-          } else if (signIn.cancelled !== true) {
-            toast.error(
-              t("connectors.signInFailed", {
-                name: connector.name,
-                error: signIn.error ?? "",
-              })
-            );
-          }
-        } else {
-          toast.success(t("connectors.added", { name: connector.name }));
-        }
-      } finally {
-        if (!added) {
-          queryClient.setQueryData(
-            settingsQueryKeys.connectors.installed,
-            previousInstalled ?? new Set()
-          );
-        }
-        clearBusy(connector.id);
-      }
-    },
-    [clearBusy, queryClient, refreshInstalled, reconnectRunningAgent, t]
-  );
-
-  // Attach an Abacus connector: sign in first if the app holds no key (free
-  // signup happens inside that same browser hop), then the connect hop, then
-  // re-read state — the platform, not the loopback ping, is the source of truth.
-  const connectAbacus = useCallback(
-    async (connector: AbacusConnector) => {
-      const service = connector.abacusService;
-      // A second click on an adding card is a retry; a click on another card
-      // cancels this one and says so.
-      const holder = connectingServiceRef.current;
-      if (holder != null) {
-        await window.api?.agent?.cancelAbacusConnector?.();
-        if (holder !== service) {
-          const other = CONNECTORS.find(
-            (entry) => entry.auth === "abacus" && entry.abacusService === holder
-          );
-          toast.info(
-            t("connectors.abacusConnectCancelled", {
-              name: other?.name ?? holder,
-            })
-          );
-        }
-      }
-      setBusy(connector.id);
-      setConnectingService(service);
-      connectingServiceRef.current = service;
-      setConnectError((current) =>
-        current?.id === connector.id ? null : current
-      );
-      let connected = false;
-      try {
-        let snapshot = await window.api?.agent?.listAbacusConnectors?.();
-        if (snapshot?.ok !== true && snapshot?.error === "not-signed-in") {
-          toast.info(t("connectors.abacusSigningIn"));
-          const auth = await signInToAbacus();
-          if (auth.ok !== true) {
-            if (auth.cancelled !== true)
-              toast.error(t("connectors.abacusSignInFailed"));
-            return;
-          }
-          snapshot = await window.api?.agent?.listAbacusConnectors?.();
-        }
-        toast.info(t("connectors.abacusConnecting", { name: connector.name }));
-        // The main process waits twenty minutes for the browser; the card
-        // gives up sooner so a hung flow does not leave it "adding" for good.
-        const result = await Promise.race([
-          window.api.agent.connectAbacusConnector(service),
-          new Promise<{ ok: false; error: string; timedOut: true }>((resolve) =>
-            setTimeout(
-              () => resolve({ ok: false, error: "timed out", timedOut: true }),
-              CONNECT_WATCHDOG_MS
-            )
-          ),
-        ]);
-        if (result.ok !== true) {
-          const timedOut = "timedOut" in result;
-          if (timedOut) void window.api?.agent?.cancelAbacusConnector?.();
-          // Cancelled by the next click is not this card's failure to report.
-          const cancelled = !timedOut && result.cancelled === true;
-          if (!cancelled) {
-            setConnectError({
-              id: connector.id,
-              message: t("connectors.abacusConnectFailed", {
-                name: connector.name,
-              }),
-            });
-          }
-          return;
-        }
-        connected = true;
-        await refreshConnectors();
-        await refreshInstalled();
-        await reconnectRunningAgent();
         toast.success(
-          t("connectors.abacusConnected", { name: connector.name })
+          connector.kind === "platform"
+            ? t("connectors.abacusConnected", { name: connector.name })
+            : t("connectors.added", { name: connector.name })
         );
       } finally {
-        // The platform is the source of truth either way.
-        if (!connected) void refreshConnectors();
-        // Release the slot only if it is still ours; another connect may have
-        // taken over.
-        if (connectingServiceRef.current === service)
-          connectingServiceRef.current = null;
-        setConnectingService((current) =>
-          current === service ? null : current
-        );
+        // The status table is the source of truth either way.
+        if (!connected) void refresh();
+        setConnecting((current) => (current === connector.id ? null : current));
         clearBusy(connector.id);
       }
     },
-    [clearBusy, refreshConnectors, refreshInstalled, reconnectRunningAgent, t]
+    [clearBusy, connecting, flow, reconnectRunningAgent, refresh, t]
   );
 
-  const disconnectAbacus = useCallback(
-    async (connector: AbacusConnector) => {
-      const service = connector.abacusService;
+  const disconnect = useCallback(
+    async (connector: ConnectorDefinition) => {
       setBusy(connector.id);
-      const previousConnectors = queryClient.getQueryData<AbacusConnectorState>(
-        settingsQueryKeys.connectors.connectors
-      );
-      let disconnected = false;
-      queryClient.setQueryData<AbacusConnectorState>(
-        settingsQueryKeys.connectors.connectors,
-        (current = { connected: new Set(), available: null }) => {
-          const connected = new Set(current.connected);
-          connected.delete(service);
-          return { ...current, connected };
-        }
-      );
       try {
-        const result =
-          await window.api.agent.disconnectAbacusConnector(service);
+        const result = await window.api.agent.disconnectConnector(connector.id);
         if (result.ok !== true) {
           toast.error(
-            t("connectors.abacusDisconnectFailed", { name: connector.name })
+            connector.kind === "platform"
+              ? t("connectors.abacusDisconnectFailed", { name: connector.name })
+              : t("connectors.removeFailed", { name: connector.name })
           );
           return;
         }
-        disconnected = true;
-        await refreshConnectors();
+        await refresh();
         await reconnectRunningAgent();
         toast.success(
-          t("connectors.abacusDisconnected", { name: connector.name })
+          connector.kind === "platform"
+            ? t("connectors.abacusDisconnected", { name: connector.name })
+            : t("connectors.removed", { name: connector.name })
         );
       } finally {
-        if (!disconnected) {
-          queryClient.setQueryData(
-            settingsQueryKeys.connectors.connectors,
-            previousConnectors ?? { connected: new Set(), available: null }
-          );
-        }
         clearBusy(connector.id);
       }
     },
-    [clearBusy, queryClient, refreshConnectors, reconnectRunningAgent, t]
+    [clearBusy, reconnectRunningAgent, refresh, t]
   );
-
-  const remove = useCallback(
-    async (connector: McpServerConnector) => {
-      setBusy(connector.id);
-      const previousInstalled = queryClient.getQueryData<Set<string>>(
-        settingsQueryKeys.connectors.installed
-      );
-      let removed = false;
-      queryClient.setQueryData<Set<string>>(
-        settingsQueryKeys.connectors.installed,
-        (current = new Set()) => {
-          const next = new Set(current);
-          next.delete(connector.id);
-          return next;
-        }
-      );
-      try {
-        const result = await window.api?.agent?.removeMcpServer?.({
-          mode: MODE,
-          name: connector.id,
-        });
-        if (result?.success !== true) {
-          toast.error(
-            result?.error ??
-              t("connectors.removeFailed", { name: connector.name })
-          );
-          return;
-        }
-        removed = true;
-        toast.success(t("connectors.removed", { name: connector.name }));
-        await refreshInstalled();
-        await reconnectRunningAgent();
-      } finally {
-        if (!removed) {
-          queryClient.setQueryData(
-            settingsQueryKeys.connectors.installed,
-            previousInstalled ?? new Set()
-          );
-        }
-        clearBusy(connector.id);
-      }
-    },
-    [clearBusy, queryClient, refreshInstalled, reconnectRunningAgent, t]
-  );
-
-  // WhatsApp enables straight away (that starts the bridge and produces the
-  // QR); token platforms wait for credentials. Either way the dialog opens.
-  const connectMessaging = (connector: MessagingConnector): void => {
-    const platform = messaging.snapshot?.platforms.find(
-      (entry) => entry.id === connector.messagingPlatform
-    );
-    if (
-      platform != null &&
-      (platform.id === "whatsapp" ||
-        platform.id === "telegram" ||
-        platform.id === "discord" ||
-        platform.id === "abacus_discord" ||
-        platform.id === "abacus_telegram" ||
-        platform.configured)
-    )
-      void messaging.connectPlatform(connector.messagingPlatform);
-    setMessagingDialog(connector.messagingPlatform);
-  };
 
   // Disabling a card also takes down a shared-bot lane that lives inside it.
   const removeMessaging = async (
@@ -551,7 +293,7 @@ export const ConnectorsPanel = (): JSX.Element => {
 
   // Sign in to an installed MCP server the running agent says is waiting on one.
   const signInMcp = useCallback(
-    async (connector: McpServerConnector) => {
+    async (connector: ConnectorDefinition) => {
       setSigningIn(connector.id);
       try {
         const result = await window.api.agent.mcpOAuthSignIn({
@@ -577,88 +319,50 @@ export const ConnectorsPanel = (): JSX.Element => {
     [refreshRuntime, reconnectRunningAgent, t]
   );
 
-  const onAddClick = (connector: ConnectorDefinition): void => {
-    if (connector.auth === "messaging") {
-      connectMessaging(connector);
-      return;
-    }
-    if (connector.auth === "abacus") {
-      void connectAbacus(connector);
-      return;
-    }
-    // A connector saved without its credential fails silently on first use.
-    if (
-      connector.auth === "token" ||
-      connector.auth === "key" ||
-      connector.auth === "agent-key" ||
-      connector.auth === "oauth-client"
-    ) {
-      setCredentialFor(connector);
-      return;
-    }
-    void add(connector, {});
-  };
-
-  const isConnectorInstalled = useCallback(
-    (connector: ConnectorDefinition): boolean =>
-      connector.auth === "messaging"
-        ? isMessagingPlatformInstalled(
-            messaging.snapshot,
-            connector.messagingPlatform
-          )
-        : connector.auth === "abacus"
-          ? abacusConnected.has(connector.abacusService)
-          : connector.auth === "agent-key"
-            ? storedKeys.has(connector.credentialProvider)
-            : installed.has(connector.id),
-    [abacusConnected, installed, messaging.snapshot, storedKeys]
-  );
-
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    // An Abacus card whose service the org disables (or that isn't GA for it)
-    // would connect to nothing; hide it once we know. No snapshot = show all.
+    // A platform card the account cannot offer would connect to nothing;
+    // hide it once we know. No statuses yet = show all.
     const offered = CONNECTORS.filter(
-      (p) =>
-        p.auth !== "abacus" ||
-        abacusAvailable == null ||
-        abacusAvailable.has(p.abacusService)
+      (connector) =>
+        !loaded || statusOf(statuses, connector.id).reason !== "not-offered"
     );
     if (needle.length === 0) return offered;
     return offered.filter(
-      (p) =>
-        p.name.toLowerCase().includes(needle) ||
-        p.description.toLowerCase().includes(needle) ||
-        p.id.includes(needle)
+      (connector) =>
+        connector.name.toLowerCase().includes(needle) ||
+        connector.description.toLowerCase().includes(needle) ||
+        connector.id.includes(needle)
     );
-  }, [query, abacusAvailable]);
+  }, [query, statuses, loaded]);
 
-  // Messaging is always its own section: hopping between installed and not on
+  // Messaging is always its own section: hopping between connected and not on
   // every reconnect would read as the page reshuffling itself.
   const messagingItems = useMemo(
     () =>
       visible.filter(
         (connector): connector is MessagingConnector =>
-          connector.auth === "messaging"
+          connector.kind === "messaging"
       ),
     [visible]
   );
   const sections = useMemo(() => {
-    const rest = visible.filter((connector) => connector.auth !== "messaging");
+    const rest = visible.filter((connector) => connector.kind !== "messaging");
     return [
       {
         id: "installed" as const,
-        items: rest.filter(isConnectorInstalled),
+        items: rest.filter((connector) => isConnected(statuses, connector.id)),
       },
       {
         id: "notInstalled" as const,
-        items: rest.filter((connector) => !isConnectorInstalled(connector)),
+        items: rest.filter((connector) => !isConnected(statuses, connector.id)),
       },
     ];
-  }, [visible, isConnectorInstalled]);
+  }, [visible, statuses]);
 
   return (
     <FocusedPage data-id="connectors-panel">
+      {flow.dialogs}
       <FocusedPageToolbar>
         <InputGroup className="w-full @xl:max-w-md">
           <InputGroupAddon>
@@ -706,32 +410,27 @@ export const ConnectorsPanel = (): JSX.Element => {
                 <div className="grid grid-cols-1 gap-2 @3xl:grid-cols-2">
                   {messagingItems.map((connector) => {
                     const platform = messaging.snapshot?.platforms.find(
-                      (entry) => entry.id === connector.messagingPlatform
+                      (entry) => entry.id === connector.platform
                     );
-                    const platformInstalled = isConnectorInstalled(connector);
-                    // A broken link offers Connect straight away, with the
-                    // error badge saying why.
-                    const needsRelink =
-                      platformInstalled &&
-                      (platform?.state === "error" ||
-                        platform?.state === "needs_login" ||
-                        platform?.state === "rate_limited");
-                    // Signed in, bot not linked: same treatment, Connect
-                    // reopens the dialog at the outstanding step.
+                    const status = statusOf(statuses, connector.id);
+                    // Attached but not live — a broken link, or a shared-bot
+                    // lane still to be linked — offers Connect straight away,
+                    // with the badge saying why.
+                    const attached =
+                      status.state === "connected" ||
+                      status.state === "pending";
                     const linkPending = sharedLinkPending(
                       messaging.snapshot,
-                      connector.messagingPlatform
+                      connector.platform
                     );
                     return (
                       <ConnectorCard
                         key={connector.id}
                         connector={connector}
-                        isInstalled={
-                          platformInstalled && !needsRelink && !linkPending
-                        }
+                        isInstalled={status.state === "connected"}
                         isBusy={false}
                         statusBadge={
-                          platform != null && platformInstalled ? (
+                          platform != null && attached ? (
                             <>
                               <MessagingStateBadge
                                 state={
@@ -752,14 +451,13 @@ export const ConnectorsPanel = (): JSX.Element => {
                           ) : null
                         }
                         onManage={
-                          platformInstalled
-                            ? () =>
-                                setMessagingDialog(connector.messagingPlatform)
+                          attached
+                            ? () => setMessagingDialog(connector.platform)
                             : undefined
                         }
-                        onAdd={() => onAddClick(connector)}
+                        onAdd={() => void connect(connector)}
                         onRemove={() =>
-                          void removeMessaging(connector.messagingPlatform)
+                          void removeMessaging(connector.platform)
                         }
                       />
                     );
@@ -793,20 +491,18 @@ export const ConnectorsPanel = (): JSX.Element => {
                       <ConnectorCard
                         key={connector.id}
                         connector={connector}
-                        isInstalled={isConnectorInstalled(connector)}
+                        isInstalled={isConnected(statuses, connector.id)}
                         isBusy={busy === connector.id}
-                        isAdding={
-                          connector.auth === "abacus" &&
-                          connectingService === connector.abacusService
-                        }
+                        isAdding={connecting === connector.id}
                         needsSignIn={
+                          connector.kind === "mcp" &&
                           connector.auth === "oauth" &&
                           runtimeServers.get(connector.id)?.status ===
                             "auth-required"
                         }
                         isSigningIn={signingIn === connector.id}
                         onSignIn={
-                          connector.auth === "oauth"
+                          connector.kind === "mcp" && connector.auth === "oauth"
                             ? () => void signInMcp(connector)
                             : undefined
                         }
@@ -815,14 +511,8 @@ export const ConnectorsPanel = (): JSX.Element => {
                             ? connectError.message
                             : null
                         }
-                        onAdd={() => onAddClick(connector)}
-                        onRemove={() =>
-                          void (connector.auth === "abacus"
-                            ? disconnectAbacus(connector)
-                            : connector.auth === "agent-key"
-                              ? saveAgentKey(connector, "")
-                              : remove(connector))
-                        }
+                        onAdd={() => void connect(connector)}
+                        onRemove={() => void disconnect(connector)}
                       />
                     ))}
                   </div>
@@ -832,25 +522,6 @@ export const ConnectorsPanel = (): JSX.Element => {
           </>
         )}
       </FocusedPageBody>
-
-      {credentialFor != null && (
-        <CredentialPrompt
-          connector={credentialFor}
-          onCancel={() => setCredentialFor(null)}
-          onSubmit={(values) => {
-            const connector = credentialFor;
-            setCredentialFor(null);
-            if (connector.auth === "agent-key") {
-              void saveAgentKey(
-                connector,
-                values[connector.env?.[0] ?? ""] ?? ""
-              );
-              return;
-            }
-            void add(connector, values);
-          }}
-        />
-      )}
 
       {messagingDialog != null && (
         <MessagingConnectorDialog
@@ -869,6 +540,24 @@ export const ConnectorsPanel = (): JSX.Element => {
       )}
     </FocusedPage>
   );
+};
+
+/** What the auth badge on a card says, by kind. */
+const authLabelKey = (connector: ConnectorDefinition): string | null => {
+  switch (connector.kind) {
+    case "platform":
+      return "connectors.auth.abacus";
+    case "credential":
+      return "connectors.auth.token";
+    case "messaging":
+      // Messaging cards wear their live state instead of an auth badge —
+      // "Connected" says more than naming the pairing mechanism would.
+      return null;
+    case "mcp":
+      return connector.auth === "none"
+        ? null
+        : `connectors.auth.${connector.auth}`;
+  }
 };
 
 const ConnectorCard = ({
@@ -902,6 +591,7 @@ const ConnectorCard = ({
   onRemove: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();
+  const authKey = authLabelKey(connector);
 
   return (
     <Item
@@ -915,15 +605,10 @@ const ConnectorCard = ({
       <ItemContent>
         <ItemTitle>
           {connector.name}
-          {/* Messaging cards wear their live state instead of an auth badge —
-              "Connected" says more than naming the pairing mechanism would. */}
-          {connector.auth !== "none" && connector.auth !== "messaging" && (
-            <Badge
-              variant="secondary"
-              title={t(`connectors.auth.${connector.auth}`)}
-            >
+          {authKey != null && (
+            <Badge variant="secondary" title={t(authKey)}>
               <Key />
-              {t(`connectors.auth.${connector.auth}`)}
+              {t(authKey)}
             </Badge>
           )}
           {statusBadge}
@@ -997,7 +682,7 @@ const ConnectorCard = ({
             {isBusy && <Spinner fontSize={10} />}
             {isAdding
               ? t("connectors.adding")
-              : connector.auth === "messaging"
+              : connector.kind === "messaging"
                 ? t("connectors.connectAction")
                 : t("connectors.add")}
           </Button>

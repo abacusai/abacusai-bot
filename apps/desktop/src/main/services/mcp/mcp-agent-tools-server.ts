@@ -4,18 +4,25 @@ import net from "net";
 import path from "path";
 import { pathToFileURL } from "url";
 
-import { sendToRenderer } from "#main/renderer-host";
 /**
  * The agent-tools MCP server: skills, task planning, memory, the web, and
  * more. One server rather than one per toolset, since all are small and
  * in-process; each toolset toggles on its own, so `tools/list` filters by the
  * enabled set and a disabled toolset's tools are never advertised.
  */
+import { describeForListing } from "@abacus-ai/connectors/describe";
+import {
+  CONNECTORS,
+  resolveConnector,
+  type Connector,
+} from "@abacus-ai/connectors/registry";
+
+import { sendToRenderer } from "#main/renderer-host";
 import { IpcChannels } from "#shared/channels";
+import type { ConnectorStatus, ConnectorStatuses } from "#shared/contracts";
 import type { ConversationKey } from "#shared/conversation-scope";
 import { artifactPathLine } from "#shared/deliverables";
 import {
-  AGENT_LINKABLE_CHAT_APPS,
   isMessagingPlatformId,
   type MessagingPlatformId,
   describePlatformForAgent,
@@ -88,18 +95,6 @@ interface JsonRpcResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
-/**
- * GitHub is not a platform connector here: its card takes a personal access
- * token, which authenticates `gh` and git in bash — private repos included,
- * nothing billed per call. The Connect button in the chat opens that card's
- * token dialog, and this is what the model reads once the token is in.
- */
-const GITHUB_SERVICE = "github";
-const GITHUB_CONNECTED_HINT =
-  "The token is in your environment: `gh` and git over HTTPS are authenticated in bash, " +
-  "so work GitHub from there (`gh repo`, `gh pr`, `gh issue`, `gh api`). There is no " +
-  "GitHub tool to call.";
-
 const SERVER_NAME = "agent-tools";
 const SERVER_VERSION = "1.0.0";
 
@@ -145,8 +140,6 @@ export interface McpAgentToolsServerOptions {
   enabledToolsets: () => Set<string>;
   workspacePath: () => string | null;
   workspaceId?: () => string | null;
-  /** Is a credential stored for this provider (the GitHub token, say)? */
-  hasStoredKey?: (provider: string) => boolean;
   /** `trigger` lets the run log tell "Run now" from the first fire at creation. */
   runCronJob?: (jobId: string, trigger?: "manual" | "create") => Promise<void>;
   /**
@@ -263,24 +256,20 @@ export interface McpAgentToolsServerOptions {
   };
   /** Optional: headless has no account, and the tool reports unconfigured. */
   connectors?: {
-    list: () => Promise<{
-      available: { service: string; name: string }[];
-      connected: string[];
-      /** service -> who it is connected as, when the platform says. */
-      accounts?: Record<string, string>;
-    }>;
+    /** Every registry connector's status on this machine, by connector id. */
+    list: () => Promise<ConnectorStatuses>;
     /** Resolves once the user answers. */
     request: (input: {
-      service: string;
+      connectorId: string;
       label: string;
       reason?: string;
       /** The conversation that asked, so the button appears only in it. */
       conversationKey: ConversationKey;
-      /** What the model reads on connect, when it is not "tools are in your list". */
+      /** For the model on connect, when it is not "tools are in your list". */
       connectedHint?: string;
     }) => Promise<string>;
     /** Resolves to null or an error sentence. */
-    disconnect?: (service: string) => Promise<string | null>;
+    disconnect?: (connectorId: string) => Promise<string | null>;
   };
 }
 
@@ -288,14 +277,6 @@ export interface McpAgentToolsServerOptions {
  * Not read from the platform catalog: that carries i18n keys and the main
  * process has no translator.
  */
-const CHAT_APP_LABELS: Record<MessagingPlatformId, string> = {
-  telegram: "Telegram",
-  discord: "Discord",
-  whatsapp: "WhatsApp",
-  abacus_discord: "Discord (Abacus AI bot)",
-  abacus_telegram: "Telegram (Abacus AI bot)",
-};
-
 export class McpAgentToolsServer {
   private server: http.Server | null = null;
   private port: number | null = null;
@@ -1559,79 +1540,19 @@ export class McpAgentToolsServer {
           "Tell the user which connector you need; they can connect it from Connectors."
       );
 
-    const { available, connected, accounts } = await connectors.list();
-    const isConnected = (service: string): boolean =>
-      connected.includes(service);
-    /** " (connected as Gmail - ada@example.com)", or "" when unknown. */
-    const accountOf = (service: string): string => {
-      const account = accounts?.[service];
-      return account != null && account.length > 0 ? ` as ${account}` : "";
-    };
-
-    // The chat apps are connectors too but live in this app's own messaging
-    // setup, not the account's catalog. Judged live, not merely running: an
-    // unlinked phone leaves the connector object waiting for a QR.
-    const liveChat =
-      this.options.messaging?.livePlatforms?.() ??
-      this.options.messaging?.runningPlatforms() ??
-      [];
-    const chatApps = AGENT_LINKABLE_CHAT_APPS.filter(
-      // Nothing the catalog carries: its entries have tools behind them.
-      (id) => !available.some((item) => item.service === id)
-    ).map((id) => ({
-      service: id,
-      name: CHAT_APP_LABELS[id],
-      live: liveChat.includes(id),
-    }));
-    const chatApp = (service: string): (typeof chatApps)[number] | undefined =>
-      chatApps.find((entry) => entry.service === service.toLowerCase());
+    const statuses = await connectors.list();
+    const statusOf = (connector: Connector): ConnectorStatus =>
+      statuses[connector.id] ?? { state: "available" };
 
     const asked = String(args.service ?? "").trim();
 
-    // Not a platform connector: the Connect button opens the token dialog.
-    if (/^git ?hub(user)?$/i.test(asked)) {
-      if (this.options.hasStoredKey?.(GITHUB_SERVICE) === true)
-        return this.ok(
-          `GitHub is already connected: a token is stored. ${GITHUB_CONNECTED_HINT} ` +
-            "Do not ask the user to connect it."
-        );
-      return this.ok(
-        await connectors.request({
-          service: GITHUB_SERVICE,
-          label: "GitHub",
-          conversationKey,
-          connectedHint: GITHUB_CONNECTED_HINT,
-          ...(typeof args.reason === "string" && args.reason.trim().length > 0
-            ? { reason: args.reason.trim() }
-            : {}),
-        })
-      );
-    }
-
     if (asked.length === 0) {
-      if (available.length === 0) {
-        return this.ok("No connectors are available on this machine.");
-      }
-
       return this.ok(
         [
           "Connectors available in this chat:",
           "",
-          ...available.map(
-            (item) =>
-              `${item.service}  ${item.name}  ${
-                isConnected(item.service)
-                  ? `connected${accountOf(item.service)}`
-                  : "not connected — ask for it with this tool"
-              }`
-          ),
-          ...chatApps.map(
-            (item) =>
-              `${item.service}  ${item.name}  ${
-                item.live
-                  ? "connected — send with its send_<platform>_message tool"
-                  : "not connected — ask for it with this tool"
-              }`
+          ...CONNECTORS.map((connector) =>
+            describeForListing(connector, statusOf(connector))
           ),
           "",
           "A connector listed as connected is one whose tools are already in your",
@@ -1642,92 +1563,72 @@ export class McpAgentToolsServer {
       );
     }
 
-    // Case-, space- and punctuation-blind.
-    const normalize = (text: string): string =>
-      text.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const wanted = normalize(asked);
-
-    const exact = available.filter(
-      (item) =>
-        normalize(item.service) === wanted || normalize(item.name) === wanted
-    );
-    // Near misses, only when nothing matched outright: ids carry suffixes
-    // ("gmailuser") and people abbreviate.
-    const loose =
-      exact.length > 0
-        ? exact
-        : available.filter(
-            (item) =>
-              normalize(item.service).startsWith(wanted) ||
-              normalize(item.name).startsWith(wanted) ||
-              (wanted.length >= 4 &&
-                (normalize(item.name).includes(wanted) ||
-                  normalize(item.service).includes(wanted)))
-          );
-
-    if (loose.length > 1) {
+    const resolved = resolveConnector(asked);
+    if ("ambiguous" in resolved)
       return this.ok(
-        `"${asked}" matches more than one connector: ${loose
-          .map((item) => `${item.name} (${item.service})`)
+        `"${asked}" matches more than one connector: ${resolved.ambiguous
+          .map((item) => `${item.name} (${item.id})`)
           .join(", ")}. Ask again with one of those.`
       );
-    }
-
-    const match = loose[0];
-
-    if (match == null) {
-      const chat = chatApp(asked);
-
-      if (chat != null) {
-        if (chat.live) {
-          return this.ok(
-            `${chat.name} is connected. Send, list and read with its own tools ` +
-              "(send_<platform>_message, list_<platform>_chats, read_<platform>_messages) — do not ask the user to " +
-              "connect anything."
-          );
-        }
-
-        // The same Connect button every other connector gets, not a trip to
-        // Settings.
-        return this.ok(
-          await connectors.request({
-            service: chat.service,
-            label: chat.name,
-            conversationKey,
-            ...(typeof args.reason === "string" && args.reason.length > 0
-              ? { reason: args.reason }
-              : {}),
-          })
-        );
-      }
-
+    const match = resolved.match;
+    if (match == null)
       return this.ok(
-        `There is no connector called "${asked}".${
-          available.length > 0
-            ? ` Available: ${available
-                .map((item) => `${item.name} (${item.service})`)
-                .join(", ")}.`
-            : ""
-        }`
+        `There is no connector called "${asked}". Available: ${CONNECTORS.map(
+          (item) => `${item.name} (${item.id})`
+        ).join(", ")}.`
       );
-    }
 
-    if (isConnected(match.service)) {
+    const status = statusOf(match);
+    const accountOf = (): string =>
+      status.account != null && status.account.length > 0
+        ? ` as ${status.account}`
+        : "";
+
+    if (status.state === "connected") {
+      if (match.kind === "messaging")
+        return this.ok(
+          `${match.name} is connected. Send, list and read with its own tools ` +
+            "(send_<platform>_message, list_<platform>_chats, read_<platform>_messages) — do not ask the user to " +
+            "connect anything."
+        );
+      if (match.kind === "credential")
+        return this.ok(
+          `${match.name} is already connected: a token is stored, so ${match.via} ` +
+            "are authenticated. Use them — there is nothing to ask the user for."
+        );
       return this.ok(
-        `${match.name} is already connected${accountOf(match.service)}. Use it — ` +
+        `${match.name} is already connected${accountOf()}. Use it — ` +
           "there is nothing to ask the user for, and that account is who they mean " +
           'by "me". Its tools are already in your tool list; use those rather than ' +
           "guessing a tool name."
       );
     }
 
+    if (status.state === "unavailable") {
+      const why =
+        status.reason === "not-signed-in"
+          ? "the app is not signed in to Abacus.AI"
+          : status.reason === "not-offered"
+            ? "the user's Abacus.AI account does not offer it"
+            : "it cannot be reached right now";
+      return this.ok(
+        `${match.name} cannot be connected from here: ${why}. Say so, and offer whatever ` +
+          "part of the task does not need it."
+      );
+    }
+
+    // The same Connect button for every kind: the card knows what each
+    // needs — a browser hop, a token, a pairing dialog.
     return this.ok(
       await connectors.request({
-        service: match.service,
+        connectorId: match.id,
         label: match.name,
         conversationKey,
-        ...(typeof args.reason === "string" && args.reason.trim().length > 0
-          ? { reason: args.reason.trim() }
+        ...(match.kind === "credential"
+          ? { connectedHint: `Use ${match.via}: they are authenticated now.` }
+          : {}),
+        ...(typeof args.reason === "string" && args.reason.length > 0
+          ? { reason: args.reason }
           : {}),
       })
     );
@@ -1744,17 +1645,27 @@ export class McpAgentToolsServer {
         'A service is required, e.g. "googlecalendar" or "whatsapp".'
       );
 
+    const resolved = resolveConnector(asked);
+    if ("ambiguous" in resolved)
+      return this.ok(
+        `"${asked}" matches more than one connector: ${resolved.ambiguous
+          .map((item) => `${item.name} (${item.id})`)
+          .join(", ")}. Ask again with one of those.`
+      );
+    const match = resolved.match;
+    if (match == null)
+      return this.err(
+        `There is no connector called "${asked}". Ask connect_connector with no arguments for the list.`
+      );
+
     // The same lever as the card in Settings, so "off" means one thing.
-    if (
-      isMessagingPlatformId(asked) &&
-      AGENT_LINKABLE_CHAT_APPS.includes(asked)
-    ) {
+    if (match.kind === "messaging") {
       const disable = this.options.messaging?.disablePlatform;
       if (disable == null)
         return this.err("Messaging is not available in this session.");
-      await disable(asked);
+      await disable(match.platform);
       return this.ok(
-        `${CHAT_APP_LABELS[asked]} is disconnected — the platform is switched off. ` +
+        `${match.name} is disconnected — the platform is switched off. ` +
           "connect_connector switches it back on when the user wants it again."
       );
     }
@@ -1763,25 +1674,11 @@ export class McpAgentToolsServer {
     if (connectors?.disconnect == null)
       return this.err("Connectors are not available in this session.");
 
-    const { available, connected } = await connectors.list();
-    const normalize = (text: string): string =>
-      text.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const wanted = normalize(asked);
-    const match =
-      available.find((item) => normalize(item.service) === wanted) ??
-      available.find((item) => normalize(item.name) === wanted) ??
-      // A service can be attached even while a flaky catalog omits it.
-      (connected.some((service) => normalize(service) === wanted)
-        ? { service: asked, name: asked }
-        : null);
-    if (match == null)
-      return this.err(
-        `There is no connector called "${asked}". Ask connect_connector with no arguments for the list.`
-      );
-    if (!connected.includes(match.service))
+    const statuses = await connectors.list();
+    if (statuses[match.id]?.state !== "connected")
       return this.ok(`${match.name} is not connected — nothing to disconnect.`);
 
-    const error = await connectors.disconnect(match.service);
+    const error = await connectors.disconnect(match.id);
     if (error != null) return this.err(error);
     return this.ok(
       `${match.name} is disconnected. Its tools are gone from your tool list; ` +

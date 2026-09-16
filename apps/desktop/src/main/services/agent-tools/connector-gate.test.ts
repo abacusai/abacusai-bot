@@ -32,7 +32,7 @@ const gateWith = (
     events,
     ask: () =>
       gate.ask({
-        service: "gmailuser",
+        connectorId: "gmailuser",
         label: "Gmail",
         conversationKey: botThread,
       }),
@@ -89,7 +89,7 @@ describe("answering a connect ask", () => {
     const events: IpcEvent[] = [];
     const gate = new ConnectorGate((event) => events.push(event), lookup);
     const pending = gate.ask({
-      service: "gmailuser",
+      connectorId: "gmailuser",
       label: "Gmail",
       conversationKey: botThread,
     });
@@ -139,7 +139,7 @@ describe("the conversation an ask belongs to", () => {
     const gate = new ConnectorGate((event) => events.push(event));
 
     void gate.ask({
-      service: "telegram",
+      connectorId: "telegram",
       label: "Telegram",
       conversationKey: botThread,
     });
@@ -152,7 +152,7 @@ describe("the conversation an ask belongs to", () => {
   it("lists an ask only to its own conversation", () => {
     const gate = new ConnectorGate(() => undefined);
     void gate.ask({
-      service: "telegram",
+      connectorId: "telegram",
       label: "Telegram",
       conversationKey: botThread,
     });
@@ -184,12 +184,12 @@ describe("the conversation an ask belongs to", () => {
     const events: IpcEvent[] = [];
     const gate = new ConnectorGate((event) => events.push(event));
     const botAsk = gate.ask({
-      service: "telegram",
+      connectorId: "telegram",
       label: "Telegram",
       conversationKey: botThread,
     });
     void gate.ask({
-      service: "gmailuser",
+      connectorId: "gmailuser",
       label: "Gmail",
       conversationKey: otherChat,
     });

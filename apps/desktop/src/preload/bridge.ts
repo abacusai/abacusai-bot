@@ -14,8 +14,8 @@ import type {
   AbacusAccountInfo,
   AbacusAuthOutcome,
   AbacusSignOutResult,
-  AbacusConnectorOutcome,
-  AbacusConnectorsSnapshot,
+  ConnectorOutcome,
+  ConnectorStatuses,
   OpenRouterAuthOutcome,
   UsageSnapshot,
   AddMcpServerRequest,
@@ -423,22 +423,31 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
         IpcChannels.SignOutAbacus,
         options
       ) as Promise<AbacusSignOutResult>,
-    listAbacusConnectors: () =>
+    listConnectorStatuses: () =>
       ipcRenderer.invoke(
-        IpcChannels.ListAbacusConnectors
-      ) as Promise<AbacusConnectorsSnapshot>,
-    connectAbacusConnector: (service: string) =>
+        IpcChannels.ListConnectorStatuses
+      ) as Promise<ConnectorStatuses>,
+    connectConnector: (connectorId: string) =>
       ipcRenderer.invoke(
-        IpcChannels.ConnectAbacusConnector,
-        service
-      ) as Promise<AbacusConnectorOutcome>,
-    cancelAbacusConnector: () =>
-      ipcRenderer.invoke(IpcChannels.CancelAbacusConnector) as Promise<void>,
-    disconnectAbacusConnector: (service: string) =>
+        IpcChannels.ConnectConnector,
+        connectorId
+      ) as Promise<ConnectorOutcome>,
+    submitConnectorFields: (
+      connectorId: string,
+      values: Record<string, string>
+    ) =>
       ipcRenderer.invoke(
-        IpcChannels.DisconnectAbacusConnector,
-        service
-      ) as Promise<AbacusConnectorOutcome>,
+        IpcChannels.SubmitConnectorFields,
+        connectorId,
+        values
+      ) as Promise<ConnectorOutcome>,
+    cancelConnectorConnect: () =>
+      ipcRenderer.invoke(IpcChannels.CancelConnectorConnect) as Promise<void>,
+    disconnectConnector: (connectorId: string) =>
+      ipcRenderer.invoke(
+        IpcChannels.DisconnectConnector,
+        connectorId
+      ) as Promise<ConnectorOutcome>,
     listSessionArtifacts: () =>
       ipcRenderer.invoke(IpcChannels.ListSessionArtifacts) as Promise<
         SessionArtifact[]

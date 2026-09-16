@@ -1,0 +1,35 @@
+{
+  "name": "@abacus-ai/connectors",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The connector registry: every service the agent can attach, what kind of thing it is, how it connects, and what the model is told about it. Imported as TypeScript source by the desktop and the agent.",
+  "type": "module",
+  "exports": {
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "default": "./dist/registry.js"
+    },
+    "./describe": {
+      "types": "./dist/describe.d.ts",
+      "default": "./dist/describe.js"
+    },
+    "./tool-meta": {
+      "types": "./dist/tool-meta.d.ts",
+      "default": "./dist/tool-meta.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@abacus-ai/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

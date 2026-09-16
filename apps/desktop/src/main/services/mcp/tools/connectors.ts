@@ -1,4 +1,8 @@
+import { catalogByKind } from "@abacus-ai/connectors/describe";
+
 import type { ToolDefinition } from "./definition";
+
+const names = catalogByKind();
 
 /**
  * Attaching and detaching Abacus.AI connector accounts.
@@ -8,8 +12,16 @@ export const CONNECTORS_TOOLS: ToolDefinition[] = [
     name: "connect_connector",
     toolsets: ["connectors"],
     description: [
-      "The user's connectors — Slack, Gmail, Calendar, Drive, GitHub and the rest — and",
-      "the way to get one connected without ending the turn.",
+      "The user's connectors — every entry on the Connectors page — and the way to",
+      "get one connected without ending the turn. They are the account connectors",
+      `(${names.platform.join(", ")}), ${names.credential.join(", ")} (a token),`,
+      `the chat apps (${names.messaging.join(", ")}) and the tool servers`,
+      `(${names.mcp.join(", ")}).`,
+      "",
+      "A tool server is a connector like any other: asking for it puts the same",
+      "Connect button up, connecting installs it on this machine, and its tools",
+      "then appear in your tool list. Never tell the user a name on this list is",
+      "not a connector, and never install one by hand.",
       "",
       "The chat apps — WhatsApp, Telegram and Discord — are in this list",
       "too, with whether they are linked, and asking for one puts the same Connect",

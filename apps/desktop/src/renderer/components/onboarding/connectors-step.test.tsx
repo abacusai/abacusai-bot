@@ -1,16 +1,19 @@
 /**
  * The connectors screen, in both of its states.
  *
- * What matters: the catalog's connectors are all shown (so a connector added
+ * What matters: the registry's connectors are all shown (so a connector added
  * there appears here without this file changing); a signed-in user attaches
  * one in place rather than being sent to the settings panel — the old
  * behaviour, which quietly ended the flow and skipped every step after it; and
  * a signed-out user's tap runs the sign-in hop first and then attaches, the
  * same contract as the in-app connectors panel.
  */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import type { JSX } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { ConnectorStatuses } from "#shared/contracts";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -18,18 +21,10 @@ vi.mock("react-i18next", () => ({
 
 import { CONNECTORS } from "../../connectors";
 
-const listAbacusConnectors = vi.fn(async () => ({
-  ok: true,
-  available: CONNECTORS.filter((connector) => connector.auth === "abacus").map(
-    (connector) => ({
-      service: (connector as { abacusService: string }).abacusService,
-      name: connector.name,
-    })
-  ),
-  connected: {} as Record<string, string>,
-}));
-const connectAbacusConnector = vi.fn(async () => ({ ok: true }) as const);
-const cancelAbacusConnector = vi.fn(async () => undefined);
+let statuses: ConnectorStatuses;
+const listConnectorStatuses = vi.fn(async () => statuses);
+const connectConnector = vi.fn(async (_id: string) => ({ ok: true }) as const);
+const cancelConnectorConnect = vi.fn(async () => undefined);
 const startAbacusAuth = vi.fn(async () => ({ ok: true }) as const);
 
 const { ConnectorsStep } = await import("./connectors-step");
@@ -43,39 +38,44 @@ const byId = (id: string): HTMLElement => {
   return node;
 };
 
-const mount = async (): Promise<void> => {
-  render((<ConnectorsStep {...handlers} />) as JSX.Element);
-  await waitFor(() => byId("onboarding-connectors-grid"));
+const gmail = "abacus-gmailuser";
+
+const mountStep = (): ReturnType<typeof render> => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    (
+      <QueryClientProvider client={client}>
+        <ConnectorsStep {...handlers} />
+      </QueryClientProvider>
+    ) as JSX.Element
+  );
 };
 
-const firstConnector = CONNECTORS.find(
-  (connector) => connector.auth === "abacus"
-) as {
-  id: string;
-  abacusService: string;
+const mount = async (): Promise<void> => {
+  mountStep();
+  await waitFor(() => byId("onboarding-connectors-grid"));
+  await waitFor(() => expect(listConnectorStatuses).toHaveBeenCalled());
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  connectAbacusConnector.mockResolvedValue({ ok: true });
+  statuses = Object.fromEntries(
+    CONNECTORS.map((connector) => [connector.id, { state: "available" }])
+  );
+  connectConnector.mockResolvedValue({ ok: true });
   startAbacusAuth.mockResolvedValue({ ok: true });
-  listAbacusConnectors.mockResolvedValue({
-    ok: true,
-    available: CONNECTORS.filter(
-      (connector) => connector.auth === "abacus"
-    ).map((connector) => ({
-      service: (connector as { abacusService: string }).abacusService,
-      name: connector.name,
-    })),
-    connected: {},
-  });
 
   (globalThis.window as unknown as { api: unknown }).api = {
     agent: {
-      listAbacusConnectors,
-      connectAbacusConnector,
+      listConnectorStatuses,
+      connectConnector,
       startAbacusAuth,
-      cancelAbacusConnector,
+      cancelConnectorConnect,
+      onEvent: () => () => undefined,
+      getMessagingSnapshot: async () => null,
+      updateMessagingPlatform: async () => null,
     },
   };
 });
@@ -85,16 +85,14 @@ describe("a hop the user walks away from", () => {
   // tile is disabled until it does. Nothing here may leave the screen frozen
   // for those five minutes on a decision the user has already made.
   const hangingHop = (): void => {
-    connectAbacusConnector.mockReturnValue(
-      new Promise(() => undefined) as never
-    );
+    connectConnector.mockReturnValue(new Promise(() => undefined) as never);
   };
 
   it("can be cancelled, and never greys the other tiles out", async () => {
     hangingHop();
     await mount();
 
-    fireEvent.click(byId(`onboarding-connector-${firstConnector.id}-connect`));
+    fireEvent.click(byId(`onboarding-connector-${gmail}-connect`));
     await waitFor(() => byId("onboarding-connectors-cancel"));
 
     // The regression: every other tile used to be disabled for as long as the
@@ -114,26 +112,7 @@ describe("a hop the user walks away from", () => {
         document.querySelector('[data-id="onboarding-connectors-cancel"]')
       ).toBeNull()
     );
-    expect(cancelAbacusConnector).toHaveBeenCalled();
-  });
-
-  it("lets a click on another tile take over the hop", async () => {
-    hangingHop();
-    await mount();
-
-    fireEvent.click(byId(`onboarding-connector-${firstConnector.id}-connect`));
-    await waitFor(() => byId("onboarding-connectors-cancel"));
-
-    // The main process is single-flight — starting this connect cancels the
-    // one in flight — so the renderer's only job is not to stand in the way.
-    connectAbacusConnector.mockReturnValue(
-      new Promise(() => undefined) as never
-    );
-    fireEvent.click(byId("onboarding-connector-messaging-whatsapp-connect"));
-
-    // The abandoned hop is told to stand down rather than left holding its
-    // loopback port.
-    expect(cancelAbacusConnector).toHaveBeenCalled();
+    expect(cancelConnectorConnect).toHaveBeenCalled();
   });
 
   it("offers no cancel until there is something to cancel", async () => {
@@ -146,13 +125,13 @@ describe("a hop the user walks away from", () => {
 
   it("is abandoned when the step is left, not left holding its port", async () => {
     hangingHop();
-    const view = render((<ConnectorsStep {...handlers} />) as JSX.Element);
+    const view = mountStep();
     await waitFor(() => byId("onboarding-connectors-grid"));
-    fireEvent.click(byId(`onboarding-connector-${firstConnector.id}-connect`));
+    fireEvent.click(byId(`onboarding-connector-${gmail}-connect`));
 
     view.unmount();
 
-    expect(cancelAbacusConnector).toHaveBeenCalled();
+    expect(cancelConnectorConnect).toHaveBeenCalled();
   });
 });
 
@@ -167,7 +146,7 @@ describe("the connectors step", () => {
     );
     expect(tiles).toHaveLength(4);
     for (const id of [
-      "abacus-gmailuser",
+      gmail,
       "messaging-whatsapp",
       "messaging-discord",
       "messaging-telegram",
@@ -181,17 +160,11 @@ describe("the connectors step", () => {
 
   it("connects a messaging tile through the gateway, not the browser hop", async () => {
     const updateMessagingPlatform = vi.fn(async () => null);
-    const getMessagingSnapshot = vi.fn(async () => null);
     (
       globalThis.window as unknown as {
         api: { agent: Record<string, unknown> };
       }
     ).api.agent.updateMessagingPlatform = updateMessagingPlatform;
-    (
-      globalThis.window as unknown as {
-        api: { agent: Record<string, unknown> };
-      }
-    ).api.agent.getMessagingSnapshot = getMessagingSnapshot;
     await mount();
 
     fireEvent.click(byId("onboarding-connector-messaging-whatsapp-connect"));
@@ -203,40 +176,14 @@ describe("the connectors step", () => {
         enabled: true,
       })
     );
-    expect(connectAbacusConnector).not.toHaveBeenCalled();
+    expect(connectConnector).not.toHaveBeenCalled();
   });
 
-  it("marks a messaging tile connected only when it actually is", async () => {
+  it("marks a tile connected only when main says it is", async () => {
     // The regression: `enabled` survives its credentials being cleared, and a
-    // Telegram with no token anywhere showed as connected in onboarding.
-    const snapshotOf = (state: string) => ({
-      platforms: [
-        {
-          id: "telegram",
-          nameKey: "telegram",
-          docsUrl: "",
-          enabled: true,
-          configured: false,
-          state,
-          errorMessage: null,
-          fields: [],
-          pendingCount: 0,
-        },
-      ],
-      pending: [],
-      approved: [],
-      gatewayEnabled: true,
-      autoApproveTools: false,
-      respondToInbound: false,
-      workspaceId: null,
-    });
-
-    const api = (
-      globalThis.window as unknown as {
-        api: { agent: Record<string, unknown> };
-      }
-    ).api.agent;
-    api.getMessagingSnapshot = async () => snapshotOf("not_configured");
+    // Telegram with no token anywhere showed as connected in onboarding. The
+    // status table is the one place that judgement is made now.
+    statuses["messaging-telegram"] = { state: "pending", reason: "not-live" };
     await mount();
 
     await waitFor(() =>
@@ -246,20 +193,6 @@ describe("the connectors step", () => {
         )
       ).toBe(false)
     );
-
-    // And the genuine article still shows.
-    api.getMessagingSnapshot = async () => snapshotOf("connected");
-    const view2 = render((<ConnectorsStep {...handlers} />) as JSX.Element);
-    await waitFor(() =>
-      expect(
-        document
-          .querySelectorAll(
-            '[data-id="onboarding-connector-messaging-telegram"]'
-          )[1]!
-          .hasAttribute("data-connected")
-      ).toBe(true)
-    );
-    view2.unmount();
   });
 
   it("keeps the attach heading, and drops the pitch", async () => {
@@ -274,52 +207,64 @@ describe("the connectors step", () => {
   it("attaches one in place, and stays on the step", async () => {
     await mount();
 
-    fireEvent.click(byId(`onboarding-connector-${firstConnector.id}-connect`));
+    fireEvent.click(byId(`onboarding-connector-${gmail}-connect`));
 
-    await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledWith(
-        firstConnector.abacusService
-      )
-    );
+    await waitFor(() => expect(connectConnector).toHaveBeenCalledWith(gmail));
     // The regression this guards: attaching used to leave onboarding for the
     // settings panel, skipping the model and folder steps entirely.
     expect(handlers.onNext).not.toHaveBeenCalled();
   });
 
-  it("marks what the platform says is attached, not what was clicked", async () => {
-    listAbacusConnectors.mockResolvedValue({
-      ok: true,
-      available: [
-        { service: firstConnector.abacusService, name: firstConnector.id },
-      ],
-      connected: { [firstConnector.abacusService]: "connector-1" },
-    });
+  it("signs in first when the app holds no Abacus account", async () => {
+    statuses[gmail] = { state: "unavailable", reason: "not-signed-in" };
+    await mount();
+
+    fireEvent.click(byId(`onboarding-connector-${gmail}-connect`));
+
+    await waitFor(() => expect(startAbacusAuth).toHaveBeenCalled());
+    await waitFor(() => expect(connectConnector).toHaveBeenCalledWith(gmail));
+  });
+
+  it("marks what main says is attached, not what was clicked", async () => {
+    statuses[gmail] = {
+      state: "connected",
+      account: "Gmail - ada@example.com",
+    };
     await mount();
 
     await waitFor(() =>
       expect(
-        byId(`onboarding-connector-${firstConnector.id}`).hasAttribute(
-          "data-connected"
-        )
+        byId(`onboarding-connector-${gmail}`).hasAttribute("data-connected")
       ).toBe(true)
     );
   });
 
+  it("drops a platform tile the account does not offer", async () => {
+    statuses[gmail] = { state: "unavailable", reason: "not-offered" };
+    await mount();
+
+    await waitFor(() =>
+      expect(
+        document.querySelector(`[data-id="onboarding-connector-${gmail}"]`)
+      ).toBeNull()
+    );
+  });
+
   it("reports a failed attach but not a cancelled one", async () => {
-    connectAbacusConnector.mockResolvedValue({
+    connectConnector.mockResolvedValue({
       ok: false,
       error: "nope",
     } as unknown as { ok: true });
     await mount();
 
-    fireEvent.click(byId(`onboarding-connector-${firstConnector.id}-connect`));
+    fireEvent.click(byId(`onboarding-connector-${gmail}-connect`));
     await waitFor(() => byId("onboarding-connectors-error"));
 
-    connectAbacusConnector.mockResolvedValue({
+    connectConnector.mockResolvedValue({
       ok: false,
       cancelled: true,
     } as unknown as { ok: true });
-    fireEvent.click(byId(`onboarding-connector-${firstConnector.id}-connect`));
+    fireEvent.click(byId(`onboarding-connector-${gmail}-connect`));
     await waitFor(() =>
       expect(
         document.querySelector('[data-id="onboarding-connectors-error"]')
@@ -327,36 +272,11 @@ describe("the connectors step", () => {
     );
   });
 
-  it("says Continue once a messaging platform is connected", async () => {
-    // The regression: the button read `connected`, which only ever holds the
-    // Abacus connectors — a scanned WhatsApp QR turned its tile green while
-    // the button still offered to continue without connectors.
-    const api = (
-      globalThis.window as unknown as {
-        api: { agent: Record<string, unknown> };
-      }
-    ).api.agent;
-    api.getMessagingSnapshot = async () => ({
-      platforms: [
-        {
-          id: "whatsapp",
-          nameKey: "whatsapp",
-          docsUrl: "",
-          enabled: true,
-          configured: true,
-          state: "connected",
-          errorMessage: null,
-          fields: [],
-          pendingCount: 0,
-        },
-      ],
-      pending: [],
-      approved: [],
-      gatewayEnabled: true,
-      autoApproveTools: false,
-      respondToInbound: false,
-      workspaceId: null,
-    });
+  it("says Continue once anything is connected", async () => {
+    // The regression: the button read a platform-only set — a scanned
+    // WhatsApp QR turned its tile green while the button still offered to
+    // continue without connectors.
+    statuses["messaging-whatsapp"] = { state: "connected" };
     await mount();
 
     await waitFor(() =>

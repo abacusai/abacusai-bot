@@ -1,3 +1,5 @@
+import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
+
 import type { AgentMode, AgentStatus, SkillMetadata } from "./agent-types";
 import type {
   BotChangeNotice,
@@ -604,6 +606,9 @@ export type IpcEvent =
     } & IpcEventBase)
   | ({ type: "connector-request"; request: ConnectorRequest } & IpcEventBase)
   | ({ type: "connector-cleared"; requestId: string } & IpcEventBase)
+  // Something changed a connector's status (connected, disconnected, a key
+  // stored); the renderer re-reads the statuses once.
+  | ({ type: "connector-status-changed" } & IpcEventBase)
   | ({
       type: "browser-permission-cleared";
       requestId: string;
@@ -735,9 +740,35 @@ export type AbacusConnectorOutcome =
   | { ok: true }
   | { ok: false; error: string; cancelled?: boolean };
 
-// The one MCP entry behind every Abacus connector card. The Bearer header is an
+/** Same contract for every connector kind. */
+export type ConnectorOutcome = AbacusConnectorOutcome;
+
+/**
+ * Where a registry connector stands on this machine. `pending` is attached
+ * but not usable yet — a messaging platform awaiting its link, an MCP server
+ * awaiting its sign-in. `unavailable` cannot be connected from here at all
+ * (signed out of Abacus, or the account does not offer the service).
+ */
+export type ConnectorState =
+  | "connected"
+  | "available"
+  | "unavailable"
+  | "pending";
+
+export interface ConnectorStatus {
+  state: ConnectorState;
+  /** Who it is connected as, when the platform says ("Gmail - ada@example.com"). */
+  account?: string;
+  /** Why it is unavailable or pending, for the card and the model. */
+  reason?: string;
+}
+
+/** Keyed by registry connector id. */
+export type ConnectorStatuses = Record<string, ConnectorStatus>;
+
+// The one MCP entry behind every platform connector card. The Bearer header is an
 // env placeholder expanded at connect time, so the key is never persisted.
-export const ABACUS_CONNECTORS_SERVER_NAME = "abacus-connectors";
+export const ABACUS_CONNECTORS_SERVER_NAME = GATEWAY_SERVER_NAME;
 
 export const abacusConnectorsMcpEntry = (mcpUrl: string): McpServerEntry => ({
   url: mcpUrl,
@@ -1047,8 +1078,8 @@ export type BrowserPermissionDecision = "allow" | "deny" | "session" | "always";
 // is suspended until the user connects it or says no.
 export interface ConnectorRequest {
   requestId: string;
-  /** Platform service key, e.g. "slack". */
-  service: string;
+  /** Registry connector id, e.g. "abacus-slack", "github", "messaging-whatsapp". */
+  connectorId: string;
   /** Button text, e.g. "Slack". */
   label: string;
   /** Why the agent needs it, in its own words. */
@@ -1612,13 +1643,21 @@ export interface AgentApi {
   }) => Promise<AbacusSignOutResult>;
   cancelAbacusAuth: () => Promise<void>;
   cancelOpenRouterAuth: () => Promise<void>;
-  listAbacusConnectors: () => Promise<AbacusConnectorsSnapshot>;
-  /** Browser hop, resolved when the platform confirms; on success the MCP entry exists. */
-  connectAbacusConnector: (service: string) => Promise<AbacusConnectorOutcome>;
-  cancelAbacusConnector: () => Promise<void>;
-  disconnectAbacusConnector: (
-    service: string
-  ) => Promise<AbacusConnectorOutcome>;
+  /** Every registry connector's state on this machine, keyed by connector id. */
+  listConnectorStatuses: () => Promise<ConnectorStatuses>;
+  /**
+   * Connect a connector whose flow takes no fields — a browser hop or a plain
+   * install. Resolves when the platform confirms, the user cancels, or it
+   * times out.
+   */
+  connectConnector: (connectorId: string) => Promise<ConnectorOutcome>;
+  /** Connect a connector whose flow asked for fields, with what the user typed. */
+  submitConnectorFields: (
+    connectorId: string,
+    values: Record<string, string>
+  ) => Promise<ConnectorOutcome>;
+  cancelConnectorConnect: () => Promise<void>;
+  disconnectConnector: (connectorId: string) => Promise<ConnectorOutcome>;
   listSessionArtifacts: () => Promise<SessionArtifact[]>;
   removeAgentSession: (
     workspaceId: string,

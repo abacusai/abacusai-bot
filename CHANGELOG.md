@@ -7,10 +7,14 @@
 
 ## Unreleased
 
-When the agent needs GitHub, it puts a Connect button in the chat like any
-other connector, and that button opens the same personal-access-token dialog
-as the GitHub card in Connectors. Before, the agent could only tell you to go
-and find the card.
+Every connector on the Connectors page can be connected from the chat: ask
+the agent for one and it puts up the Connect button, whether that is an
+account connector, GitHub (the button opens the same personal-access-token
+dialog as the GitHub card), a chat app, or a tool server such as Playwright,
+Notion or Hugging Face. Before, the agent knew only a hand-kept few by name
+and answered "Playwright isn't a connector" for the rest; now one registry
+lists them all, and every screen — Connectors, onboarding, the chat card and
+the MCP summary — reads which are connected from the same place.
 
 A file link written with `~`, such as a screenshot on the Desktop, now opens
 in the preview pane's file reader instead of reporting the file missing. A

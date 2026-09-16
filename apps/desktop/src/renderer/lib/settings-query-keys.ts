@@ -10,9 +10,8 @@ export const settingsQueryKeys = {
 
   connectors: {
     all: ["settings", "connectors"] as const,
-    installed: ["settings", "connectors", "installed"] as const,
-    storedKeys: ["settings", "connectors", "storedKeys"] as const,
-    connectors: ["settings", "connectors", "connectors"] as const,
+    /** Every registry connector's status, from main's one table. */
+    statuses: ["settings", "connectors", "statuses"] as const,
   },
 
   mcp: {
