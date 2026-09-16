@@ -12,6 +12,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 import { abacusBotDir } from "../config.js";
+import { connectorToolMeta } from "../mcp/index.js";
 
 /** Text longer than this is spilled. Roughly 7-8k tokens. */
 const MAX_INLINE_CHARS = 30_000;
@@ -22,7 +23,6 @@ const TAIL_CHARS = 6_000;
  * Connector results inline less: a Gmail search returns whole bodies, and a
  * run of them fills a routine's window. The rest is on disk.
  */
-const CONNECTOR_TOOL_PREFIX = "abacus-connectors_";
 const CONNECTOR_MAX_INLINE_CHARS = 16_000;
 const CONNECTOR_HEAD_CHARS = 12_000;
 const CONNECTOR_TAIL_CHARS = 3_000;
@@ -31,7 +31,7 @@ const CONNECTOR_TAIL_CHARS = 3_000;
 export const inlineBudget = (
   toolName: string
 ): { max: number; head: number; tail: number } =>
-  toolName.startsWith(CONNECTOR_TOOL_PREFIX)
+  connectorToolMeta(toolName) != null
     ? {
         max: CONNECTOR_MAX_INLINE_CHARS,
         head: CONNECTOR_HEAD_CHARS,

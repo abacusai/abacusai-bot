@@ -1,62 +1,18 @@
 /**
- * The availability catalog must never shrink mid-session.
- *
- * `_listValidAgentConnectors` sometimes answers with a fraction of the real
- * catalog — a bot session was offered seven services with no Google anything,
- * while a session moments later saw the full list — and the agent then told
- * the user Google Drive "isn't available". Listings are unioned with what has
- * already been seen this run; the platform stays the authority on what
- * actually attaches when a connect is attempted.
- */
-import { describe, expect, it } from "vitest";
-
-import {
-  confirmConnected,
-  withSeenAvailable,
-} from "./abacus-connector-service";
-
-const snapshot = (
-  services: string[]
-): Parameters<typeof withSeenAvailable>[0] => ({
-  ok: true,
-  available: services.map((service) => ({ service, name: service })),
-  connected: {},
-  accounts: {},
-});
-
-describe("the connector catalog", () => {
-  it("keeps services a flaky listing dropped", () => {
-    withSeenAvailable(snapshot(["slack", "googledriveuser", "gmailuser"]));
-
-    const shrunk = withSeenAvailable(snapshot(["slack"]));
-
-    const names = shrunk.available.map((item) => item.service);
-    expect(names).toContain("googledriveuser");
-    expect(names).toContain("gmailuser");
-  });
-
-  it("passes a failed listing through untouched", () => {
-    const failed = withSeenAvailable({
-      ok: false,
-      error: "unavailable",
-      available: [],
-      connected: {},
-      accounts: {},
-    });
-
-    expect(failed.available).toEqual([]);
-  });
-});
-
-/**
  * The post-OAuth confirmation. One immediate read of the (flaky, lagging)
  * listing used to answer "did not complete" over a connect that had in fact
  * completed — the user watched the OAuth succeed and the card call it failed.
  */
+import { describe, expect, it } from "vitest";
+
+import type { AbacusConnectorsSnapshot } from "#shared/contracts";
+
+import { confirmConnected } from "./abacus-connector-service";
+
 describe("confirming a connect", () => {
   const listing =
     (answers: Array<Record<string, string> | null>) =>
-    async (): Promise<ReturnType<typeof snapshot>> => {
+    async (): Promise<AbacusConnectorsSnapshot> => {
       const next = answers.shift();
       return next == null
         ? {

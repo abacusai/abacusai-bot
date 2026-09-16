@@ -70,12 +70,12 @@ afterEach(() => {
 });
 
 describe("buildConnectorsSnapshot", () => {
-  it("maps the platform catalog and active connectors to the renderer shape", () => {
+  it("maps the platform catalog and active connectors to the app's shape, registry services only", () => {
     const snapshot = buildConnectorsSnapshot(
       {
         GMAILUSER: { name: "Gmail" },
         SLACK: { name: "Slack" },
-        // Name absent -> falls back to the service key.
+        // Not in the registry: the platform offers it, this app does not.
         YOUTUBE: {},
         // The platform's GitHub: never offered here, the GitHub card is a token.
         GITHUBUSER: { name: "GitHub" },
@@ -85,6 +85,7 @@ describe("buildConnectorsSnapshot", () => {
         { service: "gmailuser", applicationConnectorId: "4d5e6f" },
         // Attached on the account, still not reported: nothing here uses it.
         { service: "GITHUBUSER", applicationConnectorId: "7g8h9i" },
+        { service: "youtube", applicationConnectorId: "0j1k2l" },
         // Rows without an id (or service) are ignored rather than guessed at.
         { service: "JIRA" },
         { applicationConnectorId: "orphan" },
@@ -95,7 +96,6 @@ describe("buildConnectorsSnapshot", () => {
     expect(snapshot.available).toEqual([
       { service: "gmailuser", name: "Gmail" },
       { service: "slack", name: "Slack" },
-      { service: "youtube", name: "YOUTUBE" },
     ]);
     expect(snapshot.connected).toEqual({
       slack: "1a2b3c",

@@ -110,6 +110,7 @@ beforeEach(() => {
     restoreSessionsForAccount,
     stashSessionsForAccount,
     setEventDispatcher: vi.fn(),
+    setCredentialSaver: vi.fn(),
     ensureMcpServer,
     removeMcpServer,
     refreshAgentProviders,

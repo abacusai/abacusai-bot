@@ -264,3 +264,59 @@ export const redactSecret = (value: string): string => {
   const tail = value.slice(-4);
   return `${"•".repeat(6)}${tail}`;
 };
+
+/**
+ * Platforms whose setup is unfinished until the shared Abacus AI bot lane is
+ * linked too: signing in lets the agent act as you, linking lets you reach it
+ * from a phone.
+ */
+export const SHARED_LINK_REQUIRED: ReadonlySet<MessagingPlatformId> =
+  new Set<MessagingPlatformId>(["discord", "telegram"]);
+
+/** Whether `platformId` still owes its shared-bot link, which keeps it off "Connected". */
+export const sharedLinkPending = (
+  snapshot: MessagingSnapshot | null,
+  platformId: MessagingPlatformId
+): boolean => {
+  if (!SHARED_LINK_REQUIRED.has(platformId)) return false;
+  const sharedId = SHARED_BOT_PLATFORM_OF[platformId];
+  if (sharedId == null) return false;
+  const shared = snapshot?.platforms.find((entry) => entry.id === sharedId);
+  // No lane offered: requiring a step nobody can complete would strand the
+  // card on "finish linking" forever.
+  if (shared == null) return false;
+  const status = shared.sharedLink?.status;
+  if (status === "unavailable") return false;
+  return status !== "linked";
+};
+
+/**
+ * Installed means enabled and configured, not connected: a card that flipped
+ * on every reconnect would read as broken, but the enabled flag outlives its
+ * credentials and alone is not enough.
+ */
+export const isMessagingPlatformInstalled = (
+  snapshot: MessagingSnapshot | null,
+  platformId: MessagingPlatformId
+): boolean => {
+  const platform = snapshot?.platforms.find((entry) => entry.id === platformId);
+  if (platform?.enabled === true && platform.configured) return true;
+  // The Discord card is also installed when only its shared-bot lane is.
+  const shared = SHARED_BOT_PLATFORM_OF[platformId];
+  return shared != null && isMessagingPlatformInstalled(snapshot, shared);
+};
+
+/** Actually connected, the bar for anything that says "Connected". */
+export const isMessagingPlatformConnected = (
+  snapshot: MessagingSnapshot | null,
+  platformId: MessagingPlatformId
+): boolean => {
+  // Half of Discord's setup is not Discord connected. See SHARED_LINK_REQUIRED.
+  if (sharedLinkPending(snapshot, platformId)) return false;
+  const state = snapshot?.platforms.find(
+    (entry) => entry.id === platformId
+  )?.state;
+  if (state === "connected" || state === "syncing") return true;
+  const shared = SHARED_BOT_PLATFORM_OF[platformId];
+  return shared != null && isMessagingPlatformConnected(snapshot, shared);
+};

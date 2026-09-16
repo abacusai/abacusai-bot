@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 /**
  * Composition root for the desktop services: constructs them, wires their
  * callbacks and routes handler requests. Substantive behavior lives in
@@ -6,6 +7,7 @@ import fs from "node:fs";
  */
 import path from "path";
 
+import { connectorById } from "@abacus-ai/connectors/registry";
 import { app } from "electron";
 
 import { AgentMode, AgentStatus, type DesktopEvent } from "#shared/agent-types";
@@ -120,8 +122,15 @@ import type {
   BotSenderChat,
   NotificationSettings,
 } from "#shared/contracts";
+import {
+  ABACUS_CONNECTORS_SERVER_NAME,
+  abacusConnectorsMcpEntry,
+} from "#shared/contracts";
 import type {
   ConnectorRequest,
+  ConnectorOutcome,
+  ConnectorStatuses,
+  McpOAuthSignInRequest,
   SessionOwner,
   RespondConnectorRequest,
 } from "#shared/contracts";
@@ -133,7 +142,6 @@ import type { BackendId, BackendStatus } from "#shared/exec-backends";
 import {
   describePlatformForAgent,
   reportableLivePlatforms,
-  SHARED_BOT_ACCOUNT_SERVICES,
   type MessagingPairingDecisionRequest,
   type MessagingPlatformId,
   type MessagingSnapshot,
@@ -242,6 +250,8 @@ import {
   readSettings,
   storedKeyProviders,
 } from "./services/config/settings";
+import { ConnectorFlowService } from "./services/connectors/connector-flow-service";
+import { ConnectorStatusService } from "./services/connectors/connector-status-service";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
 import {
   DiagnosticsSyncService,
@@ -269,6 +279,7 @@ import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
 import { McpBrowserServer } from "./services/mcp/mcp-browser-server";
 import { McpConfigService } from "./services/mcp/mcp-config-service";
 import { McpDeviceServer } from "./services/mcp/mcp-device-server";
+import { signInToMcpServer } from "./services/mcp/mcp-oauth-service";
 import {
   listPairing,
   readGatewaySettings,
@@ -282,7 +293,9 @@ import {
   cancelConnectorConnect,
   disconnectAbacusConnector,
   listAbacusConnectors,
+  startConnectorConnect,
 } from "./services/providers/abacus-connector-service";
+import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import {
   environmentNoticeService,
   messageWithEnvironmentNotice,
@@ -549,25 +562,13 @@ export class ServiceHost {
       const workspace = this.workspaceService.getActiveWorkspace();
       return workspace?.isRemote === true ? null : (workspace?.path ?? null);
     },
-    hasStoredKey: (provider) => storedKeyProviders().includes(provider),
     connectors: {
-      list: async () => {
-        const snapshot = await listAbacusConnectors();
-        return {
-          available: snapshot.available.map((item) => ({
-            service: item.service,
-            name: item.name,
-          })),
-          connected: Object.keys(snapshot.connected),
-          accounts: { ...snapshot.accounts },
-        };
-      },
+      list: () => this.listConnectorStatuses(),
       request: (input) => this.connectorGate.ask(input),
-      disconnect: async (service) => {
-        const result = await disconnectAbacusConnector(service);
+      disconnect: async (connectorId) => {
+        const result = await this.disconnectConnector(connectorId);
         if (result.ok === true) return null;
-        const reason = result.error;
-        return reason.length > 0 ? reason : "Could not disconnect.";
+        return result.error.length > 0 ? result.error : "Could not disconnect.";
       },
     },
     workspaceId: () => this.workspaceService.getActiveWorkspace()?.id ?? null,
@@ -679,11 +680,148 @@ export class ServiceHost {
   );
   private readonly connectorGate = new ConnectorGate(
     (event) => this.emitEvent(event),
-    async (service) => {
-      const snapshot = await listAbacusConnectors();
-      return snapshot.ok ? (snapshot.accounts[service] ?? null) : null;
-    }
+    async (connectorId) =>
+      (await this.listConnectorStatuses())[connectorId]?.account ?? null
   );
+
+  /**
+   * One answer to "is it connected?" per registry connector. The platform's
+   * listing is read live (narrowed to the registry as it enters the app);
+   * credentials, the messaging gateway and the MCP config are in memory.
+   */
+  readonly connectorStatuses = new ConnectorStatusService({
+    platform: async () => {
+      const snapshot = await listAbacusConnectors();
+      if (!snapshot.ok)
+        return {
+          available: new Set<string>(),
+          connected: new Set<string>(),
+          accounts: {},
+          reason: snapshot.error ?? "unavailable",
+        };
+      return {
+        available: new Set(snapshot.available.map((item) => item.service)),
+        connected: new Set(Object.keys(snapshot.connected)),
+        accounts: snapshot.accounts,
+      };
+    },
+    storedProviders: () => new Set(storedKeyProviders()),
+    messaging: () => this.messagingGatewayService.getSnapshot(),
+    mcpServers: () => this.mcpConfigService.listUserServers("code"),
+    mcpAuthRequired: () => {
+      const waiting = new Set<string>();
+      for (const runtime of this.agentManagerService.getRuntimeDiagnostics())
+        for (const server of runtime.mcpServers.values())
+          if (server.status === "auth-required") waiting.add(server.id);
+      return waiting;
+    },
+  });
+
+  /**
+   * Stores an agent credential and announces it (the gateway, running agents,
+   * the renderer). Set by the IPC layer, which owns that announcement.
+   */
+  private credentialSaver: ((provider: string, value: string) => void) | null =
+    null;
+
+  setCredentialSaver(save: (provider: string, value: string) => void): void {
+    this.credentialSaver = save;
+  }
+
+  /** How each kind connects and disconnects — the one implementation every Connect button uses. */
+  readonly connectorFlow = new ConnectorFlowService({
+    platform: {
+      connect: startConnectorConnect,
+      disconnect: disconnectAbacusConnector,
+      // The MCP file is user-editable, so the url and headers under the
+      // app's own name are rewritten rather than assumed.
+      ensureGateway: () =>
+        this.ensureMcpServer({
+          mode: "code",
+          name: ABACUS_CONNECTORS_SERVER_NAME,
+          config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
+        }),
+    },
+    credential: {
+      save: (provider, value) => {
+        if (this.credentialSaver == null)
+          throw new Error(
+            "credentials cannot be stored before the IPC layer is up"
+          );
+        this.credentialSaver(provider, value);
+      },
+    },
+    mcp: {
+      add: (name, entry) =>
+        this.addMcpServer({ mode: "code", name, config: entry }),
+      remove: (name) => this.removeMcpServer({ mode: "code", name }),
+      signIn: (name) => this.mcpOAuthSignIn({ mode: "code", name }),
+    },
+    homeDir: () => os.homedir(),
+  });
+
+  listConnectorStatuses(): Promise<ConnectorStatuses> {
+    return this.connectorStatuses.list();
+  }
+
+  /** Something moved a connector's status; the renderer re-reads once. */
+  private connectorStatusChanged(): void {
+    this.emitEvent({
+      type: "connector-status-changed",
+      emittedAt: new Date().toISOString(),
+    });
+  }
+
+  async connectConnector(connectorId: string): Promise<ConnectorOutcome> {
+    const outcome = await this.connectorFlow.connect(connectorId);
+    this.connectorStatusChanged();
+    return outcome;
+  }
+
+  async submitConnectorFields(
+    connectorId: string,
+    values: Record<string, string>
+  ): Promise<ConnectorOutcome> {
+    const outcome = await this.connectorFlow.submitFields(connectorId, values);
+    this.connectorStatusChanged();
+    return outcome;
+  }
+
+  async disconnectConnector(connectorId: string): Promise<ConnectorOutcome> {
+    const outcome = await this.connectorFlow.disconnect(connectorId);
+    this.connectorStatusChanged();
+    return outcome;
+  }
+
+  /**
+   * The server's own browser sign-in for an installed OAuth MCP server. The
+   * caller names the server but never supplies the URL, so a compromised
+   * page cannot point the flow at an attacker's endpoints.
+   */
+  async mcpOAuthSignIn(
+    request: McpOAuthSignInRequest
+  ): Promise<{ success: boolean; error?: string; cancelled?: boolean }> {
+    const server = this.listMcpServers({ mode: request.mode }).find(
+      (entry) => entry.id === request.name
+    );
+    if (server?.config.url == null)
+      return { success: false, error: "No such HTTP server is configured." };
+    if (server.config.oauth === false)
+      return { success: false, error: "OAuth is disabled for this server." };
+    const result = await signInToMcpServer(
+      server.config.url,
+      server.config.oauth != null ? { oauth: server.config.oauth } : {}
+    );
+    if (result.ok) {
+      await this.notifyMcpSignedIn(request.mode);
+      return { success: true };
+    }
+    return {
+      success: false,
+      ...(result.error != null ? { error: result.error } : {}),
+      ...(result.cancelled === true ? { cancelled: true } : {}),
+    };
+  }
   private readonly builtinToolPermissions = new BuiltinToolPermissions({
     mcpConfigService: this.mcpConfigService,
     emitEvent: (event) => this.emitEvent(event),
@@ -2284,26 +2422,25 @@ export class ServiceHost {
   }
 
   /**
-   * The attached account connectors: the service to ask for and who it is
-   * attached as. A network call; on failure it costs the note its connector
-   * line, not the whole note.
+   * The connectors attached right now, other than the chat apps (those are
+   * reported under messaging): the id to ask for and who it is attached as.
+   * The platform listing is a network call; on failure it costs the note its
+   * connector line, not the whole note.
    */
   private async describeAccountConnectors(): Promise<string[]> {
     try {
-      const snapshot = await listAbacusConnectors();
-      if (!snapshot.ok) return [];
-      const nameOf = new Map(
-        snapshot.available.map((item) => [item.service, item.name])
-      );
-      // The shared Abacus bots are already reported under messaging; listed
-      // here too they would read as the user's own Telegram.
-      return Object.keys(snapshot.connected)
-        .filter((service) => !SHARED_BOT_ACCOUNT_SERVICES.has(service))
-        .map((service) => {
-          const account = snapshot.accounts[service];
-          return `${nameOf.get(service) ?? service} (${service})${
-            account != null && account.length > 0 ? `, as ${account}` : ""
-          }`;
+      const statuses = await this.listConnectorStatuses();
+      return Object.entries(statuses)
+        .filter(([, status]) => status.state === "connected")
+        .flatMap(([id, status]) => {
+          const connector = connectorById(id);
+          if (connector == null || connector.kind === "messaging") return [];
+          const account = status.account;
+          return [
+            `${connector.name} (${id})${
+              account != null && account.length > 0 ? `, as ${account}` : ""
+            }`,
+          ];
         });
     } catch (err) {
       console.error("[environment-notice] failed to list connectors:", err);

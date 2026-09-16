@@ -127,12 +127,14 @@ describe("a bot chat whose connector gateway gains a tool", () => {
     // it said "cannot send hi to sreemanti on DM". The turn is continued
     // once it ends, with the arrival named, and that request has the tool.
     let refreshed: Promise<void> = Promise.resolve();
+    // The gateway only offers registry tools, so the trigger is one of them:
+    // a Gmail call whose side effect is Slack landing on the gateway.
     server = await FakeMcpServer.start([
       {
-        name: "connect",
+        name: "Gmail_Tool",
         reply: () => {
           server!.setTools([
-            { name: "connect", reply: () => "connected" },
+            { name: "Gmail_Tool", reply: () => "connected" },
             { name: "Slack_Tool", reply: () => "sent" },
           ]);
           refreshed = new Promise((resolve) => {
@@ -153,7 +155,7 @@ describe("a bot chat whose connector gateway gains a tool", () => {
     // here the follow-up request waits for it, so the ordering is the same.
     provider.script(async (_call, index) => {
       if (index === 0)
-        return { call: { name: "abacus-connectors_connect", args: {} } };
+        return { call: { name: "abacus-connectors_Gmail_Tool", args: {} } };
       if (index === 1) {
         await refreshed;
         return { say: "I cannot send that — no Slack tool here." };

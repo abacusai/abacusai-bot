@@ -7,6 +7,13 @@
  */
 import * as fs from "node:fs";
 
+import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
+import {
+  connectorToolMetaByName,
+  gatewayToolMeta,
+  type ConnectorToolMeta,
+} from "@abacus-ai/connectors/tool-meta";
+
 import { DEFAULT_ABACUS_V1 } from "../abacus-endpoint.js";
 import { abacusBotDir, desktopMcpConfigPath } from "../config.js";
 import { authHeadersForServer } from "./auth.js";
@@ -221,15 +228,19 @@ const noServers = (error: string, expected = false): ConnectedMcp => {
 };
 
 /**
- * Gateway tools this agent does not take, by server: they arrive whenever the
- * account has the service attached, and here a better path exists. GitHub is
- * `gh` in bash on the user's own token (github-prompt.ts) — private repos as
- * far as the token reaches, nothing billed per call — where the gateway's
- * tools bill every read and end scoped to public repos.
+ * Metadata for the gateway tools registered this process, by every name they
+ * answer to. Filled as servers connect; a tool the registry does not name is
+ * never registered, so it is never here either.
  */
-const GATEWAY_TOOLS_SUPERSEDED_LOCALLY: Record<string, ReadonlySet<string>> = {
-  "abacus-connectors": new Set(["Git_Tool", "Github_Tool"]),
-};
+const registeredToolMeta = new Map<string, ConnectorToolMeta>();
+
+/**
+ * What the agent knows about a connector tool by its pi-side name, or null
+ * for any other tool. Registered metadata first (it may carry the server's
+ * own price); the registry answers for a name seen before any server did.
+ */
+export const connectorToolMeta = (toolName: string): ConnectorToolMeta | null =>
+  registeredToolMeta.get(toolName) ?? connectorToolMetaByName(toolName);
 
 export async function connectMcpServers(
   configPath: string | undefined
@@ -379,7 +390,14 @@ export async function connectMcpServers(
     result.clients.push(client);
 
     for (const tool of client.tools) {
-      if (GATEWAY_TOOLS_SUPERSEDED_LOCALLY[name]?.has(tool.name)) continue;
+      // The registry is the allowlist for the gateway: a tool the account
+      // has attached but no entry names (GitHub's, say — a token on its own
+      // card does that job) is not offered.
+      const meta =
+        name === GATEWAY_SERVER_NAME
+          ? gatewayToolMeta(tool.name, tool._meta)
+          : null;
+      if (name === GATEWAY_SERVER_NAME && meta == null) continue;
       const qualified = qualify(name, tool, config.isBuiltin === true);
 
       result.routes.set(qualified, { client, toolName: tool.name });
@@ -387,6 +405,10 @@ export async function connectMcpServers(
         qualified === tool.name ? `${name}_${tool.name}` : tool.name;
       if (!result.routes.has(alternate))
         result.routes.set(alternate, { client, toolName: tool.name });
+      if (meta != null) {
+        registeredToolMeta.set(qualified, meta);
+        registeredToolMeta.set(alternate, meta);
+      }
 
       if (advertise)
         result.tools.push({

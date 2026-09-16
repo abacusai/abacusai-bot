@@ -5,22 +5,22 @@
  * (ABACUSAI_BOT_TURN_CAP, default 250): at 100 turns short of it the model is
  * told to wrap up and present what it has, at 50 short it is told again and
  * harder, past it the run is stopped with a message that says so.
- * Repetition: the third identical tool call in a run is blocked. Connector
- * calls: every fifth one, the model is reminded what they cost and asked
- * whether it already has enough — no cap, a nudge. Temperature
+ * Repetition: the third identical tool call in a run is blocked — the second,
+ * for a connector call, which is billed. Connector calls: every fifth one,
+ * the model is reminded what they cost and asked whether it already has
+ * enough — no cap, a nudge. Temperature
  * (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off" to disable) when unset.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+import { connectorToolMeta } from "../mcp/index.js";
 
 /** How far short of the cap each warning lands. */
 const WRAP_UP_MARGIN = 100;
 const FINAL_MARGIN = 50;
 const REPEAT_LIMIT = 3;
-
-/** Tools served by the Abacus connector MCP server (Gmail, Calendar, Slack…). */
-const CONNECTOR_TOOL_PREFIX = "abacus-connectors_";
-/** Billed per call, flat; a cheap model treats them like a free grep unless told. */
-const CONNECTOR_CALL_CREDITS = 10;
+/** A connector call costs credits; the first identical one already answered. */
+const CONNECTOR_REPEAT_LIMIT = 2;
 const CONNECTOR_REMINDER_EVERY = 5;
 
 /** Why the budget stopped the current run, or null. Cleared as the next run starts. */
@@ -63,9 +63,9 @@ const finalPrompt = (turns: number, cap: number): string =>
   `no chance to finish. Present what exists now with present_deliverable, then write your closing ` +
   `message: what is done, where it is, and what is left. No more building, fixing or exploring.`;
 
-const connectorPrompt = (calls: number): string =>
+const connectorPrompt = (calls: number, credits: number): string =>
   `Cost check: this run has made ${calls} connector calls, and each one costs ` +
-  `${CONNECTOR_CALL_CREDITS} credits. Make sure you are being efficient — do not redo searches ` +
+  `${credits} credits. Make sure you are being efficient — do not redo searches ` +
   `or re-fetch what you already have — and check whether you can complete the task now with the ` +
   `information you already hold. If you can, finish; if not, make the fewest further calls that ` +
   `get you there.`;
@@ -132,13 +132,14 @@ export default function (pi: ExtensionAPI) {
     }
     if (RESAMPLES_LIVE_STATE.has(event.toolName)) return;
 
-    if (event.toolName.startsWith(CONNECTOR_TOOL_PREFIX)) {
+    const connector = connectorToolMeta(event.toolName);
+    if (connector != null) {
       connectorCalls++;
       if (connectorCalls % CONNECTOR_REMINDER_EVERY === 0)
         pi.sendMessage(
           {
             customType: "calite-budget",
-            content: connectorPrompt(connectorCalls),
+            content: connectorPrompt(connectorCalls, connector.credits),
             display: true,
           },
           { deliverAs: "steer" }
@@ -148,6 +149,15 @@ export default function (pi: ExtensionAPI) {
     const key = `${event.toolName}:${inputKey}`;
     const count = (callCounts.get(key) ?? 0) + 1;
     callCounts.set(key, count);
+    if (connector != null && count >= CONNECTOR_REPEAT_LIMIT) {
+      return {
+        block: true,
+        reason:
+          `You already made this exact ${event.toolName} call in this run, and its result is in ` +
+          `your context above — reuse it. Each call costs ${connector.credits} credits; an identical ` +
+          `one returns the same answer. If you meant something different, change the arguments.`,
+      };
+    }
     if (count >= REPEAT_LIMIT) {
       return {
         block: true,

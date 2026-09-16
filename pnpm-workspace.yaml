@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/agent
   - packages/config
+  - packages/connectors
   - packages/test-support
 
 catalog:

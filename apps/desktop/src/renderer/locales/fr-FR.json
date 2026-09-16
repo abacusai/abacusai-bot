@@ -611,6 +611,7 @@
     "add": "Add",
     "addFailed": "Could not add {{name}}.",
     "added": "{{name}} added.",
+    "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
     "adding": "Adding…",
     "auth": {
       "key": "API key",

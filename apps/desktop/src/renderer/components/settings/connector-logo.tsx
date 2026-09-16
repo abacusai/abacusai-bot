@@ -8,6 +8,7 @@ import {
 import type { CSSProperties, JSX } from "react";
 
 import type { ConnectorDefinition } from "../../connectors";
+import { LOGO_ASSETS } from "./connector-logos";
 
 /**
  * The mark on a connector card. Abacus connectors ship a logo image; the rest
@@ -163,10 +164,11 @@ export const ConnectorLogo = ({
 }: {
   connector: ConnectorDefinition;
 }): JSX.Element => {
-  if (connector.logo != null) {
+  const asset = connector.logo != null ? LOGO_ASSETS[connector.logo] : null;
+  if (asset != null) {
     return (
       <img
-        src={connector.logo}
+        src={asset}
         alt=""
         className="h-6 w-6 object-contain"
         draggable={false}
