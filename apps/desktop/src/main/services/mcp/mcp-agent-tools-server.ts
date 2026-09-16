@@ -88,6 +88,19 @@ interface JsonRpcResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
+/**
+ * What `connect_connector("github")` answers. There is no platform GitHub
+ * connector in this app: the GitHub card takes a personal access token, which
+ * authenticates `gh` and git in bash — private repos included, nothing billed
+ * per call.
+ */
+const GITHUB_IS_A_TOKEN =
+  "GitHub is not connected through the account. It is set up on the GitHub card in " +
+  "Connectors with a personal access token (github.com/settings/tokens — fine-grained " +
+  "with Contents, Pull requests and Issues on the repositories they want, or classic " +
+  "with `repo`). Ask the user to add the token there; once it is in, `gh` and git are " +
+  "authenticated in bash and you work GitHub from there. Do not ask to connect it.";
+
 const SERVER_NAME = "agent-tools";
 const SERVER_VERSION = "1.0.0";
 
@@ -1571,6 +1584,9 @@ export class McpAgentToolsServer {
       chatApps.find((entry) => entry.service === service.toLowerCase());
 
     const asked = String(args.service ?? "").trim();
+
+    // Not a platform connector here: GitHub is a token on its own card.
+    if (/^git ?hub(user)?$/i.test(asked)) return this.ok(GITHUB_IS_A_TOKEN);
 
     if (asked.length === 0) {
       if (available.length === 0) {

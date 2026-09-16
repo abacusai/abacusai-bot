@@ -99,6 +99,17 @@ const abacusApi = async (
   (await abacusApiCall(method, httpMethod, body)).result;
 
 /**
+ * Platform connectors this app never uses. GitHub is a personal access token
+ * on the GitHub card instead (`gh` in bash, private repos, no per-call
+ * billing); the platform's GitHub App ends scoped to public repos and bills
+ * every read. Dropped here, the one place the catalog enters, so no card,
+ * Connect button, environment notice or `connect_connector` can reach it.
+ */
+export const UNUSED_PLATFORM_CONNECTORS: ReadonlySet<string> = new Set([
+  "githubuser",
+]);
+
+/**
  * Shape the two platform responses into the snapshot the renderer consumes.
  * Exported for tests: this is the only non-trivial mapping in the service.
  */
@@ -114,6 +125,7 @@ export const buildConnectorsSnapshot = (
     for (const [service, config] of Object.entries(
       validAgentConnectors as Record<string, unknown>
     )) {
+      if (UNUSED_PLATFORM_CONNECTORS.has(service.toLowerCase())) continue;
       const record =
         config != null && typeof config === "object"
           ? (config as Record<string, unknown>)
@@ -150,7 +162,11 @@ export const buildConnectorsSnapshot = (
           : typeof record.databaseConnectorId === "string"
             ? record.databaseConnectorId
             : "";
-      if (service.length > 0 && connectorId.length > 0) {
+      if (
+        service.length > 0 &&
+        connectorId.length > 0 &&
+        !UNUSED_PLATFORM_CONNECTORS.has(service)
+      ) {
         connected[service] = connectorId;
         // The platform's label ("Gmail - ada@example.com") is kept whole
         // rather than parsed: the format is theirs to change.

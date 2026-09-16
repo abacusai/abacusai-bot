@@ -77,10 +77,14 @@ describe("buildConnectorsSnapshot", () => {
         SLACK: { name: "Slack" },
         // Name absent -> falls back to the service key.
         YOUTUBE: {},
+        // The platform's GitHub: never offered here, the GitHub card is a token.
+        GITHUBUSER: { name: "GitHub" },
       },
       [
         { service: "SLACK", applicationConnectorId: "1a2b3c" },
         { service: "gmailuser", applicationConnectorId: "4d5e6f" },
+        // Attached on the account, still not reported: nothing here uses it.
+        { service: "GITHUBUSER", applicationConnectorId: "7g8h9i" },
         // Rows without an id (or service) are ignored rather than guessed at.
         { service: "JIRA" },
         { applicationConnectorId: "orphan" },

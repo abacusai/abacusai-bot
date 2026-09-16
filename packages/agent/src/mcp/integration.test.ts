@@ -157,6 +157,30 @@ describe("connecting", () => {
     expect(offeredTools()).toContain("docs_lookup");
   });
 
+  it("does not take the gateway's GitHub tools: gh on the user's own token is the path", async () => {
+    const server = await mcpServer([
+      { name: "Gmail_Tool" },
+      { name: "Git_Tool" },
+      { name: "Github_Tool" },
+    ]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ "abacus-connectors": { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+    await harness.session.send("hello");
+
+    const offered = offeredTools();
+    expect(offered).toContain("abacus-connectors_Gmail_Tool");
+    expect(offered).not.toContain("abacus-connectors_Git_Tool");
+    expect(offered).not.toContain("abacus-connectors_Github_Tool");
+  });
+
   it("tells the model it is connected, so it does not have to guess", async () => {
     const server = await mcpServer([{ name: "goto" }, { name: "click" }]);
 
