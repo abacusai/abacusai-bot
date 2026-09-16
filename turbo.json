@@ -9,6 +9,7 @@
     "ABACUSAI_BOT_DIAGNOSTICS_SYNC_URL",
     "CI",
     "HOME",
+    "LOCALAPPDATA",
     "TMPDIR",
     "TMP",
     "TEMP"
