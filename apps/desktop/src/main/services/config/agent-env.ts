@@ -2,6 +2,10 @@
  * Environment variables handed to a spawning agent process: credentials,
  * feature flags, and settings resolved on the desktop side.
  */
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+import { agentVendorDir } from "#main/resources";
 import { excludedBuiltinTools, isToolsetEnabled } from "#shared/toolsets";
 
 import { memorySnapshot } from "../agent-tools/memory-store";
@@ -71,6 +75,14 @@ export function buildAgentConfigEnv(
     if (snapshot != null) {
       envVars.ABACUSAI_BOT_MEMORY_SNAPSHOT = snapshot;
     }
+  }
+
+  // Windows: the bundled POSIX shell `bash` runs under (posix-shell.ts in
+  // the agent). Named outright because an agent from an installed experience
+  // runs under userData, where nothing sits beside it.
+  if (process.platform === "win32") {
+    const payload = join(agentVendorDir(), "busybox.exe");
+    if (existsSync(payload)) envVars.ABACUSAI_BOT_POSIX_SHELL_PAYLOAD = payload;
   }
 
   // Where `bash` runs. Resolved rather than passed through so a stored choice

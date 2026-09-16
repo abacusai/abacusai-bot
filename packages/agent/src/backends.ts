@@ -14,6 +14,7 @@ import {
 
 import { registerForegroundProcess } from "./background-processes.js";
 import { currentMode } from "./current-mode.js";
+import { posixShellOperations } from "./posix-shell.js";
 import {
   backendName,
   decide,
@@ -324,12 +325,17 @@ export function backendOperations(): BashOperations | null {
   // paths.
   if (backend !== "local") return null;
 
-  if (sandboxEnforcement() === "off") return null;
+  // No kernel backend (Windows): the shell there is the bundled POSIX one,
+  // sandbox setting or not — it is a shell, not a confinement — and null
+  // without its payload lets pi's own path run. `strict` keeps the
+  // operations so its refusal reaches the model.
+  if (backendName() === null) {
+    return sandboxEnforcement() === "strict"
+      ? localSandboxedOperations()
+      : posixShellOperations();
+  }
 
-  // Windows has no backend and no /bin/bash, so under `auto` null lets pi's
-  // local path run; `strict` keeps the operations so its refusal reaches the
-  // model.
-  if (backendName() === null && sandboxEnforcement() !== "strict") return null;
+  if (sandboxEnforcement() === "off") return null;
 
   return localSandboxedOperations();
 }

@@ -18,6 +18,7 @@ import {
 import { confinedBashTool } from "./backends.js";
 import { excludedTools } from "./excluded-tools.js";
 import guardrails from "./extensions/guardrails.js";
+import { windowsShellPrompt } from "./posix-shell.js";
 import type { AgentEvent } from "./protocol.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
@@ -81,6 +82,9 @@ export async function runDelegatedTask(
     stoppedBy: "completed",
   };
 
+  // The sub-agent runs commands through the same shell as its parent.
+  const shellPrompt = windowsShellPrompt();
+
   try {
     const resourceLoader = new DefaultResourceLoader({
       cwd: context.cwd,
@@ -100,6 +104,7 @@ export async function runDelegatedTask(
           "your intermediate steps. Make it complete and self-contained: state what you found, name",
           "the files and identifiers that matter, and say plainly if you could not determine something.",
         ].join("\n"),
+        ...(shellPrompt == null ? [] : [shellPrompt]),
       ],
       // Guardrails only: the permission gate would prompt a user who is not
       // watching, and budgets and the verify loop belong to the parent.

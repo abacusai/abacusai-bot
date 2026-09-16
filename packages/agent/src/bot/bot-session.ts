@@ -52,6 +52,7 @@ import {
   shellSegments,
 } from "../permissions.js";
 import { personaPrompt, readPersona } from "../persona.js";
+import { windowsShellPrompt } from "../posix-shell.js";
 import {
   AgentMode,
   AgentStatus,
@@ -262,6 +263,7 @@ export class BotSession {
         // Same guard as the desktop chat, on a worse surface.
         REPLY_LANGUAGE_PROMPT,
         githubPrompt(),
+        windowsShellPrompt(),
       ].filter((part): part is string => part != null),
       appendSystemPromptOverride: (base: string[]): string[] => {
         const persona = personaPrompt();

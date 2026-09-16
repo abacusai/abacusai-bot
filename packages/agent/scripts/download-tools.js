@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Fetch the two search binaries the agent shells out to: ripgrep and fd.
+ * Fetch the binaries the agent shells out to: ripgrep and fd everywhere, and
+ * on Windows busybox-w32, the POSIX shell its `bash` tool runs under.
  *
  * The agent's `grep` and `find` tools are not JavaScript. They spawn `rg` and
  * `fd`, and until this existed neither was shipped: the vendored pi agent looked
@@ -47,6 +48,9 @@ const RIPGREP_VERSION = "15.2.0";
 // matrix stays on the last version that covers all six targets rather than
 // carrying two pins and a special case.
 const FD_VERSION = "10.3.0";
+// The upstream build tag; src/posix-shell.ts names the same one for its cache
+// directory, so a bump here is a bump there.
+const BUSYBOX_VERSION = "FRP-6075-g169694ebd";
 
 /**
  * One row per binary per target. `asset` is the release filename, `sha256` the
@@ -134,6 +138,32 @@ const TOOLS = {
       },
     },
   },
+  // Windows only: a stock install has no bash, and pi's tool throws without
+  // one. One executable, not an archive; it dispatches on the name it is
+  // invoked by, and src/posix-shell.ts makes the `sh`/`grep`/... launchers
+  // at run time. GPL-2.0, spawned never linked — build/licenses carries the
+  // text. The digests match frippery.org's downloads and CodeLLM's pin.
+  busybox: {
+    label: "busybox-w32",
+    version: BUSYBOX_VERSION,
+    url: (asset) => `https://frippery.org/files/busybox/${asset}`,
+    platforms: ["win32"],
+    executable: true,
+    targets: {
+      // w64u: 64-bit x86 with Unicode (Windows 10 1903+ / Windows 11).
+      "win32-x64": {
+        asset: `busybox-w64u-${BUSYBOX_VERSION}.exe`,
+        sha256:
+          "6e263d154d8548d1eb936f65d1d8312c80df31c45974e48d6335e4dcc0f4f34c",
+      },
+      // w64a: 64-bit ARM, also Unicode.
+      "win32-arm64": {
+        asset: `busybox-w64a-${BUSYBOX_VERSION}.exe`,
+        sha256:
+          "e67f873d19d58c535cc9f0c4965ffd622e19b7bab87e3da89cb2185fb54464d7",
+      },
+    },
+  },
 };
 
 // This script lives in packages/agent/scripts.
@@ -210,6 +240,13 @@ async function fetchTool(tool, target, cached) {
     spec.asset
   );
 
+  // The file is the binary: nothing to extract.
+  if (config.executable) {
+    fs.mkdirSync(path.dirname(cached), { recursive: true });
+    fs.writeFileSync(cached, body);
+    return;
+  }
+
   const scratch = fs.mkdtempSync(
     path.join(os.tmpdir(), `abacusai-bot-${tool}-`)
   );
@@ -247,6 +284,12 @@ async function main() {
   fs.mkdirSync(DEST, { recursive: true });
 
   for (const tool of Object.keys(TOOLS)) {
+    // Absent on the platforms that do not need it, rather than a dead file.
+    if (
+      TOOLS[tool].platforms != null &&
+      !TOOLS[tool].platforms.includes(platform)
+    )
+      continue;
     const cached = path.join(CACHE, target, tool + binaryExt);
 
     if (!fs.existsSync(cached)) {
@@ -266,7 +309,7 @@ async function main() {
   }
 
   console.log(
-    `[tools] ${path.relative(ROOT, DEST)} holds rg and fd for ${target}`
+    `[tools] ${path.relative(ROOT, DEST)} holds ${fs.readdirSync(DEST).join(", ")} for ${target}`
   );
 }
 
