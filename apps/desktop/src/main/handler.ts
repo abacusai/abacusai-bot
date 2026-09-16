@@ -209,13 +209,15 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
       legacyKey != null && legacyKey !== profileKey ? [legacyKey] : [];
     if (activateProfile(profileKey, key, aliases)) {
       // This process still owns the departing profile; leave the new key only
-      // in its target profile and relaunch there.
+      // in its target profile and relaunch there. `quit`, not `exit`: the
+      // before-quit handler disposes the terminal PTYs, and a live zigpty
+      // reader thread aborts the process if Node's env is torn down under it.
       saveApiKey("abacus", "");
       clearLocalAccount();
       credentialsChanged("abacus", "");
       setTimeout(() => {
         app.relaunch();
-        app.exit(0);
+        app.quit();
       }, 300);
       return { ok: true };
     }

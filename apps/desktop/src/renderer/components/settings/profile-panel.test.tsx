@@ -3,7 +3,7 @@
  * what a signed-out one says instead of pretending to know.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import type { JSX } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,7 +25,6 @@ vi.mock("../../stores/account-store", () => ({
 }));
 
 const getAbacusAccount = vi.fn();
-const deleteAllUserData = vi.fn();
 
 const { ProfilePanel } = await import("./profile-panel");
 
@@ -54,7 +53,6 @@ beforeEach(() => {
   localAccount = null;
   (globalThis.window as unknown as { api: unknown }).api = {
     agent: { getAbacusAccount },
-    deleteAllUserData,
   };
 });
 
@@ -128,84 +126,5 @@ describe("signed out", () => {
 
     await waitFor(() => byId("profile-signed-out"));
     expect(byId("profile-name").textContent).toBe("profile.notSignedInShort");
-  });
-});
-
-/**
- * Uninstalling leaves ~/.abacusai-bot in place, and on macOS it cannot do
- * otherwise, so this control is the only way to erase it. It has to be reachable
- * and it has to be hard to hit by accident — both are asserted here.
- */
-describe("deleting all data", () => {
-  it("does not delete anything until the confirmation is accepted", async () => {
-    getAbacusAccount.mockResolvedValue(null);
-    mount();
-
-    await waitFor(() => byId("profile-delete-all"));
-    fireEvent.click(byId("profile-delete-all"));
-
-    // The dialog is open; opening it is not consent.
-    await waitFor(() => byId("profile-delete-all-confirm"));
-    expect(deleteAllUserData).not.toHaveBeenCalled();
-
-    fireEvent.click(byId("profile-delete-all-cancel"));
-    expect(deleteAllUserData).not.toHaveBeenCalled();
-  });
-
-  it("deletes once the confirmation is accepted", async () => {
-    getAbacusAccount.mockResolvedValue(null);
-    // Main deletes and exits, so the call never settles. The button must not
-    // sit waiting on a promise that will not resolve.
-    deleteAllUserData.mockReturnValue(new Promise(() => {}));
-    mount();
-
-    await waitFor(() => byId("profile-delete-all"));
-    fireEvent.click(byId("profile-delete-all"));
-    await waitFor(() => byId("profile-delete-all-confirm"));
-    fireEvent.click(byId("profile-delete-all-confirm"));
-
-    expect(deleteAllUserData).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(byId("profile-delete-all").textContent).toContain(
-        "profile.deleteAllPending"
-      )
-    );
-  });
-
-  it("clears what the renderer persisted, not only the files main owns", async () => {
-    // ~/.abacusai-bot is main's to erase; localStorage is the renderer's, and
-    // it holds the chosen language and code folder among other preferences.
-    // Left behind, the relaunched app is a fresh install that still remembers
-    // favourites nobody set — and it is user data the button said it would
-    // delete.
-    getAbacusAccount.mockResolvedValue(null);
-    deleteAllUserData.mockReturnValue(new Promise(() => {}));
-    window.localStorage.setItem("abacusai-bot-language", '{"language":"fr"}');
-    mount();
-
-    await waitFor(() => byId("profile-delete-all"));
-    fireEvent.click(byId("profile-delete-all"));
-    await waitFor(() => byId("profile-delete-all-confirm"));
-    fireEvent.click(byId("profile-delete-all-confirm"));
-
-    expect(window.localStorage.getItem("abacusai-bot-language")).toBeNull();
-    expect(deleteAllUserData).toHaveBeenCalledTimes(1);
-  });
-
-  it("says the data is still there when the delete fails", async () => {
-    getAbacusAccount.mockResolvedValue(null);
-    deleteAllUserData.mockRejectedValue(new Error("EPERM"));
-    mount();
-
-    await waitFor(() => byId("profile-delete-all"));
-    fireEvent.click(byId("profile-delete-all"));
-    await waitFor(() => byId("profile-delete-all-confirm"));
-    fireEvent.click(byId("profile-delete-all-confirm"));
-
-    await waitFor(() => byId("profile-delete-all-failed"));
-    // And the button comes back, rather than being stuck mid-delete.
-    expect(byId("profile-delete-all").textContent).toContain(
-      "profile.deleteAll"
-    );
   });
 });

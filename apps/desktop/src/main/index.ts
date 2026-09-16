@@ -105,7 +105,6 @@ import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
-import { eraseUserData } from "./services/config/delete-all-data";
 import { registerRendererState } from "./services/config/renderer-state";
 import {
   readNotificationSettings,
@@ -140,7 +139,6 @@ import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 
-const legacyUserDataDir = app.getPath("userData");
 const isolatedDevelopmentUserData =
   !app.isPackaged && process.env.ABACUSAI_BOT_USERDATA;
 
@@ -825,12 +823,9 @@ async function createWindow() {
         detail:
           "The application window has crashed repeatedly. Restart to try again.",
       });
-      if (choice === 0) {
-        app.relaunch();
-        app.exit(0);
-      } else {
-        app.exit(1);
-      }
+      // `quit`, not `exit`: before-quit tears the terminal PTYs down first.
+      if (choice === 0) app.relaunch();
+      app.quit();
     });
 
     contents.on("unresponsive", () => {
@@ -1079,28 +1074,6 @@ app
     ipcMain.handle("restart-app", () => {
       app.relaunch();
       app.quit();
-    });
-
-    // Agent children are stopped first (capped, so a wedged child cannot
-    // strand the user), or they would write config back from memory after the
-    // delete. Then relaunch via `app.exit`: `before-quit` would flush a log
-    // file back into the removed directory.
-    ipcMain.handle("app:delete-all-user-data", async () => {
-      const stopped = workspaceServiceHost.dispose();
-      const cap = new Promise<void>((resolve) => setTimeout(resolve, 6_000));
-
-      await Promise.race([stopped, cap]).catch((error: unknown) => {
-        console.warn("[delete-all-data] shutdown failed", error);
-      });
-
-      const dir = await eraseUserData(
-        isolatedDevelopmentUserData ? [] : [legacyUserDataDir]
-      );
-
-      console.log(`[delete-all-data] removed ${dir}; relaunching`);
-      markQuitting();
-      app.relaunch();
-      app.exit(0);
     });
 
     ipcMain.handle("get-home-dir", () => {
