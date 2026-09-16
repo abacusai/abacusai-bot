@@ -27,6 +27,8 @@ import {
 import { budgetSecondsFor } from "./extensions/tool-timeouts.js";
 import { posixShell } from "./posix-shell.js";
 import { AgentMode } from "./protocol.js";
+import { sandboxBackendFor } from "./sandbox-support.js";
+import { runnerPath } from "./sandbox/mxc.js";
 
 describe("deadline", () => {
   it("reads its argument as seconds, not milliseconds", () => {
@@ -197,20 +199,23 @@ describe("a platform with no sandbox backend (Windows)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("hands `auto` the bundled POSIX shell when it is there, else pi's local path", () => {
+  it("hands `auto` the confined shell where it can confine, else the bundled one, else pi's path", () => {
     // The local operations' unconfined fallback is a /bin/bash argv, which
     // does not exist on Windows — every command would fail ENOENT. Null means
-    // pi's own platform-correct local path runs instead.
+    // pi's own platform-correct local path runs instead. A Windows with the
+    // vendored runner on a build that can make containers is the one case
+    // that keeps the operations, since there they confine.
     Object.defineProperty(process, "platform", { value: "win32" });
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "local");
     vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
-    // A Windows new enough for the runner but without the vendored binary
-    // (a checkout, the CI runner) is the same case: nothing here can confine.
-    vi.stubEnv("ABACUSAI_BOT_MXC_EXEC", "");
+    const canConfine =
+      sandboxBackendFor("win32", os.release()) === "mxc" &&
+      runnerPath() != null;
 
-    // Null on a host with no busybox payload (this suite off Windows); the
-    // shell's operations on one — either way, never /bin/bash.
-    expect(backendOperations() == null).toBe(posixShell() == null);
+    // Confined operations where the runner is there; the bundled shell's
+    // where only its payload is; null on a host with neither (this suite off
+    // Windows) — either way, never /bin/bash.
+    expect(backendOperations() == null).toBe(!canConfine && posixShell() == null);
   });
 
   it("keeps the operations under `strict`, so the refusal reaches the model", () => {
