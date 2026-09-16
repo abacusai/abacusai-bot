@@ -13,10 +13,12 @@ import {
   type MessagingPlatformId,
 } from "#shared/messaging";
 
-import { CONNECTORS } from "../../connectors";
+import { CONNECTORS, type AgentKeyConnector } from "../../connectors";
 import { cn } from "../../lib/cn";
 import { useActiveConversationKey } from "../../stores/active-conversation-store";
 import { useWorkspaceStore } from "../../stores/code-store";
+import { useAgentKeySaver } from "../settings/agent-key";
+import { CredentialPrompt } from "../settings/credential-prompt";
 import {
   isMessagingPlatformConnected,
   MessagingConnectorDialog,
@@ -45,6 +47,9 @@ export const ConnectorRequestCard = (): JSX.Element | null => {
   const [busy, setBusy] = useState(false);
   /** The chat app whose own sign-in dialog is open, or null. */
   const [linking, setLinking] = useState<MessagingPlatformId | null>(null);
+  /** The token connector whose credential dialog is open, or null. */
+  const [keying, setKeying] = useState<AgentKeyConnector | null>(null);
+  const saveAgentKey = useAgentKeySaver();
   const messaging = useMessaging();
   const [error, setError] = useState<string | null>(null);
   const activeWorkspaceId = useWorkspaceStore(
@@ -137,6 +142,18 @@ export const ConnectorRequestCard = (): JSX.Element | null => {
     setBusy(true);
     setError(null);
     try {
+      // A connector set up with a token (GitHub) opens the same credential
+      // dialog its card on the Connectors page does.
+      const keyed = CONNECTORS.find(
+        (connector): connector is AgentKeyConnector =>
+          connector.auth === "agent-key" && connector.id === current.service
+      );
+      if (keyed != null) {
+        setKeying(keyed);
+        setBusy(false);
+        return;
+      }
+
       // Only the chat apps the agent offers to link (AGENT_LINKABLE_CHAT_APPS),
       // and never one the catalog already carries, whose sign-in is richer.
       const inCatalog = CONNECTORS.some(
@@ -201,6 +218,38 @@ export const ConnectorRequestCard = (): JSX.Element | null => {
       setBusy(false);
     }
   };
+
+  if (keying != null) {
+    return (
+      <CredentialPrompt
+        connector={keying}
+        onCancel={() => {
+          setKeying(null);
+          void answer("declined");
+        }}
+        onSubmit={(values) => {
+          const connector = keying;
+          setKeying(null);
+          void (async () => {
+            try {
+              // Main hands the key to every running agent on save, so `gh`
+              // is authenticated by the time the tool call resolves.
+              await saveAgentKey(
+                connector,
+                values[connector.env?.[0] ?? ""] ?? ""
+              );
+              await answer("connected");
+            } catch (cause) {
+              await answer(
+                "failed",
+                cause instanceof Error ? cause.message : String(cause)
+              );
+            }
+          })();
+        }}
+      />
+    );
+  }
 
   if (linking != null) {
     return (

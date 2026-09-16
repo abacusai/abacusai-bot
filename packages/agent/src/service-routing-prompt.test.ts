@@ -6,7 +6,8 @@ describe("serviceRoutingPrompt", () => {
   it("sends repository work to gh on the user's token and says to connect before browsing", () => {
     const text = serviceRoutingPrompt();
     expect(text).toMatch(/pull requests.*`gh` and git in bash/);
-    expect(text).toMatch(/GitHub connector card/);
+    expect(text).toMatch(/GitHub token/);
+    expect(text).toMatch(/connect_connector "github"/);
     expect(text).not.toMatch(/GitHub connector;/);
     expect(text).toMatch(/mail → Gmail/);
     expect(text).toMatch(/Calendar/);

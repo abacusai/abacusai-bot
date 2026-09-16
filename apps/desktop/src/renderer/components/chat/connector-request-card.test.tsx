@@ -52,6 +52,38 @@ vi.mock("../../stores/code-store", () => {
   return { useWorkspaceStore };
 });
 
+/** The token save behind an agent-key connector's dialog. */
+const saveAgentKey = vi.fn(
+  async (_connector: { id: string }, _value: string) => {
+    calls.push("save-key");
+  }
+);
+vi.mock("../settings/agent-key", () => ({
+  useAgentKeySaver: () => saveAgentKey,
+}));
+
+// The real dialog is the Connectors page's; here it is two buttons that
+// stand in for filling the token and for closing without one.
+vi.mock("../settings/credential-prompt", () => ({
+  CredentialPrompt: ({
+    connector,
+    onCancel,
+    onSubmit,
+  }: {
+    connector: { id: string; env?: string[] };
+    onCancel: () => void;
+    onSubmit: (values: Record<string, string>) => void;
+  }) => (
+    <div data-id="stub-credential-prompt" data-connector={connector.id}>
+      <button
+        data-id="stub-credential-submit"
+        onClick={() => onSubmit({ [connector.env?.[0] ?? "TOKEN"]: "ghp_x" })}
+      />
+      <button data-id="stub-credential-cancel" onClick={onCancel} />
+    </div>
+  ),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, values?: Record<string, string>) =>
@@ -73,7 +105,7 @@ const byId = (id: string): HTMLElement => {
 };
 
 /** The agent asking, as the renderer hears it. */
-const ask = (): void => {
+const ask = (request: Partial<Record<string, unknown>> = {}): void => {
   act(() => {
     for (const listener of listeners)
       listener({
@@ -84,6 +116,7 @@ const ask = (): void => {
           label: "Slack",
           reason: "to read #general",
           conversationKey: here,
+          ...request,
         },
       });
   });
@@ -295,6 +328,63 @@ describe("the connector request card", () => {
     );
     expect(respondConnector).not.toHaveBeenCalled();
     expect(byId("connector-request-connect")).toBeTruthy();
+  });
+
+  it("opens the token dialog for a connector set up with a key, not a browser hop", async () => {
+    ask({ service: "github", label: "GitHub", reason: "to open a PR" });
+    fireEvent.click(byId("connector-request-connect"));
+
+    await waitFor(() => byId("stub-credential-prompt"));
+    expect(byId("stub-credential-prompt").dataset.connector).toBe("github");
+    expect(connectAbacusConnector).not.toHaveBeenCalled();
+  });
+
+  it("saves the token and reports the connection", async () => {
+    ask({ service: "github", label: "GitHub" });
+    fireEvent.click(byId("connector-request-connect"));
+    await waitFor(() => byId("stub-credential-prompt"));
+
+    fireEvent.click(byId("stub-credential-submit"));
+
+    await waitFor(() => expect(respondConnector).toHaveBeenCalled());
+    expect(saveAgentKey).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "github" }),
+      "ghp_x"
+    );
+    // The key is saved before the agent is told; its next act uses it.
+    expect(calls).toEqual(["save-key", "respond"]);
+    expect(respondConnector).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: "req-1", outcome: "connected" })
+    );
+    expect(document.querySelector('[data-id="connector-request"]')).toBeNull();
+  });
+
+  it("answers declined when the token dialog is closed without one", async () => {
+    ask({ service: "github", label: "GitHub" });
+    fireEvent.click(byId("connector-request-connect"));
+    await waitFor(() => byId("stub-credential-prompt"));
+
+    fireEvent.click(byId("stub-credential-cancel"));
+
+    await waitFor(() => expect(respondConnector).toHaveBeenCalled());
+    expect(saveAgentKey).not.toHaveBeenCalled();
+    expect(respondConnector).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "declined" })
+    );
+  });
+
+  it("reports a save that failed, so the agent does not wait on it", async () => {
+    saveAgentKey.mockRejectedValueOnce(new Error("disk full"));
+    ask({ service: "github", label: "GitHub" });
+    fireEvent.click(byId("connector-request-connect"));
+    await waitFor(() => byId("stub-credential-prompt"));
+
+    fireEvent.click(byId("stub-credential-submit"));
+
+    await waitFor(() => expect(respondConnector).toHaveBeenCalled());
+    expect(respondConnector).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "failed", error: "disk full" })
+    );
   });
 
   it("takes the card down when the agent's turn ends without it", () => {
