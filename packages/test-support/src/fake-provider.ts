@@ -27,6 +27,11 @@ export type Reply =
   | { say: string }
   /** Text and a call together, which is what a narrating model sends. */
   | { say?: string; call: { name: string; args: Record<string, unknown> } }
+  /** Several calls in one message, which the client runs concurrently. */
+  | {
+      say?: string;
+      calls: Array<{ name: string; args: Record<string, unknown> }>;
+    }
   /** A provider error, as a status and the body a provider would send with it. */
   | { fail: { status: number; message: string } }
   /**
@@ -174,22 +179,21 @@ export class FakeProvider {
       return;
     }
 
-    if ("call" in reply) {
+    if ("call" in reply || "calls" in reply) {
       if (reply.say != null && reply.say.length > 0)
         frame({ content: reply.say });
 
+      const calls = "calls" in reply ? reply.calls : [reply.call];
       frame({
-        tool_calls: [
-          {
-            index: 0,
-            id: `call-${index}`,
-            type: "function",
-            function: {
-              name: reply.call.name,
-              arguments: JSON.stringify(reply.call.args),
-            },
+        tool_calls: calls.map((call, position) => ({
+          index: position,
+          id: `call-${index}-${position}`,
+          type: "function",
+          function: {
+            name: call.name,
+            arguments: JSON.stringify(call.args),
           },
-        ],
+        })),
       });
       frame({}, "tool_calls");
     } else {

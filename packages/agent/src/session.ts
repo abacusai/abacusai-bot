@@ -1492,9 +1492,18 @@ export class AbacusBotSession {
   /** Which pi events mean a model call is (still) being waited on. */
   private noteModelActivity(type: string): void {
     switch (type) {
+      case "tool_execution_end":
+        // Parallel tool calls: the model is asked again only once the last one
+        // ends. Arming here while a sibling still runs (a browser sub-agent,
+        // minutes long) reads its silence as the model's and aborts it. The
+        // heartbeat still holds the call that is ending.
+        if (this.heartbeat.size > 1) return;
+        this.awaitingModel = true;
+        this.armStallTimer();
+
+        return;
       case "agent_start":
       case "message_start":
-      case "tool_execution_end":
         this.awaitingModel = true;
         this.armStallTimer();
 

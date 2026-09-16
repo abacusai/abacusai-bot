@@ -334,6 +334,42 @@ describe("a model call that goes silent", () => {
         .join("\n")
     ).not.toMatch(/stopped answering/);
   });
+
+  it("leaves a running tool alone when a sibling call has already returned", async () => {
+    // Two calls in one message: the quick one ends, the slow one (a browser
+    // sub-agent, in practice) keeps going. The model has not gone quiet — it
+    // is not being asked anything until the slow one ends too.
+    const harness = session({ mode: "yolo" });
+    const log = captureLog();
+
+    provider.scriptSequence([
+      {
+        calls: [
+          { name: "bash", args: { command: "echo quick" } },
+          { name: "bash", args: { command: "sleep 1.5; echo slow-done" } },
+        ],
+      },
+      { say: "both finished" },
+    ]);
+    await harness.session.start();
+    await harness.session.send("run both");
+    await harness.until(
+      () => harness.agent("turn_complete").length > 0,
+      15_000
+    );
+
+    expect(harness.text).toContain("both finished");
+    expect(harness.agent("error")).toHaveLength(0);
+    // The slow tool ran to its end and its result reached the transcript.
+    expect(
+      harness
+        .agent("tool_execution_complete")
+        .map((event) => event.result?.content ?? "")
+        .join("\n")
+    ).toContain("slow-done");
+    expect(log.lines.join("")).not.toContain("produced nothing");
+    log.restore();
+  });
 });
 
 describe("a turn", () => {
