@@ -20,6 +20,36 @@ files card finds such a file the same way, and lists it under its real name.
 The Capabilities page now lists `disconnect_connector` under Connectors, with
 a description for both connector tools.
 
+Where the sandbox cannot run (Linux without bubblewrap and socat, a Windows
+older than 24H2), commands run unconfined and a dismissible notice at the top
+of the chat says so, instead of every command being refused.
+
+When the sandbox refuses something a command tried, a card now lists it and
+"Allow" runs the command again with that access, instead of the agent working
+around the refusal. Node tools are told to use the proxy.
+
+The kernel sandbox is now on by default and applies in Bypass mode too, which
+the app starts in; Settings > Capabilities switches it off. Bypass still asks
+about a hidden credential store a command names and a host not on the allow
+list.
+
+On macOS and Linux the kernel sandbox now runs on Anthropic's sandbox
+runtime. A sandboxed command's outbound connections go through its proxies:
+package registries and code hosts are allowed, any other host asks first and
+the connection waits for the answer. `ABACUSAI_BOT_SANDBOX_HOSTS` pre-approves
+hosts. Linux needs `bubblewrap` and `socat`.
+
+The kernel sandbox now runs on Windows 11 24H2 and newer, through a Microsoft
+process container. The Settings toggle says so on an older Windows instead of
+claiming the whole platform is unsupported.
+
+The kernel sandbox now hides credential stores from shell commands: SSH and
+GPG private keys, cloud CLI credential caches, browser profiles, the macOS
+keychain files and the app's own settings. Configuration beside them stays
+readable. A command that names one of the developer stores asks first, and
+the approval card lists the paths; "Always" keeps them readable for the
+session. `ABACUSAI_BOT_SANDBOX_READABLE` exempts a path without a prompt.
+
 Telegram no longer creates an assistant bot of its own through BotFather.
 Messages to you arrive from the shared Abacus AI bot, which the Telegram setup
 links; the connected account still reads chats and messages other people. The

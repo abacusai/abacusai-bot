@@ -51,10 +51,15 @@ export const settingsQueryKeys = {
     bots: ["settings", "memory", "bots"] as const,
   },
 
+  sandbox: {
+    all: ["settings", "sandbox"] as const,
+    support: ["settings", "sandbox", "support"] as const,
+    defaultMode: ["settings", "sandbox", "default-mode"] as const,
+  },
+
   capabilities: {
     all: ["settings", "capabilities"] as const,
     toolsets: ["settings", "capabilities", "toolsets"] as const,
-    sandbox: ["settings", "capabilities", "sandbox"] as const,
     xaiSearch: ["settings", "capabilities", "xai-search"] as const,
     execBackend: ["settings", "capabilities", "exec-backend"] as const,
   },

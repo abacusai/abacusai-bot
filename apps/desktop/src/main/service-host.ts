@@ -8,7 +8,7 @@ import path from "path";
 
 import { app } from "electron";
 
-import { AgentMode, AgentStatus, type DesktopEvent } from "#shared/agent-types";
+import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
 import type {
   BotChangeNotice,
   Bot,
@@ -45,6 +45,8 @@ import type {
   AgentMcpLogEntry,
   AgentMcpServer,
   McpBrowserStatus,
+  DefaultAgentMode,
+  SandboxSupport,
   DeviceStatus,
   LocalDeviceInfo,
   CaptureDeviceScreenshotRequest,
@@ -231,8 +233,8 @@ import {
 import {
   readExecBackend,
   readToolsetPreferences,
-  readSandboxEnabled,
-  setSandboxEnabled,
+  readDefaultAgentMode,
+  setDefaultAgentMode,
   readXaiSearchPreference,
   setXaiSearchEnabled,
   readNotificationSettings,
@@ -295,6 +297,7 @@ import {
   cachedRecommendedModelId,
   recommendedModelId,
 } from "./services/providers/models";
+import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
@@ -694,6 +697,10 @@ export class ServiceHost {
   private readonly workspaceService = new WorkspaceService();
   private readonly browserProfilesService = new BrowserProfilesService();
   private readonly artifactResolverService = new ArtifactResolverService();
+
+  private readonly sandboxProbeService = new SandboxProbeService(() =>
+    this.artifactResolverService.resolveBundledCliPath()
+  );
   private readonly fileTreeService = new FileTreeService();
   private readonly fileSearchService = new FileSearchService();
   private readonly gitService = new GitService();
@@ -2145,7 +2152,13 @@ export class ServiceHost {
         : request.model != null && request.model.length > 0
           ? request.model
           : await recommendedModelId();
-    const withModel = model != null ? { ...request, model } : request;
+    // A start with no mode is main's own (a bot's chat brought back to
+    // deliver a notice, say): it runs in the mode the Profile page chose.
+    const withModel = {
+      ...request,
+      ...(model != null ? { model } : {}),
+      ...(request.mode == null ? { mode: readDefaultAgentMode() } : {}),
+    };
 
     // The new agent sees the environment as it stands; nothing owed until then.
     environmentNoticeService.markSessionStarted(request.sessionId);
@@ -3193,7 +3206,7 @@ export class ServiceHost {
     const started = await this.startAgentSession({
       workspaceId,
       sessionId: editor.id,
-      mode: AgentMode.Yolo,
+      mode: readDefaultAgentMode(),
     });
     if (!started.success)
       throw new Error(started.error ?? "The editor could not start.");
@@ -3405,7 +3418,7 @@ export class ServiceHost {
     const started = await this.startAgentSession({
       workspaceId: target,
       sessionId: session.id,
-      mode: AgentMode.Yolo,
+      mode: readDefaultAgentMode(),
     });
 
     if (!started.success) {
@@ -3552,15 +3565,20 @@ export class ServiceHost {
     return setNotificationSettings(next);
   }
 
-  getSandboxEnabled(): boolean {
-    return readSandboxEnabled();
+  getDefaultAgentMode(): DefaultAgentMode {
+    return readDefaultAgentMode();
   }
 
-  /** Read back, not echoed: "on" over a failed write misstates confinement. */
-  setSandboxEnabled(enabled: boolean): boolean {
-    setSandboxEnabled(enabled);
+  /** Whether Auto is worth offering here: probed once, by the agent. */
+  getSandboxSupport(): Promise<SandboxSupport> {
+    return this.sandboxProbeService.support();
+  }
 
-    return readSandboxEnabled();
+  /** Read back, not echoed: a failed write must not show as the new mode. */
+  setDefaultAgentMode(mode: DefaultAgentMode): DefaultAgentMode {
+    setDefaultAgentMode(mode);
+
+    return readDefaultAgentMode();
   }
 
   /**

@@ -7,6 +7,7 @@
 import { useBundledTools } from "./bundled-tools.js";
 import { applyStoredApiKeys } from "./config.js";
 import { NdjsonHost } from "./host.js";
+import { sandboxAvailability } from "./sandbox/index.js";
 
 /**
  * A spawn whose binary is missing reports it on the child's 'error' event; a
@@ -43,6 +44,15 @@ async function main(): Promise<void> {
   useBundledTools();
 
   const argv = process.argv.slice(2);
+
+  // The desktop's one question before any session: can this machine confine
+  // a command? One JSON line, then exit; the probe is what decides whether
+  // the Auto mode is offered at all.
+  if (argv.includes("--sandbox-probe")) {
+    process.stdout.write(`${JSON.stringify(await sandboxAvailability())}\n`);
+    process.exit(0);
+  }
+
   const model = readFlag(argv, "--model");
   const mode = readFlag(argv, "--permission-mode");
 

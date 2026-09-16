@@ -26,6 +26,53 @@ const spawn = vi.hoisted(() => vi.fn());
 vi.mock("child_process", () => ({ spawn }));
 
 /**
+ * The sandbox decision, stubbed: what is under test here is the spawn that
+ * follows it, and the real decision would start the sandbox runtime.
+ */
+const decide = vi.hoisted(() => vi.fn());
+
+/** What the runtime says it refused for the last command; empty by default. */
+const refusedByRuntime = vi.hoisted(() => ({ list: [] as unknown[] }));
+const hostsAllowed = vi.hoisted(() => ({
+  once: [] as string[],
+  session: [] as string[],
+}));
+
+vi.mock("./sandbox/index.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./sandbox/index.js")>()),
+  decide,
+  violations: () => null,
+  denials: () => refusedByRuntime.list,
+  settledDenials: async () => refusedByRuntime.list,
+  allowHostOnce: (host: string) => hostsAllowed.once.push(host),
+  allowHostForSession: (host: string) => hostsAllowed.session.push(host),
+}));
+
+/** Run the command confined under a plain bash, the shape every backend yields. */
+const confined = (): void => {
+  decide.mockImplementation(async (_policy: unknown, command: string) => ({
+    kind: "confined",
+    argv: ["/bin/bash", "-c", command],
+    backend: "sandbox-runtime",
+  }));
+};
+
+/** No backend here: the platform's own shell, unconfined. */
+const unconfined = (): void => {
+  decide.mockResolvedValue({
+    kind: "unconfined",
+    reason: "unsupported-platform",
+  });
+};
+
+const refused = (): void => {
+  decide.mockResolvedValue({
+    kind: "refused",
+    message: "Command refused: the sandbox could not be established.",
+  });
+};
+
+/**
  * The login shell's environment, stubbed. The real one shells out to source the
  * user's profile, which is both slow and different on every machine.
  */
@@ -41,17 +88,39 @@ class FakeStream extends EventEmitter {
   destroy = vi.fn();
 }
 
-/** A child process that emits nothing until a test tells it to. */
+/**
+ * A child process that emits nothing until a test tells it to, and even then
+ * only once the backend is listening: the sandbox decision is asynchronous, so
+ * the spawn happens a tick after `exec` is called, as with a real child.
+ */
 class FakeChild extends EventEmitter {
   stdout = new FakeStream();
   stderr = new FakeStream();
   stdin = { end: vi.fn() };
   kill = vi.fn();
   pid = 4242;
+  private readonly attached = new Promise<void>((resolve) => {
+    this.on("newListener", (name: string) => {
+      if (name === "close") resolve();
+    });
+  });
 
   /** Finish the command the way a clean exit does. */
   finish(code: number | null): void {
-    this.emit("close", code);
+    void this.attached.then(() => this.emit("close", code));
+  }
+
+  /** Fail to start, the way ENOENT does. */
+  fail(error: Error): void {
+    void this.attached.then(() => this.emit("error", error));
+  }
+
+  output(text: string): void {
+    void this.attached.then(() => this.stdout.emit("data", Buffer.from(text)));
+  }
+
+  errorOutput(text: string): void {
+    void this.attached.then(() => this.stderr.emit("data", Buffer.from(text)));
   }
 }
 
@@ -65,6 +134,10 @@ const onPlatform = (platform: NodeJS.Platform): void => {
     configurable: true,
   });
 };
+
+/** Resolves once the backend has spawned the child, a tick after `exec`. */
+const spawned = (): Promise<void> =>
+  vi.waitFor(() => expect(spawn).toHaveBeenCalled());
 
 /** The argv of the last spawn, as one array. */
 const lastSpawn = (): { file: string; args: string[]; options: unknown } => {
@@ -158,11 +231,12 @@ describe("deciding whether to replace pi's own local shell", () => {
     ["modal", "auto", "darwin", false],
     ["daytona", "auto", "darwin", false],
     ["ssh", "auto", "darwin", false],
-    // Local with the sandbox switched off: pi's path handles shell resolution,
-    // login shells and platform differences better than anything here.
-    ["local", undefined, "darwin", false],
+    // Local with the sandbox switched off by the environment: pi's path
+    // handles shell resolution, login shells and platform differences better
+    // than anything here. The mode decides per command, not here.
     ["local", "off", "darwin", false],
     // Local with a backend on this platform.
+    ["local", undefined, "darwin", true],
     ["local", "auto", "darwin", true],
     ["local", "auto", "linux", true],
     ["local", "strict", "darwin", true],
@@ -187,10 +261,10 @@ describe("deciding whether to replace pi's own local shell", () => {
     onPlatform("darwin");
     const { confinedBashTool } = await load();
 
-    expect(confinedBashTool("/work/project")).toBeNull();
-
-    process.env.ABACUSAI_BOT_SANDBOX = "auto";
     expect(confinedBashTool("/work/project")).not.toBeNull();
+
+    process.env.ABACUSAI_BOT_SANDBOX = "off";
+    expect(confinedBashTool("/work/project")).toBeNull();
   });
 });
 
@@ -305,8 +379,8 @@ describe("running a command in a container", () => {
   it("streams both stdout and stderr to the caller", async () => {
     const operations = await dockerOperations();
     const running = exec(operations, "ls");
-    child.stdout.emit("data", Buffer.from("out\n"));
-    child.stderr.emit("data", Buffer.from("err\n"));
+    child.output("out\n");
+    child.errorOutput("err\n");
     child.finish(0);
 
     expect((await running).output).toBe("out\nerr\n");
@@ -315,7 +389,7 @@ describe("running a command in a container", () => {
   it("tells the model docker is missing rather than tearing the turn down", async () => {
     const operations = await dockerOperations();
     const running = exec(operations, "ls");
-    child.emit("error", new Error("spawn docker ENOENT"));
+    child.fail(new Error("spawn docker ENOENT"));
     const { exitCode, output } = await running;
 
     // 127: command not found, which is what actually happened.
@@ -360,6 +434,10 @@ describe("running a command on this machine", () => {
   beforeEach(() => {
     process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
     process.env.ABACUSAI_BOT_SANDBOX = "strict";
+    confined();
+    refusedByRuntime.list = [];
+    hostsAllowed.once = [];
+    hostsAllowed.session = [];
   });
 
   const localOperations = async (): Promise<BashOperations> => {
@@ -374,6 +452,7 @@ describe("running a command on this machine", () => {
     // strict on a platform with no backend: reported as output plus a non-zero
     // exit so the model reads why and adapts.
     onPlatform("win32");
+    refused();
     const operations = await localOperations();
 
     const { exitCode, output } = await exec(operations, "ls");
@@ -386,7 +465,6 @@ describe("running a command on this machine", () => {
 
   it("hands the command to bash when the mode asked for no confinement", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "echo hi", "/work/project");
@@ -402,7 +480,6 @@ describe("running a command on this machine", () => {
 
   it("runs the command in its own process group, so a deadline can take down what it started", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls");
@@ -416,19 +493,20 @@ describe("running a command on this machine", () => {
     // Inheriting would mean the launchd PATH, which cannot find the user's
     // toolchain — the profile is sourced once, not per command.
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls");
     child.finish(0);
     await running;
 
-    expect((lastSpawn().options as { env: unknown }).env).toEqual(SHELL_ENV);
+    expect((lastSpawn().options as { env: unknown }).env).toEqual({
+      ...SHELL_ENV,
+      NODE_USE_ENV_PROXY: "1",
+    });
   });
 
   it("keeps the caller's PATH in front of the shell's, and reaches both", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls", "/work", {
@@ -446,7 +524,6 @@ describe("running a command on this machine", () => {
 
   it("gives the caller's environment the shell's PATH when it brought none", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls", "/work", { env: { TOKEN: "abc" } });
@@ -455,7 +532,11 @@ describe("running a command on this machine", () => {
 
     const { env } = lastSpawn().options as { env: Record<string, string> };
 
-    expect(env).toEqual({ TOKEN: "abc", PATH: SHELL_ENV.PATH });
+    expect(env).toEqual({
+      TOKEN: "abc",
+      PATH: SHELL_ENV.PATH,
+      NODE_USE_ENV_PROXY: "1",
+    });
   });
 
   it("merges into the caller's own spelling of PATH", async () => {
@@ -464,7 +545,7 @@ describe("running a command on this machine", () => {
     // spellings side by side — libuv keeps one, and it may be the one without
     // pi's bin directory.
     onPlatform("win32");
-    setCurrentMode(AgentMode.Yolo);
+    unconfined();
     const operations = await localOperations();
 
     const running = exec(operations, "dir", "C:\\work", {
@@ -486,7 +567,7 @@ describe("running a command on this machine", () => {
     // Node's default Windows quoting is the C runtime's, and cmd.exe does not
     // undo it — `git commit -m "msg"` reached cmd with the backslashes in.
     onPlatform("win32");
-    setCurrentMode(AgentMode.Yolo);
+    unconfined();
     const operations = await localOperations();
 
     const running = exec(operations, 'git commit -m "msg"', "C:\\work");
@@ -501,7 +582,6 @@ describe("running a command on this machine", () => {
 
   it("closes stdin so a command that reads it does not hang", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "cat");
@@ -513,11 +593,10 @@ describe("running a command on this machine", () => {
 
   it("surfaces a spawn failure as command output", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const operations = await localOperations();
 
     const running = exec(operations, "ls");
-    child.emit("error", new Error("EACCES"));
+    child.fail(new Error("EACCES"));
     const { exitCode, output } = await running;
 
     expect(exitCode).toBe(127);
@@ -528,7 +607,26 @@ describe("running a command on this machine", () => {
     // Killing the shell alone leaves a backgrounded descendant running — and it
     // is that descendant which keeps the turn's output pipes open.
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
+    const operations = await localOperations();
+    const controller = new AbortController();
+
+    const running = exec(operations, "sleep 1000", "/work", {
+      signal: controller.signal,
+    });
+    await spawned();
+    controller.abort();
+
+    expect(kill).toHaveBeenCalledWith(-child.pid, "SIGKILL");
+
+    child.finish(null);
+    await running;
+    kill.mockRestore();
+  });
+
+  it("still kills a command whose abort landed while the sandbox was deciding", async () => {
+    // The decision is asynchronous; an abort in that gap used to be missed.
+    onPlatform("darwin");
     const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
     const operations = await localOperations();
     const controller = new AbortController();
@@ -537,6 +635,7 @@ describe("running a command on this machine", () => {
       signal: controller.signal,
     });
     controller.abort();
+    await spawned();
 
     expect(kill).toHaveBeenCalledWith(-child.pid, "SIGKILL");
 
@@ -547,7 +646,6 @@ describe("running a command on this machine", () => {
 
   it("falls back to killing the child when its group is already gone", async () => {
     onPlatform("darwin");
-    setCurrentMode(AgentMode.Yolo);
     const kill = vi.spyOn(process, "kill").mockImplementation(() => {
       throw new Error("ESRCH");
     });
@@ -557,6 +655,7 @@ describe("running a command on this machine", () => {
     const running = exec(operations, "sleep 1000", "/work", {
       signal: controller.signal,
     });
+    await spawned();
     controller.abort();
 
     expect(child.kill).toHaveBeenCalledWith("SIGKILL");
@@ -606,7 +705,7 @@ describe("settling when the command finishes rather than when its pipes close", 
     // Output keeps arriving, re-arming the grace period each time.
     for (let i = 0; i < 5; i++) {
       await vi.advanceTimersByTimeAsync(50);
-      child.stdout.emit("data", Buffer.from(`chunk${i}`));
+      child.output(`chunk${i}`);
     }
     await vi.advanceTimersByTimeAsync(200);
 
@@ -633,6 +732,7 @@ describe("running a project command through the backend", () => {
 
   it("declines when there is no backend, so the caller uses pi's own exec", async () => {
     process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
+    process.env.ABACUSAI_BOT_SANDBOX = "off";
     onPlatform("darwin");
     const { execConfined } = await load();
 
@@ -646,8 +746,8 @@ describe("running a project command through the backend", () => {
     const { execConfined } = await load();
 
     const running = execConfined("npm test", "/work");
-    child.stdout.emit("data", Buffer.from("passing\n"));
-    child.stderr.emit("data", Buffer.from("warning\n"));
+    child.output("passing\n");
+    child.errorOutput("warning\n");
     child.finish(0);
 
     expect(await running).toEqual({
@@ -689,5 +789,116 @@ describe("running a project command through the backend", () => {
 
     child.finish(null);
     await running;
+  });
+});
+
+describe("asking about what the sandbox refused", () => {
+  beforeEach(() => {
+    process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
+    process.env.ABACUSAI_BOT_SANDBOX = "strict";
+    onPlatform("darwin");
+    confined();
+    refusedByRuntime.list = [
+      { kind: "write", path: "/Users/dev/Desktop/out.txt" },
+      { kind: "host", host: "api.test", port: 443 },
+    ];
+    hostsAllowed.once = [];
+    hostsAllowed.session = [];
+  });
+
+  /** Two children in turn: the refused run, then the retry. */
+  const twoRuns = (): FakeChild[] => {
+    const first = child;
+    const second = new FakeChild();
+    let calls = 0;
+    spawn.mockImplementation(() => (++calls === 1 ? first : second));
+
+    return [first, second];
+  };
+
+  it("asks once, then runs the command again with what was allowed", async () => {
+    const { backendOperations } = await load();
+    const { SandboxApprovals } = await import("./sandbox/approvals.js");
+    const approvals = new SandboxApprovals();
+    const asked: unknown[] = [];
+    approvals.askDenials = async (command, refused) => {
+      asked.push({ command, refused });
+
+      return { once: refused, session: [] };
+    };
+    const operations = backendOperations(approvals);
+    if (operations == null) throw new Error("expected local operations");
+    const [first, second] = twoRuns();
+
+    const running = exec(operations, "cp x ~/Desktop/out.txt");
+    first!.finish(1);
+    await vi.waitFor(() => expect(spawn).toHaveBeenCalledTimes(2));
+    second!.finish(0);
+    const { exitCode, output } = await running;
+
+    expect(exitCode).toBe(0);
+    expect(asked).toHaveLength(1);
+    expect(output).toContain("running the command again");
+    // The write was handed to the retry's policy (beside whatever the
+    // command's own text was granted, sandbox/intent.ts), the host to the proxy.
+    expect(
+      (decide.mock.calls[1]![0] as { approvedWrites: string[] }).approvedWrites
+    ).toContain("/Users/dev/Desktop/out.txt");
+    expect(hostsAllowed.once).toEqual(["api.test"]);
+    expect(hostsAllowed.session).toEqual([]);
+  });
+
+  it("asks even when the command's last step exited 0", async () => {
+    // `rm x; echo done` succeeds as far as bash is concerned; the refusal is
+    // still real and still the user's to lift.
+    const { backendOperations } = await load();
+    const { SandboxApprovals } = await import("./sandbox/approvals.js");
+    const approvals = new SandboxApprovals();
+    let asked = 0;
+    approvals.askDenials = async (_command, refused) => {
+      asked += 1;
+
+      return { once: refused, session: [] };
+    };
+    const operations = backendOperations(approvals);
+    if (operations == null) throw new Error("expected local operations");
+    const [first, second] = twoRuns();
+
+    const running = exec(operations, "rm ~/Desktop/x; echo done");
+    first!.finish(0);
+    await vi.waitFor(() => expect(spawn).toHaveBeenCalledTimes(2));
+    second!.finish(0);
+    await running;
+
+    expect(asked).toBe(1);
+  });
+
+  it("keeps the refusal when the user says no", async () => {
+    const { backendOperations } = await load();
+    const { SandboxApprovals } = await import("./sandbox/approvals.js");
+    const approvals = new SandboxApprovals();
+    approvals.askDenials = async () => null;
+    const operations = backendOperations(approvals);
+    if (operations == null) throw new Error("expected local operations");
+
+    const running = exec(operations, "cp x ~/Desktop/out.txt");
+    child.finish(1);
+    const { exitCode } = await running;
+
+    expect(exitCode).toBe(1);
+    expect(spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not ask when nobody can answer, and never retries twice", async () => {
+    const { backendOperations } = await load();
+    const operations = backendOperations();
+    if (operations == null) throw new Error("expected local operations");
+
+    const running = exec(operations, "cp x ~/Desktop/out.txt");
+    child.finish(1);
+    const { exitCode } = await running;
+
+    expect(exitCode).toBe(1);
+    expect(spawn).toHaveBeenCalledTimes(1);
   });
 });

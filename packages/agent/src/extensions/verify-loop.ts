@@ -58,7 +58,12 @@ export default function (pi: ExtensionAPI) {
     // Running the test command is arbitrary code execution with no tool call
     // to decline, so only in modes where commands may run unprompted.
     const mode = currentMode();
-    if (mode !== AgentMode.AcceptEdits && mode !== AgentMode.Yolo) return;
+    if (
+      mode !== AgentMode.AcceptEdits &&
+      mode !== AgentMode.Auto &&
+      mode !== AgentMode.Yolo
+    )
+      return;
     if (!wroteFiles || retriesUsed >= MAX_RETRIES) return;
     if (selfTriggered) {
       selfTriggered = false;
