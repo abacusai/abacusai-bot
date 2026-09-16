@@ -24,9 +24,6 @@ vi.mock("@anthropic-ai/sdk", () => ({
 /** Every key that can select a provider — cleared together, or a developer
  * with one exported in their shell gets a different suite than CI. */
 const PROVIDER_KEYS = [
-  // The app's own key too: it is first in the provider order, so left in place
-  // it outranks the fake Anthropic key below and every search here goes out
-  // to routellm, billed.
   "ABACUS_API_KEY",
   "ANTHROPIC_API_KEY",
   "DEEPSEEK_API_KEY",

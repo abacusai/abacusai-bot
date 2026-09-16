@@ -4,16 +4,8 @@ import { join } from "node:path";
 
 import { defineConfig } from "vitest/config";
 
-/**
- * Every suite runs against an empty agent home. The modules under test read
- * ~/.abacusai-bot/config.json at call time for the keys the desktop stores at
- * sign-in — so on a developer machine with the app signed in, a test that
- * clears the key environment still found a real ABACUS_API_KEY, and
- * web/search.test.ts ran its "a query" fixtures against routellm for real:
- * ~20 billed searches per `pnpm test`, on whichever account was signed in.
- * CI never showed it, having no config.json. A suite that needs a home of its
- * own still sets ABACUSAI_BOT_HOME itself; this is the floor under the rest.
- */
+// An empty agent home for every suite: the code under test reads the keys the
+// desktop stores at sign-in, and a test must never spend them.
 const EMPTY_HOME = mkdtempSync(join(tmpdir(), "abacusai-bot-test-home-"));
 
 /**
