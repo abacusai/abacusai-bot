@@ -11,6 +11,9 @@ import * as path from "node:path";
 import { fakePi, type FakePi } from "@abacus-ai/test-support/fake-pi";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { ALLOWED_PATHS_ENV } from "../allowed-paths.js";
+import { setCurrentMode } from "../current-mode.js";
+import { AgentMode } from "../protocol.js";
 import guardrails, { bashWriteTargets, isProtectedPath } from "./guardrails.js";
 
 let cwd: string;
@@ -775,5 +778,76 @@ describe("bashWriteTargets", () => {
     expect(bashWriteTargets('cp a.txt "my notes.txt"')).toEqual([
       "my notes.txt",
     ]);
+  });
+});
+
+/**
+ * The fence around the workspace is for the ask-first modes. Under Full
+ * access the user has said the whole machine is in bounds, and a folder the
+ * host pre-allowed is in bounds in every mode; blocking either only sends the
+ * model to the shell, which is not fenced.
+ */
+describe("writing outside the workspace", () => {
+  let outside: string;
+
+  beforeEach(() => {
+    outside = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-outside-"));
+    // A protected-looking scratch dir is exempt anyway; use a real file.
+    fs.writeFileSync(path.join(outside, "notes.md"), "old");
+  });
+
+  afterEach(() => {
+    fs.rmSync(outside, { recursive: true, force: true });
+    setCurrentMode(AgentMode.Normal);
+    delete process.env[ALLOWED_PATHS_ENV];
+  });
+
+  /** A directory the guard cannot read as temp scratch. */
+  const target = (): string =>
+    path.join(os.homedir(), ".guardrails-test-outside", "x.md");
+
+  it("is refused in the default mode", async () => {
+    setCurrentMode(AgentMode.Normal);
+
+    const blocked = (await pi.fire(
+      "tool_call",
+      writeCall(target()),
+      ctx()
+    )) as {
+      block: boolean;
+      reason: string;
+    };
+
+    expect(blocked?.block).toBe(true);
+    expect(blocked.reason).toContain("outside the workspace");
+  });
+
+  it("is allowed under Full access", async () => {
+    setCurrentMode(AgentMode.Yolo);
+
+    const blocked = await pi.fire("tool_call", writeCall(target()), ctx());
+
+    expect(blocked).toBeUndefined();
+  });
+
+  it("is allowed inside a folder the host pre-allowed, in any mode", async () => {
+    setCurrentMode(AgentMode.Normal);
+    process.env[ALLOWED_PATHS_ENV] = path.dirname(target());
+
+    const blocked = await pi.fire("tool_call", writeCall(target()), ctx());
+
+    expect(blocked).toBeUndefined();
+  });
+
+  it("still refuses a protected path under Full access", async () => {
+    setCurrentMode(AgentMode.Yolo);
+
+    const blocked = (await pi.fire(
+      "tool_call",
+      writeCall(path.join(outside, ".env")),
+      ctx()
+    )) as { block: boolean };
+
+    expect(blocked?.block).toBe(true);
   });
 });

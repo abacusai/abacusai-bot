@@ -7,6 +7,16 @@
 
 ## Unreleased
 
+A routine set up for a folder now runs entirely inside it: the prompt names
+that folder as the working directory, and the routine's own notes and run
+history live inside it too (under `.abacusai-bot/routines/`, ignored by git)
+instead of in the app's home. Before, the prompt pointed the model at the
+app's folder and its output landed there.
+
+Under Full access the file tools no longer refuse a path outside the
+workspace, and a folder the app pre-allows (a routine's own) is never
+refused. The refusal only sent the model to the shell, which is not fenced.
+
 Every connector on the Connectors page can be connected from the chat: ask
 the agent for one and it puts up the Connect button, whether that is an
 account connector, GitHub (the button opens the same personal-access-token
