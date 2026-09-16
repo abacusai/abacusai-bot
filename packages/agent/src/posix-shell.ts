@@ -29,10 +29,7 @@ import {
 import * as os from "node:os";
 import * as path from "node:path";
 
-import {
-  createLocalBashOperations,
-  type BashOperations,
-} from "@earendil-works/pi-coding-agent";
+import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
 
 import { bundledToolsDir } from "./bundled-tools.js";
 import { mergePath } from "./sandbox/shell.js";
@@ -51,6 +48,24 @@ export const POSIX_SHELL_PAYLOAD_ENV = "ABACUSAI_BOT_POSIX_SHELL_PAYLOAD";
 /** Records what an install produced, so a later start can tell it is intact. */
 const MANIFEST = "install.json";
 const MANIFEST_VERSION = 1;
+
+/**
+ * pi's `BashOperations`, spelled here rather than imported: this module is on
+ * the package's public surface, and a pi type there drags pi-ai's model data
+ * into the declaration build, which cannot load it.
+ */
+export interface ShellOperations {
+  exec: (
+    command: string,
+    cwd: string,
+    options: {
+      onData: (data: Buffer) => void;
+      signal?: AbortSignal;
+      timeout?: number;
+      env?: NodeJS.ProcessEnv;
+    }
+  ) => Promise<{ exitCode: number | null }>;
+}
 
 /** Where the shell lives once materialised. */
 export interface PosixShell {
@@ -473,7 +488,7 @@ export function posixShellEnv(
  */
 export function posixShellOperations(
   shell: PosixShell | undefined = posixShell()
-): BashOperations | null {
+): ShellOperations | null {
   if (shell == null) return null;
   const local = createLocalBashOperations({ shellPath: shell.sh });
 
