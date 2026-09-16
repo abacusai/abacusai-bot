@@ -89,36 +89,41 @@ describe("connector calls", () => {
     pi.messages
       .filter((m) => m.customType === "calite-budget")
       .map((m) => String(m.content));
-  const gmail = (i: number) =>
-    call("abacus-connectors_Gmail_Tool", {
-      action: "search_email",
-      q: `q${i}`,
-    });
 
-  it("reminds the model what they cost on every fifth consecutive call, without blocking any", async () => {
+  it("reminds the model what they cost on every fifth call, without blocking any", async () => {
     const pi = withBudgets();
     await pi.fire("agent_start", {});
     const decisions: unknown[] = [];
     for (let i = 0; i < 12; i++)
-      decisions.push(await pi.fire("tool_call", gmail(i)));
+      decisions.push(
+        await pi.fire(
+          "tool_call",
+          call("abacus-connectors_Gmail_Tool", {
+            action: "search_email",
+            q: `q${i}`,
+          })
+        )
+      );
 
     expect(decisions.every((d) => d === undefined)).toBe(true);
     expect(steers(pi)).toHaveLength(2);
-    expect(steers(pi)[0]).toContain("last 5 tool calls");
+    expect(steers(pi)[0]).toContain("5 connector calls");
     expect(steers(pi)[0]).toContain("10 credits");
     expect(steers(pi)[0]).toMatch(/complete the task now/);
-    expect(steers(pi)[1]).toContain("last 10 tool calls");
+    expect(steers(pi)[1]).toContain("10 connector calls");
   });
 
-  it("starts the count over at any other tool, and at each run", async () => {
+  it("counts only connector tools, and starts over each run", async () => {
     const pi = withBudgets();
     await pi.fire("agent_start", {});
-    for (let i = 0; i < 4; i++) await pi.fire("tool_call", gmail(i));
-    await pi.fire("tool_call", call("bash", { command: "cat notes.md" }));
-    for (let i = 4; i < 8; i++) await pi.fire("tool_call", gmail(i));
+    for (let i = 0; i < 4; i++)
+      await pi.fire(
+        "tool_call",
+        call("abacus-connectors_Gmail_Tool", { q: i })
+      );
+    for (let i = 0; i < 5; i++)
+      await pi.fire("tool_call", call("bash", { command: `echo ${i}` }));
     expect(steers(pi)).toHaveLength(0);
-    await pi.fire("tool_call", gmail(8));
-    expect(steers(pi)).toHaveLength(1);
 
     await pi.fire("agent_start", {});
     for (let i = 0; i < 4; i++)
@@ -126,6 +131,8 @@ describe("connector calls", () => {
         "tool_call",
         call("abacus-connectors_Slack_Tool", { q: i })
       );
+    expect(steers(pi)).toHaveLength(0);
+    await pi.fire("tool_call", call("abacus-connectors_Slack_Tool", { q: 99 }));
     expect(steers(pi)).toHaveLength(1);
   });
 });

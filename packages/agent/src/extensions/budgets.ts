@@ -6,8 +6,8 @@
  * told to wrap up and present what it has, at 50 short it is told again and
  * harder, past it the run is stopped with a message that says so.
  * Repetition: the third identical tool call in a run is blocked. Connector
- * calls: every fifth one in a row, the model is reminded what they cost and
- * asked whether it already has enough — no cap, a nudge. Temperature
+ * calls: every fifth one, the model is reminded what they cost and asked
+ * whether it already has enough — no cap, a nudge. Temperature
  * (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off" to disable) when unset.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -21,7 +21,6 @@ const REPEAT_LIMIT = 3;
 const CONNECTOR_TOOL_PREFIX = "abacus-connectors_";
 /** Billed per call, flat; a cheap model treats them like a free grep unless told. */
 const CONNECTOR_CALL_CREDITS = 10;
-/** Consecutive connector calls; any other tool in between starts the count over. */
 const CONNECTOR_REMINDER_EVERY = 5;
 
 /** Why the budget stopped the current run, or null. Cleared as the next run starts. */
@@ -65,7 +64,7 @@ const finalPrompt = (turns: number, cap: number): string =>
   `message: what is done, where it is, and what is left. No more building, fixing or exploring.`;
 
 const connectorPrompt = (calls: number): string =>
-  `Cost check: the last ${calls} tool calls were all connector calls, and each one costs ` +
+  `Cost check: this run has made ${calls} connector calls, and each one costs ` +
   `${CONNECTOR_CALL_CREDITS} credits. Make sure you are being efficient — do not redo searches ` +
   `or re-fetch what you already have — and check whether you can complete the task now with the ` +
   `information you already hold. If you can, finish; if not, make the fewest further calls that ` +
@@ -133,9 +132,7 @@ export default function (pi: ExtensionAPI) {
     }
     if (RESAMPLES_LIVE_STATE.has(event.toolName)) return;
 
-    if (!event.toolName.startsWith(CONNECTOR_TOOL_PREFIX)) {
-      connectorCalls = 0;
-    } else {
+    if (event.toolName.startsWith(CONNECTOR_TOOL_PREFIX)) {
       connectorCalls++;
       if (connectorCalls % CONNECTOR_REMINDER_EVERY === 0)
         pi.sendMessage(
