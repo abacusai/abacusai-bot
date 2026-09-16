@@ -84,6 +84,59 @@ describe("repeating a call that samples live state", () => {
  * over. Now the model is told to wrap up and present at 100 short, told
  * again at 50 short, and the stop carries a message written for the user.
  */
+describe("connector calls", () => {
+  const steers = (pi: ReturnType<typeof fakePi>) =>
+    pi.messages
+      .filter((m) => m.customType === "calite-budget")
+      .map((m) => String(m.content));
+
+  it("reminds the model what they cost on every fifth call, without blocking any", async () => {
+    const pi = withBudgets();
+    await pi.fire("agent_start", {});
+    const decisions: unknown[] = [];
+    for (let i = 0; i < 12; i++)
+      decisions.push(
+        await pi.fire(
+          "tool_call",
+          call("abacus-connectors_Gmail_Tool", {
+            action: "search_email",
+            q: `q${i}`,
+          })
+        )
+      );
+
+    expect(decisions.every((d) => d === undefined)).toBe(true);
+    expect(steers(pi)).toHaveLength(2);
+    expect(steers(pi)[0]).toContain("5 connector calls");
+    expect(steers(pi)[0]).toContain("10 credits");
+    expect(steers(pi)[0]).toMatch(/complete the task now/);
+    expect(steers(pi)[1]).toContain("10 connector calls");
+  });
+
+  it("counts only connector tools, and starts over each run", async () => {
+    const pi = withBudgets();
+    await pi.fire("agent_start", {});
+    for (let i = 0; i < 4; i++)
+      await pi.fire(
+        "tool_call",
+        call("abacus-connectors_Gmail_Tool", { q: i })
+      );
+    for (let i = 0; i < 5; i++)
+      await pi.fire("tool_call", call("bash", { command: `echo ${i}` }));
+    expect(steers(pi)).toHaveLength(0);
+
+    await pi.fire("agent_start", {});
+    for (let i = 0; i < 4; i++)
+      await pi.fire(
+        "tool_call",
+        call("abacus-connectors_Slack_Tool", { q: i })
+      );
+    expect(steers(pi)).toHaveLength(0);
+    await pi.fire("tool_call", call("abacus-connectors_Slack_Tool", { q: 99 }));
+    expect(steers(pi)).toHaveLength(1);
+  });
+});
+
 describe("a run that runs long", () => {
   afterEach(() => {
     delete process.env.ABACUSAI_BOT_TURN_CAP;
