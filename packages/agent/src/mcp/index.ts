@@ -220,6 +220,17 @@ const noServers = (error: string, expected = false): ConnectedMcp => {
   return { clients: [], statuses: [], routes: new Map(), tools: [] };
 };
 
+/**
+ * Gateway tools this agent does not take, by server: they arrive whenever the
+ * account has the service attached, and here a better path exists. GitHub is
+ * `gh` in bash on the user's own token (github-prompt.ts) — private repos as
+ * far as the token reaches, nothing billed per call — where the gateway's
+ * tools bill every read and end scoped to public repos.
+ */
+const GATEWAY_TOOLS_SUPERSEDED_LOCALLY: Record<string, ReadonlySet<string>> = {
+  "abacus-connectors": new Set(["Git_Tool", "Github_Tool"]),
+};
+
 export async function connectMcpServers(
   configPath: string | undefined
 ): Promise<ConnectedMcp> {
@@ -368,6 +379,7 @@ export async function connectMcpServers(
     result.clients.push(client);
 
     for (const tool of client.tools) {
+      if (GATEWAY_TOOLS_SUPERSEDED_LOCALLY[name]?.has(tool.name)) continue;
       const qualified = qualify(name, tool, config.isBuiltin === true);
 
       result.routes.set(qualified, { client, toolName: tool.name });
