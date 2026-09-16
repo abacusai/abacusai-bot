@@ -6,14 +6,18 @@
 import type { CronJob, CronTrigger } from "./cron-store";
 import type { RoutineRunRecord } from "./routine-runs-store";
 
-/** What a fire is told about the runs before it. */
+/** What a fire is told about the runs before it, and where it stands. */
 export interface RoutineMemory {
   /** The routine's own folder; `runs/` inside holds one file per run. */
   dir: string;
+  /**
+   * Where the run's file tools resolve paths: the project the routine was set
+   * up for, with `dir` inside it, or `dir` itself when there is none. Named
+   * outright, or a model told only about `dir` writes its output there.
+   */
+  workingDirectory: string;
   runs: number;
   lastRun: RoutineRunRecord | null;
-  /** False for a routine made against a project, which reaches it by path. */
-  isWorkingDirectory: boolean;
   workspaces: string[];
 }
 
@@ -71,22 +75,25 @@ export const buildRoutineFirePrompt = (
           "```"
         );
     }
+    const inOwnFolder = memory.workingDirectory === memory.dir;
     lines.push(
-      memory.isWorkingDirectory
-        ? `This folder is your working directory: ${memory.dir}. Your earlier`
-        : `Your folder is ${memory.dir} — you are working in a project, so`,
-      memory.isWorkingDirectory
-        ? `runs (${memory.runs} on file) are in runs/, one file each, newest`
-        : `reach it by path. Your earlier runs (${memory.runs} on file) are in`,
-      memory.isWorkingDirectory
-        ? "last by name, and notes.md is yours to keep notes in for your next"
-        : `${memory.dir}/runs, one file each, newest last by name, and`,
-      memory.isWorkingDirectory
-        ? "run. Read them if you need what happened before; skip them if you"
-        : `${memory.dir}/notes.md is yours to keep notes in for your next run.`,
-      memory.isWorkingDirectory
-        ? "do not."
-        : "Read them if you need what happened before; skip them if you do not.",
+      ...(inOwnFolder
+        ? [
+            `This folder is your working directory: ${memory.dir}. Your earlier`,
+            `runs (${memory.runs} on file) are in runs/, one file each, newest`,
+            "last by name, and notes.md is yours to keep notes in for your next",
+            "run. Read them if you need what happened before; skip them if you",
+            "do not.",
+          ]
+        : [
+            `Your working directory is ${memory.workingDirectory}, the project`,
+            "this routine was set up for: anything you create goes there unless",
+            `the instruction names another place. Your own records live inside`,
+            `it at ${memory.dir}: your earlier runs (${memory.runs} on file) are`,
+            `in ${memory.dir}/runs, one file each, newest last by name, and`,
+            `${memory.dir}/notes.md is yours to keep notes in for your next run.`,
+            "Read them if you need what happened before; skip them if you do not.",
+          ]),
       "Read notes.md first if it exists, and write it when something is worth",
       "carrying over.",
       // Said outright: a model reasoning from its working directory can decide
