@@ -2,27 +2,26 @@ import { ArrowRight, Check, Link2, Loader2 } from "lucide-react";
 import { useEffect, useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { MessagingPlatformId } from "#shared/messaging";
-
 import {
   CONNECTORS,
-  type AbacusConnector,
+  connectUi,
   type ConnectorDefinition,
-  type MessagingConnector,
+  type PlatformConnector,
 } from "../../connectors";
-import { cn } from "../../lib/cn";
-import { ConnectorLogo } from "../settings/connector-logo";
 import {
-  MessagingConnectorDialog,
-  isMessagingPlatformConnected,
-  useMessaging,
-} from "../settings/messaging-connectors";
+  isConnected,
+  statusOf,
+  useConnectorStatuses,
+} from "../../hooks/use-connector-statuses";
+import { cn } from "../../lib/cn";
+import { useConnectFlow } from "../connectors/connect-flow";
+import { ConnectorLogo } from "../settings/connector-logo";
 import { Button } from "../ui";
 
 /**
- * Attach the tools you already work in. Every tile attaches in place: a
- * browser hop for the account connectors, the gateway dialog for messaging.
- * The tiles come from the connector catalog, so there is no second list.
+ * Attach the tools you already work in. Every tile attaches in place through
+ * the same flow as the Connectors page — a browser hop, a pairing dialog —
+ * and the tiles come from the registry, so there is no second list.
  */
 
 /** The four this step leads with; messaging first, since an agent you can text is a different product. */
@@ -42,8 +41,8 @@ const OFFERED: ConnectorDefinition[] = OFFERED_IDS.flatMap((id) =>
 
 /** The rest of the account connectors, shown in place on request. */
 const MORE_CONNECTORS = CONNECTORS.filter(
-  (connector): connector is AbacusConnector =>
-    connector.auth === "abacus" && !isOffered(connector)
+  (connector): connector is PlatformConnector =>
+    connector.kind === "platform" && !isOffered(connector)
 );
 
 export const ConnectorsStep = ({
@@ -59,56 +58,36 @@ export const ConnectorsStep = ({
   dots: ReactNode;
 }): JSX.Element => {
   const { t } = useTranslation();
-
-  const [connected, setConnected] = useState<Set<string>>(new Set());
-  const [available, setAvailable] = useState<Set<string> | null>(null);
-  /** The service whose browser hop is in flight; the hop is single-flight. */
+  const { statuses, loaded, refresh } = useConnectorStatuses();
+  const flow = useConnectFlow();
+  /** The connector whose browser hop is in flight; the hop is single-flight. */
   const [attaching, setAttaching] = useState<string | null>(null);
   /** Has the user asked for the rest of the catalog on this screen? */
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The messaging tiles connect through the gateway rather than a browser hop:
-  // the dialog carries WhatsApp's QR and the bot-token fields.
-  const messaging = useMessaging();
-  const [messagingDialog, setMessagingDialog] =
-    useState<MessagingPlatformId | null>(null);
-
-  /** What the platform says is attached. */
-  const refresh = async (): Promise<void> => {
-    const snapshot = await window.api.agent.listAbacusConnectors();
-    if (snapshot.ok !== true) return;
-    setConnected(new Set(Object.keys(snapshot.connected)));
-    setAvailable(new Set(snapshot.available.map((item) => item.service)));
-  };
-
-  useEffect(() => {
-    void refresh();
-  }, []);
 
   // Leaving the step abandons any connect in flight, or the loopback listener
   // holds its port for the full five-minute window.
-  useEffect(
-    () => () => {
-      void window.api?.agent?.cancelAbacusConnector?.();
-    },
-    []
-  );
+  useEffect(() => () => flow.cancel(), [flow]);
 
   /**
    * Give up on the hop in flight: it resolves on the loopback ping or after
    * five minutes, and every tile is disabled until it does.
    */
   const cancelAttach = (): void => {
-    void window.api?.agent?.cancelAbacusConnector?.();
+    flow.cancel();
     setAttaching(null);
   };
 
-  const attach = async (connector: AbacusConnector): Promise<void> => {
-    const service = connector.abacusService;
-    setAttaching(service);
+  const attach = async (connector: ConnectorDefinition): Promise<void> => {
+    // Only a browser hop is single-flight and worth a spinner; a dialog is
+    // its own affair.
+    const hop = connectUi(connector) === "browser-hop";
+    if (hop && attaching != null) cancelAttach();
+    if (hop) setAttaching(connector.id);
     setError(null);
     try {
-      const result = await window.api.agent.connectAbacusConnector(service);
+      const result = await flow.start(connector);
       if (result.ok === true) {
         await refresh();
         return;
@@ -118,42 +97,26 @@ export const ConnectorsStep = ({
     } finally {
       // Only stand down if this hop still owns the spinner: clicking another
       // tile cancels this one, and that cancellation resolves this promise.
-      setAttaching((current) => (current === service ? null : current));
+      setAttaching((current) => (current === connector.id ? null : current));
     }
   };
 
-  const openMessaging = (connector: MessagingConnector): void => {
-    if (attaching != null) cancelAttach();
-    // Connecting is what starts a linked-device platform, so enable on open.
-    void messaging.connectPlatform(connector.messagingPlatform);
-    setMessagingDialog(connector.messagingPlatform);
-  };
-
-  // Connected means CONNECTED (a live socket, a scanned QR), never the stored
-  // enable flag, which survives its own credentials being cleared.
-  const isTileConnected = (connector: ConnectorDefinition): boolean =>
-    connector.auth === "messaging"
-      ? isMessagingPlatformConnected(
-          messaging.snapshot,
-          connector.messagingPlatform
-        )
-      : connector.auth === "abacus"
-        ? connected.has(connector.abacusService)
-        : false;
-
-  // A connector the account cannot offer is dropped rather than shown failing.
+  // A connector the account cannot offer is dropped rather than shown failing
+  // — once the statuses are in; until then, every tile.
   const tiles = OFFERED.filter(
     (connector) =>
-      connector.auth !== "abacus" ||
-      available == null ||
-      available.has(connector.abacusService)
+      connector.kind !== "platform" ||
+      !loaded ||
+      statusOf(statuses, connector.id).reason !== "not-offered"
   );
 
-  // The messaging tiles live in the gateway snapshot, not in `connected`.
-  const hasConnected = connected.size > 0 || tiles.some(isTileConnected);
+  const hasConnected = CONNECTORS.some((connector) =>
+    isConnected(statuses, connector.id)
+  );
 
   return (
     <div className="@container flex flex-col" data-id="onboarding-connectors">
+      {flow.dialogs}
       <div className="flex items-center justify-between">
         <Button
           variant="link"
@@ -183,20 +146,18 @@ export const ConnectorsStep = ({
         data-id="onboarding-connectors-grid"
       >
         {tiles.map((connector) => {
-          const isConnected = isTileConnected(connector);
-          const isAttaching =
-            connector.auth === "abacus" &&
-            attaching === connector.abacusService;
+          const connected = isConnected(statuses, connector.id);
+          const isAttaching = attaching === connector.id;
 
           return (
             <div
               key={connector.id}
               data-id={`onboarding-connector-${connector.id}`}
-              data-connected={isConnected ? "" : undefined}
+              data-connected={connected ? "" : undefined}
               title={connector.description}
               className={cn(
                 "border-border bg-card/60 flex flex-col items-center gap-3 rounded-2xl border p-4",
-                isConnected && "border-primary/50"
+                connected && "border-primary/50"
               )}
             >
               <span className="flex size-12 items-center justify-center [&_img]:size-10 [&_svg]:size-10">
@@ -212,27 +173,23 @@ export const ConnectorsStep = ({
                 variant="outline"
                 size="sm"
                 data-id={`onboarding-connector-${connector.id}-connect`}
-                disabled={isConnected}
-                onClick={() =>
-                  connector.auth === "messaging"
-                    ? openMessaging(connector)
-                    : void attach(connector as AbacusConnector)
-                }
+                disabled={connected}
+                onClick={() => void attach(connector)}
                 className={cn(
                   "w-full",
-                  isConnected
+                  connected
                     ? "border-transparent bg-emerald-500/10 text-emerald-700 disabled:opacity-100 dark:text-emerald-400"
                     : "text-primary border-primary/40"
                 )}
               >
                 {isAttaching ? (
                   <Loader2 className="size-3.5 animate-spin" />
-                ) : isConnected ? (
+                ) : connected ? (
                   <Check className="size-3.5" />
                 ) : (
                   <Link2 className="size-3.5" />
                 )}
-                {isConnected
+                {connected
                   ? t("onboarding.connectorsConnectedCta")
                   : t("onboarding.connectorsConnectCta")}
               </Button>
@@ -261,7 +218,7 @@ export const ConnectorsStep = ({
           data-id="onboarding-connectors-all"
         >
           {MORE_CONNECTORS.map((connector) => {
-            const isConnected = connected.has(connector.abacusService);
+            const connected = isConnected(statuses, connector.id);
 
             return (
               <Button
@@ -269,7 +226,7 @@ export const ConnectorsStep = ({
                 variant="outline"
                 size="sm"
                 data-id={`onboarding-connector-${connector.id}-connect`}
-                disabled={isConnected}
+                disabled={connected}
                 onClick={() => void attach(connector)}
                 className="h-auto justify-start gap-2 py-2"
               >
@@ -279,7 +236,7 @@ export const ConnectorsStep = ({
                 <span className="truncate text-xs font-medium">
                   {connector.name}
                 </span>
-                {isConnected && (
+                {connected && (
                   <Check className="ml-auto size-3.5 text-emerald-600" />
                 )}
               </Button>
@@ -295,14 +252,6 @@ export const ConnectorsStep = ({
         >
           {error}
         </div>
-      )}
-
-      {messagingDialog != null && (
-        <MessagingConnectorDialog
-          platformId={messagingDialog}
-          messaging={messaging}
-          onClose={() => setMessagingDialog(null)}
-        />
       )}
 
       {/* One button on; the label says whether anything was attached. */}

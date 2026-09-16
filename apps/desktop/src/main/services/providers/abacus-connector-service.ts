@@ -2,6 +2,7 @@ import crypto from "crypto";
 import http from "http";
 import type { AddressInfo } from "net";
 
+import { connectorForService } from "@abacus-ai/connectors/registry";
 import { shell } from "electron";
 
 import type {
@@ -99,19 +100,11 @@ const abacusApi = async (
   (await abacusApiCall(method, httpMethod, body)).result;
 
 /**
- * Platform connectors this app never uses. GitHub is a personal access token
- * on the GitHub card instead (`gh` in bash, private repos, no per-call
- * billing); the platform's GitHub App ends scoped to public repos and bills
- * every read. Dropped here, the one place the catalog enters, so no card,
- * Connect button, environment notice or `connect_connector` can reach it.
- */
-export const UNUSED_PLATFORM_CONNECTORS: ReadonlySet<string> = new Set([
-  "githubuser",
-]);
-
-/**
- * Shape the two platform responses into the snapshot the renderer consumes.
- * Exported for tests: this is the only non-trivial mapping in the service.
+ * Shape the two platform responses into the snapshot the app consumes. Only
+ * services the registry has an entry for come through, in either list: the
+ * registry is the allowlist, and this is the one place the platform's catalog
+ * enters the app. (GitHub, for one, is a token on its own card here, and the
+ * platform's GitHub App never appears.) Exported for tests.
  */
 export const buildConnectorsSnapshot = (
   validAgentConnectors: unknown,
@@ -125,7 +118,7 @@ export const buildConnectorsSnapshot = (
     for (const [service, config] of Object.entries(
       validAgentConnectors as Record<string, unknown>
     )) {
-      if (UNUSED_PLATFORM_CONNECTORS.has(service.toLowerCase())) continue;
+      if (connectorForService(service) == null) continue;
       const record =
         config != null && typeof config === "object"
           ? (config as Record<string, unknown>)
@@ -165,7 +158,7 @@ export const buildConnectorsSnapshot = (
       if (
         service.length > 0 &&
         connectorId.length > 0 &&
-        !UNUSED_PLATFORM_CONNECTORS.has(service)
+        connectorForService(service) != null
       ) {
         connected[service] = connectorId;
         // The platform's label ("Gmail - ada@example.com") is kept whole
@@ -178,22 +171,6 @@ export const buildConnectorsSnapshot = (
   }
 
   return { ok: true, available, connected, accounts };
-};
-
-/**
- * Services the platform has listed as available at any point this run.
- * `_listValidAgentConnectors` sometimes answers with a fraction of the
- * catalog, and a shrink is never the account losing connectors mid-session,
- * so listings are unioned. The platform stays the authority on what attaches.
- */
-const seenAvailable = new Map<string, AbacusConnectorInfo>();
-
-export const withSeenAvailable = (
-  snapshot: AbacusConnectorsSnapshot
-): AbacusConnectorsSnapshot => {
-  if (!snapshot.ok) return snapshot;
-  for (const item of snapshot.available) seenAvailable.set(item.service, item);
-  return { ...snapshot, available: [...seenAvailable.values()] };
 };
 
 export const listAbacusConnectors =
@@ -220,7 +197,7 @@ export const listAbacusConnectors =
         accounts: {},
       };
     }
-    return withSeenAvailable(buildConnectorsSnapshot(valid, active));
+    return buildConnectorsSnapshot(valid, active);
   };
 
 const DISCONNECT_FAILED = "Could not disconnect. Please try again.";

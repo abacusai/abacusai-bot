@@ -5,7 +5,11 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const GMAIL_TOOL = "abacus-connectors_Gmail_Tool";
+import { connectorToolMeta } from "../mcp/index.js";
+
+/** The Gmail tool, whatever pi-side name it was registered under. */
+const isGmailTool = (toolName: string): boolean =>
+  connectorToolMeta(toolName)?.tool === "Gmail_Tool";
 
 const HTML_BODY_ACTIONS = new Set(["send_email", "create_draft_email"]);
 const BULK_ACTIONS = new Set(["send_bulk_emails", "create_bulk_draft_emails"]);
@@ -244,7 +248,7 @@ export function formatGmailInput(input: GmailInput): boolean {
 
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event) => {
-    if (event.toolName !== GMAIL_TOOL) return;
+    if (!isGmailTool(event.toolName)) return;
     // Arguments are changed in place; that is the contract for this hook.
     formatGmailInput(event.input as GmailInput);
   });

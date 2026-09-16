@@ -113,6 +113,27 @@ describe("connector calls", () => {
     expect(steers(pi)[1]).toContain("10 connector calls");
   });
 
+  it("blocks the second identical connector call, pointing at the result already in context", async () => {
+    const pi = withBudgets();
+    await pi.fire("agent_start", {});
+    const same = call("abacus-connectors_Gmail_Tool", {
+      action: "search_email",
+      query: "from:anup",
+    });
+    expect(await pi.fire("tool_call", same)).toBeUndefined();
+    const second = (await pi.fire("tool_call", same)) as {
+      block?: boolean;
+      reason?: string;
+    };
+    expect(second.block).toBe(true);
+    expect(second.reason).toContain("already made this exact");
+    expect(second.reason).toContain("10 credits");
+    // A tool the registry does not take is not a connector call at all.
+    const git = call("abacus-connectors_Git_Tool", { action: "get_repo" });
+    await pi.fire("tool_call", git);
+    expect(await pi.fire("tool_call", git)).toBeUndefined();
+  });
+
   it("counts only connector tools, and starts over each run", async () => {
     const pi = withBudgets();
     await pi.fire("agent_start", {});

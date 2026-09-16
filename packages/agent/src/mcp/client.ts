@@ -13,6 +13,8 @@ export interface McpToolInfo {
   name: string;
   description?: string;
   inputSchema?: Record<string, unknown>;
+  /** Whatever the server attached (MCP `_meta`); the gateway puts pricing here. */
+  _meta?: Record<string, unknown>;
 }
 
 interface JsonRpcResponse {

@@ -1,16 +1,21 @@
 /**
- * The connectors marketplace, around the one part of it that is not a config
- * write: attaching an Abacus.AI connector.
+ * The connectors page, around the parts that are not a straight status read:
+ * connecting through the one flow, and the browser hop that flow runs for a
+ * platform connector.
  *
- * That flow is single-flight in the main process — starting one connect
+ * That hop is single-flight in the main process — starting one connect
  * cancels any other — and the panel has to show that truth rather than a card
  * per click. It also has to let go of a connect the user walked away from,
  * because the listener waiting for it holds a loopback port for five minutes.
+ * And a token card connects from the same page through the same dialog the
+ * chat uses.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import type { JSX } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { ConnectorStatuses } from "#shared/contracts";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -21,6 +26,7 @@ vi.mock("sonner", () => ({
     error: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 
@@ -42,13 +48,13 @@ vi.mock("../../hooks/use-mcp-runtime", () => ({
   }),
 }));
 
-import { CONNECTORS, type AbacusConnector } from "../../connectors";
+import { CONNECTORS, type PlatformConnector } from "../../connectors";
 
 const { ConnectorsPanel } = await import("./connectors-panel");
 
-/** Two connector cards from the real catalog, so the ids are the shipped ones. */
+/** Two platform cards from the real registry, so the ids are the shipped ones. */
 const connectors = CONNECTORS.filter(
-  (connector): connector is AbacusConnector => connector.auth === "abacus"
+  (connector): connector is PlatformConnector => connector.kind === "platform"
 ).slice(0, 2);
 
 const byId = (id: string): HTMLElement => {
@@ -58,10 +64,13 @@ const byId = (id: string): HTMLElement => {
   return node;
 };
 
-const cancelAbacusConnector = vi.fn(async () => undefined);
-/** Resolvers for each in-flight connect, keyed by service. */
+const cancelConnectorConnect = vi.fn(async () => undefined);
+const submitConnectorFields = vi.fn(async () => ({ ok: true }) as const);
+const disconnectConnector = vi.fn(async () => ({ ok: true }) as const);
+/** Resolvers for each in-flight connect, keyed by connector id. */
 let pending: Map<string, (result: unknown) => void>;
-let connectAbacusConnector: ReturnType<typeof vi.fn>;
+let connectConnector: ReturnType<typeof vi.fn>;
+let statuses: ConnectorStatuses;
 let queryClient: QueryClient;
 
 /** The gateway snapshot the panel's messaging section renders from. */
@@ -109,37 +118,36 @@ beforeEach(() => {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   pending = new Map();
-  cancelAbacusConnector.mockClear();
+  cancelConnectorConnect.mockClear();
+  submitConnectorFields.mockClear();
+  disconnectConnector.mockClear();
+  statuses = Object.fromEntries(
+    CONNECTORS.map((connector) => [connector.id, { state: "available" }])
+  );
 
-  connectAbacusConnector = vi.fn(
-    (service: string) =>
+  connectConnector = vi.fn(
+    (id: string) =>
       new Promise((resolve) => {
         // Starting a connect cancels whatever was already running — the main
         // process does exactly this, and it is what makes the state tricky.
         for (const [other, resolveOther] of pending) {
-          if (other === service) continue;
+          if (other === id) continue;
           resolveOther({ ok: false, error: "cancelled", cancelled: true });
           pending.delete(other);
         }
-        pending.set(service, resolve);
+        pending.set(id, resolve);
       })
   );
 
   (globalThis.window as unknown as { api: unknown }).api = {
     openExternal: vi.fn(),
-    getHomeDir: async () => "/home/test",
+    hasGoogleChrome: async () => true,
     agent: {
-      listMcpServers: async () => [],
-      listAbacusConnectors: async () => ({
-        ok: true,
-        available: connectors.map((connector) => ({
-          service: connector.abacusService,
-          name: connector.name,
-        })),
-        connected: {},
-      }),
-      connectAbacusConnector,
-      cancelAbacusConnector,
+      listConnectorStatuses: async () => statuses,
+      connectConnector,
+      submitConnectorFields,
+      disconnectConnector,
+      cancelConnectorConnect,
       refreshMcpServers: async () => undefined,
       startAbacusAuth: async () => ({ ok: true }),
       getMessagingSnapshot: async () => messagingSnapshot,
@@ -164,12 +172,12 @@ const mount = async (): Promise<{ unmount: () => void }> => {
 
 describe("two connectors, one browser hop", () => {
   it("says Adding… on the running card, and leaves it clickable", async () => {
-    const [first] = connectors as [AbacusConnector, AbacusConnector];
+    const [first] = connectors as [PlatformConnector, PlatformConnector];
     await mount();
 
     fireEvent.click(byId(`connector-add-${first.id}`));
     await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledWith(first.abacusService)
+      expect(connectConnector).toHaveBeenCalledWith(first.id)
     );
 
     // Still an Add button — nothing has connected — reading "Adding…", and
@@ -182,28 +190,27 @@ describe("two connectors, one browser hop", () => {
     ).toBeNull();
 
     fireEvent.click(button);
-    await waitFor(() => expect(cancelAbacusConnector).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledTimes(2)
-    );
+    await waitFor(() => expect(cancelConnectorConnect).toHaveBeenCalled());
+    await waitFor(() => expect(connectConnector).toHaveBeenCalledTimes(2));
   });
 
   it("lets a second card take over, cancelling the first out loud", async () => {
-    const [first, second] = connectors as [AbacusConnector, AbacusConnector];
+    const [first, second] = connectors as [
+      PlatformConnector,
+      PlatformConnector,
+    ];
     await mount();
 
     fireEvent.click(byId(`connector-add-${first.id}`));
-    await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledTimes(1)
-    );
+    await waitFor(() => expect(connectConnector).toHaveBeenCalledTimes(1));
     expect(byId(`connector-add-${second.id}`).hasAttribute("disabled")).toBe(
       false
     );
 
     fireEvent.click(byId(`connector-add-${second.id}`));
-    await waitFor(() => expect(cancelAbacusConnector).toHaveBeenCalled());
+    await waitFor(() => expect(cancelConnectorConnect).toHaveBeenCalled());
     await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledWith(second.abacusService)
+      expect(connectConnector).toHaveBeenCalledWith(second.id)
     );
     // The first hop was resolved as cancelled by the stub; its card is back
     // on Add with no error of its own to show.
@@ -218,14 +225,12 @@ describe("two connectors, one browser hop", () => {
   });
 
   it("puts a failure on the card and gives the button back", async () => {
-    const [first] = connectors as [AbacusConnector, AbacusConnector];
+    const [first] = connectors as [PlatformConnector, PlatformConnector];
     await mount();
 
     fireEvent.click(byId(`connector-add-${first.id}`));
-    await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledTimes(1)
-    );
-    pending.get(first.abacusService)?.({ ok: false, error: "boom" });
+    await waitFor(() => expect(connectConnector).toHaveBeenCalledTimes(1));
+    pending.get(first.id)?.({ ok: false, error: "boom" });
 
     await waitFor(() =>
       expect(byId(`connector-error-${first.id}`).textContent).toContain(
@@ -234,6 +239,62 @@ describe("two connectors, one browser hop", () => {
     );
     expect(byId(`connector-add-${first.id}`).hasAttribute("disabled")).toBe(
       false
+    );
+  });
+});
+
+describe("what main says is connected", () => {
+  it("files a card under Installed on main's word alone, and removes through main", async () => {
+    statuses["abacus-gmailuser"] = {
+      state: "connected",
+      account: "Gmail - ada@example.com",
+    };
+    statuses.github = { state: "connected" };
+    await mount();
+
+    await waitFor(() => byId("connector-remove-abacus-gmailuser"));
+    expect(
+      byId("connectors-section-installed").querySelector(
+        '[data-id="connector-card-github"]'
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(byId("connector-remove-github"));
+    await waitFor(() =>
+      expect(disconnectConnector).toHaveBeenCalledWith("github")
+    );
+  });
+
+  it("hides a platform card the account does not offer", async () => {
+    statuses["abacus-jira"] = { state: "unavailable", reason: "not-offered" };
+    await mount();
+
+    expect(
+      document.querySelector('[data-id="connector-card-abacus-jira"]')
+    ).toBeNull();
+    expect(
+      document.querySelector('[data-id="connector-card-abacus-gmailuser"]')
+    ).toBeTruthy();
+  });
+});
+
+describe("a token card", () => {
+  it("opens the fields dialog and connects through it — no browser hop", async () => {
+    await mount();
+
+    fireEvent.click(byId("connector-add-github"));
+    await waitFor(() => byId("connector-credential-prompt"));
+    expect(connectConnector).not.toHaveBeenCalled();
+
+    fireEvent.change(byId("connector-credential-GH_TOKEN"), {
+      target: { value: "ghp_secret" },
+    });
+    fireEvent.click(byId("connector-credential-submit"));
+
+    await waitFor(() =>
+      expect(submitConnectorFields).toHaveBeenCalledWith("github", {
+        GH_TOKEN: "ghp_secret",
+      })
     );
   });
 });
@@ -295,6 +356,7 @@ describe("the messaging section", () => {
         ? { ...platform, enabled: true, state: "connected" }
         : platform
     );
+    statuses["messaging-whatsapp"] = { state: "connected" };
     await mount();
     await waitFor(() => byId("connector-remove-messaging-whatsapp"));
 
@@ -314,10 +376,10 @@ describe("walking away from a connect", () => {
     const view = await mount();
 
     fireEvent.click(byId(`connector-add-${connectors[0]!.id}`));
-    await waitFor(() => expect(connectAbacusConnector).toHaveBeenCalled());
+    await waitFor(() => expect(connectConnector).toHaveBeenCalled());
 
     view.unmount();
 
-    expect(cancelAbacusConnector).toHaveBeenCalled();
+    expect(cancelConnectorConnect).toHaveBeenCalled();
   });
 });

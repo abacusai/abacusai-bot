@@ -14,8 +14,8 @@ import type { ConversationKey } from "#shared/conversation-scope";
 
 type EmitEvent = (event: IpcEvent) => void;
 
-/** Who a just-connected service is connected as, when the platform says. */
-type DescribeAccount = (service: string) => Promise<string | null>;
+/** Who a just-connected connector is connected as, when the platform says. */
+type DescribeAccount = (connectorId: string) => Promise<string | null>;
 
 /** What the tool call resolves to, in the model's own reading. */
 export const CONNECTOR_OUTCOME_TEXT: Record<
@@ -46,7 +46,7 @@ export class ConnectorGate {
   private readonly pending = new Map<
     string,
     {
-      service: string;
+      connectorId: string;
       label: string;
       request: ConnectorRequest;
       /** What became usable on connect, when it is not MCP tools. */
@@ -75,7 +75,7 @@ export class ConnectorGate {
    * Resolves with the sentence the model should read, not a status code.
    */
   async ask(input: {
-    service: string;
+    connectorId: string;
     label: string;
     reason?: string;
     /** The conversation that asked. See ConnectorRequest.conversationKey. */
@@ -87,7 +87,7 @@ export class ConnectorGate {
 
     const request: ConnectorRequest = {
       requestId,
-      service: input.service,
+      connectorId: input.connectorId,
       label: input.label,
       conversationKey: input.conversationKey,
       ...(input.reason != null && input.reason.length > 0
@@ -97,7 +97,7 @@ export class ConnectorGate {
 
     return await new Promise<string>((resolve) => {
       this.pending.set(requestId, {
-        service: input.service,
+        connectorId: input.connectorId,
         label: input.label,
         request,
         ...(input.connectedHint != null
@@ -128,7 +128,7 @@ export class ConnectorGate {
     const detail =
       request.outcome === "connected"
         ? ((this.describeAccount != null
-            ? await this.describeAccount(waiting.service).catch(() => null)
+            ? await this.describeAccount(waiting.connectorId).catch(() => null)
             : null) ?? undefined)
         : request.error;
     waiting.resolve(

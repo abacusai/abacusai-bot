@@ -1,21 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
 import type { JSX } from "react";
 import { useTranslation } from "react-i18next";
 
-import { CONNECTORS, type AbacusConnector } from "../../connectors";
-import { abacusConnectorsQueryOptions } from "../../hooks/use-connected-connectors";
+import type { ConnectorStatuses } from "#shared/contracts";
+
+import { CONNECTORS, type PlatformConnector } from "../../connectors";
+import { useConnectorStatuses } from "../../hooks/use-connector-statuses";
 import { ConnectorLogo } from "../settings/connector-logo";
 
 /**
- * The Abacus connectors behind the `abacus-connectors` MCP server, by name: a
- * bare "3 tools" pill says nothing to someone who connected nothing here.
+ * The platform connectors behind the `abacus-connectors` MCP server, by name:
+ * a bare "3 tools" pill says nothing to someone who connected nothing here.
+ * Registry entries only — the registry is the allowlist, so a service
+ * attached elsewhere that this app does not take is not behind this server.
  */
 export const AbacusConnectorsSummary = (): JSX.Element => {
   const { t } = useTranslation();
-  const query = useQuery(abacusConnectorsQueryOptions);
-  const state = query.data;
+  const { statuses, loaded } = useConnectorStatuses();
 
-  if (state == null)
+  if (!loaded)
     return (
       <div
         className="text-muted-foreground mt-1 text-xs"
@@ -26,8 +28,18 @@ export const AbacusConnectorsSummary = (): JSX.Element => {
     );
 
   // No listing at all (signed out, platform unreachable) is not "none
-  // attached": the query folds both into an empty set with no catalog.
-  if (state.available == null)
+  // attached": every platform entry reads unavailable then.
+  const platformEntries = CONNECTORS.filter(
+    (connector): connector is PlatformConnector => connector.kind === "platform"
+  );
+  const unreadable = platformEntries.every((connector) => {
+    const status = statuses[connector.id];
+    return (
+      status == null ||
+      (status.state === "unavailable" && status.reason !== "not-offered")
+    );
+  });
+  if (unreadable)
     return (
       <div
         className="text-muted-foreground mt-1 text-xs"
@@ -37,7 +49,7 @@ export const AbacusConnectorsSummary = (): JSX.Element => {
       </div>
     );
 
-  const rows = connectedRows(state.connected, state.names ?? {});
+  const rows = connectedRows(statuses);
   if (rows.length === 0)
     return (
       <div
@@ -54,19 +66,17 @@ export const AbacusConnectorsSummary = (): JSX.Element => {
         {t("mcpManagement.abacusConnectors.title", { count: rows.length })}
       </div>
       <ul className="flex flex-wrap gap-1.5">
-        {rows.map((row) => (
+        {rows.map((connector) => (
           <li
-            key={row.service}
+            key={connector.service}
             className="bg-muted/60 text-foreground inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs"
-            data-id={`mcp-abacus-connector-${row.service}`}
-            title={state.accounts?.[row.service]}
+            data-id={`mcp-abacus-connector-${connector.service}`}
+            title={statuses[connector.id]?.account}
           >
-            {row.connector != null && (
-              <span className="inline-flex size-4 items-center justify-center [&_img]:h-4 [&_img]:w-4">
-                <ConnectorLogo connector={row.connector} />
-              </span>
-            )}
-            {row.name}
+            <span className="inline-flex size-4 items-center justify-center [&_img]:h-4 [&_img]:w-4">
+              <ConnectorLogo connector={connector} />
+            </span>
+            {connector.name}
           </li>
         ))}
       </ul>
@@ -74,32 +84,12 @@ export const AbacusConnectorsSummary = (): JSX.Element => {
   );
 };
 
-type ConnectedRow = {
-  service: string;
-  name: string;
-  connector: AbacusConnector | null;
-};
-
-/** Attached services in catalog order, then unknown ones by platform name. */
-
+/** Attached platform connectors, in registry order. */
 export const connectedRows = (
-  connected: Set<string>,
-  names: Record<string, string>
-): ConnectedRow[] => {
-  const catalog = CONNECTORS.filter(
-    (connector): connector is AbacusConnector => connector.auth === "abacus"
+  statuses: ConnectorStatuses
+): PlatformConnector[] =>
+  CONNECTORS.filter(
+    (connector): connector is PlatformConnector =>
+      connector.kind === "platform" &&
+      statuses[connector.id]?.state === "connected"
   );
-  const rows: ConnectedRow[] = catalog
-    .filter((connector) => connected.has(connector.abacusService))
-    .map((connector) => ({
-      service: connector.abacusService,
-      name: connector.name,
-      connector,
-    }));
-  const known = new Set(rows.map((row) => row.service));
-  for (const service of [...connected].sort()) {
-    if (known.has(service)) continue;
-    rows.push({ service, name: names[service] ?? service, connector: null });
-  }
-  return rows;
-};

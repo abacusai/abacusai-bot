@@ -3,7 +3,9 @@
  *
  * Its turn is suspended inside the tool call while this is on screen, so every
  * path out of the card has to answer — connecting, declining, or a hop that
- * fails. A card that could be left unanswered would hang the agent.
+ * fails. A card that could be left unanswered would hang the agent. And it
+ * connects any registry connector the same way the Connectors page does: a
+ * platform hop, a token dialog for GitHub, a pairing dialog for a chat app.
  */
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { act, type JSX } from "react";
@@ -14,10 +16,17 @@ type Listener = (event: Record<string, unknown>) => void;
 const listeners: Listener[] = [];
 /** What was called, in the order it was called — the point of one test below. */
 const calls: string[] = [];
-const connectAbacusConnector = vi.fn(async () => {
+const connectConnector = vi.fn(async (_id: string) => {
   calls.push("connect");
   return { ok: true } as const;
 });
+const submitConnectorFields = vi.fn(
+  async (_id: string, _values: Record<string, string>) => {
+    calls.push("submit");
+    return { ok: true } as const;
+  }
+);
+const listConnectorStatuses = vi.fn(async () => ({}));
 const respondConnector = vi.fn(async (_request: unknown) => {
   calls.push("respond");
   return undefined;
@@ -26,7 +35,7 @@ const refreshMcpServers = vi.fn(async () => {
   calls.push("refresh");
   return { success: true };
 });
-const cancelAbacusConnector = vi.fn(async () => {
+const cancelConnectorConnect = vi.fn(async () => {
   calls.push("cancel");
 });
 let pendingRequests: Array<Record<string, unknown>> = [];
@@ -52,42 +61,14 @@ vi.mock("../../stores/code-store", () => {
   return { useWorkspaceStore };
 });
 
-/** The token save behind an agent-key connector's dialog. */
-const saveAgentKey = vi.fn(
-  async (_connector: { id: string }, _value: string) => {
-    calls.push("save-key");
-  }
-);
-vi.mock("../settings/agent-key", () => ({
-  useAgentKeySaver: () => saveAgentKey,
-}));
-
-// The real dialog is the Connectors page's; here it is two buttons that
-// stand in for filling the token and for closing without one.
-vi.mock("../settings/credential-prompt", () => ({
-  CredentialPrompt: ({
-    connector,
-    onCancel,
-    onSubmit,
-  }: {
-    connector: { id: string; env?: string[] };
-    onCancel: () => void;
-    onSubmit: (values: Record<string, string>) => void;
-  }) => (
-    <div data-id="stub-credential-prompt" data-connector={connector.id}>
-      <button
-        data-id="stub-credential-submit"
-        onClick={() => onSubmit({ [connector.env?.[0] ?? "TOKEN"]: "ghp_x" })}
-      />
-      <button data-id="stub-credential-cancel" onClick={onCancel} />
-    </div>
-  ),
-}));
-
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, values?: Record<string, string>) =>
-      values?.provider != null ? `${key}:${values.provider}` : key,
+      values?.provider != null
+        ? `${key}:${values.provider}`
+        : values?.name != null
+          ? `${key}:${values.name}`
+          : key,
   }),
 }));
 
@@ -105,18 +86,21 @@ const byId = (id: string): HTMLElement => {
 };
 
 /** The agent asking, as the renderer hears it. */
-const ask = (request: Partial<Record<string, unknown>> = {}): void => {
+const ask = (
+  connectorId = "abacus-slack",
+  label = "Slack",
+  conversationKey = here
+): void => {
   act(() => {
     for (const listener of listeners)
       listener({
         type: "connector-request",
         request: {
           requestId: "req-1",
-          service: "slack",
-          label: "Slack",
+          connectorId,
+          label,
           reason: "to read #general",
-          conversationKey: here,
-          ...request,
+          conversationKey,
         },
       });
   });
@@ -129,16 +113,20 @@ beforeEach(() => {
   pendingRequests = [];
   activeKey.current = here;
   (globalThis.window as unknown as { api: unknown }).api = {
+    openExternal: vi.fn(),
     agent: {
       onEvent: (listener: Listener) => {
         listeners.push(listener);
         return () => listeners.splice(listeners.indexOf(listener), 1);
       },
-      connectAbacusConnector,
+      connectConnector,
+      submitConnectorFields,
+      listConnectorStatuses,
       respondConnector,
       refreshMcpServers,
-      cancelAbacusConnector,
+      cancelConnectorConnect,
       listConnectorRequests,
+      getMessagingSnapshot: async () => null,
     },
   };
   render((<ConnectorRequestCard />) as JSX.Element);
@@ -153,7 +141,7 @@ describe("the connector request card", () => {
     pendingRequests = [
       {
         requestId: "req-9",
-        service: "whatsapp",
+        connectorId: "messaging-whatsapp",
         label: "WhatsApp",
         conversationKey: here,
       },
@@ -165,7 +153,9 @@ describe("the connector request card", () => {
         document.querySelector('[data-id="connector-request"]')
       ).not.toBeNull()
     );
-    expect(byId("connector-request").dataset.service).toBe("whatsapp");
+    expect(byId("connector-request").dataset.connector).toBe(
+      "messaging-whatsapp"
+    );
   });
 
   it("does not duplicate an ask that arrives twice", async () => {
@@ -173,7 +163,7 @@ describe("the connector request card", () => {
     pendingRequests = [
       {
         requestId: "req-1",
-        service: "slack",
+        connectorId: "abacus-slack",
         label: "Slack",
         conversationKey: here,
       },
@@ -196,7 +186,7 @@ describe("the connector request card", () => {
   it("names the service and says why, in the agent's words", () => {
     ask();
 
-    expect(byId("connector-request").dataset.service).toBe("slack");
+    expect(byId("connector-request").dataset.connector).toBe("abacus-slack");
     expect(byId("connector-request").textContent).toContain("to read #general");
     expect(byId("connector-request-connect").textContent).toContain("Slack");
   });
@@ -207,7 +197,7 @@ describe("the connector request card", () => {
     fireEvent.click(byId("connector-request-connect"));
 
     await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledWith("slack")
+      expect(connectConnector).toHaveBeenCalledWith("abacus-slack")
     );
     await waitFor(() =>
       expect(respondConnector).toHaveBeenCalledWith({
@@ -226,6 +216,21 @@ describe("the connector request card", () => {
    * refresh started after the answer is a race it loses, which is how a fresh
    * connect was followed by "Tool ... not found" and a guessed tool name.
    */
+  it("installs a tool server straight from the chat, no dialog in between", async () => {
+    ask("playwright", "Playwright");
+
+    fireEvent.click(byId("connector-request-connect"));
+
+    await waitFor(() =>
+      expect(connectConnector).toHaveBeenCalledWith("playwright")
+    );
+    await waitFor(() =>
+      expect(respondConnector).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: "req-1", outcome: "connected" })
+      )
+    );
+  });
+
   it("reloads the running session's tools before it lets the agent go", async () => {
     ask();
 
@@ -237,6 +242,59 @@ describe("the connector request card", () => {
       sessionId: "sess-1",
     });
     expect(calls).toEqual(["connect", "refresh", "respond"]);
+  });
+
+  /**
+   * The GitHub card takes a token, and the agent asking for GitHub used to
+   * get nothing to click. Now the same dialog the Connectors page shows opens
+   * in the chat, and submitting it resolves the tool call.
+   */
+  it("opens the token dialog in the chat for a credential connector, and answers on submit", async () => {
+    ask("github", "GitHub");
+
+    fireEvent.click(byId("connector-request-connect"));
+
+    await waitFor(() => byId("connector-credential-prompt"));
+    expect(connectConnector).not.toHaveBeenCalled();
+    expect(byId("connector-credential-setup").textContent).toContain(
+      "github.com/settings/tokens"
+    );
+
+    fireEvent.change(byId("connector-credential-GH_TOKEN"), {
+      target: { value: "ghp_secret" },
+    });
+    fireEvent.click(byId("connector-credential-submit"));
+
+    await waitFor(() =>
+      expect(submitConnectorFields).toHaveBeenCalledWith("github", {
+        GH_TOKEN: "ghp_secret",
+      })
+    );
+    await waitFor(() =>
+      expect(respondConnector).toHaveBeenCalledWith({
+        requestId: "req-1",
+        conversationKey: here,
+        outcome: "connected",
+      })
+    );
+    expect(calls).toEqual(["submit", "refresh", "respond"]);
+  });
+
+  it("reads a closed token dialog as declining, not as a failure", async () => {
+    ask("github", "GitHub");
+    fireEvent.click(byId("connector-request-connect"));
+    await waitFor(() => byId("connector-credential-prompt"));
+
+    fireEvent.click(byId("connector-credential-cancel"));
+
+    await waitFor(() =>
+      expect(respondConnector).toHaveBeenCalledWith({
+        requestId: "req-1",
+        conversationKey: here,
+        outcome: "declined",
+      })
+    );
+    expect(submitConnectorFields).not.toHaveBeenCalled();
   });
 
   it("does not reload anything when the hop was declined", async () => {
@@ -260,7 +318,7 @@ describe("the connector request card", () => {
         outcome: "declined",
       })
     );
-    expect(connectAbacusConnector).not.toHaveBeenCalled();
+    expect(connectConnector).not.toHaveBeenCalled();
   });
 
   it("keeps Not now alive mid-hop, and it cancels the browser wait", async () => {
@@ -268,7 +326,7 @@ describe("the connector request card", () => {
     // a card that was all spinner — no way out until the timeout. Declining
     // mid-hop cancels the wait; the cancelled resolution answers the agent.
     let release: (value: { ok: false; cancelled: true }) => void = () => {};
-    connectAbacusConnector.mockReturnValue(
+    connectConnector.mockReturnValue(
       new Promise((resolve) => {
         release = resolve as typeof release;
       }) as never
@@ -276,13 +334,13 @@ describe("the connector request card", () => {
     ask();
     fireEvent.click(byId("connector-request-connect"));
     await waitFor(() =>
-      expect(connectAbacusConnector).toHaveBeenCalledWith("slack")
+      expect(connectConnector).toHaveBeenCalledWith("abacus-slack")
     );
 
     const decline = byId("connector-request-decline");
     expect(decline.hasAttribute("disabled")).toBe(false);
     fireEvent.click(decline);
-    await waitFor(() => expect(cancelAbacusConnector).toHaveBeenCalled());
+    await waitFor(() => expect(cancelConnectorConnect).toHaveBeenCalled());
     // Only the cancel — the answer comes from the hop resolving cancelled,
     // never from the decline click too (that would answer the agent twice).
     expect(respondConnector).not.toHaveBeenCalled();
@@ -297,7 +355,7 @@ describe("the connector request card", () => {
   });
 
   it("reads a cancelled browser hop as declining, not as a failure", async () => {
-    connectAbacusConnector.mockResolvedValue({
+    connectConnector.mockResolvedValue({
       ok: false,
       cancelled: true,
     } as never);
@@ -315,7 +373,7 @@ describe("the connector request card", () => {
   });
 
   it("keeps the card up when the hop fails, so it can be tried again", async () => {
-    connectAbacusConnector.mockResolvedValue({
+    connectConnector.mockResolvedValue({
       ok: false,
       error: "Slack said no",
     } as never);
@@ -328,63 +386,6 @@ describe("the connector request card", () => {
     );
     expect(respondConnector).not.toHaveBeenCalled();
     expect(byId("connector-request-connect")).toBeTruthy();
-  });
-
-  it("opens the token dialog for a connector set up with a key, not a browser hop", async () => {
-    ask({ service: "github", label: "GitHub", reason: "to open a PR" });
-    fireEvent.click(byId("connector-request-connect"));
-
-    await waitFor(() => byId("stub-credential-prompt"));
-    expect(byId("stub-credential-prompt").dataset.connector).toBe("github");
-    expect(connectAbacusConnector).not.toHaveBeenCalled();
-  });
-
-  it("saves the token and reports the connection", async () => {
-    ask({ service: "github", label: "GitHub" });
-    fireEvent.click(byId("connector-request-connect"));
-    await waitFor(() => byId("stub-credential-prompt"));
-
-    fireEvent.click(byId("stub-credential-submit"));
-
-    await waitFor(() => expect(respondConnector).toHaveBeenCalled());
-    expect(saveAgentKey).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "github" }),
-      "ghp_x"
-    );
-    // The key is saved before the agent is told; its next act uses it.
-    expect(calls).toEqual(["save-key", "respond"]);
-    expect(respondConnector).toHaveBeenCalledWith(
-      expect.objectContaining({ requestId: "req-1", outcome: "connected" })
-    );
-    expect(document.querySelector('[data-id="connector-request"]')).toBeNull();
-  });
-
-  it("answers declined when the token dialog is closed without one", async () => {
-    ask({ service: "github", label: "GitHub" });
-    fireEvent.click(byId("connector-request-connect"));
-    await waitFor(() => byId("stub-credential-prompt"));
-
-    fireEvent.click(byId("stub-credential-cancel"));
-
-    await waitFor(() => expect(respondConnector).toHaveBeenCalled());
-    expect(saveAgentKey).not.toHaveBeenCalled();
-    expect(respondConnector).toHaveBeenCalledWith(
-      expect.objectContaining({ outcome: "declined" })
-    );
-  });
-
-  it("reports a save that failed, so the agent does not wait on it", async () => {
-    saveAgentKey.mockRejectedValueOnce(new Error("disk full"));
-    ask({ service: "github", label: "GitHub" });
-    fireEvent.click(byId("connector-request-connect"));
-    await waitFor(() => byId("stub-credential-prompt"));
-
-    fireEvent.click(byId("stub-credential-submit"));
-
-    await waitFor(() => expect(respondConnector).toHaveBeenCalled());
-    expect(respondConnector).toHaveBeenCalledWith(
-      expect.objectContaining({ outcome: "failed", error: "disk full" })
-    );
   });
 
   it("takes the card down when the agent's turn ends without it", () => {
@@ -412,7 +413,7 @@ describe("which conversation the card belongs to", () => {
           type: "connector-request",
           request: {
             requestId: "req-scoped",
-            service: "telegram",
+            connectorId: "messaging-telegram",
             label: "Telegram",
             conversationKey,
           },

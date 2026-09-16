@@ -22,6 +22,9 @@ const GROUPS = [
   "bots",
   "browser",
   "config",
+  // The connector registry's status table and connect flow — one answer to
+  // "is it connected?" and one way to connect, for every kind.
+  "connectors",
   "conversation",
   "debug-sync",
   "diagnostics",

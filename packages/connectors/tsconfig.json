@@ -1,0 +1,12 @@
+{
+  "extends": "@abacus-ai/config/typescript/node",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": true,
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.tmp/connectors.tsbuildinfo",
+    "noEmit": true
+  },
+  "include": ["src", "tsdown.config.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

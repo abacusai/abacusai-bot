@@ -9,17 +9,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
+
 /** Matches ATTACHMENT_SCHEMA_MARKER on the gateway. */
 const ATTACHMENT_MARKER = "x_abacus_attachment";
 
 /**
- * The only server whose tools get the attachment treatment; must match
- * ABACUS_CONNECTORS_SERVER_NAME in the desktop's shared/contracts.ts (this
- * package cannot import from the app tree). Without the gate any configured
- * MCP server could stamp the marker and have workspace files read into its
- * calls.
+ * The only server whose tools get the attachment treatment: the connector
+ * gateway, named once in the registry. Without the gate any configured MCP
+ * server could stamp the marker and have workspace files read into its calls.
  */
-export const ATTACHMENT_TRUSTED_SERVER = "abacus-connectors";
+export const ATTACHMENT_TRUSTED_SERVER = GATEWAY_SERVER_NAME;
 
 /** Matches the gateway's inbound cap; checked here to save the round trip. */
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
