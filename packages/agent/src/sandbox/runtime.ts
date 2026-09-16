@@ -382,6 +382,21 @@ export async function settledDenials(
   return found;
 }
 
+/**
+ * Stop the runtime's proxies and log monitor. They hold the event loop open,
+ * so an agent whose stdin closed would otherwise never exit; a run that
+ * never started it has nothing to stop.
+ */
+export async function shutdownRuntime(): Promise<void> {
+  if (starting === null) return;
+  try {
+    await SandboxManager.reset();
+  } catch {
+    // Exiting anyway.
+  }
+  starting = null;
+}
+
 /** Tests only. */
 export async function resetRuntime(): Promise<void> {
   await SandboxManager.reset();
