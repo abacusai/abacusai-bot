@@ -84,7 +84,7 @@ export class RendererStateStore {
 
     this.#state.clear();
     this.#totalBytes = 0;
-    // Not debounced: delete-all-data erases userData right after this.
+    // Not debounced: a clear is rare and callers expect it on disk at once.
     this.#dirty = true;
     this.flushSync();
   }

@@ -1185,15 +1185,6 @@
     "credits": "Credits this month",
     "creditsValue": "{{used}} of {{granted}} used",
     "members": "Team members",
-    "dangerZone": "Danger zone",
-    "deleteAll": "Delete all data",
-    "deleteAllDescription": "Removes ~/.abacusai-bot — your API keys, every conversation, what the agent remembers about you, your profiles and installed skills. Uninstalling the app leaves this folder alone; this is the way to erase it.",
-    "deleteAllConfirmTitle": "Delete all data?",
-    "deleteAllConfirmBody": "Your API keys, conversations, memory, profiles and installed skills are deleted from this computer and cannot be recovered. Files in your projects are untouched. The app restarts as if it were newly installed.",
-    "deleteAllCancel": "Keep my data",
-    "deleteAllConfirm": "Delete everything",
-    "deleteAllPending": "Deleting and restarting…",
-    "deleteAllFailed": "Could not delete the data directory. Your data is unchanged.",
     "notSignedInShort": "साइन इन नहीं किया"
   },
   "routines": {

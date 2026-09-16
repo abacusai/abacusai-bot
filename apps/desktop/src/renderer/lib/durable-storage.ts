@@ -116,14 +116,3 @@ export const durableStorage: DurableStorage = createDurableStorage(
   typeof window === "undefined" ? undefined : window.api?.durableState,
   localStorageOrUndefined()
 );
-
-/** Everything the renderer persisted, durable store and legacy origin both. */
-export const clearAllRendererState = (): void => {
-  durableStorage.clear();
-
-  try {
-    window.localStorage.clear();
-  } catch {
-    // The durable store is what matters; the legacy origin is best-effort.
-  }
-};
