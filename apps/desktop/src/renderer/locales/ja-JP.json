@@ -1717,6 +1717,7 @@
       "reviews": "承認 {{approved}} 件 · 変更リクエスト {{changes}} 件 · 保留中 {{requested}} 件"
     },
     "premiumUpgrade": {
+      "continueOn": "Continue on {{model}} (free)",
       "cta": "Upgrade",
       "exhaustedNote": "Upgrade to get premium models and more premium features",
       "exhaustedTitle": "You've used up your free credits",

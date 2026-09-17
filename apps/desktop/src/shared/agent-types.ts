@@ -37,6 +37,9 @@ export interface ToolResult {
 interface NotificationAction {
   type: string;
   link?: string;
+  /** `switch-model` with a target: the card offers this model by name. */
+  model?: string;
+  label?: string;
 }
 
 export interface StreamingNestedToolCall {
@@ -170,7 +173,7 @@ export type AgentEvent =
           message?: string;
           type?: string;
           [k: string]: unknown;
-          actions?: Array<{ type: string; link?: string }>;
+          actions?: NotificationAction[];
         };
       };
     }

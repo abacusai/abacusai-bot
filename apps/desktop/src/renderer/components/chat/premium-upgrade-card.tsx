@@ -17,12 +17,17 @@ export const PremiumUpgradeCard = ({
   exhausted = false,
   dataId,
   onBeforeOpen,
+  freeModels = [],
+  onPickModel,
 }: {
   /** True in the chat: the copy says the credits are gone, not just upsells. */
   exhausted?: boolean;
   dataId: string;
   /** Runs before the browser hop — closing the popup the card sits in. */
   onBeforeOpen?: () => void;
+  /** Models the platform still serves for free; each one is a way to keep going. */
+  freeModels?: FreeModelSwitch[];
+  onPickModel?: (modelId: string) => void;
 }): JSX.Element => {
   const { t } = useTranslation();
   const markExhausted = useCreditsStore((state) => state.markExhausted);
@@ -57,6 +62,19 @@ export const PremiumUpgradeCard = ({
           )}
         </span>
       </span>
+      {onPickModel != null &&
+        freeModels.map((choice) => (
+          <Button
+            key={choice.model}
+            variant="secondary"
+            size="sm"
+            data-id={`${dataId}-free-model`}
+            className="shrink-0"
+            onClick={() => onPickModel(choice.model)}
+          >
+            {t("workspace.premiumUpgrade.continueOn", { model: choice.label })}
+          </Button>
+        ))}
       <Button
         size="sm"
         data-id={`${dataId}-cta`}
@@ -72,6 +90,22 @@ export const PremiumUpgradeCard = ({
     </div>
   );
 };
+
+/** A `switch-model` action naming its target: what the card can offer. */
+export interface FreeModelSwitch {
+  model: string;
+  label: string;
+}
+
+/** The named switches among an error's actions — the free models to offer. */
+export const freeModelSwitches = (
+  actions?: Array<{ type: string; model?: string; label?: string }>
+): FreeModelSwitch[] =>
+  (actions ?? []).flatMap((action) =>
+    action.type === "switch-model" && action.model != null
+      ? [{ model: action.model, label: action.label ?? action.model }]
+      : []
+  );
 
 /** Whether an error's actions ask for the upgrade card instead of a red line. */
 export const wantsUpgradeCard = (actions?: Array<{ type: string }>): boolean =>

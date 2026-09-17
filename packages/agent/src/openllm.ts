@@ -129,9 +129,6 @@ const SOURCE_RANK: Record<string, number> = {
  */
 const ABACUS_CHAT_ROUTER = "route-llm";
 
-/** Abacus's cost-optimising code router: the best cheap driver, tried first. */
-const ABACUS_CODE_ROUTER_LOW = "route-llm-code-low";
-
 /**
  * Families with a record of driving an agent loop, best first, matched against
  * the OpenRouter model id (`deepseek/deepseek-chat-v3:free`).
@@ -180,26 +177,14 @@ const inPool = (choice: ModelChoice): boolean => {
 };
 
 /**
- * Order within the Abacus slice. The code router first, since it already routes
- * across the cheap ladder server-side (paid plans pool only it); then the free
- * plan's drivers: the vision Flash (it can see attached images), Union Alpha
- * (a $0 stealth preview — bills nothing, and still serves once the balance is
- * gone), Muse, then the text-only Flashes. Anything unlisted trails.
+ * Order within the Abacus slice: the platform's, from the catalog's
+ * `route-llm-open` entry (see providers.ts), so a reorder, a new $0 model or
+ * a retired one never waits on an app release. Unranked members trail.
  */
-const ABACUS_POOL_ORDER = [
-  ABACUS_CODE_ROUTER_LOW,
-  "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
-  "stealth/union-alpha",
-  "muse-spark-1.3",
-  "deepseek-ai/DeepSeek-V4.1-Flash",
-  "deepseek-ai/DeepSeek-V4-Flash-0731",
-];
-
 const abacusRank = (choice: ModelChoice): number => {
   if (choice.provider !== "abacus") return 0;
-  const index = ABACUS_POOL_ORDER.indexOf(choice.modelId);
 
-  return index === -1 ? ABACUS_POOL_ORDER.length : index;
+  return choice.poolRank ?? Number.MAX_SAFE_INTEGER;
 };
 
 /**

@@ -87,48 +87,25 @@ describe("which models are in the pool", () => {
     ).toEqual([]);
   });
 
-  it("puts the vision Flash ahead of plain Flash in the pool", () => {
-    // Same family, same price — and it can see the images users attach.
-    // Label order alone put plain Flash first, which is how a free-tier
-    // default stayed blind to attachments.
-    const candidates = openLlmCandidates([
-      choice({
-        id: "abacus/deepseek-ai/DeepSeek-V4-Flash-0731",
-        free: false,
-        inputCost: 0.22,
-        poolEligible: true,
-      }),
-      choice({
-        id: "abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
-        free: false,
-        inputCost: 0.22,
-        poolEligible: true,
-      }),
-    ]);
-
-    expect(candidates.map((c) => c.modelId)).toEqual([
-      "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
-      "deepseek-ai/DeepSeek-V4-Flash-0731",
-    ]);
-  });
-
-  it("orders the free plan's Abacus drivers: vision Flash, Union Alpha, Muse, then the text Flashes", () => {
-    // Union Alpha is a $0 stealth preview: second so one failure lands on the
-    // driver that costs nothing and outlives the balance; Muse before the
-    // text-only Flashes. Neither family nor context window decides this.
-    const abacus = (modelId: string, free = false) =>
+  it("orders the Abacus slice as the platform ranked it, unranked last", () => {
+    // The catalog's `route-llm-open` entry carries the order (providers.ts
+    // turns it into poolRank), so a reorder, a new $0 model or a retired one
+    // never waits on a release. Neither family nor context window has a say.
+    const abacus = (modelId: string, poolRank?: number) =>
       choice({
         id: `abacus/${modelId}`,
-        free,
-        inputCost: free ? 0 : 0.22,
+        free: false,
+        inputCost: 0.22,
         poolEligible: true,
+        ...(poolRank == null ? {} : { poolRank }),
       });
     const candidates = openLlmCandidates([
-      abacus("deepseek-ai/DeepSeek-V4-Flash-0731"),
-      abacus("muse-spark-1.3"),
-      abacus("deepseek-ai/DeepSeek-V4.1-Flash"),
-      abacus("stealth/union-alpha", true),
-      abacus("deepseek-ai/DeepSeek-V4-Flash-Vision-Exp"),
+      abacus("deepseek-ai/DeepSeek-V4-Flash-0731", 4),
+      abacus("muse-spark-1.3", 2),
+      abacus("deepseek-ai/DeepSeek-V4.1-Flash", 3),
+      abacus("stealth/union-alpha", 1),
+      abacus("some/newcomer"),
+      abacus("deepseek-ai/DeepSeek-V4-Flash-Vision-Exp", 0),
     ]);
 
     expect(candidates.map((c) => c.modelId)).toEqual([
@@ -137,6 +114,7 @@ describe("which models are in the pool", () => {
       "muse-spark-1.3",
       "deepseek-ai/DeepSeek-V4.1-Flash",
       "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "some/newcomer",
     ]);
   });
 
@@ -151,12 +129,14 @@ describe("which models are in the pool", () => {
         free: false,
         inputCost: 0.22,
         poolEligible: true,
+        poolRank: 0,
       }),
       choice({
         id: "abacus/deepseek-ai/DeepSeek-V4-Flash-0731",
         free: false,
         inputCost: 0.22,
         poolEligible: true,
+        poolRank: 1,
       }),
       choice({ id: "abacus/claude-sonnet-5", free: false, inputCost: 2 }),
       choice({ id: "abacus/claude-opus-5", free: false, inputCost: 5 }),
@@ -182,29 +162,6 @@ describe("which models are in the pool", () => {
         }),
       ])
     ).toEqual([]);
-  });
-
-  it("leads the Abacus slice with the code router, not a concrete driver", () => {
-    // route-llm-code-low already routes across the cheap ladder server-side,
-    // so it is the strongest single pick the subscription offers.
-    const candidates = openLlmCandidates([
-      choice({
-        id: "abacus/deepseek-ai/DeepSeek-V4-Flash-0731",
-        free: false,
-        inputCost: 0.22,
-        contextWindow: 1_000_000,
-        poolEligible: true,
-      }),
-      choice({
-        id: "abacus/route-llm-code-low",
-        free: false,
-        inputCost: 0.22,
-        contextWindow: 1_000_000,
-        poolEligible: true,
-      }),
-    ]);
-
-    expect(candidates[0]?.modelId).toBe("route-llm-code-low");
   });
 
   // A model with no published price arrives from the catalog as cost zero,

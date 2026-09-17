@@ -37,7 +37,7 @@ import {
   type AgentEvent,
   type DesktopEvent,
 } from "./protocol.js";
-import { AbacusBotSession } from "./session.js";
+import { AbacusBotSession, OPENLLM_POOL_EXHAUSTED_MESSAGE } from "./session.js";
 
 let provider: FakeProvider;
 let home: string;
@@ -1100,13 +1100,15 @@ describe("OpenLLM", () => {
     // and the error names what the provider said.
     expect(harness.agent("turn_complete").length).toBeGreaterThan(0);
 
-    const reported = harness.agent("error").at(0)?.error.message ?? "";
+    const reported = harness.agent("error").at(0)?.error;
 
-    // Named and actionable, without the provider's billing prose: this line is
-    // the whole answer the user gets for the turn.
-    expect(reported).toMatch(/rate-limited \(429\)/);
-    expect(reported).toMatch(/switch to a different model/i);
-    expect(reported).not.toMatch(/https?:\/\//);
+    // One fixed line and the switch card: under the router the user never
+    // chose a model, so no provider's sentence about one is shown, and the
+    // way out is a button rather than a red line.
+    expect(reported?.message).toBe(OPENLLM_POOL_EXHAUSTED_MESSAGE);
+    expect(reported?.message).not.toMatch(/429|upstream|https?:\/\//);
+    expect(reported?.detail).toBeUndefined();
+    expect(reported?.actions).toEqual([{ type: "switch-model" }]);
   });
 
   it("deactivates on a concrete pick and reactivates on the router id", async () => {

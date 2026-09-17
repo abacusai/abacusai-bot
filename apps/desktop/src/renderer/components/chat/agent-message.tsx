@@ -22,7 +22,11 @@ import { BUBBLE_MAX_WIDTH } from "./bubble-width";
 import { turnDeliverables } from "./deliverables";
 import { DeliverablesPill } from "./deliverables-pill";
 import { FeedbackRow } from "./feedback-row";
-import { PremiumUpgradeCard, wantsUpgradeCard } from "./premium-upgrade-card";
+import {
+  PremiumUpgradeCard,
+  freeModelSwitches,
+  wantsUpgradeCard,
+} from "./premium-upgrade-card";
 import type {
   AgentRenderItem,
   ChatRenderItem,
@@ -170,6 +174,7 @@ const AgentTurnContent = ({
   agentStatus,
   onRetry,
   onSwitchModel,
+  onPickModel,
   creditsTotal = 0,
   onOpenSubtask,
   statusLabel,
@@ -180,6 +185,8 @@ const AgentTurnContent = ({
   agentStatus?: AgentStatus;
   onRetry?: () => void;
   onSwitchModel?: () => void;
+  /** Pick a named model straight from a card, no picker hop. */
+  onPickModel?: (modelId: string) => void;
   creditsTotal?: number;
   onOpenSubtask?: (subtaskId: string) => void;
   statusLabel?: string | null;
@@ -246,6 +253,8 @@ const AgentTurnContent = ({
                 key={`${item.id}-${idx}`}
                 dataId="chat-upgrade-card"
                 exhausted
+                freeModels={freeModelSwitches(item.actions)}
+                onPickModel={onPickModel}
               />
             );
           }
@@ -491,6 +500,7 @@ export const ChatMessageList = ({
   agentStatus,
   onRetry,
   onSwitchModel,
+  onPickModel,
   creditsTotal = 0,
   onOpenSubtask,
   statusLabel,
@@ -502,6 +512,7 @@ export const ChatMessageList = ({
   agentStatus?: AgentStatus;
   onRetry?: () => void;
   onSwitchModel?: () => void;
+  onPickModel?: (modelId: string) => void;
   creditsTotal?: number;
   onOpenSubtask?: (subtaskId: string) => void;
   statusLabel?: string | null;
@@ -549,6 +560,7 @@ export const ChatMessageList = ({
               agentStatus={isCurrentTurn ? agentStatus : undefined}
               onRetry={onRetry}
               onSwitchModel={onSwitchModel}
+              onPickModel={onPickModel}
               creditsTotal={creditsTotal}
               onOpenSubtask={onOpenSubtask}
               statusLabel={isCurrentTurn ? statusLabel : undefined}

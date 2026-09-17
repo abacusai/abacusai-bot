@@ -95,6 +95,7 @@ import {
   AgentStatus,
   type AgentEvent,
   type DesktopEvent,
+  type NotificationAction,
   type PermissionDecision,
   type PermissionRequest,
   type SkillMetadata,
@@ -1235,12 +1236,19 @@ export class AbacusBotSession {
       return;
     }
 
+    // Under the router the user never chose a model, so a provider's sentence
+    // about one is noise: the pool is out, and the card says what to do. Out
+    // of credits keeps its own card.
+    const poolExhausted = this.openLlmActive && !isOutOfCredits(message);
+
     this.emitAgentEvent({
       type: "error",
       error: {
-        message: terminalProviderMessage(message),
+        message: poolExhausted
+          ? OPENLLM_POOL_EXHAUSTED_MESSAGE
+          : terminalProviderMessage(message),
         code: "turn_failed",
-        ...providerDetail(message),
+        ...(poolExhausted ? {} : providerDetail(message)),
         ...this.errorActionsFor(message),
       },
     });
@@ -1253,16 +1261,39 @@ export class AbacusBotSession {
    */
   private upgradeActionsFor(
     raw: string
-  ):
-    | { actions: Array<{ type: string; link: string }> }
-    | Record<string, never> {
+  ): { actions: NotificationAction[] } | Record<string, never> {
     const provider = this.session?.model?.provider;
     const abacusServed = provider === "abacus" || this.openLlmActive;
     if (isOutOfCredits(raw) || isAuthFailure(raw)) this.providersStale = true;
     if (!abacusServed || !isOutOfCredits(raw)) return {};
     return {
-      actions: [{ type: "upgrade-abacus", link: ABACUS_PLAN_URL }],
+      actions: [
+        { type: "upgrade-abacus", link: ABACUS_PLAN_URL },
+        ...this.freeModelSwitches(),
+      ],
     };
+  }
+
+  /**
+   * The models the platform still serves once the balance is gone, as
+   * switches the upgrade card can offer by name. Read off the catalog, so
+   * which they are is the platform's to change.
+   */
+  private freeModelSwitches(): Array<{
+    type: string;
+    model: string;
+    label: string;
+  }> {
+    const registry = this.registry;
+    if (registry == null) return [];
+
+    return listModels(registry)
+      .filter((choice) => choice.provider === "abacus" && choice.free)
+      .map((choice) => ({
+        type: "switch-model",
+        model: choice.id,
+        label: choice.label,
+      }));
   }
 
   /**
@@ -1271,17 +1302,17 @@ export class AbacusBotSession {
    */
   private errorActionsFor(
     raw: string
-  ):
-    | { actions: Array<{ type: string; link?: string }> }
-    | Record<string, never> {
-    const actions: Array<{ type: string; link?: string }> = [
+  ): { actions: NotificationAction[] } | Record<string, never> {
+    const actions: NotificationAction[] = [
       ...(this.upgradeActionsFor(raw).actions ?? []),
     ];
+    // A pinned model that timed out or is overloaded; or the router with its
+    // whole pool down, where switching is the only move left.
     if (
-      !this.openLlmActive &&
       isProviderFailure(raw) &&
       !isOutOfCredits(raw) &&
-      classifyProviderFailure(raw).remedy.includes("switch")
+      (this.openLlmActive ||
+        classifyProviderFailure(raw).remedy.includes("switch"))
     ) {
       actions.push({ type: "switch-model" });
     }
@@ -1623,11 +1654,9 @@ export class AbacusBotSession {
       this.emitAgentEvent({
         type: "error",
         error: {
-          message: terminalProviderMessage(
-            rotation.failure,
-            "No other free model was left to try."
-          ),
+          message: OPENLLM_POOL_EXHAUSTED_MESSAGE,
           code: "turn_failed",
+          actions: [{ type: "switch-model" }],
         },
       });
       this.finishTurn();
@@ -2102,12 +2131,13 @@ export class AbacusBotSession {
         : undefined;
 
     if (resolved?.model == null) {
+      // The picker is the way out: its free-plan rows connect the sources.
       this.emitAgentEvent({
         type: "error",
         error: {
-          message:
-            "OpenLLM needs at least one source — add an OpenRouter, Google AI Studio, or Abacus.AI key in Settings.",
+          message: OPENLLM_POOL_EMPTY_MESSAGE,
           code: "model_unavailable",
+          actions: [{ type: "switch-model" }],
         },
       });
 
@@ -3165,6 +3195,16 @@ function providerFailureSummary(raw: string): string {
 }
 
 const ABACUS_PLAN_URL = "https://apps.abacus.ai/chatllm/choose-plan/";
+
+/**
+ * What the chat says when the router has nothing left to try. Fixed lines:
+ * under the router the user did not pick a model, so no provider's wording
+ * about one belongs in front of them — the card's button is the answer.
+ */
+export const OPENLLM_POOL_EXHAUSTED_MESSAGE =
+  "All free models are busy right now. Switch to a different model, or try again in a few minutes.";
+export const OPENLLM_POOL_EMPTY_MESSAGE =
+  "RouteLLM - Open has no model to run on yet. Pick a model, or connect Abacus.AI, Google AI Studio or OpenRouter from the model list.";
 
 /** The provider rejected the credential, rather than the account's balance. */
 function isAuthFailure(raw: string): boolean {
