@@ -60,7 +60,8 @@ describe("the bot's bash tool", () => {
     const result = await tool.execute(
       "call-1",
       { command: "echo ok" },
-      undefined as never,
+      undefined,
+      undefined,
       undefined as never
     );
 
