@@ -62,7 +62,7 @@ overrides:
 patchedDependencies:
   ghostty-web@0.4.0: 7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331
   react-tourlight@0.3.0: 150245916c8d1e3dbc7fb87a5a579fe59a7c5d2ebee040d25e6d5aa7d65618ee
-  zigpty@0.2.1: e31fc015adfdf0de37da7bfd03fba599ec84a23f803d9471a3f2c04bb88942f3
+  zigpty@0.2.1: f04ac3f94ba69e1b8ea5494a989b706a9f6e752e6ce0766d82da2d094d54fa86
 
 importers:
 
@@ -217,7 +217,7 @@ importers:
         version: 13.0.2
       zigpty:
         specifier: ^0.2.1
-        version: 0.2.1(patch_hash=e31fc015adfdf0de37da7bfd03fba599ec84a23f803d9471a3f2c04bb88942f3)
+        version: 0.2.1(patch_hash=f04ac3f94ba69e1b8ea5494a989b706a9f6e752e6ce0766d82da2d094d54fa86)
       zustand:
         specifier: ^5.0.10
         version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
@@ -11176,7 +11176,7 @@ snapshots:
       '@yuku-parser/binding-win32-arm64': 0.8.7
       '@yuku-parser/binding-win32-x64': 0.8.7
 
-  zigpty@0.2.1(patch_hash=e31fc015adfdf0de37da7bfd03fba599ec84a23f803d9471a3f2c04bb88942f3): {}
+  zigpty@0.2.1(patch_hash=f04ac3f94ba69e1b8ea5494a989b706a9f6e752e6ce0766d82da2d094d54fa86): {}
 
   zod-to-json-schema@3.25.2(zod@3.25.76):
     dependencies:

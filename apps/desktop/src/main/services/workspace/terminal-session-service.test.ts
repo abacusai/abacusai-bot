@@ -305,26 +305,6 @@ describe("conversation terminal session service", () => {
     }
   });
 
-  it("hands echo and line editing to the shell on a pipe", async () => {
-    // The pipe backend defaults to emulating canonical mode with its own
-    // echo, so every keystroke came back twice: once from it, once from the
-    // shell that was already doing it.
-    const original = Object.getOwnPropertyDescriptor(process, "platform")!;
-    Object.defineProperty(process, "platform", { value: "win32" });
-    const setRawMode = vi.fn();
-
-    try {
-      ptySpawn.mockImplementation(() => ({ ...fakePty(), setRawMode }));
-      const terminals = service();
-
-      await terminals.startSession(draftRequest());
-
-      expect(setRawMode).toHaveBeenCalledOnce();
-    } finally {
-      Object.defineProperty(process, "platform", original);
-    }
-  });
-
   it("ends lines the way a terminal driver would, where there is none", async () => {
     // Windows spawns through a pipe, so nothing translates a bare line feed
     // into a carriage return and one. Output walked diagonally across the

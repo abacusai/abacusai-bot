@@ -234,18 +234,13 @@ export class TerminalSessionService {
           pipe: usesPipe,
         });
 
-        if (!usesPipe) return pty;
-
-        // The pipe backend emulates a terminal in JavaScript, and its default
-        // is canonical mode with its own echo — so every keystroke appeared
-        // twice, once from it and once from the shell, which does its own
-        // echo and its own line editing. Raw mode hands all of that back to
-        // the shell, the way a console does.
-        const raw = pty as TerminalPty & { setRawMode?: () => void };
-        raw.setRawMode?.();
-
         // A pipe has no terminal driver behind it to end lines properly.
-        return carriageReturns(pty);
+        //
+        // Its canonical mode stays on: cmd.exe echoes nothing it reads from a
+        // pipe, only from a console, so the emulation's own echo is the only
+        // thing that puts a keystroke on screen. Turning it off left the
+        // keyboard apparently dead.
+        return usesPipe ? carriageReturns(pty) : pty;
       },
       onOutput: (event) =>
         options.emitTerminalOutput({

@@ -1,5 +1,5 @@
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 8272f163ff3554fed4763aa2141b1f12ddf46615..e6cabe1df23789f822fea7984aa84f764c979e72 100644
+index 8272f163ff3554fed4763aa2141b1f12ddf46615..49e37f2391fff6e3c480d6eaaf737684b52c0503 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -21,7 +21,7 @@ function loadNative() {
@@ -11,17 +11,22 @@ index 8272f163ff3554fed4763aa2141b1f12ddf46615..e6cabe1df23789f822fea7984aa84f76
  const hasNative = native$1 !== null;
  var WriteQueue = class {
  	_queue = [];
-@@ -715,7 +715,12 @@ var PipePty = class extends BasePty {
+@@ -715,6 +715,18 @@ var PipePty = class extends BasePty {
  				}
  			}
  			const sig = SIGNAL_CHARS[byte];
--			if (sig) {
-+			// Windows has no signals. `child.kill()` there is TerminateProcess,
-+			// so Ctrl+C killed the shell outright instead of interrupting what
-+			// it was running, and the byte never reached the child at all. Let
-+			// it through and leave it to the shell, which is what a console
-+			// would do.
-+			if (sig && process.platform !== "win32") {
++			if (sig && process.platform === "win32") {
++				// Windows has no signals: `child.kill()` is TerminateProcess, so
++				// this killed the shell outright rather than interrupting what it
++				// was running. Do to the line what a console does instead — drop
++				// what was typed, say so, and let the shell print a new prompt.
++				// Interrupting a running child needs a console control event,
++				// which needs ConPTY, which is not what this backend is.
++				this._lineBuffer = "";
++				if (this._echoEnabled) this._echoText("^C\r\n");
++				this._writeToChild("\r\n");
++				continue;
++			}
+ 			if (sig) {
  				this._flushLineBuffer();
  				try {
- 					this._child.kill(sig);
