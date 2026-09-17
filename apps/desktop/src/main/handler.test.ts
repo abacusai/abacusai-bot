@@ -114,6 +114,7 @@ beforeEach(() => {
     ensureMcpServer,
     removeMcpServer,
     refreshAgentProviders,
+    syncLogsNow: vi.fn(),
   };
 
   registerIpcHandlers(
