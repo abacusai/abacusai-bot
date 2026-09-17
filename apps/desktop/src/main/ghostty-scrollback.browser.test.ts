@@ -237,14 +237,30 @@ const LAYOUT_SCRIPT = `(async () => {
     );
   }
 
-  term.dispose();
-
-  return {
+  const renderer = term.renderer;
+  const metrics = renderer.getMetrics();
+  const report = {
     hostWidth: host.clientWidth,
     widthAfterFit,
     widthAfterFrames: Math.round(Number.parseFloat(canvas.style.width)),
     colsAfterFrames: cols === term.cols ? cols : -1,
+    // What the renderer itself thinks, so a failure on a machine I cannot
+    // reach says why rather than only that.
+    renderer: {
+      patched: String(renderer.resize).includes("targetWidth"),
+      parentIsHost: canvas.parentElement === host,
+      gridWidth: renderer.gridWidth ?? null,
+      gridCols: renderer.gridCols ?? null,
+      target: renderer.targetWidth ? renderer.targetWidth(term.cols) : null,
+      cellWidth: metrics.width,
+      cols: term.cols,
+      devicePixelRatio: window.devicePixelRatio,
+    },
   };
+
+  term.dispose();
+
+  return report;
 })()`;
 
 interface ViewportReport {
@@ -261,6 +277,7 @@ interface LayoutReport {
   widthAfterFit: number;
   widthAfterFrames: number;
   colsAfterFrames: number;
+  renderer: Record<string, unknown>;
 }
 
 interface SelectionReport {
@@ -312,7 +329,10 @@ describe.skipIf(!availability.usable)(
       // then is the browser's business, and it cost a CI failure to learn
       // that it differs between platforms. What the patch owes is that the
       // renderer corrects itself and then holds, which is this.
-      expect(layout.widthAfterFrames).toBe(800);
+      expect(
+        layout.widthAfterFrames,
+        `renderer said ${JSON.stringify(layout.renderer)}`
+      ).toBe(800);
       expect(layout.colsAfterFrames).toBeGreaterThan(0);
     });
 
