@@ -2,6 +2,7 @@ import { ArrowUpRight, Sparkles } from "lucide-react";
 import { useEffect, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { NotificationAction } from "../../conversation/agent-types";
 import { useCreditsStore } from "../../stores/credits-store";
 import { Button } from "../ui";
 
@@ -99,7 +100,7 @@ export interface FreeModelSwitch {
 
 /** The named switches among an error's actions — the free models to offer. */
 export const freeModelSwitches = (
-  actions?: Array<{ type: string; model?: string; label?: string }>
+  actions?: NotificationAction[]
 ): FreeModelSwitch[] =>
   (actions ?? []).flatMap((action) =>
     action.type === "switch-model" && action.model != null
@@ -108,5 +109,5 @@ export const freeModelSwitches = (
   );
 
 /** Whether an error's actions ask for the upgrade card instead of a red line. */
-export const wantsUpgradeCard = (actions?: Array<{ type: string }>): boolean =>
+export const wantsUpgradeCard = (actions?: NotificationAction[]): boolean =>
   actions?.some((action) => action.type === "upgrade-abacus") === true;

@@ -338,6 +338,9 @@ export interface ToolResult<TData extends ToolResultData = ToolResultData> {
 export interface NotificationAction {
   type: string;
   link?: string;
+  /** `switch-model` with a target: the card offers this model by name. */
+  model?: string;
+  label?: string;
 }
 
 /** Branch-version navigation for a bot turn with sibling regenerations/edits. */
