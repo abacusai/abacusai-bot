@@ -7,6 +7,9 @@
 
 ## Unreleased
 
+When a free model fails, the router now tries every other model in the pool
+before giving up, instead of stopping after five switches.
+
 A routine set up for a folder now runs entirely inside it: the prompt names
 that folder as the working directory, and the routine's own notes and run
 history live inside it too (under `.abacusai-bot/routines/`, ignored by git)
