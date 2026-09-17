@@ -39,6 +39,10 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/posix-shell-install",
   // A platform-and-build table with no imports at all.
   "@abacus-ai/agent/sandbox-support",
+  // Checked the same way: the built bundle is 4 kB whose only imports are
+  // node's `fs`, `fs/promises` and `path`. It is the atomic write every store
+  // on both sides of the app shares, and no agent runtime stands behind it.
+  "@abacus-ai/agent/atomic-file",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

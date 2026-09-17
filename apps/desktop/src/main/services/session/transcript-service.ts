@@ -7,6 +7,8 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+
 import { abacusBotHome } from "../../paths";
 
 const TRANSCRIPTS_DIR = (): string => path.join(abacusBotHome(), "transcripts");
@@ -68,10 +70,7 @@ export class TranscriptService {
       segments,
     };
     try {
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      const tmp = `${filePath}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(payload), "utf-8");
-      fs.renameSync(tmp, filePath);
+      writeFileAtomicSync(filePath, JSON.stringify(payload));
     } catch (error) {
       console.error("[transcripts] failed to write transcript", error);
       return;
