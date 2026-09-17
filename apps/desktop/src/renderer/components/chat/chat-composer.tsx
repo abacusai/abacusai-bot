@@ -89,6 +89,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { BranchPicker } from "./branch-picker";
 import { ComposerTasksBadge, ComposerTasksDrawer } from "./composer-tasks";
+import { DictationButton } from "./dictation-button";
 import { FileMentionPicker, type FileMentionItem } from "./file-mention-picker";
 import { ModelPicker } from "./model-picker";
 import { RuntimeModePicker } from "./runtime-mode-picker";
@@ -2321,6 +2322,12 @@ export const ChatComposer = ({
       ? (branchQuery.data.error ?? "Unable to read branches.")
       : null;
   const compactComposerExpanded = isMultiline || attachments.length > 0;
+  // Spoken words land after whatever is typed, with one space between.
+  const appendDictation = (text: string): void => {
+    const glue = inputValue.length === 0 || /\s$/.test(inputValue) ? "" : " ";
+    onInputValueChange(`${inputValue}${glue}${text}`);
+  };
+
   const composerControlRadius =
     compact && !compactComposerExpanded ? "rounded-full" : "rounded-lg";
   // Send stays available mid-turn: a message sent then steers the turn.
@@ -2362,6 +2369,10 @@ export const ChatComposer = ({
                 onAction={handleAttachAction}
                 asPlus
                 buttonClassName={composerControlRadius}
+              />
+              <DictationButton
+                onText={appendDictation}
+                className={composerControlRadius}
               />
             </div>
           )}
@@ -2772,6 +2783,7 @@ export const ChatComposer = ({
               {/* The + moved beside the box when compact, so the menu here
                   would be the same action twice. */}
               {!compact && <AttachMenu onAction={handleAttachAction} />}
+              {!compact && <DictationButton onText={appendDictation} />}
             </div>
           )}
           <div className="ms-auto flex shrink-0 items-center">

@@ -30,6 +30,7 @@ import type {
   RoutineUpdateInput,
 } from "./routines";
 import type { AbacusBotSettings } from "./settings";
+import type { WhisperDownloadProgress, WhisperFileResult } from "./voice";
 
 // 'deleted' is a tombstone: the workspace was removed by the user but its
 // sessions are kept readable. It can't run an agent or accept new sessions.
@@ -695,6 +696,10 @@ export type IpcEvent =
       provider: string;
       /** Present when main knows whether the provider now has a credential. */
       configured?: boolean;
+    } & IpcEventBase)
+  | ({
+      type: "whisper-download-progress";
+      progress: WhisperDownloadProgress;
     } & IpcEventBase)
   // A sign-out stashed every session or a sign-in restored a stash; no
   // per-session event can say so.
@@ -1932,6 +1937,11 @@ export interface AgentApi {
     target?: "install" | "dm"
   ) => Promise<void>;
   installMaestro: () => Promise<InstallMaestroResult>;
+  /** One Whisper model file by its Hugging Face URL, from disk or the network. */
+  fetchWhisperFile: (url: string) => Promise<WhisperFileResult>;
+  isWhisperCached: () => Promise<boolean>;
+  /** macOS asks the user once; elsewhere this is always true. */
+  requestMicrophoneAccess: () => Promise<boolean>;
   onDeviceStreamChunk: (
     callback: (chunk: DeviceStreamChunk) => void
   ) => () => void;
