@@ -68,7 +68,9 @@ const DangerZone = (): JSX.Element | null => {
       <Item variant="outline" data-id="profile-default-mode">
         <ItemContent>
           <ItemTitle>{t("profile.permissionsTitle")}</ItemTitle>
-          <ItemDescription>{t("profile.permissionsDescription")}</ItemDescription>
+          <ItemDescription>
+            {t("profile.permissionsDescription")}
+          </ItemDescription>
           {current === AgentMode.Auto && (
             <ItemDescription
               className="text-amber-600 dark:text-amber-400"

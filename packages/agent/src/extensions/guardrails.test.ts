@@ -685,10 +685,11 @@ describe("bashWriteTargets", () => {
 });
 
 /**
- * The fence around the workspace is for the ask-first modes. Under Full
- * access the user has said the whole machine is in bounds, and a folder the
- * host pre-allowed is in bounds in every mode; blocking either only sends the
- * model to the shell, which is not fenced.
+ * Whether a write may leave the workspace is the permission gate's question
+ * (permissions.ts): it asks in the ask-first modes, lets a new file into the
+ * user's folders in Auto, and lets everything through under Full access.
+ * This guard refuses none of it, or an outside write the user approved on
+ * the card would still fail here; what it keeps is the protected paths.
  */
 describe("writing outside the workspace", () => {
   let outside: string;
@@ -709,20 +710,12 @@ describe("writing outside the workspace", () => {
   const target = (): string =>
     path.join(os.homedir(), ".guardrails-test-outside", "x.md");
 
-  it("is refused in the default mode", async () => {
+  it("is not this guard's to refuse, even in the default mode", async () => {
     setCurrentMode(AgentMode.Normal);
 
-    const blocked = (await pi.fire(
-      "tool_call",
-      writeCall(target()),
-      ctx()
-    )) as {
-      block: boolean;
-      reason: string;
-    };
+    const blocked = await pi.fire("tool_call", writeCall(target()), ctx());
 
-    expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("outside the workspace");
+    expect(blocked).toBeUndefined();
   });
 
   it("is allowed under Full access", async () => {

@@ -4,6 +4,7 @@ import fs from "node:fs";
  * callbacks and routes handler requests. Substantive behavior lives in
  * `services/`.
  */
+import os from "node:os";
 import path from "path";
 
 import { connectorById } from "@abacus-ai/connectors/registry";
