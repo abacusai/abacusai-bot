@@ -171,7 +171,17 @@ export type AgentEvent =
   // so a renderer that predates them keeps working; absent `status` means
   // 'completed'.
   | { type: "subtask_start"; id: string; description?: string; kind?: string }
-  | { type: "subtask_end"; id: string; status?: "completed" | "failed" }
+  | {
+      type: "subtask_end";
+      id: string;
+      status?: "completed" | "failed";
+      /**
+       * Why a finished run is not a plain success: it stopped for the user,
+       * ran out of turns or time, or was refused for budget. The card shows
+       * the word; the parent's tool result carries the detail.
+       */
+      outcome?: "needs-user" | "limit" | "budget";
+    }
   | { type: "user_message_dequeued"; content: string }
   /**
    * A message sent mid-turn reached the model as a user message at a step

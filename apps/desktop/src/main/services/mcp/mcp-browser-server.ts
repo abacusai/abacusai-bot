@@ -123,14 +123,14 @@ const TOOLS_SCHEMA: Record<
         action: {
           type: "string",
           enum: ["goto", "back", "forward", "reload"],
-          description: "Navigation action",
+          description: 'Navigation action; a call with only a url is a "goto"',
         },
         url: {
           type: "string",
           description: 'URL to navigate to (required for "goto")',
         },
       },
-      required: ["action"],
+      required: [],
     },
   },
   browser_snapshot: {
@@ -147,13 +147,22 @@ const TOOLS_SCHEMA: Record<
       "screenshot — an image of the viewport plus a short description of where the page is.",
       "text       — visible text, optionally scoped by selector.",
       "url / title — just that.",
+      'find       — shorthand for snapshot with find:"..." (same result).',
     ].join("\n"),
     inputSchema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["snapshot", "extract", "screenshot", "text", "url", "title"],
+          enum: [
+            "snapshot",
+            "extract",
+            "screenshot",
+            "text",
+            "url",
+            "title",
+            "find",
+          ],
           description: "What to read",
         },
         find: {
@@ -1544,7 +1553,13 @@ export class McpBrowserServer {
     args: Record<string, unknown>,
     sessionId?: string
   ): Promise<ToolResult> {
-    const action = (args.action as string) ?? "";
+    // A url with no action is a goto; a small model drops the action often.
+    const action =
+      typeof args.action === "string"
+        ? args.action
+        : typeof args.url === "string"
+          ? "goto"
+          : "";
     switch (action) {
       case "goto": {
         const url = args.url as string;
@@ -1590,14 +1605,26 @@ export class McpBrowserServer {
         );
       }
       default:
-        return this.err(`Unknown navigate action: ${action}`);
+        return this.err(
+          `Unknown navigate action: ${action || "(none)"}. Use goto with a url, or back, forward, reload.`
+        );
     }
   }
 
   private async executeSnapshot(
-    args: Record<string, unknown>,
+    rawArgs: Record<string, unknown>,
     sessionId?: string
   ): Promise<ToolResult> {
+    // `find` reads as an action to a model that saw it in the description;
+    // it is snapshot with a filter, so treat it as that rather than refuse.
+    const args =
+      rawArgs.action === "find"
+        ? {
+            ...rawArgs,
+            action: "snapshot",
+            find: rawArgs.find ?? rawArgs.text ?? rawArgs.selector ?? "",
+          }
+        : rawArgs;
     const action = (args.action as string) ?? "";
     const wc = await this.getWC(sessionId);
     if (!wc) return this.err(NO_BROWSER);
@@ -1753,7 +1780,9 @@ export class McpBrowserServer {
       case "title":
         return this.ok(wc.getTitle());
       default:
-        return this.err(`Unknown snapshot action: ${action}`);
+        return this.err(
+          `Unknown snapshot action: ${action || "(none)"}. Use snapshot (with find:"..." to filter), extract, text, screenshot, url or title.`
+        );
     }
   }
 
@@ -1812,7 +1841,27 @@ export class McpBrowserServer {
     const before = McpBrowserServer.REPORTS_CHANGES.has(action)
       ? this.captureBefore(wc, sessionId)
       : null;
-    const result = await this.interactStep(wc, args, sessionId);
+    let result = await this.interactStep(wc, args, sessionId);
+    // The element was there at the snapshot and is not now: the page
+    // re-rendered under a stable ref (refs key on the selector), so one fresh
+    // snapshot usually brings it back. A model told only "take a snapshot"
+    // spends two turns on what one retry does here.
+    if (
+      result.isError === true &&
+      typeof args.ref === "string" &&
+      McpBrowserServer.isVanished(result)
+    ) {
+      const fresh = await this.takeSnapshot(wc, sessionId).catch(() => null);
+      if (fresh?.tree != null && snapshot.refMap.has(args.ref)) {
+        const retried = await this.interactStep(wc, args, sessionId);
+        if (retried.isError !== true) {
+          const text = retried.content[0]?.text ?? "";
+          result = this.ok(
+            `(The page had re-rendered; refs were refreshed and the action retried.) ${text}`
+          );
+        }
+      }
+    }
     if (before == null || result.isError === true) return result;
 
     const changes = await this.reportChanges(wc, sessionId, before);
@@ -2198,7 +2247,9 @@ export class McpBrowserServer {
       }
 
       default:
-        return this.err(`Unknown interact action: ${action}`);
+        return this.err(
+          `Unknown interact action: ${action || "(none)"}. Use click, fill, pick, type, select, press, dismiss, check, uncheck, hover, focus, scroll, scroll_into_view or wait.`
+        );
     }
   }
 
@@ -2241,6 +2292,13 @@ export class McpBrowserServer {
     return this.err(
       `JS Error: ${lastError instanceof Error ? lastError.message : String(lastError)}`
     );
+  }
+
+  /** An element the snapshot had and the page no longer has. */
+  private static isVanished(result: ToolResult): boolean {
+    const text = result.content[0]?.text ?? "";
+
+    return text.includes("not found on the page");
   }
 
   private label(args: Record<string, unknown>): string {

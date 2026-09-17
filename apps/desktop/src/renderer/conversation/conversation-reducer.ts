@@ -1189,6 +1189,9 @@ function reduceLoopEvent(
               ...s,
               status: "completed" as const,
               subtaskStatus: endedStatus,
+              ...(event.outcome !== undefined && {
+                subtaskOutcome: event.outcome,
+              }),
               ...(receivedAt !== undefined && { subtaskEndTime: receivedAt }),
             }
           : s

@@ -22,23 +22,18 @@ export function browserTaskEnabled(): boolean {
 }
 
 /**
- * One browser sub-agent at a time per session: two driving the same view would
- * type into one page and report each other's screen. Other sessions and bots
- * have views of their own and are not queued behind this one.
+ * One browser sub-agent at a time: two driving the same view would type into
+ * one page and report each other's screen. A second call while one runs is
+ * refused, not queued: a queued run sits as an outstanding tool call for
+ * minutes with nothing to show, and the parent has nothing to do with the
+ * first result until it has both. Refused, it comes back at once and the
+ * parent calls again when the first returns.
  */
-const browserLock = { tail: Promise.resolve() };
+const browserBusy = { running: false };
 
-const withBrowser = async <T>(run: () => Promise<T>): Promise<T> => {
-  const ours = browserLock.tail.then(run, run);
-
-  // The queue must not break on a failed run, and must not retain results.
-  browserLock.tail = ours.then(
-    () => undefined,
-    () => undefined
-  );
-
-  return await ours;
-};
+const BUSY_MESSAGE =
+  "A browser run is already in progress and this session has one browser. Wait for its result, " +
+  "then call browser_task again for this task — one run at a time.";
 
 interface PiToolDefinitionLike {
   name: string;
@@ -56,6 +51,48 @@ interface PiToolDefinitionLike {
   }>;
 }
 
+/**
+ * Runs one parent session may start in a window before it is told to stop and
+ * ask. A parent that keeps re-dispatching the same site (three runs on one
+ * question, each re-reading a 40k context per turn) is the most expensive
+ * thing this tool can do, and it never improves the answer.
+ */
+export const DISPATCH_LIMIT = 3;
+export const DISPATCH_WINDOW_MS = 15 * 60 * 1000;
+
+/** Sliding window of run starts; pure, for tests. */
+export class DispatchBudget {
+  private readonly starts: number[] = [];
+
+  constructor(
+    private readonly limit = DISPATCH_LIMIT,
+    private readonly windowMs = DISPATCH_WINDOW_MS
+  ) {}
+
+  /** Records a run at `now` unless the window is full; @returns whether it may run. */
+  take(now = Date.now()): boolean {
+    while (this.starts.length > 0 && now - this.starts[0]! > this.windowMs) {
+      this.starts.shift();
+    }
+    if (this.starts.length >= this.limit) return false;
+    this.starts.push(now);
+
+    return true;
+  }
+}
+
+/** The card's one-word verdict for a run that did not simply finish. */
+export type BrowserRunOutcome = "needs-user" | "limit" | "budget";
+
+export const runOutcome = (
+  stoppedBy: BrowserTaskResult["stoppedBy"]
+): BrowserRunOutcome | undefined =>
+  stoppedBy === "needs-user"
+    ? "needs-user"
+    : stoppedBy === "turn-limit" || stoppedBy === "timeout"
+      ? "limit"
+      : undefined;
+
 /** The stops that mean the run produced nothing usable. */
 const failedStop = (stoppedBy: BrowserTaskResult["stoppedBy"]): boolean =>
   stoppedBy === "error" ||
@@ -71,6 +108,7 @@ export function buildBrowserTaskTool(
   emit: (event: AgentEvent) => void
 ): PiToolDefinitionLike {
   let counter = 0;
+  const budget = new DispatchBudget();
 
   return {
     name: "browser_task",
@@ -88,6 +126,13 @@ export function buildBrowserTaskTool(
       "clicks through, waits for results, and reports what it found. You get its conclusion,",
       "not the twenty snapshots it took to get there.",
       "",
+      "One site, one goal per run. A sub-agent has a fixed turn budget and no memory of this",
+      'conversation, so "compare prices on two sites and get flight numbers and links" is',
+      "three runs, not one: give each run a single site and exactly what to report. When a",
+      "run comes back partial, use what it found; sending it back to the same site for the",
+      "rest costs as much again and rarely adds more. You may start a few runs per",
+      "conversation before being told to stop and ask the user.",
+      "",
       "Use it when the page will not give up its content to a fetch: a web app the user is",
       "signed in to, a multi-step form, a flow that needs clicking through, results that only",
       "appear after interaction, a page whose content is drawn by scripts, or a running app you",
@@ -101,8 +146,10 @@ export function buildBrowserTaskTool(
       'report_fields (e.g. ["price", "departure time", "airline"]) — a report that skips',
       "one is sent back for it.",
       "",
-      "This session has one browser, so its tasks run one at a time. When you want five",
-      "lookups, ask for all five in a single task and have it report a row for each.",
+      "This session has one browser, so its tasks run one at a time: a second call while one",
+      "is running is refused, not queued — wait for the result and call again. When you want",
+      "five lookups on one site, ask for all five in a single task and have it report a row",
+      "for each.",
       "",
       "It cannot read files or run commands, and it will stop rather than pay for anything,",
       "book anything, enter card or ID details, or fill a CAPTCHA. When it stops for that, its",
@@ -168,6 +215,30 @@ export function buildBrowserTaskTool(
         };
       }
 
+      if (browserBusy.running) {
+        return {
+          content: [{ type: "text" as const, text: BUSY_MESSAGE }],
+          details: { stoppedBy: "busy", outcome: "busy" },
+          isError: false,
+        };
+      }
+
+      // A resumed run is the same run continuing, not a new dispatch.
+      if (!resume && !budget.take()) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text:
+                `Browser budget used: ${DISPATCH_LIMIT} runs in the last ${DISPATCH_WINDOW_MS / 60_000} minutes. ` +
+                "Answer from what those runs reported, and ask the user before browsing further.",
+            },
+          ],
+          details: { stoppedBy: "budget", outcome: "budget" },
+          isError: false,
+        };
+      }
+
       // Bracketed even on failure, or the card spins forever.
       const subtaskId = `browser-${Date.now()}-${++counter}`;
       emit({
@@ -180,22 +251,31 @@ export function buildBrowserTaskTool(
       let result;
       // Failed until proven otherwise: a throw skips straight to `finally`.
       let status: "completed" | "failed" = "failed";
+      let outcome: BrowserRunOutcome | undefined;
       try {
-        result = await withBrowser(
-          async () =>
-            await runBrowserTask(context, task, emit, {
-              startUrl,
-              signal,
-              reportFields,
-              resume,
-            })
-        );
+        browserBusy.running = true;
+        try {
+          result = await runBrowserTask(context, task, emit, {
+            startUrl,
+            signal,
+            reportFields,
+            resume,
+          });
+        } finally {
+          browserBusy.running = false;
+        }
         // The card's verdict is the tool result's: a run stopped by the user or
         // at its cap still handed back what it found, and is not a failure.
         status = failedStop(result.stoppedBy) ? "failed" : "completed";
+        outcome = runOutcome(result.stoppedBy);
         // Not re-emitted: the last message already streamed into the card.
       } finally {
-        emit({ type: "subtask_end", id: subtaskId, status });
+        emit({
+          type: "subtask_end",
+          id: subtaskId,
+          status,
+          ...(outcome != null ? { outcome } : {}),
+        });
       }
 
       const failed = failedStop(result.stoppedBy);
@@ -214,7 +294,13 @@ export function buildBrowserTaskTool(
 
       return {
         content: [{ type: "text" as const, text: `${result.text}${note}` }],
-        details: { turns: result.turns, stoppedBy: result.stoppedBy },
+        details: {
+          turns: result.turns,
+          executeCalls: result.executeCalls,
+          steers: result.steers,
+          stoppedBy: result.stoppedBy,
+          ...(outcome != null ? { outcome } : {}),
+        },
         isError: failed,
       };
     },
