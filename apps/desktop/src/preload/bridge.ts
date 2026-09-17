@@ -167,6 +167,7 @@ import type {
   TerminalShellId,
   TerminalShellState,
 } from "#shared/terminal-shells";
+import type { WhisperFileResult } from "#shared/voice";
 
 export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
   return {
@@ -948,6 +949,17 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ipcRenderer.invoke(
         IpcChannels.InstallMaestro
       ) as Promise<InstallMaestroResult>,
+    fetchWhisperFile: (url: string) =>
+      ipcRenderer.invoke(
+        IpcChannels.FetchWhisperFile,
+        url
+      ) as Promise<WhisperFileResult>,
+    isWhisperCached: () =>
+      ipcRenderer.invoke(IpcChannels.IsWhisperCached) as Promise<boolean>,
+    requestMicrophoneAccess: () =>
+      ipcRenderer.invoke(
+        IpcChannels.RequestMicrophoneAccess
+      ) as Promise<boolean>,
     streamDeviceTouch: (request: StreamDeviceTouchRequest) =>
       ipcRenderer.send(IpcChannels.StreamDeviceTouch, request),
     streamDeviceKey: (request: StreamDeviceKeyRequest) =>

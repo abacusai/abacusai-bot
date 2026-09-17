@@ -132,6 +132,8 @@ mac:
   extendInfo:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    - NSMicrophoneUsageDescription: The microphone is used to dictate messages; speech is transcribed on this computer.
+    - NSMicrophoneUsageDescription: The microphone is used to dictate messages; speech is transcribed on this computer.
 dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}
 

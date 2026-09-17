@@ -35,6 +35,14 @@ Device tools can build, install, launch, inspect, tap, type, and capture Android
 apps and iOS apps. Android requires the platform tools and an emulator or
 device. iOS requires macOS, Xcode, and a simulator. This group starts disabled.
 
+## Voice input
+
+The microphone button in the composer dictates a message: press it, speak,
+press it again, and the words land in the box for you to edit and send. Speech
+is transcribed on your computer by an open Whisper model. Nothing is sent to a
+service; the model (about 80 MB) downloads from Hugging Face on first use and
+is kept under the app home. macOS asks for microphone access once.
+
 ## Files and deliverables
 
 File tools read, search, create, and edit workspace files. Document, deck,
