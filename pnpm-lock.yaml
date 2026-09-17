@@ -60,6 +60,7 @@ overrides:
   js-yaml: ^4.3.2
 
 patchedDependencies:
+  ghostty-web@0.4.0: 4d6eb9c6cc557d53220cd3c8d8839d09867c892154f395f1ccdadbd010d3893f
   react-tourlight@0.3.0: 150245916c8d1e3dbc7fb87a5a579fe59a7c5d2ebee040d25e6d5aa7d65618ee
   zigpty@0.2.1: 828c76d469ecc4ef05d872aa0963ccc0adfad5c8917b6d753a75d3efb04bb74b
 
@@ -101,6 +102,9 @@ importers:
         specifier: ^0.9.6
         version: 0.9.6
       '@fontsource-variable/inter':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/jetbrains-mono':
         specifier: ^5.3.0
         version: 5.3.0
       '@lobehub/icons-static-svg':
@@ -165,7 +169,7 @@ importers:
         version: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       ghostty-web:
         specifier: ^0.4.0
-        version: 0.4.0
+        version: 0.4.0(patch_hash=4d6eb9c6cc557d53220cd3c8d8839d09867c892154f395f1ccdadbd010d3893f)
       i18next:
         specifier: ^25.8.7
         version: 25.10.10(typescript@7.0.2)
@@ -1151,6 +1155,9 @@ packages:
 
   '@fontsource-variable/inter@5.3.0':
     resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0':
+    resolution: {integrity: sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw==}
 
   '@gar/promise-retry@1.0.3':
     resolution: {integrity: sha512-GmzA9ckNokPypTg10pgpeHNQe7ph+iIKKmhKu3Ob9ANkswreCx7R3cKmY781K8QK3AqVL3xVh9A42JvIAbkkSA==}
@@ -6736,6 +6743,8 @@ snapshots:
 
   '@fontsource-variable/inter@5.3.0': {}
 
+  '@fontsource-variable/jetbrains-mono@5.3.0': {}
+
   '@gar/promise-retry@1.0.3': {}
 
   '@google/genai@1.52.0(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.4.3))(supports-color@7.2.0)':
@@ -9050,7 +9059,7 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  ghostty-web@0.4.0: {}
+  ghostty-web@0.4.0(patch_hash=4d6eb9c6cc557d53220cd3c8d8839d09867c892154f395f1ccdadbd010d3893f): {}
 
   glob-parent@5.1.2:
     dependencies:
