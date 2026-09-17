@@ -18,13 +18,24 @@ let added: Array<{ event: GuardEvent; listener: Listener }>;
 const listenersOf = (event: GuardEvent): Listener[] =>
   process.listeners(event) as Listener[];
 
+/** Each install adds stdio error listeners too; only a test's own are removed. */
+const streamListenersBefore = new Map<NodeJS.WriteStream, Set<unknown>>();
+
 beforeEach(() => {
   added = [];
+  for (const stream of [process.stdout, process.stderr])
+    streamListenersBefore.set(stream, new Set(stream.listeners("error")));
   vi.resetModules();
 });
 
 afterEach(() => {
   for (const { event, listener } of added) process.off(event, listener);
+  for (const stream of [process.stdout, process.stderr]) {
+    for (const listener of stream.listeners("error")) {
+      if (!streamListenersBefore.get(stream)?.has(listener))
+        stream.off("error", listener as () => void);
+    }
+  }
   vi.restoreAllMocks();
 });
 
@@ -73,6 +84,25 @@ describe("the main-process crash guard", () => {
     );
 
     expect(logged.mock.calls.flat().join(" ")).toContain("ECONNRESET");
+  });
+
+  it("swallows a dead stdio pipe instead of looping on it", async () => {
+    // The loop: a closed parent terminal made every console.error an EPIPE
+    // on stderr, the exception handler logged that with console.error, and
+    // so on — tens of thousands of lines a day from one install.
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const before = process.stderr.listenerCount("error");
+    await install();
+
+    expect(process.stderr.listenerCount("error")).toBeGreaterThan(before);
+    expect(process.stdout.listenerCount("error")).toBeGreaterThan(0);
+
+    const epipe = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+
+    // With a listener the stream's error is consumed; with none it would be
+    // rethrown here as an uncaught exception.
+    expect(() => process.stderr.emit("error", epipe)).not.toThrow();
+    expect(logged).not.toHaveBeenCalled();
   });
 
   it("installs once, however many times it is called", async () => {
