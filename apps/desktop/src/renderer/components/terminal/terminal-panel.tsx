@@ -1,10 +1,3 @@
-import { ClipboardAddon } from "@xterm/addon-clipboard";
-import { FitAddon } from "@xterm/addon-fit";
-import { Unicode11Addon } from "@xterm/addon-unicode11";
-import { WebLinksAddon } from "@xterm/addon-web-links";
-import { WebglAddon } from "@xterm/addon-webgl";
-import { Terminal as XTerm } from "@xterm/xterm";
-
 import "@xterm/xterm/css/xterm.css";
 import {
   Check,
@@ -14,14 +7,7 @@ import {
   SquareTerminal,
   X,
 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type JSX,
-  type RefObject,
-} from "react";
+import { useCallback, useEffect, useRef, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -34,12 +20,10 @@ import {
   useSetTerminalShell,
   useTerminalShellState,
 } from "../../hooks/use-terminal-shells";
-import { isMacOS } from "../../lib/window-chrome";
 import {
   terminalRuntimeActions,
   useTerminalRuntimeScope,
 } from "../../stores/terminal-runtime-store";
-import { openUrlInPreview } from "../../utils/preview-utils";
 import { Button } from "../ui";
 import { ButtonGroup } from "../ui/button-group";
 import {
@@ -49,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { acquireTerminalView, closeTerminalView } from "./terminal-views";
 
 type TerminalPanelProps = {
   conversation: ConversationRef | null;
@@ -66,490 +51,69 @@ type TerminalInstanceProps = Omit<TerminalPanelProps, "onClose" | "visible"> & {
   onExited: (terminalId: string) => void;
 };
 
-/**
- * The terminal paints on a canvas, so it measures one cell at startup and
- * assumes every glyph matches. Measuring before the webfont has loaded gives
- * the fallback's metrics and a grid that no longer lines up once the real font
- * arrives, so the font is awaited rather than raced.
- */
-export const TERMINAL_FONT_FAMILY =
-  '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-
-const ensureTerminalFont = async (): Promise<void> => {
-  const fonts = document.fonts;
-  if (fonts == null) return;
-  try {
-    await fonts.load(`13px ${TERMINAL_FONT_FAMILY}`);
-    await fonts.ready;
-  } catch {
-    // A font that will not load is not a reason to refuse a terminal; the
-    // stack falls back to the platform's monospace.
-  }
-};
-
-/** Keys that produce no input, so pressing one must not jump to the prompt. */
-const MODIFIER_KEYS = new Set([
-  "Shift",
-  "Control",
-  "Alt",
-  "Meta",
-  "CapsLock",
-  "NumLock",
-  "ScrollLock",
-]);
-
-/**
- * The shortcuts a terminal is expected to have. Copy and paste need spelling
- * out because the grid is painted rather than laid out: the browser has no
- * DOM selection to copy, and Ctrl+C has to stay SIGINT on Windows and Linux,
- * which is why the copy there is Ctrl+Shift+C.
- *
- * xterm reads the return value the other way round from most handlers:
- * returning false is "handled here, do not also send it to the shell".
- */
-const installShortcuts = (term: XTerm): void => {
-  term.attachCustomKeyEventHandler((event) => {
-    if (event.type !== "keydown") return true;
-
-    // Scrolling the history, from the keyboard, the way every terminal does.
-    if (event.shiftKey && !event.ctrlKey && !event.metaKey) {
-      if (event.key === "PageUp") {
-        term.scrollPages(-1);
-        return false;
-      }
-      if (event.key === "PageDown") {
-        term.scrollPages(1);
-        return false;
-      }
-    }
-
-    const copyChord = isMacOS
-      ? event.metaKey && !event.shiftKey && event.key.toLowerCase() === "c"
-      : event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "c";
-    if (copyChord) {
-      // With nothing selected, macOS Cmd+C is a no-op and Ctrl+C must reach
-      // the shell, so the key is handed back rather than swallowed.
-      if (!term.hasSelection()) return true;
-      void navigator.clipboard?.writeText(term.getSelection());
-      return false;
-    }
-
-    const pasteChord = isMacOS
-      ? event.metaKey && !event.shiftKey && event.key.toLowerCase() === "v"
-      : event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "v";
-    if (pasteChord) {
-      // `paste` brackets the text where the shell asked for it, so a pasted
-      // newline does not run the command by itself.
-      void navigator.clipboard
-        ?.readText()
-        .then((text) => {
-          if (text.length > 0) term.paste(text);
-        })
-        .catch(() => {
-          // Denied or empty: the browser's own paste event still works.
-        });
-      return false;
-    }
-
-    // Anything that will produce input belongs at the prompt. xterm does this
-    // itself through `scrollOnUserInput`; the modifiers are listed so a bare
-    // Shift does not count as typing.
-    if (!MODIFIER_KEYS.has(event.key)) term.scrollToBottom();
-
-    return true;
-  });
-};
-
-const useSizeObserver = (
-  nodeRef: RefObject<HTMLElement | null>,
-  onResize: () => void
-): void => {
-  useEffect(() => {
-    const node = nodeRef.current;
-    if (node == null) {
-      return;
-    }
-    const observer = new ResizeObserver(() => {
-      onResize();
-    });
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
-    };
-  }, [nodeRef, onResize]);
-};
-
 const TerminalInstance = ({
   conversation,
   conversationKey,
-  generation,
   terminalId,
   active,
   shell,
   onExited,
 }: TerminalInstanceProps): JSX.Element => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<XTerm>(null);
-  const fitAddonRef = useRef<FitAddon>(null);
-  const pendingResizeRef = useRef<number>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
   // The workspace view builds a fresh conversation object on every render, so
-  // it is read through a ref: as an effect dependency it restarts the PTY on
-  // every render of the page.
+  // it is read through a ref rather than depended on: the key says the same
+  // thing and is a string.
   const conversationRef = useRef<ConversationRef | null>(conversation);
-  const conversationKeyRef = useRef<ConversationKey | null>(conversationKey);
-  const generationRef = useRef<number | null>(generation);
-  // A ref, not a dep: the start result names the shell that was spawned and
-  // writes it back to the tab, and a dep would restart the terminal on it.
   const shellRef = useRef<TerminalShellId | undefined>(shell);
-
-  // Bumped whenever the PTY dies, so the next reopen rebuilds the terminal
-  // instead of typing into a dead buffer.
-  const [ptyGeneration, setPtyGeneration] = useState(0);
-  const [isTerminalReady, setIsTerminalReady] = useState(false);
 
   useEffect(() => {
     conversationRef.current = conversation;
-    conversationKeyRef.current = conversationKey;
-    generationRef.current = generation;
     shellRef.current = shell;
-  }, [conversation, conversationKey, generation, shell]);
+  }, [conversation, shell]);
 
+  // Mount the tab's terminal. It was built the first time this ran and it
+  // outlives every render after that, PTY and scrollback included.
   useEffect(() => {
-    let disposed = false;
-    // Held separately from the ref: an instance built while this effect was
-    // being torn down never reaches the ref, and one left in the host paints
-    // a blinking cursor of its own in the corner for as long as the panel is
-    // open. Whatever is created here is disposed here.
-    let building: XTerm | null = null;
+    const host = hostRef.current;
+    const conversationValue = conversationRef.current;
+    if (host == null || conversationKey == null || conversationValue == null) {
+      return;
+    }
 
-    const initialize = async (): Promise<void> => {
-      const hostNode = containerRef.current;
-      if (hostNode == null || terminalRef.current != null) {
-        return;
-      }
-      try {
-        await ensureTerminalFont();
-      } catch {
-        if (!disposed) {
-          setIsTerminalReady(false);
-        }
-        return;
-      }
-      if (disposed || !hostNode.isConnected) {
-        return;
-      }
-
-      const term = new XTerm({
-        fontSize: 13,
-        fontFamily: TERMINAL_FONT_FAMILY,
-        cursorBlink: true,
-        cursorStyle: "block",
-        scrollback: 10000,
-        // Off: the PTY already ends its lines with CRLF, and rewriting every
-        // LF on the way in turns a raw-mode program's output into `\r\r\n`.
-        convertEol: false,
-        // Unicode 11 widths need it, and it is this process's own terminal.
-        allowProposedApi: true,
-        // Typing returns to the prompt; output only follows when the viewport
-        // is already at the bottom, which is the whole bug this replaces.
-        scrollOnUserInput: true,
-        // OSC 8 hyperlinks. Plain URLs are the web-links addon below; both
-        // land in the app's own preview rather than the OS browser.
-        linkHandler: {
-          activate: (_event, uri) => {
-            openUrlInPreview(uri);
-          },
-        },
-        theme: {
-          background: "#1e1e1e",
-          foreground: "#d4d4d4",
-          cursor: "#d4d4d4",
-          cursorAccent: "#1e1e1e",
-          selectionBackground: "rgba(124, 58, 237, 0.4)",
-          selectionForeground: "#d4d4d4",
-          black: "#000000",
-          red: "#ff6b6b",
-          green: "#51cf66",
-          yellow: "#ffd93d",
-          blue: "#6c9aff",
-          magenta: "#c77dff",
-          cyan: "#25d9f5",
-          white: "#d4d4d4",
-          brightBlack: "#666666",
-          brightRed: "#ff8787",
-          brightGreen: "#69f0ae",
-          brightYellow: "#ffe066",
-          brightBlue: "#8fb3ff",
-          brightMagenta: "#da99ff",
-          brightCyan: "#5ce0e8",
-          brightWhite: "#ffffff",
-        },
-      });
-      const fitAddon = new FitAddon();
-      term.loadAddon(fitAddon);
-      term.loadAddon(new ClipboardAddon());
-      term.loadAddon(
-        new WebLinksAddon((_event, uri) => {
-          openUrlInPreview(uri);
-        })
-      );
-      const unicode11 = new Unicode11Addon();
-      term.loadAddon(unicode11);
-      term.unicode.activeVersion = "11";
-
-      building = term;
-      if (disposed) {
-        term.dispose();
-        return;
-      }
-
-      // Nothing but this terminal may be in the host. A previous instance
-      // normally takes its canvas with it, but a dispose that half-finished
-      // leaves one behind, and a stray canvas keeps rendering.
-      hostNode.replaceChildren();
-
-      try {
-        term.open(hostNode);
-      } catch {
-        term.dispose();
-        if (!disposed) {
-          setIsTerminalReady(false);
-        }
-        return;
-      }
-
-      // The GPU renderer, with the CPU one behind it: a lost context (a GPU
-      // reset, a machine waking up) otherwise leaves a blank terminal.
-      try {
-        const webgl = new WebglAddon();
-        webgl.onContextLoss(() => {
-          webgl.dispose();
-        });
-        term.loadAddon(webgl);
-      } catch {
-        // No WebGL here; the DOM renderer draws the same grid.
-      }
-
-      installShortcuts(term);
-
-      term.onData((data) => {
-        const currentConversationKey = conversationKeyRef.current;
-        const currentGeneration = generationRef.current;
-        if (currentConversationKey == null || currentGeneration == null) {
-          return;
-        }
-        void window.api.agent.writeTerminalInput({
-          terminalId,
-          conversationKey: currentConversationKey,
-          generation: currentGeneration,
-          data,
-        });
-      });
-
-      terminalRef.current = term;
-      building = null;
-      fitAddonRef.current = fitAddon;
-      setIsTerminalReady(true);
-    };
-
-    void initialize();
+    const view = acquireTerminalView({
+      conversationKey,
+      conversation: conversationValue,
+      terminalId,
+      shell: shellRef.current,
+    });
+    host.replaceChildren(view.element);
+    const stopListening = view.onExit(() => onExited(terminalId));
 
     return () => {
-      disposed = true;
-      if (pendingResizeRef.current != null) {
-        window.clearTimeout(pendingResizeRef.current);
-        pendingResizeRef.current = null;
-      }
-      terminalRef.current?.dispose();
-      building?.dispose();
-      terminalRef.current = null;
-      building = null;
-      fitAddonRef.current = null;
-      containerRef.current?.replaceChildren();
-      setIsTerminalReady(false);
+      stopListening();
+      view.setVisible(false);
+      view.element.remove();
     };
-    // ptyGeneration is deliberately a dep: a dead PTY needs a fresh terminal.
-  }, [conversationKey, ptyGeneration, terminalId]);
-
-  const syncSize = (): void => {
-    if (conversationKey == null || generation == null) {
-      return;
-    }
-    const terminal = terminalRef.current;
-    const fitAddon = fitAddonRef.current;
-    if (terminal == null || fitAddon == null) {
-      return;
-    }
-
-    const proposed = fitAddon.proposeDimensions();
-    if (proposed == null) {
-      return;
-    }
-
-    const { cols: nextCols, rows: nextRows } = proposed;
-    if (nextCols === terminal.cols && nextRows === terminal.rows) {
-      return;
-    }
-
-    terminal.resize(nextCols, nextRows);
-    void window.api.agent.resizeTerminalSession({
-      terminalId,
-      conversationKey,
-      generation,
-      cols: nextCols,
-      rows: nextRows,
-    });
-  };
-
-  useSizeObserver(containerRef, () => {
-    if (pendingResizeRef.current != null) {
-      window.clearTimeout(pendingResizeRef.current);
-    }
-    pendingResizeRef.current = window.setTimeout(() => {
-      pendingResizeRef.current = null;
-      syncSize();
-    }, 40);
-  });
-
-  // Spawn / attach the PTY whenever the panel is visible; after a PTY death
-  // main has no surviving session, so this spawns a new one.
-  useEffect(() => {
-    const conversationRef_ = conversationRef.current;
-    if (conversationRef_ == null || conversationKey == null) return;
-    if (!active || !isTerminalReady) return;
-    let cancelled = false;
-    const term = terminalRef.current;
-    const fitAddon = fitAddonRef.current;
-    if (term == null || fitAddon == null) {
-      return;
-    }
-
-    const start = async (): Promise<void> => {
-      fitAddon.fit();
-      const proposed = fitAddon.proposeDimensions();
-      if (proposed == null) {
-        return;
-      }
-      const { cols, rows } = proposed;
-      term.resize(cols, rows);
-      const attachedGeneration = generationRef.current;
-      const result = await window.api.agent.startTerminalSession({
-        terminalId,
-        conversationKey,
-        conversation: conversationRef_,
-        generation: generationRef.current,
-        cols,
-        rows,
-        shell: shellRef.current,
-      });
-      if (!result.success) {
-        return;
-      }
-      if (cancelled || terminalRef.current !== term) {
-        return;
-      }
-      generationRef.current = result.state.generation;
-      shellRef.current = result.state.shell;
-      terminalRuntimeActions.setGeneration(
-        conversationKey,
-        result.state.generation,
-        terminalId
-      );
-      // Pin what was actually spawned, so this tab reopens the same shell
-      // after its PTY dies even if the stored preference has moved on.
-      terminalRuntimeActions.setTabShell(
-        conversationKey,
-        terminalId,
-        result.state.shell
-      );
-      // Only a terminal that has nothing in it gets the session's scrollback.
-      // Re-attaching to a PTY this instance is already showing would print
-      // everything a second time: output arrives through the event
-      // subscription whether the tab is on screen or not.
-      if (attachedGeneration == null) {
-        // reset, not clear: xterm's clear keeps the last line, and what
-        // follows is the whole scrollback.
-        term.reset();
-        if (result.initialOutput.length > 0) term.write(result.initialOutput);
-        // ghostty focused inside `open`; xterm leaves it to the embedder.
-        term.focus();
-      }
-    };
-
-    void start();
-    return () => {
-      cancelled = true;
-    };
-  }, [active, conversationKey, isTerminalReady, ptyGeneration, terminalId]);
-
-  useEffect(() => {
-    if (active || conversationKey == null) return;
-    const activeGeneration = generationRef.current;
-    if (activeGeneration == null) return;
-    void window.api.agent.hideTerminalSession({
-      terminalId,
-      conversationKey,
-      generation: activeGeneration,
-    });
-  }, [active, conversationKey, terminalId]);
+  }, [conversationKey, onExited, terminalId]);
 
   useEffect(() => {
     if (conversationKey == null) return;
-    return () => {
-      const activeGeneration = generationRef.current;
-      if (activeGeneration == null) return;
-      void window.api.agent.hideTerminalSession({
-        terminalId,
-        conversationKey,
-        generation: activeGeneration,
-      });
-    };
-  }, [conversationKey, terminalId]);
-
-  // PTY → terminal: write output, auto-collapse on exit, bump ptyGeneration.
-  useEffect(() => {
-    if (conversationKey == null) {
-      return;
-    }
-
-    const unsubscribe = window.api.agent.onEvent((event) => {
-      const term = terminalRef.current;
-      if (
-        event.type === "terminal-output" &&
-        event.terminalId === terminalId &&
-        event.conversationKey === conversationKey &&
-        event.generation === generationRef.current
-      ) {
-        term?.write(event.data);
-        return;
-      }
-      if (
-        event.type === "terminal-exited" &&
-        event.terminalId === terminalId &&
-        event.conversationKey === conversationKey &&
-        event.generation === generationRef.current
-      ) {
-        terminalRuntimeActions.setGeneration(conversationKey, null, terminalId);
-        setPtyGeneration((g) => g + 1);
-        onExited(terminalId);
-      }
+    const view = acquireTerminalView({
+      conversationKey,
+      conversation: conversationRef.current!,
+      terminalId,
+      shell: shellRef.current,
     });
-
-    return unsubscribe;
-  }, [conversationKey, onExited, terminalId]);
+    view.setVisible(active);
+  }, [active, conversationKey, terminalId]);
 
   return (
     <div
       data-terminal-instance={terminalId}
       data-terminal-id={terminalId}
+      ref={hostRef}
       className="relative h-full min-h-0 w-full overflow-hidden bg-[#1e1e1e]"
-    >
-      <div
-        ref={containerRef}
-        data-slot="terminal-host"
-        className="h-full w-full overflow-hidden bg-[#1e1e1e]"
-      />
-    </div>
+    />
   );
 };
 
@@ -619,30 +183,18 @@ export const TerminalPanel = ({
   const closeTab = useCallback(
     (terminalId: string): void => {
       if (conversationKey == null) return;
-      const tab = runtime.tabs.find(({ id }) => id === terminalId);
-      if (tab?.generation != null) {
-        void window.api.agent.hideTerminalSession({
-          terminalId,
-          conversationKey,
-          generation: tab.generation,
-          close: true,
-        });
-      }
+      // The view owns the PTY, so closing it is what kills the shell.
+      closeTerminalView(conversationKey, terminalId);
       terminalRuntimeActions.closeTab(conversationKey, terminalId);
       if (runtime.tabs.length === 1) onClose?.();
     },
-    [conversationKey, onClose, runtime.tabs]
+    [conversationKey, onClose, runtime.tabs.length]
   );
 
+  // Hiding the tab that is leaving is the instance's own business: it is told
+  // it is off screen and tells main.
   const selectTab = (terminalId: string): void => {
     if (conversationKey == null || runtime.activeTabId === terminalId) return;
-    if (activeTab?.generation != null) {
-      void window.api.agent.hideTerminalSession({
-        terminalId: activeTab.id,
-        conversationKey,
-        generation: activeTab.generation,
-      });
-    }
     terminalRuntimeActions.selectTab(conversationKey, terminalId);
   };
 
