@@ -121,6 +121,7 @@ export enum IpcChannels {
   ClearBotMemory = "agent:clear-bot-memory",
   ReadTranscript = "agent:read-transcript",
   WriteTranscript = "agent:write-transcript",
+  SubmitTurnFeedback = "agent:submit-turn-feedback",
   GetDeviceStatus = "agent:get-device-status",
   ListLocalDevices = "agent:list-local-devices",
   CaptureDeviceScreenshot = "agent:capture-device-screenshot",

@@ -59,6 +59,7 @@ import {
   useSubtaskScopeStore,
 } from "../../conversation/subtask-scope-store";
 import { workspaceConversationTransport } from "../../conversation/transport";
+import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import {
   type AgentSessionEntry,
   isPlaceholderSession,
@@ -586,6 +587,32 @@ export const ChatPanel = (): JSX.Element => {
   const activeSession =
     workspaceSessions.find((s) => s.id === activeSessionId) ?? null;
   const draftWorkspaceId = activeSessionId == null ? activeWorkspaceId : null;
+
+  // The Abacus.AI account is what the platform reports feedback under; with
+  // none, the thumbs are not offered at all rather than failing on click.
+  const abacusAccountQuery = useAbacusAccountQuery();
+  const handleRateTurn = useMemo(() => {
+    if (activeSessionId == null || abacusAccountQuery.data == null)
+      return undefined;
+    const sessionId = activeSessionId;
+    const model = activeSession?.model ?? null;
+    return async (
+      messageIndex: number,
+      rating: "up" | "down" | "clear",
+      comment?: string
+    ): Promise<boolean> => {
+      const outcome = await window.api.agent.submitTurnFeedback({
+        sessionId,
+        eventSequenceNumber: messageIndex,
+        rating,
+        model,
+        ...(comment != null && comment.length > 0 ? { comment } : {}),
+      });
+      if (!outcome.ok)
+        console.warn(`[feedback] not reported: ${outcome.reason ?? "?"}`);
+      return outcome.ok;
+    };
+  }, [activeSessionId, activeSession?.model, abacusAccountQuery.data]);
 
   // Bots-first composer identity: with no session open the most recent bot
   // stands selected; with no bots at all the composer's job is to create one.
@@ -2106,6 +2133,7 @@ export const ChatPanel = (): JSX.Element => {
                         onPickModel={(modelId) =>
                           handlePickModel(activeWorkspaceId, modelId)
                         }
+                        onRateTurn={handleRateTurn}
                         creditsTotal={conversation.credits}
                         onOpenSubtask={setSubtaskScope}
                         statusLabel={statusLabel}

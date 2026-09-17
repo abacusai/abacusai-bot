@@ -20,6 +20,8 @@ import type {
 } from "#shared/bots";
 import type {
   TranscriptSegment,
+  TurnFeedbackInput,
+  TurnFeedbackOutcome,
   MemorySnapshot,
   MemoryTargetId,
   ForgetMemoryRequest,
@@ -261,6 +263,7 @@ import {
   DiagnosticsSyncService,
   type McpRuntimeSummary,
 } from "./services/debug-sync/diagnostics-sync-service";
+import { FeedbackService } from "./services/debug-sync/feedback-service";
 import { LogSyncService } from "./services/debug-sync/log-sync-service";
 import { DeviceMirrorService } from "./services/device/device-mirror-service";
 import { DeviceService } from "./services/device/device-service";
@@ -423,6 +426,10 @@ export class ServiceHost {
   private readonly transcriptService = new TranscriptService();
   private readonly debugSyncService = new DebugSyncService({
     readTranscript: (sessionId) => this.transcriptService.read(sessionId),
+    clientVersion: app.getVersion(),
+  });
+  private readonly feedbackService = new FeedbackService({
+    debugSync: this.debugSyncService,
     clientVersion: app.getVersion(),
   });
   private readonly logSyncService = new LogSyncService();
@@ -2295,6 +2302,12 @@ export class ServiceHost {
 
   writeTranscript(sessionId: string, segments: TranscriptSegment[]): void {
     this.transcriptService.write(sessionId, segments);
+  }
+
+  submitTurnFeedback(
+    feedback: TurnFeedbackInput
+  ): Promise<TurnFeedbackOutcome> {
+    return this.feedbackService.submit(feedback);
   }
 
   async startAgentSession(

@@ -1672,7 +1672,14 @@
     },
     "feedback": {
       "copied": "Copied",
-      "copy": "Copy"
+      "copy": "Copy",
+      "failed": "Couldn't send your feedback. Please try again.",
+      "helpful": "Good response",
+      "notHelpful": "Bad response",
+      "send": "Send",
+      "skip": "Skip",
+      "tellUsMore": "Tell us more",
+      "tellUsMorePlaceholder": "What went wrong?"
     },
     "fewerModels": "表示を減らす",
     "fileEditor": {
