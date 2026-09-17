@@ -32,6 +32,7 @@ import {
   loadConfig,
   PROVIDER_API_KEY_ENV,
 } from "../config.js";
+import { setCurrentMode } from "../current-mode.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import budgets from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
@@ -249,6 +250,9 @@ export class BotSession {
 
     this.home = dir;
     this.mode = parseMode(options.mode);
+    // The sandbox reads the mode from here: a bot in YOLO runs unconfined,
+    // as a chat in YOLO does.
+    setCurrentMode(this.mode);
   }
 
   async start(): Promise<void> {
@@ -1444,6 +1448,7 @@ export class BotSession {
 
         case "allowYolo":
           this.mode = AgentMode.Yolo;
+          setCurrentMode(this.mode);
           this.emitAgentEvent({
             type: "mode_changed",
             mode: this.mode,
