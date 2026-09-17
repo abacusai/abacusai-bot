@@ -9,10 +9,7 @@ import {
   type BackendId,
   type BackendStatus,
 } from "#shared/exec-backends";
-import {
-  terminalShellLabelKey,
-  type TerminalShellId,
-} from "#shared/terminal-shells";
+import { terminalShellLabelKey } from "#shared/terminal-shells";
 import { TOOLSETS_FOR_DISPLAY, type Toolset } from "#shared/toolsets";
 
 import {
