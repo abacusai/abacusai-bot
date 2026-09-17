@@ -23,6 +23,10 @@ import {
   terminalRuntimeActions,
   useTerminalRuntimeScope,
 } from "../../stores/terminal-runtime-store";
+import {
+  acquireTerminalView,
+  closeTerminalView,
+} from "../../terminals/terminal-views";
 import { Button } from "../ui";
 import { ButtonGroup } from "../ui/button-group";
 import {
@@ -32,7 +36,6 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { acquireTerminalView, closeTerminalView } from "./terminal-views";
 
 type TerminalPanelProps = {
   conversation: ConversationRef | null;

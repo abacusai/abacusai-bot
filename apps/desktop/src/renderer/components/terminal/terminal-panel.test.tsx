@@ -15,7 +15,7 @@ import {
 import type { TerminalShellState } from "#shared/terminal-shells";
 
 import { terminalRuntimeActions } from "../../stores/terminal-runtime-store";
-import { resetTerminalViewsForTesting } from "./terminal-views";
+import { resetTerminalViewsForTesting } from "../../terminals/terminal-views";
 
 // The chrome is what these cover; a real grid needs a canvas, which jsdom has
 // no answer for. `init` never resolving keeps every view inert.

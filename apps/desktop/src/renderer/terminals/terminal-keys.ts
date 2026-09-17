@@ -5,7 +5,7 @@
  */
 import { Terminal as GhosttyTerminal } from "ghostty-web";
 
-import { isMacOS } from "../../lib/window-chrome";
+import { isMacOS } from "../lib/window-chrome";
 
 /**
  * The terminal paints on a canvas, so it measures one cell at startup and
