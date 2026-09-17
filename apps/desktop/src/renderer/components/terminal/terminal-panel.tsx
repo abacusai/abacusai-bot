@@ -467,6 +467,10 @@ const TerminalInstance = ({
       if (result.initialOutput.length > 0) {
         term.write(result.initialOutput);
       }
+      // A terminal that just opened, or a tab just switched to, should take
+      // what is typed next. ghostty focused itself inside `open`; xterm
+      // leaves it to the embedder.
+      term.focus();
     };
 
     void start();
