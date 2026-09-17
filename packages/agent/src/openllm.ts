@@ -6,6 +6,7 @@
  * to pi's fuzzy-matching resolver, the session swaps in a concrete free model.
  */
 import type { CooldownStore } from "./openllm-cooldowns.js";
+import { openRouterTakesTools } from "./openrouter-live.js";
 import type { ModelChoice } from "./providers.js";
 
 /** Must match the `openllm/auto` entry in the desktop catalog. */
@@ -150,7 +151,9 @@ const familyRank = (choice: ModelChoice): number => {
  * OpenRouter states rather than implies; an unknown price is no evidence.
  */
 const isOpenRouterFreeTier = (choice: ModelChoice): boolean =>
-  choice.free && choice.modelId.endsWith(":free");
+  choice.free &&
+  choice.modelId.endsWith(":free") &&
+  openRouterTakesTools(choice.modelId);
 
 /**
  * Whether one model is in the pool. Gemini qualifies as a whole: its catalog

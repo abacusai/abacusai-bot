@@ -82,6 +82,7 @@ import {
   openLlmCandidates,
   isOpenLlmReference,
 } from "./openllm.js";
+import { refreshOpenRouterLive } from "./openrouter-live.js";
 import {
   gateToolCall,
   MODE_NAMES,
@@ -736,7 +737,10 @@ export class AbacusBotSession {
     this.registry = registry;
     registerCustomProviders(registry, this.config);
     registerGeminiProvider(registry);
-    await registerAbacusProvider(registry);
+    await Promise.all([
+      registerAbacusProvider(registry),
+      refreshOpenRouterLive(),
+    ]);
 
     // MCP servers first: pi takes the custom tool list up front.
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
@@ -2214,7 +2218,10 @@ export class AbacusBotSession {
     await this.applyRuntimeApiKeys();
     registerCustomProviders(registry, loadConfig());
     registerGeminiProvider(registry);
-    await registerAbacusProvider(registry);
+    await Promise.all([
+      registerAbacusProvider(registry),
+      refreshOpenRouterLive(),
+    ]);
     // Whatever sidelined a model or a whole provider may no longer hold: the
     // account's credits, plan or keys just changed under us.
     this.openLlmRotation.clearCooldowns();

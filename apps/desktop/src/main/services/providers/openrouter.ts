@@ -17,9 +17,23 @@ interface OpenRouterModel {
   context_length?: number;
   pricing?: { prompt?: string; completion?: string };
   architecture?: { input_modalities?: string[]; output_modalities?: string[] };
+  supported_parameters?: string[];
 }
 
 let cache: ModelAvailability[] | null = null;
+
+/**
+ * Every request here carries tools, and a model without them answers "No
+ * endpoints found that support tool use" to each one: a music model outputs
+ * text too, so the modality test alone let one into the picker. The agent's
+ * pool applies the same reading of the catalog (openrouter-live.ts there).
+ */
+const supportsTools = (model: OpenRouterModel): boolean => {
+  const parameters = model.supported_parameters;
+
+  // Absent on an older entry: assume yes, as with the modalities.
+  return parameters == null || parameters.includes("tools");
+};
 
 /** The free tier includes image and music models, unusable in a coding agent. */
 const isTextModel = (model: OpenRouterModel): boolean => {
@@ -63,7 +77,9 @@ export const fetchFreeOpenRouterModels = async (): Promise<
     const body = (await response.json()) as { data?: OpenRouterModel[] };
 
     const models: ModelAvailability[] = (body.data ?? [])
-      .filter((model) => isFree(model) && isTextModel(model))
+      .filter(
+        (model) => isFree(model) && isTextModel(model) && supportsTools(model)
+      )
       .map((model) => ({
         id: `openrouter/${model.id}`,
         label: (model.name ?? model.id).replace(/\s*\(free\)\s*$/i, ""),

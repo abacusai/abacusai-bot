@@ -7,6 +7,10 @@
 
 ## Unreleased
 
+The free OpenRouter models offered in the picker, and the ones RouteLLM -
+Open falls back to, are now only ones that can call tools. A music model
+priced at zero was listed, and every turn on it failed.
+
 Launching the app from a terminal that later closes no longer fills the log
 with the same error tens of thousands of times.
 
