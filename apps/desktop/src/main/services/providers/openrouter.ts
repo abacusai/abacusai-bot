@@ -22,26 +22,25 @@ interface OpenRouterModel {
 
 let cache: ModelAvailability[] | null = null;
 
+/**
+ * Every request here carries tools, and a model without them answers "No
+ * endpoints found that support tool use" to each one: a music model outputs
+ * text too, so the modality test alone let one into the picker. The agent's
+ * pool applies the same reading of the catalog (openrouter-live.ts there).
+ */
+const supportsTools = (model: OpenRouterModel): boolean => {
+  const parameters = model.supported_parameters;
+
+  // Absent on an older entry: assume yes, as with the modalities.
+  return parameters == null || parameters.includes("tools");
+};
+
 /** The free tier includes image and music models, unusable in a coding agent. */
 const isTextModel = (model: OpenRouterModel): boolean => {
   const outputs = model.architecture?.output_modalities;
 
   // Older catalog entries omit the field; assume text rather than dropping them.
   return outputs == null || outputs.includes("text");
-};
-
-/**
- * Every request here carries tools, and a model without them answers "No
- * endpoints found that support tool use" to each one: a music model outputs
- * text too, so the modality test alone let one into the picker.
- */
-export const supportsTools = (model: {
-  supported_parameters?: string[];
-}): boolean => {
-  const parameters = model.supported_parameters;
-
-  // Absent on an older entry: assume yes, as with the modalities.
-  return parameters == null || parameters.includes("tools");
 };
 
 const isFree = (model: OpenRouterModel): boolean => {

@@ -50,6 +50,7 @@ import {
   OPENLLM_ID,
   OpenLlmRotation,
 } from "../openllm.js";
+import { refreshOpenRouterLive } from "../openrouter-live.js";
 import {
   gateToolCall,
   MODE_NAMES,
@@ -264,7 +265,10 @@ export class BotSession {
     this.registry = registry;
     registerCustomProviders(registry, this.config);
     registerGeminiProvider(registry);
-    await registerAbacusProvider(registry);
+    await Promise.all([
+      registerAbacusProvider(registry),
+      refreshOpenRouterLive(),
+    ]);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
 
@@ -897,7 +901,10 @@ export class BotSession {
 
     registerCustomProviders(registry, loadConfig());
     registerGeminiProvider(registry);
-    await registerAbacusProvider(registry);
+    await Promise.all([
+      registerAbacusProvider(registry),
+      refreshOpenRouterLive(),
+    ]);
   }
 
   async setModel(reference: string): Promise<void> {

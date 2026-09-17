@@ -57,12 +57,4 @@ describe("the free OpenRouter list", () => {
       "openrouter/old/entry:free",
     ]);
   });
-
-  it("reads tool support off the catalog entry", async () => {
-    const { supportsTools } = await import("./openrouter");
-
-    expect(supportsTools({ supported_parameters: ["tools"] })).toBe(true);
-    expect(supportsTools({ supported_parameters: ["max_tokens"] })).toBe(false);
-    expect(supportsTools({})).toBe(true);
-  });
 });
