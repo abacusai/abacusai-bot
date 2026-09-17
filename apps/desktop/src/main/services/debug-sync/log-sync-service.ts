@@ -13,6 +13,7 @@ import { PROVIDER_ENV_VARS } from "#shared/settings";
 
 import { abacusBotHome } from "../../paths";
 import { readSettings } from "../config/settings";
+import { clientEnvironment } from "../diagnostics/client-environment";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { deviceId } from "./device-id";
 import {
@@ -76,6 +77,8 @@ export class LogSyncService {
       readKey: () => readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus],
       syncUrl: () => this.syncUrl(),
       deviceId: () => deviceId(),
+      clientVersion: () => app.getVersion(),
+      environment: () => clientEnvironment(),
     };
   }
 

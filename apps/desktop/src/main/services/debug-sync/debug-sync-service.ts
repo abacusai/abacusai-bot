@@ -13,6 +13,7 @@ import { PROVIDER_ENV_VARS } from "#shared/settings";
 
 import { abacusBotHome } from "../../paths";
 import { readSettings } from "../config/settings";
+import { clientEnvironment } from "../diagnostics/client-environment";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import type { StoredTranscript } from "../session/transcript-service";
 import {
@@ -20,6 +21,7 @@ import {
   shouldSync,
   type SyncDeps,
 } from "./debug-sync.core";
+import { deviceId } from "./device-id";
 
 const DEBOUNCE_MS = 1_500;
 const MAX_ATTEMPTS = 5;
@@ -108,7 +110,8 @@ export class DebugSyncService {
       readSyncedCount: (id) => this.syncedCount(id),
       clientMeta: () => ({
         clientVersion: this.clientVersion,
-        platform: process.platform,
+        deviceId: deviceId(),
+        environment: clientEnvironment(),
       }),
       log: (message) => console.log(message),
     };
