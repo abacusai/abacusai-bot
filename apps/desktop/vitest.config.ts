@@ -46,9 +46,6 @@ const ciTimeouts = process.env.CI
 const CONTENDS_FOR_THE_MACHINE = [
   "src/main/services/browser/browser-snapshot.browser.test.ts",
   "src/main/services/mcp/mcp-browser-server.test.ts",
-  // About renderer code, but it spawns the same Electron: the terminal grid
-  // needs a canvas with a real cell size, which jsdom does not have.
-  "src/main/ghostty-scrollback.browser.test.ts",
 ];
 
 export default defineConfig({
