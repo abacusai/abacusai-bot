@@ -8,6 +8,8 @@
  */
 import {
   createAgentSession,
+  createBashToolDefinition,
+  createLocalBashOperations,
   DefaultResourceLoader,
   type AgentSession,
   type AgentSessionEvent,
@@ -17,6 +19,8 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { backendOperations } from "../backends.js";
+import { withBackgroundOption } from "../background-bash.js";
 import {
   browserTaskEnabled,
   buildBrowserTaskTool,
@@ -145,6 +149,23 @@ function approvalTimeoutMs(): number {
   if (Number.isFinite(raw) && raw === 0) return Number.POSITIVE_INFINITY;
 
   return Number.isFinite(raw) && raw > 0 ? raw : 15 * 60_000;
+}
+
+/**
+ * The bot's `bash`, over the same operations as the coding session's: the
+ * bundled shell on Windows and the sandbox elsewhere. A custom tool of this
+ * name replaces pi's built-in, whose own shell lookup finds nothing on a
+ * Windows machine without Git Bash.
+ */
+export function botBashTool(
+  cwd: string,
+  operations = backendOperations() ?? createLocalBashOperations()
+): ReturnType<typeof createBashToolDefinition> {
+  return withBackgroundOption(
+    createBashToolDefinition(cwd, { operations }) as never,
+    cwd,
+    operations
+  );
 }
 
 export class BotSession {
@@ -368,6 +389,7 @@ export class BotSession {
     const customTools = [
       buildBotMemoryTool(this.home),
       buildBotTimeTool(),
+      botBashTool(this.options.cwd),
       ...browserTaskTools,
       ...mcpTools,
     ];
