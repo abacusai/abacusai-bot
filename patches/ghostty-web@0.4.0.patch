@@ -1,0 +1,46 @@
+diff --git a/dist/ghostty-web.js b/dist/ghostty-web.js
+index a4ca427b95288e70c782ce303013cd644893dcec..7fce1731118e81a0af83dfcf9f250258a51de9a5 100644
+--- a/dist/ghostty-web.js
++++ b/dist/ghostty-web.js
+@@ -2387,7 +2387,13 @@ class IA {
+    */
+   writeInternal(A, B) {
+     var g;
+-    this.wasmTerm.write(A), this.processTerminalResponses(), typeof A == "string" && A.includes("\x07") ? this.bellEmitter.fire() : A instanceof Uint8Array && A.includes(7) && this.bellEmitter.fire(), (g = this.linkDetector) == null || g.invalidateCache(), this.viewportY !== 0 && this.scrollToBottom(), typeof A == "string" && A.includes("\x1B]") && this.checkForTitleChange(A), B && requestAnimationFrame(B);
++    const wasScrolledBack = this.viewportY !== 0, scrollbackBefore = wasScrolledBack ? this.getScrollbackLength() : 0;
++    this.wasmTerm.write(A), this.processTerminalResponses(), typeof A == "string" && A.includes("\x07") ? this.bellEmitter.fire() : A instanceof Uint8Array && A.includes(7) && this.bellEmitter.fire(), (g = this.linkDetector) == null || g.invalidateCache();
++    if (wasScrolledBack) {
++      const scrollbackAfter = this.getScrollbackLength(), grew = scrollbackAfter - scrollbackBefore;
++      grew > 0 && (this.viewportY = Math.min(scrollbackAfter, this.viewportY + grew), this.targetViewportY = Math.min(scrollbackAfter, this.targetViewportY + grew), this.scrollEmitter.fire(Math.floor(this.viewportY)));
++    }
++    typeof A == "string" && A.includes("\x1B]") && this.checkForTitleChange(A), B && requestAnimationFrame(B);
+   }
+   /**
+    * Write data with newline
+@@ -2572,7 +2578,7 @@ class IA {
+     if (!this.wasmTerm)
+       throw new Error("Terminal not open");
+     const B = this.getScrollbackLength(), E = Math.max(0, Math.min(B, this.viewportY - A));
+-    E !== this.viewportY && (this.viewportY = E, this.scrollEmitter.fire(this.viewportY), B > 0 && this.showScrollbar());
++    this.targetViewportY = E, E !== this.viewportY && (this.viewportY = E, this.scrollEmitter.fire(this.viewportY), B > 0 && this.showScrollbar());
+   }
+   /**
+    * Scroll viewport by a number of pages
+@@ -2592,7 +2598,7 @@ class IA {
+    * Scroll viewport to the bottom (current output)
+    */
+   scrollToBottom() {
+-    this.viewportY !== 0 && (this.viewportY = 0, this.scrollEmitter.fire(this.viewportY), this.getScrollbackLength() > 0 && this.showScrollbar());
++    this.targetViewportY = 0, this.viewportY !== 0 && (this.viewportY = 0, this.scrollEmitter.fire(this.viewportY), this.getScrollbackLength() > 0 && this.showScrollbar());
+   }
+   /**
+    * Scroll viewport to a specific line in the buffer
+@@ -2600,7 +2606,7 @@ class IA {
+    */
+   scrollToLine(A) {
+     const B = this.getScrollbackLength(), g = Math.max(0, Math.min(B, A));
+-    g !== this.viewportY && (this.viewportY = g, this.scrollEmitter.fire(this.viewportY), B > 0 && this.showScrollbar());
++    this.targetViewportY = g, g !== this.viewportY && (this.viewportY = g, this.scrollEmitter.fire(this.viewportY), B > 0 && this.showScrollbar());
+   }
+   /**
+    * Smoothly scroll to a target viewport position
