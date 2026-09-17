@@ -53,6 +53,7 @@ import editTool from "./extensions/edit-tool.js";
 import emailFormat from "./extensions/email-format.js";
 import guardrails from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
+import noPiDocs from "./extensions/no-pi-docs.js";
 import orientation from "./extensions/orientation.js";
 import outputRepair from "./extensions/output-repair.js";
 import spill from "./extensions/spill.js";
@@ -829,6 +830,10 @@ export class AbacusBotSession {
             },
             // After the gate: handlers run in registration order, and it only
             // touches the timeout argument, so the approval card stays accurate.
+            {
+              name: "abacusai-bot-no-pi-docs",
+              factory: noPiDocs as unknown as (pi: ExtensionAPI) => void,
+            },
             {
               name: "abacusai-bot-tool-timeouts",
               factory: toolTimeouts as unknown as (pi: ExtensionAPI) => void,

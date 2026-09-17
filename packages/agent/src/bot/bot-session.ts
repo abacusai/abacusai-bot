@@ -36,6 +36,7 @@ import { setCurrentMode } from "../current-mode.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import budgets from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
+import noPiDocs from "../extensions/no-pi-docs.js";
 import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
 import toolTimeouts from "../extensions/tool-timeouts.js";
@@ -315,6 +316,10 @@ export class BotSession {
         {
           name: "abacusai-bot-bot-permissions",
           factory: this.permissionExtension,
+        },
+        {
+          name: "abacusai-bot-no-pi-docs",
+          factory: noPiDocs as unknown as (pi: ExtensionAPI) => void,
         },
         {
           name: "abacusai-bot-tool-timeouts",
