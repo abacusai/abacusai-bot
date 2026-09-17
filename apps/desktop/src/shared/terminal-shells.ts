@@ -55,6 +55,10 @@ export const terminalShellsForPlatform = (
     (shell) => shell.platforms === "all" || shell.platforms.includes(platform)
   );
 
+/** The i18n key under `terminalShells` for a shell, or the id if it is new. */
+export const terminalShellLabelKey = (id: TerminalShellId): string =>
+  TERMINAL_SHELLS.find((shell) => shell.id === id)?.labelKey ?? id;
+
 export interface TerminalShellStatus {
   id: TerminalShellId;
   /** False when nothing on this machine answers to it; the row is then unpickable. */

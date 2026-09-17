@@ -11,6 +11,7 @@ import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 
 import {
+  BUSYBOX_PAYLOAD,
   installPosixShell,
   posixShellEnv,
   type PosixShell,
@@ -19,7 +20,6 @@ import {
 import { agentVendorDir } from "#main/resources";
 import {
   DEFAULT_TERMINAL_SHELL,
-  TERMINAL_SHELLS,
   terminalShellsForPlatform,
   type TerminalShellId,
   type TerminalShellStatus,
@@ -88,7 +88,7 @@ const onPath = (
 
 /** The shipped busybox payload, or undefined in a build without one. */
 export const busyboxPayload = (): string | undefined => {
-  const payload = path.join(agentVendorDir(), "busybox.exe");
+  const payload = path.join(agentVendorDir(), BUSYBOX_PAYLOAD);
 
   return existsSync(payload) ? payload : undefined;
 };
@@ -279,7 +279,3 @@ export const effectiveTerminalShell = (
   selected: TerminalShellId,
   options: ResolveTerminalShellOptions = {}
 ): TerminalShellId => resolveTerminalShell(selected, options).id;
-
-/** Every id, for callers validating a stored value. */
-export const TERMINAL_SHELL_IDS: readonly TerminalShellId[] =
-  TERMINAL_SHELLS.map((shell) => shell.id);

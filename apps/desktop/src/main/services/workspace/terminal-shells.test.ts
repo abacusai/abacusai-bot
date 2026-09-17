@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const installPosixShell = vi.fn();
 
 vi.mock("@abacus-ai/agent/posix-shell-install", () => ({
+  BUSYBOX_PAYLOAD: "busybox.exe",
   installPosixShell: (...args: unknown[]) => installPosixShell(...args),
   posixShellEnv: (env: NodeJS.ProcessEnv, shell: { bin: string }) => ({
     ...env,

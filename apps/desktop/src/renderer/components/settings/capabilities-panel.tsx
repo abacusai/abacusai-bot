@@ -9,7 +9,10 @@ import {
   type BackendId,
   type BackendStatus,
 } from "#shared/exec-backends";
-import { TERMINAL_SHELLS, type TerminalShellId } from "#shared/terminal-shells";
+import {
+  terminalShellLabelKey,
+  type TerminalShellId,
+} from "#shared/terminal-shells";
 import { TOOLSETS_FOR_DISPLAY, type Toolset } from "#shared/toolsets";
 
 import {
@@ -500,9 +503,6 @@ const TerminalShellPicker = (): JSX.Element => {
   // One shell is not a choice: off Windows there is only the login shell.
   if (state == null || state.statuses.length < 2) return <></>;
 
-  const labelKey = (id: TerminalShellId): string =>
-    TERMINAL_SHELLS.find((shell) => shell.id === id)?.labelKey ?? id;
-
   return (
     <div className="space-y-2" data-id="terminal-shell-picker">
       <h3 className="text-secondary-foreground text-xs font-semibold tracking-wide uppercase">
@@ -515,8 +515,12 @@ const TerminalShellPicker = (): JSX.Element => {
         <Alert data-id="terminal-shell-fallback">
           <AlertDescription>
             {t("terminalShells.fellBack", {
-              selected: t(`terminalShells.${labelKey(state.selected)}.label`),
-              effective: t(`terminalShells.${labelKey(state.effective)}.label`),
+              selected: t(
+                `terminalShells.${terminalShellLabelKey(state.selected)}.label`
+              ),
+              effective: t(
+                `terminalShells.${terminalShellLabelKey(state.effective)}.label`
+              ),
             })}
           </AlertDescription>
         </Alert>
@@ -537,7 +541,9 @@ const TerminalShellPicker = (): JSX.Element => {
             >
               <ItemContent>
                 <ItemTitle>
-                  {t(`terminalShells.${labelKey(status.id)}.label`)}
+                  {t(
+                    `terminalShells.${terminalShellLabelKey(status.id)}.label`
+                  )}
                   {active && (
                     <Badge variant="secondary">
                       {t("terminalShells.inUse")}
@@ -545,7 +551,9 @@ const TerminalShellPicker = (): JSX.Element => {
                   )}
                 </ItemTitle>
                 <ItemDescription>
-                  {t(`terminalShells.${labelKey(status.id)}.description`)}
+                  {t(
+                    `terminalShells.${terminalShellLabelKey(status.id)}.description`
+                  )}
                 </ItemDescription>
                 {!status.available && (
                   <ItemDescription

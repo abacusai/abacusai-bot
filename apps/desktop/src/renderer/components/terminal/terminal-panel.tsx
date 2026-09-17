@@ -13,7 +13,10 @@ import type {
   ConversationKey,
   ConversationRef,
 } from "#shared/conversation-scope";
-import { TERMINAL_SHELLS, type TerminalShellId } from "#shared/terminal-shells";
+import {
+  terminalShellLabelKey,
+  type TerminalShellId,
+} from "#shared/terminal-shells";
 
 import {
   useSetTerminalShell,
@@ -152,13 +155,10 @@ export const TerminalPanel = ({
   }, [activeTab, conversationKey, generation]);
 
   const shellLabel = useCallback(
-    (id: TerminalShellId): string => {
-      const shell = TERMINAL_SHELLS.find((entry) => entry.id === id);
-
-      return t(`terminalShells.${shell?.labelKey ?? id}.label`, {
+    (id: TerminalShellId): string =>
+      t(`terminalShells.${terminalShellLabelKey(id)}.label`, {
         defaultValue: id,
-      });
-    },
+      }),
     [t]
   );
 

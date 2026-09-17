@@ -61,11 +61,10 @@ const clamp = (value: number, max: number): number =>
 /** Which cell the pointer is over, 1-based, as the protocol counts. */
 const cellAt = (
   term: GhosttyTerminal,
-  element: HTMLElement,
+  canvas: HTMLCanvasElement | null,
   event: MouseEvent
 ): { col: number; row: number } | null => {
   const metrics = term.renderer?.getMetrics();
-  const canvas = element.querySelector("canvas");
   if (metrics == null || canvas == null) return null;
   if (metrics.width === 0 || metrics.height === 0) return null;
 
@@ -126,6 +125,13 @@ export const installMouseReporting = (
   /** Trackpad deltas are fractions of a line; they add up to one eventually. */
   let pendingRows = 0;
   let pendingColumns = 0;
+  /** Created once by `open()`; looked up again only if it ever goes away. */
+  let canvas: HTMLCanvasElement | null = null;
+  const grid = (): HTMLCanvasElement | null => {
+    if (canvas?.isConnected !== true) canvas = element.querySelector("canvas");
+
+    return canvas;
+  };
 
   const send = (sequence: string | null): void => {
     // `true`: as user input, so it reaches the PTY rather than the screen.
@@ -153,16 +159,18 @@ export const installMouseReporting = (
   /** True when the event was reported and must not also select text. */
   const report = (event: MouseEvent, kind: "down" | "up" | "move"): boolean => {
     if (!isTracking(term) || event.shiftKey) return false;
+    // Asked before the cell is measured: under click-only tracking this is
+    // every mousemove, and measuring one forces a layout.
+    if (kind === "move" && !wantsMotion()) return false;
     // The pointer says what it can do here. The library sets an I-beam for
     // text that can be selected and a hand over a link; while a program owns
     // the mouse, dragging selects nothing, so it is an arrow. Ours sticks
     // because the library's own mousemove never runs while we claim it.
     element.style.cursor = "default";
-    const at = cellAt(term, element, event);
+    const at = cellAt(term, grid(), event);
     if (at == null) return false;
 
     if (kind === "move") {
-      if (!wantsMotion()) return false;
       const cell = `${at.col},${at.row}`;
       if (cell === lastCell) return true;
       lastCell = cell;
@@ -225,7 +233,7 @@ export const installMouseReporting = (
   term.attachCustomWheelEventHandler((event) => {
     // Not tracking: the library scrolls its own viewport, which is right.
     if (!isTracking(term) || event.shiftKey) return false;
-    const at = cellAt(term, element, event);
+    const at = cellAt(term, grid(), event);
     if (at == null) return false;
     const metrics = term.renderer?.getMetrics();
 
