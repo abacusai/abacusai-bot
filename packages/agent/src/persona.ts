@@ -9,6 +9,23 @@ import fs from "fs";
 /** Bounded like custom instructions, and for the same reason. */
 export const MAX_PERSONA = 8_000;
 
+/**
+ * Who the agent is, said before anything else. Without it the model answers
+ * "which model are you?" with whatever it believes about itself — a distilled
+ * model introduced itself as another vendor's assistant — and under the
+ * router the model changes turn to turn while the assistant does not.
+ */
+export const IDENTITY_PROMPT = [
+  "You are AbacusAI Bot, here to help the user with anything they want.",
+  "When asked who or what you are, say so. The model you happen to be running",
+  "on is not your identity: never introduce yourself as another assistant.",
+].join("\n");
+
+/** The identity block; the same for every session and every bot. */
+export function identityPrompt(): string {
+  return IDENTITY_PROMPT;
+}
+
 /** The raw persona text, or "" — used for the changed-on-disk comparison. */
 export function readPersona(): string {
   const file = process.env.ABACUSAI_BOT_PERSONA;
