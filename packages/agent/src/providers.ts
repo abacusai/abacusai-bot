@@ -58,11 +58,13 @@ export interface ModelChoice {
   reasoning: boolean;
   contextWindow: number;
   /**
-   * Abacus only: whether this model belongs in OpenLLM's free pool. A free-tier
-   * catalog is the pool; a paid account contributes only the low code router,
-   * so a stale openllm selection can never route onto premium models.
+   * Abacus only: whether this model belongs in OpenLLM's free pool, and where
+   * in the Abacus slice it is tried. Both come from the catalog's
+   * `route-llm-open` entry (see abacusPool), so a stale openllm selection can
+   * never route onto premium models.
    */
   poolEligible?: boolean;
+  poolRank?: number;
 }
 
 export interface ProviderStatus {
@@ -187,8 +189,11 @@ interface AbacusPiModel {
   id: string;
   name: string;
   reasoning: boolean;
-  /** OpenLLM pool membership — see ModelChoice.poolEligible. */
+  /** OpenLLM pool membership and order — see ModelChoice.poolEligible. */
   poolEligible?: boolean;
+  poolRank?: number;
+  /** The platform says it bills nothing; see AbacusCatalogEntry.free. */
+  free?: boolean;
   input: Array<"text" | "image">;
   cost: {
     input: number;
@@ -213,6 +218,10 @@ interface AbacusCatalogEntry {
   input_token_rate?: number | string;
   output_token_rate?: number | string;
   thinking?: boolean;
+  /** Priced $0/$0 by the platform: bills nothing, and keeps serving once the balance is gone. */
+  free?: boolean;
+  /** `route-llm-open` only: the Abacus models the pool tries, in order. */
+  pool?: string[];
 }
 
 const abacusModel = (
@@ -251,6 +260,28 @@ const abacusModel = (
 const CHAT_ROUTER_ID = "route-llm";
 const CODE_ROUTER_ID = "route-llm-code";
 const CODE_ROUTER_LOW_ID = "route-llm-code-low";
+/**
+ * Not a model: the catalog entry describing the Abacus slice of OpenLLM's
+ * pool — which models, in which order — so that lives on the platform and
+ * changes there without an app release.
+ */
+export const OPEN_POOL_ID = "route-llm-open";
+
+/**
+ * The Abacus pool the catalog declares, in order; null when the server
+ * predates the descriptor, in which case the caller infers it from the tier.
+ */
+export const abacusPool = (
+  entries: ReadonlyArray<{ id?: string; pool?: unknown }>
+): string[] | null => {
+  const descriptor = entries.find((entry) => entry.id === OPEN_POOL_ID);
+
+  if (descriptor == null || !Array.isArray(descriptor.pool)) return null;
+
+  return descriptor.pool.filter(
+    (id): id is string => typeof id === "string" && id.length > 0
+  );
+};
 
 /** Over plain Flash so a free-tier default can see attached images. */
 export const FLASH_VISION_ID = "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp";
@@ -267,15 +298,18 @@ export const ABACUS_PREFERRED_MODELS = [
  */
 const STATIC_ABACUS_MODELS: AbacusPiModel[] = [
   // First, so a fallback list picks the same driver the live catalog would.
-  abacusModel(
-    CODE_ROUTER_LOW_ID,
-    "RouteLLM (Code, Low)",
-    { input: 0.14, output: 0.28 },
-    1_000_000,
-    64_000,
-    true,
-    true
-  ),
+  {
+    ...abacusModel(
+      CODE_ROUTER_LOW_ID,
+      "RouteLLM (Code, Low)",
+      { input: 0.14, output: 0.28 },
+      1_000_000,
+      64_000,
+      true,
+      true
+    ),
+    poolRank: 0,
+  },
   abacusModel(
     CODE_ROUTER_ID,
     "RouteLLM (Code)",
@@ -383,13 +417,17 @@ const fetchAbacusCatalog = async (apiKey: string): Promise<AbacusPiModel[]> => {
 
     const body = (await response.json()) as { data?: AbacusCatalogEntry[] };
 
-    // A free-tier catalog never lists the standard code router; its absence is
-    // the tier signal. On the free tier the CONCRETE models are the pool (not
-    // the low router, so OpenLLM does not route into a router that routes
-    // again); a paid catalog contributes only the low router.
+    // The pool is the catalog's `route-llm-open` list, in its order. A server
+    // predating the descriptor gets the old inference: a free-tier catalog
+    // never lists the standard code router, and there the CONCRETE models are
+    // the pool (not the low router, so OpenLLM does not route into a router
+    // that routes again); a paid catalog contributes only the low router.
+    const pool = abacusPool(body.data ?? []);
     const freeTierCatalog = !(body.data ?? []).some(
       (entry) => entry.id === CODE_ROUTER_ID
     );
+    const inferredPool = (id: string): boolean =>
+      freeTierCatalog ? id !== CODE_ROUTER_LOW_ID : id === CODE_ROUTER_LOW_ID;
 
     return (body.data ?? [])
       .filter((entry): entry is AbacusCatalogEntry & { id: string } => {
@@ -405,8 +443,8 @@ const fetchAbacusCatalog = async (apiKey: string): Promise<AbacusPiModel[]> => {
           entry.output_modalities.includes("text")
         );
       })
-      .map((entry) =>
-        abacusModel(
+      .map((entry) => ({
+        ...abacusModel(
           entry.id,
           entry.display_name ?? entry.name ?? entry.id,
           {
@@ -416,16 +454,20 @@ const fetchAbacusCatalog = async (apiKey: string): Promise<AbacusPiModel[]> => {
           entry.context_length ?? 128_000,
           entry.max_completion_tokens ?? 8_192,
           entry.thinking !== false,
-          freeTierCatalog
-            ? entry.id !== CODE_ROUTER_LOW_ID
-            : entry.id === CODE_ROUTER_LOW_ID,
+          pool != null ? pool.includes(entry.id) : inferredPool(entry.id),
           // What the platform says the model can SEE; registered text-only, the
           // harness strips attached images before the provider sees them.
           entry.input_modalities?.includes("image")
             ? ["text", "image"]
             : ["text"]
-        )
-      )
+        ),
+        ...(pool != null && pool.includes(entry.id)
+          ? { poolRank: pool.indexOf(entry.id) }
+          : {}),
+        // The platform's word, not a price test: an entry with no rate arrives
+        // as cost zero, which is not the same as free.
+        free: entry.free === true,
+      }))
       .sort((a, b) => abacusRank(a.id) - abacusRank(b.id));
   } catch {
     // Offline or an unrecognised shape: the static list still stands.
@@ -515,7 +557,14 @@ function toChoice(
   model: ReturnType<ModelRegistry["getAvailable"]>[number]
 ): ModelChoice {
   const cost = model.cost as { input?: number; output?: number } | undefined;
-  const free = (cost?.input ?? 0) === 0 && (cost?.output ?? 0) === 0;
+  const flags = model as {
+    free?: boolean;
+    poolEligible?: boolean;
+    poolRank?: number;
+  };
+  // A provider that states free-ness (Abacus) is believed over the price line.
+  const free =
+    flags.free ?? ((cost?.input ?? 0) === 0 && (cost?.output ?? 0) === 0);
 
   return {
     id: `${model.provider}/${model.id}`,
@@ -526,7 +575,8 @@ function toChoice(
     inputCost: cost?.input ?? 0,
     reasoning: Boolean(model.reasoning),
     contextWindow: model.contextWindow ?? 0,
-    poolEligible: (model as { poolEligible?: boolean }).poolEligible,
+    poolEligible: flags.poolEligible,
+    poolRank: flags.poolRank,
   };
 }
 

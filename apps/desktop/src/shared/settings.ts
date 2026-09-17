@@ -27,8 +27,12 @@ export interface AbacusBotSettings {
    * one used.
    */
   terminalShell?: string;
-  /** Shell commands confined by the OS sandbox. Absent means off. */
-  sandbox?: boolean;
+  /**
+   * What a session, bot or routine starts in when nothing picks a mode:
+   * "YOLO" (Full access, absent means this) or "AUTO" (the same, inside the
+   * kernel sandbox). Set on the Profile page.
+   */
+  defaultMode?: string;
   /**
    * Stored as what the user turned OFF, so a settings file written before this
    * existed reads as "on".

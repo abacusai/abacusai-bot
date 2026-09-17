@@ -30,12 +30,12 @@ const openLlmConfig = (): string =>
     defaultModel: "openllm/auto",
     customProviders: [
       {
-        id: "ollama",
+        id: "openrouter",
         baseUrl: provider.baseUrl,
         apiKey: "test-key",
         models: [
-          { id: "big", contextWindow: 131072 },
-          { id: "small", contextWindow: 65536 },
+          { id: "big:free", contextWindow: 131072 },
+          { id: "small:free", contextWindow: 65536 },
         ],
       },
     ],
@@ -119,7 +119,7 @@ describe("a bot on a concrete model", () => {
     const { session, events } = botSession();
     await session.start();
 
-    await session.setModel("ollama/small");
+    await session.setModel("openrouter/small:free");
 
     const changed = events
       .filter(
@@ -129,15 +129,15 @@ describe("a bot on a concrete model", () => {
       .map((event) => event.event)
       .filter((event) => event.type === "model_changed");
 
-    expect(changed.at(-1)).toMatchObject({ model: "ollama/small" });
+    expect(changed.at(-1)).toMatchObject({ model: "openrouter/small:free" });
   });
 
   it("starts on it when the chat was pinned to one", async () => {
-    const { session, events } = botSession("ollama/small");
+    const { session, events } = botSession("openrouter/small:free");
 
     await session.start();
 
-    expect(readyModel(events)).toBe("ollama/small");
+    expect(readyModel(events)).toBe("openrouter/small:free");
   });
 });
 
@@ -151,9 +151,9 @@ describe("a bot on a concrete model", () => {
  */
 describe("a switch that cannot be made", () => {
   it("leaves the reported model where it was", async () => {
-    const { session, events } = botSession("ollama/small");
+    const { session, events } = botSession("openrouter/small:free");
     await session.start();
-    expect(readyModel(events)).toBe("ollama/small");
+    expect(readyModel(events)).toBe("openrouter/small:free");
 
     await session.setModel("nope/not-a-model");
 
@@ -178,13 +178,13 @@ describe("a switch that cannot be made", () => {
   });
 
   it("does not leave the router claimed after a failed switch to it", async () => {
-    const { session, events } = botSession("ollama/small");
+    const { session, events } = botSession("openrouter/small:free");
     await session.start();
 
     // Fails, then a successful switch to a concrete model: if the flag had
     // been left set by the failure, this would report the router instead.
     await session.setModel("nope/not-a-model");
-    await session.setModel("ollama/big");
+    await session.setModel("openrouter/big:free");
 
     const changed = events
       .filter(
@@ -194,7 +194,7 @@ describe("a switch that cannot be made", () => {
       .map((event) => event.event)
       .filter((event) => event.type === "model_changed");
 
-    expect(changed.at(-1)).toMatchObject({ model: "ollama/big" });
+    expect(changed.at(-1)).toMatchObject({ model: "openrouter/big:free" });
   });
 });
 
@@ -210,13 +210,13 @@ describe("a switch that cannot be made", () => {
 describe("a bot that started without a key", () => {
   const configWith = (apiKey: boolean): string =>
     JSON.stringify({
-      defaultModel: "ollama/small",
+      defaultModel: "openrouter/small:free",
       customProviders: [
         {
-          id: "ollama",
+          id: "openrouter",
           baseUrl: provider.baseUrl,
           ...(apiKey ? { apiKey: "test-key" } : {}),
-          models: [{ id: "small", contextWindow: 65536 }],
+          models: [{ id: "small:free", contextWindow: 65536 }],
         },
       ],
     });
@@ -246,7 +246,7 @@ describe("a bot that started without a key", () => {
 
   it("says so, and never hands the turn to pi", async () => {
     writeConfig(false);
-    const { session, events } = botSession("ollama/small");
+    const { session, events } = botSession("openrouter/small:free");
     await session.start();
 
     expect(unavailable(events)).toBe(1);
@@ -262,7 +262,7 @@ describe("a bot that started without a key", () => {
 
   it("picks the model up when the keys are refreshed", async () => {
     writeConfig(false);
-    const { session, events } = botSession("ollama/small");
+    const { session, events } = botSession("openrouter/small:free");
     await session.start();
 
     writeConfig(true);
@@ -272,7 +272,7 @@ describe("a bot that started without a key", () => {
       agentEvents(events)
         .filter((event) => event.type === "model_changed")
         .at(-1)
-    ).toMatchObject({ model: "ollama/small" });
+    ).toMatchObject({ model: "openrouter/small:free" });
 
     provider.script(() => ({ say: "back" }));
     const before = provider.calls.length;
@@ -286,7 +286,7 @@ describe("a bot that started without a key", () => {
     // The incident exactly: the key came back, no refresh reached this bot,
     // and the next message still had to be answered.
     writeConfig(false);
-    const { session, events } = botSession("ollama/small");
+    const { session, events } = botSession("openrouter/small:free");
     await session.start();
 
     writeConfig(true);

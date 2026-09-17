@@ -15,6 +15,8 @@ import {
   type PermissionRequest,
   type ToolRequest,
 } from "./protocol.js";
+import { isWithin, namedSecretPaths } from "./sandbox/secrets.js";
+import { zoneContext, zoneOf } from "./sandbox/zones.js";
 import { isInsideDirectory, realPathOf } from "./workspace-path.js";
 
 /** Tools that change something on disk or run code. */
@@ -94,7 +96,8 @@ export function shellSegments(command: string): string[] {
 }
 
 export type Gate =
-  | { kind: "allow" }
+  /** `credentialPaths`: hidden stores the user already approved, to unhide. */
+  | { kind: "allow"; credentialPaths?: string[] }
   /** Refused outright without asking — PLAN mode's answer to a mutation. */
   | { kind: "refuse"; reason: string }
   | { kind: "ask"; request: PermissionRequest };
@@ -112,6 +115,10 @@ export interface GateOptions {
   allowedWritePaths: readonly string[];
   /** Origins the user chose to always allow web_fetch for, this session. */
   allowedOrigins: readonly string[];
+  /** Credential stores the sandbox hides that a command may ask to read. */
+  promptableCredentialPaths?: readonly string[];
+  /** Hidden stores the user chose to always allow reading, this session. */
+  allowedCredentialPaths?: readonly string[];
 }
 
 export function isMutatingTool(toolName: string): boolean {
@@ -134,7 +141,19 @@ export function isMutatingCall(tool: ToolRequest): boolean {
 export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   const { mode } = options;
 
-  if (mode === AgentMode.Yolo) {
+  // Full access means exactly that: no prompts and no sandbox.
+  if (mode === AgentMode.Yolo) return { kind: "allow" };
+
+  // Auto skips the approval prompts, not the sandbox: a hidden credential
+  // store a command names is still the OS refusing, and still worth a card.
+  // A file tool leaving the workspace follows the same rule as a confined
+  // command (sandbox/intent.ts): a new file in the user's own folders is
+  // fine, touching an existing one or a sensitive place asks.
+  if (mode === AgentMode.Auto) {
+    if (tool.name === "bash")
+      return credentialGate(tool, options) ?? { kind: "allow" };
+    if (WRITE_TOOLS.has(tool.name)) return autoWriteGate(tool, options);
+
     return { kind: "allow" };
   }
 
@@ -266,7 +285,19 @@ function gateWebFetch(tool: ToolRequest, options: GateOptions): Gate {
  * through, one outside asks in every mode but Yolo, as the
  * `write_outside_directory` / `edit_outside_directory` request types.
  */
-function gateWrite(tool: ToolRequest, options: GateOptions): Gate {
+const WRITE_TOOLS = new Set([
+  "write",
+  "edit",
+  "batch_edit",
+  "notebook_edit",
+  "ast_edit",
+]);
+
+/** Where a file tool's path lands, resolved for the card and the check. */
+function writeTarget(
+  tool: ToolRequest,
+  options: GateOptions
+): { requested: string; resolved: string; inside: boolean } {
   const requested = String(tool.input.path ?? tool.input.notebookPath ?? "");
   const resolved = pathToShow(
     path.resolve(options.cwd, requested),
@@ -276,37 +307,71 @@ function gateWrite(tool: ToolRequest, options: GateOptions): Gate {
     isInside(resolved, options.cwd) ||
     options.allowedWritePaths.some((dir) => isInside(resolved, dir));
 
-  if (!inside) {
-    const deducedDirectory = path.dirname(resolved);
-    const base = {
-      tool,
-      filePath: requested,
-      resolvedPath: resolved,
-      deducedDirectory,
+  return { requested, resolved, inside };
+}
+
+/** The card for a file tool leaving the workspace. */
+function outsideWriteRequest(
+  tool: ToolRequest,
+  requested: string,
+  resolved: string
+): PermissionRequest {
+  const base = {
+    tool,
+    filePath: requested,
+    resolvedPath: resolved,
+    deducedDirectory: path.dirname(resolved),
+  };
+
+  if (tool.name === "write") {
+    return {
+      ...base,
+      type: "write_outside_directory",
+      displayName: "Write file outside the workspace",
+      isNewFile: !fs.existsSync(resolved),
     };
+  }
 
-    if (tool.name === "write") {
-      return {
-        kind: "ask",
-        request: {
-          ...base,
-          type: "write_outside_directory",
-          displayName: "Write file outside the workspace",
-          isNewFile: !fs.existsSync(resolved),
-        },
-      };
-    }
+  return {
+    ...base,
+    type:
+      tool.name === "notebook_edit"
+        ? "notebook_edit_outside_directory"
+        : "edit_outside_directory",
+    displayName: "Edit file outside the workspace",
+  };
+}
 
+/**
+ * Auto's answer for a file tool: inside the workspace, scratch, or a tool
+ * home, go ahead; a NEW file in the user's own folders too, since "save it on
+ * my Desktop" is the request; anything else outside asks, because changing
+ * or replacing what is already there is what the user would want to hear
+ * about first.
+ */
+function autoWriteGate(tool: ToolRequest, options: GateOptions): Gate {
+  const { requested, resolved, inside } = writeTarget(tool, options);
+  if (inside) return { kind: "allow" };
+
+  const zone = zoneOf(resolved, zoneContext(options.cwd));
+  if (zone === "workspace" || zone === "scratch" || zone === "toolhome")
+    return { kind: "allow" };
+  if (zone === "user" && tool.name === "write" && !fs.existsSync(resolved))
+    return { kind: "allow" };
+
+  return {
+    kind: "ask",
+    request: outsideWriteRequest(tool, requested, resolved),
+  };
+}
+
+function gateWrite(tool: ToolRequest, options: GateOptions): Gate {
+  const { requested, resolved, inside } = writeTarget(tool, options);
+
+  if (!inside) {
     return {
       kind: "ask",
-      request: {
-        ...base,
-        type:
-          tool.name === "notebook_edit"
-            ? "notebook_edit_outside_directory"
-            : "edit_outside_directory",
-        displayName: "Edit file outside the workspace",
-      },
+      request: outsideWriteRequest(tool, requested, resolved),
     };
   }
 
@@ -389,12 +454,70 @@ function gateRead(tool: ToolRequest, options: GateOptions): Gate {
   };
 }
 
+/** The hidden stores a command names, split by whether the session allowed them. */
+function namedCredentialStores(
+  command: string,
+  options: GateOptions
+): { named: string[]; approved: string[]; unapproved: string[] } {
+  const named = namedSecretPaths(command, {
+    cwd: options.cwd,
+    promptable: options.promptableCredentialPaths ?? [],
+  });
+  const allowedStores = options.allowedCredentialPaths ?? [];
+  const approved = named.filter((store) =>
+    allowedStores.some((allowed) => isWithin(store, allowed))
+  );
+
+  return {
+    named,
+    approved,
+    unapproved: named.filter((store) => !approved.includes(store)),
+  };
+}
+
+/**
+ * The card for a command that names a hidden credential store the session has
+ * not allowed, or the allowance to unhide the ones it has; null when the
+ * command names none.
+ */
+function credentialGate(tool: ToolRequest, options: GateOptions): Gate | null {
+  const command = String(tool.input.command ?? "");
+  const { named, approved, unapproved } = namedCredentialStores(
+    command,
+    options
+  );
+  if (named.length === 0) return null;
+  if (unapproved.length === 0)
+    return { kind: "allow", credentialPaths: approved };
+
+  return {
+    kind: "ask",
+    request: {
+      type: "run_terminal",
+      tool,
+      displayName: "Run command",
+      command,
+      cwd: options.cwd,
+      background: tool.input.background === true,
+      credentialPaths: named,
+    },
+  };
+}
+
 function gateBash(tool: ToolRequest, options: GateOptions): Gate {
   const command = String(tool.input.command ?? "");
+
+  // A hidden credential store the command names asks even when the command
+  // prefix was approved: `cat` being allowed says nothing about the key.
+  const { named, approved, unapproved } = namedCredentialStores(
+    command,
+    options
+  );
 
   const segments = shellSegments(command);
 
   if (
+    unapproved.length === 0 &&
     segments.length > 0 &&
     segments.every(
       (segment) =>
@@ -404,7 +527,9 @@ function gateBash(tool: ToolRequest, options: GateOptions): Gate {
         )
     )
   ) {
-    return { kind: "allow" };
+    return approved.length > 0
+      ? { kind: "allow", credentialPaths: approved }
+      : { kind: "allow" };
   }
 
   return {
@@ -417,6 +542,7 @@ function gateBash(tool: ToolRequest, options: GateOptions): Gate {
       cwd: options.cwd,
       // `bash` can background a command too; the card must say so.
       background: tool.input.background === true,
+      ...(named.length > 0 ? { credentialPaths: named } : {}),
     },
   };
 }
@@ -568,7 +694,13 @@ function summarize(input: Record<string, unknown>): string {
 }
 
 /** The modes a user can name, for help text and error messages. */
-export const MODE_NAMES = ["default", "acceptedits", "plan", "yolo"] as const;
+export const MODE_NAMES = [
+  "default",
+  "acceptedits",
+  "plan",
+  "auto",
+  "yolo",
+] as const;
 
 /**
  * A mode name, or null when it is not one. `parseMode` falls back to Normal
@@ -585,6 +717,8 @@ export function parseModeStrict(raw: string | undefined): AgentMode | null {
       return AgentMode.AcceptEdits;
     case "PLAN":
       return AgentMode.PlanMode;
+    case "AUTO":
+      return AgentMode.Auto;
     case "YOLO":
       return AgentMode.Yolo;
     default:

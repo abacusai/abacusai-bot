@@ -224,20 +224,6 @@ describe("batch_edit answers to the edit guards", () => {
     expect(blocked?.block).toBe(true);
   });
 
-  it("refuses a path outside the workspace", async () => {
-    const blocked = (await pi.fire(
-      "tool_call",
-      batchCall("/etc/hosts"),
-      ctx()
-    )) as {
-      block: boolean;
-      reason: string;
-    };
-
-    expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("outside the workspace");
-  });
-
   it("lets through a file that was read this session", async () => {
     fs.writeFileSync(path.join(cwd, "server.js"), "original");
     await pi.fire(
@@ -384,57 +370,10 @@ describe("redirects into scratch space", () => {
 });
 
 /**
- * The guard asks whether a write lands outside the workspace, and a symlink is
- * the way a path can look inside while landing outside. Following it is the
- * same correction the permission gate needed; the requirement here is that
- * ordinary in-repo links keep working, since blocking those would break real
- * projects for no security gain.
+ * Containment lives in the permission gate (permissions.ts), which follows
+ * links; what this guard must not do is break ordinary in-repo links.
  */
 describe("symlinks and the workspace guard", () => {
-  // The escape target is a real system path rather than another temp
-  // directory: /tmp and /var/folders are sanctioned scratch space here, so a
-  // link pointing at one of those is allowed on purpose and would not test
-  // anything. Nothing is ever written — the point is that the guard refuses.
-  const ESCAPE_TARGET = "/etc/hosts";
-
-  it("refuses a write through a link that leaves the workspace", async () => {
-    fs.symlinkSync(ESCAPE_TARGET, path.join(cwd, "escape.txt"));
-    const blocked = (await pi.fire(
-      "tool_call",
-      writeCall("escape.txt"),
-      ctx()
-    )) as {
-      block: boolean;
-      reason: string;
-    };
-
-    expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("outside the workspace");
-  });
-
-  it("refuses an edit through such a link", async () => {
-    fs.symlinkSync(ESCAPE_TARGET, path.join(cwd, "escape.txt"));
-    // Marked as read first, so what this asserts is containment rather than the
-    // read-before-edit rule that would otherwise answer first.
-    await pi.fire(
-      "tool_call",
-      { toolName: "read", input: { path: "escape.txt" } },
-      ctx()
-    );
-
-    const blocked = (await pi.fire(
-      "tool_call",
-      {
-        toolName: "edit",
-        input: { path: "escape.txt", oldText: "a", newText: "b" },
-      },
-      ctx()
-    )) as { block: boolean; reason: string };
-
-    expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("outside the workspace");
-  });
-
   it("still allows a write through a link that stays inside", async () => {
     fs.mkdirSync(path.join(cwd, "pkg"));
     fs.symlinkSync(path.join(cwd, "pkg"), path.join(cwd, "alias"));
@@ -442,42 +381,6 @@ describe("symlinks and the workspace guard", () => {
     expect(
       await pi.fire("tool_call", writeCall("alias/new.ts"), ctx())
     ).toBeUndefined();
-  });
-
-  it("refuses a write through a DANGLING link that aims outside", async () => {
-    // The target does not exist, so realpath alone resolves the LINK's own
-    // path — which sits inside the workspace — and the write would create the
-    // target through it.
-    fs.symlinkSync(
-      "/etc/abacusai-bot-no-such-target",
-      path.join(cwd, "notes.txt")
-    );
-
-    const blocked = (await pi.fire(
-      "tool_call",
-      writeCall("notes.txt"),
-      ctx()
-    )) as { block: boolean; reason: string };
-
-    expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("outside the workspace");
-  });
-
-  it("follows a chain of dangling links to where it really aims", async () => {
-    fs.symlinkSync(path.join(cwd, "middle.txt"), path.join(cwd, "notes.txt"));
-    fs.symlinkSync(
-      "/etc/abacusai-bot-no-such-target",
-      path.join(cwd, "middle.txt")
-    );
-
-    const blocked = (await pi.fire(
-      "tool_call",
-      writeCall("notes.txt"),
-      ctx()
-    )) as { block: boolean; reason: string };
-
-    expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("outside the workspace");
   });
 
   it("still allows a plain write to a file that simply is not there yet", async () => {
@@ -782,10 +685,11 @@ describe("bashWriteTargets", () => {
 });
 
 /**
- * The fence around the workspace is for the ask-first modes. Under Full
- * access the user has said the whole machine is in bounds, and a folder the
- * host pre-allowed is in bounds in every mode; blocking either only sends the
- * model to the shell, which is not fenced.
+ * Whether a write may leave the workspace is the permission gate's question
+ * (permissions.ts): it asks in the ask-first modes, lets a new file into the
+ * user's folders in Auto, and lets everything through under Full access.
+ * This guard refuses none of it, or an outside write the user approved on
+ * the card would still fail here; what it keeps is the protected paths.
  */
 describe("writing outside the workspace", () => {
   let outside: string;
@@ -806,20 +710,12 @@ describe("writing outside the workspace", () => {
   const target = (): string =>
     path.join(os.homedir(), ".guardrails-test-outside", "x.md");
 
-  it("is refused in the default mode", async () => {
+  it("is not this guard's to refuse, even in the default mode", async () => {
     setCurrentMode(AgentMode.Normal);
 
-    const blocked = (await pi.fire(
-      "tool_call",
-      writeCall(target()),
-      ctx()
-    )) as {
-      block: boolean;
-      reason: string;
-    };
+    const blocked = await pi.fire("tool_call", writeCall(target()), ctx());
 
-    expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("outside the workspace");
+    expect(blocked).toBeUndefined();
   });
 
   it("is allowed under Full access", async () => {

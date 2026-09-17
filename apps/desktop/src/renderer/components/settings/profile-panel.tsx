@@ -2,7 +2,15 @@ import { CircleUserRound } from "lucide-react";
 import type { JSX } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AgentMode } from "#shared/agent-types";
+import type { DefaultAgentMode } from "#shared/contracts";
+
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
+import {
+  useDefaultAgentModeQuery,
+  useSandboxSupportQuery,
+  useSetDefaultAgentMode,
+} from "../../hooks/use-sandbox";
 import { displayName, useAccountStore } from "../../stores/account-store";
 import {
   FocusedPage,
@@ -17,6 +25,7 @@ import {
   ItemTitle,
 } from "../ui";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { NativeSelect, NativeSelectOption } from "../ui/native-select";
 
 const Detail = ({
   label,
@@ -36,6 +45,61 @@ const Detail = ({
     </ItemContent>
   </Item>
 );
+
+/**
+ * What new sessions, bots and routines run in: Full access, or Auto, the
+ * same inside the kernel sandbox. Offered only where the sandbox works; a
+ * machine that cannot confine a command has one honest mode, so the section
+ * is not shown there at all.
+ */
+const DangerZone = (): JSX.Element | null => {
+  const { t } = useTranslation();
+  const support = useSandboxSupportQuery().data;
+  const current = useDefaultAgentModeQuery().data ?? AgentMode.Yolo;
+  const setMode = useSetDefaultAgentMode();
+
+  if (support?.available !== true) return null;
+
+  return (
+    <section className="mt-2" data-id="profile-danger-zone">
+      <h2 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+        {t("profile.dangerZone")}
+      </h2>
+      <Item variant="outline" data-id="profile-default-mode">
+        <ItemContent>
+          <ItemTitle>{t("profile.permissionsTitle")}</ItemTitle>
+          <ItemDescription>
+            {t("profile.permissionsDescription")}
+          </ItemDescription>
+          {current === AgentMode.Auto && (
+            <ItemDescription
+              className="text-amber-600 dark:text-amber-400"
+              data-id="profile-default-mode-warning"
+            >
+              {t("profile.permissionsAutoWarning")}
+            </ItemDescription>
+          )}
+        </ItemContent>
+        <NativeSelect
+          value={current}
+          disabled={setMode.isPending}
+          aria-label={t("profile.permissionsTitle")}
+          data-id="profile-default-mode-select"
+          onChange={(event) =>
+            setMode.mutate(event.target.value as DefaultAgentMode)
+          }
+        >
+          <NativeSelectOption value={AgentMode.Yolo}>
+            {t("profile.permissionsFullAccess")}
+          </NativeSelectOption>
+          <NativeSelectOption value={AgentMode.Auto}>
+            {t("profile.permissionsAuto")}
+          </NativeSelectOption>
+        </NativeSelect>
+      </Item>
+    </section>
+  );
+};
 
 export const ProfilePanel = (): JSX.Element => {
   const { t } = useTranslation();
@@ -133,6 +197,8 @@ export const ProfilePanel = (): JSX.Element => {
             )}
           </ItemGroup>
         )}
+
+        <DangerZone />
       </FocusedPageBody>
     </FocusedPage>
   );

@@ -40,6 +40,7 @@ import { buildMcpToolDefinitions } from "../mcp/tools.js";
 import { fileCooldownStore } from "../openllm-cooldowns.js";
 import {
   isOpenLlmReference,
+  isOutOfCredits,
   openLlmCandidates,
   OPENLLM_ID,
   OpenLlmRotation,
@@ -51,7 +52,7 @@ import {
   parseModeStrict,
   shellSegments,
 } from "../permissions.js";
-import { personaPrompt, readPersona } from "../persona.js";
+import { identityPrompt, personaPrompt, readPersona } from "../persona.js";
 import { windowsShellPrompt } from "../posix-shell.js";
 import {
   AgentMode,
@@ -273,6 +274,7 @@ export class BotSession {
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
 
         return [
+          identityPrompt(),
           ...(persona == null ? [] : [persona]),
           ...base,
           ...(mcp == null ? [] : [mcp]),
@@ -1586,19 +1588,9 @@ function estimateChars(messages: readonly unknown[]): number {
   }
 }
 
-/** Out of paid-for capacity, as providers phrase it — not a mere rate limit. */
 /** Said in the chat, never sent to a phone as-is: the gateway rewords it. */
 const NO_MODEL_CONFIGURED =
   "No model provider is configured. Add an API key in Settings.";
-
-function isOutOfCredits(raw: string): boolean {
-  const status = raw.match(/^\s*(\d{3})\b/)?.[1];
-  if (status === "402") return true;
-  // RouteLLM's credit gates phrase it these ways, 429s included.
-  return /no remaining credits|insufficient credit|out of credit|credit limit|quota exceeded|purchase more credits|high percentage of your (overall )?credits/i.test(
-    raw
-  );
-}
 
 /** First sentence of a provider failure — bots never dump provider prose. */
 function compactFailure(raw: string): string {

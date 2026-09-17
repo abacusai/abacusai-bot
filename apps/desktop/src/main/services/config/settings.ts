@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-import type { NotificationSettings } from "#shared/contracts";
+import { AgentMode } from "#shared/agent-types";
+import type { DefaultAgentMode, NotificationSettings } from "#shared/contracts";
 import { EXEC_BACKENDS, type BackendId } from "#shared/exec-backends";
 import { PROVIDER_ENV_VARS, type AbacusBotSettings } from "#shared/settings";
 import {
@@ -148,12 +149,19 @@ export const readTerminalShell = (): TerminalShellId => {
 export const setTerminalShell = (shell: TerminalShellId): AbacusBotSettings =>
   writeSettings({ ...readSettings(), terminalShell: shell });
 
-/** Whether the OS sandbox is switched on. Absent means off. */
-export const readSandboxEnabled = (): boolean =>
-  readSettings().sandbox === true;
+/**
+ * The mode a session, bot or routine starts in when nothing picks one. Full
+ * access unless the user stored Auto; anything else in the file reads as
+ * Full access rather than as a guess.
+ */
+export const readDefaultAgentMode = (): DefaultAgentMode =>
+  readSettings().defaultMode === AgentMode.Auto
+    ? AgentMode.Auto
+    : AgentMode.Yolo;
 
-export const setSandboxEnabled = (enabled: boolean): AbacusBotSettings =>
-  writeSettings({ ...readSettings(), sandbox: enabled });
+export const setDefaultAgentMode = (
+  mode: DefaultAgentMode
+): AbacusBotSettings => writeSettings({ ...readSettings(), defaultMode: mode });
 
 /**
  * Whether X searches go to xAI's Live Search rather than the agent's own

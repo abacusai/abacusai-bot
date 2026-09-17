@@ -1,3 +1,4 @@
+import { spawn } from "child_process";
 /**
  * Where the agent's shell commands actually run. A backend overrides pi's
  * `BashOperations` (designed for exactly this), so pi's tool keeps its schema,
@@ -5,7 +6,7 @@
  * beyond local and docker are declared but not implemented, so the selector
  * can show them with an honest reason.
  */
-import { spawn } from "child_process";
+import * as fs from "node:fs";
 
 import {
   createBashToolDefinition,
@@ -14,19 +15,33 @@ import {
 
 import { registerForegroundProcess } from "./background-processes.js";
 import { currentMode } from "./current-mode.js";
-import { posixShellOperations } from "./posix-shell.js";
 import {
-  backendName,
+  posixShell,
+  posixShellEnv,
+  posixShellOperations,
+} from "./posix-shell.js";
+import {
+  allowHostForSession,
+  allowHostOnce,
+  backendPresent,
   decide,
+  mentionedSecretPaths,
+  networkConfinable,
   resolvePolicy,
   sandboxEnforcement,
+  settledDenials,
+  violations,
+  type Denial,
+  type SandboxApprovals,
 } from "./sandbox/index.js";
+import { classifyCommand } from "./sandbox/intent.js";
 import {
   fallbackShell,
   loginEnvironment,
   mergePath,
   settleOnExit,
 } from "./sandbox/shell.js";
+import { zoneContext } from "./sandbox/zones.js";
 
 export type BackendId =
   | "local"
@@ -160,7 +175,10 @@ function dockerOperations(image: string): BashOperations {
         const onAbort = (): void => {
           terminate();
         };
-        options.signal?.addEventListener("abort", onAbort, { once: true });
+        // The decision above is asynchronous; an abort that landed meanwhile
+        // must still take the command down.
+        if (options.signal?.aborted === true) terminate();
+        else options.signal?.addEventListener("abort", onAbort, { once: true });
 
         const timer = deadline(options.timeout, terminate);
 
@@ -196,114 +214,268 @@ function dockerOperations(image: string): BashOperations {
  * only because pi's local path has no seam for wrapping the argv. A refusal is
  * output plus a non-zero exit, not a throw, so the model reads why and adapts.
  */
-function localSandboxedOperations(): BashOperations {
-  return {
-    exec: async (command, cwd, options) => {
-      const policy = resolvePolicy(currentMode(), cwd);
+/**
+ * Run commands on this machine, confined by the OS. Exists only because pi's
+ * local path has no seam for wrapping the argv. A refusal is output plus a
+ * non-zero exit, not a throw, so the model reads why and adapts. When the
+ * sandbox refused something and a card can be shown, the user is asked and
+ * the command runs once more with what they allowed.
+ */
+function localSandboxedOperations(
+  approvals: SandboxApprovals | undefined
+): BashOperations {
+  const attempt = async (
+    command: string,
+    cwd: string,
+    options: Parameters<BashOperations["exec"]>[2],
+    retried: boolean
+  ): Promise<{ exitCode: number }> => {
+    const mode = currentMode();
+    // What the command's own text says it will do outside the workspace: a
+    // benign line (a new file on the Desktop) is granted for this run, the
+    // rest is left to the kernel and the card (sandbox/intent.ts).
+    const intent =
+      sandboxEnforcement(mode) === "off"
+        ? null
+        : classifyCommand(command, cwd, {
+            context: zoneContext(cwd),
+            ledger: approvals?.created,
+          });
+    const policy = resolvePolicy(mode, cwd, {
+      approvedReads: approvals?.reads.consume(command) ?? [],
+      approvedWrites: [
+        ...(approvals?.writes.consume(command) ?? []),
+        ...(intent?.grants ?? []),
+      ],
+      filteredNetwork: networkConfinable(),
+    });
 
-      // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
-      // inheriting this process's env would mean the launchd PATH.
-      const shell = loginEnvironment();
-      const childEnv =
-        options.env != null
-          ? withMergedPath(options.env, shell.PATH ?? shell.Path)
-          : shell;
+    // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
+    // inheriting this process's env would mean the launchd PATH.
+    const shell = loginEnvironment();
+    const inherited =
+      options.env != null
+        ? withMergedPath(options.env, shell.PATH ?? shell.Path)
+        : shell;
+    // Node's own fetch ignores the proxy variables unless told; without this a
+    // Node tool's request goes direct, is refused, and no card can be raised.
+    const childEnv =
+      policy.network.kind === "filtered"
+        ? { ...inherited, NODE_USE_ENV_PROXY: "1" }
+        : inherited;
 
-      // Built first: the sandbox binds back the PATH entries the CHILD will
-      // use.
-      const decision = decide(
-        policy,
-        command,
+    const commandId = `command-${++commandCounter}`;
+    // On Windows the command runs under the bundled POSIX shell, confined or
+    // not, and its children must find the applets (posix-shell.ts).
+    const bundledShell =
+      process.platform === "win32" ? posixShell() : undefined;
+    const spawnEnv =
+      bundledShell != null ? posixShellEnv(childEnv, bundledShell) : childEnv;
+    const decision = await decide(policy, command, cwd, spawnEnv, commandId);
+
+    if (decision.kind === "refused") {
+      options.onData(Buffer.from(`${decision.message}\n`));
+
+      // 126, "found but not executable": the closest standard code to
+      // refused.
+      return { exitCode: 126 };
+    }
+
+    const fallback = fallbackShell(
+      command,
+      process.platform,
+      process.env,
+      bundledShell ?? null
+    );
+    const argv =
+      decision.kind === "confined"
+        ? decision.argv
+        : [fallback.file, ...fallback.args];
+
+    // The tail of the output, to name a hidden store on failure.
+    let tail = "";
+    const result = await new Promise<{ exitCode: number }>((resolve) => {
+      const child = spawn(argv[0]!, argv.slice(1), {
         cwd,
-        childEnv.PATH ?? childEnv.Path
-      );
-
-      if (decision.kind === "refused") {
-        options.onData(Buffer.from(`${decision.message}\n`));
-
-        // 126, "found but not executable": the closest standard code to
-        // refused.
-        return { exitCode: 126 };
-      }
-
-      const fallback = fallbackShell(command);
-      const argv =
-        decision.kind === "confined"
-          ? decision.argv
-          : [fallback.file, ...fallback.args];
-
-      return new Promise((resolve) => {
-        const child = spawn(argv[0]!, argv.slice(1), {
-          cwd,
-          // Its own process group, so a deadline takes down what the command
-          // started too; a leftover subshell is what keeps the output pipes
-          // open.
-          detached: process.platform !== "win32",
-          env: childEnv,
-          // Written for the platform's shell; must not be re-quoted
-          // (sandbox/shell.ts).
-          ...(decision.kind !== "confined" &&
-          fallback.windowsVerbatimArguments === true
-            ? { windowsVerbatimArguments: true }
-            : {}),
-        });
-
-        // A command that reads stdin would otherwise hang until the timeout.
-        child.stdin.end();
-
-        const terminate = (): void => {
-          // Negative pid is the whole group; it fails only when already gone.
-          if (child.pid != null && process.platform !== "win32") {
-            try {
-              process.kill(-child.pid, "SIGKILL");
-              return;
-            } catch {
-              /* group already reaped — fall through to the direct kill */
-            }
-          }
-          child.kill("SIGKILL");
-        };
-
-        // Shutdown must take the process group with it, as a deadline would.
-        const unregister = registerForegroundProcess({ kill: terminate });
-
-        const onAbort = (): void => {
-          terminate();
-        };
-        options.signal?.addEventListener("abort", onAbort, { once: true });
-
-        const timer = deadline(options.timeout, terminate);
-
-        child.stdout.on("data", (data: Buffer) => options.onData(data));
-        child.stderr.on("data", (data: Buffer) => options.onData(data));
-
-        child.on("error", (error) => {
-          options.onData(
-            Buffer.from(`Failed to run command: ${error.message}\n`)
-          );
-          if (timer != null) clearTimeout(timer);
-          options.signal?.removeEventListener("abort", onAbort);
-          unregister();
-          resolve({ exitCode: 127 });
-        });
-
-        settleOnExit(child, (code) => {
-          if (timer != null) clearTimeout(timer);
-          options.signal?.removeEventListener("abort", onAbort);
-          unregister();
-          resolve({ exitCode: code ?? 1 });
-        });
+        // Its own process group, so a deadline takes down what the command
+        // started too; a leftover subshell is what keeps the output pipes
+        // open.
+        detached: process.platform !== "win32",
+        env: spawnEnv,
+        // Written for the platform's shell; must not be re-quoted
+        // (sandbox/shell.ts).
+        ...(decision.kind !== "confined" &&
+        fallback.windowsVerbatimArguments === true
+          ? { windowsVerbatimArguments: true }
+          : {}),
       });
-    },
+
+      // A command that reads stdin would otherwise hang until the timeout.
+      child.stdin.end();
+
+      const terminate = (): void => {
+        // Negative pid is the whole group; it fails only when already gone.
+        if (child.pid != null && process.platform !== "win32") {
+          try {
+            process.kill(-child.pid, "SIGKILL");
+            return;
+          } catch {
+            /* group already reaped — fall through to the direct kill */
+          }
+        }
+        child.kill("SIGKILL");
+      };
+
+      // Shutdown must take the process group with it, as a deadline would.
+      const unregister = registerForegroundProcess({ kill: terminate });
+
+      const onAbort = (): void => {
+        terminate();
+      };
+      // The decision above is asynchronous; an abort that landed meanwhile
+      // must still take the command down.
+      if (options.signal?.aborted === true) terminate();
+      else options.signal?.addEventListener("abort", onAbort, { once: true });
+
+      const timer = deadline(options.timeout, terminate);
+
+      const collect = (data: Buffer): void => {
+        options.onData(data);
+        tail = (tail + data.toString()).slice(-OUTPUT_TAIL_CHARS);
+      };
+      child.stdout.on("data", collect);
+      child.stderr.on("data", collect);
+
+      child.on("error", (error) => {
+        options.onData(
+          Buffer.from(`Failed to run command: ${error.message}\n`)
+        );
+        if (timer != null) clearTimeout(timer);
+        options.signal?.removeEventListener("abort", onAbort);
+        unregister();
+        resolve({ exitCode: 127 });
+      });
+
+      settleOnExit(child, (code) => {
+        if (timer != null) clearTimeout(timer);
+        options.signal?.removeEventListener("abort", onAbort);
+        unregister();
+        resolve({ exitCode: code ?? 1 });
+      });
+    });
+
+    // The runtime hears a refusal a beat after the exit; wait for it, then
+    // tell the model. Whatever the exit code: `rm x; echo done` exits 0 with
+    // the rm refused, and a model that never hears of the refusal guesses at
+    // the cause. The runtime's own account first, then the way to a prompt
+    // for a hidden store.
+    const refused =
+      decision.kind === "confined"
+        ? await settledDenials(commandId, { exitCode: result.exitCode, tail })
+        : [];
+    if (decision.kind === "confined") {
+      const denied = violations(commandId);
+      if (denied != null) options.onData(Buffer.from(`\n${denied}\n`));
+      const note = hiddenStoreNote(tail, policy.secrets.promptable);
+      if (note != null) options.onData(Buffer.from(note));
+    }
+
+    // What a granted command made is the session's own from here on.
+    if (decision.kind === "confined" && approvals != null && intent != null) {
+      for (const made of intent.creates)
+        if (fs.existsSync(made)) approvals.created.add(made);
+    }
+
+    if (
+      decision.kind !== "confined" ||
+      retried ||
+      approvals?.askDenials == null
+    )
+      return result;
+
+    // The sandbox refused something, whether or not the command's last step
+    // then succeeded: ask, and run once more with the answer.
+    if (refused.length === 0) return result;
+    const answer = await approvals.askDenials(
+      command,
+      refused,
+      intent != null && intent.concerns.length > 0
+        ? `The command ${intent.concerns.join("; ")}.`
+        : null
+    );
+    if (answer == null) return result;
+
+    approvals.apply(command, answer);
+    for (const denial of answer.once)
+      if (denial.kind === "host") allowHostOnce(denial.host);
+    for (const denial of answer.session)
+      if (denial.kind === "host") allowHostForSession(denial.host);
+    options.onData(
+      Buffer.from(
+        `\n[sandbox] The user allowed ${describeDenials(answer.once, answer.session)}; running the command again.\n`
+      )
+    );
+
+    return attempt(command, cwd, options, true);
   };
+
+  return {
+    exec: (command, cwd, options) => attempt(command, cwd, options, false),
+  };
+}
+
+/** `write /a, read /b, host x:443`, once each, for the note between the runs. */
+export function describeDenials(
+  ...lists: readonly (readonly Denial[])[]
+): string {
+  const seen = new Set<string>();
+
+  return lists
+    .flat()
+    .map((denial) =>
+      denial.kind === "host"
+        ? `${denial.kind} ${denial.host}:${denial.port}`
+        : `${denial.kind} ${denial.path}`
+    )
+    .filter((text) => !seen.has(text) && seen.add(text) !== undefined)
+    .join(", ");
+}
+
+const OUTPUT_TAIL_CHARS = 16_384;
+
+let commandCounter = 0;
+
+/**
+ * What a failed command is told when its output names a hidden store. The
+ * prompt is raised by naming the path, so the model is pointed at that rather
+ * than at a workaround.
+ */
+export function hiddenStoreNote(
+  output: string,
+  promptable: readonly string[]
+): string | null {
+  const mentioned = mentionedSecretPaths(output, promptable);
+  if (mentioned.length === 0) return null;
+
+  return (
+    `\n[sandbox] ${mentioned.join(", ")} is a credential store the sandbox ` +
+    `hides. If the user should allow reading it, run the command again with ` +
+    `that path written out so they can approve it on the prompt. Do not work ` +
+    `around the sandbox.\n`
+  );
 }
 
 /**
  * Operations for the selected backend, or null to use pi's own local shell,
  * which handles shell resolution and platform differences better than a
- * reimplementation would; `off` returns null for the same reason.
+ * reimplementation would; ABACUSAI_BOT_SANDBOX=off returns null for the same
+ * reason. Full access is per command (decide), since the mode can change
+ * mid-session.
  */
-export function backendOperations(): BashOperations | null {
+export function backendOperations(
+  /** The session's sandbox approvals; absent for a caller with no card. */
+  approvals?: SandboxApprovals
+): BashOperations | null {
   const backend = selectedBackend();
 
   if (backend === "docker") {
@@ -325,19 +497,23 @@ export function backendOperations(): BashOperations | null {
   // paths.
   if (backend !== "local") return null;
 
-  // No kernel backend (Windows): the shell there is the bundled POSIX one,
-  // sandbox setting or not — it is a shell, not a confinement — and null
-  // without its payload lets pi's own path run. `strict` keeps the
-  // operations so its refusal reaches the model.
-  if (backendName() === null) {
+  // No kernel backend, or none that can run here (a Windows without the
+  // vendored runner): the shell there is the bundled POSIX one, sandbox
+  // setting or not — it is a shell, not a confinement — and null without its
+  // payload lets pi's own path run. `strict` keeps the operations so its
+  // refusal reaches the model.
+  if (!backendPresent()) {
     return sandboxEnforcement() === "strict"
-      ? localSandboxedOperations()
+      ? localSandboxedOperations(approvals)
       : posixShellOperations();
   }
 
-  if (sandboxEnforcement() === "off") return null;
+  // Switched off by the environment: pi's own path, under the bundled shell
+  // where that is the shell there is.
+  if (sandboxEnforcement() === "off")
+    return process.platform === "win32" ? posixShellOperations() : null;
 
-  return localSandboxedOperations();
+  return localSandboxedOperations(approvals);
 }
 
 /**

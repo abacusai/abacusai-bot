@@ -3,6 +3,7 @@ import type {
   ConversationState,
   Segment,
   SubtaskKind,
+  SubtaskOutcome,
   SubtaskStatus,
   TextSegment,
   ThinkingSegment,
@@ -118,6 +119,8 @@ export interface SubtaskSummary {
   description?: string;
   kind?: SubtaskKind;
   status: SubtaskStatus;
+  /** Why a finished run is not a plain success, for the card's label. */
+  outcome?: SubtaskOutcome;
   startTime: number | null;
   endTime: number | null;
   toolCount: number;
@@ -188,6 +191,9 @@ function deriveSubtasks(segments: Segment[]): SubtaskSummary[] {
         }),
         ...(segment.subtaskKind !== undefined && { kind: segment.subtaskKind }),
         status: segment.subtaskStatus,
+        ...(segment.subtaskOutcome !== undefined && {
+          outcome: segment.subtaskOutcome,
+        }),
         startTime: segment.subtaskStartTime ?? null,
         endTime: segment.subtaskEndTime ?? null,
         toolCount: 0,

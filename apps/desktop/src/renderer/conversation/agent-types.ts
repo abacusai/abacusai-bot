@@ -338,6 +338,9 @@ export interface ToolResult<TData extends ToolResultData = ToolResultData> {
 export interface NotificationAction {
   type: string;
   link?: string;
+  /** `switch-model` with a target: the card offers this model by name. */
+  model?: string;
+  label?: string;
 }
 
 /** Branch-version navigation for a bot turn with sibling regenerations/edits. */
@@ -590,6 +593,27 @@ export type PermissionRequest =
       cwd: string;
       background: boolean;
       unmatchedPatterns: string[];
+      /** Hidden credential stores the command names; approving unhides them. */
+      credentialPaths?: string[];
+    })
+  | (PermissionRequestBase & {
+      // A confined command reached for a host nobody listed; the connection
+      // waits on the answer.
+      type: "network_host";
+      host: string;
+      port: number;
+    })
+  | (PermissionRequestBase & {
+      // The sandbox refused what a command tried; allowing runs it again.
+      type: "sandbox_denied";
+      command: string;
+      denials: Array<
+        | { kind: "read"; path: string }
+        | { kind: "write"; path: string }
+        | { kind: "host"; host: string; port: number }
+      >;
+      /** What the command's own text said it would do outside the workspace. */
+      note?: string;
     })
   | (PermissionRequestBase & {
       type: "generic";

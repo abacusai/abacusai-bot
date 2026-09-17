@@ -37,6 +37,8 @@ const ALLOWED = new Set([
   // but node builtins. pi stays on the other side of the split, in
   // posix-shell.ts, which main never imports.
   "@abacus-ai/agent/posix-shell-install",
+  // A platform-and-build table with no imports at all.
+  "@abacus-ai/agent/sandbox-support",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

@@ -77,6 +77,7 @@ import {
   useOpenBotChatMutation,
   useBotSenderChatsQuery,
 } from "../../hooks/use-bots";
+import { useDefaultAgentModeQuery } from "../../hooks/use-sandbox";
 import {
   useAgentSessionStateQuery,
   useWorkspaceAgentSessionsQuery,
@@ -92,6 +93,7 @@ import {
   composerDraftForKeyChange,
   writeComposerDraft,
 } from "../../lib/composer-draft";
+import { autoResolution } from "../../lib/permission-auto-resolve";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { isAppInternalWorkspace } from "../../lib/workspace-utils";
 import {
@@ -831,10 +833,11 @@ export const ChatPanel = (): JSX.Element => {
   const isSenderChat = senderChatForSession != null;
   /** A routine fire's session: a report, not a conversation to reply into. */
   const isRoutineRun = activeSession?.routineId != null;
-  // A bot is always full access and never reads or writes the session mode.
-  // Every session shares one sticky mode, so the welcome screen's picker shows
-  // what the send spawns with.
-  const selectedModeValue = isBotChat ? AgentMode.Yolo : globalSelectedMode;
+  // A bot runs in the Profile page's default and never reads or writes the
+  // session mode. Every session shares one sticky mode, so the welcome
+  // screen's picker shows what the send spawns with.
+  const defaultAgentMode = useDefaultAgentModeQuery().data ?? AgentMode.Yolo;
+  const selectedModeValue = isBotChat ? defaultAgentMode : globalSelectedMode;
 
   // Pick a model when none is chosen or the stored one is not offered (an old
   // id, a removed key). Never one whose key is missing: it fails on the first
@@ -1766,6 +1769,7 @@ export const ChatPanel = (): JSX.Element => {
       )?.path;
       if (selectedPath != null) return selectedPath;
     }
+
     return (
       workspaces.find((workspace) => workspace.id === activeWorkspaceId)
         ?.path ?? null
@@ -1850,28 +1854,18 @@ export const ChatPanel = (): JSX.Element => {
     [permissionPrompt, activeWorkspaceId, activeSessionId]
   );
 
-  // Switching to a more permissive mode settles whatever is already queued:
-  // `set_mode` only governs permissions the CLI has yet to ask for, so the
-  // prompt that made the user switch would otherwise stay up.
+  // Switching to a more permissive mode settles whatever is already queued
+  // (lib/permission-auto-resolve.ts); a sandbox card is never settled this way.
   const autoResolvedPermissionRef = useRef<string | null>(null);
   useEffect(() => {
     if (permissionPrompt == null || activeSessionId == null) return;
     const toolCallId = permissionPrompt.request.tool.id;
     if (autoResolvedPermissionRef.current === toolCallId) return;
 
-    const requestType = permissionPrompt.request.type;
-    const isEdit =
-      requestType === "edit_file" ||
-      requestType === "write_file" ||
-      requestType === "edit_outside_directory" ||
-      requestType === "write_outside_directory";
-
-    const decision =
-      selectedModeValue === AgentMode.Yolo
-        ? ("allowYolo" as const)
-        : selectedModeValue === AgentMode.AcceptEdits && isEdit
-          ? ("accept" as const)
-          : null;
+    const decision = autoResolution(
+      permissionPrompt.request,
+      selectedModeValue
+    );
     if (decision == null) return;
 
     autoResolvedPermissionRef.current = toolCallId;
@@ -1930,6 +1924,59 @@ export const ChatPanel = (): JSX.Element => {
     },
     [inputRef, inputValue, setInputValue, shortenPath]
   );
+
+  // One pick path for the composer's picker and for a card that names a
+  // model: what changes is only where the click came from.
+  const handlePickModel = (
+    workspaceId: string | null | undefined,
+    modelId: string
+  ): void => {
+    if (workspaceId != null && workspaceId.length > 0) {
+      setWorkspaceModelId(workspaceId, modelId);
+    } else {
+      setSelectedModelId(modelId);
+    }
+    // Push to a running agent here rather than via the sync effect,
+    // which only fires when the resolved model changes.
+    if (activeSessionId != null) {
+      setPendingModelPick({
+        sessionId: activeSessionId,
+        model: modelId,
+      });
+      if (activeWorkspaceId != null && isCliRunning) {
+        setModelMutation.mutate({
+          workspaceId: activeWorkspaceId,
+          sessionId: activeSessionId,
+          model: modelId,
+        });
+      }
+    }
+    // Pin it to the chat it was chosen in, so this session keeps it when
+    // the composer moves on. A running agent hears about it through
+    // set_model; this is what a stopped one is reopened with.
+    if (activeWorkspaceId != null && activeSessionId != null) {
+      void window.api.agent
+        .setAgentSessionModel(activeWorkspaceId, activeSessionId, modelId)
+        .then(() => {
+          queryClient.setQueryData(
+            workspaceQueryKeys.agentSessions(activeWorkspaceId),
+            (previous: AgentSessionEntry[] | undefined) =>
+              previous?.map((session) =>
+                session.id === activeSessionId
+                  ? { ...session, model: modelId }
+                  : session
+              ) ?? []
+          );
+        })
+        .catch(() => {
+          // The pick still reached the running agent and the workspace
+          // default; only its durability across a restart is lost.
+        });
+    }
+    // Also persisted to ~/.abacusai-bot/config.json: the renderer store
+    // alone would not reach a freshly spawned agent.
+    void window.api.agent.setDefaultModel(modelId);
+  };
 
   return (
     <div
@@ -2056,6 +2103,9 @@ export const ChatPanel = (): JSX.Element => {
                         agentStatus={agentStatus}
                         onRetry={isAgentBusy ? undefined : handleRetry}
                         onSwitchModel={handleSwitchModel}
+                        onPickModel={(modelId) =>
+                          handlePickModel(activeWorkspaceId, modelId)
+                        }
                         creditsTotal={conversation.credits}
                         onOpenSubtask={setSubtaskScope}
                         statusLabel={statusLabel}
@@ -2158,57 +2208,7 @@ export const ChatPanel = (): JSX.Element => {
           canSend={canSend}
           models={modelsQuery.data}
           selectedModelValue={selectedModelValue}
-          onSelectModel={(workspaceId, modelId) => {
-            if (workspaceId != null && workspaceId.length > 0) {
-              setWorkspaceModelId(workspaceId, modelId);
-            } else {
-              setSelectedModelId(modelId);
-            }
-            // Push to a running agent here rather than via the sync effect,
-            // which only fires when the resolved model changes.
-            if (activeSessionId != null) {
-              setPendingModelPick({
-                sessionId: activeSessionId,
-                model: modelId,
-              });
-              if (activeWorkspaceId != null && isCliRunning) {
-                setModelMutation.mutate({
-                  workspaceId: activeWorkspaceId,
-                  sessionId: activeSessionId,
-                  model: modelId,
-                });
-              }
-            }
-            // Pin it to the chat it was chosen in, so this session keeps it when
-            // the composer moves on. A running agent hears about it through
-            // set_model; this is what a stopped one is reopened with.
-            if (activeWorkspaceId != null && activeSessionId != null) {
-              void window.api.agent
-                .setAgentSessionModel(
-                  activeWorkspaceId,
-                  activeSessionId,
-                  modelId
-                )
-                .then(() => {
-                  queryClient.setQueryData(
-                    workspaceQueryKeys.agentSessions(activeWorkspaceId),
-                    (previous: AgentSessionEntry[] | undefined) =>
-                      previous?.map((session) =>
-                        session.id === activeSessionId
-                          ? { ...session, model: modelId }
-                          : session
-                      ) ?? []
-                  );
-                })
-                .catch(() => {
-                  // The pick still reached the running agent and the workspace
-                  // default; only its durability across a restart is lost.
-                });
-            }
-            // Also persisted to ~/.abacusai-bot/config.json: the renderer store
-            // alone would not reach a freshly spawned agent.
-            void window.api.agent.setDefaultModel(modelId);
-          }}
+          onSelectModel={handlePickModel}
           selectedModeValue={selectedModeValue}
           canSelectMode={!isBotChat}
           // One box everywhere: two composers in one app read as two apps.

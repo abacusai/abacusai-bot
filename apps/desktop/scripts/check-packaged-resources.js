@@ -41,6 +41,9 @@ const REQUIRED = [
   // The POSIX shell `bash` runs under on Windows; without it every command
   // the model writes fails on a machine with no Git Bash.
   ...(process.platform === "win32" ? ["agent/vendor/busybox.exe"] : []),
+  // The Windows sandbox runner (packages/agent/src/sandbox/mxc.ts); without it
+  // every confined command is refused on a Windows 11 24H2 machine.
+  ...(process.platform === "win32" ? ["agent/vendor/mxc/wxc-exec.exe"] : []),
   "vendor/scrcpy-server.jar",
   "skills",
 ];
