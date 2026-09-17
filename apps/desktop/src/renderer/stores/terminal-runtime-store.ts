@@ -61,16 +61,25 @@ const withDefaultTab = (
         generation: DEFAULT_TAB.generation,
       };
 
+/**
+ * An update that changes nothing writes nothing. Every component that reads a
+ * scope re-renders on a store write, and the workspace view rebuilds the
+ * conversation object it hands the panel on each render — so a write of an
+ * identical value from inside an effect that reads it is an endless loop of
+ * renders, PTY attaches and scrollback replays. Returning `current` unchanged
+ * is how an action says "nothing happened".
+ */
 const updateScope = (
   scope: ConversationKey,
   update: (current: TerminalRuntimeScopeState) => TerminalRuntimeScopeState
 ): void => {
-  terminalRuntimeStore.setState((state) => ({
-    scopes: {
-      ...state.scopes,
-      [scope]: update(state.scopes[scope] ?? EMPTY_SCOPE),
-    },
-  }));
+  terminalRuntimeStore.setState((state) => {
+    const current = state.scopes[scope] ?? EMPTY_SCOPE;
+    const next = update(current);
+    if (next === current) return state;
+
+    return { scopes: { ...state.scopes, [scope]: next } };
+  });
 };
 
 let nextTerminalId = 1;
@@ -121,12 +130,17 @@ export const terminalRuntimeActions = {
     terminalId: string,
     shell: TerminalShellId | undefined
   ): void =>
-    updateScope(scope, (value) => ({
-      ...value,
-      tabs: value.tabs.map((tab) =>
-        tab.id === terminalId ? { ...tab, shell } : tab
-      ),
-    })),
+    updateScope(scope, (value) => {
+      const tab = value.tabs.find(({ id }) => id === terminalId);
+      if (tab == null || tab.shell === shell) return value;
+
+      return {
+        ...value,
+        tabs: value.tabs.map((entry) =>
+          entry.id === terminalId ? { ...entry, shell } : entry
+        ),
+      };
+    }),
 
   selectTab: (scope: ConversationKey, terminalId: string): void =>
     updateScope(scope, (value) => {
@@ -173,15 +187,22 @@ export const terminalRuntimeActions = {
     updateScope(scope, (value) => {
       const current = withDefaultTab(value);
       const id = terminalId ?? current.activeTabId ?? DEFAULT_TAB.id;
-      const tabs = current.tabs.map((tab) =>
-        tab.id === id ? { ...tab, generation } : tab
+      const tab = current.tabs.find((entry) => entry.id === id);
+      const active =
+        current.activeTabId === id ? generation : current.generation;
+      // Same generation on the same tab: the caller is re-reporting what the
+      // store already holds, and a new object here would re-render everything
+      // that reads it.
+      if (
+        current === value &&
+        tab?.generation === generation &&
+        current.generation === active
+      )
+        return value;
+      const tabs = current.tabs.map((entry) =>
+        entry.id === id ? { ...entry, generation } : entry
       );
-      return {
-        ...current,
-        tabs,
-        generation:
-          current.activeTabId === id ? generation : current.generation,
-      };
+      return { ...current, tabs, generation: active };
     }),
 
   promoteDraft: (

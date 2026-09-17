@@ -192,6 +192,10 @@ const TerminalInstance = ({
   const terminalRef = useRef<XTerm>(null);
   const fitAddonRef = useRef<FitAddon>(null);
   const pendingResizeRef = useRef<number>(null);
+  // The workspace view builds a fresh conversation object on every render, so
+  // it is read through a ref: as an effect dependency it restarts the PTY on
+  // every render of the page.
+  const conversationRef = useRef<ConversationRef | null>(conversation);
   const conversationKeyRef = useRef<ConversationKey | null>(conversationKey);
   const generationRef = useRef<number | null>(generation);
   // A ref, not a dep: the start result names the shell that was spawned and
@@ -204,10 +208,11 @@ const TerminalInstance = ({
   const [isTerminalReady, setIsTerminalReady] = useState(false);
 
   useEffect(() => {
+    conversationRef.current = conversation;
     conversationKeyRef.current = conversationKey;
     generationRef.current = generation;
     shellRef.current = shell;
-  }, [conversationKey, generation, shell]);
+  }, [conversation, conversationKey, generation, shell]);
 
   useEffect(() => {
     let disposed = false;
@@ -409,14 +414,9 @@ const TerminalInstance = ({
   // Spawn / attach the PTY whenever the panel is visible; after a PTY death
   // main has no surviving session, so this spawns a new one.
   useEffect(() => {
-    if (
-      !active ||
-      conversation == null ||
-      conversationKey == null ||
-      !isTerminalReady
-    ) {
-      return;
-    }
+    const conversationRef_ = conversationRef.current;
+    if (conversationRef_ == null || conversationKey == null) return;
+    if (!active || !isTerminalReady) return;
     let cancelled = false;
     const term = terminalRef.current;
     const fitAddon = fitAddonRef.current;
@@ -432,10 +432,11 @@ const TerminalInstance = ({
       }
       const { cols, rows } = proposed;
       term.resize(cols, rows);
+      const attachedGeneration = generationRef.current;
       const result = await window.api.agent.startTerminalSession({
         terminalId,
         conversationKey,
-        conversation,
+        conversation: conversationRef_,
         generation: generationRef.current,
         cols,
         rows,
@@ -461,30 +462,25 @@ const TerminalInstance = ({
         terminalId,
         result.state.shell
       );
-      // reset, not clear: xterm's clear keeps the last line, and what follows
-      // is the session's whole scrollback being replayed.
-      term.reset();
-      if (result.initialOutput.length > 0) {
-        term.write(result.initialOutput);
+      // Only a terminal that has nothing in it gets the session's scrollback.
+      // Re-attaching to a PTY this instance is already showing would print
+      // everything a second time: output arrives through the event
+      // subscription whether the tab is on screen or not.
+      if (attachedGeneration == null) {
+        // reset, not clear: xterm's clear keeps the last line, and what
+        // follows is the whole scrollback.
+        term.reset();
+        if (result.initialOutput.length > 0) term.write(result.initialOutput);
+        // ghostty focused inside `open`; xterm leaves it to the embedder.
+        term.focus();
       }
-      // A terminal that just opened, or a tab just switched to, should take
-      // what is typed next. ghostty focused itself inside `open`; xterm
-      // leaves it to the embedder.
-      term.focus();
     };
 
     void start();
     return () => {
       cancelled = true;
     };
-  }, [
-    active,
-    conversation,
-    conversationKey,
-    isTerminalReady,
-    ptyGeneration,
-    terminalId,
-  ]);
+  }, [active, conversationKey, isTerminalReady, ptyGeneration, terminalId]);
 
   useEffect(() => {
     if (active || conversationKey == null) return;
