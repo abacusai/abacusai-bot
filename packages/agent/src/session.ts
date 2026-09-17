@@ -944,14 +944,11 @@ export class AbacusBotSession {
       this.config.browserModel ??
       ""
     ).trim();
-    const browserModel =
+    const browserModelOverride =
       browserModelRef.length > 0
-        ? (resolveModel(
-            this.modelRuntime,
-            browserModelRef,
-            this.maxOutputTokens
-          ).model ?? model)
-        : model;
+        ? resolveModel(this.modelRuntime, browserModelRef, this.maxOutputTokens)
+            .model
+        : undefined;
 
     // The roster is a table (roster.ts) so it can be read without a session.
     const roster = buildRoster(
@@ -960,8 +957,11 @@ export class AbacusBotSession {
         agentDir: dir,
         modelRuntime: this.modelRuntime,
         subAgentSettingsManager,
-        model,
-        browserModel,
+        // Read at spawn: the chat's model moves with a pick or a pool hop, and
+        // a sub-agent runs on the one the user is on then, not at start.
+        model: () => this.session?.model ?? model,
+        browserModel: () =>
+          browserModelOverride ?? this.session?.model ?? model,
         hostServices: hostServices ? this.hostServices : null,
         excluded,
         // Background runs go through the same operations as the foreground

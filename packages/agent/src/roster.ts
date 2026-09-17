@@ -53,13 +53,16 @@ export interface RosterContext {
   /** Sub-agents' own manager, left at the configured retry budget. */
   subAgentSettingsManager: SettingsManager;
   /**
-   * The session's resolved model. `unknown` here, as in the sub-agent
-   * contexts: naming the provider type in an exported signature drags the
-   * provider catalogue into the package's declaration build.
+   * The session's model, read when a sub-agent is spawned rather than when
+   * the table is built: a pick or a pool hop after start must reach the
+   * sub-agents, or a document is written by a model the user left. `unknown`
+   * here, as in the sub-agent contexts: naming the provider type in an
+   * exported signature drags the provider catalogue into the package's
+   * declaration build.
    */
-  model: unknown;
+  model: () => unknown;
   /** The browser sub-agent's model, which may be stronger than the chat's. */
-  browserModel: unknown;
+  browserModel: () => unknown;
   /** Null for a front end without host services (the CLI). */
   hostServices: HostServiceClient | null;
   /** The tools the user switched off in Capabilities. */
@@ -117,23 +120,46 @@ const browserTools = (ctx: RosterContext): RosterTool[] =>
 const browserTaskWanted = (ctx: RosterContext): boolean =>
   browserTools(ctx).length > 0 && browserTaskEnabled();
 
-const subAgentOptions = (
-  ctx: RosterContext
+/**
+ * A sub-agent's options, with `model` a live read of the session's: the task
+ * reads `context.model` as it spawns, so a switch between build and spawn
+ * lands. Spreading the result would freeze it — merge with `withLiveModel`.
+ */
+export const subAgentOptions = <Extra extends object>(
+  ctx: Pick<
+    RosterContext,
+    "cwd" | "agentDir" | "modelRuntime" | "subAgentSettingsManager" | "model"
+  >,
+  extra?: Extra
 ): {
   cwd: string;
   agentDir: string;
   modelRuntime: ModelRuntime;
   settingsManager: SettingsManager;
   skillPaths: string[];
-  model?: never;
-} => ({
-  cwd: ctx.cwd,
-  agentDir: ctx.agentDir,
-  modelRuntime: ctx.modelRuntime,
-  settingsManager: ctx.subAgentSettingsManager,
-  skillPaths: skillDirs(ctx.cwd),
-  ...(ctx.model != null ? { model: ctx.model as never } : {}),
-});
+  readonly model?: never;
+} & Extra =>
+  withLiveModel(
+    {
+      cwd: ctx.cwd,
+      agentDir: ctx.agentDir,
+      modelRuntime: ctx.modelRuntime,
+      settingsManager: ctx.subAgentSettingsManager,
+      skillPaths: skillDirs(ctx.cwd),
+      ...(extra ?? ({} as Extra)),
+    },
+    ctx.model
+  );
+
+/** `options` with a `model` getter that asks `read` each time. */
+const withLiveModel = <T extends object>(
+  options: T,
+  read: () => unknown
+): T & { readonly model?: never } =>
+  Object.defineProperty(options, "model", {
+    enumerable: true,
+    get: () => read(),
+  }) as T & { readonly model?: never };
 
 /**
  * Tools that are deliberately not switchable, so their absence from the
@@ -230,17 +256,17 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
     when: browserTaskWanted,
     build: (ctx) =>
       buildBrowserTaskTool(
-        {
-          cwd: ctx.cwd,
-          agentDir: ctx.agentDir,
-          modelRuntime: ctx.modelRuntime,
-          settingsManager: ctx.subAgentSettingsManager,
-          // Resolved per run so a reconnect reaches the sub-agent too.
-          browserTools: () => browserTools(ctx),
-          ...(ctx.browserModel != null
-            ? { model: ctx.browserModel as never }
-            : {}),
-        },
+        withLiveModel(
+          {
+            cwd: ctx.cwd,
+            agentDir: ctx.agentDir,
+            modelRuntime: ctx.modelRuntime,
+            settingsManager: ctx.subAgentSettingsManager,
+            // Resolved per run so a reconnect reaches the sub-agent too.
+            browserTools: () => browserTools(ctx),
+          },
+          ctx.browserModel
+        ),
         ctx.emit
       ),
   },
@@ -251,7 +277,7 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
     when: (ctx) => ctx.hostServices != null && documentToolEnabled(),
     build: (ctx) =>
       buildDocumentTool(
-        { ...subAgentOptions(ctx), hostServices: ctx.hostServices! },
+        subAgentOptions(ctx, { hostServices: ctx.hostServices! }),
         ctx.emit
       ),
   },
@@ -261,7 +287,7 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
     when: (ctx) => ctx.hostServices != null && designToolEnabled(),
     build: (ctx) =>
       buildDesignTool(
-        { ...subAgentOptions(ctx), hostServices: ctx.hostServices! },
+        subAgentOptions(ctx, { hostServices: ctx.hostServices! }),
         ctx.emit
       ),
   },
@@ -272,7 +298,7 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
     when: (ctx) => ctx.hostServices != null && deckToolEnabled(),
     build: (ctx) =>
       buildDeckTool(
-        { ...subAgentOptions(ctx), hostServices: ctx.hostServices! },
+        subAgentOptions(ctx, { hostServices: ctx.hostServices! }),
         ctx.emit
       ),
   },

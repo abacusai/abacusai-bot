@@ -18,6 +18,7 @@ import {
   OWN_TOOLS,
   ROSTER_TOOL_NAMES,
   SUB_AGENT_TOOLS,
+  subAgentOptions,
   type RosterContext,
 } from "./roster.js";
 
@@ -75,8 +76,8 @@ describe("building the roster", () => {
       agentDir: "/tmp/roster-agent",
       modelRuntime: {} as never,
       subAgentSettingsManager: {} as never,
-      model: undefined,
-      browserModel: undefined,
+      model: () => undefined,
+      browserModel: () => undefined,
       hostServices: null,
       excluded: [],
       operations: {} as never,
@@ -120,5 +121,31 @@ describe("building the roster", () => {
     for (const name of ["document", "design", "ppt"]) {
       expect(names).not.toContain(name);
     }
+  });
+});
+
+describe("a sub-agent's model", () => {
+  it("is the session's model at spawn, not at build", () => {
+    // The reported case: a session opened on the pool's first pick, the user
+    // switched to a free model, and a document sub-agent still ran — and
+    // billed — on the model the table was built with.
+    let current: unknown = "abacus/pool-pick";
+    const options = subAgentOptions(
+      {
+        cwd: "/tmp/roster-ws",
+        agentDir: "/tmp/roster-agent",
+        modelRuntime: {} as never,
+        subAgentSettingsManager: {} as never,
+        model: () => current,
+      },
+      { hostServices: null }
+    );
+
+    expect(options.model).toBe("abacus/pool-pick");
+    expect(options.hostServices).toBeNull();
+
+    current = "abacus/stealth/union-alpha";
+
+    expect(options.model).toBe("abacus/stealth/union-alpha");
   });
 });
