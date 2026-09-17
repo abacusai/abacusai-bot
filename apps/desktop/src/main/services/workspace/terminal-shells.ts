@@ -161,12 +161,6 @@ const locate = (
   env: NodeJS.ProcessEnv,
   platform: NodeJS.Platform
 ): ResolvedTerminalShell | null => {
-  const posixLogin = (command: string): ResolvedTerminalShell | null => {
-    const file = onPath(command, env, platform);
-
-    return file == null ? null : { id, file, args: ["-l"] };
-  };
-
   switch (id) {
     case "system":
       return systemShell(env, platform);
@@ -207,18 +201,6 @@ const locate = (
         ),
       };
     }
-
-    case "bash":
-      return posixLogin("bash");
-
-    case "zsh":
-      return posixLogin("zsh");
-
-    case "fish":
-      return posixLogin("fish");
-
-    case "sh":
-      return posixLogin("sh");
   }
 };
 

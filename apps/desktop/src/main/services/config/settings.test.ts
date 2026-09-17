@@ -256,7 +256,7 @@ describe("the terminal panel's shell", () => {
     expect(readTerminalShell()).toBe("system");
   });
 
-  it.each([["cmd"], ["powershell"], ["busybox"], ["zsh"]])(
+  it.each([["cmd"], ["powershell"], ["pwsh"], ["busybox"]])(
     "reads back %s",
     async (shell) => {
       const { setTerminalShell, readTerminalShell } = await load();
@@ -269,6 +269,8 @@ describe("the terminal panel's shell", () => {
 
   it.each([
     ["a shell nobody has heard of", "nushell"],
+    // The shells the panel used to offer off Windows, which it no longer does.
+    ["one of the retired POSIX ids", "zsh"],
     ["the wrong type", 7],
   ])("falls back to the default for %s", async (_label, stored) => {
     writeConfig({ terminalShell: stored });

@@ -15,11 +15,7 @@ export type TerminalShellId =
   | "cmd"
   | "powershell"
   | "pwsh"
-  | "busybox"
-  | "bash"
-  | "zsh"
-  | "fish"
-  | "sh";
+  | "busybox";
 
 export interface TerminalShell {
   id: TerminalShellId;
@@ -30,8 +26,14 @@ export interface TerminalShell {
 }
 
 /**
- * `system` leads: it is what the panel opened before there was a choice, and
- * it stays the fallback when a stored id names something no longer installed.
+ * Windows only, apart from `system`.
+ *
+ * macOS and Linux have one answer to "which shell": the one the user set as
+ * their login shell, which `$SHELL` names and which their dotfiles are written
+ * for. Offering to open bash instead of their zsh is a menu nobody wanted in
+ * front of a choice they already made. Windows is the case with a real
+ * question behind it — cmd, PowerShell, and the POSIX shell this app ships —
+ * so that is where the menu appears.
  */
 export const TERMINAL_SHELLS: readonly TerminalShell[] = [
   { id: "system", labelKey: "system", platforms: "all" },
@@ -39,10 +41,6 @@ export const TERMINAL_SHELLS: readonly TerminalShell[] = [
   { id: "powershell", labelKey: "powershell", platforms: ["win32"] },
   { id: "pwsh", labelKey: "pwsh", platforms: ["win32"] },
   { id: "busybox", labelKey: "busybox", platforms: ["win32"] },
-  { id: "bash", labelKey: "bash", platforms: ["darwin", "linux"] },
-  { id: "zsh", labelKey: "zsh", platforms: ["darwin", "linux"] },
-  { id: "fish", labelKey: "fish", platforms: ["darwin", "linux"] },
-  { id: "sh", labelKey: "sh", platforms: ["darwin", "linux"] },
 ];
 
 export const DEFAULT_TERMINAL_SHELL: TerminalShellId = "system";

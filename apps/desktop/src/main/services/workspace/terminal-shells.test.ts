@@ -185,20 +185,12 @@ describe("terminal shells on macOS and Linux", () => {
     });
   });
 
-  it("lists only the shells that are actually installed", () => {
-    put("zsh");
-    const statuses = terminalShellStatuses(posix());
-
-    expect(statuses.find((status) => status.id === "zsh")).toEqual({
-      id: "zsh",
-      available: true,
-      path: path.join(binDir, "zsh"),
-    });
-    expect(statuses.find((status) => status.id === "bash")?.available).toBe(
-      false
-    );
-    // Not offered here at all: it is a Windows payload.
-    expect(statuses.some((status) => status.id === "busybox")).toBe(false);
+  it("offers nothing to choose between", () => {
+    // One shell, so the panel shows no menu: the login shell is a choice the
+    // user already made, and their dotfiles are written for it.
+    expect(terminalShellStatuses(posix())).toEqual([
+      { id: "system", available: true, path: posix().env.SHELL },
+    ]);
   });
 
   it("refuses a Windows id on a Unix machine", () => {

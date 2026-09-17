@@ -181,6 +181,18 @@ describe("buttons and motion", () => {
   });
 });
 
+describe("the pointer", () => {
+  it("is an arrow while a program owns the mouse, and text otherwise", () => {
+    mouse("mousemove", { ...at(2, 2) });
+    // Nothing tracking: the library's I-beam is left alone.
+    expect(element.style.cursor).toBe("");
+
+    modes.add(1000).add(1006);
+    mouse("mousemove", { ...at(3, 2) });
+    expect(element.style.cursor).toBe("default");
+  });
+});
+
 describe("focus", () => {
   it("is reported only to a program that asked", () => {
     element.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));

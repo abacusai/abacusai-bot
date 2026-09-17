@@ -497,7 +497,8 @@ const TerminalShellPicker = (): JSX.Element => {
   const state = useTerminalShellState();
   const choose = useSetTerminalShell();
 
-  if (state == null) return <></>;
+  // One shell is not a choice: off Windows there is only the login shell.
+  if (state == null || state.statuses.length < 2) return <></>;
 
   const labelKey = (id: TerminalShellId): string =>
     TERMINAL_SHELLS.find((shell) => shell.id === id)?.labelKey ?? id;

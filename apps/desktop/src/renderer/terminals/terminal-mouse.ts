@@ -153,6 +153,11 @@ export const installMouseReporting = (
   /** True when the event was reported and must not also select text. */
   const report = (event: MouseEvent, kind: "down" | "up" | "move"): boolean => {
     if (!isTracking(term) || event.shiftKey) return false;
+    // The pointer says what it can do here. The library sets an I-beam for
+    // text that can be selected and a hand over a link; while a program owns
+    // the mouse, dragging selects nothing, so it is an arrow. Ours sticks
+    // because the library's own mousemove never runs while we claim it.
+    element.style.cursor = "default";
     const at = cellAt(term, element, event);
     if (at == null) return false;
 
@@ -194,6 +199,17 @@ export const installMouseReporting = (
     if (held < 0) return;
     claim(event, "up");
   };
+  /**
+   * Runs after the library's own mousemove, which sets an I-beam for
+   * selectable text and a hand over a link. While a program owns the mouse,
+   * dragging selects nothing, so an arrow is the honest pointer — and this
+   * has to be the later listener to survive theirs, for the modes where we do
+   * not claim the event outright.
+   */
+  const onMouseMoveCursor = (event: MouseEvent): void => {
+    if (isTracking(term) && !event.shiftKey) element.style.cursor = "default";
+  };
+
   const onContextMenu = (event: MouseEvent): void => {
     // Right-click belongs to the program while it is tracking.
     if (isTracking(term) && !event.shiftKey) event.preventDefault();
@@ -257,6 +273,7 @@ export const installMouseReporting = (
 
   element.addEventListener("mousedown", onMouseDown, { capture: true });
   element.addEventListener("mousemove", onMouseMove, { capture: true });
+  element.addEventListener("mousemove", onMouseMoveCursor);
   element.addEventListener("contextmenu", onContextMenu);
   element.addEventListener("focusin", onFocusIn);
   element.addEventListener("focusout", onFocusOut);
@@ -267,6 +284,7 @@ export const installMouseReporting = (
     term.attachCustomWheelEventHandler(undefined);
     element.removeEventListener("mousedown", onMouseDown, { capture: true });
     element.removeEventListener("mousemove", onMouseMove, { capture: true });
+    element.removeEventListener("mousemove", onMouseMoveCursor);
     element.removeEventListener("contextmenu", onContextMenu);
     element.removeEventListener("focusin", onFocusIn);
     element.removeEventListener("focusout", onFocusOut);
