@@ -37,7 +37,7 @@ import {
   type AgentEvent,
   type DesktopEvent,
 } from "./protocol.js";
-import { AbacusBotSession } from "./session.js";
+import { AbacusBotSession, OPENLLM_POOL_EXHAUSTED_MESSAGE } from "./session.js";
 
 let provider: FakeProvider;
 let home: string;
@@ -197,7 +197,7 @@ afterEach(async () => {
   // The router's cooldowns outlive the session that learned them — that is the
   // point of them (openllm-cooldowns.ts), and they are keyed on the home
   // directory every test in this file shares. So one test rate-limiting
-  // `ollama/big` moved the *next* test's pool order under it, and the suite
+  // `openrouter/big:free` moved the *next* test's pool order under it, and the suite
   // failed on whichever test ran second. Each test gets a pool with nothing
   // held against it.
   fs.rmSync(path.join(home, "openllm-cooldowns.json"), { force: true });
@@ -643,7 +643,7 @@ describe("changing the model", () => {
   it("keeps one unusable custom provider from hiding every other one", async () => {
     // pi validates a provider as it is registered, and an entry with no
     // `baseUrl` throws. The registration loop used to let that out, so every
-    // provider after it — the Ollama entry the desktop had just written, for
+    // provider after it — the custom entry the desktop had just written, for
     // one — was never registered, and the pick that needed it could not
     // resolve.
     const harness = session();
@@ -707,8 +707,8 @@ describe("changing the model", () => {
 
     await harness.session.start();
 
-    // The Ollama setup flow writes a customProviders entry while this process
-    // is already running, and the desktop picker offers its models right away.
+    // The custom-provider setup flow writes a customProviders entry while this
+    // process is already running, and the desktop picker offers its models right away.
     // The registrations are a snapshot from start(), so without a refresh the
     // pick fails as "unknown model" until the app is reopened.
     const configFile = path.join(home, "config.json");
@@ -842,9 +842,9 @@ describe("without a host attached", () => {
  * pool, a provider failure moves the conversation to the next model instead of
  * ending it, and running out of pool surfaces the error instead of spinning.
  *
- * The pool here is an "ollama" custom provider pointing at the loopback fake —
- * ollama is a real pool member, and a custom provider is the one kind a test
- * can conjure without the network. pi's own retry loop is disabled for these:
+ * The pool here is an "openrouter" custom provider pointing at the loopback
+ * fake, its models named `:free` so they count as the free tier — a custom
+ * provider is the one kind a test can conjure without the network. pi's own retry loop is disabled for these:
  * it would otherwise re-send the same failing call with exponential backoff
  * before the rotation gets its turn, which tests the backoff and not the
  * router.
@@ -855,12 +855,12 @@ describe("OpenLLM", () => {
       defaultModel: "openllm/auto",
       customProviders: [
         {
-          id: "ollama",
+          id: "openrouter",
           baseUrl: provider.baseUrl,
           apiKey: "test-key",
           models: [
-            { id: "big", contextWindow: 131072 },
-            { id: "small", contextWindow: 65536 },
+            { id: "big:free", contextWindow: 131072 },
+            { id: "small:free", contextWindow: 65536 },
           ],
         },
       ],
@@ -1006,7 +1006,7 @@ describe("OpenLLM", () => {
     expect(harness.agent("error")).toHaveLength(0);
     // The rotation is logged, not shown: the chat carries the answer.
     expect(log.lines.join("")).toMatch(
-      /failed \(no reply in 1s\) — routing to ollama\/small/
+      /failed \(no reply in 1s\) — routing to openrouter\/small:free/
     );
     expect(chatNotices(harness).join("\n")).not.toMatch(/routing to/);
     // Still the router in the picker: which model answered is its business.
@@ -1030,7 +1030,7 @@ describe("OpenLLM", () => {
     // terminal error painted over it.
     expect(harness.text).toContain("recovered on the second model");
     expect(harness.agent("error")).toHaveLength(0);
-    expect(log.lines.join("")).toMatch(/routing to ollama\/small/);
+    expect(log.lines.join("")).toMatch(/routing to openrouter\/small:free/);
     expect(chatNotices(harness).join("\n")).not.toMatch(/routing to/);
     // The picker keeps highlighting the router, not the model of the day.
     expect(harness.agent("model_changed").at(-1)?.model).toBe("openllm/auto");
@@ -1054,7 +1054,7 @@ describe("OpenLLM", () => {
       harness.agent("notification").filter((e) => e.notificationKey != null)
     ).toEqual([]);
     expect(log.lines.join("")).toContain(
-      "ollama/big failed (429) — routing to ollama/small…"
+      "openrouter/big:free failed (429) — routing to openrouter/small:free…"
     );
     log.restore();
   });
@@ -1080,7 +1080,7 @@ describe("OpenLLM", () => {
     const failure = log.lines.find((line) => line.includes("failed"));
 
     expect(failure).toContain(
-      "ollama/big failed (429) — routing to ollama/small…"
+      "openrouter/big:free failed (429) — routing to openrouter/small:free…"
     );
     expect(failure).not.toMatch(/openrouter\.ai|retry shortly/);
     log.restore();
@@ -1100,24 +1100,28 @@ describe("OpenLLM", () => {
     // and the error names what the provider said.
     expect(harness.agent("turn_complete").length).toBeGreaterThan(0);
 
-    const reported = harness.agent("error").at(0)?.error.message ?? "";
+    const reported = harness.agent("error").at(0)?.error;
 
-    // Named and actionable, without the provider's billing prose: this line is
-    // the whole answer the user gets for the turn.
-    expect(reported).toMatch(/rate-limited \(429\)/);
-    expect(reported).toMatch(/switch to a different model/i);
-    expect(reported).not.toMatch(/https?:\/\//);
+    // One fixed line and the switch card: under the router the user never
+    // chose a model, so no provider's sentence about one is shown, and the
+    // way out is a button rather than a red line.
+    expect(reported?.message).toBe(OPENLLM_POOL_EXHAUSTED_MESSAGE);
+    expect(reported?.message).not.toMatch(/429|upstream|https?:\/\//);
+    expect(reported?.detail).toBeUndefined();
+    expect(reported?.actions).toEqual([{ type: "switch-model" }]);
   });
 
   it("deactivates on a concrete pick and reactivates on the router id", async () => {
     const harness = session({ mode: "yolo" });
 
     await harness.session.start();
-    await harness.session.setModel("ollama/small");
+    await harness.session.setModel("openrouter/small:free");
 
     // Picking a real model leaves the router: the session reports the model
     // itself again.
-    expect(harness.agent("model_changed").at(-1)?.model).toBe("ollama/small");
+    expect(harness.agent("model_changed").at(-1)?.model).toBe(
+      "openrouter/small:free"
+    );
 
     await harness.session.setModel("openllm/auto");
 
@@ -1183,7 +1187,7 @@ describe("OpenLLM", () => {
         fail: { status: 429, message: "rate limited upstream" },
       }));
       await harness.session.start();
-      await harness.session.setModel("ollama/small");
+      await harness.session.setModel("openrouter/small:free");
       await harness.session.send("hi");
       await harness.until(() => harness.agent("error").length > 0);
 

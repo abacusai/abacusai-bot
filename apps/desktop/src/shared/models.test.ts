@@ -45,7 +45,7 @@ describe("the OpenLLM catalog entry", () => {
 
   it("names OpenRouter as the primary way in", () => {
     // `requiresEnv` can only carry one variable; the availability service
-    // widens `configured` to any pool source (Gemini or Abacus key, Ollama)
+    // widens `configured` to any pool source (Gemini or Abacus key)
     // — see openLlmConfigured in main/services/providers/models.ts.
     expect(router?.requiresEnv).toBe("OPENROUTER_API_KEY");
   });

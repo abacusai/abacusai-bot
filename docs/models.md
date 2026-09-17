@@ -13,7 +13,7 @@ Open Settings, then Models, to paste a provider key or use a supported sign-in
 flow. The page lists the providers available in the installed version and links
 to each provider's key page. The app supports direct providers, model gateways,
 AWS Bedrock, Google Vertex, Azure OpenAI, and OpenAI-compatible local endpoints
-such as Ollama, llama.cpp, and vLLM.
+such as llama.cpp and vLLM.
 
 ## Key precedence
 

@@ -31,9 +31,6 @@ vi.mock("./groq", () => ({
   clearGroqCache: () => {},
   fetchLiveGroqModelIds: async () => groqLive.current,
 }));
-vi.mock("./ollama-service", () => ({
-  ensureManagedOllamaServer: async () => {},
-}));
 vi.mock("../../paths", () => ({ abacusBotHome: () => "/nonexistent-home" }));
 
 const { listAvailableModels } = await import("./models");
