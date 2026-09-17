@@ -848,6 +848,25 @@ export interface McpBrowserStatus {
   approval: BrowserApproval;
 }
 
+/** Which kernel sandbox this machine has; null means commands run unconfined. */
+/**
+ * Whether this machine can confine a shell command, probed once. Decides
+ * whether Auto is offered at all: a machine that cannot sandbox gets Full
+ * access alone, plainly.
+ */
+export interface SandboxSupport {
+  available: boolean;
+  /** Why not, in a sentence, when `available` is false. */
+  reason: string | null;
+}
+
+/**
+ * What a session, bot or routine runs in when nothing picks otherwise:
+ * Full access, or Auto (the same, inside the sandbox). Chosen on the Profile
+ * page.
+ */
+export type DefaultAgentMode = AgentMode.Yolo | AgentMode.Auto;
+
 /** A local simulator, emulator or device; mirrors main's DeviceInfo. */
 export interface LocalDeviceInfo {
   platform: "ios" | "android";
@@ -1793,14 +1812,16 @@ export interface AgentApi {
   ) => Promise<AgentMcpLogEntry[]>;
   getMcpBrowserStatus: () => Promise<McpBrowserStatus>;
   setMcpBrowserEnabled: (enabled: boolean) => Promise<McpBrowserStatus>;
-  /** Whether shell commands run confined by the OS sandbox. Off by default. */
-  getSandboxEnabled: () => Promise<boolean>;
+  /** The mode a session, bot or routine starts in when nothing picks one. */
+  getDefaultAgentMode: () => Promise<DefaultAgentMode>;
+  /** Whether this machine can confine a command at all; probed once. */
+  getSandboxSupport: () => Promise<SandboxSupport>;
   getNotificationSettings: () => Promise<NotificationSettings>;
   setNotificationSettings: (
     next: NotificationSettings
   ) => Promise<NotificationSettings>;
-  /** Resolves to the stored state; takes effect next session. */
-  setSandboxEnabled: (enabled: boolean) => Promise<boolean>;
+  /** Resolves to the stored mode; applies to what starts next. */
+  setDefaultAgentMode: (mode: DefaultAgentMode) => Promise<DefaultAgentMode>;
   /** Off by default: holding an xAI model key should not decide where a search goes. */
   getXaiSearchEnabled: () => Promise<boolean>;
   /** Resolves to the stored state; applies next session. */

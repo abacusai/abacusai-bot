@@ -234,9 +234,12 @@ describe("the shell a command falls back to without a sandbox backend", () => {
     // The regression: a hardcoded bash spawn fails ENOENT on stock Windows,
     // which callers read as the command failing with empty output.
     expect(
-      fallbackShell("npm test", "win32", {
-        ComSpec: "C:\\Windows\\system32\\cmd.exe",
-      })
+      fallbackShell(
+        "npm test",
+        "win32",
+        { ComSpec: "C:\\Windows\\system32\\cmd.exe" },
+        null
+      )
     ).toEqual({
       file: "C:\\Windows\\system32\\cmd.exe",
       args: ["/d", "/s", "/c", "npm test"],
@@ -247,14 +250,22 @@ describe("the shell a command falls back to without a sandbox backend", () => {
   });
 
   it("still finds cmd.exe when ComSpec is unset", () => {
-    expect(fallbackShell("npm test", "win32", {}).file).toBe("cmd.exe");
+    expect(fallbackShell("npm test", "win32", {}, null).file).toBe("cmd.exe");
+  });
+
+  it("runs under the bundled POSIX shell on Windows where it is installed", () => {
+    // What the model was told it has (posix-shell.ts); cmd.exe only without
+    // the payload. A plain -c argument: Node quotes it, and sh reads it back.
+    expect(
+      fallbackShell("npm test && ls", "win32", {}, { sh: "C:\\bb\\sh.exe" })
+    ).toEqual({ file: "C:\\bb\\sh.exe", args: ["-c", "npm test && ls"] });
   });
 
   it("keeps the command as one argument on both platforms", () => {
     const command = 'echo "a b" && echo done';
 
     expect(fallbackShell(command, "darwin", {}).args.at(-1)).toBe(command);
-    expect(fallbackShell(command, "win32", {}).args.at(-1)).toBe(command);
+    expect(fallbackShell(command, "win32", {}, null).args.at(-1)).toBe(command);
   });
 });
 

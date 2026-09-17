@@ -1,9 +1,16 @@
-import { CircleHelp, FastForward, ListChecks, ShieldCheck } from "lucide-react";
-import { type ComponentType, type JSX } from "react";
+import {
+  CircleHelp,
+  FastForward,
+  ListChecks,
+  ShieldCheck,
+  ShieldOff,
+} from "lucide-react";
+import { type ComponentType, type JSX, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AgentMode } from "#shared/agent-types";
 
+import { useSandboxSupportQuery } from "../../hooks/use-sandbox";
 import {
   Select,
   SelectContent,
@@ -18,17 +25,27 @@ type ModeOption = {
     | "workspace.runtimeMode.supervisedDescription"
     | "workspace.runtimeMode.acceptEditsDescription"
     | "workspace.runtimeMode.planDescription"
+    | "workspace.runtimeMode.autoDescription"
     | "workspace.runtimeMode.fullAccessDescription";
   icon: ComponentType<{ className?: string }>;
   labelKey:
     | "workspace.runtimeMode.supervised"
     | "workspace.runtimeMode.acceptEdits"
     | "workspace.runtimeMode.plan"
+    | "workspace.runtimeMode.auto"
     | "workspace.runtimeMode.fullAccess";
   value: AgentMode;
 };
 
+// Auto leads: it is the mode to reach for, and the one the Profile page
+// offers as the default beside Full access.
 const MODE_OPTIONS: ModeOption[] = [
+  {
+    value: AgentMode.Auto,
+    labelKey: "workspace.runtimeMode.auto",
+    descriptionKey: "workspace.runtimeMode.autoDescription",
+    icon: ShieldCheck,
+  },
   {
     value: AgentMode.Normal,
     labelKey: "workspace.runtimeMode.supervised",
@@ -51,7 +68,7 @@ const MODE_OPTIONS: ModeOption[] = [
     value: AgentMode.Yolo,
     labelKey: "workspace.runtimeMode.fullAccess",
     descriptionKey: "workspace.runtimeMode.fullAccessDescription",
-    icon: ShieldCheck,
+    icon: ShieldOff,
   },
 ];
 
@@ -65,6 +82,16 @@ export const RuntimeModePicker = ({
   disabled?: boolean;
 }): JSX.Element => {
   const { t } = useTranslation();
+  // Auto is only offered where the sandbox works: without one it would be
+  // Full access under a safer name.
+  const sandbox = useSandboxSupportQuery().data;
+  const options = useMemo(
+    () =>
+      sandbox?.available === true
+        ? MODE_OPTIONS
+        : MODE_OPTIONS.filter((option) => option.value !== AgentMode.Auto),
+    [sandbox]
+  );
   const selected =
     MODE_OPTIONS.find((option) => option.value === value) ?? MODE_OPTIONS[0];
   const SelectedIcon = selected.icon;
@@ -100,7 +127,7 @@ export const RuntimeModePicker = ({
         className="min-w-64"
       >
         <SelectGroup>
-          {MODE_OPTIONS.map((option) => {
+          {options.map((option) => {
             const Icon = option.icon;
             return (
               <SelectItem

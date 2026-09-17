@@ -61,6 +61,7 @@ import type {
   SetSessionWorktreeRequest,
   WorkspaceGitContext,
   AbacusAccountInfo,
+  DefaultAgentMode,
 } from "#shared/contracts";
 import {
   ABACUS_CONNECTORS_SERVER_NAME,
@@ -1044,13 +1045,20 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     }
   );
 
-  ipcMain.handle(IpcChannels.GetSandboxEnabled, () => {
-    return serviceHost.getSandboxEnabled();
+  ipcMain.handle(IpcChannels.GetDefaultAgentMode, () => {
+    return serviceHost.getDefaultAgentMode();
   });
 
-  ipcMain.handle(IpcChannels.SetSandboxEnabled, (_event, enabled: boolean) => {
-    return serviceHost.setSandboxEnabled(enabled);
+  ipcMain.handle(IpcChannels.GetSandboxSupport, () => {
+    return serviceHost.getSandboxSupport();
   });
+
+  ipcMain.handle(
+    IpcChannels.SetDefaultAgentMode,
+    (_event, mode: DefaultAgentMode) => {
+      return serviceHost.setDefaultAgentMode(mode);
+    }
+  );
 
   ipcMain.handle(IpcChannels.GetXaiSearchEnabled, () => {
     return serviceHost.getXaiSearchEnabled();

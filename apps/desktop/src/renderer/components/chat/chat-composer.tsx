@@ -61,6 +61,7 @@ import {
   getMentionAtCursor,
   tokenize,
 } from "../../lib/mentions";
+import { modeAfterDecision } from "../../lib/permission-auto-resolve";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { filterSkills } from "../../utils/skill-utils";
 import { Button, Spinner, Textarea } from "../ui";
@@ -645,8 +646,13 @@ function BashPermissionUI({
   tool: PendingPermissionInfo;
   onDecide: (d: PermissionDecisionInput) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const command = String(tool.toolInput.command ?? "").trim();
   const displayName = getProp<string>(tool.toolInput, "_displayName") ?? "Bash";
+  const credentialPaths =
+    tool.request?.type === "run_terminal"
+      ? (tool.request.credentialPaths ?? [])
+      : [];
   const alwaysAllowRule =
     getProp<string>(tool.toolInput, "_alwaysAllowRule") ?? null;
   const alwaysAllowRules =
@@ -668,10 +674,118 @@ function BashPermissionUI({
           {command}
         </pre>
       )}
+      {credentialPaths.length > 0 && (
+        <div
+          className="flex flex-col gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-2 text-xs"
+          data-id="permission-credential-read"
+        >
+          <span className="text-foreground font-medium">
+            {t("permissions.credentialRead")}
+          </span>
+          <ul className="text-muted-foreground list-disc pl-4 font-mono break-all">
+            {credentialPaths.map((store) => (
+              <li key={store}>{store}</li>
+            ))}
+          </ul>
+          <span className="text-muted-foreground">
+            {t("permissions.credentialAlways")}
+          </span>
+        </div>
+      )}
       <PermActionList
         onDecide={onDecide}
         alwaysAllowRule={alwaysAllowRule ?? fallbackRule}
         alwaysAllowRules={alwaysAllowRules}
+      />
+    </div>
+  );
+}
+
+/** The sandbox refused what a command tried; allowing runs the command again. */
+function SandboxDeniedPermissionUI({
+  tool,
+  onDecide,
+}: {
+  tool: PendingPermissionInfo;
+  onDecide: (d: PermissionDecisionInput) => void;
+}): JSX.Element {
+  const { t } = useTranslation();
+  const request = tool.request?.type === "sandbox_denied" ? tool.request : null;
+  const command = request?.command ?? "";
+  const denials = request?.denials ?? [];
+  return (
+    <div className="flex flex-col gap-2" data-id="permission-sandbox-denied">
+      <div className="flex items-start gap-2">
+        <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+        <span className="text-foreground text-xs font-medium">
+          {t("permissions.sandboxDenied")}
+        </span>
+      </div>
+      {command.length > 0 && (
+        <pre className="text-muted-foreground bg-muted border-border max-h-20 overflow-y-auto rounded-lg border px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap">
+          {command}
+        </pre>
+      )}
+      <ul className="text-muted-foreground list-disc pl-4 font-mono text-xs break-all">
+        {denials.map((denial) => (
+          <li key={JSON.stringify(denial)}>
+            {denial.kind === "host"
+              ? t("permissions.sandboxDeniedHost", {
+                  host: `${denial.host}:${denial.port}`,
+                })
+              : denial.kind === "read"
+                ? t("permissions.sandboxDeniedRead", { path: denial.path })
+                : t("permissions.sandboxDeniedWrite", { path: denial.path })}
+          </li>
+        ))}
+      </ul>
+      {request?.note != null && request.note.length > 0 && (
+        <span
+          className="text-xs text-amber-600 dark:text-amber-400"
+          data-id="permission-sandbox-denied-note"
+        >
+          {request.note}
+        </span>
+      )}
+      <span className="text-muted-foreground text-xs">
+        {t("permissions.sandboxDeniedRerun")}
+      </span>
+      <PermActionList
+        onDecide={onDecide}
+        showAllowAlways={true}
+        alwaysAllowLabel={t("permissions.sandboxDeniedAlways")}
+      />
+    </div>
+  );
+}
+
+/** A sandboxed command reached for a host nobody listed; it waits on this. */
+function NetworkHostPermissionUI({
+  tool,
+  onDecide,
+}: {
+  tool: PendingPermissionInfo;
+  onDecide: (d: PermissionDecisionInput) => void;
+}): JSX.Element {
+  const { t } = useTranslation();
+  const request = tool.request?.type === "network_host" ? tool.request : null;
+  const host = request?.host ?? getProp<string>(tool.toolInput, "host") ?? "";
+  const port = request?.port ?? getProp<number>(tool.toolInput, "port") ?? 0;
+  return (
+    <div className="flex flex-col gap-2" data-id="permission-network-host">
+      <div className="flex items-start gap-2">
+        <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+        <span className="text-foreground text-xs font-medium">
+          {t("permissions.networkHost")}
+        </span>
+      </div>
+      <pre className="text-muted-foreground bg-muted border-border rounded-lg border px-2.5 py-2 font-mono text-xs break-all whitespace-pre-wrap">
+        {host}:{port}
+      </pre>
+      <PermActionList
+        onDecide={onDecide}
+        showAllowAlways={true}
+        alwaysAllowLabel={t("permissions.networkHostAlways", { host })}
       />
     </div>
   );
@@ -1268,11 +1382,13 @@ const PermissionPane = ({
   if (permission == null) return null;
 
   const decide = (decision: PermissionDecisionInput): void => {
-    // If decision triggers a mode change, update the local UI too
-    if (decision === "allowAlways" && onModeChange != null)
-      onModeChange(AgentMode.AcceptEdits);
-    if (decision === "allowYolo" && onModeChange != null)
-      onModeChange(AgentMode.Yolo);
+    // A decision that moves the mode moves the picker too; never from a
+    // sandbox card (lib/permission-auto-resolve.ts).
+    const nextMode =
+      permission.request != null && typeof decision === "string"
+        ? modeAfterDecision(permission.request, decision)
+        : null;
+    if (nextMode != null && onModeChange != null) onModeChange(nextMode);
     // The transport owns the toolCallId -> permissionId join and retires the
     // prompt as soon as the decision is sent, so the pane closes on click.
     void workspaceConversationTransport.respondToPermission(
@@ -1311,6 +1427,10 @@ const PermissionPane = ({
     content = (
       <OutsideDirPermissionUI tool={permission} onDecide={decide} verb="read" />
     );
+  } else if (permissionType === "network_host") {
+    content = <NetworkHostPermissionUI tool={permission} onDecide={decide} />;
+  } else if (permissionType === "sandbox_denied") {
+    content = <SandboxDeniedPermissionUI tool={permission} onDecide={decide} />;
   } else if (permissionType === "exit_plan_mode") {
     content = <ExitPlanModePermissionUI tool={permission} onDecide={decide} />;
   } else if (permissionType === "ask_user_question") {
