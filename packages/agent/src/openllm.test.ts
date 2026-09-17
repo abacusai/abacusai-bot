@@ -1,9 +1,9 @@
 /**
  * OpenLLM's contract: given the live model list, it always has a next-best
- * free model to hand — Gemini's Studio quota first, then OpenRouter's free
- * tier ranked toward the families that can drive an agent loop, then the
- * local Ollama floor — skipping whatever failed in the last few minutes, and
- * never inventing a model that is not part of the free pool.
+ * free model to hand — Abacus's drivers first, then Gemini's Studio quota,
+ * then OpenRouter's free tier ranked toward the families that can drive an
+ * agent loop — skipping whatever failed in the last few minutes, and never
+ * inventing a model that is not part of the free pool.
  *
  * The rotation state is the part worth pinning hardest. The failure mode it
  * exists for is a shared upstream quota: when one free model 429s, the next
@@ -80,10 +80,11 @@ describe("which models are in the pool", () => {
     expect(candidates).toHaveLength(1);
   });
 
-  it("keeps Ollama — the user's own hardware is free by definition", () => {
+  it("keeps a custom provider out, however it is named", () => {
+    // A user's own endpoint is not a free tier the pool may spend.
     expect(
       openLlmCandidates([choice({ id: "ollama/qwen2.5-coder:7b" })])
-    ).toHaveLength(1);
+    ).toEqual([]);
   });
 
   it("puts the vision Flash ahead of plain Flash in the pool", () => {
@@ -107,6 +108,34 @@ describe("which models are in the pool", () => {
 
     expect(candidates.map((c) => c.modelId)).toEqual([
       "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+      "deepseek-ai/DeepSeek-V4-Flash-0731",
+    ]);
+  });
+
+  it("orders the free plan's Abacus drivers: vision Flash, Union Alpha, Muse, then the text Flashes", () => {
+    // Union Alpha is a $0 stealth preview: second so one failure lands on the
+    // driver that costs nothing and outlives the balance; Muse before the
+    // text-only Flashes. Neither family nor context window decides this.
+    const abacus = (modelId: string, free = false) =>
+      choice({
+        id: `abacus/${modelId}`,
+        free,
+        inputCost: free ? 0 : 0.22,
+        poolEligible: true,
+      });
+    const candidates = openLlmCandidates([
+      abacus("deepseek-ai/DeepSeek-V4-Flash-0731"),
+      abacus("muse-spark-1.3"),
+      abacus("deepseek-ai/DeepSeek-V4.1-Flash"),
+      abacus("stealth/union-alpha", true),
+      abacus("deepseek-ai/DeepSeek-V4-Flash-Vision-Exp"),
+    ]);
+
+    expect(candidates.map((c) => c.modelId)).toEqual([
+      "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+      "stealth/union-alpha",
+      "muse-spark-1.3",
+      "deepseek-ai/DeepSeek-V4.1-Flash",
       "deepseek-ai/DeepSeek-V4-Flash-0731",
     ]);
   });
@@ -230,9 +259,8 @@ describe("which models are in the pool", () => {
     expect(candidates).toEqual([]);
   });
 
-  it("orders the sources: cheap Abacus, OpenRouter, Gemini, the Ollama floor", () => {
+  it("orders the sources: cheap Abacus, Gemini, OpenRouter", () => {
     const candidates = openLlmCandidates([
-      choice({ id: "ollama/qwen2.5-coder:7b" }),
       choice({
         id: "abacus/route-llm-code-low",
         free: false,
@@ -245,9 +273,8 @@ describe("which models are in the pool", () => {
 
     expect(candidates.map((c) => c.provider)).toEqual([
       "abacus",
-      "openrouter",
       "gemini",
-      "ollama",
+      "openrouter",
     ]);
   });
 
@@ -289,25 +316,25 @@ describe("which models are in the pool", () => {
 
 describe("rotation across failures", () => {
   const candidates = openLlmCandidates([
-    choice({ id: "gemini/gemini-3.5-flash-lite", free: false }),
     choice({ id: "openrouter/deepseek/one:free" }),
-    choice({ id: "ollama/qwen2.5-coder:7b" }),
+    choice({ id: "gemini/gemini-3.5-flash-lite", free: false }),
+    choice({ id: "openrouter/z/two:free", label: "Zulu" }),
   ]);
 
   it("starts on the best-ranked candidate", () => {
     const rotation = new OpenLlmRotation(() => 0);
 
-    expect(rotation.pick(candidates)?.id).toBe("openrouter/deepseek/one:free");
+    expect(rotation.pick(candidates)?.id).toBe("gemini/gemini-3.5-flash-lite");
   });
 
-  it("moves down the pool as models fail, ending on the local floor", () => {
+  it("moves down the pool as models fail, ending on the last rung", () => {
     const rotation = new OpenLlmRotation(() => 0);
 
-    rotation.markFailed("openrouter/deepseek/one:free");
-    expect(rotation.pick(candidates)?.id).toBe("gemini/gemini-3.5-flash-lite");
-
     rotation.markFailed("gemini/gemini-3.5-flash-lite");
-    expect(rotation.pick(candidates)?.id).toBe("ollama/qwen2.5-coder:7b");
+    expect(rotation.pick(candidates)?.id).toBe("openrouter/deepseek/one:free");
+
+    rotation.markFailed("openrouter/deepseek/one:free");
+    expect(rotation.pick(candidates)?.id).toBe("openrouter/z/two:free");
   });
 
   it("skips the model that just failed even before it is marked", () => {
@@ -317,19 +344,19 @@ describe("rotation across failures", () => {
     const rotation = new OpenLlmRotation(() => 0);
 
     expect(
-      rotation.pick(candidates, new Set(["openrouter/deepseek/one:free"]))?.id
-    ).toBe("gemini/gemini-3.5-flash-lite");
+      rotation.pick(candidates, new Set(["gemini/gemini-3.5-flash-lite"]))?.id
+    ).toBe("openrouter/deepseek/one:free");
   });
 
   it("lets a failed model back in once its cooldown expires", () => {
     let now = 0;
     const rotation = new OpenLlmRotation(() => now);
 
-    rotation.markFailed("openrouter/deepseek/one:free");
-    expect(rotation.pick(candidates)?.id).toBe("gemini/gemini-3.5-flash-lite");
+    rotation.markFailed("gemini/gemini-3.5-flash-lite");
+    expect(rotation.pick(candidates)?.id).toBe("openrouter/deepseek/one:free");
 
     now = OPENLLM_COOLDOWN_MS + 1;
-    expect(rotation.pick(candidates)?.id).toBe("openrouter/deepseek/one:free");
+    expect(rotation.pick(candidates)?.id).toBe("gemini/gemini-3.5-flash-lite");
   });
 
   it("lengthens the wait as failures pile up, and caps it", () => {
@@ -344,7 +371,7 @@ describe("rotation across failures", () => {
   it("escalates the wait a model actually serves on repeated failures", () => {
     let now = 0;
     const rotation = new OpenLlmRotation(() => now);
-    const id = "openrouter/deepseek/one:free";
+    const id = "gemini/gemini-3.5-flash-lite";
 
     rotation.markFailed(id);
     now = OPENLLM_COOLDOWN_MS + 1;
@@ -364,7 +391,7 @@ describe("rotation across failures", () => {
     // serving hour-long cooldowns weeks later.
     let now = 0;
     const rotation = new OpenLlmRotation(() => now);
-    const id = "openrouter/deepseek/one:free";
+    const id = "gemini/gemini-3.5-flash-lite";
 
     rotation.markFailed(id);
     rotation.markFailed(id);
@@ -389,11 +416,11 @@ describe("rotation across failures", () => {
     };
 
     const first = new OpenLlmRotation(() => 0, store);
-    first.markFailed("openrouter/deepseek/one:free");
+    first.markFailed("gemini/gemini-3.5-flash-lite");
 
     const second = new OpenLlmRotation(() => 0, store);
 
-    expect(second.pick(candidates)?.id).toBe("gemini/gemini-3.5-flash-lite");
+    expect(second.pick(candidates)?.id).toBe("openrouter/deepseek/one:free");
   });
 
   it("still answers when every candidate failed recently", () => {
@@ -402,13 +429,13 @@ describe("rotation across failures", () => {
     let now = 0;
     const rotation = new OpenLlmRotation(() => now);
 
-    rotation.markFailed("openrouter/deepseek/one:free");
-    now = 1000;
     rotation.markFailed("gemini/gemini-3.5-flash-lite");
+    now = 1000;
+    rotation.markFailed("openrouter/deepseek/one:free");
     now = 2000;
-    rotation.markFailed("ollama/qwen2.5-coder:7b");
+    rotation.markFailed("openrouter/z/two:free");
 
-    expect(rotation.pick(candidates)?.id).toBe("openrouter/deepseek/one:free");
+    expect(rotation.pick(candidates)?.id).toBe("gemini/gemini-3.5-flash-lite");
   });
 
   it("returns nothing only when there is nothing to return", () => {
@@ -417,8 +444,8 @@ describe("rotation across failures", () => {
     expect(rotation.pick([])).toBeUndefined();
     expect(
       rotation.pick(
-        [choice({ id: "gemini/gemini-3.5-flash-lite" })],
-        new Set(["gemini/gemini-3.5-flash-lite"])
+        [choice({ id: "openrouter/deepseek/one:free" })],
+        new Set(["openrouter/deepseek/one:free"])
       )
     ).toBeUndefined();
   });
@@ -448,9 +475,21 @@ describe("failures the account owns rather than the model", () => {
     expect(accountWideFailure(failure, "openrouter")).toBeNull();
   });
 
+  it("reads an exhausted Abacus balance as every billed model's failure", () => {
+    // RouteLLM's credit gate refuses each billed model the same way; the $0
+    // preview is the one sibling it still serves, so only the paid tier closes.
+    expect(
+      accountWideFailure(
+        "429: You have no remaining credits to use the LLM apis.",
+        "abacus"
+      )
+    ).toEqual({ provider: "abacus", free: false });
+    expect(accountWideFailure("503: Model is overloaded", "abacus")).toBeNull();
+  });
+
   it("says nothing about providers that do not share an allowance", () => {
-    // A Studio key's quota and an Ollama box have nothing to do with
-    // OpenRouter's wording, and matching on text alone would condemn them.
+    // A Studio key's quota has nothing to do with OpenRouter's wording, and
+    // matching on text alone would condemn it.
     expect(accountWideFailure(DAY, "gemini")).toBeNull();
     expect(accountWideFailure(DAY, undefined)).toBeNull();
   });
@@ -461,7 +500,7 @@ describe("a pool whose account has closed a tier", () => {
     choice({ id: "openrouter/z-ai/glm-5.2:free" }),
     choice({ id: "openrouter/google/gemma-4-31b-it:free" }),
     choice({ id: "openrouter/nvidia/nemotron-3.5:free" }),
-    choice({ id: "ollama/qwen2.5-coder:7b" }),
+    choice({ id: "gemini/gemini-3.5-flash-lite", free: false }),
   ]);
 
   it("steps over every sibling sharing the exhausted quota", () => {
@@ -471,7 +510,7 @@ describe("a pool whose account has closed a tier", () => {
 
     rotation.markScopeFailed({ provider: "openrouter", free: true });
 
-    expect(rotation.pick(pool)?.id).toBe("ollama/qwen2.5-coder:7b");
+    expect(rotation.pick(pool)?.id).toBe("gemini/gemini-3.5-flash-lite");
   });
 
   it("has nothing to offer when the closed tier was the whole pool", () => {
@@ -485,13 +524,37 @@ describe("a pool whose account has closed a tier", () => {
     expect(rotation.pick(freeOnly)).toBeUndefined();
   });
 
+  it("hops an out-of-credits Abacus account straight to its $0 model", () => {
+    const rotation = new OpenLlmRotation(() => 0);
+    const abacus = openLlmCandidates([
+      choice({
+        id: "abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+        free: false,
+        inputCost: 0.22,
+        poolEligible: true,
+      }),
+      choice({
+        id: "abacus/stealth/union-alpha",
+        free: true,
+        inputCost: 0,
+        poolEligible: true,
+      }),
+    ]);
+
+    rotation.markScopeFailed({ provider: "abacus", free: false });
+
+    expect(rotation.pick(abacus)?.id).toBe("abacus/stealth/union-alpha");
+  });
+
   it("keeps the paid tier, which is a different allowance", () => {
     const rotation = new OpenLlmRotation(() => 0);
     const paid = choice({ id: "openrouter/deepseek/paid", free: false });
 
     rotation.markScopeFailed({ provider: "openrouter", free: true });
 
-    expect(rotation.pick([...pool, paid])?.id).toBe("ollama/qwen2.5-coder:7b");
+    expect(rotation.pick([...pool, paid])?.id).toBe(
+      "gemini/gemini-3.5-flash-lite"
+    );
     expect(rotation.pick([paid])?.id).toBe("openrouter/deepseek/paid");
   });
 
@@ -499,10 +562,15 @@ describe("a pool whose account has closed a tier", () => {
     let now = 0;
     const rotation = new OpenLlmRotation(() => now);
 
+    // Gemini outranks OpenRouter, so it is set aside to watch the tier itself.
+    const withoutGemini = new Set(["gemini/gemini-3.5-flash-lite"]);
+
     rotation.markScopeFailed({ provider: "openrouter", free: true });
-    expect(rotation.pick(pool)?.id).toBe("ollama/qwen2.5-coder:7b");
+    expect(rotation.pick(pool, withoutGemini)).toBeUndefined();
 
     now = OPENLLM_ACCOUNT_COOLDOWN_MS + 1;
-    expect(rotation.pick(pool)?.id).toBe("openrouter/z-ai/glm-5.2:free");
+    expect(rotation.pick(pool, withoutGemini)?.id).toBe(
+      "openrouter/z-ai/glm-5.2:free"
+    );
   });
 });

@@ -76,6 +76,7 @@ import {
   OPENLLM_ID,
   OpenLlmRotation,
   accountWideFailure,
+  isOutOfCredits,
   openLlmCandidates,
   isOpenLlmReference,
   MAX_OPENLLM_ROTATIONS_PER_TURN,
@@ -3164,17 +3165,6 @@ function providerFailureSummary(raw: string): string {
 }
 
 const ABACUS_PLAN_URL = "https://apps.abacus.ai/chatllm/choose-plan/";
-
-/** Out of paid-for capacity, as providers phrase it — not a mere rate limit. */
-function isOutOfCredits(raw: string): boolean {
-  const status = raw.match(/^\s*(\d{3})\b/)?.[1];
-  if (status === "402") return true;
-  // Credit gates phrase it these ways, 429s included; an exhausted account
-  // must never read as a mere rate limit.
-  return /no remaining credits|insufficient credit|out of credit|credit limit|quota exceeded|purchase more credits|high percentage of your (overall )?credits/i.test(
-    raw
-  );
-}
 
 /** The provider rejected the credential, rather than the account's balance. */
 function isAuthFailure(raw: string): boolean {

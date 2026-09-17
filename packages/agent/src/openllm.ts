@@ -1,8 +1,8 @@
 /**
  * OpenLLM: one picker entry standing for "every model I can run for free right
- * now" — OpenRouter's `:free` tier, a Studio key's daily quota, Abacus's cheap
- * drivers, local Ollama. The sources fail independently, so pooled with
- * automatic fallback they keep the agent working. The id is virtual: never sent
+ * now" — Abacus's cheap drivers, a Studio key's daily quota, OpenRouter's
+ * `:free` tier. The sources fail independently, so pooled with automatic
+ * fallback they keep the agent working. The id is virtual: never sent
  * to pi's fuzzy-matching resolver, the session swaps in a concrete free model.
  */
 import type { CooldownStore } from "./openllm-cooldowns.js";
@@ -56,6 +56,17 @@ export interface FailureScope {
   free?: boolean;
 }
 
+/** Out of paid-for capacity, as providers phrase it — not a mere rate limit. */
+export function isOutOfCredits(raw: string): boolean {
+  const status = raw.match(/^\s*(\d{3})\b/)?.[1];
+  if (status === "402") return true;
+  // Credit gates phrase it these ways, 429s included; an exhausted account
+  // must never read as a mere rate limit.
+  return /no remaining credits|insufficient credit|out of credit|credit limit|quota exceeded|purchase more credits|high percentage of your (overall )?credits/i.test(
+    raw
+  );
+}
+
 /**
  * The class a provider error condemns, or null when it only condemns the model.
  * An account failure (`free-models-per-day` is one allowance shared by every
@@ -67,6 +78,12 @@ export function accountWideFailure(
   failure: string,
   provider: string | undefined
 ): FailureScope | null {
+  // An exhausted Abacus balance refuses every billed model alike; the $0 ones
+  // (a stealth preview) still serve, so the pool hops straight to them.
+  if (provider === "abacus") {
+    return isOutOfCredits(failure) ? { provider: "abacus", free: false } : null;
+  }
+
   if (provider !== "openrouter") return null;
 
   // One allowance across every free model on the key, not a per-model limit.
@@ -96,16 +113,13 @@ export const MAX_OPENLLM_ROTATIONS_PER_TURN = 5;
 
 /**
  * The pool's sources, in the order tried. Abacus first: paid for, tuned for
- * agent loops, and never free-tier rate-limited. OpenRouter before Gemini to
- * match the order the dropdown presents. Ollama last: a local model can never
- * be rate-limited away, so it is the floor, but small local models mangle
- * multi-step tool use often enough that anything hosted and working wins.
+ * agent loops, and never free-tier rate-limited. Then a Studio key's Gemini
+ * quota, then OpenRouter's `:free` models.
  */
 const SOURCE_RANK: Record<string, number> = {
   abacus: 0,
-  openrouter: 1,
-  gemini: 2,
-  ollama: 3,
+  gemini: 1,
+  openrouter: 2,
 };
 
 /**
@@ -152,8 +166,7 @@ const isOpenRouterFreeTier = (choice: ModelChoice): boolean =>
  * Whether one model is in the pool. Gemini qualifies as a whole: its catalog
  * cost is the paid rate, but a Studio key serves it under a daily free quota.
  * Abacus qualifies by the provider's poolEligible flag rather than a price
- * test, since rates drift past any hardcoded ceiling. Ollama is the user's own
- * hardware.
+ * test, since rates drift past any hardcoded ceiling.
  */
 const inPool = (choice: ModelChoice): boolean => {
   if (choice.provider === "openrouter") return isOpenRouterFreeTier(choice);
@@ -163,19 +176,30 @@ const inPool = (choice: ModelChoice): boolean => {
     );
   }
 
-  return choice.provider === "gemini" || choice.provider === "ollama";
+  return choice.provider === "gemini";
 };
 
 /**
- * Order within the Abacus slice: the code router first, since it already routes
- * across the cheap ladder server-side, then the concrete drivers.
+ * Order within the Abacus slice. The code router first, since it already routes
+ * across the cheap ladder server-side (paid plans pool only it); then the free
+ * plan's drivers: the vision Flash (it can see attached images), Union Alpha
+ * (a $0 stealth preview — bills nothing, and still serves once the balance is
+ * gone), Muse, then the text-only Flashes. Anything unlisted trails.
  */
+const ABACUS_POOL_ORDER = [
+  ABACUS_CODE_ROUTER_LOW,
+  "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+  "stealth/union-alpha",
+  "muse-spark-1.3",
+  "deepseek-ai/DeepSeek-V4.1-Flash",
+  "deepseek-ai/DeepSeek-V4-Flash-0731",
+];
+
 const abacusRank = (choice: ModelChoice): number => {
   if (choice.provider !== "abacus") return 0;
-  if (choice.modelId === ABACUS_CODE_ROUTER_LOW) return 0;
-  // The vision Flash leads: same price, and it can see attached images.
-  if (choice.modelId === "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp") return 1;
-  return 2;
+  const index = ABACUS_POOL_ORDER.indexOf(choice.modelId);
+
+  return index === -1 ? ABACUS_POOL_ORDER.length : index;
 };
 
 /**
