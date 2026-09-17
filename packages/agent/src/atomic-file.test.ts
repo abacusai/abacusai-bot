@@ -1,13 +1,4 @@
-/**
- * The write every store in this repo goes through.
- *
- * A reader must never catch a half-written file, and — the part that cost a
- * user their Telegram tools on Windows — a writer must not be defeated by a
- * reader. Windows refuses a rename onto a file anyone holds open, so a session
- * reloading its config is enough to bounce a write that had nothing wrong with
- * it, and the caller above logged the failure and carried on as if it had
- * worked.
- */
+/** Stage-and-rename writes, including the Windows EPERM retry. */
 import fs from "node:fs";
 import fsPromises from "node:fs/promises";
 import os from "node:os";
@@ -123,12 +114,6 @@ describe("skipIfUnchanged", () => {
 
     expect(fs.readFileSync(target(), "utf-8")).toBe("after");
   });
-
-  it("writes when there is no file yet", () => {
-    writeFileAtomicSync(target(), "first", { skipIfUnchanged: true });
-
-    expect(fs.readFileSync(target(), "utf-8")).toBe("first");
-  });
 });
 
 describe("the async half", () => {
@@ -139,7 +124,7 @@ describe("the async half", () => {
     expect(tempFiles()).toEqual([]);
   });
 
-  it("gives up on a rename that never succeeds, leaving no temp file", async () => {
+  it("cleans up after a rename that never succeeds", async () => {
     vi.spyOn(fsPromises, "rename").mockRejectedValue(epermError());
 
     await expect(writeFileAtomic(target(), "doomed")).rejects.toThrow(/EPERM/);

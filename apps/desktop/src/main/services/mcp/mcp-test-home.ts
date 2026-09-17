@@ -1,29 +1,21 @@
 /**
- * A temporary ABACUSAI_BOT_HOME for the config tests. The service resolves the
- * home directory at import time, so every test that writes config has to point
- * the env var somewhere disposable and re-import the module behind it.
+ * A disposable ABACUSAI_BOT_HOME. The service resolves the home directory at
+ * import time, so tests must set the env var and re-import behind it.
  */
 import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { afterEach, beforeEach } from "vitest";
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
+
+import type { McpConfigService } from "./mcp-config-service";
 
 export interface TempBotHome {
-  /** The directory itself, valid inside a test body. */
-  path: () => string;
   /** A fresh service bound to this home. */
-  loadService: () => Promise<
-    InstanceType<typeof import("./mcp-config-service").McpConfigService>
-  >;
+  loadService: () => Promise<McpConfigService>;
 }
 
-/**
- * Registers the hooks and hands back accessors. `seed` is written as
- * `mcp-code.json` before each test, since a service with no user config is
- * rarely what a test means.
- */
+/** `seed` is written as `mcp-code.json` before each test. */
 export const useTempBotHome = (
   seed: Record<string, unknown> = {
     mcpServers: { linear: { url: "http://localhost:11" } },
@@ -47,7 +39,6 @@ export const useTempBotHome = (
   });
 
   return {
-    path: () => home,
     loadService: async () => {
       vi.resetModules();
       const { McpConfigService } = await import("./mcp-config-service");

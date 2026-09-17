@@ -60,8 +60,7 @@ export function readMcpAuth(): McpAuthFile {
 
 export function writeMcpAuth(file: McpAuthFile): void {
   // A truncated token file costs every stored sign-in, since `readMcpAuth`
-  // cannot tell corrupt from absent. `restrict` because these are credentials:
-  // the file is never world-readable, not even briefly.
+  // cannot tell corrupt from absent.
   writeFileAtomicSync(mcpAuthPath(), `${JSON.stringify(file, null, 2)}\n`, {
     restrict: true,
   });

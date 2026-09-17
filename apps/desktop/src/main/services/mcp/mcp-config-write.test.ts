@@ -1,14 +1,4 @@
-/**
- * How the runtime MCP config asks to be written.
- *
- * The write itself — staging, the rename, waiting out a reader that holds the
- * file open — belongs to `@abacus-ai/agent/atomic-file` and is tested there.
- * What matters here is the option this caller passes: a connector starting or
- * stopping rewrites every live session's config, and none of that file's
- * content depends on connectors, so almost every one of those rewrites has
- * nothing to say. Making them anyway is what put a rename on top of the
- * sessions reading the same files.
- */
+/** The options this caller passes; the write itself is tested in the agent. */
 import fs from "fs";
 
 import { describe, expect, it, vi } from "vitest";

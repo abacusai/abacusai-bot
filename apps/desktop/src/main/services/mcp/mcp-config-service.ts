@@ -104,13 +104,8 @@ const runtimeAgentConfigPath = (mode: McpMode): string =>
 /**
  * Write JSON that only this user can read. These files carry secrets: the
  * builtin servers' bearer tokens and whatever a connector needs (PATs, OAuth
- * secrets, keys in `env`).
- *
- * `skipIfUnchanged` matters most here: a connector starting or stopping
- * rewrites every live session's config, and none of that file's content
- * depends on connectors, so almost every one of those rewrites is identical to
- * what is already on disk. Not making them is what keeps this write off the
- * sessions reading the same files.
+ * secrets, keys in `env`). Connector start/stop rewrites every live session's
+ * config with identical bytes, hence `skipIfUnchanged`.
  */
 const writeJsonAtomic = (filePath: string, data: unknown): void => {
   writeFileAtomicSync(filePath, JSON.stringify(data, null, 2), {

@@ -33,8 +33,7 @@ export default defineConfig({
     "src/posix-shell-install.ts",
     // And whether this platform has a kernel sandbox, for the Settings page.
     "src/sandbox-support.ts",
-    // And the atomic write every store on both sides shares. It imports only
-    // node's fs, so main pays nothing for it.
+    // And the shared atomic write. Imports only node's fs, so main pays nothing.
     "src/atomic-file.ts",
   ],
   deps: {

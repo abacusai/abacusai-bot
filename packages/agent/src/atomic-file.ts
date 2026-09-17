@@ -1,37 +1,21 @@
 /**
- * Writing a file without ever leaving a half-written one behind.
+ * Stage-and-rename file writes, shared by every store in the repo.
  *
- * Every store in this repo that matters — MCP config, bots, transcripts, auth
- * tokens — stages its content in a temp file and renames it into place, since
- * a rename is the one filesystem operation a reader cannot catch midway. They
- * each grew their own copy of that, with their own bugs; this is the one copy.
- *
- * Two things the naive version gets wrong, both learned on Windows:
- *
- *  - A temp name derived only from the target is shared by every writer of it.
- *    The desktop and the CLI share these directories, so two writers interleave
- *    into one temp file and one renames what the other still holds open.
- *  - A rename onto a file anyone has open is refused outright (EPERM), where
- *    POSIX would allow it. A session reloading its config is enough to cause
- *    it, and the write it bounces had nothing wrong with it.
+ * Two Windows constraints shape this: a rename onto a file anyone holds open
+ * is refused with EPERM (POSIX allows it), and a temp name derived only from
+ * the target collides between the desktop and the CLI, which share these
+ * directories.
  */
 import fs from "fs";
 import fsPromises from "fs/promises";
 import path from "path";
 
 export interface AtomicWriteOptions {
-  /**
-   * Restrict the file to its owner (0600). For anything carrying secrets:
-   * bearer tokens, OAuth material, whatever a connector's `env` holds. Set on
-   * the temp file too, so it is never briefly readable with a looser mode.
-   */
+  /** 0600, applied to the temp file too so it is never briefly world-readable. */
   restrict?: boolean;
   /**
-   * Return without writing when the file already holds exactly these bytes.
-   * For files rewritten far more often than they change — the caller saves a
-   * rename, and a reader of the file is never disturbed by a write that had
-   * nothing to say. Not worth it for content that always differs (anything
-   * stamped with a time), where the read is pure overhead.
+   * Skip the write when the file already holds these bytes, sparing readers a
+   * rename. Costs a read, so pointless for content that always differs.
    */
   skipIfUnchanged?: boolean;
 }
@@ -55,8 +39,7 @@ const restrictToOwner = (filePath: string): void => {
   try {
     fs.chmodSync(filePath, 0o600);
   } catch {
-    // Nothing to fall back to, and failing the write would be worse than a
-    // file with the mode the platform chose.
+    // Nothing to fall back to.
   }
 };
 
@@ -69,15 +52,12 @@ const unchanged = (filePath: string, contents: string): boolean => {
   }
 };
 
-/**
- * The wait between rename attempts blocks, because a synchronous write has no
- * way to yield. That is why the budget is two short waits and not more: past
- * it the caller hears about the failure rather than the app stalling for it.
- */
+const SLEEP_SIGNAL = new Int32Array(new SharedArrayBuffer(4));
+
+/** Blocks the thread, so keep the budget tiny. */
 const sleepSync = (ms: number): void => {
   Atomics.wait(SLEEP_SIGNAL, 0, 0, ms);
 };
-const SLEEP_SIGNAL = new Int32Array(new SharedArrayBuffer(4));
 
 export function writeFileAtomicSync(
   filePath: string,
@@ -85,6 +65,7 @@ export function writeFileAtomicSync(
   options: AtomicWriteOptions = {}
 ): void {
   if (options.skipIfUnchanged === true && unchanged(filePath, contents)) {
+    // Still chmod: the bytes may match a file written by something else.
     if (options.restrict === true) restrictToOwner(filePath);
     return;
   }
@@ -104,21 +85,19 @@ export function writeFileAtomicSync(
         sleepSync(RENAME_BACKOFF_MS * attempt);
       }
     }
-    // After the rename: a file that already existed keeps its own mode through
-    // one, so the temp file's mode is not what ends up on disk.
+    // A rename onto an existing file keeps that file's mode, not the temp's.
     if (options.restrict === true) restrictToOwner(filePath);
   } catch (err) {
     try {
       fs.rmSync(temp, { force: true });
     } catch {
-      // A temp file someone else has locked is the smaller problem; the write
-      // already failed, and that is what the caller needs to hear about.
+      // Nothing to fall back to.
     }
     throw err;
   }
 }
 
-/** The same guarantees where the caller can await, and the wait yields. */
+/** Async counterpart. */
 export async function writeFileAtomic(
   filePath: string,
   contents: string,
@@ -145,9 +124,7 @@ export async function writeFileAtomic(
     }
     if (options.restrict === true) restrictToOwner(filePath);
   } catch (err) {
-    await fsPromises.rm(temp, { force: true }).catch(() => {
-      // See the sync path: the write's own failure is the one that matters.
-    });
+    await fsPromises.rm(temp, { force: true }).catch(() => {});
     throw err;
   }
 }
