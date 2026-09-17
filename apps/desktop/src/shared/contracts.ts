@@ -1063,6 +1063,21 @@ export interface BrowserPermissionRequest {
 // opinion about the renderer's segment shapes.
 export type TranscriptSegment = Record<string, unknown>;
 
+/** A thumbs up/down on one assistant turn; `clear` withdraws it. */
+export interface TurnFeedbackInput {
+  sessionId: string;
+  /** Index of the rated bot text segment in the stored transcript. */
+  eventSequenceNumber: number;
+  rating: "up" | "down" | "clear";
+  comment?: string;
+  model?: string | null;
+}
+
+export interface TurnFeedbackOutcome {
+  ok: boolean;
+  reason?: string;
+}
+
 /** What the user asked to keep, the agent's notes, what it knows of the person. */
 export type MemoryTargetId = "memory" | "user" | "remember";
 
@@ -1570,6 +1585,10 @@ export interface AgentApi {
   getUsageSnapshot: () => Promise<UsageSnapshot>;
   /** Null when signed out. */
   getAbacusAccount: (refresh?: boolean) => Promise<AbacusAccountInfo | null>;
+  /** Report a thumbs up/down on an assistant turn to the platform. */
+  submitTurnFeedback: (
+    feedback: TurnFeedbackInput
+  ) => Promise<TurnFeedbackOutcome>;
   getSettings: () => Promise<AbacusBotSettings>;
   /** Up-arrow history for one composer (a session, or a workspace's new-session box), newest first. */
   listPromptHistory: (scope: string) => Promise<string[]>;
