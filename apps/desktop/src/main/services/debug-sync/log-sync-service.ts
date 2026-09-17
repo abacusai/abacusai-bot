@@ -50,6 +50,12 @@ export class LogSyncService {
     this.timer.unref?.();
   }
 
+  /** Ship what is on disk now: a key was just stored, and the lines that led
+   * up to it are only worth anything if they leave before the app is closed. */
+  syncNow(): void {
+    void this.sweep();
+  }
+
   stop(): void {
     if (this.timer != null) {
       clearInterval(this.timer);

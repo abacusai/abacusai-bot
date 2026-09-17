@@ -2,8 +2,9 @@ import crypto from "crypto";
 import http from "http";
 import type { AddressInfo } from "net";
 
-import { shell } from "electron";
+import { app, shell } from "electron";
 
+import { readSettings } from "../config/settings";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 
 /**
@@ -29,6 +30,20 @@ export type AbacusAuthResult =
   | { ok: true; key: string }
   | { ok: false; error: string; cancelled?: boolean };
 
+/**
+ * What the browser tab is told about the exchange, so a failure that never
+ * leaves this machine (the usual case: the app's own request to Abacus.AI
+ * fails) is still visible to the user and, via the tab, to Abacus.AI.
+ */
+type ExchangeOutcome =
+  | { state: "pending" }
+  | { state: "ok" }
+  | { state: "failed"; reason: string };
+
+// After the exchange settles the listener stays up just long enough for the
+// tab to read the outcome; the app itself has already been answered.
+const RESULT_LINGER_MS = 15_000;
+
 /** base64url(sha256(verifier)), which is what `code_challenge_method=S256` means. */
 const codeChallengeFor = (verifier: string): string =>
   crypto.createHash("sha256").update(verifier).digest("base64url");
@@ -53,7 +68,17 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
     let settled = false;
     let accepted = false;
     let timer: NodeJS.Timeout | null = null;
+    let linger: NodeJS.Timeout | null = null;
+    let outcome: ExchangeOutcome = { state: "pending" };
     const abort = new AbortController();
+
+    const closeServer = (): void => {
+      if (linger != null) clearTimeout(linger);
+      // Drop keep-alive sockets too: server.close() alone waits for the
+      // browser's connection to idle out and the port stays held.
+      server.closeAllConnections?.();
+      server.close();
+    };
 
     const server = http.createServer((req, res) => {
       // GET-only with a 127.0.0.1 Host, so a DNS-rebinding page fails the
@@ -68,6 +93,21 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
       }
 
       const url = new URL(req.url ?? "/", "http://127.0.0.1");
+
+      // The tab polls this after the redirect; the path is as unguessable as
+      // the callback itself and the body never carries the key.
+      if (url.pathname === `/${callbackPath}/result`) {
+        res
+          .writeHead(200, {
+            "content-type": "application/json",
+            "cache-control": "no-store",
+          })
+          .end(JSON.stringify(outcome), () => {
+            // Close only once the answer has left the socket.
+            if (outcome.state !== "pending") closeServer();
+          });
+        return;
+      }
 
       if (url.pathname !== `/${callbackPath}`) {
         res.writeHead(404).end();
@@ -90,29 +130,39 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
           "referrer-policy": "no-referrer",
           "x-content-type-options": "nosniff",
         })
-        .end(RESPONSE_PAGE);
+        .end(responsePage());
 
       if (code == null || code.length === 0) {
-        finish({
-          ok: false,
-          error: "Abacus.AI did not return an authorization code.",
-        });
+        finish(
+          {
+            ok: false,
+            error: "Abacus.AI did not return an authorization code.",
+          },
+          "no_code"
+        );
         return;
       }
 
-      void exchange(code, verifier, abort.signal).then(finish);
+      void exchange(code, verifier, abort.signal).then(({ result, reason }) =>
+        finish(result, reason)
+      );
     });
 
-    const finish = (result: AbacusAuthResult): void => {
+    /**
+     * Settle the attempt. With a `reason` (or a success) the browser tab is
+     * still waiting to hear how the exchange went, so the listener lingers
+     * for it; a cancel or timeout has no tab to inform and closes at once.
+     */
+    const finish = (result: AbacusAuthResult, reason?: string): void => {
       if (settled) return;
       settled = true;
       if (timer != null) clearTimeout(timer);
-      // Drop keep-alive sockets too: server.close() alone waits for the
-      // browser's connection to idle out and the port stays held.
       abort.abort();
-      server.closeAllConnections?.();
-      server.close();
       if (inFlight?.close === close) inFlight = null;
+      if (result.ok) outcome = { state: "ok" };
+      else if (reason != null) outcome = { state: "failed", reason };
+      if (outcome.state === "pending") closeServer();
+      else linger = setTimeout(closeServer, RESULT_LINGER_MS);
       resolve(result);
     };
 
@@ -166,11 +216,15 @@ const genericFailure: AbacusAuthResult = {
   error: "Could not complete Abacus.AI sign-in. Please try again.",
 };
 
+/** Only a short code ever reaches the tab or the beacon, never response text. */
+const reasonCode = (value: string): string =>
+  value.replace(/[^A-Za-z0-9_]/g, "").slice(0, 32) || "unknown";
+
 const exchange = async (
   code: string,
   verifier: string,
   signal: AbortSignal
-): Promise<AbacusAuthResult> => {
+): Promise<{ result: AbacusAuthResult; reason?: string }> => {
   try {
     const response = await fetch(new URL(EXCHANGE_PATH, abacusAppHost()), {
       method: "POST",
@@ -187,7 +241,7 @@ const exchange = async (
       console.warn(
         `[abacus-auth] exchange rejected: HTTP ${response.status} ${detail.slice(0, 200)}`
       );
-      return genericFailure;
+      return { result: genericFailure, reason: `http_${response.status}` };
     }
 
     const payload = (await response.json().catch(() => null)) as {
@@ -198,26 +252,54 @@ const exchange = async (
     if (payload?.success !== true) {
       if (typeof payload?.error === "string")
         console.warn(`[abacus-auth] exchange failed: ${payload.error}`);
-      return genericFailure;
+      return { result: genericFailure, reason: "bad_payload" };
     }
     const key =
       typeof payload.result?.apiKey === "string"
         ? payload.result.apiKey.trim()
         : "";
 
-    if (key.length === 0) return genericFailure;
+    if (key.length === 0) return { result: genericFailure, reason: "no_key" };
 
-    return { ok: true, key };
+    return { result: { ok: true, key } };
   } catch (error) {
     console.warn(
       `[abacus-auth] exchange error: ${error instanceof Error ? error.message : String(error)}`
     );
-    return genericFailure;
+    // The error name (TypeError, AbortError, ...) says which class of failure
+    // it was without carrying the message, which can name a proxy or a host.
+    const name = error instanceof Error ? error.name : "unknown";
+    return { result: genericFailure, reason: `fetch_${reasonCode(name)}` };
   }
 };
 
-/** The tab shown after the redirect; the plan link is for a new account. */
-const RESPONSE_PAGE = `<!doctype html>
+/**
+ * The tab shown after the redirect; the plan link is for a new account. Its
+ * script polls the listener for the exchange outcome: a failure is shown in
+ * the tab (the app can only say "try again") and reported to Abacus.AI as a
+ * short code through the browser, which reaches it even when the app's own
+ * request could not. Without the script the page is exactly what it was.
+ */
+const responsePage = (): string => {
+  let build = "packaged";
+  try {
+    if (!app.isPackaged) build = "source";
+  } catch {
+    // No `app` outside electron (tests).
+  }
+  // The same opt-out as the log sync: with it off, the tab still shows the
+  // outcome but reports nothing.
+  let reportEnabled = true;
+  try {
+    reportEnabled = readSettings().serverDebugSync ?? true;
+  } catch {
+    // Unreadable settings: report, as the log sync would.
+  }
+  // An API path: an unknown method is answered 404 and logged, which is all
+  // the beacon needs.
+  const beacon = new URL("/api/v1/_abacusaibotSignInResult", abacusAppHost());
+  beacon.searchParams.set("build", build);
+  return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -230,17 +312,47 @@ const RESPONSE_PAGE = `<!doctype html>
     background: #fff; color: #111;
   }
   @media (prefers-color-scheme: dark) { body { background: #111; color: #eee; } }
-  .card { text-align: center; padding: 2rem; }
+  .card { text-align: center; padding: 2rem; max-width: 34rem; }
   h1 { font-size: 1.05rem; margin: 0 0 .35rem; }
   p { margin: 0; opacity: .65; font-size: .875rem; }
   a { color: inherit; }
+  code { font-size: .8rem; }
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>Abacus.AI is connected</h1>
-    <p>You can close this tab and go back to the app.</p>
-    <p style="margin-top:.6rem">New account? Your free plan is already active — DeepSeek V4 Flash, Kimi, Qwen, GLM and more coding models are ready to use. <a href="https://apps.abacus.ai/chatllm/" rel="noreferrer">Manage your account</a> or upgrade anytime.</p>
+    <h1 id="title">Abacus.AI is connected</h1>
+    <p id="body">You can close this tab and go back to the app.</p>
+    <p id="plan" style="margin-top:.6rem">New account? Your free plan is already active — DeepSeek V4 Flash, Kimi, Qwen, GLM and more coding models are ready to use. <a href="https://apps.abacus.ai/chatllm/" rel="noreferrer">Manage your account</a> or upgrade anytime.</p>
   </div>
+  <script>
+  (function () {
+    var beacon = ${JSON.stringify(reportEnabled ? beacon.toString() : "")};
+    var url = location.pathname + "/result";
+    var tries = 0;
+    function report(outcome, reason) {
+      if (!beacon) return;
+      var img = new Image();
+      img.src = beacon + "&outcome=" + encodeURIComponent(outcome) +
+        (reason ? "&reason=" + encodeURIComponent(reason) : "");
+    }
+    function poll() {
+      if (tries++ > 40) return;
+      fetch(url, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (o) {
+        if (!o || o.state === "pending") { setTimeout(poll, 500); return; }
+        if (o.state === "ok") { report("ok"); return; }
+        var reason = String(o.reason || "unknown").replace(/[^A-Za-z0-9_]/g, "").slice(0, 32);
+        document.getElementById("title").textContent = "Sign-in did not finish in the app";
+        document.getElementById("body").textContent =
+          "Abacus.AI signed you in, but the app could not complete the connection (" + reason + "). " +
+          "Go back to the app and try again. If you are running the app from source, the terminal has the full error on a line starting with [abacus-auth].";
+        document.getElementById("plan").hidden = true;
+        report("failed", reason);
+      }).catch(function () { setTimeout(poll, 500); });
+    }
+    poll();
+  })();
+  </script>
 </body>
 </html>`;
+};
