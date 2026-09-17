@@ -211,6 +211,11 @@ const TerminalInstance = ({
 
   useEffect(() => {
     let disposed = false;
+    // Held separately from the ref: an instance built while this effect was
+    // being torn down never reaches the ref, and one left in the host paints
+    // a blinking cursor of its own in the corner for as long as the panel is
+    // open. Whatever is created here is disposed here.
+    let building: XTerm | null = null;
 
     const initialize = async (): Promise<void> => {
       const hostNode = containerRef.current;
@@ -287,6 +292,17 @@ const TerminalInstance = ({
       term.loadAddon(unicode11);
       term.unicode.activeVersion = "11";
 
+      building = term;
+      if (disposed) {
+        term.dispose();
+        return;
+      }
+
+      // Nothing but this terminal may be in the host. A previous instance
+      // normally takes its canvas with it, but a dispose that half-finished
+      // leaves one behind, and a stray canvas keeps rendering.
+      hostNode.replaceChildren();
+
       try {
         term.open(hostNode);
       } catch {
@@ -326,6 +342,7 @@ const TerminalInstance = ({
       });
 
       terminalRef.current = term;
+      building = null;
       fitAddonRef.current = fitAddon;
       setIsTerminalReady(true);
     };
@@ -339,8 +356,11 @@ const TerminalInstance = ({
         pendingResizeRef.current = null;
       }
       terminalRef.current?.dispose();
+      building?.dispose();
       terminalRef.current = null;
+      building = null;
       fitAddonRef.current = null;
+      containerRef.current?.replaceChildren();
       setIsTerminalReady(false);
     };
     // ptyGeneration is deliberately a dep: a dead PTY needs a fresh terminal.
