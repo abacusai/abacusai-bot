@@ -6,11 +6,18 @@ import type {
   SessionConversationKey,
 } from "#shared/conversation-scope";
 import { conversationBelongsToWorkspace } from "#shared/conversation-scope";
+import type { TerminalShellId } from "#shared/terminal-shells";
 
 export type TerminalRuntimeTab = {
   id: string;
   label: string;
   generation: number | null;
+  /**
+   * The shell this tab runs. Absent until one has been spawned, which is what
+   * a tab opened without a pick means: main resolves the stored preference,
+   * and the answer comes back on the start result.
+   */
+  shell?: TerminalShellId;
 };
 
 export type TerminalRuntimeScopeState = {
@@ -79,14 +86,23 @@ export const terminalRuntimeActions = {
       isOpen,
     })),
 
-  addTab: (scope: ConversationKey): string => {
+  /**
+   * `options.shell` is a deliberate pick from the `+` menu; without one the
+   * tab opens whatever main has stored, so the panel opening a terminal by
+   * itself never has to ask.
+   */
+  addTab: (
+    scope: ConversationKey,
+    options: { shell?: TerminalShellId; label?: string } = {}
+  ): string => {
     const id = createTerminalId();
     updateScope(scope, (value) => {
       const current = withDefaultTab(value);
       const tab: TerminalRuntimeTab = {
         id,
-        label: `Terminal ${current.tabs.length + 1}`,
+        label: options.label ?? `Terminal ${current.tabs.length + 1}`,
         generation: null,
+        shell: options.shell,
       };
       return {
         ...current,
@@ -98,6 +114,19 @@ export const terminalRuntimeActions = {
     });
     return id;
   },
+
+  /** What a start actually spawned, so a reopened tab asks for the same shell. */
+  setTabShell: (
+    scope: ConversationKey,
+    terminalId: string,
+    shell: TerminalShellId | undefined
+  ): void =>
+    updateScope(scope, (value) => ({
+      ...value,
+      tabs: value.tabs.map((tab) =>
+        tab.id === terminalId ? { ...tab, shell } : tab
+      ),
+    })),
 
   selectTab: (scope: ConversationKey, terminalId: string): void =>
     updateScope(scope, (value) => {

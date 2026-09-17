@@ -1,10 +1,18 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  type RenderResult,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   draftConversationKey,
   draftConversationRef,
 } from "#shared/conversation-scope";
+import type { TerminalShellState } from "#shared/terminal-shells";
 
 import { terminalRuntimeActions } from "../../stores/terminal-runtime-store";
 
@@ -22,10 +30,45 @@ vi.mock("react-i18next", () => ({
 
 const { TerminalPanel } = await import("./terminal-panel");
 
+const windowsShells: TerminalShellState = {
+  selected: "system",
+  effective: "cmd",
+  statuses: [
+    { id: "system", available: true },
+    { id: "cmd", available: true },
+    { id: "powershell", available: true },
+    { id: "busybox", available: true },
+    { id: "pwsh", available: false },
+  ],
+};
+
+const getTerminalShellState = vi.fn(async () => windowsShells);
+const setTerminalShell = vi.fn(async () => windowsShells);
+
+// The panel lives inside the app's provider; the shell roster is a query.
+const renderPanel = (ui: React.ReactElement): RenderResult =>
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      {ui}
+    </QueryClientProvider>
+  );
+
 beforeEach(() => {
+  getTerminalShellState.mockClear();
+  setTerminalShell.mockClear();
   Object.defineProperty(window, "api", {
     configurable: true,
-    value: { agent: { onEvent: vi.fn(() => vi.fn()) } },
+    value: {
+      agent: {
+        onEvent: vi.fn(() => vi.fn()),
+        getTerminalShellState,
+        setTerminalShell,
+      },
+    },
   });
 });
 
@@ -37,7 +80,7 @@ describe("TerminalPanel chrome", () => {
     const conversation = draftConversationRef("workspace");
     const conversationKey = draftConversationKey("workspace");
     terminalRuntimeActions.setOpen(conversationKey, true);
-    const { container } = render(
+    const { container } = renderPanel(
       <TerminalPanel
         conversation={conversation}
         conversationKey={conversationKey}
@@ -78,7 +121,7 @@ describe("TerminalPanel chrome", () => {
     const conversation = draftConversationRef("workspace");
     const conversationKey = draftConversationKey("workspace");
     terminalRuntimeActions.setOpen(conversationKey, true);
-    const { container } = render(
+    const { container } = renderPanel(
       <TerminalPanel
         conversation={conversation}
         conversationKey={conversationKey}
@@ -100,8 +143,69 @@ describe("TerminalPanel chrome", () => {
     );
   });
 
+  it("opens the last-used shell from + and only asks behind the chevron", async () => {
+    const conversation = draftConversationRef("workspace");
+    const conversationKey = draftConversationKey("workspace");
+    terminalRuntimeActions.setOpen(conversationKey, true);
+    renderPanel(
+      <TerminalPanel
+        conversation={conversation}
+        conversationKey={conversationKey}
+        generation={null}
+      />
+    );
+
+    // The plain + neither asks nor rewrites the preference: main resolves it.
+    fireEvent.click(
+      screen.getByRole("button", { name: "workspace.terminal.newTab" })
+    );
+    expect(setTerminalShell).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+
+    const picker = await screen.findByRole("button", {
+      name: "workspace.terminal.pickShell",
+    });
+    fireEvent.click(picker);
+
+    const busybox = await screen.findByRole("menuitem", {
+      name: "terminalShells.busybox.label",
+    });
+    fireEvent.click(busybox);
+
+    // Picked: the tab is labelled with the shell, and the pick is stored so
+    // the next automatically opened terminal comes back to it.
+    await waitFor(() =>
+      expect(setTerminalShell).toHaveBeenCalledWith("busybox")
+    );
+    expect(
+      screen.getByRole("tab", { name: /terminalShells.busybox.label/ })
+    ).toBeTruthy();
+  });
+
+  it("hides the shell picker when the roster has nothing to choose from", async () => {
+    getTerminalShellState.mockResolvedValueOnce({
+      selected: "system",
+      effective: "system",
+      statuses: [{ id: "system", available: true }],
+    } as TerminalShellState);
+    const conversationKey = draftConversationKey("workspace");
+    terminalRuntimeActions.setOpen(conversationKey, true);
+    renderPanel(
+      <TerminalPanel
+        conversation={draftConversationRef("workspace")}
+        conversationKey={conversationKey}
+        generation={null}
+      />
+    );
+
+    await waitFor(() => expect(getTerminalShellState).toHaveBeenCalled());
+    expect(
+      screen.queryByRole("button", { name: "workspace.terminal.pickShell" })
+    ).toBeNull();
+  });
+
   it("omits the close control when the panel cannot be closed", () => {
-    render(
+    renderPanel(
       <TerminalPanel
         conversation={null}
         conversationKey={null}

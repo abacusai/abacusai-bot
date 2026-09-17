@@ -9,10 +9,26 @@ import {
   draftConversationRef,
   sessionConversationRef,
 } from "#shared/conversation-scope";
+import type { TerminalShellId } from "#shared/terminal-shells";
 
 import { TerminalSessionService } from "./terminal-session-service";
 
 const ptySpawn = vi.fn();
+const storedShell = vi.fn<() => TerminalShellId>(() => "system");
+const resolveShell = vi.fn((id: TerminalShellId) => ({
+  id,
+  file: `/bin/${id}`,
+  args: ["-l"],
+  env: id === "busybox" ? { BB_OVERRIDE_APPLETS: ";tar" } : undefined,
+}));
+
+vi.mock("../config/settings", () => ({
+  readTerminalShell: () => storedShell(),
+}));
+
+vi.mock("./terminal-shells", () => ({
+  resolveTerminalShell: (id: TerminalShellId) => resolveShell(id),
+}));
 
 vi.mock("zigpty", () => ({
   spawn: (...args: unknown[]) => ptySpawn(...args) as unknown,
@@ -30,6 +46,9 @@ let workspace: string;
 
 beforeEach(() => {
   workspace = fs.mkdtempSync(path.join(os.tmpdir(), "terminal-session-"));
+  storedShell.mockClear();
+  resolveShell.mockClear();
+  storedShell.mockReturnValue("system");
   ptySpawn.mockReset();
   ptySpawn.mockImplementation(() => fakePty());
 });
@@ -58,6 +77,70 @@ const draftRequest = () => {
 };
 
 describe("conversation terminal session service", () => {
+  it("opens the shell the request names", async () => {
+    const terminals = service();
+
+    const result = await terminals.startSession({
+      ...draftRequest(),
+      shell: "busybox",
+    });
+
+    expect(result.state.shell).toBe("busybox");
+    expect(ptySpawn).toHaveBeenCalledWith(
+      "/bin/busybox",
+      ["-l"],
+      expect.objectContaining({
+        cwd: workspace,
+        env: expect.objectContaining({ BB_OVERRIDE_APPLETS: ";tar" }),
+      })
+    );
+  });
+
+  it("opens the stored shell when the request names none", async () => {
+    // What an automatically opened terminal sends: the last shell picked is
+    // the one that comes back, with nobody asked.
+    storedShell.mockReturnValue("powershell");
+    const terminals = service();
+
+    const result = await terminals.startSession(draftRequest());
+
+    expect(result.state.shell).toBe("powershell");
+    expect(ptySpawn).toHaveBeenCalledWith(
+      "/bin/powershell",
+      ["-l"],
+      expect.objectContaining({ cwd: workspace })
+    );
+  });
+
+  it("keeps a promoted terminal on the shell it was opened with", async () => {
+    storedShell.mockReturnValue("system");
+    const resolveWorkspacePath = vi.fn(
+      (_workspaceId: string, sessionId?: string) =>
+        sessionId == null ? workspace : path.join(workspace, sessionId)
+    );
+    const terminals = new TerminalSessionService({
+      resolveWorkspacePath,
+      emitTerminalOutput: () => {},
+      emitTerminalExit: () => {},
+      emitTerminalState: () => {},
+    });
+    const draft = draftRequest();
+    await terminals.startSession({ ...draft, shell: "busybox" });
+
+    // The session checkout differs from the draft's, so the PTY is restarted;
+    // the preference has moved on, and the tab must not move with it.
+    storedShell.mockReturnValue("cmd");
+    const session = sessionConversationRef("workspace-1", "chat-a");
+    const promoted = await terminals.promoteDraftToSession({
+      draftConversation: draft.conversation,
+      draftConversationKey: draft.conversationKey,
+      sessionConversation: session,
+      sessionConversationKey: conversationKey(session),
+    });
+
+    expect(promoted?.shell).toBe("busybox");
+  });
+
   it("serializes racing starts for one conversation", async () => {
     const terminals = service();
     const request = draftRequest();

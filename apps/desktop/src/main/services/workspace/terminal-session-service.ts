@@ -16,13 +16,16 @@ import {
   type ConversationKey,
   type ConversationRef,
 } from "#shared/conversation-scope";
+import type { TerminalShellId } from "#shared/terminal-shells";
 
+import { readTerminalShell } from "../config/settings";
 import {
   ConversationTerminalRuntimeRegistry,
   type ConversationTerminalAttachment,
   type ConversationTerminalEvent,
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
+import { resolveTerminalShell } from "./terminal-shells";
 
 type PtySpawn = (
   file: string,
@@ -80,10 +83,13 @@ const sanitizeEnv = (value: NodeJS.ProcessEnv): Record<string, string> =>
     )
   );
 
-const resolveShell = (): { file: string; args: string[] } =>
-  process.platform === "win32"
-    ? { file: process.env.ComSpec ?? "powershell.exe", args: [] }
-    : { file: process.env.SHELL ?? "/bin/bash", args: ["-l"] };
+/**
+ * The shell a start request asks for: the one it names, else the stored
+ * preference. An automatically opened terminal sends nothing and so reopens
+ * whatever was last picked from the panel's `+` menu.
+ */
+const requestedShell = (shell: TerminalShellId | undefined): TerminalShellId =>
+  shell ?? readTerminalShell();
 
 type TerminalSessionServiceOptions = {
   resolveWorkspacePath: (
@@ -145,6 +151,7 @@ const snapshot = (
   visible: attachment.visible,
   cols: attachment.cols,
   rows: attachment.rows,
+  shell: attachment.shell,
   exitCode: null,
   exitedAt: null,
 });
@@ -154,7 +161,7 @@ export class TerminalSessionService {
 
   constructor(private readonly options: TerminalSessionServiceOptions) {
     this.registry = new ConversationTerminalRuntimeRegistry({
-      createPty: async ({ scope, cols, rows }) => {
+      createPty: async ({ scope, cols, rows, shell: requested }) => {
         const workspacePath = options.resolveWorkspacePath(
           scope.workspaceId,
           scope.kind === "session" ? scope.sessionId : undefined
@@ -162,11 +169,11 @@ export class TerminalSessionService {
         if (workspacePath == null) {
           throw new Error("Workspace path is unavailable.");
         }
-        const shell = resolveShell();
+        const shell = resolveTerminalShell(requestedShell(requested));
         const spawn = await loadSpawn();
         return spawn(shell.file, shell.args, {
           cwd: workspacePath,
-          env: sanitizeEnv(process.env),
+          env: { ...sanitizeEnv(process.env), ...shell.env },
           cols,
           rows,
           encoding: "utf8",
@@ -245,6 +252,9 @@ export class TerminalSessionService {
           scope: registryScope(request.conversation),
           cols: request.cols,
           rows: request.rows,
+          // Resolved here rather than at spawn time so the snapshot names the
+          // shell the terminal really got, fallback included.
+          shell: resolveTerminalShell(requestedShell(request.shell)).id,
         });
         attachment = started;
         created = started.created;
@@ -361,9 +371,10 @@ export class TerminalSessionService {
       const promotedAttachments = this.registry.list(attachment.key);
       this.registry.disposeScope(attachment.key);
       const restarted = await Promise.all(
-        promotedAttachments.map(({ terminalId, cols, rows }) =>
+        promotedAttachments.map(({ terminalId, cols, rows, shell }) =>
           this.registry.start({
             terminalId,
+            shell,
             scope: {
               kind: "session",
               workspaceId: request.sessionConversation.workspaceId,

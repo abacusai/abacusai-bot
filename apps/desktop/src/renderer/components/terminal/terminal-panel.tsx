@@ -7,7 +7,14 @@ import {
   type ILinkProvider,
   type ILink,
 } from "ghostty-web";
-import { Minus, Plus, SquareTerminal, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Minus,
+  Plus,
+  SquareTerminal,
+  X,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -22,13 +29,24 @@ import type {
   ConversationKey,
   ConversationRef,
 } from "#shared/conversation-scope";
+import { TERMINAL_SHELLS, type TerminalShellId } from "#shared/terminal-shells";
 
+import {
+  useSetTerminalShell,
+  useTerminalShellState,
+} from "../../hooks/use-terminal-shells";
 import {
   terminalRuntimeActions,
   useTerminalRuntimeScope,
 } from "../../stores/terminal-runtime-store";
 import { openUrlInPreview } from "../../utils/preview-utils";
 import { Button } from "../ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const createPreviewLinkProvider = (inner: ILinkProvider): ILinkProvider => ({
@@ -67,6 +85,8 @@ type TerminalPanelProps = {
 type TerminalInstanceProps = Omit<TerminalPanelProps, "onClose" | "visible"> & {
   terminalId: string;
   active: boolean;
+  /** Absent asks main for the stored preference; a picked shell names itself. */
+  shell?: TerminalShellId;
   onExited: (terminalId: string) => void;
 };
 
@@ -116,6 +136,7 @@ const TerminalInstance = ({
   generation,
   terminalId,
   active,
+  shell,
   onExited,
 }: TerminalInstanceProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -124,6 +145,9 @@ const TerminalInstance = ({
   const pendingResizeRef = useRef<number>(null);
   const conversationKeyRef = useRef<ConversationKey | null>(conversationKey);
   const generationRef = useRef<number | null>(generation);
+  // A ref, not a dep: the start result names the shell that was spawned and
+  // writes it back to the tab, and a dep would restart the terminal on it.
+  const shellRef = useRef<TerminalShellId | undefined>(shell);
 
   // Bumped whenever the PTY dies, so the next reopen rebuilds the
   // GhosttyTerminal instead of typing into a dead buffer.
@@ -133,7 +157,8 @@ const TerminalInstance = ({
   useEffect(() => {
     conversationKeyRef.current = conversationKey;
     generationRef.current = generation;
-  }, [conversationKey, generation]);
+    shellRef.current = shell;
+  }, [conversationKey, generation, shell]);
 
   useEffect(() => {
     let disposed = false;
@@ -315,6 +340,7 @@ const TerminalInstance = ({
         generation: generationRef.current,
         cols,
         rows,
+        shell: shellRef.current,
       });
       if (!result.success) {
         return;
@@ -323,10 +349,18 @@ const TerminalInstance = ({
         return;
       }
       generationRef.current = result.state.generation;
+      shellRef.current = result.state.shell;
       terminalRuntimeActions.setGeneration(
         conversationKey,
         result.state.generation,
         terminalId
+      );
+      // Pin what was actually spawned, so this tab reopens the same shell
+      // after its PTY dies even if the stored preference has moved on.
+      terminalRuntimeActions.setTabShell(
+        conversationKey,
+        terminalId,
+        result.state.shell
       );
       term.clear();
       if (result.initialOutput.length > 0) {
@@ -427,6 +461,8 @@ export const TerminalPanel = ({
 }: TerminalPanelProps): JSX.Element => {
   const { t } = useTranslation();
   const runtime = useTerminalRuntimeScope(conversationKey);
+  const shellState = useTerminalShellState();
+  const rememberShell = useSetTerminalShell();
   const activeTab =
     runtime.tabs.find(({ id }) => id === runtime.activeTabId) ??
     runtime.tabs[0] ??
@@ -446,6 +482,38 @@ export const TerminalPanel = ({
       );
     }
   }, [activeTab, conversationKey, generation]);
+
+  const shellLabel = useCallback(
+    (id: TerminalShellId): string => {
+      const shell = TERMINAL_SHELLS.find((entry) => entry.id === id);
+
+      return t(`terminalShells.${shell?.labelKey ?? id}.label`, {
+        defaultValue: id,
+      });
+    },
+    [t]
+  );
+
+  /**
+   * No argument is the `+` button: main opens whatever was stored, which is
+   * also what the panel's own automatic terminal gets. An id is a pick from
+   * the menu, and a pick is remembered.
+   */
+  const openTab = useCallback(
+    (shell?: TerminalShellId): void => {
+      if (conversationKey == null) return;
+      if (shell == null) {
+        terminalRuntimeActions.addTab(conversationKey);
+        return;
+      }
+      rememberShell(shell);
+      terminalRuntimeActions.addTab(conversationKey, {
+        shell,
+        label: shellLabel(shell),
+      });
+    },
+    [conversationKey, rememberShell, shellLabel]
+  );
 
   const closeTab = useCallback(
     (terminalId: string): void => {
@@ -538,13 +606,11 @@ export const TerminalPanel = ({
                 variant="ghost"
                 size="icon-sm"
                 className="size-6 shrink-0 text-zinc-400 hover:text-white"
+                data-id="terminal-new-tab"
                 aria-label={t("workspace.terminal.newTab", {
                   defaultValue: "New terminal",
                 })}
-                onClick={() => {
-                  if (conversationKey != null)
-                    terminalRuntimeActions.addTab(conversationKey);
-                }}
+                onClick={() => openTab()}
               />
             }
           >
@@ -556,6 +622,48 @@ export const TerminalPanel = ({
             })}
           </TooltipContent>
         </Tooltip>
+
+        {/* The chevron, not the `+`: opening a terminal is the common act and
+            must stay one click. Only the deliberate choice asks. */}
+        {shellState != null && shellState.statuses.length > 1 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-6 shrink-0 text-zinc-400 hover:text-white"
+                  data-id="terminal-shell-picker"
+                  aria-label={t("workspace.terminal.pickShell", {
+                    defaultValue: "Open a different shell",
+                  })}
+                />
+              }
+            >
+              <ChevronDown />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" className="min-w-44">
+              {shellState.statuses.map((status) => {
+                const label = shellLabel(status.id);
+                return (
+                  <DropdownMenuItem
+                    key={status.id}
+                    disabled={!status.available}
+                    data-id={`terminal-shell-${status.id}`}
+                    onClick={() => openTab(status.id)}
+                  >
+                    {status.id === shellState.effective ? (
+                      <Check />
+                    ) : (
+                      <SquareTerminal />
+                    )}
+                    {label}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {onClose != null && (
           <Tooltip>
@@ -590,6 +698,7 @@ export const TerminalPanel = ({
                 conversation={conversation}
                 conversationKey={conversationKey}
                 generation={tab.generation}
+                shell={tab.shell}
                 active={visible && active}
                 onExited={closeTab}
               />

@@ -76,6 +76,7 @@ import type {
 } from "#shared/messaging";
 import type { RoutineCreateInput, RoutineUpdateInput } from "#shared/routines";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
+import type { TerminalShellId } from "#shared/terminal-shells";
 
 import { sessionDefaultWorkspace } from "./paths";
 import {
@@ -1088,6 +1089,17 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(IpcChannels.GetExecBackendState, () => {
     return serviceHost.getExecBackendState();
   });
+
+  ipcMain.handle(IpcChannels.GetTerminalShellState, () => {
+    return serviceHost.getTerminalShellState();
+  });
+
+  ipcMain.handle(
+    IpcChannels.SetTerminalShell,
+    (_event, shell: TerminalShellId) => {
+      return serviceHost.setTerminalShell(shell);
+    }
+  );
 
   ipcMain.handle(IpcChannels.SetExecBackend, (_event, backend: BackendId) => {
     return serviceHost.setExecBackend(backend);

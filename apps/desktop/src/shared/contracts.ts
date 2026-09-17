@@ -30,6 +30,7 @@ import type {
   RoutineUpdateInput,
 } from "./routines";
 import type { AbacusBotSettings } from "./settings";
+import type { TerminalShellId, TerminalShellState } from "./terminal-shells";
 
 // 'deleted' is a tombstone: the workspace was removed by the user but its
 // sessions are kept readable. It can't run an agent or accept new sessions.
@@ -211,6 +212,8 @@ export interface TerminalSessionSnapshot {
   visible: boolean;
   cols: number;
   rows: number;
+  /** The shell this terminal is actually running, once one has been spawned. */
+  shell?: TerminalShellId;
   exitedAt?: string | null;
   exitCode?: number | null;
 }
@@ -224,6 +227,11 @@ export interface StartTerminalSessionRequest {
   generation: number | null;
   cols: number;
   rows: number;
+  /**
+   * Which shell to spawn. Absent means the stored preference, which is what an
+   * automatically opened terminal sends; the `+` menu names one outright.
+   */
+  shell?: TerminalShellId;
 }
 
 export interface StartTerminalSessionResult {
@@ -1814,6 +1822,9 @@ export interface AgentApi {
   ) => Promise<Record<string, boolean>>;
   getExecBackendState: () => Promise<ExecBackendState>;
   setExecBackend: (backend: BackendId) => Promise<ExecBackendState>;
+  getTerminalShellState: () => Promise<TerminalShellState>;
+  /** Also stores the pick, so the next automatic terminal opens the same shell. */
+  setTerminalShell: (shell: TerminalShellId) => Promise<TerminalShellState>;
   /** The agent is blocked inside its tool call until this. */
   respondConnector: (request: RespondConnectorRequest) => Promise<void>;
   /** Asks still waiting, re-served to a remounting card. */

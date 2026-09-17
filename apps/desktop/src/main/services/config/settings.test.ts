@@ -249,6 +249,35 @@ describe("the execution backend", () => {
   );
 });
 
+describe("the terminal panel's shell", () => {
+  it("is the platform default until one is picked", async () => {
+    const { readTerminalShell } = await load();
+
+    expect(readTerminalShell()).toBe("system");
+  });
+
+  it.each([["cmd"], ["powershell"], ["busybox"], ["zsh"]])(
+    "reads back %s",
+    async (shell) => {
+      const { setTerminalShell, readTerminalShell } = await load();
+
+      setTerminalShell(shell as never);
+
+      expect(readTerminalShell()).toBe(shell);
+    }
+  );
+
+  it.each([
+    ["a shell nobody has heard of", "nushell"],
+    ["the wrong type", 7],
+  ])("falls back to the default for %s", async (_label, stored) => {
+    writeConfig({ terminalShell: stored });
+    const { readTerminalShell } = await load();
+
+    expect(readTerminalShell()).toBe("system");
+  });
+});
+
 describe("the sandbox switch", () => {
   it("is off when nothing has been stored", async () => {
     const { readSandboxEnabled } = await load();

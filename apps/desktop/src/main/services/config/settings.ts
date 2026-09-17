@@ -4,6 +4,11 @@ import path from "path";
 import type { NotificationSettings } from "#shared/contracts";
 import { EXEC_BACKENDS, type BackendId } from "#shared/exec-backends";
 import { PROVIDER_ENV_VARS, type AbacusBotSettings } from "#shared/settings";
+import {
+  DEFAULT_TERMINAL_SHELL,
+  isTerminalShellId,
+  type TerminalShellId,
+} from "#shared/terminal-shells";
 import type { ToolsetPreferences } from "#shared/toolsets";
 
 import { abacusBotHome } from "../../paths";
@@ -127,6 +132,21 @@ export const readExecBackend = (): BackendId | undefined => {
 
 export const setExecBackend = (backend: BackendId): AbacusBotSettings =>
   writeSettings({ ...readSettings(), execBackend: backend });
+
+/**
+ * The terminal panel's shell. Unvalidated beyond the id being one we know:
+ * whether it resolves on this machine is `resolveTerminalShell`'s call, and a
+ * shell that stopped existing must still read back so the settings row can
+ * show what was chosen.
+ */
+export const readTerminalShell = (): TerminalShellId => {
+  const stored = readSettings().terminalShell;
+
+  return isTerminalShellId(stored) ? stored : DEFAULT_TERMINAL_SHELL;
+};
+
+export const setTerminalShell = (shell: TerminalShellId): AbacusBotSettings =>
+  writeSettings({ ...readSettings(), terminalShell: shell });
 
 /** Whether the OS sandbox is switched on. Absent means off. */
 export const readSandboxEnabled = (): boolean =>
