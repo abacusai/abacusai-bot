@@ -10,22 +10,22 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { AgentMode } from "../protocol.js";
+import { realPathOf } from "../workspace-path.js";
+import {
+  readableExemptions,
+  resolveSecretPaths,
+  type SecretPaths,
+} from "./secrets.js";
+import { existingToolHomes } from "./zones.js";
 
-/**
- * What the OS is asked to enforce. File effects only: network confinement has
- * its own failure modes (a blocked `npm install` looks like a broken machine),
- * and promising it without enforcing it everywhere is worse than not claiming.
- */
-export type SandboxMode =
-  | "read-only"
-  | "workspace-write"
-  | "danger-full-access";
+/** What the OS is asked to enforce on files. */
+export type SandboxMode = "read-only" | "workspace-write";
 
 /** How hard to insist on a sandbox. */
 export type SandboxEnforcement =
-  /** Never sandbox. The default — see sandboxEnforcement. */
+  /** Never sandbox: Full access, or ABACUSAI_BOT_SANDBOX=off. */
   | "off"
-  /** Sandbox where a backend exists, run unconfined where none does. */
+  /** Sandbox where a backend exists, run unconfined where none does. The default. */
   | "auto"
   /** Require a working sandbox. No sandbox, no command. */
   | "strict";
@@ -37,62 +37,96 @@ export interface SandboxPolicy {
   workspaceRoot: string;
   /** Temp directories a build is entitled to, fully resolved. */
   writableTemp: string[];
+  /** Caches and toolchains a build writes to as a matter of course (zones.ts). */
+  toolHomes: string[];
+  /** Credential stores hidden from the command, and what is read back. */
+  secrets: SecretPaths;
+  /** Paths outside the workspace the user let this command write. */
+  approvedWrites: string[];
+  /** Where the command's outbound connections may go. */
+  network: NetworkPolicy;
 }
 
 /**
- * Off unless something asks for it. The desktop sets ABACUSAI_BOT_SANDBOX=auto
- * when the Settings toggle is on and nothing when off, so the stored
- * preference and this default agree. Off means bash is bounded only by the
- * permission gate and guardrails.
+ * Outbound network: open, or only through the runtime's proxies, which hold
+ * an unlisted host while the user is asked (runtime.ts).
  */
-export function sandboxEnforcement(): SandboxEnforcement {
+export type NetworkPolicy = { kind: "open" } | { kind: "filtered" };
+
+/**
+ * The mode decides: Full access is the one mode with no sandbox, and every
+ * other mode is confined where a backend exists. ABACUSAI_BOT_SANDBOX in the
+ * environment overrides for the deliberate: `off` never confines, `strict`
+ * refuses a command rather than run it unconfined.
+ */
+export function sandboxEnforcement(mode?: AgentMode): SandboxEnforcement {
+  if (mode === AgentMode.Yolo) return "off";
+
   const raw = (process.env.ABACUSAI_BOT_SANDBOX ?? "").trim().toLowerCase();
 
   if (raw === "strict") return "strict";
-  if (raw === "auto" || raw === "1" || raw === "true") return "auto";
+  if (raw === "off" || raw === "0" || raw === "false") return "off";
 
-  return "off";
+  return "auto";
 }
 
 /**
- * The sandbox follows the permission mode rather than adding a second control
- * that can disagree with it: Plan's gate-level read-only becomes true at the
- * OS level, and Bypass is a deliberate request to run unimpeded.
+ * Plan's gate-level read-only becomes true at the OS level; every other mode
+ * gets the workspace. Auto included: it skips the approval prompts, so it is
+ * exactly where the kernel bounds matter most. Full access is off entirely
+ * (sandboxEnforcement), so what it maps to never applies.
  */
 export function modeToSandboxMode(mode: AgentMode): SandboxMode {
-  switch (mode) {
-    case AgentMode.PlanMode:
-      return "read-only";
-    case AgentMode.Yolo:
-      return "danger-full-access";
-    default:
-      return "workspace-write";
-  }
+  return mode === AgentMode.PlanMode ? "read-only" : "workspace-write";
 }
 
 /**
  * Resolve a path to what the kernel will see: on macOS `/tmp` IS
  * `/private/tmp`, and a profile naming the symlink grants nothing. A path
- * that does not exist yet is normalized lexically so `mkdir && cd` still works.
+ * that does not exist yet is resolved through its nearest existing ancestor
+ * (`/var/folders/…/new.txt` is `/private/var/folders/…/new.txt`), so a file
+ * about to be made is judged where it will land.
  */
 export function canonicalize(target: string): string {
   try {
     return fs.realpathSync.native(target);
   } catch {
-    return path.resolve(target);
+    return realPathOf(target) ?? path.resolve(target);
   }
 }
 
-export function resolvePolicy(mode: AgentMode, cwd: string): SandboxPolicy {
+export function resolvePolicy(
+  mode: AgentMode,
+  cwd: string,
+  options: {
+    /** Stores the user approved for this command, on top of the environment's. */
+    approvedReads?: readonly string[];
+    /** Paths the user let this command write, from a card after a refusal. */
+    approvedWrites?: readonly string[];
+    /** Whether the backend can force connections through the asking proxy. */
+    filteredNetwork?: boolean;
+  } = {}
+): SandboxPolicy {
   const temps = new Set<string>();
   for (const candidate of ["/tmp", os.tmpdir()]) {
     if (candidate) temps.add(canonicalize(candidate));
   }
 
+  const workspaceRoot = canonicalize(cwd);
   return {
     mode: modeToSandboxMode(mode),
-    enforcement: sandboxEnforcement(),
-    workspaceRoot: canonicalize(cwd),
+    enforcement: sandboxEnforcement(mode),
+    workspaceRoot,
     writableTemp: [...temps],
+    toolHomes: existingToolHomes(),
+    secrets: resolveSecretPaths({
+      workspaceRoot,
+      exemptions: [...readableExemptions(), ...(options.approvedReads ?? [])],
+    }),
+    approvedWrites: [...(options.approvedWrites ?? [])],
+    network:
+      options.filteredNetwork === true
+        ? { kind: "filtered" }
+        : { kind: "open" },
   };
 }

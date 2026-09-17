@@ -17,7 +17,6 @@ import {
   readDockerImage,
   readExecBackend,
   readToolsetPreferences,
-  readSandboxEnabled,
   readXaiSearchEnabled,
 } from "./settings";
 
@@ -48,15 +47,6 @@ export function buildAgentConfigEnv(
   // in Settings, which the agent cannot read.
   if (readXaiSearchEnabled() && hasCredential("XAI_API_KEY")) {
     envVars.ABACUSAI_BOT_XAI_SEARCH = "1";
-  }
-
-  // An ABACUSAI_BOT_SANDBOX already in the environment is someone being
-  // deliberate (`strict`, say) and must not be overwritten by a toggle.
-  if (
-    readSandboxEnabled() &&
-    (process.env.ABACUSAI_BOT_SANDBOX ?? "").trim().length === 0
-  ) {
-    envVars.ABACUSAI_BOT_SANDBOX = "auto";
   }
 
   // Toolsets the user switched off in Capabilities. Resolved here because

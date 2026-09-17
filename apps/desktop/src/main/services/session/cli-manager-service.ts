@@ -323,6 +323,7 @@ const parseMode = (value: unknown): AgentMode | null => {
     value === AgentMode.Normal ||
     value === AgentMode.AcceptEdits ||
     value === AgentMode.PlanMode ||
+    value === AgentMode.Auto ||
     value === AgentMode.Yolo
   ) {
     return value;

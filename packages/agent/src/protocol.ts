@@ -11,6 +11,9 @@ export enum AgentMode {
   Normal = "DEFAULT",
   AcceptEdits = "ACCEPTEDITS",
   PlanMode = "PLAN",
+  /** Bypass with the kernel sandbox: no approval prompts, commands confined. */
+  Auto = "AUTO",
+  /** Bypass with nothing: no prompts and no sandbox. */
   Yolo = "YOLO",
 }
 
@@ -151,6 +154,8 @@ export type AgentEvent =
       source: "startup" | "user" | "approval" | "bot";
     }
   | { type: "model_changed"; model: string }
+  // Whether this session's shell commands run under a kernel sandbox, sent
+  // once at startup; `reason` says why not.
   | {
       type: "turn_complete";
       /**
@@ -292,6 +297,8 @@ export type PermissionRequest =
       cwd: string;
       background: boolean;
       unmatchedPatterns?: string[];
+      /** Hidden credential stores the command names; approving unhides them. */
+      credentialPaths?: string[];
     })
   | (PermissionRequestBase & {
       type: "browser_action";
@@ -305,6 +312,25 @@ export type PermissionRequest =
       type: "fetch_url";
       url: string;
       origin: string;
+    })
+  | (PermissionRequestBase & {
+      // A confined command reached for a host nobody listed; the connection
+      // waits on the answer.
+      type: "network_host";
+      host: string;
+      port: number;
+    })
+  | (PermissionRequestBase & {
+      // The sandbox refused what a command tried; allowing runs it again.
+      type: "sandbox_denied";
+      command: string;
+      denials: Array<
+        | { kind: "read"; path: string }
+        | { kind: "write"; path: string }
+        | { kind: "host"; host: string; port: number }
+      >;
+      /** What the command's own text said it would do outside the workspace. */
+      note?: string;
     })
   | (PermissionRequestBase & {
       type: "generic";

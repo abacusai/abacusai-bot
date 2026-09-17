@@ -93,6 +93,8 @@ import type {
   GetGitCurrentBranchResult,
   PrInfo,
   McpBrowserStatus,
+  DefaultAgentMode,
+  SandboxSupport,
   McpServerInfo,
   SessionTurnStateSnapshot,
   SetMcpServerDisabledRequest,
@@ -721,13 +723,19 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ipcRenderer.invoke(IpcChannels.GetToolsetStates) as Promise<
         Record<string, boolean>
       >,
-    getSandboxEnabled: () =>
-      ipcRenderer.invoke(IpcChannels.GetSandboxEnabled) as Promise<boolean>,
-    setSandboxEnabled: (enabled: boolean) =>
+    getDefaultAgentMode: () =>
       ipcRenderer.invoke(
-        IpcChannels.SetSandboxEnabled,
-        enabled
-      ) as Promise<boolean>,
+        IpcChannels.GetDefaultAgentMode
+      ) as Promise<DefaultAgentMode>,
+    getSandboxSupport: () =>
+      ipcRenderer.invoke(
+        IpcChannels.GetSandboxSupport
+      ) as Promise<SandboxSupport>,
+    setDefaultAgentMode: (mode: DefaultAgentMode) =>
+      ipcRenderer.invoke(
+        IpcChannels.SetDefaultAgentMode,
+        mode
+      ) as Promise<DefaultAgentMode>,
     getXaiSearchEnabled: () =>
       ipcRenderer.invoke(IpcChannels.GetXaiSearchEnabled) as Promise<boolean>,
     setXaiSearchEnabled: (enabled: boolean) =>

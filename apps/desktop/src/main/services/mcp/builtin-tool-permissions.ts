@@ -87,7 +87,7 @@ export class BuiltinToolPermissions {
     // which must honour the mode the agent's own permission layer honours.
     if (sessionId != null) {
       const mode = this.deps.getSessionMode(sessionId);
-      if (mode === AgentMode.Yolo) return "allow";
+      if (mode === AgentMode.Yolo || mode === AgentMode.Auto) return "allow";
     }
     const state = this.deps.mcpConfigService.readState();
     // Browsing defaults to never-ask (a prompt per page is unusable; Browser

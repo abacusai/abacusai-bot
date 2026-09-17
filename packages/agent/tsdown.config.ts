@@ -27,9 +27,13 @@ export default defineConfig({
     // Same reason: the desktop's picker reads pi's model catalog
     // (`@abacus-ai/agent/model-catalog`) from Electron's main process.
     "src/model-catalog.ts",
+    // And whether this platform has a kernel sandbox, for the Settings page.
+    "src/sandbox-support.ts",
   ],
   deps: {
-    neverBundle: [...NATIVE_PACKAGES],
+    // The sandbox runtime finds its vendored seccomp filters and Java agent
+    // relative to its own files, so it ships as a package beside the agent.
+    neverBundle: [...NATIVE_PACKAGES, "@anthropic-ai/sandbox-runtime"],
     onlyBundle: false,
   },
   format: "esm",

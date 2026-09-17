@@ -16,6 +16,7 @@ import {
   type DesktopEvent,
   type QueueEntry,
 } from "./protocol.js";
+import { shutdownRuntime } from "./sandbox/index.js";
 import { AbacusBotSession } from "./session.js";
 
 export interface HostOptions {
@@ -139,6 +140,8 @@ export class NdjsonHost {
     await Promise.allSettled(this.inFlight);
 
     this.session.dispose();
+    // The sandbox runtime's proxies would keep the process alive past this.
+    await shutdownRuntime();
   }
 
   private async handle(command: DesktopCommand): Promise<void> {

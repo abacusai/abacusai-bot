@@ -1,3 +1,5 @@
+import * as path from "node:path";
+
 import {
   createAgentSession,
   createLocalBashOperations,
@@ -117,6 +119,19 @@ import {
   type ReplyLanguageMismatch,
 } from "./reply-language.js";
 import { buildRoster } from "./roster.js";
+import {
+  allowHostForSession,
+  backendName,
+  canonicalize,
+  ensureRuntime,
+  networkConfinable,
+  resolveSecretPaths,
+  SandboxApprovals,
+  sandboxEnforcement,
+  setHostDecider,
+  type Denial,
+  type DenialDecision,
+} from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { conversationSessionManager } from "./session-file.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
@@ -124,6 +139,18 @@ import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
 import { searchAvailable, xaiSearchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
+import { isInsideDirectory } from "./workspace-path.js";
+
+/** The answers that mean "and keep allowing this for the session". */
+function isAlwaysDecision(decision: PermissionDecision): boolean {
+  const answer = typeof decision === "string" ? decision : decision.type;
+
+  return (
+    answer === "allowAlways" ||
+    answer === "allow_always_with_rule" ||
+    answer === "allow_always_with_rules"
+  );
+}
 
 export interface SessionOptions {
   cwd: string;
@@ -549,6 +576,8 @@ export class AbacusBotSession {
   private readonly sessionAllowedTools = new Set<string>();
   /** Origins the user chose to always allow web_fetch for, this session. */
   private readonly sessionAllowedOrigins: string[] = [];
+  /** What the user let commands do beyond the sandbox, once or for the session. */
+  private readonly sandboxApprovals = new SandboxApprovals();
   /** Directories outside the workspace the user allowed reads from, this session. */
   private readonly sessionAllowedReadPaths: string[] = allowedPathsFromEnv();
   /**
@@ -939,6 +968,8 @@ export class AbacusBotSession {
     // A switched-off toolset is withheld, not hidden: the model never sees it.
     const excluded = excludedTools();
 
+    await this.prepareSandboxRuntime();
+
     // The browser sub-agent may run on a stronger model than the chat.
     const browserModelRef = (
       process.env.ABACUSAI_BOT_BROWSER_MODEL ??
@@ -967,7 +998,9 @@ export class AbacusBotSession {
         excluded,
         // Background runs go through the same operations as the foreground
         // ones, so `background: true` cannot become a way around the sandbox.
-        operations: backendOperations() ?? createLocalBashOperations(),
+        operations:
+          backendOperations(this.sandboxApprovals) ??
+          createLocalBashOperations(),
         // A getter: refreshMcp swaps `this.mcp`, and captured routes would
         // call closed clients forever.
         mcp: () => this.mcp,
@@ -2407,6 +2440,7 @@ export class AbacusBotSession {
 
         this.toolInputs.delete(event.toolCallId);
         this.heartbeat.ended(event.toolCallId);
+        this.rememberCreated(tool, event.isError === true);
         this.emitAgentEvent({
           type: "tool_execution_complete",
           tool,
@@ -2591,6 +2625,8 @@ export class AbacusBotSession {
         ],
         allowedWritePaths: [...this.sessionAllowedWritePaths],
         allowedOrigins: [...this.sessionAllowedOrigins],
+        promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
+        allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
       });
 
       if (gate.kind === "allow") {
@@ -2662,33 +2698,7 @@ export class AbacusBotSession {
         status: AgentStatus.WaitingForToolPermission,
       });
 
-      const decision = await new Promise<PermissionDecision>((resolve) => {
-        const budget = approvalTimeoutMs();
-        // Infinity is the opt-out and must not reach setTimeout, which treats
-        // an out-of-range delay as 1ms.
-        const timer = Number.isFinite(budget)
-          ? setTimeout(() => {
-              // Drop it first, so a late answer racing the expiry finds nothing.
-              this.pending.delete(permissionId);
-              this.emitAgentEvent({ type: "permission_cleared", permissionId });
-              resolve({
-                type: "reject_with_message",
-                message:
-                  `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
-                  `Do not retry the same call — say what you need approved and stop.`,
-              });
-            }, budget)
-          : undefined;
-        // A pending approval should never be the reason the process survives.
-        timer?.unref?.();
-
-        this.pending.set(permissionId, {
-          resolve: (answer) => {
-            if (timer) clearTimeout(timer);
-            resolve(answer);
-          },
-        });
-      });
+      const decision = await this.awaitDecision(permissionId);
 
       this.recordApproval(pi, {
         stage: "decided",
@@ -2711,6 +2721,202 @@ export class AbacusBotSession {
    * protocol: a durable record, excluded from the model's context. Every ask
    * gets a matching decision, including the ones no human made.
    */
+  /** The user's answer to a card, or a rejection once the budget runs out. */
+  private awaitDecision(permissionId: string): Promise<PermissionDecision> {
+    return new Promise<PermissionDecision>((resolve) => {
+      const budget = approvalTimeoutMs();
+      // Infinity is the opt-out and must not reach setTimeout, which treats
+      // an out-of-range delay as 1ms.
+      const timer = Number.isFinite(budget)
+        ? setTimeout(() => {
+            // Drop it first, so a late answer racing the expiry finds nothing.
+            this.pending.delete(permissionId);
+            this.emitAgentEvent({ type: "permission_cleared", permissionId });
+            resolve({
+              type: "reject_with_message",
+              message:
+                `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
+                `Do not retry the same call — say what you need approved and stop.`,
+            });
+          }, budget)
+        : undefined;
+      // A pending approval should never be the reason the process survives.
+      timer?.unref?.();
+
+      this.pending.set(permissionId, {
+        resolve: (answer) => {
+          if (timer) clearTimeout(timer);
+          resolve(answer);
+        },
+      });
+    });
+  }
+
+  /**
+   * Start the sandbox runtime's proxies and route their questions to the
+   * user. A failure is not fatal here: the first confined command reports it.
+   */
+  private async prepareSandboxRuntime(): Promise<void> {
+    if (sandboxEnforcement() === "off" || backendName() === null) return;
+    if (!networkConfinable()) return;
+
+    setHostDecider((host, port) => this.askNetworkHost(host, port));
+    this.sandboxApprovals.askDenials = (command, refused, note) =>
+      this.askDenials(command, refused, note);
+    await ensureRuntime();
+  }
+
+  /**
+   * A file the write tool made outside the workspace is the session's own:
+   * a later command may change or remove it without a card (intent.ts).
+   */
+  private rememberCreated(tool: ToolRequest, failed: boolean): void {
+    if (failed || tool.name !== "write") return;
+    const requested = tool.input.path;
+    if (typeof requested !== "string" || requested.length === 0) return;
+    const resolved = canonicalize(path.resolve(this.options.cwd, requested));
+    if (isInsideDirectory(resolved, this.options.cwd)) return;
+    this.sandboxApprovals.created.add(resolved);
+  }
+
+  /**
+   * The sandbox refused what a command tried. The card lists it; "allow"
+   * lets the command run once more with those, "always" keeps them for the
+   * session. Null means the command stays refused.
+   */
+  private async askDenials(
+    command: string,
+    refused: Denial[],
+    note: string | null
+  ): Promise<DenialDecision | null> {
+    if (!this.canReachUser()) return null;
+
+    const permissionId = `perm-${++this.permissionCounter}`;
+    const input = { command, denials: refused };
+    const request: PermissionRequest = {
+      type: "sandbox_denied",
+      tool: {
+        id: permissionId,
+        name: "sandbox",
+        type: "tool",
+        input,
+        args: input,
+      },
+      displayName: "Allow what the sandbox refused",
+      command,
+      denials: refused,
+      ...(note != null ? { note } : {}),
+    };
+
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "asked",
+        permissionId,
+        toolName: "sandbox",
+        detail: refused.map((denial) => denial.kind).join(","),
+      });
+    }
+    this.options.emit({ type: "permission_needed", permissionId, request });
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.WaitingForToolPermission,
+    });
+
+    const decision = await this.awaitDecision(permissionId);
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.ExecutingTool,
+    });
+
+    const answer = typeof decision === "string" ? decision : decision.type;
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "decided",
+        permissionId,
+        toolName: "sandbox",
+        outcome: answer,
+      });
+    }
+
+    if (isAlwaysDecision(decision) || answer === "allowYolo")
+      return { once: refused, session: refused };
+    if (
+      answer === "accept" ||
+      answer === "accept_with_message" ||
+      answer === "background"
+    )
+      return { once: refused, session: [] };
+
+    return null;
+  }
+
+  /**
+   * A confined command reached for a host nobody listed. The connection is
+   * held while the card is up; "always" lists the host for the session.
+   */
+  private async askNetworkHost(host: string, port: number): Promise<boolean> {
+    if (!this.canReachUser()) return false;
+
+    const permissionId = `perm-${++this.permissionCounter}`;
+    const input = { host, port };
+    const request: PermissionRequest = {
+      type: "network_host",
+      tool: {
+        id: permissionId,
+        name: "network",
+        type: "tool",
+        input,
+        args: input,
+      },
+      displayName: "Reach a host",
+      host,
+      port,
+    };
+
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "asked",
+        permissionId,
+        toolName: "network",
+        detail: `${host}:${port}`,
+      });
+    }
+    this.options.emit({ type: "permission_needed", permissionId, request });
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.WaitingForToolPermission,
+    });
+
+    const decision = await this.awaitDecision(permissionId);
+    // The command that asked is still running.
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.ExecutingTool,
+    });
+
+    const answer = typeof decision === "string" ? decision : decision.type;
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "decided",
+        permissionId,
+        toolName: "network",
+        outcome: answer,
+      });
+    }
+
+    if (isAlwaysDecision(decision) || answer === "allowYolo") {
+      allowHostForSession(host);
+
+      return true;
+    }
+
+    return (
+      answer === "accept" ||
+      answer === "accept_with_message" ||
+      answer === "background"
+    );
+  }
+
   private recordApproval(
     pi: ExtensionAPI,
     record: {
@@ -2782,6 +2988,29 @@ export class AbacusBotSession {
     tool: ToolRequest,
     request: PermissionRequest
   ): { block: true; reason: string } | undefined {
+    const verdict = this.applyDecisionToAllowances(decision, tool, request);
+
+    // An accepted shell card that named hidden stores unhides them: for this
+    // command, and for the session when the answer was "always".
+    if (
+      verdict === undefined &&
+      request.type === "run_terminal" &&
+      request.credentialPaths != null
+    ) {
+      const command = String(tool.input.command ?? "");
+      this.sandboxApprovals.reads.approveOnce(command, request.credentialPaths);
+      if (isAlwaysDecision(decision))
+        this.sandboxApprovals.reads.approveForSession(request.credentialPaths);
+    }
+
+    return verdict;
+  }
+
+  private applyDecisionToAllowances(
+    decision: PermissionDecision,
+    tool: ToolRequest,
+    request: PermissionRequest
+  ): { block: true; reason: string } | undefined {
     // Leaving plan mode is a different question: here "always" means accept
     // every edit from now on, not "never ask about this tool again".
     if (tool.name === EXIT_PLAN_TOOL_NAME) {
@@ -2842,6 +3071,16 @@ export class AbacusBotSession {
       default:
         return { block: true, reason: "The user rejected this tool call." };
     }
+  }
+
+  /**
+   * The hidden stores a command may ask to read, when the sandbox is on. Empty
+   * otherwise, so no card mentions a store nothing is hiding.
+   */
+  private promptableCredentialPaths(cwd: string): string[] {
+    if (sandboxEnforcement() === "off" || backendName() === null) return [];
+
+    return resolveSecretPaths({ workspaceRoot: cwd }).promptable;
   }
 
   /**

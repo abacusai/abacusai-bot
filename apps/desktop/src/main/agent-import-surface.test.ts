@@ -32,6 +32,8 @@ const ALLOWED = new Set([
   // modules rather than the `providers/all` barrel, which drags the agent
   // runtime (streams, diagnostics, ~3 MB) in behind it.
   "@abacus-ai/agent/model-catalog",
+  // A platform-and-build table with no imports at all.
+  "@abacus-ai/agent/sandbox-support",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

@@ -1040,6 +1040,7 @@ describe("settings that apply to every open session", () => {
     ["DEFAULT", AgentMode.Normal],
     ["ACCEPTEDITS", AgentMode.AcceptEdits],
     ["PLAN", AgentMode.PlanMode],
+    ["AUTO", AgentMode.Auto],
     ["YOLO", AgentMode.Yolo],
   ])("passes %s through to the CLI", async (mode, expected) => {
     await transport.setPermissionMode(mode as never);
