@@ -87,3 +87,38 @@ describe("buildChatItems tool derivation adapter", () => {
     ]);
   });
 });
+
+describe("the feedback row's target", () => {
+  it("names the rated bot segment by id, not by the turn counter", () => {
+    // A rating is keyed on the segment's position in the synced transcript.
+    // The turn counter (2 * users - 1) skips the tool and status segments in
+    // between, so it must not be what gets sent.
+    const items = buildChatItems(
+      [
+        {
+          id: "u1",
+          type: "text",
+          source: "user",
+          content: "hi",
+          status: "completed",
+        },
+        bashSegment("tc1", "c1", "success"),
+        {
+          id: "b1",
+          type: "text",
+          source: "bot",
+          content: "hello",
+          status: "completed",
+        },
+      ] as never,
+      []
+    );
+    const turn = items.find((item) => item.kind === "agent");
+    if (turn?.kind !== "agent") throw new Error("Expected an agent turn");
+    const feedback = turn.items.find((item) => item.kind === "feedback");
+    if (feedback?.kind !== "feedback")
+      throw new Error("Expected a feedback row");
+    expect(feedback.segmentId).toBe("b1");
+    expect(feedback.messageIndex).toBe(1);
+  });
+});

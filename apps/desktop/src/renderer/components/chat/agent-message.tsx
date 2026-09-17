@@ -188,9 +188,9 @@ const AgentTurnContent = ({
   onSwitchModel?: () => void;
   /** Pick a named model straight from a card, no picker hop. */
   onPickModel?: (modelId: string) => void;
-  /** Thumbs on a turn, by the rated segment's transcript index. */
+  /** Thumbs on a turn, by the rated bot text segment's id. */
   onRateTurn?: (
-    messageIndex: number,
+    segmentId: string,
     rating: "up" | "down" | "clear",
     comment?: string
   ) => Promise<boolean>;
@@ -310,7 +310,7 @@ const AgentTurnContent = ({
                 onRateTurn == null
                   ? undefined
                   : (rating, comment) =>
-                      onRateTurn(item.messageIndex, rating, comment)
+                      onRateTurn(item.segmentId, rating, comment)
               }
             />
           );
@@ -528,7 +528,7 @@ export const ChatMessageList = ({
   onSwitchModel?: () => void;
   onPickModel?: (modelId: string) => void;
   onRateTurn?: (
-    messageIndex: number,
+    segmentId: string,
     rating: "up" | "down" | "clear",
     comment?: string
   ) => Promise<boolean>;
