@@ -5,7 +5,6 @@
  * and everything runs through `scrub` because the file is written to share.
  */
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import type {
@@ -16,6 +15,11 @@ import type {
   UsageSnapshot,
 } from "#shared/contracts";
 
+import {
+  clientEnvironment,
+  formatClientEnvironment,
+  type ClientEnvironment,
+} from "./client-environment";
 import { scrub } from "./scrub";
 
 /** Console lines kept per process. Roughly a few MB at worst. */
@@ -107,9 +111,7 @@ export interface AgentSessionDiagnostics {
  * scrubbed of the user's name with the rest of the dump.
  */
 export interface EnvironmentInfo {
-  osRelease: string;
-  osVersion: string;
-  locale: string;
+  client: ClientEnvironment;
   execPath: string;
   resourcesPath: string;
   shell: string;
@@ -162,11 +164,7 @@ export function collectEnvironmentInfo(input: {
   const agentRoot = path.dirname(input.agentEntry);
 
   return {
-    osRelease: safely(() => os.release()),
-    osVersion: safely(() => os.version()),
-    locale: safely(
-      () => Intl.DateTimeFormat().resolvedOptions().locale ?? "unknown"
-    ),
+    client: clientEnvironment(),
     execPath: process.execPath,
     resourcesPath: input.resourcesPath,
     // An empty COMSPEC is how a Windows shell spawn ends up with no shell.
@@ -182,14 +180,6 @@ export function collectEnvironmentInfo(input: {
     ),
     artifactError: input.artifactError ?? null,
   };
-}
-
-function safely(read: () => string): string {
-  try {
-    return read();
-  } catch {
-    return "unknown";
-  }
 }
 
 function formatSession(session: AgentSessionDiagnostics): string {
@@ -239,7 +229,7 @@ function formatSession(session: AgentSessionDiagnostics): string {
 
 function formatEnvironment(env: EnvironmentInfo): string {
   const lines = [
-    `os: ${env.osVersion} (${env.osRelease})  locale: ${env.locale}`,
+    formatClientEnvironment(env.client),
     `electron binary: ${env.execPath}`,
     `resources: ${env.resourcesPath}`,
     `shell: ${env.shell}`,
@@ -312,7 +302,6 @@ export function buildLogDump(input: LogDumpInput): string {
     "AbacusAIBot log dump",
     `generated: ${new Date().toISOString()}`,
     `version: ${input.appVersion}${input.isPackaged ? "" : " (development build)"}`,
-    `platform: ${process.platform} ${process.arch}`,
     `electron: ${process.versions.electron}  node: ${process.versions.node}  chrome: ${process.versions.chrome}`,
     `home: ${input.homeDir}`,
     "",
