@@ -162,7 +162,9 @@ describe("right panel React adapter", () => {
     expect(terminalRuntimeStore.get().scopes[session]).toMatchObject({
       isOpen: true,
       generation: null,
-      activeTabId: "terminal-1",
+      // Ids are minted per terminal and never reused, so the promoted tab is
+      // read rather than named.
+      activeTabId: terminalRuntimeStore.get().scopes[session]?.tabs[0]?.id,
     });
 
     act(() => conversationScopeActions.disposeWorkspace("workspace-one"));

@@ -124,6 +124,46 @@ describe("terminal shells on Windows", () => {
     expect(resolved.env?.BB_OVERRIDE_APPLETS).toBe(";tar");
   });
 
+  it("gives busybox an interactive shell with a prompt", () => {
+    fs.writeFileSync(path.join(vendor, "busybox.exe"), "");
+    installPosixShell.mockReturnValue({
+      sh: "sh.exe",
+      bin: "bin",
+      overrideApplets: "",
+    });
+
+    const resolved = resolveTerminalShell(
+      "busybox",
+      windows({ USERPROFILE: "C:\\Users\\Someone" })
+    );
+
+    // Windows spawns through a pipe rather than ConPTY, and ash asks whether
+    // its input is a terminal before deciding it is interactive. Without -i
+    // it reads the pipe as a script: commands run and nothing else does.
+    expect(resolved.args).toEqual(["-i"]);
+    expect(resolved.env?.PS1).toBe("\\w $ ");
+    expect(resolved.env?.TERM).toBe("xterm-256color");
+    expect(resolved.env?.HOME).toBe("C:\\Users\\Someone");
+  });
+
+  it("leaves a shell's own prompt and terminal alone", () => {
+    fs.writeFileSync(path.join(vendor, "busybox.exe"), "");
+    installPosixShell.mockReturnValue({
+      sh: "sh.exe",
+      bin: "bin",
+      overrideApplets: "",
+    });
+
+    const resolved = resolveTerminalShell(
+      "busybox",
+      windows({ PS1: "mine> ", TERM: "dumb", HOME: "H:\\home" })
+    );
+
+    expect(resolved.env?.PS1).toBe("mine> ");
+    expect(resolved.env?.TERM).toBe("dumb");
+    expect(resolved.env?.HOME).toBe("H:\\home");
+  });
+
   it("installs busybox once however often a shell is resolved", () => {
     fs.writeFileSync(path.join(vendor, "busybox.exe"), "");
     installPosixShell.mockReturnValue({

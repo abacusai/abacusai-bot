@@ -252,4 +252,46 @@ describe("conversation terminal session service", () => {
     expect(ptySpawn.mock.calls[1]?.[2]).toMatchObject({ cwd: worktree });
     expect(ptySpawn.mock.results[0]?.value.kill).toHaveBeenCalledOnce();
   });
+
+  it("ends lines the way a terminal driver would, where there is none", async () => {
+    // Windows spawns through a pipe, so nothing translates a bare line feed
+    // into a carriage return and one. Output walked diagonally across the
+    // panel without this.
+    const original = Object.getOwnPropertyDescriptor(process, "platform")!;
+    Object.defineProperty(process, "platform", { value: "win32" });
+    const emitted: string[] = [];
+    let emit: ((chunk: string) => void) | null = null;
+    ptySpawn.mockImplementation(() => ({
+      ...fakePty(),
+      onData: (callback: (chunk: string) => void) => {
+        emit = callback;
+      },
+    }));
+
+    try {
+      const terminals = new TerminalSessionService({
+        resolveWorkspacePath: () => workspace,
+        emitTerminalOutput: (event) => emitted.push(event.data),
+        emitTerminalExit: () => {},
+        emitTerminalState: () => {},
+      });
+      await terminals.startSession(draftRequest());
+
+      emit!("total 4096\ndrwxr-xr-x 2 raj\n");
+      // Already correct, and not doubled.
+      emit!("kept\r\n");
+      // A chunk that splits a CRLF down the middle.
+      emit!("split\r");
+      emit!("\nafter\n");
+
+      expect(emitted).toEqual([
+        "total 4096\r\ndrwxr-xr-x 2 raj\r\n",
+        "kept\r\n",
+        "split\r",
+        "\nafter\r\n",
+      ]);
+    } finally {
+      Object.defineProperty(process, "platform", original);
+    }
+  });
 });

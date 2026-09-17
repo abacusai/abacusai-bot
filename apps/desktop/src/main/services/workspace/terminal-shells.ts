@@ -188,17 +188,33 @@ const locate = (
       const shell = busybox(env, platform);
       if (shell == null) return null;
 
+      const shellEnv = Object.fromEntries(
+        Object.entries(posixShellEnv(env, shell)).filter(
+          (entry): entry is [string, string] => typeof entry[1] === "string"
+        )
+      );
+
       return {
         id,
         file: shell.sh,
-        // ash reads no login profile here: the workspace cwd and the
-        // inherited environment are the whole setup.
-        args: [],
-        env: Object.fromEntries(
-          Object.entries(posixShellEnv(env, shell)).filter(
-            (entry): entry is [string, string] => typeof entry[1] === "string"
-          )
-        ),
+        // -i, because ash decides it is interactive by asking whether its
+        // input is a terminal, and on Windows this app spawns through a pipe
+        // rather than ConPTY (see terminal-session-service.ts). Without it
+        // ash reads the pipe as a script: commands run, and nothing else
+        // happens — no prompt, no line editing, no job control.
+        args: ["-i"],
+        env: {
+          ...shellEnv,
+          // ash prints no prompt without one, and reads none from a profile
+          // it was never told to load. `\w` is the working directory.
+          PS1: env.PS1 ?? "\\w $ ",
+          // The PTY is an xterm; ash asks $TERM before it edits a line.
+          TERM: env.TERM ?? "xterm-256color",
+          // So `cd` with no argument and `~` go somewhere.
+          ...(env.HOME == null && env.USERPROFILE != null
+            ? { HOME: env.USERPROFILE }
+            : {}),
+        },
       };
     }
   }

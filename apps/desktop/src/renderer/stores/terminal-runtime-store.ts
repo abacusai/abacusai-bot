@@ -32,12 +32,6 @@ type TerminalRuntimeState = {
   scopes: Readonly<Record<string, TerminalRuntimeScopeState>>;
 };
 
-const DEFAULT_TAB: TerminalRuntimeTab = Object.freeze({
-  id: "terminal-1",
-  label: "Terminal 1",
-  generation: null,
-});
-
 const EMPTY_SCOPE: TerminalRuntimeScopeState = Object.freeze({
   isOpen: false,
   generation: null,
@@ -49,17 +43,40 @@ export const terminalRuntimeStore = createStore<TerminalRuntimeState>({
   scopes: {},
 });
 
+let nextTerminalId = 1;
+
+/**
+ * Ids are never reused, including the first tab's.
+ *
+ * Main keys a PTY by conversation and terminal id, and hands a new terminal
+ * the scrollback of whatever is already running under that id. While the
+ * first tab was always `terminal-1`, closing every tab and opening the panel
+ * again produced that id a second time — so the "new" terminal came up
+ * attached to the old shell, showing everything the last one had printed.
+ */
+const createTerminalId = (): string => {
+  nextTerminalId += 1;
+
+  return `terminal-${Date.now().toString(36)}-${nextTerminalId.toString(36)}`;
+};
+
 const withDefaultTab = (
   current: TerminalRuntimeScopeState
-): TerminalRuntimeScopeState =>
-  current.tabs.length > 0
-    ? current
-    : {
-        ...current,
-        tabs: [DEFAULT_TAB],
-        activeTabId: DEFAULT_TAB.id,
-        generation: DEFAULT_TAB.generation,
-      };
+): TerminalRuntimeScopeState => {
+  if (current.tabs.length > 0) return current;
+  const tab: TerminalRuntimeTab = {
+    id: createTerminalId(),
+    label: "Terminal 1",
+    generation: null,
+  };
+
+  return {
+    ...current,
+    tabs: [tab],
+    activeTabId: tab.id,
+    generation: tab.generation,
+  };
+};
 
 /**
  * An update that changes nothing writes nothing. Every component that reads a
@@ -80,12 +97,6 @@ const updateScope = (
 
     return { scopes: { ...state.scopes, [scope]: next } };
   });
-};
-
-let nextTerminalId = 1;
-const createTerminalId = (): string => {
-  nextTerminalId += 1;
-  return `terminal-${Date.now().toString(36)}-${nextTerminalId.toString(36)}`;
 };
 
 export const terminalRuntimeActions = {
@@ -186,7 +197,8 @@ export const terminalRuntimeActions = {
   ): void =>
     updateScope(scope, (value) => {
       const current = withDefaultTab(value);
-      const id = terminalId ?? current.activeTabId ?? DEFAULT_TAB.id;
+      const id = terminalId ?? current.activeTabId ?? current.tabs[0]?.id;
+      if (id == null) return value;
       const tab = current.tabs.find((entry) => entry.id === id);
       const active =
         current.activeTabId === id ? generation : current.generation;
