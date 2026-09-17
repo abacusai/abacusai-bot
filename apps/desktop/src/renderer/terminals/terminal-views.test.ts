@@ -36,6 +36,7 @@ vi.mock("ghostty-web", () => ({
     open(): void {}
     loadAddon(): void {}
     dispose(): void {}
+    reset(): void {}
     write(): void {}
     resize(): void {}
     focus(): void {}
