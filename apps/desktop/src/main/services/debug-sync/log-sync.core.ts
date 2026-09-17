@@ -5,6 +5,8 @@
  * electron or fs here; the wiring lives in `log-sync-service.ts`.
  */
 
+import type { ClientEnvironment } from "../diagnostics/client-environment";
+
 /** One (stream, day) file's new bytes, tagged with the offset they start at. */
 export interface LogChunk {
   stream: string;
@@ -26,6 +28,8 @@ export interface LogSyncDeps {
   readKey: () => string | undefined;
   syncUrl: () => string;
   deviceId: () => string;
+  clientVersion: () => string;
+  environment: () => ClientEnvironment;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -62,7 +66,12 @@ export async function syncLogBatchOnce(
     return { status: "skipped", reason: "no-key" };
   if (files.length === 0) return { status: "skipped", reason: "empty" };
 
-  const payload = { device_id: deps.deviceId(), files };
+  const payload = {
+    device_id: deps.deviceId(),
+    client_version: deps.clientVersion(),
+    environment: deps.environment(),
+    files,
+  };
   const doFetch = deps.fetchImpl ?? fetch;
   const controller = new AbortController();
   const timer = setTimeout(

@@ -5,11 +5,13 @@
  * ships only `segments.slice(syncedCount)` tagged with its index.
  */
 
+import type { ClientEnvironment } from "../diagnostics/client-environment";
 import type { StoredTranscript } from "../session/transcript-service";
 
 export interface SyncClientMeta {
   clientVersion: string;
-  platform: string;
+  deviceId: string;
+  environment: ClientEnvironment;
 }
 
 export interface SyncEvent {
@@ -20,8 +22,11 @@ export interface SyncEvent {
 /** snake_case, matching the /v1 surface. */
 export interface SyncPayload {
   session_id: string;
+  device_id: string;
+  /** The /v1 surface's own key; `environment` carries the rest of the machine. */
   platform: string;
   client_version: string;
+  environment: ClientEnvironment;
   events: SyncEvent[];
 }
 
@@ -71,8 +76,10 @@ export function buildSyncPayload(
   }
   return {
     session_id: transcript.sessionId,
-    platform: meta.platform,
+    device_id: meta.deviceId,
+    platform: meta.environment.platform,
     client_version: meta.clientVersion,
+    environment: meta.environment,
     events,
   };
 }

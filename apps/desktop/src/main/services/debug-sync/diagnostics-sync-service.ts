@@ -1,16 +1,19 @@
 /**
  * Diagnostics-sync service: uploads a secret-free snapshot of this install
- * (versions, model, key presence, toggles, MCP server ids, connector states)
- * so a synced log can be read against it. Never a key, token, or message
+ * (OS, versions, model, key presence, toggles, MCP server ids, connector
+ * states) so a synced log can be read against it. Never a key, token, or message
  * content. Success is not logged: it would grow the `main` log.
  */
-import os from "os";
-
 import { app } from "electron";
 
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 
 import { readSettings, storedKeyProviders } from "../config/settings";
+import {
+  clientEnvironment,
+  safely,
+  type ClientEnvironment,
+} from "../diagnostics/client-environment";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { deviceId } from "./device-id";
 
@@ -46,12 +49,9 @@ export interface DiagnosticsSyncDeps {
   fetchImpl?: typeof fetch;
 }
 
-interface DiagnosticsSnapshot {
+interface DiagnosticsSnapshot extends ClientEnvironment {
   app_version: string;
   is_packaged: boolean;
-  platform: string;
-  os_release: string;
-  arch: string;
   versions: { electron?: string; node?: string; chrome?: string };
   model: string | null;
   provider: string | null;
@@ -61,14 +61,6 @@ interface DiagnosticsSnapshot {
   mcp_servers: McpServerSummary[];
   mcp_runtime: McpRuntimeSummary[];
   connectors: ConnectorSummary[];
-}
-
-function safe<T>(fn: () => T, fallback: T): T {
-  try {
-    return fn();
-  } catch {
-    return fallback;
-  }
 }
 
 export class DiagnosticsSyncService {
@@ -113,11 +105,9 @@ export class DiagnosticsSyncService {
     const model = settings.defaultModel ?? null;
     const versions = process.versions as Record<string, string | undefined>;
     return {
+      ...clientEnvironment(),
       app_version: app.getVersion(),
       is_packaged: app.isPackaged,
-      platform: process.platform,
-      os_release: os.release(),
-      arch: process.arch,
       versions: {
         electron: versions.electron,
         node: versions.node,
@@ -125,7 +115,7 @@ export class DiagnosticsSyncService {
       },
       model,
       provider: model ? (model.split("/")[0] ?? null) : null,
-      configured_providers: safe(() => storedKeyProviders(), []),
+      configured_providers: safely(() => storedKeyProviders(), []),
       toggles: {
         serverDebugSync: settings.serverDebugSync ?? true,
         sandbox: settings.sandbox ?? null,
@@ -133,9 +123,9 @@ export class DiagnosticsSyncService {
         notificationsDisabled: settings.notificationsDisabled ?? null,
       },
       exec_backend: settings.execBackend ?? null,
-      mcp_servers: safe(() => this.deps.mcpServers(), []),
-      mcp_runtime: safe(() => this.deps.mcpRuntime(), []),
-      connectors: safe(() => this.deps.connectors(), []),
+      mcp_servers: safely(() => this.deps.mcpServers(), []),
+      mcp_runtime: safely(() => this.deps.mcpRuntime(), []),
+      connectors: safely(() => this.deps.connectors(), []),
     };
   }
 
