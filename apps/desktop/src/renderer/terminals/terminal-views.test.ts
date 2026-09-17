@@ -18,12 +18,41 @@ import {
   sessionConversationRef,
 } from "#shared/conversation-scope";
 
+import {
+  terminalRuntimeActions,
+  terminalRuntimeStore,
+} from "../stores/terminal-runtime-store";
+
+// Enough of a terminal to get the view through construction. jsdom has no
+// canvas, so nothing here draws; what these cover is the registry and the
+// lifecycle around it.
 vi.mock("ghostty-web", () => ({
-  // Never resolving: the view stops before it builds a grid, which is as far
-  // as jsdom can go, and every rule below is about the registry.
-  init: vi.fn(() => new Promise<void>(() => {})),
-  Terminal: class {},
-  FitAddon: class {},
+  init: vi.fn(async () => {}),
+  Terminal: class {
+    cols = 80;
+    rows = 24;
+    wasmTerm = {};
+    renderer = { getMetrics: () => ({ width: 10, height: 20 }) };
+    open(): void {}
+    loadAddon(): void {}
+    dispose(): void {}
+    write(): void {}
+    resize(): void {}
+    focus(): void {}
+    getViewportY(): number {
+      return 0;
+    }
+    registerLinkProvider(): void {}
+    attachCustomKeyEventHandler(): void {}
+    attachCustomWheelEventHandler(): void {}
+    onData(): void {}
+  },
+  FitAddon: class {
+    fit(): void {}
+    proposeDimensions(): undefined {
+      return undefined;
+    }
+  },
   UrlRegexProvider: class {},
   OSC8LinkProvider: class {},
 }));
@@ -37,6 +66,8 @@ const {
 } = await import("./terminal-views");
 
 const hideTerminalSession = vi.fn(async () => true);
+/** The renderer's end of the agent event stream, so a test can fire one. */
+let emitAgentEvent: ((event: Record<string, unknown>) => void) | null = null;
 
 beforeEach(() => {
   resetTerminalViewsForTesting();
@@ -45,7 +76,12 @@ beforeEach(() => {
     configurable: true,
     value: {
       agent: {
-        onEvent: vi.fn(() => vi.fn()),
+        onEvent: vi.fn((listener: (event: Record<string, unknown>) => void) => {
+          emitAgentEvent = listener;
+          return () => {
+            emitAgentEvent = null;
+          };
+        }),
         startTerminalSession: vi.fn(async () => ({
           success: true,
           created: true,
@@ -170,5 +206,36 @@ describe("the terminal a tab owns", () => {
         terminalId: "terminal-1",
       })
     ).toBe(survivor);
+  });
+
+  it("takes its tab with it when the shell exits, with nobody listening", async () => {
+    terminalRuntimeActions.setOpen(draft, true);
+    const tab = terminalRuntimeStore.get().scopes[draft]?.tabs[0]?.id ?? "";
+    const view = acquireTerminalView({
+      conversationKey: draft,
+      conversation: draftRef,
+      terminalId: tab,
+    });
+    // Let the session start so the view knows its generation.
+    await vi.waitFor(() => expect(emitAgentEvent).not.toBeNull());
+
+    // No panel is mounted, so nothing has registered an exit listener — which
+    // is the case this covers: the tab used to survive with everything the
+    // dead shell had printed, and the next terminal opened on top of it.
+    emitAgentEvent!({
+      type: "terminal-exited",
+      terminalId: tab,
+      conversationKey: draft,
+      generation: 1,
+    });
+
+    expect(terminalRuntimeStore.get().scopes[draft]?.tabs).toHaveLength(0);
+    expect(
+      acquireTerminalView({
+        conversationKey: draft,
+        conversation: draftRef,
+        terminalId: tab,
+      })
+    ).not.toBe(view);
   });
 });

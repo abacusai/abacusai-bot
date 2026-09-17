@@ -21,6 +21,7 @@ import {
 } from "../../hooks/use-terminal-shells";
 import {
   terminalRuntimeActions,
+  terminalRuntimeStore,
   useTerminalRuntimeScope,
 } from "../../stores/terminal-runtime-store";
 import {
@@ -188,9 +189,14 @@ export const TerminalPanel = ({
       // The view owns the PTY, so closing it is what kills the shell.
       closeTerminalView(conversationKey, terminalId);
       terminalRuntimeActions.closeTab(conversationKey, terminalId);
-      if (runtime.tabs.length === 1) onClose?.();
+      // Asked of the store rather than of this render's copy: a shell that
+      // exits closes its own tab, so by now the count may already be lower
+      // than the one this callback was built with.
+      const left =
+        terminalRuntimeStore.get().scopes[conversationKey]?.tabs.length ?? 0;
+      if (left === 0) onClose?.();
     },
-    [conversationKey, onClose, runtime.tabs.length]
+    [conversationKey, onClose]
   );
 
   // Hiding the tab that is leaving is the instance's own business: it is told
