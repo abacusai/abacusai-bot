@@ -1329,6 +1329,11 @@ export class ServiceHost {
     });
   }
 
+  /** Ship the debug logs now rather than on the next timed sweep. */
+  syncLogsNow(): void {
+    this.logSyncService.syncNow();
+  }
+
   /** True while a user-requested agent turn is still in flight. */
   hasActiveAgentTurn(): boolean {
     return this.sessionTurnStateService.hasBusyTurn();

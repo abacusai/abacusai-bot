@@ -148,6 +148,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     if (provider === "openrouter") clearOpenRouterCache();
     if (provider === "abacus") clearAbacusCache();
     if (provider === "abacus") syncAbacusGateway(key);
+    // The sync needs this key, and the lines worth reading are the sign-in
+    // attempts that came before it; do not wait for the timer.
+    if (provider === "abacus" && key != null && key.trim().length > 0)
+      serviceHost.syncLogsNow();
     // Running sessions took their credentials from the environment as it was
     // when they spawned; without this the key only works in the next chat.
     serviceHost.refreshAgentProviders();
