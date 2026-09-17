@@ -95,7 +95,18 @@ const carriageReturns = (pty: TerminalPty): TerminalPty => {
   let endedOnCarriageReturn = false;
 
   return {
-    ...pty,
+    // Delegated one by one rather than spread: a PTY is a class instance, and
+    // spreading one copies the fields and leaves every method on the
+    // prototype behind. `onExit is not a function`, on Windows only, because
+    // Windows is the only platform that wraps.
+    // Delegated one by one rather than spread: a PTY is a class instance, and
+    // spreading one copies the fields and leaves every method on the
+    // prototype behind. `onExit is not a function`, on Windows only, because
+    // Windows is the only platform that wraps.
+    onExit: (callback) => pty.onExit(callback),
+    write: (data) => pty.write(data),
+    resize: (cols, rows) => pty.resize(cols, rows),
+    kill: (signal) => pty.kill(signal),
     onData: (callback) =>
       pty.onData((chunk) => {
         if (typeof chunk !== "string") {

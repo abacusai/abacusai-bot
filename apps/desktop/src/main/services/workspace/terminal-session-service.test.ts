@@ -253,6 +253,58 @@ describe("conversation terminal session service", () => {
     expect(ptySpawn.mock.results[0]?.value.kill).toHaveBeenCalledOnce();
   });
 
+  it("keeps every part of a pty that is a class, not a bag of fields", async () => {
+    // zigpty hands back an instance whose methods live on the prototype. The
+    // Windows wrapper used to spread it, which copies the fields and leaves
+    // the methods behind: "pty.onExit is not a function", on Windows only.
+    const original = Object.getOwnPropertyDescriptor(process, "platform")!;
+    Object.defineProperty(process, "platform", { value: "win32" });
+    const killed: string[] = [];
+
+    class ClassPty {
+      onData(_callback: (chunk: string) => void): void {}
+      onExit(_callback: (event: { exitCode: number }) => void): void {}
+      write(_data: string): void {}
+      resize(_cols: number, _rows: number): void {}
+      kill(signal?: string): void {
+        killed.push(signal ?? "default");
+      }
+    }
+
+    try {
+      ptySpawn.mockImplementation(() => new ClassPty());
+      const terminals = service();
+      const request = draftRequest();
+
+      const result = await terminals.startSession(request);
+
+      expect(result.success).toBe(true);
+      expect(
+        terminals.writeInput({
+          conversationKey: request.conversationKey,
+          generation: result.state.generation,
+          data: "ls\r",
+        })
+      ).toBe(true);
+      expect(
+        terminals.resizeSession({
+          conversationKey: request.conversationKey,
+          generation: result.state.generation,
+          cols: 100,
+          rows: 30,
+        })
+      ).toBe(true);
+      terminals.hideSession({
+        conversationKey: request.conversationKey,
+        generation: result.state.generation,
+        close: true,
+      });
+      expect(killed).toHaveLength(1);
+    } finally {
+      Object.defineProperty(process, "platform", original);
+    }
+  });
+
   it("ends lines the way a terminal driver would, where there is none", async () => {
     // Windows spawns through a pipe, so nothing translates a bare line feed
     // into a carriage return and one. Output walked diagonally across the
