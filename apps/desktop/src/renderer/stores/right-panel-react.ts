@@ -4,6 +4,12 @@ import {
   type UseSelectorOptions,
 } from "@tanstack/react-store";
 
+import { conversationRefFromKey } from "#shared/conversation-scope";
+
+import {
+  closeTerminalViews,
+  rekeyTerminalViews,
+} from "../terminals/terminal-views";
 import { browserResourceActions } from "./browser-resource-store";
 import { previewActions } from "./preview-store";
 import {
@@ -86,6 +92,11 @@ export const conversationScopeActions = {
     browserResourceActions.promoteDraft(from, to);
     rightPanelActions.promoteDraft(from, to);
     terminalRuntimeActions.promoteDraft(from, to);
+    // Main carries the PTY across the promotion, so the live terminals move
+    // with their tabs. Without this the panel asks for a terminal under the
+    // session's key, finds none, and starts a second shell beside the first.
+    const promoted = conversationRefFromKey(to);
+    if (promoted != null) rekeyTerminalViews(from, to, promoted);
     previewActions.promoteDraft(from, to);
   },
 
@@ -93,6 +104,8 @@ export const conversationScopeActions = {
     browserResourceActions.disposeScope(scope);
     rightPanelActions.disposeScope(scope);
     terminalRuntimeActions.disposeScope(scope);
+    // The tabs are gone; the shells behind them have to go too.
+    closeTerminalViews(scope);
     previewActions.disposeScope(scope);
   },
 

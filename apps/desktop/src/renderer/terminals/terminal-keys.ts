@@ -5,7 +5,7 @@
  */
 import { Terminal as XTerm } from "@xterm/xterm";
 
-import { isMacOS } from "../../lib/window-chrome";
+import { isMacOS } from "../lib/window-chrome";
 
 /**
  * The terminal paints on a canvas, so it measures one cell at startup and
