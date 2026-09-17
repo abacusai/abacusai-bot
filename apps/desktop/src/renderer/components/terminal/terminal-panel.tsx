@@ -1,12 +1,11 @@
-import {
-  FitAddon,
-  init as initGhostty,
-  Terminal as GhosttyTerminal,
-  UrlRegexProvider,
-  OSC8LinkProvider,
-  type ILinkProvider,
-  type ILink,
-} from "ghostty-web";
+import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { FitAddon } from "@xterm/addon-fit";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
+import { Terminal as XTerm } from "@xterm/xterm";
+
+import "@xterm/xterm/css/xterm.css";
 import {
   Check,
   ChevronDown,
@@ -50,31 +49,6 @@ import {
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
-const createPreviewLinkProvider = (inner: ILinkProvider): ILinkProvider => ({
-  provideLinks(
-    y: number,
-    callback: (links: ILink[] | undefined) => void
-  ): void {
-    inner.provideLinks(y, (links) => {
-      if (links == null) {
-        callback(undefined);
-        return;
-      }
-      callback(
-        links.map((link) => ({
-          ...link,
-          activate: () => {
-            openUrlInPreview(link.text);
-          },
-        }))
-      );
-    });
-  },
-  dispose(): void {
-    inner.dispose?.();
-  },
-});
-
 type TerminalPanelProps = {
   conversation: ConversationRef | null;
   conversationKey: ConversationKey | null;
@@ -90,9 +64,6 @@ type TerminalInstanceProps = Omit<TerminalPanelProps, "onClose" | "visible"> & {
   shell?: TerminalShellId;
   onExited: (terminalId: string) => void;
 };
-
-let ghosttyInitialized = false;
-let ghosttyInitPromise: Promise<void> | null = null;
 
 /**
  * The terminal paints on a canvas, so it measures one cell at startup and
@@ -115,24 +86,6 @@ const ensureTerminalFont = async (): Promise<void> => {
   }
 };
 
-const ensureGhostty = async (): Promise<void> => {
-  if (ghosttyInitialized) {
-    return;
-  }
-  if (ghosttyInitPromise != null) {
-    return ghosttyInitPromise;
-  }
-  ghosttyInitPromise = initGhostty()
-    .then(() => {
-      ghosttyInitialized = true;
-    })
-    .catch((error) => {
-      ghosttyInitPromise = null;
-      throw error;
-    });
-  return ghosttyInitPromise;
-};
-
 /** Keys that produce no input, so pressing one must not jump to the prompt. */
 const MODIFIER_KEYS = new Set([
   "Shift",
@@ -146,25 +99,26 @@ const MODIFIER_KEYS = new Set([
 
 /**
  * The shortcuts a terminal is expected to have. Copy and paste need spelling
- * out because the grid is a canvas: the browser has no DOM selection to copy,
- * and Ctrl+C has to stay SIGINT on Windows and Linux, which is why the copy
- * there is Ctrl+Shift+C.
+ * out because the grid is painted rather than laid out: the browser has no
+ * DOM selection to copy, and Ctrl+C has to stay SIGINT on Windows and Linux,
+ * which is why the copy there is Ctrl+Shift+C.
  *
- * Returning true means the terminal must not also treat the key as input.
+ * xterm reads the return value the other way round from most handlers:
+ * returning false is "handled here, do not also send it to the shell".
  */
-const installShortcuts = (term: GhosttyTerminal): void => {
+const installShortcuts = (term: XTerm): void => {
   term.attachCustomKeyEventHandler((event) => {
-    if (event.type !== "keydown") return false;
+    if (event.type !== "keydown") return true;
 
     // Scrolling the history, from the keyboard, the way every terminal does.
     if (event.shiftKey && !event.ctrlKey && !event.metaKey) {
       if (event.key === "PageUp") {
         term.scrollPages(-1);
-        return true;
+        return false;
       }
       if (event.key === "PageDown") {
         term.scrollPages(1);
-        return true;
+        return false;
       }
     }
 
@@ -172,12 +126,11 @@ const installShortcuts = (term: GhosttyTerminal): void => {
       ? event.metaKey && !event.shiftKey && event.key.toLowerCase() === "c"
       : event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "c";
     if (copyChord) {
-      const selection = term.getSelection();
       // With nothing selected, macOS Cmd+C is a no-op and Ctrl+C must reach
       // the shell, so the key is handed back rather than swallowed.
-      if (selection.length === 0) return false;
-      void navigator.clipboard?.writeText(selection);
-      return true;
+      if (!term.hasSelection()) return true;
+      void navigator.clipboard?.writeText(term.getSelection());
+      return false;
     }
 
     const pasteChord = isMacOS
@@ -194,14 +147,15 @@ const installShortcuts = (term: GhosttyTerminal): void => {
         .catch(() => {
           // Denied or empty: the browser's own paste event still works.
         });
-      return true;
+      return false;
     }
 
-    // Anything that will produce input belongs at the prompt: typing while
-    // scrolled up used to echo somewhere off-screen.
+    // Anything that will produce input belongs at the prompt. xterm does this
+    // itself through `scrollOnUserInput`; the modifiers are listed so a bare
+    // Shift does not count as typing.
     if (!MODIFIER_KEYS.has(event.key)) term.scrollToBottom();
 
-    return false;
+    return true;
   });
 };
 
@@ -234,7 +188,7 @@ const TerminalInstance = ({
   onExited,
 }: TerminalInstanceProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<GhosttyTerminal>(null);
+  const terminalRef = useRef<XTerm>(null);
   const fitAddonRef = useRef<FitAddon>(null);
   const pendingResizeRef = useRef<number>(null);
   const conversationKeyRef = useRef<ConversationKey | null>(conversationKey);
@@ -243,8 +197,8 @@ const TerminalInstance = ({
   // writes it back to the tab, and a dep would restart the terminal on it.
   const shellRef = useRef<TerminalShellId | undefined>(shell);
 
-  // Bumped whenever the PTY dies, so the next reopen rebuilds the
-  // GhosttyTerminal instead of typing into a dead buffer.
+  // Bumped whenever the PTY dies, so the next reopen rebuilds the terminal
+  // instead of typing into a dead buffer.
   const [ptyGeneration, setPtyGeneration] = useState(0);
   const [isTerminalReady, setIsTerminalReady] = useState(false);
 
@@ -263,7 +217,6 @@ const TerminalInstance = ({
         return;
       }
       try {
-        await ensureGhostty();
         await ensureTerminalFont();
       } catch {
         if (!disposed) {
@@ -275,7 +228,7 @@ const TerminalInstance = ({
         return;
       }
 
-      const term = new GhosttyTerminal({
+      const term = new XTerm({
         fontSize: 13,
         fontFamily: TERMINAL_FONT_FAMILY,
         cursorBlink: true,
@@ -284,6 +237,18 @@ const TerminalInstance = ({
         // Off: the PTY already ends its lines with CRLF, and rewriting every
         // LF on the way in turns a raw-mode program's output into `\r\r\n`.
         convertEol: false,
+        // Unicode 11 widths need it, and it is this process's own terminal.
+        allowProposedApi: true,
+        // Typing returns to the prompt; output only follows when the viewport
+        // is already at the bottom, which is the whole bug this replaces.
+        scrollOnUserInput: true,
+        // OSC 8 hyperlinks. Plain URLs are the web-links addon below; both
+        // land in the app's own preview rather than the OS browser.
+        linkHandler: {
+          activate: (_event, uri) => {
+            openUrlInPreview(uri);
+          },
+        },
         theme: {
           background: "#1e1e1e",
           foreground: "#d4d4d4",
@@ -311,6 +276,15 @@ const TerminalInstance = ({
       });
       const fitAddon = new FitAddon();
       term.loadAddon(fitAddon);
+      term.loadAddon(new ClipboardAddon());
+      term.loadAddon(
+        new WebLinksAddon((_event, uri) => {
+          openUrlInPreview(uri);
+        })
+      );
+      const unicode11 = new Unicode11Addon();
+      term.loadAddon(unicode11);
+      term.unicode.activeVersion = "11";
 
       try {
         term.open(hostNode);
@@ -322,12 +296,17 @@ const TerminalInstance = ({
         return;
       }
 
-      term.registerLinkProvider(
-        createPreviewLinkProvider(new UrlRegexProvider(term))
-      );
-      term.registerLinkProvider(
-        createPreviewLinkProvider(new OSC8LinkProvider(term))
-      );
+      // The GPU renderer, with the CPU one behind it: a lost context (a GPU
+      // reset, a machine waking up) otherwise leaves a blank terminal.
+      try {
+        const webgl = new WebglAddon();
+        webgl.onContextLoss(() => {
+          webgl.dispose();
+        });
+        term.loadAddon(webgl);
+      } catch {
+        // No WebGL here; the DOM renderer draws the same grid.
+      }
 
       installShortcuts(term);
 
@@ -461,7 +440,9 @@ const TerminalInstance = ({
         terminalId,
         result.state.shell
       );
-      term.clear();
+      // reset, not clear: xterm's clear keeps the last line, and what follows
+      // is the session's whole scrollback being replayed.
+      term.reset();
       if (result.initialOutput.length > 0) {
         term.write(result.initialOutput);
       }

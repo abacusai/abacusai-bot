@@ -63,6 +63,5 @@ minimumReleaseAgeExclude:
   - typebox@1.3.16
 
 patchedDependencies:
-  ghostty-web@0.4.0: patches/ghostty-web@0.4.0.patch
   react-tourlight@0.3.0: patches/react-tourlight@0.3.0.patch
   zigpty@0.2.1: patches/zigpty@0.2.1.patch

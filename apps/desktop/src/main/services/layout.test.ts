@@ -63,11 +63,6 @@ const MAIN_ROOT_FILES = [
   "crash-guard.ts",
   "external-links.test.ts",
   "external-links.ts",
-  // A fourth check of the same kind, and here for the same reason as the
-  // three above: it spawns Electron to ask what the terminal's vendored VT
-  // library does to the viewport, which renderer tests have no browser for
-  // and renderer sources may not import main to borrow.
-  "ghostty-scrollback.browser.test.ts",
   "handler.test.ts",
   "handler.ts",
   "index.ts",

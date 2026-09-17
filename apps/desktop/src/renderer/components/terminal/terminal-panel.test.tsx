@@ -16,13 +16,50 @@ import type { TerminalShellState } from "#shared/terminal-shells";
 
 import { terminalRuntimeActions } from "../../stores/terminal-runtime-store";
 
-vi.mock("ghostty-web", () => ({
-  init: vi.fn(() => new Promise<void>(() => {})),
-  Terminal: class {},
-  FitAddon: class {},
-  UrlRegexProvider: class {},
-  OSC8LinkProvider: class {},
+// The chrome is what these cover; a real grid needs a canvas, which jsdom has
+// no answer for. `open` never resolving keeps every instance inert.
+vi.mock("@xterm/xterm", () => ({
+  Terminal: class {
+    unicode = { activeVersion: "6" };
+    cols = 80;
+    rows = 24;
+    open(): void {}
+    loadAddon(): void {}
+    dispose(): void {}
+    reset(): void {}
+    write(): void {}
+    resize(): void {}
+    focus(): void {}
+    scrollPages(): void {}
+    scrollToBottom(): void {}
+    hasSelection(): boolean {
+      return false;
+    }
+    getSelection(): string {
+      return "";
+    }
+    paste(): void {}
+    attachCustomKeyEventHandler(): void {}
+    onData(): { dispose: () => void } {
+      return { dispose: () => {} };
+    }
+  },
 }));
+vi.mock("@xterm/xterm/css/xterm.css", () => ({}));
+vi.mock("@xterm/addon-fit", () => ({
+  FitAddon: class {
+    fit(): void {}
+    // No layout in jsdom, so the grid never gets a size and the panel stops
+    // before it asks main for a PTY.
+    proposeDimensions(): undefined {
+      return undefined;
+    }
+  },
+}));
+vi.mock("@xterm/addon-webgl", () => ({ WebglAddon: class {} }));
+vi.mock("@xterm/addon-web-links", () => ({ WebLinksAddon: class {} }));
+vi.mock("@xterm/addon-unicode11", () => ({ Unicode11Addon: class {} }));
+vi.mock("@xterm/addon-clipboard", () => ({ ClipboardAddon: class {} }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
