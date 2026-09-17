@@ -60,7 +60,7 @@ overrides:
   js-yaml: ^4.3.2
 
 patchedDependencies:
-  ghostty-web@0.4.0: 4d6eb9c6cc557d53220cd3c8d8839d09867c892154f395f1ccdadbd010d3893f
+  ghostty-web@0.4.0: c06aef434699966d2200dbd3a64e176e93034d95eda23f2160aca826f013dca9
   react-tourlight@0.3.0: 150245916c8d1e3dbc7fb87a5a579fe59a7c5d2ebee040d25e6d5aa7d65618ee
   zigpty@0.2.1: 828c76d469ecc4ef05d872aa0963ccc0adfad5c8917b6d753a75d3efb04bb74b
 
@@ -169,7 +169,7 @@ importers:
         version: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       ghostty-web:
         specifier: ^0.4.0
-        version: 0.4.0(patch_hash=4d6eb9c6cc557d53220cd3c8d8839d09867c892154f395f1ccdadbd010d3893f)
+        version: 0.4.0(patch_hash=c06aef434699966d2200dbd3a64e176e93034d95eda23f2160aca826f013dca9)
       i18next:
         specifier: ^25.8.7
         version: 25.10.10(typescript@7.0.2)
@@ -9059,7 +9059,7 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  ghostty-web@0.4.0(patch_hash=4d6eb9c6cc557d53220cd3c8d8839d09867c892154f395f1ccdadbd010d3893f): {}
+  ghostty-web@0.4.0(patch_hash=c06aef434699966d2200dbd3a64e176e93034d95eda23f2160aca826f013dca9): {}
 
   glob-parent@5.1.2:
     dependencies:

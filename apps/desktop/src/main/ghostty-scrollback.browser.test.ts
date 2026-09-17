@@ -201,12 +201,65 @@ const SELECTION_SCRIPT = `(async () => {
   return { beforeAutoScroll, afterAutoScroll, selectedLength: selected.length };
 })()`;
 
+/**
+ * The grid stopped short of its container: the canvas is sized to
+ * `cols * cellWidth`, while `proposeDimensions` reserves 15px for a scrollbar
+ * the renderer then draws *inside* that canvas. So the panel had a dead strip
+ * down its right edge and a scrollbar floating well left of it. The patch
+ * stretches the canvas to the container and leaves the reservation to keep the
+ * last column clear of the scrollbar lane.
+ */
+const LAYOUT_SCRIPT = `(async () => {
+  const { init, Terminal, FitAddon } = window.__ghostty;
+  await init();
+  const host = document.getElementById("host");
+  const term = new Terminal({
+    cols: 80,
+    rows: 24,
+    convertEol: false,
+    smoothScrollDuration: 0,
+  });
+  const fit = new FitAddon();
+  term.loadAddon(fit);
+  term.open(host);
+  fit.fit();
+
+  const canvas = host.querySelector("canvas");
+  const firstWidth = canvas.style.width;
+  const cols = term.cols;
+
+  // A few frames of output: a canvas whose width no longer matches
+  // cols * cellWidth used to be resized on every one of them.
+  for (let i = 0; i < 5; i += 1) {
+    term.write("line " + i + "\\r\\n");
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+  }
+
+  term.dispose();
+
+  return {
+    hostWidth: host.clientWidth,
+    canvasWidth: Math.round(Number.parseFloat(firstWidth)),
+    widthAfterFrames: Math.round(Number.parseFloat(canvas.style.width)),
+    colsAfterFrames: cols === term.cols ? cols : -1,
+  };
+})()`;
+
 interface ViewportReport {
   atBottom: number;
   scrolledBack: number;
   afterOutput: number;
   backAtBottom: number;
   following: number;
+}
+
+interface LayoutReport {
+  hostWidth: number;
+  canvasWidth: number;
+  widthAfterFrames: number;
+  colsAfterFrames: number;
 }
 
 interface SelectionReport {
@@ -244,6 +297,19 @@ describe.skipIf(!availability.usable)(
       // And the other half of the rule: at the bottom, output still follows.
       expect(report.backAtBottom).toBe(0);
       expect(report.following).toBe(0);
+    });
+
+    it("fills the width it was given, and keeps filling it", () => {
+      const layout = runSnapshotFixtures(LAYOUT_SCRIPT, {
+        layout: FIXTURE,
+      }).layout as unknown as LayoutReport;
+
+      // The host is 800px wide in the fixture; the grid covers all of it.
+      expect(layout.hostWidth).toBe(800);
+      expect(layout.canvasWidth).toBe(800);
+      // And output does not send it into a resize on every frame.
+      expect(layout.widthAfterFrames).toBe(800);
+      expect(layout.colsAfterFrames).toBeGreaterThan(0);
     });
 
     it("keeps scrolling while a selection is dragged off the top", () => {
