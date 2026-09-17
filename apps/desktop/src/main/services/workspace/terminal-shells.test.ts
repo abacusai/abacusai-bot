@@ -86,19 +86,26 @@ describe("terminal shells on Windows", () => {
     });
   });
 
-  it("finds pwsh through PATHEXT and reports it missing when it is not installed", () => {
+  it("reports pwsh missing when it is not installed", () => {
     expect(resolveTerminalShell("pwsh", windows()).id).toBe("system");
-
-    put("pwsh.exe");
-    // Named without its extension, the way it is typed; the extension comes
-    // from PATHEXT, whose case is the environment's business.
-    const resolved = resolveTerminalShell("pwsh", windows());
-    expect(resolved.id).toBe("pwsh");
-    expect(resolved.args).toEqual(["-NoLogo"]);
-    expect(resolved.file.toLowerCase()).toBe(
-      path.join(binDir, "pwsh.exe").toLowerCase()
-    );
   });
+
+  it.each([["pwsh.exe"], ["pwsh.EXE"]])(
+    "finds %s through PATHEXT, whichever case the disk uses",
+    (file) => {
+      put(file);
+      // Named without its extension, the way it is typed. PATHEXT is upper
+      // case and the file usually is not, which only passes unnoticed on a
+      // case-insensitive filesystem.
+      const resolved = resolveTerminalShell("pwsh", windows());
+
+      expect(resolved.id).toBe("pwsh");
+      expect(resolved.args).toEqual(["-NoLogo"]);
+      expect(resolved.file.toLowerCase()).toBe(
+        path.join(binDir, "pwsh.exe").toLowerCase()
+      );
+    }
+  );
 
   it("spawns the bundled busybox with its applets on PATH", () => {
     fs.writeFileSync(path.join(vendor, "busybox.exe"), "");
