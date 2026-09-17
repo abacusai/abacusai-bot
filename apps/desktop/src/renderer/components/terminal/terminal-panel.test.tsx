@@ -15,6 +15,7 @@ import {
 import type { TerminalShellState } from "#shared/terminal-shells";
 
 import { terminalRuntimeActions } from "../../stores/terminal-runtime-store";
+import { resetTerminalViewsForTesting } from "./terminal-views";
 
 // The chrome is what these cover; a real grid needs a canvas, which jsdom has
 // no answer for. `open` never resolving keeps every instance inert.
@@ -104,12 +105,27 @@ beforeEach(() => {
         onEvent: vi.fn(() => vi.fn()),
         getTerminalShellState,
         setTerminalShell,
+        // The view starts a session as soon as it is built; these cover the
+        // whole surface it can reach for.
+        startTerminalSession: vi.fn(async () => ({
+          success: false,
+          created: false,
+          initialOutput: "",
+          error: "no terminal backend in tests",
+          state: {},
+        })),
+        writeTerminalInput: vi.fn(async () => true),
+        resizeTerminalSession: vi.fn(async () => true),
+        hideTerminalSession: vi.fn(async () => true),
       },
     },
   });
 });
 
-afterEach(() => terminalRuntimeActions.reset());
+afterEach(() => {
+  resetTerminalViewsForTesting();
+  terminalRuntimeActions.reset();
+});
 
 describe("TerminalPanel chrome", () => {
   it("fills the center panel and exposes compact terminal tab controls", () => {
