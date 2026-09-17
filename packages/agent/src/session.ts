@@ -81,7 +81,6 @@ import {
   isOutOfCredits,
   openLlmCandidates,
   isOpenLlmReference,
-  MAX_OPENLLM_ROTATIONS_PER_TURN,
 } from "./openllm.js";
 import {
   gateToolCall,
@@ -684,8 +683,12 @@ export class AbacusBotSession {
     Date.now,
     fileCooldownStore()
   );
-  /** Model switches spent on provider failures this turn. */
-  private openLlmRotationsThisTurn = 0;
+  /**
+   * Models that failed this turn. A rotation never returns to one, so a turn
+   * ends once the whole pool has been asked — that, not a count, is the
+   * budget: a pool of six is walked to the end, a pool of two is not spun on.
+   */
+  private readonly openLlmFailedThisTurn = new Set<string>();
   /**
    * Set at `agent_end` when the reply came back in the wrong script and the
    * turn continues with a repair. Once per turn; a second miss ends the turn.
@@ -1191,7 +1194,7 @@ export class AbacusBotSession {
     this.malformedContinuations = 0;
     this.contextCompactions = 0;
     this.pendingContextCompaction = null;
-    this.openLlmRotationsThisTurn = 0;
+    this.openLlmFailedThisTurn.clear();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
     this.toolsArrivedThisTurn = [];
@@ -1678,8 +1681,10 @@ export class AbacusBotSession {
     const failed = session.model;
     const failedId = failed ? `${failed.provider}/${failed.id}` : undefined;
 
-    if (failedId != null) this.openLlmRotation.markFailed(failedId);
-    this.openLlmRotationsThisTurn += 1;
+    if (failedId != null) {
+      this.openLlmRotation.markFailed(failedId);
+      this.openLlmFailedThisTurn.add(failedId);
+    }
 
     const resolved = resolveModel(
       runtime,
@@ -1746,19 +1751,7 @@ export class AbacusBotSession {
   private shouldRotateOpenLlm(
     messages: readonly unknown[]
   ): { failure: string; nextId: string } | null {
-    if (
-      !this.openLlmActive ||
-      this.interrupted ||
-      this.openLlmRotationsThisTurn >= MAX_OPENLLM_ROTATIONS_PER_TURN
-    ) {
-      if (this.openLlmActive && !this.interrupted) {
-        process.stderr.write(
-          `[abacusai-bot-agent] pool not rotating: ${this.openLlmRotationsThisTurn} rotations already this turn\n`
-        );
-      }
-
-      return null;
-    }
+    if (!this.openLlmActive || this.interrupted) return null;
 
     const failure = endedOnProviderError(messages);
 
@@ -1777,7 +1770,10 @@ export class AbacusBotSession {
       registry != null
         ? this.openLlmRotation.pick(
             openLlmCandidates(listModels(registry)),
-            currentId != null ? new Set([currentId]) : undefined
+            new Set([
+              ...this.openLlmFailedThisTurn,
+              ...(currentId != null ? [currentId] : []),
+            ])
           )
         : undefined;
 
