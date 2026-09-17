@@ -101,12 +101,16 @@ export const FeedbackRow = ({
       const previous = verdict;
       setVerdict(next);
       setRating(true);
-      setAskingMore(next === "down");
+      setAskingMore(false);
       void onRate(next === "none" ? "clear" : next)
         .then((ok) => {
-          if (ok) return;
+          if (ok) {
+            // Ask only once the thumb is on record: a box that opens and then
+            // closes on a failed report reads as a glitch.
+            if (next === "down") setAskingMore(true);
+            return;
+          }
           setVerdict(previous);
-          setAskingMore(false);
           toast.error(t("workspace.feedback.failed"));
         })
         .finally(() => setRating(false));

@@ -122,6 +122,25 @@ describe("tell us more", () => {
     expect(down.getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("does not open when the thumbs-down was not recorded", async () => {
+    const onRate = vi.fn(async () => false);
+    render(<FeedbackRow content="Answer" creditsTotal={0} onRate={onRate} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /feedback\.notHelpful/i })
+    );
+    await waitFor(() => expect(onRate).toHaveBeenCalledWith("down"));
+    // Settled: the thumb reverted, and the box never showed.
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: /feedback\.notHelpful/i })
+          .getAttribute("aria-pressed")
+      ).toBe("false")
+    );
+    expect(screen.queryByPlaceholderText(/tellUsMorePlaceholder/i)).toBeNull();
+  });
+
   it("does not open on a thumbs-up", async () => {
     const onRate = vi.fn(async () => true);
     render(<FeedbackRow content="Answer" creditsTotal={0} onRate={onRate} />);
