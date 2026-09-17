@@ -7,6 +7,9 @@
 
 ## Unreleased
 
+The agent no longer refers to documentation that is not shipped with the
+app when asked about skills or extensions.
+
 The free OpenRouter models offered in the picker, and the ones RouteLLM -
 Open falls back to, are now only ones that can call tools. A music model
 priced at zero was listed, and every turn on it failed.
