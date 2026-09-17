@@ -39,7 +39,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { bundledToolsDir } from "./bundled-tools.js";
-import { mergePath } from "./sandbox/shell.js";
+import { mergePath } from "./merge-path.js";
 
 /** Upstream release tag (frippery.org / rmyorston/busybox-w32); the digests are pinned in scripts/download-tools.js. */
 export const BUSYBOX_VERSION = "FRP-6075-g169694ebd";
