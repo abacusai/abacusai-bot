@@ -69,7 +69,12 @@ export function installMainLogCollector(sink?: (line: string) => void): void {
       if (mainLogBuffer.length > MAX_LOG_ENTRIES) {
         mainLogBuffer.splice(0, mainLogBuffer.length - MAX_LOG_ENTRIES);
       }
-      original(...args);
+      try {
+        original(...args);
+      } catch {
+        // The console's stream is gone (a closed parent terminal); the
+        // buffer and the file sink above already have the line.
+      }
     };
   }
 }

@@ -7,6 +7,9 @@
 
 ## Unreleased
 
+Launching the app from a terminal that later closes no longer fills the log
+with the same error tens of thousands of times.
+
 When a free model fails, the router now tries every other model in the pool
 before giving up, instead of stopping after five switches.
 
