@@ -204,10 +204,11 @@ function flag(name, fallback) {
 
 /** Extract `archive` into `dir` with whatever the host has. */
 function extract(archive, dir) {
-  if (archive.endsWith(".zip") && process.platform === "win32") {
-    // Windows ships bsdtar as tar.exe and it reads zip. Preferred over
-    // Expand-Archive, which is markedly slower, and over Git Bash's GNU tar,
-    // which cannot read zip at all.
+  if (process.platform === "win32") {
+    // Windows ships bsdtar as tar.exe: it reads zip and sniffs gzip itself.
+    // Preferred over Expand-Archive, which is markedly slower, and over Git
+    // Bash's GNU tar, which cannot read zip at all and takes the colon in a
+    // drive letter for a remote host.
     execFileSync(
       path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe"),
       ["xf", archive, "-C", dir],
