@@ -237,13 +237,31 @@ const LAYOUT_SCRIPT = `(async () => {
     );
   }
 
+  // The column count changing is what sent Terminal.resize down the path that
+  // used to re-size the canvas behind the renderer. Whether a platform's font
+  // metrics make the fit change it is an accident, so this asks for it.
+  term.resize(term.cols - 2, term.rows);
+  // Read before a frame can repair it: this is the resize itself being asked
+  // whether it left the canvas the size the renderer had just made it.
+  const widthDuringColumnChange = Math.round(
+    Number.parseFloat(canvas.style.width)
+  );
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
+  const widthAfterColumnChange = Math.round(
+    Number.parseFloat(canvas.style.width)
+  );
+
   const renderer = term.renderer;
   const metrics = renderer.getMetrics();
   const report = {
     hostWidth: host.clientWidth,
     widthAfterFit,
     widthAfterFrames: Math.round(Number.parseFloat(canvas.style.width)),
-    colsAfterFrames: cols === term.cols ? cols : -1,
+    widthDuringColumnChange,
+    widthAfterColumnChange,
+    colsAfterFrames: cols,
     // What the renderer itself thinks, so a failure on a machine I cannot
     // reach says why rather than only that.
     renderer: {
@@ -276,6 +294,8 @@ interface LayoutReport {
   /** Reported for diagnosis: whether the first sizing already had a container. */
   widthAfterFit: number;
   widthAfterFrames: number;
+  widthDuringColumnChange: number;
+  widthAfterColumnChange: number;
   colsAfterFrames: number;
   renderer: Record<string, unknown>;
 }
@@ -334,6 +354,14 @@ describe.skipIf(!availability.usable)(
         `renderer said ${JSON.stringify(layout.renderer)}`
       ).toBe(800);
       expect(layout.colsAfterFrames).toBeGreaterThan(0);
+      // And a resize that changes the column count leaves it filled, which is
+      // where this went wrong on Linux and not here: `Terminal.resize` sized
+      // the canvas itself, after the renderer had already done it.
+      expect(
+        layout.widthDuringColumnChange,
+        `renderer said ${JSON.stringify(layout.renderer)}`
+      ).toBe(800);
+      expect(layout.widthAfterColumnChange).toBe(800);
     });
 
     it("keeps scrolling while a selection is dragged off the top", () => {

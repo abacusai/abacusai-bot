@@ -1,5 +1,5 @@
 diff --git a/dist/ghostty-web.js b/dist/ghostty-web.js
-index a4ca427b95288e70c782ce303013cd644893dcec..1d2d97e71a158ab4d53877c28e3b81c7e98a0b36 100644
+index a4ca427b95288e70c782ce303013cd644893dcec..d5cfa5fbf22d88cd5e250f34e3f254fce2917b59 100644
 --- a/dist/ghostty-web.js
 +++ b/dist/ghostty-web.js
 @@ -1381,11 +1381,23 @@ class $ {
@@ -23,7 +23,7 @@ index a4ca427b95288e70c782ce303013cd644893dcec..1d2d97e71a158ab4d53877c28e3b81c7
 -    const g = A * this.metrics.width, E = B * this.metrics.height;
 +    const E = B * this.metrics.height;
 +    const g = this.targetWidth(A);
-+    this.gridCols = A, this.gridRows = B, this.gridWidth = g;
++    this.gridCols = A, this.gridRows = B;
      this.canvas.style.width = `${g}px`, this.canvas.style.height = `${E}px`, this.canvas.width = g * this.devicePixelRatio, this.canvas.height = E * this.devicePixelRatio, this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio), this.ctx.textBaseline = "alphabetic", this.ctx.textAlign = "left", this.ctx.fillStyle = this.theme.background, this.ctx.fillRect(0, 0, g, E);
    }
    // ==========================================================================
@@ -32,7 +32,7 @@ index a4ca427b95288e70c782ce303013cd644893dcec..1d2d97e71a158ab4d53877c28e3b81c7
      this.currentBuffer = A;
      const I = A.getCursor(), D = A.getDimensions(), i = E ? E.getScrollbackLength() : 0;
 -    (U = A.needsFullRedraw) != null && U.call(A) && (B = !0), (this.canvas.width !== D.cols * this.metrics.width * this.devicePixelRatio || this.canvas.height !== D.rows * this.metrics.height * this.devicePixelRatio) && (this.resize(D.cols, D.rows), B = !0), g !== this.lastViewportY && (B = !0, this.lastViewportY = g);
-+    (U = A.needsFullRedraw) != null && U.call(A) && (B = !0), (this.gridCols !== D.cols || this.gridRows !== D.rows || this.gridWidth !== this.targetWidth(D.cols) || this.canvas.height !== D.rows * this.metrics.height * this.devicePixelRatio) && (this.resize(D.cols, D.rows), B = !0), g !== this.lastViewportY && (B = !0, this.lastViewportY = g);
++    (U = A.needsFullRedraw) != null && U.call(A) && (B = !0), (this.gridCols !== D.cols || this.gridRows !== D.rows || this.canvas.width !== this.targetWidth(D.cols) * this.devicePixelRatio || this.canvas.height !== D.rows * this.metrics.height * this.devicePixelRatio) && (this.resize(D.cols, D.rows), B = !0), g !== this.lastViewportY && (B = !0, this.lastViewportY = g);
      const s = I.x !== this.lastCursorPosition.x || I.y !== this.lastCursorPosition.y;
      if (s || this.cursorBlink) {
        if (!B && !A.isRowDirty(I.y)) {
@@ -61,7 +61,17 @@ index a4ca427b95288e70c782ce303013cd644893dcec..1d2d97e71a158ab4d53877c28e3b81c7
    }
    /**
     * Write data with newline
-@@ -2572,7 +2589,7 @@ class IA {
+@@ -2423,8 +2440,7 @@ class IA {
+     if (this.assertOpen(), A === this.cols && B === this.rows)
+       return;
+     this.cols = A, this.rows = B, this.wasmTerm.resize(A, B), this.renderer.resize(A, B);
+-    const g = this.renderer.getMetrics();
+-    this.canvas.width = g.width * A, this.canvas.height = g.height * B, this.canvas.style.width = `${g.width * A}px`, this.canvas.style.height = `${g.height * B}px`, this.resizeEmitter.fire({ cols: A, rows: B }), this.renderer.render(this.wasmTerm, !0, this.viewportY, this);
++    this.resizeEmitter.fire({ cols: A, rows: B }), this.renderer.render(this.wasmTerm, !0, this.viewportY, this);
+   }
+   /**
+    * Clear terminal screen
+@@ -2572,7 +2588,7 @@ class IA {
      if (!this.wasmTerm)
        throw new Error("Terminal not open");
      const B = this.getScrollbackLength(), E = Math.max(0, Math.min(B, this.viewportY - A));
@@ -70,7 +80,7 @@ index a4ca427b95288e70c782ce303013cd644893dcec..1d2d97e71a158ab4d53877c28e3b81c7
    }
    /**
     * Scroll viewport by a number of pages
-@@ -2592,7 +2609,7 @@ class IA {
+@@ -2592,7 +2608,7 @@ class IA {
     * Scroll viewport to the bottom (current output)
     */
    scrollToBottom() {
@@ -79,7 +89,7 @@ index a4ca427b95288e70c782ce303013cd644893dcec..1d2d97e71a158ab4d53877c28e3b81c7
    }
    /**
     * Scroll viewport to a specific line in the buffer
-@@ -2600,7 +2617,7 @@ class IA {
+@@ -2600,7 +2616,7 @@ class IA {
     */
    scrollToLine(A) {
      const B = this.getScrollbackLength(), g = Math.max(0, Math.min(B, A));
