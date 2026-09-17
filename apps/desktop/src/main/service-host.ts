@@ -155,6 +155,10 @@ import type {
   RoutineListItem,
   RoutineUpdateInput,
 } from "#shared/routines";
+import type {
+  TerminalShellId,
+  TerminalShellState,
+} from "#shared/terminal-shells";
 import { isToolsetEnabled, TOOLSETS, TOOLSETS_BY_ID } from "#shared/toolsets";
 
 import {
@@ -240,6 +244,8 @@ import {
 } from "./services/config/agent-env";
 import {
   readExecBackend,
+  readTerminalShell,
+  setTerminalShell,
   readToolsetPreferences,
   readSandboxEnabled,
   setSandboxEnabled,
@@ -331,6 +337,10 @@ import { GitService } from "./services/workspace/git-service";
 import { resolveSessionWorkspacePath } from "./services/workspace/session-workspace-context";
 import { SkillsService } from "./services/workspace/skills-service";
 import { TerminalSessionService } from "./services/workspace/terminal-session-service";
+import {
+  effectiveTerminalShell,
+  terminalShellStatuses,
+} from "./services/workspace/terminal-shells";
 import { WorkspaceRuntimeService } from "./services/workspace/workspace-runtime-service";
 import { WorkspaceService } from "./services/workspace/workspace-service";
 
@@ -3721,6 +3731,28 @@ export class ServiceHost {
       effective: resolveBackend(stored),
       statuses: backendStatuses(),
     };
+  }
+
+  /** The shell roster for the settings pane and the terminal panel's `+` menu. */
+  getTerminalShellState(): TerminalShellState {
+    const selected = readTerminalShell();
+
+    return {
+      selected,
+      effective: effectiveTerminalShell(selected),
+      statuses: terminalShellStatuses(),
+    };
+  }
+
+  /**
+   * Store a pick. Called by the settings row and by the `+` menu alike: the
+   * shell someone opened last is the one an automatically opened terminal
+   * should come back with.
+   */
+  setTerminalShell(shell: TerminalShellId): TerminalShellState {
+    setTerminalShell(shell);
+
+    return this.getTerminalShellState();
   }
 
   getNotificationSettings(): NotificationSettings {

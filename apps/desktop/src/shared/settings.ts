@@ -20,6 +20,13 @@ export interface AbacusBotSettings {
   execBackend?: string;
   /** Image used by the Docker backend. Absent means a small Debian base. */
   execDockerImage?: string;
+  /**
+   * Shell the terminal panel opens, by the ids in `shared/terminal-shells.ts`.
+   * Absent means the platform default. Written whenever a shell is picked from
+   * the panel's `+` menu, so an automatically opened terminal reopens the last
+   * one used.
+   */
+  terminalShell?: string;
   /** Shell commands confined by the OS sandbox. Absent means off. */
   sandbox?: boolean;
   /**

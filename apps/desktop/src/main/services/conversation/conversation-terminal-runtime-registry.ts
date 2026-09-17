@@ -1,3 +1,5 @@
+import type { TerminalShellId } from "#shared/terminal-shells";
+
 import {
   conversationBelongsToWorkspace,
   conversationKey,
@@ -24,6 +26,8 @@ export type CreateConversationTerminalPty = (request: {
   generation: number;
   cols: number;
   rows: number;
+  /** Absent means the caller's own default; the registry only carries it. */
+  shell?: TerminalShellId;
 }) => TerminalPty | Promise<TerminalPty>;
 
 export type ConversationTerminalEvent = {
@@ -47,6 +51,11 @@ export type ConversationTerminalAttachment = ConversationTerminalEvent & {
   rows: number;
   visible: boolean;
   scrollback: string;
+  /**
+   * What this terminal was started with, so a reattach reports it and a
+   * scope promotion restarts the same shell rather than the current default.
+   */
+  shell?: TerminalShellId;
 };
 
 export type StartConversationTerminalResult = ConversationTerminalAttachment & {
@@ -71,6 +80,7 @@ type Runtime = {
   scope: ConversationScope;
   generation: number;
   pty: TerminalPty;
+  shell?: TerminalShellId;
   cols: number;
   rows: number;
   visible: boolean;
@@ -165,6 +175,7 @@ export class ConversationTerminalRuntimeRegistry {
     scope: ConversationScope;
     cols: number;
     rows: number;
+    shell?: TerminalShellId;
   }): Promise<StartConversationTerminalResult> {
     const key = conversationKey(request.scope);
     const terminalId = request.terminalId ?? DEFAULT_TERMINAL_ID;
@@ -420,6 +431,7 @@ export class ConversationTerminalRuntimeRegistry {
       scope: ConversationScope;
       cols: number;
       rows: number;
+      shell?: TerminalShellId;
     },
     key: ConversationKey,
     terminalId: string,
@@ -433,6 +445,7 @@ export class ConversationTerminalRuntimeRegistry {
       generation,
       cols: request.cols,
       rows: request.rows,
+      shell: request.shell,
     });
     if (this.generations.get(id) !== generation) {
       pty.kill();
@@ -445,6 +458,7 @@ export class ConversationTerminalRuntimeRegistry {
       scope: request.scope,
       generation,
       pty,
+      shell: request.shell,
       cols: request.cols,
       rows: request.rows,
       visible: true,
@@ -489,6 +503,7 @@ export class ConversationTerminalRuntimeRegistry {
       cols: runtime.cols,
       rows: runtime.rows,
       visible: runtime.visible,
+      shell: runtime.shell,
       scrollback: runtime.scrollback.read(),
     };
   }

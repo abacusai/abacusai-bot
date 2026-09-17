@@ -105,4 +105,36 @@ describe("terminal runtime renderer state", () => {
       generation: 1,
     });
   });
+
+  it("carries a picked shell on its own tab and leaves the rest to main", () => {
+    const scope = sessionConversationKey("workspace", "session");
+    let picked = "";
+    act(() => {
+      terminalRuntimeActions.setOpen(scope, true);
+      picked = terminalRuntimeActions.addTab(scope, {
+        shell: "busybox",
+        label: "BusyBox sh",
+      });
+    });
+
+    const tabs = terminalRuntimeStore.get().scopes[scope]?.tabs ?? [];
+
+    // The default tab asks for nothing: main opens whatever is stored.
+    expect(tabs[0]?.id).toBe("terminal-1");
+    expect(tabs[0]?.shell).toBeUndefined();
+    expect(tabs[1]).toMatchObject({
+      id: picked,
+      label: "BusyBox sh",
+      shell: "busybox",
+    });
+
+    // What was actually spawned is written back, so a restart asks again for
+    // the same shell rather than the current preference.
+    act(() =>
+      terminalRuntimeActions.setTabShell(scope, "terminal-1", "powershell")
+    );
+    expect(terminalRuntimeStore.get().scopes[scope]?.tabs[0]?.shell).toBe(
+      "powershell"
+    );
+  });
 });

@@ -32,6 +32,11 @@ const ALLOWED = new Set([
   // modules rather than the `providers/all` barrel, which drags the agent
   // runtime (streams, diagnostics, ~3 MB) in behind it.
   "@abacus-ai/agent/model-catalog",
+  // Checked the same way: busybox's install is node:crypto, node:fs, node:os
+  // and node:path, plus two leaf modules of this package that import nothing
+  // but node builtins. pi stays on the other side of the split, in
+  // posix-shell.ts, which main never imports.
+  "@abacus-ai/agent/posix-shell-install",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

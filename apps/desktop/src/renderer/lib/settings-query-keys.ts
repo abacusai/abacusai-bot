@@ -56,6 +56,9 @@ export const settingsQueryKeys = {
     sandbox: ["settings", "capabilities", "sandbox"] as const,
     xaiSearch: ["settings", "capabilities", "xai-search"] as const,
     execBackend: ["settings", "capabilities", "exec-backend"] as const,
+    // Shared with the terminal panel's `+` menu, which picks from the same
+    // roster and writes the same preference.
+    terminalShell: ["settings", "capabilities", "terminal-shell"] as const,
   },
 
   devices: {
