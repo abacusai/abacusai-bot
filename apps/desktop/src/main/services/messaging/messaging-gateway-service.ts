@@ -16,6 +16,7 @@ import {
   type SharedChannelLink,
 } from "#shared/messaging";
 
+import { readDefaultAgentMode } from "../config/settings";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 import { AbacusChannelsConnector } from "./abacus-channels-connector";
 import { forChat } from "./chat-markdown";
@@ -1043,8 +1044,8 @@ export class MessagingGatewayService {
       workspaceId,
       session.id,
       // Nobody is at the keyboard to approve a tool for a remote turn; the
-      // pairing allowlist is what keeps Yolo from being an open door.
-      autoApproveTools ? AgentMode.Yolo : AgentMode.AcceptEdits
+      // pairing allowlist is what keeps Bypass from being an open door.
+      autoApproveTools ? readDefaultAgentMode() : AgentMode.AcceptEdits
     );
 
     if (!started.success) {

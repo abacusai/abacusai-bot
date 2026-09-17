@@ -3,32 +3,46 @@
 Supervised sessions have a permission mode. A session keeps its mode when you
 move between conversations.
 
-| Mode | File changes | Shell commands |
-| --- | --- | --- |
-| Default | Ask first | Ask first |
-| Auto-Accept | Apply inside the workspace | Ask first |
-| Plan | Refuse | Refuse |
-| Bypass | Apply without asking | Run without asking |
+| Mode        | File changes               | Shell commands                          |
+| ----------- | -------------------------- | --------------------------------------- |
+| Default     | Ask first                  | Ask first, inside the sandbox           |
+| Auto-Accept | Apply inside the workspace | Ask first, inside the sandbox           |
+| Plan        | Refuse                     | Refuse                                  |
+| Auto        | Apply without asking       | Run without asking, inside the sandbox  |
+| Full access | Apply without asking       | Run without asking, with no sandbox     |
 
 Plan mode is read-only. The agent can inspect files and prepare a plan, but its
-tools reject mutations. Bypass removes the approval gate and should only be used
-when the workspace and request are trusted.
+tools reject mutations. Auto and Full access remove the approval gate and
+should only be used when the workspace and request are trusted. Auto keeps the
+kernel sandbox: shell commands stay bounded to the workspace, credential stores
+stay hidden, and the sandbox cards (a hidden store a command names, a host not
+on the allow list, something the OS refused) still appear. Full access has
+nothing behind it: no prompts and no sandbox. Auto is offered only on a machine
+whose sandbox works (see below).
+
+## The default mode
+
+Every session starts in the mode the picker shows, and the picker remembers the
+last choice. Bots and routines have no picker; they run in the default mode.
+The default is Full access. The Profile page, under Danger zone, can change it
+to Auto for new sessions, bots and routines; the picker follows. The choice is
+shown only on a machine whose sandbox works.
 
 ## Bots, routines, and remote messages
 
-Bot chats run in Bypass mode. They do not show the session mode picker. A bot
-can use enabled tools, connected accounts, and any files available to the
+Bot chats run in the default mode. They do not show the session mode picker. A
+bot can use enabled tools, connected accounts, and any files available to the
 operating-system user without asking for each action.
 
-Routine runs also use Bypass mode. Their instructions give them the routine
-folder and every workspace registered in the app. Bypass can reach other paths
-available to the operating-system user. New routines normally run once when
-created, then follow their saved schedule or webhook trigger.
+Routine runs also use the default mode. Their instructions give them the
+routine folder and every workspace registered in the app. Full access can reach
+other paths available to the operating-system user. New routines normally run
+once when created, then follow their saved schedule or webhook trigger.
 
 Messaging accounts record incoming messages but do not start agent turns by
 default. If you enable inbound responses, only approved senders can start a
-turn. "Run remote turns unattended" is on by default and gives those turns
-Bypass mode. Turn it off to use Auto-Accept instead. Workspace edits then
+turn. "Run remote turns unattended" is on by default and gives those turns the
+default mode. Turn it off to use Auto-Accept instead. Workspace edits then
 proceed, while shell commands and other risky actions wait for approval in the
 desktop app.
 
@@ -38,7 +52,7 @@ approved senders, bot assignment, and unattended-tools setting together.
 ## Workspace boundary
 
 Reads inside the workspace do not prompt. Reads and writes outside it require
-approval in every mode except Bypass. Auto-Accept grants write access to the
+approval in every mode except Auto and Full access. Auto-Accept grants write access to the
 workspace, not to the rest of the machine.
 
 Some paths remain protected from agent file tools, including `.git`, `.env`, and
@@ -78,16 +92,87 @@ call that started it.
 
 ### Kernel sandbox
 
-macOS and Linux can run commands under an optional kernel sandbox. Plan mode
-allows no writes. Default and Auto-Accept allow writes to the workspace and
-temporary directories. Bypass remains unconfined. Reads and network access are
-not restricted.
+macOS, Linux and Windows 11 24H2 or newer run commands under a kernel
+sandbox in every mode but Full access. macOS and Linux use Anthropic's sandbox
+runtime (Seatbelt and bubblewrap, with its loopback proxies for the network);
+Windows uses a Microsoft process container run by the `wxc-exec` runner the
+app ships. Plan mode allows no writes. Default, Auto-Accept and Auto allow
+writes to the workspace and temporary directories. Full access is the one
+mode with no sandbox. Bots and routines run in the default mode without a card
+to answer, so in Auto a hidden store stays hidden and an unlisted host is
+refused outright.
+
+Reads are allowed everywhere except a short list of credential stores: SSH
+private keys, GPG private keys, cloud CLI credential and token caches (AWS,
+Google Cloud, Azure), `~/.kube/config`, `~/.docker/config.json`, `~/.netrc`,
+`~/.pypirc`, browser profiles, the macOS keychain files, Windows credential
+stores, and this app's own settings and browser data. Configuration beside
+them stays readable, so `~/.ssh/config`, known hosts, public keys and
+`~/.aws/config` still work. The ssh and gpg agent sockets stay reachable, so
+`git push` and signed commits work with the keys hidden; other unix sockets
+(the session bus, Docker) do not.
+
+A command that names one of the developer stores (SSH and GPG keys, cloud
+credentials, kube and docker config, `.netrc`, `.pypirc`) asks first, even
+when the command itself was already allowed. The card lists the paths.
+"Allow once" unhides them for that command; "Always" keeps them readable for
+the rest of the session. `ABACUSAI_BOT_SANDBOX_READABLE`, a path-delimited
+list where `~` expands to the home directory, exempts a path without
+prompting.
+
+Beyond the workspace and temp, a confined command may also write to the
+caches and toolchains a build uses (`~/.npm`, `~/.cache`, `~/.cargo`, `~/go`,
+`~/.m2`, `~/Library/Caches` and the like, where they exist).
+
+The command's own text decides one more thing before it runs. A plainly
+written command that only makes new things in the user's own folders (a file
+on the Desktop, a directory beside the project, a `git clone` there) gets
+those paths added to its write list for that run, and a command may change or
+remove again what this session made. Nothing else is granted: deleting or
+replacing something that is not the session's, appending to an existing file,
+changing permissions, anything under a dotfile, `~/Library`, the system, or
+another volume, and any line that cannot be read with confidence (command or
+variable substitution, `eval`, `sh -c`, `xargs`, `find -exec`, an interpreter
+with inline code, `sudo`, unbalanced quotes) all go to the kernel as before,
+and one refused step means nothing on the line is granted. The reading is
+static and can only add the literal paths the command names; a wrong reading
+costs a card, never grants a write the text did not spell out. The same rule
+applies to the file tools in Auto: a new file in the user's folders is
+written, an edit outside the workspace asks.
+
+When the sandbox refuses something a command tried, a write outside the
+workspace, a read of a hidden store the command did not name, or a host the
+proxy turned down, a card lists exactly what was refused, and says what the
+command's text meant to do there ("deletes …", "replaces …"). "Allow" runs the
+same command again with that access; "Always" keeps it for the session;
+"Deny" leaves the refusal. The card cannot help a tool that ignores the proxy
+variables, since its connection never reached the proxy; Node tools are told
+to honour them (`NODE_USE_ENV_PROXY=1`, which Node 22.21 and 24 understand).
+
+On macOS and Linux, outbound connections from a confined command go only
+through the runtime's HTTP and SOCKS proxies. Package registries and code
+hosts (npm, PyPI, crates.io, Go, RubyGems, Maven, GitHub, GitLab, Docker Hub,
+Hugging Face, Debian and Ubuntu mirrors) are allowed without asking; any other
+host raises a prompt while the connection waits. "Allow once" lets that
+connection through, "Always" allows the host for the session. Connections to
+loopback are direct, so a dev server the command starts still answers.
+`ABACUSAI_BOT_SANDBOX_HOSTS`, a comma-separated list where `*.example.com`
+allows a domain, pre-approves hosts. A tool that ignores `HTTP_PROXY`,
+`HTTPS_PROXY` and `ALL_PROXY` cannot connect at all. On Windows the network is
+not confined yet.
+
+Linux needs `bubblewrap` and `socat` installed, and unprivileged user
+namespaces with capabilities (Ubuntu 24.04 restricts them by default; see the
+runtime's notes on `kernel.apparmor_restrict_unprivileged_userns`). The app
+probes this once at launch. Where the sandbox cannot run, or on a Windows
+older than 24H2 (build 26100), Auto is not offered: the picker and the Profile
+page show Full access alone, which is what such a machine has. A confined mode
+picked anyway (Default, say) still runs its commands, unconfined.
+`ABACUSAI_BOT_SANDBOX=strict` refuses them instead; `off` never confines.
 
 The sandbox applies to shell commands, including commands started by delegated
 agents and verification tools. It does not confine Electron, model requests,
-MCP tools, device tools, or service connectors. Windows does not provide this
-backend. `ABACUSAI_BOT_SANDBOX=strict` refuses commands when no sandbox is
-available; `auto` runs them unconfined on a platform with no backend.
+MCP tools, device tools, or service connectors.
 
 ### Docker
 

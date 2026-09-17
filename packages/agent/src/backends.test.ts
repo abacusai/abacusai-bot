@@ -18,11 +18,16 @@ import * as path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { backendOperations, deadline, selectedBackend } from "./backends.js";
-import { currentMode, setCurrentMode } from "./current-mode.js";
+import {
+  backendOperations,
+  deadline,
+  hiddenStoreNote,
+  selectedBackend,
+} from "./backends.js";
 import { budgetSecondsFor } from "./extensions/tool-timeouts.js";
 import { posixShell } from "./posix-shell.js";
-import { AgentMode } from "./protocol.js";
+import { sandboxBackendFor } from "./sandbox-support.js";
+import { runnerPath } from "./sandbox/mxc.js";
 
 describe("deadline", () => {
   it("reads its argument as seconds, not milliseconds", () => {
@@ -105,22 +110,22 @@ describe("a command that leaves something running behind it", () => {
       : it.skip;
 
   let scratch: string;
-  let restoreMode: AgentMode;
+  const realPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
 
   beforeEach(() => {
     scratch = fs.mkdtempSync(path.join(os.tmpdir(), "backends-test-"));
     // What is under test is how the spawn is waited on, which is the same
     // whether or not the command ends up confined. Running unconfined is what
-    // makes that reachable everywhere: the Linux runner has a bubblewrap that
-    // cannot be established, and its (correct) answer to any other mode is to
-    // refuse the command outright — which would leave this covered on macOS
-    // only, and the hang it pins is not platform-specific.
-    restoreMode = currentMode();
-    setCurrentMode(AgentMode.Yolo);
+    // makes that reachable everywhere: the Linux runner has a sandbox runtime
+    // that cannot start, and its (correct) answer is to refuse the command
+    // outright. A platform with no backend runs unconfined under `auto`.
+    Object.defineProperty(process, "platform", { value: "freebsd" });
+    vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
   });
 
   afterEach(() => {
-    setCurrentMode(restoreMode);
+    Object.defineProperty(process, "platform", realPlatform);
+    vi.unstubAllEnvs();
     fs.rmSync(scratch, { recursive: true, force: true });
   });
 
@@ -193,17 +198,25 @@ describe("a platform with no sandbox backend (Windows)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("hands `auto` the bundled POSIX shell when it is there, else pi's local path", () => {
+  it("hands `auto` the confined shell where it can confine, else the bundled one, else pi's path", () => {
     // The local operations' unconfined fallback is a /bin/bash argv, which
     // does not exist on Windows — every command would fail ENOENT. Null means
-    // pi's own platform-correct local path runs instead.
+    // pi's own platform-correct local path runs instead. A Windows with the
+    // vendored runner on a build that can make containers is the one case
+    // that keeps the operations, since there they confine.
     Object.defineProperty(process, "platform", { value: "win32" });
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "local");
     vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
+    const canConfine =
+      sandboxBackendFor("win32", os.release()) === "mxc" &&
+      runnerPath() != null;
 
-    // Null on a host with no busybox payload (this suite off Windows); the
-    // shell's operations on one — either way, never /bin/bash.
-    expect(backendOperations() == null).toBe(posixShell() == null);
+    // Confined operations where the runner is there; the bundled shell's
+    // where only its payload is; null on a host with neither (this suite off
+    // Windows) — either way, never /bin/bash.
+    expect(backendOperations() == null).toBe(
+      !canConfine && posixShell() == null
+    );
   });
 
   it("keeps the operations under `strict`, so the refusal reaches the model", () => {
@@ -230,5 +243,21 @@ describe("a platform with no sandbox backend (Windows)", () => {
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "docker");
 
     expect(backendOperations()).not.toBeNull();
+  });
+});
+
+describe("the note on a failed command that hit a hidden store", () => {
+  it("names the store and points at the prompt, not a workaround", () => {
+    const note = hiddenStoreNote(
+      "cat: /home/dev/.netrc: Operation not permitted\n",
+      ["/home/dev/.ssh", "/home/dev/.netrc"]
+    );
+    expect(note).toContain("/home/dev/.netrc");
+    expect(note).toContain("approve");
+    expect(note).not.toContain("/home/dev/.ssh");
+  });
+
+  it("is silent when the output mentions no store", () => {
+    expect(hiddenStoreNote("npm ERR! 404", ["/home/dev/.netrc"])).toBeNull();
   });
 });

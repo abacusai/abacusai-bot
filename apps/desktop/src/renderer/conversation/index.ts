@@ -21,6 +21,7 @@ export type {
   SendMessageOptions,
   StopProcessingResult,
   SubtaskSegment,
+  SubtaskOutcome,
   SubtaskStatus,
   TerminalCommandSegment,
   TextSegment,

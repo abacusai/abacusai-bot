@@ -57,6 +57,7 @@ describe("mode parsing", () => {
   it.each([
     ["ACCEPTEDITS", AgentMode.AcceptEdits],
     ["PLAN", AgentMode.PlanMode],
+    ["AUTO", AgentMode.Auto],
     ["YOLO", AgentMode.Yolo],
     ["DEFAULT", AgentMode.Normal],
   ])("parses %s", (raw, expected) => {
@@ -72,15 +73,18 @@ describe("mode parsing", () => {
 });
 
 describe("bypass mode", () => {
-  it("allows everything, including what Plan would refuse", () => {
-    for (const tool of ["bash", "write", "edit", "web_fetch", "read"]) {
-      const gate = gateToolCall(
-        call(tool, { command: "rm -rf /", path: "x", url: "http://x.test" }),
-        options({ mode: AgentMode.Yolo })
-      );
-      expect(gate.kind, tool).toBe("allow");
+  it.each([AgentMode.Yolo, AgentMode.Auto])(
+    "%s allows everything, including what Plan would refuse",
+    (mode) => {
+      for (const tool of ["bash", "write", "edit", "web_fetch", "read"]) {
+        const gate = gateToolCall(
+          call(tool, { command: "rm -rf /", path: "x", url: "http://x.test" }),
+          options({ mode })
+        );
+        expect(gate.kind, tool).toBe("allow");
+      }
     }
-  });
+  );
 });
 
 describe("plan mode", () => {
@@ -530,6 +534,71 @@ describe("writes outside the workspace", () => {
       ).kind
     ).toBe("allow");
   });
+
+  describe.skipIf(process.platform === "win32")("in Auto", () => {
+    // Auto follows the same rule as a confined command (sandbox/intent.ts):
+    // a new file in the user's own folders goes through, the rest asks.
+    const desktopFile = path.join(
+      os.homedir(),
+      "Desktop",
+      "abacusai-bot-no-such-file-9f1c.md"
+    );
+
+    it("lets a new file onto the Desktop without a card", () => {
+      expect(
+        gateToolCall(
+          call("write", { path: desktopFile, content: "x" }),
+          options({ mode: AgentMode.Auto })
+        ).kind
+      ).toBe("allow");
+    });
+
+    it("asks before touching a sensitive place, new or not", () => {
+      for (const target of [
+        outside,
+        path.join(os.homedir(), ".zshrc"),
+        path.join(os.homedir(), "loose-file-9f1c.txt"),
+      ]) {
+        const gate = gateToolCall(
+          call("write", { path: target, content: "x" }),
+          options({ mode: AgentMode.Auto })
+        );
+        expect(gate.kind, target).toBe("ask");
+        expect(gate.kind === "ask" && gate.request.type, target).toBe(
+          "write_outside_directory"
+        );
+      }
+    });
+
+    it("asks before editing anything outside, since that changes what is there", () => {
+      const gate = gateToolCall(
+        call("edit", { path: desktopFile, edits: [] }),
+        options({ mode: AgentMode.Auto })
+      );
+      expect(gate.kind).toBe("ask");
+      expect(gate.kind === "ask" && gate.request.type).toBe(
+        "edit_outside_directory"
+      );
+    });
+
+    it("lets scratch and the workspace through", () => {
+      expect(
+        gateToolCall(
+          call("write", {
+            path: path.join(os.tmpdir(), "x.txt"),
+            content: "x",
+          }),
+          options({ mode: AgentMode.Auto })
+        ).kind
+      ).toBe("allow");
+      expect(
+        gateToolCall(
+          call("edit", { path: "src/app.ts", edits: [] }),
+          options({ mode: AgentMode.Auto })
+        ).kind
+      ).toBe("allow");
+    });
+  });
 });
 
 describe("shell prefix matching", () => {
@@ -562,6 +631,7 @@ describe("strict mode parsing", () => {
     ["DEFAULT", AgentMode.Normal],
     ["acceptedits", AgentMode.AcceptEdits],
     ["plan", AgentMode.PlanMode],
+    ["auto", AgentMode.Auto],
     ["yolo", AgentMode.Yolo],
     ["  plan  ", AgentMode.PlanMode],
   ])("reads %s", (raw, expected) => {
@@ -1103,3 +1173,88 @@ describe("executing JavaScript in a page", () => {
     }
   });
 });
+
+// POSIX fixtures, as in secrets.test.ts.
+describe.skipIf(process.platform === "win32")(
+  "a hidden credential store named by a command",
+  () => {
+    const stores = ["/Users/someone/.ssh", "/Users/someone/.netrc"];
+
+    it("asks even when the command prefix was approved, and names the store", () => {
+      const gate = gateToolCall(
+        call("bash", { command: "cat /Users/someone/.ssh/id_ed25519" }),
+        options({
+          allowedCommands: ["cat"],
+          promptableCredentialPaths: stores,
+        })
+      );
+      expect(gate.kind).toBe("ask");
+      if (gate.kind !== "ask" || gate.request.type !== "run_terminal") return;
+      expect(gate.request.credentialPaths).toEqual([
+        "/Users/someone/.ssh/id_ed25519",
+      ]);
+    });
+
+    it("allows once the store was always-allowed, and says which to unhide", () => {
+      const gate = gateToolCall(
+        call("bash", { command: "cat /Users/someone/.netrc" }),
+        options({
+          allowedCommands: ["cat"],
+          promptableCredentialPaths: stores,
+          allowedCredentialPaths: ["/Users/someone/.netrc"],
+        })
+      );
+      expect(gate).toEqual({
+        kind: "allow",
+        credentialPaths: ["/Users/someone/.netrc"],
+      });
+    });
+
+    it("still asks when only some named stores were always-allowed", () => {
+      const gate = gateToolCall(
+        call("bash", {
+          command: "cat /Users/someone/.netrc /Users/someone/.ssh/id_rsa",
+        }),
+        options({
+          allowedCommands: ["cat"],
+          promptableCredentialPaths: stores,
+          allowedCredentialPaths: ["/Users/someone/.netrc"],
+        })
+      );
+      expect(gate.kind).toBe("ask");
+    });
+
+    it("mentions no store on an ordinary command", () => {
+      const gate = gateToolCall(
+        call("bash", { command: "git push" }),
+        options({ promptableCredentialPaths: stores })
+      );
+      if (gate.kind !== "ask" || gate.request.type !== "run_terminal") return;
+      expect(gate.request.credentialPaths).toBeUndefined();
+    });
+
+    it("still asks in Auto, which skips approvals but not the sandbox", () => {
+      const gate = gateToolCall(
+        call("bash", { command: "cat /Users/someone/.netrc" }),
+        options({ mode: AgentMode.Auto, promptableCredentialPaths: stores })
+      );
+      expect(gate.kind).toBe("ask");
+      // And an ordinary command in Auto still runs without a card.
+      expect(
+        gateToolCall(
+          call("bash", { command: "git push" }),
+          options({ mode: AgentMode.Auto, promptableCredentialPaths: stores })
+        ).kind
+      ).toBe("allow");
+    });
+
+    it("never asks in Full access, which has no sandbox to hide the store", () => {
+      expect(
+        gateToolCall(
+          call("bash", { command: "cat /Users/someone/.netrc" }),
+          options({ mode: AgentMode.Yolo, promptableCredentialPaths: stores })
+        ).kind
+      ).toBe("allow");
+    });
+  }
+);

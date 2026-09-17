@@ -1,3 +1,5 @@
+import * as path from "node:path";
+
 import {
   createAgentSession,
   createLocalBashOperations,
@@ -76,6 +78,7 @@ import {
   OPENLLM_ID,
   OpenLlmRotation,
   accountWideFailure,
+  isOutOfCredits,
   openLlmCandidates,
   isOpenLlmReference,
   MAX_OPENLLM_ROTATIONS_PER_TURN,
@@ -87,13 +90,14 @@ import {
   parseModeStrict,
   shellSegments,
 } from "./permissions.js";
-import { personaPrompt, readPersona } from "./persona.js";
+import { identityPrompt, personaPrompt, readPersona } from "./persona.js";
 import { windowsShellPrompt } from "./posix-shell.js";
 import {
   AgentMode,
   AgentStatus,
   type AgentEvent,
   type DesktopEvent,
+  type NotificationAction,
   type PermissionDecision,
   type PermissionRequest,
   type SkillMetadata,
@@ -115,6 +119,19 @@ import {
   type ReplyLanguageMismatch,
 } from "./reply-language.js";
 import { buildRoster } from "./roster.js";
+import {
+  allowHostForSession,
+  backendName,
+  canonicalize,
+  ensureRuntime,
+  networkConfinable,
+  resolveSecretPaths,
+  SandboxApprovals,
+  sandboxEnforcement,
+  setHostDecider,
+  type Denial,
+  type DenialDecision,
+} from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { conversationSessionManager } from "./session-file.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
@@ -122,6 +139,18 @@ import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
 import { searchAvailable, xaiSearchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
+import { isInsideDirectory } from "./workspace-path.js";
+
+/** The answers that mean "and keep allowing this for the session". */
+function isAlwaysDecision(decision: PermissionDecision): boolean {
+  const answer = typeof decision === "string" ? decision : decision.type;
+
+  return (
+    answer === "allowAlways" ||
+    answer === "allow_always_with_rule" ||
+    answer === "allow_always_with_rules"
+  );
+}
 
 export interface SessionOptions {
   cwd: string;
@@ -547,6 +576,8 @@ export class AbacusBotSession {
   private readonly sessionAllowedTools = new Set<string>();
   /** Origins the user chose to always allow web_fetch for, this session. */
   private readonly sessionAllowedOrigins: string[] = [];
+  /** What the user let commands do beyond the sandbox, once or for the session. */
+  private readonly sandboxApprovals = new SandboxApprovals();
   /** Directories outside the workspace the user allowed reads from, this session. */
   private readonly sessionAllowedReadPaths: string[] = allowedPathsFromEnv();
   /**
@@ -756,7 +787,7 @@ export class AbacusBotSession {
       // start: this hook runs on each reload, and `base` is the array above,
       // so the user's own instructions stay last.
       appendSystemPromptOverride: (base: string[]): string[] => {
-        // The bot's identity comes first: who the agent is before what it knows.
+        // Who the agent is comes first, then a bot's own persona, then what it knows.
         const persona = personaPrompt();
         const instructions = customInstructionsPrompt();
         const remember = rememberPrompt();
@@ -766,6 +797,7 @@ export class AbacusBotSession {
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
 
         return [
+          identityPrompt(),
           ...(persona == null ? [] : [persona]),
           ...base,
           ...(mcp == null ? [] : [mcp]),
@@ -936,20 +968,19 @@ export class AbacusBotSession {
     // A switched-off toolset is withheld, not hidden: the model never sees it.
     const excluded = excludedTools();
 
+    await this.prepareSandboxRuntime();
+
     // The browser sub-agent may run on a stronger model than the chat.
     const browserModelRef = (
       process.env.ABACUSAI_BOT_BROWSER_MODEL ??
       this.config.browserModel ??
       ""
     ).trim();
-    const browserModel =
+    const browserModelOverride =
       browserModelRef.length > 0
-        ? (resolveModel(
-            this.modelRuntime,
-            browserModelRef,
-            this.maxOutputTokens
-          ).model ?? model)
-        : model;
+        ? resolveModel(this.modelRuntime, browserModelRef, this.maxOutputTokens)
+            .model
+        : undefined;
 
     // The roster is a table (roster.ts) so it can be read without a session.
     const roster = buildRoster(
@@ -958,13 +989,18 @@ export class AbacusBotSession {
         agentDir: dir,
         modelRuntime: this.modelRuntime,
         subAgentSettingsManager,
-        model,
-        browserModel,
+        // Read at spawn: the chat's model moves with a pick or a pool hop, and
+        // a sub-agent runs on the one the user is on then, not at start.
+        model: () => this.session?.model ?? model,
+        browserModel: () =>
+          browserModelOverride ?? this.session?.model ?? model,
         hostServices: hostServices ? this.hostServices : null,
         excluded,
         // Background runs go through the same operations as the foreground
         // ones, so `background: true` cannot become a way around the sandbox.
-        operations: backendOperations() ?? createLocalBashOperations(),
+        operations:
+          backendOperations(this.sandboxApprovals) ??
+          createLocalBashOperations(),
         // A getter: refreshMcp swaps `this.mcp`, and captured routes would
         // call closed clients forever.
         mcp: () => this.mcp,
@@ -1234,12 +1270,19 @@ export class AbacusBotSession {
       return;
     }
 
+    // Under the router the user never chose a model, so a provider's sentence
+    // about one is noise: the pool is out, and the card says what to do. Out
+    // of credits keeps its own card.
+    const poolExhausted = this.openLlmActive && !isOutOfCredits(message);
+
     this.emitAgentEvent({
       type: "error",
       error: {
-        message: terminalProviderMessage(message),
+        message: poolExhausted
+          ? OPENLLM_POOL_EXHAUSTED_MESSAGE
+          : terminalProviderMessage(message),
         code: "turn_failed",
-        ...providerDetail(message),
+        ...(poolExhausted ? {} : providerDetail(message)),
         ...this.errorActionsFor(message),
       },
     });
@@ -1252,16 +1295,39 @@ export class AbacusBotSession {
    */
   private upgradeActionsFor(
     raw: string
-  ):
-    | { actions: Array<{ type: string; link: string }> }
-    | Record<string, never> {
+  ): { actions: NotificationAction[] } | Record<string, never> {
     const provider = this.session?.model?.provider;
     const abacusServed = provider === "abacus" || this.openLlmActive;
     if (isOutOfCredits(raw) || isAuthFailure(raw)) this.providersStale = true;
     if (!abacusServed || !isOutOfCredits(raw)) return {};
     return {
-      actions: [{ type: "upgrade-abacus", link: ABACUS_PLAN_URL }],
+      actions: [
+        { type: "upgrade-abacus", link: ABACUS_PLAN_URL },
+        ...this.freeModelSwitches(),
+      ],
     };
+  }
+
+  /**
+   * The models the platform still serves once the balance is gone, as
+   * switches the upgrade card can offer by name. Read off the catalog, so
+   * which they are is the platform's to change.
+   */
+  private freeModelSwitches(): Array<{
+    type: string;
+    model: string;
+    label: string;
+  }> {
+    const registry = this.registry;
+    if (registry == null) return [];
+
+    return listModels(registry)
+      .filter((choice) => choice.provider === "abacus" && choice.free)
+      .map((choice) => ({
+        type: "switch-model",
+        model: choice.id,
+        label: choice.label,
+      }));
   }
 
   /**
@@ -1270,17 +1336,17 @@ export class AbacusBotSession {
    */
   private errorActionsFor(
     raw: string
-  ):
-    | { actions: Array<{ type: string; link?: string }> }
-    | Record<string, never> {
-    const actions: Array<{ type: string; link?: string }> = [
+  ): { actions: NotificationAction[] } | Record<string, never> {
+    const actions: NotificationAction[] = [
       ...(this.upgradeActionsFor(raw).actions ?? []),
     ];
+    // A pinned model that timed out or is overloaded; or the router with its
+    // whole pool down, where switching is the only move left.
     if (
-      !this.openLlmActive &&
       isProviderFailure(raw) &&
       !isOutOfCredits(raw) &&
-      classifyProviderFailure(raw).remedy.includes("switch")
+      (this.openLlmActive ||
+        classifyProviderFailure(raw).remedy.includes("switch"))
     ) {
       actions.push({ type: "switch-model" });
     }
@@ -1460,9 +1526,18 @@ export class AbacusBotSession {
   /** Which pi events mean a model call is (still) being waited on. */
   private noteModelActivity(type: string): void {
     switch (type) {
+      case "tool_execution_end":
+        // Parallel tool calls: the model is asked again only once the last one
+        // ends. Arming here while a sibling still runs (a browser sub-agent,
+        // minutes long) reads its silence as the model's and aborts it. The
+        // heartbeat still holds the call that is ending.
+        if (this.heartbeat.size > 1) return;
+        this.awaitingModel = true;
+        this.armStallTimer();
+
+        return;
       case "agent_start":
       case "message_start":
-      case "tool_execution_end":
         this.awaitingModel = true;
         this.armStallTimer();
 
@@ -1622,11 +1697,9 @@ export class AbacusBotSession {
       this.emitAgentEvent({
         type: "error",
         error: {
-          message: terminalProviderMessage(
-            rotation.failure,
-            "No other free model was left to try."
-          ),
+          message: OPENLLM_POOL_EXHAUSTED_MESSAGE,
           code: "turn_failed",
+          actions: [{ type: "switch-model" }],
         },
       });
       this.finishTurn();
@@ -2101,12 +2174,13 @@ export class AbacusBotSession {
         : undefined;
 
     if (resolved?.model == null) {
+      // The picker is the way out: its free-plan rows connect the sources.
       this.emitAgentEvent({
         type: "error",
         error: {
-          message:
-            "OpenLLM needs at least one source — add an OpenRouter, Google AI Studio, or Abacus.AI key in Settings.",
+          message: OPENLLM_POOL_EMPTY_MESSAGE,
           code: "model_unavailable",
+          actions: [{ type: "switch-model" }],
         },
       });
 
@@ -2366,6 +2440,7 @@ export class AbacusBotSession {
 
         this.toolInputs.delete(event.toolCallId);
         this.heartbeat.ended(event.toolCallId);
+        this.rememberCreated(tool, event.isError === true);
         this.emitAgentEvent({
           type: "tool_execution_complete",
           tool,
@@ -2550,6 +2625,8 @@ export class AbacusBotSession {
         ],
         allowedWritePaths: [...this.sessionAllowedWritePaths],
         allowedOrigins: [...this.sessionAllowedOrigins],
+        promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
+        allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
       });
 
       if (gate.kind === "allow") {
@@ -2621,33 +2698,7 @@ export class AbacusBotSession {
         status: AgentStatus.WaitingForToolPermission,
       });
 
-      const decision = await new Promise<PermissionDecision>((resolve) => {
-        const budget = approvalTimeoutMs();
-        // Infinity is the opt-out and must not reach setTimeout, which treats
-        // an out-of-range delay as 1ms.
-        const timer = Number.isFinite(budget)
-          ? setTimeout(() => {
-              // Drop it first, so a late answer racing the expiry finds nothing.
-              this.pending.delete(permissionId);
-              this.emitAgentEvent({ type: "permission_cleared", permissionId });
-              resolve({
-                type: "reject_with_message",
-                message:
-                  `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
-                  `Do not retry the same call — say what you need approved and stop.`,
-              });
-            }, budget)
-          : undefined;
-        // A pending approval should never be the reason the process survives.
-        timer?.unref?.();
-
-        this.pending.set(permissionId, {
-          resolve: (answer) => {
-            if (timer) clearTimeout(timer);
-            resolve(answer);
-          },
-        });
-      });
+      const decision = await this.awaitDecision(permissionId);
 
       this.recordApproval(pi, {
         stage: "decided",
@@ -2670,6 +2721,202 @@ export class AbacusBotSession {
    * protocol: a durable record, excluded from the model's context. Every ask
    * gets a matching decision, including the ones no human made.
    */
+  /** The user's answer to a card, or a rejection once the budget runs out. */
+  private awaitDecision(permissionId: string): Promise<PermissionDecision> {
+    return new Promise<PermissionDecision>((resolve) => {
+      const budget = approvalTimeoutMs();
+      // Infinity is the opt-out and must not reach setTimeout, which treats
+      // an out-of-range delay as 1ms.
+      const timer = Number.isFinite(budget)
+        ? setTimeout(() => {
+            // Drop it first, so a late answer racing the expiry finds nothing.
+            this.pending.delete(permissionId);
+            this.emitAgentEvent({ type: "permission_cleared", permissionId });
+            resolve({
+              type: "reject_with_message",
+              message:
+                `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
+                `Do not retry the same call — say what you need approved and stop.`,
+            });
+          }, budget)
+        : undefined;
+      // A pending approval should never be the reason the process survives.
+      timer?.unref?.();
+
+      this.pending.set(permissionId, {
+        resolve: (answer) => {
+          if (timer) clearTimeout(timer);
+          resolve(answer);
+        },
+      });
+    });
+  }
+
+  /**
+   * Start the sandbox runtime's proxies and route their questions to the
+   * user. A failure is not fatal here: the first confined command reports it.
+   */
+  private async prepareSandboxRuntime(): Promise<void> {
+    if (sandboxEnforcement() === "off" || backendName() === null) return;
+    if (!networkConfinable()) return;
+
+    setHostDecider((host, port) => this.askNetworkHost(host, port));
+    this.sandboxApprovals.askDenials = (command, refused, note) =>
+      this.askDenials(command, refused, note);
+    await ensureRuntime();
+  }
+
+  /**
+   * A file the write tool made outside the workspace is the session's own:
+   * a later command may change or remove it without a card (intent.ts).
+   */
+  private rememberCreated(tool: ToolRequest, failed: boolean): void {
+    if (failed || tool.name !== "write") return;
+    const requested = tool.input.path;
+    if (typeof requested !== "string" || requested.length === 0) return;
+    const resolved = canonicalize(path.resolve(this.options.cwd, requested));
+    if (isInsideDirectory(resolved, this.options.cwd)) return;
+    this.sandboxApprovals.created.add(resolved);
+  }
+
+  /**
+   * The sandbox refused what a command tried. The card lists it; "allow"
+   * lets the command run once more with those, "always" keeps them for the
+   * session. Null means the command stays refused.
+   */
+  private async askDenials(
+    command: string,
+    refused: Denial[],
+    note: string | null
+  ): Promise<DenialDecision | null> {
+    if (!this.canReachUser()) return null;
+
+    const permissionId = `perm-${++this.permissionCounter}`;
+    const input = { command, denials: refused };
+    const request: PermissionRequest = {
+      type: "sandbox_denied",
+      tool: {
+        id: permissionId,
+        name: "sandbox",
+        type: "tool",
+        input,
+        args: input,
+      },
+      displayName: "Allow what the sandbox refused",
+      command,
+      denials: refused,
+      ...(note != null ? { note } : {}),
+    };
+
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "asked",
+        permissionId,
+        toolName: "sandbox",
+        detail: refused.map((denial) => denial.kind).join(","),
+      });
+    }
+    this.options.emit({ type: "permission_needed", permissionId, request });
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.WaitingForToolPermission,
+    });
+
+    const decision = await this.awaitDecision(permissionId);
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.ExecutingTool,
+    });
+
+    const answer = typeof decision === "string" ? decision : decision.type;
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "decided",
+        permissionId,
+        toolName: "sandbox",
+        outcome: answer,
+      });
+    }
+
+    if (isAlwaysDecision(decision) || answer === "allowYolo")
+      return { once: refused, session: refused };
+    if (
+      answer === "accept" ||
+      answer === "accept_with_message" ||
+      answer === "background"
+    )
+      return { once: refused, session: [] };
+
+    return null;
+  }
+
+  /**
+   * A confined command reached for a host nobody listed. The connection is
+   * held while the card is up; "always" lists the host for the session.
+   */
+  private async askNetworkHost(host: string, port: number): Promise<boolean> {
+    if (!this.canReachUser()) return false;
+
+    const permissionId = `perm-${++this.permissionCounter}`;
+    const input = { host, port };
+    const request: PermissionRequest = {
+      type: "network_host",
+      tool: {
+        id: permissionId,
+        name: "network",
+        type: "tool",
+        input,
+        args: input,
+      },
+      displayName: "Reach a host",
+      host,
+      port,
+    };
+
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "asked",
+        permissionId,
+        toolName: "network",
+        detail: `${host}:${port}`,
+      });
+    }
+    this.options.emit({ type: "permission_needed", permissionId, request });
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.WaitingForToolPermission,
+    });
+
+    const decision = await this.awaitDecision(permissionId);
+    // The command that asked is still running.
+    this.emitAgentEvent({
+      type: "status_changed",
+      status: AgentStatus.ExecutingTool,
+    });
+
+    const answer = typeof decision === "string" ? decision : decision.type;
+    if (this.pi != null) {
+      this.recordApproval(this.pi, {
+        stage: "decided",
+        permissionId,
+        toolName: "network",
+        outcome: answer,
+      });
+    }
+
+    if (isAlwaysDecision(decision) || answer === "allowYolo") {
+      allowHostForSession(host);
+
+      return true;
+    }
+
+    return (
+      answer === "accept" ||
+      answer === "accept_with_message" ||
+      answer === "background"
+    );
+  }
+
   private recordApproval(
     pi: ExtensionAPI,
     record: {
@@ -2741,6 +2988,29 @@ export class AbacusBotSession {
     tool: ToolRequest,
     request: PermissionRequest
   ): { block: true; reason: string } | undefined {
+    const verdict = this.applyDecisionToAllowances(decision, tool, request);
+
+    // An accepted shell card that named hidden stores unhides them: for this
+    // command, and for the session when the answer was "always".
+    if (
+      verdict === undefined &&
+      request.type === "run_terminal" &&
+      request.credentialPaths != null
+    ) {
+      const command = String(tool.input.command ?? "");
+      this.sandboxApprovals.reads.approveOnce(command, request.credentialPaths);
+      if (isAlwaysDecision(decision))
+        this.sandboxApprovals.reads.approveForSession(request.credentialPaths);
+    }
+
+    return verdict;
+  }
+
+  private applyDecisionToAllowances(
+    decision: PermissionDecision,
+    tool: ToolRequest,
+    request: PermissionRequest
+  ): { block: true; reason: string } | undefined {
     // Leaving plan mode is a different question: here "always" means accept
     // every edit from now on, not "never ask about this tool again".
     if (tool.name === EXIT_PLAN_TOOL_NAME) {
@@ -2801,6 +3071,16 @@ export class AbacusBotSession {
       default:
         return { block: true, reason: "The user rejected this tool call." };
     }
+  }
+
+  /**
+   * The hidden stores a command may ask to read, when the sandbox is on. Empty
+   * otherwise, so no card mentions a store nothing is hiding.
+   */
+  private promptableCredentialPaths(cwd: string): string[] {
+    if (sandboxEnforcement() === "off" || backendName() === null) return [];
+
+    return resolveSecretPaths({ workspaceRoot: cwd }).promptable;
   }
 
   /**
@@ -3165,16 +3445,15 @@ function providerFailureSummary(raw: string): string {
 
 const ABACUS_PLAN_URL = "https://apps.abacus.ai/chatllm/choose-plan/";
 
-/** Out of paid-for capacity, as providers phrase it — not a mere rate limit. */
-function isOutOfCredits(raw: string): boolean {
-  const status = raw.match(/^\s*(\d{3})\b/)?.[1];
-  if (status === "402") return true;
-  // Credit gates phrase it these ways, 429s included; an exhausted account
-  // must never read as a mere rate limit.
-  return /no remaining credits|insufficient credit|out of credit|credit limit|quota exceeded|purchase more credits|high percentage of your (overall )?credits/i.test(
-    raw
-  );
-}
+/**
+ * What the chat says when the router has nothing left to try. Fixed lines:
+ * under the router the user did not pick a model, so no provider's wording
+ * about one belongs in front of them — the card's button is the answer.
+ */
+export const OPENLLM_POOL_EXHAUSTED_MESSAGE =
+  "All free models are busy right now. Switch to a different model, or try again in a few minutes.";
+export const OPENLLM_POOL_EMPTY_MESSAGE =
+  "RouteLLM - Open has no model to run on yet. Pick a model, or connect Abacus.AI, Google AI Studio or OpenRouter from the model list.";
 
 /** The provider rejected the credential, rather than the account's balance. */
 function isAuthFailure(raw: string): boolean {

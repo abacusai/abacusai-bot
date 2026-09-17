@@ -10,7 +10,6 @@ import minimaxMark from "@lobehub/icons-static-svg/icons/minimax-color.svg";
 import mistralMark from "@lobehub/icons-static-svg/icons/mistral-color.svg";
 import moonshotMark from "@lobehub/icons-static-svg/icons/moonshot.svg";
 import nvidiaMark from "@lobehub/icons-static-svg/icons/nvidia-color.svg";
-import ollamaMark from "@lobehub/icons-static-svg/icons/ollama.svg";
 import openAiMark from "@lobehub/icons-static-svg/icons/openai.svg";
 import openCodeMark from "@lobehub/icons-static-svg/icons/opencode.svg";
 import openRouterMark from "@lobehub/icons-static-svg/icons/openrouter-color.svg";
@@ -48,7 +47,6 @@ const MONO_MARKS: Record<string, string> = {
   claude: anthropicMark,
   groq: groqMark,
   moonshotai: moonshotMark,
-  ollama: ollamaMark,
   openai: openAiMark,
   "openai-codex": openAiMark,
   opencode: openCodeMark,

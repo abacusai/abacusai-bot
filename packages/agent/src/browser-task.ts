@@ -24,9 +24,12 @@ import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
 const MAX_PROVIDER_RETRIES = 2;
 
 // Bounds, because a run holds a browser view. Wrap-up points come first: a run
-// told to report keeps its findings, a run cut off loses them.
+// told to report keeps its findings, a run cut off loses them. Each point says
+// how many turns remain: "close to your limit" reads as "out of budget" to a
+// small model, which then reports early — or, on a resumed run, at once.
 export const MAX_TURNS = 100;
 export const WRAP_UP_TURN = 60;
+export const FINAL_WARNING_TURN = 85;
 /** Tool output read so far; past this the run is told to conclude. */
 export const WRAP_UP_RESULT_CHARS = 350_000;
 /**
@@ -35,10 +38,26 @@ export const WRAP_UP_RESULT_CHARS = 350_000;
  */
 export const REPEAT_HOST_LIMIT = 8;
 const TIMEOUT_MS = 12 * 60 * 1000;
+/**
+ * `browser_execute` calls in a row before the run is told to use the page
+ * tools. Hand-written scraping is where a small model spends a whole run:
+ * one query per turn, retyped after every page change.
+ */
+export const EXECUTE_STREAK_LIMIT = 6;
 
-const WRAP_UP_MESSAGE =
-  "You are close to your limit. Stop exploring now and write your final report from what " +
-  "you have already seen: the concrete values, and plainly what you could not finish.";
+export const wrapUpMessage = (turnsLeft: number): string =>
+  `You have about ${turnsLeft} turns left. Stop exploring now and write your final report ` +
+  "from what you have already seen: the concrete values, and plainly what you could not finish.";
+export const finalWarningMessage = (turnsLeft: number): string =>
+  `${turnsLeft} turns left. Write the final report in your next message; do not start anything new.`;
+const EXECUTE_STREAK_MESSAGE =
+  "You are scraping the page by hand, one browser_execute at a time. Use the page tools " +
+  'instead: browser_snapshot extract with a selector for rows of data, snapshot find:"..." ' +
+  "for an element, and browser_interact by ref to act. They cost one call where the script " +
+  "costs six.";
+/** A resumed run gets its budget back; said outright, or the old wrap-up stands. */
+export const budgetNote = (turns: number): string =>
+  `(Budget: ${turns} tool turns for this run; you will be warned as it runs low.)`;
 const REPEATING_MESSAGE =
   "You have loaded the same site many times in a row without acting on a page. More of the " +
   "same search will not change the answer. If a sign-in wall or missing page is in the way, " +
@@ -68,8 +87,16 @@ const BROWSER_SYSTEM_PROMPT = [
   "   clickable elements as @eN refs.",
   "2. Act with browser_interact using a ref. Every action reports what changed and lists new",
   "   elements with their refs, so you usually do not need another snapshot.",
-  '3. browser_snapshot find:"..." when you need an element that was not listed; extract with',
-  "   a selector when you want rows of data. Refs stay valid while the element is on the page.",
+  '3. browser_snapshot action:"snapshot" with find:"..." when you need an element that was not',
+  '   listed; action:"extract" with a selector when you want rows of data (prices, times,',
+  "   names) — it returns them as rows in one call. Refs stay valid while the element is on",
+  "   the page; if one goes stale the action refreshes it for you once.",
+  "4. browser_execute is the last resort, for what the tools above cannot reach (shadow",
+  "   roots, frames). Reading rows or clicking with a script means step 3 or 2 was skipped.",
+  "",
+  "You have a turn budget and are told as it runs low. Plan for it: one specific URL, the",
+  "site's own filters, extract for the data, then report. Do not re-read a page you already",
+  "have the values from.",
   "",
   "Rules that save the most trouble:",
   "- City, airport, product and address boxes are autocompletes: use interact pick, never fill.",
@@ -83,11 +110,14 @@ const BROWSER_SYSTEM_PROMPT = [
   "  solve a CAPTCHA. When you reach a step only the user can do, stop there, leave the page",
   '  as it is, and end your report with a line starting "NEEDS USER:" that says exactly what',
   '  they should do in the browser ("sign in to LinkedIn", "enter the card details and press',
-  '  Pay"). You will be resumed on the same page once they have done it.',
+  '  Pay"). You will be resumed on the same page once they have done it. Write that line',
+  "  only when you are actually stopped at such a step; a finished or partial report does",
+  "  not get one.",
   "",
   "Your final message is the entire answer the caller receives. Give the concrete values:",
-  "numbers, names, URLs, dates. Say plainly what you could not do and why. An honest partial",
-  "answer beats a confident guess.",
+  "numbers, names, URLs, dates. When the task names fields to report, end with a FOUND:",
+  "block that lists each field with its value or 'not found'. Say plainly what you could",
+  "not do and why. An honest partial answer beats a confident guess.",
 ].join("\n");
 
 export interface BrowserTaskContext {
@@ -112,6 +142,10 @@ export interface BrowserTaskOptions {
 export interface BrowserTaskResult {
   text: string;
   turns: number;
+  /** `browser_execute` calls; a high share means the page tools were skipped. */
+  executeCalls: number;
+  /** Nudges the run was given, in order: "wrap-up", "final", "repeating", "execute". */
+  steers: string[];
   stoppedBy:
     | "completed"
     | "needs-user"
@@ -123,10 +157,24 @@ export interface BrowserTaskResult {
 }
 
 /** A run stopped at a step only the user can do says so on its last line. */
-export const NEEDS_USER_PATTERN = /^\s*\**\s*NEEDS USER:/im;
+export const NEEDS_USER_PATTERN = /^\s*\**\s*NEEDS USER:\**\s*(.*)$/im;
+/**
+ * The line with nothing after it. Models write "NEEDS USER: none" to say they
+ * were not blocked; read as a stop, that sends the user to the browser to do
+ * nothing and parks the run.
+ */
+const NOTHING_NEEDED =
+  /^[\s*_]*(?:none|nothing|nil|n\/a|no(?:ne)?\s+(?:action|step|input|further|hand-?over)|-|—)?(?:[\s*_.,;:!—-]|$)/i;
 
 export function needsUser(report: string): boolean {
-  return NEEDS_USER_PATTERN.test(report);
+  const match = NEEDS_USER_PATTERN.exec(report);
+  if (match == null) return false;
+  const rest = (match[1] ?? "").trim();
+  if (rest.length === 0) return false;
+
+  const head = NOTHING_NEEDED.exec(rest);
+
+  return head == null || head[0].trim().length === 0;
 }
 
 interface PausedRun {
@@ -199,6 +247,27 @@ export class RepeatTracker {
     }
     this.streak = host === this.host ? this.streak + 1 : 1;
     this.host = host;
+
+    return this.streak === this.limit;
+  }
+}
+
+/** Counts `browser_execute` calls with no other tool between; pure, for tests. */
+export class ExecuteStreakTracker {
+  private streak = 0;
+  total = 0;
+
+  constructor(private readonly limit = EXECUTE_STREAK_LIMIT) {}
+
+  /** @returns true exactly when the streak reaches the limit. */
+  observe(toolName: string): boolean {
+    if (toolName !== "browser_execute") {
+      this.streak = 0;
+
+      return false;
+    }
+    this.total += 1;
+    this.streak += 1;
 
     return this.streak === this.limit;
   }
@@ -375,8 +444,11 @@ export async function runBrowserTask(
   let providerError = "";
   let readChars = 0;
   let wrappedUp = false;
+  let finalWarned = false;
   let warnedRepeating = false;
   const repeats = new RepeatTracker();
+  const executes = new ExecuteStreakTracker();
+  const steers: string[] = [];
   const outcome: { stoppedBy: BrowserTaskResult["stoppedBy"] } = {
     stoppedBy: "completed",
   };
@@ -425,6 +497,12 @@ export async function runBrowserTask(
       session = created.session as unknown as typeof session;
     }
 
+    const steer = (kind: string, text: string): void => {
+      steers.push(kind);
+      trace.write({ type: "nudge", reason: kind, turns });
+      void session.steer(text).catch(() => undefined);
+    };
+
     try {
       // One subscription for the whole run, re-armed because the report nudge
       // is a second prompt on the same session.
@@ -469,15 +547,20 @@ export async function runBrowserTask(
           ).length;
         }
 
-        if (event.type === "tool_execution_start" && !warnedRepeating) {
+        if (event.type === "tool_execution_start") {
           const started = event as unknown as {
             toolName: string;
             args?: unknown;
           };
-          if (repeats.observe(started.toolName, started.args)) {
+          if (
+            !warnedRepeating &&
+            repeats.observe(started.toolName, started.args)
+          ) {
             warnedRepeating = true;
-            trace.write({ type: "nudge", reason: "repeating" });
-            void session.steer(REPEATING_MESSAGE).catch(() => undefined);
+            steer("repeating", REPEATING_MESSAGE);
+          }
+          if (executes.observe(started.toolName)) {
+            steer("execute", EXECUTE_STREAK_MESSAGE);
           }
         }
 
@@ -490,7 +573,7 @@ export async function runBrowserTask(
             readChars >= WRAP_UP_RESULT_CHARS
           ) {
             wrappedUp = true;
-            void session.steer(WRAP_UP_MESSAGE).catch(() => undefined);
+            steer("wrap-up", wrapUpMessage(MAX_TURNS - turns));
           }
 
           return;
@@ -518,7 +601,11 @@ export async function runBrowserTask(
 
           if (!wrappedUp && turns >= WRAP_UP_TURN) {
             wrappedUp = true;
-            void session.steer(WRAP_UP_MESSAGE).catch(() => undefined);
+            steer("wrap-up", wrapUpMessage(MAX_TURNS - turns));
+          }
+          if (!finalWarned && turns >= FINAL_WARNING_TURN) {
+            finalWarned = true;
+            steer("final", finalWarningMessage(MAX_TURNS - turns));
           }
 
           if (turns >= MAX_TURNS) {
@@ -566,12 +653,13 @@ export async function runBrowserTask(
         resumed != null
           ? "The user has done their part in the browser and says: " +
             `"${task}"\n\nThe page is as you left it. Take a snapshot to see where it is now, then continue ` +
-            "from where you stopped and finish the task. Do not start over."
+            "from where you stopped and finish the task. Do not start over.\n\n" +
+            `Your turn budget has been reset: any earlier note that you were near your limit no longer applies. ${budgetNote(MAX_TURNS)}`
           : resume
-            ? `${task}\n\n(There was no earlier browser run to continue, so this starts fresh.)`
+            ? `${task}\n\n(There was no earlier browser run to continue, so this starts fresh.)\n\n${budgetNote(MAX_TURNS)}`
             : startUrl != null && startUrl.trim().length > 0
-              ? `Start at ${startUrl.trim()}\n\n${task}`
-              : task;
+              ? `Start at ${startUrl.trim()}\n\n${task}\n\n${budgetNote(MAX_TURNS)}`
+              : `${task}\n\n${budgetNote(MAX_TURNS)}`;
 
       let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
       const timeout = new Promise<void>((resolve) => {
@@ -638,14 +726,17 @@ export async function runBrowserTask(
       stoppedBy: outcome.stoppedBy,
       turns,
       readChars,
+      executeCalls: executes.total,
+      steers,
       report: lastText.slice(0, 8000),
       providerError,
     });
+    const tally = { turns, executeCalls: executes.total, steers };
 
     if (outcome.stoppedBy === "error") {
       return {
         text: `The browser task failed: ${providerError.length > 0 ? providerError : "the sub-agent prompt failed"}`,
-        turns,
+        ...tally,
         stoppedBy: "error",
       };
     }
@@ -653,7 +744,7 @@ export async function runBrowserTask(
     if (outcome.stoppedBy === "aborted") {
       return {
         text: "The browser task was stopped before it finished.",
-        turns,
+        ...tally,
         stoppedBy: "aborted",
       };
     }
@@ -664,7 +755,7 @@ export async function runBrowserTask(
           providerError.length > 0
             ? `The browser sub-agent could not reach the model: ${providerError}`
             : "The browser sub-agent could not reach the model.",
-        turns,
+        ...tally,
         stoppedBy: "provider-error",
       };
     }
@@ -674,7 +765,7 @@ export async function runBrowserTask(
         lastText.trim().length > 0
           ? lastText
           : "The browser sub-agent finished without reporting anything.",
-      turns,
+      ...tally,
       stoppedBy: outcome.stoppedBy,
     };
   } catch (error) {
@@ -687,6 +778,8 @@ export async function runBrowserTask(
     return {
       text: `The browser task failed: ${error instanceof Error ? error.message : String(error)}`,
       turns,
+      executeCalls: 0,
+      steers: [],
       stoppedBy: "error",
     };
   }

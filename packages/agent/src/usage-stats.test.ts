@@ -281,7 +281,6 @@ describe("pool membership by name", () => {
   it("matches the sources OpenLLM routes", () => {
     expect(isOpenLlmPoolModel("openrouter", "z-ai/glm-5.2:free")).toBe(true);
     expect(isOpenLlmPoolModel("gemini", "gemini-3.6-flash")).toBe(true);
-    expect(isOpenLlmPoolModel("ollama", "qwen2.5-coder:7b")).toBe(true);
     expect(isOpenLlmPoolModel("abacus", "route-llm-code-low")).toBe(true);
   });
 
@@ -292,6 +291,7 @@ describe("pool membership by name", () => {
     expect(isOpenLlmPoolModel("abacus", "claude-opus-5")).toBe(false);
     expect(isOpenLlmPoolModel("anthropic", "claude-opus-5")).toBe(false);
     expect(isOpenLlmPoolModel("deepseek", "deepseek-v4-flash")).toBe(false);
+    expect(isOpenLlmPoolModel("ollama", "qwen2.5-coder:7b")).toBe(false);
   });
 });
 

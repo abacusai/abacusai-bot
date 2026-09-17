@@ -16,7 +16,11 @@ import {
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { SubtaskStatus, SubtaskSummary } from "../../conversation";
+import type {
+  SubtaskOutcome,
+  SubtaskStatus,
+  SubtaskSummary,
+} from "../../conversation";
 import { Markdown } from "../common/markdown";
 import { Button } from "../ui";
 import { ShimmerText } from "./shimmer-text";
@@ -42,6 +46,13 @@ export const KIND_LABEL_KEYS: Record<string, string> = {
   component: "workspace.agents.kind.component",
   delegate: "workspace.agents.kind.delegate",
   browser: "workspace.agents.kind.browser",
+};
+
+/** Label for a finished run that is not a plain success. */
+export const OUTCOME_LABEL_KEYS: Record<SubtaskOutcome, string> = {
+  "needs-user": "workspace.subtask.needsYou",
+  limit: "workspace.subtask.hitLimit",
+  budget: "workspace.subtask.budget",
 };
 
 export function formatDuration(
@@ -100,6 +111,10 @@ export const SubtaskCard = ({
   // deliverable does not exist.
   if (summary.status === "interrupted")
     detailParts.push(t("workspace.subtask.didNotFinish"));
+  // A run that stopped for the user or at its cap finished with a partial
+  // report; the tick alone would read as "all done".
+  if (summary.status === "completed" && summary.outcome != null)
+    detailParts.push(t(OUTCOME_LABEL_KEYS[summary.outcome]));
   if (summary.toolCount > 0) {
     detailParts.push(
       t("workspace.subtask.toolCount", { count: summary.toolCount })

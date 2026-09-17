@@ -31,9 +31,13 @@ export default defineConfig({
     // shell, so main installs it through
     // `@abacus-ai/agent/posix-shell-install`. That module imports no pi.
     "src/posix-shell-install.ts",
+    // And whether this platform has a kernel sandbox, for the Settings page.
+    "src/sandbox-support.ts",
   ],
   deps: {
-    neverBundle: [...NATIVE_PACKAGES],
+    // The sandbox runtime finds its vendored seccomp filters and Java agent
+    // relative to its own files, so it ships as a package beside the agent.
+    neverBundle: [...NATIVE_PACKAGES, "@anthropic-ai/sandbox-runtime"],
     onlyBundle: false,
   },
   format: "esm",
