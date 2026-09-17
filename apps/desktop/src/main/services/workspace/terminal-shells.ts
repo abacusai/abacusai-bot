@@ -47,6 +47,12 @@ const isFile = (candidate: string): boolean => {
  * First match on PATH, honouring PATHEXT on Windows so `pwsh` finds
  * `pwsh.exe`. `where`/`which` would do the same by spawning a process per
  * lookup, and this runs once per settings render.
+ *
+ * Each extension is tried as PATHEXT spells it and again in lower case:
+ * PATHEXT is `.COM;.EXE;...` by convention while the files on disk are
+ * `pwsh.exe`, and Windows only gets away with that because its filesystems
+ * are case-insensitive. On one that is not — a mounted share, or a Linux box
+ * running these tests — the uppercase form alone finds nothing.
  */
 const onPath = (
   command: string,
@@ -60,7 +66,12 @@ const onPath = (
           "",
           ...(env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD")
             .split(";")
-            .filter((extension) => extension.length > 0),
+            .filter((extension) => extension.length > 0)
+            .flatMap((extension) => {
+              const lowered = extension.toLowerCase();
+
+              return lowered === extension ? [extension] : [extension, lowered];
+            }),
         ]
       : [""];
 

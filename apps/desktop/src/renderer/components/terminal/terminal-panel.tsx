@@ -41,6 +41,7 @@ import {
 } from "../../stores/terminal-runtime-store";
 import { openUrlInPreview } from "../../utils/preview-utils";
 import { Button } from "../ui";
+import { ButtonGroup } from "../ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -679,53 +680,52 @@ export const TerminalPanel = ({
           })}
         </div>
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-6 shrink-0 text-zinc-400 hover:text-white"
-                data-id="terminal-new-tab"
-                aria-label={t("workspace.terminal.newTab", {
-                  defaultValue: "New terminal",
-                })}
-                onClick={() => openTab()}
-              />
-            }
-          >
-            <Plus />
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            {t("workspace.terminal.newTab", {
-              defaultValue: "New terminal",
-            })}
-          </TooltipContent>
-        </Tooltip>
-
-        {/* The chevron, not the `+`: opening a terminal is the common act and
-            must stay one click. Only the deliberate choice asks. */}
-        {shellState != null && shellState.statuses.length > 1 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
+        {/* One control, not two: the `+` opens a terminal in a click and the
+            chevron beside it is the only thing that asks which shell. */}
+        <ButtonGroup className="shrink-0 gap-0">
+          <Tooltip>
+            <TooltipTrigger
               render={
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="size-6 shrink-0 text-zinc-400 hover:text-white"
-                  data-id="terminal-shell-picker"
-                  aria-label={t("workspace.terminal.pickShell", {
-                    defaultValue: "Open a different shell",
+                  className="size-6 text-zinc-400 hover:text-white"
+                  data-id="terminal-new-tab"
+                  aria-label={t("workspace.terminal.newTab", {
+                    defaultValue: "New terminal",
                   })}
+                  onClick={() => openTab()}
                 />
               }
             >
-              <ChevronDown />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="end" className="min-w-44">
-              {shellState.statuses.map((status) => {
-                const label = shellLabel(status.id);
-                return (
+              <Plus />
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {t("workspace.terminal.newTab", {
+                defaultValue: "New terminal",
+              })}
+            </TooltipContent>
+          </Tooltip>
+
+          {shellState != null && shellState.statuses.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-6 w-4 text-zinc-400 hover:text-white"
+                    data-id="terminal-shell-picker"
+                    aria-label={t("workspace.terminal.pickShell", {
+                      defaultValue: "Open a different shell",
+                    })}
+                  />
+                }
+              >
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="min-w-44">
+                {shellState.statuses.map((status) => (
                   <DropdownMenuItem
                     key={status.id}
                     disabled={!status.available}
@@ -737,13 +737,13 @@ export const TerminalPanel = ({
                     ) : (
                       <SquareTerminal />
                     )}
-                    {label}
+                    {shellLabel(status.id)}
                   </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </ButtonGroup>
 
         {onClose != null && (
           <Tooltip>
