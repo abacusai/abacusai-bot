@@ -52,7 +52,7 @@ import {
   parseModeStrict,
   shellSegments,
 } from "../permissions.js";
-import { personaPrompt, readPersona } from "../persona.js";
+import { identityPrompt, personaPrompt, readPersona } from "../persona.js";
 import { windowsShellPrompt } from "../posix-shell.js";
 import {
   AgentMode,
@@ -274,6 +274,7 @@ export class BotSession {
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
 
         return [
+          identityPrompt(),
           ...(persona == null ? [] : [persona]),
           ...base,
           ...(mcp == null ? [] : [mcp]),

@@ -88,7 +88,7 @@ import {
   parseModeStrict,
   shellSegments,
 } from "./permissions.js";
-import { personaPrompt, readPersona } from "./persona.js";
+import { identityPrompt, personaPrompt, readPersona } from "./persona.js";
 import { windowsShellPrompt } from "./posix-shell.js";
 import {
   AgentMode,
@@ -758,7 +758,7 @@ export class AbacusBotSession {
       // start: this hook runs on each reload, and `base` is the array above,
       // so the user's own instructions stay last.
       appendSystemPromptOverride: (base: string[]): string[] => {
-        // The bot's identity comes first: who the agent is before what it knows.
+        // Who the agent is comes first, then a bot's own persona, then what it knows.
         const persona = personaPrompt();
         const instructions = customInstructionsPrompt();
         const remember = rememberPrompt();
@@ -768,6 +768,7 @@ export class AbacusBotSession {
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
 
         return [
+          identityPrompt(),
           ...(persona == null ? [] : [persona]),
           ...base,
           ...(mcp == null ? [] : [mcp]),
