@@ -7,6 +7,7 @@ export {
   BUSYBOX_VERSION,
   installPosixShell,
   posixShell,
+  posixShellEnv,
   posixShellOperations,
   windowsShellPrompt,
 } from "./posix-shell.js";

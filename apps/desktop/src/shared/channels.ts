@@ -104,6 +104,8 @@ export enum IpcChannels {
   SetToolsetEnabled = "agent:set-toolset-enabled",
   GetExecBackendState = "agent:get-exec-backend-state",
   SetExecBackend = "agent:set-exec-backend",
+  GetTerminalShellState = "agent:get-terminal-shell-state",
+  SetTerminalShell = "agent:set-terminal-shell",
   RespondConnector = "agent:respond-connector",
   ListConnectorRequests = "agent:list-connector-requests",
   ListBrowserPermissionRequests = "agent:list-browser-permission-requests",

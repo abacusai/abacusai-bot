@@ -1431,6 +1431,32 @@
     "uploadFromFolder": "Da cartella…",
     "uploadTitle": "Importa una skill dal tuo computer"
   },
+  "terminalShells": {
+    "busybox": {
+      "description": "The POSIX shell bundled with the app (busybox ash) — the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "label": "BusyBox sh"
+    },
+    "cmd": {
+      "description": "The Windows command prompt.",
+      "label": "Command Prompt"
+    },
+    "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
+    "inUse": "In use",
+    "notInstalled": "Not found on this machine.",
+    "powershell": {
+      "description": "Windows PowerShell, the one that ships with Windows.",
+      "label": "Windows PowerShell"
+    },
+    "pwsh": {
+      "description": "PowerShell 7 or later, installed separately.",
+      "label": "PowerShell"
+    },
+    "system": {
+      "description": "Whatever this machine calls its default shell.",
+      "label": "Default shell"
+    },
+    "title": "Terminal shell"
+  },
   "theme": {
     "dark": "Scuro",
     "light": "Chiaro",
@@ -1918,6 +1944,7 @@
       "closeTab": "Close terminal tab",
       "hide": "Nascondi terminale",
       "newTab": "New terminal",
+      "pickShell": "Open a different shell",
       "tabs": "Terminal tabs"
     },
     "terminalRequiresWorkspace": "Seleziona uno spazio di lavoro per usare il terminale",

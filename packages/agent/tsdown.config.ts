@@ -27,6 +27,10 @@ export default defineConfig({
     // Same reason: the desktop's picker reads pi's model catalog
     // (`@abacus-ai/agent/model-catalog`) from Electron's main process.
     "src/model-catalog.ts",
+    // And the same again: the terminal panel offers the bundled busybox as a
+    // shell, so main installs it through
+    // `@abacus-ai/agent/posix-shell-install`. That module imports no pi.
+    "src/posix-shell-install.ts",
     // And whether this platform has a kernel sandbox, for the Settings page.
     "src/sandbox-support.ts",
   ],

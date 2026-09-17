@@ -25,7 +25,10 @@ void test("dependency changes are always foundation releases", () => {
   assert.equal(classify(["pnpm-lock.yaml"]), "foundation");
   assert.equal(classify(["pnpm-workspace.yaml"]), "foundation");
   assert.equal(
-    classify(["patches/zigpty@0.2.1.patch", "apps/desktop/src/renderer/x.ts"]),
+    classify([
+      "patches/ghostty-web@0.4.0.patch",
+      "apps/desktop/src/renderer/x.ts",
+    ]),
     "foundation"
   );
 });
