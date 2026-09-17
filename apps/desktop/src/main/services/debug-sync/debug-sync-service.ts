@@ -124,6 +124,20 @@ export class DebugSyncService {
     return `${abacusRoutellmV1()}/abacusaibot_debug_sync`;
   }
 
+  /**
+   * Upload whatever is pending for the session now, and wait for it: a
+   * rating is keyed on the synced transcript, so it must land first. A
+   * debounced upload still pending is folded in.
+   */
+  async flush(sessionId: string): Promise<void> {
+    const pending = this.timers.get(sessionId);
+    if (pending != null) {
+      clearTimeout(pending);
+      this.timers.delete(sessionId);
+    }
+    await this.run(sessionId);
+  }
+
   private async run(sessionId: string): Promise<void> {
     if (this.inFlight.has(sessionId)) {
       // A newer turn arrived mid-upload; re-arm.

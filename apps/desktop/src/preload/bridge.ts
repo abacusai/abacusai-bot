@@ -55,6 +55,8 @@ import type {
   BrowserPermissionRequest,
   RespondBrowserPermissionRequest,
   TranscriptSegment,
+  TurnFeedbackInput,
+  TurnFeedbackOutcome,
   MemorySnapshot,
   MemoryTargetId,
   BotMemoryView,
@@ -206,6 +208,11 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
         IpcChannels.GetAbacusAccount,
         refresh
       ) as Promise<AbacusAccountInfo | null>,
+    submitTurnFeedback: (feedback: TurnFeedbackInput) =>
+      ipcRenderer.invoke(
+        IpcChannels.SubmitTurnFeedback,
+        feedback
+      ) as Promise<TurnFeedbackOutcome>,
     getSettings: () =>
       ipcRenderer.invoke(IpcChannels.GetSettings) as Promise<AbacusBotSettings>,
     listPromptHistory: (scope: string) =>

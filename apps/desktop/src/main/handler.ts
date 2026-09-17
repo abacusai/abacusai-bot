@@ -24,6 +24,7 @@ import type {
   RespondBrowserPermissionRequest,
   RespondConnectorRequest,
   TranscriptSegment,
+  TurnFeedbackInput,
   MemoryTargetId,
   ForgetMemoryRequest,
   CaptureDeviceScreenshotRequest,
@@ -1201,6 +1202,13 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     IpcChannels.WriteTranscript,
     (_event, sessionId: string, segments: TranscriptSegment[]) => {
       return serviceHost.writeTranscript(sessionId, segments);
+    }
+  );
+
+  ipcMain.handle(
+    IpcChannels.SubmitTurnFeedback,
+    (_event, feedback: TurnFeedbackInput) => {
+      return serviceHost.submitTurnFeedback(feedback);
     }
   );
 

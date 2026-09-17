@@ -175,6 +175,7 @@ const AgentTurnContent = ({
   onRetry,
   onSwitchModel,
   onPickModel,
+  onRateTurn,
   creditsTotal = 0,
   onOpenSubtask,
   statusLabel,
@@ -187,6 +188,12 @@ const AgentTurnContent = ({
   onSwitchModel?: () => void;
   /** Pick a named model straight from a card, no picker hop. */
   onPickModel?: (modelId: string) => void;
+  /** Thumbs on a turn, by the rated segment's transcript index. */
+  onRateTurn?: (
+    messageIndex: number,
+    rating: "up" | "down" | "clear",
+    comment?: string
+  ) => Promise<boolean>;
   creditsTotal?: number;
   onOpenSubtask?: (subtaskId: string) => void;
   statusLabel?: string | null;
@@ -299,6 +306,12 @@ const AgentTurnContent = ({
               content={item.content}
               credits={item.credits}
               creditsTotal={creditsTotal}
+              onRate={
+                onRateTurn == null
+                  ? undefined
+                  : (rating, comment) =>
+                      onRateTurn(item.messageIndex, rating, comment)
+              }
             />
           );
         }
@@ -501,6 +514,7 @@ export const ChatMessageList = ({
   onRetry,
   onSwitchModel,
   onPickModel,
+  onRateTurn,
   creditsTotal = 0,
   onOpenSubtask,
   statusLabel,
@@ -513,6 +527,11 @@ export const ChatMessageList = ({
   onRetry?: () => void;
   onSwitchModel?: () => void;
   onPickModel?: (modelId: string) => void;
+  onRateTurn?: (
+    messageIndex: number,
+    rating: "up" | "down" | "clear",
+    comment?: string
+  ) => Promise<boolean>;
   creditsTotal?: number;
   onOpenSubtask?: (subtaskId: string) => void;
   statusLabel?: string | null;
@@ -561,6 +580,7 @@ export const ChatMessageList = ({
               onRetry={onRetry}
               onSwitchModel={onSwitchModel}
               onPickModel={onPickModel}
+              onRateTurn={onRateTurn}
               creditsTotal={creditsTotal}
               onOpenSubtask={onOpenSubtask}
               statusLabel={isCurrentTurn ? statusLabel : undefined}
