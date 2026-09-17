@@ -46,6 +46,9 @@ export interface ToolResult {
 export interface NotificationAction {
   type: string;
   link?: string;
+  /** `switch-model` with a target: the card offers this model by name. */
+  model?: string;
+  label?: string;
 }
 
 export interface StreamingNestedToolCall {
@@ -192,7 +195,7 @@ export type AgentEvent =
          */
         detail?: string;
         /** `upgrade-abacus` renders the upgrade card instead of the error. */
-        actions?: Array<{ type: string; link?: string }>;
+        actions?: NotificationAction[];
       };
     }
   | {

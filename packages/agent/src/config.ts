@@ -15,7 +15,7 @@ export interface CustomProviderModel {
   maxTokens?: number;
 }
 
-/** An OpenAI-compatible endpoint: llama.cpp, vLLM, Ollama, LiteLLM, an OSS router. */
+/** An OpenAI-compatible endpoint: llama.cpp, vLLM, LiteLLM, an OSS router. */
 export interface CustomProviderConfig {
   id: string;
   name?: string;

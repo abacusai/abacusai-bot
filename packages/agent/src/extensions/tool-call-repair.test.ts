@@ -2,7 +2,7 @@ import { fakePi, type FakeTool } from "@abacus-ai/test-support/fake-pi";
 /**
  * Recovering a tool call the model wrote as text.
  *
- * The reproducer: qwen2.5-coder over Ollama answers "hi" with a ```json fence
+ * The reproducer: a small local qwen2.5-coder answers "hi" with a ```json fence
  * holding `{"name": "delegate_task", "arguments": {...}}` and never makes a
  * native call. The nudge in output-repair asks it to re-issue the call, the
  * model writes the same text again, and after the budget runs out the user is

@@ -1717,6 +1717,7 @@
       "reviews": "{{approved}} genehmigt · {{changes}} Änderungen angefordert · {{requested}} ausstehend"
     },
     "premiumUpgrade": {
+      "continueOn": "Continue on {{model}} (free)",
       "cta": "Upgrade",
       "exhaustedNote": "Upgrade to get premium models and more premium features",
       "exhaustedTitle": "You've used up your free credits",

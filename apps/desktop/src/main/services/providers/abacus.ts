@@ -31,7 +31,12 @@ interface AbacusModel {
   agentic?: boolean;
   code_agent?: boolean;
   thinking?: boolean;
+  /** Priced $0/$0 by the platform: bills nothing, and keeps serving once the balance is gone. */
+  free?: boolean;
 }
+
+/** What a $0 model's row says; the platform decides which rows those are. */
+const FREE_MODEL_NOTE = "Free — doesn't use credits";
 
 let cache: ModelAvailability[] | null = null;
 
@@ -220,9 +225,12 @@ export const fetchAbacusModels = async (): Promise<ModelAvailability[]> => {
         : (model.display_name ?? model.name ?? model.id),
       provider: "abacus",
       tier: tierFor(model, model.id === defaultId, freeTierAccount),
-      note: freeTierAccount
-        ? "Included with your Abacus.AI free plan"
-        : noteFor(model),
+      note:
+        model.free === true
+          ? FREE_MODEL_NOTE
+          : freeTierAccount
+            ? "Included with your Abacus.AI free plan"
+            : noteFor(model),
       requiresEnv: ENV_VAR,
       configured: hasCredential(ENV_VAR),
     }));
