@@ -8,6 +8,8 @@
  */
 import {
   createAgentSession,
+  createBashToolDefinition,
+  createLocalBashOperations,
   DefaultResourceLoader,
   type AgentSession,
   type AgentSessionEvent,
@@ -17,6 +19,8 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { backendOperations } from "../backends.js";
+import { withBackgroundOption } from "../background-bash.js";
 import {
   browserTaskEnabled,
   buildBrowserTaskTool,
@@ -28,6 +32,7 @@ import {
   loadConfig,
   PROVIDER_API_KEY_ENV,
 } from "../config.js";
+import { setCurrentMode } from "../current-mode.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import budgets from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
@@ -147,6 +152,23 @@ function approvalTimeoutMs(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : 15 * 60_000;
 }
 
+/**
+ * The bot's `bash`, over the same operations as the coding session's: the
+ * bundled shell on Windows and the sandbox elsewhere. A custom tool of this
+ * name replaces pi's built-in, whose own shell lookup finds nothing on a
+ * Windows machine without Git Bash.
+ */
+export function botBashTool(
+  cwd: string,
+  operations = backendOperations() ?? createLocalBashOperations()
+): ReturnType<typeof createBashToolDefinition> {
+  return withBackgroundOption(
+    createBashToolDefinition(cwd, { operations }) as never,
+    cwd,
+    operations
+  );
+}
+
 export class BotSession {
   /** Steers handed to pi that have not reached the model yet, oldest first. */
   private readonly pendingSteers: string[] = [];
@@ -228,6 +250,9 @@ export class BotSession {
 
     this.home = dir;
     this.mode = parseMode(options.mode);
+    // The sandbox reads the mode from here: a bot in YOLO runs unconfined,
+    // as a chat in YOLO does.
+    setCurrentMode(this.mode);
   }
 
   async start(): Promise<void> {
@@ -368,6 +393,7 @@ export class BotSession {
     const customTools = [
       buildBotMemoryTool(this.home),
       buildBotTimeTool(),
+      botBashTool(this.options.cwd),
       ...browserTaskTools,
       ...mcpTools,
     ];
@@ -1422,6 +1448,7 @@ export class BotSession {
 
         case "allowYolo":
           this.mode = AgentMode.Yolo;
+          setCurrentMode(this.mode);
           this.emitAgentEvent({
             type: "mode_changed",
             mode: this.mode,
