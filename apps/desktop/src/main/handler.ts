@@ -78,6 +78,7 @@ import type {
 } from "#shared/messaging";
 import type { RoutineCreateInput, RoutineUpdateInput } from "#shared/routines";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
+import type { TerminalShellId } from "#shared/terminal-shells";
 
 import { sessionDefaultWorkspace } from "./paths";
 import {
@@ -222,8 +223,8 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     if (activateProfile(profileKey, key, aliases)) {
       // This process still owns the departing profile; leave the new key only
       // in its target profile and relaunch there. `quit`, not `exit`: the
-      // before-quit handler disposes the terminal PTYs, and a live zigpty
-      // reader thread aborts the process if Node's env is torn down under it.
+      // before-quit handler disposes the terminal PTYs, and a live pty reader
+      // thread aborts the process if Node's env is torn down under it.
       saveApiKey("abacus", "");
       clearLocalAccount();
       credentialsChanged("abacus", "");
@@ -1097,6 +1098,17 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(IpcChannels.GetExecBackendState, () => {
     return serviceHost.getExecBackendState();
   });
+
+  ipcMain.handle(IpcChannels.GetTerminalShellState, () => {
+    return serviceHost.getTerminalShellState();
+  });
+
+  ipcMain.handle(
+    IpcChannels.SetTerminalShell,
+    (_event, shell: TerminalShellId) => {
+      return serviceHost.setTerminalShell(shell);
+    }
+  );
 
   ipcMain.handle(IpcChannels.SetExecBackend, (_event, backend: BackendId) => {
     return serviceHost.setExecBackend(backend);

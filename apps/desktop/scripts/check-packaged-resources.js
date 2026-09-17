@@ -44,6 +44,15 @@ const REQUIRED = [
   // The Windows sandbox runner (packages/agent/src/sandbox/mxc.ts); without it
   // every confined command is refused on a Windows 11 24H2 machine.
   ...(process.platform === "win32" ? ["agent/vendor/mxc/wxc-exec.exe"] : []),
+  // The terminal's ConPTY, which node-pty's addon opens by a path relative to
+  // itself. Inside the asar it is a header entry rather than a file, and the
+  // terminal fails to start with no clue as to why — so it is asserted where
+  // the unpacking puts it.
+  ...(process.platform === "win32"
+    ? [
+        `app.asar.unpacked/node_modules/@lydell/node-pty-win32-${process.arch}/prebuilds/win32-${process.arch}/conpty/conpty.dll`,
+      ]
+    : []),
   "vendor/scrcpy-server.jar",
   "skills",
 ];

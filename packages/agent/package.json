@@ -17,6 +17,10 @@
       "types": "./dist/custom-instructions.d.ts",
       "default": "./dist/custom-instructions.js"
     },
+    "./posix-shell-install": {
+      "types": "./dist/posix-shell-install.d.ts",
+      "default": "./dist/posix-shell-install.js"
+    },
     "./model-catalog": {
       "types": "./dist/model-catalog.d.ts",
       "default": "./dist/model-catalog.js"

@@ -12,7 +12,12 @@
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import * as path from "node:path";
 
+import { mergePath } from "../merge-path.js";
 import { posixShell } from "../posix-shell.js";
+
+// Re-exported where it has always been imported from; it lives in its own
+// module now because an entry point that must not reach pi needs it too.
+export { mergePath };
 
 /**
  * The interpreter every confined command runs under. Shared so the sandbox
@@ -310,24 +315,6 @@ export function loginEnvironment(): NodeJS.ProcessEnv {
  * Neither half can simply win: pi prepends its own bin directory, and the rest
  * of pi's PATH is the launchd one that cannot find the user's toolchain.
  */
-export function mergePath(
-  front: string | undefined,
-  back: string | undefined,
-  // ";" on Windows, where splitting on ":" would cut every `C:\` entry in half.
-  delimiter: string = path.delimiter
-): string | undefined {
-  const entries = [
-    ...(front ?? "").split(delimiter),
-    ...(back ?? "").split(delimiter),
-  ].filter((entry) => entry.length > 0);
-  const seen = new Set<string>();
-  const merged = entries.filter((entry) =>
-    seen.has(entry) ? false : seen.add(entry) !== undefined
-  );
-
-  return merged.length > 0 ? merged.join(delimiter) : undefined;
-}
-
 /** Forget the cached environment. Tests only; the profile does not change. */
 export function resetLoginEnvironment(): void {
   resolved = undefined;

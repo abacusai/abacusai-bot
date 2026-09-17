@@ -89,7 +89,10 @@ extraResources:
 # missing on disk — the "ENOENT ... app.asar.unpacked" main-process crash.
 asarUnpack:
   - "**/*.node"
-  - "**/node_modules/zigpty/**"
+  # node-pty's Windows addon opens conpty.dll and OpenConsole.exe by a path
+  # relative to itself, and reads its conout through a worker script; all three
+  # have to be real files on disk.
+  - "**/node_modules/@lydell/**"
   # @ff-labs/fff-node loads a Rust dylib through ffi-rs (dlopen), so both must be
   # real files. See main/services/workspace/file-search-service.ts
   - "**/node_modules/ffi-rs/**"

@@ -161,6 +161,10 @@ import type {
   RoutineUpdateInput,
 } from "#shared/routines";
 import type { AbacusBotSettings } from "#shared/settings";
+import type {
+  TerminalShellId,
+  TerminalShellState,
+} from "#shared/terminal-shells";
 
 export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
   return {
@@ -774,6 +778,15 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
         IpcChannels.SetExecBackend,
         backend
       ) as Promise<ExecBackendState>,
+    getTerminalShellState: () =>
+      ipcRenderer.invoke(
+        IpcChannels.GetTerminalShellState
+      ) as Promise<TerminalShellState>,
+    setTerminalShell: (shell: TerminalShellId) =>
+      ipcRenderer.invoke(
+        IpcChannels.SetTerminalShell,
+        shell
+      ) as Promise<TerminalShellState>,
     respondConnector: (request: RespondConnectorRequest) =>
       ipcRenderer.invoke(
         IpcChannels.RespondConnector,

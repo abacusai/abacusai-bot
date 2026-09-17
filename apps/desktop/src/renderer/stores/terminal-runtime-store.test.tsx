@@ -27,13 +27,16 @@ describe("terminal runtime renderer state", () => {
       terminalRuntimeActions.setOpen(first, true);
       terminalRuntimeActions.setGeneration(first, 3);
     });
+    // The id is minted per terminal and never reused, so the tab is read
+    // rather than named.
+    const firstTabId = result.current.tabs[0]?.id;
     expect(result.current).toMatchObject({
       isOpen: true,
       generation: 3,
-      activeTabId: "terminal-1",
+      activeTabId: firstTabId,
     });
     expect(result.current.tabs).toEqual([
-      { id: "terminal-1", label: "Terminal 1", generation: 3 },
+      { id: firstTabId, label: "Terminal 1", generation: 3 },
     ]);
 
     rerender({ scope: second });
@@ -58,7 +61,7 @@ describe("terminal runtime renderer state", () => {
     expect(terminalRuntimeStore.get().scopes[session]).toMatchObject({
       isOpen: true,
       generation: null,
-      activeTabId: "terminal-1",
+      activeTabId: terminalRuntimeStore.get().scopes[session]?.tabs[0]?.id,
     });
     expect(terminalRuntimeStore.get().scopes[draft]).toBeUndefined();
   });
@@ -99,10 +102,57 @@ describe("terminal runtime renderer state", () => {
     });
     expect(terminalRuntimeStore.get().scopes[scope]?.tabs).toHaveLength(2);
 
+    const firstTab = terminalRuntimeStore.get().scopes[scope]?.tabs[0]?.id;
     act(() => terminalRuntimeActions.closeTab(scope, second));
     expect(terminalRuntimeStore.get().scopes[scope]).toMatchObject({
-      activeTabId: "terminal-1",
+      activeTabId: firstTab,
       generation: 1,
     });
+  });
+
+  it("carries a picked shell on its own tab and leaves the rest to main", () => {
+    const scope = sessionConversationKey("workspace", "session");
+    let picked = "";
+    act(() => {
+      terminalRuntimeActions.setOpen(scope, true);
+      picked = terminalRuntimeActions.addTab(scope, {
+        shell: "busybox",
+        label: "BusyBox sh",
+      });
+    });
+
+    const tabs = terminalRuntimeStore.get().scopes[scope]?.tabs ?? [];
+
+    // The default tab asks for nothing: main opens whatever is stored.
+    expect(tabs[0]?.shell).toBeUndefined();
+    expect(tabs[1]).toMatchObject({
+      id: picked,
+      label: "BusyBox sh",
+      shell: "busybox",
+    });
+
+    // What was actually spawned is written back, so a restart asks again for
+    // the same shell rather than the current preference.
+    act(() =>
+      terminalRuntimeActions.setTabShell(scope, tabs[0]!.id, "powershell")
+    );
+    expect(terminalRuntimeStore.get().scopes[scope]?.tabs[0]?.shell).toBe(
+      "powershell"
+    );
+  });
+
+  it("never opens a new terminal under an id it has used before", () => {
+    const scope = sessionConversationKey("workspace", "session");
+    act(() => terminalRuntimeActions.setOpen(scope, true));
+    const first = terminalRuntimeStore.get().scopes[scope]?.tabs[0]?.id;
+
+    act(() => terminalRuntimeActions.closeTab(scope, first!));
+    act(() => terminalRuntimeActions.setOpen(scope, true));
+    const second = terminalRuntimeStore.get().scopes[scope]?.tabs[0]?.id;
+
+    // Main keys a PTY by conversation and terminal id, and gives a terminal
+    // the scrollback of whatever is running under its id. Reusing one showed
+    // the closed terminal's output in the new one.
+    expect(second).not.toBe(first);
   });
 });

@@ -21,6 +21,13 @@ export interface AbacusBotSettings {
   /** Image used by the Docker backend. Absent means a small Debian base. */
   execDockerImage?: string;
   /**
+   * Shell the terminal panel opens, by the ids in `shared/terminal-shells.ts`.
+   * Absent means the platform default. Written whenever a shell is picked from
+   * the panel's `+` menu, so an automatically opened terminal reopens the last
+   * one used.
+   */
+  terminalShell?: string;
+  /**
    * What a session, bot or routine starts in when nothing picks a mode:
    * "YOLO" (Full access, absent means this) or "AUTO" (the same, inside the
    * kernel sandbox). Set on the Profile page.

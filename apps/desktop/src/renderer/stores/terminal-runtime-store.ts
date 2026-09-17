@@ -6,11 +6,18 @@ import type {
   SessionConversationKey,
 } from "#shared/conversation-scope";
 import { conversationBelongsToWorkspace } from "#shared/conversation-scope";
+import type { TerminalShellId } from "#shared/terminal-shells";
 
 export type TerminalRuntimeTab = {
   id: string;
   label: string;
   generation: number | null;
+  /**
+   * The shell this tab runs. Absent until one has been spawned, which is what
+   * a tab opened without a pick means: main resolves the stored preference,
+   * and the answer comes back on the start result.
+   */
+  shell?: TerminalShellId;
 };
 
 export type TerminalRuntimeScopeState = {
@@ -25,12 +32,6 @@ type TerminalRuntimeState = {
   scopes: Readonly<Record<string, TerminalRuntimeScopeState>>;
 };
 
-const DEFAULT_TAB: TerminalRuntimeTab = Object.freeze({
-  id: "terminal-1",
-  label: "Terminal 1",
-  generation: null,
-});
-
 const EMPTY_SCOPE: TerminalRuntimeScopeState = Object.freeze({
   isOpen: false,
   generation: null,
@@ -42,34 +43,60 @@ export const terminalRuntimeStore = createStore<TerminalRuntimeState>({
   scopes: {},
 });
 
+let nextTerminalId = 1;
+
+/**
+ * Ids are never reused, including the first tab's.
+ *
+ * Main keys a PTY by conversation and terminal id, and hands a new terminal
+ * the scrollback of whatever is already running under that id. While the
+ * first tab was always `terminal-1`, closing every tab and opening the panel
+ * again produced that id a second time — so the "new" terminal came up
+ * attached to the old shell, showing everything the last one had printed.
+ */
+const createTerminalId = (): string => {
+  nextTerminalId += 1;
+
+  return `terminal-${Date.now().toString(36)}-${nextTerminalId.toString(36)}`;
+};
+
 const withDefaultTab = (
   current: TerminalRuntimeScopeState
-): TerminalRuntimeScopeState =>
-  current.tabs.length > 0
-    ? current
-    : {
-        ...current,
-        tabs: [DEFAULT_TAB],
-        activeTabId: DEFAULT_TAB.id,
-        generation: DEFAULT_TAB.generation,
-      };
+): TerminalRuntimeScopeState => {
+  if (current.tabs.length > 0) return current;
+  const tab: TerminalRuntimeTab = {
+    id: createTerminalId(),
+    label: "Terminal 1",
+    generation: null,
+  };
 
+  return {
+    ...current,
+    tabs: [tab],
+    activeTabId: tab.id,
+    generation: tab.generation,
+  };
+};
+
+/**
+ * An update that changes nothing writes nothing. Every component that reads a
+ * scope re-renders on a store write, and the workspace view rebuilds the
+ * conversation object it hands the panel on each render — so a write of an
+ * identical value from inside an effect that reads it is an endless loop of
+ * renders, PTY attaches and scrollback replays. Returning `current` unchanged
+ * is how an action says "nothing happened".
+ */
 const updateScope = (
   scope: ConversationKey,
   update: (current: TerminalRuntimeScopeState) => TerminalRuntimeScopeState
 ): void => {
-  terminalRuntimeStore.setState((state) => ({
-    scopes: {
-      ...state.scopes,
-      [scope]: update(state.scopes[scope] ?? EMPTY_SCOPE),
-    },
-  }));
-};
+  terminalRuntimeStore.setState((state) => {
+    const current = state.scopes[scope] ?? EMPTY_SCOPE;
+    const next = update(current);
+    if (next === current) return state;
 
-let nextTerminalId = 1;
-const createTerminalId = (): string => {
-  nextTerminalId += 1;
-  return `terminal-${Date.now().toString(36)}-${nextTerminalId.toString(36)}`;
+    return { scopes: { ...state.scopes, [scope]: next } };
+  });
 };
 
 export const terminalRuntimeActions = {
@@ -79,14 +106,23 @@ export const terminalRuntimeActions = {
       isOpen,
     })),
 
-  addTab: (scope: ConversationKey): string => {
+  /**
+   * `options.shell` is a deliberate pick from the `+` menu; without one the
+   * tab opens whatever main has stored, so the panel opening a terminal by
+   * itself never has to ask.
+   */
+  addTab: (
+    scope: ConversationKey,
+    options: { shell?: TerminalShellId; label?: string } = {}
+  ): string => {
     const id = createTerminalId();
     updateScope(scope, (value) => {
       const current = withDefaultTab(value);
       const tab: TerminalRuntimeTab = {
         id,
-        label: `Terminal ${current.tabs.length + 1}`,
+        label: options.label ?? `Terminal ${current.tabs.length + 1}`,
         generation: null,
+        shell: options.shell,
       };
       return {
         ...current,
@@ -98,6 +134,24 @@ export const terminalRuntimeActions = {
     });
     return id;
   },
+
+  /** What a start actually spawned, so a reopened tab asks for the same shell. */
+  setTabShell: (
+    scope: ConversationKey,
+    terminalId: string,
+    shell: TerminalShellId | undefined
+  ): void =>
+    updateScope(scope, (value) => {
+      const tab = value.tabs.find(({ id }) => id === terminalId);
+      if (tab == null || tab.shell === shell) return value;
+
+      return {
+        ...value,
+        tabs: value.tabs.map((entry) =>
+          entry.id === terminalId ? { ...entry, shell } : entry
+        ),
+      };
+    }),
 
   selectTab: (scope: ConversationKey, terminalId: string): void =>
     updateScope(scope, (value) => {
@@ -143,16 +197,24 @@ export const terminalRuntimeActions = {
   ): void =>
     updateScope(scope, (value) => {
       const current = withDefaultTab(value);
-      const id = terminalId ?? current.activeTabId ?? DEFAULT_TAB.id;
-      const tabs = current.tabs.map((tab) =>
-        tab.id === id ? { ...tab, generation } : tab
+      const id = terminalId ?? current.activeTabId ?? current.tabs[0]?.id;
+      if (id == null) return value;
+      const tab = current.tabs.find((entry) => entry.id === id);
+      const active =
+        current.activeTabId === id ? generation : current.generation;
+      // Same generation on the same tab: the caller is re-reporting what the
+      // store already holds, and a new object here would re-render everything
+      // that reads it.
+      if (
+        current === value &&
+        tab?.generation === generation &&
+        current.generation === active
+      )
+        return value;
+      const tabs = current.tabs.map((entry) =>
+        entry.id === id ? { ...entry, generation } : entry
       );
-      return {
-        ...current,
-        tabs,
-        generation:
-          current.activeTabId === id ? generation : current.generation,
-      };
+      return { ...current, tabs, generation: active };
     }),
 
   promoteDraft: (

@@ -1,60 +1,45 @@
 import {
-  FitAddon,
-  init as initGhostty,
-  Terminal as GhosttyTerminal,
-  UrlRegexProvider,
-  OSC8LinkProvider,
-  type ILinkProvider,
-  type ILink,
-} from "ghostty-web";
-import { Minus, Plus, SquareTerminal, X } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type JSX,
-  type RefObject,
-} from "react";
+  Check,
+  ChevronDown,
+  Minus,
+  Plus,
+  SquareTerminal,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
   ConversationKey,
   ConversationRef,
 } from "#shared/conversation-scope";
+import {
+  terminalShellLabelKey,
+  type TerminalShellId,
+} from "#shared/terminal-shells";
 
 import {
+  useSetTerminalShell,
+  useTerminalShellState,
+} from "../../hooks/use-terminal-shells";
+import {
   terminalRuntimeActions,
+  terminalRuntimeStore,
   useTerminalRuntimeScope,
 } from "../../stores/terminal-runtime-store";
-import { openUrlInPreview } from "../../utils/preview-utils";
+import {
+  acquireTerminalView,
+  closeTerminalView,
+} from "../../terminals/terminal-views";
 import { Button } from "../ui";
+import { ButtonGroup } from "../ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-
-const createPreviewLinkProvider = (inner: ILinkProvider): ILinkProvider => ({
-  provideLinks(
-    y: number,
-    callback: (links: ILink[] | undefined) => void
-  ): void {
-    inner.provideLinks(y, (links) => {
-      if (links == null) {
-        callback(undefined);
-        return;
-      }
-      callback(
-        links.map((link) => ({
-          ...link,
-          activate: () => {
-            openUrlInPreview(link.text);
-          },
-        }))
-      );
-    });
-  },
-  dispose(): void {
-    inner.dispose?.();
-  },
-});
 
 type TerminalPanelProps = {
   conversation: ConversationRef | null;
@@ -67,354 +52,74 @@ type TerminalPanelProps = {
 type TerminalInstanceProps = Omit<TerminalPanelProps, "onClose" | "visible"> & {
   terminalId: string;
   active: boolean;
+  /** Absent asks main for the stored preference; a picked shell names itself. */
+  shell?: TerminalShellId;
   onExited: (terminalId: string) => void;
-};
-
-let ghosttyInitialized = false;
-let ghosttyInitPromise: Promise<void> | null = null;
-
-const ensureGhostty = async (): Promise<void> => {
-  if (ghosttyInitialized) {
-    return;
-  }
-  if (ghosttyInitPromise != null) {
-    return ghosttyInitPromise;
-  }
-  ghosttyInitPromise = initGhostty()
-    .then(() => {
-      ghosttyInitialized = true;
-    })
-    .catch((error) => {
-      ghosttyInitPromise = null;
-      throw error;
-    });
-  return ghosttyInitPromise;
-};
-
-const useSizeObserver = (
-  nodeRef: RefObject<HTMLElement | null>,
-  onResize: () => void
-): void => {
-  useEffect(() => {
-    const node = nodeRef.current;
-    if (node == null) {
-      return;
-    }
-    const observer = new ResizeObserver(() => {
-      onResize();
-    });
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
-    };
-  }, [nodeRef, onResize]);
 };
 
 const TerminalInstance = ({
   conversation,
   conversationKey,
-  generation,
   terminalId,
   active,
+  shell,
   onExited,
 }: TerminalInstanceProps): JSX.Element => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<GhosttyTerminal>(null);
-  const fitAddonRef = useRef<FitAddon>(null);
-  const pendingResizeRef = useRef<number>(null);
-  const conversationKeyRef = useRef<ConversationKey | null>(conversationKey);
-  const generationRef = useRef<number | null>(generation);
-
-  // Bumped whenever the PTY dies, so the next reopen rebuilds the
-  // GhosttyTerminal instead of typing into a dead buffer.
-  const [ptyGeneration, setPtyGeneration] = useState(0);
-  const [isTerminalReady, setIsTerminalReady] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
+  // The workspace view builds a fresh conversation object on every render, so
+  // it is read through a ref rather than depended on: the key says the same
+  // thing and is a string.
+  const conversationRef = useRef<ConversationRef | null>(conversation);
+  const shellRef = useRef<TerminalShellId | undefined>(shell);
 
   useEffect(() => {
-    conversationKeyRef.current = conversationKey;
-    generationRef.current = generation;
-  }, [conversationKey, generation]);
+    conversationRef.current = conversation;
+    shellRef.current = shell;
+  }, [conversation, shell]);
 
+  // Mount the tab's terminal. It was built the first time this ran and it
+  // outlives every render after that, PTY and scrollback included.
   useEffect(() => {
-    let disposed = false;
+    const host = hostRef.current;
+    const conversationValue = conversationRef.current;
+    if (host == null || conversationKey == null || conversationValue == null) {
+      return;
+    }
 
-    const initialize = async (): Promise<void> => {
-      const hostNode = containerRef.current;
-      if (hostNode == null || terminalRef.current != null) {
-        return;
-      }
-      try {
-        await ensureGhostty();
-      } catch {
-        if (!disposed) {
-          setIsTerminalReady(false);
-        }
-        return;
-      }
-      if (disposed || !hostNode.isConnected) {
-        return;
-      }
-
-      const term = new GhosttyTerminal({
-        fontSize: 13,
-        fontFamily: "'JetBrains Mono', monospace",
-        cursorBlink: true,
-        cursorStyle: "block",
-        scrollback: 3000,
-        convertEol: true,
-        theme: {
-          background: "#1e1e1e",
-          foreground: "#d4d4d4",
-          cursor: "#d4d4d4",
-          cursorAccent: "#1e1e1e",
-          selectionBackground: "rgba(124, 58, 237, 0.4)",
-          selectionForeground: "#d4d4d4",
-          black: "#000000",
-          red: "#ff6b6b",
-          green: "#51cf66",
-          yellow: "#ffd93d",
-          blue: "#6c9aff",
-          magenta: "#c77dff",
-          cyan: "#25d9f5",
-          white: "#d4d4d4",
-          brightBlack: "#666666",
-          brightRed: "#ff8787",
-          brightGreen: "#69f0ae",
-          brightYellow: "#ffe066",
-          brightBlue: "#8fb3ff",
-          brightMagenta: "#da99ff",
-          brightCyan: "#5ce0e8",
-          brightWhite: "#ffffff",
-        },
-      });
-      const fitAddon = new FitAddon();
-      term.loadAddon(fitAddon);
-
-      try {
-        term.open(hostNode);
-      } catch {
-        term.dispose();
-        if (!disposed) {
-          setIsTerminalReady(false);
-        }
-        return;
-      }
-
-      term.registerLinkProvider(
-        createPreviewLinkProvider(new UrlRegexProvider(term))
-      );
-      term.registerLinkProvider(
-        createPreviewLinkProvider(new OSC8LinkProvider(term))
-      );
-
-      term.onData((data) => {
-        const currentConversationKey = conversationKeyRef.current;
-        const currentGeneration = generationRef.current;
-        if (currentConversationKey == null || currentGeneration == null) {
-          return;
-        }
-        void window.api.agent.writeTerminalInput({
-          terminalId,
-          conversationKey: currentConversationKey,
-          generation: currentGeneration,
-          data,
-        });
-      });
-
-      terminalRef.current = term;
-      fitAddonRef.current = fitAddon;
-      setIsTerminalReady(true);
-    };
-
-    void initialize();
+    const view = acquireTerminalView({
+      conversationKey,
+      conversation: conversationValue,
+      terminalId,
+      shell: shellRef.current,
+    });
+    host.replaceChildren(view.element);
+    const stopListening = view.onExit(() => onExited(terminalId));
 
     return () => {
-      disposed = true;
-      if (pendingResizeRef.current != null) {
-        window.clearTimeout(pendingResizeRef.current);
-        pendingResizeRef.current = null;
-      }
-      terminalRef.current?.dispose();
-      terminalRef.current = null;
-      fitAddonRef.current = null;
-      setIsTerminalReady(false);
+      stopListening();
+      view.setVisible(false);
+      view.element.remove();
     };
-    // ptyGeneration is deliberately a dep: a dead PTY needs a fresh terminal.
-  }, [conversationKey, ptyGeneration, terminalId]);
-
-  const syncSize = (): void => {
-    if (conversationKey == null || generation == null) {
-      return;
-    }
-    const terminal = terminalRef.current;
-    const fitAddon = fitAddonRef.current;
-    if (terminal == null || fitAddon == null) {
-      return;
-    }
-
-    const proposed = fitAddon.proposeDimensions();
-    if (proposed == null) {
-      return;
-    }
-
-    const { cols: nextCols, rows: nextRows } = proposed;
-    if (nextCols === terminal.cols && nextRows === terminal.rows) {
-      return;
-    }
-
-    terminal.resize(nextCols, nextRows);
-    void window.api.agent.resizeTerminalSession({
-      terminalId,
-      conversationKey,
-      generation,
-      cols: nextCols,
-      rows: nextRows,
-    });
-  };
-
-  useSizeObserver(containerRef, () => {
-    if (pendingResizeRef.current != null) {
-      window.clearTimeout(pendingResizeRef.current);
-    }
-    pendingResizeRef.current = window.setTimeout(() => {
-      pendingResizeRef.current = null;
-      syncSize();
-    }, 40);
-  });
-
-  // Spawn / attach the PTY whenever the panel is visible; after a PTY death
-  // main has no surviving session, so this spawns a new one.
-  useEffect(() => {
-    if (
-      !active ||
-      conversation == null ||
-      conversationKey == null ||
-      !isTerminalReady
-    ) {
-      return;
-    }
-    let cancelled = false;
-    const term = terminalRef.current;
-    const fitAddon = fitAddonRef.current;
-    if (term == null || fitAddon == null) {
-      return;
-    }
-
-    const start = async (): Promise<void> => {
-      fitAddon.fit();
-      const proposed = fitAddon.proposeDimensions();
-      if (proposed == null) {
-        return;
-      }
-      const { cols, rows } = proposed;
-      term.resize(cols, rows);
-      const result = await window.api.agent.startTerminalSession({
-        terminalId,
-        conversationKey,
-        conversation,
-        generation: generationRef.current,
-        cols,
-        rows,
-      });
-      if (!result.success) {
-        return;
-      }
-      if (cancelled || terminalRef.current !== term) {
-        return;
-      }
-      generationRef.current = result.state.generation;
-      terminalRuntimeActions.setGeneration(
-        conversationKey,
-        result.state.generation,
-        terminalId
-      );
-      term.clear();
-      if (result.initialOutput.length > 0) {
-        term.write(result.initialOutput);
-      }
-    };
-
-    void start();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    active,
-    conversation,
-    conversationKey,
-    isTerminalReady,
-    ptyGeneration,
-    terminalId,
-  ]);
-
-  useEffect(() => {
-    if (active || conversationKey == null) return;
-    const activeGeneration = generationRef.current;
-    if (activeGeneration == null) return;
-    void window.api.agent.hideTerminalSession({
-      terminalId,
-      conversationKey,
-      generation: activeGeneration,
-    });
-  }, [active, conversationKey, terminalId]);
+  }, [conversationKey, onExited, terminalId]);
 
   useEffect(() => {
     if (conversationKey == null) return;
-    return () => {
-      const activeGeneration = generationRef.current;
-      if (activeGeneration == null) return;
-      void window.api.agent.hideTerminalSession({
-        terminalId,
-        conversationKey,
-        generation: activeGeneration,
-      });
-    };
-  }, [conversationKey, terminalId]);
-
-  // PTY → terminal: write output, auto-collapse on exit, bump ptyGeneration.
-  useEffect(() => {
-    if (conversationKey == null) {
-      return;
-    }
-
-    const unsubscribe = window.api.agent.onEvent((event) => {
-      const term = terminalRef.current;
-      if (
-        event.type === "terminal-output" &&
-        event.terminalId === terminalId &&
-        event.conversationKey === conversationKey &&
-        event.generation === generationRef.current
-      ) {
-        term?.write(event.data);
-        return;
-      }
-      if (
-        event.type === "terminal-exited" &&
-        event.terminalId === terminalId &&
-        event.conversationKey === conversationKey &&
-        event.generation === generationRef.current
-      ) {
-        terminalRuntimeActions.setGeneration(conversationKey, null, terminalId);
-        setPtyGeneration((g) => g + 1);
-        onExited(terminalId);
-      }
+    const view = acquireTerminalView({
+      conversationKey,
+      conversation: conversationRef.current!,
+      terminalId,
+      shell: shellRef.current,
     });
-
-    return unsubscribe;
-  }, [conversationKey, onExited, terminalId]);
+    view.setVisible(active);
+  }, [active, conversationKey, terminalId]);
 
   return (
     <div
       data-terminal-instance={terminalId}
       data-terminal-id={terminalId}
+      ref={hostRef}
       className="relative h-full min-h-0 w-full overflow-hidden bg-[#1e1e1e]"
-    >
-      <div
-        ref={containerRef}
-        data-slot="terminal-host"
-        className="h-full w-full overflow-hidden bg-[#1e1e1e]"
-      />
-    </div>
+    />
   );
 };
 
@@ -427,6 +132,8 @@ export const TerminalPanel = ({
 }: TerminalPanelProps): JSX.Element => {
   const { t } = useTranslation();
   const runtime = useTerminalRuntimeScope(conversationKey);
+  const shellState = useTerminalShellState();
+  const rememberShell = useSetTerminalShell();
   const activeTab =
     runtime.tabs.find(({ id }) => id === runtime.activeTabId) ??
     runtime.tabs[0] ??
@@ -447,33 +154,55 @@ export const TerminalPanel = ({
     }
   }, [activeTab, conversationKey, generation]);
 
+  const shellLabel = useCallback(
+    (id: TerminalShellId): string =>
+      t(`terminalShells.${terminalShellLabelKey(id)}.label`, {
+        defaultValue: id,
+      }),
+    [t]
+  );
+
+  /**
+   * No argument is the `+` button: main opens whatever was stored, which is
+   * also what the panel's own automatic terminal gets. An id is a pick from
+   * the menu, and a pick is remembered.
+   */
+  const openTab = useCallback(
+    (shell?: TerminalShellId): void => {
+      if (conversationKey == null) return;
+      if (shell == null) {
+        terminalRuntimeActions.addTab(conversationKey);
+        return;
+      }
+      rememberShell(shell);
+      terminalRuntimeActions.addTab(conversationKey, {
+        shell,
+        label: shellLabel(shell),
+      });
+    },
+    [conversationKey, rememberShell, shellLabel]
+  );
+
   const closeTab = useCallback(
     (terminalId: string): void => {
       if (conversationKey == null) return;
-      const tab = runtime.tabs.find(({ id }) => id === terminalId);
-      if (tab?.generation != null) {
-        void window.api.agent.hideTerminalSession({
-          terminalId,
-          conversationKey,
-          generation: tab.generation,
-          close: true,
-        });
-      }
+      // The view owns the PTY, so closing it is what kills the shell.
+      closeTerminalView(conversationKey, terminalId);
       terminalRuntimeActions.closeTab(conversationKey, terminalId);
-      if (runtime.tabs.length === 1) onClose?.();
+      // Asked of the store rather than of this render's copy: a shell that
+      // exits closes its own tab, so by now the count may already be lower
+      // than the one this callback was built with.
+      const left =
+        terminalRuntimeStore.get().scopes[conversationKey]?.tabs.length ?? 0;
+      if (left === 0) onClose?.();
     },
-    [conversationKey, onClose, runtime.tabs]
+    [conversationKey, onClose]
   );
 
+  // Hiding the tab that is leaving is the instance's own business: it is told
+  // it is off screen and tells main.
   const selectTab = (terminalId: string): void => {
     if (conversationKey == null || runtime.activeTabId === terminalId) return;
-    if (activeTab?.generation != null) {
-      void window.api.agent.hideTerminalSession({
-        terminalId: activeTab.id,
-        conversationKey,
-        generation: activeTab.generation,
-      });
-    }
     terminalRuntimeActions.selectTab(conversationKey, terminalId);
   };
 
@@ -531,31 +260,70 @@ export const TerminalPanel = ({
           })}
         </div>
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-6 shrink-0 text-zinc-400 hover:text-white"
-                aria-label={t("workspace.terminal.newTab", {
-                  defaultValue: "New terminal",
-                })}
-                onClick={() => {
-                  if (conversationKey != null)
-                    terminalRuntimeActions.addTab(conversationKey);
-                }}
-              />
-            }
-          >
-            <Plus />
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            {t("workspace.terminal.newTab", {
-              defaultValue: "New terminal",
-            })}
-          </TooltipContent>
-        </Tooltip>
+        {/* One control, not two: the `+` opens a terminal in a click and the
+            chevron beside it is the only thing that asks which shell. */}
+        <ButtonGroup className="shrink-0 gap-0">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-6 text-zinc-400 hover:text-white"
+                  data-id="terminal-new-tab"
+                  aria-label={t("workspace.terminal.newTab", {
+                    defaultValue: "New terminal",
+                  })}
+                  onClick={() => openTab()}
+                />
+              }
+            >
+              <Plus />
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {t("workspace.terminal.newTab", {
+                defaultValue: "New terminal",
+              })}
+            </TooltipContent>
+          </Tooltip>
+
+          {shellState != null && shellState.statuses.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-6 w-4 text-zinc-400 hover:text-white"
+                    data-id="terminal-shell-picker"
+                    aria-label={t("workspace.terminal.pickShell", {
+                      defaultValue: "Open a different shell",
+                    })}
+                  />
+                }
+              >
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="min-w-44">
+                {shellState.statuses.map((status) => (
+                  <DropdownMenuItem
+                    key={status.id}
+                    disabled={!status.available}
+                    data-id={`terminal-shell-${status.id}`}
+                    onClick={() => openTab(status.id)}
+                  >
+                    {status.id === shellState.effective ? (
+                      <Check />
+                    ) : (
+                      <SquareTerminal />
+                    )}
+                    {shellLabel(status.id)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </ButtonGroup>
 
         {onClose != null && (
           <Tooltip>
@@ -590,6 +358,7 @@ export const TerminalPanel = ({
                 conversation={conversation}
                 conversationKey={conversationKey}
                 generation={tab.generation}
+                shell={tab.shell}
                 active={visible && active}
                 onExited={closeTab}
               />

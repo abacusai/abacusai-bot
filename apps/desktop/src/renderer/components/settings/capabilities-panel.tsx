@@ -9,8 +9,13 @@ import {
   type BackendId,
   type BackendStatus,
 } from "#shared/exec-backends";
+import { terminalShellLabelKey } from "#shared/terminal-shells";
 import { TOOLSETS_FOR_DISPLAY, type Toolset } from "#shared/toolsets";
 
+import {
+  useSetTerminalShell,
+  useTerminalShellState,
+} from "../../hooks/use-terminal-shells";
 import { settingsQueryKeys } from "../../lib/settings-query-keys";
 import {
   FocusedPage,
@@ -292,6 +297,7 @@ const ToolsetDetail = ({
 
       {/* Terminal & Processes has a target as well as a switch. */}
       {toolset.id === "terminal" && !planned && <ExecBackendPicker />}
+      {toolset.id === "terminal" && !planned && <TerminalShellPicker />}
 
       {/* X search has a choice of engine behind it. */}
       {toolset.id === "x_search" && !planned && <XaiSearchToggle />}
@@ -470,6 +476,88 @@ const ExecBackendPicker = (): JSX.Element => {
                     data-id={`exec-backend-blocker-${backend.id}`}
                   >
                     {blocker}
+                  </ItemDescription>
+                )}
+              </ItemContent>
+            </Item>
+          );
+        })}
+      </ItemGroup>
+    </div>
+  );
+};
+
+/**
+ * Which shell the terminal panel opens. The same preference the panel's `+`
+ * menu writes: whichever place it is picked, the next terminal that opens by
+ * itself uses it.
+ */
+const TerminalShellPicker = (): JSX.Element => {
+  const { t } = useTranslation();
+  const state = useTerminalShellState();
+  const choose = useSetTerminalShell();
+
+  // One shell is not a choice: off Windows there is only the login shell.
+  if (state == null || state.statuses.length < 2) return <></>;
+
+  return (
+    <div className="space-y-2" data-id="terminal-shell-picker">
+      <h3 className="text-secondary-foreground text-xs font-semibold tracking-wide uppercase">
+        {t("terminalShells.title")}
+      </h3>
+
+      {/* Only when they diverge: a stored shell that no longer exists is
+          otherwise a silent substitution. */}
+      {state.effective !== state.selected && (
+        <Alert data-id="terminal-shell-fallback">
+          <AlertDescription>
+            {t("terminalShells.fellBack", {
+              selected: t(
+                `terminalShells.${terminalShellLabelKey(state.selected)}.label`
+              ),
+              effective: t(
+                `terminalShells.${terminalShellLabelKey(state.effective)}.label`
+              ),
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <ItemGroup className="gap-2">
+        {state.statuses.map((status) => {
+          const active = state.effective === status.id;
+
+          return (
+            <Item
+              key={status.id}
+              render={<button type="button" disabled={!status.available} />}
+              variant={active ? "muted" : "outline"}
+              onClick={() => choose(status.id)}
+              data-id={`terminal-shell-${status.id}`}
+              className="items-start disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ItemContent>
+                <ItemTitle>
+                  {t(
+                    `terminalShells.${terminalShellLabelKey(status.id)}.label`
+                  )}
+                  {active && (
+                    <Badge variant="secondary">
+                      {t("terminalShells.inUse")}
+                    </Badge>
+                  )}
+                </ItemTitle>
+                <ItemDescription>
+                  {t(
+                    `terminalShells.${terminalShellLabelKey(status.id)}.description`
+                  )}
+                </ItemDescription>
+                {!status.available && (
+                  <ItemDescription
+                    className="text-amber-600 dark:text-amber-400"
+                    data-id={`terminal-shell-missing-${status.id}`}
+                  >
+                    {t("terminalShells.notInstalled")}
                   </ItemDescription>
                 )}
               </ItemContent>

@@ -16,13 +16,16 @@ import {
   type ConversationKey,
   type ConversationRef,
 } from "#shared/conversation-scope";
+import type { TerminalShellId } from "#shared/terminal-shells";
 
+import { readTerminalShell } from "../config/settings";
 import {
   ConversationTerminalRuntimeRegistry,
   type ConversationTerminalAttachment,
   type ConversationTerminalEvent,
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
+import { resolveTerminalShell } from "./terminal-shells";
 
 type PtySpawn = (
   file: string,
@@ -34,36 +37,21 @@ type PtySpawn = (
     rows?: number;
     encoding?: string | null;
     name?: string;
-    pipe?: boolean;
+    /** Windows: ConPTY through the bundled conpty.dll rather than the OS copy. */
+    useConptyDll?: boolean;
   }
 ) => TerminalPty;
 
 let cachedSpawn: PtySpawn | null = null;
 let cachedSpawnError: Error | null = null;
 
-const importZigPty = async (): Promise<{ spawn: PtySpawn }> => {
-  if (process.platform !== "win32") {
-    return (await import("zigpty")) as unknown as { spawn: PtySpawn };
-  }
-
-  // The pnpm patch makes zigpty honor this flag before eagerly loading its
-  // Windows .node binding. Keep it scoped to module initialization; zigpty
-  // retains the selected PipePty backend after the import completes.
-  const previous = process.env.ZIGPTY_DISABLE_NATIVE;
-  process.env.ZIGPTY_DISABLE_NATIVE = "1";
-  try {
-    return (await import("zigpty")) as unknown as { spawn: PtySpawn };
-  } finally {
-    if (previous == null) delete process.env.ZIGPTY_DISABLE_NATIVE;
-    else process.env.ZIGPTY_DISABLE_NATIVE = previous;
-  }
-};
-
 const loadSpawn = async (): Promise<PtySpawn> => {
   if (cachedSpawn != null) return cachedSpawn;
   if (cachedSpawnError != null) throw cachedSpawnError;
   try {
-    const mod = await importZigPty();
+    const mod = (await import("@lydell/node-pty")) as unknown as {
+      spawn: PtySpawn;
+    };
     cachedSpawn = mod.spawn;
     return cachedSpawn;
   } catch (error) {
@@ -80,10 +68,13 @@ const sanitizeEnv = (value: NodeJS.ProcessEnv): Record<string, string> =>
     )
   );
 
-const resolveShell = (): { file: string; args: string[] } =>
-  process.platform === "win32"
-    ? { file: process.env.ComSpec ?? "powershell.exe", args: [] }
-    : { file: process.env.SHELL ?? "/bin/bash", args: ["-l"] };
+/**
+ * The shell a start request asks for: the one it names, else the stored
+ * preference. An automatically opened terminal sends nothing and so reopens
+ * whatever was last picked from the panel's `+` menu.
+ */
+const requestedShell = (shell: TerminalShellId | undefined): TerminalShellId =>
+  shell ?? readTerminalShell();
 
 type TerminalSessionServiceOptions = {
   resolveWorkspacePath: (
@@ -145,6 +136,7 @@ const snapshot = (
   visible: attachment.visible,
   cols: attachment.cols,
   rows: attachment.rows,
+  shell: attachment.shell,
   exitCode: null,
   exitedAt: null,
 });
@@ -154,7 +146,7 @@ export class TerminalSessionService {
 
   constructor(private readonly options: TerminalSessionServiceOptions) {
     this.registry = new ConversationTerminalRuntimeRegistry({
-      createPty: async ({ scope, cols, rows }) => {
+      createPty: async ({ scope, cols, rows, shell: requested }) => {
         const workspacePath = options.resolveWorkspacePath(
           scope.workspaceId,
           scope.kind === "session" ? scope.sessionId : undefined
@@ -162,19 +154,20 @@ export class TerminalSessionService {
         if (workspacePath == null) {
           throw new Error("Workspace path is unavailable.");
         }
-        const shell = resolveShell();
+        const shell = resolveTerminalShell(requestedShell(requested));
         const spawn = await loadSpawn();
         return spawn(shell.file, shell.args, {
           cwd: workspacePath,
-          env: sanitizeEnv(process.env),
+          env: { ...sanitizeEnv(process.env), ...shell.env },
           cols,
           rows,
           encoding: "utf8",
           name: "xterm-256color",
-          // zigpty's native Windows prebuild imports node.exe directly and can
-          // execute invalid memory inside Electron. Its supported pipe backend
-          // keeps the same API without loading ConPTY into the GUI process.
-          pipe: process.platform === "win32",
+          // The bundled ConPTY rather than whatever the OS shipped, and not
+          // optional: with it off, `kill` forks a console-list agent through
+          // `process.execPath`, which under Electron starts a second copy of
+          // the app.
+          useConptyDll: process.platform === "win32",
         });
       },
       onOutput: (event) =>
@@ -245,6 +238,9 @@ export class TerminalSessionService {
           scope: registryScope(request.conversation),
           cols: request.cols,
           rows: request.rows,
+          // Resolved here rather than at spawn time so the snapshot names the
+          // shell the terminal really got, fallback included.
+          shell: resolveTerminalShell(requestedShell(request.shell)).id,
         });
         attachment = started;
         created = started.created;
@@ -361,9 +357,10 @@ export class TerminalSessionService {
       const promotedAttachments = this.registry.list(attachment.key);
       this.registry.disposeScope(attachment.key);
       const restarted = await Promise.all(
-        promotedAttachments.map(({ terminalId, cols, rows }) =>
+        promotedAttachments.map(({ terminalId, cols, rows, shell }) =>
           this.registry.start({
             terminalId,
+            shell,
             scope: {
               kind: "session",
               workspaceId: request.sessionConversation.workspaceId,

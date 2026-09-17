@@ -36,6 +36,18 @@ forward slashes. Installed programs on PATH — node, python, git, `npm.cmd` —
 run as themselves. The shell is installed on first use under
 `%LOCALAPPDATA%\abacusai-bot\posix-shell`; delete that directory to reset it.
 
+The terminal panel can open the same shell: on Windows, the chevron beside its
+`+` button lists Command Prompt, Windows PowerShell, PowerShell 7 and the
+bundled BusyBox sh, and picking one opens it and remembers it. `+` on its own,
+and any terminal the panel opens by itself, uses whatever was picked last.
+Capabilities → Terminal & Processes holds the same setting. A shell that is not
+installed is listed but cannot be picked, and a stored one that disappears
+falls back to the system default.
+
+macOS and Linux have no such menu: the terminal opens the login shell `$SHELL`
+names, which is the choice the user already made and the one their dotfiles are
+written for.
+
 ## Docker execution fails
 
 Run `docker info` and confirm that the daemon is available through the same
