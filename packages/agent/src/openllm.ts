@@ -105,13 +105,6 @@ export function accountWideFailure(
 }
 
 /**
- * Rotations spent in one user turn before the failure is surfaced instead. Each
- * attempt costs pi's own retry-with-backoff first; five rides out a provider or
- * two and still reaches the local floor, more means the whole pool is down.
- */
-export const MAX_OPENLLM_ROTATIONS_PER_TURN = 5;
-
-/**
  * The pool's sources, in the order tried. Abacus first: paid for, tuned for
  * agent loops, and never free-tier rate-limited. Then a Studio key's Gemini
  * quota, then OpenRouter's `:free` models.
