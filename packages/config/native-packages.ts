@@ -10,6 +10,6 @@ export const NATIVE_PACKAGES = [
   "@ff-labs/fff-node",
   "@mariozechner/clipboard",
   "@silvia-odwyer/photon-node",
+  "@lydell/node-pty",
   "ffi-rs",
-  "zigpty",
 ] as const;

@@ -33,10 +33,10 @@ allowBuilds:
   electron: true
   electron-winstaller: false
   protobufjs: false
-  zigpty: true
   "@tsparticles/engine": true
   # esbuild only verifies its platform binary on install.
   esbuild: true
+  zigpty: set this to true or false
 
 # dompurify below 3.4.13 carries known XSS bypasses and arrives transitively
 # through the markdown pipeline. deepmerge-ts below 8 breaks CJS/ESM interop.
@@ -65,4 +65,3 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   ghostty-web@0.4.0: patches/ghostty-web@0.4.0.patch
   react-tourlight@0.3.0: patches/react-tourlight@0.3.0.patch
-  zigpty@0.2.1: patches/zigpty@0.2.1.patch

@@ -37,36 +37,21 @@ type PtySpawn = (
     rows?: number;
     encoding?: string | null;
     name?: string;
-    pipe?: boolean;
+    /** Windows: ConPTY through the bundled conpty.dll rather than the OS copy. */
+    useConptyDll?: boolean;
   }
 ) => TerminalPty;
 
 let cachedSpawn: PtySpawn | null = null;
 let cachedSpawnError: Error | null = null;
 
-const importZigPty = async (): Promise<{ spawn: PtySpawn }> => {
-  if (process.platform !== "win32") {
-    return (await import("zigpty")) as unknown as { spawn: PtySpawn };
-  }
-
-  // The pnpm patch makes zigpty honor this flag before eagerly loading its
-  // Windows .node binding. Keep it scoped to module initialization; zigpty
-  // retains the selected PipePty backend after the import completes.
-  const previous = process.env.ZIGPTY_DISABLE_NATIVE;
-  process.env.ZIGPTY_DISABLE_NATIVE = "1";
-  try {
-    return (await import("zigpty")) as unknown as { spawn: PtySpawn };
-  } finally {
-    if (previous == null) delete process.env.ZIGPTY_DISABLE_NATIVE;
-    else process.env.ZIGPTY_DISABLE_NATIVE = previous;
-  }
-};
-
 const loadSpawn = async (): Promise<PtySpawn> => {
   if (cachedSpawn != null) return cachedSpawn;
   if (cachedSpawnError != null) throw cachedSpawnError;
   try {
-    const mod = await importZigPty();
+    const mod = (await import("@lydell/node-pty")) as unknown as {
+      spawn: PtySpawn;
+    };
     cachedSpawn = mod.spawn;
     return cachedSpawn;
   } catch (error) {
@@ -74,55 +59,6 @@ const loadSpawn = async (): Promise<PtySpawn> => {
       error instanceof Error ? error : new Error(String(error));
     throw cachedSpawnError;
   }
-};
-
-/**
- * What a terminal driver does to output on its way out, done here because on
- * Windows there is no driver to do it.
- *
- * A tty translates a bare line feed into a carriage return and a line feed
- * (ONLCR), and ConPTY does the same. This app spawns through zigpty's pipe
- * backend on Windows instead (see the note at the spawn), so a program that
- * ends its lines with `\n` alone — every POSIX-minded tool, busybox's applets
- * among them — walked its output diagonally across the panel, each line
- * starting where the last one ended.
- *
- * Translating here rather than in the terminal means the scrollback main
- * replays is already right, and a `\r\n` that was already correct is left
- * alone rather than doubled.
- */
-const carriageReturns = (pty: TerminalPty): TerminalPty => {
-  let endedOnCarriageReturn = false;
-
-  return {
-    // Delegated one by one rather than spread: a PTY is a class instance, and
-    // spreading one copies the fields and leaves every method on the
-    // prototype behind. `onExit is not a function`, on Windows only, because
-    // Windows is the only platform that wraps.
-    onExit: (callback) => pty.onExit(callback),
-    write: (data) => pty.write(data),
-    resize: (cols, rows) => pty.resize(cols, rows),
-    kill: (signal) => pty.kill(signal),
-    onData: (callback) =>
-      pty.onData((chunk) => {
-        if (typeof chunk !== "string") {
-          callback(chunk);
-          return;
-        }
-        if (!chunk.includes("\n")) {
-          endedOnCarriageReturn = chunk.endsWith("\r");
-          callback(chunk);
-          return;
-        }
-        // A chunk can split a CRLF; the CR from the last one still counts.
-        const leadsWithLineFeed =
-          endedOnCarriageReturn && chunk.startsWith("\n");
-        const head = leadsWithLineFeed ? "\n" : "";
-        const rest = leadsWithLineFeed ? chunk.slice(1) : chunk;
-        endedOnCarriageReturn = chunk.endsWith("\r");
-        callback(`${head}${rest.replace(/(?<!\r)\n/g, "\r\n")}`);
-      }),
-  };
 };
 
 const sanitizeEnv = (value: NodeJS.ProcessEnv): Record<string, string> =>
@@ -220,27 +156,19 @@ export class TerminalSessionService {
         }
         const shell = resolveTerminalShell(requestedShell(requested));
         const spawn = await loadSpawn();
-        const usesPipe = process.platform === "win32";
-        const pty = spawn(shell.file, shell.args, {
+        return spawn(shell.file, shell.args, {
           cwd: workspacePath,
           env: { ...sanitizeEnv(process.env), ...shell.env },
           cols,
           rows,
           encoding: "utf8",
           name: "xterm-256color",
-          // zigpty's native Windows prebuild imports node.exe directly and can
-          // execute invalid memory inside Electron. Its supported pipe backend
-          // keeps the same API without loading ConPTY into the GUI process.
-          pipe: usesPipe,
+          // The bundled ConPTY rather than whatever the OS shipped, and not
+          // optional: with it off, `kill` forks a console-list agent through
+          // `process.execPath`, which under Electron starts a second copy of
+          // the app.
+          useConptyDll: process.platform === "win32",
         });
-
-        // A pipe has no terminal driver behind it to end lines properly.
-        //
-        // Its canonical mode stays on: cmd.exe echoes nothing it reads from a
-        // pipe, only from a console, so the emulation's own echo is the only
-        // thing that puts a keystroke on screen. Turning it off left the
-        // keyboard apparently dead.
-        return usesPipe ? carriageReturns(pty) : pty;
       },
       onOutput: (event) =>
         options.emitTerminalOutput({

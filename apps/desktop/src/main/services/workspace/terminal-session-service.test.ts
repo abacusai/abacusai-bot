@@ -30,7 +30,7 @@ vi.mock("./terminal-shells", () => ({
   resolveTerminalShell: (id: TerminalShellId) => resolveShell(id),
 }));
 
-vi.mock("zigpty", () => ({
+vi.mock("@lydell/node-pty", () => ({
   spawn: (...args: unknown[]) => ptySpawn(...args) as unknown,
 }));
 
@@ -201,7 +201,9 @@ describe("conversation terminal session service", () => {
     ]);
     expect(ptySpawn.mock.calls[0]?.[2]).toMatchObject({
       cwd: path.join(workspace, "chat-a"),
-      pipe: process.platform === "win32",
+      // Windows gets the bundled ConPTY; without it `kill` forks a console
+      // agent through the app's own executable.
+      useConptyDll: process.platform === "win32",
     });
     expect(ptySpawn.mock.calls[1]?.[2]).toMatchObject({
       cwd: path.join(workspace, "chat-b"),
@@ -251,99 +253,5 @@ describe("conversation terminal session service", () => {
     expect(ptySpawn).toHaveBeenCalledTimes(2);
     expect(ptySpawn.mock.calls[1]?.[2]).toMatchObject({ cwd: worktree });
     expect(ptySpawn.mock.results[0]?.value.kill).toHaveBeenCalledOnce();
-  });
-
-  it("keeps every part of a pty that is a class, not a bag of fields", async () => {
-    // zigpty hands back an instance whose methods live on the prototype. The
-    // Windows wrapper used to spread it, which copies the fields and leaves
-    // the methods behind: "pty.onExit is not a function", on Windows only.
-    const original = Object.getOwnPropertyDescriptor(process, "platform")!;
-    Object.defineProperty(process, "platform", { value: "win32" });
-    const killed: string[] = [];
-
-    class ClassPty {
-      onData(_callback: (chunk: string) => void): void {}
-      onExit(_callback: (event: { exitCode: number }) => void): void {}
-      write(_data: string): void {}
-      resize(_cols: number, _rows: number): void {}
-      kill(signal?: string): void {
-        killed.push(signal ?? "default");
-      }
-    }
-
-    try {
-      ptySpawn.mockImplementation(() => new ClassPty());
-      const terminals = service();
-      const request = draftRequest();
-
-      const result = await terminals.startSession(request);
-
-      expect(result.success).toBe(true);
-      expect(
-        terminals.writeInput({
-          conversationKey: request.conversationKey,
-          generation: result.state.generation,
-          data: "ls\r",
-        })
-      ).toBe(true);
-      expect(
-        terminals.resizeSession({
-          conversationKey: request.conversationKey,
-          generation: result.state.generation,
-          cols: 100,
-          rows: 30,
-        })
-      ).toBe(true);
-      terminals.hideSession({
-        conversationKey: request.conversationKey,
-        generation: result.state.generation,
-        close: true,
-      });
-      expect(killed).toHaveLength(1);
-    } finally {
-      Object.defineProperty(process, "platform", original);
-    }
-  });
-
-  it("ends lines the way a terminal driver would, where there is none", async () => {
-    // Windows spawns through a pipe, so nothing translates a bare line feed
-    // into a carriage return and one. Output walked diagonally across the
-    // panel without this.
-    const original = Object.getOwnPropertyDescriptor(process, "platform")!;
-    Object.defineProperty(process, "platform", { value: "win32" });
-    const emitted: string[] = [];
-    let emit: ((chunk: string) => void) | null = null;
-    ptySpawn.mockImplementation(() => ({
-      ...fakePty(),
-      onData: (callback: (chunk: string) => void) => {
-        emit = callback;
-      },
-    }));
-
-    try {
-      const terminals = new TerminalSessionService({
-        resolveWorkspacePath: () => workspace,
-        emitTerminalOutput: (event) => emitted.push(event.data),
-        emitTerminalExit: () => {},
-        emitTerminalState: () => {},
-      });
-      await terminals.startSession(draftRequest());
-
-      emit!("total 4096\ndrwxr-xr-x 2 raj\n");
-      // Already correct, and not doubled.
-      emit!("kept\r\n");
-      // A chunk that splits a CRLF down the middle.
-      emit!("split\r");
-      emit!("\nafter\n");
-
-      expect(emitted).toEqual([
-        "total 4096\r\ndrwxr-xr-x 2 raj\r\n",
-        "kept\r\n",
-        "split\r",
-        "\nafter\r\n",
-      ]);
-    } finally {
-      Object.defineProperty(process, "platform", original);
-    }
   });
 });
