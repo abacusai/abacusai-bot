@@ -81,6 +81,8 @@ export type AgentRenderItem =
       /** Per-turn feedback controls; credits ride along for the chip. */
       kind: "feedback";
       id: string;
+      /** The rated bot text segment; its position in the transcript is what a rating names. */
+      segmentId: string;
       messageIndex: number;
       content: string;
       credits?: number;
@@ -266,6 +268,7 @@ function buildAgentItems(
     items.push({
       kind: "feedback",
       id: `feedback-${feedbackText.id}`,
+      segmentId: feedbackText.id,
       messageIndex: feedbackText.messageIndex,
       content: feedbackText.content,
       ...(turnCredits != null ? { credits: turnCredits } : {}),
