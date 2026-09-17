@@ -99,10 +99,6 @@ const carriageReturns = (pty: TerminalPty): TerminalPty => {
     // spreading one copies the fields and leaves every method on the
     // prototype behind. `onExit is not a function`, on Windows only, because
     // Windows is the only platform that wraps.
-    // Delegated one by one rather than spread: a PTY is a class instance, and
-    // spreading one copies the fields and leaves every method on the
-    // prototype behind. `onExit is not a function`, on Windows only, because
-    // Windows is the only platform that wraps.
     onExit: (callback) => pty.onExit(callback),
     write: (data) => pty.write(data),
     resize: (cols, rows) => pty.resize(cols, rows),
@@ -110,6 +106,11 @@ const carriageReturns = (pty: TerminalPty): TerminalPty => {
     onData: (callback) =>
       pty.onData((chunk) => {
         if (typeof chunk !== "string") {
+          callback(chunk);
+          return;
+        }
+        if (!chunk.includes("\n")) {
+          endedOnCarriageReturn = chunk.endsWith("\r");
           callback(chunk);
           return;
         }
@@ -233,8 +234,18 @@ export class TerminalSessionService {
           pipe: usesPipe,
         });
 
+        if (!usesPipe) return pty;
+
+        // The pipe backend emulates a terminal in JavaScript, and its default
+        // is canonical mode with its own echo — so every keystroke appeared
+        // twice, once from it and once from the shell, which does its own
+        // echo and its own line editing. Raw mode hands all of that back to
+        // the shell, the way a console does.
+        const raw = pty as TerminalPty & { setRawMode?: () => void };
+        raw.setRawMode?.();
+
         // A pipe has no terminal driver behind it to end lines properly.
-        return usesPipe ? carriageReturns(pty) : pty;
+        return carriageReturns(pty);
       },
       onOutput: (event) =>
         options.emitTerminalOutput({
