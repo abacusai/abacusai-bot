@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  budgetNote,
+  EXECUTE_STREAK_LIMIT,
+  ExecuteStreakTracker,
+  FINAL_WARNING_TURN,
+  finalWarningMessage,
   MAX_TURNS,
   missingReportFields,
   needsUser,
   REPEAT_HOST_LIMIT,
   RepeatTracker,
   WRAP_UP_TURN,
+  wrapUpMessage,
 } from "./browser-task.js";
 
 describe("checking a browser report against what was asked for", () => {
@@ -50,7 +56,44 @@ describe("checking a browser report against what was asked for", () => {
 
 describe("the run bounds", () => {
   it("asks for the report before the hard turn ceiling", () => {
-    expect(WRAP_UP_TURN).toBeLessThan(MAX_TURNS);
+    expect(WRAP_UP_TURN).toBeLessThan(FINAL_WARNING_TURN);
+    expect(FINAL_WARNING_TURN).toBeLessThan(MAX_TURNS);
+  });
+
+  it("tells the run how many turns it has, not that it is 'close to a limit'", () => {
+    // "close to your limit" reads as "out of budget" to a small model; it then
+    // reports at once, and a resumed run reports before it does anything.
+    expect(wrapUpMessage(40)).toMatch(/40 turns/);
+    expect(wrapUpMessage(40)).not.toMatch(/close to/i);
+    expect(finalWarningMessage(15)).toMatch(/15 turns/);
+    expect(budgetNote(MAX_TURNS)).toMatch(
+      new RegExp(`${MAX_TURNS} tool turns`)
+    );
+  });
+});
+
+describe("noticing a run scraping by hand", () => {
+  it("fires when browser_execute runs the limit times in a row", () => {
+    const tracker = new ExecuteStreakTracker(3);
+
+    expect(tracker.observe("browser_execute")).toBe(false);
+    expect(tracker.observe("browser_execute")).toBe(false);
+    expect(tracker.observe("browser_execute")).toBe(true);
+    expect(tracker.observe("browser_execute")).toBe(false);
+    expect(tracker.total).toBe(4);
+  });
+
+  it("starts over once any page tool is used", () => {
+    const tracker = new ExecuteStreakTracker(2);
+
+    tracker.observe("browser_execute");
+    tracker.observe("browser_snapshot");
+    expect(tracker.observe("browser_execute")).toBe(false);
+    expect(tracker.observe("browser_execute")).toBe(true);
+  });
+
+  it("allows the odd script for what the page tools cannot reach", () => {
+    expect(EXECUTE_STREAK_LIMIT).toBeGreaterThanOrEqual(4);
   });
 });
 
@@ -120,5 +163,32 @@ describe("a run that stopped for the user", () => {
     expect(needsUser("The user needs to know the price is ₹52,142.")).toBe(
       false
     );
+  });
+
+  it("is not a NEEDS USER line that says nothing is needed", () => {
+    // Models write the line to say they were not blocked. Read as a stop, it
+    // parks the run and sends the user to the browser to do nothing.
+    for (const report of [
+      "Found 3 fares.\n\nNEEDS USER: none — the site rendered fine.",
+      "NEEDS USER: none required to continue; no login or CAPTCHA was hit.",
+      "NEEDS USER: nothing to hand over — no sign-in or payment was reached.",
+      "**NEEDS USER:** N/A",
+      "NEEDS USER: no action needed.",
+      "NEEDS USER:",
+      "NEEDS USER: -",
+    ]) {
+      expect(needsUser(report), report).toBe(false);
+    }
+  });
+
+  it("still stops for a real step, however it is phrased", () => {
+    for (const report of [
+      "NEEDS USER: sign in to LinkedIn, then tell me.",
+      "NEEDS USER: enter the card details and press Pay.",
+      "NEEDS USER: solve the CAPTCHA on the page.",
+      "NEEDS USER: No fares load until you sign in — sign in, then tell me.",
+    ]) {
+      expect(needsUser(report), report).toBe(true);
+    }
   });
 });

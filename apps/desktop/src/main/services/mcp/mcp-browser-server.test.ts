@@ -456,6 +456,15 @@ describe("navigating", () => {
     ).toBe(true);
   });
 
+  it("treats a url with no action as a goto", async () => {
+    const { isError } = await call("browser_navigate", {
+      url: "https://example.test/direct",
+    });
+
+    expect(isError).toBe(false);
+    expect(page.url).toBe("https://example.test/direct");
+  });
+
   it("says there is nowhere to go back to instead of reporting a move", async () => {
     const { text, isError } = await call("browser_navigate", {
       action: "back",
@@ -636,10 +645,26 @@ describe("snapshotting", () => {
     expect(content[1]?.text).toMatch(/screenshot-\d+\.png$/);
   });
 
-  it("rejects an unknown snapshot action", async () => {
-    expect(
-      (await call("browser_snapshot", { action: "photograph" })).isError
-    ).toBe(true);
+  it("rejects an unknown snapshot action, naming the ones that exist", async () => {
+    const { text, isError } = await call("browser_snapshot", {
+      action: "photograph",
+    });
+    expect(isError).toBe(true);
+    expect(text).toMatch(/extract/);
+  });
+
+  it('reads action:"find" as a snapshot with that filter', async () => {
+    // A model that saw find in the description calls it as the action; the
+    // refusal cost the sub-agent two turns and sent it to raw JavaScript.
+    respondWith(() => oneButton);
+    const { text, isError } = await call("browser_snapshot", {
+      action: "find",
+      find: "Go",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain('matching "Go"');
+    expect(text).toContain("@e1");
   });
 });
 
@@ -725,7 +750,12 @@ describe("interacting", () => {
 
   it("reports an element that vanished between snapshot and click", async () => {
     await seedRefs();
-    respondWith(() => ({ status: "not_found" }));
+    // The retry's fresh snapshot finds nothing either: the element is gone.
+    respondWith((expression) =>
+      expression.includes("el.click()")
+        ? { status: "not_found" }
+        : { ...oneButton, tree: { tag: "main", children: [] }, refCount: 0 }
+    );
     const { text, isError } = await call("browser_interact", {
       action: "click",
       ref: "@e1",
@@ -733,6 +763,29 @@ describe("interacting", () => {
 
     expect(isError).toBe(true);
     expect(text).toContain("not found");
+  });
+
+  it("retries once with fresh refs when the page re-rendered under a ref", async () => {
+    await seedRefs();
+    let clicks = 0;
+    respondWith((expression) => {
+      // The cursor animation also asks about #go; only the click script clicks.
+      if (!expression.includes("el.click()")) return oneButton;
+      clicks += 1;
+
+      return clicks === 1
+        ? { status: "not_found" }
+        : { status: "ok", tag: "button", text: "Go", x: 10, y: 20 };
+    });
+    const { text, isError } = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+
+    expect(isError).toBe(false);
+    expect(clicks).toBe(2);
+    expect(text).toContain("re-rendered");
+    expect(text).toContain("(10,20)");
   });
 
   it("refuses to call a click on a disabled control a click", async () => {

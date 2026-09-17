@@ -404,6 +404,8 @@ export type SubtaskStatus = "running" | "completed" | "interrupted";
 
 // Optional everywhere: older hosts and persisted transcripts send no kind.
 export type SubtaskKind = "component" | "delegate" | "browser";
+/** Why a finished sub-agent is not a plain success; absent when it is. */
+export type SubtaskOutcome = "needs-user" | "limit" | "budget";
 
 // Child segments with `subtaskId === subtaskRef` render inside the card. Live
 // sessions only: hydrated history has no bracket data and stays inline.
@@ -414,6 +416,7 @@ export type SubtaskSegment = SegmentBase & {
   description?: string;
   subtaskKind?: SubtaskKind;
   subtaskStatus: SubtaskStatus;
+  subtaskOutcome?: SubtaskOutcome;
   subtaskStartTime?: number;
   subtaskEndTime?: number;
 };
@@ -524,7 +527,12 @@ export type ConversationLoopEvent =
       description?: string;
       kind?: SubtaskKind;
     }
-  | { type: "subtask_end"; id: string; status?: "completed" | "failed" }
+  | {
+      type: "subtask_end";
+      id: string;
+      status?: "completed" | "failed";
+      outcome?: SubtaskOutcome;
+    }
   // `/clear` inside the agent; same semantics as the `{ kind: "reset" }` envelope.
   | { type: "segments_cleared" };
 
