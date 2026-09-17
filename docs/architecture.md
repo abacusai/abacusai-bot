@@ -44,6 +44,7 @@ between releases.
 | `messaging/` | WhatsApp, Telegram, Discord, and remote-turn routing |
 | `providers/` | Models, usage data, and execution backends |
 | `updates/` | Signed foundation and TUF-verified experience updates |
+| `voice/` | Speech model files and microphone access for dictation |
 | `config/` | Settings, credentials, and agent environment |
 | `agent-tools/`, `pptx/` | Host implementations for specialist tools |
 

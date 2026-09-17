@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { createRef, type JSX } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,6 +38,23 @@ vi.mock("./composer-tasks", () => ({
   ComposerTasksDrawer: () => null,
 }));
 vi.mock("./file-mention-picker", () => ({ FileMentionPicker: () => null }));
+// The microphone needs a real browser; the hook is stubbed to hand text back.
+const dictation = vi.hoisted(() => ({
+  onText: null as ((text: string) => void) | null,
+}));
+vi.mock("../../voice/use-dictation", () => ({
+  useDictation: (onText: (text: string) => void) => {
+    dictation.onText = onText;
+    return {
+      phase: "idle",
+      level: 0,
+      download: null,
+      error: null,
+      toggle: () => {},
+      cancel: () => {},
+    };
+  },
+}));
 vi.mock("./model-picker", () => ({ ModelPicker: () => null }));
 vi.mock("./runtime-mode-picker", () => ({
   RuntimeModePicker: () => <button type="button">Permission mode</button>,
@@ -668,5 +691,26 @@ describe("the compact composer as the message grows", () => {
 
     expect(boxClass()).toContain("rounded-2xl");
     expect(boxClass()).not.toContain("rounded-full");
+  });
+});
+
+describe("dictation", () => {
+  it("puts the spoken words after the typed ones, in both shapes", () => {
+    for (const compact of [false, true]) {
+      const onInputValueChange = vi.fn();
+      renderComposer(true, {
+        compact,
+        inputValue: "fix the",
+        onInputValueChange,
+      });
+
+      dictation.onText?.("login bug");
+
+      expect(onInputValueChange).toHaveBeenCalledWith("fix the login bug");
+      expect(
+        document.querySelector('[data-id="local-code-dictation-btn"]')
+      ).toBeTruthy();
+      cleanup();
+    }
   });
 });

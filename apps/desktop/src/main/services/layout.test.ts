@@ -36,6 +36,7 @@ const GROUPS = [
   "sandbox",
   "session",
   "updates",
+  "voice",
   "workspace",
 ];
 

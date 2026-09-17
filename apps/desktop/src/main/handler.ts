@@ -116,6 +116,7 @@ import {
 } from "./services/providers/openrouter-auth-service";
 import { getUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
+import { requestMicrophoneAccess } from "./services/voice/microphone";
 
 export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   const dispatchEvent = (event: IpcEvent): void => {
@@ -1287,6 +1288,16 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(IpcChannels.InstallMaestro, () => {
     return serviceHost.installMaestro();
   });
+
+  ipcMain.handle(IpcChannels.FetchWhisperFile, (_event, url: string) =>
+    serviceHost.whisperModelService.fetchFile(url)
+  );
+  ipcMain.handle(IpcChannels.IsWhisperCached, () =>
+    serviceHost.whisperModelService.isCached()
+  );
+  ipcMain.handle(IpcChannels.RequestMicrophoneAccess, () =>
+    requestMicrophoneAccess()
+  );
 
   ipcMain.on(
     IpcChannels.StreamDeviceTouch,
