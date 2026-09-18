@@ -132,6 +132,7 @@ export const workspaceQueryKeys = {
   customInstructions: ["local-code", "custom-instructions"] as const,
   usageSnapshot: ["local-code", "usage-snapshot"] as const,
   abacusAccount: ["local-code", "abacus-account"] as const,
+  referralSummary: ["local-code", "referral-summary"] as const,
 
   cliSessionStateRoot: ["local-code", "cli-session-state"] as const,
   cliSessionState: (workspaceId: string, sessionId: string) =>

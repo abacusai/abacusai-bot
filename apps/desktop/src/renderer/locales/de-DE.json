@@ -676,7 +676,8 @@
     "title": "You've used all your free Abacus.AI credits",
     "topUpCta": "Top up",
     "upsellBody": "Get access to premium models",
-    "upsellTitle": "Unlock the full potential"
+    "upsellTitle": "Unlock the full potential",
+    "inviteCta": "Or invite friends for free credits"
   },
   "deepAgentCard": {
     "body": "Open DeepAgent on the web",
@@ -1239,6 +1240,50 @@
     "permissionsAuto": "Auto",
     "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
     "notSignedInShort": "Nicht angemeldet"
+  },
+  "referralCard": {
+    "body": "We send the invites for you, from your Gmail or WhatsApp. {{count}} invites unlock the credits.",
+    "cta": "Invite friends",
+    "dismiss": "Dismiss",
+    "title": "Invite friends, earn {{credits}} credits"
+  },
+  "referrals": {
+    "title": "Invite friends",
+    "lead": "Invite friends to the AbacusAI Bot and earn credits. We send the invites for you from your own Gmail or WhatsApp.",
+    "leadWithNumbers": "Invite {{count}} friends to the AbacusAI Bot and get {{credits}} credits. We send the invites for you from your own Gmail or WhatsApp, and every friend who joins earns you {{perFriend}} more.",
+    "notSignedIn": "Sign in to Abacus.AI to invite friends.",
+    "progressTitle": "{{sent}} of {{total}} invites sent",
+    "progressGranted": "{{credits}} credits earned. Keep inviting: every friend who joins still pays.",
+    "friendsJoined": "{{count}} friends joined so far, {{credits}} credits earned from them.",
+    "copyLink": "Copy invite link",
+    "linkCopied": "Invite link copied",
+    "gmailTitle": "From your Gmail",
+    "gmailBody": "The people you email most, ready to invite. Untick anyone you'd rather leave out, then send. Each invite goes from your own address.",
+    "connectGmail": "Connect Gmail",
+    "noGmailContacts": "No contacts found in your recent sent mail yet. Add addresses below.",
+    "addEmailsHint": "Connect Gmail to pick from your contacts, or add addresses below and we send from Abacus.AI.",
+    "addEmailsPlaceholder": "Add email addresses, separated by commas",
+    "addEmails": "Add",
+    "whatsappTitle": "From your WhatsApp",
+    "whatsappBody": "Your WhatsApp chats, ready to invite. Untick anyone you'd rather leave out, then send. Each message goes from your own number, one chat at a time.",
+    "linkWhatsapp": "Link WhatsApp in Connectors",
+    "noWhatsappContacts": "No WhatsApp chats read yet. Give it a moment after linking.",
+    "selectedCount": "{{selected}} of {{total}} selected",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "messageLabel": "Your note to them",
+    "defaultMessage": "I've been using the AbacusAI Bot, a free open-source desktop AI agent that runs on free models. Worth a try.",
+    "sendInvites": "Send {{count}} invites",
+    "sending": "Sending…",
+    "sentToast": "Invited {{count}} people",
+    "sentToastDetail": "{{skipped}} already on Abacus.AI or invited before, {{failed}} could not be sent.",
+    "milestoneToast": "{{credits}} credits added to your account",
+    "errors": {
+      "gmail": "Gmail is not connected. Connect it and try again.",
+      "whatsapp": "WhatsApp is not linked or is still starting. Check Connectors and try again.",
+      "signedOut": "Sign in to Abacus.AI first.",
+      "unavailable": "Could not send the invites right now. Try again in a moment."
+    }
   },
   "routines": {
     "atLabel": "At",
