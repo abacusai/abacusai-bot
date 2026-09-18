@@ -37,6 +37,13 @@ const MIN_LETTERS = 20;
 const MIN_USER_LETTERS = 1;
 /** A script has to carry this share of the letters to be "the" script. */
 const DOMINANT_SHARE = 0.6;
+/**
+ * A script the user never wrote in counts as drift at this share of a reply.
+ * Well under DOMINANT_SHARE on purpose: a Chinese answer to an English
+ * question is still Chinese when half its letters are the English technical
+ * terms inside it, and that is the reply the user is left reading.
+ */
+const FOREIGN_SHARE = 0.2;
 
 /** Fenced and inline code, and the app's own reminder blocks, stripped. */
 const withoutCodeAndReminders = (text: string): string =>
@@ -125,6 +132,28 @@ export const userScript = (messages: readonly unknown[]): Script | null => {
   return dominantOf(total, MIN_USER_LETTERS);
 };
 
+/**
+ * The script a reply drifted into, or null. Judged against the user's script
+ * rather than by dominance. A script the user never wrote in counts as drift
+ * once it is more than noise; Latin is the exception for a user writing
+ * another script, since Latin letters sit inside every language's technical
+ * prose (names, identifiers, product words), so it counts only when it is the
+ * reply, not merely in it.
+ */
+const driftedScript = (text: string, expected: Script): Script | null => {
+  const { counts, letters } = scriptCounts(text);
+  if (letters < MIN_LETTERS) return null;
+  for (const [script, count] of [...counts].sort((a, b) => b[1] - a[1])) {
+    if (script === expected) continue;
+    const share =
+      script === "latin" && expected !== "latin"
+        ? DOMINANT_SHARE
+        : FOREIGN_SHARE;
+    if (count >= MIN_LETTERS && count / letters >= share) return script;
+  }
+  return null;
+};
+
 export interface ReplyLanguageMismatch {
   /** The script the user wrote in. */
   expected: Script;
@@ -133,10 +162,10 @@ export interface ReplyLanguageMismatch {
 }
 
 /**
- * Whether the turn ended in a different script from the message it answers.
- * Only the LAST assistant text with enough to judge counts: the drift starts
- * after a run of tool results, and the whole reply would let the paragraphs
- * ahead of it outvote the wrong-script tail the user is left reading.
+ * Whether the turn ended in a script the user does not write in. Only the
+ * LAST assistant text with enough to judge counts: the drift starts after a
+ * run of tool results, and the whole reply would let the paragraphs ahead of
+ * it outvote the wrong-script tail the user is left reading.
  */
 export const replyLanguageMismatch = (
   messages: readonly unknown[]
@@ -153,9 +182,10 @@ export const replyLanguageMismatch = (
   if (expected == null) return null;
   for (let index = messages.length - 1; index > lastUser; index--) {
     if (roleOf(messages[index]) !== "assistant") continue;
-    const got = dominantScript(textOf(messages[index]));
-    if (got == null) continue;
-    return got === expected ? null : { expected, got };
+    const text = textOf(messages[index]);
+    if (scriptCounts(text).letters < MIN_LETTERS) continue;
+    const got = driftedScript(text, expected);
+    return got == null ? null : { expected, got };
   }
   return null;
 };
