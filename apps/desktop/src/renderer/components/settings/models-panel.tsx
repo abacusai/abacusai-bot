@@ -12,11 +12,7 @@ import {
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  isPlausibleApiKey,
-  PROVIDER_KEY_FIELDS,
-  type ProviderKeyField,
-} from "#shared/settings";
+import { PROVIDER_KEY_FIELDS, type ProviderKeyField } from "#shared/settings";
 
 import {
   useModelProvidersQuery,
@@ -33,7 +29,6 @@ import {
 } from "../layout/focused-page";
 import {
   Button,
-  Input,
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -54,6 +49,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
+import { ProviderKeyDialog } from "./provider-key-dialog";
 
 // Model provider keys. They go to `~/.abacusai-bot/config.json` and into the
 // agent's environment at spawn; a key already exported in the shell wins and
@@ -69,8 +65,6 @@ export const ModelsSettingsPanel = ({
 }): JSX.Element | null => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [invalid, setInvalid] = useState<Set<string>>(new Set());
   const [removing, setRemoving] = useState<ProviderKeyField | null>(null);
   const [connecting, setConnecting] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -157,59 +151,10 @@ export const ModelsSettingsPanel = ({
     }
   };
 
-  const dirty = Object.values(drafts).some((value) => value.trim().length > 0);
-
-  // Write every edited field, then re-read the world. Nothing here proves a
-  // key works; it only refuses a paste that could not be one (an `export`
-  // line, a URL, half a key) instead of storing it.
-  const saveAll = async (): Promise<boolean> => {
-    const edited = Object.entries(drafts).filter(
-      ([, value]) => value.trim().length > 0
-    );
-
-    if (edited.length === 0) return true;
-
-    const rejected = new Set(
-      edited
-        .filter(([, key]) => !isPlausibleApiKey(key))
-        .map(([provider]) => provider)
-    );
-
-    setInvalid(rejected);
-    if (rejected.size > 0) return false;
-
-    const previous = queryClient.getQueryData<ModelProviderState>(
-      settingsQueryKeys.models.providers
-    );
-    queryClient.setQueryData<ModelProviderState>(
-      settingsQueryKeys.models.providers,
-      (current = { configured: {}, stored: new Set() }) => {
-        const configured = { ...current.configured };
-        const stored = new Set(current.stored);
-        for (const [provider] of edited) {
-          configured[provider] = true;
-          stored.add(provider);
-        }
-        return { configured, stored };
-      }
-    );
-    try {
-      for (const [provider, key] of edited) {
-        await window.api.agent.saveApiKey(provider, key);
-      }
-    } catch (error) {
-      queryClient.setQueryData(settingsQueryKeys.models.providers, previous);
-      throw error;
-    }
-
-    setDrafts({});
-    // A new key can change which models exist at all (OpenRouter's free tier),
-    // so the catalog is refetched rather than left to go stale.
-    await window.api.agent.listModels(true);
+  /** A key changed on disk: re-read what is configured and tell the caller. */
+  const afterKeysChanged = async (): Promise<void> => {
     await refresh();
     onKeysChanged?.();
-
-    return true;
   };
 
   // Forget a stored key: `saveApiKey` deletes the entry on an empty string.
@@ -235,13 +180,10 @@ export const ModelsSettingsPanel = ({
       throw error;
     }
     await window.api.agent.listModels(true);
-    await refresh();
-    onKeysChanged?.();
+    await afterKeysChanged();
   };
 
   const cancel = (): void => {
-    setDrafts({});
-    setInvalid(new Set());
     setConnectError(null);
   };
 
@@ -402,40 +344,7 @@ export const ModelsSettingsPanel = ({
               </Button>
             )}
           </div>
-        ) : (
-          <>
-            <Input
-              type="password"
-              data-id={`api-key-input-${field.provider}`}
-              value={drafts[field.provider] ?? ""}
-              onChange={(e) => {
-                setInvalid((prev) => {
-                  if (!prev.has(field.provider)) return prev;
-                  const next = new Set(prev);
-                  next.delete(field.provider);
-                  return next;
-                });
-                setDrafts((prev) => ({
-                  ...prev,
-                  [field.provider]: e.target.value,
-                }));
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void saveAll();
-              }}
-              placeholder={field.envVar}
-              className="font-mono"
-            />
-            {invalid.has(field.provider) && (
-              <div
-                className="text-[0.625rem] text-red-500"
-                data-id={`api-key-invalid-${field.provider}`}
-              >
-                {t("apiKeys.invalidKey")}
-              </div>
-            )}
-          </>
-        )}
+        ) : null}
       </div>
     );
 
@@ -499,8 +408,30 @@ export const ModelsSettingsPanel = ({
           </div>
         )}
 
+        {/* A pasted key gets the one dialog every entry point shares. */}
+        <ProviderKeyDialog
+          field={
+            selectedProvider != null && selectedProvider.connect == null
+              ? selectedProvider
+              : null
+          }
+          open={selectedProvider != null && selectedProvider.connect == null}
+          configured={
+            selectedProvider != null &&
+            configured[selectedProvider.provider] === true
+          }
+          onClose={() => onProviderChange?.(null)}
+          onSaved={afterKeysChanged}
+          // Only a key we wrote can be taken back: an exported environment
+          // variable belongs to the shell that set it.
+          {...(selectedProvider != null && stored.has(selectedProvider.provider)
+            ? { onRemove: () => setRemoving(selectedProvider) }
+            : {})}
+        />
+
+        {/* The browser sign-ins keep their card: a Connect button, not a field. */}
         <Dialog
-          open={provider != null}
+          open={selectedProvider != null && selectedProvider.connect != null}
           onOpenChange={(nextOpen) => {
             if (!nextOpen) {
               cancel();
@@ -508,15 +439,13 @@ export const ModelsSettingsPanel = ({
             }
           }}
         >
-          {provider != null && (
+          {selectedProvider != null && selectedProvider.connect != null && (
             <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-xl">
               <DialogHeader>
-                <DialogTitle>{selectedProvider?.label}</DialogTitle>
-                <DialogDescription>{selectedProvider?.hint}</DialogDescription>
+                <DialogTitle>{selectedProvider.label}</DialogTitle>
+                <DialogDescription>{selectedProvider.hint}</DialogDescription>
               </DialogHeader>
-              {selectedProvider != null
-                ? providerCard(selectedProvider, true)
-                : null}
+              {providerCard(selectedProvider, true)}
               {connectError != null && (
                 <div className="text-destructive text-xs">{connectError}</div>
               )}
@@ -528,17 +457,7 @@ export const ModelsSettingsPanel = ({
                     onProviderChange?.(null);
                   }}
                 >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  onClick={() =>
-                    void saveAll().then((saved) => {
-                      if (saved) onProviderChange?.(null);
-                    })
-                  }
-                  disabled={!dirty}
-                >
-                  {t("apiKeys.saveChanges")}
+                  {t("common.close")}
                 </Button>
               </DialogFooter>
             </DialogContent>
