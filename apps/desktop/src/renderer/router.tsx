@@ -37,6 +37,7 @@ import { MemoryPanel } from "./components/settings/memory-panel";
 import { ModelsSettingsPanel } from "./components/settings/models-panel";
 import { NotificationSettingsPanel } from "./components/settings/notification-settings-dialog";
 import { ProfilePanel } from "./components/settings/profile-panel";
+import { ReferralsPanel } from "./components/settings/referrals-panel";
 import { RoutinesPanel } from "./components/settings/routines-panel";
 import { UsagePanel } from "./components/settings/usage-panel";
 import { SkillsManagementPanel } from "./components/skills/skills-management-panel";
@@ -490,6 +491,13 @@ const accountRoute = createRoute({
   component: ProfilePanel,
 });
 
+const referralsRoute = createRoute({
+  getParentRoute: () => inPaneLayoutRoute,
+  path: "/settings/referrals",
+  staticData: { titleKey: "referrals.title" },
+  component: ReferralsPanel,
+});
+
 const modelsRoute = createRoute({
   getParentRoute: () => inPaneLayoutRoute,
   path: "/settings/models",
@@ -561,6 +569,7 @@ const routeTree = rootRoute.addChildren([
       usageRoute,
       changelogRoute,
       accountRoute,
+      referralsRoute,
       browserSettingsRoute,
       deviceSettingsRoute,
       notificationSettingsRoute,

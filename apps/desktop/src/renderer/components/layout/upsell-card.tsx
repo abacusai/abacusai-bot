@@ -16,6 +16,8 @@ export const UpsellCard = ({
   body,
   cta,
   onCta,
+  secondaryCta,
+  onSecondaryCta,
   onDismiss,
   dismissLabel,
 }: {
@@ -25,6 +27,9 @@ export const UpsellCard = ({
   /** Omitted for a card whose whole message is the text. */
   cta?: string;
   onCta?: () => void;
+  /** A quieter second way out, under the button. */
+  secondaryCta?: string;
+  onSecondaryCta?: () => void;
   /** Given only where dismissing is allowed; the card is closable then. */
   onDismiss?: () => void;
   dismissLabel?: string;
@@ -64,6 +69,17 @@ export const UpsellCard = ({
       >
         {cta}
         <ArrowUpRight />
+      </Button>
+    )}
+    {secondaryCta != null && (
+      <Button
+        variant="link"
+        size="sm"
+        data-id={`${dataId}-secondary-cta`}
+        className="text-muted-foreground hover:text-foreground h-auto p-0 text-xs"
+        onClick={onSecondaryCta}
+      >
+        {secondaryCta}
       </Button>
     )}
   </div>
