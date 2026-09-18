@@ -253,8 +253,6 @@ import {
   readToolsetPreferences,
   readDefaultAgentMode,
   setDefaultAgentMode,
-  readXaiSearchPreference,
-  setXaiSearchEnabled,
   readNotificationSettings,
   setNotificationSettings,
   setExecBackend,
@@ -3803,21 +3801,6 @@ export class ServiceHost {
     setDefaultAgentMode(mode);
 
     return readDefaultAgentMode();
-  }
-
-  /**
-   * The stored preference, not the resolved one: an `XAI_API_KEY` in the
-   * environment also turns routing on, and that switch cannot be moved.
-   */
-  getXaiSearchEnabled(): boolean {
-    return readXaiSearchPreference();
-  }
-
-  /** Read back rather than echoed, same reason as the sandbox above. */
-  setXaiSearchEnabled(enabled: boolean): boolean {
-    setXaiSearchEnabled(enabled);
-
-    return readXaiSearchPreference();
   }
 
   setExecBackend(backend: BackendId): {

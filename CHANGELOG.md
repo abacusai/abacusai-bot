@@ -7,6 +7,9 @@
 
 ## Unreleased
 
+X search now runs on your Abacus.AI account, reading X's own index; the xAI
+Live Search key and switch are gone, since xAI retired that service.
+
 The agent no longer refers to documentation that is not shipped with the
 app when asked about skills or extensions.
 

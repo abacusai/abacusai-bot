@@ -163,23 +163,6 @@ export const setDefaultAgentMode = (
   mode: DefaultAgentMode
 ): AbacusBotSettings => writeSettings({ ...readSettings(), defaultMode: mode });
 
-/**
- * Whether X searches go to xAI's Live Search rather than the agent's own
- * search of x.com. A shell-exported `XAI_API_KEY` means yes, as
- * docs/capabilities.md promises. A key pasted into the connect page is a
- * model key and must not quietly route searches to xAI; that takes the toggle.
- */
-export const readXaiSearchEnabled = (): boolean =>
-  (process.env.XAI_API_KEY ?? "").trim().length > 0 ||
-  readSettings().xaiSearch === true;
-
-/** What the toggle shows and writes: the stored preference on its own. */
-export const readXaiSearchPreference = (): boolean =>
-  readSettings().xaiSearch === true;
-
-export const setXaiSearchEnabled = (enabled: boolean): AbacusBotSettings =>
-  writeSettings({ ...readSettings(), xaiSearch: enabled });
-
 /** Both default on; stored inverted so absent reads as on. */
 export const readNotificationSettings = (): NotificationSettings => {
   const stored = readSettings();

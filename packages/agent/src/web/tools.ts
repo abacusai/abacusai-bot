@@ -14,7 +14,7 @@ import {
   search,
   searchAvailable,
   WebSearchError,
-  xaiSearchAvailable,
+  desktopXSearchAvailable,
 } from "./search.js";
 
 // `twitter.com` is still served and linked all over the web; excluding it
@@ -141,11 +141,11 @@ export default function (pi: ExtensionAPI): void {
   });
 
   // X search runs on whichever model key the app holds, so it is gated neither
-  // on an xAI signup nor on a key existing at session start. The agent-tools
-  // server offers its own `x_search` over xAI Live Search, which reads X
-  // directly and is the better answer when a key exists; isSupersededWebTool
-  // keeps the two from colliding.
-  if (!xaiSearchAvailable()) {
+  // on a signup nor on a key existing at session start. The agent-tools
+  // server offers its own `x_search` over the platform's X API, which reads X
+  // directly and is the better answer when an Abacus key exists;
+  // isSupersededWebTool keeps the two from colliding.
+  if (!desktopXSearchAvailable()) {
     pi.registerTool({
       name: "x_search",
       label: "X Search",

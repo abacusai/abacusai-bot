@@ -2014,11 +2014,5 @@
       "select": "Select worktree"
     },
     "yesterday": "어제"
-  },
-  "xaiSearch": {
-    "description": "Send X searches to xAI's Live Search, which reads X's own index. Your search text goes to api.x.ai and an XAI_API_KEY is needed. Off by default: with it off, the agent searches x.com through its normal web search and nothing extra leaves.",
-    "envNote": "Applies to new sessions. An XAI_API_KEY exported in your shell switches this on regardless.",
-    "label": "Search X through xAI",
-    "title": "X search engine"
   }
 }

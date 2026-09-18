@@ -1849,10 +1849,6 @@ export interface AgentApi {
   ) => Promise<NotificationSettings>;
   /** Resolves to the stored mode; applies to what starts next. */
   setDefaultAgentMode: (mode: DefaultAgentMode) => Promise<DefaultAgentMode>;
-  /** Off by default: holding an xAI model key should not decide where a search goes. */
-  getXaiSearchEnabled: () => Promise<boolean>;
-  /** Resolves to the stored state; applies next session. */
-  setXaiSearchEnabled: (enabled: boolean) => Promise<boolean>;
   /** Keyed by toolset id. */
   getToolsetStates: () => Promise<Record<string, boolean>>;
   /** Resolves to the full state map so the panel stays consistent. */

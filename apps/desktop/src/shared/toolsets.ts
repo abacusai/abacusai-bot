@@ -429,8 +429,8 @@ export const TOOLSETS: Toolset[] = [
     status: "ready",
     delivery: "mcp-agent-tools",
     tools: [tool("x_search")],
-    // On by default: it reads public posts and cannot act. Without xAI Live
-    // Search keyed it withholds itself and the agent's own x_search answers.
+    // On by default: it reads public posts and cannot act. Without an Abacus
+    // key it withholds itself and the agent's own x_search answers.
     defaultEnabled: true,
   },
 ];

@@ -96,8 +96,6 @@ export enum IpcChannels {
   GetDefaultAgentMode = "agent:get-default-agent-mode",
   GetSandboxSupport = "agent:get-sandbox-support",
   SetDefaultAgentMode = "agent:set-default-agent-mode",
-  GetXaiSearchEnabled = "agent:get-xai-search-enabled",
-  SetXaiSearchEnabled = "agent:set-xai-search-enabled",
   GetNotificationSettings = "agent:get-notification-settings",
   SetNotificationSettings = "agent:set-notification-settings",
   GetToolsetStates = "agent:get-toolset-states",

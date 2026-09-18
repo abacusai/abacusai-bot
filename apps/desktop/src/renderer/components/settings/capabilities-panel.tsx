@@ -300,7 +300,6 @@ const ToolsetDetail = ({
       {toolset.id === "terminal" && !planned && <TerminalShellPicker />}
 
       {/* X search has a choice of engine behind it. */}
-      {toolset.id === "x_search" && !planned && <XaiSearchToggle />}
 
       {toolset.delivery === "builtin" && !planned && (
         <p
@@ -313,62 +312,6 @@ const ToolsetDetail = ({
       )}
 
       <McpToolsNote />
-    </div>
-  );
-};
-
-/**
- * Where an X search goes: off (default), the agent scopes web search to x.com;
- * on, the query is sent to xAI's Live Search. A switch rather than implied by
- * an xAI key, because "let me run Grok" should not also decide that every X
- * search leaves for a vendor the user never picked as a search engine.
- */
-const XaiSearchToggle = (): JSX.Element => {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-
-  const enabledQuery = useQuery({
-    queryKey: settingsQueryKeys.capabilities.xaiSearch,
-    queryFn: async () =>
-      (await window.api?.agent?.getXaiSearchEnabled?.()) ?? false,
-    staleTime: 10_000,
-  });
-
-  const flip = useMutation({
-    mutationFn: async (next: boolean) =>
-      (await window.api?.agent?.setXaiSearchEnabled?.(next)) ?? false,
-    onSuccess: (state) =>
-      queryClient.setQueryData(settingsQueryKeys.capabilities.xaiSearch, state),
-  });
-
-  const enabled = enabledQuery.data ?? false;
-
-  return (
-    <div className="space-y-2" data-id="xai-search-toggle">
-      <h3 className="text-secondary-foreground text-xs font-semibold tracking-wide uppercase">
-        {t("xaiSearch.title")}
-      </h3>
-
-      <div className="border-border flex items-start gap-3 rounded-lg border px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-foreground text-xs">{t("xaiSearch.label")}</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {t("xaiSearch.description")}
-          </p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {t("xaiSearch.envNote")}
-          </p>
-        </div>
-
-        <Switch
-          checked={enabled}
-          onCheckedChange={() => flip.mutate(!enabled)}
-          disabled={flip.isPending}
-          aria-label={t("xaiSearch.label")}
-          data-id="xai-search-enabled-toggle"
-          onClick={(event) => event.stopPropagation()}
-        />
-      </div>
     </div>
   );
 };

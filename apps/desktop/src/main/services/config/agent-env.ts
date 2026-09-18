@@ -17,7 +17,6 @@ import {
   readDockerImage,
   readExecBackend,
   readToolsetPreferences,
-  readXaiSearchEnabled,
 } from "./settings";
 
 /**
@@ -43,10 +42,10 @@ export function buildAgentConfigEnv(
   // (services/abacus-host).
   envVars.ABACUSAI_BOT_ABACUS_V1 = abacusRoutellmV1();
 
-  // Decides which of the two X search tools the agent keeps; the choice lives
-  // in Settings, which the agent cannot read.
-  if (readXaiSearchEnabled() && hasCredential("XAI_API_KEY")) {
-    envVars.ABACUSAI_BOT_XAI_SEARCH = "1";
+  // Decides which of the two X search tools the agent keeps: the desktop's,
+  // over the platform's X API, exists exactly while an Abacus key does.
+  if (hasCredential("ABACUS_API_KEY")) {
+    envVars.ABACUSAI_BOT_DESKTOP_X_SEARCH = "1";
   }
 
   // Toolsets the user switched off in Capabilities. Resolved here because
