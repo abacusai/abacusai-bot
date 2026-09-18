@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { ReferralInviteOutcome } from "#shared/contracts";
 
 import { connectorById } from "../../connectors";
+import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import { useReferralSummaryQuery } from "../../hooks/use-referrals";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { useConnectFlow } from "../connectors/connect-flow";
@@ -159,7 +160,7 @@ const ContactPicker = ({
       <Textarea
         value={message}
         onChange={(event) => onMessageChange(event.target.value)}
-        rows={3}
+        rows={8}
         maxLength={1000}
         aria-label={t("referrals.messageLabel")}
         data-id={`${dataId}-message`}
@@ -187,10 +188,18 @@ export const ReferralsPanel = (): JSX.Element => {
     useReferralSummaryQuery();
   const flow = useConnectFlow();
   const messaging = useMessaging();
+  const { data: account } = useAbacusAccountQuery();
 
-  const [message, setMessage] = useState<string>(() =>
-    t("referrals.defaultMessage")
-  );
+  // The note is the user's to edit; it starts in their name once the account has loaded.
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (message != null || account === undefined) return;
+    setMessage(
+      t("referrals.defaultMessage", {
+        name: account?.name?.trim() || t("referrals.aFriend"),
+      })
+    );
+  }, [account, message, t]);
   const [gmailRows, setGmailRows] = useState<PickerRow[] | null>(null);
   const [manualEmail, setManualEmail] = useState("");
   const [whatsappRows, setWhatsappRows] = useState<PickerRow[] | null>(null);
@@ -284,7 +293,9 @@ export const ReferralsPanel = (): JSX.Element => {
   const sendEmails = async (emails: string[]): Promise<void> => {
     setSending("gmail");
     try {
-      report(await window.api.agent.sendReferralEmailInvites(emails, message));
+      report(
+        await window.api.agent.sendReferralEmailInvites(emails, message ?? "")
+      );
       setGmailRows((rows) =>
         rows == null ? rows : rows.filter((row) => !emails.includes(row.id))
       );
@@ -297,7 +308,10 @@ export const ReferralsPanel = (): JSX.Element => {
     setSending("whatsapp");
     try {
       report(
-        await window.api.agent.sendReferralWhatsappInvites(chatIds, message)
+        await window.api.agent.sendReferralWhatsappInvites(
+          chatIds,
+          message ?? ""
+        )
       );
       setWhatsappRows((rows) =>
         rows == null ? rows : rows.filter((row) => !chatIds.includes(row.id))
@@ -451,7 +465,7 @@ export const ReferralsPanel = (): JSX.Element => {
                     ? t("referrals.noGmailContacts")
                     : t("referrals.addEmailsHint")
                 }
-                message={message}
+                message={message ?? ""}
                 onMessageChange={setMessage}
                 onSend={sendEmails}
                 sending={sending === "gmail"}
@@ -500,7 +514,7 @@ export const ReferralsPanel = (): JSX.Element => {
                   rows={whatsappRows ?? []}
                   loading={whatsappRows == null}
                   emptyText={t("referrals.noWhatsappContacts")}
-                  message={message}
+                  message={message ?? ""}
                   onMessageChange={setMessage}
                   onSend={sendWhatsapp}
                   sending={sending === "whatsapp"}
