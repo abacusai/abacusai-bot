@@ -201,7 +201,11 @@ export function classifyCommand(
     if (!quotesBalance(segment) || OPAQUE.test(segment)) {
       return {
         ...NOTHING,
-        concerns: ["the command is not plain enough to read"],
+        // A predicate the card reads after "The command", for the user, not
+        // the classifier: what to do about a line it cannot read.
+        concerns: [
+          "uses shell substitutions, so what it touches cannot be read from its text — check the command itself before allowing",
+        ],
       };
     }
 
