@@ -47,14 +47,16 @@ const classify = (
 const onPosix = process.platform !== "win32";
 
 describe.skipIf(!onPosix)("what a concern reads like", () => {
-  it("is a predicate the card puts after 'The command'", () => {
-    // The card said "The command the command is not plain enough to read."
+  it("tells the user what to do with a line it cannot read", () => {
+    // The card said "The command the command is not plain enough to read." —
+    // a classifier's shrug, doubled. A predicate after "The command" now,
+    // and one the user can act on.
     const intent = classify(
       'echo "local: $(git config --get credential.helper)"'
     );
-    expect(intent.concerns).toEqual(["is not plain enough to read"]);
-    for (const concern of intent.concerns)
-      expect(concern.toLowerCase().startsWith("the command")).toBe(false);
+    expect(intent.concerns).toHaveLength(1);
+    expect(intent.concerns[0]).toMatch(/^uses shell substitutions/);
+    expect(intent.concerns[0]).toContain("check the command itself");
   });
 });
 
