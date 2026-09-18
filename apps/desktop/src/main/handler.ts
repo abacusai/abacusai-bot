@@ -1062,17 +1062,6 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     }
   );
 
-  ipcMain.handle(IpcChannels.GetXaiSearchEnabled, () => {
-    return serviceHost.getXaiSearchEnabled();
-  });
-
-  ipcMain.handle(
-    IpcChannels.SetXaiSearchEnabled,
-    (_event, enabled: boolean) => {
-      return serviceHost.setXaiSearchEnabled(enabled);
-    }
-  );
-
   ipcMain.handle(IpcChannels.GetNotificationSettings, () => {
     return serviceHost.getNotificationSettings();
   });

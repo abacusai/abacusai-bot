@@ -614,12 +614,12 @@ export function searchAvailable(): boolean {
 }
 
 /**
- * Whether the desktop reported an xAI key at spawn (this process cannot read
- * the app's settings). Then X search here stands down: xAI's Live Search reads
- * X itself, and a web index filtered to x.com is the weaker answer.
+ * Whether the desktop serves `x_search` itself, over the platform's X API
+ * (this process cannot read the app's settings). Then X search here stands
+ * down: X's own index beats a web index filtered to x.com.
  */
-export function xaiSearchAvailable(): boolean {
-  return (process.env.ABACUSAI_BOT_XAI_SEARCH ?? "").trim() === "1";
+export function desktopXSearchAvailable(): boolean {
+  return (process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH ?? "").trim() === "1";
 }
 
 /**

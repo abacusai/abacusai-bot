@@ -41,12 +41,6 @@ export interface AbacusBotSettings {
   /** Absent means on, for the same reason. */
   notificationSoundDisabled?: boolean;
   /**
-   * Send X searches to xAI's Live Search instead of the agent's own search.
-   * Absent means off: an xAI key added for models should not quietly change
-   * where a search goes. An `XAI_API_KEY` in the shell still switches it on.
-   */
-  xaiSearch?: boolean;
-  /**
    * Enable transcript, log, and diagnostic uploads when an Abacus key is stored.
    * Defaults to true. Retained for config compatibility; there is no settings UI.
    * The selected session provider does not affect this check.

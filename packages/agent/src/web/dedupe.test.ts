@@ -40,7 +40,7 @@ describe("which web tool gives way", () => {
     // The one genuine arbitration left. xAI's Live Search reads X itself, so it
     // wins where its key exists — and gives way to this process where it does not.
     process.env.ANTHROPIC_API_KEY = "sk-test";
-    delete process.env.ABACUSAI_BOT_XAI_SEARCH;
+    delete process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH;
 
     expect(isSupersededWebTool({ name: "agent-tools_x_search" })).toBe(true);
   });
