@@ -1,7 +1,7 @@
 /**
  * Selecting a confinement backend, and deciding what to do without one.
  * A backend that works confines. Without one, or with one that cannot start
- * (no bubblewrap or socat, an older Windows), `auto` runs the command
+ * (no bubblewrap or socat, Windows), `auto` runs the command
  * unconfined and the session says so on screen; `strict` refuses instead.
  */
 import * as os from "node:os";
@@ -64,8 +64,7 @@ export type SandboxDecision =
 
 /**
  * Whether this platform has a confinement backend at all, working or not.
- * Windows counts only from the build that can make a process container; an
- * older one has no backend rather than a broken one.
+ * Windows sandboxing is disabled.
  */
 export function backendName(): SandboxBackend | null {
   return sandboxBackendFor(process.platform, os.release());
@@ -190,7 +189,7 @@ export async function sandboxAvailability(): Promise<SandboxAvailability> {
       active: false,
       reason:
         process.platform === "win32"
-          ? "needs Windows 11 24H2 or newer"
+          ? "sandboxing is disabled on Windows"
           : `no sandbox backend for ${process.platform}`,
     };
 

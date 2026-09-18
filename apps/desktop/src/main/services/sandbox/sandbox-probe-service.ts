@@ -41,7 +41,7 @@ export class SandboxProbeService {
         available: false,
         reason:
           this.platform === "win32"
-            ? "needs Windows 11 24H2 or newer"
+            ? "sandboxing is disabled on Windows"
             : `no sandbox backend for ${this.platform}`,
       };
     }

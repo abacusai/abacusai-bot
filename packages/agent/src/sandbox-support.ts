@@ -17,16 +17,14 @@ export function windowsBuild(release: string): number {
 }
 
 /**
- * The backend a platform has at all, working or not. An older Windows has
- * none rather than a broken one, so `auto` runs unconfined there and says so.
+ * The backend a platform has at all, working or not. Windows sandboxing is
+ * disabled, so `auto` runs unconfined there and says so.
  */
 export function sandboxBackendFor(
   platform: NodeJS.Platform,
-  release: string
+  _release: string
 ): SandboxBackend | null {
   if (platform === "darwin" || platform === "linux") return "sandbox-runtime";
-  if (platform === "win32" && windowsBuild(release) >= MINIMUM_WINDOWS_BUILD)
-    return "mxc";
 
   return null;
 }
