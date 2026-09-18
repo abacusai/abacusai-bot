@@ -111,6 +111,12 @@ import {
 } from "./services/providers/abacus-auth-service";
 import { cancelConnectorConnect } from "./services/providers/abacus-connector-service";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
+import {
+  fetchReferralSummary,
+  listReferralGmailContacts,
+  sendReferralEmailInvites,
+  sendReferralWhatsappInvites,
+} from "./services/providers/abacus-referral-service";
 import { signOut as clearLocalAccount } from "./services/providers/account-service";
 import { listAvailableModels } from "./services/providers/models";
 import { clearOpenRouterCache } from "./services/providers/openrouter";
@@ -759,6 +765,30 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(IpcChannels.GetMessagingSnapshot, () => {
     return serviceHost.getMessagingSnapshot();
   });
+
+  ipcMain.handle(IpcChannels.GetReferralSummary, () => fetchReferralSummary());
+
+  ipcMain.handle(IpcChannels.ListReferralGmailContacts, () =>
+    listReferralGmailContacts()
+  );
+
+  ipcMain.handle(
+    IpcChannels.SendReferralEmailInvites,
+    (_event, emails: unknown, message: unknown) =>
+      sendReferralEmailInvites(emails, message)
+  );
+
+  ipcMain.handle(IpcChannels.ListReferralWhatsappContacts, () =>
+    serviceHost.listInviteContacts("whatsapp")
+  );
+
+  ipcMain.handle(
+    IpcChannels.SendReferralWhatsappInvites,
+    (_event, chatIds: unknown, message: unknown) =>
+      sendReferralWhatsappInvites(chatIds, message, (chatId, text) =>
+        serviceHost.sendMessagingText("whatsapp", chatId, text)
+      )
+  );
 
   ipcMain.handle(
     IpcChannels.UpdateMessagingPlatform,
