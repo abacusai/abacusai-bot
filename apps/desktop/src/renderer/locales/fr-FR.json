@@ -1304,8 +1304,7 @@
       "whatsapp": "WhatsApp is not linked or is still starting. Check Connectors and try again.",
       "signedOut": "Sign in to Abacus.AI first.",
       "unavailable": "Could not send the invites right now. Try again in a moment."
-    },
-    "aFriend": "A friend"
+    }
   },
   "routines": {
     "atLabel": "At",

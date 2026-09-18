@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import type { ReferralInviteOutcome } from "#shared/contracts";
 
 import { connectorById } from "../../connectors";
-import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import { useReferralSummaryQuery } from "../../hooks/use-referrals";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { useConnectFlow } from "../connectors/connect-flow";
@@ -188,18 +187,10 @@ export const ReferralsPanel = (): JSX.Element => {
     useReferralSummaryQuery();
   const flow = useConnectFlow();
   const messaging = useMessaging();
-  const { data: account } = useAbacusAccountQuery();
 
-  // The note is the user's to edit; it starts in their name once the account has loaded.
-  const [message, setMessage] = useState<string | null>(null);
-  useEffect(() => {
-    if (message != null || account === undefined) return;
-    setMessage(
-      t("referrals.defaultMessage", {
-        name: account?.name?.trim() || t("referrals.aFriend"),
-      })
-    );
-  }, [account, message, t]);
+  const [message, setMessage] = useState<string | null>(() =>
+    t("referrals.defaultMessage")
+  );
   const [gmailRows, setGmailRows] = useState<PickerRow[] | null>(null);
   const [manualEmail, setManualEmail] = useState("");
   const [whatsappRows, setWhatsappRows] = useState<PickerRow[] | null>(null);
