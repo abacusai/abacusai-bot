@@ -1272,7 +1272,7 @@
     "selectAll": "Select all",
     "selectNone": "Select none",
     "messageLabel": "Your note to them",
-    "defaultMessage": "I've been using the AbacusAI Bot, a free open-source desktop AI agent that runs on free models. Worth a try.",
+    "defaultMessage": "I've been using the AbacusAI Bot, a free, open-source desktop AI agent. It's 100% free, runs on amazing free LLMs, and does real work on your computer: files, terminal, browser, Gmail, WhatsApp and more. Worth a try. It's open source too, star the repo if you like it: https://github.com/abacusai/abacusai-bot",
     "sendInvites": "Send {{count}} invites",
     "sending": "Sending…",
     "sentToast": "Invited {{count}} people",
