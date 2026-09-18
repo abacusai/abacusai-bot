@@ -1272,7 +1272,7 @@
     "selectAll": "Select all",
     "selectNone": "Select none",
     "messageLabel": "Your note to them",
-    "defaultMessage": "Download the app from bot.abacus.ai. I've been using the AbacusAI Bot, a free, open-source desktop AI agent. It's 100% free, runs on amazing free LLMs, and does real work on your computer: files, terminal, browser, Gmail, WhatsApp and more. Worth a try. It's open source too, star the repo if you like it: https://github.com/abacusai/abacusai-bot Download the app from bot.abacus.ai.",
+    "defaultMessage": "{{name}} has invited you to try the AbacusAI Bot, a free, open-source desktop AI agent.\n\n- 100% free: it runs on amazing free LLMs, no credit card, no subscription.\n- Does real work on your computer: your files, terminal and browser, with your permission.\n- Connects to Gmail, Google Drive, Slack, WhatsApp, Telegram and Discord.\n- Runs bots and routines for you around the clock.\n\nIt is open source. If you like it, star the repo: https://github.com/abacusai/abacusai-bot",
     "sendInvites": "Send {{count}} invites",
     "sending": "Sending…",
     "sentToast": "Invited {{count}} people",
@@ -1283,7 +1283,8 @@
       "whatsapp": "WhatsApp is not linked or is still starting. Check Connectors and try again.",
       "signedOut": "Sign in to Abacus.AI first.",
       "unavailable": "Could not send the invites right now. Try again in a moment."
-    }
+    },
+    "aFriend": "A friend"
   },
   "routines": {
     "atLabel": "At",
