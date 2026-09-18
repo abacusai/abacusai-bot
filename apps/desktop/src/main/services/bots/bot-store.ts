@@ -6,6 +6,8 @@
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+
 import {
   MAX_BOT_DESCRIPTION,
   MAX_BOT_PERSONA,
@@ -50,12 +52,7 @@ const read = (): Bot[] => {
 };
 
 const write = (bots: Bot[]): void => {
-  const file = FILE();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(bots, null, 2)}\n`, "utf8");
-  fs.renameSync(temp, file);
+  writeFileAtomicSync(FILE(), `${JSON.stringify(bots, null, 2)}\n`);
 };
 
 let counter = 0;
@@ -211,11 +208,7 @@ const readSenderSessions = (): Record<string, BotSenderSession> => {
 };
 
 const writeSenderSessions = (rows: Record<string, BotSenderSession>): void => {
-  const file = SENDER_FILE();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, JSON.stringify(rows, null, 2));
-  fs.renameSync(temp, file);
+  writeFileAtomicSync(SENDER_FILE(), JSON.stringify(rows, null, 2));
 };
 
 /** The route's identity: which chat, on which platform, for which bot. */

@@ -9,6 +9,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { writeFileAtomicSync } from "../atomic-file.js";
 import { abacusBotDir } from "../config.js";
 
 /** Refresh this long before nominal expiry, so a token never dies mid-request. */
@@ -58,19 +59,11 @@ export function readMcpAuth(): McpAuthFile {
 }
 
 export function writeMcpAuth(file: McpAuthFile): void {
-  const target = mcpAuthPath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  // Temp file plus rename, like the desktop half: a truncated token file costs
-  // every stored sign-in, since `readMcpAuth` cannot tell corrupt from absent.
-  const temp = `${target}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(file, null, 2)}\n`, "utf8");
-  // Credentials: mode set before the rename so the file is never world-readable.
-  try {
-    fs.chmodSync(temp, 0o600);
-  } catch {
-    // Windows and some network filesystems don't do POSIX modes. Not fatal.
-  }
-  fs.renameSync(temp, target);
+  // A truncated token file costs every stored sign-in, since `readMcpAuth`
+  // cannot tell corrupt from absent.
+  writeFileAtomicSync(mcpAuthPath(), `${JSON.stringify(file, null, 2)}\n`, {
+    restrict: true,
+  });
 }
 
 const isExpired = (record: McpTokenRecord): boolean =>
