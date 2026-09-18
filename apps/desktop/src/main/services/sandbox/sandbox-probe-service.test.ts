@@ -23,23 +23,26 @@ describe("the sandbox probe", () => {
     expect(() => parseProbe('{"ok":true}')).toThrow();
   });
 
-  it("answers an older Windows without spawning anything", async () => {
-    let spawned = 0;
-    const service = new SandboxProbeService(
-      () => {
-        spawned += 1;
-        throw new Error("must not resolve the agent");
-      },
-      "win32",
-      "10.0.22631"
-    );
+  it.each(["10.0.19045", "10.0.22631", "10.0.26100", "10.0.26200"])(
+    "answers Windows %s without spawning anything",
+    async (release) => {
+      let spawned = 0;
+      const service = new SandboxProbeService(
+        () => {
+          spawned += 1;
+          throw new Error("must not resolve the agent");
+        },
+        "win32",
+        release
+      );
 
-    await expect(service.support()).resolves.toEqual({
-      available: false,
-      reason: "needs Windows 11 24H2 or newer",
-    });
-    expect(spawned).toBe(0);
-  });
+      await expect(service.support()).resolves.toEqual({
+        available: false,
+        reason: "sandboxing is disabled on Windows",
+      });
+      expect(spawned).toBe(0);
+    }
+  );
 
   it("turns a probe that cannot run into an unavailable sandbox, once", async () => {
     let resolved = 0;
