@@ -71,18 +71,18 @@ describe("which X search the model gets", () => {
    * superseded" for the wrong reason.
    */
   const withKeys = (xai: boolean, run: () => void): void => {
-    const previousXai = process.env.ABACUSAI_BOT_XAI_SEARCH;
+    const previousXai = process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH;
     const previousModel = process.env.ANTHROPIC_API_KEY;
 
     process.env.ANTHROPIC_API_KEY = "test-key";
-    if (xai) process.env.ABACUSAI_BOT_XAI_SEARCH = "1";
-    else delete process.env.ABACUSAI_BOT_XAI_SEARCH;
+    if (xai) process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH = "1";
+    else delete process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH;
 
     try {
       run();
     } finally {
-      if (previousXai == null) delete process.env.ABACUSAI_BOT_XAI_SEARCH;
-      else process.env.ABACUSAI_BOT_XAI_SEARCH = previousXai;
+      if (previousXai == null) delete process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH;
+      else process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH = previousXai;
       if (previousModel == null) delete process.env.ANTHROPIC_API_KEY;
       else process.env.ANTHROPIC_API_KEY = previousModel;
     }

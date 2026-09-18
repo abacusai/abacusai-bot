@@ -120,7 +120,6 @@ export class DiagnosticsSyncService {
         serverDebugSync: settings.serverDebugSync ?? true,
         autoDefaultMode:
           settings.defaultMode == null ? null : settings.defaultMode === "AUTO",
-        xaiSearch: settings.xaiSearch ?? null,
         notificationsDisabled: settings.notificationsDisabled ?? null,
       },
       exec_backend: settings.execBackend ?? null,

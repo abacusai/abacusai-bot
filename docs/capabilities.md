@@ -25,8 +25,9 @@ Web search uses a configured model provider or a dedicated search backend.
 link-local addresses, oversized responses, unsupported binary data, and
 cross-origin redirects. Localhost remains available for testing a local server.
 
-X search uses xAI search only when its switch and key are present. Otherwise it
-uses a configured web-search provider and restricts results to X domains.
+X search reads X's own index through your Abacus.AI account, billed per
+request. Without an Abacus.AI key it uses a configured web-search provider and
+restricts results to X domains.
 
 ## Devices
 

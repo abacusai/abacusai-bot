@@ -59,7 +59,6 @@ export const settingsQueryKeys = {
   capabilities: {
     all: ["settings", "capabilities"] as const,
     toolsets: ["settings", "capabilities", "toolsets"] as const,
-    xaiSearch: ["settings", "capabilities", "xai-search"] as const,
     execBackend: ["settings", "capabilities", "exec-backend"] as const,
     // Shared with the terminal panel's `+` menu, which picks from the same
     // roster and writes the same preference.

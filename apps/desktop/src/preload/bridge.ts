@@ -747,13 +747,6 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
         IpcChannels.SetDefaultAgentMode,
         mode
       ) as Promise<DefaultAgentMode>,
-    getXaiSearchEnabled: () =>
-      ipcRenderer.invoke(IpcChannels.GetXaiSearchEnabled) as Promise<boolean>,
-    setXaiSearchEnabled: (enabled: boolean) =>
-      ipcRenderer.invoke(
-        IpcChannels.SetXaiSearchEnabled,
-        enabled
-      ) as Promise<boolean>,
     getNotificationSettings: () =>
       ipcRenderer.invoke(
         IpcChannels.GetNotificationSettings

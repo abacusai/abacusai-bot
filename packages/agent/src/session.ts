@@ -138,7 +138,7 @@ import { conversationSessionManager } from "./session-file.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
-import { searchAvailable, xaiSearchAvailable } from "./web/search.js";
+import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
 import { isInsideDirectory } from "./workspace-path.js";
 
@@ -377,15 +377,16 @@ function handoverPrompt(presentTool: string | undefined): string {
 
 /**
  * The server's `x_search`, when this process's own version should answer
- * instead. The server's runs on xAI's Live Search, which reads X itself, so
- * where an xAI key exists it is the better tool and this process stands down;
- * the desktop signals that, since this process cannot read the app's settings.
+ * instead. The server's runs on the platform's X API, which reads X itself,
+ * so where an Abacus key exists it is the better tool and this process stands
+ * down; the desktop signals that, since this process cannot read the app's
+ * settings.
  */
 export function isSupersededWebTool(tool: { name: string }): boolean {
   // Server-qualified names only; this process's own `x_search` must stay.
   if (!/^.+_x_search$/.test(tool.name)) return false;
 
-  return !xaiSearchAvailable() && searchAvailable();
+  return !desktopXSearchAvailable() && searchAvailable();
 }
 
 /**
