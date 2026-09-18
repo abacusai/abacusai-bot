@@ -86,6 +86,49 @@ describe("replyLanguageMismatch", () => {
     ).toEqual({ expected: "latin", got: "cjk" });
   });
 
+  it("flags a Chinese reply whose English technical terms outnumber the prose", () => {
+    // The reply a user got to "is my github connected?": Chinese sentences
+    // carrying GitHub, the account names, the scopes and "keyring token".
+    // Han held under 60% of the letters, so dominance saw no clear script and
+    // the repair never ran.
+    expect(
+      replyLanguageMismatch([
+        user("is my github connected ?"),
+        assistant(
+          "是的——GitHub 已连接。✅\n\n" +
+            "- **活跃账号:** `PranshuS007`（Pranshu Sharma），通过 token 认证\n" +
+            "- **令牌权限范围:** `admin:org`、`project`、`repo`、`user`、`workflow`——因此私有仓库、PR 和 Issues 均可使用\n" +
+            "- 你那里还有一个第二账号已登录但未激活: `pranshu-11`（keyring token）\n\n" +
+            "所以 `gh` 和 git-over-HTTPS 已经可以使用了——直接告诉我你想在哪个仓库上做什么就行。"
+        ),
+      ])
+    ).toEqual({ expected: "latin", got: "cjk" });
+  });
+
+  it("lets English terms through in a reply to a user who writes in another script", () => {
+    // Identifiers, product names and error text are English in every
+    // language's technical prose; a Chinese user gets them too.
+    expect(
+      replyLanguageMismatch([
+        user("我的 GitHub 连接好了吗？"),
+        assistant(
+          "是的，GitHub 已连接。活跃账号是 PranshuS007，token 的权限范围包括 admin:org、repo、user 和 workflow，所以 gh 和 git over HTTPS 都可以直接使用。"
+        ),
+      ])
+    ).toBeNull();
+  });
+
+  it("still flags a reply that drifted into Latin for a user who writes in another script", () => {
+    expect(
+      replyLanguageMismatch([
+        user("请帮我看看今天的日程安排，然后告诉我有没有需要提前准备的会议。"),
+        assistant(
+          "You have three meetings today. The 3pm one references the Q3 deck, which needs a review before you join; the other two need nothing from you."
+        ),
+      ])
+    ).toEqual({ expected: "cjk", got: "latin" });
+  });
+
   it("judges a message as a whole, so a name in another script does not trip it", () => {
     expect(
       replyLanguageMismatch([

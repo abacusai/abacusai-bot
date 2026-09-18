@@ -7,6 +7,12 @@
 
 ## Unreleased
 
+A reply that drifts into another language is caught even when it is full of
+English technical terms. A Chinese answer to an English question, with
+GitHub, account names and token scopes in it, read as "no clear language" and
+was never asked to answer again; now any script the user did not write in is
+drift once it is more than a stray name.
+
 X search now runs on your Abacus.AI account, reading X's own index; the xAI
 Live Search key and switch are gone, since xAI retired that service.
 
