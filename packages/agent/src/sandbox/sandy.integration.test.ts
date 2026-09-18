@@ -7,11 +7,16 @@ import {
   realpathSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve, dirname } from "node:path";
+import { join, resolve } from "node:path";
 
 import { expect, it } from "vitest";
 
 import { installPosixShell, posixShellEnv } from "../posix-shell-install.js";
+
+// Draft compatibility experiment, not the app's execution path yet. Git's
+// normalized-path lookup fails through inaccessible ancestors in AppContainer;
+// a drive alias avoids that lookup. Production integration still needs a
+// lifecycle for these aliases and normal user Git configuration access.
 
 it.skipIf(process.platform !== "win32" || !existsSync("vendor/sandy.exe"))(
   "runs BusyBox and Git in Sandy without allowing outside writes",
@@ -19,26 +24,32 @@ it.skipIf(process.platform !== "win32" || !existsSync("vendor/sandy.exe"))(
     const root = mkdtempSync(join(homedir(), "sandy-busybox-"));
     mkdirSync(join(root, "workspace"));
     const cwd = realpathSync.native(join(root, "workspace"));
-    const mount = spawnSync("C:/Windows/System32/subst.exe", ["Z:", cwd], {
-      encoding: "utf8",
-    });
-    expect(mount.status, mount.stderr).toBe(0);
+    const subst = join(
+      process.env.SystemRoot ?? "C:\\Windows",
+      "System32",
+      "subst.exe"
+    );
+    let drive: string | undefined;
     try {
+      for (const letter of "ZYXWVUTSRQPONMLKJIHGFE") {
+        const candidate = `${letter}:`;
+        const mount = spawnSync(subst, [candidate, cwd], {
+          encoding: "utf8",
+          timeout: 5000,
+        });
+        if (mount.status === 0) {
+          drive = candidate;
+          break;
+        }
+      }
+      if (drive == null)
+        throw new Error("No unused drive letter for Sandy compatibility test");
       const shell = installPosixShell({
         payload: resolve("vendor/busybox.exe"),
         cacheRoot: join(root, "shell"),
       })!;
-      const parents: string[] = [];
-      for (
-        let parent = dirname(cwd);
-        parent.toLowerCase().startsWith(homedir().toLowerCase());
-        parent = dirname(parent)
-      ) {
-        parents.push(parent);
-        if (parent === dirname(parent)) break;
-      }
-      const config = `[sandbox]\ntoken = 'appcontainer'\nworkdir = "Z:\\\\"\n[allow.deep]\nexecute = [${JSON.stringify(shell.bin)}]\nall = [${JSON.stringify(cwd)}]\n[allow.this]\nread = ${JSON.stringify(parents)}\n[environment]\ninherit = true\n[privileges]\nnetwork = false\nlan = false\n`;
-      const command = `echo content | cat > file.txt && git init && git add file.txt && git -c user.name=Test -c user.email=test@example.com commit -m test && git status --porcelain; echo outside > '${join(root, "denied.txt").replaceAll("\\", "/")}'`;
+      const config = `[sandbox]\ntoken = 'appcontainer'\nworkdir = ${JSON.stringify(`${drive}\\`)}\n[allow.deep]\nexecute = [${JSON.stringify(shell.bin)}]\nall = [${JSON.stringify(cwd)}]\n[environment]\ninherit = true\n[privileges]\nnetwork = true\nlan = false\n`;
+      const command = `echo content | cat > file.txt && git init && git add file.txt && git -c user.name=Test -c user.email=test@example.com commit -m test && git status --porcelain && echo git-write-ok; echo outside > '${join(root, "denied.txt").replaceAll("\\", "/")}'`;
       const result = spawnSync(
         resolve("vendor/sandy.exe"),
         ["-s", config, "-x", shell.sh, "-c", command],
@@ -52,6 +63,8 @@ it.skipIf(process.platform !== "win32" || !existsSync("vendor/sandy.exe"))(
         }
       );
       expect(result.error).toBeUndefined();
+      expect(result.stdout, result.stderr).toContain("git-write-ok");
+      expect(result.status).toBe(1);
       expect(
         existsSync(join(cwd, "file.txt")),
         `${result.status}: ${result.stdout}${result.stderr}`
@@ -65,7 +78,7 @@ it.skipIf(process.platform !== "win32" || !existsSync("vendor/sandy.exe"))(
         `${result.status}: ${result.stdout}${result.stderr}`
       ).toBe(false);
     } finally {
-      spawnSync("C:/Windows/System32/subst.exe", ["Z:", "/D"]);
+      if (drive != null) spawnSync(subst, [drive, "/D"], { timeout: 5000 });
       rmSync(root, { recursive: true, force: true });
     }
   },
