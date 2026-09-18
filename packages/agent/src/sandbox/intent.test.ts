@@ -46,6 +46,20 @@ const classify = (
 
 const onPosix = process.platform !== "win32";
 
+describe.skipIf(!onPosix)("what a concern reads like", () => {
+  it("tells the user what to do with a line it cannot read", () => {
+    // The card said "The command the command is not plain enough to read." —
+    // a classifier's shrug, doubled. A predicate after "The command" now,
+    // and one the user can act on.
+    const intent = classify(
+      'echo "local: $(git config --get credential.helper)"'
+    );
+    expect(intent.concerns).toHaveLength(1);
+    expect(intent.concerns[0]).toMatch(/^uses shell substitutions/);
+    expect(intent.concerns[0]).toContain("check the command itself");
+  });
+});
+
 describe.skipIf(!onPosix)("what a benign line is granted", () => {
   it("a new file in the user's folders, by redirect, touch, tee or cp", () => {
     for (const command of [
