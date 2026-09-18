@@ -99,7 +99,7 @@ One-off supervised sessions remain available for work that does not need a persi
 
 Default, Auto-Accept, Plan, Auto, and Full access modes control supervised sessions. Bot chats and routine runs use the default mode and do not show the mode picker. They run as your operating-system user and can reach files and connected accounts without an approval prompt. Routine instructions include their own folder and every workspace registered in the app.
 
-The default mode is Full access: no approval prompts and no sandbox. The Profile page can change it to Auto, which is the same inside a kernel sandbox: shell commands cannot write outside the workspace, read credential stores such as SSH keys, or reach hosts you have not allowed, and a card asks when one tries. Auto is offered on macOS, Linux with bubblewrap, and Windows 11 24H2 or newer.
+The default mode is Full access: no approval prompts and no sandbox. The Profile page can change it to Auto, which confines shell commands and asks for additional file access. macOS and Linux also ask before connecting to unlisted hosts. Windows uses the bundled Sandy AppContainer runner with BusyBox and allows internet access. Auto is offered on macOS, Linux with bubblewrap, and Windows 10 1903 or newer on x64, or Windows 11 on ARM64. See [permissions](docs/permissions.md) for platform differences.
 
 Remote messaging also uses the default mode when "Run remote turns unattended" is on. That setting is on by default, although inbound responses remain off until you enable them. Turning it off makes risky actions wait for approval in the desktop app.
 

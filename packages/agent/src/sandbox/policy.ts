@@ -43,6 +43,8 @@ export interface SandboxPolicy {
   secrets: SecretPaths;
   /** Paths outside the workspace the user let this command write. */
   approvedWrites: string[];
+  /** Additional reads explicitly approved by the user. */
+  approvedReads?: string[];
   /** Where the command's outbound connections may go. */
   network: NetworkPolicy;
 }
@@ -124,6 +126,7 @@ export function resolvePolicy(
       exemptions: [...readableExemptions(), ...(options.approvedReads ?? [])],
     }),
     approvedWrites: [...(options.approvedWrites ?? [])],
+    approvedReads: [...readableExemptions(), ...(options.approvedReads ?? [])],
     network:
       options.filteredNetwork === true
         ? { kind: "filtered" }

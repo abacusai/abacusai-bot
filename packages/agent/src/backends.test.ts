@@ -27,7 +27,6 @@ import {
 import { budgetSecondsFor } from "./extensions/tool-timeouts.js";
 import { posixShell } from "./posix-shell.js";
 import { sandboxBackendFor } from "./sandbox-support.js";
-import { runnerPath } from "./sandbox/mxc.js";
 
 describe("deadline", () => {
   it("reads its argument as seconds, not milliseconds", () => {
@@ -207,9 +206,7 @@ describe("a platform with no sandbox backend (Windows)", () => {
     Object.defineProperty(process, "platform", { value: "win32" });
     vi.stubEnv("ABACUSAI_BOT_EXEC_BACKEND", "local");
     vi.stubEnv("ABACUSAI_BOT_SANDBOX", "auto");
-    const canConfine =
-      sandboxBackendFor("win32", os.release()) === "mxc" &&
-      runnerPath() != null;
+    const canConfine = sandboxBackendFor("win32", os.release()) === "sandy";
 
     // Confined operations where the runner is there; the bundled shell's
     // where only its payload is; null on a host with neither (this suite off

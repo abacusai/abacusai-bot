@@ -4,10 +4,10 @@
  * the same question the agent answers (see sandbox/index.ts).
  */
 
-export type SandboxBackend = "sandbox-runtime" | "mxc";
+export type SandboxBackend = "sandbox-runtime" | "sandy";
 
-/** The first Windows build whose process containers the MXC runner supports. */
-export const MINIMUM_WINDOWS_BUILD = 26100;
+/** BusyBox's Unicode build requires Windows 10 1903. */
+export const MINIMUM_WINDOWS_BUILD = 18362;
 
 /** The build number in an `os.release()` string such as `10.0.26100`. */
 export function windowsBuild(release: string): number {
@@ -22,11 +22,17 @@ export function windowsBuild(release: string): number {
  */
 export function sandboxBackendFor(
   platform: NodeJS.Platform,
-  release: string
+  release: string,
+  arch: string = process.arch
 ): SandboxBackend | null {
   if (platform === "darwin" || platform === "linux") return "sandbox-runtime";
-  if (platform === "win32" && windowsBuild(release) >= MINIMUM_WINDOWS_BUILD)
-    return "mxc";
+  // Sandy publishes x64; ARM64 needs Windows 11's x64 emulation.
+  if (
+    platform === "win32" &&
+    (arch === "x64" || arch === "arm64") &&
+    windowsBuild(release) >= (arch === "arm64" ? 22000 : MINIMUM_WINDOWS_BUILD)
+  )
+    return "sandy";
 
   return null;
 }

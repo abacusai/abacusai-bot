@@ -92,17 +92,17 @@ call that started it.
 
 ### Kernel sandbox
 
-macOS, Linux and Windows 11 24H2 or newer run commands under a kernel
+macOS, Linux and supported Windows versions run commands under a kernel
 sandbox in every mode but Full access. macOS and Linux use Anthropic's sandbox
 runtime (Seatbelt and bubblewrap, with its loopback proxies for the network);
-Windows uses a Microsoft process container run by the `wxc-exec` runner the
-app ships. Plan mode allows no writes. Default, Auto-Accept and Auto allow
+Windows uses the bundled Sandy CLI's AppContainer with BusyBox, without an
+administrator setup. Plan mode keeps the workspace read-only. Default, Auto-Accept and Auto allow
 writes to the workspace and temporary directories. Full access is the one
 mode with no sandbox. Bots and routines run in the default mode without a card
 to answer, so in Auto a hidden store stays hidden and an unlisted host is
 refused outright.
 
-Reads are allowed everywhere except a short list of credential stores: SSH
+On macOS and Linux, reads are allowed everywhere except a short list of credential stores: SSH
 private keys, GPG private keys, cloud CLI credential and token caches (AWS,
 Google Cloud, Azure), `~/.kube/config`, `~/.docker/config.json`, `~/.netrc`,
 `~/.pypirc`, browser profiles, the macOS keychain files, Windows credential
@@ -120,7 +120,7 @@ the rest of the session. `ABACUSAI_BOT_SANDBOX_READABLE`, a path-delimited
 list where `~` expands to the home directory, exempts a path without
 prompting.
 
-Beyond the workspace and temp, a confined command may also write to the
+On macOS and Linux, beyond the workspace and temp, a confined command may also write to the
 caches and toolchains a build uses (`~/.npm`, `~/.cache`, `~/.cargo`, `~/go`,
 `~/.m2`, `~/Library/Caches` and the like, where they exist).
 
@@ -159,15 +159,35 @@ loopback are direct, so a dev server the command starts still answers.
 `ABACUSAI_BOT_SANDBOX_HOSTS`, a comma-separated list where `*.example.com`
 allows a domain, pre-approves hosts. A tool that ignores `HTTP_PROXY`,
 `HTTPS_PROXY` and `ALL_PROXY` cannot connect at all. On Windows the network is
-not confined yet.
+open to internet hosts without per-host approvals. Sandy blocks LAN and
+loopback access, so local development servers and local proxies do not have
+the same connectivity as on macOS and Linux.
+
+On Windows, Sandy grants access to the workspace, BusyBox, readable Git
+configuration, a private temporary directory, and approved paths. System
+files that Windows makes available to AppContainers remain readable.
+Other user files and tool caches may need approval. Explicit absolute-path
+permission-denied diagnostics can raise the existing file approval card;
+ambiguous or silent failures cannot. Creating a file outside the workspace
+requires approval for its existing parent directory, which the card names.
+Grants that cover a protected credential store are refused instead of
+silently exposing it. Git init, add and commit run inside the sandbox;
+authentication helpers and signing agents may require additional access.
+
+Each Windows command uses a temporary drive alias for the workspace so Git
+can resolve its working directory without read access to the workspace's
+ancestors. Use relative paths inside the workspace; changing to its original
+absolute path can still fail in Git. The alias is removed when the command
+finishes or is cancelled. Sandy file grants are cleaned up before an approved
+retry. A missing or broken runner refuses commands in confined modes.
 
 Linux needs `bubblewrap` and `socat` installed, and unprivileged user
 namespaces with capabilities (Ubuntu 24.04 restricts them by default; see the
 runtime's notes on `kernel.apparmor_restrict_unprivileged_userns`). The app
 probes this once at launch. Where the sandbox cannot run, or on a Windows
-older than 24H2 (build 26100), Auto is not offered: the picker and the Profile
+older than Windows 10 1903 on x64 or Windows 11 on ARM64, Auto is not offered: the picker and the Profile
 page show Full access alone, which is what such a machine has. A confined mode
-picked anyway (Default, say) still runs its commands, unconfined.
+picked anyway on an unsupported platform still runs its commands unconfined.
 `ABACUSAI_BOT_SANDBOX=strict` refuses them instead; `off` never confines.
 
 The sandbox applies to shell commands, including commands started by delegated

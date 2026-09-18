@@ -182,23 +182,6 @@ const TOOLS = {
   },
 };
 
-/**
- * The Windows sandbox runner, `wxc-exec.exe` from Microsoft's MXC SDK, taken
- * from the npm tarball rather than the package: the package also carries
- * node-pty and the macOS and Linux runners, none of which the agent uses (see
- * src/sandbox/mxc.ts). Windows only; the other platforms confine with what the
- * OS ships. Shipped under vendor/mxc/, apart from the search tools.
- */
-const MXC = {
-  label: "MXC sandbox runner",
-  version: "0.8.0",
-  url: "https://registry.npmjs.org/@microsoft/mxc-sdk/-/mxc-sdk-0.8.0.tgz",
-  sha256: "06bb2399d7e98ab1907acf851e12a4e44748dd467b79d3e53c2f2fbf569da14e",
-  // The runner and the two helpers it may start.
-  files: ["wxc-exec.exe", "plm.exe", "winhttp-proxy-shim.exe"],
-  targets: { "win32-x64": "x64", "win32-arm64": "arm64" },
-};
-
 // This script lives in packages/agent/scripts.
 const ROOT = path.resolve(import.meta.dirname, "..");
 // Per-target, so cross-building win32 after darwin does not re-download, and
@@ -304,51 +287,6 @@ async function fetchTool(tool, target, cached) {
   }
 }
 
-async function fetchMxc(target, cachedDir) {
-  console.log(`[tools] downloading ${MXC.label} ${MXC.version} for ${target}`);
-  const body = await fetchVerified(MXC.url, MXC.sha256, path.basename(MXC.url));
-
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "abacusai-bot-mxc-"));
-  const archive = path.join(scratch, "mxc-sdk.tgz");
-
-  try {
-    fs.writeFileSync(archive, body);
-    extract(archive, scratch);
-
-    const source = path.join(scratch, "package", "bin", MXC.targets[target]);
-    fs.mkdirSync(cachedDir, { recursive: true });
-    for (const file of MXC.files) {
-      const extracted = path.join(source, file);
-      if (!fs.existsSync(extracted)) {
-        throw new Error(`${path.basename(MXC.url)}: no ${file} for ${target}`);
-      }
-      fs.copyFileSync(extracted, path.join(cachedDir, file));
-    }
-  } finally {
-    fs.rmSync(scratch, { recursive: true, force: true });
-  }
-}
-
-/** Put the Windows runner beside the search tools, on a Windows target only. */
-async function vendorMxc(target) {
-  if (MXC.targets[target] == null) return;
-
-  const cachedDir = path.join(CACHE, target, "mxc");
-  if (MXC.files.every((file) => fs.existsSync(path.join(cachedDir, file)))) {
-    console.log(
-      `[tools] ${MXC.label} ${MXC.version} for ${target} already cached`
-    );
-  } else {
-    await fetchMxc(target, cachedDir);
-  }
-
-  const shipped = path.join(DEST, "mxc");
-  fs.mkdirSync(shipped, { recursive: true });
-  for (const file of MXC.files) {
-    fs.copyFileSync(path.join(cachedDir, file), path.join(shipped, file));
-  }
-}
-
 async function main() {
   const platform = flag("platform", process.platform);
   const arch = flag("arch", process.env.TARGET_ARCH || process.arch);
@@ -386,8 +324,6 @@ async function main() {
     // and a binary the agent cannot execute fails exactly like a missing one.
     if (platform !== "win32") fs.chmodSync(shipped, 0o755);
   }
-
-  await vendorMxc(target);
 
   console.log(
     `[tools] ${path.relative(ROOT, DEST)} holds ${fs.readdirSync(DEST).join(", ")} for ${target}`

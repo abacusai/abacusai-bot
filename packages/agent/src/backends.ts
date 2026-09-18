@@ -245,7 +245,11 @@ function localSandboxedOperations(
       approvedReads: approvals?.reads.consume(command) ?? [],
       approvedWrites: [
         ...(approvals?.writes.consume(command) ?? []),
-        ...(intent?.grants ?? []),
+        // Sandy grants existing objects. New outside paths need a card naming
+        // their parent; never silently turn a file grant into a directory grant.
+        ...(intent?.grants ?? []).filter(
+          (target) => process.platform !== "win32" || fs.existsSync(target)
+        ),
       ],
       filteredNetwork: networkConfinable(),
     });
@@ -294,6 +298,7 @@ function localSandboxedOperations(
 
     // The tail of the output, to name a hidden store on failure.
     let tail = "";
+    let stderrTail = "";
     const result = await new Promise<{ exitCode: number }>((resolve) => {
       const child = spawn(argv[0]!, argv.slice(1), {
         cwd,
@@ -301,7 +306,8 @@ function localSandboxedOperations(
         // started too; a leftover subshell is what keeps the output pipes
         // open.
         detached: process.platform !== "win32",
-        env: spawnEnv,
+        env:
+          decision.kind === "confined" ? (decision.env ?? spawnEnv) : spawnEnv,
         // Written for the platform's shell; must not be re-quoted
         // (sandbox/shell.ts).
         ...(decision.kind !== "confined" &&
@@ -327,7 +333,12 @@ function localSandboxedOperations(
       };
 
       // Shutdown must take the process group with it, as a deadline would.
-      const unregister = registerForegroundProcess({ kill: terminate });
+      const unregister = registerForegroundProcess({
+        kill: () => {
+          terminate();
+          if (decision.kind === "confined") decision.cleanup?.();
+        },
+      });
 
       const onAbort = (): void => {
         terminate();
@@ -344,7 +355,10 @@ function localSandboxedOperations(
         tail = (tail + data.toString()).slice(-OUTPUT_TAIL_CHARS);
       };
       child.stdout.on("data", collect);
-      child.stderr.on("data", collect);
+      child.stderr.on("data", (data: Buffer) => {
+        stderrTail = (stderrTail + data.toString()).slice(-OUTPUT_TAIL_CHARS);
+        collect(data);
+      });
 
       child.on("error", (error) => {
         options.onData(
@@ -362,6 +376,8 @@ function localSandboxedOperations(
         unregister();
         resolve({ exitCode: code ?? 1 });
       });
+    }).finally(() => {
+      if (decision.kind === "confined") decision.cleanup?.();
     });
 
     // The runtime hears a refusal a beat after the exit; wait for it, then
@@ -371,7 +387,9 @@ function localSandboxedOperations(
     // for a hidden store.
     const refused =
       decision.kind === "confined"
-        ? await settledDenials(commandId, { exitCode: result.exitCode, tail })
+        ? decision.denials != null
+          ? decision.denials(stderrTail)
+          : await settledDenials(commandId, { exitCode: result.exitCode, tail })
         : [];
     if (decision.kind === "confined") {
       const denied = violations(commandId);

@@ -31,12 +31,12 @@ describe("the sandbox probe", () => {
         throw new Error("must not resolve the agent");
       },
       "win32",
-      "10.0.22631"
+      "10.0.17763"
     );
 
     await expect(service.support()).resolves.toEqual({
       available: false,
-      reason: "needs Windows 11 24H2 or newer",
+      reason: "needs Windows 10 1903 or newer (Windows 11 on ARM64)",
     });
     expect(spawned).toBe(0);
   });

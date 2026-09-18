@@ -143,8 +143,13 @@ describe("the decision table", () => {
   it("under auto, runs unconfined and says why when the backend cannot start", async () => {
     if (backendName() === null) return;
     const decision = await decide(policy(), "echo hi", "/tmp/ws");
-    // Whichever this machine is, the answer is one of the two honest ones.
-    expect(["confined", "unconfined"]).toContain(decision.kind);
+    // Sandy must fail closed when its runner or grants cannot be applied.
+    expect(
+      backendName() === "sandy"
+        ? ["confined", "refused"]
+        : ["confined", "unconfined"]
+    ).toContain(decision.kind);
+    if (decision.kind === "confined") decision.cleanup?.();
     if (decision.kind === "unconfined")
       expect(decision.reason).toBe("backend-unavailable");
   });
@@ -169,7 +174,7 @@ describe("the decision table", () => {
   it("does not tell the model to give up, since a later attempt may work", () => {
     // A probe that ran out of time is deliberately left uncached so the next
     // command tries again; a refusal saying "do not retry" contradicts that.
-    for (const backend of ["sandbox-runtime", "mxc"] as const) {
+    for (const backend of ["sandbox-runtime", "sandy"] as const) {
       const message = unavailableBackendMessage(backend, "bwrap not installed");
 
       expect(message).not.toContain("do not retry");

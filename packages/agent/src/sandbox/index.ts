@@ -1,15 +1,16 @@
 /**
  * Selecting a confinement backend, and deciding what to do without one.
  * A backend that works confines. Without one, or with one that cannot start
- * (no bubblewrap or socat, an older Windows), `auto` runs the command
- * unconfined and the session says so on screen; `strict` refuses instead.
+ * (no bubblewrap or socat, an older Windows), `auto` can run unconfined
+ * with a warning. A broken Sandy installation always refuses execution.
  */
 import * as os from "node:os";
 
 import { sandboxBackendFor, type SandboxBackend } from "../sandbox-support.js";
-import * as mxc from "./mxc.js";
+import type { Denial } from "./approvals.js";
 import { sandboxEnforcement, type SandboxPolicy } from "./policy.js";
 import * as runtime from "./runtime.js";
+import * as sandy from "./sandy.js";
 
 export type {
   NetworkPolicy,
@@ -52,7 +53,14 @@ export type { SandboxBackend } from "../sandbox-support.js";
 
 export type SandboxDecision =
   /** Run this argv instead of the bare command. */
-  | { kind: "confined"; argv: string[]; backend: SandboxBackend }
+  | {
+      kind: "confined";
+      argv: string[];
+      backend: SandboxBackend;
+      env?: NodeJS.ProcessEnv;
+      cleanup?: () => void;
+      denials?: (stderr: string) => Denial[];
+    }
   /** No confinement wanted: Full access, or switched off by the environment. */
   | { kind: "unconfined"; reason: "mode" }
   /** No backend on this platform, and enforcement permits running anyway. */
@@ -64,25 +72,23 @@ export type SandboxDecision =
 
 /**
  * Whether this platform has a confinement backend at all, working or not.
- * Windows counts only from the build that can make a process container; an
- * older one has no backend rather than a broken one.
+ * Windows requires AppContainer and support for the bundled BusyBox binary.
  */
 export function backendName(): SandboxBackend | null {
   return sandboxBackendFor(process.platform, os.release());
 }
 
 /**
- * Whether the backend's own program is here to run. The Windows runner is a
- * vendored binary that a checkout without the download step lacks; with it
- * missing, `auto` hands the shell back to pi's own platform-correct path
- * rather than run every command through a fallback written for bash. The
- * runtime on macOS and Linux is probed asynchronously instead (ensureRuntime).
+ * Route supported platforms through the confinement decision, including
+ * installations whose runner is missing or broken.
  */
 export function backendPresent(): boolean {
   const backend = backendName();
   if (backend === null) return false;
 
-  return backend === "mxc" ? mxc.runnerPath() != null : true;
+  // Keep Auto commands on the decision path even if Sandy's payload is lost:
+  // a missing runner must produce a refusal, not an unconfined fallback.
+  return true;
 }
 
 /** Whether the backend forces outbound connections through the asking proxy. */
@@ -102,8 +108,8 @@ export function unavailableBackendMessage(
   const hint =
     backend === "sandbox-runtime" && process.platform === "linux"
       ? ` (Install bubblewrap and socat, and check that unprivileged user namespaces are enabled.)`
-      : backend === "mxc"
-        ? ` (The Windows process container runner shipped with the app could not start; reinstalling the app restores it.)`
+      : backend === "sandy"
+        ? ` (The Sandy runner shipped with the app could not start or apply its file grants.)`
         : "";
 
   return (
@@ -146,19 +152,32 @@ export async function decide(
     return { kind: "unconfined", reason: "unsupported-platform" };
   }
 
-  const argv =
-    backend === "sandbox-runtime"
-      ? await runtime.wrap(policy, command, cwd, commandId)
-      : mxc.wrap(policy, command, cwd, childEnv);
+  if (backend === "sandy") {
+    try {
+      if (!sandy.probe())
+        throw new Error("The Windows sandbox confinement probe failed.");
+      return {
+        kind: "confined",
+        backend,
+        ...sandy.prepare(policy, command, cwd, childEnv),
+      };
+    } catch (error) {
+      return {
+        kind: "refused",
+        message: unavailableBackendMessage(
+          backend,
+          error instanceof Error ? error.message : String(error)
+        ),
+      };
+    }
+  }
+  const argv = await runtime.wrap(policy, command, cwd, commandId);
 
   if (argv === null) {
     if (policy.enforcement === "strict") {
       return {
         kind: "refused",
-        message: unavailableBackendMessage(
-          backend,
-          backend === "sandbox-runtime" ? runtime.runtimeFailure() : null
-        ),
+        message: unavailableBackendMessage(backend, runtime.runtimeFailure()),
       };
     }
 
@@ -190,12 +209,12 @@ export async function sandboxAvailability(): Promise<SandboxAvailability> {
       active: false,
       reason:
         process.platform === "win32"
-          ? "needs Windows 11 24H2 or newer"
+          ? "needs Windows 10 1903 or newer (Windows 11 on ARM64)"
           : `no sandbox backend for ${process.platform}`,
     };
 
-  if (backend === "mxc") {
-    return mxc.probe()
+  if (backend === "sandy") {
+    return sandy.probe()
       ? { active: true, reason: null }
       : { active: false, reason: "the Windows sandbox runner could not start" };
   }

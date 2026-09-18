@@ -2767,11 +2767,11 @@ export class AbacusBotSession {
    */
   private async prepareSandboxRuntime(): Promise<void> {
     if (sandboxEnforcement() === "off" || backendName() === null) return;
+    this.sandboxApprovals.askDenials = (command, refused, note) =>
+      this.askDenials(command, refused, note);
     if (!networkConfinable()) return;
 
     setHostDecider((host, port) => this.askNetworkHost(host, port));
-    this.sandboxApprovals.askDenials = (command, refused, note) =>
-      this.askDenials(command, refused, note);
     await ensureRuntime();
   }
 
