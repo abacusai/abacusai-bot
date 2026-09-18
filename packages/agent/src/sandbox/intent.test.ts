@@ -46,6 +46,18 @@ const classify = (
 
 const onPosix = process.platform !== "win32";
 
+describe.skipIf(!onPosix)("what a concern reads like", () => {
+  it("is a predicate the card puts after 'The command'", () => {
+    // The card said "The command the command is not plain enough to read."
+    const intent = classify(
+      'echo "local: $(git config --get credential.helper)"'
+    );
+    expect(intent.concerns).toEqual(["is not plain enough to read"]);
+    for (const concern of intent.concerns)
+      expect(concern.toLowerCase().startsWith("the command")).toBe(false);
+  });
+});
+
 describe.skipIf(!onPosix)("what a benign line is granted", () => {
   it("a new file in the user's folders, by redirect, touch, tee or cp", () => {
     for (const command of [

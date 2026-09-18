@@ -201,7 +201,8 @@ export function classifyCommand(
     if (!quotesBalance(segment) || OPAQUE.test(segment)) {
       return {
         ...NOTHING,
-        concerns: ["the command is not plain enough to read"],
+        // A predicate: the card reads it after "The command".
+        concerns: ["is not plain enough to read"],
       };
     }
 
