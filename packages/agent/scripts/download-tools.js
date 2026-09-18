@@ -51,6 +51,9 @@ const FD_VERSION = "10.3.0";
 // The upstream build tag; src/posix-shell.ts names the same one for its cache
 // directory, so a bump here is a bump there.
 const BUSYBOX_VERSION = "FRP-6075-g169694ebd";
+const SANDY_VERSION = "0.9992";
+const SANDY_SHA256 =
+  "8a337f199ed7e64bae3088ab247aa485cc063a4ae3e42bec1aad36a48016c535";
 
 /**
  * One row per binary per target. `asset` is the release filename, `sha256` the
@@ -62,6 +65,19 @@ const BUSYBOX_VERSION = "FRP-6075-g169694ebd";
  * only shows up on a user's machine.
  */
 const TOOLS = {
+  sandy: {
+    label: "Sandy sandbox runner",
+    version: SANDY_VERSION,
+    url: () =>
+      `https://github.com/ahrvoje/sandy_cli/releases/download/v${SANDY_VERSION}/sandy.exe`,
+    platforms: ["win32"],
+    executable: true,
+    targets: {
+      "win32-x64": { asset: "sandy.exe", sha256: SANDY_SHA256 },
+      // Upstream publishes x64 only; Windows 11 ARM64 supplies emulation.
+      "win32-arm64": { asset: "sandy.exe", sha256: SANDY_SHA256 },
+    },
+  },
   rg: {
     label: "ripgrep",
     version: RIPGREP_VERSION,

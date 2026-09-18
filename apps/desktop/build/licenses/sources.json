@@ -1,5 +1,10 @@
 [
   {
+    "file": "sandy-LICENSE",
+    "asset": "Sandy 0.9992 (Windows sandbox runner)",
+    "source": "https://github.com/ahrvoje/sandy_cli/blob/v0.9992/LICENSE"
+  },
+  {
     "file": "devicon-LICENSE",
     "asset": "Playwright connector icon paths from devicon",
     "source": "https://github.com/devicons/devicon/blob/7330accdbc47e2dc0c19789a48533c4a3c50fe58/LICENSE"
