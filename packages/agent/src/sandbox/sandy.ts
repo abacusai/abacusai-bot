@@ -51,6 +51,113 @@ function checkGrants(paths: readonly string[], policy: SandboxPolicy): void {
   }
 }
 
+/** User-installed tools need their installation files as well as the launcher. */
+export function toolPaths(
+  env: NodeJS.ProcessEnv,
+  policy: SandboxPolicy
+): string[] {
+  const paths: string[] = [];
+  const system = existing(
+    [env.SystemRoot, env.ProgramFiles, env["ProgramFiles(x86)"]].filter(
+      (entry): entry is string => entry != null
+    )
+  );
+  const add = (target: string): void => {
+    const resolved = canonicalize(target);
+    if (
+      resolved === path.parse(resolved).root ||
+      resolved === canonicalize(env.USERPROFILE ?? os.homedir())
+    )
+      return;
+    // Windows already exposes these installations to AppContainers. Their
+    // ACLs normally cannot be changed by a non-administrator.
+    if (system.some((parent) => isWithin(resolved, parent))) return;
+    try {
+      checkGrants([resolved], policy);
+    } catch {
+      return;
+    }
+    paths.push(resolved);
+  };
+  for (const entry of (env.PATH ?? env.Path ?? "").split(path.delimiter)) {
+    const directory = entry.replace(/^"(.*)"$/, "$1");
+    if (!path.isAbsolute(directory)) continue;
+    try {
+      const entries = fs.readdirSync(directory, { withFileTypes: true });
+      add(directory);
+      // Package managers expose executables through symlinks. The runtime's
+      // DLLs and standard library live beside the resolved executable.
+      for (const item of entries) {
+        if (item.isSymbolicLink() && /\.(exe|cmd|bat)$/i.test(item.name))
+          add(path.dirname(canonicalize(path.join(directory, item.name))));
+      }
+    } catch {
+      /* PATH can contain missing or inaccessible entries. */
+    }
+  }
+  return grantableToolPaths(existing(paths));
+}
+
+const toolAccess = new Map<string, boolean>();
+
+/** Check WRITE_DAC without changing ACLs, taking group memberships into account. */
+function grantableToolPaths(paths: string[]): string[] {
+  if (process.platform !== "win32") return paths;
+  const unknown = paths.filter((target) => !toolAccess.has(target));
+  if (unknown.length > 0) {
+    const powershell = path.join(
+      process.env.SystemRoot ?? "C:\\Windows",
+      "System32",
+      "WindowsPowerShell",
+      "v1.0",
+      "powershell.exe"
+    );
+    const script = `
+[Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class SandboxPathAccess {
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  public static extern IntPtr CreateFile(string name, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+  [DllImport("kernel32.dll")]
+  public static extern bool CloseHandle(IntPtr handle);
+}
+'@
+$paths = [Console]::In.ReadToEnd() | ConvertFrom-Json
+foreach ($target in $paths) {
+  $handle = [SandboxPathAccess]::CreateFile($target, 0x40000, 7, [IntPtr]::Zero, 3, 0x02000000, [IntPtr]::Zero)
+  if ($handle -ne [IntPtr]::new(-1)) {
+    [void][SandboxPathAccess]::CloseHandle($handle)
+    [Console]::Out.WriteLine($target)
+  }
+}
+`;
+    const result = spawnSync(
+      powershell,
+      [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-EncodedCommand",
+        Buffer.from(script, "utf16le").toString("base64"),
+      ],
+      {
+        input: JSON.stringify(unknown),
+        encoding: "utf8",
+        timeout: 10000,
+        windowsHide: true,
+      }
+    );
+    const allowed = new Set(
+      result.status === 0 ? result.stdout.trim().split(/\r?\n/) : []
+    );
+    for (const target of unknown) toolAccess.set(target, allowed.has(target));
+  }
+  return paths.filter((target) => toolAccess.get(target));
+}
+
 export function buildConfig(
   policy: SandboxPolicy,
   cwd: string,
@@ -71,7 +178,12 @@ export function buildConfig(
       "config"
     ),
   ]);
-  const execute = existing([shell.bin, policy.workspaceRoot]);
+  const execute = existing([
+    shell.bin,
+    policy.workspaceRoot,
+    ...(policy.approvedReads ?? []),
+    ...toolPaths(env, policy),
+  ]);
   const write = existing([
     scratch,
     ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
@@ -185,7 +297,21 @@ export function prepare(
     const config = buildConfig(policy, `${drive}\\`, shell, scratch, env);
     const mappedDrive = drive;
     return {
-      argv: [runner, "-q", "-s", config, "-x", shell.sh, "-c", command],
+      // BusyBox's Windows exec emulation exits early when its parent is
+      // invisible across the AppContainer boundary. Keep a shell parent in
+      // the same container so native commands retain their real exit status.
+      argv: [
+        runner,
+        "-q",
+        "-s",
+        config,
+        "-x",
+        shell.sh,
+        "-c",
+        '"$0" -c "$1"; exit $?',
+        shell.sh,
+        command,
+      ],
       env: posixShellEnv(
         { ...env, TEMP: scratch, TMP: scratch, TMPDIR: scratch },
         shell

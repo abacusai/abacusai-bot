@@ -164,7 +164,11 @@ loopback access, so local development servers and local proxies do not have
 the same connectivity as on macOS and Linux.
 
 On Windows, Sandy grants access to the workspace, BusyBox, readable Git
-configuration, a private temporary directory, and approved paths. System
+configuration, safe tool directories from `PATH`, a private temporary
+directory, and approved paths. Tool discovery resolves installation links
+without maintaining a list of runtime names. It checks whether the user can
+grant access before including an installation; an unrelated administrator-owned
+`PATH` entry must not prevent the shell from starting. System
 files that Windows makes available to AppContainers remain readable.
 Other user files and tool caches may need approval. Explicit absolute-path
 permission-denied diagnostics can raise the existing file approval card;
@@ -173,6 +177,30 @@ requires approval for its existing parent directory, which the card names.
 Grants that cover a protected credential store are refused instead of
 silently exposing it. Git init, add and commit run inside the sandbox;
 authentication helpers and signing agents may require additional access.
+
+BusyBox runs on the real Windows filesystem and can start native Windows
+programs. Its shell syntax and utilities do not turn Windows into Linux.
+Live tests cover `sed`, `grep`, `awk`, sorting, loops, pipes and file
+operations, plus PowerShell scripts and user-owned Bun and Python installations
+with temporary files and child processes. Native children inherit confinement.
+PowerShell script execution policy still applies; the test sets it only for
+the child process, without changing the machine's policy.
+
+This backend does **not** yet provide general runtime parity. Node 22.19.0
+and 26.9.0 hung during the live tests, even for `--version` in a user-owned
+installation. libuv has an [upstream AppContainer named-pipe fix](https://github.com/libuv/libuv/pull/5181),
+but compatibility must be verified in the actual Node build. The Node test is
+explicitly skipped by default; `ABACUSAI_TEST_SANDY_NODE=1` enables the failing
+reproducer, and `ABACUSAI_TEST_NODE_BINARY` can select a candidate executable.
+Passing the other runtime tests does not establish Node support.
+
+Creating symbolic links is also blocked by AppContainer, including on the
+tested machine with Developer Mode enabled. Existing workspace junctions and symlinks are
+usable, while their outside targets remain protected. Administrator-owned
+installations outside Windows' AppContainer-readable locations need different
+installation permissions or a user-owned installation. The app does not copy
+or reinstall runtimes automatically. Package-manager shims may point to an
+inaccessible runtime elsewhere; granting the shim alone is insufficient.
 
 Each Windows command uses a temporary drive alias for the workspace so Git
 can resolve its working directory without read access to the workspace's

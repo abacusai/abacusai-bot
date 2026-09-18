@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { SandboxPolicy } from "./policy.js";
-import { buildConfig, diagnosticDenials } from "./sandy.js";
+import { buildConfig, diagnosticDenials, toolPaths } from "./sandy.js";
 
 describe("Sandy grants", () => {
   let root: string;
@@ -48,6 +48,42 @@ describe("Sandy grants", () => {
   it("refuses a network policy it cannot enforce", () => {
     policy.network = { kind: "filtered" };
     expect(config).toThrow("per-host");
+  });
+
+  it("discovers tool installations from PATH without naming runtimes", () => {
+    const tools = path.join(root, "custom-tools");
+    fs.mkdirSync(tools);
+    expect(toolPaths({ PATH: tools, USERPROFILE: root }, policy)).toEqual([
+      tools,
+    ]);
+  });
+
+  it("does not expose a protected store or the home directory through PATH", () => {
+    const tools = path.join(root, "private-tools");
+    fs.mkdirSync(tools);
+    policy.secrets.denied = [path.join(tools, "credentials")];
+    expect(
+      toolPaths(
+        { PATH: [root, tools].join(path.delimiter), USERPROFILE: root },
+        policy
+      )
+    ).toEqual([]);
+  });
+
+  it("allows approved readable tool installations to execute", () => {
+    const tools = path.join(root, "approved-tools");
+    fs.mkdirSync(tools);
+    policy.workspaceRoot = path.join(root, "workspace");
+    fs.mkdirSync(policy.workspaceRoot);
+    policy.approvedReads = [tools];
+    const result = buildConfig(
+      policy,
+      policy.workspaceRoot,
+      { bin: policy.workspaceRoot, sh: "sh.exe", overrideApplets: "" },
+      policy.workspaceRoot,
+      { USERPROFILE: root }
+    );
+    expect(result).toContain(`execute = ${JSON.stringify([tools])}`);
   });
 
   it("does not mistake arbitrary failures or relative paths for an approval", () => {
