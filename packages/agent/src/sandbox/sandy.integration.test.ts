@@ -135,7 +135,10 @@ describe.skipIf(process.platform !== "win32" || runnerPath() == null)(
       );
       const mappings = () => spawnSync(subst, [], { encoding: "utf8" }).stdout;
       const before = mappings();
-      const timed = await run("sleep 30", { timeout: 1 });
+      const timed = await run(
+        "sh -c 'sleep 3; echo orphan > orphan.txt' & wait",
+        { timeout: 1 }
+      );
       expect(timed.exitCode, timed.output).not.toBe(0);
       expect(mappings()).toBe(before);
       const controller = new AbortController();
@@ -147,7 +150,25 @@ describe.skipIf(process.platform !== "win32" || runnerPath() == null)(
       } finally {
         clearTimeout(timer);
       }
-      expect((await run("echo recovered > after.txt")).exitCode).toBe(0);
+      expect((await run("sleep 2; echo recovered > after.txt")).exitCode).toBe(
+        0
+      );
+      expect(fs.existsSync(path.join(cwd, "orphan.txt"))).toBe(false);
+    });
+
+    it("keeps overlapping commands' grants separate during cleanup", async () => {
+      const target = path.join(root, "private.txt");
+      fs.writeFileSync(target, "private-content");
+      const command = `sleep 2; cat ${quote(target)}`;
+      approvals.reads.approveOnce(command, [target]);
+      const allowed = run(command);
+      approvals = new SandboxApprovals();
+      const denied = run(`cat ${quote(target)}`);
+      const [first, second] = await Promise.all([allowed, denied]);
+      expect(first.exitCode, first.output).toBe(0);
+      expect(first.output).toContain("private-content");
+      expect(second.exitCode, second.output).not.toBe(0);
+      expect(second.output).not.toContain("private-content");
     });
   }
 );
