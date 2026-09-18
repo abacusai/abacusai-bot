@@ -188,9 +188,12 @@ export const ReferralsPanel = (): JSX.Element => {
   const flow = useConnectFlow();
   const messaging = useMessaging();
 
-  const [message, setMessage] = useState<string | null>(() =>
-    t("referrals.defaultMessage")
-  );
+  // The note is the user's to edit; it starts with their own invite link once the summary has loaded.
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (message != null || summary == null) return;
+    setMessage(t("referrals.defaultMessage", { link: summary.inviteLink }));
+  }, [summary, message, t]);
   const [gmailRows, setGmailRows] = useState<PickerRow[] | null>(null);
   const [manualEmail, setManualEmail] = useState("");
   const [whatsappRows, setWhatsappRows] = useState<PickerRow[] | null>(null);
