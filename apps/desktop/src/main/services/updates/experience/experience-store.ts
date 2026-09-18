@@ -9,6 +9,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { writeFileAtomic } from "@abacus-ai/agent/atomic-file";
 import { app } from "electron";
 
 import { resourcePath } from "#main/resources";
@@ -46,11 +47,7 @@ const writePointer = async (
   file: string,
   value: ActivePointer
 ): Promise<void> => {
-  const temporary = `${file}.tmp`;
-
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(temporary, JSON.stringify(value), { mode: 0o600 });
-  await fs.rename(temporary, file);
+  await writeFileAtomic(file, JSON.stringify(value), { restrict: true });
 };
 
 const readPointer = async (

@@ -2,6 +2,8 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+
 import type { McpMode, McpServerEntry, McpServerInfo } from "#shared/contracts";
 
 import { abacusBotHome } from "../../paths";
@@ -102,27 +104,14 @@ const runtimeAgentConfigPath = (mode: McpMode): string =>
 /**
  * Write JSON that only this user can read. These files carry secrets: the
  * builtin servers' bearer tokens and whatever a connector needs (PATs, OAuth
- * secrets, keys in `env`). The temp file is chmodded before the rename so it
- * is never briefly visible with a looser mode; the target is chmodded too,
- * since an existing file keeps its own mode through a rename onto it.
+ * secrets, keys in `env`). Connector start/stop rewrites every live session's
+ * config with identical bytes, hence `skipIfUnchanged`.
  */
 const writeJsonAtomic = (filePath: string, data: unknown): void => {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
-  restrictToOwner(tmp);
-  fs.renameSync(tmp, filePath);
-  restrictToOwner(filePath);
-};
-
-/** Best effort: Windows and some network filesystems have no POSIX modes. */
-const restrictToOwner = (filePath: string): void => {
-  try {
-    fs.chmodSync(filePath, 0o600);
-  } catch {
-    // Nothing to fall back to, and failing the write would be worse than a
-    // file with the mode the platform chose.
-  }
+  writeFileAtomicSync(filePath, JSON.stringify(data, null, 2), {
+    restrict: true,
+    skipIfUnchanged: true,
+  });
 };
 
 const readJson = <T>(filePath: string, fallback: T): T => {

@@ -25,6 +25,10 @@
       "types": "./dist/model-catalog.d.ts",
       "default": "./dist/model-catalog.js"
     },
+    "./atomic-file": {
+      "types": "./dist/atomic-file.d.ts",
+      "default": "./dist/atomic-file.js"
+    },
     "./sandbox-support": {
       "types": "./dist/sandbox-support.d.ts",
       "default": "./dist/sandbox-support.js"
