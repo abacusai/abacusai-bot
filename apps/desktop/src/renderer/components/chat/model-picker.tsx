@@ -16,6 +16,7 @@ import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import { useWorkspaceStore } from "../../stores/code-store";
+import { ProviderKeyDialog } from "../settings/provider-key-dialog";
 import { Button } from "../ui";
 import {
   Combobox,
@@ -46,7 +47,10 @@ const CONNECT_RANK: Record<string, number> = {
   [CONNECT_OPENROUTER_ID]: 0,
   [CONNECT_GEMINI_ID]: 1,
 };
-const GOOGLE_AI_STUDIO_KEY_URL = "https://aistudio.google.com/apikey";
+/** The Gemini key field, for the dialog the picker opens in place. */
+const GEMINI_FIELD = PROVIDER_KEY_FIELDS.find(
+  (field) => field.provider === "gemini"
+);
 const EMPTY_MODELS: ModelAvailability[] = [];
 const PROVIDER_LABELS = new Map(
   PROVIDER_KEY_FIELDS.map((field) => [field.provider, field.label])
@@ -128,6 +132,8 @@ export const ModelPicker = ({
   }, [options]);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  /** The key dialog is open for Gemini. */
+  const [connectingGemini, setConnectingGemini] = useState(false);
   const [compact, setCompact] = useState(false);
   const hasConfiguredModel = options.length > 0;
   const [railValue, setRailValue] = useState<RailValue>(
@@ -306,10 +312,9 @@ export const ModelPicker = ({
           }
           if (option.id === CONNECT_GEMINI_ID) {
             setOpen(false);
-            // Fetch the key in the browser, paste it in the keys panel — both
-            // opened together so the two halves of the errand meet.
-            void window.api.openExternal(GOOGLE_AI_STUDIO_KEY_URL);
-            openProviderSettings("gemini");
+            // The same key dialog as onboarding and the models page, here in
+            // the chat rather than a trip to Settings; it carries the link.
+            setConnectingGemini(true);
             return;
           }
           onSelectModel(activeWorkspaceId, option.id);
@@ -585,6 +590,12 @@ export const ModelPicker = ({
           </div>
         </ComboboxContent>
       </Combobox>
+      <ProviderKeyDialog
+        field={GEMINI_FIELD ?? null}
+        open={connectingGemini}
+        onClose={() => setConnectingGemini(false)}
+        onSaved={() => onModelsRefreshed?.()}
+      />
     </div>
   );
 };
