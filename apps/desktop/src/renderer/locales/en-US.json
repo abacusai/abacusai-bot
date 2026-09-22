@@ -666,11 +666,13 @@
   },
   "creditsCard": {
     "body": "Unlock the full potential",
+    "connectBody": "Connect a free source to keep going — no card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
     "or": "or",
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
+    "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
     "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
     "switchTitle": "You've used all your free Abacus.AI credits",
     "title": "You've used all your free Abacus.AI credits",
@@ -1796,12 +1798,10 @@
       "reviews": "{{approved}} approved · {{changes}} changes requested · {{requested}} pending"
     },
     "premiumUpgrade": {
+      "connectNote": "Connect a free source to keep going — no card needed",
       "continueOn": "Continue on {{model}} (free)",
-      "cta": "Upgrade",
-      "exhaustedNote": "Upgrade to get premium models and more premium features",
-      "exhaustedTitle": "You've used up your free credits",
-      "note": "Claude Opus, Fable, GPT & more premium features",
-      "title": "Upgrade to use Premium Models"
+      "exhaustedTitle": "You've used up your free Abacus.AI credits",
+      "switchNote": "Pick another model in the model picker to keep going"
     },
     "preview": {
       "addSurface": "Add surface",

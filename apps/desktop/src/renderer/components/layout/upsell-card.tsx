@@ -1,5 +1,5 @@
 import { ArrowUpRight, X } from "lucide-react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import { AbacusBotMark } from "../brand/abacus-bot-logo";
 import { Button } from "../ui";
@@ -10,12 +10,21 @@ import { Button } from "../ui";
  * out-of-credits notice and the paid tier's link to the agent are one shape
  * rather than three that drifted apart.
  */
+export interface UpsellAction {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
 export const UpsellCard = ({
   dataId,
   title,
   body,
   cta,
   onCta,
+  actions = [],
   onDismiss,
   dismissLabel,
 }: {
@@ -25,6 +34,8 @@ export const UpsellCard = ({
   /** Omitted for a card whose whole message is the text. */
   cta?: string;
   onCta?: () => void;
+  /** Several ways on, stacked — the free sources still to connect. */
+  actions?: UpsellAction[];
   /** Given only where dismissing is allowed; the card is closable then. */
   onDismiss?: () => void;
   dismissLabel?: string;
@@ -66,5 +77,18 @@ export const UpsellCard = ({
         <ArrowUpRight />
       </Button>
     )}
+    {actions.map((action) => (
+      <Button
+        key={action.id}
+        size="sm"
+        data-id={`${dataId}-action-${action.id}`}
+        className="from-primary w-full bg-gradient-to-b to-violet-700 font-semibold"
+        disabled={action.disabled}
+        onClick={action.onClick}
+      >
+        {action.icon}
+        {action.label}
+      </Button>
+    ))}
   </div>
 );
