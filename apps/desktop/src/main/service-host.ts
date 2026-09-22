@@ -332,6 +332,7 @@ import {
   SessionTurnStateService,
 } from "./services/session/session-turn-state-service";
 import { TranscriptService } from "./services/session/transcript-service";
+import { WhisperModelService } from "./services/voice/whisper-model-service";
 import {
   FileSearchService,
   type FileSearchResult,
@@ -549,6 +550,9 @@ export class ServiceHost {
     };
   }
   private readonly deviceService = new DeviceService();
+  readonly whisperModelService = new WhisperModelService({
+    emitEvent: (event) => this.emitEvent(event),
+  });
   private readonly deviceMirrorService = new DeviceMirrorService(
     this.deviceService,
     {

@@ -9,6 +9,10 @@ const alias = {
   "#preload": resolve(import.meta.dirname, "src/preload"),
   "#renderer": resolve(import.meta.dirname, "src/renderer"),
   "#shared": resolve(import.meta.dirname, "src/shared"),
+  "ort-dist": resolve(
+    import.meta.dirname,
+    "../../node_modules/onnxruntime-web/dist"
+  ),
 };
 
 /**

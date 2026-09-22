@@ -1977,6 +1977,19 @@
       "show": "Show the thought process"
     },
     "unpinChat": "Soltar chat",
+    "voice": {
+      "downloading": "Downloading the speech model… {{percent}}%",
+      "errors": {
+        "microphone-in-use": "The microphone is in use by another app.",
+        "no-microphone": "No microphone was found.",
+        "permission-denied": "Microphone access was denied. Allow it in system settings.",
+        "transcription-failed": "Could not transcribe that. Try again.",
+        "unsupported": "Recording is not available here."
+      },
+      "start": "Dictate",
+      "stop": "Stop and transcribe",
+      "transcribing": "Transcribing…"
+    },
     "welcome": {
       "addWorkspace": "Añadir nuevo espacio de trabajo",
       "defaultWorkspace": "Default workspace: {{path}}",
