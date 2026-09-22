@@ -30,10 +30,6 @@
     <key>com.apple.security.device.audio-input</key>
     <true/>
 
-    <!-- Dictation records from the microphone -->
-    <key>com.apple.security.device.audio-input</key>
-    <true/>
-
     <!-- Required by vm-helper for Apple Virtualization.framework -->
     <key>com.apple.security.virtualization</key>
     <true/>
