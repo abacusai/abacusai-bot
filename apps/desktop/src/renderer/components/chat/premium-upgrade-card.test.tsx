@@ -35,8 +35,12 @@ vi.mock("../../hooks/use-model-providers", () => ({
   }),
 }));
 
-const { PremiumUpgradeCard, freeModelSwitches, wantsUpgradeCard } =
-  await import("./premium-upgrade-card");
+const {
+  PremiumUpgradeCard,
+  exhaustedScope,
+  freeModelSwitches,
+  wantsUpgradeCard,
+} = await import("./premium-upgrade-card");
 const { useCreditsStore } = await import("../../stores/credits-store");
 
 const free = (over: Partial<AbacusAccountInfo> = {}): AbacusAccountInfo => ({
@@ -191,6 +195,21 @@ describe("PremiumUpgradeCard", () => {
     expect(openExternal).toHaveBeenCalledWith(
       "https://apps.abacus.ai/chatllm/admin/profile?buyCredits=true"
     );
+  });
+});
+
+describe("what the card says ran out", () => {
+  it("wants the card for a shut pool too, titled for it", () => {
+    expect(wantsUpgradeCard([{ type: "free-pool-out" }])).toBe(true);
+    expect(exhaustedScope([{ type: "free-pool-out" }])).toBe("pool");
+    expect(exhaustedScope([{ type: "upgrade-abacus" }])).toBe("abacus");
+    expect(exhaustedScope([{ type: "switch-model" }])).toBe("pool");
+
+    renderCard({ dataId: "chat-upgrade-card", scope: "pool" });
+    expect(document.body.textContent).toContain(
+      "workspace.premiumUpgrade.poolOutTitle"
+    );
+    expect(button("connect-openrouter")).not.toBeNull();
   });
 });
 

@@ -1287,15 +1287,18 @@ export class AbacusBotSession {
     // about one is noise: the pool is out, and the card says what to do. Out
     // of credits keeps its own card.
     const poolExhausted = this.openLlmActive && !isOutOfCredits(message);
+    const poolShut = this.openLlmActive && this.isPoolShut();
 
     this.emitAgentEvent({
       type: "error",
       error: {
-        message: poolExhausted
-          ? OPENLLM_POOL_EXHAUSTED_MESSAGE
-          : terminalProviderMessage(message),
+        message: poolShut
+          ? OPENLLM_POOL_SHUT_MESSAGE
+          : poolExhausted
+            ? OPENLLM_POOL_EXHAUSTED_MESSAGE
+            : terminalProviderMessage(message),
         code: "turn_failed",
-        ...(poolExhausted ? {} : providerDetail(message)),
+        ...(poolExhausted || poolShut ? {} : providerDetail(message)),
         ...this.errorActionsFor(message),
       },
     });
@@ -1353,6 +1356,14 @@ export class AbacusBotSession {
     const actions: NotificationAction[] = [
       ...(this.upgradeActionsFor(raw).actions ?? []),
     ];
+    // The router with every source used up: the card that connects another
+    // free source, rather than a switch button leading to the same empty pool.
+    if (this.openLlmActive && this.isPoolShut()) {
+      if (!actions.some((action) => action.type === "upgrade-abacus")) {
+        actions.push({ type: "free-pool-out" }, ...this.freeModelSwitches());
+      }
+      return { actions };
+    }
     // A pinned model that timed out or is overloaded; or the router with its
     // whole pool down, where switching is the only move left.
     if (
@@ -1364,6 +1375,16 @@ export class AbacusBotSession {
       actions.push({ type: "switch-model" });
     }
     return actions.length > 0 ? { actions } : {};
+  }
+
+  /** Whether every model the router could run is in a class the account refused. */
+  private isPoolShut(): boolean {
+    const registry = this.registry;
+
+    return (
+      registry != null &&
+      this.openLlmRotation.poolShut(openLlmCandidates(listModels(registry)))
+    );
   }
 
   /**
@@ -1712,9 +1733,11 @@ export class AbacusBotSession {
       this.emitAgentEvent({
         type: "error",
         error: {
-          message: OPENLLM_POOL_EXHAUSTED_MESSAGE,
+          message: this.isPoolShut()
+            ? OPENLLM_POOL_SHUT_MESSAGE
+            : OPENLLM_POOL_EXHAUSTED_MESSAGE,
           code: "turn_failed",
-          actions: [{ type: "switch-model" }],
+          ...this.errorActionsFor(rotation.failure),
         },
       });
       this.finishTurn();
@@ -2180,13 +2203,20 @@ export class AbacusBotSession {
         : undefined;
 
     if (resolved?.model == null) {
-      // The picker is the way out: its free-plan rows connect the sources.
+      // The picker is the way out: its free-plan rows connect the sources. A
+      // pool that has sources but every one used up says so, and the card
+      // offers what is still to connect.
+      const shut = this.isPoolShut();
       this.emitAgentEvent({
         type: "error",
         error: {
-          message: OPENLLM_POOL_EMPTY_MESSAGE,
+          message: shut
+            ? OPENLLM_POOL_SHUT_MESSAGE
+            : OPENLLM_POOL_EMPTY_MESSAGE,
           code: "model_unavailable",
-          actions: [{ type: "switch-model" }],
+          actions: shut
+            ? [{ type: "free-pool-out" }, ...this.freeModelSwitches()]
+            : [{ type: "switch-model" }],
         },
       });
 
@@ -3461,6 +3491,8 @@ const ABACUS_PLAN_URL = "https://apps.abacus.ai/chatllm/choose-plan/";
  */
 export const OPENLLM_POOL_EXHAUSTED_MESSAGE =
   "All free models are busy right now. Switch to a different model, or try again in a few minutes.";
+export const OPENLLM_POOL_SHUT_MESSAGE =
+  "Every free source is used up for now. Connect another free source, or pick a different model to keep going.";
 export const OPENLLM_POOL_EMPTY_MESSAGE =
   "RouteLLM - Open has no model to run on yet. Pick a model, or connect Abacus.AI, Google AI Studio or OpenRouter from the model list.";
 

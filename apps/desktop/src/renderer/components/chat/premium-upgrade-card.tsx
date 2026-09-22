@@ -32,12 +32,15 @@ const CONNECT_LABEL: Record<FreeSource, string> = {
  */
 export const PremiumUpgradeCard = ({
   dataId,
+  scope = "abacus",
   freeModels = [],
   onPickModel,
   onSwitchModel,
   onResume,
 }: {
   dataId: string;
+  /** See exhaustedScope: what ran out, which the title names. */
+  scope?: "abacus" | "pool";
   /** Models the platform still serves for free; each one is a way to keep going. */
   freeModels?: FreeModelSwitch[];
   onPickModel?: (modelId: string) => void;
@@ -64,7 +67,9 @@ export const PremiumUpgradeCard = ({
 
   const title = paying
     ? t("creditsCard.paidTitle")
-    : t("workspace.premiumUpgrade.exhaustedTitle");
+    : scope === "pool"
+      ? t("workspace.premiumUpgrade.poolOutTitle")
+      : t("workspace.premiumUpgrade.exhaustedTitle");
   const note = paying
     ? t("creditsCard.paidBody")
     : missing.length > 0
@@ -161,6 +166,20 @@ export const freeModelSwitches = (
       : []
   );
 
-/** Whether an error's actions ask for the upgrade card instead of a red line. */
+/** Whether an error's actions ask for the card instead of a red line. */
 export const wantsUpgradeCard = (actions?: NotificationAction[]): boolean =>
-  actions?.some((action) => action.type === "upgrade-abacus") === true;
+  actions?.some(
+    (action) =>
+      action.type === "upgrade-abacus" || action.type === "free-pool-out"
+  ) === true;
+
+/**
+ * What ran out: the Abacus.AI credits alone (`upgrade-abacus`), or every
+ * source the router had (`free-pool-out`) — the card's title says which.
+ */
+export const exhaustedScope = (
+  actions?: NotificationAction[]
+): "abacus" | "pool" =>
+  actions?.some((action) => action.type === "upgrade-abacus") === true
+    ? "abacus"
+    : "pool";
