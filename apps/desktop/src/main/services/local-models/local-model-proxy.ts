@@ -58,10 +58,18 @@ export const modelInBody = (body: Buffer): string | null => {
 };
 
 /**
- * The path a request may be forwarded to: the OpenAI-style API under /v1,
- * relative to the upstream — never a host the request line names, which is
- * how a loopback proxy becomes a way to reach somewhere else.
+ * The endpoints a request may be forwarded to: the OpenAI-style API the agent
+ * speaks. The forwarded path is always one of these literals, never the
+ * request line itself — a loopback proxy that forwarded whatever it was
+ * given would be a way to reach somewhere else.
  */
+const FORWARDED_PATHS = [
+  "/v1/chat/completions",
+  "/v1/completions",
+  "/v1/embeddings",
+  "/v1/models",
+] as const;
+
 export const forwardablePath = (
   requestUrl: string | undefined
 ): string | null => {
@@ -69,9 +77,7 @@ export const forwardablePath = (
   if (!raw.startsWith("/") || raw.startsWith("//")) return null;
   const parsed = new URL(raw, "http://local.invalid");
   if (parsed.host !== "local.invalid") return null;
-  if (!parsed.pathname.startsWith("/v1/") && parsed.pathname !== "/v1")
-    return null;
-  return `${parsed.pathname}${parsed.search}`;
+  return FORWARDED_PATHS.find((known) => known === parsed.pathname) ?? null;
 };
 
 const fail = (
