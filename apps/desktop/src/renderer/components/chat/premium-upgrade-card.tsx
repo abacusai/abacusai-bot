@@ -55,7 +55,7 @@ export const PremiumUpgradeCard = ({
   const markExhausted = useCreditsStore((state) => state.markExhausted);
   const { data: account } = useAbacusAccountQuery();
   const { data: providers } = useModelProvidersQuery();
-  const { connect, connecting } = useConnectFreeProvider();
+  const { connect, connecting, keyDialog } = useConnectFreeProvider();
   const { state: localModels } = useLocalModels();
   const showLocalModelDialog = useLocalModelDialogStore((store) => store.show);
 
@@ -171,6 +171,7 @@ export const PremiumUpgradeCard = ({
           </Button>
         )
       )}
+      {keyDialog}
     </div>
   );
 };
