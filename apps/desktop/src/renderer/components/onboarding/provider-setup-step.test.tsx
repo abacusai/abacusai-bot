@@ -74,17 +74,17 @@ describe("pasting a key", () => {
 
     fireEvent.click(byId("onboarding-setup-provider-gemini-connect"));
 
-    await waitFor(() => byId("onboarding-setup-key-dialog"));
-    expect(byId("onboarding-setup-key-title").textContent).toContain(
+    await waitFor(() => byId("provider-key-dialog"));
+    expect(byId("provider-key-title").textContent).toContain(
       "onboarding.setupKeyDialogTitle"
     );
-    expect(byId("onboarding-setup-key-link")).toBeTruthy();
-    expect(byId("onboarding-setup-key-cancel")).toBeTruthy();
+    expect(byId("provider-key-link")).toBeTruthy();
+    expect(byId("provider-key-cancel")).toBeTruthy();
     // The console stays shut until it is asked for. Connect used to throw the
     // user into a web page over a dialog they had not read yet.
     expect(openExternal).not.toHaveBeenCalled();
 
-    fireEvent.click(byId("onboarding-setup-key-link"));
+    fireEvent.click(byId("provider-key-link"));
 
     expect(openExternal).toHaveBeenCalled();
   });
@@ -92,13 +92,13 @@ describe("pasting a key", () => {
   it("stores the key on save and reports the provider connected", async () => {
     await mount();
     fireEvent.click(byId("onboarding-setup-provider-gemini-connect"));
-    await waitFor(() => byId("onboarding-setup-key-dialog"));
+    await waitFor(() => byId("provider-key-dialog"));
 
-    fireEvent.change(byId("onboarding-setup-key-input"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "AIzaSyA-really-long-enough-key-value-here" },
     });
     listModels.mockResolvedValue([{ provider: "gemini", configured: true }]);
-    fireEvent.click(byId("onboarding-setup-key-save"));
+    fireEvent.click(byId("provider-key-save"));
 
     await waitFor(() =>
       expect(saveApiKey).toHaveBeenCalledWith(
@@ -109,7 +109,7 @@ describe("pasting a key", () => {
     // The dialog closes and the card says so.
     await waitFor(() =>
       expect(
-        document.querySelector('[data-id="onboarding-setup-key-dialog"]')
+        document.querySelector('[data-id="provider-key-dialog"]')
       ).toBeNull()
     );
     await waitFor(() =>
@@ -124,16 +124,16 @@ describe("pasting a key", () => {
   it("cancels without storing anything", async () => {
     await mount();
     fireEvent.click(byId("onboarding-setup-provider-gemini-connect"));
-    await waitFor(() => byId("onboarding-setup-key-dialog"));
+    await waitFor(() => byId("provider-key-dialog"));
 
-    fireEvent.change(byId("onboarding-setup-key-input"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "AIzaSyA-really-long-enough-key-value-here" },
     });
-    fireEvent.click(byId("onboarding-setup-key-cancel"));
+    fireEvent.click(byId("provider-key-cancel"));
 
     await waitFor(() =>
       expect(
-        document.querySelector('[data-id="onboarding-setup-key-dialog"]')
+        document.querySelector('[data-id="provider-key-dialog"]')
       ).toBeNull()
     );
     expect(saveApiKey).not.toHaveBeenCalled();
@@ -306,10 +306,10 @@ describe("a provider that takes a key", () => {
     await mount();
 
     fireEvent.click(byId("onboarding-setup-provider-gemini-connect"));
-    fireEvent.change(byId("onboarding-setup-key-input"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "AIzaSyB-1234567890abcdefghijklmnop" },
     });
-    fireEvent.click(byId("onboarding-setup-key-save"));
+    fireEvent.click(byId("provider-key-save"));
 
     await waitFor(() =>
       expect(saveApiKey).toHaveBeenCalledWith(
@@ -325,7 +325,7 @@ describe("a provider that takes a key", () => {
     fireEvent.click(byId("onboarding-setup-provider-gemini-connect"));
     await waitFor(() =>
       expect(
-        document.querySelectorAll('[data-id="onboarding-setup-key-dialog"]')
+        document.querySelectorAll('[data-id="provider-key-dialog"]')
       ).toHaveLength(1)
     );
 
@@ -334,8 +334,7 @@ describe("a provider that takes a key", () => {
     fireEvent.click(byId("onboarding-setup-provider-openrouter-connect"));
 
     expect(
-      document.querySelectorAll('[data-id="onboarding-setup-key-dialog"]')
-        .length
+      document.querySelectorAll('[data-id="provider-key-dialog"]').length
     ).toBeLessThanOrEqual(1);
   });
 
@@ -343,10 +342,10 @@ describe("a provider that takes a key", () => {
     await mount();
 
     fireEvent.click(byId("onboarding-setup-provider-gemini-connect"));
-    fireEvent.change(byId("onboarding-setup-key-input"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "nope" },
     });
-    fireEvent.click(byId("onboarding-setup-key-save"));
+    fireEvent.click(byId("provider-key-save"));
 
     expect(saveApiKey).not.toHaveBeenCalled();
   });

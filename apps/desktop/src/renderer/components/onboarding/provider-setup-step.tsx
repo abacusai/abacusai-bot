@@ -1,32 +1,14 @@
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  ExternalLink,
-  KeyRound,
-  Link2,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, KeyRound, Link2 } from "lucide-react";
 import React, { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  isPlausibleApiKey,
-  PROVIDER_KEY_FIELDS,
-  type ProviderKeyField,
-} from "#shared/settings";
+import { PROVIDER_KEY_FIELDS, type ProviderKeyField } from "#shared/settings";
 
 import { signInToAbacus } from "../../lib/abacus-sign-in";
 import { cn } from "../../lib/cn";
 import { ProviderMark } from "../chat/provider-mark";
-import { Button, Input, Spinner } from "../ui";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { ProviderKeyDialog } from "../settings/provider-key-dialog";
+import { Button, Spinner } from "../ui";
 
 /**
  * Where the free keys are: the last step of the flow, two providers that cost
@@ -98,9 +80,6 @@ export const ProviderSetupStep = ({
   const [connectError, setConnectError] = useState<string | null>(null);
   /** The provider whose key field is open, or null while the grid is idle. */
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const [keyValue, setKeyValue] = useState("");
-  const [keyInvalid, setKeyInvalid] = useState(false);
-  const [savingKey, setSavingKey] = useState(false);
   /** Has the user asked for the providers this screen does not lead with? */
   const [showAll, setShowAll] = useState(false);
   const openKeyField = FEATURED_PROVIDERS.find(
@@ -201,42 +180,7 @@ export const ProviderSetupStep = ({
     if (field.connect === "abacus") return connectAbacus();
     if (field.connect === "openrouter") return connectOpenRouter();
 
-    const opening = field.provider !== openKey;
-    setOpenKey(opening ? field.provider : null);
-    setKeyValue("");
-    setKeyInvalid(false);
-  };
-
-  /**
-   * Store the pasted key. Only a real request proves it works, but a paste that
-   * could not be a key is rejected in place rather than as an auth error later.
-   */
-  /** Give up on the key: the dialog closes and nothing is stored. */
-  const closeKeyDialog = (): void => {
-    setOpenKey(null);
-    setKeyValue("");
-    setKeyInvalid(false);
-  };
-
-  const saveKey = async (): Promise<void> => {
-    const key = keyValue.trim();
-    if (key.length === 0 || openKey == null) return;
-    if (!isPlausibleApiKey(key)) {
-      setKeyInvalid(true);
-      return;
-    }
-
-    setSavingKey(true);
-    try {
-      await window.api.agent.saveApiKey(openKey, key);
-      // A new key changes which models exist, so the catalog is refetched.
-      await window.api.agent.listModels(true);
-      setKeyValue("");
-      setOpenKey(null);
-      await refresh();
-    } finally {
-      setSavingKey(false);
-    }
+    setOpenKey(field.provider !== openKey ? field.provider : null);
   };
 
   return (
@@ -420,88 +364,15 @@ export const ProviderSetupStep = ({
         </div>
       )}
 
-      {/* A dialog rather than a field under the grid. Pasting a key means
-          leaving for the provider's console first, and a one-line field on a
-          screen the user is about to walk away from said nothing about where
-          to go or what to come back to. The dialog names the errand, carries
-          the link, and is still there when they return. */}
-      <Dialog
+      {/* A dialog rather than a field under the grid: pasting a key means
+          leaving for the provider's console first, and the dialog names the
+          errand and is still there when they return. */}
+      <ProviderKeyDialog
+        field={openKeyField ?? null}
         open={openKeyField != null}
-        onOpenChange={(open) => {
-          if (!open) closeKeyDialog();
-        }}
-      >
-        {openKeyField != null && (
-          <DialogContent
-            className="sm:max-w-lg"
-            data-id="onboarding-setup-key-dialog"
-          >
-            <DialogHeader>
-              <DialogTitle data-id="onboarding-setup-key-title">
-                {t("onboarding.setupKeyDialogTitle", {
-                  provider: openKeyField.label,
-                })}
-              </DialogTitle>
-              <DialogDescription>
-                {t("onboarding.setupKeyDialogBody")}
-              </DialogDescription>
-            </DialogHeader>
-
-            <Button
-              variant="link"
-              size="sm"
-              data-id="onboarding-setup-key-link"
-              onClick={() => window.api.openExternal(openKeyField.signupUrl)}
-              className="text-primary h-auto justify-start p-0 text-sm"
-            >
-              {t("onboarding.setupKeyDialogLink", {
-                provider: openKeyField.label,
-              })}
-              <ExternalLink className="size-3.5" />
-            </Button>
-
-            <Input
-              type="password"
-              autoFocus
-              data-id="onboarding-setup-key-input"
-              value={keyValue}
-              placeholder={t("onboarding.setupKeyPlaceholder", {
-                provider: openKeyField.label,
-              })}
-              onChange={(event) => {
-                setKeyInvalid(false);
-                setKeyValue(event.target.value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void saveKey();
-              }}
-            />
-            <span className="text-muted-foreground text-xs">
-              {keyInvalid
-                ? t("onboarding.setupKeyInvalid")
-                : t("onboarding.setupKeyHint")}
-            </span>
-
-            <DialogFooter>
-              <Button
-                variant="secondary"
-                data-id="onboarding-setup-key-cancel"
-                onClick={closeKeyDialog}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                data-id="onboarding-setup-key-save"
-                disabled={savingKey || keyValue.trim().length === 0}
-                onClick={() => void saveKey()}
-              >
-                {savingKey && <Spinner fontSize={11} />}
-                {t("onboarding.setupSaveCta")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog>
+        onClose={() => setOpenKey(null)}
+        onSaved={refresh}
+      />
 
       {(abacusError ?? connectError) != null && (
         <div

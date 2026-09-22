@@ -253,6 +253,60 @@ describe("ModelPicker", () => {
     expect(openExternal).not.toHaveBeenCalled();
   });
 
+  // Connecting Gemini used to open the browser and send the user to Settings;
+  // the key dialog every other entry point uses opens here instead.
+  it("opens the shared key dialog in place for Connect Gemini", async () => {
+    const saveApiKey = vi.fn(async () => ({}));
+    const listModels = vi.fn(async () => []);
+    (globalThis.window as unknown as { api: unknown }).api = {
+      agent: {
+        getAbacusAccount: async () => ({ subscription_tier: "free" }),
+        saveApiKey,
+        listModels,
+      },
+      openExternal,
+    };
+    renderPicker([configuredModel]);
+    fireEvent.click(screen.getByRole("combobox"));
+
+    await waitFor(() =>
+      expect(
+        document.querySelector(
+          '[data-id="local-code-model-option-connect/gemini"]'
+        )
+      ).toBeTruthy()
+    );
+    fireEvent.click(
+      document.querySelector(
+        '[data-id="local-code-model-option-connect/gemini"]'
+      )!
+    );
+
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-id="provider-key-dialog"]')
+      ).toBeTruthy()
+    );
+    // No trip to Settings and no blind browser open: the dialog carries the link.
+    expect(navigate).not.toHaveBeenCalled();
+    expect(openExternal).not.toHaveBeenCalled();
+
+    fireEvent.change(
+      document.querySelector('[data-id="provider-key-input"]')!,
+      {
+        target: { value: "AIzaSy-a-real-looking-key" },
+      }
+    );
+    fireEvent.click(document.querySelector('[data-id="provider-key-save"]')!);
+
+    await waitFor(() =>
+      expect(saveApiKey).toHaveBeenCalledWith(
+        "gemini",
+        "AIzaSy-a-real-looking-key"
+      )
+    );
+  });
+
   it("shows no upgrade card off the free tier", async () => {
     (globalThis.window as unknown as { api: unknown }).api = {
       agent: {

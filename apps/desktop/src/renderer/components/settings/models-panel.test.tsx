@@ -123,10 +123,10 @@ describe("saving a key", () => {
   it("stores what was pasted under the provider whose card it is", async () => {
     await openPage("groq");
 
-    fireEvent.change(byId("api-key-input-groq"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "gsk-test-key" },
     });
-    fireEvent.keyDown(byId("api-key-input-groq"), { key: "Enter" });
+    fireEvent.keyDown(byId("provider-key-input"), { key: "Enter" });
 
     await waitFor(() =>
       expect(saveApiKey).toHaveBeenCalledWith("groq", "gsk-test-key")
@@ -136,9 +136,9 @@ describe("saving a key", () => {
   it("saves nothing when nothing was typed", async () => {
     await openPage("mistral");
 
-    fireEvent.keyDown(byId("api-key-input-mistral"), { key: "Enter" });
+    fireEvent.keyDown(byId("provider-key-input"), { key: "Enter" });
 
-    // saveAll resolves before any writes happen; a zero-draft save is a no-op.
+    // An empty paste is a no-op, not a write of an empty key.
     await waitFor(() => expect(saveApiKey).not.toHaveBeenCalled());
   });
 });
@@ -175,7 +175,7 @@ describe("a key that is already stored", () => {
     listStoredKeyProviders.mockResolvedValue(["groq"]);
     await openPage("groq");
 
-    fireEvent.click(byId("api-key-remove-groq"));
+    fireEvent.click(byId("provider-key-remove"));
     await waitFor(() => byId("api-key-remove-dialog"));
     // The dialog's own confirm button, not the card's.
     fireEvent.click(
@@ -208,7 +208,7 @@ describe("a key that is already stored", () => {
     listStoredKeyProviders.mockResolvedValue(["groq"]);
     await openPage("groq");
 
-    fireEvent.click(byId("api-key-remove-groq"));
+    fireEvent.click(byId("provider-key-remove"));
     await waitFor(() => byId("api-key-remove-dialog"));
     fireEvent.click(
       byId("api-key-remove-dialog").querySelectorAll("button")[1]!
@@ -225,9 +225,9 @@ describe("a key that is already stored", () => {
     listStoredKeyProviders.mockResolvedValue([]);
     await openPage("groq");
 
-    expect(byId("api-key-state-groq")).toBeTruthy();
+    expect(byId("provider-key-state")).toBeTruthy();
     expect(
-      document.querySelector('[data-id="api-key-remove-groq"]')
+      document.querySelector('[data-id="provider-key-remove"]')
     ).toBeNull();
   });
 
@@ -235,7 +235,7 @@ describe("a key that is already stored", () => {
     listStoredKeyProviders.mockResolvedValue(["groq"]);
     await openPage("groq");
 
-    expect(byId("api-key-state-groq").textContent).toContain(
+    expect(byId("provider-key-state").textContent).toContain(
       "apiKeys.notVerified"
     );
   });
@@ -265,31 +265,39 @@ describe("a paste that could not be a key", () => {
   it("is refused in place instead of stored", async () => {
     await openPage("groq");
 
-    fireEvent.change(byId("api-key-input-groq"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "export GROQ_API_KEY=gsk-test-key" },
     });
-    fireEvent.keyDown(byId("api-key-input-groq"), { key: "Enter" });
+    fireEvent.keyDown(byId("provider-key-input"), { key: "Enter" });
 
-    await waitFor(() => byId("api-key-invalid-groq"));
+    await waitFor(() =>
+      expect(byId("provider-key-hint").textContent).toBe(
+        "onboarding.setupKeyInvalid"
+      )
+    );
     expect(saveApiKey).not.toHaveBeenCalled();
   });
 
   it("stops complaining as soon as the field is edited again", async () => {
     await openPage("groq");
 
-    fireEvent.change(byId("api-key-input-groq"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "https://console.groq.com/keys" },
     });
-    fireEvent.keyDown(byId("api-key-input-groq"), { key: "Enter" });
-    await waitFor(() => byId("api-key-invalid-groq"));
+    fireEvent.keyDown(byId("provider-key-input"), { key: "Enter" });
+    await waitFor(() =>
+      expect(byId("provider-key-hint").textContent).toBe(
+        "onboarding.setupKeyInvalid"
+      )
+    );
 
-    fireEvent.change(byId("api-key-input-groq"), {
+    fireEvent.change(byId("provider-key-input"), {
       target: { value: "gsk-a-real-looking-key" },
     });
 
-    expect(
-      document.querySelector('[data-id="api-key-invalid-groq"]')
-    ).toBeNull();
+    expect(byId("provider-key-hint").textContent).toBe(
+      "onboarding.setupKeyHint"
+    );
   });
 });
 

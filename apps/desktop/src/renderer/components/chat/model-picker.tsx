@@ -103,7 +103,7 @@ export const ModelPicker = ({
     (state) => state.toggleFavoriteModel
   );
   const navigate = useNavigate();
-  const { connect } = useConnectFreeProvider();
+  const { connect, keyDialog } = useConnectFreeProvider();
   const openProviderSettings = (provider: string): void => {
     if (provider === "*") {
       void navigate({ to: "/settings/models", search: {} });
@@ -570,6 +570,7 @@ export const ModelPicker = ({
           </div>
         </ComboboxContent>
       </Combobox>
+      {keyDialog}
     </div>
   );
 };

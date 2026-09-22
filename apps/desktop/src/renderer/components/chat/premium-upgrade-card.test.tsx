@@ -164,18 +164,18 @@ describe("PremiumUpgradeCard", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("sends Google's key errand to the browser and the keys panel", () => {
+  it("asks for Google's key here, without leaving the card", () => {
+    // Google has no sign-in hop, only a paste. Sending the user to Settings
+    // abandoned the turn that raised this card; the dialog carries the link.
     renderCard({ dataId: "chat-upgrade-card" });
 
     fireEvent.click(button("connect-gemini")!);
 
-    expect(openExternal).toHaveBeenCalledWith(
-      "https://aistudio.google.com/apikey"
-    );
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/settings/models",
-      search: { provider: "gemini" },
-    });
+    expect(
+      document.querySelector('[data-id="provider-key-dialog"]')
+    ).not.toBeNull();
+    expect(openExternal).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("offers a local model once every free source is connected, and resumes on it", () => {

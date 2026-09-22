@@ -7,6 +7,12 @@
 
 ## Unreleased
 
+Pasting a model provider's API key is the same dialog everywhere: from
+onboarding, from the Models page, and from Connect Gemini in the model picker,
+which now opens it in place instead of sending you to Settings. It names the
+errand, carries the link to the provider's console, and says when a key is
+already saved.
+
 A reply that drifts into another language is caught even when it is full of
 English technical terms. A Chinese answer to an English question, with
 GitHub, account names and token scopes in it, read as "no clear language" and

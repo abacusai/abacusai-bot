@@ -20,6 +20,7 @@
     "remove": "Remove key",
     "removeDescription": "Deletes the saved key from ~/.abacusai-bot/config.json. Existing chats keep using it until they are restarted.",
     "removeTitle": "Remove the {{provider}} key?",
+    "replacePlaceholder": "Paste a new {{provider}} API key to replace the saved one",
     "saveChanges": "Save",
     "title": "Models"
   },

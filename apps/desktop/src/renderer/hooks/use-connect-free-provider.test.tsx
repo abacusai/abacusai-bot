@@ -1,6 +1,6 @@
 /** The one connect hop the picker rows and the out-of-credits cards share. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook } from "@testing-library/react";
+import { act, render, renderHook } from "@testing-library/react";
 import type { JSX, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -82,19 +82,36 @@ describe("useConnectFreeProvider", () => {
     expect(listModels).not.toHaveBeenCalled();
   });
 
-  it("sends Google's key errand to the browser and the keys panel together", async () => {
+  // Google has no sign-in hop: the key is pasted. It used to open the browser
+  // and send the user to Settings, leaving whatever they were doing; the key
+  // dialog opens where they already are, and carries the link itself.
+  it("asks for Google's key in the dialog, going nowhere", async () => {
     const { result } = renderHook(() => useConnectFreeProvider(), { wrapper });
 
     await act(async () => {
       expect(await result.current.connect("gemini")).toBe(false);
     });
 
-    expect(openExternal).toHaveBeenCalledWith(
-      "https://aistudio.google.com/apikey"
-    );
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/settings/models",
-      search: { provider: "gemini" },
-    });
+    expect(openExternal).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+
+    // The caller renders it; open only once the paste has been asked for.
+    render(<>{result.current.keyDialog}</>, { wrapper });
+    expect(
+      document.querySelector('[data-id="provider-key-dialog"]')
+    ).not.toBeNull();
+    expect(
+      document.querySelector('[data-id="provider-key-input"]')
+    ).not.toBeNull();
+  });
+
+  it("keeps the dialog shut until a key is actually wanted", () => {
+    const { result } = renderHook(() => useConnectFreeProvider(), { wrapper });
+
+    render(<>{result.current.keyDialog}</>, { wrapper });
+
+    expect(
+      document.querySelector('[data-id="provider-key-dialog"]')
+    ).toBeNull();
   });
 });
