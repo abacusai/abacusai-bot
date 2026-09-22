@@ -176,5 +176,9 @@ export enum IpcChannels {
   RemoveRoutine = "agent:remove-routine",
   RunRoutine = "agent:run-routine",
   ListSessionArtifacts = "agent:list-session-artifacts",
+  GetLocalModelState = "agent:get-local-model-state",
+  InstallLocalModel = "agent:install-local-model",
+  CancelLocalModelInstall = "agent:cancel-local-model-install",
+  RemoveLocalModel = "agent:remove-local-model",
   Event = "agent:event",
 }

@@ -15,6 +15,7 @@ import type {
   SessionConversationRef,
 } from "./conversation-scope";
 import type { BackendId, BackendStatus } from "./exec-backends";
+import type { LocalModelProgress, LocalModelState } from "./local-models";
 import type {
   MessagingPairingDecisionRequest,
   MessagingPlatformId,
@@ -706,9 +707,17 @@ export type IpcEvent =
     } & IpcEventBase)
   // A sign-out stashed every session or a sign-in restored a stash; no
   // per-session event can say so.
-  | ({ type: "sessions-reloaded" } & IpcEventBase);
+  | ({ type: "sessions-reloaded" } & IpcEventBase)
+  // A local model download moved on; the last event of a download says how it ended.
+  | ({
+      type: "local-model-progress";
+      progress: LocalModelProgress;
+    } & IpcEventBase);
 
 /** The key itself never leaves main. */
+export type LocalModelInstallOutcome =
+  | { ok: true; model: string }
+  | { ok: false; error: string };
 export type OpenRouterAuthOutcome =
   | { ok: true }
   | { ok: false; error: string; cancelled?: boolean };
@@ -1676,6 +1685,15 @@ export interface AgentApi {
   removeRoutine: (id: string) => Promise<void>;
   /** `create` marks the run as the test run after setup. */
   runRoutine: (id: string, trigger?: "manual" | "create") => Promise<void>;
+  /** What this machine can run locally, what is installed and what is loading. */
+  getLocalModelState: () => Promise<LocalModelState>;
+  /**
+   * Download a catalog model and register it; resolves once it can be picked
+   * as `local/<id>`. Progress arrives as `local-model-progress` events.
+   */
+  installLocalModel: (modelId: string) => Promise<LocalModelInstallOutcome>;
+  cancelLocalModelInstall: () => Promise<void>;
+  removeLocalModel: (modelId: string) => Promise<void>;
   /** Browser sign-in; resolves when the user finishes, cancels, or it times out. */
   startOpenRouterAuth: () => Promise<OpenRouterAuthOutcome>;
   /** Browser sign-in or sign-up; resolves when the user finishes, cancels, or it times out. */
