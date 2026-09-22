@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { BrowserPermissionPrompt } from "./components/browser/browser-permission-prompt";
 import { CriticalUpdateDialog } from "./components/common/critical-update-dialog";
 import { UpdateStalledBanner } from "./components/common/update-stalled-banner";
+import { LocalModelDialog } from "./components/local-models/local-model-dialog";
 import { FirstBotDialog } from "./components/onboarding/first-bot-dialog";
 import { OnboardingFlow } from "./components/onboarding/onboarding-flow";
 import { WelcomeTourGate } from "./components/onboarding/welcome-tour";
@@ -163,6 +164,7 @@ function App(): React.JSX.Element {
           } as React.CSSProperties
         }
       >
+        <LocalModelDialog />
         <Toaster
           position="top-right"
           offset={{ top: TITLEBAR_HEIGHT + 10 }}

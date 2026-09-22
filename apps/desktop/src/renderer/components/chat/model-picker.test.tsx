@@ -87,6 +87,27 @@ beforeEach(() => {
 });
 
 describe("ModelPicker", () => {
+  it("groups the models served on this machine under their own name", async () => {
+    const local: ModelAvailability = {
+      id: "local/qwen3.5-4b",
+      label: "Qwen 3.5 4B",
+      provider: "local",
+      tier: "local",
+      configured: true,
+    };
+    renderPicker([configuredModel, local]);
+    fireEvent.click(screen.getByRole("combobox"));
+
+    await waitFor(() =>
+      expect(
+        document.querySelector(
+          '[data-id="local-code-model-option-local/qwen3.5-4b"]'
+        )
+      ).not.toBeNull()
+    );
+    expect(screen.getByText("localModels.onThisMachine")).toBeTruthy();
+  });
+
   it("replaces the picker with the shared provider launcher when no model is configured", () => {
     renderPicker([unconfiguredModel]);
 

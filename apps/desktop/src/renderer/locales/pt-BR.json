@@ -669,6 +669,7 @@
     "connectBody": "Connect a free source to keep going — no card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
+    "localBody": "Or run a model on this computer — free, with no limits.",
     "or": "or",
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
@@ -891,6 +892,24 @@
     "runNow": "Executar agora",
     "startFailed": "Não foi possível iniciar.",
     "started": "Iniciada — roda em uma sessão própria."
+  },
+  "localModels": {
+    "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
+    "download": "Download {{size}} and use it",
+    "downloading": "{{received}} of {{total}} ({{percent}}%)",
+    "installed": "Installed",
+    "machine": "This computer has {{memory}} of memory.",
+    "onThisMachine": "On this machine",
+    "recommended": "Recommended",
+    "remove": "Remove",
+    "sectionHint": "Models the app downloads and runs here with the bundled llama.cpp. They join RouteLLM - Open as its last resort.",
+    "stopDownload": "Stop download",
+    "tight": "That is tight for this model; answers will be slow.",
+    "title": "Use a local model",
+    "unavailable": "This build of the app cannot run models locally.",
+    "use": "Use {{model}}",
+    "useLocal": "Use a local model",
+    "verifying": "Checking the download…"
   },
   "logs": {
     "saveFailed": "Could not save logs: {{error}}",
@@ -1739,6 +1758,7 @@
       "favorites": "Favorites",
       "noFavorites": "Favorite models appear here.",
       "noResults": "No models found.",
+      "onThisMachine": "On this machine",
       "removeFavorite": "Remove {{model}} from favorites",
       "search": "Search models…",
       "title": "Choose a model"
@@ -1801,6 +1821,7 @@
       "connectNote": "Connect a free source to keep going — no card needed",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
+      "localNote": "Or run a model on this computer — free, no limits",
       "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
     },
