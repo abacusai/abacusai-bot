@@ -19,11 +19,24 @@ const account = vi.hoisted(() => ({
   updatedAt: 0,
 }));
 
+const providers = vi.hoisted(() => ({
+  configured: {} as Record<string, boolean>,
+}));
+const navigate = vi.fn();
+
 vi.mock("../../hooks/use-abacus-account", () => ({
   useAbacusAccountQuery: () => ({
     data: account.current,
     dataUpdatedAt: account.updatedAt,
   }),
+}));
+vi.mock("../../hooks/use-model-providers", () => ({
+  useModelProvidersQuery: () => ({
+    data: { configured: providers.configured, stored: new Set() },
+  }),
+}));
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => navigate,
 }));
 
 const { CreditsExhaustedCard, shouldShowCreditsCard } =
@@ -46,6 +59,8 @@ const free = (over: Partial<AbacusAccountInfo> = {}): AbacusAccountInfo => ({
 });
 
 const getAbacusAccount = vi.fn(async () => account.current);
+const startOpenRouterAuth = vi.fn(async () => ({ ok: true as const }));
+const listModels = vi.fn(async () => []);
 
 const renderCard = () =>
   render(
@@ -67,9 +82,15 @@ beforeEach(() => {
   useCreditsStore.setState({ exhaustedAt: null });
   account.current = free();
   account.updatedAt = 0;
+  providers.configured = { abacus: true };
   getAbacusAccount.mockClear();
+  startOpenRouterAuth.mockClear();
+  navigate.mockClear();
   Object.assign(window, {
-    api: { agent: { getAbacusAccount }, openExternal: vi.fn() },
+    api: {
+      agent: { getAbacusAccount, startOpenRouterAuth, listModels },
+      openExternal: vi.fn(),
+    },
   });
 });
 
@@ -141,18 +162,76 @@ describe("CreditsExhaustedCard", () => {
     expect(dismiss()).toBeNull();
   });
 
-  it("still hands a spent free plan the way to upgrade", () => {
-    // The basic-tier rule above must not take this with it: out of credits
-    // is the one moment the upgrade button is the answer to the question.
+  it("hands a spent free plan the free sources it has not connected, never a plan", async () => {
     useCreditsStore.getState().markExhausted();
     renderCard();
 
     expect(card()?.textContent).toContain("creditsCard.title");
+    expect(card()?.textContent).toContain("creditsCard.connectBody");
     expect(
       document.querySelector('[data-id="sidebar-credits-card-cta"]')
+    ).toBeNull();
+    const openRouter = document.querySelector<HTMLButtonElement>(
+      '[data-id="sidebar-credits-card-action-openrouter"]'
+    );
+    expect(openRouter).not.toBeNull();
+    expect(
+      document.querySelector('[data-id="sidebar-credits-card-action-gemini"]')
     ).not.toBeNull();
     // And no dismiss: closing it would hide why nothing runs.
     expect(dismiss()).toBeNull();
+
+    fireEvent.click(openRouter!);
+    await waitFor(() => expect(startOpenRouterAuth).toHaveBeenCalledTimes(1));
+  });
+
+  it("offers only the source still missing", () => {
+    providers.configured = { abacus: true, gemini: true };
+    useCreditsStore.getState().markExhausted();
+    renderCard();
+
+    expect(
+      document.querySelector('[data-id="sidebar-credits-card-action-gemini"]')
+    ).toBeNull();
+    expect(
+      document.querySelector(
+        '[data-id="sidebar-credits-card-action-openrouter"]'
+      )
+    ).not.toBeNull();
+  });
+
+  it("points at the picker once every free source is connected", () => {
+    providers.configured = { abacus: true, openrouter: true, gemini: true };
+    useCreditsStore.getState().markExhausted();
+    renderCard();
+
+    expect(card()?.textContent).toContain("creditsCard.pickBody");
+    expect(card()?.querySelector("button")).toBeNull();
+  });
+
+  it("names another provider's key over the free sources", () => {
+    providers.configured = { abacus: true, openai: true };
+    useCreditsStore.getState().markExhausted();
+    renderCard();
+
+    expect(card()?.textContent).toContain("creditsCard.switchTitle");
+    expect(card()?.querySelector("button")).toBeNull();
+  });
+
+  it("sends a spent paid plan to its top-up", () => {
+    account.current = free({ subscription_tier: "pro", credits_used: 500 });
+    useCreditsStore.getState().markExhausted();
+    renderCard();
+
+    expect(card()?.textContent).toContain("creditsCard.paidTitle");
+    expect(
+      document.querySelector('[data-id="sidebar-credits-card-cta"]')
+    ).not.toBeNull();
+    expect(
+      document.querySelector(
+        '[data-id="sidebar-credits-card-action-openrouter"]'
+      )
+    ).toBeNull();
   });
 
   it("says nothing to a basic plan, which has the agent card instead", () => {

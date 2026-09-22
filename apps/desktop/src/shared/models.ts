@@ -19,6 +19,9 @@ export interface AbacusBotModel {
   requiresEnv?: string;
 }
 
+/** The router's id; must match OPENLLM_ID in packages/agent/src/openllm.ts. */
+export const OPENLLM_ID = "openllm/auto";
+
 export const MODEL_CATALOG: AbacusBotModel[] = [
   // ── The defaults ──────────────────────────────────────────────────────────
   // OpenLLM's virtual id resolves to the best model in the free pool, with
@@ -27,7 +30,7 @@ export const MODEL_CATALOG: AbacusBotModel[] = [
   // catalog supersession preserves it. `requiresEnv` names the primary source;
   // openLlmConfigured also accepts other configured pool sources.
   {
-    id: "openllm/auto",
+    id: OPENLLM_ID,
     // The id stays `openllm/auto` (stored in sessions, matched by OPENLLM_ID);
     // only the on-screen name says it is the same routing idea as RouteLLM.
     label: "RouteLLM - Open",

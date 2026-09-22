@@ -15,6 +15,7 @@ import type { ModelAvailability } from "#shared/models";
 import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
+import { useConnectFreeProvider } from "../../hooks/use-connect-free-provider";
 import { useWorkspaceStore } from "../../stores/code-store";
 import { Button } from "../ui";
 import {
@@ -30,7 +31,6 @@ import {
 } from "../ui/combobox";
 import { InputGroupAddon } from "../ui/input-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { PremiumUpgradeCard } from "./premium-upgrade-card";
 import { ProviderMark } from "./provider-mark";
 
 type RailValue = "favorites" | string;
@@ -46,7 +46,6 @@ const CONNECT_RANK: Record<string, number> = {
   [CONNECT_OPENROUTER_ID]: 0,
   [CONNECT_GEMINI_ID]: 1,
 };
-const GOOGLE_AI_STUDIO_KEY_URL = "https://aistudio.google.com/apikey";
 const EMPTY_MODELS: ModelAvailability[] = [];
 const PROVIDER_LABELS = new Map(
   PROVIDER_KEY_FIELDS.map((field) => [field.provider, field.label])
@@ -97,6 +96,7 @@ export const ModelPicker = ({
     (state) => state.toggleFavoriteModel
   );
   const navigate = useNavigate();
+  const { connect } = useConnectFreeProvider();
   const openProviderSettings = (provider: string): void => {
     if (provider === "*") {
       void navigate({ to: "/settings/models", search: {} });
@@ -172,7 +172,6 @@ export const ModelPicker = ({
         tier: "free",
         configured: true,
       });
-    // The paid upgrade is the card pinned under the list, not a row.
     return rows;
   }, [geminiConnected, isFreeTier, openRouterConnected, t]);
 
@@ -290,26 +289,14 @@ export const ModelPicker = ({
           if (option == null) return;
           if (option.id === CONNECT_OPENROUTER_ID) {
             setOpen(false);
-            // The credentials-changed event refreshes the catalog when the hop
-            // lands. A failure (not a cancel) falls back to the keys panel.
-
-            void window.api.agent.startOpenRouterAuth().then((result) => {
-              if (result.ok === true) {
-                void window.api.agent
-                  .listModels(true)
-                  .then(() => onModelsRefreshed?.());
-              } else if (result.cancelled !== true) {
-                openProviderSettings("openrouter");
-              }
+            void connect("openrouter").then((connected) => {
+              if (connected) onModelsRefreshed?.();
             });
             return;
           }
           if (option.id === CONNECT_GEMINI_ID) {
             setOpen(false);
-            // Fetch the key in the browser, paste it in the keys panel — both
-            // opened together so the two halves of the errand meet.
-            void window.api.openExternal(GOOGLE_AI_STUDIO_KEY_URL);
-            openProviderSettings("gemini");
+            void connect("gemini");
             return;
           }
           onSelectModel(activeWorkspaceId, option.id);
@@ -558,14 +545,6 @@ export const ModelPicker = ({
                   </ComboboxGroup>
                 ))}
               </ComboboxList>
-              {isFreeTier && (
-                <div className="border-t p-1.5">
-                  <PremiumUpgradeCard
-                    dataId="model-picker-upgrade-card"
-                    onBeforeOpen={() => setOpen(false)}
-                  />
-                </div>
-              )}
               <ComboboxEmpty className="flex-1 flex-col items-center gap-2 px-6">
                 {search.trim().length === 0 && railValue === "favorites" ? (
                   <>

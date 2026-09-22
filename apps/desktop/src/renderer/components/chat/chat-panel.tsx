@@ -39,7 +39,7 @@ import type {
   WorkspaceListItem,
 } from "#shared/contracts";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
-import { DEFAULT_MODEL_ID } from "#shared/models";
+import { DEFAULT_MODEL_ID, OPENLLM_ID } from "#shared/models";
 import { detectRememberRequest } from "#shared/remember";
 
 import {
@@ -806,6 +806,10 @@ export const ChatPanel = (): JSX.Element => {
     sessionId: string;
     model: string;
   } | null>(null);
+  // The session whose dead turn is re-sent once its pick lands (handleResumeOnPool),
+  // and the retry itself, which is defined further down with the send path.
+  const resumeAfterPickRef = useRef<string | null>(null);
+  const retryRef = useRef<() => void>(() => {});
   const userPick =
     pendingModelPick != null && pendingModelPick.sessionId === activeSessionId
       ? pendingModelPick.model
@@ -1130,8 +1134,13 @@ export const ChatPanel = (): JSX.Element => {
     if (pendingModelPick == null) return;
     if (
       modelPickHonoured(pendingModelPick.model, sessionStateQuery.data?.model)
-    )
+    ) {
       setPendingModelPick(null);
+      if (resumeAfterPickRef.current === pendingModelPick.sessionId) {
+        resumeAfterPickRef.current = null;
+        retryRef.current();
+      }
+    }
   }, [pendingModelPick, sessionStateQuery.data?.model]);
 
   // The half where the agent neither confirms nor refuses: time-box the pick so
@@ -1142,6 +1151,8 @@ export const ChatPanel = (): JSX.Element => {
     const held = pendingModelPick;
     const timer = setTimeout(() => {
       setPendingModelPick((pick) => (pick === held ? null : pick));
+      if (resumeAfterPickRef.current === held.sessionId)
+        resumeAfterPickRef.current = null;
       toast.error(t("workspace.modelSwitchFailed"), {
         id: `local-code-model-pick-timeout-${held.sessionId}`,
       });
@@ -1161,6 +1172,8 @@ export const ChatPanel = (): JSX.Element => {
       setPendingModelPick((pick) =>
         pick != null && pick.sessionId === event.sessionId ? null : pick
       );
+      if (resumeAfterPickRef.current === event.sessionId)
+        resumeAfterPickRef.current = null;
       if (event.sessionId === activeSessionId) {
         toast.error(t("workspace.modelSwitchFailed"), {
           id: `local-code-model-unavailable-${event.sessionId}`,
@@ -1880,6 +1893,20 @@ export const ChatPanel = (): JSX.Element => {
   const handleRetry = (): void => {
     void sendMessage([], t("workspace.retryMessage"));
   };
+  retryRef.current = handleRetry;
+
+  // A free source just joined the pool: run the dead turn again on the router.
+  // A chat pinned to a concrete model is moved onto the router first and the
+  // retry waits for the agent to confirm (the pick-honoured effect above);
+  // sending straight away would run the turn on the model that just failed.
+  const handleResumeOnPool = (): void => {
+    if (selectedModelValue === OPENLLM_ID) {
+      handleRetry();
+      return;
+    }
+    resumeAfterPickRef.current = activeSessionId;
+    handlePickModel(activeWorkspaceId, OPENLLM_ID);
+  };
 
   // Pending permission for composer
   const pendingPermission = useMemo(
@@ -2140,6 +2167,7 @@ export const ChatPanel = (): JSX.Element => {
                         onPickModel={(modelId) =>
                           handlePickModel(activeWorkspaceId, modelId)
                         }
+                        onResume={isAgentBusy ? undefined : handleResumeOnPool}
                         onRateTurn={handleRateTurn}
                         creditsTotal={conversation.credits}
                         onOpenSubtask={setSubtaskScope}
