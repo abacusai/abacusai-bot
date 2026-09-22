@@ -53,6 +53,9 @@ describe("the bundled server", () => {
     expect(args[args.indexOf("--chat-template-kwargs") + 1]).toBe(
       '{"enable_thinking":false}'
     );
+    // Never "none": that leaves the template's empty think block in the
+    // reply, and the transcript shows the tags.
+    expect(args[args.indexOf("--reasoning-format") + 1]).toBe("deepseek");
     expect(args).toContain("--no-webui");
   });
 });
