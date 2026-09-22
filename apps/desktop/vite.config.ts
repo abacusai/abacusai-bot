@@ -11,6 +11,11 @@ const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
 
 const root = import.meta.dirname;
 
+// The ONNX runtime's WebAssembly files are not in its export map, so the
+// transcriber reaches them through this alias. Hoisted node_modules, as
+// electron-builder.yml also relies on.
+const ortDist = resolve(root, "../../node_modules/onnxruntime-web/dist");
+
 export default defineConfig({
   build: { outDir: "dist/renderer" },
   plugins: [
@@ -62,6 +67,7 @@ export default defineConfig({
       "#preload": resolve(root, "src/preload"),
       "#renderer": resolve(root, "src/renderer"),
       "#shared": resolve(root, "src/shared"),
+      "ort-dist": ortDist,
     },
     dedupe: ["react", "react-dom"],
   },
