@@ -102,12 +102,13 @@ describe("modelInBody", () => {
 });
 
 describe("forwardablePath", () => {
-  it("keeps the API path and query, and nothing that names a host", () => {
+  it("maps a request onto one of the known API paths, or nothing", () => {
     expect(forwardablePath("/v1/chat/completions")).toBe(
       "/v1/chat/completions"
     );
-    expect(forwardablePath("/v1/models?x=1")).toBe("/v1/models?x=1");
-    expect(forwardablePath("/v1")).toBe("/v1");
+    expect(forwardablePath("/v1/models?x=1")).toBe("/v1/models");
+    expect(forwardablePath("/v1")).toBeNull();
+    expect(forwardablePath("/v1/anything")).toBeNull();
     expect(forwardablePath("http://evil.invalid/v1/models")).toBeNull();
     expect(forwardablePath("//evil.invalid/v1/models")).toBeNull();
     expect(forwardablePath("/health")).toBeNull();
