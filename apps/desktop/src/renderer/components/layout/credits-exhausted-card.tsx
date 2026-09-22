@@ -142,7 +142,7 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
   const exhaustedAt = useCreditsStore((state) => state.exhaustedAt);
   const [dismissed, setDismissed] = useState(readDismissed);
   const clearExhausted = useCreditsStore((state) => state.clearExhausted);
-  const { connect, connecting } = useConnectFreeProvider();
+  const { connect, connecting, keyDialog } = useConnectFreeProvider();
   const { state: localModels } = useLocalModels();
   const showLocalModelDialog = useLocalModelDialogStore((store) => store.show);
 
@@ -211,70 +211,73 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
             : t("creditsCard.pickBody");
 
   return (
-    <UpsellCard
-      dataId="sidebar-credits-card"
-      title={title}
-      body={body}
-      // The switch and pick cards are the whole message: their action is a
-      // picker in the composer, and a button here would lead somewhere else.
-      {...(exhausted && !paid
-        ? canConnect
-          ? {
-              actions: missing.map((source) => ({
-                id: source,
-                label: t(CONNECT_LABEL[source]),
-                icon: <ProviderMark provider={source} className="size-3.5" />,
-                disabled: connecting != null,
-                onClick: () => void connect(source),
-              })),
-            }
-          : canGoLocal
+    <>
+      <UpsellCard
+        dataId="sidebar-credits-card"
+        title={title}
+        body={body}
+        // The switch and pick cards are the whole message: their action is a
+        // picker in the composer, and a button here would lead somewhere else.
+        {...(exhausted && !paid
+          ? canConnect
             ? {
-                actions: [
-                  {
-                    id: "local",
-                    label: t("localModels.useLocal"),
-                    icon: (
-                      <ProviderMark provider="local" className="size-3.5" />
-                    ),
-                    onClick: () => showLocalModelDialog(),
-                  },
-                ],
+                actions: missing.map((source) => ({
+                  id: source,
+                  label: t(CONNECT_LABEL[source]),
+                  icon: <ProviderMark provider={source} className="size-3.5" />,
+                  disabled: connecting != null,
+                  onClick: () => void connect(source),
+                })),
               }
-            : {}
-        : {
-            cta: t(paid ? "creditsCard.topUpCta" : "creditsCard.cta"),
-            onCta: () => {
-              void window.api.openExternal(
-                paid ? ABACUS_BUY_CREDITS_URL : ABACUS_PLAN_URL
-              );
-            },
-          })}
-      // Out of credits on a free plan, beside the free sources it can still connect:
-      // the other way to more is to invite friends. The pick card stays button-free.
-      {...(exhausted && !paid && (canConnect || canGoLocal)
-        ? {
-            secondaryCta: t("creditsCard.inviteCta"),
-            onSecondaryCta: () => {
-              void navigate({ to: "/settings/referrals" });
-            },
-          }
-        : {})}
-      // No way out of the out-of-credits state but the button: closing it
-      // would hide the only explanation for a turn that will not run.
-      {...(exhausted
-        ? {}
-        : {
-            dismissLabel: t("creditsCard.dismiss"),
-            onDismiss: () => {
-              try {
-                durableStorage.setItem(DISMISSED_KEY, "1");
-              } catch {
-                // A card that cannot remember being closed still closes.
-              }
-              setDismissed(true);
-            },
-          })}
-    />
+            : canGoLocal
+              ? {
+                  actions: [
+                    {
+                      id: "local",
+                      label: t("localModels.useLocal"),
+                      icon: (
+                        <ProviderMark provider="local" className="size-3.5" />
+                      ),
+                      onClick: () => showLocalModelDialog(),
+                    },
+                  ],
+                }
+              : {}
+          : {
+              cta: t(paid ? "creditsCard.topUpCta" : "creditsCard.cta"),
+              onCta: () => {
+                void window.api.openExternal(
+                  paid ? ABACUS_BUY_CREDITS_URL : ABACUS_PLAN_URL
+                );
+              },
+            })}
+        // Out of credits on a free plan, beside the free sources it can still connect:
+        // the other way to more is to invite friends. The pick card stays button-free.
+        {...(exhausted && !paid && (canConnect || canGoLocal)
+          ? {
+              secondaryCta: t("creditsCard.inviteCta"),
+              onSecondaryCta: () => {
+                void navigate({ to: "/settings/referrals" });
+              },
+            }
+          : {})}
+        // No way out of the out-of-credits state but the button: closing it
+        // would hide the only explanation for a turn that will not run.
+        {...(exhausted
+          ? {}
+          : {
+              dismissLabel: t("creditsCard.dismiss"),
+              onDismiss: () => {
+                try {
+                  durableStorage.setItem(DISMISSED_KEY, "1");
+                } catch {
+                  // A card that cannot remember being closed still closes.
+                }
+                setDismissed(true);
+              },
+            })}
+      />
+      {keyDialog}
+    </>
   );
 };
