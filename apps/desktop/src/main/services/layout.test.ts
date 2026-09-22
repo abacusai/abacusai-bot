@@ -29,6 +29,9 @@ const GROUPS = [
   "debug-sync",
   "diagnostics",
   "device",
+  // The models the app downloads and serves on this machine: the store, the
+  // llama.cpp server, the endpoint in front of it, and what ties them together.
+  "local-models",
   "mcp",
   "messaging",
   "pptx",

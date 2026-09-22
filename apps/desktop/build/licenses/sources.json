@@ -25,6 +25,11 @@
     "source": "https://github.com/Genymobile/scrcpy/blob/v2.7/LICENSE"
   },
   {
+    "file": "llama-cpp-LICENSE",
+    "asset": "llama.cpp b11102 (llama-server, the runtime local models are served by; spawned as a separate process, never linked)",
+    "source": "https://github.com/ggml-org/llama.cpp/blob/b11102/LICENSE"
+  },
+  {
     "file": "wa-js-LICENSE",
     "asset": "wa-js 4.6.0",
     "source": "https://github.com/wppconnect-team/wa-js/blob/v4.6.0/LICENSE"

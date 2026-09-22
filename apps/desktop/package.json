@@ -51,7 +51,7 @@
     "test:unit": "vitest run --project shared --project main --project renderer",
     "test:watch": "vitest",
     "typecheck": "tsc -b",
-    "vendor": "node scripts/download-scrcpy.js && node scripts/download-wa-js.js"
+    "vendor": "node scripts/download-scrcpy.js && node scripts/download-wa-js.js && node scripts/download-llama-server.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
