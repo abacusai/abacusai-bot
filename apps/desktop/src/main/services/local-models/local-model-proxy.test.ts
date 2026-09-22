@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   LocalModelProxy,
+  forwardablePath,
   modelInBody,
   type UpstreamServer,
 } from "./local-model-proxy";
@@ -100,7 +101,28 @@ describe("modelInBody", () => {
   });
 });
 
+describe("forwardablePath", () => {
+  it("keeps the API path and query, and nothing that names a host", () => {
+    expect(forwardablePath("/v1/chat/completions")).toBe(
+      "/v1/chat/completions"
+    );
+    expect(forwardablePath("/v1/models?x=1")).toBe("/v1/models?x=1");
+    expect(forwardablePath("/v1")).toBe("/v1");
+    expect(forwardablePath("http://evil.invalid/v1/models")).toBeNull();
+    expect(forwardablePath("//evil.invalid/v1/models")).toBeNull();
+    expect(forwardablePath("/health")).toBeNull();
+    expect(forwardablePath("/")).toBeNull();
+    expect(forwardablePath(undefined)).toBeNull();
+  });
+});
+
 describe("the local model endpoint", () => {
+  it("answers 404 off the API path rather than forwarding anywhere", async () => {
+    const reply = await post({ model: "a" }, "/health");
+    expect(reply.status).toBe(404);
+    expect(upstreams.a!.starts).toBe(0);
+  });
+
   it("starts the model on the first request and streams the answer through", async () => {
     const reply = await post({
       model: "a",

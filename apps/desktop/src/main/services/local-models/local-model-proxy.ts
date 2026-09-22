@@ -57,6 +57,23 @@ export const modelInBody = (body: Buffer): string | null => {
   }
 };
 
+/**
+ * The path a request may be forwarded to: the OpenAI-style API under /v1,
+ * relative to the upstream — never a host the request line names, which is
+ * how a loopback proxy becomes a way to reach somewhere else.
+ */
+export const forwardablePath = (
+  requestUrl: string | undefined
+): string | null => {
+  const raw = requestUrl ?? "/";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  const parsed = new URL(raw, "http://local.invalid");
+  if (parsed.host !== "local.invalid") return null;
+  if (!parsed.pathname.startsWith("/v1/") && parsed.pathname !== "/v1")
+    return null;
+  return `${parsed.pathname}${parsed.search}`;
+};
+
 const fail = (
   response: http.ServerResponse,
   status: number,
@@ -164,6 +181,11 @@ export class LocalModelProxy {
     this.inFlight += 1;
     this.clearIdle();
     try {
+      const path = forwardablePath(request.url);
+      if (path == null) {
+        fail(response, 404, "not an endpoint of the local model");
+        return;
+      }
       const body = await readBody(request);
       const modelId = modelInBody(body) ?? this.options.defaultModelId();
       if (modelId == null) {
@@ -183,7 +205,7 @@ export class LocalModelProxy {
         );
         return;
       }
-      await this.forward(upstream, request, body, response);
+      await this.forward(upstream, path, request, body, response);
     } finally {
       this.inFlight -= 1;
       this.touch();
@@ -192,18 +214,23 @@ export class LocalModelProxy {
 
   private forward(
     upstream: UpstreamServer,
+    path: string,
     request: http.IncomingMessage,
     body: Buffer,
     response: http.ServerResponse
   ): Promise<void> {
     return new Promise((resolve) => {
-      const target = new URL(request.url ?? "/", upstream.baseUrl);
+      // Host and port are the upstream's own; only the vetted path is the request's.
+      const base = new URL(upstream.baseUrl);
       const headers = { ...request.headers };
       delete headers.host;
       delete headers["content-length"];
       const proxied = http.request(
-        target,
         {
+          protocol: "http:",
+          hostname: base.hostname,
+          port: base.port,
+          path,
           method: request.method,
           headers: { ...headers, "content-length": String(body.length) },
         },
