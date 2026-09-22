@@ -24,6 +24,7 @@ import { DeliverablesPill } from "./deliverables-pill";
 import { FeedbackRow } from "./feedback-row";
 import {
   PremiumUpgradeCard,
+  exhaustedScope,
   freeModelSwitches,
   wantsUpgradeCard,
 } from "./premium-upgrade-card";
@@ -262,6 +263,7 @@ const AgentTurnContent = ({
               <PremiumUpgradeCard
                 key={`${item.id}-${idx}`}
                 dataId="chat-upgrade-card"
+                scope={exhaustedScope(item.actions)}
                 freeModels={freeModelSwitches(item.actions)}
                 onPickModel={onPickModel}
                 onSwitchModel={onSwitchModel}
