@@ -10,7 +10,11 @@ import { wantsModelSwitch } from "./agent-message";
 import { BUBBLE_MAX_WIDTH } from "./bubble-width";
 import { turnDeliverables } from "./deliverables";
 import { DeliverablesPill } from "./deliverables-pill";
-import { PremiumUpgradeCard, wantsUpgradeCard } from "./premium-upgrade-card";
+import {
+  PremiumUpgradeCard,
+  exhaustedScope,
+  wantsUpgradeCard,
+} from "./premium-upgrade-card";
 import type { AgentRenderItem, ChatRenderItem } from "./render-utils";
 import { ShimmerText } from "./shimmer-text";
 import {
@@ -260,6 +264,7 @@ export const BotMessageList = ({
               <div key={part.id} className="max-w-md">
                 <PremiumUpgradeCard
                   dataId="chat-upgrade-card"
+                  scope={exhaustedScope(part.actions)}
                   onSwitchModel={onSwitchModel}
                 />
               </div>
