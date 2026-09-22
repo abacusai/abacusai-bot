@@ -49,6 +49,7 @@ import {
 } from "../browser/browser-snapshot";
 import {
   pickBrowserTarget,
+  type BrowserPage,
   type BrowserTargetMemory,
   type BrowserTargetSource,
 } from "../browser/browser-target";
@@ -667,7 +668,7 @@ export class McpBrowserServer {
   }
 
   /** The session's own view, if the runtime has one alive. */
-  private findView(sessionId?: string): Electron.WebContents | null {
+  private findView(sessionId?: string): BrowserPage | null {
     const source = this.options.target?.() ?? null;
     if (source == null) return null;
 
@@ -688,7 +689,13 @@ export class McpBrowserServer {
     return wc;
   }
 
+  /** Whether the pages are the app's own pane, which the renderer shows and animates. */
+  private presentsInApp(): boolean {
+    return this.options.target?.()?.presentsInApp !== false;
+  }
+
   private emitPreviewEvent(url?: string, sessionId?: string): void {
+    if (!this.presentsInApp()) return;
     const conversationKey =
       sessionId == null
         ? null
@@ -707,7 +714,7 @@ export class McpBrowserServer {
    * navigation, which has no destination to check.
    */
   private async awaitNavigation(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     startUrl: string,
     targetHost: string | null,
     timeoutMs: number
@@ -751,7 +758,7 @@ export class McpBrowserServer {
    * asynchronous, so success is decided by the settled URL, not the call.
    */
   private async historyNavigate(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     what: "back" | "forward" | "reload",
     go: () => void,
     sessionId?: string
@@ -786,7 +793,7 @@ export class McpBrowserServer {
    * never settles; success is decided by where the webContents ended up.
    */
   private async navigateTo(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     url: string,
     sessionId?: string
   ): Promise<ToolResult> {
@@ -859,7 +866,7 @@ export class McpBrowserServer {
   private async getWC(
     sessionId?: string,
     navigateUrl?: string
-  ): Promise<Electron.WebContents | null> {
+  ): Promise<BrowserPage | null> {
     const attachKey = this.attachKey(sessionId);
     let wc = this.findView(sessionId);
     if (wc != null) {
@@ -936,7 +943,7 @@ export class McpBrowserServer {
   }
 
   private async cdp(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     method: string,
     params?: Record<string, unknown>
   ): Promise<any> {
@@ -984,7 +991,7 @@ export class McpBrowserServer {
    * with `text`, a named key with its virtual key code so Enter submits.
    */
   private async dispatchTrustedKey(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     key: string,
     mods: string[]
   ): Promise<void> {
@@ -1063,7 +1070,7 @@ export class McpBrowserServer {
   private static readonly SETTLE_MAX_MS = 2_500;
 
   private async settle(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     maxMs = McpBrowserServer.SETTLE_MAX_MS
   ): Promise<void> {
     const deadline = Date.now() + maxMs;
@@ -1080,7 +1087,7 @@ export class McpBrowserServer {
 
   /** A fresh snapshot, with the session's refs replaced by it. */
   private async takeSnapshot(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     sessionId?: string
   ): Promise<{
     title: string;
@@ -1122,7 +1129,7 @@ export class McpBrowserServer {
   }
 
   private captureBefore(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     sessionId?: string
   ): { url: string; title: string; refs: Map<string, string> } {
     return {
@@ -1134,7 +1141,7 @@ export class McpBrowserServer {
 
   /** What an action did to the page: URL, new elements with refs, overlays. */
   private async reportChanges(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     sessionId: string | undefined,
     before: { url: string; title: string; refs: Map<string, string> }
   ): Promise<string> {
@@ -1176,7 +1183,7 @@ export class McpBrowserServer {
 
   /** What a page looks like on arrival: its clickable elements and any overlay. */
   private async arrival(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     sessionId: string | undefined,
     headline: string
   ): Promise<string> {
@@ -1221,7 +1228,7 @@ export class McpBrowserServer {
    * alone leaves such a field on its old value.
    */
   private async pick(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     args: Record<string, unknown>,
     sessionId?: string
   ): Promise<ToolResult> {
@@ -1321,7 +1328,7 @@ export class McpBrowserServer {
 
   /** Close whatever is sitting on top of the page. */
   private async dismiss(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     sessionId?: string
   ): Promise<ToolResult> {
     const before = this.captureBefore(wc, sessionId);
@@ -1361,10 +1368,7 @@ export class McpBrowserServer {
     return this.ok(`Dismissed ${closed.join(", ")}.\n${changes}`);
   }
 
-  private async evalJS(
-    wc: Electron.WebContents,
-    expression: string
-  ): Promise<any> {
+  private async evalJS(wc: BrowserPage, expression: string): Promise<any> {
     const { result, exceptionDetails } = await this.cdp(
       wc,
       "Runtime.evaluate",
@@ -1399,6 +1403,7 @@ export class McpBrowserServer {
   private emitCursorEvent(type: "mcp-cursor-move", x: number, y: number): void;
   private emitCursorEvent(type: "mcp-cursor-click" | "mcp-cursor-hide"): void;
   private emitCursorEvent(type: string, x?: number, y?: number): void {
+    if (!this.presentsInApp()) return;
     const payload: Record<string, unknown> = {
       type,
       emittedAt: new Date().toISOString(),
@@ -1409,7 +1414,7 @@ export class McpBrowserServer {
   }
 
   private async animateCursorToElement(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     sel: string
   ): Promise<void> {
     const center = await this.evalJS(wc, GET_ELEMENT_CENTER_JS(sel));
@@ -1499,7 +1504,7 @@ export class McpBrowserServer {
    * fallback and hangs on a hidden view.
    */
   private async captureImage(
-    wc: Electron.WebContents
+    wc: BrowserPage
   ): Promise<{ data: string; mimeType: string } | null> {
     const bounded = <T>(work: () => Promise<T>): Promise<T | null> =>
       Promise.race([
@@ -1871,7 +1876,7 @@ export class McpBrowserServer {
   }
 
   private async interactStep(
-    wc: Electron.WebContents,
+    wc: BrowserPage,
     args: Record<string, unknown>,
     sessionId?: string
   ): Promise<ToolResult> {

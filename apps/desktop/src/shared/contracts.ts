@@ -863,11 +863,30 @@ export interface McpServerInfo {
 
 export type BrowserApproval = "ask" | "always";
 
+/** Which browser the agent's browser tools drive: the app's own view, or the user's Chrome. */
+export type BrowserEngine = "builtin" | "chrome";
+
+/** The user's Chrome, as reached through the Playwright Extension. */
+export interface ChromeBrowserStatus {
+  /** The browser found on this computer (Chrome, else Edge), or null. */
+  browser: string | null;
+  extensionInstalled: boolean;
+  installUrl: string;
+  connecting: boolean;
+  connected: boolean;
+  /** Tabs in the app's tab group while connected. */
+  tabs: number;
+  /** Why the last connection attempt failed, if it did. */
+  error: string | null;
+}
+
 export interface McpBrowserStatus {
   running: boolean;
   port: number | null;
   enabled: boolean;
   approval: BrowserApproval;
+  engine: BrowserEngine;
+  chrome: ChromeBrowserStatus;
 }
 
 /** Which kernel sandbox this machine has; null means commands run unconfined. */
@@ -1928,6 +1947,13 @@ export interface AgentApi {
   ) => Promise<AgentMcpLogEntry[]>;
   getMcpBrowserStatus: () => Promise<McpBrowserStatus>;
   setMcpBrowserEnabled: (enabled: boolean) => Promise<McpBrowserStatus>;
+  /** Built-in view or the user's Chrome; the choice is kept across restarts. */
+  setBrowserEngine: (engine: BrowserEngine) => Promise<McpBrowserStatus>;
+  /** Open Chrome's allow page and wait for the user (or the token) to let the app in. */
+  connectChromeBrowser: () => Promise<McpBrowserStatus>;
+  disconnectChromeBrowser: () => Promise<McpBrowserStatus>;
+  /** The extension's own token, so later connections skip the allow page. */
+  setChromeExtensionToken: (token: string) => Promise<McpBrowserStatus>;
   /** The mode a session, bot or routine starts in when nothing picks one. */
   getDefaultAgentMode: () => Promise<DefaultAgentMode>;
   /** Whether this machine can confine a command at all; probed once. */

@@ -331,21 +331,43 @@
     },
     "approvalSubtitle": "에이전트가 탐색 전에 승인을 요청할지 선택하세요.",
     "approvalTitle": "승인",
+    "chrome": {
+      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
+      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
+      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
+      "connecting": "Waiting for you to allow the connection in your browser…",
+      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "install": "Install the extension",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "tokenTitle": "Extension token",
+      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
+      "tokenSave": "Save token",
+      "tokenSaved": "Token saved.",
+      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    },
     "clearAction": "모든 브라우징 데이터 삭제",
     "clearSubtitle": "앱 내 브라우저의 사이트 데이터와 캐시를 삭제합니다",
     "clearTitle": "브라우징 데이터",
     "cleared": "브라우징 데이터를 삭제했습니다.",
     "dataSection": "데이터",
     "done": "완료",
+    "engine": {
+      "builtin": "Built-in browser",
+      "chrome": "My Chrome"
+    },
+    "engineSection": "Which browser",
+    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
+    "engineTitle": "Browser the agent uses",
+    "homepageInvalid": "Enter a valid web address.",
+    "homepageSave": "Save",
+    "homepageSaved": "Home page saved.",
+    "homepageTitle": "Home page",
     "masterSubtitle": "에이전트가 내장 브라우저를 제어하도록 허용",
     "masterTitle": "Browser",
     "permissionsSection": "권한",
     "subtitle": "에이전트의 내장 브라우저를 관리합니다.",
-    "title": "Browser",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page"
+    "title": "Browser"
   },
   "capabilities": {
     "skills": {

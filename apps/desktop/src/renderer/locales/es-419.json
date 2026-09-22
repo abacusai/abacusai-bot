@@ -331,21 +331,43 @@
     },
     "approvalSubtitle": "Elige si el agente pide aprobación antes de navegar.",
     "approvalTitle": "Aprobación",
+    "chrome": {
+      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
+      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
+      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
+      "connecting": "Waiting for you to allow the connection in your browser…",
+      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "install": "Install the extension",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "tokenTitle": "Extension token",
+      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
+      "tokenSave": "Save token",
+      "tokenSaved": "Token saved.",
+      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    },
     "clearAction": "Borrar todos los datos de navegación",
     "clearSubtitle": "Borrar datos de sitios y caché del navegador integrado",
     "clearTitle": "Datos de navegación",
     "cleared": "Datos de navegación borrados.",
     "dataSection": "Datos",
     "done": "Listo",
+    "engine": {
+      "builtin": "Built-in browser",
+      "chrome": "My Chrome"
+    },
+    "engineSection": "Which browser",
+    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
+    "engineTitle": "Browser the agent uses",
+    "homepageInvalid": "Enter a valid web address.",
+    "homepageSave": "Save",
+    "homepageSaved": "Home page saved.",
+    "homepageTitle": "Home page",
     "masterSubtitle": "Permitir que el agente controle el navegador integrado",
     "masterTitle": "Navegador",
     "permissionsSection": "Permisos",
     "subtitle": "Administra el navegador integrado del agente.",
-    "title": "Navegador",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page"
+    "title": "Navegador"
   },
   "capabilities": {
     "skills": {

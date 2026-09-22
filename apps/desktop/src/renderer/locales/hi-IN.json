@@ -331,21 +331,43 @@
     },
     "approvalSubtitle": "चुनें कि एजेंट ब्राउज़ करने से पहले स्वीकृति मांगे या नहीं।",
     "approvalTitle": "अनुमोदन",
+    "chrome": {
+      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
+      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
+      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
+      "connecting": "Waiting for you to allow the connection in your browser…",
+      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "install": "Install the extension",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "tokenTitle": "Extension token",
+      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
+      "tokenSave": "Save token",
+      "tokenSaved": "Token saved.",
+      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    },
     "clearAction": "सभी ब्राउज़िंग डेटा साफ़ करें",
     "clearSubtitle": "इन-ऐप ब्राउज़र से साइट डेटा और कैश साफ़ करें",
     "clearTitle": "ब्राउज़िंग डेटा",
     "cleared": "ब्राउज़िंग डेटा साफ़ हो गया।",
     "dataSection": "डेटा",
     "done": "पूर्ण",
+    "engine": {
+      "builtin": "Built-in browser",
+      "chrome": "My Chrome"
+    },
+    "engineSection": "Which browser",
+    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
+    "engineTitle": "Browser the agent uses",
+    "homepageInvalid": "Enter a valid web address.",
+    "homepageSave": "Save",
+    "homepageSaved": "Home page saved.",
+    "homepageTitle": "Home page",
     "masterSubtitle": "एजेंट को अंतर्निहित ब्राउज़र नियंत्रित करने दें",
     "masterTitle": "Browser",
     "permissionsSection": "अनुमतियाँ",
     "subtitle": "एजेंट के बिल्ट-इन ब्राउज़र को प्रबंधित करें।",
-    "title": "Browser",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page"
+    "title": "Browser"
   },
   "capabilities": {
     "skills": {

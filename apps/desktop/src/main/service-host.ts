@@ -32,6 +32,7 @@ import type {
   AgentSessionListItem,
   SessionArtifact,
   BrowserApproval,
+  BrowserEngine,
   ClearBrowserDataRequest,
   ClearBrowserDataResult,
   GetMcpRuntimeServersRequest,
@@ -241,6 +242,7 @@ import {
 } from "./services/bots/bot-store";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
+import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-service";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import {
   buildAgentAuthEnv,
@@ -524,6 +526,10 @@ export class ServiceHost {
 
   /** A session with no browser open gets a hidden one; the renderer is told. */
   private browserTargetSource(): BrowserTargetSource | null {
+    // The user's Chrome, when chosen: its tabs stand in for the app's views,
+    // and the first browser call opens the allow page if it is not connected.
+    if (this.builtinMcpLifecycle.getBrowserEngine() === "chrome")
+      return this.chromeBrowser.targetSource();
     const runtime = this.browserRuntime;
     if (runtime == null) return null;
 
@@ -679,9 +685,20 @@ export class ServiceHost {
       },
     },
   });
+  /** The user's own Chrome, driven through the Playwright Extension. */
+  private readonly chromeBrowser = new ChromeBrowserService({
+    token: () => this.mcpConfigService.readState().chromeExtensionToken,
+    onStatusChanged: () =>
+      this.emitEvent({
+        type: "browser-status-updated",
+        status: this.builtinMcpLifecycle.getBrowserStatus(),
+        emittedAt: new Date().toISOString(),
+      }),
+  });
   private readonly builtinMcpLifecycle = new BuiltinMcpLifecycle({
     mcpConfigService: this.mcpConfigService,
     browserServer: this.mcpBrowserServer,
+    chromeBrowser: this.chromeBrowser,
     deviceServer: this.mcpDeviceServer,
     agentToolsServer: this.mcpAgentToolsServer,
     emitEvent: (event) => this.emitEvent(event),
@@ -1498,6 +1515,7 @@ export class ServiceHost {
   dispose(): Promise<void> {
     this.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
+    this.chromeBrowser.dispose();
     this.mcpDeviceServer.stop();
     this.deviceMirrorService.dispose();
     this.initializedAt = null;
@@ -3185,6 +3203,22 @@ export class ServiceHost {
 
   setBrowserApproval(approval: BrowserApproval): Promise<McpBrowserStatus> {
     return this.builtinMcpLifecycle.setBrowserApproval(approval);
+  }
+
+  setBrowserEngine(engine: BrowserEngine): Promise<McpBrowserStatus> {
+    return this.builtinMcpLifecycle.setBrowserEngine(engine);
+  }
+
+  connectChromeBrowser(): Promise<McpBrowserStatus> {
+    return this.builtinMcpLifecycle.connectChrome();
+  }
+
+  disconnectChromeBrowser(): Promise<McpBrowserStatus> {
+    return this.builtinMcpLifecycle.disconnectChrome();
+  }
+
+  setChromeExtensionToken(token: string): Promise<McpBrowserStatus> {
+    return this.builtinMcpLifecycle.setChromeExtensionToken(token);
   }
 
   async clearBrowserData(

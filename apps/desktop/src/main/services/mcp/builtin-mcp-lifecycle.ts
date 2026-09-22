@@ -5,11 +5,13 @@
  */
 import type {
   BrowserApproval,
+  BrowserEngine,
   IpcEvent,
   McpBrowserStatus,
   McpMode,
 } from "#shared/contracts";
 
+import type { ChromeBrowserService } from "../browser/chrome/chrome-browser-service";
 import type { BuiltinPermissionScope } from "./builtin-tool-permissions";
 import type { McpAgentToolsServer } from "./mcp-agent-tools-server";
 import type { McpBrowserServer } from "./mcp-browser-server";
@@ -24,6 +26,7 @@ import type { McpDeviceServer } from "./mcp-device-server";
 type BuiltinMcpLifecycleDeps = {
   mcpConfigService: McpConfigService;
   browserServer: McpBrowserServer;
+  chromeBrowser: ChromeBrowserService;
   deviceServer: McpDeviceServer;
   agentToolsServer: McpAgentToolsServer;
   emitEvent: (event: IpcEvent) => void;
@@ -45,14 +48,57 @@ export class BuiltinMcpLifecycle {
   }
 
   getBrowserStatus(): McpBrowserStatus {
+    const state = this.deps.mcpConfigService.readState();
     return {
       running: this.deps.browserServer.isRunning(),
       port: this.deps.browserServer.getPort(),
       enabled: this.browserEnabled,
-      approval:
-        this.deps.mcpConfigService.readState().builtinBrowserApproval ??
-        "always",
+      approval: state.builtinBrowserApproval ?? "always",
+      engine: state.browserEngine ?? "builtin",
+      chrome: this.deps.chromeBrowser.status(),
     };
+  }
+
+  getBrowserEngine(): BrowserEngine {
+    return this.deps.mcpConfigService.readState().browserEngine ?? "builtin";
+  }
+
+  private announceBrowserStatus(): McpBrowserStatus {
+    const status = this.getBrowserStatus();
+    this.deps.emitEvent({
+      type: "browser-status-updated",
+      status,
+      emittedAt: new Date().toISOString(),
+    });
+    return status;
+  }
+
+  /** Switch the tools between the built-in view and the user's Chrome. */
+  async setBrowserEngine(engine: BrowserEngine): Promise<McpBrowserStatus> {
+    const state = this.deps.mcpConfigService.readState();
+    state.browserEngine = engine;
+    this.deps.mcpConfigService.writeState(state);
+    if (engine === "builtin") this.deps.chromeBrowser.disconnect();
+    return this.announceBrowserStatus();
+  }
+
+  async connectChrome(): Promise<McpBrowserStatus> {
+    await this.deps.chromeBrowser.connect();
+    return this.announceBrowserStatus();
+  }
+
+  async disconnectChrome(): Promise<McpBrowserStatus> {
+    this.deps.chromeBrowser.disconnect();
+    return this.announceBrowserStatus();
+  }
+
+  async setChromeExtensionToken(token: string): Promise<McpBrowserStatus> {
+    const state = this.deps.mcpConfigService.readState();
+    const trimmed = token.trim();
+    if (trimmed.length === 0) delete state.chromeExtensionToken;
+    else state.chromeExtensionToken = trimmed;
+    this.deps.mcpConfigService.writeState(state);
+    return this.announceBrowserStatus();
   }
 
   async setBrowserEnabled(enabled: boolean): Promise<McpBrowserStatus> {
