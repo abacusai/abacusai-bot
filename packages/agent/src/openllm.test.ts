@@ -80,6 +80,20 @@ describe("which models are in the pool", () => {
     expect(candidates).toHaveLength(1);
   });
 
+  it("pools the models the app serves on this machine, after every cloud source", () => {
+    const pool = openLlmCandidates([
+      choice({ id: "local/qwen3.5-4b", free: true }),
+      choice({ id: "openrouter/z-ai/glm-5.2:free" }),
+      choice({ id: "gemini/gemini-3.5-flash-lite", free: false }),
+    ]);
+
+    expect(pool.map((model) => model.id)).toEqual([
+      "gemini/gemini-3.5-flash-lite",
+      "openrouter/z-ai/glm-5.2:free",
+      "local/qwen3.5-4b",
+    ]);
+  });
+
   it("keeps a custom provider out, however it is named", () => {
     // A user's own endpoint is not a free tier the pool may spend.
     expect(

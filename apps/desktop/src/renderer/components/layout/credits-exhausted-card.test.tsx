@@ -38,6 +38,20 @@ vi.mock("../../hooks/use-model-providers", () => ({
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
+const localModels = vi.hoisted(() => ({ runtimeAvailable: true }));
+vi.mock("../../hooks/use-local-models", () => ({
+  useLocalModels: () => ({
+    state: {
+      runtimeAvailable: localModels.runtimeAvailable,
+      totalMemoryBytes: 0,
+      recommendedId: "qwen3.5-4b",
+      catalog: [],
+      installedIds: [],
+      download: null,
+      servingId: null,
+    },
+  }),
+}));
 
 const { CreditsExhaustedCard, shouldShowCreditsCard } =
   await import("./credits-exhausted-card");
@@ -200,10 +214,28 @@ describe("CreditsExhaustedCard", () => {
     ).not.toBeNull();
   });
 
-  it("points at the picker once every free source is connected", () => {
+  it("offers a local model once every free source is connected", async () => {
     providers.configured = { abacus: true, openrouter: true, gemini: true };
     useCreditsStore.getState().markExhausted();
     renderCard();
+
+    expect(card()?.textContent).toContain("creditsCard.localBody");
+    const local = document.querySelector<HTMLButtonElement>(
+      '[data-id="sidebar-credits-card-action-local"]'
+    );
+    expect(local).not.toBeNull();
+    fireEvent.click(local!);
+    const { useLocalModelDialogStore } =
+      await import("../../stores/local-model-dialog-store");
+    expect(useLocalModelDialogStore.getState().open).toBe(true);
+  });
+
+  it("points at the picker instead on a build without the local runtime", () => {
+    providers.configured = { abacus: true, openrouter: true, gemini: true };
+    localModels.runtimeAvailable = false;
+    useCreditsStore.getState().markExhausted();
+    renderCard();
+    localModels.runtimeAvailable = true;
 
     expect(card()?.textContent).toContain("creditsCard.pickBody");
     expect(card()?.querySelector("button")).toBeNull();

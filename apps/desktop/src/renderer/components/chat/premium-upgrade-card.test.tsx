@@ -35,12 +35,29 @@ vi.mock("../../hooks/use-model-providers", () => ({
   }),
 }));
 
+const localModels = vi.hoisted(() => ({ runtimeAvailable: true }));
+vi.mock("../../hooks/use-local-models", () => ({
+  useLocalModels: () => ({
+    state: {
+      runtimeAvailable: localModels.runtimeAvailable,
+      totalMemoryBytes: 0,
+      recommendedId: "qwen3.5-4b",
+      catalog: [],
+      installedIds: [],
+      download: null,
+      servingId: null,
+    },
+  }),
+}));
+
 const {
   PremiumUpgradeCard,
   exhaustedScope,
   freeModelSwitches,
   wantsUpgradeCard,
 } = await import("./premium-upgrade-card");
+const { useLocalModelDialogStore } =
+  await import("../../stores/local-model-dialog-store");
 const { useCreditsStore } = await import("../../stores/credits-store");
 
 const free = (over: Partial<AbacusAccountInfo> = {}): AbacusAccountInfo => ({
@@ -79,6 +96,7 @@ const button = (suffix: string) =>
 beforeEach(() => {
   localStorage.clear();
   useCreditsStore.setState({ exhaustedAt: null });
+  useLocalModelDialogStore.setState({ open: false, onReady: null });
   account.current = free();
   providers.configured = { abacus: true };
   navigate.mockClear();
@@ -160,13 +178,34 @@ describe("PremiumUpgradeCard", () => {
     });
   });
 
-  it("points at the picker once every free source is connected", () => {
+  it("offers a local model once every free source is connected, and resumes on it", () => {
     providers.configured = { abacus: true, openrouter: true, gemini: true };
-    const onSwitchModel = vi.fn();
-    renderCard({ dataId: "chat-upgrade-card", onSwitchModel });
+    const onPickModel = vi.fn();
+    const onResume = vi.fn();
+    renderCard({ dataId: "chat-upgrade-card", onPickModel, onResume });
 
     expect(button("connect-openrouter")).toBeNull();
     expect(button("cta")).toBeNull();
+    expect(document.body.textContent).toContain(
+      "workspace.premiumUpgrade.localNote"
+    );
+    fireEvent.click(button("local")!);
+    expect(useLocalModelDialogStore.getState().open).toBe(true);
+
+    // The dialog reports the model ready: the chat moves onto it and runs on.
+    useLocalModelDialogStore.getState().onReady?.("local/qwen3.5-4b");
+    expect(onPickModel).toHaveBeenCalledWith("local/qwen3.5-4b");
+    expect(onResume).toHaveBeenCalledTimes(1);
+  });
+
+  it("points at the picker instead on a build without the local runtime", () => {
+    providers.configured = { abacus: true, openrouter: true, gemini: true };
+    localModels.runtimeAvailable = false;
+    const onSwitchModel = vi.fn();
+    renderCard({ dataId: "chat-upgrade-card", onSwitchModel });
+    localModels.runtimeAvailable = true;
+
+    expect(button("local")).toBeNull();
     expect(document.body.textContent).toContain(
       "workspace.premiumUpgrade.switchNote"
     );

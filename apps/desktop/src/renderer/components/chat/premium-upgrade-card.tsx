@@ -9,6 +9,7 @@ import {
   useConnectFreeProvider,
   type FreeSource,
 } from "../../hooks/use-connect-free-provider";
+import { useLocalModels } from "../../hooks/use-local-models";
 import { useModelProvidersQuery } from "../../hooks/use-model-providers";
 import {
   ABACUS_BUY_CREDITS_URL,
@@ -16,6 +17,7 @@ import {
   creditsTier,
 } from "../../lib/abacus-credits";
 import { useCreditsStore } from "../../stores/credits-store";
+import { useLocalModelDialogStore } from "../../stores/local-model-dialog-store";
 import { Button } from "../ui";
 import { ProviderMark } from "./provider-mark";
 
@@ -54,6 +56,8 @@ export const PremiumUpgradeCard = ({
   const { data: account } = useAbacusAccountQuery();
   const { data: providers } = useModelProvidersQuery();
   const { connect, connecting } = useConnectFreeProvider();
+  const { state: localModels } = useLocalModels();
+  const showLocalModelDialog = useLocalModelDialogStore((store) => store.show);
 
   // A card standing where a turn died is the freshest word that the credits
   // are gone; the sidebar keeps showing the way out after this chat is gone.
@@ -64,6 +68,9 @@ export const PremiumUpgradeCard = ({
   const tier = creditsTier(account);
   const paying = tier === "paid" || tier === "basic";
   const missing = paying ? [] : missingFreeSources(providers?.configured);
+  // Every free source connected and spent: the model that cannot run out.
+  const canGoLocal =
+    !paying && missing.length === 0 && localModels?.runtimeAvailable === true;
 
   const title = paying
     ? t("creditsCard.paidTitle")
@@ -74,7 +81,9 @@ export const PremiumUpgradeCard = ({
     ? t("creditsCard.paidBody")
     : missing.length > 0
       ? t("workspace.premiumUpgrade.connectNote")
-      : t("workspace.premiumUpgrade.switchNote");
+      : canGoLocal
+        ? t("workspace.premiumUpgrade.localNote")
+        : t("workspace.premiumUpgrade.switchNote");
 
   return (
     <div
@@ -133,6 +142,22 @@ export const PremiumUpgradeCard = ({
             {t(CONNECT_LABEL[source])}
           </Button>
         ))
+      ) : canGoLocal ? (
+        <Button
+          size="sm"
+          data-id={`${dataId}-local`}
+          className="from-primary shrink-0 bg-gradient-to-b to-violet-700 font-semibold"
+          onClick={() =>
+            // Once the model is ready the dead turn runs again on it.
+            showLocalModelDialog((model) => {
+              onPickModel?.(model);
+              onResume?.();
+            })
+          }
+        >
+          <ProviderMark provider="local" className="size-3.5" />
+          {t("localModels.useLocal")}
+        </Button>
       ) : (
         onSwitchModel != null && (
           <Button

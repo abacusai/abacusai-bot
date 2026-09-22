@@ -11,6 +11,7 @@ import {
   useConnectFreeProvider,
   type FreeSource,
 } from "../../hooks/use-connect-free-provider";
+import { useLocalModels } from "../../hooks/use-local-models";
 import { useModelProvidersQuery } from "../../hooks/use-model-providers";
 import {
   ABACUS_BUY_CREDITS_URL,
@@ -23,6 +24,7 @@ import {
   isExhaustedMarkLive,
   useCreditsStore,
 } from "../../stores/credits-store";
+import { useLocalModelDialogStore } from "../../stores/local-model-dialog-store";
 import { ProviderMark } from "../chat/provider-mark";
 import { UpsellCard } from "./upsell-card";
 
@@ -140,6 +142,8 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
   const [dismissed, setDismissed] = useState(readDismissed);
   const clearExhausted = useCreditsStore((state) => state.clearExhausted);
   const { connect, connecting } = useConnectFreeProvider();
+  const { state: localModels } = useLocalModels();
+  const showLocalModelDialog = useLocalModelDialogStore((store) => store.show);
 
   // The account refreshed after the mark and shows headroom again.
   useEffect(() => {
@@ -178,6 +182,12 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
       ? missingFreeSources(providers?.configured)
       : [];
   const canConnect = missing.length > 0;
+  const canGoLocal =
+    exhausted &&
+    !paid &&
+    !canSwitch &&
+    !canConnect &&
+    localModels?.runtimeAvailable === true;
 
   const title = !exhausted
     ? t("creditsCard.upsellTitle")
@@ -194,7 +204,9 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
         ? t("creditsCard.paidBody")
         : canConnect
           ? t("creditsCard.connectBody")
-          : t("creditsCard.pickBody");
+          : canGoLocal
+            ? t("creditsCard.localBody")
+            : t("creditsCard.pickBody");
 
   return (
     <UpsellCard
@@ -214,7 +226,20 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
                 onClick: () => void connect(source),
               })),
             }
-          : {}
+          : canGoLocal
+            ? {
+                actions: [
+                  {
+                    id: "local",
+                    label: t("localModels.useLocal"),
+                    icon: (
+                      <ProviderMark provider="local" className="size-3.5" />
+                    ),
+                    onClick: () => showLocalModelDialog(),
+                  },
+                ],
+              }
+            : {}
         : {
             cta: t(paid ? "creditsCard.topUpCta" : "creditsCard.cta"),
             onCta: () => {
