@@ -25,6 +25,8 @@ export const UpsellCard = ({
   cta,
   onCta,
   actions = [],
+  secondaryCta,
+  onSecondaryCta,
   onDismiss,
   dismissLabel,
 }: {
@@ -36,6 +38,9 @@ export const UpsellCard = ({
   onCta?: () => void;
   /** Several ways on, stacked — the free sources still to connect. */
   actions?: UpsellAction[];
+  /** A quieter second way out, under the button. */
+  secondaryCta?: string;
+  onSecondaryCta?: () => void;
   /** Given only where dismissing is allowed; the card is closable then. */
   onDismiss?: () => void;
   dismissLabel?: string;
@@ -90,5 +95,16 @@ export const UpsellCard = ({
         {action.label}
       </Button>
     ))}
+    {secondaryCta != null && (
+      <Button
+        variant="link"
+        size="sm"
+        data-id={`${dataId}-secondary-cta`}
+        className="text-muted-foreground hover:text-foreground h-auto p-0 text-xs"
+        onClick={onSecondaryCta}
+      >
+        {secondaryCta}
+      </Button>
+    )}
   </div>
 );

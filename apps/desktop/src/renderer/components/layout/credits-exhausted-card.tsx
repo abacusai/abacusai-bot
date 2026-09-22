@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -164,6 +165,7 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
     });
   }, [exhaustedAt, queryClient]);
 
+  const navigate = useNavigate();
   const state = creditsCardState({ account, exhaustedAt, dismissed });
   if (state == null) return null;
   const exhausted = state === "exhausted";
@@ -248,6 +250,16 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
               );
             },
           })}
+      // Out of credits on a free plan, beside the free sources it can still connect:
+      // the other way to more is to invite friends. The pick card stays button-free.
+      {...(exhausted && !paid && (canConnect || canGoLocal)
+        ? {
+            secondaryCta: t("creditsCard.inviteCta"),
+            onSecondaryCta: () => {
+              void navigate({ to: "/settings/referrals" });
+            },
+          }
+        : {})}
       // No way out of the out-of-credits state but the button: closing it
       // would hide the only explanation for a turn that will not run.
       {...(exhausted

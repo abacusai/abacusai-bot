@@ -27,6 +27,7 @@ import {
 import { SessionsTree } from "../workspace/sessions-tree";
 import { CreditsExhaustedCard } from "./credits-exhausted-card";
 import { DeepAgentCard } from "./deepagent-card";
+import { ReferralCard } from "./referral-card";
 /**
  * The sidebar: the bots tree, then the app-level stack at the bottom.
  * Artifacts, routines and connectors sit there with settings because they are
@@ -188,6 +189,7 @@ export const WorkspaceSidebar = ({
           </SidebarGroupContent>
         </SidebarGroup>
         <DeepAgentCard />
+        <ReferralCard />
         <CreditsExhaustedCard />
         <SettingsMenu />
       </SidebarFooter>

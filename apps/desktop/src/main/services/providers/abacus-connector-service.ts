@@ -41,16 +41,16 @@ const abacusApiKey = (): string => credentialFor("ABACUS_API_KEY");
  * the payload because a successful DELETE returns null. Failure detail is
  * logged, not surfaced: server-influenced text never renders in a dialog.
  */
-const abacusApiCall = async (
+export const abacusApiCall = async (
   method: string,
-  httpMethod: "POST" | "DELETE",
+  httpMethod: "POST" | "DELETE" | "GET",
   body?: Record<string, unknown>
 ): Promise<{ ok: boolean; result: unknown }> => {
   const key = abacusApiKey();
   if (key.length === 0) return { ok: false, result: null };
   try {
     const url = apiUrl(method);
-    if (httpMethod === "DELETE" && body != null) {
+    if (httpMethod !== "POST" && body != null) {
       for (const [name, value] of Object.entries(body)) {
         url.searchParams.set(name, String(value));
       }
@@ -94,7 +94,7 @@ const abacusApiCall = async (
 /** The payload alone, for the two listing calls that only care about that. */
 const abacusApi = async (
   method: string,
-  httpMethod: "POST" | "DELETE",
+  httpMethod: "POST" | "DELETE" | "GET",
   body?: Record<string, unknown>
 ): Promise<unknown | null> =>
   (await abacusApiCall(method, httpMethod, body)).result;

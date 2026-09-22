@@ -13,6 +13,10 @@ import type {
   BotChatPreview,
   BotSenderChat,
   AbacusAccountInfo,
+  ReferralSummary,
+  ReferralGmailContact,
+  ReferralWhatsappContact,
+  ReferralInviteOutcome,
   AbacusAuthOutcome,
   AbacusSignOutResult,
   ConnectorOutcome,
@@ -215,6 +219,30 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
         IpcChannels.GetAbacusAccount,
         refresh
       ) as Promise<AbacusAccountInfo | null>,
+    getReferralSummary: () =>
+      ipcRenderer.invoke(
+        IpcChannels.GetReferralSummary
+      ) as Promise<ReferralSummary | null>,
+    listReferralGmailContacts: () =>
+      ipcRenderer.invoke(IpcChannels.ListReferralGmailContacts) as Promise<
+        ReferralGmailContact[]
+      >,
+    sendReferralEmailInvites: (emails: string[], message: string) =>
+      ipcRenderer.invoke(
+        IpcChannels.SendReferralEmailInvites,
+        emails,
+        message
+      ) as Promise<ReferralInviteOutcome>,
+    listReferralWhatsappContacts: () =>
+      ipcRenderer.invoke(IpcChannels.ListReferralWhatsappContacts) as Promise<
+        ReferralWhatsappContact[]
+      >,
+    sendReferralWhatsappInvites: (chatIds: string[], message: string) =>
+      ipcRenderer.invoke(
+        IpcChannels.SendReferralWhatsappInvites,
+        chatIds,
+        message
+      ) as Promise<ReferralInviteOutcome>,
     submitTurnFeedback: (feedback: TurnFeedbackInput) =>
       ipcRenderer.invoke(
         IpcChannels.SubmitTurnFeedback,

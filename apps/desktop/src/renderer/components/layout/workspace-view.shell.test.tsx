@@ -254,6 +254,7 @@ vi.mock("../brand/abacus-bot-logo", () => ({ AbacusBotLogo: () => null }));
 vi.mock("../common/update-pill", () => ({ UpdatePill: () => null }));
 vi.mock("../settings/settings-menu", () => ({ SettingsMenu: () => null }));
 vi.mock("./deepagent-card", () => ({ DeepAgentCard: () => null }));
+vi.mock("./referral-card", () => ({ ReferralCard: () => null }));
 vi.mock("./credits-exhausted-card", () => ({
   CreditsExhaustedCard: () => null,
 }));

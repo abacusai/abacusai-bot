@@ -72,7 +72,7 @@ export interface MessagingConnector {
    * The platform's address book, for "send this to Mom". Optional: token
    * platforms know nobody until somebody writes in, which pairing covers.
    */
-  listContacts?(): Array<{ chatId: string; name: string }>;
+  listContacts?(): Array<{ chatId: string; name: string; isGroup?: boolean }>;
   /**
    * Chats with messages waiting, read fresh from the platform's own store.
    * Optional: a scrape of unread badges is a guess, and this must not be one.
