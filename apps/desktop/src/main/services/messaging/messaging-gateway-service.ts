@@ -1467,6 +1467,7 @@ export class MessagingGatewayService {
     chatId: string;
     name: string;
     status: "pending" | "approved" | "paused";
+    isGroup?: boolean;
   }> {
     const byKey = new Map<
       string,
@@ -1475,6 +1476,7 @@ export class MessagingGatewayService {
         chatId: string;
         name: string;
         status: "pending" | "approved" | "paused";
+        isGroup?: boolean;
       }
     >();
 
@@ -1494,6 +1496,7 @@ export class MessagingGatewayService {
           chatId: contact.chatId,
           name: contact.name,
           status: "approved",
+          isGroup: contact.isGroup,
         });
       }
     }
@@ -1718,6 +1721,19 @@ export class MessagingGatewayService {
       this.routes.delete(key);
       this.routesBySession.delete(route.sessionId);
     }
+  }
+
+  /**
+   * Every one-to-one chat known on a platform, uncapped and without the
+   * user's own chat: the invite picker shows the whole address book.
+   */
+  listInviteContacts(
+    platformId: MessagingPlatformId
+  ): Array<{ chatId: string; name: string }> {
+    const self = this.connectors.get(platformId)?.selfChatId?.() ?? null;
+    return this.allKnownChats(platformId)
+      .filter((row) => row.isGroup !== true && row.chatId !== self)
+      .map(({ chatId, name }) => ({ chatId, name }));
   }
 
   listKnownChats(

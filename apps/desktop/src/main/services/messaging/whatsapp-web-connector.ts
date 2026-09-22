@@ -82,7 +82,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private selfLinkedAnnounced = false;
   private loginTimer: NodeJS.Timeout | null = null;
   private inboundTimer: NodeJS.Timeout | null = null;
-  private contacts: Array<{ chatId: string; name: string }> = [];
+  private contacts: Array<{ chatId: string; name: string; isGroup?: boolean }> =
+    [];
   /** The account's own number ("+digits") — what "me" resolves to. */
   private self: string | null = null;
   /** The self chat's display title, for the inbound sweep's always-watch. */
@@ -323,7 +324,11 @@ export class WhatsAppWebConnector implements MessagingConnector {
         seen.add(chat.name);
         return true;
       })
-      .map((chat) => ({ chatId: chat.name, name: chat.name }));
+      .map((chat) => ({
+        chatId: chat.name,
+        name: chat.name,
+        isGroup: chat.isGroup === true,
+      }));
   }
 
   /**
@@ -741,7 +746,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     });
   }
 
-  listContacts(): Array<{ chatId: string; name: string }> {
+  listContacts(): Array<{ chatId: string; name: string; isGroup?: boolean }> {
     // The user's own chat leads the list, named for what it is: under its
     // WhatsApp title it reads to the model as a stranger with the user's name.
     if (this.self == null) return this.contacts;

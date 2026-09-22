@@ -7,6 +7,7 @@ import {
   CircleUserRound,
   Compass,
   FileText,
+  Gift,
   Globe,
   Info,
   KeyRound,
@@ -204,6 +205,14 @@ export const SettingsMenu = (): JSX.Element => {
             >
               <CircleUserRound />
               {t("profile.title")}
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => void navigate({ to: "/settings/referrals" })}
+              data-id="settings-menu-referrals"
+            >
+              <Gift />
+              {t("referrals.title")}
             </DropdownMenuItem>
 
             <DropdownMenuSub>

@@ -1560,6 +1560,56 @@ export interface AbacusAccountInfo {
   credits_granted: number | null;
 }
 
+/** The invite-friends loop as the platform reports it for this account. */
+export interface ReferralSummary {
+  /** The link a friend follows to install the app; signing in from it credits this user. */
+  inviteLink: string;
+  /** People invited so far, every channel, distinct per recipient. */
+  invitesSent: number;
+  /** Invites that unlock the one-time credit grant. */
+  milestoneInvites: number;
+  /** Credits the grant is worth. */
+  milestoneCredits: number;
+  milestoneGranted: boolean;
+  /** Invited friends who joined, and what each one earned. */
+  friendsJoined: number;
+  creditsPerFriend: number;
+  /** Whether invites can go out from the user's own Gmail. */
+  gmailConnected: boolean;
+}
+
+export interface ReferralGmailContact {
+  email: string;
+  name: string | null;
+}
+
+export interface ReferralWhatsappContact {
+  /** What a send addresses; on WhatsApp the contact's name. */
+  chatId: string;
+  name: string;
+}
+
+export interface ReferralInviteOutcome {
+  ok: boolean;
+  /** Recipients this call invited. */
+  sent: number;
+  /** Recipients skipped: already on the platform, or invited before. */
+  skipped: number;
+  /** Recipients the send failed for. */
+  failed: number;
+  /** The running total after this call, or null when the platform did not say. */
+  invitesSent: number | null;
+  /** Credits granted by this call when it crossed the milestone. */
+  milestoneCreditsGranted: number;
+  /** Safe to show; never platform text. */
+  error:
+    | "not-signed-in"
+    | "gmail-not-connected"
+    | "whatsapp-not-connected"
+    | "unavailable"
+    | null;
+}
+
 export interface UsageSnapshot {
   generatedAt: number;
   /** The window the totals cover, today inclusive. */
@@ -1607,6 +1657,22 @@ export interface AgentApi {
   getUsageSnapshot: () => Promise<UsageSnapshot>;
   /** Null when signed out. */
   getAbacusAccount: (refresh?: boolean) => Promise<AbacusAccountInfo | null>;
+  /** The invite-friends loop; null when signed out or the platform did not answer. */
+  getReferralSummary: () => Promise<ReferralSummary | null>;
+  /** Most-emailed contacts from the connected Gmail; empty when it is not connected. */
+  listReferralGmailContacts: () => Promise<ReferralGmailContact[]>;
+  /** Email invites, sent from the user's own Gmail. */
+  sendReferralEmailInvites: (
+    emails: string[],
+    message: string
+  ) => Promise<ReferralInviteOutcome>;
+  /** One-to-one chats on the linked WhatsApp; empty when it is not linked. */
+  listReferralWhatsappContacts: () => Promise<ReferralWhatsappContact[]>;
+  /** WhatsApp invites, sent from the user's own number. */
+  sendReferralWhatsappInvites: (
+    chatIds: string[],
+    message: string
+  ) => Promise<ReferralInviteOutcome>;
   /** Report a thumbs up/down on an assistant turn to the platform. */
   submitTurnFeedback: (
     feedback: TurnFeedbackInput

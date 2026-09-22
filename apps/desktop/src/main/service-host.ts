@@ -1916,6 +1916,20 @@ export class ServiceHost {
     return this.messagingGatewayService.getSnapshot();
   }
 
+  listInviteContacts(
+    platformId: MessagingPlatformId
+  ): Array<{ chatId: string; name: string }> {
+    return this.messagingGatewayService.listInviteContacts(platformId);
+  }
+
+  sendMessagingText(
+    platformId: MessagingPlatformId,
+    chatId: string,
+    text: string
+  ): Promise<void> {
+    return this.messagingGatewayService.sendToChat(platformId, chatId, text);
+  }
+
   updateMessagingPlatform(
     request: UpdateMessagingPlatformRequest
   ): Promise<MessagingSnapshot> {
