@@ -183,31 +183,53 @@ describe("ModelPicker", () => {
     ).not.toBeNull();
   });
 
-  // The free tier's paid upgrade is the card pinned under the list — always
-  // in view, never a row that scrolls away.
-  it("pins the upgrade card under the list for the free tier", async () => {
+  // Nothing in the picker sells a plan: the free tier's way on is the two
+  // connect rows, which run the shared connect hop.
+  it("connects OpenRouter from its row and refreshes the list, selling nothing", async () => {
+    const startOpenRouterAuth = vi.fn(async () => ({ ok: true }));
+    const listModels = vi.fn(async () => []);
+    const onModelsRefreshed = vi.fn();
     (globalThis.window as unknown as { api: unknown }).api = {
       agent: {
         getAbacusAccount: async () => ({ subscription_tier: "free" }),
+        startOpenRouterAuth,
+        listModels,
       },
       openExternal,
     };
-    renderPicker([configuredModel]);
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <ModelPicker
+          models={[configuredModel]}
+          selectedModelValue={configuredModel.id}
+          activeWorkspaceId="workspace-one"
+          onSelectModel={vi.fn()}
+          onModelsRefreshed={onModelsRefreshed}
+        />
+      </QueryClientProvider>
+    );
     fireEvent.click(screen.getByRole("combobox"));
 
-    await waitFor(() =>
-      expect(
-        document.querySelector('[data-id="model-picker-upgrade-card"]')
-      ).toBeTruthy()
-    );
-    expect(screen.getByText("workspace.premiumUpgrade.title")).toBeTruthy();
+    const row = await waitFor(() => {
+      const found = document.querySelector(
+        '[data-id="local-code-model-option-connect/openrouter"]'
+      );
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(
+      document.querySelector('[data-id="model-picker-upgrade-card"]')
+    ).toBeNull();
 
-    fireEvent.click(
-      document.querySelector('[data-id="model-picker-upgrade-card-cta"]')!
-    );
-    expect(openExternal).toHaveBeenCalledWith(
-      "https://apps.abacus.ai/chatllm/choose-plan/"
-    );
+    fireEvent.click(row);
+    await waitFor(() => expect(onModelsRefreshed).toHaveBeenCalledTimes(1));
+    expect(startOpenRouterAuth).toHaveBeenCalledTimes(1);
+    expect(listModels).toHaveBeenCalledWith(true);
+    expect(openExternal).not.toHaveBeenCalled();
   });
 
   it("shows no upgrade card off the free tier", async () => {

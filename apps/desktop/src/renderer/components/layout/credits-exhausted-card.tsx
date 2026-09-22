@@ -6,36 +6,38 @@ import type { AbacusAccountInfo } from "#shared/contracts";
 import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
+import {
+  missingFreeSources,
+  useConnectFreeProvider,
+  type FreeSource,
+} from "../../hooks/use-connect-free-provider";
 import { useModelProvidersQuery } from "../../hooks/use-model-providers";
+import {
+  ABACUS_BUY_CREDITS_URL,
+  ABACUS_PLAN_URL,
+  creditsTier,
+} from "../../lib/abacus-credits";
 import { durableStorage } from "../../lib/durable-storage";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import {
   isExhaustedMarkLive,
   useCreditsStore,
 } from "../../stores/credits-store";
-import { ABACUS_PLAN_URL } from "../chat/premium-upgrade-card";
+import { ProviderMark } from "../chat/provider-mark";
 import { UpsellCard } from "./upsell-card";
 
-/** Where a Pro account tops up, rather than the plan chooser it has used. */
-export const ABACUS_BUY_CREDITS_URL =
-  "https://apps.abacus.ai/chatllm/admin/profile?buyCredits=true";
+export {
+  ABACUS_BUY_CREDITS_URL,
+  creditsTier,
+  type CreditsTier,
+} from "../../lib/abacus-credits";
 
 /** Free-pool sources: a key here is already spent when the pool is exhausted. */
 const FREE_POOL_PROVIDERS = new Set(["abacus", "gemini", "openrouter"]);
 
-/** The plan a card should speak to. Unknown until the account is read. */
-export type CreditsTier = "free" | "basic" | "paid" | "unknown";
-
-export const creditsTier = (
-  account: AbacusAccountInfo | null | undefined
-): CreditsTier => {
-  const tier = account?.subscription_tier?.trim().toLowerCase();
-
-  if (tier == null || tier.length === 0) return "unknown";
-  if (tier === "free") return "free";
-  if (tier === "basic") return "basic";
-
-  return "paid";
+const CONNECT_LABEL: Record<FreeSource, string> = {
+  openrouter: "workspace.modelPicker.connectOpenRouter",
+  gemini: "workspace.modelPicker.connectGoogleAi",
 };
 
 /** A paid tier: the card would be selling them what they already have. */
@@ -137,6 +139,7 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
   const exhaustedAt = useCreditsStore((state) => state.exhaustedAt);
   const [dismissed, setDismissed] = useState(readDismissed);
   const clearExhausted = useCreditsStore((state) => state.clearExhausted);
+  const { connect, connecting } = useConnectFreeProvider();
 
   // The account refreshed after the mark and shows headroom again.
   useEffect(() => {
@@ -161,13 +164,20 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
   if (state == null) return null;
   const exhausted = state === "exhausted";
   const tier = creditsTier(account);
+  const paid = tier === "paid";
   // Out of Abacus credits with another provider's key on disk: the way back is
   // the model picker, not the billing page.
   const alternatives = exhausted
     ? alternativeProviderLabels(providers?.configured)
     : [];
   const canSwitch = alternatives.length > 0;
-  const paid = tier === "paid";
+  // The free tier is never sold a plan from here: its way on is the free
+  // sources it has not connected yet, then the picker.
+  const missing =
+    exhausted && !paid && !canSwitch
+      ? missingFreeSources(providers?.configured)
+      : [];
+  const canConnect = missing.length > 0;
 
   const title = !exhausted
     ? t("creditsCard.upsellTitle")
@@ -180,17 +190,31 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
       ? t("creditsCard.switchBody", {
           providers: joinProviderLabels(alternatives, t("creditsCard.or")),
         })
-      : t(paid ? "creditsCard.paidBody" : "creditsCard.body");
+      : paid
+        ? t("creditsCard.paidBody")
+        : canConnect
+          ? t("creditsCard.connectBody")
+          : t("creditsCard.pickBody");
 
   return (
     <UpsellCard
       dataId="sidebar-credits-card"
       title={title}
       body={body}
-      // The switch card is the whole message: its action is a picker in the
-      // composer, and a button here would lead somewhere else entirely.
-      {...(canSwitch
-        ? {}
+      // The switch and pick cards are the whole message: their action is a
+      // picker in the composer, and a button here would lead somewhere else.
+      {...(exhausted && !paid
+        ? canConnect
+          ? {
+              actions: missing.map((source) => ({
+                id: source,
+                label: t(CONNECT_LABEL[source]),
+                icon: <ProviderMark provider={source} className="size-3.5" />,
+                disabled: connecting != null,
+                onClick: () => void connect(source),
+              })),
+            }
+          : {}
         : {
             cta: t(paid ? "creditsCard.topUpCta" : "creditsCard.cta"),
             onCta: () => {

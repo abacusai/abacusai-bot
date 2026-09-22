@@ -258,7 +258,10 @@ export const BotMessageList = ({
           ) : part.kind === "notification" ? (
             wantsUpgradeCard(part.actions) ? (
               <div key={part.id} className="max-w-md">
-                <PremiumUpgradeCard dataId="chat-upgrade-card" exhausted />
+                <PremiumUpgradeCard
+                  dataId="chat-upgrade-card"
+                  onSwitchModel={onSwitchModel}
+                />
               </div>
             ) : (
               <BotBubble key={part.id} tone="notice">

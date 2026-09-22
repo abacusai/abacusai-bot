@@ -175,6 +175,7 @@ const AgentTurnContent = ({
   onRetry,
   onSwitchModel,
   onPickModel,
+  onResume,
   onRateTurn,
   creditsTotal = 0,
   onOpenSubtask,
@@ -188,6 +189,8 @@ const AgentTurnContent = ({
   onSwitchModel?: () => void;
   /** Pick a named model straight from a card, no picker hop. */
   onPickModel?: (modelId: string) => void;
+  /** Run the dead turn again on the free pool once a source has joined it. */
+  onResume?: () => void;
   /** Thumbs on a turn, by the rated bot text segment's id. */
   onRateTurn?: (
     segmentId: string,
@@ -259,9 +262,10 @@ const AgentTurnContent = ({
               <PremiumUpgradeCard
                 key={`${item.id}-${idx}`}
                 dataId="chat-upgrade-card"
-                exhausted
                 freeModels={freeModelSwitches(item.actions)}
                 onPickModel={onPickModel}
+                onSwitchModel={onSwitchModel}
+                onResume={onResume}
               />
             );
           }
@@ -514,6 +518,7 @@ export const ChatMessageList = ({
   onRetry,
   onSwitchModel,
   onPickModel,
+  onResume,
   onRateTurn,
   creditsTotal = 0,
   onOpenSubtask,
@@ -527,6 +532,7 @@ export const ChatMessageList = ({
   onRetry?: () => void;
   onSwitchModel?: () => void;
   onPickModel?: (modelId: string) => void;
+  onResume?: () => void;
   onRateTurn?: (
     segmentId: string,
     rating: "up" | "down" | "clear",
@@ -580,6 +586,7 @@ export const ChatMessageList = ({
               onRetry={onRetry}
               onSwitchModel={onSwitchModel}
               onPickModel={onPickModel}
+              onResume={onResume}
               onRateTurn={onRateTurn}
               creditsTotal={creditsTotal}
               onOpenSubtask={onOpenSubtask}
