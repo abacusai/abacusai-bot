@@ -37,7 +37,11 @@ import {
   type AgentEvent,
   type DesktopEvent,
 } from "./protocol.js";
-import { AbacusBotSession, OPENLLM_POOL_EXHAUSTED_MESSAGE } from "./session.js";
+import {
+  AbacusBotSession,
+  OPENLLM_POOL_EXHAUSTED_MESSAGE,
+  OPENLLM_POOL_SHUT_MESSAGE,
+} from "./session.js";
 
 let provider: FakeProvider;
 let home: string;
@@ -1145,6 +1149,31 @@ describe("OpenLLM", () => {
     expect(reported?.message).not.toMatch(/429|upstream|https?:\/\//);
     expect(reported?.detail).toBeUndefined();
     expect(reported?.actions).toEqual([{ type: "switch-model" }]);
+  });
+
+  it("says the pool is used up, not busy, when the account shut every source", async () => {
+    const harness = session({ mode: "yolo" });
+
+    // The key's daily allowance, shared by every :free sibling: one refusal
+    // closes the whole OpenRouter tier, and that tier is this pool.
+    provider.script(() => ({
+      fail: {
+        status: 429,
+        message:
+          "Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day",
+      },
+    }));
+    await harness.session.start();
+    await harness.session.send("hi");
+    await harness.until(() => harness.agent("error").length > 0);
+
+    const reported = harness.agent("error").at(0)?.error;
+
+    // Waiting will not open a shut pool, so the message and the card say
+    // "connect another source" rather than "try again in a few minutes".
+    expect(reported?.message).toBe(OPENLLM_POOL_SHUT_MESSAGE);
+    expect(reported?.actions).toEqual([{ type: "free-pool-out" }]);
+    expect(harness.agent("turn_complete").length).toBeGreaterThan(0);
   });
 
   it("deactivates on a concrete pick and reactivates on the router id", async () => {

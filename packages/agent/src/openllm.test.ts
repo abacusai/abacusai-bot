@@ -450,6 +450,24 @@ describe("failures the account owns rather than the model", () => {
     expect(accountWideFailure(DAY, "gemini")).toBeNull();
     expect(accountWideFailure(DAY, undefined)).toBeNull();
   });
+
+  it("reads a Studio key's spent quota as the whole key's failure", () => {
+    // Google's wording for the free tier's daily allowance; a plain 429 is a
+    // per-model rate limit and stays with the model.
+    expect(
+      accountWideFailure(
+        '429: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details.","status":"RESOURCE_EXHAUSTED"}}',
+        "gemini"
+      )
+    ).toEqual({ provider: "gemini" });
+    expect(
+      accountWideFailure(
+        "429: Resource has been exhausted (e.g. check quota).",
+        "gemini"
+      )
+    ).toBeNull();
+    expect(accountWideFailure("503: overloaded", "gemini")).toBeNull();
+  });
 });
 
 describe("a pool whose account has closed a tier", () => {
@@ -468,6 +486,21 @@ describe("a pool whose account has closed a tier", () => {
     rotation.markScopeFailed({ provider: "openrouter", free: true });
 
     expect(rotation.pick(pool)?.id).toBe("gemini/gemini-3.5-flash-lite");
+  });
+
+  it("knows a shut pool from a busy one", () => {
+    // Busy: models cooling down still get a turn when the wait is shortest.
+    // Shut: the account refused every class, and only a new source helps.
+    const rotation = new OpenLlmRotation(() => 0);
+
+    expect(rotation.poolShut(pool)).toBe(false);
+    rotation.markFailed("openrouter/z-ai/glm-5.2:free");
+    expect(rotation.poolShut(pool)).toBe(false);
+    rotation.markScopeFailed({ provider: "openrouter", free: true });
+    expect(rotation.poolShut(pool)).toBe(false);
+    rotation.markScopeFailed({ provider: "gemini" });
+    expect(rotation.poolShut(pool)).toBe(true);
+    expect(rotation.poolShut([])).toBe(false);
   });
 
   it("has nothing to offer when the closed tier was the whole pool", () => {

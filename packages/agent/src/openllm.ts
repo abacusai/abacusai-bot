@@ -85,6 +85,18 @@ export function accountWideFailure(
     return isOutOfCredits(failure) ? { provider: "abacus", free: false } : null;
   }
 
+  // A Studio key's free quota is the key's, not one model's: Google says so
+  // with RESOURCE_EXHAUSTED / "exceeded your current quota" on a 429, which a
+  // plain per-model rate limit does not carry.
+  if (provider === "gemini") {
+    return /\b429\b/.test(failure) &&
+      /resource_exhausted|exceeded your current quota|quota exceeded/i.test(
+        failure
+      )
+      ? { provider: "gemini" }
+      : null;
+  }
+
   if (provider !== "openrouter") return null;
 
   // One allowance across every free model on the key, not a per-model limit.
@@ -277,6 +289,19 @@ export class OpenLlmRotation {
     this.cooldownUntil.clear();
     this.failures.clear();
     this.scopeUntil.clear();
+  }
+
+  /**
+   * Whether every candidate is in a class the account refused: the pool is
+   * not busy but shut, and waiting will not open it — only a new source will.
+   */
+  poolShut(candidates: ModelChoice[]): boolean {
+    const now = this.now();
+
+    return (
+      candidates.length > 0 &&
+      candidates.every((choice) => this.inRefusedScope(choice, now))
+    );
   }
 
   /** Whether the account has this model's class shut for now. */

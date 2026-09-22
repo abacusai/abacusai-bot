@@ -1801,6 +1801,7 @@
       "connectNote": "Connect a free source to keep going — no card needed",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
+      "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
     },
     "preview": {
