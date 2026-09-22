@@ -31,6 +31,7 @@ import {
   FocusedPageBody,
   FocusedPageToolbar,
 } from "../layout/focused-page";
+import { LocalModelsSection } from "../local-models/local-models-section";
 import {
   Button,
   Input,
@@ -498,6 +499,8 @@ export const ModelsSettingsPanel = ({
             {t("apiKeys.noMatches")}
           </div>
         )}
+
+        {filter.trim().length === 0 && <LocalModelsSection />}
 
         <Dialog
           open={provider != null}

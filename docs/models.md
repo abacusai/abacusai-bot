@@ -15,6 +15,17 @@ to each provider's key page. The app supports direct providers, model gateways,
 AWS Bedrock, Google Vertex, Azure OpenAI, and OpenAI-compatible local endpoints
 such as llama.cpp and vLLM.
 
+## Local models
+
+Settings, then Models, has an "On this machine" section: the app can download
+a model (a Qwen build in GGUF form, pinned by checksum) into
+`~/.abacusai-bot/models` and run it with the bundled llama.cpp server. It
+appears in the model picker under "On this machine" and joins RouteLLM - Open
+as its last resort, after Abacus.AI, Google AI Studio and OpenRouter. The
+recommendation follows the machine's memory. A local model needs no account,
+key or quota; it is slower than the cloud, and the server is stopped after
+fifteen idle minutes so the memory comes back.
+
 ## Key precedence
 
 The app stores pasted keys in `~/.abacusai-bot/config.json`. A non-empty

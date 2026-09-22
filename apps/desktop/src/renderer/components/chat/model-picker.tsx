@@ -11,6 +11,7 @@ import {
 import { useMemo, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
+import { LOCAL_PROVIDER_ID } from "#shared/local-models";
 import type { ModelAvailability } from "#shared/models";
 import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 
@@ -81,6 +82,12 @@ export const ModelPicker = ({
   attentionNonce?: number;
 }): JSX.Element => {
   const { t } = useTranslation();
+  // The models the app serves on this machine carry a translated group name;
+  // every other group is named after its provider.
+  const providerLabel = (provider: string): string =>
+    provider === LOCAL_PROVIDER_ID
+      ? t("localModels.onThisMachine")
+      : modelProviderLabel(provider);
   // Only models that can run right now: a provider whose key was removed takes
   // its models out of the dropdown; offering one fails on the first token.
   const options = useMemo(
@@ -121,8 +128,7 @@ export const ModelPicker = ({
     return groups.toSorted((left, right) => {
       const pinDelta = (pinned[left] ?? 9) - (pinned[right] ?? 9);
       return (
-        pinDelta ||
-        modelProviderLabel(left).localeCompare(modelProviderLabel(right))
+        pinDelta || providerLabel(left).localeCompare(providerLabel(right))
       );
     });
   }, [options]);
@@ -182,7 +188,7 @@ export const ModelPicker = ({
     const filtered =
       query.length > 0
         ? options.filter((option) =>
-            `${option.label} ${option.id} ${modelProviderLabel(
+            `${option.label} ${option.id} ${providerLabel(
               modelProviderGroup(option.provider)
             )} ${option.note ?? ""}`
               .toLowerCase()
@@ -360,7 +366,7 @@ export const ModelPicker = ({
                   </TooltipContent>
                 </Tooltip>
                 {providers.map((provider) => {
-                  const label = modelProviderLabel(provider);
+                  const label = providerLabel(provider);
                   return (
                     <Tooltip key={provider}>
                       <TooltipTrigger
@@ -478,7 +484,7 @@ export const ModelPicker = ({
                 {groupedVisibleOptions.map(([provider, providerOptions]) => (
                   <ComboboxGroup key={provider}>
                     <ComboboxLabel className="bg-popover/95 sticky top-0 z-10 px-2 py-1 text-[0.625rem] font-medium backdrop-blur-sm">
-                      {modelProviderLabel(provider)}
+                      {providerLabel(provider)}
                     </ComboboxLabel>
                     {providerOptions.map((option) => {
                       const favorite = favoriteModelIds.includes(option.id);

@@ -120,13 +120,18 @@ export function accountWideFailure(
 /**
  * The pool's sources, in the order tried. Abacus first: paid for, tuned for
  * agent loops, and never free-tier rate-limited. Then a Studio key's Gemini
- * quota, then OpenRouter's `:free` models.
+ * quota, then OpenRouter's `:free` models, and last the models the app serves
+ * on this machine — never rate-limited, but slower than any of the above.
  */
 const SOURCE_RANK: Record<string, number> = {
   abacus: 0,
   gemini: 1,
   openrouter: 2,
+  local: 3,
 };
+
+/** The custom provider the desktop registers its own local models under. */
+const LOCAL_PROVIDER = "local";
 
 /**
  * Abacus's CHAT router, never pooled: above 5000 tokens of context it
@@ -181,7 +186,7 @@ const inPool = (choice: ModelChoice): boolean => {
     );
   }
 
-  return choice.provider === "gemini";
+  return choice.provider === "gemini" || choice.provider === LOCAL_PROVIDER;
 };
 
 /**
