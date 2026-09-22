@@ -24,6 +24,10 @@ type BrowserApproval = "ask" | "always";
 
 export interface DesktopState {
   builtinBrowserDisabled?: boolean;
+  /** Which browser the tools drive. Absent means the built-in view. */
+  browserEngine?: "builtin" | "chrome";
+  /** The Playwright Extension's token, pasted by the user; lets a connection skip the allow page. */
+  chromeExtensionToken?: string;
   /** Permission policy for the built-in browser MCP tools. Default 'ask'. */
   builtinBrowserApproval?: BrowserApproval;
   builtinDevicesDisabled?: boolean;

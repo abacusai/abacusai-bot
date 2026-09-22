@@ -33,6 +33,7 @@ import type {
   WorkspacePathStatus,
   RelocateWorkspaceResult,
   BrowserApproval,
+  BrowserEngine,
   BrowserRuntimeLease,
   BrowserRuntimeCapture,
   BrowserRuntimeState,
@@ -768,6 +769,24 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ipcRenderer.invoke(IpcChannels.GetMcpServerLogs, request) as Promise<
         AgentMcpLogEntry[]
       >,
+    setBrowserEngine: (engine: BrowserEngine) =>
+      ipcRenderer.invoke(
+        IpcChannels.SetBrowserEngine,
+        engine
+      ) as Promise<McpBrowserStatus>,
+    connectChromeBrowser: () =>
+      ipcRenderer.invoke(
+        IpcChannels.ConnectChromeBrowser
+      ) as Promise<McpBrowserStatus>,
+    disconnectChromeBrowser: () =>
+      ipcRenderer.invoke(
+        IpcChannels.DisconnectChromeBrowser
+      ) as Promise<McpBrowserStatus>,
+    setChromeExtensionToken: (token: string) =>
+      ipcRenderer.invoke(
+        IpcChannels.SetChromeExtensionToken,
+        token
+      ) as Promise<McpBrowserStatus>,
     getMcpBrowserStatus: () =>
       ipcRenderer.invoke(
         IpcChannels.GetMcpBrowserStatus

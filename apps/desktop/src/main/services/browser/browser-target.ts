@@ -3,7 +3,47 @@
  * per conversation, not a `<webview>`: the only `<webview>` tags in the app
  * are previews and charts, so the tools pick by session, never by type.
  */
-import type { WebContents } from "electron";
+export type DidFailLoadListener = (
+  event: unknown,
+  errorCode: number,
+  errorDescription: string,
+  validatedURL: string,
+  isMainFrame: boolean
+) => void;
+
+/**
+ * The page the browser tools drive: the slice of Electron's `WebContents`
+ * they use, so that a tab in the user's own Chrome (services/browser/chrome)
+ * can stand in for the built-in view without the tools knowing which it is.
+ */
+export interface BrowserPage {
+  readonly id: number;
+  isDestroyed(): boolean;
+  getURL(): string;
+  getTitle(): string;
+  isLoading(): boolean;
+  loadURL(url: string): Promise<void>;
+  canGoBack(): boolean;
+  canGoForward(): boolean;
+  goBack(): void;
+  goForward(): void;
+  reload(): void;
+  focus(): void;
+  on(event: "did-fail-load", listener: DidFailLoadListener): unknown;
+  off(event: "did-fail-load", listener: DidFailLoadListener): unknown;
+  capturePage(
+    rect?: undefined,
+    options?: { stayHidden?: boolean }
+  ): Promise<{ toJPEG?: (quality: number) => Buffer; toPNG: () => Buffer }>;
+  readonly debugger: {
+    isAttached(): boolean;
+    attach(protocolVersion?: string): void;
+    sendCommand(
+      method: string,
+      commandParams?: Record<string, unknown>
+    ): Promise<unknown>;
+  };
+}
 
 export interface BrowserViewCandidate {
   id: number;
@@ -22,9 +62,14 @@ export interface BrowserTargetMemory {
 /** What the browser server needs from the runtime; injected for tests. */
 export interface BrowserTargetSource {
   candidates(): BrowserViewCandidate[];
-  webContents(id: number): WebContents | null;
+  webContents(id: number): BrowserPage | null;
   /** A hidden view for a session, or null when the desktop does not know it. */
   materialize(sessionId: string, url: string): Promise<number | null>;
+  /**
+   * False when the pages live outside this app (the user's own Chrome): the
+   * renderer then has no pane to open and no cursor to animate.
+   */
+  presentsInApp?: boolean;
 }
 
 /**
