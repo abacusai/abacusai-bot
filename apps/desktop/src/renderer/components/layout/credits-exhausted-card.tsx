@@ -250,8 +250,9 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
               );
             },
           })}
-      // Out of credits on a free plan: the other way to more is to invite friends.
-      {...(exhausted && !paid && !canSwitch
+      // Out of credits on a free plan, beside the free sources it can still connect:
+      // the other way to more is to invite friends. The pick card stays button-free.
+      {...(exhausted && !paid && (canConnect || canGoLocal)
         ? {
             secondaryCta: t("creditsCard.inviteCta"),
             onSecondaryCta: () => {
