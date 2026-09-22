@@ -2705,11 +2705,14 @@ export const ChatComposer = ({
         </div>
 
         {/* Which checkout the turn runs against. A bot has no picker because
-            it has no mode either: nobody is watching to make the call. */}
+            it has no mode either: nobody is watching to make the call. A plain
+            row with the toolbar's insets, not a tab hanging off the box: the
+            compact composer's + sits beside the box, so anything sized to the
+            box lands offset from both it and the toolbar below. */}
         {hasGit && canSelectMode && (
           <div
             data-slot="composer-context-rail"
-            className="border-border/80 bg-card/80 relative z-0 mx-auto -mt-px flex min-h-8 w-[calc(100%-2rem)] flex-wrap items-center justify-between gap-1 rounded-b-xl border border-t-0 px-1.5 py-0.5 shadow-[0_10px_24px_-22px_rgb(0_0_0/0.9)] backdrop-blur-xl"
+            className="flex min-w-0 flex-wrap items-center justify-between gap-1 px-1 pt-1"
           >
             <WorktreePicker
               worktrees={worktrees}

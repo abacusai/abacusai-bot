@@ -225,8 +225,11 @@ describe("ChatComposer sizing", () => {
     const contextRail = worktree?.closest(
       '[data-slot="composer-context-rail"]'
     );
-    expect(contextRail?.className).toContain("w-[calc(100%-2rem)]");
-    expect(contextRail?.className).toContain("rounded-b-xl");
+    // A plain row under the box with the toolbar's insets — not a tab sized
+    // to the box, which the compact composer's + beside the box knocks askew.
+    expect(contextRail?.className).not.toContain("rounded-b-xl");
+    expect(contextRail?.className).not.toContain("w-[calc(100%-2rem)]");
+    expect(contextRail?.className).toContain("px-1");
     expect(pr).toBeNull();
     expect(branch).not.toBeNull();
   });
