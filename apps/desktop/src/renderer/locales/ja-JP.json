@@ -331,21 +331,43 @@
     },
     "approvalSubtitle": "エージェントがブラウズ前に承認を求めるかどうかを選択します。",
     "approvalTitle": "承認",
+    "chrome": {
+      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
+      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
+      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
+      "connecting": "Waiting for you to allow the connection in your browser…",
+      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "install": "Install the extension",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "tokenTitle": "Extension token",
+      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
+      "tokenSave": "Save token",
+      "tokenSaved": "Token saved.",
+      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    },
     "clearAction": "すべての閲覧データを削除",
     "clearSubtitle": "アプリ内ブラウザのサイトデータとキャッシュを削除します",
     "clearTitle": "閲覧データ",
     "cleared": "閲覧データを削除しました。",
     "dataSection": "データ",
     "done": "完了",
+    "engine": {
+      "builtin": "Built-in browser",
+      "chrome": "My Chrome"
+    },
+    "engineSection": "Which browser",
+    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
+    "engineTitle": "Browser the agent uses",
+    "homepageInvalid": "Enter a valid web address.",
+    "homepageSave": "Save",
+    "homepageSaved": "Home page saved.",
+    "homepageTitle": "Home page",
     "masterSubtitle": "エージェントに内蔵ブラウザーの操作を許可する",
     "masterTitle": "Browser",
     "permissionsSection": "権限",
     "subtitle": "エージェントの組み込みブラウザを管理します。",
-    "title": "Browser",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page"
+    "title": "Browser"
   },
   "capabilities": {
     "skills": {

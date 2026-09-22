@@ -13,6 +13,7 @@ import { IpcChannels } from "#shared/channels";
 import type {
   AddMcpServerRequest,
   BrowserApproval,
+  BrowserEngine,
   ClearBrowserDataRequest,
   GetMcpRuntimeServersRequest,
   GetMcpServerLogsRequest,
@@ -1114,6 +1115,20 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     (_event, enabled: boolean) => {
       return serviceHost.setMcpBrowserEnabled(enabled);
     }
+  );
+
+  ipcMain.handle(
+    IpcChannels.SetBrowserEngine,
+    (_event, engine: BrowserEngine) => serviceHost.setBrowserEngine(engine)
+  );
+  ipcMain.handle(IpcChannels.ConnectChromeBrowser, () =>
+    serviceHost.connectChromeBrowser()
+  );
+  ipcMain.handle(IpcChannels.DisconnectChromeBrowser, () =>
+    serviceHost.disconnectChromeBrowser()
+  );
+  ipcMain.handle(IpcChannels.SetChromeExtensionToken, (_event, token: string) =>
+    serviceHost.setChromeExtensionToken(token)
   );
 
   ipcMain.handle(IpcChannels.GetDefaultAgentMode, () => {

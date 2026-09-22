@@ -29,6 +29,15 @@ X search reads X's own index through your Abacus.AI account, billed per
 request. Without an Abacus.AI key it uses a configured web-search provider and
 restricts results to X domains.
 
+The agent can drive your own Chrome instead of the app's browser: Settings,
+then Browser, then "Browser the agent uses" set to "My Chrome". It works
+through the Playwright Extension from the Chrome Web Store; Chrome asks you to
+allow the connection the first time, and the agent's tabs then open in an
+"AbacusAI Bot" tab group in your Chrome, with your logins and extensions.
+Drag a tab out of the group to take it away from the agent. Pasting the
+extension's token in the same settings lets later connections skip the allow
+page. Microsoft Edge works the same way.
+
 ## Devices
 
 Device tools can build, install, launch, inspect, tap, type, and capture Android

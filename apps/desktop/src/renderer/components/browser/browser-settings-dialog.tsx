@@ -4,7 +4,11 @@ import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { BrowserApproval, McpBrowserStatus } from "#shared/contracts";
+import type {
+  BrowserApproval,
+  BrowserEngine,
+  McpBrowserStatus,
+} from "#shared/contracts";
 
 import {
   getBrowserHomepage,
@@ -44,6 +48,34 @@ export const BrowserSettingsPanel = (): JSX.Element => {
     });
     return () => off?.();
   }, [queryClient]);
+
+  const [token, setToken] = useState("");
+  const chromeMutation = useMutation({
+    mutationFn: async (
+      action:
+        | { kind: "engine"; engine: BrowserEngine }
+        | { kind: "connect" }
+        | { kind: "disconnect" }
+        | { kind: "token"; token: string }
+    ): Promise<McpBrowserStatus | null> => {
+      const agent = window.api?.agent;
+      if (agent == null) return null;
+      switch (action.kind) {
+        case "engine":
+          return agent.setBrowserEngine(action.engine);
+        case "connect":
+          return agent.connectChromeBrowser();
+        case "disconnect":
+          return agent.disconnectChromeBrowser();
+        case "token":
+          return agent.setChromeExtensionToken(action.token);
+      }
+    },
+    onSuccess: (next) => {
+      if (next != null)
+        queryClient.setQueryData(settingsQueryKeys.browser.status, next);
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: async (next: Partial<McpBrowserStatus>) => {
@@ -114,6 +146,8 @@ export const BrowserSettingsPanel = (): JSX.Element => {
   // Mirrors the main-process default ('always') so the dialog doesn't flash
   // "Ask each time" before the status query lands.
   const approval: BrowserApproval = status?.approval ?? "always";
+  const engine: BrowserEngine = status?.engine ?? "builtin";
+  const chrome = status?.chrome ?? null;
 
   const settings = (
     <div className="space-y-5">
@@ -138,6 +172,143 @@ export const BrowserSettingsPanel = (): JSX.Element => {
           onClick={(event) => event.stopPropagation()}
         />
       </Card>
+
+      <section>
+        <h3 className="text-muted-foreground mb-2 px-1 text-xs tracking-wide uppercase">
+          {t("browserSettings.engineSection")}
+        </h3>
+        <Card size="sm" className="bg-muted/40 flex flex-col gap-3 p-4">
+          <div className="flex items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">
+                {t("browserSettings.engineTitle")}
+              </div>
+              <div className="text-muted-foreground text-xs">
+                {t("browserSettings.engineSubtitle")}
+              </div>
+            </div>
+            <Select
+              value={engine}
+              onValueChange={(value) => {
+                if (value === "builtin" || value === "chrome")
+                  chromeMutation.mutate({ kind: "engine", engine: value });
+              }}
+              disabled={busy || status == null}
+            >
+              <SelectTrigger data-id="browser-settings-engine">
+                <SelectValue>
+                  {t(`browserSettings.engine.${engine}`)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="builtin">
+                    {t("browserSettings.engine.builtin")}
+                  </SelectItem>
+                  <SelectItem value="chrome">
+                    {t("browserSettings.engine.chrome")}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          {engine === "chrome" && chrome != null && (
+            <div
+              className="border-border flex flex-col gap-2 border-t pt-3"
+              data-id="browser-settings-chrome"
+            >
+              <div className="text-muted-foreground text-xs">
+                {chrome.browser == null
+                  ? t("browserSettings.chrome.notFound")
+                  : !chrome.extensionInstalled
+                    ? t("browserSettings.chrome.extensionMissing", {
+                        browser: chrome.browser,
+                      })
+                    : chrome.connected
+                      ? t("browserSettings.chrome.connected", {
+                          browser: chrome.browser,
+                          count: chrome.tabs,
+                        })
+                      : chrome.connecting
+                        ? t("browserSettings.chrome.connecting")
+                        : t("browserSettings.chrome.ready", {
+                            browser: chrome.browser,
+                          })}
+              </div>
+              {chrome.error != null && (
+                <div
+                  className="text-destructive text-xs"
+                  data-id="browser-settings-chrome-error"
+                >
+                  {chrome.error}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {!chrome.extensionInstalled && (
+                  <Button
+                    size="sm"
+                    data-id="browser-settings-chrome-install"
+                    onClick={() =>
+                      void window.api?.openExternal?.(chrome.installUrl)
+                    }
+                  >
+                    {t("browserSettings.chrome.install")}
+                  </Button>
+                )}
+                {chrome.extensionInstalled && !chrome.connected && (
+                  <Button
+                    size="sm"
+                    data-id="browser-settings-chrome-connect"
+                    disabled={chrome.connecting || chromeMutation.isPending}
+                    onClick={() => chromeMutation.mutate({ kind: "connect" })}
+                  >
+                    {t("browserSettings.chrome.connect")}
+                  </Button>
+                )}
+                {chrome.connected && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    data-id="browser-settings-chrome-disconnect"
+                    onClick={() =>
+                      chromeMutation.mutate({ kind: "disconnect" })
+                    }
+                  >
+                    {t("browserSettings.chrome.disconnect")}
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="password"
+                  value={token}
+                  onChange={(event) => setToken(event.target.value)}
+                  placeholder={t("browserSettings.chrome.tokenPlaceholder")}
+                  aria-label={t("browserSettings.chrome.tokenTitle")}
+                  data-id="browser-settings-chrome-token"
+                  className="flex-1"
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-id="browser-settings-chrome-token-save"
+                  disabled={token.trim().length === 0}
+                  onClick={() => {
+                    chromeMutation.mutate({ kind: "token", token });
+                    setToken("");
+                    toast.success(t("browserSettings.chrome.tokenSaved"));
+                  }}
+                >
+                  {t("browserSettings.chrome.tokenSave")}
+                </Button>
+              </div>
+              <div className="text-muted-foreground text-[0.625rem]">
+                {t("browserSettings.chrome.tokenHint")}
+              </div>
+            </div>
+          )}
+        </Card>
+      </section>
 
       <section>
         <h3 className="text-muted-foreground mb-2 px-1 text-xs tracking-wide uppercase">
