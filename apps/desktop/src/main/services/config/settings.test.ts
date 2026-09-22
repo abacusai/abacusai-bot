@@ -93,6 +93,67 @@ describe("reading a config file that is not what it should be", () => {
   });
 });
 
+describe("the app's own custom provider entry", () => {
+  it("is added beside the user's, replaced in place, and removed on its own", async () => {
+    writeConfig({
+      customProviders: [{ id: "mine", baseUrl: "http://localhost:8080" }],
+      defaultModel: "old-model",
+    });
+    const { upsertCustomProvider, removeCustomProvider } = await load();
+
+    upsertCustomProvider({
+      id: "local",
+      baseUrl: "http://127.0.0.1:1/v1",
+      models: [{ id: "a" }],
+    });
+    upsertCustomProvider({
+      id: "local",
+      baseUrl: "http://127.0.0.1:2/v1",
+      models: [{ id: "a" }, { id: "b" }],
+    });
+
+    expect(storedConfig()).toEqual({
+      defaultModel: "old-model",
+      customProviders: [
+        { id: "mine", baseUrl: "http://localhost:8080" },
+        {
+          id: "local",
+          baseUrl: "http://127.0.0.1:2/v1",
+          models: [{ id: "a" }, { id: "b" }],
+        },
+      ],
+    });
+
+    removeCustomProvider("local");
+    expect(storedConfig()).toEqual({
+      defaultModel: "old-model",
+      customProviders: [{ id: "mine", baseUrl: "http://localhost:8080" }],
+    });
+
+    // The last entry gone takes the key with it, so the file reads as untouched.
+    removeCustomProvider("mine");
+    expect(storedConfig()).toEqual({ defaultModel: "old-model" });
+    removeCustomProvider("mine");
+    expect(storedConfig()).toEqual({ defaultModel: "old-model" });
+  });
+
+  it("reads an entry someone wrote as an object keyed by id", async () => {
+    writeConfig({
+      customProviders: { llamacpp: { baseUrl: "http://localhost:8080" } },
+    });
+    const { upsertCustomProvider } = await load();
+
+    upsertCustomProvider({ id: "local", baseUrl: "http://127.0.0.1:1/v1" });
+
+    expect(storedConfig()).toEqual({
+      customProviders: [
+        { id: "llamacpp", baseUrl: "http://localhost:8080" },
+        { id: "local", baseUrl: "http://127.0.0.1:1/v1" },
+      ],
+    });
+  });
+});
+
 describe("writing without losing what was already there", () => {
   it("keeps keys the UI knows nothing about", async () => {
     // config.json is hand-editable and holds custom provider definitions; a

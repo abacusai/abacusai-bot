@@ -3,13 +3,32 @@
  * same file (packages/agent/src/config.ts), so additions must stay compatible.
  */
 
+/** One entry of `customProviders`, as the agent reads it (packages/agent config.ts). */
+export interface CustomProviderEntry {
+  id: string;
+  name?: string;
+  baseUrl: string;
+  apiKey?: string;
+  headers?: Record<string, string>;
+  models?: Array<{
+    id: string;
+    name?: string;
+    reasoning?: boolean;
+    contextWindow?: number;
+    maxTokens?: number;
+  }>;
+}
+
 export interface AbacusBotSettings {
   /** Last model the user selected. */
   defaultModel?: string;
   /** Provider credentials, keyed by environment-variable name. */
   apiKeys?: Record<string, string>;
-  /** Custom OpenAI-compatible endpoints. Owned by the user, never rewritten by the UI. */
-  customProviders?: unknown[];
+  /**
+   * Custom OpenAI-compatible endpoints. The user's own entries are never
+   * rewritten; the app owns exactly one, `local`, for the models it serves.
+   */
+  customProviders?: CustomProviderEntry[];
   /**
    * Keyed by the ids in `shared/toolsets.ts`. Only explicitly toggled groups
    * appear; absent ones take the registry default, so a new toolset ships with

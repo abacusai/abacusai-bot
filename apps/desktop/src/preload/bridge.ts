@@ -9,6 +9,7 @@ import type {
 } from "#shared/bots";
 import { IpcChannels } from "#shared/channels";
 import type {
+  LocalModelInstallOutcome,
   BotChatPreview,
   BotSenderChat,
   AbacusAccountInfo,
@@ -146,6 +147,7 @@ import type {
 } from "#shared/contracts";
 import type { ConversationKey } from "#shared/conversation-scope";
 import type { BackendId } from "#shared/exec-backends";
+import type { LocalModelState } from "#shared/local-models";
 import type {
   MessagingPairingDecisionRequest,
   MessagingPlatformId,
@@ -419,6 +421,22 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ipcRenderer.invoke(IpcChannels.RemoveRoutine, id) as Promise<void>,
     runRoutine: (id: string, trigger?: "manual" | "create") =>
       ipcRenderer.invoke(IpcChannels.RunRoutine, id, trigger) as Promise<void>,
+    getLocalModelState: () =>
+      ipcRenderer.invoke(
+        IpcChannels.GetLocalModelState
+      ) as Promise<LocalModelState>,
+    installLocalModel: (modelId: string) =>
+      ipcRenderer.invoke(
+        IpcChannels.InstallLocalModel,
+        modelId
+      ) as Promise<LocalModelInstallOutcome>,
+    cancelLocalModelInstall: () =>
+      ipcRenderer.invoke(IpcChannels.CancelLocalModelInstall) as Promise<void>,
+    removeLocalModel: (modelId: string) =>
+      ipcRenderer.invoke(
+        IpcChannels.RemoveLocalModel,
+        modelId
+      ) as Promise<void>,
     startOpenRouterAuth: () =>
       ipcRenderer.invoke(
         IpcChannels.StartOpenRouterAuth

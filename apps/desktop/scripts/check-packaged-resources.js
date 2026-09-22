@@ -54,6 +54,9 @@ const REQUIRED = [
       ]
     : []),
   "vendor/scrcpy-server.jar",
+  // The llama.cpp server local models run on; without it the local option
+  // is offered and fails on the first request.
+  `vendor/llama/llama-server${EXE}`,
   "skills",
 ];
 

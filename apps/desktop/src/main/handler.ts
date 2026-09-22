@@ -70,6 +70,7 @@ import {
 } from "#shared/contracts";
 import type { ConversationKey } from "#shared/conversation-scope";
 import type { BackendId } from "#shared/exec-backends";
+import { LOCAL_PROVIDER_ID } from "#shared/local-models";
 import type {
   MessagingPairingDecisionRequest,
   UpdateMessagingPlatformRequest,
@@ -98,6 +99,7 @@ import {
   setDefaultModel,
   storedKeyProviders,
 } from "./services/config/settings";
+import { LocalModelService } from "./services/local-models/local-model-service";
 import {
   abacusCredentialRejected,
   clearAbacusCache,
@@ -118,6 +120,14 @@ import {
 } from "./services/providers/openrouter-auth-service";
 import { getUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
+
+/** The local model runtime, alive from the handlers' registration to quit. */
+let localModels: LocalModelService | null = null;
+
+export const disposeLocalModels = (): void => {
+  localModels?.dispose();
+  localModels = null;
+};
 
 export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   const dispatchEvent = (event: IpcEvent): void => {
@@ -627,6 +637,34 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
       );
     }
   );
+
+  localModels = new LocalModelService({
+    onProgress: (progress) =>
+      dispatchEvent({
+        type: "local-model-progress",
+        progress,
+        emittedAt: new Date().toISOString(),
+      }),
+    // The `local` provider entry changed: same path as a stored key, so the
+    // catalog is dropped and every running agent re-reads its providers.
+    onProviderChanged: () => credentialsChanged(LOCAL_PROVIDER_ID),
+  });
+  void localModels.start().catch((error: unknown) => {
+    console.warn("[local-models] endpoint did not start", error);
+  });
+
+  ipcMain.handle(IpcChannels.GetLocalModelState, () => localModels?.state());
+  ipcMain.handle(IpcChannels.InstallLocalModel, (_event, modelId: string) =>
+    localModels == null
+      ? { ok: false, error: "local models are not available" }
+      : localModels.install(modelId)
+  );
+  ipcMain.handle(IpcChannels.CancelLocalModelInstall, () => {
+    localModels?.cancelInstall();
+  });
+  ipcMain.handle(IpcChannels.RemoveLocalModel, (_event, modelId: string) => {
+    localModels?.remove(modelId);
+  });
 
   ipcMain.handle(IpcChannels.StartOpenRouterAuth, async () => {
     const result = await startOpenRouterAuth();
