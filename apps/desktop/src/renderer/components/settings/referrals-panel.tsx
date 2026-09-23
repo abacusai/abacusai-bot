@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Copy, LoaderCircle, Mail, MessageCircle, Plus } from "lucide-react";
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -30,6 +30,32 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type PickerRow = { id: string; label: string; detail: string | null };
 
+/** Comma/space-separated addresses, lower-cased, the well-formed ones. */
+export const parseEmails = (text: string): PickerRow[] => {
+  const seen = new Set<string>();
+  for (const value of text.split(/[\s,;]+/)) {
+    const email = value.trim().toLowerCase();
+    if (EMAIL_RE.test(email)) seen.add(email);
+  }
+  return [...seen].map((email) => ({ id: email, label: email, detail: null }));
+};
+
+/**
+ * Comma-separated phone numbers with a country code. The id is the number in
+ * international form, which WhatsApp resolves to the chat by construction.
+ */
+export const parsePhones = (text: string): PickerRow[] => {
+  const seen = new Map<string, string>();
+  for (const value of text.split(/[,;\n]+/)) {
+    const typed = value.trim();
+    if (!/^\+?[\d\s().-]+$/.test(typed)) continue;
+    const digits = typed.replace(/\D/g, "");
+    if (digits.length < 7 || digits.length > 15) continue;
+    if (!seen.has(`+${digits}`)) seen.set(`+${digits}`, typed);
+  }
+  return [...seen].map(([id, label]) => ({ id, label, detail: null }));
+};
+
 const ProgressBar = ({
   value,
   max,
@@ -52,7 +78,21 @@ const ProgressBar = ({
   </div>
 );
 
-/** A checklist of people with select-all, a note, and the one send button. */
+/** The typed-in row a picker accepts beside the ones it already lists. */
+type ManualAdd = {
+  placeholder: string;
+  addLabel: string;
+  /** Rows the typed text names; none means it named nothing usable. */
+  parse: (text: string) => PickerRow[];
+  emptyHint: string;
+  invalidHint: string;
+};
+
+/**
+ * A checklist of people with select-all, a note, and the one send button.
+ * Adding always says what it did: a typed row lands ticked at the top of the
+ * list, and an empty or unusable box says so instead of staying quiet.
+ */
 const ContactPicker = ({
   dataId,
   rows,
@@ -62,7 +102,8 @@ const ContactPicker = ({
   onMessageChange,
   onSend,
   sending,
-  extra,
+  manual,
+  onAddRows,
 }: {
   dataId: string;
   rows: PickerRow[];
@@ -72,18 +113,82 @@ const ContactPicker = ({
   onMessageChange: (value: string) => void;
   onSend: (ids: string[]) => Promise<void>;
   sending: boolean;
-  extra?: JSX.Element;
+  manual: ManualAdd;
+  onAddRows: (rows: PickerRow[]) => void;
 }): JSX.Element => {
   const { t } = useTranslation();
   const [unchecked, setUnchecked] = useState<Set<string>>(() => new Set());
+  const [typed, setTyped] = useState("");
+  const [hint, setHint] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const selected = useMemo(
     () => rows.filter((row) => !unchecked.has(row.id)).map((row) => row.id),
     [rows, unchecked]
   );
 
+  const addTyped = (): void => {
+    const added = typed.trim().length === 0 ? [] : manual.parse(typed);
+    if (added.length === 0) {
+      setHint(
+        typed.trim().length === 0 ? manual.emptyHint : manual.invalidHint
+      );
+      inputRef.current?.focus();
+      return;
+    }
+    onAddRows(added);
+    // Re-adding someone unticked earlier ticks them again: adding means inviting.
+    setUnchecked((current) => {
+      const next = new Set(current);
+      for (const row of added) next.delete(row.id);
+      return next;
+    });
+    setTyped("");
+    setHint(null);
+    if (listRef.current != null) listRef.current.scrollTop = 0;
+  };
+
   return (
     <div className="flex flex-col gap-3" data-id={dataId}>
-      {extra}
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-2">
+          <Input
+            ref={inputRef}
+            value={typed}
+            onChange={(event) => {
+              setTyped(event.target.value);
+              if (hint != null) setHint(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addTyped();
+              }
+            }}
+            placeholder={manual.placeholder}
+            aria-label={manual.placeholder}
+            aria-invalid={hint != null || undefined}
+            data-id={`${dataId}-manual`}
+          />
+          <Button
+            variant="outline"
+            onClick={addTyped}
+            data-id={`${dataId}-manual-add`}
+          >
+            <Plus />
+            {manual.addLabel}
+          </Button>
+        </div>
+        {hint != null && (
+          <p
+            className="text-destructive text-xs"
+            role="alert"
+            data-id={`${dataId}-manual-hint`}
+          >
+            {hint}
+          </p>
+        )}
+      </div>
       {loading ? (
         <p className="text-muted-foreground flex items-center gap-2 text-sm">
           <LoaderCircle className="size-4 animate-spin" />
@@ -124,7 +229,10 @@ const ContactPicker = ({
               </Button>
             </span>
           </div>
-          <ul className="max-h-64 divide-y overflow-y-auto rounded-lg border">
+          <ul
+            ref={listRef}
+            className="max-h-64 divide-y overflow-y-auto rounded-lg border"
+          >
             {rows.map((row) => {
               const checked = !unchecked.has(row.id);
               return (
@@ -195,7 +303,6 @@ export const ReferralsPanel = (): JSX.Element => {
     setMessage(t("referrals.defaultMessage", { link: summary.inviteLink }));
   }, [summary, message, t]);
   const [gmailRows, setGmailRows] = useState<PickerRow[] | null>(null);
-  const [manualEmail, setManualEmail] = useState("");
   const [whatsappRows, setWhatsappRows] = useState<PickerRow[] | null>(null);
   const [sending, setSending] = useState<"gmail" | "whatsapp" | null>(null);
   const [connectingGmail, setConnectingGmail] = useState(false);
@@ -333,21 +440,14 @@ export const ReferralsPanel = (): JSX.Element => {
     }
   };
 
-  const addManualEmails = (): void => {
-    const emails = manualEmail
-      .split(/[\s,;]+/)
-      .map((value) => value.trim().toLowerCase())
-      .filter((value) => EMAIL_RE.test(value));
-    if (emails.length === 0) return;
-    setGmailRows((rows) => {
-      const known = new Set((rows ?? []).map((row) => row.id));
-      const added = emails
-        .filter((email) => !known.has(email))
-        .map((email) => ({ id: email, label: email, detail: null }));
-      return [...added, ...(rows ?? [])];
-    });
-    setManualEmail("");
-  };
+  /** Typed rows go in front, once each; ones already listed stay where they are. */
+  const prependRows =
+    (setRows: typeof setGmailRows) =>
+    (added: PickerRow[]): void =>
+      setRows((rows) => {
+        const known = new Set((rows ?? []).map((row) => row.id));
+        return [...added.filter((row) => !known.has(row.id)), ...(rows ?? [])];
+      });
 
   const copyLink = (): void => {
     if (summary == null) return;
@@ -463,31 +563,14 @@ export const ReferralsPanel = (): JSX.Element => {
                 onMessageChange={setMessage}
                 onSend={sendEmails}
                 sending={sending === "gmail"}
-                extra={
-                  <div className="flex gap-2">
-                    <Input
-                      value={manualEmail}
-                      onChange={(event) => setManualEmail(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          addManualEmails();
-                        }
-                      }}
-                      placeholder={t("referrals.addEmailsPlaceholder")}
-                      aria-label={t("referrals.addEmailsPlaceholder")}
-                      data-id="referrals-manual-email"
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={addManualEmails}
-                      data-id="referrals-manual-email-add"
-                    >
-                      <Plus />
-                      {t("referrals.addEmails")}
-                    </Button>
-                  </div>
-                }
+                manual={{
+                  placeholder: t("referrals.addEmailsPlaceholder"),
+                  addLabel: t("referrals.addEmails"),
+                  parse: parseEmails,
+                  emptyHint: t("referrals.addEmailsEmpty"),
+                  invalidHint: t("referrals.addEmailsInvalid"),
+                }}
+                onAddRows={prependRows(setGmailRows)}
               />
             </section>
 
@@ -512,6 +595,14 @@ export const ReferralsPanel = (): JSX.Element => {
                   onMessageChange={setMessage}
                   onSend={sendWhatsapp}
                   sending={sending === "whatsapp"}
+                  manual={{
+                    placeholder: t("referrals.addPhonesPlaceholder"),
+                    addLabel: t("referrals.addPhones"),
+                    parse: parsePhones,
+                    emptyHint: t("referrals.addPhonesEmpty"),
+                    invalidHint: t("referrals.addPhonesInvalid"),
+                  }}
+                  onAddRows={prependRows(setWhatsappRows)}
                 />
               ) : (
                 <Button
