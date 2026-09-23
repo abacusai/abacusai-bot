@@ -52,6 +52,7 @@ const config = (): {
   customProviders?: Array<{
     id: string;
     baseUrl: string;
+    apiKey?: string;
     models: Array<{ id: string }>;
   }>;
 } => JSON.parse(fs.readFileSync(path.join(home, "config.json"), "utf8"));
@@ -125,6 +126,9 @@ describe("LocalModelService", () => {
       (entry) => entry.id === "local"
     );
     expect(provider?.baseUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/v1$/);
+    // Without a key the agent reads the model as unconfigured and answers on
+    // a different one; the endpoint itself checks nothing.
+    expect(provider?.apiKey).toBeTruthy();
     expect(provider?.models.map((model) => model.id)).toEqual([spec.id]);
     expect(providerChanges).toBeGreaterThan(0);
     local.dispose();

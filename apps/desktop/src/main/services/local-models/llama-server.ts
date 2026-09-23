@@ -60,8 +60,11 @@ export const llamaServerArgs = (
   // Thinking off: on this hardware the answer is what the user waits for.
   "--chat-template-kwargs",
   '{"enable_thinking":false}',
+  // Parsed into its own field, not left in the reply: the template emits an
+  // empty <think></think> even with thinking off, and "none" is defined as
+  // leaving that in `content`, where it reaches the transcript verbatim.
   "--reasoning-format",
-  "none",
+  "deepseek",
   "--no-webui",
   "--log-disable",
 ];
