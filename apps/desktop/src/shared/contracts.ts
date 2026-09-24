@@ -684,6 +684,8 @@ export type IpcEvent =
   | ({ type: "cronjobs-updated" } & IpcEventBase)
   // The Gmail persona landed in the USER profile; the renderer shows it once.
   | ({ type: "user-persona-learned"; text: string } & IpcEventBase)
+  // The persona run is under way; percent is an estimate against a typical run.
+  | ({ type: "user-persona-progress"; percent: number } & IpcEventBase)
   // The composer echoes the user's own messages; a turn driven from main has
   // nothing to render it, so this is that echo.
   | ({
