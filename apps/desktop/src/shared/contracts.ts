@@ -682,6 +682,8 @@ export type IpcEvent =
   | ({ type: "messaging-updated" } & IpcEventBase)
   | ({ type: "bots-updated" } & IpcEventBase)
   | ({ type: "cronjobs-updated" } & IpcEventBase)
+  // The Gmail persona landed in the USER profile; the renderer shows it once.
+  | ({ type: "user-persona-learned"; text: string } & IpcEventBase)
   // The composer echoes the user's own messages; a turn driven from main has
   // nothing to render it, so this is that echo.
   | ({

@@ -197,9 +197,12 @@ import {
   type RenderDesignRequest,
 } from "./services/agent-tools/design-agent";
 import {
+  emailPersona,
   emailPersonaPrompt,
   GMAIL_CONNECTOR_ID,
   hasEmailPersona,
+  PERSONA_POLL_MS,
+  PERSONA_WAIT_MS,
 } from "./services/agent-tools/gmail-persona";
 import {
   applyMemoryAction,
@@ -3641,11 +3644,41 @@ export class ServiceHost {
         sessionId: session.id,
         message: emailPersonaPrompt(),
       });
+      this.announcePersonaWhenWritten();
     } catch (error) {
       console.warn(
         `[persona] Gmail profile failed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  /**
+   * Existing users: Gmail was connected before this feature existed, so the
+   * first start after the update learns the persona the same way.
+   */
+  async learnPersonaIfGmailConnected(): Promise<void> {
+    if (hasEmailPersona()) return;
+    const snapshot = await listAbacusConnectors();
+    if (snapshot.ok && snapshot.connected.gmailuser != null)
+      await this.learnPersonaFromGmail(GMAIL_CONNECTOR_ID);
+  }
+
+  /** The renderer shows the persona once, the moment the entry appears. */
+  private announcePersonaWhenWritten(): void {
+    const deadline = Date.now() + PERSONA_WAIT_MS;
+    const poll = (): void => {
+      const text = emailPersona();
+      if (text != null) {
+        this.emitEvent({
+          type: "user-persona-learned",
+          text,
+          emittedAt: new Date().toISOString(),
+        });
+        return;
+      }
+      if (Date.now() < deadline) setTimeout(poll, PERSONA_POLL_MS).unref();
+    };
+    setTimeout(poll, PERSONA_POLL_MS).unref();
   }
 
   /**
