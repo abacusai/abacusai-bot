@@ -917,6 +917,13 @@
     "startFailed": "Não foi possível iniciar.",
     "started": "Iniciada — roda em uma sessão própria."
   },
+  "persona": {
+    "title": "We learnt this about you",
+    "body": "From the emails you sent, so the assistant and your bots talk to you the way you talk. It lives in your memory: edit or forget it any time.",
+    "forget": "Forget this",
+    "edit": "Edit in Memory",
+    "ok": "Looks right"
+  },
   "localModels": {
     "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
     "download": "Download {{size}} and use it",
