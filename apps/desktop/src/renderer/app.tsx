@@ -9,6 +9,7 @@ import { LocalModelDialog } from "./components/local-models/local-model-dialog";
 import { FirstBotDialog } from "./components/onboarding/first-bot-dialog";
 import { OnboardingFlow } from "./components/onboarding/onboarding-flow";
 import { WelcomeTourGate } from "./components/onboarding/welcome-tour";
+import { PersonaLearnedDialog } from "./components/persona/persona-learned-dialog";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useConversationActivator } from "./components/workspace/workspace-activation";
 import { useWorkspaceConversationBridge } from "./conversation/store";
@@ -165,6 +166,7 @@ function App(): React.JSX.Element {
         }
       >
         <LocalModelDialog />
+        <PersonaLearnedDialog />
         <Toaster
           position="top-right"
           offset={{ top: TITLEBAR_HEIGHT + 10 }}

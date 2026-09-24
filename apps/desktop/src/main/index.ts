@@ -963,6 +963,12 @@ app
       () => rendererWebContents()?.id ?? null
     );
     workspaceServiceHost.startCronScheduler();
+    // A minute in, so the gateway and sign-in state have settled first.
+    setTimeout(() => {
+      void workspaceServiceHost
+        .learnPersonaIfGmailConnected()
+        .catch(() => undefined);
+    }, 60_000).unref();
 
     // Reap devices a previous run booted but never shut down (force quit and
     // crashes skip `before-quit`). Only ever touches devices we started.
