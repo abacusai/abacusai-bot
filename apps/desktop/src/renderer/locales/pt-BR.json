@@ -919,6 +919,11 @@
   },
   "persona": {
     "title": "We learnt this about you",
+    "generatingTitle": "Generating your persona…",
+    "generatingBody": "Reading the emails you sent to learn how you write, what you do and what you care about. This takes a minute or two.",
+    "generatingPercent": "{{percent}}% done",
+    "failedTitle": "Could not generate your persona",
+    "failedBody": "The run did not finish. Reconnect Gmail or try again later; nothing was changed.",
     "body": "From the emails you sent, so the assistant and your bots talk to you the way you talk. It lives in your memory: edit or forget it any time.",
     "forget": "Forget this",
     "edit": "Edit in Memory",

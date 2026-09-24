@@ -203,6 +203,7 @@ import {
   hasEmailPersona,
   PERSONA_POLL_MS,
   PERSONA_WAIT_MS,
+  personaProgress,
 } from "./services/agent-tools/gmail-persona";
 import {
   applyMemoryAction,
@@ -3608,13 +3609,19 @@ export class ServiceHost {
    * and never in the way — a failure only means the profile stays as it was.
    */
   async learnPersonaFromGmail(connectorId: string): Promise<void> {
-    if (connectorId !== GMAIL_CONNECTOR_ID || hasEmailPersona()) return;
+    if (connectorId !== GMAIL_CONNECTOR_ID) return;
+    if (hasEmailPersona()) {
+      console.info("[persona] already learnt; not running again");
+      return;
+    }
     try {
-      const target = await this.ensureHomeWorkspace(
-        path.join(abacusBotHome(), "persona"),
-        "routine"
-      );
-      if (target == null) return;
+      // The Auto workspace, where ordinary chats live: the run shows in the
+      // session list under its own name while it works.
+      const target = await this.ensureSessionHomeWorkspace();
+      if (target == null) {
+        console.warn("[persona] no workspace to run in");
+        return;
+      }
       const session = this.agentSessionManagerService.create(target);
       this.emitEvent({
         type: "local-cli-session-created",
@@ -3623,11 +3630,12 @@ export class ServiceHost {
         session,
         emittedAt: new Date().toISOString(),
       });
-      this.updateAgentSessionLabel(
-        target,
-        session.id,
-        "Learning how you write, from Gmail"
-      );
+      this.updateAgentSessionLabel(target, session.id, "Generating persona…");
+      this.emitEvent({
+        type: "user-persona-progress",
+        percent: 0,
+        emittedAt: new Date().toISOString(),
+      });
       const started = await this.startAgentSession({
         workspaceId: target,
         sessionId: session.id,
@@ -3635,8 +3643,13 @@ export class ServiceHost {
       });
       if (!started.success) {
         console.warn(
-          `[persona] Gmail profile session did not start: ${started.error ?? "unknown"}`
+          `[persona] session did not start: ${started.error ?? "unknown"}`
         );
+        this.emitEvent({
+          type: "user-persona-progress",
+          percent: -1,
+          emittedAt: new Date().toISOString(),
+        });
         return;
       }
       this.sendAgentMessage({
@@ -3644,11 +3657,17 @@ export class ServiceHost {
         sessionId: session.id,
         message: emailPersonaPrompt(),
       });
-      this.announcePersonaWhenWritten();
+      console.info(`[persona] reading sent mail in session ${session.id}`);
+      this.announcePersonaWhenWritten(target, session.id);
     } catch (error) {
       console.warn(
         `[persona] Gmail profile failed: ${error instanceof Error ? error.message : String(error)}`
       );
+      this.emitEvent({
+        type: "user-persona-progress",
+        percent: -1,
+        emittedAt: new Date().toISOString(),
+      });
     }
   }
 
@@ -3659,16 +3678,40 @@ export class ServiceHost {
   async learnPersonaIfGmailConnected(): Promise<void> {
     if (hasEmailPersona()) return;
     const snapshot = await listAbacusConnectors();
-    if (snapshot.ok && snapshot.connected.gmailuser != null)
-      await this.learnPersonaFromGmail(GMAIL_CONNECTOR_ID);
+    if (!snapshot.ok) {
+      console.info(
+        `[persona] connectors unavailable at start: ${snapshot.error}`
+      );
+      return;
+    }
+    if (snapshot.connected.gmailuser == null) {
+      console.info("[persona] Gmail not connected; nothing to learn from");
+      return;
+    }
+    await this.learnPersonaFromGmail(GMAIL_CONNECTOR_ID);
   }
 
-  /** The renderer shows the persona once, the moment the entry appears. */
-  private announcePersonaWhenWritten(): void {
-    const deadline = Date.now() + PERSONA_WAIT_MS;
+  /**
+   * The renderer shows the run's progress (estimated) and then the persona
+   * itself, the moment the entry appears; a run that never writes it ends
+   * with -1 so the screen is not held forever.
+   */
+  private announcePersonaWhenWritten(
+    workspaceId: string,
+    sessionId: string
+  ): void {
+    const startedAt = Date.now();
+    const deadline = startedAt + PERSONA_WAIT_MS;
     const poll = (): void => {
       const text = emailPersona();
       if (text != null) {
+        console.info("[persona] learnt; showing it");
+        this.updateAgentSessionLabel(workspaceId, sessionId, "Your persona");
+        this.emitEvent({
+          type: "user-persona-progress",
+          percent: 100,
+          emittedAt: new Date().toISOString(),
+        });
         this.emitEvent({
           type: "user-persona-learned",
           text,
@@ -3676,7 +3719,21 @@ export class ServiceHost {
         });
         return;
       }
-      if (Date.now() < deadline) setTimeout(poll, PERSONA_POLL_MS).unref();
+      if (Date.now() >= deadline) {
+        console.warn("[persona] the run did not write a persona in time");
+        this.emitEvent({
+          type: "user-persona-progress",
+          percent: -1,
+          emittedAt: new Date().toISOString(),
+        });
+        return;
+      }
+      this.emitEvent({
+        type: "user-persona-progress",
+        percent: personaProgress(Date.now() - startedAt),
+        emittedAt: new Date().toISOString(),
+      });
+      setTimeout(poll, PERSONA_POLL_MS).unref();
     };
     setTimeout(poll, PERSONA_POLL_MS).unref();
   }

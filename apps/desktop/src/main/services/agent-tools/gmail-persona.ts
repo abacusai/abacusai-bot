@@ -14,14 +14,28 @@ export const SENT_MAIL_SAMPLE = 25;
 
 export const hasEmailPersona = (): boolean => emailPersona() != null;
 
+/**
+ * The marker as the model may actually write it: bold, as a heading, with
+ * other punctuation. "email persona" at the start of the first line is the
+ * test, so a stylistic flourish never hides the entry from the dialog.
+ */
+export const isEmailPersonaEntry = (entry: string): boolean =>
+  /^[\s#*_>-]*email persona/i.test(entry);
+
 /** The persona as written, without its marker line, or null. */
 export const emailPersona = (): string | null => {
-  const entry = readEntries("user").find((item) =>
-    item.startsWith(EMAIL_PERSONA_MARKER)
-  );
+  const entry = readEntries("user").find(isEmailPersonaEntry);
   if (entry == null) return null;
-  return entry.slice(EMAIL_PERSONA_MARKER.length).trim();
+  const firstBreak = entry.indexOf("\n");
+  return (firstBreak < 0 ? "" : entry.slice(firstBreak + 1)).trim() || entry;
 };
+
+/** How long a run usually takes; the bar is an estimate against this. */
+export const PERSONA_EXPECTED_MS = 150_000;
+
+/** Percent done at `elapsed`: climbs to 90, the last stretch is the write. */
+export const personaProgress = (elapsedMs: number): number =>
+  Math.min(90, Math.round((elapsedMs / PERSONA_EXPECTED_MS) * 90));
 
 /** How long a hidden session gets to read the mail and file the entry. */
 export const PERSONA_WAIT_MS = 15 * 60_000;
