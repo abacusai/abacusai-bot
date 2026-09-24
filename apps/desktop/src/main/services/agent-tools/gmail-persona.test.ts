@@ -5,8 +5,10 @@ vi.mock("./memory-store", () => ({ readEntries: vi.fn(() => []) }));
 const store = await import("./memory-store");
 const {
   EMAIL_PERSONA_MARKER,
+  emailPersona,
   emailPersonaPrompt,
   hasEmailPersona,
+  personaProgress,
   SENT_MAIL_SAMPLE,
 } = await import("./gmail-persona");
 
@@ -21,6 +23,22 @@ describe("the Gmail persona", () => {
     ]);
     expect(hasEmailPersona()).toBe(true);
     expect(store.readEntries).toHaveBeenLastCalledWith("user");
+  });
+
+  it("recognises the marker however the model styled it, and returns the body", () => {
+    vi.mocked(store.readEntries).mockReturnValue([
+      "**Email persona (from my sent mail):**\nWrites tersely.\nSigns off with Best.",
+    ]);
+    expect(hasEmailPersona()).toBe(true);
+    expect(emailPersona()).toBe("Writes tersely.\nSigns off with Best.");
+    vi.mocked(store.readEntries).mockReturnValue(["Persona of an email: no"]);
+    expect(hasEmailPersona()).toBe(false);
+  });
+
+  it("estimates progress against a typical run and never claims done", () => {
+    expect(personaProgress(0)).toBe(0);
+    expect(personaProgress(75_000)).toBe(45);
+    expect(personaProgress(10 * 60_000)).toBe(90);
   });
 
   it("asks for sent mail only, files one USER entry under the marker, and forbids touching mail", () => {

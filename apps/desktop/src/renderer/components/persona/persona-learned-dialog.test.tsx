@@ -16,7 +16,11 @@ vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 
 const { PersonaLearnedDialog } = await import("./persona-learned-dialog");
 
-type Listener = (event: { type: string; text?: string }) => void;
+type Listener = (event: {
+  type: string;
+  text?: string;
+  percent?: number;
+}) => void;
 let listener: Listener | null = null;
 const forgetMemory = vi.fn(async () => ({
   memory: [],
@@ -24,7 +28,7 @@ const forgetMemory = vi.fn(async () => ({
   remember: [],
 }));
 const entry =
-  "Email persona (from my sent mail):\nShort, direct, signs off with Best.";
+  "**Email persona (from my sent mail):**\nShort, direct, signs off with Best.";
 
 const byId = (id: string) =>
   document.querySelector<HTMLElement>(`[data-id="${id}"]`);
@@ -53,6 +57,26 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("the persona dialog", () => {
+  it("holds the screen with the progress while the run is going, then steps aside at 100", () => {
+    render((<PersonaLearnedDialog />) as JSX.Element);
+    act(() => listener!({ type: "user-persona-progress", percent: 0 }));
+    expect(byId("persona-generating")).not.toBeNull();
+    act(() => listener!({ type: "user-persona-progress", percent: 42 }));
+    expect(byId("persona-generating-percent")?.textContent).toBe(
+      "persona.generatingPercent"
+    );
+    act(() => listener!({ type: "user-persona-progress", percent: 100 }));
+    expect(byId("persona-generating")).toBeNull();
+  });
+
+  it("says so when the run gives up", () => {
+    render((<PersonaLearnedDialog />) as JSX.Element);
+    act(() => listener!({ type: "user-persona-progress", percent: -1 }));
+    expect(byId("persona-failed")).not.toBeNull();
+    fireEvent.click(byId("persona-failed-ok")!);
+    expect(byId("persona-failed")).toBeNull();
+  });
+
   it("stays hidden until the persona lands, then shows it", () => {
     render((<PersonaLearnedDialog />) as JSX.Element);
     expect(byId("persona-learned")).toBeNull();
