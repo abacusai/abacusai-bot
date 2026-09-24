@@ -12,8 +12,20 @@ export const EMAIL_PERSONA_MARKER = "Email persona (from my sent mail):";
 /** Enough to hear a voice, few enough to read in one sitting. */
 export const SENT_MAIL_SAMPLE = 25;
 
-export const hasEmailPersona = (): boolean =>
-  readEntries("user").some((entry) => entry.startsWith(EMAIL_PERSONA_MARKER));
+export const hasEmailPersona = (): boolean => emailPersona() != null;
+
+/** The persona as written, without its marker line, or null. */
+export const emailPersona = (): string | null => {
+  const entry = readEntries("user").find((item) =>
+    item.startsWith(EMAIL_PERSONA_MARKER)
+  );
+  if (entry == null) return null;
+  return entry.slice(EMAIL_PERSONA_MARKER.length).trim();
+};
+
+/** How long a hidden session gets to read the mail and file the entry. */
+export const PERSONA_WAIT_MS = 15 * 60_000;
+export const PERSONA_POLL_MS = 5_000;
 
 /** The one-shot prompt the hidden session runs. */
 export const emailPersonaPrompt = (): string =>
