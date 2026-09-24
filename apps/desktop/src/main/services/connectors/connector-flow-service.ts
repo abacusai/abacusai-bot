@@ -22,6 +22,8 @@ export interface FlowSources {
     disconnect: (service: string) => Promise<ConnectorOutcome>;
     /** Rewrites the gateway MCP entry after a connect: the file is user-editable. */
     ensureGateway: () => void;
+    /** A service just attached; whatever follows from that (fire and forget). */
+    onConnected?: (connectorId: string) => void;
   };
   /**
    * Store (or clear, with "") an agent credential by provider id. Announcing
@@ -99,7 +101,10 @@ export class ConnectorFlowService {
       return failure(`${connector.name} is paired from its own dialog.`);
     if (connector.kind === "platform") {
       const outcome = await this.sources.platform.connect(connector.service);
-      if (outcome.ok) this.sources.platform.ensureGateway();
+      if (outcome.ok) {
+        this.sources.platform.ensureGateway();
+        this.sources.platform.onConnected?.(connectorId);
+      }
       return outcome;
     }
     if (connector.kind === "mcp") return this.installMcp(connector, {});

@@ -197,6 +197,11 @@ import {
   type RenderDesignRequest,
 } from "./services/agent-tools/design-agent";
 import {
+  emailPersonaPrompt,
+  GMAIL_CONNECTOR_ID,
+  hasEmailPersona,
+} from "./services/agent-tools/gmail-persona";
+import {
   applyMemoryAction,
   forgetAll,
   forgetEntryAt,
@@ -782,6 +787,8 @@ export class ServiceHost {
           name: ABACUS_CONNECTORS_SERVER_NAME,
           config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
         }),
+      onConnected: (connectorId) =>
+        void this.learnPersonaFromGmail(connectorId),
     },
     credential: {
       save: (provider, value) => {
@@ -3590,6 +3597,55 @@ export class ServiceHost {
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Gmail just connected: a hidden session reads the user's recent sent mail
+   * and files an "Email persona" entry in the USER profile. Once per profile,
+   * and never in the way — a failure only means the profile stays as it was.
+   */
+  async learnPersonaFromGmail(connectorId: string): Promise<void> {
+    if (connectorId !== GMAIL_CONNECTOR_ID || hasEmailPersona()) return;
+    try {
+      const target = await this.ensureHomeWorkspace(
+        path.join(abacusBotHome(), "persona"),
+        "routine"
+      );
+      if (target == null) return;
+      const session = this.agentSessionManagerService.create(target);
+      this.emitEvent({
+        type: "local-cli-session-created",
+        workspaceId: target,
+        sessionId: session.id,
+        session,
+        emittedAt: new Date().toISOString(),
+      });
+      this.updateAgentSessionLabel(
+        target,
+        session.id,
+        "Learning how you write, from Gmail"
+      );
+      const started = await this.startAgentSession({
+        workspaceId: target,
+        sessionId: session.id,
+        mode: readDefaultAgentMode(),
+      });
+      if (!started.success) {
+        console.warn(
+          `[persona] Gmail profile session did not start: ${started.error ?? "unknown"}`
+        );
+        return;
+      }
+      this.sendAgentMessage({
+        workspaceId: target,
+        sessionId: session.id,
+        message: emailPersonaPrompt(),
+      });
+    } catch (error) {
+      console.warn(
+        `[persona] Gmail profile failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   /**
