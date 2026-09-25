@@ -3,8 +3,8 @@ import node from "@abacus-ai/config/oxlint/node";
 import { defineConfig } from "oxlint";
 
 /**
- * `extends` is only valid at the top level — inside an `overrides` entry oxlint
- * rejects it outright — so the renderer's React layer is spelled out here.
+ * `extends` is only valid at the top level: inside an `overrides` entry oxlint
+ * rejects it outright, so the renderer's React layer is spelled out here.
  */
 export default defineConfig({
   extends: [base, node],

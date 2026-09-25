@@ -4,8 +4,8 @@
  * Check that the packaged app carries the files it spawns at runtime.
  *
  * Everything here is code the app runs out of `Contents/Resources` rather than
- * out of the asar, which means nothing in the build — not typecheck, not the
- * test suite, not electron-builder itself — notices when a piece stops being
+ * out of the asar, which means nothing in the build (not typecheck, not the
+ * test suite, not electron-builder itself) notices when a piece stops being
  * copied. The failure lands on the user instead, as a runtime "Cannot find
  * package" the moment the app spawns what did not travel. Dev never shows it,
  * because dev runs everything from the repo.
@@ -46,7 +46,7 @@ const REQUIRED = [
   ...(process.platform === "win32" ? ["agent/vendor/mxc/wxc-exec.exe"] : []),
   // The terminal's ConPTY, which node-pty's addon opens by a path relative to
   // itself. Inside the asar it is a header entry rather than a file, and the
-  // terminal fails to start with no clue as to why — so it is asserted where
+  // terminal fails to start with no clue as to why, so it is asserted where
   // the unpacking puts it.
   ...(process.platform === "win32"
     ? [
@@ -134,8 +134,8 @@ function main() {
 
   // Present is not the same as usable. A binary that lost its executable bit on
   // the way into the bundle, or that was packaged for another architecture,
-  // exists at exactly the right path and still cannot answer a search — and
-  // that failure would reach the user as `grep` reporting itself unavailable.
+  // exists at exactly the right path and still cannot answer a search. That
+  // failure would reach the user as `grep` reporting itself unavailable.
   const dead = [];
   for (const tool of ["rg", "fd"]) {
     const binary = path.join(resources, "agent", "vendor", tool + EXE);
@@ -143,7 +143,7 @@ function main() {
 
     if (probe.status !== 0) {
       dead.push(
-        `${tool} — ${(probe.error?.message ?? probe.stderr ?? `exit ${probe.status}`).trim()}`
+        `${tool}: ${(probe.error?.message ?? probe.stderr ?? `exit ${probe.status}`).trim()}`
       );
     } else {
       console.log(
@@ -160,7 +160,7 @@ function main() {
 
     if (probe.status !== 0 || probe.stdout !== "ok") {
       dead.push(
-        `busybox — ${(probe.error?.message ?? probe.stderr ?? `exit ${probe.status}`).trim()}`
+        `busybox: ${(probe.error?.message ?? probe.stderr ?? `exit ${probe.status}`).trim()}`
       );
     } else {
       console.log(`[packaged-resources] busybox: sh -c works`);

@@ -1,4 +1,4 @@
 {
-  "_comment": "Grandfathered i18n bare-literal signatures (file|kind|text). Regenerate with `node scripts/check-jsx-i18n.js --update`. Do NOT add new entries by hand — localize the string instead.",
+  "_comment": "Grandfathered i18n bare-literal signatures (file|kind|text). Regenerate with `node scripts/check-jsx-i18n.js --update`. Do NOT add new entries by hand: localize the string instead.",
   "signatures": []
 }

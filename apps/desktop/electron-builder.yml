@@ -2,7 +2,7 @@ appId: ai.abacus.bot
 productName: AbacusAI-Bot
 directories:
   buildResources: build
-  # Not dist/ — that is where Vite builds to.
+  # Not dist/, which is where Vite builds to.
   output: release
 
 files:
@@ -53,7 +53,7 @@ extraResources:
     to: agent/node_modules/@ast-grep/
   # The terminal UI that pi-coding-agent draws with. It loads a .node addon, so
   # the agent bundle leaves it external (see @abacus-ai/config/native-packages)
-  # and it has to be a real package beside the agent — with the two
+  # and it has to be a real package beside the agent, with the two
   # dependencies of its own that nothing else here puts on disk. The desktop
   # never draws a TUI, but the import is in the chunk every entry shares, so a
   # missing copy is not a missing feature: the agent fails to spawn at all.
@@ -77,7 +77,7 @@ extraResources:
     to: agent/node_modules/node-forge/
   - from: ../../node_modules/zod/
     to: agent/node_modules/zod/
-  # Loaded only when the agent works on an image, and loaded dynamically — so
+  # Loaded only when the agent works on an image, and loaded dynamically, so
   # unlike pi-tui its absence does not stop the agent from starting. It stops
   # the first image operation instead, which is a worse way to find out.
   - from: ../../node_modules/@silvia-odwyer/photon-node/
@@ -86,7 +86,7 @@ extraResources:
 # Only native modules need to be on the real filesystem. Unpacking all of
 # node_modules forced thousands of nested pure-JS files onto disk and blew past
 # Windows' 260-char MAX_PATH during install, leaving files in the asar header but
-# missing on disk — the "ENOENT ... app.asar.unpacked" main-process crash.
+# missing on disk: the "ENOENT ... app.asar.unpacked" main-process crash.
 asarUnpack:
   - "**/*.node"
   # node-pty's Windows addon opens conpty.dll and OpenConsole.exe by a path
@@ -104,13 +104,13 @@ npmRebuild: false
 
 # Named from ${productName}, not ${name}: the package is scoped
 # (@abacus-ai/desktop), and a scoped name carries a slash, which every
-# artifact target reads as a directory separator — the AppImage build fails
+# artifact target reads as a directory separator. The AppImage build fails
 # outright trying to write through a directory that does not exist.
 #
 # Every artifactName carries ${arch}. Releases publish x64 and arm64 for each
 # platform into one flat CDN directory, so a name without it means the second
-# build silently overwrites the first — visible only later, as users on one
-# architecture downloading a binary that will not run.
+# build silently overwrites the first. It shows up only later, as users on one
+# architecture download a binary that will not run.
 win:
   executableName: AbacusBot
   icon: resources/icon.ico
@@ -122,7 +122,7 @@ nsis:
 
 mac:
   # The dmg is what a human downloads; the zip is what electron-updater installs
-  # updates from — it ignores the dmg entirely, so dropping the zip target
+  # updates from. It ignores the dmg entirely, so dropping the zip target
   # silently breaks auto-updates.
   artifactName: ${productName}-${version}-${arch}.${ext}
   hardenedRuntime: true
