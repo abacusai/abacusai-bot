@@ -49,7 +49,7 @@ describe("a bot's thread", () => {
         kind: "agent",
         id: "a1",
         items: [
-          text("t1", "On it — let me look."),
+          text("t1", "On it, let me look."),
           toolGroup("g1"),
           text("t2", "Four folders and a stray zip."),
         ],
@@ -59,7 +59,7 @@ describe("a bot's thread", () => {
     render((<BotMessageList chatItems={items} />) as JSX.Element);
 
     expect(bubbles()).toEqual([
-      "On it — let me look.",
+      "On it, let me look.",
       "Four folders and a stray zip.",
     ]);
   });
@@ -81,7 +81,7 @@ describe("a bot's thread", () => {
 
   it("drops a turn that only did work and said nothing", () => {
     // An empty bubble reads as a message that failed to load, which is worse
-    // than the turn simply not appearing until the bot has something to say.
+    // than the turn not appearing until the bot has something to say.
     const items: ChatRenderItem[] = [
       { kind: "agent", id: "a1", items: [toolGroup("g1")] },
       { kind: "agent", id: "a2", items: [text("t1", "  ")] },
@@ -122,7 +122,7 @@ describe("a bot's thread", () => {
 
     expect(screen.queryByText("Wrote 1 file")).toBeNull();
     expect(bubbles()).toEqual(["Here you go."]);
-    // Both turns keep their card — the second said nothing but still delivered.
+    // Both turns keep their card; the second said nothing but still delivered.
     expect(
       document.querySelectorAll('[data-id="deliverables-card"]')
     ).toHaveLength(2);
@@ -166,7 +166,7 @@ describe("when the thread says the time", () => {
   const now = new Date("2026-08-27T14:00:00").getTime();
 
   // The component reads the clock itself (`Date.now()`), and these stamps are
-  // written relative to the fixed `now` above — so without pinning it, what
+  // written relative to the fixed `now` above, so without pinning it what
   // "yesterday" renders as depends on the day the suite runs. This passed for
   // exactly one day, 2026-08-27, and named a weekday from the 28th on.
   //

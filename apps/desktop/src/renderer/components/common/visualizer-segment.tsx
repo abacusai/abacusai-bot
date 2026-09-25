@@ -144,7 +144,7 @@ window.onerror = function () { return true; };
 // to a custom scheme; the host's 'will-navigate' listener preventDefaults
 // the navigation and routes the URL based on its scheme. We use
 // location.href (not window.open) because Electron 40 removed the
-// 'new-window' event on WebviewTag — only 'will-navigate' fires.
+// 'new-window' event on WebviewTag; only 'will-navigate' fires.
 window.sendPrompt = function (text) {
   if (typeof text !== 'string' || !text) return;
   try { window.location.href = 'vz-sendprompt:' + encodeURIComponent(text); } catch (e) {}
@@ -157,7 +157,7 @@ window.__vz_apply = function (markup, scripts) {
   });
 };
 // Intercept <a> clicks and hand them to the app rather than the guest. We
-// trigger a navigation to a custom 'vz-link:' scheme — Chromium can't resolve
+// trigger a navigation to a custom 'vz-link:' scheme. Chromium can't resolve
 // it so the webview never actually navigates (the chart stays put), but the
 // 'will-navigate' event still fires on the host with the URL, which we decode
 // and open in the preview pane. Matches iOS VisualizerView's
@@ -204,7 +204,7 @@ const VisualizerSegmentImpl = ({ code, dataId }: VisualizerSegmentProps) => {
     codeRef.current = code;
   }, [code]);
 
-  // Empty shell — content is pushed via executeJavaScript after dom-ready.
+  // Empty shell; content is pushed via executeJavaScript after dom-ready.
   const src = useMemo(() => {
     const themeVars = isDark ? DARK_THEME_VARS : LIGHT_THEME_VARS;
     const html = buildShellDocument(themeVars);
@@ -271,7 +271,7 @@ const VisualizerSegmentImpl = ({ code, dataId }: VisualizerSegmentProps) => {
       } catch {
         return;
       }
-      // Re-measure on a cadence — Chart.js loads from CDN, so the canvas
+      // Re-measure on a cadence: Chart.js loads from CDN, so the canvas
       // paints and reflows well after we've pushed the content.
       measureHeight(wv);
       timeouts.push(setTimeout(() => !cancelled && measureHeight(wv), 100));
@@ -296,7 +296,7 @@ const VisualizerSegmentImpl = ({ code, dataId }: VisualizerSegmentProps) => {
             setPendingPrompt(text);
           }
         } catch {
-          // malformed payload — ignore
+          // malformed payload, ignore
         }
         return;
       }
@@ -305,12 +305,12 @@ const VisualizerSegmentImpl = ({ code, dataId }: VisualizerSegmentProps) => {
           const real = decodeURIComponent(url.slice(LINK_SCHEME.length));
           if (real) openLink(real);
         } catch {
-          // malformed payload — ignore
+          // malformed payload, ignore
         }
         return;
       }
       // A bare programmatic navigation (not a vz-link: click) is dropped, not
-      // sent to openExternal — that URL would be an exfil channel.
+      // sent to openExternal: that URL would be an exfil channel.
     };
 
     wv.addEventListener("dom-ready", onDomReady);

@@ -5,7 +5,7 @@
 
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
-// Resolve a file path from tool input — tools use camelCase but we accept both
+// Resolve a file path from tool input. Tools use camelCase but we accept both
 export function getFilePath(input: Record<string, unknown>): string | null {
   for (const k of [
     "filePath",

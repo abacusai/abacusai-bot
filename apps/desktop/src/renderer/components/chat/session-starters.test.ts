@@ -57,8 +57,8 @@ describe("session starters", () => {
   });
 
   /**
-   * Long enough to carry a limit and a request for a report — the two things
-   * people leave out — and short enough to read in a composer before editing.
+   * Long enough to carry a limit and a request for a report (the two things
+   * people leave out), and short enough to read in a composer before editing.
    * The upper bound is the one that keeps drifting: prose creeps back in as
    * "not one screen at its best moment" and the prompt turns into a pitch.
    */

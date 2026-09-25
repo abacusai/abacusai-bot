@@ -78,7 +78,7 @@ export const SettingsMenu = (): JSX.Element => {
   const signOutOfAbacus = async (): Promise<void> => {
     // No dialog, no choices: the main process stashes this account's sessions
     // into its hidden per-account folder (restored by its next sign-in) and
-    // deletes every stored key — Abacus and the rest. The credential change
+    // deletes every stored key, Abacus and the rest. The credential change
     // flips the app straight back to onboarding's sign-in screen (app.tsx).
     await window.api.agent.signOutAbacus({ keepOtherApiKeys: false });
     await signOutAccount();
@@ -171,7 +171,7 @@ export const SettingsMenu = (): JSX.Element => {
                 {/* Beside the account rather than inside its menu: what the
                     agent remembers about you belongs next to who you are, and
                     it is one of the few settings pages people come back to.
-                    Its own button — a control nested inside the menu trigger
+                    Its own button: a control nested inside the menu trigger
                     would open the menu on the way past. */}
                 <Button
                   variant="ghost"

@@ -88,22 +88,22 @@ export const DevicePanel = (): JSX.Element => {
   const queryClient = useQueryClient();
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  /** Active platform tab — null until the device list + workspace decide the default. */
+  /** Active platform tab; null until the device list + workspace decide the default. */
   const [platformTab, setPlatformTab] = useState<DevicePlatform | null>(null);
   const [booting, setBooting] = useState(false);
   const [buildPhase, setBuildPhase] = useState<DeviceBuildPhase | null>(null);
   const [installingMaestro, setInstallingMaestro] = useState(false);
   const [creatingDevice, setCreatingDevice] = useState(false);
-  /** Setup guidance from a failed create — rendered in place, not as a toast. */
+  /** Setup guidance from a failed create, shown in place rather than as a toast. */
   const [createError, setCreateError] = useState<string | null>(null);
   const [screenMode, setScreenMode] = useState<ScreenMode>("poll");
-  /** Device key whose stream errored — stops the upgrade effect from retry-looping. */
+  /** Device key whose stream errored. Stops the upgrade effect from retry-looping. */
   const [streamFailedKey, setStreamFailedKey] = useState<string | null>(null);
-  /** iOS device key whose native framebuffer stream failed — falls back to window capture. */
+  /** iOS device key whose native framebuffer stream failed; falls back to window capture. */
   const [iosStreamFailedKey, setIosStreamFailedKey] = useState<string | null>(
     null
   );
-  /** iOS device key whose window capture also failed — last stop before polling. */
+  /** iOS device key whose window capture also failed; last stop before polling. */
   const [windowCaptureFailedKey, setWindowCaptureFailedKey] = useState<
     string | null
   >(null);
@@ -114,7 +114,7 @@ export const DevicePanel = (): JSX.Element => {
   );
   const imgRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  /** Device screen aspect (w/h) — used to locate the content area inside the captured Simulator window. */
+  /** Device screen aspect (w/h), used to locate the content area inside the captured Simulator window. */
   const deviceAspectRef = useRef<number | null>(null);
 
   const statusQuery = useQuery({
@@ -179,7 +179,7 @@ export const DevicePanel = (): JSX.Element => {
   const projectTargets = `${project?.ios === true}/${project?.android === true}`;
   const lastProjectTargets = useRef<string | null>(null);
   useEffect(() => {
-    if (project == null) return; // not loaded yet — don't clear a valid tab
+    if (project == null) return; // not loaded yet; don't clear a valid tab
     if (lastProjectTargets.current === projectTargets) return;
     const isFirst = lastProjectTargets.current == null;
     lastProjectTargets.current = projectTargets;
@@ -274,7 +274,7 @@ export const DevicePanel = (): JSX.Element => {
     if (selectedId == null || !selectedBooted || selectedPlatform !== "ios")
       return;
     if (iosStreamFailedKey === selectedKey) return; // gave up → window-capture effect takes over
-    setScreenMode("ios-stream"); // unconditional — see the Android effect above
+    setScreenMode("ios-stream"); // unconditional; see the Android effect above
     const canvas = canvasRef.current;
     if (canvas == null || screenMode !== "ios-stream") return;
     const failedKey = selectedKey;
@@ -294,7 +294,7 @@ export const DevicePanel = (): JSX.Element => {
       }
     );
     const start = async (): Promise<void> => {
-      // Ensure the sim is booted AND Simulator.app is running — the mirror
+      // Ensure the sim is booted AND Simulator.app is running: the mirror
       // fullscreens its window (into an invisible Space) and captures it.
       await window.api?.agent?.bootLocalDevice?.({
         platform: "ios",
@@ -328,7 +328,7 @@ export const DevicePanel = (): JSX.Element => {
     // When the native mirror is enabled, wait for it to give up first.
     if (IOS_NATIVE_MIRROR_ENABLED && iosStreamFailedKey !== selectedKey) return;
     if (windowCaptureFailedKey === selectedKey) return; // gave up → polling
-    setScreenMode("ios-window"); // unconditional — see the Android effect above
+    setScreenMode("ios-window"); // unconditional; see the Android effect above
     const canvas = canvasRef.current;
     if (canvas == null || screenMode !== "ios-window") return;
     const failedKey = selectedKey;
@@ -518,7 +518,7 @@ export const DevicePanel = (): JSX.Element => {
       devH = imgRef.current.naturalHeight || null;
     } else if (canvasRef.current != null) {
       // All stream modes (android-stream / ios-stream / ios-window) paint the
-      // device screen into the canvas — element box maps 1:1 to the screen.
+      // device screen into the canvas, so the element box maps 1:1 to the screen.
       devW = canvasRef.current.width || null;
       devH = canvasRef.current.height || null;
     }
@@ -590,7 +590,7 @@ export const DevicePanel = (): JSX.Element => {
     e.currentTarget.focus?.();
     pointerStart.current = { fx: point.fx, fy: point.fy, time: Date.now() };
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    // Begin a live gesture — iOS streams true HID down/move/up; Android
+    // Begin a live gesture. iOS streams true HID down/move/up; Android
     // records the origin (its swipe is reconstructed on up).
     streamTouch("down", point.fx, point.fy);
     refreshScreen();
@@ -635,7 +635,7 @@ export const DevicePanel = (): JSX.Element => {
         });
         if (result.device != null) setSelectedKey(deviceKey(result.device));
       } else {
-        // Setup guidance from main — show it in place, not as a toast that
+        // Setup guidance from main: show it in place, not as a toast that
         // disappears before it can be acted on.
         setCreateError(result?.error ?? t("devicePanel.createDeviceFailed"));
       }
@@ -763,7 +763,7 @@ export const DevicePanel = (): JSX.Element => {
               >
                 <span>{PLATFORM_LABEL[p]}</span>
                 {targeted && (
-                  // The workspace builds for this platform — marks the tab that
+                  // The workspace builds for this platform: marks the tab that
                   // Build & Run will actually work on.
                   <span
                     className="bg-primary h-1.5 w-1.5 rounded-full"

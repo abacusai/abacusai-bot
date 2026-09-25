@@ -1,8 +1,8 @@
 /**
  * The first bot, at the end of onboarding.
  *
- * Linking WhatsApp, Telegram or Discord — which the connectors step, two
- * screens earlier, invites the user to do — mints a self-lane bot of the
+ * Linking WhatsApp, Telegram or Discord (which the connectors step, two
+ * screens earlier, invites the user to do) mints a self-lane bot of the
  * app's own. The check here read "they already have bots" about those and
  * bailed, so a new user who connected anything, which is most of them, never
  * reached their first bot.
@@ -119,7 +119,7 @@ describe("the first bot", () => {
     mount();
     await waitFor(() => expect(dialog.created).not.toBeNull());
 
-    // The dialog calls onClose after a button that returned true — so
+    // The dialog calls onClose after a button that returned true, so
     // Create is followed by a close, which is not a cancel.
     dialog.created?.(bot({ id: "made", name: "Chief" }));
     dialog.close?.();

@@ -12,7 +12,7 @@ const match = (
 
 describe("selectPaneTitleKey", () => {
   it("leaves the chat route without a title of its own", () => {
-    // The title bar falls back to the session label only here — anywhere else
+    // The title bar falls back to the session label only here; anywhere else
     // that label would describe a chat the pane is not showing.
     expect(selectPaneTitleKey([match({}), match({})])).toBeUndefined();
   });

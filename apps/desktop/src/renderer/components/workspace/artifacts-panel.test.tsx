@@ -1,7 +1,7 @@
 /**
  * The Artifacts page: what a row shows, and where a click takes you.
  *
- * Clicking an artifact used to land on `/` — whatever chat was active — with
+ * Clicking an artifact used to land on `/` (whatever chat was active) with
  * the pane closed by the route on arrival, so the user saw a session and no
  * file. It goes to the artifact's own conversation now and opens there. The
  * location was a column that disappeared below a wide breakpoint; it is now

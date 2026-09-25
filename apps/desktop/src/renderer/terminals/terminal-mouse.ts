@@ -1,12 +1,12 @@
 /**
- * Mouse and focus reporting — the half of the protocol ghostty-web asks about
+ * Mouse and focus reporting: the half of the protocol ghostty-web asks about
  * but never answers.
  *
  * The library knows when a program has switched tracking on (`hasMouseTracking`,
  * `getMode`) and yet emits no mouse sequence anywhere: there is not one `CSI <`
  * in its bundle. Its wheel handler papers over the gap by sending cursor keys
  * on the alternate screen, which is the 1990s fallback for terminals that
- * cannot report a wheel at all — so `less` scrolled by moving its cursor,
+ * cannot report a wheel at all: `less` scrolled by moving its cursor,
  * `htop` and `lazygit` ignored the pointer, and tmux could not pick a pane.
  *
  * So this sends the real thing, and only what was asked for:
@@ -210,7 +210,7 @@ export const installMouseReporting = (
   /**
    * Runs after the library's own mousemove, which sets an I-beam for
    * selectable text and a hand over a link. While a program owns the mouse,
-   * dragging selects nothing, so an arrow is the honest pointer — and this
+   * dragging selects nothing, so an arrow is the honest pointer, and this
    * has to be the later listener to survive theirs, for the modes where we do
    * not claim the event outright.
    */

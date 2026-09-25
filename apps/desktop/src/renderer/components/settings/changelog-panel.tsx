@@ -14,7 +14,7 @@ import { Badge } from "../ui/badge";
 
 /**
  * What's new: every release, newest first, the running one marked. The text
- * is CHANGELOG.md bundled at build time — see lib/changelog.ts.
+ * is CHANGELOG.md bundled at build time (see lib/changelog.ts).
  */
 export const ChangelogPanel = (): JSX.Element => {
   const { t } = useTranslation();

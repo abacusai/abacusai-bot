@@ -28,7 +28,7 @@ export function useKeepAwake(): void {
       if (busy === last) return;
       last = busy;
       void window.api.power?.setAgentBusy?.(busy)?.catch?.(() => {
-        /* main not ready yet — the next edge will resync */
+        /* main not ready yet; the next edge will resync */
       });
     };
 

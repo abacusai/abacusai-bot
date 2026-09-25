@@ -3,7 +3,7 @@
  *
  * What matters: the registry's connectors are all shown (so a connector added
  * there appears here without this file changing); a signed-in user attaches
- * one in place rather than being sent to the settings panel — the old
+ * one in place rather than being sent to the settings panel (the old
  * behaviour, which quietly ended the flow and skipped every step after it; and
  * a signed-out user's tap runs the sign-in hop first and then attaches, the
  * same contract as the in-app connectors panel.
@@ -96,7 +96,7 @@ describe("a hop the user walks away from", () => {
     await waitFor(() => byId("onboarding-connectors-cancel"));
 
     // The regression: every other tile used to be disabled for as long as the
-    // hop was out — walk away from the browser tab and the whole screen was
+    // hop was out: walk away from the browser tab and the whole screen was
     // dead until a five-minute timeout. Changing your mind is a click on
     // another tile, so the tiles stay live.
     expect(
@@ -169,7 +169,7 @@ describe("the connectors step", () => {
 
     fireEvent.click(byId("onboarding-connector-messaging-whatsapp-connect"));
 
-    // WhatsApp enables on click — that is what starts the bridge and the QR.
+    // WhatsApp enables on click; that is what starts the bridge and the QR.
     await waitFor(() =>
       expect(updateMessagingPlatform).toHaveBeenCalledWith({
         platformId: "whatsapp",
@@ -273,7 +273,7 @@ describe("the connectors step", () => {
   });
 
   it("says Continue once anything is connected", async () => {
-    // The regression: the button read a platform-only set — a scanned
+    // The regression: the button read a platform-only set: a scanned
     // WhatsApp QR turned its tile green while the button still offered to
     // continue without connectors.
     statuses["messaging-whatsapp"] = { state: "connected" };

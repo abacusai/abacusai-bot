@@ -165,7 +165,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Every market day before the open:",
       "- Read my watchlist, risk level, and preferences from Google Sheets.",
       "- Scan fresh company news, earnings, major announcements, and market catalysts.",
-      "- Select 1–3 stocks that are genuinely worth researching today.",
+      "- Select 1–3 stocks worth researching today.",
       "- For each, give: Why now, Thesis, Catalyst, Valuation context, Key risks, and What would invalidate the idea.",
       "Do not place trades or present any idea as guaranteed.",
     ].join("\n"),
@@ -713,7 +713,7 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "Check my competitor list every week:",
       "- Find new landing pages, launches, campaigns, social pushes, and positioning changes.",
       "- For each new campaign, capture: Audience, Core promise, Main claim, CTA, Channel, and Launch date.",
-      "- Explain what is genuinely new and why it may matter.",
+      "- Explain what is new and why it may matter.",
       "- Save the strongest examples and notes to Google Drive.",
       "Do not repeat unchanged campaigns from prior reports.",
     ].join("\n"),
@@ -881,6 +881,6 @@ export const orderedTemplateIds = (
   return [...new Set([...leading, ...members])];
 };
 
-/** The Featured tab's order — what a fresh Create Bot page leads with. */
+/** The Featured tab's order: what a fresh Create Bot page leads with. */
 export const heroTemplateIds = (connectors: readonly string[] = []): string[] =>
   orderedTemplateIds("featured", connectors);

@@ -2,7 +2,7 @@ import type { SkillMetadata } from "#shared/agent-types";
 
 // Builtin skills would live under `~/.abacusai-bot/builtin-skills/<clientKind>/`.
 // The bundled agent does not currently scan that directory, and the disk scan
-// (api.skills.listInstalled) omits it too — this filter is kept as a defensive
+// (api.skills.listInstalled) omits it too. This filter is kept as a defensive
 // guard so that if an agent build ever reports builtins in its `skills_loaded`
 // event (with `location` set to the skill file path), they still never appear
 // in the user-facing slash picker.

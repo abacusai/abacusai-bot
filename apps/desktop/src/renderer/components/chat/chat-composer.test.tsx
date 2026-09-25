@@ -108,7 +108,7 @@ const renderComposer = (
     worktreeMutationPending?: boolean;
     // `null` is "catalog not loaded yet" and reaches the component as
     // undefined. Passing `undefined` here would pick up the default instead,
-    // which is a configured model — the opposite of what that case means.
+    // which is a configured model: the opposite of what that case means.
     models?: ModelAvailability[] | null;
     onInputValueChange?: (value: string) => void;
     activeWorkspaceId?: string | null;
@@ -248,7 +248,7 @@ describe("ChatComposer sizing", () => {
     const contextRail = worktree?.closest(
       '[data-slot="composer-context-rail"]'
     );
-    // A plain row under the box with the toolbar's insets — not a tab sized
+    // A plain row under the box with the toolbar's insets, not a tab sized
     // to the box, which the compact composer's + beside the box knocks askew.
     expect(contextRail?.className).not.toContain("rounded-b-xl");
     expect(contextRail?.className).not.toContain("w-[calc(100%-2rem)]");
@@ -461,7 +461,7 @@ describe("ChatComposer gates", () => {
 });
 
 /**
- * The up-arrow walks the prompt history — but only where a shell would.
+ * The up-arrow walks the prompt history, but only where a shell would.
  *
  * The pickers own the arrows while they are open, and a multi-line draft is
  * still something you move a caret around in: paging history from the middle
@@ -506,7 +506,7 @@ describe("ChatComposer prompt history", () => {
 
 /**
  * One box everywhere: a session runs the same compact composer a bot does.
- * What a session keeps is the two controls a person supervising a run needs —
+ * What a session keeps is the two controls a person supervising a run needs:
  * what the agent is allowed to do, and which checkout it runs against. A bot
  * has neither, because nobody is watching it to make either call.
  */
@@ -592,7 +592,7 @@ describe("the caret and the text it sits on", () => {
 /**
  * A pill is the right shape for one line of text and the wrong one for a
  * stack. `rounded-full` on a box this wide is a radius of half its height, so
- * a permission card's rows ran straight out through the curve — the command
+ * a permission card's rows ran straight out through the curve: the command
  * box and the Deny row ended up drawn outside their own container.
  */
 describe("the compact composer's shape", () => {

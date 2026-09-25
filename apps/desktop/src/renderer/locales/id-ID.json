@@ -93,7 +93,7 @@
       "templatesDivider": "Or start with a template"
     },
     "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models — the bot loop is built for them.",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
     "modelLabel": "Model",
     "nameLabel": "Nama",
     "namePlaceholder": "mis. Scout",
@@ -129,7 +129,7 @@
     "save": "Simpan",
     "saveError": "Tidak dapat menyimpan bot.",
     "senderChat": "Obrolan balas-otomatis dengan {{sender}} di {{platform}}",
-    "senderChatReadOnly": "Percakapan balas-otomatis — {{bot}} menjawab {{sender}} di sini atas nama Anda. Anda bisa melihat tetapi tidak mengetik; untuk mengubah cara membalas, beri tahu {{bot}} di obrolannya sendiri.",
+    "senderChatReadOnly": "Percakapan balas-otomatis: {{bot}} menjawab {{sender}} di sini atas nama Anda. Anda bisa melihat tetapi tidak mengetik; untuk mengubah cara membalas, beri tahu {{bot}} di obrolannya sendiri.",
     "templates": {
       "appointment-assistant": {
         "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
@@ -256,7 +256,7 @@
         "name": "News Radar"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox—forms, renewals, appointments, and follow-ups.",
+        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
         "name": "Personal Admin"
       },
       "portfolio-pulse": {
@@ -314,8 +314,8 @@
     "unpin": "Unpin",
     "viewBots": "Bot",
     "viewSessions": "Sesi",
-    "channelChatReadOnly": "This conversation lives in {{app}} — message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp — message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
   },
   "browserPermission": {
     "allow": "Izinkan",
@@ -336,7 +336,7 @@
       "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
       "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
       "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
       "install": "Install the extension",
       "connect": "Connect",
       "disconnect": "Disconnect",
@@ -478,8 +478,8 @@
       "noMatches": "No toolset matches that.",
       "noModelTools": "This capability doesn't add any tools the model calls directly.",
       "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned — this isn't a missing API key.",
-      "restartNote": "Changes apply to the next session — the agent is handed its tool list when a session starts.",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
+      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
       "resizePanels": "Resize toolsets and details",
       "searchPlaceholder": "Search toolsets and tools…",
       "toolCount_one": "{{count}} tool",
@@ -539,7 +539,7 @@
         "label": "Memory"
       },
       "messaging": {
-        "description": "Kirim pesan lewat aplikasi chat yang terhubung — WhatsApp, Telegram, Discord — sebagai pengguna atau bot mereka.",
+        "description": "Kirim pesan lewat aplikasi chat yang terhubung (WhatsApp, Telegram, Discord) sebagai pengguna atau bot mereka.",
         "label": "Perpesanan"
       },
       "pdf": {
@@ -629,7 +629,7 @@
   },
   "connectors": {
     "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}} — try again.",
+    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
     "abacusConnecting": "Finish connecting {{name}} in your browser…",
     "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
@@ -673,7 +673,7 @@
     "noneInstalled": "No konektor added yet.",
     "notInstalled": "Belum terpasang",
     "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL — add this to your app",
+    "redirectUrlLabel": "Redirect URL: add this to your app",
     "remove": "Remove",
     "removeFailed": "Could not remove {{name}}.",
     "removed": "{{name}} removed.",
@@ -681,7 +681,7 @@
     "signInAction": "Sign in",
     "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
     "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added — opening your browser to sign in…",
+    "signingIn": "{{name}} added. Opening your browser to sign in…",
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
@@ -689,10 +689,10 @@
   },
   "creditsCard": {
     "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going — no card needed.",
+    "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer — free, with no limits.",
+    "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
@@ -739,7 +739,7 @@
     "keyHome": "Beranda",
     "keyRecents": "Terbaru",
     "maestroInstallFailed": "Instalasi Maestro gagal",
-    "maestroInstalled": "Maestro terinstal — kini Anda dapat berinteraksi dengan simulator iOS",
+    "maestroInstalled": "Maestro terinstal. Kini Anda dapat berinteraksi dengan simulator iOS",
     "modeLive": "Langsung",
     "modePoll": "Lambat (tangkapan layar)",
     "noDevices": "Tidak ada perangkat",
@@ -782,7 +782,7 @@
     "androidDesc": "Instal Android Studio, lalu buat perangkat virtual di Tools → Device Manager.",
     "androidTitle": "Android · Android Studio",
     "download": "Unduh",
-    "iosDesc": "Instal Xcode dari Mac App Store dan buka sekali untuk menyelesaikan penyiapan — simulator akan muncul di sini.",
+    "iosDesc": "Instal Xcode dari Mac App Store dan buka sekali untuk menyelesaikan penyiapan. Simulator akan muncul di sini.",
     "iosRuntimeDesc": "Xcode terinstal tetapi tidak ada simulator yang ditemukan. Buka Xcode → Settings → Components dan unduh runtime iOS.",
     "iosTitle": "iOS · Xcode",
     "recheck": "Periksa lagi"
@@ -830,7 +830,7 @@
     },
     "title": "Execution backend",
     "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
     "title": "We set up your first bot"
@@ -909,13 +909,13 @@
   },
   "jobs": {
     "delete": "Hapus",
-    "empty": "Belum ada jadwal. Minta agen lewat chat — \"setiap hari kerja jam 9, ringkas inbox saya\" — dan tugasnya muncul di sini.",
+    "empty": "Belum ada jadwal. Minta agen lewat chat, misalnya \"setiap hari kerja jam 9, ringkas inbox saya\", dan tugasnya muncul di sini.",
     "enabled": "Aktif",
     "lastRun": "terakhir {{time}}",
     "nextRun": "berikutnya {{time}}",
     "runNow": "Jalankan sekarang",
     "startFailed": "Tidak bisa memulai.",
-    "started": "Dimulai — berjalan di sesinya sendiri."
+    "started": "Dimulai. Berjalan di sesinya sendiri."
   },
   "persona": {
     "title": "We learnt this about you",
@@ -981,7 +981,7 @@
       "oauthSection": "OAuth (opsional)",
       "scopePlaceholder": "Scope (dipisahkan spasi, opsional)",
       "titleAdd": "Hubungkan ke MCP kustom",
-      "titleEdit": "Edit server MCP — {{name}}",
+      "titleEdit": "Edit server MCP: {{name}}",
       "transportHttp": "Streamable HTTP",
       "transportStdio": "STDIO",
       "url": "URL",
@@ -1033,7 +1033,7 @@
       "title_other": "{{count}} Abacus connectors, served through this server:",
       "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
       "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now — sign in to Abacus.AI, or try again."
+      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
     }
   },
   "memory": {
@@ -1041,7 +1041,7 @@
     "clearConfirm": "Forget everything here?",
     "clearNo": "Keep",
     "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions — a preference of yours, a fact about your setup.",
+    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
     "forget": "Forget this",
     "loading": "Reading memory…",
     "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
@@ -1052,7 +1052,7 @@
         "title": "The agent's own notes"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here — and in every prompt from the next message on.",
+        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
         "title": "Always remember"
       },
       "user": {
@@ -1062,10 +1062,10 @@
     },
     "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
     "title": "Memory",
-    "writeFailed": "Tidak ada yang dihapus — sebuah sesi sedang menulis ke memori pada saat yang sama. Coba lagi.",
+    "writeFailed": "Tidak ada yang dihapus. Sebuah sesi sedang menulis ke memori pada saat yang sama. Coba lagi.",
     "instructions": {
       "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with — tone, language, house style, things to never do.",
+      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
       "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
       "save": "Save",
       "saveFailed": "Could not save. Check that the settings folder is writable.",
@@ -1093,9 +1093,9 @@
       "telegram": "Mengobrol dengan agen dari Telegram Anda sendiri, dan biarkan ia mengirim pesan sebagai Anda. Terhubung dengan memindai QR dari ponsel.",
       "whatsapp": "Jalankan agen dari obrolan WhatsApp."
     },
-    "discordConnected": "Terhubung — agen mengirim pesan sebagai akun Discord Anda.",
+    "discordConnected": "Terhubung. Agen mengirim pesan sebagai akun Discord Anda.",
     "discordOpenLogin": "Buka login Discord",
-    "discordScan": "Jendela login Discord terbuka — pindai QR-nya dengan aplikasi Discord, atau masuk dengan email dan kata sandi.",
+    "discordScan": "Jendela login Discord terbuka. Pindai QR-nya dengan aplikasi Discord, atau masuk dengan email dan kata sandi.",
     "doneConnect": "Continue",
     "enablePlatform": "Aktifkan platform",
     "fields": {
@@ -1127,20 +1127,20 @@
       "gatewayEnabled": "Perpesanan aktif",
       "gatewayEnabledHelp": "Matikan semua konektor sekaligus tanpa kehilangan penyiapan Anda.",
       "respondToInbound": "Balas pesan masuk",
-      "respondToInboundHelp": "Mati: chat masuk hanya dicatat agar agen bisa membacanya saat Anda minta — tidak ada yang berjalan atau membalas. Nyala: pengirim yang disetujui bisa menjalankan agen dari jauh.",
+      "respondToInboundHelp": "Mati: chat masuk hanya dicatat agar agen bisa membacanya saat Anda minta; tidak ada yang berjalan atau membalas. Nyala: pengirim yang disetujui bisa menjalankan agen dari jauh.",
       "workspace": "Ruang kerja",
       "workspaceActive": "Ikuti ruang kerja aktif",
       "workspaceHelp": "Proyek tempat pesan masuk dijalankan.",
       "deliverToBot": "Deliver messages to a bot",
       "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot — one session per sender"
+      "deliverToBotNone": "No bot (one session per sender)"
     },
     "setup": {
-      "discord": "Klik Hubungkan dan jendela login Discord terbuka. Pindai QR dengan aplikasi Discord, atau masuk dengan email dan kata sandi. AbacusAI Bot lalu mengirim pesan sebagai akun Discord Anda — tanpa bot, tanpa token.",
-      "telegram": "Klik Hubungkan dan jendela login Telegram terbuka. Masuk di sana seperti biasa — pindai QR dengan ponsel (Setelan, Perangkat, Tautkan Perangkat), atau gunakan nomor telepon atau passkey. AbacusAI Bot lalu mengirim pesan sebagai akun Telegram Anda sendiri. Tanpa kunci API, tanpa bot.",
+      "discord": "Klik Hubungkan dan jendela login Discord terbuka. Pindai QR dengan aplikasi Discord, atau masuk dengan email dan kata sandi. AbacusAI Bot lalu mengirim pesan sebagai akun Discord Anda (tanpa bot, tanpa token).",
+      "telegram": "Klik Hubungkan dan jendela login Telegram terbuka. Masuk di sana seperti biasa: pindai QR dengan ponsel (Setelan, Perangkat, Tautkan Perangkat), atau gunakan nomor telepon atau passkey. AbacusAI Bot lalu mengirim pesan sebagai akun Telegram Anda sendiri. Tanpa kunci API, tanpa bot.",
       "whatsapp": "Aktifkan ini, lalu pindai kode QR di bawah dari WhatsApp di ponsel Anda (Pengaturan, Perangkat tertaut, Tautkan perangkat). Ini menautkan AbacusAI Bot sebagai perangkat pada akun tersebut, jadi gunakan nomor khusus, bukan nomor pribadi Anda."
     },
-    "stepSignIn": "First — sign in to {{app}}",
+    "stepSignIn": "First, sign in to {{app}}",
     "states": {
       "connected": "Terhubung",
       "connecting": "Menghubungkan",
@@ -1153,18 +1153,18 @@
       "rate_limited": "Rate limited",
       "syncing": "Menyinkronkan"
     },
-    "telegramConnected": "Terhubung — agen mengirim pesan sebagai akun Telegram Anda.",
+    "telegramConnected": "Terhubung. Agen mengirim pesan sebagai akun Telegram Anda.",
     "telegramOpenLogin": "Buka login Telegram",
-    "telegramScan": "Jendela login Telegram terbuka — pindai QR-nya dengan ponsel Anda (Setelan, Perangkat, Tautkan Perangkat), atau masuk di sana lewat nomor telepon.",
+    "telegramScan": "Jendela login Telegram terbuka. Pindai QR-nya dengan ponsel Anda (Setelan, Perangkat, Tautkan Perangkat), atau masuk di sana lewat nomor telepon.",
     "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
     "unsavedChanges": "Perubahan belum disimpan",
-    "whatsappConnected": "Terhubung — agen mengirim pesan sebagai akun WhatsApp Anda.",
+    "whatsappConnected": "Terhubung. Agen mengirim pesan sebagai akun WhatsApp Anda.",
     "whatsappOpenLogin": "Buka login WhatsApp",
-    "whatsappScan": "Jendela login WhatsApp terbuka — pindai kode QR-nya dari WhatsApp di ponsel Anda: Pengaturan, Perangkat tertaut, Tautkan perangkat.",
-    "whatsappSyncing": "Tertaut — WhatsApp sedang menyinkronkan chat Anda ke perangkat ini. Pertama kali butuh beberapa menit. Biarkan WhatsApp di ponsel dan aplikasi ini tetap terbuka sampai selesai.",
+    "whatsappScan": "Jendela login WhatsApp terbuka. Pindai kode QR-nya dari WhatsApp di ponsel Anda: Pengaturan, Perangkat tertaut, Tautkan perangkat.",
+    "whatsappSyncing": "Tertaut. WhatsApp sedang menyinkronkan chat Anda ke perangkat ini. Pertama kali butuh beberapa menit. Biarkan WhatsApp di ponsel dan aplikasi ini tetap terbuka sampai selesai.",
     "sharedLink": {
       "title": "Abacus AI bot",
-      "stepLink": "Then — link the Abacus AI bot",
+      "stepLink": "Then, link the Abacus AI bot",
       "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
       "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
       "link": "Link Abacus AI bot",
@@ -1202,7 +1202,7 @@
   },
   "onboarding": {
     "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "Browser Anda terbuka untuk masuk — atau membuat akun. Aplikasi mendapat kunci API-nya sendiri; kata sandi Anda tidak pernah menyentuhnya.",
+    "connectBody": "Browser Anda terbuka untuk masuk atau membuat akun. Aplikasi mendapat kunci API-nya sendiri; kata sandi Anda tidak pernah menyentuhnya.",
     "connectCta": "Daftar / Masuk",
     "connectTitle": "Hubungkan Abacus.AI",
     "connectorsContinueCta": "Continue",
@@ -1213,7 +1213,7 @@
     "setupConnectorsTitle": "Connectors",
     "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
+    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
     "setupSaveCta": "Save",
     "setupSignInCta": "Sign in / Create Free Account",
@@ -1232,7 +1232,7 @@
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
+    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
     "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
@@ -1246,7 +1246,7 @@
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
     "connectorsMore": "{{count}}+ more in Settings",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved — please try signing in again.",
+    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1410,7 +1410,7 @@
       "failed": "Failed",
       "running": "Running"
     },
-    "runReadOnly": "Eksekusi rutinitas — sesi ini adalah laporan rutinitas. Anda bisa membacanya tapi tidak membalas; eksekusi berikutnya mulai dari awal. Untuk mengubah perilakunya, edit rutinitasnya.",
+    "runReadOnly": "Eksekusi rutinitas: sesi ini adalah laporan rutinitas. Anda bisa membacanya tapi tidak membalas; eksekusi berikutnya mulai dari awal. Untuk mengubah perilakunya, edit rutinitasnya.",
     "runsEmpty": "No runs yet.",
     "runsIn": "runs in {{folder}}",
     "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
@@ -1466,7 +1466,7 @@
     "webhookCopied": "URL webhook disalin.",
     "webhookHint": "Picu rutinitas ini dengan HTTP POST.",
     "webhookLabel": "Webhook",
-    "webhookPublicPending": "Setting up the public link — this local one works meanwhile…",
+    "webhookPublicPending": "Setting up the public link. This local one works meanwhile…",
     "workspaceAddError": "That folder could not be added.",
     "workspaceChoose": "Choose a folder…",
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
@@ -1540,7 +1540,7 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash) — the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
       "label": "BusyBox sh"
     },
     "cmd": {
@@ -1579,7 +1579,7 @@
     "steps": {
       "artifacts": {
         "title": "Artefak",
-        "body": "Berkas yang dihasilkan sebuah sesi — dokumen, gambar, laporan — terkumpul di satu tempat, bukan berserak di transkrip."
+        "body": "Berkas yang dihasilkan sebuah sesi (dokumen, gambar, laporan) terkumpul di satu tempat, bukan berserak di transkrip."
       },
       "bots": {
         "body": "Agen tetap dengan instruksi, jadwal, dan chat sendiri. Buat satu untuk pekerjaan yang sering Anda delegasikan.",
@@ -1589,7 +1589,7 @@
       },
       "capabilities": {
         "title": "Kapabilitas",
-        "body": "Semua yang bisa dijangkau agen — konektor, skill, tool, dan server MCP. Yang Anda nyalakan di sini akan dipakai sesi berikutnya."
+        "body": "Semua yang bisa dijangkau agen: konektor, skill, tool, dan server MCP. Yang Anda nyalakan di sini akan dipakai sesi berikutnya."
       },
       "changes": {
         "title": "Perubahan",
@@ -1601,7 +1601,7 @@
       },
       "makeBot": {
         "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect — with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
       },
       "memory": {
         "title": "Memori",
@@ -1640,7 +1640,7 @@
   },
   "updateBanner": {
     "dismiss": "Dismiss",
-    "stalled": "Tidak dapat memulai ulang secara otomatis — tutup aplikasi lalu buka kembali untuk menyelesaikan pembaruan.",
+    "stalled": "Tidak dapat memulai ulang secara otomatis. Tutup aplikasi lalu buka kembali untuk menyelesaikan pembaruan.",
     "subtitle": "Relaunch to get the latest improvements and fixes.",
     "title": "A new version is ready",
     "whatsChanged": "See what changed"
@@ -1655,7 +1655,7 @@
   },
   "updatePill": {
     "downloading": "Mengunduh pembaruan… {{percent}}%",
-    "failed": "Update download failed — retry",
+    "failed": "Update download failed. Retry",
     "installing": "Restarting…",
     "relaunch": "Relaunch to update",
     "retrying": "Retrying…",
@@ -1666,7 +1666,7 @@
     "dailyTitle": "Aktivitas harian",
     "empty": "Belum ada penggunaan tercatat. Jalankan percakapan lalu kembali.",
     "errorCount": "{{count}} galat",
-    "errorsHint": "Galat penyedia — biasanya batas laju tingkat gratis yang dilewati RouteLLM - Open.",
+    "errorsHint": "Galat penyedia: biasanya batas laju tingkat gratis yang dilewati RouteLLM - Open.",
     "loading": "Membaca log sesi…",
     "notBilled": "Tidak ditagih",
     "openrouterCard": "Kredit OpenRouter",
@@ -1679,7 +1679,7 @@
     "readFailed": "Tidak dapat membaca log sesi.",
     "refresh": "Segarkan",
     "requestCount": "{{count}} perm.",
-    "subtitle": "Apa yang dihabiskan mesin ini, per model — dibaca dari log sesi lokal Anda. Tidak ada yang keluar dari komputer Anda.",
+    "subtitle": "Apa yang dihabiskan mesin ini per model, dibaca dari log sesi lokal Anda. Tidak ada yang keluar dari komputer Anda.",
     "title": "Penggunaan",
     "today": "Hari ini",
     "unpricedHint": "Beberapa model tidak memiliki harga yang dipublikasikan; token dihitung, tetapi biayanya tidak.",
@@ -1765,7 +1765,7 @@
     "composerNeedsModel": "Hubungkan model untuk memulai",
     "composerNeedsWorkspace": "Pilih folder ruang kerja untuk memulai",
     "composerPlaceholder": "Tanyakan apa saja tentang basis kode Anda…",
-    "composerPlaceholderBusy": "Send now to steer the agent — it lands at its next step",
+    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
     "composerTasks": {
       "dismiss": "Dismiss tasks for this turn",
       "now": "now",
@@ -1837,10 +1837,10 @@
       "configureBeforeSending": "Connect a model before sending a message.",
       "configureProviders": "Configure model providers",
       "connectGoogleAi": "Hubungkan Google AI Studio",
-      "connectGoogleAiNote": "Kuota Gemini gratis — ambil kunci API lalu tempel di sini",
+      "connectGoogleAiNote": "Kuota Gemini gratis: ambil kunci API lalu tempel di sini",
       "connectModels": "Connect models",
       "connectOpenRouter": "Hubungkan OpenRouter",
-      "connectOpenRouterNote": "Model gratis dengan sekali masuk lewat browser — bergabung ke RouteLLM - Open dan daftar ini",
+      "connectOpenRouterNote": "Model gratis dengan sekali masuk lewat browser: bergabung ke RouteLLM - Open dan daftar ini",
       "favorites": "Favorites",
       "noFavorites": "Favorite models appear here.",
       "noResults": "No models found.",
@@ -1904,10 +1904,10 @@
       "reviews": "{{approved}} disetujui · {{changes}} perubahan diminta · {{requested}} tertunda"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going — no card needed",
+      "connectNote": "Connect a free source to keep going. No card needed",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Or run a model on this computer — free, no limits",
+      "localNote": "Or run a model on this computer for free, with no limits",
       "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
     },
@@ -1957,7 +1957,7 @@
       "split": "Terpisah",
       "stop": "Hentikan pemuatan",
       "toggleTooltip": "Alihkan pratinjau",
-      "truncatedFile": "This file is too large to open in full — only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
       "tryAgain": "Try again",
       "unified": "Terpadu",
       "zoom": "Zoom",
@@ -2025,7 +2025,7 @@
       "modelCta": "Pilih model"
     },
     "sendMessage": "Kirim (Enter)",
-    "sendUndeliverable": "Couldn't reach the agent for this chat — your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
     "sessionOptions": "Opsi sesi",
     "sessions": "Sesi",
     "showRightPanel": "Tampilkan panel",
@@ -2121,7 +2121,7 @@
       "description": "{{path}} sudah tidak ada. Pilih folder lain untuk workspace ini, atau hapus workspace-nya.",
       "relocate": "Pilih folder",
       "relocated": "Folder workspace diperbarui",
-      "sendBlocked": "Tidak dapat mengirim — {{path}} sudah tidak ada.",
+      "sendBlocked": "Tidak dapat mengirim: {{path}} sudah tidak ada.",
       "title": "Folder tidak ditemukan"
     },
     "workspaceOptions": "Opsi ruang kerja",

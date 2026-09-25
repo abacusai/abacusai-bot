@@ -7,8 +7,8 @@ import { settingsQueryKeys } from "../lib/settings-query-keys";
 
 /**
  * Every registry connector's status, from main's one table, re-read once
- * whenever main says something moved (`connector-status-changed`) — a key
- * stored, a platform attached, a chat app paired — and after a messaging or
+ * whenever main says something moved (`connector-status-changed`: a key
+ * stored, a platform attached, a chat app paired), and after a messaging or
  * credential change, which move statuses too. No surface computes
  * "installed" for itself any more.
  */

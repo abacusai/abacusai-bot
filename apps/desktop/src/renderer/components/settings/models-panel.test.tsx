@@ -252,7 +252,7 @@ describe("a key that is already stored", () => {
 
 describe("what crosses into the renderer", () => {
   it("resolves which providers are configured without reading any key", async () => {
-    // The panel used to fetch the whole settings file — every stored secret —
+    // The panel used to fetch the whole settings file (every stored secret)
     // to render a checkmark.
     await openPage();
 
@@ -304,7 +304,7 @@ describe("a paste that could not be a key", () => {
 describe("an OpenRouter hop the user walks away from", () => {
   // The hop ends in a browser we do not control and the listener waits twenty
   // minutes. This page used to disable the button for all of it, with no
-  // cancel — so someone whose signup never reached OpenRouter's authorize page
+  // cancel, so someone whose signup never reached OpenRouter's authorize page
   // had nothing to press at the one moment they needed it.
   const hangingHop = (): void => {
     startOpenRouterAuth.mockReturnValue(new Promise(() => undefined) as never);
@@ -317,7 +317,7 @@ describe("an OpenRouter hop the user walks away from", () => {
     fireEvent.click(byId("api-key-connect-openrouter"));
     await waitFor(() => expect(startOpenRouterAuth).toHaveBeenCalledTimes(1));
 
-    // The label does not change — it still says Connect, and it is still
+    // The label does not change: it still says Connect, and it is still
     // clickable. The spinner and the cancel carry the in-flight state.
     const button = byId("api-key-connect-openrouter");
     expect(button.hasAttribute("disabled")).toBe(false);

@@ -3,8 +3,8 @@
  * connecting through the one flow, and the browser hop that flow runs for a
  * platform connector.
  *
- * That hop is single-flight in the main process — starting one connect
- * cancels any other — and the panel has to show that truth rather than a card
+ * That hop is single-flight in the main process (starting one connect
+ * cancels any other), and the panel has to show that truth rather than a card
  * per click. It also has to let go of a connect the user walked away from,
  * because the listener waiting for it holds a loopback port for five minutes.
  * And a token card connects from the same page through the same dialog the
@@ -128,7 +128,7 @@ beforeEach(() => {
   connectConnector = vi.fn(
     (id: string) =>
       new Promise((resolve) => {
-        // Starting a connect cancels whatever was already running — the main
+        // Starting a connect cancels whatever was already running. The main
         // process does exactly this, and it is what makes the state tricky.
         for (const [other, resolveOther] of pending) {
           if (other === id) continue;
@@ -180,7 +180,7 @@ describe("two connectors, one browser hop", () => {
       expect(connectConnector).toHaveBeenCalledWith(first.id)
     );
 
-    // Still an Add button — nothing has connected — reading "Adding…", and
+    // Still an Add button (nothing has connected), reading "Adding…", and
     // not disabled: a hop that goes nowhere is one click from a fresh one.
     const button = byId(`connector-add-${first.id}`);
     expect(button.textContent).toContain("connectors.adding");
@@ -279,7 +279,7 @@ describe("what main says is connected", () => {
 });
 
 describe("a token card", () => {
-  it("opens the fields dialog and connects through it — no browser hop", async () => {
+  it("opens the fields dialog and connects through it without a browser hop", async () => {
     await mount();
 
     fireEvent.click(byId("connector-add-github"));
@@ -333,7 +333,7 @@ describe("the messaging section", () => {
     await waitFor(() => byId("messaging-detail-whatsapp"));
   });
 
-  it("connects Telegram in one click, like WhatsApp — QR, not a token", async () => {
+  it("connects Telegram in one click, like WhatsApp: QR, not a token", async () => {
     await mount();
     await waitFor(() => byId("connector-add-messaging-telegram"));
 

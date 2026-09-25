@@ -93,7 +93,7 @@
       "templatesDivider": "Or start with a template"
     },
     "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models — the bot loop is built for them.",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
     "modelLabel": "Model",
     "nameLabel": "名前",
     "namePlaceholder": "例: Scout",
@@ -129,7 +129,7 @@
     "save": "保存",
     "saveError": "ボットを保存できませんでした。",
     "senderChat": "{{platform}} での {{sender}} との自動返信チャット",
-    "senderChatReadOnly": "自動返信の会話 — {{bot}} がここであなたに代わって {{sender}} に返信します。閲覧はできますが入力はできません。返信の仕方を変えるには、{{bot}} 自身のチャットで伝えてください。",
+    "senderChatReadOnly": "自動返信の会話です。{{bot}} がここであなたに代わって {{sender}} に返信します。閲覧はできますが入力はできません。返信の仕方を変えるには、{{bot}} 自身のチャットで伝えてください。",
     "templates": {
       "appointment-assistant": {
         "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
@@ -256,7 +256,7 @@
         "name": "News Radar"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox—forms, renewals, appointments, and follow-ups.",
+        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
         "name": "Personal Admin"
       },
       "portfolio-pulse": {
@@ -314,8 +314,8 @@
     "unpin": "Unpin",
     "viewBots": "ボット",
     "viewSessions": "セッション",
-    "channelChatReadOnly": "This conversation lives in {{app}} — message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp — message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
   },
   "browserPermission": {
     "allow": "許可",
@@ -336,7 +336,7 @@
       "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
       "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
       "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
       "install": "Install the extension",
       "connect": "Connect",
       "disconnect": "Disconnect",
@@ -478,8 +478,8 @@
       "noMatches": "No toolset matches that.",
       "noModelTools": "This capability doesn't add any tools the model calls directly.",
       "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned — this isn't a missing API key.",
-      "restartNote": "Changes apply to the next session — the agent is handed its tool list when a session starts.",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
+      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
       "resizePanels": "Resize toolsets and details",
       "searchPlaceholder": "Search toolsets and tools…",
       "toolCount_one": "{{count}} tool",
@@ -629,7 +629,7 @@
   },
   "connectors": {
     "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}} — try again.",
+    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
     "abacusConnecting": "Finish connecting {{name}} in your browser…",
     "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
@@ -673,7 +673,7 @@
     "noneInstalled": "No コネクタ added yet.",
     "notInstalled": "未インストール",
     "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL — add this to your app",
+    "redirectUrlLabel": "Redirect URL: add this to your app",
     "remove": "Remove",
     "removeFailed": "Could not remove {{name}}.",
     "removed": "{{name}} removed.",
@@ -681,7 +681,7 @@
     "signInAction": "Sign in",
     "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
     "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added — opening your browser to sign in…",
+    "signingIn": "{{name}} added. Opening your browser to sign in…",
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
@@ -689,10 +689,10 @@
   },
   "creditsCard": {
     "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going — no card needed.",
+    "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer — free, with no limits.",
+    "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
@@ -739,7 +739,7 @@
     "keyHome": "ホーム",
     "keyRecents": "最近のアプリ",
     "maestroInstallFailed": "Maestro のインストールに失敗しました",
-    "maestroInstalled": "Maestro がインストールされました — iOS シミュレーターを操作できます",
+    "maestroInstalled": "Maestro がインストールされました。iOS シミュレーターを操作できます",
     "modeLive": "ライブ",
     "modePoll": "低速（スクリーンショット）",
     "noDevices": "デバイスがありません",
@@ -830,7 +830,7 @@
     },
     "title": "Execution backend",
     "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
     "title": "We set up your first bot"
@@ -915,7 +915,7 @@
     "nextRun": "次回 {{time}}",
     "runNow": "今すぐ実行",
     "startFailed": "実行を開始できませんでした。",
-    "started": "開始しました — 専用セッションで実行されます。"
+    "started": "開始しました。専用セッションで実行されます。"
   },
   "persona": {
     "title": "We learnt this about you",
@@ -981,7 +981,7 @@
       "oauthSection": "OAuth（任意）",
       "scopePlaceholder": "スコープ（スペース区切り、任意）",
       "titleAdd": "カスタム MCP に接続",
-      "titleEdit": "MCP サーバーを編集 — {{name}}",
+      "titleEdit": "MCP サーバーを編集: {{name}}",
       "transportHttp": "Streamable HTTP",
       "transportStdio": "STDIO",
       "url": "URL",
@@ -1033,7 +1033,7 @@
       "title_other": "{{count}} Abacus connectors, served through this server:",
       "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
       "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now — sign in to Abacus.AI, or try again."
+      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
     }
   },
   "memory": {
@@ -1041,7 +1041,7 @@
     "clearConfirm": "Forget everything here?",
     "clearNo": "Keep",
     "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions — a preference of yours, a fact about your setup.",
+    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
     "forget": "Forget this",
     "loading": "Reading memory…",
     "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
@@ -1052,7 +1052,7 @@
         "title": "The agent's own notes"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here — and in every prompt from the next message on.",
+        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
         "title": "Always remember"
       },
       "user": {
@@ -1065,7 +1065,7 @@
     "writeFailed": "削除されていません。同じタイミングで別のセッションがメモリに書き込んでいました。もう一度お試しください。",
     "instructions": {
       "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with — tone, language, house style, things to never do.",
+      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
       "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
       "save": "Save",
       "saveFailed": "Could not save. Check that the settings folder is writable.",
@@ -1093,9 +1093,9 @@
       "telegram": "自分のTelegramからエージェントとやり取りし、あなたとして相手にメッセージを送らせます。スマホでQRをスキャンして接続します。",
       "whatsapp": "WhatsApp のチャットからエージェントを実行します。"
     },
-    "discordConnected": "接続済み — エージェントはあなたのDiscordアカウントとして送信します。",
+    "discordConnected": "接続済みです。エージェントはあなたのDiscordアカウントとして送信します。",
     "discordOpenLogin": "Discordログインを開く",
-    "discordScan": "Discordのログインウィンドウが開きました — DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。",
+    "discordScan": "Discordのログインウィンドウが開きました。DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。",
     "doneConnect": "Continue",
     "enablePlatform": "プラットフォームを有効にする",
     "fields": {
@@ -1127,20 +1127,20 @@
       "gatewayEnabled": "メッセージングを有効にする",
       "gatewayEnabledHelp": "設定を失わずに、すべてのコネクタをまとめてオフにできます。",
       "respondToInbound": "受信メッセージに応答する",
-      "respondToInboundHelp": "オフ: 受信チャットは記録のみ行われ、依頼したときにエージェントが読めます — 何も実行されず、返信もしません。オン: 承認済みの送信者がリモートでエージェントを操作できます。",
+      "respondToInboundHelp": "オフ: 受信チャットは記録のみ行われ、依頼したときにエージェントが読めます。何も実行されず、返信もしません。オン: 承認済みの送信者がリモートでエージェントを操作できます。",
       "workspace": "ワークスペース",
       "workspaceActive": "アクティブなワークスペースに従う",
       "workspaceHelp": "受信したメッセージをどのプロジェクトで実行するかを指定します。",
       "deliverToBot": "Deliver messages to a bot",
       "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot — one session per sender"
+      "deliverToBotNone": "No bot (one session per sender)"
     },
     "setup": {
-      "discord": "「接続」をクリックするとDiscordのログインウィンドウが開きます。DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。するとAbacusAI Botはあなた自身のDiscordアカウントとして送信します — ボットもトークンも不要です。",
-      "telegram": "「接続」をクリックするとTelegramのログインウィンドウが開きます。いつも通りログインしてください — スマホでQRをスキャン（設定、デバイス、デバイスを追加）するか、電話番号かパスキーを使います。するとAbacusAI Botはあなた自身のTelegramアカウントとして送信します。APIキーもボットも不要です。",
+      "discord": "「接続」をクリックするとDiscordのログインウィンドウが開きます。DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。するとAbacusAI Botはあなた自身のDiscordアカウントとして送信します（ボットもトークンも不要です）。",
+      "telegram": "「接続」をクリックするとTelegramのログインウィンドウが開きます。いつも通りログインしてください。スマホでQRをスキャン（設定、デバイス、デバイスを追加）するか、電話番号かパスキーを使います。するとAbacusAI Botはあなた自身のTelegramアカウントとして送信します。APIキーもボットも不要です。",
       "whatsapp": "これを有効にしたうえで、スマートフォンの WhatsApp から下の QR コードをスキャンしてください（設定、リンク済みデバイス、デバイスをリンク）。AbacusAI Bot がそのアカウントのデバイスとしてリンクされるため、個人の番号ではなく専用の番号を使うことをおすすめします。"
     },
-    "stepSignIn": "First — sign in to {{app}}",
+    "stepSignIn": "First, sign in to {{app}}",
     "states": {
       "connected": "接続済み",
       "connecting": "接続中",
@@ -1153,18 +1153,18 @@
       "rate_limited": "Rate limited",
       "syncing": "同期中"
     },
-    "telegramConnected": "接続済み — エージェントはあなたのTelegramアカウントとして送信します。",
+    "telegramConnected": "接続済みです。エージェントはあなたのTelegramアカウントとして送信します。",
     "telegramOpenLogin": "Telegramログインを開く",
     "telegramScan": "Telegramのログインウィンドウが開きました。スマホでQRをスキャンするか（設定、デバイス、デバイスを追加）、電話番号でログインしてください。",
     "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
     "unsavedChanges": "未保存の変更",
-    "whatsappConnected": "接続済み — エージェントはあなたのWhatsAppアカウントとして送信します。",
+    "whatsappConnected": "接続済みです。エージェントはあなたのWhatsAppアカウントとして送信します。",
     "whatsappOpenLogin": "WhatsAppログインを開く",
-    "whatsappScan": "WhatsAppのログインウィンドウが開きました — スマートフォンの WhatsApp からその QR をスキャンしてください: 設定、リンク済みデバイス、デバイスをリンク。",
-    "whatsappSyncing": "リンク済み — WhatsApp がチャットをこのデバイスに同期しています。初回は数分かかります。完了するまで、スマートフォンの WhatsApp とこのアプリを開いたままにしてください。",
+    "whatsappScan": "WhatsAppのログインウィンドウが開きました。スマートフォンの WhatsApp からその QR をスキャンしてください: 設定、リンク済みデバイス、デバイスをリンク。",
+    "whatsappSyncing": "リンク済みです。WhatsApp がチャットをこのデバイスに同期しています。初回は数分かかります。完了するまで、スマートフォンの WhatsApp とこのアプリを開いたままにしてください。",
     "sharedLink": {
       "title": "Abacus AI bot",
-      "stepLink": "Then — link the Abacus AI bot",
+      "stepLink": "Then, link the Abacus AI bot",
       "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
       "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
       "link": "Link Abacus AI bot",
@@ -1213,7 +1213,7 @@
     "setupConnectorsTitle": "Connectors",
     "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
+    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
     "setupSaveCta": "Save",
     "setupSignInCta": "Sign in / Create Free Account",
@@ -1232,7 +1232,7 @@
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
+    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
     "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
@@ -1246,7 +1246,7 @@
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
     "connectorsMore": "{{count}}+ more in Settings",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved — please try signing in again.",
+    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1410,7 +1410,7 @@
       "failed": "Failed",
       "running": "Running"
     },
-    "runReadOnly": "ルーティン実行 — このセッションはルーティンのレポートです。閲覧はできますが返信はできません。次の実行は新しく始まります。動作を変えるにはルーティンを編集してください。",
+    "runReadOnly": "ルーティン実行です。このセッションはルーティンのレポートです。閲覧はできますが返信はできません。次の実行は新しく始まります。動作を変えるにはルーティンを編集してください。",
     "runsEmpty": "No runs yet.",
     "runsIn": "runs in {{folder}}",
     "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
@@ -1466,7 +1466,7 @@
     "webhookCopied": "Webhook URL をコピーしました。",
     "webhookHint": "HTTP POST でこのルーティンを起動します。",
     "webhookLabel": "Webhook",
-    "webhookPublicPending": "Setting up the public link — this local one works meanwhile…",
+    "webhookPublicPending": "Setting up the public link. This local one works meanwhile…",
     "workspaceAddError": "That folder could not be added.",
     "workspaceChoose": "Choose a folder…",
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
@@ -1540,7 +1540,7 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash) — the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
       "label": "BusyBox sh"
     },
     "cmd": {
@@ -1579,7 +1579,7 @@
     "steps": {
       "artifacts": {
         "title": "成果物",
-        "body": "セッションが作ったファイル — 文書、画像、レポート — が、履歴に散らばらず一か所にまとまります。"
+        "body": "セッションが作ったファイル（文書、画像、レポート）が、履歴に散らばらず一か所にまとまります。"
       },
       "bots": {
         "body": "独自の指示・スケジュール・チャットを持つ常駐エージェントです。繰り返し任せる仕事にはボットを作りましょう。",
@@ -1589,7 +1589,7 @@
       },
       "capabilities": {
         "title": "機能",
-        "body": "エージェントが使えるもの一式 — コネクタ、スキル、ツール、MCP サーバー。ここで有効にしたものは次のセッションから使えます。"
+        "body": "エージェントが使えるもの一式です。コネクタ、スキル、ツール、MCP サーバー。ここで有効にしたものは次のセッションから使えます。"
       },
       "changes": {
         "title": "変更",
@@ -1601,7 +1601,7 @@
       },
       "makeBot": {
         "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect — with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
       },
       "memory": {
         "title": "メモリ",
@@ -1655,7 +1655,7 @@
   },
   "updatePill": {
     "downloading": "アップデートをダウンロード中… {{percent}}%",
-    "failed": "Update download failed — retry",
+    "failed": "Update download failed. Retry",
     "installing": "Restarting…",
     "relaunch": "Relaunch to update",
     "retrying": "Retrying…",
@@ -1666,7 +1666,7 @@
     "dailyTitle": "日別アクティビティ",
     "empty": "まだ使用記録がありません。会話を実行してから戻ってください。",
     "errorCount": "{{count}} エラー",
-    "errorsHint": "プロバイダーエラー — 多くは RouteLLM - Open が回避した無料枠のレート制限です。",
+    "errorsHint": "プロバイダーエラーです。多くは RouteLLM - Open が回避した無料枠のレート制限です。",
     "loading": "セッションログを読み込み中…",
     "notBilled": "課金なし",
     "openrouterCard": "OpenRouter クレジット",
@@ -1679,7 +1679,7 @@
     "readFailed": "セッションログを読み取れませんでした。",
     "refresh": "更新",
     "requestCount": "{{count}} 件",
-    "subtitle": "このマシンがモデルごとに消費した量 — ローカルのセッションログから読み取ります。データは外部に送信されません。",
+    "subtitle": "このマシンがモデルごとに消費した量です。ローカルのセッションログから読み取ります。データは外部に送信されません。",
     "title": "使用状況",
     "today": "今日",
     "unpricedHint": "一部のモデルは価格が公開されていません。トークンは集計されますが、コストは含まれません。",
@@ -1765,7 +1765,7 @@
     "composerNeedsModel": "開始するにはモデルを接続してください",
     "composerNeedsWorkspace": "開始するにはワークスペースフォルダーを選択してください",
     "composerPlaceholder": "コードベースについて何でも聞いてください…",
-    "composerPlaceholderBusy": "Send now to steer the agent — it lands at its next step",
+    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
     "composerTasks": {
       "dismiss": "Dismiss tasks for this turn",
       "now": "now",
@@ -1837,7 +1837,7 @@
       "configureBeforeSending": "Connect a model before sending a message.",
       "configureProviders": "Configure model providers",
       "connectGoogleAi": "Google AI Studioを接続",
-      "connectGoogleAiNote": "無料のGemini枠 — APIキーを取得してここに貼り付け",
+      "connectGoogleAiNote": "無料のGemini枠。APIキーを取得してここに貼り付け",
       "connectModels": "Connect models",
       "connectOpenRouter": "OpenRouterを接続",
       "connectOpenRouterNote": "ブラウザで1回サインインするだけで無料モデルがRouteLLM - Openとこのリストに加わります",
@@ -1904,10 +1904,10 @@
       "reviews": "承認 {{approved}} 件 · 変更リクエスト {{changes}} 件 · 保留中 {{requested}} 件"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going — no card needed",
+      "connectNote": "Connect a free source to keep going. No card needed",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Or run a model on this computer — free, no limits",
+      "localNote": "Or run a model on this computer for free, with no limits",
       "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
     },
@@ -1957,7 +1957,7 @@
       "split": "分割",
       "stop": "読み込みを停止",
       "toggleTooltip": "プレビューの切り替え",
-      "truncatedFile": "This file is too large to open in full — only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
       "tryAgain": "Try again",
       "unified": "統合",
       "zoom": "Zoom",
@@ -2025,7 +2025,7 @@
       "modelCta": "モデルを選択"
     },
     "sendMessage": "送信（Enter）",
-    "sendUndeliverable": "Couldn't reach the agent for this chat — your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
     "sessionOptions": "セッションオプション",
     "sessions": "セッション",
     "showRightPanel": "パネルを表示",

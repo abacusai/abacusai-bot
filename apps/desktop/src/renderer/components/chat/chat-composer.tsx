@@ -1617,7 +1617,7 @@ const HighlightOverlay = ({
   value: string;
   placeholder?: string;
   overlayInnerRef: RefObject<HTMLDivElement | null>;
-  /** Must track the textarea's own compact padding — see the note above. */
+  /** Must track the textarea's own compact padding (see the note above). */
   compact?: boolean;
 }): JSX.Element => {
   const tokens = tokenize(value);
@@ -2025,7 +2025,7 @@ export const ChatComposer = ({
       setSlashQuery(query);
       setSlashSelectedIndex(0);
       setSlashMenuOpen(filterSkills(skills, query).length > 0);
-      // Only one popup at a time — slash wins over mention.
+      // Only one popup at a time; slash wins over mention.
       closeMentionPicker();
     } else {
       setSlashMenuOpen(false);
@@ -2305,7 +2305,7 @@ export const ChatComposer = ({
     setSendGate(null);
   }, [navigate]);
 
-  // branches rendered as-is from IPC — no client-side sort
+  // branches rendered as-is from IPC, no client-side sort
   const branchNames = branchQuery.data?.branches?.map((b) => b.name) ?? [];
   const currentBranch =
     currentBranchQuery.data?.currentBranch ??
@@ -2402,7 +2402,7 @@ export const ChatComposer = ({
                 onToggle={toggleTasks}
               />
             )}
-            {/* Slash-command (skill) picker — positioned above the composer box */}
+            {/* Slash-command (skill) picker, above the composer box */}
             <SlashCommandMenu
               skills={skills}
               query={slashQuery}
@@ -2411,7 +2411,7 @@ export const ChatComposer = ({
               visible={slashMenuOpen}
             />
 
-            {/* Drop overlay — shown while dragging, pointer-events-none so drop fires on parent */}
+            {/* Drop overlay while dragging; pointer-events-none so drop fires on parent */}
             {isDragOver && (
               <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl">
                 <Upload className="text-primary size-5" />
@@ -2443,7 +2443,7 @@ export const ChatComposer = ({
                 attachments={attachments}
                 onRemove={removeAttachment}
               />
-              {/* @file-mention picker — positioned above the composer box */}
+              {/* @file-mention picker, above the composer box */}
               <FileMentionPicker
                 results={mentionResults}
                 selectedIndex={mentionSelectedIndex}

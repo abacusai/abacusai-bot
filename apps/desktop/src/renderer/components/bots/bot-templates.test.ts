@@ -4,7 +4,7 @@
  * The cards are the product team's sheet, one tab per category. Within a
  * tab, what the user has connected decides the order: someone who has just
  * linked WhatsApp is shown the WhatsApp bot first, not wherever the sheet
- * happened to put it — but only on a tab that has that bot at all.
+ * happened to put it. But only on a tab that has that bot at all.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";

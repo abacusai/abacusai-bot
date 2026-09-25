@@ -62,7 +62,7 @@ export const WorkspacePicker = ({
               variant === "workspace"
                 ? // Capped in `ch` rather than rem: the heading renders at 24px
                   // and 30px, so a fixed 16rem showed noticeably fewer
-                  // characters at the larger size — and how many characters of
+                  // characters at the larger size, and how many characters of
                   // their folder name a user sees is the whole point of the
                   // cap. 24ch is about eight more than the 16rem it replaces.
                   "bg-muted/50 hover:bg-muted h-auto max-w-[24ch] min-w-0 gap-1.5 rounded-lg border border-transparent px-2 py-1 text-2xl font-normal @2xl:text-3xl [&_svg]:size-[1em]"
@@ -75,8 +75,8 @@ export const WorkspacePicker = ({
       >
         <Folder />
         <span
-          // The name is capped, so the whole of it — and which folder it is,
-          // when two projects share a basename — lives in the tooltip.
+          // The name is capped, so the whole of it (and which folder it is,
+          // when two projects share a basename) lives in the tooltip.
           title={active?.path ?? name}
           className={`truncate ${variant === "workspace" ? "underline decoration-dotted underline-offset-4" : ""}`}
         >

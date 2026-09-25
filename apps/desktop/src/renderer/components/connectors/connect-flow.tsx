@@ -33,8 +33,8 @@ import {
  * says what each kind needs (`connectUi`); this runs it: a browser hop or a
  * plain install goes straight to main, a kind that takes fields opens the one
  * fields dialog, a chat app opens its pairing dialog. Every path resolves to
- * the same outcome, so a caller — the Connectors page, onboarding, the card
- * the agent raised in a chat — never branches on kind itself.
+ * the same outcome, so a caller (the Connectors page, onboarding, the card
+ * the agent raised in a chat) never branches on kind itself.
  */
 
 export type ConnectResult = ConnectorOutcome;

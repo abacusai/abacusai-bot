@@ -31,7 +31,7 @@ describe("composer drafts", () => {
  *
  * A new session pane starts with no workspace selected, so the box has no key
  * and nowhere to persist what is typed. Picking the folder gives it one, and
- * the text used to be dropped on the way — the prompt vanished exactly when
+ * the text used to be dropped on the way: the prompt vanished exactly when
  * the user was ready to send it.
  */
 describe("carrying a draft across a change of identity", () => {

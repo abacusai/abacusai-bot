@@ -592,7 +592,7 @@ const ToolChip = ({
   const canOpen = targetPath != null && targetPath.length > 0;
   const open = (): void => {
     if (!canOpen) return;
-    // Resolve first — a workspace-relative path would otherwise fail the file
+    // Resolve first: a workspace-relative path would otherwise fail the file
     // read inside the preview opener and fall through to the OS-level opener.
     const absolute = resolvePath(targetPath);
     if (isDirectory === true) {
@@ -1422,7 +1422,7 @@ const ToolRow = ({
 
   return (
     <div className="hover:bg-accent/20 rounded-md transition-colors">
-      {/* Row body. Rows sit inside the group card, which supplies the framing —
+      {/* Row body. Rows sit inside the group card, which supplies the framing,
           so the row itself is a plain icon + label line with no connector art. */}
       <div className="flex min-h-6 min-w-0 items-start gap-1.5 px-0.5 py-0.5 text-xs/relaxed">
         <span
@@ -1436,7 +1436,7 @@ const ToolRow = ({
               className={`text-muted-foreground flex min-w-0 flex-1 flex-wrap items-center gap-1 leading-5`}
             >
               {/* Action text shimmers while running. Chip + lineInfo sit OUTSIDE
-                the ShimmerText so their content stays visible — the shimmer
+                the ShimmerText so their content stays visible: the shimmer
                 effect uses background-clip:text + transparent fill, which would
                 otherwise blank out any nested <code>/ToolChip text. */}
               {isRunning ? (

@@ -11,7 +11,7 @@ interface LocalModelDialogState {
 /**
  * One dialog for the whole app, opened from wherever the way on is a local
  * model: the out-of-credits cards, the sidebar, the picker. The opener says
- * what happens once the model is ready — the chat that ran dry resumes on it;
+ * what happens once the model is ready: the chat that ran dry resumes on it;
  * the settings page only wants it installed.
  */
 export const useLocalModelDialogStore = create<LocalModelDialogState>()(

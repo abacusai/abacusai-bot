@@ -36,7 +36,7 @@ describe("keyed notifications", () => {
     state = notify(state, "Routing to a/one…", {
       notificationKey: "routing-1",
     });
-    state = notify(state, "a/one failed (429) — routing to a/two…", {
+    state = notify(state, "a/one failed (429), routing to a/two…", {
       notificationKey: "routing-1",
       severity: "warning",
     });
@@ -85,7 +85,7 @@ describe("keyed notifications", () => {
 
   /**
    * The bug: keys are counted per agent process, so reopening a session starts
-   * over at `openllm-routing-1` — the key an answer from days ago is already
+   * over at `openllm-routing-1`, the key an answer from days ago is already
    * saved under. Matching by key across the whole transcript found that old
    * line and rewrote it, so the routing notice for the turn the user had just
    * started appeared above an answer they had already read, and nowhere near
@@ -141,7 +141,7 @@ describe("keyed notifications", () => {
     ]);
   });
 
-  it("leaves unkeyed notices alone — they are still separate events", () => {
+  it("leaves unkeyed notices alone because they are still separate events", () => {
     let state = createInitialConversationState();
     state = notify(state, "first");
     state = notify(state, "second");
