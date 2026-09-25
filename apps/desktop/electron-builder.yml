@@ -116,8 +116,8 @@ win:
   icon: resources/icon.ico
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  shortcutName: AbacusAI Bot
+  uninstallDisplayName: AbacusAI Bot
   createDesktopShortcut: always
 
 mac:
@@ -130,6 +130,8 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
+    - CFBundleName: AbacusAI Bot
+    - CFBundleDisplayName: AbacusAI Bot
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
     - NSMicrophoneUsageDescription: The microphone is used to dictate messages; speech is transcribed on this computer.
@@ -146,7 +148,7 @@ linux:
   icon: build/icons
   desktop:
     entry: |
-      Name=AbacusAI-Bot
+      Name=AbacusAI Bot
       StartupWMClass=AbacusAI-Bot
 appImage:
   artifactName: ${productName}-${version}-${arch}.${ext}

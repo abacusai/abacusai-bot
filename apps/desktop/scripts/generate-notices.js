@@ -174,7 +174,7 @@ const output = path.join(desktop, "dist/THIRD-PARTY-NOTICES.txt");
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(
   output,
-  `Third-party software in AbacusAI-Bot\nGenerated from installed desktop dependencies and bundled agent source maps.\nDependencies may include code removed by tree shaking.\n\n${entries.join("\n\n" + "=".repeat(72) + "\n\n")}\n`
+  `Third-party software in AbacusAI Bot\nGenerated from installed desktop dependencies and bundled agent source maps.\nDependencies may include code removed by tree shaking.\n\n${entries.join("\n\n" + "=".repeat(72) + "\n\n")}\n`
 );
 console.log(
   `Generated desktop notices for ${entries.length} dependency and asset entries (${fallback.length} use declared SPDX terms).`
