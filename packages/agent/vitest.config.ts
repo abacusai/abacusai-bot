@@ -21,11 +21,10 @@ const SPAWNS_SOMETHING = [
   "src/bundled-tools.test.ts",
   "src/static-server.test.ts",
   "src/background-processes.test.ts",
-  // Spawns exactly what background-processes.test.ts does — the same
-  // createLocalBashOperations, the same real `echo` — but it was left in the
-  // `unit` project, where files run flat out against a 5s default. On a
-  // contended Windows runner the spawn alone outran that, and three of its
-  // tests timed out on nearly every run.
+  // Spawns what background-processes.test.ts does (the same
+  // createLocalBashOperations, the same real `echo`). Against the unit
+  // project's 5s default, the spawn alone times out on a contended Windows
+  // runner.
   "src/background-bash.test.ts",
 ];
 

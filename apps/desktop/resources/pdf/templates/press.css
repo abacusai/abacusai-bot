@@ -1,5 +1,5 @@
 /*
- * Press — long-form editorial.
+ * Press: long-form editorial.
  *
  * A narrow measure, a large standfirst, and a cover that behaves like a magazine
  * opener. For essays and argument: the reader is expected to start at the top and
@@ -21,7 +21,7 @@ body {
   line-height: 1.7;
 }
 
-/* Editorial lives or dies on measure — 32em is the readable column. */
+/* Editorial lives or dies on measure: 32em is the readable column. */
 p, ul, ol, blockquote { max-width: 32em; }
 
 .eyebrow {

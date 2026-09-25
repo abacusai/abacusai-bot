@@ -2,7 +2,7 @@
  * A reply in the wrong script is caught at the end of the turn.
  *
  * Reported as the Chief of Staff bot greeting in English and then, three
- * bubbles later, briefing in Chinese — the same model, drifting after a
+ * bubbles later, briefing in Chinese: the same model, drifting after a
  * run of tool results. The check is by script, on the last user message
  * against every assistant text after it.
  */
@@ -72,7 +72,7 @@ describe("replyLanguageMismatch", () => {
       replyLanguageMismatch([
         user("Introduce yourself once, then get started on your mission."),
         assistant(
-          "I'm Chief of Staff. Before I do anything else, let me set up my morning routine — a weekday morning briefing that reviews your calendar, Gmail, and Slack."
+          "I'm Chief of Staff. Before I do anything else, let me set up my morning routine: a weekday morning briefing that reviews your calendar, Gmail, and Slack."
         ),
         { role: "toolResult", content: "ok" },
         assistant(

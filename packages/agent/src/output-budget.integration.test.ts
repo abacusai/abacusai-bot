@@ -3,14 +3,14 @@
  *
  * Not a unit test on the clamp, because the clamp is not the interesting part:
  * what matters is the number that reaches the provider, and that is decided
- * further down — pi sends `min(model.maxTokens, contextWindow - prompt)`. So
+ * further down: pi sends `min(model.maxTokens, contextWindow - prompt)`. So
  * these read the request body off a loopback endpoint and assert on the field
  * the provider's credit check reads.
  *
  * The bug: a model's `maxTokens` is what it *can* emit, and asking for all of
  * it every turn is not free even though the tokens are never generated.
- * OpenRouter prices the ceiling you authorise, so `deepseek-v4-flash` — 384,000
- * output tokens at $0.1652/M — needed $0.063 of credit behind every request,
+ * OpenRouter prices the ceiling you authorise, so `deepseek-v4-flash` (384,000
+ * output tokens at $0.1652/M) needed $0.063 of credit behind every request,
  * "say hi" included. Keys holding a couple of cents got HTTP 402 on a turn that
  * would have cost a fraction of one, and the failure read as the model being
  * unavailable.
@@ -152,7 +152,7 @@ afterEach(() => {
 describe("the output budget a request asks for", () => {
   it("does not ask for a model's whole advertised maximum", async () => {
     // deepseek-v4-flash's real shape. Unclamped this asked for 383,014 tokens,
-    // which OpenRouter will only run for a key holding $0.063 — per request.
+    // which OpenRouter will only run for a key holding $0.063, per request.
     expect(
       await budgetAskedFor({ contextWindow: 1_048_576, maxTokens: 384_000 })
     ).toBe(DEFAULT_MAX_OUTPUT_TOKENS);

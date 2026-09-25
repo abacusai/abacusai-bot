@@ -2,7 +2,7 @@
  * The host service client, which had no test and one very bad failure mode.
  *
  * Every request here is a promise a tool call is blocked on. Without a deadline
- * a request nobody answers is a tool call that never returns — and because a
+ * a request nobody answers is a tool call that never returns, and because a
  * pending promise keeps nothing on the event loop, the process did not even
  * hang visibly: `abacusai-bot "write me a report"` exited 0 with no output and
  * no JSON object, which a script reads as success.

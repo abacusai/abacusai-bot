@@ -1,6 +1,6 @@
 /**
  * Spill's job is that nothing is lost. The trimmed result must stay small, and
- * the part that was cut must still be reachable — those two together are the
+ * the part that was cut must still be reachable. Those two together are the
  * whole feature, and either one alone is a regression.
  */
 import * as fs from "node:fs";
@@ -14,7 +14,7 @@ import {
 } from "@abacus-ai/test-support/fake-pi";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-/** 5,000 numbered lines — comfortably past the inline cap. */
+/** 5,000 numbered lines: comfortably past the inline cap. */
 const BIG = Array.from(
   { length: 5_000 },
   (_, i) => `line ${i} ${"x".repeat(20)}`
@@ -26,7 +26,7 @@ let pi: FakePi;
 // Each `vi.resetModules()` below yields a fresh module instance that registers
 // its own exit hook, so this file legitimately accumulates more than Node's
 // default ten. That is an artifact of reloading the module per test, not of
-// the extension — in a real process the hook is registered once.
+// the extension: in a real process the hook is registered once.
 process.setMaxListeners(50);
 
 beforeEach(async () => {
@@ -36,8 +36,8 @@ beforeEach(async () => {
   process.env.ABACUSAI_BOT_HOME = home;
 
   // A fresh module per test. The exit hook is registered once per process on
-  // purpose — every sub-agent loads its own copy of the extensions, and a
-  // listener per sub-agent is a leak — so a test that wants to observe
+  // purpose: every sub-agent loads its own copy of the extensions, and a
+  // listener per sub-agent is a leak, so a test that wants to observe
   // first-run behaviour has to start from a clean module. (The dead-directory
   // sweep is per instance, not per process, for the opposite reason: leftovers
   // appear over time, so sweeping once at startup would miss them.)
@@ -216,7 +216,7 @@ describe("read_output", () => {
 });
 
 describe("on-disk handling", () => {
-  // Windows has no POSIX mode bits — chmod there only toggles the read-only flag.
+  // Windows has no POSIX mode bits: chmod there only toggles the read-only flag.
   it.skipIf(process.platform === "win32")(
     "writes owner-only, because output is whatever a command printed",
     async () => {
@@ -233,7 +233,7 @@ describe("on-disk handling", () => {
 
   it("sweeps directories left behind by processes that are gone", async () => {
     // A crash skips the exit hook, so a stale directory is the normal case
-    // rather than the exceptional one — and its contents are the sensitive part.
+    // rather than the exceptional one, and its contents are the sensitive part.
     const dead = path.join(home, "spill", "999999999");
     fs.mkdirSync(dead, { recursive: true });
     fs.writeFileSync(path.join(dead, "out-1.txt"), "leftover secrets");

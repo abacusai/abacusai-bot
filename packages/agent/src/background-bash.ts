@@ -44,21 +44,21 @@ interface OperationsLike {
 const TIMEOUT_GUIDANCE = [
   "",
   "A call with no timeout gets 120 seconds, and is killed at it. Set timeout (in seconds, up to",
-  "600) for anything that legitimately takes longer. Commands that fetch a dependency tree —",
-  "npm/pnpm/yarn install, npx, create-next-app, pip install, cargo build, git clone, docker",
-  "build — are given the full 600 automatically; you do not need to ask for it, and you should",
+  "600) for anything that legitimately takes longer. Commands that fetch a dependency tree",
+  "(npm/pnpm/yarn install, npx, create-next-app, pip install, cargo build, git clone, docker",
+  "build) are given the full 600 automatically; you do not need to ask for it, and you should",
   "not background them: the next step needs the files they write.",
 ].join("\n");
 
 const BACKGROUND_GUIDANCE = [
   "",
-  "Set background: true for work that takes longer than you are willing to sit on — a build, a",
+  "Set background: true for work that takes longer than you are willing to sit on: a build, a",
   "test suite, a long install, a training run. The call returns as soon as the command is",
   "running, you keep working, and you are told automatically when it finishes; you do not have",
   "to poll for it. timeout does not apply to a background run, and stop one early with",
   "kill_process.",
   "",
-  "Not for a server you want to stay up — use the background tool for that, which is built to",
+  "Not for a server you want to stay up. Use the background tool for that, which is built to",
   "be left running and read from.",
 ].join("\n");
 
@@ -82,7 +82,7 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
       timeout: Type.Optional(
         Type.Number({
           description:
-            "Seconds to allow, up to 600. Unset means 120 — or 600 for an install or a " +
+            "Seconds to allow, up to 600. Unset means 120, or 600 for an install or a " +
             "scaffold, which are recognised by their command.",
         })
       ),
@@ -132,7 +132,7 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
             text: [
               `Started ${job.id} in the background: ${command}`,
               "",
-              "Carry on with something else — you will be told when it finishes, with its output.",
+              "Carry on with something else; you will be told when it finishes, with its output.",
               `Stop it early with kill_process id:"${job.id}".`,
             ].join("\n"),
           },

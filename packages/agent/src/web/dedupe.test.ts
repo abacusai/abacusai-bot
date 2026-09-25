@@ -1,8 +1,8 @@
 /**
  * That there is still only one web search.
  *
- * Two of them used to reach the model at once — this process's `web_search` and
- * the agent-tools server's, prefixed to `agent-tools_web_search` — with nearly
+ * Two of them used to reach the model at once: this process's `web_search` and
+ * the agent-tools server's, prefixed to `agent-tools_web_search`, with nearly
  * the same description and different backends, so the model picked by coin toss
  * and half the time got the dead one. That was settled by filtering one out at
  * the seam; it is now settled at the source, because the server no longer ships
@@ -38,7 +38,7 @@ describe("which web tool gives way", () => {
 
   it("still stands the server's X search down when it cannot answer", () => {
     // The one genuine arbitration left. xAI's Live Search reads X itself, so it
-    // wins where its key exists — and gives way to this process where it does not.
+    // wins where its key exists, and gives way to this process where it does not.
     process.env.ANTHROPIC_API_KEY = "sk-test";
     delete process.env.ABACUSAI_BOT_DESKTOP_X_SEARCH;
 

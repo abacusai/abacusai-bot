@@ -14,7 +14,7 @@ const MAX_NUDGES_PER_SESSION = 6;
 const MAX_NUDGES_PER_PROMPT = 2;
 
 const FENCED_TOOL_CALL_PATTERNS: RegExp[] = [
-  // ```json { "name": "...", "arguments": ... } — a tool call written as text
+  // ```json { "name": "...", "arguments": ... }: a tool call written as text
   /```[a-z_]*\s*\{[^`]{0,400}"(?:name|tool|tool_name|function)"\s*:/i,
   // XML-ish pseudo tool-call tags various models fall back to
   /<(?:tool_call|function_call|invoke|tool)\b/i,

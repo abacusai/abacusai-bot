@@ -52,7 +52,7 @@ const SLOW_COMMAND_PATTERN =
 /** What a killed command should tell the model to do about it. */
 const TIMEOUT_REMEDY =
   "Re-run it with a larger `timeout` (up to 600 seconds). Use `background: true` " +
-  "only for something you do not need the result of right now — never for an " +
+  "only for something you do not need the result of right now; never for an " +
   "install or a scaffold, because the next step needs its files.";
 
 /** The budget a bash call gets when the model named none. */
@@ -117,7 +117,7 @@ export default function (pi: ExtensionAPI) {
         entry.overran = true;
         if (ctx.hasUI) {
           ctx.ui.notify(
-            `AbacusAI Bot: ${event.toolName} has run past its ${seconds}s budget — still waiting`,
+            `AbacusAI Bot: ${event.toolName} has run past its ${seconds}s budget; still waiting`,
             "warning"
           );
         }

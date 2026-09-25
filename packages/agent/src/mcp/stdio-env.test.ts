@@ -1,8 +1,8 @@
 /**
  * Which environment the stdio transport reasons about.
  *
- * A server is spawned with `{ ...process.env, ...config.env }`, so that — not
- * this process's own environment — is what decides how the command resolves
+ * A server is spawned with `{ ...process.env, ...config.env }`, so that, not
+ * this process's own environment, is what decides how the command resolves
  * and what cmd.exe would expand. Deciding against `process.env` let a variable
  * defined only in the server's config slip past both.
  */
@@ -88,7 +88,7 @@ describe("the environment a stdio server is resolved against", () => {
   it("is the child's for %VAR% too, not this process's", () => {
     // The variable exists only in the server's own config env. Checking
     // process.env said "undefined, therefore safe", and cmd.exe then expanded
-    // it anyway — the exact silent rewrite the check exists to stop.
+    // it anyway: the exact silent rewrite the check exists to stop.
     onWindows();
 
     McpClient.stdioTransport("npx", ["--root", "%SERVER_HOME%\\data"], {

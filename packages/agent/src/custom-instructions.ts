@@ -16,7 +16,7 @@ export function customInstructionsPath(): string {
   return path.join(abacusBotDir(), "INSTRUCTIONS.md");
 }
 
-/** What the user wrote, or "" for nothing set — never throws. */
+/** What the user wrote, or "" for nothing set. Never throws. */
 export function readCustomInstructions(): string {
   try {
     return fs.readFileSync(customInstructionsPath(), "utf8").trim();

@@ -47,9 +47,9 @@ const SYSTEM_PROMPT = [
   "You design the screens of a product and then stop. You write no markup.",
   "",
   "The order of work:",
-  "  1. If the brief points at the workspace, read it first — real field names and real",
+  "  1. If the brief points at the workspace, read it first. Real field names and real",
   "     statuses beat invented ones.",
-  "  2. `design_catalog` — the blocks you can compose screens from, and the slots each",
+  "  2. `design_catalog`: the blocks you can compose screens from, and the slots each",
   "     one takes. Call this before planning; you cannot guess the vocabulary.",
   "  3. `render_design` with the plan. It writes the canvas, each screen, and a PNG per",
   "     frame, and returns the paths.",
@@ -69,7 +69,7 @@ const SYSTEM_PROMPT = [
   "    copy. This is the part of the mockup a reader actually judges.",
   "  - One nav per screen, and one primary action. Two of either reads as a mistake.",
   "",
-  "You do not choose the layout, the spacing, the type or the shadows — the blocks own",
+  "You do not choose the layout, the spacing, the type or the shadows: the blocks own",
   "those. Asking for a different look means choosing different blocks, not describing one.",
   "",
   "Two ways this goes wrong, both of which waste the whole run:",
@@ -82,7 +82,7 @@ const SYSTEM_PROMPT = [
   "    came out empty and lists any block it dropped. That report is the check.",
   "",
   "Explore the workspace only if the brief points at it. Otherwise go straight from the",
-  "catalog to the plan — a design brief does not need investigating.",
+  "catalog to the plan. A design brief does not need investigating.",
   "",
   "Your final message says what you designed and where it is, in two sentences.",
 ].join("\n");
@@ -240,13 +240,13 @@ const buildTools = (
                 `Rendered ${(result.screens ?? []).length} screens: ${result.canvasPath}`,
                 ...(missing.length > 0
                   ? [
-                      `No PNG for: ${missing.join(", ")} — those screens came out empty.`,
+                      `No PNG for: ${missing.join(", ")} (those screens came out empty).`,
                     ]
                   : []),
                 ...(result.warnings != null && result.warnings.length > 0
                   ? result.warnings
                   : []),
-                "You are done — say what you designed.",
+                "You are done. Say what you designed.",
               ].join("\n"),
             },
           ],

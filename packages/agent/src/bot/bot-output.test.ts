@@ -34,7 +34,7 @@ describe("rerouting inline reasoning", () => {
   });
 
   it("survives tags split across streaming chunks", () => {
-    // Chunk size 3 splits both the open and close tags mid-way — the exact
+    // Chunk size 3 splits both the open and close tags mid-way: the exact
     // case a delta stream produces and a whole-string regex never sees.
     const { text, thinking } = run(
       "<think>hidden reasoning</think>visible answer",

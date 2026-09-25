@@ -1,19 +1,19 @@
 /**
  * The invariant the connect page stands on: for every key-paste provider the
  * desktop offers, setting that one env var is enough for pi to surface the
- * provider's models — no registration call, no extra config.
+ * provider's models: no registration call, no extra config.
  *
  * This is pi's own env discovery and bundled catalog doing the work
  * (env-api-keys and models.generated in pi-ai), which is exactly why it needs
  * pinning: a pi upgrade that renames an env var or drops a provider from its
  * catalog would break the feature while every line of this repo still
  * compiled. The mapping here is duplicated from the desktop's
- * PROVIDER_ENV_VARS on purpose — the agent cannot import the desktop's shared
+ * PROVIDER_ENV_VARS on purpose: the agent cannot import the desktop's shared
  * module, and the duplication means a drift on either side fails a test.
  *
  * Also pinned: the exact model id PROVIDER_DEFAULTS starts a session on, and
  * every curated id the desktop picker offers for these providers, resolve in
- * pi's catalog — an id that fails to resolve strands the very user it was
+ * pi's catalog: an id that fails to resolve strands the very user it was
  * added for.
  */
 import * as fs from "node:fs";
@@ -56,7 +56,7 @@ const KEY_LIT_PROVIDERS: Record<string, string> = {
  * The picker's curated ids for the key-paste providers, copied from
  * MODEL_CATALOG in apps/desktop/src/shared/models.ts. Duplicated for the same
  * reason the env-var map above is: the agent cannot import the desktop's
- * shared module, and a copy means drift on either side fails a test —
+ * shared module, and a copy means drift on either side fails a test:
  * models.test.ts holds the other half of the pair.
  *
  * Excluded on purpose: openllm/auto (virtual, resolved before pi sees it),
@@ -100,7 +100,7 @@ const savedEnv: Record<string, string | undefined> = {};
 beforeAll(async () => {
   // Every key set to a placeholder before the runtime is created: availability
   // is computed from the environment at startup. Values are never sent
-  // anywhere — the catalog is bundled and network refresh is off.
+  // anywhere: the catalog is bundled and network refresh is off.
   for (const envVar of Object.keys(KEY_LIT_PROVIDERS)) {
     savedEnv[envVar] = process.env[envVar];
     process.env[envVar] = "test-key";
@@ -133,7 +133,7 @@ describe("a key alone lights the provider up", () => {
     for (const provider of Object.values(KEY_LIT_PROVIDERS)) {
       expect(
         byProvider.has(provider),
-        `no models surfaced for "${provider}" — did pi rename its env var or drop its catalog?`
+        `no models surfaced for "${provider}": did pi rename its env var or drop its catalog?`
       ).toBe(true);
     }
   });
@@ -166,7 +166,7 @@ describe("every session-start default", () => {
       const chosen = defaultModelFor({ [envVar]: "test-key" });
 
       expect(chosen, `no default for ${envVar}`).not.toBeNull();
-      // The default must belong to the provider that key unlocks — openllm is
+      // The default must belong to the provider that key unlocks: openllm is
       // legitimate for the pool keys (OpenRouter and friends).
       expect(
         chosen === "openllm/auto" || chosen?.startsWith(`${provider}/`),

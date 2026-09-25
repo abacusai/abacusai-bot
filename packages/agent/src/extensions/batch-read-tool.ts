@@ -115,7 +115,7 @@ export default function (pi: ExtensionAPI) {
     label: "Batch Read",
     description:
       `Read several files in one call, up to ${MAX_FILES}. ` +
-      "Use this whenever you already know you want more than one file — it costs one turn instead of one per file. " +
+      "Use this whenever you already know you want more than one file: it costs one turn instead of one per file. " +
       "Each file is read from the start and the whole batch shares one output budget, so a file that does not " +
       "fit is named rather than returned. For a specific region of a single file, or for an image, use read.",
     parameters: batchReadSchema,

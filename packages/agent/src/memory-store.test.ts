@@ -5,7 +5,7 @@
  * apps/desktop/src/main/services/agent-tools/memory-store.ts does not throw, it
  * just means the terminal cannot read what the app wrote. So the delimiter, the
  * filenames and the block headers are pinned here as literals rather than
- * imported — a test that reads the same constant as the code cannot catch the
+ * imported: a test that reads the same constant as the code cannot catch the
  * constant changing.
  */
 import { spawn, spawnSync } from "child_process";
@@ -99,7 +99,7 @@ describe("what the agent carries into a session", () => {
  * desktop had remembered and never add to it.
  *
  * The limits and the wording are asserted because they are the contract the
- * desktop's store already publishes. Drift here does not throw — it just means
+ * desktop's store already publishes. Drift here does not throw; it just means
  * the same call answers differently depending on which surface made it.
  */
 describe("editing what is remembered", () => {
@@ -134,7 +134,7 @@ describe("editing what is remembered", () => {
     });
 
     expect(again.ok).toBe(true);
-    expect(again.message).toBe("Already remembered — nothing changed.");
+    expect(again.message).toBe("Already remembered, nothing changed.");
     expect(readEntries("memory")).toHaveLength(1);
   });
 
@@ -279,7 +279,7 @@ describe("editing what is remembered", () => {
  * while its tool told the model it was saved.
  *
  * The children run this module's real source. Node strips the types, and a
- * resolve hook supplies the `.ts` behind each `./x.js` specifier — the same
+ * resolve hook supplies the `.ts` behind each `./x.js` specifier, the same
  * files the app ships, not a copy that could drift away from them.
  *
  * Each child holds its read open for READ_DELAY_MS before writing. Real
@@ -294,7 +294,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  * The pid comes from a real short-lived child rather than being made up,
  * because "not running" is exactly what the lock asks about and a guessed
  * number could belong to something alive. A spawn that produced no pid fails
- * the test rather than falling back to a number — pid 1 is init, which is
+ * the test rather than falling back to a number: pid 1 is init, which is
  * always running, and would quietly turn this into its own opposite.
  */
 const deadHolder = (): string => {
@@ -333,7 +333,7 @@ registerHooks({
  * Once, because the six writers below start together: when each of them wrote
  * this file itself, a child could import it while another was part-way through
  * rewriting it, load a truncated module that never reached `registerHooks`,
- * and then fail to resolve `./config.js` — surfacing as `writer exited 1` from
+ * and then fail to resolve `./config.js`, surfacing as `writer exited 1` from
  * a test that is supposed to be about lock contention.
  */
 const writeResolveHook = (): string => {
@@ -341,7 +341,7 @@ const writeResolveHook = (): string => {
 
   if (!fs.existsSync(hook)) {
     // Staged and renamed, so the file a child imports is either absent or
-    // whole — never the half of it that was on disk at that instant.
+    // whole, never the half of it that was on disk at that instant.
     const staged = `${hook}.tmp`;
 
     fs.writeFileSync(staged, RESOLVE_HOOK, "utf8");
@@ -409,7 +409,7 @@ describe("several processes writing the same store", () => {
   it("does not wedge on a lock whose holder died", async () => {
     // A crashed writer leaves its lock file on disk. Nothing will ever come
     // back to release it, so a lock nobody holds has to be broken rather than
-    // waited on — otherwise one crash makes the store permanently unwritable.
+    // waited on; otherwise one crash makes the store permanently unwritable.
     // It is broken at once, whatever its age, because the holder is gone.
     const lock = path.join(home, "memories", "MEMORY.md.lock");
 
@@ -427,7 +427,7 @@ describe("several processes writing the same store", () => {
 /**
  * What the lock is for, asserted directly.
  *
- * The failure it prevents is silent — the rename is atomic, so a lost entry
+ * The failure it prevents is silent: the rename is atomic, so a lost entry
  * leaves nothing malformed to notice, and both writers told their model the
  * note was saved. So the assertions are about what a caller is told as much as
  * about what ends up on disk.
@@ -447,8 +447,8 @@ describe("two writers reaching one store at the same time", () => {
 
   it("waits on a holder that has stalled, rather than breaking its lock", async () => {
     // The case an age-based rule gets wrong. A holder can be descheduled for
-    // seconds — a loaded machine, a home directory on a network filesystem, a
-    // virus scanner — and its critical section is synchronous, so it cannot
+    // seconds (a loaded machine, a home directory on a network filesystem, a
+    // virus scanner) and its critical section is synchronous, so it cannot
     // announce that it is still there. Breaking its lock lets a second writer
     // read and write while the first is mid read-modify-write, and one of the
     // two entries is then lost with both callers told they succeeded.
@@ -495,8 +495,8 @@ describe("two writers reaching one store at the same time", () => {
 
   it("honours a lock whose identity reached disk only in part", async () => {
     // A write that landed as far as the pid and no further. Read as a complete
-    // identity it names a pid that is not running — this one demonstrably is
-    // not — and the real holder's lock would be broken underneath it. The
+    // identity it names a pid that is not running (this one demonstrably is
+    // not) and the real holder's lock would be broken underneath it. The
     // trailing nonce is what proves the write finished.
     const lock = path.join(home, "memories", "MEMORY.md.lock");
     const torn = deadHolder().split(":").slice(0, 2).join(":");
@@ -515,7 +515,7 @@ describe("two writers reaching one store at the same time", () => {
 
   it("honours a lock held by another machine, whose processes it cannot ask about", async () => {
     // A home directory shared between two machines. The pid in this lock is not
-    // running HERE, and asking about it locally is meaningless — it names a
+    // running HERE, and asking about it locally is meaningless: it names a
     // process on the other host, which may well be mid-write. Only the backstop
     // may clear it.
     const lock = path.join(home, "memories", "MEMORY.md.lock");
@@ -537,8 +537,8 @@ describe("two writers reaching one store at the same time", () => {
   it("clears a lock that has outlived every plausible write", async () => {
     // The backstop, and the only thing that can break this lock: the holder is
     // this very process, so liveness says "still working" forever. Without the
-    // bound, a lock left by a crash whose pid has since been reused — or one
-    // from a machine that never came back — would shut the store permanently.
+    // bound, a lock left by a crash whose pid has since been reused, or one
+    // from a machine that never came back, would shut the store permanently.
     const lock = path.join(home, "memories", "MEMORY.md.lock");
 
     fs.mkdirSync(path.dirname(lock), { recursive: true });
@@ -557,8 +557,8 @@ describe("two writers reaching one store at the same time", () => {
   }, 30_000);
 
   it("leaves no nameless lock behind when stamping it fails", async () => {
-    // The file is created and then stamped, two calls. If the second fails —
-    // a full disk is the usual reason — the lock on disk names nobody, and a
+    // The file is created and then stamped, two calls. If the second fails
+    // (a full disk is the usual reason), the lock on disk names nobody, and a
     // nameless lock is honoured rather than broken, so leaving it would hold
     // the store shut until the backstop.
     const lock = path.join(home, "memories", "MEMORY.md.lock");
@@ -623,8 +623,8 @@ describe("what the user asked to be remembered", () => {
 
   it("stays out of the frozen snapshot", async () => {
     // The other two are read once at spawn so the prompt prefix holds still.
-    // This store is re-read every turn instead, and must not be counted twice
-    // — nor turn an otherwise-empty install into a snapshot that carries a
+    // This store is re-read every turn instead, and must not be counted twice,
+    // nor turn an otherwise-empty install into a snapshot that carries a
     // header for stores with nothing in them.
     await applyMemoryAction("remember", "add", { content: "I like blue" });
 

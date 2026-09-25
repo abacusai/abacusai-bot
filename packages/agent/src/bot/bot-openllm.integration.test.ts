@@ -2,7 +2,7 @@
  * Which model a bot's chat says it is running on.
  *
  * A bot pinned to `openllm/auto` showed the router for a moment and then
- * snapped onto whatever the pool resolved to — "DeepSeek V4 Flash" a few
+ * snapped onto whatever the pool resolved to: "DeepSeek V4 Flash" a few
  * seconds after the chat opened, as if something had silently changed the
  * bot's model behind the user's back. The session loop had the rule that
  * prevents this and the bot loop did not, so the two front ends disagreed
@@ -114,7 +114,7 @@ describe("a bot on the router", () => {
 
 describe("a bot on a concrete model", () => {
   it("reports that model, because that is what was chosen", async () => {
-    // Picking a model is leaving the router, not steering it — the picker
+    // Picking a model is leaving the router, not steering it: the picker
     // must follow the user here, not hold onto the router entry.
     const { session, events } = botSession();
     await session.start();
@@ -146,7 +146,7 @@ describe("a bot on a concrete model", () => {
  *
  * The router flag was set from the requested reference before the model had
  * resolved, so a switch that then failed left the chat on its old model while
- * `currentModelReference` claimed the router — the picker reported one model
+ * `currentModelReference` claimed the router: the picker reported one model
  * and the turns ran on another. It is the same ordering the session loop uses.
  */
 describe("a switch that cannot be made", () => {
@@ -164,7 +164,7 @@ describe("a switch that cannot be made", () => {
       )
       .map((event) => event.event);
 
-    // It refuses, and says so — rather than reporting a model change that did
+    // It refuses, and says so, rather than reporting a model change that did
     // not happen.
     expect(changed.filter((event) => event.type === "model_changed")).toEqual(
       []

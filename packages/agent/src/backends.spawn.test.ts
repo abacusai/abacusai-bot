@@ -2,7 +2,7 @@
  * How a command is handed to a backend, with the spawn itself stubbed out.
  *
  * Two things here are worth holding still. The selection decides whether pi's
- * own local shell runs or is replaced — and returning operations on a platform
+ * own local shell runs or is replaced, and returning operations on a platform
  * they cannot work on (or null where confinement was demanded) is the kind of
  * mistake that either breaks every command or quietly removes the sandbox. The
  * argv and environment are the other: a wrong `--volume` gives the container a
@@ -234,7 +234,7 @@ describe("reading the backend the desktop selected", () => {
 describe("deciding whether to replace pi's own local shell", () => {
   /** backend, sandbox setting, platform, and whether operations are supplied. */
   const cases: [string, string | undefined, NodeJS.Platform, boolean][] = [
-    // A container is already an isolation boundary — never double-wrapped.
+    // A container is already an isolation boundary, so it is never double-wrapped.
     ["docker", undefined, "darwin", true],
     ["docker", "strict", "linux", true],
     // Declared but unimplemented: pi's local shell is what actually runs.
@@ -251,8 +251,8 @@ describe("deciding whether to replace pi's own local shell", () => {
     ["local", "auto", "darwin", true],
     ["local", "auto", "linux", true],
     ["local", "strict", "darwin", true],
-    // The Windows rows — no backend, so `auto` steps aside and `strict` keeps
-    // the operations for their refusal — are pinned in backends.test.ts.
+    // The Windows rows (no backend, so `auto` steps aside and `strict` keeps
+    // the operations for their refusal) are pinned in backends.test.ts.
   ];
 
   it.each(cases)(
@@ -410,7 +410,7 @@ describe("running a command in a container", () => {
   });
 
   it("stops the container by name, not just the client attached to it", async () => {
-    // Killing `docker run` only detaches — the command would keep running with
+    // Killing `docker run` only detaches: the command would keep running with
     // nobody reading it.
     const operations = await dockerOperations();
     const controller = new AbortController();
@@ -468,7 +468,7 @@ describe("running a command on this machine", () => {
 
     const { exitCode, output } = await exec(operations, "ls");
 
-    // 126: found but not executable — the closest standard code to "refused".
+    // 126: found but not executable, the closest standard code to "refused".
     expect(exitCode).toBe(126);
     expect(output).toContain("Command refused");
     expect(spawn).not.toHaveBeenCalled();
@@ -502,7 +502,7 @@ describe("running a command on this machine", () => {
 
   it("hands over the login shell's environment rather than this process's", async () => {
     // Inheriting would mean the launchd PATH, which cannot find the user's
-    // toolchain — the profile is sourced once, not per command.
+    // toolchain: the profile is sourced once, not per command.
     onPlatform("darwin");
     const operations = await localOperations();
 
@@ -553,7 +553,7 @@ describe("running a command on this machine", () => {
   it("merges into the caller's own spelling of PATH", async () => {
     // Windows spells it `Path`, and pi's getShellEnv() passes that casing
     // through. Reading `PATH` found nothing and writing `PATH` left two
-    // spellings side by side — libuv keeps one, and it may be the one without
+    // spellings side by side: libuv keeps one, and it may be the one without
     // pi's bin directory.
     onPlatform("win32");
     unconfined();
@@ -567,7 +567,7 @@ describe("running a command on this machine", () => {
 
     const { env } = lastSpawn().options as { env: Record<string, string> };
 
-    // One PATH, under the key that was already there — not a second one
+    // One PATH, under the key that was already there, not a second one
     // beside it.
     expect(env.PATH).toBeUndefined();
     expect(env.Path?.startsWith("C:\\pi\\bin")).toBe(true);
@@ -576,7 +576,7 @@ describe("running a command on this machine", () => {
 
   it("hands the fallback command line over without re-quoting it", async () => {
     // Node's default Windows quoting is the C runtime's, and cmd.exe does not
-    // undo it — `git commit -m "msg"` reached cmd with the backslashes in.
+    // undo it: `git commit -m "msg"` reached cmd with the backslashes in.
     onPlatform("win32");
     unconfined();
     const operations = await localOperations();
@@ -646,7 +646,7 @@ describe("running a command on this machine", () => {
   });
 
   it("kills the whole process group on abort", async () => {
-    // Killing the shell alone leaves a backgrounded descendant running — and it
+    // Killing the shell alone leaves a backgrounded descendant running, and it
     // is that descendant which keeps the turn's output pipes open.
     onPlatform("darwin");
     const kill = vi.spyOn(process, "kill").mockImplementation(() => true);
@@ -726,7 +726,7 @@ describe("settling when the command finishes rather than when its pipes close", 
 
   it("returns when a descendant still holds the pipes open", async () => {
     // `nohup node server.js &` runs in a subshell that outlives the shell and
-    // keeps its stdout — waiting for `close` there wedges the tool call until
+    // keeps its stdout: waiting for `close` there wedges the tool call until
     // the app's inactivity timeout.
     vi.useFakeTimers();
     const operations = await dockerOperations();

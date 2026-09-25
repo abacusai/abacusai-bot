@@ -1,6 +1,6 @@
 ---
 name: Data analysis
-description: Explore, clean, and draw conclusions from a dataset — profiling it, handling missing and malformed values, aggregating, and reporting findings honestly. Use when handed a CSV, spreadsheet, or query result and asked what it shows.
+description: Explore, clean, and draw conclusions from a dataset: profiling it, handling missing and malformed values, aggregating, and reporting findings honestly. Use when handed a CSV, spreadsheet, or query result and asked what it shows.
 ---
 
 # Data analysis
@@ -28,8 +28,8 @@ dates), and how much is missing.
 ## Missing data
 
 Find out *why* it is missing before deciding what to do. Missing at random and
-missing because the sensor was offline call for different handling — and
-dropping rows silently changes the population you are describing.
+missing because the sensor was offline call for different handling.
+Dropping rows silently changes the population you are describing.
 
 Say what you did. "Dropped 1,204 rows (12%) with no timestamp" belongs in the
 output, not just in the code.
@@ -38,7 +38,7 @@ output, not just in the code.
 
 - Check group sizes before comparing group means. A "group" with three rows is
   noise, and it will produce the most extreme number in your table.
-- Prefer the median for anything with a tail — income, latency, session length.
+- Prefer the median for anything with a tail: income, latency, session length.
   A mean latency is almost always the wrong number to quote.
 - After a join, **check the row count**. Growth means a many-to-many you did not
   expect; shrinkage means keys that did not match.
@@ -49,7 +49,7 @@ output, not just in the code.
   named. Name it.
 - Give the denominator. "40% increase" from 5 to 7 is not a finding.
 - Report the uncertainty, or at least the sample size.
-- State what would change the conclusion — that is what makes it useful rather
+- State what would change the conclusion. That is what makes it useful rather
   than decorative.
 - If the data cannot answer the question, say so. That is a legitimate and
   frequently correct result.

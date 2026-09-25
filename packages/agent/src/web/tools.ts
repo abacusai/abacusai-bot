@@ -26,7 +26,7 @@ const X_SITES = ["x.com", "twitter.com"] as const;
  * shaped like a system prompt, tool result or user turn, and stripping tags
  * does not help: unlabelled, it lands in the context looking like the
  * harness's own framing. The nonce is per call and unguessable, so page text
- * cannot close the fence early — a fixed marker would just become the next
+ * cannot close the fence early: a fixed marker would just become the next
  * thing an attacker writes.
  */
 function envelope(url: string, body: string): string {
@@ -63,7 +63,7 @@ export default function (pi: ExtensionAPI): void {
       "Search the web and get back real result URLs with titles and excerpts. " +
       "Use it whenever the answer depends on something you cannot know: current " +
       "events, recent releases, live prices, version-specific behaviour, or anything " +
-      "the user says is time-sensitive. Returns sources only — follow up with " +
+      "the user says is time-sensitive. Returns sources only: follow up with " +
       "web_fetch to read any of them in full. If it reports no results, that means " +
       "nothing was found: say so rather than answering from memory.",
     parameters: Type.Object({
@@ -84,8 +84,8 @@ export default function (pi: ExtensionAPI): void {
               type: "text",
               text:
                 "Web search is not configured. It reuses whichever model key the app " +
-                "already has — an Abacus.AI account, Claude, DeepSeek, OpenAI, Gemini " +
-                "and OpenRouter all run it — so signing in or adding a key in Settings " +
+                "already has: an Abacus.AI account, Claude, DeepSeek, OpenAI, Gemini " +
+                "and OpenRouter all run it, so signing in or adding a key in Settings " +
                 "enables search too, with no separate search account. Tell the user " +
                 "that; do not answer from memory as though you had searched.",
             },
@@ -152,7 +152,7 @@ export default function (pi: ExtensionAPI): void {
       description:
         "Search public posts on X (Twitter) and get back real post URLs with titles " +
         "and excerpts. Use it when the question is about what people are saying right " +
-        "now — reaction to a release, whether an outage is widespread, what an author " +
+        "now: reaction to a release, whether an outage is widespread, what an author " +
         "said about their own work. Results are restricted to x.com: anything found " +
         "elsewhere is discarded rather than returned. If it reports no results, that " +
         "means nothing was found on X: say so rather than answering from memory.",
@@ -217,7 +217,7 @@ export default function (pi: ExtensionAPI): void {
     label: "Fetch URL",
     description:
       "Fetch one http(s) URL and return its text, with HTML reduced to readable " +
-      "prose. Use it to read a page you already have the address for — a search " +
+      "prose. Use it to read a page you already have the address for: a search " +
       "result, a link in the repo, a docs page, or a localhost server you started. " +
       "Cross-origin redirects are not followed: if the page redirects elsewhere " +
       "you will be told where, and can call again with that URL if you want it.",
@@ -251,7 +251,7 @@ export default function (pi: ExtensionAPI): void {
             url: result.url,
             truncated: result.truncated,
           },
-          // A 404 is a result the model should read, not a tool failure — but a
+          // A 404 is a result the model should read, not a tool failure, but a
           // 5xx usually means retrying or choosing another source.
           isError: result.status >= 500,
         };

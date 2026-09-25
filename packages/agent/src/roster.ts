@@ -1,7 +1,7 @@
 /**
  * The tools this process registers itself, as one table.
  *
- * Each entry names the tool the model will call and says when it is built —
+ * Each entry names the tool the model will call and says when it is built:
  * a feature flag, or "only when no MCP server already serves that name".
  * The table exists so the roster can be read without running a session:
  * roster.test.ts checks every name here against the Capabilities registry
@@ -123,7 +123,7 @@ const browserTaskWanted = (ctx: RosterContext): boolean =>
 /**
  * A sub-agent's options, with `model` a live read of the session's: the task
  * reads `context.model` as it spawns, so a switch between build and spawn
- * lands. Spreading the result would freeze it — merge with `withLiveModel`.
+ * lands. Spreading the result would freeze it; merge with `withLiveModel`.
  */
 export const subAgentOptions = <Extra extends object>(
   ctx: Pick<

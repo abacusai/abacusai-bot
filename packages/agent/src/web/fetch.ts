@@ -75,12 +75,12 @@ function unmapIpv4(ip: string): string {
 async function resolveAndVet(url: URL): Promise<string[]> {
   const host = url.hostname.replace(/^\[|\]$/g, "");
 
-  // A literal needs no lookup — it is already the address that will be dialed.
+  // A literal needs no lookup: it is already the address that will be dialed.
   if (net.isIP(host) !== 0) {
     if (isBlockedAddress(host)) {
       throw new WebFetchError(
         "BLOCKED_URL",
-        `Refusing to fetch ${url.hostname} — it is a link-local address, ` +
+        `Refusing to fetch ${url.hostname}: it is a link-local address, ` +
           `the range that serves cloud instance credentials.`
       );
     }
@@ -106,7 +106,7 @@ async function resolveAndVet(url: URL): Promise<string[]> {
     if (isBlockedAddress(address)) {
       throw new WebFetchError(
         "BLOCKED_URL",
-        `Refusing to fetch ${host} — it resolves to ${address}, a link-local ` +
+        `Refusing to fetch ${host}: it resolves to ${address}, a link-local ` +
           `address in the range that serves cloud instance credentials.`
       );
     }
@@ -379,7 +379,7 @@ export async function fetchUrl(
           throw new WebFetchError(
             "REDIRECT_BLOCKED",
             `${url.href} redirects to a different origin (${next.origin}). ` +
-              `Cross-origin redirects are not followed — call web_fetch again with ` +
+              `Cross-origin redirects are not followed: call web_fetch again with ` +
               `${next.href} if that is where you meant to go.`
           );
         }

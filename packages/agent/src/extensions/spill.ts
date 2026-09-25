@@ -88,7 +88,7 @@ export const resetSpillRecords = (): void => {
 };
 
 export default function (pi: ExtensionAPI) {
-  /** Once per extension instance — so a sub-agent session sweeps too. */
+  /** Once per extension instance, so a sub-agent session sweeps too. */
   let swept = false;
 
   /**
@@ -109,7 +109,7 @@ export default function (pi: ExtensionAPI) {
       try {
         // Signal 0 tests for existence without delivering anything.
         process.kill(pid, 0);
-        continue; // Alive — another session owns it.
+        continue; // Alive: another session owns it.
       } catch (error) {
         // EPERM means the pid exists but belongs to another user; leave it.
         if ((error as NodeJS.ErrnoException).code === "EPERM") continue;
@@ -185,7 +185,7 @@ export default function (pi: ExtensionAPI) {
 
       // The path is given outright. "Saved as out-1" read as a file name, and
       // a model that had just been told its working directory went looking
-      // for out-1 there — and sent a sub-agent to look for it there too.
+      // for out-1 there, and sent a sub-agent to look for it there too.
       const notice = id
         ? `… [${dropped} chars omitted. Full output saved to ${records.get(id)?.file} ` +
           `(${records.get(id)?.totalLines ?? 0} lines). Read the omitted middle with read_output ` +
