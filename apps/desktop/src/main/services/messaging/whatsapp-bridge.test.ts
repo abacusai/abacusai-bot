@@ -83,7 +83,7 @@ describe("resolveJid", () => {
   });
 
   it("resolves a name exactly before loosely", () => {
-    // "School Friends" is a prefix of "School Friendsss" — the exact match
+    // "School Friends" is a prefix of "School Friendsss": the exact match
     // wins, and the prefix rule never gets a vote.
     expect(resolveJid("School Friends", chats)).toEqual({
       jid: "120363002@g.us",
@@ -92,7 +92,7 @@ describe("resolveJid", () => {
   });
 
   it("refuses an ambiguous name rather than guessing", () => {
-    // "Raj" is exact for one chat — fine. "ra" is a prefix of two.
+    // "Raj" is exact for one chat, fine. "ra" is a prefix of two.
     expect(resolveJid("Raj", chats)).toEqual({ jid: "918888800000@c.us" });
     const result = resolveJid("ra", chats);
     expect("error" in result && result.error).toMatch(/More than one/);

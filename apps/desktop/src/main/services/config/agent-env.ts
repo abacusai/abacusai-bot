@@ -28,7 +28,7 @@ export function buildAgentAuthEnv(): Record<string, string> {
   return credentialEnv();
 }
 
-/** Everything besides auth and the MCP config path — see the call site. */
+/** Everything besides auth and the MCP config path. See the call site. */
 export function buildAgentConfigEnv(
   runtimeMcpPath: string | null
 ): Record<string, string> {

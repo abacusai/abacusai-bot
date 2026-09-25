@@ -60,7 +60,7 @@ describe("a provider the user has a key for", () => {
     expect(after.length).toBeGreaterThan(before.length);
     expect(after.length).toBeGreaterThan(10);
     expect(after.every((model) => model.configured)).toBe(true);
-    // Ids stay `provider/model-id` — what set_model sends.
+    // Ids stay `provider/model-id`, which is what set_model sends.
     expect(after.every((model) => model.id.startsWith("openai/"))).toBe(true);
     // No duplicates when a curated row and a catalog row are the same model.
     expect(new Set(after.map((model) => model.id)).size).toBe(after.length);

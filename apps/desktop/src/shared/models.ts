@@ -8,7 +8,7 @@
 export type ModelTier = "default" | "strong" | "fast" | "free" | "local";
 
 export interface AbacusBotModel {
-  /** Canonical `provider/model-id` — exactly what `set_model` sends. */
+  /** Canonical `provider/model-id`, exactly what `set_model` sends. */
   id: string;
   label: string;
   provider: string;
@@ -36,7 +36,7 @@ export const MODEL_CATALOG: AbacusBotModel[] = [
     label: "RouteLLM - Open",
     provider: "openllm",
     tier: "default",
-    note: "Every free model you can run — cheap Abacus routes, Gemini's free quota, OpenRouter free tier — with automatic fallback when one fails or rate-limits",
+    note: "Every free model you can run (cheap Abacus routes, Gemini's free quota, OpenRouter free tier), with automatic fallback when one fails or rate-limits",
     requiresEnv: "OPENROUTER_API_KEY",
   },
   // Fetch-failure fallback only: the live per-account catalog supersedes every

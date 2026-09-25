@@ -2,15 +2,15 @@
  * Which account the Settings menu is talking about.
  *
  * The menu offered "Sign in" to a user who was signed in, and no way to sign
- * out at all. It read the local account file — a name and an email collected
- * during onboarding — while what a user means by "signed in" is the Abacus.AI
+ * out at all. It read the local account file (a name and an email collected
+ * during onboarding), while what a user means by "signed in" is the Abacus.AI
  * connection that mints their key. Anyone who skipped onboarding therefore had
  * no account on file, so the menu said "Sign in" no matter how connected they
  * were, and the only thing behind it cleared a profile they had never created.
  *
  * Abacus is the only provider this can apply to. Every other one is a key the
  * user pasted, and the place to remove one of those is the field it was typed
- * into — there is no session to end.
+ * into. There is no session to end.
  */
 import { describe, expect, it } from "vitest";
 

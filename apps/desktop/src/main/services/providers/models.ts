@@ -57,7 +57,7 @@ const readConfig = (): AbacusBotConfigShape => {
 /**
  * The plan tier's default, as of the last catalog read. A session spawned
  * with no model of its own starts here rather than on the agent's built-in
- * fallback, which is the free pool whatever the tier — so a Pro account's new
+ * fallback, which is the free pool whatever the tier, so a Pro account's new
  * chat, bot or routine used to open on an empty pool and fall back with a
  * warning before the composer's pick could correct it.
  */

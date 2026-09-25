@@ -25,7 +25,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
   const HEADING_TAGS = new Set(['H1','H2','H3','H4','H5','H6']);
   // How far below <body> the walk goes.
   //
-  // This was 12, which is not a deep page — it is an ordinary one. A button
+  // This was 12, which is not a deep page but an ordinary one. A button
   // inside a modern app's shell (root > provider > layout > main > section >
   // card > row > ...) sits well past it, and everything beyond was dropped
   // silently: the snapshot came back with a handful of refs, or none, and the
@@ -49,7 +49,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
   const vpH = window.innerHeight;
 
   // Three states, not two. 'gone' takes the subtree with it; 'invisible' is an
-  // element a user cannot see or click but whose children may still be both —
+  // element a user cannot see or click but whose children may still be both:
   // visibility, unlike display, is inherited and can be turned back on.
   //
   // visibility:hidden used to slip through entirely: such an element keeps its
@@ -88,7 +88,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
         const p = el.parentElement;
         if (!p || getComputedStyle(p).cursor !== 'pointer') return true;
       }
-    } catch { /* getComputedStyle can throw on a detached element — not clickable */ }
+    } catch { /* getComputedStyle can throw on a detached element, which is not clickable */ }
     return false;
   }
 
@@ -111,7 +111,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
   // Every label goes through this on the way out.
   //
   // A name is rendered onto one line of the tree, and the tree's structure is
-  // its indentation — so a label with a newline in it (a two-line button, a
+  // its indentation, so a label with a newline in it (a two-line button, a
   // <select> whose text is its options one per line) split the node across
   // lines and the second half read as a node of its own at the top level.
   function clean(text) {
@@ -140,7 +140,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
       }
       // A label wrapped around the field instead of pointing at it. The branch
       // below handles the label element, but a <label> is not interactive so it
-      // never gets a ref — the checkbox inside does, and it was coming back
+      // never gets a ref. The checkbox inside does, and it was coming back
       // with no name at all: "[input] type=checkbox [unchecked]", with nothing
       // to say what was being agreed to.
       const wrapping = el.closest('label');
@@ -173,7 +173,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
   // Every candidate is checked before it is handed out, and the order is
   // "most likely to survive a re-render" first.
   //
-  // The id/data-id/data-testid/name forms used to return early, unverified —
+  // The id/data-id/data-testid/name forms used to return early, unverified:
   // only the built path was checked. That is backwards: those are exactly the
   // attributes that repeat. A list carrying data-testid="row-delete" on every
   // row gave every row the same selector, so a click on the fortieth resolved
@@ -190,7 +190,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
 
   // Escaped with split/join rather than a regex: this string passes through a
   // TypeScript template literal on its way into the page, and a character
-  // class holding a backslash does not survive the trip legibly — it arrived
+  // class holding a backslash does not survive the trip legibly. It arrived
   // as an unterminated class and took every snapshot with it.
   function attributeSelector(attribute, value) {
     const escaped = value.split('\\\\').join('\\\\\\\\').split('"').join('\\\\"');
@@ -251,7 +251,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
       if (resolvesTo(candidate, el)) return candidate;
     }
 
-    // Nothing identifies it — inside a shadow root, or nested past the cap.
+    // Nothing identifies it: inside a shadow root, or nested past the cap.
     // Returning a selector anyway is what put a wrong-element ref in the map,
     // so the caller drops the ref instead and the element stays in the tree as
     // context the agent can read but not aim at.
@@ -455,7 +455,7 @@ export function formatOverlays(
         .map((button) => `${button.ref} "${button.name}"`)
         .join(", ");
 
-      return `On top of the page (${overlay.kind}): "${overlay.text}" — buttons: ${buttons}. Dismiss it before clicking underneath.`;
+      return `On top of the page (${overlay.kind}): "${overlay.text}". Buttons: ${buttons}. Dismiss it before clicking underneath.`;
     })
     .join("\n");
 }
@@ -488,7 +488,7 @@ export function formatTree(node: SnapshotNode | null, depth: number): string {
     if (node.offscreen) line += " [offscreen]";
   } else {
     line = `${pad}[${node.tag}]`;
-    if (node.unreachable) line += " (no ref — not addressable by selector)";
+    if (node.unreachable) line += " (no ref: not addressable by selector)";
   }
   if (node.name) line += ` "${node.name}"`;
   if (node.type) line += ` type=${node.type}`;
@@ -530,7 +530,7 @@ export function renderTree(
 
   return {
     text:
-      `${kept}\n... ${omittedRefs} more element${omittedRefs === 1 ? "" : "s"} not shown — the page is too large to ` +
+      `${kept}\n... ${omittedRefs} more element${omittedRefs === 1 ? "" : "s"} not shown. The page is too large to ` +
       "describe in full.\nScroll to bring the part you want into view and snapshot again, or use " +
       "browser_snapshot text with a selector, or browser_execute to query the DOM for just what you need.",
     omittedRefs,

@@ -3,7 +3,7 @@
  * of list_chats.
  *
  * The report: Discord connected with two DMs, and the model told the user
- * "I don't see any contacts on Discord" — one flat cap of a hundred, and
+ * "I don't see any contacts on Discord". One flat cap of a hundred, and
  * WhatsApp had filled every row.
  */
 import { describe, expect, it, vi } from "vitest";

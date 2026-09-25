@@ -2,7 +2,7 @@
  * A pairing code that runs out while the user is still finding their phone.
  *
  * The QR was minted with a server-set lifetime, and past it the pane said
- * "that code expired, link again" — asking the user to redo by hand what the
+ * "that code expired, link again", asking the user to redo by hand what the
  * app can do for them, and leaving whoever was mid-scan pointed at a QR that
  * silently does nothing. It mints a fresh one instead.
  */

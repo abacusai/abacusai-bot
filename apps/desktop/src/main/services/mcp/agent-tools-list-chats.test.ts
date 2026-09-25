@@ -2,8 +2,8 @@
  * What `list_chats` says when it has nothing to show.
  *
  * The answer matters more than it looks. A model asked to check Telegram on an
- * empty address book ran nineteen searches in a row — "telegram", "alex",
- * "a", "e", "i", "o", "mom", "What is this" — because every one of them came
+ * empty address book ran nineteen searches in a row: "telegram", "alex",
+ * "a", "e", "i", "o", "mom", "What is this", because every one of them came
  * back as `No contact matching "x"`, which reads as "your query missed" and
  * invites the next guess. Nothing in the reply said the book was empty, so
  * nothing told it to stop.

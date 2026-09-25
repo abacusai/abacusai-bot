@@ -36,7 +36,7 @@ interface AbacusModel {
 }
 
 /** What a $0 model's row says; the platform decides which rows those are. */
-const FREE_MODEL_NOTE = "Free — doesn't use credits";
+const FREE_MODEL_NOTE = "Free: doesn't use credits";
 
 let cache: ModelAvailability[] | null = null;
 

@@ -124,7 +124,7 @@ export class LogSyncService {
           if (!outcome.retryable) {
             this.disabledForRun = outcome.reason;
             console.warn(
-              `[log-sync] disabled for this run (${outcome.reason}) — best-effort, will not succeed by retrying`
+              `[log-sync] disabled for this run (${outcome.reason}). Best-effort, will not succeed by retrying`
             );
           } else {
             console.warn(`[log-sync] batch gave up: ${outcome.reason}`);

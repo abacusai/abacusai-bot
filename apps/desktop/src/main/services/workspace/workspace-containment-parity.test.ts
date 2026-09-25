@@ -2,8 +2,8 @@
  * Pins the two containment rules to each other.
  *
  * `isInsideWorkspace` here and `isInsideDirectory` in
- * packages/agent/src/workspace-path.ts answer the same question — does this
- * path really land inside the workspace — for the same reason, but they are
+ * packages/agent/src/workspace-path.ts answer the same question (does this
+ * path really land inside the workspace?) for the same reason, but they are
  * independent implementations rather than copies: one is async and folds case,
  * the other is sync. Comparing their source would prove nothing, so this drives
  * both through one table of cases and asserts they agree.

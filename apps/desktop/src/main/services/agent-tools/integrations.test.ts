@@ -1,6 +1,6 @@
 /**
  * X search, with `fetch` stubbed: what is worth asserting is the request that
- * goes out — the platform host, the bearer token, the query — and what the
+ * goes out (the platform host, the bearer token, the query) and what the
  * model gets back. The host is the validated one and cannot be pointed at a
  * loopback stub, which is the point.
  *
@@ -36,7 +36,7 @@ let reply: { status: number; body: unknown } = { status: 200, body: {} };
 beforeAll(() => {
   // Credentials resolve from the environment and then from settings on disk, so
   // without a home of its own this suite reads whatever the developer happens to
-  // have configured — and "no key" cannot be tested on a machine that has one.
+  // have configured, and "no key" cannot be tested on a machine that has one.
   home = mkdtempSync(join(tmpdir(), "abacusai-bot-integrations-"));
   process.env.ABACUSAI_BOT_HOME = home;
   process.env.ABACUS_API_KEY = "test-key";

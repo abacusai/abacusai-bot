@@ -2,7 +2,7 @@
  * The shape of `main/` and its `services/`, pinned.
  *
  * This directory reached 71 loose files, which is how it was reported: one flat
- * folder nobody could navigate. Grouping it is only half a fix — the half that
+ * folder nobody could navigate. Grouping it is only half a fix. The half that
  * lasts is that the next service has somewhere obvious to go, and that dropping
  * one at the top level fails here instead of being noticed a year later.
  *
@@ -22,7 +22,7 @@ const GROUPS = [
   "bots",
   "browser",
   "config",
-  // The connector registry's status table and connect flow — one answer to
+  // The connector registry's status table and connect flow. One answer to
   // "is it connected?" and one way to connect, for every kind.
   "connectors",
   "conversation",
@@ -54,7 +54,7 @@ const MAIN_ROOT_FILES = [
   // process-level concern rather than any one service's.
   "agent-import-surface.test.ts",
   // No module of its own: it is a check on how the app is packaged, and what
-  // it checks — what the spawned agent process can resolve beside itself — is
+  // it checks (what the spawned agent process can resolve beside itself) is
   // a process-level concern rather than any one service's.
   "agent-runtime-deps.test.ts",
   "app-quit-state.ts",
@@ -136,7 +136,7 @@ describe("the services directory", () => {
 describe("the main directory above it", () => {
   // The same failure mode one level up: this directory accumulated loose
   // provider and settings modules for a while before they were grouped, so it
-  // gets the same rule as `services/` — a file here is a deliberate decision.
+  // gets the same rule as `services/`. A file here is a deliberate decision.
   it("holds nothing loose but the process-level modules", () => {
     const loose = readdirSync(join(SERVICES, ".."), { withFileTypes: true })
       .filter((entry) => entry.isFile())

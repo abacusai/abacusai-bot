@@ -1,7 +1,7 @@
 /**
  * What survives into a printed document.
  *
- * The allow-list is the document's security boundary — it is applied at the
+ * The allow-list is the document's security boundary. It is applied at the
  * boundary precisely so the sub-agent's output cannot be trusted to be clean.
  * It was also, until now, the reason a document asked for "with images" printed
  * without any: `img` was not on the list, so every picture was dropped
@@ -33,7 +33,7 @@ describe("images in a printed document", () => {
 
   it("keeps a Windows drive-letter path, which is a local file, not a scheme", () => {
     // Lowercased, "C:\..." starts with `c:` and looks like a URL scheme to a
-    // naive test — which silently stripped every locally-generated image from
+    // naive test, which silently stripped every locally-generated image from
     // PDFs printed on Windows.
     const html = '<img src="C:\\Users\\me\\chart.png" alt="Chart">';
     expect(sanitizeHtml(html)).toContain(

@@ -2,7 +2,7 @@
  * `present_deliverable`: what actually reaches the preview pane.
  *
  * The tool takes a list; every item becomes a row of the chat's files card,
- * and only the first — the primary — goes to the preview pane. A bot's turn
+ * and only the first (the primary) goes to the preview pane. A bot's turn
  * sends nothing to the pane at all. Opening the pane is a notification rather
  * than a call, so what is asserted here is the broadcast.
  */
@@ -66,7 +66,7 @@ describe("presenting URLs", () => {
     ]);
   });
 
-  it("opens only the first — the rest are rows of the files card", async () => {
+  it("opens only the first; the rest are rows of the files card", async () => {
     const paths = await present([
       { path: "http://localhost:5173" },
       { path: "http://localhost:5174" },

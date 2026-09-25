@@ -5,7 +5,7 @@
  * wrong in both directions: on the case-insensitive filesystems of macOS and
  * Windows the same directory spelled with different casing was rejected, and a
  * symlink inside the workspace pointing out of it sailed through. These pin
- * the corrected behavior — real paths, `path.relative`, case folded where the
+ * the corrected behavior: real paths, `path.relative`, case folded where the
  * filesystem folds it.
  */
 import {
@@ -76,7 +76,7 @@ describe("writing a file through the tree", () => {
 
   it("refuses a write through a DANGLING link that points out of the workspace", async () => {
     // The target does not exist, so realpath fails on the link exactly as it
-    // does on a plain missing file — but writing the link creates its target,
+    // does on a plain missing file, but writing the link creates its target,
     // outside the workspace, rather than a file where the link sits.
     const target = join(outside, "created-by-the-write.txt");
     symlinkSync(target, join(workspace, "notes.txt"));

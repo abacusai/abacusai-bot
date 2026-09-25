@@ -3,12 +3,12 @@
  *
  * The report: a tester unlinked WhatsApp from their phone, and the app kept
  * saying Connected while every send and read hit a logged-out page. The
- * signed-out branch of checkLogin existed — but the login poll was cleared
+ * signed-out branch of checkLogin existed, but the login poll was cleared
  * the moment the connector reported connected, so nothing ever ran it.
  *
  * Pinned here: the poll keeps answering after connect (a signed-out page
  * flips the state to needs_login), and the flip is debounced by what the
- * page positively shows — a QR screen is believed after four polls in a
+ * page positively shows: a QR screen is believed after four polls in a
  * row, while a page showing neither the QR nor the chat list is WhatsApp
  * booting (the connector's own /send?phone= navigations reload the whole
  * SPA) and has to stay that way for forty. Wiping the link on a slow boot
@@ -57,7 +57,7 @@ const connectorSeeing = (
   return {
     // A macrotask flush after the connecting poll: the connected branch now
     // kicks off a SERIALIZED contacts refresh, and the login poll skips
-    // ticks while any serialized task is driving the page — the flush lets
+    // ticks while any serialized task is driving the page; the flush lets
     // the (stubbed) task finish so later polls are judged, not skipped.
     poll: async () => {
       await internals.checkLogin();
@@ -78,16 +78,16 @@ describe("a login that goes away after connect", () => {
     ]);
 
     await poll(); // connects
-    await poll(); // QR readings — debounced...
+    await poll(); // QR readings, debounced...
     await poll();
     await poll();
-    await poll(); // ...fourth in a row — believed
+    await poll(); // ...fourth in a row, believed
 
     expect(states).toEqual(["connected", "needs_login"]);
   });
 
   it("waits out a boot screen instead of reporting an unlink", async () => {
-    // Neither the QR nor the chat list: the page is booting — which is what
+    // Neither the QR nor the chat list: the page is booting, which is what
     // every connector-initiated navigation looks like for a while. Four in
     // a row must NOT be believed the way a QR is.
     const { poll, states } = connectorSeeing([
@@ -97,7 +97,7 @@ describe("a login that goes away after connect", () => {
     ]);
 
     await poll(); // connects
-    for (let i = 0; i < 10; i += 1) await poll(); // boot drags on — waited out
+    for (let i = 0; i < 10; i += 1) await poll(); // boot drags on, waited out
     await poll(); // the boot finishes
 
     expect(states).toEqual(["connected"]);
@@ -112,9 +112,9 @@ describe("a login that goes away after connect", () => {
     ]);
 
     await poll(); // connects
-    await poll(); // transient signed-out — debounced
-    await poll(); // healthy again — debounce reset
-    await poll(); // another lone signed-out — still debounced
+    await poll(); // transient signed-out, debounced
+    await poll(); // healthy again, debounce reset
+    await poll(); // another lone signed-out, still debounced
 
     expect(states).toEqual(["connected"]);
   });

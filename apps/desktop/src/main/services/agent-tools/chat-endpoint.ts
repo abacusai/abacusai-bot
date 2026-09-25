@@ -131,9 +131,9 @@ export const resolveChatEndpoint = (purpose: string): ChatEndpoint => {
   // Read by the model as a tool error, so it steers away from improvising.
   const accepted = CHAT_PROVIDERS.map((provider) => provider.envVar).join(", ");
   throw new Error(
-    `${purpose} needs a model provider key. The user can add one in Settings → API keys — any of ` +
+    `${purpose} needs a model provider key. The user can add one in Settings → API keys: any of ` +
       `${accepted} works, in the environment or the store. ` +
       "Until then this tool is unavailable: tell the user exactly what is missing and ask how they " +
-      "want to proceed — do not improvise a replacement pipeline."
+      "want to proceed. Do not improvise a replacement pipeline."
   );
 };

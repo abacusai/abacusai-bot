@@ -62,8 +62,8 @@ const FOOTER_TEMPLATE =
 
 /**
  * Counts `/Type /Page` objects (whitespace optional, `/Pages` tree nodes
- * excluded). A valid PDF can defeat the literal scan — compressed object
- * streams hide the markers — so a non-empty document never reports fewer than
+ * excluded). A valid PDF can defeat the literal scan. Compressed object
+ * streams hide the markers, so a non-empty document never reports fewer than
  * one page.
  */
 const countPages = (pdf: Buffer): number => {

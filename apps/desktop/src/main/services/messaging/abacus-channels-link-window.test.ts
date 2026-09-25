@@ -1,7 +1,7 @@
 /**
  * The Abacus AI bot's install link opens in the app's own window, never
  * through the OS. Handed to the OS, a discord.com link opens the Discord
- * desktop app when one is installed — the app took over the authorize flow
+ * desktop app when one is installed. The app took over the authorize flow
  * and the pairing card waited forever. The window must also refuse the
  * `discord://` handoff the authorize page tries once the bot is added.
  */
@@ -121,7 +121,7 @@ describe("opening the install link", () => {
       onState: () => {},
       onLog: () => {},
     });
-    expect(() => connector.openLink()).toThrow(/press Link first/);
+    expect(() => connector.openLink()).toThrow(/Press Link first/);
   });
 
   it("closes the window once the link lands", () => {

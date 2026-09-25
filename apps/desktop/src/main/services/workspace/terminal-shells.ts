@@ -3,7 +3,7 @@
  * this machine can actually answer for.
  *
  * busybox is the reason this file exists: it is not on PATH and not installed
- * by anything the user did — it ships in the app's vendor directory and is
+ * by anything the user did. It ships in the app's vendor directory and is
  * materialised per user by the agent package, which hands back the `sh`
  * launcher plus the applet directory its children need on PATH.
  */
@@ -51,8 +51,8 @@ const isFile = (candidate: string): boolean => {
  * Each extension is tried as PATHEXT spells it and again in lower case:
  * PATHEXT is `.COM;.EXE;...` by convention while the files on disk are
  * `pwsh.exe`, and Windows only gets away with that because its filesystems
- * are case-insensitive. On one that is not — a mounted share, or a Linux box
- * running these tests — the uppercase form alone finds nothing.
+ * are case-insensitive. On one that is not (a mounted share, or a Linux box
+ * running these tests), the uppercase form alone finds nothing.
  */
 const onPath = (
   command: string,
@@ -98,7 +98,7 @@ let installedBusybox: PosixShell | undefined | null = null;
 /**
  * The materialised busybox, installed once per process. Verifying an install
  * digests the executable and stats every launcher, and a terminal start
- * resolves the shell twice — once for the snapshot, once to spawn.
+ * resolves the shell twice: once for the snapshot, once to spawn.
  */
 const busybox = (
   env: NodeJS.ProcessEnv,
@@ -201,7 +201,7 @@ const locate = (
         // input is a terminal, and on Windows this app spawns through a pipe
         // rather than ConPTY (see terminal-session-service.ts). Without it
         // ash reads the pipe as a script: commands run, and nothing else
-        // happens — no prompt, no line editing, no job control.
+        // happens: no prompt, no line editing, no job control.
         args: ["-i"],
         env: {
           ...shellEnv,

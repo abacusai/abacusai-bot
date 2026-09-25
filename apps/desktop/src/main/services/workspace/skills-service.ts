@@ -31,7 +31,7 @@ import { environmentNoticeService } from "../providers/environment-notice-servic
 // lists exactly what the agent loads. repairSelfLink() clears the self-link
 // old builds left at the global dir.
 
-/** The one global skills dir — written by the desktop, scanned by the agent. */
+/** The one global skills dir. Written by the desktop, scanned by the agent. */
 const GLOBAL_SKILLS_DIR = path.join(DESKTOP_DIR, "skills");
 
 /**
@@ -255,7 +255,7 @@ function parseFrontmatter(content: string): Record<string, unknown> {
     const key = m[1];
     const rawValue = m[2].trim();
 
-    // Block scalar (`key: |`, `key: >-`, …) — the value is the indented block.
+    // Block scalar (`key: |`, `key: >-`, …). The value is the indented block.
     const blockHeader = rawValue.match(/^([|>])([+-]?)\s*(?:#.*)?$/);
     if (blockHeader != null) {
       const { text, nextIndex } = readBlockScalar(

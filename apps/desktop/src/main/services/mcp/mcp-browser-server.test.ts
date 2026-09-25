@@ -4,7 +4,7 @@
  * Everything here goes over the real JSON-RPC transport into the real
  * `McpBrowserServer`; only Electron is stood in for. The page is a scripted
  * `Runtime.evaluate` responder rather than a DOM, because what is being checked
- * is the decision the tool makes about what the page said — which ref it
+ * is the decision the tool makes about what the page said: which ref it
  * resolves, whether it retries, whether it calls a thing that did not happen a
  * success. The page-side scripts need real layout and are covered by their own
  * contract tests in browser-snapshot.test.ts.
@@ -539,7 +539,7 @@ describe("navigating", () => {
 
     expect(isError).toBe(true);
     expect(text).toContain("ERR_HTTP2_PROTOCOL_ERROR (-337)");
-    expect(text).toContain("try a different source");
+    expect(text).toContain("Try a different source");
   });
 
   it("drops the refs of every session, because they all share the pane", async () => {

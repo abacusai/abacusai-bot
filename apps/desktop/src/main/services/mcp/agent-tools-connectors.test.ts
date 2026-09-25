@@ -2,7 +2,7 @@
  * `connect_connector`: what the agent can see and how it asks.
  *
  * The failure this replaces is an agent reporting "I cannot do that, Slack is
- * not connected" and stopping — a dead end for something the user could fix
+ * not connected" and stopping: a dead end for something the user could fix
  * with one click. So the listing is the whole registry, connected or not (an
  * agent that only sees what it has cannot name what it needs), and asking
  * suspends the turn behind a Connect button rather than ending it. Every
@@ -135,7 +135,7 @@ describe("asking for one", () => {
     expect(text).toContain("already in your tool list");
   });
 
-  it("asks for GitHub with the same button as everything else — the card takes a token", async () => {
+  it("asks for GitHub with the same button as everything else: the card takes a token", async () => {
     for (const service of ["github", "GitHub"]) {
       vi.clearAllMocks();
 
@@ -148,7 +148,7 @@ describe("asking for one", () => {
     }
   });
 
-  it("asks for a tool server with the same button — Playwright is a connector here", async () => {
+  it("asks for a tool server with the same button (Playwright is a connector here)", async () => {
     // The regression: "connect playwright" was answered with "Playwright
     // isn't a connector" and an npm install recipe. It is in the registry, so
     // it gets the button, and connecting installs it.
@@ -193,7 +193,7 @@ describe("asking for one", () => {
 
   it("resolves a display name to its id", async () => {
     // The observed failure: the id is "abacus-gmailuser", the model asks for
-    // "gmail" (Gmail is connected here, so the answer is already-connected —
+    // "gmail" (Gmail is connected here, so the answer is already-connected;
     // the point is that the name resolved at all).
     const text = await call({ service: "gmail" });
 
@@ -245,7 +245,7 @@ describe("asking for one", () => {
 /**
  * The chat apps are connectors too, in the same registry: leaving them out
  * let the agent tell a user that WhatsApp "isn't available as a connector on
- * this system" — inside the app whose WhatsApp bot they were talking to.
+ * this system", inside the app whose WhatsApp bot they were talking to.
  */
 describe("the chat apps", () => {
   it("are listed alongside the account's connectors", async () => {
@@ -304,7 +304,7 @@ describe("the chat apps", () => {
 /**
  * `disconnect_connector`: the other half of the round trip. Until it existed
  * the agent answered "I don't have a tool that disconnects" and sent the user
- * to Settings — for a detach the platform API supports in one call.
+ * to Settings, for a detach the platform API supports in one call.
  */
 describe("disconnecting", () => {
   const disconnected: string[] = [];
@@ -365,7 +365,7 @@ describe("disconnecting", () => {
     const text = await disconnect("slack");
 
     expect(disconnected).toEqual([]);
-    expect(text).toContain("not connected — nothing to disconnect");
+    expect(text).toContain("not connected: nothing to disconnect");
   });
 
   it("switches a chat app off through the gateway, the same lever as its card", async () => {

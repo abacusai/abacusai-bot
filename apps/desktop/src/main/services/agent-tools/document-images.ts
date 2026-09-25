@@ -112,7 +112,7 @@ export const localiseImages = async (
   if (sources.length === 0) return report;
 
   for (const extra of sources.slice(MAX_IMAGES)) {
-    report.dropped.push(`${extra} — past the ${MAX_IMAGES}-image limit`);
+    report.dropped.push(`${extra}: past the ${MAX_IMAGES}-image limit`);
   }
 
   const wanted = sources.slice(0, MAX_IMAGES);
@@ -134,7 +134,7 @@ export const localiseImages = async (
       report.localised.set(result.url, result.name);
     else
       report.dropped.push(
-        `${result.url} — ${String((result as { error?: string }).error)}`
+        `${result.url}: ${String((result as { error?: string }).error)}`
       );
   }
 

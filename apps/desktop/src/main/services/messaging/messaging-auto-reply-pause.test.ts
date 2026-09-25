@@ -1,7 +1,7 @@
 /**
  * Auto-replies live beside the schedules now, with the same verbs: a pause
  * keeps the grant but stops the answers, resume restores them, delete
- * removes the sender. Pinned at the store level — approvedUserIds is what
+ * removes the sender. Pinned at the store level: approvedUserIds is what
  * inbound routing consults, so "paused senders are not answered" is exactly
  * "paused rows are not in that set".
  */
@@ -47,7 +47,7 @@ describe("pausing an auto-reply", () => {
 
     pausePairing("whatsapp", "girlies");
     expect(approvedUserIds("whatsapp").has("girlies")).toBe(false);
-    // The grant survives — paused, not forgotten.
+    // The grant survives; paused, not forgotten.
     expect(listPairing()[0]?.status).toBe("paused");
     expect(listPairing()[0]?.managedBy).toBe("bot");
 

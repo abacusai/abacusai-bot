@@ -38,7 +38,7 @@ describe("the words that go out", () => {
     );
   });
 
-  it("send the whole text when there is no tag — a reply is never lost", () => {
+  it("send the whole text when there is no tag: a reply is never lost", () => {
     expect(outgoingWords("khawa hoyeche, tumi?")).toBe("khawa hoyeche, tumi?");
   });
 

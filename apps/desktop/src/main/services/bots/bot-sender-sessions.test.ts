@@ -1,7 +1,7 @@
 /**
  * Sender conversations: one dedicated session per (bot, platform chat).
  *
- * The store side of the audience fix — a bot answering a remote sender must
+ * The store side of the audience fix: a bot answering a remote sender must
  * do it in a room where that sender is the only audience, and this table is
  * how the gateway finds that room again.
  */
@@ -76,7 +76,7 @@ describe("the sender-session table", () => {
     expect(botForSession("unrelated")).toBeNull();
   });
 
-  it("hides sender sessions from the Sessions list — they live under the bot", () => {
+  it("hides sender sessions from the Sessions list, since they live under the bot", () => {
     const bot = createBot({ name: "B", title: "", description: "x" });
     recordBotSession(bot.id, "ws-1", "forever-chat");
     recordSenderSession(senderSessionKey(bot.id, "whatsapp", "G"), {
@@ -90,7 +90,7 @@ describe("the sender-session table", () => {
     const hidden = botSessionIds();
     expect(hidden).toContain("forever-chat");
     // The bot set the conversation up, so the user looks for it under the
-    // bot in the Bots pane — not among their own sessions.
+    // bot in the Bots pane, not among their own sessions.
     expect(hidden).toContain("sender-sess");
   });
 

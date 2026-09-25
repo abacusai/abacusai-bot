@@ -3,7 +3,7 @@
  *
  * The desktop writes this file after a sign-in; the agent reads it headlessly
  * at connect time and refreshes tokens in it. Neither package can import the
- * other, so both declare the shape themselves — and a field added on one side
+ * other, so both declare the shape themselves, and a field added on one side
  * only is silent. Nothing throws; the token just does not survive the trip, and
  * the server reports as needing sign-in again.
  *
@@ -28,7 +28,7 @@ const AGENT_SOURCE = readFileSync(
 );
 
 /**
- * The field names of one interface, with `?` kept — optionality is part of the
+ * The field names of one interface, with `?` kept: optionality is part of the
  * contract. Comments and nested object literals are flattened away, so only the
  * top-level members of the block are reported.
  */

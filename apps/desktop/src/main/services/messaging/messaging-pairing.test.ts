@@ -2,7 +2,7 @@
  * The pending list has to stay usable on a platform anyone can reach.
  *
  * Re-recording one sender is already a no-op, so no single stranger can grow
- * the file. Distinct senders were unbounded — and email makes that a certainty
+ * the file. Distinct senders were unbounded, and email makes that a certainty
  * rather than an attack, since every spam message arrives from a new address.
  * Each one added a row, rewrote messaging.json and refreshed the pane, so the
  * list a real request has to be found in fills with junk and every inbound

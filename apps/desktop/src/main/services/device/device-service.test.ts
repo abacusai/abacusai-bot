@@ -30,7 +30,7 @@ describe("choosing a JDK for Gradle", () => {
 
   it("picks the runnable JDK over a newer one Gradle rejects", () => {
     // The ordinary Homebrew state: plain `openjdk` is whatever shipped last
-    // week, `openjdk@22` is a common pin. 22 runs, 26 does not — taking the
+    // week, `openjdk@22` is a common pin. 22 runs, 26 does not, and taking the
     // newest regardless produced "Unsupported class file major version" with a
     // working JDK sitting right there.
     expect(pickGradleJdk([jdk(22), jdk(26)])?.version).toBe(22);
@@ -38,7 +38,7 @@ describe("choosing a JDK for Gradle", () => {
   });
 
   it("falls back to the newest when nothing is usable at all", () => {
-    // Both fail, so there is no right answer — but it must still return one
+    // Both fail, so there is no right answer, but it must still return one
     // rather than leaving the caller with nothing to report.
     expect(pickGradleJdk([jdk(11), jdk(26)])?.version).toBe(26);
     expect(pickGradleJdk([jdk(24), jdk(26)])?.version).toBe(26);
@@ -82,7 +82,7 @@ const NODE = (attrs: Record<string, string>, children = ""): string =>
 describe("rendering an Android screen for the model", () => {
   it("numbers tappable elements and gives each one a centre point", () => {
     // The model taps by index, so the numbering and the points have to line up
-    // exactly — an off-by-one here taps the wrong control.
+    // exactly. An off-by-one here taps the wrong control.
     const xml = `<hierarchy>${NODE({
       class: "android.widget.Button",
       text: "Reverse",

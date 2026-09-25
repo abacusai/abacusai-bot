@@ -1,8 +1,8 @@
 /**
  * One answer to "is this connector connected?", for every kind, keyed by
- * registry id. Each kind has exactly one source of truth — the platform's
+ * registry id. Each kind has exactly one source of truth: the platform's
  * listing, the stored credentials, the messaging gateway's live state, the
- * MCP config — and this is the only place those are read for that question.
+ * MCP config. This is the only place those are read for that question.
  * The renderer, the environment notice and `connect_connector` all consume
  * the same statuses, so no surface computes "installed" on its own.
  */

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
  * The agent's index bundles the whole agent, and leaves the packages that load
  * native code external (see @abacus-ai/config/native-packages) because a
  * bundler cannot inline a `.node` addon. Those packages ship beside the asar
- * for the agent's own process to resolve — they are not inside the asar, and
+ * for the agent's own process to resolve. They are not inside the asar, and
  * the main process runs from inside the asar.
  *
  * So a single barrel import in main is not a size regression. It is an app that
@@ -21,13 +21,13 @@ import { describe, expect, it } from "vitest";
  * That shipped as 1.0.6, from one line added in good faith. The tsdown config
  * has warned about it in a comment since usage-stats was split out; a comment
  * cannot fail a build, and this can. Every entry below is a leaf module with no
- * agent runtime behind it — add to the list only after checking the same.
+ * agent runtime behind it. Add to the list only after checking the same.
  */
 const ALLOWED = new Set([
   "@abacus-ai/agent/usage",
   "@abacus-ai/agent/custom-instructions",
   // Checked the same way: its bundle is pi's generated model data and a
-  // flattener — two chunks, no import outside `node:module`, and none of the
+  // flattener. Two chunks, no import outside `node:module`, and none of the
   // native packages. It reaches that catalog through pi's per-provider data
   // modules rather than the `providers/all` barrel, which drags the agent
   // runtime (streams, diagnostics, ~3 MB) in behind it.

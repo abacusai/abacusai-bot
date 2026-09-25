@@ -1,5 +1,5 @@
 /**
- * "Which groups have new messages?" — asked of the WhatsApp bot, and answered
+ * "Which groups have new messages?": asked of the WhatsApp bot, and answered
  * with "I have no tool for that", which was true. The list and read tools
  * now take `only_unread`, answered live from the platform's own counters;
  * what the model sees when the platform can, cannot, or has nothing waiting.
@@ -68,10 +68,10 @@ describe("list_whatsapp_chats with only_unread", () => {
     const h = harness(async () => waiting);
     const text = await h.call("list_whatsapp_chats", { only_unread: true });
     expect(text).toContain("chats with unread messages (3)");
-    expect(text).toContain('to: "School friendsss"  — 3 unread');
-    expect(text).toContain('to: "Raj"  — 1 unread');
+    expect(text).toContain('to: "School friendsss"  (3 unread)');
+    expect(text).toContain('to: "Raj"  (1 unread)');
     // A chat marked unread by hand has no number; say what it is.
-    expect(text).toContain('to: "Anuja"  — marked unread');
+    expect(text).toContain('to: "Anuja"  (marked unread)');
   });
 
   it("says the user is caught up when nothing is waiting", async () => {
@@ -117,9 +117,9 @@ describe("read_whatsapp_messages with only_unread", () => {
       // Marked unread: no count to go by, so a short peek.
       ["Anuja", 5],
     ]);
-    expect(text).toContain("— School friendsss (3 unread)");
+    expect(text).toContain("- School friendsss (3 unread)");
     expect(text).toContain("Raj: hello from School friendsss");
-    expect(text).toContain("— Anuja (marked unread)");
+    expect(text).toContain("- Anuja (marked unread)");
   });
 
   it("honours a smaller limit per chat", async () => {

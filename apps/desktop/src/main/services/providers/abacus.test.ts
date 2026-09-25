@@ -101,7 +101,7 @@ describe("fetchAbacusAccount", () => {
  * The app reads a stored key as proof of a session, so a key the platform has
  * revoked leaves it insisting the user is signed in while every request fails.
  * Acting on that requires knowing the difference between a refusal and a bad
- * afternoon on the network — and getting it backwards would sign people out
+ * afternoon on the network, and getting it backwards would sign people out
  * because their wifi dropped.
  */
 describe("whether the key has been refused outright", () => {

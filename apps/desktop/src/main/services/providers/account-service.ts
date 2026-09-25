@@ -7,7 +7,7 @@ import { abacusBotHome } from "../../paths";
 
 /**
  * The account file: `~/.abacusai-bot/account.json`. With no server there is
- * no session to refresh — the file being present *is* being signed in.
+ * no session to refresh. The file being present *is* being signed in.
  */
 
 const accountPath = (): string => path.join(abacusBotHome(), "account.json");
@@ -58,7 +58,7 @@ export const forgetAccount = (): AccountState => {
   try {
     fs.rmSync(accountPath(), { force: true });
   } catch {
-    // Already gone, or unwritable — either way there is nothing to report.
+    // Already gone, or unwritable. Either way there is nothing to report.
   }
 
   return EMPTY_ACCOUNT_STATE;

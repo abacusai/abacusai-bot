@@ -87,7 +87,7 @@ describe("the heal's read-back", () => {
   }, 12_000);
 
   it("counts a genuinely new bubble as delivered", async () => {
-    // Two "hi" bubbles now, one before — the send landed.
+    // Two "hi" bubbles now, one before: the send landed.
     const found = await runRecentOut(
       [
         { out: true, text: "hi" },

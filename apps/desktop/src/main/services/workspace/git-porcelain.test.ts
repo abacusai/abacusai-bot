@@ -4,7 +4,7 @@
  * The Changes panel used to read git's terminal-facing output, which quotes any
  * path it thinks is unusual and escapes the bytes in octal. `café.txt` arrived
  * as `"caf\303\251.txt"`, a tidy-up pass turned the backslashes into slashes,
- * and the panel ended up showing `"caf/303/251.txt"` — a name that does not
+ * and the panel ended up showing `"caf/303/251.txt"`, a name that does not
  * exist, so its diff was empty and staging it failed. Every accented, CJK or
  * emoji filename behaved that way.
  *
@@ -26,8 +26,8 @@ const CJK = "報告書.md";
 const SPACED = "naïve report.md";
 /**
  * A name containing what porcelain uses to mean "renamed to", so the parser is
- * shown not to confuse the two. Windows cannot represent it — `>` is one of the
- * characters its filesystem reserves — so there it is simply not among the
+ * shown not to confuse the two. Windows cannot represent it (`>` is one of the
+ * characters its filesystem reserves), so there it is simply not among the
  * names tried, rather than failing the whole file at setup.
  */
 const ARROW = "a -> b.txt";

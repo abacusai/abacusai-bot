@@ -1,9 +1,9 @@
 /**
  * Discord's server reach: servers and their channels resolve as contacts,
- * server chat ids are accepted, and server inbound is the mention pill —
- * reported once per change, not once per sweep.
+ * server chat ids are accepted, and server inbound is the mention pill,
+ * which is reported once per change, not once per sweep.
  *
- * Also pinned: every navigation carries the plain-Chrome user agent —
+ * Also pinned: every navigation carries the plain-Chrome user agent.
  * discord.com can wedge its boot under the default Electron UA.
  */
 import fs from "fs";
@@ -48,13 +48,13 @@ describe("server contacts", () => {
     inner.contacts = [{ chatId: "111", name: "Sd" }];
     inner.guilds = [{ guildId: "22", name: "SolidJS", mentions: 0 }];
     inner.guildChannels.set("22", [
-      { chatId: "22/33", name: "#general — SolidJS" },
+      { chatId: "22/33", name: "#general (SolidJS)" },
     ]);
 
     expect(c.listContacts()).toEqual([
       { chatId: "111", name: "Sd" },
       { chatId: "22", name: "SolidJS (server)" },
-      { chatId: "22/33", name: "#general — SolidJS" },
+      { chatId: "22/33", name: "#general (SolidJS)" },
     ]);
   });
 });
@@ -62,7 +62,7 @@ describe("server contacts", () => {
 describe("server chat ids", () => {
   it("rejects a name outright instead of driving the page", async () => {
     const { c } = connector();
-    // No window exists in this test — reaching for one would throw, so an
+    // No window exists in this test; reaching for one would throw, so an
     // empty answer here proves the id was refused before any page driving.
     await expect(c.readChat("solidjs general", 10)).resolves.toEqual([]);
   });
@@ -90,7 +90,7 @@ describe("the send-verification probe", () => {
 });
 
 describe("opening a bare server id", () => {
-  // A bare server id used to navigate to /channels/<gid> and hope — Discord
+  // A bare server id used to navigate to /channels/<gid> and hope. Discord
   // often lands that on the Server Guide, which has no composer, so a
   // routine's send to "the server" died with "did not load" and asked the
   // user for a channel id they should never need.
@@ -108,8 +108,8 @@ describe("opening a bare server id", () => {
     };
     inner.guilds = [{ guildId: "22", name: "SolidJS", mentions: 0 }];
     inner.guildChannels.set("22", [
-      { chatId: "22/701", name: "#general — SolidJS" },
-      { chatId: "22/702", name: "#help — SolidJS" },
+      { chatId: "22/701", name: "#general (SolidJS)" },
+      { chatId: "22/702", name: "#help (SolidJS)" },
     ]);
     inner.ensureWindow = () => ({ isDestroyed: () => false });
     inner.waitForChat = async () => true;
@@ -142,7 +142,7 @@ describe("the mention sweep", () => {
     let rows = guilds(2);
     inner.run = async () => rows;
 
-    // The first sweep primes the ledger silently — everything it sees
+    // The first sweep primes the ledger silently; everything it sees
     // predates the connector, like the DM sweep's first pass.
     inner.firstInboundSweep = true;
     await inner.sweepGuildMentions();
@@ -162,7 +162,7 @@ describe("the mention sweep", () => {
     });
 
     await inner.sweepGuildMentions();
-    expect(messages).toHaveLength(1); // still 3 — nothing new to say
+    expect(messages).toHaveLength(1); // still 3, nothing new to say
   });
 
   it("stays quiet for servers with no mentions", async () => {

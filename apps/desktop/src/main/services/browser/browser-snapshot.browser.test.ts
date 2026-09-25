@@ -2,13 +2,13 @@
  * The snapshot walker, run in a real browser.
  *
  * This is the part of the browser tools nothing else could reach. The walker
- * asks questions only layout can answer — `offsetParent`, `getBoundingClientRect`,
- * the computed `cursor` — and jsdom answers all of them with zero, which makes
+ * asks questions only layout can answer: `offsetParent`, `getBoundingClientRect`,
+ * the computed `cursor`. jsdom answers all of them with zero, which makes
  * every element invisible and every tree empty. So these fixtures load in
  * Electron, which the repo already depends on, and the assertions are about
  * what the walker actually made of a rendered page.
  *
- * Three bugs came out of writing it, all of the same kind — the walker quietly
+ * Three bugs came out of writing it, all of the same kind. The walker quietly
  * saw less than the page had:
  *
  *   - Anything more than twelve elements below `<body>` was dropped. That is an
@@ -39,7 +39,7 @@ const VIEWPORT_HEIGHT = 768;
 
 /**
  * Fixtures are loaded from a file, and a root-relative `href` resolved against
- * a `file://` URL picks up whatever the platform's root is — on Windows
+ * a `file://` URL picks up whatever the platform's root is. On Windows
  * `/products/42` becomes `/C:/products/42`, which is the drive letter leaking
  * into an assertion about paths. A base URL gives every fixture the same
  * origin everywhere, which is what the walker is being asked about.
@@ -199,7 +199,7 @@ const describeInBrowser = availability.usable ? describe : describe.skip;
 
 if (!availability.usable) {
   console.warn(
-    `[browser-snapshot] skipping the walker suite — ${availability.reason}`
+    `[browser-snapshot] skipping the walker suite: ${availability.reason}`
   );
 }
 
@@ -257,7 +257,7 @@ describeInBrowser("the snapshot walker, against real layout", () => {
     it("finds one twenty down, which is an ordinary app shell", () => {
       // The bug: the cap was twelve. root > provider > layout > main > section
       // > card > row passes that without trying, and everything beyond it was
-      // dropped in silence — the snapshot came back nearly empty and the tool
+      // dropped in silence. The snapshot came back nearly empty and the tool
       // blamed the page.
       expect(refs("appShell")).toContain("Twenty deep");
     });

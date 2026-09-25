@@ -6,7 +6,7 @@
  * the connector stayed registered and restarted for a fresh QR, its address
  * book went empty with it, and the tool answered "no address book has synced".
  * The agent read that as "you have no contacts" and started asking the user
- * for phone numbers — including, for a message to themselves, their own.
+ * for phone numbers, even their own for a message to themselves.
  */
 import { describe, expect, it } from "vitest";
 
@@ -88,19 +88,19 @@ describe("who the user is", () => {
     const text = await call(server({ chats: [CONTACT] }), {});
 
     expect(text).toContain("919804585173@s.whatsapp.net");
-    expect(text).toContain('(the user — "me")');
+    expect(text).toContain('(the user, "me")');
   });
 
   it("names it even when there is nothing else to list", async () => {
     const text = await call(server({ chats: [] }), {});
 
-    expect(text).toContain('(the user — "me")');
+    expect(text).toContain('(the user, "me")');
   });
 
   it("says nothing about it before the platform has said who it is", async () => {
     const text = await call(server({ chats: [CONTACT], self: false }), {});
 
-    expect(text).not.toContain('(the user — "me")');
+    expect(text).not.toContain('(the user, "me")');
   });
 });
 
@@ -144,7 +144,7 @@ describe("a platform that is still starting", () => {
   /**
    * A new bot's first mission fires seconds after launch, and WhatsApp Web
    * takes most of a minute to boot. In that window the address book is
-   * empty and "me" unknown — true, and the wrong answer. The model was told
+   * empty and "me" unknown: true, and the wrong answer. The model was told
    * nothing had synced and asked the user to message it first.
    */
   it("says so, and never that nothing has synced", async () => {

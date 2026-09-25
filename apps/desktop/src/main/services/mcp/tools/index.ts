@@ -16,7 +16,7 @@ import { TODO_TOOLS } from "./todo";
  * which Capabilities toggle governs it, who may see it, and what runs. The
  * server derives listing and dispatch from this list and nothing else, so a
  * tool that exists here is advertised and callable, and one that does not is
- * neither — there is no second table to forget.
+ * neither: there is no second table to forget.
  */
 export const AGENT_TOOLS: readonly ToolDefinition[] = [
   ...SKILLS_TOOLS,

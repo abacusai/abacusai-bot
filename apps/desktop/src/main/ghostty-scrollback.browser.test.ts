@@ -12,7 +12,7 @@
  *
  * jsdom cannot answer any of this: there is no canvas to open the terminal on
  * and the grid never gets a cell size, so the harness the browser-snapshot
- * tests already use is borrowed here — which is why a test about renderer
+ * tests already use is borrowed here, which is why a test about renderer
  * code sits with the other whole-app checks in `src/main` rather than beside
  * the panel: it is a node test that spawns Electron, and renderer sources may
  * not reach into main. The bundle inlines its own WASM as a
@@ -37,7 +37,7 @@ import {
 const bundleAsGlobal = (): string => {
   // `import.meta.resolve`, because the package exports only its bare
   // specifier, and only under the "import" condition does that name the ESM
-  // build — which is the one the app loads and the one the patch touches.
+  // build, which is the one the app loads and the one the patch touches.
   const source = readFileSync(
     fileURLToPath(import.meta.resolve("ghostty-web")),
     "utf8"
@@ -157,7 +157,7 @@ const WHEEL_SCRIPT = `(async () => {
 
 /**
  * Dragging a selection past the top edge has to keep scrolling and keep
- * extending the selection — the "selection-based scroll" in the report.
+ * extending the selection (the "selection-based scroll" in the report).
  */
 const SELECTION_SCRIPT = `(async () => {
   const { init, Terminal } = window.__ghostty;
@@ -329,7 +329,7 @@ describe.skipIf(!availability.usable)(
 
       // The patch: 20 lines of output pushed 20 lines into the scrollback, so
       // the viewport is 20 further from the bottom and the reader has not
-      // moved. Unpatched, this is 0 — the snap.
+      // moved. Unpatched, this is 0 (the snap).
       expect(report.afterOutput).toBe(50);
 
       // And the other half of the rule: at the bottom, output still follows.

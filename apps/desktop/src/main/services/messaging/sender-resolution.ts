@@ -8,7 +8,7 @@ import type { MessagingPlatformId } from "#shared/messaging";
 
 export interface SenderCandidate {
   platform: MessagingPlatformId;
-  /** What inbound gating compares against — the sender's id, not the chat's. */
+  /** What inbound gating compares against: the sender's id, not the chat's. */
   userId: string;
   chatId: string;
   name: string;

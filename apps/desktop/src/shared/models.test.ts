@@ -4,7 +4,7 @@
  * The entry is data, but two facts about it are load-bearing and easy to break
  * from a distance: its id must match OPENLLM_ID in
  * packages/agent/src/openllm.ts (the agent intercepts exactly this string
- * before pi's resolver sees it), and its tier must not be "free" — the live
+ * before pi's resolver sees it), and its tier must not be "free". The live
  * OpenRouter catalog supersedes hardcoded free-tier entries in
  * main/services/providers/models.ts, and the router is not a model the live
  * list carries, so tier "free" would silently drop it the moment a key was
@@ -45,8 +45,8 @@ describe("the OpenLLM catalog entry", () => {
 
   it("names OpenRouter as the primary way in", () => {
     // `requiresEnv` can only carry one variable; the availability service
-    // widens `configured` to any pool source (Gemini or Abacus key)
-    // — see openLlmConfigured in main/services/providers/models.ts.
+    // widens `configured` to any pool source (Gemini or Abacus key).
+    // See openLlmConfigured in main/services/providers/models.ts.
     expect(router?.requiresEnv).toBe("OPENROUTER_API_KEY");
   });
 
@@ -67,7 +67,7 @@ describe("the RouteLLM catalog entry", () => {
 
   it("names the CODE router, never the chat router", () => {
     // abacus/route-llm short-circuits to a Flash model above 5000 tokens of
-    // context — the live catalog refuses to offer it, and the static list
+    // context. The live catalog refuses to offer it, and the static list
     // must not resurrect it when the fetch fails.
     expect(cheap).toBeDefined();
     expect(MODEL_CATALOG.some((model) => model.id === "abacus/route-llm")).toBe(
@@ -99,8 +99,8 @@ describe("the expanded list's order", () => {
  * The other half of the pair with CURATED_MODEL_IDS in
  * packages/agent/src/providers.catalog.integration.test.ts, which resolves
  * each of these against pi's bundled catalog. The agent cannot import this
- * module, so the list is copied there; this test is what makes the copy honest
- * — add an entry here and the agent-side list has to grow with it.
+ * module, so the list is copied there. This test is what makes the copy honest:
+ * add an entry here and the agent-side list has to grow with it.
  */
 const PINNED_AGAINST_PI = [
   "anthropic/claude-haiku-4-5",

@@ -3,7 +3,7 @@
  *
  * The agent decides how long a tool may take; the desktop decides how long it
  * will wait before calling the agent dead. They live in separate packages that
- * cannot import each other, and nothing made them agree — so they drifted into
+ * cannot import each other, and nothing made them agree, so they drifted into
  * a state where the second number was smaller than the first and a healthy
  * agent was killed for being slow.
  *
@@ -113,7 +113,7 @@ describe("the budgets the two packages have to agree on", () => {
   it("beats several times inside the budget of every long-running tool", () => {
     // Short tools (read_output at 15s) finish before the watchdog cares and
     // need no beat at all. The ones that matter are those that can still be
-    // working when the watchdog runs out — each must have reported many times
+    // working when the watchdog runs out. Each must have reported many times
     // by then.
     const longRunning = Object.entries(toolBudgetSeconds()).filter(
       ([, seconds]) => seconds * 1_000 >= WATCHDOG_MS / 2
@@ -217,7 +217,7 @@ describe("the agent and the watchdog, wired together", () => {
 
   it("lets the watchdog fire on a tool that hung and cannot be killed", () => {
     // `document`, `ppt`, `design`, `delegate_task` and `browser_task` have no
-    // native timeout — the budget extension can warn one has overrun but not
+    // native timeout. The budget extension can warn one has overrun but not
     // stop it. Vouching for such a call forever would leave the session
     // unendable except by pressing Stop, so the vouching runs out and the
     // watchdog takes over.

@@ -4,7 +4,7 @@
  * Every case here is one where the tool used to answer rather than fail: a
  * stale ref that typed into whatever happened to be focused, a `goto` that
  * reported the page it was already on, an execute that ran a click twice. None
- * of them raised an error, which is why they were expensive — the agent read a
+ * of them raised an error, which is why they were expensive. The agent read a
  * success and kept going against a page state that never existed.
  */
 import { describe, expect, it } from "vitest";
@@ -156,7 +156,7 @@ describe("planning how to run browser_execute code", () => {
 
   it("does not mistake the word return inside a string for a statement", () => {
     // This is an expression, and treating it as a statement body made it
-    // evaluate to undefined — which reads like the page said no.
+    // evaluate to undefined, which reads like the page said no.
     expect(
       planExecuteAttempts(`document.body.innerText.includes('return ')`)
     ).toHaveLength(2);
@@ -201,7 +201,7 @@ describe("deciding whether to try the next execute attempt", () => {
   });
 
   it("does not treat a page error that merely mentions the word as one", () => {
-    // Unanchored, this re-ran code that had already done its work — the
+    // Unanchored, this re-ran code that had already done its work. The
     // double-execution the retry was narrowed to avoid.
     expect(
       isSyntaxError(new Error("Error: SyntaxError in the user config"))

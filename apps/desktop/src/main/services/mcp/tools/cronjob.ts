@@ -9,7 +9,7 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
     toolsets: ["cronjob"],
     botAlways: true,
     description: [
-      "Schedule the agent to run a prompt on its own — on a clock, on an incoming webhook, or both.",
+      "Schedule the agent to run a prompt on its own: on a clock, on an incoming webhook, or both.",
       "",
       'Actions: "create" (prompt, and schedule and/or webhook: true; optional name), "list",',
       '"update" (id, and any of name/schedule/prompt/enabled), "pause" (id), "resume" (id),',
@@ -26,7 +26,7 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       "Names like MON are not supported, and neither is a seconds field.",
       "Reach for sensible defaults: pin loose asks to weekdays and waking hours unless the",
       "routine is about the user's life rather than their work, and inherit the current minute",
-      'when the user names only an hour — asked at 1:32, "daily at 2" means "32 2 * * *".',
+      'when the user names only an hour: asked at 1:32, "daily at 2" means "32 2 * * *".',
       "",
       "A routine with a schedule also fires once the moment it is created, whatever its",
       "schedule says, so the user sees it work instead of waiting out the first gap. Tell them",

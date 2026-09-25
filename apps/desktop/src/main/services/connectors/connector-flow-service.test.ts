@@ -1,6 +1,6 @@
 /**
  * One connect and one disconnect per connector kind, so every Connect button
- * in the app — the page, onboarding, the card the agent raises — does the
+ * in the app (the page, onboarding, the card the agent raises) does the
  * same thing for the same connector.
  */
 import { connectorById } from "@abacus-ai/connectors/registry";

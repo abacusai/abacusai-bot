@@ -10,7 +10,7 @@ import { experienceAgentEntry } from "#main/services/updates/experience/active-e
  * the asar because a script inside app.asar cannot be spawned.
  */
 export type ResolvedAgentArtifact = {
-  /** Executable to spawn — Electron's binary, run in pure-Node mode. */
+  /** Executable to spawn: Electron's binary, run in pure-Node mode. */
   execPath: string;
   /** Arguments that precede the agent's own flags (the entry script). */
   execArgs: string[];

@@ -161,7 +161,7 @@ export class DeviceMirrorService {
         // Installed but no app id resolved, so nothing launches; silent
         // success would read as "Build & Run did nothing".
         console.warn(
-          "[device-build] installed but NOT launched — no app id resolved from the project"
+          "[device-build] installed but NOT launched: no app id resolved from the project"
         );
       }
       emitPhase("done");
@@ -227,7 +227,7 @@ export class DeviceMirrorService {
       return { ...scrcpy, streamId: rendererStreamId ?? scrcpy.streamId };
     }
     console.warn(
-      `[device-stream] scrcpy unavailable (${scrcpy.error ?? "?"}) — falling back to screenrecord`
+      `[device-stream] scrcpy unavailable (${scrcpy.error ?? "?"}), falling back to screenrecord`
     );
     const fallback = await this.deviceStreamService.start(
       request.deviceId,
@@ -257,7 +257,7 @@ export class DeviceMirrorService {
       return;
     if (this.androidRestartAttempts >= MAX_ANDROID_MIRROR_RESTARTS) {
       console.warn(
-        `[device-stream] scrcpy died ${this.androidRestartAttempts}x in a row — leaving the mirror down`
+        `[device-stream] scrcpy died ${this.androidRestartAttempts}x in a row, leaving the mirror down`
       );
       return;
     }

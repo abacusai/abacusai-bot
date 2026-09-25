@@ -32,8 +32,8 @@ export interface TerminalShell {
  * their login shell, which `$SHELL` names and which their dotfiles are written
  * for. Offering to open bash instead of their zsh is a menu nobody wanted in
  * front of a choice they already made. Windows is the case with a real
- * question behind it — cmd, PowerShell, and the POSIX shell this app ships —
- * so that is where the menu appears.
+ * question behind it: cmd, PowerShell, and the POSIX shell this app ships.
+ * So that is where the menu appears.
  */
 export const TERMINAL_SHELLS: readonly TerminalShell[] = [
   { id: "system", labelKey: "system", platforms: "all" },

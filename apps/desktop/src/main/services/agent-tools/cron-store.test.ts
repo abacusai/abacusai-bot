@@ -198,7 +198,7 @@ describe("a job that runs once", () => {
       job.id
     );
     expect(dueJobs(new Date(at)).map((j) => j.id)).toContain(job.id);
-    // Slept through: an hour late, still due — once means once, not never.
+    // Slept through: an hour late, still due. Once means once, not never.
     expect(dueJobs(new Date(at + 3_600_000)).map((j) => j.id)).toContain(
       job.id
     );

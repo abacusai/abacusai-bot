@@ -428,7 +428,7 @@ export const renderDocument = async (
                                 white.
     large                       bigger type, for reading on a screen
 
-  styles.css beside this file is a copy — edit it freely, it affects only this
+  styles.css beside this file is a copy: edit it freely, it affects only this
   document. Section bodies are sanitized on render: scripts, styles and unknown
   tags are stripped, so add content with the tags already used here.
 -->

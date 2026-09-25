@@ -42,7 +42,7 @@ interface McpTokenRecord {
 
 interface McpAuthFile {
   servers?: Record<string, McpTokenRecord>;
-  /** DCR results keyed by issuer — plus the redirect URI they were registered with. */
+  /** DCR results keyed by issuer, plus the redirect URI they were registered with. */
   clients?: Record<
     string,
     { clientId: string; clientSecret?: string; redirectUri?: string }
@@ -170,7 +170,7 @@ const discoverAuthorizationServer = async (
       // Not a 401: the server is open, or failing in a way OAuth will not fix.
       throw new Error(
         probe.ok || probe.status < 400
-          ? "This server did not ask for a sign-in — it may already be accessible."
+          ? "This server did not ask for a sign-in. It may already be accessible."
           : `The server answered HTTP ${probe.status}, not a sign-in challenge.`
       );
     }
@@ -279,7 +279,7 @@ const obtainClient = async (
 
   if (metadata.registration_endpoint == null) {
     throw new Error(
-      "This provider does not support automatic client registration — it needs credentials from its own " +
+      "This provider does not support automatic client registration; it needs credentials from its own " +
         `developer console. Create an app there with ${redirectUri} as its redirect URL, then open this ` +
         "server\u2019s Edit dialog and fill in the OAuth client id (and secret, if issued) before " +
         "signing in again."
@@ -504,8 +504,8 @@ export const signInToMcpServer = async (
         oauthLog(
           serverUrl,
           result.ok
-            ? "signed in — tokens saved"
-            : `${result.cancelled === true ? "cancelled" : "failed"} — ${result.error}`
+            ? "signed in: tokens saved"
+            : `${result.cancelled === true ? "cancelled" : "failed"}: ${result.error}`
         );
         if (timer != null) clearTimeout(timer);
         // Closing a server that never listened is an error, not a no-op.

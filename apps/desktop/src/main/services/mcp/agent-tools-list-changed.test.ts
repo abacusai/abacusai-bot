@@ -5,7 +5,7 @@
  * and reported "I don't have a WhatsApp tool" even after the link. The server
  * exposes tools dynamically (a platform's tools appear when it connects), so it
  * must advertise `listChanged: true` and push `notifications/tools/list_changed`
- * to every open connection when availability flips — the standard MCP signal to
+ * to every open connection when availability flips: the standard MCP signal to
  * re-run tools/list.
  */
 import http from "http";
