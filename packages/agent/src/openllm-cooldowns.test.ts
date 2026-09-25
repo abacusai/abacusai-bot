@@ -2,7 +2,7 @@
  * The cooldowns that outlive a session, and what concurrency does to them.
  *
  * Every chat is its own agent process, so this file is the only thing standing
- * between a user and rediscovering a saturated model — by failing on it — at
+ * between a user and rediscovering a saturated model (by failing on it) at
  * the start of every new chat.
  */
 import fs from "fs";

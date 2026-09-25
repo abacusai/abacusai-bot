@@ -1,5 +1,5 @@
 /**
- * `skill_add` — installs a skill from inside the conversation. One call covers
+ * `skill_add`: installs a skill from inside the conversation. One call covers
  * search and install because the model rarely knows a skill's repo: with no
  * `source` a clear match installs and an ambiguous one returns a shortlist.
  * The result carries the path because the skill list the model sees is fixed
@@ -79,7 +79,7 @@ function shortlist(skills: MarketplaceSkill[]): string {
     .slice(0, 10)
     .map(
       (skill) =>
-        `query "${skill.skillId}", source "${skill.source}" — ${skill.name} (${skill.installs} installs)`
+        `query "${skill.skillId}", source "${skill.source}": ${skill.name} (${skill.installs} installs)`
     )
     .join("\n");
 }
@@ -96,23 +96,23 @@ export function buildSkillAddTool(
       "",
       "Pass what the skill should do, or its id, as `query`. With no `source` this searches",
       "the marketplace: a clear match installs immediately, and anything else comes back as a",
-      "shortlist — call again with the `source` of the one you want. Skills are installed",
+      "shortlist. Call again with the `source` of the one you want. Skills are installed",
       'globally unless you pass scope "project", which puts the skill in the workspace where',
       "it can be committed alongside the code it is about.",
       "",
       "The install returns the path it wrote. The skill joins your listed skills from your",
       "next turn; to act on it in this one, read that file.",
       "",
-      "A skill of the same id that is already installed is left alone — pass replace true to",
+      "A skill of the same id that is already installed is left alone: pass replace true to",
       "overwrite it, which discards any edits made to it locally.",
       "",
       "For a skill that already exists use skills_list and skill_view. To write a new skill of",
-      "your own, write a SKILL.md with the file tools — this tool only fetches published ones.",
+      "your own, write a SKILL.md with the file tools: this tool only fetches published ones.",
     ].join("\n"),
     parameters: Type.Object({
       query: Type.String({
         description:
-          "The skill to install — its id, its name, or what you want it to do.",
+          "The skill to install: its id, its name, or what you want it to do.",
       }),
       source: Type.Optional(
         Type.String({
@@ -123,7 +123,7 @@ export function buildSkillAddTool(
       scope: Type.Optional(
         Type.Union([Type.Literal("global"), Type.Literal("project")], {
           description:
-            "Where to install it. Defaults to global — available in every workspace.",
+            "Where to install it. Defaults to global: available in every workspace.",
         })
       ),
       replace: Type.Optional(
@@ -181,7 +181,7 @@ export function buildSkillAddTool(
               text(
                 [
                   `Several skills match "${query}". Pick one and call skill_add again with both arguments`,
-                  "exactly as written below — do not search again with different words:",
+                  "exactly as written below. Do not search again with different words:",
                   "",
                   shortlist(found.skills),
                 ].join("\n")

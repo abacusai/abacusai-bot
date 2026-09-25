@@ -67,7 +67,7 @@ export function addCoreEntry(dir: string, content: string): BotMemoryResult {
   const entry = flatten(content);
 
   if (entry.length === 0)
-    return { ok: false, message: "Nothing to remember — content was empty." };
+    return { ok: false, message: "Nothing to remember: content was empty." };
   if (entry.length > MAX_ENTRY_CHARS) {
     return {
       ok: false,
@@ -78,7 +78,7 @@ export function addCoreEntry(dir: string, content: string): BotMemoryResult {
   const entries = readCoreEntries(dir);
 
   if (entries.some((line) => line.toLowerCase() === entry.toLowerCase()))
-    return { ok: true, message: "Already in core memory — nothing changed." };
+    return { ok: true, message: "Already in core memory. Nothing changed." };
 
   const next = [...entries, entry];
   const size = next.reduce((sum, line) => sum + line.length + 3, 0);
@@ -133,7 +133,7 @@ export function appendDailyNote(dir: string, content: string): BotMemoryResult {
   const entry = flatten(content);
 
   if (entry.length === 0)
-    return { ok: false, message: "Nothing to note — content was empty." };
+    return { ok: false, message: "Nothing to note: content was empty." };
   if (entry.length > MAX_ENTRY_CHARS) {
     return {
       ok: false,

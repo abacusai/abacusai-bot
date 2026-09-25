@@ -5,8 +5,8 @@ import { spawnSync } from "node:child_process";
  * This is a boundary where the type says `number` and the unit is carried only
  * by convention: pi hands a replacement backend the model's `timeout` argument
  * in SECONDS, because pi's own implementation of the interface is what converts
- * it. Reading it as milliseconds is silent — nothing fails to compile, nothing
- * throws — and it turns every command into one that is killed before it can
+ * it. Reading it as milliseconds is silent: nothing fails to compile, nothing
+ * throws, and it turns every command into one that is killed before it can
  * produce a byte, which reaches the model as `(no output)` and exit 1 with no
  * hint that a deadline was involved.
  *
@@ -88,7 +88,7 @@ describe("deadline", () => {
 });
 
 /**
- * The turn ends when the command ends — not when the last thing it started
+ * The turn ends when the command ends, not when the last thing it started
  * closes its inherited pipes.
  *
  * A real session wedged here. The model restarted a dev server with
@@ -138,7 +138,7 @@ describe("a command that leaves something running behind it", () => {
   /**
    * Backgrounds a process that outlives the shell, exactly as the bug did: the
    * `&&` makes it a compound list, so bash runs it in a subshell that stays
-   * alive for the sleep's duration — and the redirect binds to the `sleep`
+   * alive for the sleep's duration, and the redirect binds to the `sleep`
    * inside it, leaving that subshell holding this command's stdout and stderr.
    */
   const lingering = (token: string): string =>
@@ -163,7 +163,7 @@ describe("a command that leaves something running behind it", () => {
       expect(output).toContain("READY");
       // The descendant holds the pipes for 20s; anything near that is the hang.
       expect(elapsed).toBeLessThan(5);
-      // And it must still be running, or this passed for the wrong reason — a
+      // And it must still be running, or this passed for the wrong reason: a
       // background process that died on its own holds nothing, and the wait
       // under test would never have been exercised.
       expect(survivors(token)).not.toBe("");
@@ -183,7 +183,7 @@ describe("a command that leaves something running behind it", () => {
       });
 
       expect(result.exitCode).not.toBe(0);
-      // Killing only the shell would orphan the group rather than end it — which
+      // Killing only the shell would orphan the group rather than end it, which
       // is what left the original hang's deadline with nothing to reach.
       expect(survivors(token)).toBe("");
     }
@@ -200,7 +200,7 @@ describe("a platform with no sandbox backend (Windows)", () => {
 
   it("hands `auto` the confined shell where it can confine, else the bundled one, else pi's path", () => {
     // The local operations' unconfined fallback is a /bin/bash argv, which
-    // does not exist on Windows — every command would fail ENOENT. Null means
+    // does not exist on Windows: every command would fail ENOENT. Null means
     // pi's own platform-correct local path runs instead. A Windows with the
     // vendored runner on a build that can make containers is the one case
     // that keeps the operations, since there they confine.
@@ -213,7 +213,7 @@ describe("a platform with no sandbox backend (Windows)", () => {
 
     // Confined operations where the runner is there; the bundled shell's
     // where only its payload is; null on a host with neither (this suite off
-    // Windows) — either way, never /bin/bash.
+    // Windows): either way, never /bin/bash.
     expect(backendOperations() == null).toBe(
       !canConfine && posixShell() == null
     );
@@ -229,7 +229,7 @@ describe("a platform with no sandbox backend (Windows)", () => {
 
   it("refuses the docker backend outright, at construction", () => {
     // The container mounts the workspace at its host path so the model's
-    // paths keep working inside — and `C:\...` is never a valid mount
+    // paths keep working inside, and `C:\...` is never a valid mount
     // destination or workdir in a Linux guest. One clear failure at selection
     // beats a mount error on every command.
     Object.defineProperty(process, "platform", { value: "win32" });

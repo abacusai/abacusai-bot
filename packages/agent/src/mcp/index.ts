@@ -391,7 +391,7 @@ export async function connectMcpServers(
 
     for (const tool of client.tools) {
       // The registry is the allowlist for the gateway: a tool the account
-      // has attached but no entry names (GitHub's, say — a token on its own
+      // has attached but no entry names (GitHub's, say, where a token on its own
       // card does that job) is not offered.
       const meta =
         name === GATEWAY_SERVER_NAME

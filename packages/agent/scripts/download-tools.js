@@ -4,17 +4,11 @@
  * Fetch the binaries the agent shells out to: ripgrep and fd everywhere, and
  * on Windows busybox-w32, the POSIX shell its `bash` tool runs under.
  *
- * The agent's `grep` and `find` tools are not JavaScript. They spawn `rg` and
- * `fd`, and until this existed neither was shipped: the vendored pi agent looked
- * for them on PATH and, failing that, called the GitHub releases API at the
- * moment the model first tried to search, downloaded a tarball, and extracted it
- * into the user's home directory. A machine that was offline, behind a proxy, or
- * simply unlucky with GitHub's unauthenticated rate limit got
- * "ripgrep (rg) is not available and could not be downloaded" instead of a
- * search result — there is no JS fallback in either tool.
- *
- * So they are fetched here, at build time, on a machine that already has network
- * access, and shipped inside the app.
+ * The agent's `grep` and `find` tools spawn `rg` and `fd` and have no JS
+ * fallback. Without a shipped copy, the vendored pi agent looks on PATH and
+ * then downloads a release from GitHub the first time the model searches, which
+ * fails offline, behind a proxy, or on GitHub's unauthenticated rate limit. So
+ * they are fetched here at build time and shipped inside the app.
  *
  * Everything is pinned and checksummed. These are executables that run on a
  * user's machine with the agent's cwd, so a floating "latest" would mean the
@@ -23,8 +17,8 @@
  * publishes none, so its digests were taken from a download and are what any
  * later build has to reproduce.
  *
- * Idempotent, via a per-target cache under packages/agent/vendor/tools/, so a
- * rebuild copies rather than re-downloading ~3MB per tool.
+ * Idempotent, via a per-target cache under node_modules/.cache/vendor-tools/,
+ * so a rebuild copies rather than re-downloading ~3MB per tool.
  *
  * Usage:
  *   node scripts/download-tools.js                    # host platform/arch
@@ -44,9 +38,9 @@ import { fetchVerified, run } from "@abacus-ai/config/vendor-fetch";
 
 const RIPGREP_VERSION = "15.2.0";
 // Not 10.4.2, the current release. fd stopped publishing an x86_64-apple-darwin
-// build after 10.3.0, and an Intel Mac still has to get an fd — so the whole
-// matrix stays on the last version that covers all six targets rather than
-// carrying two pins and a special case.
+// build after 10.3.0, and an Intel Mac still needs an fd. The whole matrix
+// stays on the last version that covers all six targets rather than carrying
+// two pins and a special case.
 const FD_VERSION = "10.3.0";
 // The upstream build tag; src/posix-shell.ts names the same one for its cache
 // directory, so a bump here is a bump there.
@@ -141,8 +135,8 @@ const TOOLS = {
   // Windows only: a stock install has no bash, and pi's tool throws without
   // one. One executable, not an archive; it dispatches on the name it is
   // invoked by, and src/posix-shell.ts makes the `sh`/`grep`/... launchers
-  // at run time. GPL-2.0, spawned never linked — build/licenses carries the
-  // text. The digests match frippery.org's downloads and CodeLLM's pin.
+  // at run time. GPL-2.0, spawned and never linked; build/licenses carries
+  // the text. The digests match frippery.org's downloads and CodeLLM's pin.
   busybox: {
     label: "busybox-w32",
     version: BUSYBOX_VERSION,
@@ -190,8 +184,8 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const CACHE = path.join(ROOT, "node_modules", ".cache", "vendor-tools");
 // Downloaded third-party files live in a `vendor/` directory, the same name in
 // every package that has one, and deliberately NOT inside dist: tsdown clears
-// dist on every build, so anything downloaded into it has to be sequenced after
-// the build and excluded from its cache entry — churn for no gain. See
+// dist on every build, so anything downloaded into it would have to run after
+// the build and be excluded from its cache entry. See
 // src/bundled-tools.ts for how it is found at run time.
 const DEST = path.join(ROOT, "vendor");
 
@@ -341,7 +335,7 @@ async function main() {
 
   // Cleared, not merged into. Building win32 after darwin in the same tree
   // would otherwise leave the darwin `rg` beside the new `rg.exe`, and a binary
-  // for the wrong platform is worse than none — it ships, and it fails on the
+  // for the wrong platform is worse than none: it ships, and it fails on the
   // user's machine rather than here.
   fs.rmSync(DEST, { recursive: true, force: true });
   fs.mkdirSync(DEST, { recursive: true });

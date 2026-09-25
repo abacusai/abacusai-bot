@@ -1,14 +1,14 @@
 /**
  * The sandbox, at two levels.
  *
- * The pure parts — mode mapping, the decision table — are tested everywhere.
+ * The pure parts (mode mapping, the decision table) are tested everywhere.
  * The confinement itself is tested against the real kernel through the
  * sandbox runtime, and only where it can run: a test that quietly passes on
  * the wrong platform is worse than one that skips, so a machine with no
  * usable backend skips the live sections rather than inventing a verdict.
  *
  * The live section includes the escape a security review found in the first
- * version of this code — an app bundle written into the writable workspace and
+ * version of this code: an app bundle written into the writable workspace and
  * started through LaunchServices, which runs outside the sandbox entirely.
  * That is here as a regression test: a sandbox with no test that tries to
  * break out is a sandbox that quietly stops working.
@@ -288,7 +288,7 @@ describe.runIf(onRuntime)("confinement against the real kernel", () => {
 
   describe("evasions that defeat pattern matching", () => {
     // Each of these gets past a regex deny-list. None of them gets past the
-    // kernel — which is the entire argument for having a sandbox at all.
+    // kernel, which is the entire argument for having a sandbox at all.
     it.each([
       [
         "a base64-decoded script",
@@ -320,7 +320,7 @@ describe.runIf(onRuntime)("confinement against the real kernel", () => {
     //
     // The positive control below is what makes this test worth having. An
     // assertion that a file did NOT appear passes for every reason the escape
-    // failed to be attempted at all — no Aqua session on a CI runner, a slow
+    // failed to be attempted at all: no Aqua session on a CI runner, a slow
     // machine, LaunchServices declining the bundle. So we first prove the
     // bundle DOES run when nothing is stopping it.
     let launchWorks = false;
@@ -368,7 +368,7 @@ describe.runIf(onRuntime)("confinement against the real kernel", () => {
           timeout: 20_000,
         });
       } catch {
-        // Fall through — payloadLanded decides.
+        // Fall through: payloadLanded decides.
       }
       launchWorks = await payloadLanded();
       fs.rmSync(outside, { force: true });

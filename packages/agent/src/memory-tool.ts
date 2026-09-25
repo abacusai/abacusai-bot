@@ -1,5 +1,5 @@
 /**
- * `memory` — remembering something, from the CLI, which has no MCP server.
+ * `memory`: remembering something, from the CLI, which has no MCP server.
  * Name, targets, actions, schema and output are identical to the MCP version
  * in mcp-agent-tools-server.ts so the model meets one tool in both surfaces.
  */
@@ -41,15 +41,15 @@ export function buildMemoryTool(): PiToolDefinitionLike {
       "Remember something across sessions.",
       "",
       "Targets:",
-      '  "memory" — your own notes: environment facts, project conventions, tool quirks.',
-      '  "user"   — what you know about the person: preferences, habits, how they work.',
+      '  "memory": your own notes (environment facts, project conventions, tool quirks).',
+      '  "user":   what you know about the person (preferences, habits, how they work).',
       "",
       "Actions:",
-      '  "add"     — store a new entry (required: content).',
-      '  "replace" — swap an entry out (required: match, content).',
-      '  "remove"  — forget an entry (required: match).',
+      '  "add":     store a new entry (required: content).',
+      '  "replace": swap an entry out (required: match, content).',
+      '  "remove":  forget an entry (required: match).',
       "",
-      '"match" is a short fragment that identifies exactly one entry — not the whole text.',
+      '"match" is a short fragment that identifies exactly one entry, not the whole text.',
       "Writes land on disk immediately but only reach your system prompt next session.",
       "Keep this curated: store what stays true, not what merely happened.",
     ].join("\n"),

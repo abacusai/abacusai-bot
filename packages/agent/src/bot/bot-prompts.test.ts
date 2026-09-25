@@ -1,7 +1,7 @@
 /**
  * A bot answers everyone the user allowed. The old rule let it stay quiet
  * on "broadcasts and automated content", and a model read a contact saved
- * as "My Airtel" as a telco robot and sent nothing — to the user's own
+ * as "My Airtel" as a telco robot and sent nothing, to the user's own
  * second number.
  */
 import { describe, expect, it } from "vitest";

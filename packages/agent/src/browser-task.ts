@@ -26,7 +26,7 @@ const MAX_PROVIDER_RETRIES = 2;
 // Bounds, because a run holds a browser view. Wrap-up points come first: a run
 // told to report keeps its findings, a run cut off loses them. Each point says
 // how many turns remain: "close to your limit" reads as "out of budget" to a
-// small model, which then reports early — or, on a resumed run, at once.
+// small model, which then reports early (or, on a resumed run, at once).
 export const MAX_TURNS = 100;
 export const WRAP_UP_TURN = 60;
 export const FINAL_WARNING_TURN = 85;
@@ -89,7 +89,7 @@ const BROWSER_SYSTEM_PROMPT = [
   "   elements with their refs, so you usually do not need another snapshot.",
   '3. browser_snapshot action:"snapshot" with find:"..." when you need an element that was not',
   '   listed; action:"extract" with a selector when you want rows of data (prices, times,',
-  "   names) — it returns them as rows in one call. Refs stay valid while the element is on",
+  "   names): it returns them as rows in one call. Refs stay valid while the element is on",
   "   the page; if one goes stale the action refreshes it for you once.",
   "4. browser_execute is the last resort, for what the tools above cannot reach (shadow",
   "   roots, frames). Reading rows or clicking with a script means step 3 or 2 was skipped.",
@@ -700,7 +700,7 @@ export async function runBrowserTask(
             trace.write({ type: "nudge", missing });
             await prompt(
               `Your report does not mention: ${missing.join(", ")}. Add them from what you saw ` +
-                "on the page — take one more look if you must — or say explicitly that you could not find each one."
+                "on the page (take one more look if you must), or say explicitly that you could not find each one."
             );
           }
         }

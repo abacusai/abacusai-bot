@@ -251,7 +251,7 @@ describe("connecting", () => {
   });
 
   it("reports an unreachable server without taking the session down", async () => {
-    // One unreachable server must never stop the agent starting — otherwise
+    // One unreachable server must never stop the agent starting: otherwise
     // the whole session dies because a simulator was not running.
     fs.writeFileSync(
       configPath,

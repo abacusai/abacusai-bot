@@ -21,7 +21,7 @@ const quote = (token: string): string => {
   return `"${escaped}"`;
 };
 
-/** The command line for `cmd.exe /d /s /c` — every token quoted. */
+/** The command line for `cmd.exe /d /s /c`: every token quoted. */
 export const cmdCommandLine = (
   absoluteCommand: string,
   args: readonly string[]
@@ -84,7 +84,7 @@ export const resolveWin32Command = (
       try {
         if (fs.statSync(full).isFile()) return full;
       } catch {
-        /* raced away — keep looking */
+        /* raced away, keep looking */
       }
     }
   }

@@ -13,7 +13,7 @@ export interface MatchRange {
 }
 
 export type ResolveFailure =
-  /** oldText was empty — the caller wants `write`, not `edit`. */
+  /** oldText was empty: the caller wants `write`, not `edit`. */
   | { kind: "empty" }
   /** oldText and newText are the same, so the edit is a no-op. */
   | { kind: "identical" }

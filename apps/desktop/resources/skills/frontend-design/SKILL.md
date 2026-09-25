@@ -1,6 +1,6 @@
 ---
 name: Frontend design
-description: Design and build user interfaces that look considered rather than generated — layout, spacing, type, colour, and states. Use when building or restyling any UI, or when a screen works but looks wrong and it is not obvious why.
+description: Design and build user interfaces that look considered rather than generated: layout, spacing, type, colour, and states. Use when building or restyling any UI, or when a screen works but looks wrong and it is not obvious why.
 ---
 
 # Frontend design
@@ -28,17 +28,17 @@ Whitespace is not wasted space. Cramped is the single most common failure.
 
 ## Colour
 
-- One accent. Use it for the primary action and almost nothing else — if
+- One accent. Use it for the primary action and almost nothing else: if
   everything is emphasised, nothing is.
 - Greys carry the interface; the accent points at the one thing to do next.
-- Semantic colour must never be the *only* signal — colour-blind users and
+- Semantic colour must never be the *only* signal: colour-blind users and
   greyscale printing both lose it. Pair it with an icon or text.
 - Check contrast: 4.5:1 for body text, 3:1 for large text. This is not optional.
 
 ## States
 
 An unstyled state is a bug. Every interactive element needs: default, hover,
-active, focus, disabled — and focus must be **visible**, because keyboard users
+active, focus, disabled. Focus must be **visible**, because keyboard users
 navigate by it. Never `outline: none` without a replacement.
 
 Every async surface needs: loading, empty, error, and loaded. The empty state is
@@ -48,7 +48,7 @@ the one people forget, and it is the first thing a new user sees.
 
 - 150–200ms for local feedback, 200–300ms for entrances.
 - Ease-out for things arriving, ease-in for things leaving.
-- Animate `transform` and `opacity` only — animating `width`, `top`, or `height`
+- Animate `transform` and `opacity` only: animating `width`, `top`, or `height`
   causes layout thrash.
 - Respect `prefers-reduced-motion`.
 

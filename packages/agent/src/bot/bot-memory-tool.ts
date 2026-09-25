@@ -1,5 +1,5 @@
 /**
- * `memory` — the bot's one tool for its own two-tier store, registered by the
+ * `memory`: the bot's one tool for its own two-tier store, registered by the
  * bot loop in place of the global memory tool, which bots must never touch.
  * `note` is cheap and append-only, `remember` is core (in every prompt),
  * `forget` prunes core, `search` reaches everything ever noted.
@@ -43,12 +43,12 @@ export function buildBotMemoryTool(dir: string): PiToolDefinitionLike {
       "Your persistent memory. It outlives this conversation and every restart.",
       "",
       "Actions:",
-      '  "note"     — jot a working fact into today\'s notes (required: content).',
+      '  "note":      jot a working fact into today\'s notes (required: content).',
       "               Cheap and append-only; use it freely as you work.",
-      '  "remember" — add a durable fact to core memory (required: content).',
+      '  "remember":  add a durable fact to core memory (required: content).',
       "               Core memory is in your prompt every turn; keep it curated.",
-      '  "forget"   — remove a core entry (required: match, a unique fragment).',
-      '  "search"   — find past notes and memories (required: query).',
+      '  "forget":    remove a core entry (required: match, a unique fragment).',
+      '  "search":    find past notes and memories (required: query).',
       "",
       "Note what happened; remember what stays true.",
     ].join("\n"),

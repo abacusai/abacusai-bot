@@ -8,17 +8,16 @@ import { defineConfig } from "tsdown";
  * copied without its whole dependency graph coming too.
  *
  * Everything is inlined except the packages that load native code, which cannot
- * be — see @abacus-ai/config/native-packages.
+ * be (see @abacus-ai/config/native-packages).
  */
 export default defineConfig({
   // usage-stats and custom-instructions are their own tiny entries: the
   // desktop's Electron main imports them directly (`@abacus-ai/agent/usage`,
   // `@abacus-ai/agent/custom-instructions`), and routing either through the
-  // index would inline the whole agent bundle into the app's main process —
+  // index would inline the whole agent bundle into the app's main process,
   // along with the native-addon packages the index leaves external, which do
-  // not exist inside the app's asar. That is not a size regression, it is a
-  // main process that cannot start (ERR_MODULE_NOT_FOUND @earendil-works/pi-tui,
-  // shipped in 1.0.6).
+  // not exist inside the app's asar. The main process then cannot start
+  // (ERR_MODULE_NOT_FOUND @earendil-works/pi-tui).
   entry: [
     "src/index.ts",
     "src/main.ts",

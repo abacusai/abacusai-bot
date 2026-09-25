@@ -141,7 +141,7 @@ export function resetBackgroundJobs(): void {
  * would otherwise strand a process group or a docker container.
  */
 export interface ForegroundProcess {
-  /** Synchronous kill — must be safe inside a process 'exit' handler. */
+  /** Synchronous kill: must be safe inside a process 'exit' handler. */
   kill: () => void;
   /** Teardown that spawns (e.g. `docker kill`); skipped on 'exit', where the
    *  event loop is gone and nothing can spawn. */

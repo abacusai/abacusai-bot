@@ -26,7 +26,7 @@ export function botDailyNotesDir(dir: string): string {
   return path.join(dir, "memory");
 }
 
-/** `memory/YYYY-MM-DD.md`, in local time — the bot's day, not UTC's. */
+/** `memory/YYYY-MM-DD.md`, in local time: the bot's day, not UTC's. */
 export function botDailyNoteFile(dir: string, date = new Date()): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");

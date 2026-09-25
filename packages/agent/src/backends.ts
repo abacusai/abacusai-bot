@@ -156,7 +156,7 @@ function dockerOperations(image: string): BashOperations {
               () => {}
             );
           } catch {
-            /* docker unavailable — the client kill is all that is left */
+            /* docker unavailable: the client kill is all that is left */
           }
         };
 
@@ -320,7 +320,7 @@ function localSandboxedOperations(
             process.kill(-child.pid, "SIGKILL");
             return;
           } catch {
-            /* group already reaped — fall through to the direct kill */
+            /* group already reaped, fall through to the direct kill */
           }
         }
         child.kill("SIGKILL");
@@ -499,7 +499,7 @@ export function backendOperations(
 
   // No kernel backend, or none that can run here (a Windows without the
   // vendored runner): the shell there is the bundled POSIX one, sandbox
-  // setting or not — it is a shell, not a confinement — and null without its
+  // setting or not: it is a shell, not a confinement, and null without its
   // payload lets pi's own path run. `strict` keeps the operations so its
   // refusal reaches the model.
   if (!backendPresent()) {

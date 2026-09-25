@@ -3,7 +3,7 @@
  *
  * This answer is used twice: by `run_tests` when the model asks, and by the
  * verify loop when a run that touched code settles. Those were separate copies
- * of this function and they had drifted — a project configuring pytest only in
+ * of this function and they had drifted: a project configuring pytest only in
  * pyproject.toml was verified by one and invisible to the other, and gradle was
  * known to only one of them. The cases below are pinned so that cannot happen
  * quietly again.
@@ -158,7 +158,7 @@ describe("the command it builds", () => {
 
   it("quotes a filter so a real shell cannot be made to run it", () => {
     // The filter reaches `bash -c`, so the guarantee that matters is not what
-    // the string looks like — the dangerous text is still in there, inertly —
+    // the string looks like (the dangerous text is still in there, inertly)
     // but what a shell does with it. Asserting against a real shell is the only
     // version of this test that cannot pass while the escaping is broken.
     write("pytest.ini");
@@ -175,7 +175,7 @@ describe("the command it builds", () => {
 describe("the command it builds for Windows", () => {
   it("double-quotes a filter, because cmd.exe does not quote with '", () => {
     // Single quotes are ordinary characters to cmd, so the POSIX form reached
-    // the runner as part of the pattern and matched nothing — reported as a
+    // the runner as part of the pattern and matched nothing, reported as a
     // clean "0 passed, 0 failed" rather than as a failure.
     write("pytest.ini");
 
@@ -201,7 +201,7 @@ describe("the command it builds for Windows", () => {
 
   it("names the interpreter Windows actually has", () => {
     // `python3` on Windows is the Store's alias stub, which exits non-zero
-    // with no output — read by the verify loop as the suite failing.
+    // with no output, read by the verify loop as the suite failing.
     write("pytest.ini");
 
     expect(winCommand()).toBe("python -m pytest -q --maxfail=25");

@@ -4,7 +4,7 @@
  * ast-grep is an optional native dependency (see lang.ts): its ABI has to match
  * the Node the agent runs under, which a desktop app cannot promise on every
  * platform it ships to. So there is a real, shipped configuration in which the
- * parser is simply absent — and the whole design of these tools rests on what
+ * parser is absent, and the whole design of these tools rests on what
  * they do then. `ast_edit` silently doing nothing would look like a successful
  * edit, and `code_map` reporting "no symbols" would look like an empty file.
  * Both have to refuse, and say why.

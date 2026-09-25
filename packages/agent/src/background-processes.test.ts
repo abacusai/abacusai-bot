@@ -2,7 +2,7 @@ import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
 /**
  * The promise this makes is about processes, so these start real ones.
  *
- * A mocked `spawn` would report every one of these cases as working — a job
+ * A mocked `spawn` would report every one of these cases as working: a job
  * that was never killed looks exactly like a job that was, right up until the
  * port is still bound half an hour after the app closed.
  */
@@ -44,7 +44,7 @@ const settled = (id: string): Promise<BackgroundJob> =>
  * gone before the next one starts.
  *
  * Killing was the easy half. On Windows the tree kill is a fire-and-forget
- * `taskkill /F /T` — it returns long before the tree is down — so a test that
+ * `taskkill /F /T` (it returns long before the tree is down), so a test that
  * left `sleep 30` running handed the next test a shell still being force-killed
  * underneath it. Git Bash forked in that window does not run the script: it
  * dies with STATUS_ACCESS_VIOLATION, and the job reports exit 3221225477 where
@@ -120,7 +120,7 @@ describe("stopping one", () => {
 
     const finished = await settled(job.id);
 
-    // Killed, not "exited 0" — the difference decides whether the agent is told.
+    // Killed, not "exited 0": the difference decides whether the agent is told.
     expect(finished.exit?.killed).toBe(true);
   });
 
@@ -306,7 +306,7 @@ describe("going away", () => {
 
   it("kills what is running on SIGTERM, then lets the signal do its job", () => {
     // SIGTERM is what the desktop sends when it stops a session, so this is
-    // the quit path — and the one that would strand a server holding a port.
+    // the quit path, and the one that would strand a server holding a port.
     const job = start("sleep 2");
     const raised: Array<string | number | undefined> = [];
     const kill = vi.spyOn(process, "kill").mockImplementation(((

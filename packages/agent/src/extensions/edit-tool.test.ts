@@ -1,8 +1,8 @@
 /**
  * The edit tool writes to disk, so these drive it against real files in a temp
- * directory rather than a mocked filesystem: the things most likely to break —
- * a CRLF file silently converted to LF, a BOM dropped, a `$&` in the
- * replacement mangled — are all invisible to a mock that only tracks strings.
+ * directory rather than a mocked filesystem: the things most likely to break
+ * (a CRLF file silently converted to LF, a BOM dropped, a `$&` in the
+ * replacement mangled) are all invisible to a mock that only tracks strings.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -486,7 +486,7 @@ describe("when the filesystem says no", () => {
  */
 describe("an edit that turns out to be a no-op", () => {
   it("says the result was identical rather than claiming a change", async () => {
-    // oldText is over-indented, so it matches loosely — onto text that already
+    // oldText is over-indented, so it matches loosely onto text that already
     // equals newText.
     const file = fixture("a.ts", "function f() {\n  return 1\n}\n");
     const result = await edit(file, [

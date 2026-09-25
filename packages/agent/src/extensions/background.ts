@@ -127,7 +127,7 @@ export default function (pi: ExtensionAPI) {
         "",
         "You started this and carried on. Pick it up now: if it was what you were waiting for,",
         "continue the work it was for; if it failed, deal with the failure. Do not re-run it just",
-        "to see the output again — this is the output.",
+        "to see the output again: this is the output.",
       ].join("\n"),
     });
 
@@ -152,11 +152,11 @@ export default function (pi: ExtensionAPI) {
     name: "fetch_background_output",
     label: "Fetch Background Output",
     description:
-      "Read what a background process has printed — anything started with a bash call made with " +
+      "Read what a background process has printed: anything started with a bash call made with " +
       "background: true. Works while it is still running and after it has finished, so it answers " +
       'both "how far has it got" and "what did it say".\n\n' +
       "Pass an id, or leave it off to see everything that is running and what became of it.\n\n" +
-      "You do not need this to find out that a backgrounded command finished — you are told, with " +
+      "You do not need this to find out that a backgrounded command finished: you are told, with " +
       "its output. Reach for it when you want to look before then, or to read something again.",
     parameters: Type.Object({
       id: Type.Optional(
@@ -240,7 +240,7 @@ export default function (pi: ExtensionAPI) {
         return text(`No background process with id ${params.id}.`, true);
 
       if (!killBackgroundJob(params.id)) {
-        return text(`${params.id} had already finished — nothing to stop.`);
+        return text(`${params.id} had already finished; nothing to stop.`);
       }
 
       return text(`Stopped ${params.id}: ${job.command}`);

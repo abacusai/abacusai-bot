@@ -46,7 +46,7 @@ export const BUILTIN_PROVIDERS = [
 ] as const;
 
 export interface ModelChoice {
-  /** Canonical `provider/model-id` reference — what `set_model` carries. */
+  /** Canonical `provider/model-id` reference: what `set_model` carries. */
   id: string;
   provider: string;
   modelId: string;
@@ -189,7 +189,7 @@ interface AbacusPiModel {
   id: string;
   name: string;
   reasoning: boolean;
-  /** OpenLLM pool membership and order — see ModelChoice.poolEligible. */
+  /** OpenLLM pool membership and order; see ModelChoice.poolEligible. */
   poolEligible?: boolean;
   poolRank?: number;
   /** The platform says it bills nothing; see AbacusCatalogEntry.free. */
@@ -262,7 +262,7 @@ const CODE_ROUTER_ID = "route-llm-code";
 const CODE_ROUTER_LOW_ID = "route-llm-code-low";
 /**
  * Not a model: the catalog entry describing the Abacus slice of OpenLLM's
- * pool — which models, in which order — so that lives on the platform and
+ * pool (which models, in which order), so that lives on the platform and
  * changes there without an app release.
  */
 export const OPEN_POOL_ID = "route-llm-open";

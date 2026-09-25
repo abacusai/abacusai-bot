@@ -95,10 +95,10 @@ export async function runDelegatedTask(
         [
           "You are a sub-agent handling one self-contained task for another agent.",
           "",
-          "You have the full toolset, and nobody is watching to approve anything you do — so",
+          "You have the full toolset, and nobody is watching to approve anything you do, so",
           "the judgement about whether an action is wanted is yours alone. Prefer reading and",
           "reasoning; change only what the task actually asks you to change.",
-          "You cannot delegate further, and you cannot ask the user anything — they are not watching.",
+          "You cannot delegate further, and you cannot ask the user anything: they are not watching.",
           "",
           "Your final message is the entire answer the calling agent receives, and it will not see",
           "your intermediate steps. Make it complete and self-contained: state what you found, name",
@@ -121,7 +121,7 @@ export async function runDelegatedTask(
     // The SAME confined shell as the main session; pi's built-in bash is
     // neither sandboxed nor gated, so a sub-agent would walk around the
     // sandbox. A custom tool replaces the built-in by name; it must NOT also
-    // go in `excludeTools`, which pi applies to custom tools too — that left
+    // go in `excludeTools`, which pi applies to custom tools too; that left
     // a sub-agent with no shell at all wherever a backend was active.
     const confinedBash = confinedBashTool(context.cwd);
 
@@ -303,7 +303,7 @@ export async function runDelegatedTask(
 
     // The parent has to know the answer is partial.
     return {
-      text: `The sub-agent did not finish — it was ${why}. Treat anything below as incomplete.${partial}`,
+      text: `The sub-agent did not finish (it was ${why}). Treat anything below as incomplete.${partial}`,
       turns,
       stoppedBy: outcome.stoppedBy,
     };

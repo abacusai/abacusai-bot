@@ -69,7 +69,7 @@ const containedPath = (workspace: string, raw: string): string => {
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
     throw new AttachmentError(
       `Attachment path ${raw} is outside the workspace. Only files inside the ` +
-        `workspace can be sent — copy the file into the workspace first, then retry.`
+        `workspace can be sent. Copy the file into the workspace first, then retry.`
     );
   }
 

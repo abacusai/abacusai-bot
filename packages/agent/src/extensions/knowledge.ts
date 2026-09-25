@@ -23,11 +23,11 @@ const TOOL_CARDS: Record<string, string> = {
     "edit usage: pass path, oldText and newText. oldText is copied VERBATIM from the file (exact " +
     "whitespace). Read the file first, keep oldText minimal but unique. To change EVERY occurrence, set " +
     "replaceAll: true rather than repeating the edit. For several changes to the SAME file, use " +
-    "batch_edit once instead of calling edit repeatedly. If it keeps failing, re-read the file — its " +
+    "batch_edit once instead of calling edit repeatedly. If it keeps failing, re-read the file: its " +
     "content is not what you remember.",
   batch_edit:
     "batch_edit usage: pass path and edits[], each with oldText/newText. Every oldText is matched " +
-    "against the ORIGINAL file, not against earlier edits, so the edits must not overlap — merge " +
+    "against the ORIGINAL file, not against earlier edits, so the edits must not overlap: merge " +
     "nearby changes into one entry. Use it whenever one file needs more than one change.",
   batch_file_read:
     "batch_file_read usage: pass paths[] to read several files in one turn instead of one read per " +
@@ -43,12 +43,12 @@ const TOOL_CARDS: Record<string, string> = {
     "If nothing matches, simplify the pattern to the smallest expression that identifies the code.",
   code_map:
     "code_map usage: point it at a DIRECTORY to see what a subsystem defines, or pass query with the " +
-    'words you know ("session close") — several words all have to match, and they are literal text, ' +
+    'words you know ("session close"). Several words all have to match, and they are literal text, ' +
     "not a regex. It indexes definitions only, in .ts .tsx .js .jsx .py .css; for a usage, a string, or " +
     "any other language, use grep.",
   run_tests:
     'run_tests usage: call with no arguments to run the whole suite, or filter: "substring" for a ' +
-    "subset. Do not pass shell flags — it builds the command itself.",
+    "subset. Do not pass shell flags: it builds the command itself.",
   bash:
     "bash usage: non-interactive commands only; big outputs get trimmed, so pipe exploration through " +
     "grep/head/tail. For file changes use edit/batch_edit/write/ast_edit, not shell redirects.",
@@ -69,7 +69,7 @@ function detectStack(cwd: string): string[] {
       const pkg = JSON.parse(pkgRaw);
       const scripts = Object.keys(pkg.scripts ?? {}).slice(0, 8);
       facts.push(
-        `Node project "${pkg.name ?? "?"}"${scripts.length ? ` — npm scripts: ${scripts.join(", ")}` : ""}`
+        `Node project "${pkg.name ?? "?"}"${scripts.length ? ` (npm scripts: ${scripts.join(", ")})` : ""}`
       );
     } catch {
       facts.push("Node project (package.json present, unparseable)");
@@ -107,7 +107,7 @@ export default function (pi: ExtensionAPI) {
         .map((e) => e.name + "/")
         .slice(0, 15);
     } catch {
-      // unreadable cwd — skip the brief
+      // unreadable cwd: skip the brief
     }
     if (stack.length === 0 && docs.length === 0 && dirs.length === 0) return;
 
@@ -141,7 +141,7 @@ export default function (pi: ExtensionAPI) {
       return {
         content: [
           ...event.content,
-          { type: "text" as const, text: `Hint — ${card}` },
+          { type: "text" as const, text: `Hint: ${card}` },
         ],
       };
     }

@@ -174,7 +174,7 @@ export function botBashTool(
 export class BotSession {
   /** Steers handed to pi that have not reached the model yet, oldest first. */
   private readonly pendingSteers: string[] = [];
-  /** True while the router is what the user picked — see currentModelReference. */
+  /** True while the router is what the user picked. See currentModelReference. */
   private openLlmActive = false;
   private session: AgentSession | undefined;
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
@@ -219,10 +219,10 @@ export class BotSession {
   private contextCompactions = 0;
   private continuingPastMalformedToolCall = false;
   private pendingContextCompaction: string | null = null;
-  /** A reply in the wrong language, to be asked for again — once per turn. */
+  /** A reply in the wrong language, to be asked for again (once per turn). */
   private pendingLanguageRepair: ReplyLanguageMismatch | null = null;
   private languageRepairsThisTurn = 0;
-  /** Whether a user turn is in flight — a refresh landing now is mid-turn. */
+  /** Whether a user turn is in flight: a refresh landing now is mid-turn. */
   private turnRunning = false;
   /** MCP tools registered while this turn ran; pi offers them next turn. */
   private toolsArrivedThisTurn: string[] = [];
@@ -230,13 +230,13 @@ export class BotSession {
   private toolArrivalsThisTurn = 0;
 
   // Memory machinery.
-  /** The provider's usage for the turn's last request — set at agent_end. */
+  /** The provider's usage for the turn's last request, set at agent_end. */
   private lastTurnUsage: TurnUsage | null = null;
   /** Rough transcript size in chars, updated at every agent_end. */
   private estimatedTranscriptChars = 0;
   /** One flush per compaction cycle; reset when a compaction happens. */
   private flushedSinceCompaction = false;
-  /** True while a flush/consolidation turn runs — its output stays hidden. */
+  /** True while a flush/consolidation turn runs: its output stays hidden. */
   private hiddenTurn = false;
   /** What the current prompt's memory block was built from. */
   private promptMemoryFingerprint = "";
@@ -1428,7 +1428,7 @@ export class BotSession {
                 type: "reject_with_message",
                 message:
                   `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
-                  `Do not retry the same call — say what you need approved and stop.`,
+                  `Do not retry the same call. Say what you need approved and stop.`,
               });
             }, budget)
           : undefined;
@@ -1631,7 +1631,7 @@ function estimateChars(messages: readonly unknown[]): number {
 const NO_MODEL_CONFIGURED =
   "No model provider is configured. Add an API key in Settings.";
 
-/** First sentence of a provider failure — bots never dump provider prose. */
+/** First sentence of a provider failure: bots never dump provider prose. */
 function compactFailure(raw: string): string {
   const first = raw.split(/[.\n]/)[0]?.trim() ?? "";
 

@@ -1,7 +1,7 @@
 /**
  * The bundled OpenRouter snapshot cannot say which models take tools; the
  * live catalog can. Until it has answered the pool behaves as before, and
- * afterwards a model it names without tools — or does not name at all — is
+ * afterwards a model it names without tools, or does not name at all, is
  * out of the pool.
  */
 import { afterEach, describe, expect, it } from "vitest";

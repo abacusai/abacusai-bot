@@ -1,5 +1,5 @@
 /**
- * A bot chat must see a tool its MCP server gained mid-conversation — the
+ * A bot chat must see a tool its MCP server gained mid-conversation: the
  * Slack connector a user adds from the bot chat itself. The desktop session
  * has this covered; the bot loop is a separate session class and had no
  * proof of its own.
@@ -97,7 +97,7 @@ afterEach(async () => {
 
 describe("a bot chat whose connector gateway gains a tool", () => {
   it("offers the tool on the next turn, and says so in its prompt", async () => {
-    // The gateway is up with nothing behind it — no connector yet.
+    // The gateway is up with nothing behind it: no connector yet.
     server = await FakeMcpServer.start([]);
     fs.writeFileSync(
       configPath,
@@ -121,8 +121,8 @@ describe("a bot chat whose connector gateway gains a tool", () => {
 
   it("continues the turn with a tool that landed while the turn ran", async () => {
     // Slack connected from inside the chat: connect_connector returns, the
-    // gateway gains the tool, and every session is refreshed a moment later
-    // — after the tool result, inside the same turn. pi's tool list is fixed
+    // gateway gains the tool, and every session is refreshed a moment later,
+    // after the tool result, inside the same turn. pi's tool list is fixed
     // for the turn, so the model's follow-up request cannot see the tool;
     // it said "cannot send hi to sreemanti on DM". The turn is continued
     // once it ends, with the arrival named, and that request has the tool.
@@ -158,7 +158,7 @@ describe("a bot chat whose connector gateway gains a tool", () => {
         return { call: { name: "abacus-connectors_Gmail_Tool", args: {} } };
       if (index === 1) {
         await refreshed;
-        return { say: "I cannot send that — no Slack tool here." };
+        return { say: "I cannot send that: no Slack tool here." };
       }
       return { say: "sent" };
     });

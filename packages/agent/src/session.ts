@@ -194,8 +194,8 @@ function memoryPrompt(hasMemoryTool: boolean): string | null {
     "",
     // Naming a tool that is not registered teaches failing calls.
     hasMemoryTool
-      ? "Use the `memory` tool to add, correct, or drop any of it. Entries here were true when written — verify anything that names a file, flag, or command before relying on it."
-      : "Entries here were true when written — verify anything that names a file, flag, or command before relying on it. You cannot change them in this session.",
+      ? "Use the `memory` tool to add, correct, or drop any of it. Entries here were true when written: verify anything that names a file, flag, or command before relying on it."
+      : "Entries here were true when written: verify anything that names a file, flag, or command before relying on it. You cannot change them in this session.",
   ].join("\n");
 }
 
@@ -226,7 +226,7 @@ function displayPrompt(): string {
   return [
     "Showing images:",
     "",
-    "The chat displays a markdown image when its source is a file on disk — an absolute path, a",
+    "The chat displays a markdown image when its source is a file on disk: an absolute path, a",
     "path relative to the workspace, or a file:// URL. It cannot display a remote URL, so download",
     "the image first (curl, or a generation tool) and show the local file. Never offer a link to an",
     "image on someone else's site in place of showing the picture.",
@@ -247,14 +247,14 @@ export function planModePrompt(
   return [
     "Plan mode:",
     "",
-    "Plan mode is read-only, and it refuses every shell command — not just the ones that change",
+    "Plan mode is read-only, and it refuses every shell command, not just the ones that change",
     "something. `bash` and `run_tests` are refused in Plan mode even for `ls`, `git log`, `grep` or",
     "a build you only want to read the output of. Do not spend turns discovering this one command",
     "at a time.",
     "",
     "Investigate with the tools that stay available instead: `read`, `batch_file_read`, `grep`,",
     "`find`/`glob` and `ls` cover everything a shell would have been used to look at. When the plan",
-    "is ready and the user wants it done, call `exit_plan_mode` — that is how the mode changes.",
+    "is ready and the user wants it done, call `exit_plan_mode`: that is how the mode changes.",
   ].join("\n");
 }
 
@@ -307,7 +307,7 @@ export function mcpPrompt(statuses: readonly McpServerStatus[]): string | null {
     lines.push(
       `You are connected to these services right now, through MCP: ${described}. Their tools are`,
       "yours to call like any other. When you are asked whether you have access to one of them,",
-      "this list is the answer — do not say you lack an integration that is named here."
+      "this list is the answer: do not say you lack an integration that is named here."
     );
   }
 
@@ -357,7 +357,7 @@ function handoverPrompt(presentTool: string | undefined): string {
     "",
     "A file you produced is only reachable if you name it. The chat turns a markdown link whose",
     "target is a path on disk (or a file:// URL) into one the user can click to open, so a turn that",
-    "produced something ends by linking it — and when the answer is short enough to read in the",
+    "produced something ends by linking it, and when the answer is short enough to read in the",
     "message, put it there too. Reporting that the work happened, with no link and no content, is a",
     "dead end: the user can neither see what you wrote nor find where it went.",
   ];
@@ -365,8 +365,8 @@ function handoverPrompt(presentTool: string | undefined): string {
   if (presentTool != null) {
     lines.push(
       "",
-      `Then call \`${presentTool}\` with the same files, most important first — from a component, from`,
-      "`write`, from `bash`, it does not matter. The link makes them clickable; this opens the first one",
+      `Then call \`${presentTool}\` with the same files, most important first. From a component, from`,
+      "`write` or from `bash`, it does not matter. The link makes them clickable; this opens the first one",
       "in the preview pane and files them all under Artifacts, where they can be found again after the",
       "conversation has moved on. List the deliverables, not the scratch files."
     );
@@ -436,8 +436,8 @@ function componentsPrompt(availableTools: ReadonlySet<string>): string | null {
           .join(", ")}. Each returns a finished, verified artifact.`,
         "",
         "When the user asks for a presentation, deck, PPT, PDF, report, memo, app, dashboard,",
-        "mockup, wireframe or design, call the matching tool. Do NOT build these by hand — no",
-        "python-pptx, no reportlab, no hand-written HTML decks — and do not use a skill for",
+        "mockup, wireframe or design, call the matching tool. Do NOT build these by hand: no",
+        "python-pptx, no reportlab, no hand-written HTML decks, and do not use a skill for",
         "them even if one is listed. Your job is the context argument: put everything the",
         "artifact should contain into it, then hand the result over (see below).",
         "",
@@ -556,7 +556,7 @@ export class AbacusBotSession {
   /** Steers handed to pi that have not reached the model yet, oldest first. */
   private readonly pendingSteers: string[] = [];
   private session: AgentSession | undefined;
-  /** Construction options for the inner pi session, minus the model — see resetConversation. */
+  /** Construction options for the inner pi session, minus the model; see resetConversation. */
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
   private modelRuntime: ModelRuntime | undefined;
   /**
@@ -639,24 +639,24 @@ export class AbacusBotSession {
   private readonly heartbeat = new ToolHeartbeat((event) =>
     this.options.emit(event)
   );
-  /** Provider calls that failed and were retried this turn — see reportFailedCall. */
+  /** Provider calls that failed and were retried this turn; see reportFailedCall. */
   private retriedCalls = 0;
-  /** The turn in flight was stopped by the user — see reportTurnFailure. */
+  /** The turn in flight was stopped by the user; see reportTurnFailure. */
   private interrupted = false;
   /** Continuations spent on a malformed tool call this turn. */
   private malformedContinuations = 0;
-  /** The provider's usage for the turn's last request — set at `agent_end`. */
+  /** The provider's usage for the turn's last request, set at `agent_end`. */
   private lastTurnUsage: TurnUsage | null = null;
-  /** The context failure to compact around, with the turn it ended — set at `agent_end`. */
+  /** The context failure to compact around, with the turn it ended, set at `agent_end`. */
   private pendingContextCompaction: {
     failure: string;
     messages: readonly unknown[];
   } | null = null;
-  /** Compactions spent recovering this turn. One is the limit — see compactAndRetry. */
+  /** Compactions spent recovering this turn. One is the limit; see compactAndRetry. */
   private contextCompactions = 0;
   /** Set at `agent_end` when the turn is to be continued rather than ended. */
   private continuingPastMalformedToolCall = false;
-  /** Whether a user turn is in flight — a refresh landing now is mid-turn. */
+  /** Whether a user turn is in flight: a refresh landing now is mid-turn. */
   private turnRunning = false;
   /**
    * A model call that has gone silent. Nothing in the stack ends a stalled
@@ -676,7 +676,7 @@ export class AbacusBotSession {
   /** The arrivals a continuation is about to name, once per turn. */
   private pendingToolArrival: string[] | null = null;
   private toolArrivalsThisTurn = 0;
-  /** True while the session runs OpenLLM — see openllm.ts. */
+  /** True while the session runs OpenLLM; see openllm.ts. */
   private openLlmActive = false;
   /**
    * Which free models failed recently. File-backed so cooldowns outlive this
@@ -688,7 +688,7 @@ export class AbacusBotSession {
   );
   /**
    * Models that failed this turn. A rotation never returns to one, so a turn
-   * ends once the whole pool has been asked — that, not a count, is the
+   * ends once the whole pool has been asked: that, not a count, is the
    * budget: a pool of six is walked to the end, a pool of two is not spun on.
    */
   private readonly openLlmFailedThisTurn = new Set<string>();
@@ -938,7 +938,7 @@ export class AbacusBotSession {
           : {
               model: undefined,
               error: isOpenLlmReference(requested)
-                ? "the free pool is empty — add an OpenRouter, Google AI Studio, or Abacus.AI key"
+                ? "the free pool is empty; add an OpenRouter, Google AI Studio, or Abacus.AI key"
                 : undefined,
               warning: undefined,
             };
@@ -962,7 +962,7 @@ export class AbacusBotSession {
 
       if (fallback != null) {
         // The requested model cannot run (no key, or an empty free pool), so
-        // the first model that can takes the turn — a session that opens on
+        // the first model that can takes the turn: a session that opens on
         // something beats one that will not open. Announced, never silent: a
         // turn answered by a model nobody chose is the whole confusion here.
         model = fallback;
@@ -1114,7 +1114,7 @@ export class AbacusBotSession {
     });
   }
 
-  /** Reconnect every server — the desktop's "refresh" action. */
+  /** Reconnect every server: the desktop's "refresh" action. */
   async refreshMcp(): Promise<void> {
     for (const client of this.mcp.clients) {
       client.close();
@@ -1188,7 +1188,7 @@ export class AbacusBotSession {
     const session = this.requireSession();
 
     // The last turn died on credits or credentials. Whatever the user did
-    // about it — a key, a top-up, an upgrade — is on disk or on the account
+    // about it (a key, a top-up, an upgrade) is on disk or on the account
     // by now, and this is the first moment we can act on it.
     if (this.providersStale) {
       this.providersStale = false;
@@ -1451,7 +1451,7 @@ export class AbacusBotSession {
           type: "notification",
           severity: "warning",
           message:
-            "The model answered in the wrong language — asking it to answer again in yours.",
+            "The model answered in the wrong language. Asking it to answer again in yours.",
         });
 
         await this.session?.sendCustomMessage(
@@ -1531,7 +1531,7 @@ export class AbacusBotSession {
       this.stallRecoveriesThisTurn += 1;
       // Logged, not shown: the chat carries the answer, not the retry.
       process.stderr.write(
-        `[provider] ${modelId} stopped answering after ${seconds}s — asking it again.\n`
+        `[provider] ${modelId} stopped answering after ${seconds}s. Asking it again.\n`
       );
       await this.session?.sendCustomMessage(
         {
@@ -1614,7 +1614,7 @@ export class AbacusBotSession {
     this.awaitingModel = false;
     this.pendingStall = { modelId };
     process.stderr.write(
-      `[abacusai-bot-agent] ${modelId} produced nothing for ${modelStallMs() / 1000}s — aborting the call\n`
+      `[abacusai-bot-agent] ${modelId} produced nothing for ${modelStallMs() / 1000}s; aborting the call\n`
     );
     // Not Stop: `interrupted` stays false so the continuation can run.
     await this.session?.abort();
@@ -1727,7 +1727,7 @@ export class AbacusBotSession {
       // Should not happen: the candidate came off the live registry moments
       // ago. The idle event was withheld for this rotation, so end the turn.
       this.closeRoutingLine(
-        `Routing failed (${compactProviderError(rotation.failure)}) — no model left in the pool.`,
+        `Routing failed (${compactProviderError(rotation.failure)}): no model left in the pool.`,
         "warning"
       );
       this.emitAgentEvent({
@@ -1756,7 +1756,7 @@ export class AbacusBotSession {
     }
 
     this.emitRoutingLine(
-      `${failedId ?? "the model"} failed (${compactProviderError(rotation.failure)}) — routing to ${rotation.nextId}…`,
+      `${failedId ?? "the model"} failed (${compactProviderError(rotation.failure)}), routing to ${rotation.nextId}…`,
       "warning"
     );
     this.openLlmRoutingTarget = rotation.nextId;
@@ -1931,7 +1931,7 @@ export class AbacusBotSession {
 
     this.retriedCalls += 1;
     process.stderr.write(
-      `[provider] ${providerFailureSummary(text)} — retrying (attempt ${this.retriedCalls + 1}).\n`
+      `[provider] ${providerFailureSummary(text)}; retrying (attempt ${this.retriedCalls + 1}).\n`
     );
   }
 
@@ -2248,7 +2248,7 @@ export class AbacusBotSession {
     // Keys the desktop saved after this process started are on disk only:
     // `applyStoredApiKeys` runs once at startup, and pi's built-in providers
     // took their credentials from the environment as it was then. Re-read the
-    // file, then hand pi each key it owns — the same re-read on every call
+    // file, then hand pi each key it owns: the same re-read on every call
     // that makes registerGeminiProvider pick a Gemini key up.
     applyStoredApiKeys();
     await this.applyRuntimeApiKeys();
@@ -2678,7 +2678,7 @@ export class AbacusBotSession {
           block: true,
           reason:
             "You already asked to start this turn and the user declined. Reply to them and wait " +
-            "for what they say next — do not ask again.",
+            "for what they say next. Do not ask again.",
         };
       }
 
@@ -2714,7 +2714,7 @@ export class AbacusBotSession {
         return {
           block: true,
           reason:
-            `${tool.name} needs approval, but this session has no way to ask — ` +
+            `${tool.name} needs approval, but this session has no way to ask: ` +
             `the app is not attached. Do only what runs without approval, or tell ` +
             `the user what you need them to allow.`,
         };
@@ -2775,7 +2775,7 @@ export class AbacusBotSession {
               type: "reject_with_message",
               message:
                 `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
-                `Do not retry the same call — say what you need approved and stop.`,
+                `Do not retry the same call. Say what you need approved and stop.`,
             });
           }, budget)
         : undefined;
@@ -3017,7 +3017,7 @@ export class AbacusBotSession {
           block: true,
           reason:
             "The user is not ready to start. Stay in plan mode: refine the plan or ask what they want changed. " +
-            "Do not ask again this turn — reply to them and wait.",
+            "Do not ask again this turn. Reply to them and wait.",
         };
     }
   }
@@ -3311,8 +3311,8 @@ export class AbacusBotSession {
  * a first-time user can act on. Plain text, since the CLI prints it too.
  */
 const NO_MODEL_CONFIGURED =
-  "No model provider is configured. Set an API key — ABACUS_API_KEY, ANTHROPIC_API_KEY, " +
-  "OPENAI_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY or GEMINI_API_KEY — or add one in Settings.";
+  "No model provider is configured. Set an API key (ABACUS_API_KEY, ANTHROPIC_API_KEY, " +
+  "OPENAI_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY or GEMINI_API_KEY) or add one in Settings.";
 
 /** What to say when one model's key is missing but others are configured. */
 const missingKeyMessage = (reference: string, provider: string): string => {
@@ -3371,7 +3371,7 @@ const COMPACTION_CONTINUATION_TYPE = "abacusai-bot:context-compaction";
  * an unexplained gap reads as work undone.
  */
 const COMPACTION_CONTINUATION_PROMPT =
-  "The conversation was too long for your context window, so the history above was summarized to fit. Continue the task from it — do not restart it or repeat work that already completed.";
+  "The conversation was too long for your context window, so the history above was summarized to fit. Continue the task from it. Do not restart it or repeat work that already completed.";
 
 /** Marks an OpenLLM model switch in the session log as ours. */
 /**
@@ -3387,7 +3387,7 @@ const modelStallMs = (): number =>
 const MAX_STALL_RECOVERIES_PER_TURN = 1;
 const STALL_CONTINUATION_TYPE = "abacusai-bot:stall-recovery";
 const STALL_CONTINUATION_PROMPT =
-  "The previous provider call produced no output and was abandoned. Continue the task from the transcript above — do not restart it or repeat work that already completed.";
+  "The previous provider call produced no output and was abandoned. Continue the task from the transcript above. Do not restart it or repeat work that already completed.";
 
 const OPENLLM_CONTINUATION_TYPE = "abacusai-bot:openllm-rotation";
 
@@ -3396,7 +3396,7 @@ const OPENLLM_CONTINUATION_TYPE = "abacusai-bot:openllm-rotation";
  * bare "continue" invites a restart.
  */
 const OPENLLM_CONTINUATION_PROMPT =
-  "The previous model's provider call failed, and you have taken over this conversation on a different model. Continue the task from the transcript above — do not restart it or repeat work that already completed.";
+  "The previous model's provider call failed, and you have taken over this conversation on a different model. Continue the task from the transcript above. Do not restart it or repeat work that already completed.";
 
 /**
  * Whether a finished turn's last word from the model was a mangled tool call.
@@ -3487,7 +3487,7 @@ const ABACUS_PLAN_URL = "https://apps.abacus.ai/chatllm/choose-plan/";
 /**
  * What the chat says when the router has nothing left to try. Fixed lines:
  * under the router the user did not pick a model, so no provider's wording
- * about one belongs in front of them — the card's button is the answer.
+ * about one belongs in front of them: the card's button is the answer.
  */
 export const OPENLLM_POOL_EXHAUSTED_MESSAGE =
   "All free models are busy right now. Switch to a different model, or try again in a few minutes.";
@@ -3639,7 +3639,7 @@ export function classifyProviderFailure(raw: string): {
 function readableProviderError(raw: string): string {
   const cap = (text: string): string =>
     text.length > 300 ? `${text.slice(0, 300)}…` : text;
-  // "429: {json}" — the status is worth keeping, the envelope is not.
+  // "429: {json}": the status is worth keeping, the envelope is not.
   const match = raw.match(/^\s*(\d{3})\s*:\s*(\{[\s\S]*\})\s*$/);
 
   if (match?.[1] == null || match[2] == null) {

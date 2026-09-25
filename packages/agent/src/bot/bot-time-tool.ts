@@ -1,5 +1,5 @@
 /**
- * `current_time` — the bot's clock. The bot loop has no shell (no `date`),
+ * `current_time`: the bot's clock. The bot loop has no shell (no `date`),
  * and a model with no clock asks the user for something every machine knows.
  * An optional IANA timezone covers "what time is it for the client in Berlin".
  */
@@ -78,8 +78,8 @@ export const timezonePrompt = (): string =>
   [
     `The user's local timezone is ${describeTimezone()}. For the current`,
     "date and time, call `current_time`.",
-    "Present every time you show — calendar events, deadlines, message",
-    'timestamps, "how long until" — in the user\'s local timezone, converting',
+    "Present every time you show (calendar events, deadlines, message",
+    'timestamps, "how long until") in the user\'s local timezone, converting',
     "from the source's zone (connectors often return UTC or the event's own",
     "zone) and naming the zone once. Never show a source zone's time as if it",
     "were local, and never promise to convert later: convert now.",
@@ -91,7 +91,7 @@ export function buildBotTimeTool(): PiToolDefinitionLike {
     label: BOT_TIME_TOOL_NAME,
     description: [
       "The current date and time. You have no other clock: call this whenever",
-      "timing matters — deadlines, schedules, how far away a meeting is —",
+      "timing matters (deadlines, schedules, how far away a meeting is)",
       "instead of asking the user or guessing.",
       "",
       'Optional "timezone" (an IANA name like "Europe/Berlin") answers what',

@@ -4,7 +4,7 @@
  * pi applies `excludeTools` to custom tools as well as built-ins, so a name that
  * appears in both the custom tool list and the exclude list is registered and
  * then dropped. The sandboxed bash is registered under the name `bash` on
- * purpose — that is how it displaces pi's built-in — so naming `bash` in the
+ * purpose (that is how it displaces pi's built-in), so naming `bash` in the
  * exclude list as well removes the replacement along with the thing it was
  * replacing, and the agent has no shell at all.
  *
@@ -54,7 +54,7 @@ describe("replacing bash with our own", () => {
 
   it("never asks the caller to exclude the name it registers", () => {
     // The regression. The decision to register a replacement is returned on its
-    // own, with no exclude list to mutate — so there is no longer a place where
+    // own, with no exclude list to mutate, so there is no longer a place where
     // "drop the built-in" can be spelled as "exclude `bash`", which pi reads as
     // "drop every tool called bash, including the one just registered".
     const excluded = ["web_search"];
@@ -90,7 +90,7 @@ describe("which X search the model gets", () => {
 
   it("keeps the server's X search when an xAI key exists", () => {
     // xAI's Live Search reads X itself. A web index filtered to x.com is the
-    // weaker answer, so this process stands down rather than competing — even
+    // weaker answer, so this process stands down rather than competing, even
     // though it could serve the call.
     withKeys(true, () => {
       expect(isSupersededWebTool({ name: "agent-tools_x_search" })).toBe(false);
@@ -129,7 +129,7 @@ describe("which X search the model gets", () => {
 /**
  * Gemini reports a tool call it could not serialize by ending the stream with
  * `finish_reason: MALFORMED_FUNCTION_CALL`. pi has no case for it, so it lands
- * on the default arm — `stopReason: "error"` — and none of pi's retryable
+ * on the default arm (`stopReason: "error"`), and none of pi's retryable
  * patterns match, so the turn stops there. What the user saw was the answer the
  * model had already streamed with a red terminal error nailed to the bottom of
  * it, and, over messaging, the raw provider string sent as a second message.
@@ -219,8 +219,8 @@ describe("spotting a mangled tool call", () => {
 
 /**
  * What OpenLLM rotates on: a turn whose last word from the model was a
- * provider failure. The free tier fails as a way of life — a shared upstream
- * quota 429s, a model disappears from the catalog overnight — and every one of
+ * provider failure. The free tier fails as a way of life: a shared upstream
+ * quota 429s, a model disappears from the catalog overnight, and every one of
  * those is answered by moving to a different free model, so the check is
  * deliberately broad. What it must never match is a failure that switching
  * models cannot fix (a mangled tool call gets a same-model retry instead) or a
@@ -322,7 +322,7 @@ describe("spotting the provider error a turn died on", () => {
  * malformed-call retry) is pending, on the promise that the continuation will
  * either run the turn on or end it. A Stop that lands in between used to break
  * that promise both ways: the rotation could still trigger a fresh turn after
- * the user said stop, or bail without ever emitting the terminal events —
+ * the user said stop, or bail without ever emitting the terminal events,
  * leaving the session busy forever.
  */
 describe("Stop racing an OpenLLM rotation", () => {
@@ -444,8 +444,8 @@ describe("Stop racing an OpenLLM rotation", () => {
  * The OpenLLM retry cap, and who it applies to.
  *
  * The cap used to be patched onto the one SettingsManager the whole session
- * shared, so delegate sub-agents — concrete models with no rotation to fall
- * back on — had their retry budget cut to 1 as well, turning their transient
+ * shared, so delegate sub-agents (concrete models with no rotation to fall
+ * back on) had their retry budget cut to 1 as well, turning their transient
  * provider blips into hard failures.
  */
 describe("retry budgets while OpenLLM routes", () => {
@@ -518,7 +518,7 @@ describe("how much of the context window is kept free", () => {
   it("keeps pi's reserve when it is the larger of the two", () => {
     const manager = holder(16_384);
 
-    // A fifth of 32k is 6,553 — less headroom than pi already asks for.
+    // A fifth of 32k is 6,553, less headroom than pi already asks for.
     reserveContextHeadroom(manager, () => 32_000);
 
     expect(manager.getCompactionSettings().reserveTokens).toBe(16_384);

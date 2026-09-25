@@ -4,7 +4,7 @@
  */
 
 /**
- * Resolves when the signal aborts — immediately if it already has, never if
+ * Resolves when the signal aborts: immediately if it already has, never if
  * there is no signal. Callers must run `dispose` once the race settles: the
  * signal spans the whole run, so a leftover listener retains its delegation's
  * closure for as long as the run lives.

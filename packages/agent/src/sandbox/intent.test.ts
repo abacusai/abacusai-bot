@@ -48,7 +48,7 @@ const onPosix = process.platform !== "win32";
 
 describe.skipIf(!onPosix)("what a concern reads like", () => {
   it("tells the user what to do with a line it cannot read", () => {
-    // The card said "The command the command is not plain enough to read." —
+    // The card said "The command the command is not plain enough to read.",
     // a classifier's shrug, doubled. A predicate after "The command" now,
     // and one the user can act on.
     const intent = classify(

@@ -1,8 +1,8 @@
 /**
  * OpenLLM's contract: given the live model list, it always has a next-best
- * free model to hand — Abacus's drivers first, then Gemini's Studio quota,
+ * free model to hand: Abacus's drivers first, then Gemini's Studio quota,
  * then OpenRouter's free tier ranked toward the families that can drive an
- * agent loop — skipping whatever failed in the last few minutes, and never
+ * agent loop, skipping whatever failed in the last few minutes, and never
  * inventing a model that is not part of the free pool.
  *
  * The rotation state is the part worth pinning hardest. The failure mode it
@@ -69,7 +69,7 @@ describe("which models are in the pool", () => {
     ]);
   });
 
-  it("keeps Gemini despite its catalog cost — the Studio quota is the point", () => {
+  it("keeps Gemini despite its catalog cost: the Studio quota is the point", () => {
     // The registered cost is the paid rate; a Google AI Studio key serves the
     // same models under a real daily free quota. Filtering on cost alone
     // would throw away the second-largest free source.
@@ -214,8 +214,8 @@ describe("which models are in the pool", () => {
   });
 
   it("leaves paid providers and unknown custom endpoints out", () => {
-    // A custom endpoint with zero registered cost is not necessarily free —
-    // a LiteLLM proxy to a paid model registers the same way — so only the
+    // A custom endpoint with zero registered cost is not necessarily free:
+    // a LiteLLM proxy to a paid model registers the same way, so only the
     // sources known to be free are pooled.
     const candidates = openLlmCandidates([
       choice({ id: "anthropic/claude-opus-5", free: false, inputCost: 5 }),
@@ -265,7 +265,7 @@ describe("which models are in the pool", () => {
     ]);
   });
 
-  it("breaks family ties by context window — transcripts outgrow small ones", () => {
+  it("breaks family ties by context window: transcripts outgrow small ones", () => {
     const candidates = openLlmCandidates([
       choice({ id: "openrouter/deepseek/small:free", contextWindow: 32_000 }),
       choice({ id: "openrouter/deepseek/large:free", contextWindow: 164_000 }),

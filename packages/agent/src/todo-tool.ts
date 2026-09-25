@@ -1,5 +1,5 @@
 /**
- * `todo` — the plan, registered by the agent itself so a session without the
+ * `todo`: the plan, registered by the agent itself so a session without the
  * desktop's MCP server still has one. Name, actions, schema and output must
  * stay identical to mcp-agent-tools-server.ts: a model that learned the tool
  * one way must not find a different one the other.
@@ -37,8 +37,8 @@ export function buildTodoTool(): PiToolDefinitionLike {
       "Track a plan for multi-step work.",
       "",
       "Actions:",
-      '  "set"  — replace the whole plan (required: todos).',
-      '  "list" — read the current plan.',
+      '  "set":  replace the whole plan (required: todos).',
+      '  "list": read the current plan.',
       "",
       "Write the full list every time rather than editing single items. Exactly one item may be in_progress.",
     ].join("\n"),
