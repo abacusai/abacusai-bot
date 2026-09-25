@@ -2,8 +2,8 @@
  * Who owns a terminal, and for how long.
  *
  * The panel used to build one from inside an effect, which is how a render
- * came to spawn a shell. A view is now a thing with an identity — one per
- * conversation and tab — and these are the rules that identity has to keep,
+ * came to spawn a shell. A view is now a thing with an identity (one per
+ * conversation and tab), and these are the rules that identity has to keep,
  * because each one it breaks is a PTY nobody can see and nobody kills.
  *
  * The grid itself is not exercised here: it needs a canvas, and jsdom has
@@ -220,7 +220,7 @@ describe("the terminal a tab owns", () => {
     // Let the session start so the view knows its generation.
     await vi.waitFor(() => expect(emitAgentEvent).not.toBeNull());
 
-    // No panel is mounted, so nothing has registered an exit listener — which
+    // No panel is mounted, so nothing has registered an exit listener, which
     // is the case this covers: the tab used to survive with everything the
     // dead shell had printed, and the next terminal opened on top of it.
     emitAgentEvent!({

@@ -36,7 +36,7 @@ export const UpsellCard = ({
   /** Omitted for a card whose whole message is the text. */
   cta?: string;
   onCta?: () => void;
-  /** Several ways on, stacked — the free sources still to connect. */
+  /** Several ways on, stacked: the free sources still to connect. */
   actions?: UpsellAction[];
   /** A quieter second way out, under the button. */
   secondaryCta?: string;

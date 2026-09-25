@@ -56,7 +56,7 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
       "Go through the mail that came in since your last run. Sort it into",
       "needs a reply, worth reading, and noise, and say which is which in one",
       "line each. Draft replies in my voice for the ones that need one and",
-      "show me the drafts — send nothing. Flag anything with a deadline in it.",
+      "show me the drafts. Send nothing. Flag anything with a deadline in it.",
     ].join(" "),
   },
   {
@@ -82,7 +82,7 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
       "Run this workspace's test suite and tell me only what changed: tests",
       "that fail now and passed before, and tests that pass now and failed",
       "before. For each new failure, name the likely cause from the output and",
-      "the file to look at. Do not fix anything — report and stop.",
+      "the file to look at. Do not fix anything. Report and stop.",
     ].join(" "),
   },
   {

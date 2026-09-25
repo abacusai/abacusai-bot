@@ -40,7 +40,7 @@ import {
  */
 const QUIET_GAP_MS = 15 * 60 * 1000;
 
-/** "Yesterday 1:22 PM" — the day only when it is not today. */
+/** "Yesterday 1:22 PM": the day only when it is not today. */
 const stampLabel = (at: number, now: number): string => {
   const when = new Date(at);
   const time = when.toLocaleTimeString(undefined, {
@@ -206,7 +206,7 @@ export const BotMessageList = ({
   times?: Map<string, number>;
   isWorking?: boolean;
   onOpenSubtask?: (subtaskId: string) => void;
-  /** Point the user at the model picker — a pinned model that keeps failing. */
+  /** Point the user at the model picker when a pinned model that keeps failing. */
   onSwitchModel?: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();

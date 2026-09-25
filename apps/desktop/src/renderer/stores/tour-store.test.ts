@@ -2,7 +2,7 @@
  * The tour runs when it is started, and at no other time.
  *
  * There is deliberately no persisted "already seen" flag to assert on. One
- * used to exist, and the gate started a lap whenever it was missing — so a
+ * used to exist, and the gate started a lap whenever it was missing, so a
  * cleared localStorage looked exactly like a new user, and the launch that
  * moved Electron's userData showed the welcome tour to everybody who
  * took the update. Signing out or in changes nothing but closing an open lap.

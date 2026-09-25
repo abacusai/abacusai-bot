@@ -35,7 +35,7 @@ describe("a message the user sent", () => {
 
   it("does not take an account read to render", () => {
     // The avatar was the only thing here that needed the signed-in account, so
-    // this renders with no account store and no Abacus query mocked at all —
+    // this renders with no account store and no Abacus query mocked at all,
     // which is the point: a bubble is text and a side of the screen.
     expect(() =>
       render((<UserMessageBubble content="still fine" />) as JSX.Element)

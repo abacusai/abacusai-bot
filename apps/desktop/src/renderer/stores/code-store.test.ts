@@ -64,8 +64,8 @@ describe("workspace ui store", () => {
 
   it("drops a stored per-workspace mode rather than promoting it", async () => {
     // The per-workspace value is the one that used to win over whatever the
-    // picker was showing, which is how a mode chosen on the welcome screen —
-    // where no workspace is selected — was lost on send. It is not carried
+    // picker was showing, which is how a mode chosen on the welcome screen
+    // (where no workspace is selected) was lost on send. It is not carried
     // forward: the global is the sticky value for every session.
     localStorage.setItem(
       STORE_KEY,
@@ -190,7 +190,7 @@ describe("a deselected workspace", () => {
     expect(store.getState().workspaceUiStates.w2?.activeSessionId).toBe("s2");
   });
 
-  it("stops restoring an app-wide right pane — it belongs to the conversation now", async () => {
+  it("stops restoring an app-wide right pane, which belongs to the conversation", async () => {
     // A v2 install persisted whichever chat last opened its pane; restoring it
     // on launch put one chat's preview over another. v3 drops both fields.
     localStorage.setItem(

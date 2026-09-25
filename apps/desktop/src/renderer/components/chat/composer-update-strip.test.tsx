@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * The update, where it lives now: one strip above the composer.
  *
  * What is worth pinning is the restraint. It is absent when there is no
- * update — which is almost always — quiet while a download nobody can act on
+ * update (which is almost always), quiet while a download nobody can act on
  * runs, and only takes colour and a click target at the one moment a click
  * does something.
  */
@@ -84,7 +84,7 @@ describe("ComposerUpdateStrip", () => {
         container.querySelector("[data-id='update-strip-downloading']")
       ).not.toBeNull();
     });
-    // Rounded, not 41.7 — and no button, because nothing can be done yet.
+    // Rounded, not 41.7, and no button, because nothing can be done yet.
     expect(container.textContent).toContain('{"percent":42}');
     expect(container.querySelector("button")).toBeNull();
     expect(
@@ -187,7 +187,7 @@ describe("ComposerUpdateStrip", () => {
  *
  * Reported from a real dump: a transfer killed by `net::ERR_NETWORK_CHANGED`
  * (moving between wifi and a VPN is enough) left the strip saying "41%" with a
- * spinner over it — for hours, across two more failed retries, until the app
+ * spinner over it for hours, across two more failed retries, until the app
  * was restarted. Two things were wrong: the service kept the last progress
  * figure after the transfer died, and the strip had no failed state to show even
  * if it had not.

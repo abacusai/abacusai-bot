@@ -163,7 +163,7 @@ import { SESSION_STARTERS } from "./session-starters";
 import { SubtaskScopeHeader } from "./subtask-card";
 import { ThinkingLoader } from "./thinking-loader";
 
-// Stable empty array — prevents new [] literals from invalidating effect deps
+// Stable empty array: prevents new [] literals from invalidating effect deps
 // on every render when agentSessionsQuery.data is undefined.
 const EMPTY_SESSIONS: AgentSessionListItem[] = [];
 const EMPTY_WORKSPACES: WorkspaceListItem[] = [];
@@ -386,7 +386,7 @@ const WelcomeScreen = ({
     queryFn: () => window.api.agent.getSessionHomeWorkspacePath(),
     staleTime: Infinity,
   }).data;
-  // Which + was pressed. Both land here — nothing active, nothing said — so
+  // Which + was pressed. Both land here (nothing active, nothing said), so
   // the pane cannot tell a new bot from a new session without being told.
   const newPaneIntent = useWorkspaceStore((state) => state.newPaneIntent);
 
@@ -428,7 +428,7 @@ const WelcomeScreen = ({
               onAddWorkspace={onAddWorkspace}
             />
             {/* With nothing picked a send lands in the app's own auto
-                workspace, which the picker does not list — so its path is
+                workspace, which the picker does not list, so its path is
                 said here, in advance. */}
             {activeWorkspaceId == null && autoWorkspacePath != null && (
               <p
@@ -444,7 +444,7 @@ const WelcomeScreen = ({
           </div>
 
           {/* Openers. A card fills the composer rather than sending: the
-              prompt is a draft to edit — the file, the screen, the app it
+              prompt is a draft to edit, because the file, the screen, the app it
               talks about are still only in the user's head. */}
           <div
             className="grid w-full max-w-3xl grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3"
@@ -477,7 +477,7 @@ const WelcomeScreen = ({
           </div>
         </>
       ) : (
-        // The bot maker fills the pane on its own — no heading, no composer:
+        // The bot maker fills the pane on its own, with no heading and no composer:
         // the first thing this app asks for is a bot, not a prompt.
         <>
           <HomeUpdateBanner />
@@ -562,7 +562,7 @@ export const ChatPanel = (): JSX.Element => {
   const prevSessionIdsRef = useRef<string>("");
   useEffect(() => {
     if (activeWorkspaceId == null) return;
-    // Placeholder data is the previous workspace's list — never reconcile it.
+    // Placeholder data is the previous workspace's list; never reconcile it.
     if (agentSessionsQuery.isPlaceholderData) return;
     const sessionIds = workspaceSessions
       .filter((s) => !isPlaceholderSession(s) && typeof s.id === "string")
@@ -602,7 +602,7 @@ export const ChatPanel = (): JSX.Element => {
       comment?: string
     ): Promise<boolean> => {
       // The synced transcript is this same segment list, so the rated turn is
-      // named by its position here — not by the user/bot turn counter, which
+      // named by its position here, not by the user/bot turn counter, which
       // skips the tool and status segments in between.
       const eventSequenceNumber = workspaceConversationStore
         .getSegments(sessionId)
@@ -628,7 +628,7 @@ export const ChatPanel = (): JSX.Element => {
   const activateSelection = useConversationActivator();
   const bots = useMemo(() => botsQuery.data ?? [], [botsQuery.data]);
   // Which + was pressed: read before its first use, which is composerBot just
-  // below — its other use is 1200 lines further down.
+  // below. Its other use is 1200 lines further down.
   const paneIntent = useWorkspaceStore((state) => state.newPaneIntent);
   const composerBot = useMemo(() => {
     if (activeSessionId != null)
@@ -926,7 +926,7 @@ export const ChatPanel = (): JSX.Element => {
   // Clear stale activeSessionId that no longer exists (e.g. after deleted session or old localStorage)
   useEffect(() => {
     if (activeWorkspaceId == null || activeSessionId == null) return;
-    // Placeholder data is the previous workspace's list — not an answer here.
+    // Placeholder data is the previous workspace's list, not an answer here.
     if (agentSessionsQuery.isLoading || agentSessionsQuery.isPlaceholderData)
       return;
     const realSessions = workspaceSessions.filter(
@@ -1001,7 +1001,7 @@ export const ChatPanel = (): JSX.Element => {
     sessionId: null,
     attempts: 0,
   });
-  // Session id whose auto-start has exhausted its retries — blocks the effect
+  // Session id whose auto-start has exhausted its retries. Blocks the effect
   // until the user explicitly retries (toast action) or switches session.
   const [startGaveUpSessionId, setStartGaveUpSessionId] = useState<
     string | null
@@ -1014,7 +1014,7 @@ export const ChatPanel = (): JSX.Element => {
   const [workspaceMissingDismissedId, setWorkspaceMissingDismissedId] =
     useState<string | null>(null);
   const workspacePathMissing = workspacePathStatusQuery.data?.exists === false;
-  // Tombstoned workspaces are read-only anyway — a missing folder is expected
+  // Tombstoned workspaces are read-only anyway: a missing folder is expected
   // there, not something to fix, so the relocate/remove dialog stays away.
   const missingWorkspace =
     workspacePathMissing && activeWorkspaceId != null
@@ -1308,7 +1308,7 @@ export const ChatPanel = (): JSX.Element => {
     let workspaceId = storeSnapshot.activeWorkspaceId;
     if (workspaceId == null) {
       // No project picked: the chat runs in the app's own session folder,
-      // made and selected here rather than asked for — see sessionDefaultWorkspace.
+      // made and selected here rather than asked for (see sessionDefaultWorkspace).
       const autoWorkspaceId =
         await window.api.agent.ensureSessionHomeWorkspace();
       if (autoWorkspaceId == null) {
@@ -1440,7 +1440,7 @@ export const ChatPanel = (): JSX.Element => {
       for (let i = 0; i < attachmentMeta.length; i++) {
         const absPath = saveRes.paths[i];
         if (absPath == null) continue;
-        // Absolute paths in @-mentions — agent resolves via filesystem.
+        // Absolute paths in @-mentions; the agent resolves via filesystem.
         fileRefs.push(`@${absPath}`);
       }
     }
@@ -1557,7 +1557,7 @@ export const ChatPanel = (): JSX.Element => {
 
       // Analytics: message_sent (code mode)
 
-      // sendMutation.onMutate flips the cached turn-state to "pending" — the
+      // sendMutation.onMutate flips the cached turn-state to "pending", the
       // single source of truth driving the busy UI everywhere.
       await sendMutation.mutateAsync({
         workspaceId,
@@ -1734,7 +1734,7 @@ export const ChatPanel = (): JSX.Element => {
     invalidateWorkspaceCaches();
   }, [invalidateWorkspaceCaches, activateWorkspaceSession]);
 
-  // Derived state — busy/loading is read from the single source of truth (TQ cache).
+  // Derived state: busy/loading is read from the single source of truth (TQ cache).
   const turnStateQuery = useSessionTurnStateQuery(
     activeWorkspaceId,
     activeSessionId
@@ -2044,7 +2044,7 @@ export const ChatPanel = (): JSX.Element => {
       className="bg-background relative flex h-full min-h-0 flex-col"
       data-id="local-code-chat-panel"
     >
-      {/* Message / welcome area — also a drop zone for path-mentions */}
+      {/* Message / welcome area, also a drop zone for path-mentions */}
       <MessageScrollerProvider
         key={activeSessionId ?? "new-session"}
         autoScroll
@@ -2136,8 +2136,8 @@ export const ChatPanel = (): JSX.Element => {
                         onBack={() => setSubtaskScope(null)}
                       />
                     )}
-                    {/* A bot's chat is a thread, not a work log — see
-                        bot-message-list.tsx — and so is a routine's run:
+                    {/* A bot's chat is a thread, not a work log (see
+                        bot-message-list.tsx), and so is a routine's run:
                         what it said, not the tools it used to say it.
                         Sessions keep the full transcript: there you are
                         supervising the agent. */}
@@ -2198,15 +2198,15 @@ export const ChatPanel = (): JSX.Element => {
           shows only the asks filed under the conversation on screen. */}
       <ConnectorRequestCard />
 
-      {/* The update — downloading, failed, or ready — right above where the
+      {/* The update (downloading, failed, or ready) sits right above where the
           user is already typing, so no session and no sidebar state hides it.
           The bot maker shows it as a banner at the top of the pane instead. */}
       {!showsBotMaker && <ComposerUpdateStrip />}
 
       {/* A channel bot's chat happens in Discord/Telegram/WhatsApp: everything
           here is a mirror of that conversation, so there is nothing to type.
-          The user messages the Abacus AI bot in the chat app — or, on
-          WhatsApp, themselves — and both sides land in this transcript. */}
+          The user messages the Abacus AI bot in the chat app (or, on
+          WhatsApp, themselves), and both sides land in this transcript. */}
       {channelBotChat != null && !showsBotMaker && !isSenderChat && (
         <div className="border-border bg-muted text-muted-foreground mx-4 mb-3 rounded-md border px-3 py-2 text-xs">
           {channelBotChat.channel === "whatsapp"
@@ -2219,7 +2219,7 @@ export const ChatPanel = (): JSX.Element => {
 
       {/* An auto-reply conversation is the bot's line to one person: every
           word in it is delivered to that sender as the user, so there is no
-          composer — a message typed here would be answered TO the sender.
+          composer: a message typed here would be answered TO the sender.
           The user watches, and steers the bot from the bot's own chat. */}
       {isSenderChat && !showsBotMaker && (
         <div className="border-border bg-muted text-muted-foreground mx-4 mb-3 rounded-md border px-3 py-2 text-xs">
@@ -2237,7 +2237,7 @@ export const ChatPanel = (): JSX.Element => {
           {t("routines.runReadOnly")}
         </div>
       )}
-      {/* Composer — absent under the bot maker, which owns the whole pane,
+      {/* Composer. Absent under the bot maker, which owns the whole pane,
           and in auto-reply conversations and routine runs, which are
           read-only. */}
       {showsBotMaker ||

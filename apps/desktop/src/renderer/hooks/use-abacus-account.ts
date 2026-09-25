@@ -10,8 +10,8 @@ export const abacusAccountQueryOptions = (refresh = false) =>
     queryKey: workspaceQueryKeys.abacusAccount,
     queryFn: () => window.api.agent.getAbacusAccount(refresh),
     staleTime: 60_000,
-    // Credits are spent outside this window too — bots, routines, the web
-    // app — so the number is re-read on a schedule as well as after a turn.
+    // Credits are spent outside this window too (bots, routines, the web
+    // app), so the number is re-read on a schedule as well as after a turn.
     refetchInterval: ACCOUNT_REFETCH_MS,
   });
 

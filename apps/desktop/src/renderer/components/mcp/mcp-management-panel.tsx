@@ -345,7 +345,7 @@ export const McpManagementPanel = ({
         else next.add(serverId);
         return next;
       });
-      // Pull a fresh tail outside the updater — side effects in updaters are unsafe.
+      // Pull a fresh tail outside the updater; side effects in updaters are unsafe.
       if (!isOpen) void reloadLogs(serverId);
     },
     [expandedLogs, reloadLogs]

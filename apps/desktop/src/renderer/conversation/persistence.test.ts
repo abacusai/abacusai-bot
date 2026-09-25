@@ -4,7 +4,7 @@
  * The case that broke: a bot's routine chat is minted before its first fire,
  * and the sidebar warms it on hover. The first read found no file, the session
  * was written off as restored for the rest of the run, and every fire after
- * that wrote a transcript nothing would ever load — a blank chat sitting next
+ * that wrote a transcript nothing would ever load: a blank chat sitting next
  * to a file with the whole conversation in it.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -194,7 +194,7 @@ describe("a live event before the first open", () => {
       const written = writeTranscript.mock.calls[0]?.[1] as { id: string }[];
       // What the store holds after the hydrate is what gets written; the
       // fake store here is static, so the point pinned is the ORDER: read,
-      // then write — not write-then-read.
+      // then write, not write-then-read.
       expect(readTranscript.mock.invocationCallOrder[0]).toBeLessThan(
         writeTranscript.mock.invocationCallOrder[0]!
       );

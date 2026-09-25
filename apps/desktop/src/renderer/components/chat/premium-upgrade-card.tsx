@@ -46,7 +46,7 @@ export const PremiumUpgradeCard = ({
   /** Models the platform still serves for free; each one is a way to keep going. */
   freeModels?: FreeModelSwitch[];
   onPickModel?: (modelId: string) => void;
-  /** Point the user at the model picker — the other models they already hold. */
+  /** Point the user at the model picker: the other models they already hold. */
   onSwitchModel?: () => void;
   /** Run the dead turn again on the free pool, once a source has joined it. */
   onResume?: () => void;
@@ -182,7 +182,7 @@ export interface FreeModelSwitch {
   label: string;
 }
 
-/** The named switches among an error's actions — the free models to offer. */
+/** The named switches among an error's actions: the free models to offer. */
 export const freeModelSwitches = (
   actions?: NotificationAction[]
 ): FreeModelSwitch[] =>
@@ -201,7 +201,7 @@ export const wantsUpgradeCard = (actions?: NotificationAction[]): boolean =>
 
 /**
  * What ran out: the Abacus.AI credits alone (`upgrade-abacus`), or every
- * source the router had (`free-pool-out`) — the card's title says which.
+ * source the router had (`free-pool-out`). The card's title says which.
  */
 export const exhaustedScope = (
   actions?: NotificationAction[]

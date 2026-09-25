@@ -65,7 +65,7 @@ export const ProviderSetupStep = ({
 }: {
   /** Back to the welcome screen. */
   onBack: () => void;
-  /** Done here — leave onboarding for the app. */
+  /** Done here; leave onboarding for the app. */
   onDone: () => void;
   /** The flow's progress dots, so this step doesn't own the shell's chrome. */
   dots: ReactNode;
@@ -119,7 +119,7 @@ export const ProviderSetupStep = ({
     []
   );
 
-  /** The same browser hop as the welcome screen's sign-in — offered again
+  /** The same browser hop as the welcome screen's sign-in, offered again
    * here because "Abacus free tier" is one of the three LLM choices. */
   const connectAbacus = async (): Promise<void> => {
     setAbacusConnecting(true);
@@ -200,7 +200,7 @@ export const ProviderSetupStep = ({
 
       <div className="flex flex-col items-center text-center">
         {/* No mark and no product name here. The user is inside the app, three
-            screens into its first run — the window has already said whose it
+            screens into its first run. The window has already said whose it
             is, and repeating it on every step spends the top of the screen on
             what they already know instead of on what the step is asking. */}
         <h1 className="text-foreground text-4xl font-bold tracking-tight text-balance">
@@ -214,10 +214,8 @@ export const ProviderSetupStep = ({
         </p>
       </div>
 
-      {/* One row per provider, and the row is the control: the three cards
-          that used to sit under this grid said the same three things again in
-          twice the height, which is what put a scrollbar on a step that is
-          meant to fit. Selecting a row either starts its browser hop or opens
+      {/* One row per provider, and the row is the control, so the step fits
+          without a scrollbar. Selecting a row either starts its browser hop or opens
           one key field, so the screen grows by a line rather than by a card. */}
       <div
         className="mt-8 grid grid-cols-2 gap-3 @xl:grid-cols-4"

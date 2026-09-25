@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * The host speaks the legacy tool vocabulary and the reducer speaks the current
  * one, so every tool the agent runs passes through a translation here. When it
- * is wrong the failure is silent and total — a card with no command line, an
- * edit with no diff, a sub-agent's work spilling into the main transcript — so
+ * is wrong the failure is silent and total (a card with no command line, an
+ * edit with no diff, a sub-agent's work spilling into the main transcript), so
  * the mapping is worth pinning in both directions, along with what the bridge
  * does with input it does not recognise.
  */
@@ -364,7 +364,7 @@ describe("translating the host's tool events", () => {
 
   it("keeps the start event's arguments when the result lands", () => {
     // The completion event rebuilds its request with EMPTY args, and the
-    // reducer replaces the card with the result's toolCall — so without the
+    // reducer replaces the card with the result's toolCall, so without the
     // join every finished bash card would lose its command line.
     ingestEvent({
       type: "tool_execution_start",
@@ -457,7 +457,7 @@ describe("translating the host's tool events", () => {
     });
   });
 
-  it("marks no error on a call that simply succeeded", () => {
+  it("marks no error on a call that succeeded", () => {
     ingestEvent({
       type: "tool_execution_complete",
       tool: toolRequest("call-1", "read"),
@@ -503,7 +503,7 @@ describe("display data, which arrives before the tool does", () => {
   });
 
   it("survives the start event that arrives after it", () => {
-    // Sent at permission time, before the tool is tracked — losing it strips
+    // Sent at permission time, before the tool is tracked. Losing it strips
     // edit cards of their diff.
     ingestEvent({
       type: "tool_display_data",
@@ -641,7 +641,7 @@ describe("streaming a running command's output", () => {
       output: "running…",
     });
 
-    // `streaming` is what keeps the card in its running state — the command
+    // `streaming` is what keeps the card in its running state: the command
     // has not finished, and its completion arrives separately.
     expect(loopEvents()[1]).toEqual({
       type: "terminal_command",
@@ -822,7 +822,7 @@ describe("attributing work to an open sub-agent", () => {
 
   it("closes an unfinished bracket at the turn boundary", () => {
     // An id kept past its turn stamps the NEXT turn's text with a dead bracket,
-    // which the views then filter out entirely — a blank turn.
+    // which the views then filter out entirely: a blank turn.
     openBracket("sub-1");
     ingestEvent({ type: "turn_complete" });
     ingestEvent({ type: "text_delta", text: "x" });
@@ -859,7 +859,7 @@ describe("forcing the session back to idle on Stop", () => {
   });
 
   it("closes a bracket Stop was pressed inside", () => {
-    // Stop is the only end this turn gets — the subtask_end that would retire
+    // Stop is the only end this turn gets: the subtask_end that would retire
     // the bracket is suppressed, so leaving it open blanks every later turn.
     ingestEvent({ type: "subtask_start", id: "sub-1", kind: "task" });
     transport.markIdle(SESSION);

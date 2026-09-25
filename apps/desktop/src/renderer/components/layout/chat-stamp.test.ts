@@ -4,7 +4,7 @@
  * The vocabulary a phone's message list uses, and the one a bot's row wants:
  * the clock time while it is still today, and the day once it is not. The
  * compact ages the workspace tree draws ("17m", "54d") answer a different
- * question — how stale is this, rather than when was this said.
+ * question: how stale is this, rather than when was this said.
  */
 import { describe, expect, it } from "vitest";
 
@@ -16,7 +16,7 @@ const at = (iso: string): number => new Date(iso).getTime();
 describe("chatStamp", () => {
   it("gives the clock time for anything said today", () => {
     expect(chatStamp(at("2026-08-28T13:25:00"), NOW)?.kind).toBe("time");
-    // Midnight is today, not yesterday — the boundary is the start of the day,
+    // Midnight is today, not yesterday: the boundary is the start of the day,
     // not 24 hours ago.
     expect(chatStamp(at("2026-08-28T00:00:00"), NOW)?.kind).toBe("time");
   });

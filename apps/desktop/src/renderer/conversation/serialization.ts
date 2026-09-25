@@ -176,7 +176,7 @@ export function segmentsToConversationSegments(
       continue;
     }
 
-    // A segment outside the open bracket closes it — membership is positional.
+    // A segment outside the open bracket closes it; membership is positional.
     if (openSubtaskId != null && seg.subtaskId !== openSubtaskId)
       closeSubtask();
 

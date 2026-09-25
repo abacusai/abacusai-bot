@@ -5,7 +5,7 @@
  * actually reported were about this control's *state* rather than its looks: a
  * toggle that stays disabled cannot be switched back on, and `disabled` here is
  * driven by whether a save is in flight. The accessible name matters for the
- * same reason it exists — the switch shows no text of its own, so without it
+ * same reason it exists: the switch shows no text of its own, so without it
  * there is nothing to find it by.
  */
 import { render, screen } from "@testing-library/react";

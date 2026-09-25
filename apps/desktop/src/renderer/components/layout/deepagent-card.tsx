@@ -8,7 +8,7 @@ const DEEPAGENT_URL = "https://apps.abacus.ai/chatllm";
 
 /**
  * A sidebar card pointing paid Abacus accounts at the Abacus AI agent on the
- * web — the upsell for work this app is not the place for: long, complex,
+ * web: the upsell for work this app is not the place for: long, complex,
  * agentic runs. The free tier does not get it, because that agent is what
  * their plan lacks, and a link that lands them on a paywall reads as a bait
  * card rather than a shortcut. Same shape as the card the free tier sees in

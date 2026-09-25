@@ -27,7 +27,7 @@ export const FirstBotDialog = ({
   armed,
   onDone,
 }: {
-  /** Onboarding finished in this session — the one moment this fires. */
+  /** Onboarding finished in this session: the one moment this fires. */
   armed: boolean;
   /** The popup was closed, or there was nothing to show. */
   onDone: () => void;
@@ -54,8 +54,8 @@ export const FirstBotDialog = ({
     startedRef.current = true;
     keptRef.current = false;
     // Only bots the user would call theirs. Linking WhatsApp, Telegram or
-    // Discord — which the connectors step, two screens before this, invites
-    // them to do — mints a self-lane bot of the app's own, and counting one
+    // Discord (which the connectors step, two screens before this, invites
+    // them to do) mints a self-lane bot of the app's own, and counting one
     // of those meant almost nobody reached their first bot: the check read
     // "they already have bots" about bots they never made.
     if (botsQuery.data.some((bot) => bot.channel == null)) {

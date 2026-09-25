@@ -119,8 +119,8 @@ export const BrowserSettingsPanel = (): JSX.Element => {
   const status = statusQuery.data ?? null;
   const busy = updateMutation.isPending || clearMutation.isPending;
 
-  // setMcpBrowserEnabled / setBrowserApproval both emit browser-status-updated
-  // which the useEffect above reflects into local state — handlers don't need
+  // setMcpBrowserEnabled / setBrowserApproval both emit browser-status-updated,
+  // which the useEffect above reflects into local state. Handlers don't need
   // to set it themselves.
   const handleToggleEnabled = (): void => {
     if (status == null) return;

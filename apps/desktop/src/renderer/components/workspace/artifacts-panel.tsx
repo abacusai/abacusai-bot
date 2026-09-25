@@ -122,7 +122,7 @@ const locationTail = (artifact: SessionArtifact): string => {
 /**
  * What the location column is for: getting to the file, not reading its path.
  * The path itself was four wrapped lines of monospace that nobody reads and
- * that pushed the two things people actually press to the edge of the row —
+ * that pushed the two things people actually press to the edge of the row,
  * so it moved into their tooltips, where a full path belongs.
  */
 const ArtifactActions = ({

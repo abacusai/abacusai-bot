@@ -45,7 +45,7 @@ export const DeliverablesPill = ({
       openUrlInPreview(item.path);
       return;
     }
-    // Resolve first — a workspace-relative path would otherwise fail the read.
+    // Resolve first: a workspace-relative path would otherwise fail the read.
     const absolute = resolvePath(item.path);
     void openAbsoluteFileInPreview(
       absolute,

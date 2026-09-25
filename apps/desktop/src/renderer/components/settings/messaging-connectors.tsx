@@ -378,8 +378,8 @@ const PlatformDetail = ({
             </p>
           )}
         </div>
-        {/* No enable switch here. Clicking Connect on the card IS the intent
-            — the dialog's job is the QR or the token, and disconnecting is
+        {/* No enable switch here. Clicking Connect on the card IS the intent;
+            the dialog's job is the QR or the token, and disconnecting is
             the card's Remove button. A toggle in between only added a state
             to explain. */}
       </header>
@@ -388,7 +388,7 @@ const PlatformDetail = ({
         <p
           data-id={`messaging-error-${platform.id}`}
           className={
-            // Waiting on a login is an instruction, not a failure — don't
+            // Waiting on a login is an instruction, not a failure, so don't
             // paint "scan the QR" red.
             platform.state === "needs_login" ||
             platform.state === "rate_limited"
@@ -416,7 +416,7 @@ const PlatformDetail = ({
         )}
 
       {/* The shared Abacus AI bot: the same one ChatLLM's personal agents pair
-          with. A section of this card, not a card of its own — it is another
+          with. A section of this card, not a card of its own: it is another
           way to reach the agent from Discord, not another Discord. */}
       {sharedBot != null && (
         <SharedLinkSection
@@ -447,7 +447,7 @@ const PlatformDetail = ({
           would rather not, and a connect that has just landed is when they
           want to get on with it.
 
-          Before this the connected state had no button at all — the QR
+          Without it the connected state had no button at all: the QR
           disappeared, the green line appeared, and the only way out was the
           close cross or a click outside, neither of which looks like the end
           of a flow you were walked through. */}
@@ -531,9 +531,8 @@ const PlatformDetail = ({
         </section>
       )}
 
-      {/* No "Approved" list here by design (it once sat between the pending
-          queue and the credentials): most rows were businesses the auto-
-          approve path had recorded — ICICI, CRED, Zomato — and a wall of
+      {/* No "Approved" list here by design: most rows were businesses the
+          auto-approve path had recorded (ICICI, CRED, Zomato), and a wall of
           bank names read as noise, not as a security surface. Revoking is
           decidePairing("revoke"); resurface it in a settings view if a real
           management need appears. */}

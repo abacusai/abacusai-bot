@@ -1,7 +1,7 @@
 /**
  * Who is owed the first-run flow.
  *
- * Two rules. Never having answered onboarding owes it — holding an Abacus.AI
+ * Two rules. Never having answered onboarding owes it: holding an Abacus.AI
  * credential is not the same as having been onboarded. And holding NO
  * credential owes it too: the app requires an account, so a sign-out (or a
  * revoked key) drops straight back onto the flow's sign-in screen.
@@ -20,7 +20,7 @@ const resolved = {
 describe("nothing is usable until there is an account", () => {
   it("owes onboarding to anyone without a credential, onboarded or not", () => {
     // The wall: being onboarded once is not a licence to use the app after the
-    // credential goes — a revoked key, a sign-out, a cleared field all land
+    // credential goes. A revoked key, a sign-out, a cleared field all land
     // back on the first screen.
     expect(
       resolveNeedsOnboarding({
@@ -32,8 +32,8 @@ describe("nothing is usable until there is an account", () => {
   });
 
   it("says nothing while the answer is still loading", () => {
-    // `null` is "not known yet", and the app is not rendered through it —
-    // otherwise a signed-out user gets a working app for the moment it takes
+    // `null` is "not known yet", and the app is not rendered through it.
+    // Otherwise a signed-out user gets a working app for the moment it takes
     // the credential to resolve.
     expect(
       resolveNeedsOnboarding({

@@ -4,7 +4,7 @@
  * There are two: the workspace tree reads its own workspace's sessions, the
  * sidebar's Sessions section reads the flat list across every workspace. A
  * rename that patched only the first left a new chat reading "Untitled" after
- * its first message had already named it — right until something else
+ * its first message had already named it, right until something else
  * refetched, which in practice meant creating another chat.
  */
 import { QueryClient } from "@tanstack/react-query";

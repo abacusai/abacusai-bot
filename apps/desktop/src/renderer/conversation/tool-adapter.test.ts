@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 /**
  * What the tool UI is told about a shell command while it runs.
  *
- * The renderer decides "still running" from a single field — the render item's
- * `state` — and three separate pieces of UI hang off it: the group header
+ * The renderer decides "still running" from a single field (the render item's
+ * `state`), and three separate pieces of UI hang off it: the group header
  * ("Running 1 command" vs "Ran 1 command"), the row's shimmer, and the
  * live-output preview. A card that settles on its first byte of output takes
  * all three down while the command is still going, which is exactly what a
@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
  * still waiting to print its first byte must not be marked as one whose
  * arguments are still arriving.
  *
- * These tests drive the real pipeline — reducer events in, render items out —
+ * These tests drive the real pipeline (reducer events in, render items out)
  * because the bug lived in the seam between them, not in either half.
  */
 import {
@@ -108,7 +108,7 @@ describe("a command that streams output while it runs", () => {
     expect(streaming.state).toBe("running");
     expect(streaming.liveOutput).toBe("compiling…");
     expect(streaming.result).toBeUndefined();
-    // Arguments are not what is streaming here — the output is.
+    // Arguments are not what is streaming here; the output is.
     expect(streaming.streamingArgs).toBe(false);
 
     state = complete(state, "compiling…\ndone");
@@ -187,7 +187,7 @@ const pendingBash = (args: Record<string, unknown>): PendingSegment => ({
 
 describe("toToolRenderItem", () => {
   it("labels a running command instead of hiding it behind the tool name", () => {
-    // A command that prints nothing stays a placeholder for its whole run —
+    // A command that prints nothing stays a placeholder for its whole run:
     // there is no output event to realize it into a terminal card. Its
     // arguments arrived complete with `tool_execution_start`, so the row can
     // say which command is running rather than shimmering the word "bash".

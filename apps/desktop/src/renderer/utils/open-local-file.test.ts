@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 describe("opening a local file from the renderer", () => {
-  it("says nothing when the file simply opens", async () => {
+  it("says nothing when the file opens", async () => {
     openFilePath.mockResolvedValue({ outcome: "opened" });
 
     await openLocalFile("/ws/notes.txt");

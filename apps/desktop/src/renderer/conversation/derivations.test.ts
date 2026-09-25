@@ -83,7 +83,7 @@ describe("deriveGroupedTranscript", () => {
 
     expect(result.groups).toHaveLength(1);
     expect(result.groups[0]?.callIds).toEqual(["call-1", "call-2", "call-3"]);
-    // The blanks are not members of the group either — nothing to reveal.
+    // The blanks are not members of the group either; nothing to reveal.
     expect(result.groups[0]?.memberIds).toEqual(["one", "two", "three"]);
   });
 
