@@ -8,7 +8,7 @@
  * for the target being built: Metal on macOS, Vulkan on x64 Windows and Linux
  * (its backends load dynamically, so a machine with no usable GPU runs on the
  * CPU), CPU-only on arm64 Windows. Pinned and checksummed like every other
- * vendored binary — this one runs a model on the user's machine.
+ * vendored binary: this one runs a model on the user's machine.
  *
  * Only the server and the libraries it loads are kept; the release also holds
  * a dozen command-line tools this app never spawns.
@@ -65,7 +65,7 @@ const TARGETS = {
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 // Downloaded third-party files go in `vendor/`, and this app's resources
-// directory ships verbatim — so this is already the packaged path.
+// directory ships verbatim, so this is already the packaged path.
 const DEST = path.join(ROOT, "resources", "vendor", "llama");
 // Per-target, so cross-building win32 after darwin does not re-download.
 const CACHE = path.join(ROOT, "vendor", "llama");
@@ -182,7 +182,7 @@ async function main() {
   }
 
   // Cleared, not merged into: a library for the wrong platform is worse than
-  // none — it ships, and fails on the user's machine rather than here.
+  // none. It ships, and fails on the user's machine rather than here.
   fs.rmSync(DEST, { recursive: true, force: true });
   fs.mkdirSync(DEST, { recursive: true });
   for (const entry of fs.readdirSync(cachedDir, { withFileTypes: true })) {

@@ -1,9 +1,9 @@
 /**
  * The connector registry: one entry per service the agent can attach, and the
- * one place that says what kind of thing it is. Everything downstream — the
+ * one place that says what kind of thing it is. Everything downstream (the
  * Connectors page, onboarding, the Connect button in a chat, the
  * `connect_connector` tool, the model's routing hints, the agent's per-tool
- * guards — reads this and never keeps a list of its own.
+ * guards) reads this and never keeps a list of its own.
  *
  * The rule the rest of the app leans on: this registry is the allowlist. A
  * platform service, a gateway tool, or a prompt mention that is not here does
@@ -83,7 +83,7 @@ export interface PlatformConnector extends ConnectorBase {
   kind: "platform";
   /** The platform's service key, lowercase: "gmailuser", "slack". */
   service: string;
-  /** The gateway tools this app takes for the service — an allowlist. */
+  /** The gateway tools this app takes for the service: an allowlist. */
   tools: readonly string[];
   /** What one call to any of those tools costs the user, in credits. */
   credits: number;
@@ -208,7 +208,7 @@ const messaging = (
 });
 
 export const CONNECTORS: readonly Connector[] = [
-  // ── Messaging — listed first: an agent you can text is a different product ──
+  // ── Messaging, listed first: an agent you can text is a different product ──
   messaging(
     "whatsapp",
     "WhatsApp",
@@ -261,7 +261,7 @@ export const CONNECTORS: readonly Connector[] = [
   platform(
     "slack",
     "Slack",
-    "Search, read and post in your Slack workspace — one click, no Slack app to create.",
+    "Search, read and post in your Slack workspace: one click, no Slack app to create.",
     ["Slack_Tool"],
     { logo: "slack", onboarding: true, routes: ["Slack messages and channels"] }
   ),
@@ -317,7 +317,7 @@ export const CONNECTORS: readonly Connector[] = [
     id: "github",
     name: "GitHub",
     description:
-      "Repos, issues and pull requests through the gh CLI, with your own token — private repos included.",
+      "Repos, issues and pull requests through the gh CLI, with your own token, private repos included.",
     category: "featured",
     docsUrl: "https://github.com/settings/tokens",
     provider: "github",
@@ -326,7 +326,7 @@ export const CONNECTORS: readonly Connector[] = [
     logo: "github",
     routes: ["repositories", "pull requests", "commits", "issues"],
     setup: [
-      "Create a personal access token at github.com/settings/tokens — either a fine-grained token with access to the repositories you want (Contents + Pull requests + Issues, read/write as needed), or a classic token with the `repo` scope.",
+      "Create a personal access token at github.com/settings/tokens: either a fine-grained token with access to the repositories you want (Contents + Pull requests + Issues, read/write as needed), or a classic token with the `repo` scope.",
       "Copy the token (it is shown once) and paste it below.",
     ],
     fields: { GH_TOKEN: { label: "Personal access token", secret: true } },
@@ -391,7 +391,7 @@ export const CONNECTORS: readonly Connector[] = [
   platform(
     "zoom",
     "Zoom",
-    "Look up meetings, recordings and users in your Zoom account — read-only.",
+    "Look up meetings, recordings and users in your Zoom account (read-only).",
     ["Zoom_Tool"],
     { logo: "zoom" }
   ),
@@ -499,7 +499,7 @@ export const platformConnectors = (): readonly PlatformConnector[] =>
 
 /**
  * Resolve what a model (or a person) called a connector to an entry: by id,
- * name, platform service key or chat-app id — case-, space- and
+ * name, platform service key or chat-app id: case-, space- and
  * punctuation-blind, then by prefix, then by a contained word of four letters
  * or more. More than one loose match is an ambiguity, reported as such.
  */

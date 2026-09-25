@@ -1,7 +1,7 @@
 /**
  * Types for vendor-fetch.js, which is plain JavaScript because it runs from
  * build scripts before anything is compiled. Declared here so a TypeScript
- * consumer — the test that pins the retry rules — sees real signatures rather
+ * consumer (the test that pins the retry rules) sees real signatures rather
  * than `any`.
  */
 export declare function digest(buf: Buffer | Uint8Array): string;

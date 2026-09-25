@@ -1,7 +1,7 @@
 /**
  * Build the deterministic experience artifact: the renderer bundle
  * (dist/renderer) and the agent bundle (packages/agent/dist, filtered the
- * same way electron-builder ships it — no source maps, declarations, or
+ * same way electron-builder ships it: no source maps, declarations, or
  * build stamps) as one canonical tree plus a byte-reproducible zip at
  * dist/experience/experience.zip.
  *

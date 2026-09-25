@@ -34,7 +34,7 @@ function isPlainObject(value) {
 
 // Recurses. The locale files are nested (every UI string lives under a section
 // like `agent`), so a shallow copy would see the section as a non-string
-// and replace the whole translated subtree with en-US — silently reverting
+// and replace the whole translated subtree with en-US, silently reverting
 // every translation in the file the next time anyone ran this script.
 function syncLocale(baseObj, localeObj) {
   const synced = {};
@@ -83,7 +83,7 @@ const PLURAL_SUFFIXES = ["_one", "_other", "_zero", "_two", "_few", "_many"];
  * The sync above only proves the locale files agree with each other; it cannot
  * see a call site left pointing at a key that was renamed away, which renders
  * as the raw key string in the UI. A bulk rename of the `localCode.*` section
- * is exactly how that happens, and the failure is silent — nothing throws, the
+ * is exactly how that happens, and the failure is silent: nothing throws, the
  * user just reads "workspace.modelTier.fast" on a button.
  *
  * Template literals (`t(`workspace.modelTier.${tier}`)`) can't be resolved
@@ -112,7 +112,7 @@ function checkKeyUsage(baseKeys) {
             !(known.has(key) || PLURAL_SUFFIXES.some((s) => known.has(key + s)))
           ) {
             problems.push(
-              `${rel}: t("${key}") — no such key in ${BASE_LOCALE}`
+              `${rel}: t("${key}") has no such key in ${BASE_LOCALE}`
             );
           }
         }
@@ -120,7 +120,7 @@ function checkKeyUsage(baseKeys) {
         for (const [, prefix] of source.matchAll(/\bt\(\s*`([\w.]*)\$\{/g)) {
           if (prefix && !baseKeys.some((k) => k.startsWith(prefix))) {
             problems.push(
-              `${rel}: t(\`${prefix}\${...}\`) — no key in ${BASE_LOCALE} starts with "${prefix}"`
+              `${rel}: t(\`${prefix}\${...}\`) has no key in ${BASE_LOCALE} starting with "${prefix}"`
             );
           }
         }
@@ -193,7 +193,7 @@ function main() {
   for (const row of report) {
     const status = row.changed ? (checkOnly ? "OUT OF SYNC" : "UPDATED") : "OK";
     console.log(
-      `  ${row.file}: ${row.keys} keys, missing ${row.missing}, extra ${row.extra} — ${status}`
+      `  ${row.file}: ${row.keys} keys, missing ${row.missing}, extra ${row.extra} (${status})`
     );
   }
 

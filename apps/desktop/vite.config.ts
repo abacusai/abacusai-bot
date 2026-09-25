@@ -29,10 +29,10 @@ export default defineConfig({
             both: {
               exclude: [...NATIVE_PACKAGES, ...ELECTRON_NATIVE],
               // The experience update client must ship inside the main
-              // bundle — nothing under resources/ provides these, and a bare
+              // bundle. Nothing under resources/ provides these, and a bare
               // import of them in a packaged app fails at startup. Pinned
-              // explicitly because the plugin otherwise leaves them
-              // external, and the packaged-startup guard test enforces it.
+              // because the plugin otherwise leaves them external; the
+              // packaged-startup guard test enforces it.
               // The connector registry is TypeScript source shared with the
               // agent (a devDependency, like every workspace package); it
               // has no dist to resolve from the asar and must be inlined.
@@ -59,7 +59,7 @@ export default defineConfig({
   ],
   resolve: {
     // The four roots package.json's `imports` declares. Repeated because Node's
-    // subpath-imports resolution takes a target literally — it tries no
+    // subpath-imports resolution takes a target literally: it tries no
     // extensions and no index files, so `#renderer/components/ui` never finds
     // `components/ui/index.tsx` on its own.
     alias: {

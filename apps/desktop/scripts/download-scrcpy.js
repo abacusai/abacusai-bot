@@ -9,7 +9,7 @@
  * the server aborts on a mismatch, so this pins the exact release that
  * protocol was written against.
  *
- * Idempotent — a correct jar already on disk is left alone, so `dev` and
+ * Idempotent: a correct jar already on disk is left alone, so `dev` and
  * `build` can both depend on it without paying for a download every time.
  *
  * Usage:
@@ -32,9 +32,7 @@ const URL = `https://github.com/Genymobile/scrcpy/releases/download/v${VERSION}/
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 // Downloaded third-party files go in `vendor/`, and this app's resources
-// directory ships verbatim — so this is already the packaged path. It used to
-// land in src/main/native/, which put a downloaded artifact inside the source
-// tree and made "is this checked in?" a question anyone had to ask.
+// directory ships verbatim, so this is already the packaged path.
 const DEST = path.join(ROOT, "resources", "vendor", "scrcpy-server.jar");
 
 async function main() {
