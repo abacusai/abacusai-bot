@@ -1094,7 +1094,7 @@ app
           { role: "editMenu" },
           { role: "viewMenu" },
           { role: "windowMenu" },
-        ]),
+        ])
       );
     }
     ipcMain.handle("get-app-version", () => app.getVersion());
