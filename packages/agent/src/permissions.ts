@@ -98,7 +98,7 @@ export function shellSegments(command: string): string[] {
 export type Gate =
   /** `credentialPaths`: hidden stores the user already approved, to unhide. */
   | { kind: "allow"; credentialPaths?: string[] }
-  /** Refused outright without asking — PLAN mode's answer to a mutation. */
+  /** Refused outright without asking: PLAN mode's answer to a mutation. */
   | { kind: "refuse"; reason: string }
   | { kind: "ask"; request: PermissionRequest };
 
@@ -163,7 +163,7 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
     if (mode !== AgentMode.PlanMode) {
       return {
         kind: "refuse",
-        reason: "Not in plan mode — you can already make changes, so go ahead.",
+        reason: "Not in plan mode. You can already make changes, so go ahead.",
       };
     }
 
@@ -192,12 +192,12 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
       reason:
         "Plan mode is read-only: no file changes and no shell commands. " +
         "Investigate and write the plan. When it is ready and the user wants it done, " +
-        "call exit_plan_mode to ask to start — that is how the mode changes. " +
+        "call exit_plan_mode to ask to start: that is how the mode changes. " +
         "Do not ask them to flip a switch themselves.",
     };
   }
 
-  // bash and web_fetch have their own, narrower allowance stores — a blanket
+  // bash and web_fetch have their own, narrower allowance stores; a blanket
   // tool-level "always allow" would approve every command and every host.
   if (
     tool.name !== "bash" &&
@@ -222,7 +222,7 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
     case "write":
     case "notebook_edit":
     case "ast_edit":
-      // Containment first, then the mode — see gateWrite. AcceptEdits waves
+      // Containment first, then the mode; see gateWrite. AcceptEdits waves
       // through an edit inside the workspace, not one anywhere on disk.
       return gateWrite(tool, options);
     case "bash":
@@ -255,7 +255,7 @@ function gateWebFetch(tool: ToolRequest, options: GateOptions): Gate {
   try {
     origin = new URL(raw).origin;
   } catch {
-    // Unparseable never reaches the network — the fetch itself refuses it —
+    // Unparseable never reaches the network (the fetch itself refuses it),
     // so let it through to fail with a message the model can act on.
     return { kind: "allow" };
   }

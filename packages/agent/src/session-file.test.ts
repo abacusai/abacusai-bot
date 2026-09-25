@@ -15,8 +15,8 @@ import { conversationSessionManager } from "./session-file.js";
 
 /**
  * One real turn. pi holds a session in memory until an assistant message
- * exists — it will not litter the sessions directory with chats that never
- * got a reply — so a user message alone never reaches disk.
+ * exists: it will not litter the sessions directory with chats that never
+ * got a reply, so a user message alone never reaches disk.
  */
 const turn = (
   manager: ReturnType<typeof conversationSessionManager>,

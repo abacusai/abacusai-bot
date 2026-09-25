@@ -1,5 +1,5 @@
 // An ABACUSAI_BOT_ABACUS_V1 override is honored only when it is https on an
-// abacus.ai host, else production — so a planted value can't redirect the key.
+// abacus.ai host, else production, so a planted value can't redirect the key.
 export const DEFAULT_ABACUS_V1 = "https://routellm.abacus.ai/v1";
 
 const isAbacusHost = (host: string): boolean =>

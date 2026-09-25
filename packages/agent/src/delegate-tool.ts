@@ -9,9 +9,9 @@ import type { AgentEvent } from "./protocol.js";
 
 /**
  * Whether this session gets `delegate_task`. Off when the desktop switched the
- * toolset off, and always off for a bot (ABACUSAI_BOT_BOT_DIR marks one): a
- * delegate starts blank — no notes, no working folder, none of what the bot
- * already fetched — so the bot has to re-describe its own state to it and
+ * toolset off, and always off for a bot (ABACUSAI_BOT_BOT_DIR marks one). A
+ * delegate starts blank (no notes, no working folder, none of what the bot
+ * already fetched), so the bot has to re-describe its own state to it and
  * gets that wrong, and the delegate's report lands in the user's chat as if
  * the bot had said it. A bot's work is sequential; it does it itself.
  */
@@ -58,7 +58,7 @@ export function buildDelegateTool(
       "Hand one self-contained investigation to a sub-agent and get back only its conclusion.",
       "",
       "Worth it when answering would mean reading across many files and you only need the",
-      "answer, not the search — the sub-agent spends the tool calls, you keep the finding.",
+      "answer, not the search: the sub-agent spends the tool calls, you keep the finding.",
       "",
       "The sub-agent is read-only and cannot ask questions or delegate further, so give it",
       "everything it needs in the task description. It sees none of this conversation.",

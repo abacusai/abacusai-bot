@@ -33,14 +33,14 @@ export function buildExitPlanTool(
     description: [
       "Ask to leave plan mode and start carrying out the plan.",
       "",
-      "Call this once the plan is settled and the user wants it done — including when they",
-      'simply say "yes" or "go ahead". Do not tell them to flip a switch: this is the switch,',
+      "Call this once the plan is settled and the user wants it done, including when they",
+      'say "yes" or "go ahead". Do not tell them to flip a switch: this is the switch,',
       "and asking is your job rather than theirs.",
       "",
       "Pass the plan itself so they can see what they are approving. They may approve every",
       "change individually, accept them all, or decline and keep planning.",
       "",
-      "Pointless outside plan mode — you can already act.",
+      "Pointless outside plan mode: you can already act.",
     ].join("\n"),
     parameters: Type.Object({
       plan: Type.String({
@@ -58,7 +58,7 @@ export function buildExitPlanTool(
           {
             type: "text" as const,
             text:
-              `Approved. The session is now in ${currentMode()} mode, so you can make changes — ` +
+              `Approved. The session is now in ${currentMode()} mode, so you can make changes; ` +
               `start on the plan now rather than asking again.` +
               (plan.length > 0
                 ? ""

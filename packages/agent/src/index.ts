@@ -1,5 +1,5 @@
 /**
- * `@abacus-ai/agent` — the agent as a library. `./main.js` is the same session
+ * `@abacus-ai/agent`: the agent as a library. `./main.js` is the same session
  * as a child process, wrapped in the NDJSON protocol.
  */
 export { bundledToolsDir, useBundledTools } from "./bundled-tools.js";

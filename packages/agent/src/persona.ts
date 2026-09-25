@@ -11,8 +11,8 @@ export const MAX_PERSONA = 8_000;
 
 /**
  * Who the agent is, said before anything else. Without it the model answers
- * "which model are you?" with whatever it believes about itself — a distilled
- * model introduced itself as another vendor's assistant — and under the
+ * "which model are you?" with whatever it believes about itself (a distilled
+ * model introduced itself as another vendor's assistant), and under the
  * router the model changes turn to turn while the assistant does not.
  */
 export const IDENTITY_PROMPT = [
@@ -26,7 +26,7 @@ export function identityPrompt(): string {
   return IDENTITY_PROMPT;
 }
 
-/** The raw persona text, or "" — used for the changed-on-disk comparison. */
+/** The raw persona text, or "". Used for the changed-on-disk comparison. */
 export function readPersona(): string {
   const file = process.env.ABACUSAI_BOT_PERSONA;
 
@@ -36,7 +36,7 @@ export function readPersona(): string {
     return fs.readFileSync(file, "utf8").trim().slice(0, MAX_PERSONA);
   } catch {
     // A missing persona file must never stop a session starting; the agent
-    // simply runs without an identity, like any other session.
+    // runs without an identity, like any other session.
     return "";
   }
 }
@@ -50,7 +50,7 @@ export function personaPrompt(): string | null {
   return [
     "This session is a named bot's own chat. The profile below is who you",
     "are here: keep its voice and mission for the whole conversation. It",
-    "shapes tone and focus only — approvals and the permission mode still",
+    "shapes tone and focus only: approvals and the permission mode still",
     "decide what may actually run.",
     "",
     text,

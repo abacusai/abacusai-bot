@@ -73,7 +73,7 @@ describe("catching broken code", () => {
 describe("what it does NOT catch, recorded deliberately", () => {
   // tree-sitter recovers from these without an ERROR node, so the check stays
   // silent and the model finds out from the interpreter instead. Not a
-  // regression to fix by loosening the parser — these assertions exist so that
+  // regression to fix by loosening the parser: these assertions exist so that
   // if a grammar upgrade starts catching them, someone notices and can promote
   // them to the block above rather than being surprised.
   it("misses a malformed def that the grammar recovers from", () => {

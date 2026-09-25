@@ -3,7 +3,7 @@
  *
  * A user ran a crawl through bash. It wrote nothing to stdout for ten minutes,
  * so the agent emitted nothing, so the desktop's watchdog concluded the agent
- * was wedged and ended the turn — "Agent timed out: nothing came back for 10
+ * was wedged and ended the turn: "Agent timed out: nothing came back for 10
  * minutes while running bash (...)". The command was fine; the only thing wrong
  * was that working silently and being dead looked identical from outside.
  */
@@ -153,7 +153,7 @@ describe("stopping when there is nothing to report", () => {
 /**
  * The heartbeat vouches for a call; it does not vouch for the agent forever.
  *
- * Several tools cannot be killed — the budget extension can warn that
+ * Several tools cannot be killed: the budget extension can warn that
  * `document` or `delegate_task` has overrun but not stop it. If a hung one
  * could be vouched for indefinitely, the watchdog would never fire and the
  * session would be unendable except by pressing Stop. That is a worse failure

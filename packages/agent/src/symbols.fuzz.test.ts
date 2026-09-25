@@ -5,7 +5,7 @@
  * the user is in the middle of editing, files in a language the extension lies
  * about, and generated files no person ever read. A parser handles those by
  * producing a partial tree; the risk is in what the classifier then does with
- * one — an unwrapped `undefined`, a slice with a backwards range, a recursion
+ * one: an unwrapped `undefined`, a slice with a backwards range, a recursion
  * that does not bottom out.
  *
  * The generator is seeded rather than random so that a failure here reproduces
@@ -111,7 +111,7 @@ function checkInvariants(
       problems.push("out of source order");
   }
 
-  // Rendering must not throw either — it is what the model actually receives.
+  // Rendering must not throw either: it is what the model actually receives.
   if (symbols.length > 0) renderSymbols(symbols);
 
   return problems;
@@ -142,9 +142,7 @@ describe("input that does not parse", () => {
         }
 
         if (problems.length > 0)
-          failures.push(
-            `${problems.join("; ")} — on ${JSON.stringify(source)}`
-          );
+          failures.push(`${problems.join("; ")}: on ${JSON.stringify(source)}`);
       }
 
       expect(failures.slice(0, 5), `${failures.length} failures`).toEqual([]);
@@ -178,7 +176,7 @@ module.exports.run = function () {}
         try {
           const problems = checkInvariants(family, lang, partial);
           if (problems.length > 0)
-            failures.push(`${problems.join("; ")} — cut at ${cut}`);
+            failures.push(`${problems.join("; ")}: cut at ${cut}`);
         } catch (error) {
           failures.push(`threw at cut ${cut}: ${(error as Error).message}`);
         }
@@ -235,7 +233,7 @@ describe("input that is merely extreme", () => {
    * this line is 60,000 levels deep. Walked with one call frame per level it
    * threw `RangeError: Maximum call stack size exceeded`, and at the 5,000 of
    * the case above it depended on how much stack the rest of the suite had
-   * already used — a real crash that presented as a flaky test.
+   * already used: a real crash that presented as a flaky test.
    */
   it("indexes a line too deep for the call stack", () => {
     const source = `export const A = ${"1 + ".repeat(60_000)}1`;

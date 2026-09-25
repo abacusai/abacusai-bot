@@ -4,7 +4,7 @@ import fs from "node:fs";
  *
  * A component ends by telling the model "Hand it over: present_deliverable
  * with <url>". If the registered name is anything else, that instruction is a
- * lie and the run ends on a failed tool call — which is what happened, because
+ * lie and the run ends on a failed tool call. That is what happened, because
  * every MCP tool was prefixed with its server and the only registered name was
  * `agent-tools_present_deliverable`.
  *

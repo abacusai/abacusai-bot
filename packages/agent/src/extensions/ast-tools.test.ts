@@ -1,7 +1,7 @@
 /**
  * The structural edit tool, which writes to the user's files.
  *
- * The failure worth guarding is not a crash — it is a rewrite that parses. An
+ * The failure worth guarding is not a crash. It is a rewrite that parses. An
  * unbound metavariable is emitted literally, `$NAME` is a legal identifier in
  * JavaScript and TypeScript, so the post-edit syntax check sees nothing wrong
  * and the file is written with a reference to a variable that does not exist.
@@ -233,8 +233,8 @@ describe("the ast_edit tool", () => {
   ])(
     "reports %s as an invalid pattern rather than as no matches",
     async (_label, pattern) => {
-      // These are the inputs ast-grep actually rejects. `((((` does NOT throw — it
-      // parses to something that simply matches nothing — so a test using it
+      // These are the inputs ast-grep actually rejects. `((((` does NOT throw: it
+      // parses to something that matches nothing, so a test using it
       // passed through the no-match path and proved nothing about this one.
       write("a.ts", "const a = 1");
 

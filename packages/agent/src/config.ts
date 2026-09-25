@@ -123,7 +123,7 @@ const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 
 /**
  * The key each provider is stored under. Mirrors PROVIDER_ENV_VARS in the
- * desktop's shared settings — this package cannot import from the app's source
+ * desktop's shared settings; this package cannot import from the app's source
  * tree, the same split `abacusBotDir` lives with. Only providers pi discovers
  * from the environment: gemini and abacus register themselves, and `github` is
  * not a model provider.
@@ -203,7 +203,7 @@ export function desktopMcpConfigPath(): string | null {
     try {
       if (fs.statSync(candidate).isFile()) return candidate;
     } catch {
-      // Not there, or not readable — try the next name.
+      // Not there, or not readable: try the next name.
     }
   }
 
@@ -275,7 +275,7 @@ export function userProfilePrompt(): string | undefined {
     if (lines.length === 0) return undefined;
 
     lines.push(
-      'This is background, not something to announce. Do not open replies by restating their name or their tools, and never let it displace what they actually asked for. Bring this up only where it is genuinely relevant, and remember that an app they told us they use is not by itself something you are connected to — what you are connected to is stated separately, under "Connected services".'
+      'This is background, not something to announce. Do not open replies by restating their name or their tools, and never let it displace what they actually asked for. Bring this up only where it is genuinely relevant, and remember that an app they told us they use is not by itself something you are connected to: what you are connected to is stated separately, under "Connected services".'
     );
 
     return lines.join("\n\n");

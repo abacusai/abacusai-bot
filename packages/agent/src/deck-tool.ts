@@ -1,5 +1,5 @@
 /**
- * `ppt` — the parent-facing tool for "make me a deck"; work is in deck-task.ts.
+ * `ppt`: the parent-facing tool for "make me a deck"; work is in deck-task.ts.
  */
 import { Type } from "typebox";
 
@@ -48,14 +48,14 @@ export function buildDeckTool(
       "the brief points at them.",
       "",
       "You supply the content, not the design. The template owns the layout, the type and the",
-      "palette, and the sub-agent fills text into fixed slots — which is what stops a deck",
+      "palette, and the sub-agent fills text into fixed slots, which is what stops a deck",
       "coming out as a wall of bullet points. Do not ask for a visual style; ask for a subject",
       "and an audience, and say if it is a pitch, a lecture, a review or an announcement,",
       "because that is what picks the template.",
       "",
       "Two files come back, and they are not interchangeable. The PDF is pixel-identical to",
       "the chosen template and is what you send or present. The .pptx carries the same words",
-      "as real editable text boxes in a plain layout — it is for someone who needs to change",
+      "as real editable text boxes in a plain layout: it is for someone who needs to change",
       "the deck, not for looking at. HTML cannot be converted to PowerPoint, so a file that is",
       "both is not on the table; offer whichever the user actually needs.",
       "",
@@ -64,7 +64,7 @@ export function buildDeckTool(
     parameters: Type.Object({
       brief: Type.String({
         description:
-          "Everything the deck should say, and who it is for — as if to someone who has not read this conversation.",
+          "Everything the deck should say, and who it is for, as if to someone who has not read this conversation.",
       }),
       output_path: Type.String({
         description:
@@ -173,7 +173,7 @@ export function buildDeckTool(
                 ? [
                     `Editable PowerPoint: ${result.pptxPath} (same words, plain layout)`,
                   ]
-                : ["No .pptx could be written — the PDF is the only output."]),
+                : ["No .pptx could be written; the PDF is the only output."]),
               ...(result.htmlPath != null && result.htmlPath.length > 0
                 ? [`HTML source: ${result.htmlPath}`]
                 : []),

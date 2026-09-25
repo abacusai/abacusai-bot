@@ -2,7 +2,7 @@
  * The profile is sourced once, not once per command.
  *
  * Under the sandbox a login shell per command meant every result the model read
- * carried several lines of permission errors from the user's own profile —
+ * carried several lines of permission errors from the user's own profile:
  * fnm's symlink, pyenv's rehash, gcloud's log file, all writing under `$HOME`
  * and all correctly refused. Spent context on every call, indistinguishable
  * from the command itself failing.
@@ -50,7 +50,7 @@ describe("handing a command to a shell", () => {
 
   it("goes back to a login shell when asked", () => {
     // The escape hatch, for a profile that defines shell FUNCTIONS an
-    // environment cannot carry — `nvm` being the one people hit.
+    // environment cannot carry (`nvm` being the one people hit).
     const previous = process.env.ABACUSAI_BOT_LOGIN_SHELL;
 
     process.env.ABACUSAI_BOT_LOGIN_SHELL = "1";
@@ -67,7 +67,7 @@ describe("handing a command to a shell", () => {
 describe("which shell sources the profile", () => {
   it("uses the user's own login shell, not bash's idea of it", () => {
     // The macOS default. Homebrew's PATH lives in ~/.zprofile, which a bash
-    // dump never sources — the whole reason the shell must be the user's.
+    // dump never sources: the whole reason the shell must be the user's.
     expect(withShell("/bin/zsh", dumpShell)).toBe("/bin/zsh");
     expect(withShell("/bin/bash", dumpShell)).toBe("/bin/bash");
   });
@@ -99,7 +99,7 @@ describe("the environment commands get", () => {
   });
 
   it("lets this process's own environment win", () => {
-    // The app sets variables deliberately — a key resolved from the keychain
+    // The app sets variables deliberately: a key resolved from the keychain
     // must not be replaced by a stale one in a shell profile.
     resetLoginEnvironment();
     process.env.ABACUSAI_BOT_SHELL_ENV_PROBE = "from-process";
@@ -183,7 +183,7 @@ describe("merging the caller's PATH with the profile's", () => {
 
   it("reaches the toolchain the caller could not see", () => {
     // The regression this exists for. pi derives its PATH from this process's
-    // environment, which in a GUI-launched app is launchd's — so letting it win
+    // environment, which in a GUI-launched app is launchd's, so letting it win
     // outright means a version-managed node is not on the path at all, and every
     // command that needs one fails with "command not found" under the sandbox.
     const merged = mergePath(
@@ -244,7 +244,7 @@ describe("the shell a command falls back to without a sandbox backend", () => {
       file: "C:\\Windows\\system32\\cmd.exe",
       args: ["/d", "/s", "/c", "npm test"],
       // Node's default quoting is the C runtime's, and cmd.exe does not undo
-      // it — the command has to reach cmd exactly as it was written.
+      // it: the command has to reach cmd exactly as it was written.
       windowsVerbatimArguments: true,
     });
   });
@@ -271,7 +271,7 @@ describe("the shell a command falls back to without a sandbox backend", () => {
 
 describe("running a command through the fallback shell", () => {
   // The point of spawning here rather than through pi's exec is
-  // windowsVerbatimArguments, which pi's ExecOptions cannot express — so the
+  // windowsVerbatimArguments, which pi's ExecOptions cannot express, so the
   // behaviour that has to hold is that the command text arrives as written.
   const posixOnly = it.runIf(process.platform !== "win32");
 

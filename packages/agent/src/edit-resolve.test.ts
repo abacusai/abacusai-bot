@@ -236,7 +236,7 @@ describe("refusing to overreach", () => {
       false
     );
 
-    // Either it declines to match, or it matches the small correct block —
+    // Either it declines to match, or it matches the small correct block,
     // what it must never do is return the whole file.
     if (result.ok) {
       expect(
@@ -340,7 +340,7 @@ describe("declining rather than guessing", () => {
 
   it("ignores blank lines on both sides when scoring surrounding context", () => {
     // The blank line at the same position in both is "nothing to compare", not
-    // a mismatch — counting it against the score would sink an honest match.
+    // a mismatch: counting it against the score would sink an honest match.
     const content = ["fn {", "  a()", "}", "", "}"].join("\n");
     const found = matched(
       content,
@@ -433,12 +433,12 @@ describe("helpers", () => {
 /**
  * The relaxed strategies each scan the whole file, so their cost is the thing
  * most likely to regress quietly. The common case must stay free, and the worst
- * case — nothing matches, so all nine strategies run — must stay far inside the
+ * case (nothing matches, so all nine strategies run) must stay far inside the
  * tool's 30s budget.
  */
 describe("cost on a large file", () => {
   // The default 5s timeout is shorter than the budget this asserts, so a slow
-  // run died as "Test timed out" — the harness failing before the assertion
+  // run died as "Test timed out", the harness failing before the assertion
   // could say what the measurement actually was. The ceiling is generous for
   // the same reason: on a CI runner sharing its cores with the rest of the
   // suite this takes seconds, not the ~1s it takes on an idle machine, and a

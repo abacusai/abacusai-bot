@@ -2,7 +2,7 @@ import { fakePi } from "@abacus-ai/test-support/fake-pi";
 /**
  * The repeat guard breaks loops. It must not break looking again.
  *
- * Its refusal tells the model "repeating it returns the same result", which is
+ * Its refusal tells the model "Repeating it returns the same result", which is
  * true of reading a file and false of photographing a screen. Blocked on a
  * third screenshot, one run concluded the tool was deduplicating its calls and
  * started relaunching the app to "force a state change" rather than simply
@@ -55,7 +55,7 @@ describe("repeating a call that reads stable state", () => {
 });
 
 describe("repeating a call that samples live state", () => {
-  it("never blocks a screenshot — taking it again after a tap is the job", async () => {
+  it("never blocks a screenshot: taking it again after a tap is the job", async () => {
     const pi = withBudgets();
     expect(
       await repeat(pi, "device_screenshot", { udid: "sim-1" }, 6)
@@ -79,9 +79,8 @@ describe("repeating a call that samples live state", () => {
 
 /**
  * The turn cap. A run that reached it used to be aborted on its next model
- * call with nothing said: the abort surfaced as "the model provider had a
- * problem — retrying", and it landed on runs that had just handed the work
- * over. Now the model is told to wrap up and present at 100 short, told
+ * call with nothing said: the abort surfaced as a provider error with a
+ * retry notice, and it landed on runs that had just handed the work over. Now the model is told to wrap up and present at 100 short, told
  * again at 50 short, and the stop carries a message written for the user.
  */
 describe("connector calls", () => {

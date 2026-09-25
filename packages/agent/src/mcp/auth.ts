@@ -29,7 +29,7 @@ export interface McpTokenRecord {
 }
 
 export interface McpAuthFile {
-  /** Keyed by the MCP server URL — tokens belong to the resource, not the config name. */
+  /** Keyed by the MCP server URL: tokens belong to the resource, not the config name. */
   servers?: Record<string, McpTokenRecord>;
   /**
    * Dynamic-registration results keyed by issuer; the desktop reuses a client

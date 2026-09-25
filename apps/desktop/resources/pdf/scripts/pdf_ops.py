@@ -5,7 +5,7 @@ The component shells out to this rather than reimplementing PDF parsing in the
 main process: the Python ecosystem for PDFs is genuinely good, and none of it
 has a JavaScript equivalent worth the trade.
 
-Every subcommand prints one JSON object to stdout — success or failure — so the
+Every subcommand prints one JSON object to stdout on success and on failure, so the
 caller never has to parse prose. A missing library is reported as data too,
 naming the pip package, because "ModuleNotFoundError: pdfplumber" on stderr is
 an error the agent has to guess its way out of.
@@ -75,10 +75,10 @@ def cmd_info(args):
         'pages': len(reader.pages),
         'encrypted': reader.is_encrypted,
         'metadata': meta,
-        # A scanned PDF parses fine and yields no text — the caller needs to know
+        # A scanned PDF parses fine and yields no text: the caller needs to know
         # that before it reports an empty document as an empty document.
         'text_extractable': bool((first or '').strip()),
-        'hint': None if (first or '').strip() else 'No text on page 1 — likely scanned; OCR is needed.',
+        'hint': None if (first or '').strip() else 'No text on page 1. It is likely scanned and needs OCR.',
     }))
 
 
@@ -244,7 +244,8 @@ def main():
         args.fn(args)
     except FileNotFoundError as exc:
         fail(f'file not found: {exc.filename}', code='not-found')
-    except Exception as exc:  # noqa: BLE001 — the caller wants the message, not a traceback
+    # The caller wants the message, not a traceback.
+    except Exception as exc:  # noqa: BLE001
         fail(f'{type(exc).__name__}: {exc}')
 
 

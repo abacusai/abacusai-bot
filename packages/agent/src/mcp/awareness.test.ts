@@ -2,7 +2,7 @@
  * The model has to know which services it is connected to.
  *
  * Reported: a Playwright connector was added in the app, a new conversation was
- * started after that, and the agent still answered that it was not connected —
+ * started after that, and the agent still answered that it was not connected:
  * it used the tools only once the user named the server themselves. The tools
  * were in the roster the whole time. A list of tool names says a call is
  * possible; it does not say that the service the user just asked about by name

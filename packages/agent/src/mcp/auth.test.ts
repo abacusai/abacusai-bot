@@ -2,7 +2,7 @@
  * MCP OAuth tokens at connect time.
  *
  * This is the headless half of the sign-in: no browser, no user, just a stored
- * token and — when it has gone stale — one POST to renew it. Everything that
+ * token and, when it has gone stale, one POST to renew it. Everything that
  * can go wrong is supposed to end the same quiet way, with no Authorization
  * header, a 401 from the server, and a visible "sign in" for the person. A
  * refresh path that threw instead, or one that wrote a half-updated file, would
@@ -107,13 +107,13 @@ describe("writing the token file", () => {
 
   it("leaves no temp file behind", () => {
     // Written through a temp file and renamed, so an interrupted refresh cannot
-    // leave a truncated token file — readMcpAuth cannot tell corrupt from absent.
+    // leave a truncated token file: readMcpAuth cannot tell corrupt from absent.
     writeMcpAuth({ servers: { [SERVER]: record() } });
 
     expect(fs.readdirSync(home)).toEqual(["mcp-auth.json"]);
   });
 
-  // Windows has no POSIX mode bits — chmod there only toggles the read-only flag.
+  // Windows has no POSIX mode bits: chmod there only toggles the read-only flag.
   it.skipIf(process.platform === "win32")(
     "keeps the file readable only by its owner",
     () => {

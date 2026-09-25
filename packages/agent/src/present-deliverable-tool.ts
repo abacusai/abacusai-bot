@@ -1,5 +1,5 @@
 /**
- * `present_deliverable` — handing the work over, from the CLI. The desktop
+ * `present_deliverable`: handing the work over, from the CLI. The desktop
  * serves this over MCP; the CLI has no MCP server, and every prompt tells the
  * model to end with this tool. Name, schema, path resolution and markdown match
  * mcp-agent-tools-server.ts, except the closing line names the primary item
@@ -78,7 +78,7 @@ export function buildPresentDeliverableTool(
     label: PRESENT_DELIVERABLE_TOOL_NAME,
     description: [
       "Hand the finished work over. Call this at the end of a turn that produced files,",
-      "listing what the user asked for — most important first.",
+      "listing what the user asked for, most important first.",
       "",
       "The items become clickable links in the chat and are filed as artifacts, and the",
       "first one opens in the preview pane. Naming a path in prose does none of that, and",
@@ -89,7 +89,7 @@ export function buildPresentDeliverableTool(
       "",
       "Call it again whenever the user asks to see, show, open, or look at something you",
       "already made. The pane may have been closed or the app restarted since, and this is",
-      "the only way to put the file back on screen — describing it, or rendering its pages",
+      "the only way to put the file back on screen: describing it, or rendering its pages",
       "into the chat, does not show it. Presenting the same file twice is cheap and safe.",
     ].join("\n"),
     parameters: {
@@ -106,7 +106,7 @@ export function buildPresentDeliverableTool(
                 type: "string",
                 description:
                   "Path to the file, or an http(s) URL (a served app). A relative path resolves against " +
-                  "the workspace directory. Files must exist — this reports the ones that do not.",
+                  "the workspace directory. Files must exist: this reports the ones that do not.",
               },
               label: {
                 type: "string",
@@ -129,7 +129,7 @@ export function buildPresentDeliverableTool(
 
       if (rawItems.length === 0) {
         return text(
-          "At least one item is required — each with a path or an http(s) URL.",
+          "At least one item is required, each with a path or an http(s) URL.",
           true
         );
       }
@@ -170,7 +170,7 @@ export function buildPresentDeliverableTool(
         const detail = missing.length > 0 ? `\n\n${missing.join("\n")}` : "";
 
         return text(
-          `Nothing could be presented — none of those exist. Check the paths.${detail}`,
+          `Nothing could be presented: none of those exist. Check the paths.${detail}`,
           true
         );
       }

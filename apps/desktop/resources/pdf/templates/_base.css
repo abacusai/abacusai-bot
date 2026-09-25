@@ -9,7 +9,7 @@
  * Loaded relatively, from the `fonts/` directory copied beside this stylesheet into
  * every document's source folder. Relative because the page is printed from a
  * file:// URL with no network, so an absolute or remote URL silently falls back to
- * the system stack — which is the failure that looks like nothing happened.
+ * the system stack, which is the failure that looks like nothing happened.
  *
  * Latin subsets only, and only the weights used: seven files, 184KB. Licences ride
  * along in the same directory.
@@ -102,7 +102,7 @@
  * The palette is the only thing that changes: every rule below draws from these
  * variables, so a look is a palette swap and nothing else has to know.
  *
- * A dark document must also be printed full-bleed — see `.bleed` — because the
+ * A dark document must also be printed full-bleed (see `.bleed`) because the
  * page margins are painted by Chromium, not by this stylesheet, and no rule here
  * can reach them. A dark text column inside white margins is the failure this
  * pairing exists to prevent.

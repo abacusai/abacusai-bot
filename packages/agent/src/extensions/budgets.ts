@@ -5,10 +5,10 @@
  * (ABACUSAI_BOT_TURN_CAP, default 250): at 100 turns short of it the model is
  * told to wrap up and present what it has, at 50 short it is told again and
  * harder, past it the run is stopped with a message that says so.
- * Repetition: the third identical tool call in a run is blocked — the second,
- * for a connector call, which is billed. Connector calls: every fifth one,
+ * Repetition: the third identical tool call in a run is blocked (the second,
+ * for a connector call, which is billed). Connector calls: every fifth one,
  * the model is reminded what they cost and asked whether it already has
- * enough — no cap, a nudge. Temperature
+ * enough. There is no cap, only a nudge. Temperature
  * (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off" to disable) when unset.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -65,8 +65,8 @@ const finalPrompt = (turns: number, cap: number): string =>
 
 const connectorPrompt = (calls: number, credits: number): string =>
   `Cost check: this run has made ${calls} connector calls, and each one costs ` +
-  `${credits} credits. Make sure you are being efficient — do not redo searches ` +
-  `or re-fetch what you already have — and check whether you can complete the task now with the ` +
+  `${credits} credits. Make sure you are being efficient: do not redo searches ` +
+  `or re-fetch what you already have, and check whether you can complete the task now with the ` +
   `information you already hold. If you can, finish; if not, make the fewest further calls that ` +
   `get you there.`;
 
@@ -116,7 +116,7 @@ export default function (pi: ExtensionAPI) {
       stoppedBecause = stoppedMessage(cap);
       if (ctx.hasUI)
         ctx.ui.notify(
-          `AbacusAI Bot: turn budget (${cap}) exhausted — stopping this run`,
+          `AbacusAI Bot: turn budget (${cap}) exhausted; stopping this run`,
           "warning"
         );
       ctx.abort();
@@ -154,7 +154,7 @@ export default function (pi: ExtensionAPI) {
         block: true,
         reason:
           `You already made this exact ${event.toolName} call in this run, and its result is in ` +
-          `your context above — reuse it. Each call costs ${connector.credits} credits; an identical ` +
+          `your context above. Reuse it. Each call costs ${connector.credits} credits; an identical ` +
           `one returns the same answer. If you meant something different, change the arguments.`,
       };
     }
@@ -162,8 +162,8 @@ export default function (pi: ExtensionAPI) {
       return {
         block: true,
         reason:
-          `You have already made this exact ${event.toolName} call ${count - 1} times in this run — ` +
-          `repeating it returns the same result. Step back: state what you learned from the previous ` +
+          `You have already made this exact ${event.toolName} call ${count - 1} times in this run. ` +
+          `Repeating it returns the same result. Step back: state what you learned from the previous ` +
           `result and try a different approach.`,
       };
     }

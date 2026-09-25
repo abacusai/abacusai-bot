@@ -2,7 +2,7 @@ import { fakePi } from "@abacus-ai/test-support/fake-pi";
 /**
  * The budget only means anything if it reaches the call. pi's bash tool
  * documents "no default timeout", so an unstamped call is one that can park
- * the session until someone presses Stop — and an unattended session has
+ * the session until someone presses Stop, and an unattended session has
  * nobody to press it.
  */
 import { describe, expect, it, vi } from "vitest";
@@ -91,7 +91,7 @@ describe("stamping a deadline", () => {
     expect(event.input.timeout).toBe(300);
   });
 
-  it('still caps an absurd one — "wins" cannot mean "may park forever"', async () => {
+  it('still caps an absurd one: "wins" cannot mean "may park forever"', async () => {
     const pi = withTimeouts();
     const event = bashCall({ command: "x", timeout: 99_999 });
     await pi.fire("tool_call", event);
@@ -255,7 +255,7 @@ describe("the watchdog", () => {
       await pi.fire("turn_end", {});
       await vi.advanceTimersByTimeAsync(120_000);
 
-      // A turn that ended takes its watchdogs with it — no warning about a
+      // A turn that ended takes its watchdogs with it: no warning about a
       // call nobody is waiting for any more.
       expect(pi.notifications).toHaveLength(0);
     } finally {

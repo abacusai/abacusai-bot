@@ -1,6 +1,6 @@
 /**
- * A bot's `bash` runs through the session's operations — the bundled shell on
- * Windows, the sandbox elsewhere — not pi's built-in, which looks for Git Bash
+ * A bot's `bash` runs through the session's operations (the bundled shell on
+ * Windows, the sandbox elsewhere), not pi's built-in, which looks for Git Bash
  * on PATH and on a stock Windows machine finds nothing.
  */
 import * as fs from "node:fs";

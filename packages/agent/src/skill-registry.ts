@@ -44,7 +44,7 @@ const rawCandidates = (
       `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${candidate}`
   );
 
-/** Lowercase, dashes for anything else — the id the on-disk scanner will derive. */
+/** Lowercase, dashes for anything else: the id the on-disk scanner will derive. */
 export function slugifySkillId(value: string): string {
   return value
     .trim()
@@ -168,7 +168,7 @@ export async function installSkill(options: {
   if (owner == null || repo == null || owner === "" || repo === "") {
     return {
       ok: false,
-      error: `Source must be "owner/repo" — got "${options.source}".`,
+      error: `Source must be "owner/repo", got "${options.source}".`,
     };
   }
 
@@ -210,7 +210,7 @@ export async function installSkill(options: {
   if (!looksLikeSkill(hit.body)) {
     return {
       ok: false,
-      error: `What ${options.source} served for "${leaf}" is not a skill — no description in its frontmatter, so nothing would load it.`,
+      error: `What ${options.source} served for "${leaf}" is not a skill: no description in its frontmatter, so nothing would load it.`,
     };
   }
 

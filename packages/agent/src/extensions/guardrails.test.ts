@@ -1,8 +1,8 @@
 /**
- * Replacing a file used to be refused outright. It is now allowed, which is
- * only safe because the previous contents are kept and the model is told where
- * — so these pin exactly that pair. Either half alone is worse than the
- * refusal was: a copy nobody can find, or an overwrite with no copy.
+ * Replacing a file is allowed, and that is only safe because the previous
+ * contents are kept and the model is told where, so these pin exactly that
+ * pair. Either half alone is worse than a refusal: a copy nobody can find,
+ * or an overwrite with no copy.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -320,7 +320,7 @@ describe("redirects into scratch space", () => {
     "lets the write tool into this platform's temp dir as well",
     async () => {
       // The guards judge realpath()ed targets, and on macOS realpath maps
-      // /var/folders/... to /private/var/folders/... — a form the lexical prefix
+      // /var/folders/... to /private/var/folders/..., a form the lexical prefix
       // list missed, so a mktemp file could be shell-redirected but not written
       // with the tools.
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-tools-"));
@@ -336,7 +336,7 @@ describe("redirects into scratch space", () => {
 
   // Skipped on Windows: same short-form vs long-form mismatch as above.
   it.skipIf(process.platform === "win32")(
-    "does not treat a link parked in temp as scratch — the target decides",
+    "does not treat a link parked in temp as scratch: the target decides",
     async () => {
       // The carve-out is about where the bytes land, not where the name sits.
       // /etc/hosts is a real file outside every sanctioned area; nothing is
@@ -449,7 +449,7 @@ describe("symlinks that dodge the protected-path guard", () => {
   });
 
   it("refuses a write through a dangling link to a protected name", async () => {
-    // No .env.production exists yet — the write through the link would be
+    // No .env.production exists yet: the write through the link would be
     // what creates it, so the guard has to judge the link's aim, not its name.
     fs.symlinkSync(
       path.join(cwd, ".env.production"),
@@ -504,7 +504,7 @@ describe("symlinks that dodge the protected-path guard", () => {
  * The protected-path guard, on the platform it was silently off for.
  *
  * The patterns are written with `/`, and `path.resolve` returns a `\` separated
- * path on Windows — so none of them matched there and `.env`, `.git` and
+ * path on Windows, so none of them matched there and `.env`, `.git` and
  * `node_modules` were all writable. Nothing caught it because this suite runs
  * on macOS and Linux only; Windows gets the build and the CLI smoke test,
  * neither of which touches the guard.
@@ -545,7 +545,7 @@ describe("protected paths, whichever separator the platform uses", () => {
 
 /**
  * The shell was the way around the protected-path guard: the write tool
- * refused `.env`, and one `>>` in bash wrote it anyway. These pin the pair —
+ * refused `.env`, and one `>>` in bash wrote it anyway. These pin the pair:
  * both tools refuse, and the commands that reach a protected path without
  * naming it keep working, because blocking those would stop `git commit`.
  */

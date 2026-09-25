@@ -323,7 +323,7 @@ describe("shapes that must NOT convert", () => {
     ).toBeUndefined();
   });
 
-  it("never executes a plain python fence — that is code for the user", async () => {
+  it("never executes a plain python fence: that is code for the user", async () => {
     const pi = withRepair();
     const result = await repair(
       pi,

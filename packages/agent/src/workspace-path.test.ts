@@ -1,7 +1,7 @@
 /**
  * The schemas promise "relative paths resolve against the workspace". They did
  * not: the path went to the desktop as typed, and the host resolved it against
- * the MAIN PROCESS's cwd — `/` in a packaged app. A deck asked for at
+ * the MAIN PROCESS's cwd (`/` in a packaged app). A deck asked for at
  * `dating-apps-comparison/deck.pdf` tried to `mkdir /dating-apps-comparison`
  * and died with ENOENT at the root of the disk.
  */
@@ -66,7 +66,7 @@ describe("resolving where the model wants a file written", () => {
  * The gates ask realPathOf where a write would really land, and a symlink
  * whose target does not exist yet is the tricky case: realpath throws on it
  * exactly as on a plain missing file, but writing THROUGH the link creates its
- * target — so the answer has to be the target, not the link's own name.
+ * target, so the answer has to be the target, not the link's own name.
  */
 describe("the real path of what does not exist yet", () => {
   let dir: string;

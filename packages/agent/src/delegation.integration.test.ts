@@ -1,9 +1,9 @@
 /**
  * `delegate_task`, and the bounds on a run nobody is watching.
  *
- * The header of delegation.ts lists three deliberate limits, and one of them —
+ * The header of delegation.ts lists three deliberate limits, and one of them,
  * "a hard turn ceiling, so a confused sub-agent ends rather than running until
- * the budget does" — was not implemented: `turns` was counted, reported, and
+ * the budget does", was not implemented: `turns` was counted, reported, and
  * never compared to anything. Nothing else could stop such a run, because the
  * tool-timeouts watchdog reports an overrun but cannot end a call. So these
  * tests drive a sub-agent into exactly that loop.
@@ -183,7 +183,7 @@ describe("a delegated run the user stops", () => {
     // working until the turn ceiling or the 15-minute clock.
     const controller = new AbortController();
 
-    // Abort once the run is demonstrably underway — from the responder, so
+    // Abort once the run is demonstrably underway: from the responder, so
     // the timing does not depend on how fast the fake provider loops.
     provider.script((_call, index) => {
       if (index === 2) controller.abort();
@@ -220,7 +220,7 @@ describe("a delegated run the user stops", () => {
   }, 60_000);
 
   it("leaves no abort listener behind on the run's signal", async () => {
-    // One controller per RUN, not per tool call — every delegation in a turn
+    // One controller per RUN, not per tool call: every delegation in a turn
     // shares this signal, so a listener that is never removed accumulates for
     // as long as the run lasts and holds each delegation's closure with it.
     const controller = new AbortController();

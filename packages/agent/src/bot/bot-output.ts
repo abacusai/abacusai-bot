@@ -86,7 +86,7 @@ export class BotOutputSanitizer {
       : { text: held, thinking: "" };
   }
 
-  /** Fresh message, fresh state — an unclosed tag must not leak across. */
+  /** Fresh message, fresh state: an unclosed tag must not leak across. */
   reset(): void {
     this.held = "";
     this.closing = null;

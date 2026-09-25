@@ -1,6 +1,6 @@
 /**
  * The usage scanner's contract: what the session logs say is what the numbers
- * show — per model, per day, with errors counted (a free-tier 429 IS the
+ * show: per model, per day, with errors counted (a free-tier 429 IS the
  * story), the window cut on local calendar days, and files re-read only when
  * they change.
  */
@@ -200,7 +200,7 @@ describe("the file cache", () => {
     writeSession("recent.jsonl", [assistantLine({})]);
 
     // Content dated inside the window, mtime far outside it. Appends move
-    // mtime, so a real session log cannot look like this — which is the point:
+    // mtime, so a real session log cannot look like this, which is the point:
     // the turn is missing only because the file was never opened at all.
     const stale = writeSession("stale.jsonl", [assistantLine({})]);
     const long_ago = new Date(NOW - 400 * DAY);
@@ -214,7 +214,7 @@ describe("the file cache", () => {
 describe("what a dollar figure is allowed to mean", () => {
   it("bills nothing for the models the router runs for free", async () => {
     // Gemini's catalog rate is Google's paid one, but a Studio key is served
-    // under a free quota — the same call openllm.ts makes when it pools them.
+    // under a free quota: the same call openllm.ts makes when it pools them.
     writeSession("a.jsonl", [
       assistantLine({ provider: "gemini", model: "gemini-3.6-flash", cost: 4 }),
     ]);
@@ -314,7 +314,7 @@ describe("the OpenRouter key lookup", () => {
     );
 
     // An unread stream holds the socket, and the panel asks again on every
-    // refresh — a wrong key would leak one per glance.
+    // refresh: a wrong key would leak one per glance.
     expect(await fetchOpenRouterKeyStatus("bad-key")).toBeNull();
     expect(cancel).toHaveBeenCalledTimes(1);
   });
@@ -383,7 +383,7 @@ describe("routed turns", () => {
     const summary = await new UsageScanner(dir, () => NOW).summary(30);
     const ids = summary.models.map((model) => model.id).sort();
 
-    // The router's own row survives, carrying the errors it routed around —
+    // The router's own row survives, carrying the errors it routed around,
     // which is the number that explains why a turn took four tries.
     expect(ids).toEqual([
       "openrouter/auto",

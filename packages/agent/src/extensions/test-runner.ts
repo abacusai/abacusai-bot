@@ -285,7 +285,7 @@ export default function (pi: ExtensionAPI) {
     description:
       "Detects and runs the project's test suite (pytest, vitest, jest, npm test, go test, cargo test) " +
       "and returns a structured summary: pass/fail counts, exit code, and the first failure. " +
-      "Use run_tests instead of invoking test commands via bash — the output is compact and parsed. " +
+      "Use run_tests instead of invoking test commands via bash: the output is compact and parsed. " +
       "Optional filter runs a subset (passed to -k / -t / -run).",
     parameters: Type.Object({
       filter: Type.Optional(

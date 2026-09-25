@@ -1,6 +1,6 @@
 ---
 name: Web research
-description: Research a topic online and report what is actually supported — finding primary sources, cross-checking claims, and separating fact from consensus. Use when asked to look something up, compare options, or check whether something is true or current.
+description: Research a topic online and report what is actually supported: finding primary sources, cross-checking claims, and separating fact from consensus. Use when asked to look something up, compare options, or check whether something is true or current.
 ---
 
 # Web research
@@ -9,14 +9,14 @@ description: Research a topic online and report what is actually supported — f
 
 Rank what you find:
 
-1. **Primary** — the spec, the RFC, the official docs, the paper, the source code
-2. **Official secondary** — the vendor's changelog, release notes, status page
-3. **Community** — Stack Overflow, blog posts, forum threads
-4. **Aggregators** — content farms, listicles, anything summarising the above
+1. **Primary**: the spec, the RFC, the official docs, the paper, the source code
+2. **Official secondary**: the vendor's changelog, release notes, status page
+3. **Community**: Stack Overflow, blog posts, forum threads
+4. **Aggregators**: content farms, listicles, anything summarising the above
 
 A blog post explaining an API is evidence about what the API did *when it was
-written*. The docs are evidence about now. When they disagree, the docs win —
-and if the docs disagree with observed behaviour, the behaviour wins.
+written*. The docs are evidence about now. When they disagree, the docs win.
+If the docs disagree with observed behaviour, the behaviour wins.
 
 ## Check the date on everything
 
@@ -30,7 +30,7 @@ For anything versioned, find out which version the source is talking about.
 ## Cross-check
 
 Two sources that both trace to the same original are one source. Follow the
-citation before counting it as corroboration — a claim can appear in fifty
+citation before counting it as corroboration: a claim can appear in fifty
 places and have exactly one origin.
 
 Be most suspicious of the claims that are most convenient for you: the ones that

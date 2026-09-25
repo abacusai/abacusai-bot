@@ -127,8 +127,8 @@ describe("building the roster", () => {
 describe("a sub-agent's model", () => {
   it("is the session's model at spawn, not at build", () => {
     // The reported case: a session opened on the pool's first pick, the user
-    // switched to a free model, and a document sub-agent still ran — and
-    // billed — on the model the table was built with.
+    // switched to a free model, and a document sub-agent still ran, and
+    // billed, on the model the table was built with.
     let current: unknown = "abacus/pool-pick";
     const options = subAgentOptions(
       {

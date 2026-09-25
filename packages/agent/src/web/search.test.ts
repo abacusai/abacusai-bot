@@ -4,8 +4,8 @@
  *
  * A model that did not search will happily write four plausible-looking URLs,
  * and nothing downstream can tell those from real ones. So the provider is
- * stubbed here to return the shapes a real one can return — including the one
- * where it answers without searching — and the assertion is that the last case
+ * stubbed here to return the shapes a real one can return, including the one
+ * where it answers without searching, and the assertion is that the last case
  * fails loudly rather than quietly.
  *
  * The provider is stubbed rather than called: a suite that needs a funded API
@@ -21,7 +21,7 @@ vi.mock("@anthropic-ai/sdk", () => ({
   },
 }));
 
-/** Every key that can select a provider — cleared together, or a developer
+/** Every key that can select a provider. They are cleared together, or a developer
  * with one exported in their shell gets a different suite than CI. */
 const PROVIDER_KEYS = [
   "ABACUS_API_KEY",
@@ -316,7 +316,7 @@ describe("the backend model", () => {
     };
     expect(request.tools[0]!.name).toBe("web_search");
     // The dated variant is the contract with the provider, not a version we
-    // invented — pinning it here makes an accidental change visible.
+    // invented: pinning it here makes an accidental change visible.
     expect(request.tools[0]!.type).toBe("web_search_20260209");
   });
 
@@ -336,8 +336,8 @@ describe("the backend model", () => {
 /**
  * The other providers, at the seam that can be tested without a key.
  *
- * Each one is a request and a parser. The request is a URL and a body — wrong
- * and it fails loudly on the first real call — while the parser is where a
+ * Each one is a request and a parser. The request is a URL and a body; get it
+ * wrong and it fails loudly on the first real call. The parser is where a
  * shape change turns into silently missing sources, or worse, into prose
  * presented as citations. So the parsers are pinned against the shapes the
  * vendors document, including the empty case that strict mode has to refuse.
@@ -497,8 +497,8 @@ describe("scoping a search to a set of sites", () => {
 
   it("drops what came from anywhere else", async () => {
     // The `site:` operator is a request, and providers are free to ignore it.
-    // Enforcing it here is what makes the scope a guarantee rather than a hope
-    // — otherwise "search X" quietly returns a blog's coverage of X.
+    // Enforcing it here is what makes the scope a guarantee rather than a hope.
+    // Otherwise "search X" quietly returns a blog's coverage of X.
     create.mockResolvedValue(mixed());
     const result = await search("agents", { sites: ["x.com", "twitter.com"] });
 

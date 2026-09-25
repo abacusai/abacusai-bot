@@ -55,7 +55,7 @@ export default function (pi: ExtensionAPI): void {
           {
             type: "text" as const,
             text:
-              `There is no file at ${target}. Do not try another name from memory — ` +
+              `There is no file at ${target}. Do not try another name from memory; ` +
               `run \`ls\` on ${parent === "." ? "the directory" : parent} and read one that is ` +
               "actually listed, or use `glob` if you are not sure which directory it is in.",
           },

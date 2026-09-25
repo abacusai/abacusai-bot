@@ -3,7 +3,7 @@
  *
  * Between listing a parent and resolving one of its children, a build step, a
  * `git clean` or a watch process can remove it. It is a race, so it cannot be
- * provoked by arranging files on disk — only by making the filesystem call fail
+ * provoked by arranging files on disk; only by making the filesystem call fail
  * at the moment the walk makes it. One vanished directory must cost the caller
  * that directory and nothing else.
  */

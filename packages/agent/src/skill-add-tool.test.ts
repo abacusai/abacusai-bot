@@ -4,7 +4,7 @@
  * The network is stubbed at `fetch`, so what is pinned here is the part that
  * has to be right on a machine with no marketplace reachable: which URLs are
  * probed, where the file lands, and what the model is told when the answer is
- * ambiguous rather than an install. The on-disk layout — `<id>/SKILL.md` — is
+ * ambiguous rather than an install. The on-disk layout (`<id>/SKILL.md`) is
  * written as a literal because the agent's scanner derives the skill id from
  * that folder name; a test that imported the path builder would not notice it
  * changing.
@@ -99,7 +99,7 @@ describe("skill_add", () => {
       fs.readFileSync(path.join(root, "global", "pdf", "SKILL.md"), "utf8")
     ).toBe(SKILL_MD);
     // The point of reloading: the session has to pick the skill up, and the
-    // text says when — so that had better be what happens.
+    // text says when, so that had better be what happens.
     expect(reloads).toBe(1);
     expect(result.text).toContain("next turn");
     expect(result.text).toContain("anthropics/skills");
