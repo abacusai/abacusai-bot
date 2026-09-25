@@ -32,7 +32,7 @@ env:
 jobs:
   # Which release unit does this change touch? Renderer and agent source are
   # an experience release (hot-swapped over TUF, no relaunch); anything else
-  # — dependencies, the shell, the preload, the lockfile — fails toward a
+  # (dependencies, the shell, the preload, the lockfile) fails toward a
   # full signed foundation release. Informational here; the release pipeline
   # runs the same classifier to decide what a tag needs.
   classify:
@@ -77,7 +77,7 @@ jobs:
       - run: pnpm run lint
       # The tool configs (oxlint.config.ts, oxfmt.config.ts and what they
       # import) belong to no workspace package, so `pnpm run typecheck` never
-      # sees them — and lint is invoked directly above, not through turbo, so
+      # sees them. Lint is invoked directly above, not through turbo, so
       # the //#lint task's dependsOn never fires either.
       - run: pnpm run typecheck:tools
       # Covers every workspace package, so a reference to something that does
@@ -90,7 +90,7 @@ jobs:
           pnpm --filter @abacus-ai/desktop run check:locales
 
       # Fails on any high/critical advisory that is not on the documented
-      # exception list in the script — each entry names why it is accepted, and
+      # exception list in the script: each entry names why it is accepted, and
       # goes stale (and fails) the moment the upstream fix ships.
       - name: Audit dependencies
         run: pnpm run check:audit
@@ -101,7 +101,7 @@ jobs:
       fail-fast: false
       # macOS is not redundant: the sandbox confinement tests skip themselves on
       # a platform with no backend, so on Linux alone the suite would report
-      # green while proving nothing about the thing most worth proving — that a
+      # green while proving nothing about the thing most worth proving: that a
       # write outside the workspace is actually refused.
       #
       # Windows is here because faking `process.platform` in a unit test cannot
@@ -110,9 +110,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    # Windows blocks like everywhere else. It reported without blocking while
-    # the desktop suite was failing there, which is exactly how it came to be
-    # failing on main without anyone noticing — a job nobody has to look at is
+    # Windows blocks like the other platforms. A job nobody has to look at is
     # a job nobody looks at.
     #
     # Two agent-side bugs are still open, with their tests skipped and the
@@ -120,7 +118,7 @@ jobs:
     # extensions/guardrails.ts matches the temp dir in short form against a
     # long-form real path, and backends.ts terminate() has no process-tree kill
     # on Windows, so a stopped command leaks its descendants. Skipped is the
-    # right shape for those — they name themselves, and they do not hide a
+    # right shape for those: they name themselves, and they do not hide a
     # regression in everything else.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -133,7 +131,7 @@ jobs:
 
       # E2E tests execute the built CLI and bundled-tools tests execute the
       # vendored search binaries. A clean runner has neither until the complete
-      # build graph has run — fetching the binaries alone leaves the suites that
+      # build graph has run: fetching the binaries alone leaves the suites that
       # spawn the CLI failing on a bundle that was never built.
       - name: Build what the tests execute
         run: pnpm run build
@@ -142,7 +140,7 @@ jobs:
 
       # The agent resolves these at runtime rather than shelling out to whatever
       # is on PATH, so a vendor step that half-succeeded is a search tool that
-      # does not exist — on one platform only, which is how it stays unnoticed.
+      # does not exist, and on one platform only, which is how it goes unnoticed.
       - name: The search binaries landed beside the agent and run
         shell: bash
         run: |
@@ -198,7 +196,7 @@ jobs:
 
       # The desktop app spawns the agent and speaks NDJSON to it. This asserts
       # the host still answers on stdout in the protocol, whatever it has to
-      # say — a stack trace on stderr and silence on stdout is a dead app.
+      # say: a stack trace on stderr and silence on stdout is a dead app.
       - name: The desktop entry still speaks NDJSON
         shell: bash
         run: |
@@ -255,20 +253,17 @@ jobs:
         run: pnpm --filter @abacus-ai/desktop run check:packaged
 
       # Nothing else starts the app. Typecheck and the unit suites never load
-      # main/index.ts, so the failures this shape produces — a named import from
+      # main/index.ts, so the failures this shape produces (a named import from
       # a CommonJS package, `__dirname` in an ESM main process, a module that is
-      # not inside the asar — get through green CI and only appear on launch.
+      # not inside the asar) get through green CI and only appear on launch.
       #
-      # The app has to SAY it started. This used to watch the pid for thirty
-      # seconds and pass if the process was still there, which is not the same
-      # question: an uncaught exception at import time puts up Electron's
-      # "A JavaScript error occurred in the main process" dialog and then waits
-      # on it, so a crashed app holds its pid open indefinitely and looked
-      # exactly like a healthy one. That is how 1.0.6 shipped a main process
-      # that could not resolve @earendil-works/pi-tui, through this step, green.
+      # The app has to SAY it started: a still-running pid is not proof, since
+      # an uncaught exception at import time puts up Electron's "A JavaScript
+      # error occurred in the main process" dialog and waits on it, so a
+      # crashed app holds its pid open and looks healthy.
       #
-      # So the app prints a marker at the end of its ready chain — every module
-      # evaluated, window created, IPC registered — and exits 0. No marker, no
+      # So the app prints a marker at the end of its ready chain (every module
+      # evaluated, window created, IPC registered) and exits 0. No marker, no
       # pass, however alive the process looks.
       - name: The packaged app actually starts
         working-directory: apps/desktop
@@ -286,8 +281,8 @@ jobs:
           [ -n "$app" ] || { echo "::error::could not find the unpacked app executable"; exit 1; }
           echo "Launching $app"
 
-          # Chromium's setuid sandbox refuses to run — and aborts the whole
-          # process — unless its helper is root-owned and setuid. electron-builder
+          # Chromium's setuid sandbox refuses to run (and aborts the whole
+          # process) unless its helper is root-owned and setuid. electron-builder
           # cannot set that when it unpacks as the runner user; the installers it
           # produces do it at install time. Do the same here rather than passing
           # --no-sandbox, so the smoke test starts the app the way a user's
@@ -302,7 +297,7 @@ jobs:
 
           # ABACUSAI_BOT_SMOKE_TEST makes the app print the marker and exit 0 once
           # it is fully up. The timeout is the backstop for an app that hangs
-          # before that point rather than crashing — also a failure to start.
+          # before that point rather than crashing, which is also a failure to start.
           ABACUSAI_BOT_SMOKE_TEST=1 launch "$app" > app.log 2>&1 &
           pid=$!
 
@@ -322,14 +317,13 @@ jobs:
           cat app.log
 
           if [ -z "$ready" ]; then
-            echo "::error::the packaged app never reported that it started — see the log above"
+            echo "::error::the packaged app never reported that it started (see the log above)"
             exit 1
           fi
 
-          # Belt and braces: the marker says the ready chain finished, this says
+          # Belt and braces: the marker says the ready chain finished, this checks
           # nothing blew up on the way. ERR_MODULE_NOT_FOUND and Electron's own
-          # fatal-dialog text are in the list because they were not, and 1.0.6
-          # went out.
+          # fatal-dialog text are the signatures of an import-time crash.
           if grep -qiE 'ReferenceError|TypeError|SyntaxError|ERR_MODULE_NOT_FOUND|Cannot find (package|module)|Uncaught Exception|A JavaScript error occurred|threw an error|unhandled (promise )?rejection' app.log; then
             echo "::error::the main process logged a fatal error on startup"
             exit 1

@@ -24,8 +24,8 @@ rejected. Everything else is noise for the reader.
 Before:
 
 ```ts
-// The requested model cannot run — no key for it, or a free pool with
-// nothing left in it — so the first model that CAN takes the turn.
+// The requested model cannot run (no key for it, or a free pool with
+// nothing left in it), so the first model that CAN takes the turn.
 //
 // Silently. This used to open the conversation with a paragraph about
 // a pool being empty and a substitution being made, which is the app

@@ -10,7 +10,7 @@ repository (publisher plus read-only server).
 - `dist/publish.mjs <experience.zip>` signs the archive into the local dev
   repository as the `experience/latest.zip` TUF target.
 - `dist/refresh.mjs` re-signs snapshot and timestamp with fresh expiries
-  without touching targets — what a scheduled job runs between releases so
+  without touching targets. A scheduled job runs it between releases so
   client verification never hits an expired timestamp.
 - `dist/dev.mjs` bootstraps the dev repository (ed25519 key per role) and
   serves it read-only on `127.0.0.1:4321`.
@@ -19,8 +19,8 @@ repository (publisher plus read-only server).
   `none`. Unknown paths fail toward `foundation`.
 
 The desktop verifier (`apps/desktop/src/main/experience/integrity.ts`)
-recomputes every digest from the same JSON canon as `src/manifest.ts` —
-builder and verifier are two views of one contract. Production publishing
+recomputes every digest from the same JSON canon as `src/manifest.ts`, so
+builder and verifier share one contract. Production publishing
 signs the same metadata with managed keys in the release pipeline; this
 repository never serves private keys and the server is GET-only.
 

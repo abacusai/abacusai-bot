@@ -8,7 +8,7 @@ export interface ChangelogRelease {
   body: string;
 }
 
-const HEADING = /^## (\S+)(?:\s+—\s+(\d{4}-\d{2}-\d{2}))?\s*$/u;
+const HEADING = /^## (\S+)(?:\s+\((\d{4}-\d{2}-\d{2})\))?\s*$/u;
 
 export const parseChangelog = (markdown: string): ChangelogRelease[] => {
   const releases: ChangelogRelease[] = [];
