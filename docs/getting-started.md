@@ -64,8 +64,8 @@ servers. The built-in Abacus.AI flow connects services such as Gmail, Drive,
 Calendar, Slack, Outlook, Jira, and Confluence in the browser. A bot may ask for
 a missing connector while it works.
 
-WhatsApp, Telegram, and Discord let you reach a bot from another device. Merely
-connecting a messaging account does not start automatic replies. Choose the
+WhatsApp, Telegram, and Discord let you reach a bot from another device.
+Connecting a messaging account does not start automatic replies. Choose the
 bot, enable responses, and approve senders first. Remote tool calls cannot show
 an approval dialog to the sender. Unattended remote tools are on by default and
 run with full permissions once inbound responses are enabled. Turn that setting

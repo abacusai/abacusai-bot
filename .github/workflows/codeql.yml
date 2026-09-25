@@ -15,7 +15,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Weekly, because the query pack itself updates — a scan that only runs on
+    # Weekly, because the query pack itself updates: a scan that only runs on
     # pushes stops finding new bug classes the moment the repo goes quiet.
     - cron: "30 5 * * 1"
 
