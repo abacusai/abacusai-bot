@@ -29,7 +29,7 @@ export class ArtifactResolverService {
     } catch {
       // An unbuilt agent would otherwise surface as every send failing quietly.
       throw new Error(
-        `AbacusAIBot agent entry not found at ${entry}. Run "pnpm build" first.`
+        `AbacusAI Bot agent entry not found at ${entry}. Run "pnpm build" first.`
       );
     }
 

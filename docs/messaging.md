@@ -1,6 +1,6 @@
 # Bots, routines, and messaging
 
-Bots are the main unit of ongoing work in AbacusAIBot. You can chat with one in
+Bots are the main unit of ongoing work in AbacusAI Bot. You can chat with one in
 the desktop app or reach it through WhatsApp, Telegram, and Discord. A routine
 wakes it on a schedule or through a webhook. Sessions remain available for
 one-off work you supervise directly.

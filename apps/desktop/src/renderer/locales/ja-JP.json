@@ -829,7 +829,7 @@
       "label": "SSH"
     },
     "title": "Execution backend",
-    "unimplemented": "AbacusAIBot can't run commands here yet.",
+    "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
@@ -1136,8 +1136,8 @@
       "deliverToBotNone": "No bot — one session per sender"
     },
     "setup": {
-      "discord": "「接続」をクリックするとDiscordのログインウィンドウが開きます。DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。するとAbacusAIBotはあなた自身のDiscordアカウントとして送信します — ボットもトークンも不要です。",
-      "telegram": "「接続」をクリックするとTelegramのログインウィンドウが開きます。いつも通りログインしてください — スマホでQRをスキャン（設定、デバイス、デバイスを追加）するか、電話番号かパスキーを使います。するとAbacusAIBotはあなた自身のTelegramアカウントとして送信します。APIキーもボットも不要です。",
+      "discord": "「接続」をクリックするとDiscordのログインウィンドウが開きます。DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。するとAbacusAI Botはあなた自身のDiscordアカウントとして送信します — ボットもトークンも不要です。",
+      "telegram": "「接続」をクリックするとTelegramのログインウィンドウが開きます。いつも通りログインしてください — スマホでQRをスキャン（設定、デバイス、デバイスを追加）するか、電話番号かパスキーを使います。するとAbacusAI Botはあなた自身のTelegramアカウントとして送信します。APIキーもボットも不要です。",
       "whatsapp": "これを有効にしたうえで、スマートフォンの WhatsApp から下の QR コードをスキャンしてください（設定、リンク済みデバイス、デバイスをリンク）。AbacusAI Bot がそのアカウントのデバイスとしてリンクされるため、個人の番号ではなく専用の番号を使うことをおすすめします。"
     },
     "stepSignIn": "First — sign in to {{app}}",
@@ -1190,7 +1190,7 @@
     "enableTitle": "Notify me",
     "soundSubtitle": "Uses your system notification sound.",
     "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAIBot tells you while you are looking elsewhere",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
     "title": "Notifications"
   },
   "notifications": {
@@ -1211,7 +1211,7 @@
     "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
     "setupConnectorsCta": "Browse connectors",
     "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAIBot",
+    "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
@@ -1222,7 +1222,7 @@
     "welcomeCapabilityModels": "Access",
     "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "永続メモリを備えた、あなた専用のオープンソースAIコワーカー",
-    "welcomeTitle": "Welcome to AbacusAIBot",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
@@ -1234,7 +1234,7 @@
     "setupExistingLater": "Connect later",
     "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedTitleName": "Abacus AI Bot",
+    "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
@@ -1633,7 +1633,7 @@
         "body": "モデル別・セッション別のトークンと費用。実行にいくらかかったのか、後から驚くことがありません。"
       },
       "welcome": {
-        "title": "AbacusAIBot へようこそ",
+        "title": "AbacusAI Bot へようこそ",
         "body": "ウィンドウをひと回りします。どのパネルが何で、何のためにあるのか。短い15か所、どこででも抜けられます。"
       }
     }
@@ -1785,7 +1785,7 @@
     "deleteWorkspace": "ワークスペースを削除",
     "deleteWorkspaceConfirmLabel": "確認のためワークスペース名を入力してください：",
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
-    "deleteWorkspaceDescription": "「{{name}}」とそのチャットを AbacusAIBot から削除します。ディスク上のファイルとフォルダーは削除されず、そのまま残ります。この操作は取り消せません。",
+    "deleteWorkspaceDescription": "「{{name}}」とそのチャットを AbacusAI Bot から削除します。ディスク上のファイルとフォルダーは削除されず、そのまま残ります。この操作は取り消せません。",
     "deleteWorkspaceNameMismatch": "名前が一致しません",
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",

@@ -1,13 +1,13 @@
 # Models
 
-You can start AbacusAIBot without an existing paid model subscription. A free
+You can start AbacusAI Bot without an existing paid model subscription. A free
 Abacus.AI account starts with 2,000 credits and a selection of free models.
 OpenRouter and Google AI Studio add other free model options. Provider quotas,
 catalogs, and free-tier limits can change.
 
 You can also connect paid provider keys, subscriptions, cloud platforms, model
-gateways, or a local model. AbacusAIBot does not proxy every request through an
-AbacusAIBot service.
+gateways, or a local model. AbacusAI Bot does not proxy every request through an
+AbacusAI Bot service.
 
 Open Settings, then Models, to paste a provider key or use a supported sign-in
 flow. The page lists the providers available in the installed version and links

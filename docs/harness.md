@@ -1,6 +1,6 @@
 # Agent harness
 
-AbacusAIBot uses pi for model streaming, tool dispatch, and session state. The
+AbacusAI Bot uses pi for model streaming, tool dispatch, and session state. The
 project adds deterministic checks around that loop.
 
 | Layer | Behavior |

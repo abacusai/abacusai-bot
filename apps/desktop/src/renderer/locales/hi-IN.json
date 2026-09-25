@@ -829,7 +829,7 @@
       "label": "SSH"
     },
     "title": "Execution backend",
-    "unimplemented": "AbacusAIBot can't run commands here yet.",
+    "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
@@ -1136,8 +1136,8 @@
       "deliverToBotNone": "No bot — one session per sender"
     },
     "setup": {
-      "discord": "Connect पर क्लिक करें, एक Discord लॉगिन विंडो खुलेगी। QR को Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें। फिर AbacusAIBot आपके अपने Discord खाते के रूप में संदेश भेजता है — कोई बॉट नहीं, कोई टोकन नहीं।",
-      "telegram": "Connect पर क्लिक करें और एक Telegram लॉगिन विंडो खुलेगी। वहीं हमेशा की तरह लॉगिन करें — फ़ोन से QR स्कैन करें (Settings, Devices, Link Desktop Device), या अपना फ़ोन नंबर या passkey इस्तेमाल करें। फिर AbacusAIBot आपके अपने Telegram खाते के रूप में संदेश भेजता है। कोई API कुंजी नहीं, कोई बॉट नहीं।",
+      "discord": "Connect पर क्लिक करें, एक Discord लॉगिन विंडो खुलेगी। QR को Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें। फिर AbacusAI Bot आपके अपने Discord खाते के रूप में संदेश भेजता है — कोई बॉट नहीं, कोई टोकन नहीं।",
+      "telegram": "Connect पर क्लिक करें और एक Telegram लॉगिन विंडो खुलेगी। वहीं हमेशा की तरह लॉगिन करें — फ़ोन से QR स्कैन करें (Settings, Devices, Link Desktop Device), या अपना फ़ोन नंबर या passkey इस्तेमाल करें। फिर AbacusAI Bot आपके अपने Telegram खाते के रूप में संदेश भेजता है। कोई API कुंजी नहीं, कोई बॉट नहीं।",
       "whatsapp": "इसे सक्षम करें, फिर अपने फ़ोन के WhatsApp से नीचे दिया QR कोड स्कैन करें (सेटिंग्स, लिंक्ड डिवाइसेज़, डिवाइस लिंक करें)। इससे AbacusAI Bot उस खाते पर एक डिवाइस के रूप में जुड़ जाता है, इसलिए अपने निजी नंबर के बजाय एक अलग नंबर का उपयोग करें।"
     },
     "stepSignIn": "First — sign in to {{app}}",
@@ -1190,7 +1190,7 @@
     "enableTitle": "Notify me",
     "soundSubtitle": "Uses your system notification sound.",
     "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAIBot tells you while you are looking elsewhere",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
     "title": "Notifications"
   },
   "notifications": {
@@ -1211,7 +1211,7 @@
     "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
     "setupConnectorsCta": "Browse connectors",
     "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAIBot",
+    "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
@@ -1222,7 +1222,7 @@
     "welcomeCapabilityModels": "Access",
     "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "स्थायी मेमोरी वाला आपका निजी ओपन-सोर्स AI सहकर्मी",
-    "welcomeTitle": "Welcome to AbacusAIBot",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
@@ -1234,7 +1234,7 @@
     "setupExistingLater": "Connect later",
     "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedTitleName": "Abacus AI Bot",
+    "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
@@ -1633,7 +1633,7 @@
         "body": "मॉडल और सेशन के हिसाब से टोकन और ख़र्च, ताकि किसी रन की लागत बाद में चौंकाए नहीं।"
       },
       "welcome": {
-        "title": "AbacusAIBot में आपका स्वागत है",
+        "title": "AbacusAI Bot में आपका स्वागत है",
         "body": "विंडो का एक छोटा चक्कर: हर पैनल क्या है और किस काम आता है। पंद्रह छोटे पड़ाव, और आप किसी भी पड़ाव पर बाहर निकल सकते हैं।"
       }
     }
@@ -1785,7 +1785,7 @@
     "deleteWorkspace": "कार्यस्थान हटाएं",
     "deleteWorkspaceConfirmLabel": "पुष्टि करने के लिए कार्यस्थान का नाम टाइप करें:",
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
-    "deleteWorkspaceDescription": "यह \"{{name}}\" और उसकी चैट को AbacusAIBot से हटा देता है। डिस्क पर आपकी फ़ाइलें और फ़ोल्डर नहीं हटाए जाते और अछूते रहेंगे। यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "deleteWorkspaceDescription": "यह \"{{name}}\" और उसकी चैट को AbacusAI Bot से हटा देता है। डिस्क पर आपकी फ़ाइलें और फ़ोल्डर नहीं हटाए जाते और अछूते रहेंगे। यह क्रिया पूर्ववत नहीं की जा सकती।",
     "deleteWorkspaceNameMismatch": "नाम मेल नहीं खाता",
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",

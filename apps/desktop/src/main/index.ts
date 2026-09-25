@@ -1062,7 +1062,7 @@ app
     });
 
     app.setAboutPanelOptions({
-      applicationName: "AbacusAIBot",
+      applicationName: "AbacusAI Bot",
       applicationVersion: app.getVersion(),
       copyright: `Copyright © ${new Date().getFullYear()} Abacus.AI`,
       credits: "Open source under the MIT License",

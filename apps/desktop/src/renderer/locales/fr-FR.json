@@ -829,7 +829,7 @@
       "label": "SSH"
     },
     "title": "Execution backend",
-    "unimplemented": "AbacusAIBot can't run commands here yet.",
+    "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
@@ -1136,8 +1136,8 @@
       "deliverToBotNone": "No bot — one session per sender"
     },
     "setup": {
-      "discord": "Cliquez sur Connecter et une fenêtre de connexion Discord s'ouvre. Scannez le QR avec l'appli Discord, ou connectez-vous avec e-mail et mot de passe. AbacusAIBot écrit alors avec votre propre compte Discord — sans bot, sans jeton.",
-      "telegram": "Cliquez sur Connecter et une fenêtre de connexion Telegram s'ouvre. Connectez-vous comme d'habitude — scannez le QR avec votre téléphone (Paramètres, Appareils, Ajouter un appareil), ou utilisez votre numéro ou une passkey. AbacusAIBot écrit alors avec votre propre compte Telegram. Sans clés d'API, sans bot.",
+      "discord": "Cliquez sur Connecter et une fenêtre de connexion Discord s'ouvre. Scannez le QR avec l'appli Discord, ou connectez-vous avec e-mail et mot de passe. AbacusAI Bot écrit alors avec votre propre compte Discord — sans bot, sans jeton.",
+      "telegram": "Cliquez sur Connecter et une fenêtre de connexion Telegram s'ouvre. Connectez-vous comme d'habitude — scannez le QR avec votre téléphone (Paramètres, Appareils, Ajouter un appareil), ou utilisez votre numéro ou une passkey. AbacusAI Bot écrit alors avec votre propre compte Telegram. Sans clés d'API, sans bot.",
       "whatsapp": "Activez ceci, puis scannez le code QR ci-dessous depuis WhatsApp sur votre téléphone (Réglages, Appareils connectés, Connecter un appareil). Cela relie AbacusAI Bot comme un appareil de ce compte : utilisez donc un numéro dédié plutôt que votre numéro personnel."
     },
     "stepSignIn": "First — sign in to {{app}}",
@@ -1190,7 +1190,7 @@
     "enableTitle": "Notify me",
     "soundSubtitle": "Uses your system notification sound.",
     "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAIBot tells you while you are looking elsewhere",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
     "title": "Notifications"
   },
   "notifications": {
@@ -1211,7 +1211,7 @@
     "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
     "setupConnectorsCta": "Browse connectors",
     "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAIBot",
+    "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
@@ -1222,7 +1222,7 @@
     "welcomeCapabilityModels": "Access",
     "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "Votre coéquipier IA personnel et open source, doté d'une mémoire persistante",
-    "welcomeTitle": "Welcome to AbacusAIBot",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
@@ -1234,7 +1234,7 @@
     "setupExistingLater": "Connect later",
     "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedTitleName": "Abacus AI Bot",
+    "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
@@ -1633,7 +1633,7 @@
         "body": "Tokens et dépenses par modèle et par session, pour que le coût d'une exécution ne soit jamais une surprise."
       },
       "welcome": {
-        "title": "Bienvenue dans AbacusAIBot",
+        "title": "Bienvenue dans AbacusAI Bot",
         "body": "Un tour rapide de la fenêtre : ce qu'est chaque panneau et à quoi il sert. Quinze courtes étapes, et vous pouvez partir à n'importe laquelle."
       }
     }
@@ -1785,7 +1785,7 @@
     "deleteWorkspace": "Supprimer l'espace de travail",
     "deleteWorkspaceConfirmLabel": "Tapez le nom de l'espace de travail pour confirmer :",
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
-    "deleteWorkspaceDescription": "Cela supprime « {{name}} » et ses conversations d'AbacusAIBot. Vos fichiers et le dossier sur le disque ne sont pas supprimés et resteront intacts. Cette action est irréversible.",
+    "deleteWorkspaceDescription": "Cela supprime « {{name}} » et ses conversations d'AbacusAI Bot. Vos fichiers et le dossier sur le disque ne sont pas supprimés et resteront intacts. Cette action est irréversible.",
     "deleteWorkspaceNameMismatch": "Le nom ne correspond pas",
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",

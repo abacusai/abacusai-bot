@@ -829,7 +829,7 @@
       "label": "SSH"
     },
     "title": "Execution backend",
-    "unimplemented": "AbacusAIBot can't run commands here yet.",
+    "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
@@ -1136,9 +1136,9 @@
       "deliverToBotNone": "No bot — one session per sender"
     },
     "setup": {
-      "discord": "Click Connect and a Discord login window opens. Scan the QR with the Discord app on your phone, or log in with your email and password. AbacusAIBot then messages as your own Discord account — no bot, no token. Or link the Abacus AI bot below and DM it from anywhere.",
-      "telegram": "Click Connect and a Telegram login window opens. Log in there the way you already do — scan the QR with your phone (Settings, Devices, Link Desktop Device), or use your phone number or a passkey. AbacusAIBot then messages as your own Telegram account. No API keys, no bot.",
-      "whatsapp": "Enable this, then scan the QR code below from WhatsApp on your phone (Settings, Linked devices, Link a device). This links AbacusAIBot as a device on that account, so use a dedicated number rather than your personal one."
+      "discord": "Click Connect and a Discord login window opens. Scan the QR with the Discord app on your phone, or log in with your email and password. AbacusAI Bot then messages as your own Discord account — no bot, no token. Or link the Abacus AI bot below and DM it from anywhere.",
+      "telegram": "Click Connect and a Telegram login window opens. Log in there the way you already do — scan the QR with your phone (Settings, Devices, Link Desktop Device), or use your phone number or a passkey. AbacusAI Bot then messages as your own Telegram account. No API keys, no bot.",
+      "whatsapp": "Enable this, then scan the QR code below from WhatsApp on your phone (Settings, Linked devices, Link a device). This links AbacusAI Bot as a device on that account, so use a dedicated number rather than your personal one."
     },
     "stepSignIn": "First — sign in to {{app}}",
     "states": {
@@ -1190,7 +1190,7 @@
     "enableTitle": "Notify me",
     "soundSubtitle": "Uses your system notification sound.",
     "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAIBot tells you while you are looking elsewhere",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
     "title": "Notifications"
   },
   "notifications": {
@@ -1222,7 +1222,7 @@
     "welcomeCapabilityModels": "100+ AI Models",
     "welcomeFreeBadge": "Free forever",
     "welcomeTagline": "Open Source Agent And AI Co-Worker",
-    "welcomeTitle": "Abacus AI Bot",
+    "welcomeTitle": "AbacusAI Bot",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "open-source AI agent",
@@ -1234,7 +1234,7 @@
     "setupExistingLater": "Connect later",
     "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedTitleName": "Abacus AI Bot",
+    "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
@@ -1633,7 +1633,7 @@
         "body": "Tokens and spend, by model and by session, so what a run cost is never a surprise afterwards."
       },
       "welcome": {
-        "title": "Welcome to AbacusAIBot",
+        "title": "Welcome to AbacusAI Bot",
         "body": "A quick lap around the window: what each panel is and what it is for. Fifteen short stops, and you can leave at any one of them."
       }
     }
@@ -1785,7 +1785,7 @@
     "deleteWorkspace": "Delete Workspace",
     "deleteWorkspaceConfirmLabel": "Type the workspace name to confirm:",
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
-    "deleteWorkspaceDescription": "This removes \"{{name}}\" from AbacusAIBot. Its chats stay visible in the sidebar as read-only history — delete the workspace again to erase them for good. Your files and the folder on disk are not touched.",
+    "deleteWorkspaceDescription": "This removes \"{{name}}\" from AbacusAI Bot. Its chats stay visible in the sidebar as read-only history — delete the workspace again to erase them for good. Your files and the folder on disk are not touched.",
     "deleteWorkspaceNameMismatch": "Name does not match",
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",

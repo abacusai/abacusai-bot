@@ -20,7 +20,7 @@ Public issues are not a safe place for API keys, credentials, private conversati
 
 - For billing, quotas, outages, or account access, contact the model or service provider involved.
 - Source builds and modified forks receive best-effort guidance. Include the exact commit and local changes when reporting a defect.
-- Only the latest AbacusAIBot release receives fixes.
+- Only the latest AbacusAI Bot release receives fixes.
 - Suspected vulnerabilities must follow the [private security process](SECURITY.md#report-a-vulnerability).
 
 The project does not provide a general private support inbox through GitHub. Use the public issue forms for non-sensitive, reproducible product problems.
