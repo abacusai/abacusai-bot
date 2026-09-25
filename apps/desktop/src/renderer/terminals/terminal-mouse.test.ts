@@ -4,7 +4,7 @@
  * The bug this answers: a wheel turn arrived at `less` as cursor keys, because
  * ghostty-web reports no mouse at all and falls back to the pre-wheel
  * behaviour on the alternate screen. Every case here is a way of getting that
- * wrong again — reporting when nothing asked, staying silent when something
+ * wrong again: reporting when nothing asked, staying silent when something
  * did, or sending a sequence the program cannot read.
  */
 import { beforeEach, describe, expect, it } from "vitest";

@@ -92,7 +92,7 @@ export const WorkspaceMissingDialog = ({
           variant: "default",
           onClick: async () => {
             const selected = await window.api.openFolderDialog();
-            // Picker dismissed — stay open so the user still has both exits.
+            // Picker dismissed: stay open so the user still has both exits.
             if (selected == null) return false;
             await relocateWorkspaceMutation.mutateAsync({
               workspaceId,

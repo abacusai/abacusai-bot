@@ -7,7 +7,7 @@ import { NewBotDialog } from "./new-bot-dialog";
 /**
  * Edit a bot: the create form, with the bot's own values in it and "Save"
  * on the button. One form for both, so an edit shows exactly what create
- * asked for — check-ins included, which the old edit dialog left out.
+ * asked for, check-ins included, which the old edit dialog left out.
  */
 export const BotDialog = ({
   isOpen,

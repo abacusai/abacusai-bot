@@ -20,7 +20,7 @@ import { Button } from "../ui";
 
 /**
  * Attach the tools you already work in. Every tile attaches in place through
- * the same flow as the Connectors page — a browser hop, a pairing dialog —
+ * the same flow as the Connectors page (a browser hop, a pairing dialog),
  * and the tiles come from the registry, so there is no second list.
  */
 
@@ -101,8 +101,8 @@ export const ConnectorsStep = ({
     }
   };
 
-  // A connector the account cannot offer is dropped rather than shown failing
-  // — once the statuses are in; until then, every tile.
+  // A connector the account cannot offer is dropped rather than shown failing,
+  // once the statuses are in. Until then, every tile.
   const tiles = OFFERED.filter(
     (connector) =>
       connector.kind !== "platform" ||

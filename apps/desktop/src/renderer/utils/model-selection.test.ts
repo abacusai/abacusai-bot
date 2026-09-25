@@ -2,7 +2,7 @@
  * The rule these pin: a session that has run keeps its own model, and the
  * workspace/global picks only fill in for one that has not.
  *
- * The bug they exist for was silent — reopening an old chat quietly moved it
+ * The bug they exist for was silent: reopening an old chat quietly moved it
  * onto whatever the last-used chat was set to, and nothing on screen said so.
  */
 import { describe, expect, it } from "vitest";
@@ -144,7 +144,7 @@ describe("releasing a dropdown pick", () => {
     // the sessions cache in the same handler, so the stored record agrees with
     // the pick immediately. Releasing on that evidence handed resolution back
     // to the model the agent was still running, and the composer snapped to
-    // the old name — the bug the pick was added to fix, returning through the
+    // the old name (the bug the pick was added to fix), returning through the
     // rule that retires it.
     expect(
       modelPickHonoured("anthropic/claude-opus-5", "abacus/gpt-5.6-sol")
@@ -158,8 +158,8 @@ describe("releasing a dropdown pick", () => {
   });
 
   it("holds a pick on a session with no live model rather than releasing it", () => {
-    // A stopped session reports nothing. Holding costs nothing — the pick and
-    // the stored record agree — and releasing would let a stale live value win.
+    // A stopped session reports nothing. Holding costs nothing (the pick and
+    // the stored record agree), and releasing would let a stale live value win.
     expect(modelPickHonoured("anthropic/claude-opus-5", undefined)).toBe(false);
     expect(modelPickHonoured("anthropic/claude-opus-5", null)).toBe(false);
     expect(modelPickHonoured("anthropic/claude-opus-5", "")).toBe(false);
@@ -179,7 +179,7 @@ describe("releasing a dropdown pick", () => {
 
 describe("recognising a refused pick", () => {
   // The other way a pick ends. The agent answers an unrunnable set_model with
-  // an error coded model_unavailable and never sends model_changed — the one
+  // an error coded model_unavailable and never sends model_changed, the one
   // signal the release rule above waits for. Missing the refusal held the pick
   // forever: the composer named a model the agent was not running, silently.
   const refusal = (error: unknown): unknown => ({
@@ -272,7 +272,7 @@ describe("sessionModelFor", () => {
     // The session-state query holds its previous answer as placeholder data,
     // so opening a new chat leaves the last chat's model in hand. Session
     // model outranks the workspace pick, so without this gate every pick in
-    // the new chat resolved straight back to the old chat's model — the
+    // the new chat resolved straight back to the old chat's model: the
     // dropdown moved and the composer snapped back.
     expect(
       sessionModelFor({

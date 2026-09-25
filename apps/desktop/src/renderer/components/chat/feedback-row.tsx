@@ -73,8 +73,8 @@ export const FeedbackRow = ({
   creditsTotal: number;
   /**
    * Report a thumbs up/down (or its withdrawal), with what the user wrote
-   * about a bad reply. Absent when the turn cannot be rated — no signed-in
-   * Abacus.AI account, or a turn the platform never saw — and the thumbs are
+   * about a bad reply. Absent when the turn cannot be rated (no signed-in
+   * Abacus.AI account, or a turn the platform never saw), and the thumbs are
    * then not shown.
    */
   onRate?: (
@@ -87,7 +87,7 @@ export const FeedbackRow = ({
   const CopyIcon = copied ? Check : Copy;
   const [verdict, setVerdict] = useState<Verdict>("none");
   const [rating, setRating] = useState(false);
-  // The "tell us more" box: opens on a thumbs-down, which is already sent —
+  // The "tell us more" box: opens on a thumbs-down, which is already sent;
   // the text is a follow-up, so closing it without writing loses nothing.
   const [askingMore, setAskingMore] = useState(false);
   const [comment, setComment] = useState("");

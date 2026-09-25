@@ -10,7 +10,7 @@ import i18n from "../i18n";
 
 export const useNotifications = (): void => {
   useEffect(() => {
-    // True when the window isn't focused — notify only if the user can't see it.
+    // True when the window isn't focused: notify only if the user can't see it.
     const shouldNotify = (): boolean => !document.hasFocus();
 
     const unsubscribe = window.api.agent.onEvent((event) => {

@@ -93,7 +93,7 @@
       "templatesDivider": "Or start with a template"
     },
     "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models — the bot loop is built for them.",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
     "modelLabel": "Model",
     "nameLabel": "नाम",
     "namePlaceholder": "जैसे Scout",
@@ -129,7 +129,7 @@
     "save": "सहेजें",
     "saveError": "बॉट सहेजा नहीं जा सका।",
     "senderChat": "{{platform}} पर {{sender}} के साथ स्वतः-उत्तर चैट",
-    "senderChatReadOnly": "स्वतः-उत्तर वार्तालाप — {{bot}} यहाँ आपकी ओर से {{sender}} को उत्तर देता है। आप देख सकते हैं पर लिख नहीं सकते; बदलाव के लिए {{bot}} को उसकी अपनी चैट में बताएँ।",
+    "senderChatReadOnly": "स्वतः-उत्तर वार्तालाप: {{bot}} यहाँ आपकी ओर से {{sender}} को उत्तर देता है। आप देख सकते हैं पर लिख नहीं सकते; बदलाव के लिए {{bot}} को उसकी अपनी चैट में बताएँ।",
     "templates": {
       "appointment-assistant": {
         "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
@@ -256,7 +256,7 @@
         "name": "News Radar"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox—forms, renewals, appointments, and follow-ups.",
+        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
         "name": "Personal Admin"
       },
       "portfolio-pulse": {
@@ -314,8 +314,8 @@
     "unpin": "Unpin",
     "viewBots": "बॉट",
     "viewSessions": "सत्र",
-    "channelChatReadOnly": "This conversation lives in {{app}} — message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp — message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
   },
   "browserPermission": {
     "allow": "अनुमति दें",
@@ -336,7 +336,7 @@
       "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
       "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
       "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
       "install": "Install the extension",
       "connect": "Connect",
       "disconnect": "Disconnect",
@@ -478,8 +478,8 @@
       "noMatches": "No toolset matches that.",
       "noModelTools": "This capability doesn't add any tools the model calls directly.",
       "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned — this isn't a missing API key.",
-      "restartNote": "Changes apply to the next session — the agent is handed its tool list when a session starts.",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
+      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
       "resizePanels": "Resize toolsets and details",
       "searchPlaceholder": "Search toolsets and tools…",
       "toolCount_one": "{{count}} tool",
@@ -539,7 +539,7 @@
         "label": "Memory"
       },
       "messaging": {
-        "description": "जुड़े चैट ऐप्स — WhatsApp, Telegram, Discord — पर उपयोगकर्ता या उनके बॉट के रूप में संदेश भेजें।",
+        "description": "जुड़े चैट ऐप्स (WhatsApp, Telegram, Discord) पर उपयोगकर्ता या उनके बॉट के रूप में संदेश भेजें।",
         "label": "मैसेजिंग"
       },
       "pdf": {
@@ -629,7 +629,7 @@
   },
   "connectors": {
     "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}} — try again.",
+    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
     "abacusConnecting": "Finish connecting {{name}} in your browser…",
     "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
@@ -673,7 +673,7 @@
     "noneInstalled": "No कनेक्टर added yet.",
     "notInstalled": "इंस्टॉल नहीं किया गया",
     "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL — add this to your app",
+    "redirectUrlLabel": "Redirect URL: add this to your app",
     "remove": "Remove",
     "removeFailed": "Could not remove {{name}}.",
     "removed": "{{name}} removed.",
@@ -681,7 +681,7 @@
     "signInAction": "Sign in",
     "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
     "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added — opening your browser to sign in…",
+    "signingIn": "{{name}} added. Opening your browser to sign in…",
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
@@ -689,10 +689,10 @@
   },
   "creditsCard": {
     "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going — no card needed.",
+    "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer — free, with no limits.",
+    "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
@@ -739,7 +739,7 @@
     "keyHome": "होम",
     "keyRecents": "हाल की ऐप्स",
     "maestroInstallFailed": "Maestro इंस्टॉल नहीं हो सका",
-    "maestroInstalled": "Maestro इंस्टॉल हो गया — अब आप iOS सिम्युलेटर के साथ इंटरैक्ट कर सकते हैं",
+    "maestroInstalled": "Maestro इंस्टॉल हो गया। अब आप iOS सिम्युलेटर के साथ इंटरैक्ट कर सकते हैं",
     "modeLive": "लाइव",
     "modePoll": "धीमा (स्क्रीनशॉट)",
     "noDevices": "कोई डिवाइस नहीं",
@@ -782,7 +782,7 @@
     "androidDesc": "Android Studio इंस्टॉल करें, फिर Tools → Device Manager में एक वर्चुअल डिवाइस बनाएँ।",
     "androidTitle": "Android · Android Studio",
     "download": "डाउनलोड करें",
-    "iosDesc": "Mac App Store से Xcode इंस्टॉल करें और सेटअप पूरा करने के लिए इसे एक बार खोलें — फिर सिम्युलेटर यहाँ दिखेंगे।",
+    "iosDesc": "Mac App Store से Xcode इंस्टॉल करें और सेटअप पूरा करने के लिए इसे एक बार खोलें। फिर सिम्युलेटर यहाँ दिखेंगे।",
     "iosRuntimeDesc": "Xcode इंस्टॉल है लेकिन कोई सिम्युलेटर नहीं मिला। Xcode → Settings → Components खोलें और एक iOS रनटाइम डाउनलोड करें।",
     "iosTitle": "iOS · Xcode",
     "recheck": "फिर से जाँचें"
@@ -830,7 +830,7 @@
     },
     "title": "Execution backend",
     "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
     "title": "We set up your first bot"
@@ -909,13 +909,13 @@
   },
   "jobs": {
     "delete": "हटाएँ",
-    "empty": "कुछ निर्धारित नहीं है। चैट में एजेंट से कहें — “हर कार्यदिवस सुबह 9 बजे मेरा इनबॉक्स समराइज़ करो” — और जॉब यहाँ दिखेगा।",
+    "empty": "कुछ निर्धारित नहीं है। चैट में एजेंट से कहें, जैसे “हर कार्यदिवस सुबह 9 बजे मेरा इनबॉक्स समराइज़ करो”, और जॉब यहाँ दिखेगा।",
     "enabled": "सक्रिय",
     "lastRun": "पिछला {{time}}",
     "nextRun": "अगला {{time}}",
     "runNow": "अभी चलाएँ",
     "startFailed": "रन शुरू नहीं हो सका।",
-    "started": "शुरू हुआ — यह अपने सत्र में चलता है।"
+    "started": "शुरू हुआ। यह अपने सत्र में चलता है।"
   },
   "persona": {
     "title": "We learnt this about you",
@@ -981,7 +981,7 @@
       "oauthSection": "OAuth (वैकल्पिक)",
       "scopePlaceholder": "स्कोप (स्पेस से अलग, वैकल्पिक)",
       "titleAdd": "एक कस्टम MCP से कनेक्ट करें",
-      "titleEdit": "MCP सर्वर संपादित करें — {{name}}",
+      "titleEdit": "MCP सर्वर संपादित करें: {{name}}",
       "transportHttp": "Streamable HTTP",
       "transportStdio": "STDIO",
       "url": "URL",
@@ -1033,7 +1033,7 @@
       "title_other": "{{count}} Abacus connectors, served through this server:",
       "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
       "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now — sign in to Abacus.AI, or try again."
+      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
     }
   },
   "memory": {
@@ -1041,7 +1041,7 @@
     "clearConfirm": "Forget everything here?",
     "clearNo": "Keep",
     "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions — a preference of yours, a fact about your setup.",
+    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
     "forget": "Forget this",
     "loading": "Reading memory…",
     "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
@@ -1052,7 +1052,7 @@
         "title": "The agent's own notes"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here — and in every prompt from the next message on.",
+        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
         "title": "Always remember"
       },
       "user": {
@@ -1062,10 +1062,10 @@
     },
     "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
     "title": "Memory",
-    "writeFailed": "कुछ भी नहीं हटाया गया — उसी समय एक सत्र मेमोरी में लिख रहा था। फिर से प्रयास करें।",
+    "writeFailed": "कुछ भी नहीं हटाया गया। उसी समय एक सत्र मेमोरी में लिख रहा था। फिर से प्रयास करें।",
     "instructions": {
       "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with — tone, language, house style, things to never do.",
+      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
       "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
       "save": "Save",
       "saveFailed": "Could not save. Check that the settings folder is writable.",
@@ -1093,9 +1093,9 @@
       "telegram": "अपने Telegram से एजेंट से चैट करें और उसे अपनी ओर से लोगों को संदेश भेजने दें। फ़ोन से QR स्कैन करके जुड़ता है।",
       "whatsapp": "WhatsApp चैट से एजेंट चलाएँ।"
     },
-    "discordConnected": "कनेक्ट हो गया — एजेंट आपके Discord खाते के रूप में संदेश भेजता है।",
+    "discordConnected": "कनेक्ट हो गया। एजेंट आपके Discord खाते के रूप में संदेश भेजता है।",
     "discordOpenLogin": "Discord लॉगिन खोलें",
-    "discordScan": "एक Discord लॉगिन विंडो खुली — इसका QR Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें।",
+    "discordScan": "एक Discord लॉगिन विंडो खुली। इसका QR Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें।",
     "doneConnect": "Continue",
     "enablePlatform": "प्लेटफ़ॉर्म सक्षम करें",
     "fields": {
@@ -1127,20 +1127,20 @@
       "gatewayEnabled": "मैसेजिंग सक्षम",
       "gatewayEnabledHelp": "अपना सेटअप खोए बिना सभी कनेक्टर एक साथ बंद करें।",
       "respondToInbound": "आने वाले संदेशों का जवाब दें",
-      "respondToInboundHelp": "बंद: आने वाले चैट केवल रिकॉर्ड होते हैं ताकि एजेंट आपके कहने पर पढ़ सके — कुछ नहीं चलता, कोई जवाब नहीं जाता। चालू: स्वीकृत भेजने वाले एजेंट को दूर से चला सकते हैं।",
+      "respondToInboundHelp": "बंद: आने वाले चैट केवल रिकॉर्ड होते हैं ताकि एजेंट आपके कहने पर पढ़ सके; कुछ नहीं चलता, कोई जवाब नहीं जाता। चालू: स्वीकृत भेजने वाले एजेंट को दूर से चला सकते हैं।",
       "workspace": "वर्कस्पेस",
       "workspaceActive": "सक्रिय वर्कस्पेस का अनुसरण करें",
       "workspaceHelp": "आने वाले संदेश किस प्रोजेक्ट पर चलेंगे।",
       "deliverToBot": "Deliver messages to a bot",
       "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot — one session per sender"
+      "deliverToBotNone": "No bot (one session per sender)"
     },
     "setup": {
-      "discord": "Connect पर क्लिक करें, एक Discord लॉगिन विंडो खुलेगी। QR को Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें। फिर AbacusAI Bot आपके अपने Discord खाते के रूप में संदेश भेजता है — कोई बॉट नहीं, कोई टोकन नहीं।",
-      "telegram": "Connect पर क्लिक करें और एक Telegram लॉगिन विंडो खुलेगी। वहीं हमेशा की तरह लॉगिन करें — फ़ोन से QR स्कैन करें (Settings, Devices, Link Desktop Device), या अपना फ़ोन नंबर या passkey इस्तेमाल करें। फिर AbacusAI Bot आपके अपने Telegram खाते के रूप में संदेश भेजता है। कोई API कुंजी नहीं, कोई बॉट नहीं।",
+      "discord": "Connect पर क्लिक करें, एक Discord लॉगिन विंडो खुलेगी। QR को Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें। फिर AbacusAI Bot आपके अपने Discord खाते के रूप में संदेश भेजता है (कोई बॉट नहीं, कोई टोकन नहीं)।",
+      "telegram": "Connect पर क्लिक करें और एक Telegram लॉगिन विंडो खुलेगी। वहीं हमेशा की तरह लॉगिन करें: फ़ोन से QR स्कैन करें (Settings, Devices, Link Desktop Device), या अपना फ़ोन नंबर या passkey इस्तेमाल करें। फिर AbacusAI Bot आपके अपने Telegram खाते के रूप में संदेश भेजता है। कोई API कुंजी नहीं, कोई बॉट नहीं।",
       "whatsapp": "इसे सक्षम करें, फिर अपने फ़ोन के WhatsApp से नीचे दिया QR कोड स्कैन करें (सेटिंग्स, लिंक्ड डिवाइसेज़, डिवाइस लिंक करें)। इससे AbacusAI Bot उस खाते पर एक डिवाइस के रूप में जुड़ जाता है, इसलिए अपने निजी नंबर के बजाय एक अलग नंबर का उपयोग करें।"
     },
-    "stepSignIn": "First — sign in to {{app}}",
+    "stepSignIn": "First, sign in to {{app}}",
     "states": {
       "connected": "कनेक्टेड",
       "connecting": "कनेक्ट हो रहा है",
@@ -1153,18 +1153,18 @@
       "rate_limited": "Rate limited",
       "syncing": "सिंक हो रहा है"
     },
-    "telegramConnected": "जुड़ा — एजेंट आपके Telegram खाते के रूप में संदेश भेजता है।",
+    "telegramConnected": "जुड़ा। एजेंट आपके Telegram खाते के रूप में संदेश भेजता है।",
     "telegramOpenLogin": "Telegram लॉगिन खोलें",
-    "telegramScan": "एक Telegram लॉगिन विंडो खुली — इसके QR को अपने फ़ोन से स्कैन करें (Settings, Devices, Add Device), या वहीं फ़ोन से लॉगिन करें।",
+    "telegramScan": "एक Telegram लॉगिन विंडो खुली। इसके QR को अपने फ़ोन से स्कैन करें (Settings, Devices, Add Device), या वहीं फ़ोन से लॉगिन करें।",
     "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
     "unsavedChanges": "बिना सहेजे बदलाव",
-    "whatsappConnected": "जुड़ा — एजेंट आपके WhatsApp खाते के रूप में संदेश भेजता है।",
+    "whatsappConnected": "जुड़ा। एजेंट आपके WhatsApp खाते के रूप में संदेश भेजता है।",
     "whatsappOpenLogin": "WhatsApp लॉगिन खोलें",
-    "whatsappScan": "एक WhatsApp लॉगिन विंडो खुली है — अपने फ़ोन के WhatsApp से इसका QR स्कैन करें: सेटिंग्स, लिंक्ड डिवाइसेज़, डिवाइस लिंक करें।",
-    "whatsappSyncing": "लिंक हो गया — WhatsApp आपकी चैट इस डिवाइस पर सिंक कर रहा है। पहली बार इसमें कुछ मिनट लगते हैं। पूरा होने तक फ़ोन पर WhatsApp और यह ऐप खुला रखें।",
+    "whatsappScan": "एक WhatsApp लॉगिन विंडो खुली है। अपने फ़ोन के WhatsApp से इसका QR स्कैन करें: सेटिंग्स, लिंक्ड डिवाइसेज़, डिवाइस लिंक करें।",
+    "whatsappSyncing": "लिंक हो गया। WhatsApp आपकी चैट इस डिवाइस पर सिंक कर रहा है। पहली बार इसमें कुछ मिनट लगते हैं। पूरा होने तक फ़ोन पर WhatsApp और यह ऐप खुला रखें।",
     "sharedLink": {
       "title": "Abacus AI bot",
-      "stepLink": "Then — link the Abacus AI bot",
+      "stepLink": "Then, link the Abacus AI bot",
       "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
       "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
       "link": "Link Abacus AI bot",
@@ -1202,7 +1202,7 @@
   },
   "onboarding": {
     "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "साइन इन — या खाता बनाने — के लिए आपका ब्राउज़र खुलता है। ऐप को अपनी अलग API कुंजी मिलती है; आपका पासवर्ड कभी ऐप तक नहीं पहुँचता।",
+    "connectBody": "साइन इन या खाता बनाने के लिए आपका ब्राउज़र खुलता है। ऐप को अपनी अलग API कुंजी मिलती है; आपका पासवर्ड कभी ऐप तक नहीं पहुँचता।",
     "connectCta": "साइन अप / साइन इन",
     "connectTitle": "Abacus.AI जोड़ें",
     "connectorsContinueCta": "Continue",
@@ -1213,7 +1213,7 @@
     "setupConnectorsTitle": "Connectors",
     "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
+    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
     "setupSaveCta": "Save",
     "setupSignInCta": "Sign in / Create Free Account",
@@ -1232,7 +1232,7 @@
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
+    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
     "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
@@ -1246,7 +1246,7 @@
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
     "connectorsMore": "{{count}}+ more in Settings",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved — please try signing in again.",
+    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1410,7 +1410,7 @@
       "failed": "Failed",
       "running": "Running"
     },
-    "runReadOnly": "रूटीन रन — यह सेशन रूटीन की रिपोर्ट है। आप इसे पढ़ सकते हैं पर जवाब नहीं दे सकते; अगला रन नए सिरे से शुरू होगा। इसका काम बदलने के लिए रूटीन संपादित करें।",
+    "runReadOnly": "रूटीन रन: यह सेशन रूटीन की रिपोर्ट है। आप इसे पढ़ सकते हैं पर जवाब नहीं दे सकते; अगला रन नए सिरे से शुरू होगा। इसका काम बदलने के लिए रूटीन संपादित करें।",
     "runsEmpty": "No runs yet.",
     "runsIn": "runs in {{folder}}",
     "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
@@ -1466,7 +1466,7 @@
     "webhookCopied": "वेबहुक URL कॉपी हुआ।",
     "webhookHint": "HTTP POST से यह रूटीन फ़ायर करें।",
     "webhookLabel": "वेबहुक",
-    "webhookPublicPending": "Setting up the public link — this local one works meanwhile…",
+    "webhookPublicPending": "Setting up the public link. This local one works meanwhile…",
     "workspaceAddError": "That folder could not be added.",
     "workspaceChoose": "Choose a folder…",
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
@@ -1540,7 +1540,7 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash) — the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
       "label": "BusyBox sh"
     },
     "cmd": {
@@ -1579,7 +1579,7 @@
     "steps": {
       "artifacts": {
         "title": "आर्टिफ़ैक्ट",
-        "body": "सेशन में बनी फ़ाइलें — दस्तावेज़, इमेज, रिपोर्ट — बातचीत में बिखरी रहने के बजाय एक जगह इकट्ठी।"
+        "body": "सेशन में बनी फ़ाइलें (दस्तावेज़, इमेज, रिपोर्ट) बातचीत में बिखरी रहने के बजाय एक जगह इकट्ठी।"
       },
       "bots": {
         "body": "अपने निर्देशों, शेड्यूल और चैट वाले स्थायी एजेंट। जो काम आप बार-बार सौंपते हैं, उसके लिए एक बनाएँ।",
@@ -1589,11 +1589,11 @@
       },
       "capabilities": {
         "title": "क्षमताएँ",
-        "body": "एजेंट जिन तक पहुँच सकता है वह सब — कनेक्टर, स्किल, टूल और MCP सर्वर। यहाँ जो चालू करेंगे, अगला सेशन उसका उपयोग करेगा।"
+        "body": "एजेंट जिन तक पहुँच सकता है वह सब: कनेक्टर, स्किल, टूल और MCP सर्वर। यहाँ जो चालू करेंगे, अगला सेशन उसका उपयोग करेगा।"
       },
       "changes": {
         "title": "बदलाव",
-        "body": "एजेंट का हर एडिट, एक diff की तरह — कहीं जाने से पहले आप पढ़ सकते हैं। बग़ल के टैब में आपकी फ़ाइलें और चल रहे सब-एजेंट हैं।"
+        "body": "एजेंट का हर एडिट, एक diff की तरह, कहीं जाने से पहले आप पढ़ सकते हैं। बग़ल के टैब में आपकी फ़ाइलें और चल रहे सब-एजेंट हैं।"
       },
       "connectors": {
         "title": "कनेक्टर",
@@ -1601,7 +1601,7 @@
       },
       "makeBot": {
         "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect — with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
       },
       "memory": {
         "title": "मेमोरी",
@@ -1617,7 +1617,7 @@
       },
       "preview": {
         "title": "प्रीव्यू",
-        "body": "चैट के बग़ल में ब्राउज़र और फ़ाइल व्यूअर। एजेंट ने अभी जो बनाया, वह यहीं खुलता है — ऐप छोड़े बिना देख लीजिए।"
+        "body": "चैट के बग़ल में ब्राउज़र और फ़ाइल व्यूअर। एजेंट ने अभी जो बनाया, वह यहीं खुलता है। ऐप छोड़े बिना देख लीजिए।"
       },
       "sidebar": {
         "title": "आपके वर्कस्पेस",
@@ -1640,7 +1640,7 @@
   },
   "updateBanner": {
     "dismiss": "Dismiss",
-    "stalled": "स्वतः पुनः आरंभ नहीं हो सका — अपडेट पूरा करने के लिए ऐप बंद करके फिर से खोलें।",
+    "stalled": "स्वतः पुनः आरंभ नहीं हो सका। अपडेट पूरा करने के लिए ऐप बंद करके फिर से खोलें।",
     "subtitle": "Relaunch to get the latest improvements and fixes.",
     "title": "A new version is ready",
     "whatsChanged": "See what changed"
@@ -1655,7 +1655,7 @@
   },
   "updatePill": {
     "downloading": "अपडेट डाउनलोड हो रहा है… {{percent}}%",
-    "failed": "Update download failed — retry",
+    "failed": "Update download failed. Retry",
     "installing": "Restarting…",
     "relaunch": "Relaunch to update",
     "retrying": "Retrying…",
@@ -1666,7 +1666,7 @@
     "dailyTitle": "दैनिक गतिविधि",
     "empty": "अभी तक कोई उपयोग दर्ज नहीं है। एक बातचीत चलाएँ और वापस आएँ।",
     "errorCount": "{{count}} त्रुटि",
-    "errorsHint": "प्रोवाइडर त्रुटियाँ — अधिकतर फ़्री-टियर रेट लिमिट जिनसे RouteLLM - Open आगे बढ़ गया।",
+    "errorsHint": "प्रोवाइडर त्रुटियाँ: अधिकतर फ़्री-टियर रेट लिमिट जिनसे RouteLLM - Open आगे बढ़ गया।",
     "loading": "सेशन लॉग पढ़े जा रहे हैं…",
     "notBilled": "शुल्क नहीं",
     "openrouterCard": "OpenRouter क्रेडिट",
@@ -1679,7 +1679,7 @@
     "readFailed": "सेशन लॉग नहीं पढ़े जा सके।",
     "refresh": "रीफ़्रेश",
     "requestCount": "{{count}} अनुरोध",
-    "subtitle": "इस मशीन ने प्रति मॉडल क्या खर्च किया — आपके लोकल सेशन लॉग से पढ़ा गया। कुछ भी आपके कंप्यूटर से बाहर नहीं जाता।",
+    "subtitle": "इस मशीन ने प्रति मॉडल क्या खर्च किया। आपके लोकल सेशन लॉग से पढ़ा गया। कुछ भी आपके कंप्यूटर से बाहर नहीं जाता।",
     "title": "उपयोग",
     "today": "आज",
     "unpricedHint": "कुछ मॉडलों की कीमत प्रकाशित नहीं है; उनके टोकन गिने जाते हैं, लागत नहीं।",
@@ -1765,7 +1765,7 @@
     "composerNeedsModel": "शुरू करने के लिए एक मॉडल कनेक्ट करें",
     "composerNeedsWorkspace": "शुरू करने के लिए एक वर्कस्पेस फ़ोल्डर चुनें",
     "composerPlaceholder": "अपने कोडबेस के बारे में कुछ भी पूछें…",
-    "composerPlaceholderBusy": "Send now to steer the agent — it lands at its next step",
+    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
     "composerTasks": {
       "dismiss": "Dismiss tasks for this turn",
       "now": "now",
@@ -1837,10 +1837,10 @@
       "configureBeforeSending": "Connect a model before sending a message.",
       "configureProviders": "Configure model providers",
       "connectGoogleAi": "Google AI Studio कनेक्ट करें",
-      "connectGoogleAiNote": "मुफ़्त Gemini कोटा — API कुंजी लाकर यहाँ चिपकाएँ",
+      "connectGoogleAiNote": "मुफ़्त Gemini कोटा: API कुंजी लाकर यहाँ चिपकाएँ",
       "connectModels": "Connect models",
       "connectOpenRouter": "OpenRouter कनेक्ट करें",
-      "connectOpenRouterNote": "एक ब्राउज़र साइन-इन से मुफ़्त मॉडल — RouteLLM - Open और इस सूची में जुड़ते हैं",
+      "connectOpenRouterNote": "एक ब्राउज़र साइन-इन से मुफ़्त मॉडल: RouteLLM - Open और इस सूची में जुड़ते हैं",
       "favorites": "Favorites",
       "noFavorites": "Favorite models appear here.",
       "noResults": "No models found.",
@@ -1904,10 +1904,10 @@
       "reviews": "{{approved}} स्वीकृत · {{changes}} बदलाव अनुरोधित · {{requested}} लंबित"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going — no card needed",
+      "connectNote": "Connect a free source to keep going. No card needed",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Or run a model on this computer — free, no limits",
+      "localNote": "Or run a model on this computer for free, with no limits",
       "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
     },
@@ -1957,7 +1957,7 @@
       "split": "विभाजित",
       "stop": "लोडिंग रोकें",
       "toggleTooltip": "पूर्वावलोकन टॉगल करें",
-      "truncatedFile": "This file is too large to open in full — only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
       "tryAgain": "Try again",
       "unified": "एकीकृत",
       "zoom": "Zoom",
@@ -2025,7 +2025,7 @@
       "modelCta": "मॉडल चुनें"
     },
     "sendMessage": "भेजें (Enter)",
-    "sendUndeliverable": "Couldn't reach the agent for this chat — your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
     "sessionOptions": "सत्र विकल्प",
     "sessions": "सत्र",
     "showRightPanel": "पैनल दिखाएं",
@@ -2121,7 +2121,7 @@
       "description": "{{path}} अब मौजूद नहीं है। इस वर्कस्पेस के लिए कोई दूसरा फ़ोल्डर चुनें, या इसे हटा दें।",
       "relocate": "फ़ोल्डर चुनें",
       "relocated": "वर्कस्पेस फ़ोल्डर अपडेट किया गया",
-      "sendBlocked": "भेजा नहीं जा सकता — {{path}} अब मौजूद नहीं है।",
+      "sendBlocked": "भेजा नहीं जा सकता: {{path}} अब मौजूद नहीं है।",
       "title": "फ़ोल्डर नहीं मिला"
     },
     "workspaceOptions": "कार्यस्थान विकल्प",

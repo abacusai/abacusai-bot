@@ -36,7 +36,7 @@ export const AbacusBotMascot = ({
       data-state={state}
       className={`shrink-0 ${className}`}
     >
-      {/* The columns, receded — scenery for the face rather than the subject. */}
+      {/* The columns, receded: scenery for the face rather than the subject. */}
       <g fill="currentColor" opacity="0.16">
         <rect x="70" y="88" width="36" height="96" rx="18" />
         <rect x="70" y="272" width="36" height="60" rx="18" />

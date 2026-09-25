@@ -22,8 +22,8 @@ type Phase =
   | { kind: "failed" };
 
 /**
- * Front and centre while the persona is being learnt from Gmail — a full
- * screen with the progress — and then the persona itself: keep it, edit it
+ * Front and centre while the persona is being learnt from Gmail (a full
+ * screen with the progress), and then the persona itself: keep it, edit it
  * with the rest of memory, or forget it on the spot.
  */
 export const PersonaLearnedDialog = (): JSX.Element | null => {

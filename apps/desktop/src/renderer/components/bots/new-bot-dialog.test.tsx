@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 /**
- * The new-bot dialog: name, persona, instructions — and, under more
+ * The new-bot dialog: name, persona, instructions and, under more
  * options, a description and scheduled check-ins that become a routine on
  * the bot.
  */

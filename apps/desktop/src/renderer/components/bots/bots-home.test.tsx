@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
  * The first page of Bots asks for a name, and nothing else.
  *
  * It used to open on a dress-up game: ten colour swatches and eight
- * silhouettes to tap through before typing anything — the same game every
+ * silhouettes to tap through before typing anything, the same game every
  * other bot product on the market is already playing. The look is still
  * there; it is derived from the name once there is one.
  *

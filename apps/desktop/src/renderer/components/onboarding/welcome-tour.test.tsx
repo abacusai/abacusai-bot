@@ -87,7 +87,7 @@ describe("TourTooltip", () => {
   });
 
   it("opens on the pair, as two rows rather than a paragraph", () => {
-    // Bots and sessions are one answer to "what is this list" — the stop says
+    // Bots and sessions are one answer to "what is this list", so the stop says
     // both, and a stop that says both should not read as one run-on sentence.
     render(
       (

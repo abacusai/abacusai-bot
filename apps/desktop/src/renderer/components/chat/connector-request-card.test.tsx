@@ -2,7 +2,7 @@
  * The Connect button the agent is waiting on.
  *
  * Its turn is suspended inside the tool call while this is on screen, so every
- * path out of the card has to answer — connecting, declining, or a hop that
+ * path out of the card has to answer: connecting, declining, or a hop that
  * fails. A card that could be left unanswered would hang the agent. And it
  * connects any registry connector the same way the Connectors page does: a
  * platform hop, a token dialog for GitHub, a pairing dialog for a chat app.
@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type Listener = (event: Record<string, unknown>) => void;
 
 const listeners: Listener[] = [];
-/** What was called, in the order it was called — the point of one test below. */
+/** What was called, in the order it was called: the point of one test below. */
 const calls: string[] = [];
 const connectConnector = vi.fn(async (_id: string) => {
   calls.push("connect");
@@ -211,7 +211,7 @@ describe("the connector request card", () => {
 
   /**
    * The session already running is holding the tool list it started with, so
-   * the connector's tools are not in it until it reloads — and the agent is
+   * the connector's tools are not in it until it reloads, and the agent is
    * suspended inside the tool call, with a tool call as its very next act. A
    * refresh started after the answer is a race it loses, which is how a fresh
    * connect was followed by "Tool ... not found" and a guessed tool name.
@@ -323,7 +323,7 @@ describe("the connector request card", () => {
 
   it("keeps Not now alive mid-hop, and it cancels the browser wait", async () => {
     // The field case: Connect clicked, mind changed in the browser, back to
-    // a card that was all spinner — no way out until the timeout. Declining
+    // a card that was all spinner with no way out until the timeout. Declining
     // mid-hop cancels the wait; the cancelled resolution answers the agent.
     let release: (value: { ok: false; cancelled: true }) => void = () => {};
     connectConnector.mockReturnValue(
@@ -341,7 +341,7 @@ describe("the connector request card", () => {
     expect(decline.hasAttribute("disabled")).toBe(false);
     fireEvent.click(decline);
     await waitFor(() => expect(cancelConnectorConnect).toHaveBeenCalled());
-    // Only the cancel — the answer comes from the hop resolving cancelled,
+    // Only the cancel. The answer comes from the hop resolving cancelled,
     // never from the decline click too (that would answer the agent twice).
     expect(respondConnector).not.toHaveBeenCalled();
 

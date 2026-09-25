@@ -2,7 +2,7 @@
  * Pinning, which the two sidebar sections do separately.
  *
  * Bots and Sessions are two lists with two Pinned groups, so they keep two
- * lists of ids — pinning in one must never move anything in the other.
+ * lists of ids. Pinning in one must never move anything in the other.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 

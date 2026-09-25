@@ -3,7 +3,7 @@
  *
  * The store only ever sees a cron string, so the one thing worth pinning is
  * that each control the user touches lands in the expression that gets
- * saved — and that opening an existing routine puts those controls back
+ * saved, and that opening an existing routine puts those controls back
  * where they were.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

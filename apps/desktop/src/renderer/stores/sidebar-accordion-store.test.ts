@@ -1,5 +1,5 @@
 /**
- * One section open at a time — the invariant the whole sidebar layout rests
+ * One section open at a time: the invariant the whole sidebar layout rests
  * on: the open section takes the height, so two open at once would mean
  * neither has it.
  */

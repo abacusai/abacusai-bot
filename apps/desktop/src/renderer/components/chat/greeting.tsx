@@ -102,8 +102,7 @@ const getRandomGreetingKey = (): string => {
 export const Greeting = () => {
   const { t } = useTranslation();
   const greetingKey = useMemo(() => getRandomGreetingKey(), []);
-  // The one place the optional sign-in visibly pays for itself. Absent when
-  // nobody has signed in, which is a supported state — the greeting simply
+  // Absent when nobody has signed in (a supported state); the greeting then
   // reads as it always did.
   const account = useAccountStore((state) => state.account);
   const { data: abacusAccount } = useAbacusAccountQuery();

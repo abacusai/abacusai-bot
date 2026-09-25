@@ -54,14 +54,17 @@ import type { BotTemplate } from "./bot-templates";
 
 /** The standing instruction a bot with no instructions starts with. */
 export const NAME_ONLY_MISSION = [
-  "Your mission is not set yet — take your best cue from your name. In your",
+  "Your mission is not set yet. Take your best cue from your name. In your",
   "first message, say what you guess your lane is, offer two or three concrete",
   "jobs you could take on, and ask the user what they actually want you",
   "handling. Once they tell you, treat that as your standing mission from then",
   "on.",
 ].join(" ");
 
-/** What a check-in routine asks the bot to do when it fires. */
+/**
+ * What a check-in routine asks the bot to do when it fires. Stored routines
+ * are recognised by this exact text (isCheckInRoutine), so do not reword it.
+ */
 export const CHECK_IN_PROMPT = [
   "This is your scheduled check-in. Look at what has changed since you last",
   "spoke to the user — anything your mission tracks, anything they asked you",
@@ -91,7 +94,7 @@ const isCheckInRoutine = (
   botId: string
 ): boolean => routine.botId === botId && routine.prompt === CHECK_IN_PROMPT;
 
-/** The schedule in words, for the bot's own ears — English, like its prompt. */
+/** The schedule in words, for the bot's own ears (English, like its prompt). */
 const describeCheckIn = (
   preset: CheckInSchedule | "off",
   time: string,
