@@ -8,7 +8,7 @@ describe("parseChangelog", () => {
       [
         "# Changelog",
         "",
-        "## 1.0.60 — 2026-09-07",
+        "## 1.0.60 (2026-09-07)",
         "",
         "- One thing ([#1](https://example.com/pull/1))",
         "- Another",
