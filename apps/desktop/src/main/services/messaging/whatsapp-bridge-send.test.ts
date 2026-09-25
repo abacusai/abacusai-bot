@@ -2,7 +2,7 @@
  * A send with the bridge attached never touches the page driver, and a send
  * WhatsApp queued but did not confirm is not sent twice on retry.
  *
- * The report behind this: "the message was typed but didn't go through" —
+ * The report behind this: "the message was typed but didn't go through",
  * said about a message that was already on the user's phone. The page driver
  * had no way to know; the bridge does.
  */
@@ -112,7 +112,7 @@ describe("sending through the bridge", () => {
     });
 
     // First attempt: WhatsApp queued it, the server never answered. The
-    // tool must hear a failure — not "sent".
+    // tool must hear a failure, not "sent".
     await expect(internals.sendTextNow("Meghna", "hi")).rejects.toThrow(
       /NOT resent/
     );
@@ -123,7 +123,7 @@ describe("sending through the bridge", () => {
     ack = 1;
     await internals.sendTextNow("Meghna", "hi");
     expect(calls).toBe(1);
-    expect(logs.join("\n")).toMatch(/since been accepted — not resending/);
+    expect(logs.join("\n")).toMatch(/since been accepted, not resending/);
     expect(domSends).toEqual([]);
   });
 
@@ -270,8 +270,8 @@ describe("who an inbound message is from", () => {
 
   it("keeps a message the user typed to themselves, on the own chat's lid id", async () => {
     // WhatsApp files the "Message yourself" chat under a lid, not the phone
-    // jid the account is signed in as. The message is fromMe — the user
-    // typed it on the phone — and used to be dropped as our own outgoing.
+    // jid the account is signed in as. The message is fromMe (the user
+    // typed it on the phone) and used to be dropped as our own outgoing.
     const seen = await inboundWith(
       [{ jid: "123456789012345@lid", name: "You", isGroup: false, isMe: true }],
       {

@@ -14,7 +14,7 @@ describe("presentedDeliverables", () => {
     const items = presentedDeliverables(
       {
         items: [
-          { path: REPORT, label: "Morning Brief — 15 Sep 2026" },
+          { path: REPORT, label: "Morning Brief: 15 Sep 2026" },
           { path: "http://localhost:5173", label: "The app" },
         ],
       },
@@ -22,7 +22,7 @@ describe("presentedDeliverables", () => {
     );
 
     expect(items).toEqual([
-      { path: REPORT, label: "Morning Brief — 15 Sep 2026", isUrl: false },
+      { path: REPORT, label: "Morning Brief: 15 Sep 2026", isUrl: false },
       { path: "http://localhost:5173", label: "The app", isUrl: true },
     ]);
   });

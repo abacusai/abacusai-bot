@@ -16,8 +16,8 @@ export interface UpdateStatus {
   error: string | null;
   progress: UpdateProgress | null;
   updateInfo: { version: string } | null;
-  /** Install was requested but the app never quit — the update can't be applied. */
+  /** Install was requested but the app never quit, so the update can't be applied. */
   installStalled: boolean;
-  /** The running version is below the feed's criticalBelow — a P0 escalation. */
+  /** The running version is below the feed's criticalBelow: a P0 escalation. */
   criticalUpdate: boolean;
 }

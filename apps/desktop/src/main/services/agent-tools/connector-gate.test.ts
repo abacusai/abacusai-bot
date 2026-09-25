@@ -49,7 +49,7 @@ const gateWith = (
 describe("answering a connect ask", () => {
   /**
    * Both halves of the report this fixes. The model came back from a connect
-   * knowing neither which tools it had just been given — it invented one — nor
+   * knowing neither which tools it had just been given (it invented one) nor
    * whose account it had attached, so it asked the user for the Gmail address
    * on the Gmail they had connected a second earlier.
    */

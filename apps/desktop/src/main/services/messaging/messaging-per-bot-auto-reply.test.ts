@@ -3,8 +3,8 @@
  *
  * The report: the user deleted an auto-reply for Ma from Routines, set up a
  * new one in a new bot, and Ma's next message still landed in the old bot's
- * conversation. Delivery was one global pointer — whichever bot turned
- * auto-reply on first — and the new bot's setup approved Ma without ever
+ * conversation. Delivery was one global pointer (whichever bot turned
+ * auto-reply on first), and the new bot's setup approved Ma without ever
  * becoming her bot. The row now names its bot, routing prefers it, and
  * deleting the row deletes the conversations with her too.
  */

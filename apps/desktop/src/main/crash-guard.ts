@@ -15,8 +15,8 @@ export function installCrashGuard(): void {
   installed = true;
 
   // A parent terminal that has gone away closes stdout/stderr, and a write
-  // to a closed pipe is an EPIPE error on the stream — with no listener,
-  // an uncaught exception. The handler below logs to the same stream, so
+  // to a closed pipe is an EPIPE error on the stream, which with no
+  // listener becomes an uncaught exception. The handler below logs to the same stream, so
   // one dead pipe became an exception per log line, forever. A listener
   // makes the failed write a no-op; the file log still gets every line.
   for (const stream of [process.stdout, process.stderr]) {

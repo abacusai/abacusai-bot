@@ -2,7 +2,7 @@
  * The MCP config files hold the only credential their servers have.
  *
  * The built-in browser, device and agent-tools servers listen on loopback with
- * no authentication of their own — `localMcpServerToken` exists because
+ * no authentication of their own. `localMcpServerToken` exists because
  * `tools/call` was otherwise reachable by anything on the machine. The token it
  * mints is written into the runtime config, so that file is the credential. A
  * user config additionally holds whatever a connector needs: a personal access

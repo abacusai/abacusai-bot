@@ -5,7 +5,7 @@ import type { AddressInfo } from "net";
 import { shell } from "electron";
 
 /**
- * "Connect OpenRouter" — OAuth PKCE instead of copy-pasting a key. The flow
+ * "Connect OpenRouter": OAuth PKCE instead of copy-pasting a key. The flow
  * needs no registered client id and accepts a loopback callback on any port,
  * so the app opens the browser, listens on 127.0.0.1, and exchanges the code
  * for a key. That key is the same kind as a pasted one and lands in

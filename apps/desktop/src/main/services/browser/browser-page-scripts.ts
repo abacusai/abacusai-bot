@@ -114,7 +114,7 @@ export const checkScript = (
   const el = document.querySelector(${JSON.stringify(selector)});
   if (!el) return 'not_found';
   if (el.checked !== ${JSON.stringify(want)}) el.click();
-  // Report the state the element actually ended in — a click a
+  // Report the state the element actually ended in. A click a
   // framework intercepted or reverted is not a success.
   return el.checked === ${JSON.stringify(want)} ? 'ok' : 'unchanged';
 })()`;

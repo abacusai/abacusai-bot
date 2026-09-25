@@ -1,7 +1,7 @@
 /**
  * Local models end to end: what this machine can run, downloading one,
  * serving the installed ones through the loopback proxy, and telling the
- * agent about them as a custom provider — `local`, in config.json, the same
+ * agent about them as a custom provider: `local`, in config.json, the same
  * entry a user would write by hand for their own llama.cpp.
  */
 import os from "node:os";
@@ -184,7 +184,7 @@ export class LocalModelService {
         baseUrl: this.proxy.baseUrl,
         // The server on this machine authenticates nobody, but a provider
         // carrying no key reads as unconfigured, and an unconfigured model is
-        // passed over for a fallback — the picked model would never answer.
+        // passed over for a fallback. The picked model would never answer.
         apiKey: "local",
         models: installed.map((spec) => ({
           id: spec.id,

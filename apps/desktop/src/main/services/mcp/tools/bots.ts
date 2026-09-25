@@ -12,7 +12,7 @@ export const BOTS_TOOLS: ToolDefinition[] = [
       "Your own recent activity, across YOUR other conversations: your main",
       "chat with the user, your auto-reply chats, and your routine runs.",
       'Call it when the user asks what you have done, or when "so far"',
-      "plainly reaches beyond this conversation — this chat's context does",
+      "plainly reaches beyond this conversation. This chat's context does",
       "not follow you between conversations, but your work does.",
     ].join("\n"),
     inputSchema: { type: "object", properties: {} },

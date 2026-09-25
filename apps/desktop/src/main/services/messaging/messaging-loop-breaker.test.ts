@@ -2,7 +2,7 @@
  * The backstop under the echo guards.
  *
  * A group's chat-list preview names its speaker, so the bot read its own
- * replies back as incoming messages and answered them — then answered those.
+ * replies back as incoming messages and answered them, then answered those.
  * Three rounds of commentary meant for the user went to a real group before
  * anyone stopped it.
  *
@@ -78,7 +78,7 @@ describe("a chat producing turns faster than a person could", () => {
   it("trips once the pace stops being human", () => {
     const { inbound } = gateway();
 
-    // A loop has no ceiling — it runs as fast as the agent answers — so it
+    // A loop has no ceiling: it runs as fast as the agent answers, so it
     // passes any threshold within a minute or two.
     for (let i = 0; i < 20; i++) inbound("Girlies");
 

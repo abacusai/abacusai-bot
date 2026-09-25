@@ -101,7 +101,7 @@ describe("isValidStreamKeyRequest", () => {
 
 describe("a keyboard press from the mirror", () => {
   /**
-   * The payload is a valid one — every field is a string — so the validators
+   * The payload is a valid one (every field is a string), so the validators
    * pass it through, and the key tables are what stands between a property
    * name every object has and a value the input path treats as a keycode.
    */

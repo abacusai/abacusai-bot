@@ -91,7 +91,7 @@ const TOOLS_SCHEMA: Record<
       properties: {
         platform: {
           ...PLATFORM_PROP,
-          description: `${PLATFORM_PROP.description}. Optional — auto-detected from the project when unambiguous.`,
+          description: `${PLATFORM_PROP.description}. Optional; auto-detected from the project when unambiguous.`,
         },
         scheme: {
           type: "string",
@@ -108,11 +108,11 @@ const TOOLS_SCHEMA: Record<
   device_app: {
     description: [
       "Manage an app on a device. Actions:",
-      '  "install"   — install an artifact (params: path to .app dir / .apk)',
-      '  "launch"    — launch by app id (params: appId = iOS bundle id / Android package)',
-      '  "terminate" — force-stop the app (params: appId)',
-      '  "uninstall" — remove the app (params: appId)',
-      '  "open_url"  — open a URL / deep link on the device (params: url)',
+      '  "install":   install an artifact (params: path to .app dir / .apk)',
+      '  "launch":    launch by app id (params: appId = iOS bundle id / Android package)',
+      '  "terminate": force-stop the app (params: appId)',
+      '  "uninstall": remove the app (params: appId)',
+      '  "open_url":  open a URL / deep link on the device (params: url)',
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -141,7 +141,7 @@ const TOOLS_SCHEMA: Record<
   },
   device_screenshot: {
     description:
-      "Capture a screenshot of a booted device. Saves a PNG to disk and returns the file path — Read the file to see the screen. Use after every meaningful UI change.",
+      "Capture a screenshot of a booted device. Saves a PNG to disk and returns the file path. Read the file to see the screen. Use after every meaningful UI change.",
     inputSchema: {
       type: "object",
       properties: { platform: PLATFORM_PROP, device: DEVICE_PROP },
@@ -150,7 +150,7 @@ const TOOLS_SCHEMA: Record<
   },
   device_snapshot: {
     description: [
-      "Capture the current UI element tree (Android: uiautomator; iOS: Maestro — requires the Maestro binary on the host).",
+      "Capture the current UI element tree (Android: uiautomator; iOS: Maestro, which needs the Maestro binary on the host).",
       "Returns interactive elements with @eN refs usable in device_interact (refs valid until the next snapshot or screen change).",
       "If the tree is empty or unavailable, fall back to device_screenshot.",
     ].join("\n"),
@@ -165,12 +165,12 @@ const TOOLS_SCHEMA: Record<
       "Interact with the device screen. Prefer @eN refs from the latest device_snapshot; raw x/y coordinates work as a fallback (e.g. from a screenshot).",
       "Android runs natively via adb; iOS requires the Maestro binary on the host (the tool explains how to install it if missing).",
       "Actions:",
-      "  tap        — tap an element or point (params: ref OR x+y)",
-      "  long_press — press and hold (params: ref OR x+y)",
-      "  swipe / scroll — scroll the screen (params: direction up/down/left/right, amount px)",
-      "  type       — type text into the focused input (tap the field first)",
-      "  press_key  — press a key (params: key = enter/back/home/delete; Android also tab/menu or raw KEYCODE_*)",
-      "  wait       — wait (params: amount ms, default 2000)",
+      "  tap:         tap an element or point (params: ref OR x+y)",
+      "  long_press:  press and hold (params: ref OR x+y)",
+      "  swipe / scroll: scroll the screen (params: direction up/down/left/right, amount px)",
+      "  type:        type text into the focused input (tap the field first)",
+      "  press_key:   press a key (params: key = enter/back/home/delete; Android also tab/menu or raw KEYCODE_*)",
+      "  wait:        wait (params: amount ms, default 2000)",
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -215,7 +215,7 @@ const TOOLS_SCHEMA: Record<
   device_logs: {
     description: [
       "Read recent device logs (iOS: unified log via `log show --last 2m`; Android: logcat).",
-      "Always pass a filter (regex) and/or appId to avoid noise — raw device logs are extremely verbose.",
+      "Always pass a filter (regex) and/or appId to avoid noise; raw device logs are extremely verbose.",
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -665,7 +665,7 @@ export class McpDeviceServer {
       const platform = parseDevicePlatform(args.platform);
       if (platform == null && args.platform != null) {
         return this.err(
-          `Unknown platform ${JSON.stringify(args.platform)} — use "ios" or "android".`
+          `Unknown platform ${JSON.stringify(args.platform)}. Use "ios" or "android".`
         );
       }
       // device_build auto-detects; snapshot/interact default to Android.
@@ -683,7 +683,7 @@ export class McpDeviceServer {
             );
           const lines = devices.map(
             (d) =>
-              `[${d.platform}] ${d.name} — ${d.state}${d.os != null ? ` (${d.os})` : ""}${d.physical === true ? " (physical)" : ""} id=${d.id}`
+              `[${d.platform}] ${d.name}: ${d.state}${d.os != null ? ` (${d.os})` : ""}${d.physical === true ? " (physical)" : ""} id=${d.id}`
           );
           return this.ok(lines.join("\n"));
         }
@@ -707,7 +707,7 @@ export class McpDeviceServer {
               this.deviceService.detectProjectPlatforms(workspacePath);
             if (project.ios && project.android)
               return this.err(
-                "Project targets both iOS and Android — pass platform explicitly."
+                "Project targets both iOS and Android. Pass platform explicitly."
               );
             if (project.ios) buildPlatform = "ios";
             else if (project.android) buildPlatform = "android";

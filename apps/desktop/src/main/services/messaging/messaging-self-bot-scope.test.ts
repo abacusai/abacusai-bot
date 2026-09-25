@@ -159,7 +159,7 @@ describe("who answers whom", () => {
 
   it("never lets the Discord DM fall through to Telegram's bot", async () => {
     // Before the Discord lane has its bot, the DM must not borrow the
-    // Telegram one — nor the general bot, which is for other people. It
+    // Telegram one, nor the general bot, which is for other people. It
     // gets a plain gateway session.
     settings.selfBotId = "self-bot";
     settings.selfBotIds = {};

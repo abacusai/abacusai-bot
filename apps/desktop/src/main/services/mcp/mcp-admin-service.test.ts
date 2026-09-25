@@ -104,7 +104,7 @@ describe("ensureMcpServer", () => {
 describe("runtime rewrites reach running sessions", () => {
   // The regression this pins: each spawn's ABACUSAI_BOT_MCP_CONFIG points at a
   // per-session runtime file, and a change that only rewrote the session-less
-  // file left every live session reloading a file nobody had touched — a
+  // file left every live session reloading a file nobody had touched: a
   // connector attached mid-conversation stayed invisible until app restart.
   const buildRecordingAdmin = async () => {
     const { McpAdminService } = await import("./mcp-admin-service");

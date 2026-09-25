@@ -112,12 +112,12 @@ export const lastTaggedReply = (text: string): string | null => {
 /** The one rule, restated on every auto-reply turn. See dispatch. */
 const REPLY_REMINDER =
   "[auto-reply] Everything you write here is delivered to them as if the " +
-  "user typed it. Reply with only the words to send — never notes, " +
+  "user typed it. Reply with only the words to send: never notes, " +
   "questions or options meant for the user, who is not in this chat. " +
   "Put the words to send inside <reply></reply>. ONLY what is inside that " +
   "tag is delivered; think, plan or note anything outside it. Nothing runs " +
-  "after your reply, so anything that needs looking up — weather, a " +
-  "search, a date — do it now with your tools and answer with the result; " +
+  "after your reply, so anything that needs looking up (weather, a " +
+  "search, a date), do it now with your tools and answer with the result; " +
   'never send "hold on" or "let me check".';
 
 /**
@@ -320,7 +320,7 @@ type Route = {
    * reply.
    */
   buffer: string;
-  /** Which assistant message the buffer is from — see handleAgentEvent. */
+  /** Which assistant message the buffer is from. See handleAgentEvent. */
   bufferMessageId: string | null;
   /**
    * A complete <reply> block written earlier in the turn, kept when a tool
@@ -506,12 +506,12 @@ export class MessagingGatewayService {
     );
 
     // A start can fail halfway with resources already live (an IMAP client with
-    // a reconnect handler, say) — stop() is what releases them.
+    // a reconnect handler, say). stop() is what releases them.
     await this.awaitStop(connector);
 
     // Logged, not just shown: the pane's string is overwritten by the next
     // attempt, and a log dump must still show the failure.
-    console.log(`[messaging] ${platformId}: failed — ${message}`);
+    console.log(`[messaging] ${platformId}: failed: ${message}`);
     this.setState(platformId, "error", message);
   }
 
@@ -638,7 +638,7 @@ export class MessagingGatewayService {
     const previous = this.states.get(platformId);
     if (previous?.state === state && previous.error === (error ?? null)) return;
 
-    // Leaving `connecting` at all — connected, failed, switched off — settles
+    // Leaving `connecting` at all (connected, failed, switched off) settles
     // the question the deadline was asking.
     if (state !== "connecting") this.clearConnectDeadline(platformId);
     // A connector that made it back up has earned a fresh restart ladder.
@@ -736,7 +736,7 @@ export class MessagingGatewayService {
     // talking. The connector drops the signed ones; this catches the rest.
     if (isSelf && looksLikeBotOutput(message.text)) {
       console.log(
-        `[messaging] ${platformId}: a message in the user's own chat reads as another bot's output — not answering it`
+        `[messaging] ${platformId}: a message in the user's own chat reads as another bot's output, not answering it`
       );
       return;
     }
@@ -763,7 +763,7 @@ export class MessagingGatewayService {
       if (!this.pauseNoticed) {
         this.pauseNoticed = true;
         console.log(
-          "[messaging] auto-reply is paused after a suspected loop — messages are logged, not answered"
+          "[messaging] auto-reply is paused after a suspected loop; messages are logged, not answered"
         );
       }
       return;
@@ -798,7 +798,7 @@ export class MessagingGatewayService {
 
     // A sender the connector itself identifies as "me" is approved on sight:
     // the identity it established at connect outranks the pairing queue. Not
-    // a row the user paused, though — approving on sight there undid the
+    // a row the user paused, though: approving on sight there undid the
     // pause with the next message, and deleting the bot was the only way to
     // stop it answering.
     if (!approved.has(message.userId) && isSelf) {
@@ -885,7 +885,7 @@ export class MessagingGatewayService {
       Date.now() - active.busySince > BUSY_RESET_MS
     ) {
       console.log(
-        `[messaging] ${active.platform}:${active.chatId} turn stuck busy — resetting`
+        `[messaging] ${active.platform}:${active.chatId} turn stuck busy, resetting`
       );
       active.busy = false;
       active.buffer = "";
@@ -1091,7 +1091,7 @@ export class MessagingGatewayService {
    */
   forgetSession(sessionId: string): void {
     this.routesBySession.delete(sessionId);
-    // Every route bound to it, not just the registered one — bot routes for
+    // Every route bound to it, not just the registered one: bot routes for
     // several chats can share a session.
     for (const [key, route] of this.routes) {
       if (route.sessionId === sessionId) this.routes.delete(key);
@@ -1150,7 +1150,7 @@ export class MessagingGatewayService {
     // An answer the model had already finished goes now, before the new
     // message can make it write a second one. Only the last reply of a turn
     // is sent, so without this a "hey" landing behind a real question loses
-    // the answer to it — and the reply that does go out says "as I said
+    // the answer to it, and the reply that does go out says "as I said
     // above" about words nobody ever received.
     const written = lastTaggedReply(route.buffer) ?? route.taggedReply;
     if (written != null && written !== "NO_REPLY") {
@@ -1385,7 +1385,7 @@ export class MessagingGatewayService {
       }
     }
     console.error(
-      `[messaging] ${platformId} send to ${chatId} failed after ${delays.length} attempts — giving up`
+      `[messaging] ${platformId} send to ${chatId} failed after ${delays.length} attempts, giving up`
     );
     this.appendLog({
       platform: platformId,
@@ -1592,7 +1592,7 @@ export class MessagingGatewayService {
     });
     if (botId == null) return;
     console.log(
-      `[messaging] ${platform} linked — auto-reply bot ready in the self chat`
+      `[messaging] ${platform} linked, auto-reply bot ready in the self chat`
     );
     this.options.emitChanged();
   }
@@ -1603,7 +1603,7 @@ export class MessagingGatewayService {
     this.options.emitChanged();
   }
 
-  /** Stop answering. The pairing list survives — stopping is not forgetting. */
+  /** Stop answering. The pairing list survives; stopping is not forgetting. */
   disableAutoReply(): void {
     saveGatewaySettings({ respondToInbound: false });
     this.options.emitChanged();
@@ -1617,7 +1617,7 @@ export class MessagingGatewayService {
       userId: string;
       name: string;
     }>;
-    /** Senders who have messaged in but are not allowed — newest last. */
+    /** Senders who have messaged in but are not allowed; newest last. */
     pending: Array<{
       platform: MessagingPlatformId;
       userId: string;
@@ -1842,8 +1842,8 @@ export class MessagingGatewayService {
     if (/^\+?\d{4,}$/.test(digits)) return target;
 
     const candidates = this.allKnownChats(platformId);
-    // A known chat id that happens not to look like one — Slack's C… channel
-    // ids, say — is an id, not a name to resolve.
+    // A known chat id that happens not to look like one (Slack's C… channel
+    // ids, say) is an id, not a name to resolve.
     if (candidates.some((row) => row.chatId === target)) return target;
 
     const needle = target.toLowerCase();

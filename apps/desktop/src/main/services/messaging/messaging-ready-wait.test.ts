@@ -2,7 +2,7 @@
  * A send to "me" that lands while the platform is still starting waits for
  * it, rather than failing on "has not said which account it is connected as".
  *
- * The report: a new WhatsApp bot's first mission — say hi to the user — fired
+ * The report: a new WhatsApp bot's first mission (say hi to the user) fired
  * seconds after launch. WhatsApp Web was still booting; the tool answered
  * that it could not identify the user's own chat, and the model asked the
  * user to message it first.
@@ -84,7 +84,7 @@ describe("a platform that is linked but has not yet learned who the user is", ()
         sent.push(chatId);
       },
     });
-    // The account becomes known a moment later — the bridge attached.
+    // The account becomes known a moment later: the bridge attached.
     setTimeout(() => {
       self = "+919804585173";
     }, 700);

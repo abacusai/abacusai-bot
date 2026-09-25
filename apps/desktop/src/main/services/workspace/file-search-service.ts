@@ -65,7 +65,7 @@ export class FileSearchService {
     if (pending != null) return pending;
     const created = this.createFinder(rootPath);
     this.finderPromises.set(rootPath, created);
-    // A failed creation is not cached — the next search retries it.
+    // A failed creation is not cached. The next search retries it.
     void created.then((finder) => {
       if (finder == null) this.finderPromises.delete(rootPath);
     });

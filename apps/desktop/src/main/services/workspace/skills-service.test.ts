@@ -62,7 +62,7 @@ describe("SkillsService.openFile", () => {
   });
 
   it("reveals a helper the OS would run, rather than claiming it is outside", () => {
-    // The boundary is satisfied — it is a file in a skills directory — so a
+    // The boundary is satisfied (it is a file in a skills directory), so a
     // message about being outside one would simply be untrue, and the click
     // must still take the user to the file.
     // "Something the OS would run" is the executable bit on POSIX and the

@@ -1,6 +1,6 @@
 /**
- * Where the user's Chrome is, and whether the Playwright Extension — the
- * bridge that lets an outside client drive its tabs — is installed in it.
+ * Where the user's Chrome is, and whether the Playwright Extension, the
+ * bridge that lets an outside client drive its tabs, is installed in it.
  * Edge carries the same extension, so it is the fallback.
  */
 import fs from "node:fs";

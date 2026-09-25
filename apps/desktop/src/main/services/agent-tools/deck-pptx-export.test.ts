@@ -3,7 +3,7 @@
  *
  * `deck-stage` scales the deck to fit the window and keeps non-active slides
  * hidden. Its own docs say the PPTX exporter sets `noscale` so the capture sees
- * real geometry — nothing did, so every slide measured 0x0. The export then
+ * real geometry. Nothing did, so every slide measured 0x0. The export then
  * failed into a `console.error` and a null, which the tool turned into an
  * omitted line: the user got a PDF, no .pptx, and no reason.
  */
@@ -46,7 +46,7 @@ describe("deciding whether the page was measurable", () => {
 /**
  * The export sizes images through pptxgenjs, which sizes them through
  * `image-size`, whose ICNS, JXL and HEIF parsers loop forever on a crafted
- * buffer (CVE-2025-71329, CVE-2025-71330) — in the main process, so the whole
+ * buffer (CVE-2025-71329, CVE-2025-71330), in the main process, so the whole
  * app stops. No fixed release exists, so the buffers never reach it.
  */
 describe("which captured images are safe to size", () => {

@@ -1,7 +1,7 @@
 /**
  * The shape check the connect page applies before storing a key.
  *
- * It is not a validity check and cannot be one — only a real request proves a
+ * It is not a validity check and cannot be one. Only a real request proves a
  * key works. What it does is refuse the paste that could not be a key at all,
  * so a mistake shows up in the field the user is looking at rather than as an
  * auth error part-way through their first conversation.

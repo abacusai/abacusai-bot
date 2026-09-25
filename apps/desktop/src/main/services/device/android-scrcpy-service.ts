@@ -97,7 +97,7 @@ export class AndroidScrcpyService {
       return {
         success: false,
         error:
-          "scrcpy server not bundled — run `pnpm --filter @abacus-ai/desktop vendor`.",
+          "scrcpy server not bundled. Run `pnpm --filter @abacus-ai/desktop vendor`.",
       };
     }
 
@@ -166,7 +166,7 @@ export class AndroidScrcpyService {
         // An unexplained exit means the device-side server crashed and the
         // mirror restarts, which reads as a freeze unless the reason is logged.
         const unexpected = this.stopReason == null;
-        const why = this.stopReason ?? "UNEXPECTED — server died on its own";
+        const why = this.stopReason ?? "UNEXPECTED: server died on its own";
         console.warn(`[scrcpy] server exited (code ${String(code)}): ${why}`);
         if (this.streamId === currentId) {
           this.server = null;
@@ -309,7 +309,7 @@ export class AndroidScrcpyService {
       // grows memory without limit. Tear down through the owner's restart
       // path rather than leave the panel frozen.
       if (size > MAX_FRAME_BYTES) {
-        this.stop(`frame size ${size} exceeds the maximum — stream desynced`);
+        this.stop(`frame size ${size} exceeds the maximum, stream desynced`);
         this.onUnexpectedExit?.(streamId);
         return;
       }

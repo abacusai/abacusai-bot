@@ -598,7 +598,7 @@ export class McpAgentToolsServer {
   }
 
   /**
-   * `tools/call`, gated the same way `tools/list` is — re-checked here, so a
+   * `tools/call`, gated the same way `tools/list` is (re-checked here), so a
    * toolset switched off mid-session stops working even while the model
    * holds an older tool list. Public for the tests that call tools directly.
    */
@@ -651,7 +651,7 @@ export class McpAgentToolsServer {
       skills
         .map(
           (skill) =>
-            `${skill.id} [${skill.source}] — ${skill.description ?? "no description"}`
+            `${skill.id} [${skill.source}]: ${skill.description ?? "no description"}`
         )
         .join("\n")
     );
@@ -807,7 +807,7 @@ export class McpAgentToolsServer {
         const others = jobs.length - visible.length;
         const suffix =
           callerBot != null && others > 0
-            ? `\n\n(${others} other routine${others === 1 ? "" : "s"} belong to the user or other bots — not yours to run.)`
+            ? `\n\n(${others} other routine${others === 1 ? "" : "s"} belong to the user or other bots, not yours to run.)`
             : "";
 
         const none =
@@ -862,7 +862,7 @@ export class McpAgentToolsServer {
         // The double-send guard: the fire is the demonstration, and the
         // creating agent must not also perform the task "to confirm it works".
         const first = firedNow
-          ? " The first one is running now, without waiting for the next tick — " +
+          ? " The first one is running now, without waiting for the next tick: " +
             "it performs the routine's task itself, so do NOT also do that " +
             "task (send the message, gather the summary) here: that would " +
             "reach the user twice. Just confirm the setup in a sentence."
@@ -919,7 +919,7 @@ export class McpAgentToolsServer {
 
         if (Object.keys(changes).length === 0)
           return this.err(
-            "Nothing to update — give a schedule, a prompt, a name, or enabled."
+            "Nothing to update: give a schedule, a prompt, a name, or enabled."
           );
 
         const job = updateJob(id, changes);
@@ -942,8 +942,8 @@ export class McpAgentToolsServer {
 
         return this.ok(
           job.botId != null
-            ? `Started ${id} now, in a fresh run listed under Routines — in your voice.`
-            : `Started ${id} now, in a fresh run listed under Routines.`
+            ? `Started ${id} now in a fresh run, listed under Routines and written in your voice.`
+            : `Started ${id} now in a fresh run, listed under Routines.`
         );
       }
 
@@ -1052,7 +1052,7 @@ export class McpAgentToolsServer {
 
         return this.ok(
           [
-            `Printed ${printed.htmlPath} — ${printed.pages} pages in ${printed.seconds}s: ${printed.pdfPath}`,
+            `Printed ${printed.htmlPath} (${printed.pages} pages in ${printed.seconds}s): ${printed.pdfPath}`,
             ...(printed.previewPath != null
               ? [`Rendered page, as a PNG: ${printed.previewPath}`]
               : []),
@@ -1241,7 +1241,7 @@ export class McpAgentToolsServer {
 
     if (rawItems.length === 0)
       return this.err(
-        "At least one item is required — each with a path or an http(s) URL."
+        "At least one item is required, each with a path or an http(s) URL."
       );
 
     const valid: Array<{ label: string; target: string; isUrl: boolean }> = [];
@@ -1279,7 +1279,7 @@ export class McpAgentToolsServer {
     if (valid.length === 0) {
       const detail = missing.length > 0 ? `\n\n${missing.join("\n")}` : "";
       return this.err(
-        `Nothing could be presented — none of those exist. Check the paths.${detail}`
+        `Nothing could be presented: none of those exist. Check the paths.${detail}`
       );
     }
 
@@ -1342,7 +1342,7 @@ export class McpAgentToolsServer {
       return this.ok(
         `Wrote ${result.pdfPath}\n${result.slides} slides at ${result.widthPx}x${result.heightPx}, ` +
           `${Math.round(result.bytes / 1024)} KB.\n\n` +
-          "Read the PDF back and look at it before showing the user — overflowing text is obvious in the render and invisible in the markup."
+          "Read the PDF back and look at it before showing the user. Overflowing text is obvious in the render and invisible in the markup."
       );
     } catch (error) {
       return this.err(
@@ -1372,7 +1372,7 @@ export class McpAgentToolsServer {
     });
 
     return this.ok(
-      `Submitted as job ${jobId}. Generation takes minutes — check it with bfl_flux3_get_result, polling every 20-30 seconds rather than continuously.`
+      `Submitted as job ${jobId}. Generation takes minutes: check it with bfl_flux3_get_result, polling every 20-30 seconds rather than continuously.`
     );
   }
 
@@ -1461,7 +1461,7 @@ export class McpAgentToolsServer {
     return this.err(
       `${platform} is not connected right now, so nothing was sent. ` +
         "It may be linking or waiting for a QR scan. Do not retry, do not " +
-        "send the user to Settings, and do not ask them for the number — " +
+        "send the user to Settings, and do not ask them for the number: " +
         `call connect_connector with service "${platform}": it puts a ` +
         "Connect button in front of the user right here and waits for them."
     );
@@ -1497,7 +1497,7 @@ export class McpAgentToolsServer {
       }
       if (size > MAX_ATTACHMENT_BYTES)
         return this.err(
-          `That file is ${Math.round(size / 1024 / 1024)}MB — the limit is ${Math.round(MAX_ATTACHMENT_BYTES / 1024 / 1024)}MB.`
+          `That file is ${Math.round(size / 1024 / 1024)}MB; the limit is ${Math.round(MAX_ATTACHMENT_BYTES / 1024 / 1024)}MB.`
         );
       await messaging.sendFile(
         platform,
@@ -1556,7 +1556,7 @@ export class McpAgentToolsServer {
           ),
           "",
           "A connector listed as connected is one whose tools are already in your",
-          "tool list — use those, do not guess a tool name. Where it says what it is",
+          "tool list. Use those; do not guess a tool name. Where it says what it is",
           "connected as, that is the user's own account on that service: it is who",
           '"me" and "myself" mean, so do not ask them for it.',
         ].join("\n")
@@ -1588,16 +1588,16 @@ export class McpAgentToolsServer {
       if (match.kind === "messaging")
         return this.ok(
           `${match.name} is connected. Send, list and read with its own tools ` +
-            "(send_<platform>_message, list_<platform>_chats, read_<platform>_messages) — do not ask the user to " +
+            "(send_<platform>_message, list_<platform>_chats, read_<platform>_messages). Do not ask the user to " +
             "connect anything."
         );
       if (match.kind === "credential")
         return this.ok(
           `${match.name} is already connected: a token is stored, so ${match.via} ` +
-            "are authenticated. Use them — there is nothing to ask the user for."
+            "are authenticated. Use them: there is nothing to ask the user for."
         );
       return this.ok(
-        `${match.name} is already connected${accountOf()}. Use it — ` +
+        `${match.name} is already connected${accountOf()}. Use it: ` +
           "there is nothing to ask the user for, and that account is who they mean " +
           'by "me". Its tools are already in your tool list; use those rather than ' +
           "guessing a tool name."
@@ -1618,7 +1618,7 @@ export class McpAgentToolsServer {
     }
 
     // The same Connect button for every kind: the card knows what each
-    // needs — a browser hop, a token, a pairing dialog.
+    // needs, whether a browser hop, a token, or a pairing dialog.
     return this.ok(
       await connectors.request({
         connectorId: match.id,
@@ -1665,7 +1665,7 @@ export class McpAgentToolsServer {
         return this.err("Messaging is not available in this session.");
       await disable(match.platform);
       return this.ok(
-        `${match.name} is disconnected — the platform is switched off. ` +
+        `${match.name} is disconnected. The platform is switched off. ` +
           "connect_connector switches it back on when the user wants it again."
       );
     }
@@ -1676,7 +1676,7 @@ export class McpAgentToolsServer {
 
     const statuses = await connectors.list();
     if (statuses[match.id]?.state !== "connected")
-      return this.ok(`${match.name} is not connected — nothing to disconnect.`);
+      return this.ok(`${match.name} is not connected: nothing to disconnect.`);
 
     const error = await connectors.disconnect(match.id);
     if (error != null) return this.err(error);
@@ -1702,7 +1702,7 @@ export class McpAgentToolsServer {
     );
     if (chats.length === 0)
       return this.ok(
-        "No other conversations yet — everything you have done is in this one."
+        "No other conversations yet: everything you have done is in this one."
       );
 
     const sections: string[] = [];
@@ -1735,7 +1735,7 @@ export class McpAgentToolsServer {
     const starting = messaging.startingPlatforms?.() ?? [];
     const startingNote =
       starting.length > 0
-        ? `\n\nStill starting: ${starting.join(", ")} — linked, and reading who the user is and the chat list. ` +
+        ? `\n\nStill starting: ${starting.join(", ")} (linked, and reading who the user is and the chat list). ` +
           "This finishes within a minute of launch. Try again in about twenty seconds; " +
           "do not tell the user nothing has synced or that they must message first."
         : "";
@@ -1767,7 +1767,7 @@ export class McpAgentToolsServer {
       hiddenEntries.length > 0
         ? "\n\nNot shown: " +
           hiddenEntries.map(([id, n]) => `${n} more on ${id}`).join(", ") +
-          ' — pass a query, or platform: "<name>" to list one platform in full.'
+          '. Pass a query, or platform: "<name>" to list one platform in full.'
         : "";
     const live = messaging.livePlatforms?.() ?? platforms;
     const down = platforms.filter((id) => !live.includes(id));
@@ -1776,20 +1776,20 @@ export class McpAgentToolsServer {
     // "abacus_discord" is not read as the user's Discord.
     const connectedLine =
       live.length === 0
-        ? "Connected platforms: none — nothing is linked right now."
+        ? "Connected platforms: none. Nothing is linked right now."
         : `Connected platforms: ${live.map(describePlatformForAgent).join(", ")}`;
     // Added to every answer for a platform started but not connected: its
     // address book is empty, which must read as "not linked", not "no
     // contacts".
     const downNote =
       down.length > 0
-        ? `\n\nNot connected right now: ${down.join(", ")} — reconnecting or waiting to be linked again. ` +
+        ? `\n\nNot connected right now: ${down.join(", ")} (reconnecting or waiting to be linked again). ` +
           "Anything missing here may simply be out of reach until it is back; say so rather than " +
           "asking the user to supply it."
         : "";
     const selves = messaging.selfChats?.() ?? [];
     const selfRows = selves.map(
-      (row) => `${row.platform}  ${row.chatId}  (the user — "me")`
+      (row) => `${row.platform}  ${row.chatId}  (the user, "me")`
     );
 
     // Linked but unable to say who as. Say so, or the model asks the user for
@@ -1800,7 +1800,7 @@ export class McpAgentToolsServer {
     const selfNote =
       selfless.length > 0
         ? `\n\nWho the user is on ${selfless.join(", ")} is not known yet. ` +
-          "Do not ask them for their own number or handle — say you cannot " +
+          "Do not ask them for their own number or handle. Say you cannot " +
           "identify their own chat there yet, and offer to send to someone " +
           "named instead."
         : "";
@@ -1827,7 +1827,7 @@ export class McpAgentToolsServer {
             connectedLine,
             "",
             ...(selfRows.length > 0 ? [...selfRows, ""] : []),
-            "No chats yet — nobody has messaged in and no address book has synced, so " +
+            "No chats yet. Nobody has messaged in and no address book has synced, so " +
               "there is nothing to search. Another query will not find anything: the " +
               "user has to be messaged first, or message in. On WhatsApp you can still " +
               "send to a phone number." +
@@ -1845,7 +1845,7 @@ export class McpAgentToolsServer {
           `No contact matching "${query}", out of ${known} known. This searched chat ` +
             "NAMES only. If the user means a topic, a place, a thing or words " +
             'someone said ("taco bell", "the invoice"), that is a MESSAGE search: use ' +
-            "the platform's read tool with `query` — it searches message content " +
+            "the platform's read tool with `query`: it searches message content " +
             "through the platform's own search. Omit the query here to see every " +
             "name. On WhatsApp you can still send to a phone number." +
             downNote +
@@ -1870,7 +1870,7 @@ export class McpAgentToolsServer {
           .join("\n"),
         "",
         "Each row's `to: \"...\"` is the exact value for the platform's send and " +
-          "read tools — on WhatsApp a contact's or group's name IS its " +
+          "read tools. On WhatsApp a contact's or group's name IS its " +
           "chat id; there is no other id to look for." +
           hiddenNote,
         downNote + selfNote,
@@ -1909,14 +1909,14 @@ export class McpAgentToolsServer {
       // "nothing here" then has two causes and must name the right one.
       if (isMessagingPlatformId(platform) && this.notLinked(platform) != null)
         return this.ok(
-          `Nothing stored for that chat, and ${platform} is not connected right now — ` +
+          `Nothing stored for that chat, and ${platform} is not connected right now: ` +
             "anything newer than the last sync is out of reach until it is back. " +
             "Say so rather than asking the user to name the chat differently."
         );
 
       if (query.length > 0)
         return this.ok(
-          `No message containing "${query}" was found — the platform's own ` +
+          `No message containing "${query}" was found. The platform's own ` +
             "search came back empty too, so a different wording of the same " +
             "thing may still match. Try a shorter or more distinctive word."
         );
@@ -1986,7 +1986,7 @@ export class McpAgentToolsServer {
     if (unread.ok === false) return unread.result;
     if (unread.rows.length === 0)
       return this.ok(
-        `No ${platform} chats have unread messages right now — the user is caught up.`
+        `No ${platform} chats have unread messages right now. The user is caught up.`
       );
     return this.ok(
       [
@@ -1994,7 +1994,7 @@ export class McpAgentToolsServer {
         "",
         ...unread.rows.map(
           (row) =>
-            `${platform}  to: "${row.chatId}"  — ${describeUnread(row.unreadCount)}`
+            `${platform}  to: "${row.chatId}"  (${describeUnread(row.unreadCount)})`
         ),
         "",
         "Read one with the platform's read tool and its `to:` value, or pass " +
@@ -2013,7 +2013,7 @@ export class McpAgentToolsServer {
     if (unread.ok === false) return unread.result;
     if (unread.rows.length === 0)
       return this.ok(
-        `No ${platform} chats have unread messages right now — the user is caught up.`
+        `No ${platform} chats have unread messages right now. The user is caught up.`
       );
     const chats = unread.rows.slice(0, UNREAD_CHATS_READ_CAP);
     const perChat = limit ?? UNREAD_PER_CHAT_DEFAULT;
@@ -2031,9 +2031,9 @@ export class McpAgentToolsServer {
       });
       sections.push(
         [
-          `— ${chat.name} (${describeUnread(chat.unreadCount)})`,
+          `- ${chat.name} (${describeUnread(chat.unreadCount)})`,
           ...(rows.length === 0
-            ? ["  (nothing readable — the messages may be media only)"]
+            ? ["  (nothing readable; the messages may be media only)"]
             : rows.map(
                 (row) =>
                   `  [${row.at}] ${
@@ -2047,7 +2047,7 @@ export class McpAgentToolsServer {
     }
     const more =
       unread.rows.length > chats.length
-        ? `\n\n${unread.rows.length - chats.length} more chat(s) have unread messages — list them with \`only_unread\` on the list tool and read them by name.`
+        ? `\n\n${unread.rows.length - chats.length} more chat(s) have unread messages. List them with \`only_unread\` on the list tool and read them by name.`
         : "";
     return this.ok(sections.join("\n\n") + more);
   }
@@ -2127,7 +2127,7 @@ export class McpAgentToolsServer {
           : undefined;
       if (platform == null)
         return this.err(
-          `Several platforms are connected (${running.join(", ")}) — say which one the sender is on.`
+          `Several platforms are connected (${running.join(", ")}). Say which one the sender is on.`
         );
 
       const resolution = resolveSender(
@@ -2173,8 +2173,8 @@ export class McpAgentToolsServer {
 
     const allowedLine =
       resolved != null
-        ? `${resolved.name} will be answered in a separate conversation of their own — everything written there is delivered to them, as the user. Gather the user's instructions for that sender now (tone, goals, what not to say) and store them in memory.`
-        : "No sender allowed yet — allow one with allow_sender, or approve pending ones from the Connectors page.";
+        ? `${resolved.name} will be answered in a separate conversation of their own. Everything written there is delivered to them, as the user. Gather the user's instructions for that sender now (tone, goals, what not to say) and store them in memory.`
+        : "No sender allowed yet. Allow one with allow_sender, or approve pending ones from the Connectors page.";
 
     return this.ok(
       action === "on" ? `Auto-reply is on. ${allowedLine}` : allowedLine

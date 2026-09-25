@@ -387,10 +387,10 @@ const SELF_LANE_BOTS: Record<
       "You are the user's personal assistant living in their Discord DM " +
       "with the Abacus AI bot. Every message they send to that DM comes " +
       "to you, and every reply you write is delivered straight back to " +
-      'them there — replying IS messaging them, so when they say "send ' +
+      'them there. Replying IS messaging them, so when they say "send ' +
       'me X" or "message me on Discord", just answer with X; never ' +
       "say you cannot reach them and never ask which chat is theirs. " +
-      "They can ask you for anything you can do — questions, tasks with " +
+      "They can ask you for anything you can do: questions, tasks with " +
       "your tools, code, documents, schedules, messages to other " +
       "people. Be a helpful, concise assistant and keep replies " +
       "chat-sized (Discord caps a message at 2000 characters).",
@@ -404,10 +404,10 @@ const SELF_LANE_BOTS: Record<
       "You are the user's personal assistant living in their WhatsApp " +
       '"Message yourself" chat. Every message they send to that chat comes ' +
       "to you, and every reply you write is delivered straight back to " +
-      'them there — replying IS messaging them, so when they say "send ' +
+      'them there. Replying IS messaging them, so when they say "send ' +
       'me X" or "message me", just answer with X; never say you ' +
       "cannot reach them and never ask which chat is theirs. They can " +
-      "ask you for anything you can do — questions, tasks with your " +
+      "ask you for anything you can do: questions, tasks with your " +
       "tools, code, documents, schedules, messages to other people. Be " +
       "a helpful, concise assistant and keep replies chat-sized.",
   },
@@ -421,10 +421,10 @@ const SELF_LANE_BOTS: Record<
       "You are the user's personal assistant living in their Telegram chat " +
       "with the Abacus AI bot. Every message they send to that chat comes " +
       "to you, and every reply you write is delivered straight back to " +
-      'them there — replying IS messaging them, so when they say "send ' +
+      'them there. Replying IS messaging them, so when they say "send ' +
       'me X" or "message me", just answer with X; never say you ' +
       "cannot reach them and never ask which chat is theirs. They can " +
-      "ask you for anything you can do — questions, tasks with your " +
+      "ask you for anything you can do: questions, tasks with your " +
       "tools, code, documents, schedules, messages to other people. Be " +
       "a helpful, concise assistant and keep replies chat-sized.",
   },
@@ -778,7 +778,7 @@ export class ServiceHost {
     this.credentialSaver = save;
   }
 
-  /** How each kind connects and disconnects — the one implementation every Connect button uses. */
+  /** How each kind connects and disconnects. The one implementation every Connect button uses. */
   readonly connectorFlow = new ConnectorFlowService({
     platform: {
       connect: startConnectorConnect,
@@ -1449,7 +1449,7 @@ export class ServiceHost {
             error: {
               message:
                 `Agent timed out: nothing came back for ${INACTIVITY_TIMEOUT_MINUTES} minutes${doing}. ` +
-                `The turn was stopped — send a message to pick it back up.`,
+                `The turn was stopped. Send a message to pick it back up.`,
             },
           },
         },
@@ -2382,7 +2382,7 @@ export class ServiceHost {
     // The chat's remembered model beats the composer's: the renderer starts a
     // session before its list has loaded, and the agent would then report the
     // wrong model back over the record that should have chosen it. With
-    // neither, the plan tier's default — not the agent's own fallback, which
+    // neither, the plan tier's default. Not the agent's own fallback, which
     // is the free pool whatever the tier.
     const remembered = this.agentSessionManagerService.get(
       request.sessionId
@@ -3606,7 +3606,7 @@ export class ServiceHost {
   /**
    * Gmail just connected: a hidden session reads the user's recent sent mail
    * and files an "Email persona" entry in the USER profile. Once per profile,
-   * and never in the way — a failure only means the profile stays as it was.
+   * and never in the way. A failure only means the profile stays as it was.
    */
   async learnPersonaFromGmail(connectorId: string): Promise<void> {
     if (connectorId !== GMAIL_CONNECTOR_ID) return;

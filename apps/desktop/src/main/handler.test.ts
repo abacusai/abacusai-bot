@@ -46,7 +46,7 @@ vi.mock("./services/providers/account-service", () => ({
 vi.mock("./profile-home", () => ({
   profileKeyFor: vi.fn(() => "acct-test"),
   legacyProfileKeyFor: vi.fn(() => "ada@example.com_acme"),
-  // Same profile: no switch, no relaunch — the path every test here walks.
+  // Same profile: no switch, no relaunch (the path every test here walks).
   activateProfile: vi.fn(() => false),
   initProfileHome: vi.fn(),
 }));
@@ -163,7 +163,7 @@ describe("acquiring an Abacus.AI key", () => {
   it("takes the gateway away when the key is removed", async () => {
     // The bug: the entry was added here but removed only by the Settings
     // sign-out, so a key that ended any other way left a server behind that
-    // the app could never authenticate — listed in MCP, serving nothing, for
+    // the app could never authenticate: listed in MCP, serving nothing, for
     // a user the app agreed was signed out.
     await handlers.get(IpcChannels.SaveApiKey)?.({}, "abacus", "");
 
@@ -259,7 +259,7 @@ describe("asking who the key belongs to", () => {
  *
  * The profile a run uses is chosen by account key, so an unattributable key
  * has no home of its own. Letting it through would drop that account into
- * whichever profile is already active — handing it someone else's sessions,
+ * whichever profile is already active, handing it someone else's sessions,
  * workspaces and memories, and writing its key into their config. Two ways in:
  * the /v1/account read fails every retry, or a deployment without that
  * endpoint answers with a profile carrying no email. The second would put
@@ -282,7 +282,7 @@ describe("signing in with a key that cannot be attributed", () => {
   it("puts the key back where it found it: nowhere", async () => {
     await handlers.get(IpcChannels.StartAbacusAuth)?.({});
 
-    // Stored on the way in — the sign-in stores before it identifies — so
+    // Stored on the way in (the sign-in stores before it identifies), so
     // refusing has to undo that or the wall would let the user straight past.
     expect(vi.mocked(saveApiKey)).toHaveBeenCalledWith("abacus", "");
   });

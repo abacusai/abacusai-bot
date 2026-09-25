@@ -101,13 +101,13 @@ type AgentManagerServiceOptions = {
   ) => void;
   emitSystemReady: (workspaceId: string, sessionId: string) => void;
   emitSessionClosed: (workspaceId: string, sessionId: string) => void;
-  /** Full MCP runtime snapshot for a session — broadcast on update. */
+  /** Full MCP runtime snapshot for a session. Broadcast on update. */
   emitMcpRuntimeServers: (
     workspaceId: string,
     sessionId: string,
     servers: AgentMcpServer[]
   ) => void;
-  /** Per-server status transition — fires on every change. */
+  /** Per-server status transition. Fires on every change. */
   emitMcpRuntimeStatus: (
     workspaceId: string,
     sessionId: string,
@@ -172,7 +172,7 @@ export type ExecFileLike = (
 /**
  * One command, one line. JSON leaves U+2028 and U+2029 unescaped (they are
  * legal inside a JSON string) but the agent reads stdin with readline, which
- * ends a line on either — so a persona pasted from Apple Notes arrived as two
+ * ends a line on either, so a persona pasted from Apple Notes arrived as two
  * malformed lines and the routine never ran. Both are valid JSON escapes.
  */
 export function serializeCommand(command: unknown): string {
@@ -296,7 +296,7 @@ function logMcpOutcome(
         ? "needs a sign-in"
         : (next.error ?? "");
   console.log(
-    `[mcp] ${next.name}: ${next.status}${detail.length > 0 ? ` — ${detail}` : ""} (session ${sessionId.slice(0, 8)})`
+    `[mcp] ${next.name}: ${next.status}${detail.length > 0 ? ` (${detail})` : ""} (session ${sessionId.slice(0, 8)})`
   );
 }
 
@@ -360,7 +360,7 @@ const logCliSpawnFailure = (
 
 export class AgentManagerService {
   private readonly runtimes = new Map<string, CliRuntime>();
-  /** Sessions whose process has gone — see ExitedRuntimeRecord. */
+  /** Sessions whose process has gone. See ExitedRuntimeRecord. */
   private readonly exited: ExitedRuntimeRecord[] = [];
 
   constructor(private readonly options: AgentManagerServiceOptions) {}

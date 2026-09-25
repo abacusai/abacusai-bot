@@ -3,7 +3,7 @@
  *
  * Two rules carry this file. The list is capped, because the arrows are for
  * "the thing I just asked, again, slightly different" and not for searching.
- * And a prompt sent twice appears once, at the front — a run of identical
+ * And a prompt sent twice appears once, at the front. A run of identical
  * entries is only further to press.
  */
 import fs from "fs";

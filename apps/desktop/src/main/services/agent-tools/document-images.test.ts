@@ -9,7 +9,7 @@ import fs from "node:fs/promises";
  * is reported rather than vanishing.
  *
  * Served from a real loopback server: the failure was about what a real
- * response does — its status, its content-type — which a stubbed fetch decides
+ * response does (its status, its content-type), which a stubbed fetch decides
  * for itself.
  */
 import http from "node:http";
@@ -25,7 +25,7 @@ import {
   rewriteImageSources,
 } from "./document-images";
 
-/** The tests serve from loopback, which the real guard refuses — see its own test below. */
+/** The tests serve from loopback, which the real guard refuses. See its own test below. */
 const allowLoopback = (): void => undefined;
 
 // A one-pixel PNG, so content-type and bytes are both real.
@@ -94,7 +94,7 @@ describe("finding the images a document wants", () => {
     ]);
   });
 
-  it("leaves local sources alone — they already print", () => {
+  it("leaves local sources alone, since they already print", () => {
     expect(
       remoteImageSources([
         '<img src="chart.png"><img src="data:image/png;base64,AAA">',

@@ -85,7 +85,7 @@ export const haListEntities = async (filter?: string): Promise<string> => {
   const shown = matching.slice(0, 100);
   const lines = shown.map(
     (entity) =>
-      `${entity.entity_id} — ${entity.attributes?.friendly_name ?? "unnamed"} [${entity.state}]`
+      `${entity.entity_id}: ${entity.attributes?.friendly_name ?? "unnamed"} [${entity.state}]`
   );
 
   if (matching.length > shown.length) {
