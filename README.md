@@ -23,7 +23,7 @@
 
 Create a bot for a job you want to hand off. Give it a name, instructions, and a model. Each bot keeps its own chat and memory and uses the tools you enable. Message it from the desktop, WhatsApp, Telegram, or Discord. It can work in Gmail, Google Drive, Slack, GitHub, Notion, and other connected services, then check in or run again on a schedule.
 
-Coding is one of the jobs a bot can do. AbacusAIBot is built for personal assistance, research, communication, recurring work, and tasks that cross several apps.
+Coding is one of the jobs a bot can do. AbacusAI Bot is built for personal assistance, research, communication, recurring work, and tasks that cross several apps.
 
 > [!IMPORTANT]
 > Bot chats and routines run with full tool permissions. They can edit files, run commands, send messages, and act through connected accounts without the approval mode used by supervised sessions. Remote messaging has separate sender and tool controls. Review [permissions](docs/permissions.md) and the [security model](SECURITY.md) before creating recurring or remote work.
@@ -43,7 +43,7 @@ Provider catalogs, quotas, and free-tier limits can change. The Models page show
 <br>
 <table>
   <tr>
-    <td><img src="docs/media/demo-onboarding.gif" alt="AbacusAIBot onboarding for models, connectors, and the product tour"></td>
+    <td><img src="docs/media/demo-onboarding.gif" alt="AbacusAI Bot onboarding for models, connectors, and the product tour"></td>
   </tr>
   <tr>
     <td align="center">Sign in, connect the apps you use, choose a model, and meet your first bot.</td>
@@ -65,7 +65,7 @@ Reach a bot from the apps already on your phone:
 
 | App | How it works |
 | --- | --- |
-| WhatsApp | Link AbacusAIBot as a device, then talk to it through your "Message yourself" chat. It can also read and send in allowed conversations. |
+| WhatsApp | Link AbacusAI Bot as a device, then talk to it through your "Message yourself" chat. It can also read and send in allowed conversations. |
 | Telegram | Sign in to your account, then link the shared Abacus AI bot. Direct messages reach your agent, and the connected account can read and send messages. |
 | Discord | Sign in to your account, then link the shared Abacus AI bot. Direct messages reach your agent, and the connected account can work in allowed chats. |
 
@@ -75,7 +75,7 @@ See [Bots, routines, and messaging](docs/messaging.md) for setup and safety boun
 
 ## Connectors and routines
 
-AbacusAIBot exposes 100+ connectors and tools. Built-in Abacus.AI connectors include Gmail, Google Drive, Google Calendar, Slack, Outlook, OneDrive, Jira, Confluence, Dropbox, X, and other work services. The app also supports MCP servers, skills, local tools, browsers, files, and devices.
+AbacusAI Bot exposes 100+ connectors and tools. Built-in Abacus.AI connectors include Gmail, Google Drive, Google Calendar, Slack, Outlook, OneDrive, Jira, Confluence, Dropbox, X, and other work services. The app also supports MCP servers, skills, local tools, browsers, files, and devices.
 
 A connector gives bots and sessions tools for an account. The bot can ask you to connect a service when it needs one. Disconnect the service to remove that account access.
 
@@ -115,7 +115,7 @@ The current onboarding signs you in or creates a free account, offers messaging 
 
 ## Repository scope
 
-This repository contains the AbacusAIBot desktop application. It does not publish a CLI, SDK, hosted agent, or remote execution service. Internal storage formats and application protocols may change between releases. Only the latest release is supported.
+This repository contains the AbacusAI Bot desktop application. It does not publish a CLI, SDK, hosted agent, or remote execution service. Internal storage formats and application protocols may change between releases. Only the latest release is supported.
 
 To build the app, use Node.js 22 and pnpm:
 
@@ -136,7 +136,7 @@ The full environment and packaging commands are in [Build from source](docs/gett
 
 ## Acknowledgements
 
-AbacusAIBot builds on [pi](https://github.com/badlogic/pi-mono), [codingagent-lite](https://github.com/mariozechner/codingagent-lite), and [scrcpy](https://github.com/Genymobile/scrcpy).
+AbacusAI Bot builds on [pi](https://github.com/badlogic/pi-mono), [codingagent-lite](https://github.com/mariozechner/codingagent-lite), and [scrcpy](https://github.com/Genymobile/scrcpy).
 
 ## License
 

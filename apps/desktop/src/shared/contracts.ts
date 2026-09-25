@@ -821,7 +821,7 @@ export interface WriteFileResult {
   error?: string;
 }
 
-/** MCP configs are namespaced by mode; AbacusAIBot only has the one. */
+/** MCP configs are namespaced by mode; AbacusAI Bot only has the one. */
 export type McpMode = "code";
 
 export interface McpOAuthEntry {

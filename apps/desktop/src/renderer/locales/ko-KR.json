@@ -829,7 +829,7 @@
       "label": "SSH"
     },
     "title": "Execution backend",
-    "unimplemented": "AbacusAIBot can't run commands here yet.",
+    "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
@@ -1136,8 +1136,8 @@
       "deliverToBotNone": "No bot — one session per sender"
     },
     "setup": {
-      "discord": "연결을 클릭하면 Discord 로그인 창이 열립니다. Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요. 그러면 AbacusAIBot이 당신의 Discord 계정으로 메시지를 보냅니다 — 봇도 토큰도 필요 없습니다.",
-      "telegram": "연결을 클릭하면 Telegram 로그인 창이 열립니다. 평소처럼 로그인하세요 — 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 전화번호 또는 패스키를 사용하세요. 그러면 AbacusAIBot이 당신의 Telegram 계정으로 메시지를 보냅니다. API 키도 봇도 필요 없습니다.",
+      "discord": "연결을 클릭하면 Discord 로그인 창이 열립니다. Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요. 그러면 AbacusAI Bot이 당신의 Discord 계정으로 메시지를 보냅니다 — 봇도 토큰도 필요 없습니다.",
+      "telegram": "연결을 클릭하면 Telegram 로그인 창이 열립니다. 평소처럼 로그인하세요 — 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 전화번호 또는 패스키를 사용하세요. 그러면 AbacusAI Bot이 당신의 Telegram 계정으로 메시지를 보냅니다. API 키도 봇도 필요 없습니다.",
       "whatsapp": "이 항목을 켠 뒤 휴대폰의 WhatsApp으로 아래 QR 코드를 스캔하세요(설정, 연결된 기기, 기기 연결). 이렇게 하면 AbacusAI Bot이 해당 계정의 기기로 연결되므로 개인 번호 대신 전용 번호를 사용하세요."
     },
     "stepSignIn": "First — sign in to {{app}}",
@@ -1190,7 +1190,7 @@
     "enableTitle": "Notify me",
     "soundSubtitle": "Uses your system notification sound.",
     "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAIBot tells you while you are looking elsewhere",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
     "title": "Notifications"
   },
   "notifications": {
@@ -1211,7 +1211,7 @@
     "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
     "setupConnectorsCta": "Browse connectors",
     "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAIBot",
+    "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
@@ -1222,7 +1222,7 @@
     "welcomeCapabilityModels": "Access",
     "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "지속 메모리를 갖춘 나만의 오픈소스 AI 동료",
-    "welcomeTitle": "Welcome to AbacusAIBot",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
@@ -1234,7 +1234,7 @@
     "setupExistingLater": "Connect later",
     "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedTitleName": "Abacus AI Bot",
+    "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
@@ -1633,7 +1633,7 @@
         "body": "모델별·세션별 토큰과 비용. 한 번의 실행에 얼마가 들었는지 나중에 놀랄 일이 없습니다."
       },
       "welcome": {
-        "title": "AbacusAIBot에 오신 것을 환영합니다",
+        "title": "AbacusAI Bot에 오신 것을 환영합니다",
         "body": "창을 한 바퀴 돌아봅니다. 각 패널이 무엇이고 어디에 쓰는지. 짧은 열다섯 곳이고, 언제든 나갈 수 있습니다."
       }
     }
@@ -1785,7 +1785,7 @@
     "deleteWorkspace": "작업 공간 삭제",
     "deleteWorkspaceConfirmLabel": "확인을 위해 작업 공간 이름을 입력하세요:",
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
-    "deleteWorkspaceDescription": "\"{{name}}\" 및 해당 채팅이 AbacusAIBot에서 제거됩니다. 디스크의 파일과 폴더는 삭제되지 않고 그대로 유지됩니다. 이 작업은 되돌릴 수 없습니다.",
+    "deleteWorkspaceDescription": "\"{{name}}\" 및 해당 채팅이 AbacusAI Bot에서 제거됩니다. 디스크의 파일과 폴더는 삭제되지 않고 그대로 유지됩니다. 이 작업은 되돌릴 수 없습니다.",
     "deleteWorkspaceNameMismatch": "이름이 일치하지 않습니다",
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
