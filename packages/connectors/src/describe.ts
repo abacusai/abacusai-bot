@@ -61,7 +61,7 @@ export const catalogPrompt = (): string => {
     `${names.credential.join(", ")} (a token); the chat apps ${names.messaging.join(", ")}; ` +
     `and the tool servers ${names.mcp.join(", ")}. ` +
     "When the user asks to connect or use one of these, call connect_connector " +
-    "with its name — that puts the Connect button in the chat. Never say a name " +
+    "with its name: that puts the Connect button in the chat. Never say a name " +
     "on this list is not a connector, and never install one by hand."
   );
 };
@@ -79,14 +79,14 @@ export const describeForListing = (
   const how =
     connector.kind === "messaging"
       ? connected
-        ? "connected — send with its send_<platform>_message tool"
-        : "not connected — ask for it with this tool"
+        ? "connected: send with its send_<platform>_message tool"
+        : "not connected: ask for it with this tool"
       : connector.kind === "credential"
         ? connected
-          ? `connected — use ${connector.via}`
-          : `not connected — ask for it with this tool (${connectUi(connector) === "fields" ? "the user pastes a token" : "the user signs in"})`
+          ? `connected: use ${connector.via}`
+          : `not connected: ask for it with this tool (${connectUi(connector) === "fields" ? "the user pastes a token" : "the user signs in"})`
         : connected
           ? `connected${account}`
-          : "not connected — ask for it with this tool";
+          : "not connected: ask for it with this tool";
   return `${connector.id}  ${connector.name}  ${how}`;
 };

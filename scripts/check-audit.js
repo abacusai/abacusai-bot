@@ -26,7 +26,7 @@ const TARGETS = {
         "image-size <=2.0.2 via pptxgenjs: the ICNS parser hangs on a crafted " +
         "image. deck-pptx-export.ts only hands pptxgenjs images whose content " +
         "signature is on its allowlist (isSupportedImage), which was written " +
-        "for this advisory and its sibling — ICNS, JXL and HEIF never reach " +
+        "for this advisory and its sibling: ICNS, JXL and HEIF never reach " +
         "image-size. Delete when image-size >=2.0.3 ships.",
       "GHSA-5p2g-fcmc-qvqq":
         "image-size <=2.0.2 via pptxgenjs: the JXL and HEIF parsers hang on a " +
@@ -57,7 +57,7 @@ const target = Object.hasOwn(TARGETS, targetName)
   : undefined;
 if (!target) {
   console.error(
-    `[audit] unknown target "${targetName}" — expected one of: ${Object.keys(TARGETS).join(", ")}`
+    `[audit] unknown target "${targetName}". Expected one of: ${Object.keys(TARGETS).join(", ")}`
   );
   process.exit(1);
 }
@@ -159,7 +159,7 @@ if (offenders.length > 0) {
 
 if (stale.length > 0) {
   console.error(
-    "[audit] accepted advisories that no longer apply — delete them from scripts/check-audit.js:"
+    "[audit] accepted advisories that no longer apply (delete them from scripts/check-audit.js):"
   );
   for (const id of stale) console.error(`  ${id}: ${ACCEPTED[id]}`);
   process.exit(1);

@@ -32,8 +32,8 @@ interface ServerToolMeta {
 }
 
 /**
- * The metadata for a gateway tool, or null when the app does not take it —
- * which is what makes the registry an allowlist: a tool the platform serves
+ * The metadata for a gateway tool, or null when the app does not take it.
+ * That is what makes the registry an allowlist: a tool the platform serves
  * for an attached service still stays out of the model's hands unless some
  * entry names it.
  */

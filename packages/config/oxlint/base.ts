@@ -3,8 +3,8 @@ import { defineConfig } from "oxlint";
 import { BUILD_OUTPUT_IGNORES } from "../build-output-ignores.ts";
 
 /**
- * What CI enforces: oxlint's `correctness` category — rules that find bugs
- * rather than opinions — plus four turned back on deliberately. Not ultracite's
+ * What CI enforces: oxlint's `correctness` category (rules that find bugs
+ * rather than opinions) plus four turned back on deliberately. Not ultracite's
  * full set: that is 12,000 mostly stylistic diagnostics on this tree, and a
  * gate nobody can pass gets switched off (`pnpm lint:all` runs it instead).
  */

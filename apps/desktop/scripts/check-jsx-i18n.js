@@ -6,18 +6,18 @@
  * Scans the renderer source tree (src/renderer/) for user-facing English
  * string literals that should go through react-i18next
  * (`t('...')` / `i18n.t('...')`). Rule: all user-facing UI strings must be
- * localized — never hard-code English text in components.
+ * localized. Never hard-code English text in components.
  *
  * It is a RATCHET, not a full audit: a committed baseline
  * (scripts/i18n-literals-baseline.json) records the literals that already
  * existed when the guard was introduced, so CI fails only when a NEW bare
- * literal is added — existing debt is grandfathered, regressions are blocked.
+ * literal is added. Existing debt is grandfathered; regressions are blocked.
  *
  * Detected patterns (high-signal, low false-positive):
- *   A) toast.<level>('literal')                — bare string passed to a Sonner toast
- *   B) user-facing JSX attrs with a literal     — placeholder / title / aria-label /
+ *   A) toast.<level>('literal'): a bare string passed to a Sonner toast
+ *   B) user-facing JSX attrs with a literal: placeholder / title / aria-label /
  *      alt / label / message / tooltip = "Text" or ={'Text'}
- *   C) multi-word JSX text nodes                — >Some Capitalized Text< on one line
+ *   C) multi-word JSX text nodes: >Some Capitalized Text< on one line
  *
  * It intentionally does NOT try to catch every literal (e.g. multi-line JSX
  * text). It catches the common regression vectors. Lines with an
@@ -71,7 +71,7 @@ function detectLine(line) {
   const found = [];
   if (/\bi18n-ignore\b/.test(line)) return found;
 
-  // A) toast.<level>('literal' | "literal" | `literal`) — bare string as first arg.
+  // A) toast.<level>('literal' | "literal" | `literal`): bare string as first arg.
   const toastRe =
     /\btoast\.(?:error|success|warning|info|loading|message)\(\s*(['"`])((?:\\.|(?!\1).)*?)\1/g;
   let m;
@@ -145,7 +145,7 @@ function main() {
   if (update) {
     const baseline = {
       _comment:
-        "Grandfathered i18n bare-literal signatures (file|kind|text). Regenerate with `node scripts/check-jsx-i18n.js --update`. Do NOT add new entries by hand — localize the string instead.",
+        "Grandfathered i18n bare-literal signatures (file|kind|text). Regenerate with `node scripts/check-jsx-i18n.js --update`. Do NOT add new entries by hand: localize the string instead.",
       signatures: uniqueSigs,
     };
     fs.writeFileSync(BASELINE_PATH, JSON.stringify(baseline, null, 2) + "\n");
@@ -160,13 +160,13 @@ function main() {
 
   if (fresh.length === 0) {
     console.log(
-      `[i18n-guard] OK — no new bare UI literals (${baseline.size} grandfathered).`
+      `[i18n-guard] OK: no new bare UI literals (${baseline.size} grandfathered).`
     );
     return;
   }
 
   console.error(
-    `\n[i18n-guard] FAIL — ${fresh.length} new bare user-facing literal(s) found.`
+    `\n[i18n-guard] FAIL: ${fresh.length} new bare user-facing literal(s) found.`
   );
   console.error(
     "Wrap these in t(...) / i18n.t(...) and add a key to src/renderer/locales/en-US.json."

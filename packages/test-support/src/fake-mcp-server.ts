@@ -52,7 +52,7 @@ export class FakeMcpServer {
     return `http://127.0.0.1:${this.port}/mcp`;
   }
 
-  /** Change what the next `tools/list` reports — a server gaining a tool. */
+  /** Change what the next `tools/list` reports: a server gaining a tool. */
   setTools(tools: FakeMcpTool[]): void {
     this.tools = tools;
   }
