@@ -1,8 +1,8 @@
 /**
  * A thumbs up/down on one assistant turn, reported to the platform. The
- * verdict is keyed on the synced transcript (session + event index), so the
- * transcript is flushed first: a rating on a turn the server has not seen is
- * refused there, and would otherwise vanish.
+ * verdict is keyed on the synced transcript (session + event sequence), so the
+ * transcript is flushed first and the rated segment is named by the sequence
+ * it was uploaded under.
  */
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 
@@ -15,8 +15,8 @@ export type FeedbackRating = "up" | "down" | "clear";
 
 export interface TurnFeedback {
   sessionId: string;
-  /** Index of the rated bot text segment in the stored transcript. */
-  eventSequenceNumber: number;
+  /** The rated bot text segment. */
+  segmentId: string;
   rating: FeedbackRating;
   comment?: string;
   /** The model the turn ran on, for the alert. */
@@ -35,6 +35,7 @@ const MAX_COMMENT_LENGTH = 2000;
 const MAX_MODEL_LENGTH = 200;
 /** Same shape the transcript sync uses for session ids. */
 const SESSION_ID = /^[A-Za-z0-9._-]{1,128}$/;
+const MAX_SEGMENT_ID_LENGTH = 256;
 const RATINGS = new Set<FeedbackRating>(["up", "down", "clear"]);
 
 /**
@@ -46,10 +47,15 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
   if (typeof input !== "object" || input == null) return null;
   const raw = input as Record<string, unknown>;
   const sessionId = raw.sessionId;
-  const sequence = raw.eventSequenceNumber;
+  const segmentId = raw.segmentId;
   const rating = raw.rating;
   if (typeof sessionId !== "string" || !SESSION_ID.test(sessionId)) return null;
-  if (!Number.isInteger(sequence) || (sequence as number) < 0) return null;
+  if (
+    typeof segmentId !== "string" ||
+    segmentId.length === 0 ||
+    segmentId.length > MAX_SEGMENT_ID_LENGTH
+  )
+    return null;
   if (typeof rating !== "string" || !RATINGS.has(rating as FeedbackRating))
     return null;
   const comment =
@@ -62,7 +68,7 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
       : null;
   return {
     sessionId,
-    eventSequenceNumber: sequence as number,
+    segmentId,
     rating: rating as FeedbackRating,
     ...(comment.length > 0 ? { comment } : {}),
     model,
@@ -72,7 +78,7 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
 export class FeedbackService {
   constructor(
     private readonly options: {
-      debugSync: DebugSyncService;
+      debugSync: Pick<DebugSyncService, "flush" | "sequenceOf">;
       clientVersion: string;
       fetchImpl?: typeof fetch;
     }
@@ -95,6 +101,11 @@ export class FeedbackService {
 
     // The server rates a synced event; make sure this turn is one.
     await this.options.debugSync.flush(feedback.sessionId);
+    const sequence = this.options.debugSync.sequenceOf(
+      feedback.sessionId,
+      feedback.segmentId
+    );
+    if (sequence == null) return { ok: false, reason: "not-synced" };
 
     const doFetch = this.options.fetchImpl ?? fetch;
     const controller = new AbortController();
@@ -108,7 +119,7 @@ export class FeedbackService {
         },
         body: JSON.stringify({
           session_id: feedback.sessionId,
-          event_sequence_number: feedback.eventSequenceNumber,
+          event_sequence_number: sequence,
           rating: feedback.rating,
           comment: feedback.comment ?? "",
           model: feedback.model ?? null,
