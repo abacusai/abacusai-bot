@@ -2,7 +2,7 @@
  * Discord's chat list is not believed until the rail has actually rendered.
  *
  * The report: "I checked the Discord address book properly this time, and
- * there are no contacts" — said ten seconds after connect, five seconds
+ * there are no contacts", said ten seconds after connect, five seconds
  * before the rail read found two DMs.
  */
 import { describe, expect, it, vi } from "vitest";
@@ -48,7 +48,7 @@ describe("when the Discord chat list can be believed", () => {
     expect(connector.listContacts()).toEqual([{ chatId: "1", name: "anewja" }]);
   });
 
-  it("after two empty rails — an account with no DMs is also an answer", async () => {
+  it("after two empty rails, an account with no DMs is also an answer", async () => {
     const { connector, refresh } = connectorWith([[], []]);
     await refresh();
     await refresh();

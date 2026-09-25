@@ -2,8 +2,8 @@
  * The net has to actually be under the process, not just defined.
  *
  * What this pins is narrow and specific: after installing, an uncaught
- * exception in the main process is a logged line rather than Electron's default
- * — a modal error box, which blocks the main process and leaves every window
+ * exception in the main process is a logged line rather than Electron's default:
+ * a modal error box, which blocks the main process and leaves every window
  * spinning on IPC that will never be answered. That is what a tester saw when a
  * dropped IMAP socket threw.
  */
@@ -89,7 +89,7 @@ describe("the main-process crash guard", () => {
   it("swallows a dead stdio pipe instead of looping on it", async () => {
     // The loop: a closed parent terminal made every console.error an EPIPE
     // on stderr, the exception handler logged that with console.error, and
-    // so on — tens of thousands of lines a day from one install.
+    // so on: tens of thousands of lines a day from one install.
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const before = process.stderr.listenerCount("error");
     await install();

@@ -3,7 +3,7 @@
  *
  * dispose() is what app quit awaits, and its contract is "resolved means the
  * children are gone". A dispose that resolves while an agent still runs lets
- * that agent — and everything it spawned — outlive the app.
+ * that agent, and everything it spawned, outlive the app.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";

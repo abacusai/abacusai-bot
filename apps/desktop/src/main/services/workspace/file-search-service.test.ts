@@ -2,7 +2,7 @@
  * The file picker's native library has to be dlopen()ed from a real file.
  *
  * @ff-labs/fff-node computes the dylib path from its own location, so in a
- * packaged build that path runs through app.asar — which dlopen cannot read,
+ * packaged build that path runs through app.asar, which dlopen cannot read,
  * failing with ENOTDIR on the archive. The rewrite below is what keeps the
  * import pointed at the unpacked copy; these cases pin the shapes it has to
  * handle, including the Windows separator and the paths it must leave alone.

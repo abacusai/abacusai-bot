@@ -2,8 +2,8 @@
  * The other end of the Playwright Extension: a loopback WebSocket the
  * extension connects to once the user allows it, over which this app drives
  * the tabs the extension puts in its tab group. The wire protocol is the
- * extension's — `chrome.debugger.*` and `chrome.tabs.*` calls with positional
- * arguments, and the same APIs' events coming back — so the app speaks CDP to
+ * extension's: `chrome.debugger.*` and `chrome.tabs.*` calls with positional
+ * arguments, and the same APIs' events coming back, so the app speaks CDP to
  * a real Chrome tab exactly as it does to its own view.
  */
 import { randomUUID } from "node:crypto";

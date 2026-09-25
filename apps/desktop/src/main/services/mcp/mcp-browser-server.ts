@@ -96,7 +96,7 @@ const HISTORY_NAVIGATE_TIMEOUT_MS = 10_000;
  */
 const NO_BROWSER =
   "The browser preview is not available right now. Do not retry in a loop. " +
-  "To read a public page use `web_fetch` with the URL, or `web_search` to find one — " +
+  "To read a public page use `web_fetch` with the URL, or `web_search` to find one; " +
   "neither needs a browser. Only if the task truly requires a browser (a signed-in app, " +
   "a form to fill) tell the user the browser pane did not open and ask them to try again.";
 const SERVER_NAME = "browser";
@@ -111,7 +111,7 @@ const TOOLS_SCHEMA: Record<
     description: [
       "Navigate the browser. goto loads a URL; back, forward and reload move through history.",
       "",
-      "Put the query in the URL whenever the site allows it — one goto replaces a dozen clicks:",
+      "Put the query in the URL whenever the site allows it; one goto replaces a dozen clicks:",
       "  google.com/travel/flights?q=Flights from BLR to DEL on 2026-09-20 one way",
       "  google.com/maps/search/coffee+near+me   ·   amazon.in/s?k=usb+c+cable",
       "",
@@ -139,16 +139,16 @@ const TOOLS_SCHEMA: Record<
       "Read the page. Every element you can act on has an @eN ref that stays the same",
       "for as long as the element is on the page.",
       "",
-      'snapshot   — the element tree. Add find:"Delhi" to list only elements whose label',
+      'snapshot:    the element tree. Add find:"Delhi" to list only elements whose label',
       "             matches, or interactive_only:true to drop plain text. Prefer find over",
       "             reading a whole tree.",
-      "extract    — structured rows without writing JavaScript: selector (required), optional",
+      "extract:     structured rows without writing JavaScript: selector (required), optional",
       '             fields {"price": ".price"} mapping names to selectors inside each row, limit.',
       "             A <table> comes back as rows of cells.",
-      "screenshot — an image of the viewport plus a short description of where the page is.",
-      "text       — visible text, optionally scoped by selector.",
-      "url / title — just that.",
-      'find       — shorthand for snapshot with find:"..." (same result).',
+      "screenshot:  an image of the viewport plus a short description of where the page is.",
+      "text:        visible text, optionally scoped by selector.",
+      "url / title: just that.",
+      'find:        shorthand for snapshot with find:"..." (same result).',
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -196,23 +196,23 @@ const TOOLS_SCHEMA: Record<
   },
   browser_interact: {
     description: [
-      "Act on an element by its @eN ref. After the action the result says what changed —",
-      "new elements with their refs, a new URL, a dialog that appeared — so you rarely need",
+      "Act on an element by its @eN ref. The result says what changed (new elements with",
+      "their refs, a new URL, a dialog that appeared), so you rarely need",
       "another snapshot. Refs stay valid while the element exists.",
       "",
-      "click        — click (params: ref)",
-      "fill         — replace a field's text (params: ref, text)",
-      "pick         — fill an autocomplete and choose the matching suggestion from its dropdown,",
+      "click:         click (params: ref)",
+      "fill:          replace a field's text (params: ref, text)",
+      "pick:          fill an autocomplete and choose the matching suggestion from its dropdown,",
       "               then confirm the field took it (params: ref, text). Use this for city,",
-      "               airport, product and address boxes — plain fill leaves them unchanged.",
-      "type         — append text without clearing (params: ref, text)",
-      "select       — choose an option in a <select> (params: ref, value — option text works)",
-      "press        — a key or combo (params: key, e.g. Enter, Escape, ArrowDown, Control+a)",
-      "dismiss      — close the cookie banner, consent dialog or overlay on top of the page",
-      "check / uncheck — a checkbox (params: ref)",
-      "hover, focus, scroll_into_view — (params: ref)",
-      "scroll       — the page or an element (params: direction, amount, optional ref)",
-      "wait         — until text appears, a URL matches, or an element exists",
+      "               airport, product and address boxes; plain fill leaves them unchanged.",
+      "type:          append text without clearing (params: ref, text)",
+      "select:        choose an option in a <select> (params: ref, value; option text works)",
+      "press:         a key or combo (params: key, e.g. Enter, Escape, ArrowDown, Control+a)",
+      "dismiss:       close the cookie banner, consent dialog or overlay on top of the page",
+      "check / uncheck: a checkbox (params: ref)",
+      "hover, focus, scroll_into_view: (params: ref)",
+      "scroll:        the page or an element (params: direction, amount, optional ref)",
+      "wait:          until text appears, a URL matches, or an element exists",
       "               (params: text | url_pattern | ref, amount = timeout ms). Use this instead",
       "               of snapshotting in a loop while results load.",
     ].join("\n"),
@@ -301,7 +301,7 @@ const TOOLS_SCHEMA: Record<
   },
 };
 
-/** Drop screenshots older than a day — nothing looks at yesterday's page. */
+/** Drop screenshots older than a day: nothing looks at yesterday's page. */
 function pruneOldScreenshots(maxAgeMs = 24 * 60 * 60 * 1000): void {
   try {
     const cutoff = Date.now() - maxAgeMs;
@@ -310,7 +310,7 @@ function pruneOldScreenshots(maxAgeMs = 24 * 60 * 60 * 1000): void {
       try {
         if (fs.statSync(file).mtimeMs < cutoff) fs.unlinkSync(file);
       } catch {
-        /* raced with another prune, or unreadable — skip */
+        /* raced with another prune, or unreadable: skip */
       }
     }
   } catch {
@@ -835,7 +835,7 @@ export class McpBrowserServer {
       this.onNavigated();
 
       return this.err(
-        `${url} did not load: ${failure}. The site refused the request or is unreachable — try a different source.`
+        `${url} did not load: ${failure}. The site refused the request or is unreachable. Try a different source.`
       );
     }
 
@@ -854,7 +854,7 @@ export class McpBrowserServer {
 
     return this.err(
       `Navigation to ${url} did not complete within ${this.navigateTimeout() / 1000}s (preview is at ${current}). ` +
-        "The page may still be loading — take a snapshot to check."
+        "The page may still be loading. Take a snapshot to check."
     );
   }
 
@@ -1151,7 +1151,7 @@ export class McpBrowserServer {
     try {
       result = await this.takeSnapshot(wc, sessionId);
     } catch {
-      return `Now at ${wc.getURL()} — the page is still loading; wait, then snapshot.`;
+      return `Now at ${wc.getURL()}. The page is still loading; wait, then snapshot.`;
     }
     if (result.tree == null) return "";
 
@@ -1211,7 +1211,7 @@ export class McpBrowserServer {
         );
       } else {
         lines.push(
-          "No interactive elements yet — the page may still be loading. Use interact wait, then snapshot."
+          "No interactive elements yet. The page may still be loading. Use interact wait, then snapshot."
         );
       }
     } catch {
@@ -1316,7 +1316,7 @@ export class McpBrowserServer {
 
     if (!took) {
       return this.err(
-        `Typed "${text}" into ${label} but the field reads "${value}" — the site did not accept it.${seen} ` +
+        `Typed "${text}" into ${label} but the field reads "${value}". The site did not accept it.${seen} ` +
           `Click the right suggestion by ref, or try a shorter text.\n${changes}`
       );
     }
@@ -1643,7 +1643,7 @@ export class McpBrowserServer {
           return this.ok(
             `Page: ${result?.title ?? wc.getTitle()}\nURL: ${result?.url ?? wc.getURL()}\n\n` +
               "(no interactive elements found)\n" +
-              'The page may still be loading — interact action:"wait" with text or url_pattern, then snapshot again.\n' +
+              'The page may still be loading. interact action:"wait" with text or url_pattern, then snapshot again.\n' +
               "If it stays empty the content is likely inside a shadow root or an iframe, which this snapshot " +
               "and plain document.querySelector both see through: reach it with browser_execute using " +
               "element.shadowRoot or the frame's contentDocument, or navigate straight to the frame URL."
@@ -1668,7 +1668,7 @@ export class McpBrowserServer {
           lines.push(
             filtered.count > 0
               ? filtered.text
-              : "(none — try a shorter word, or snapshot without find to see the page)"
+              : "(none; try a shorter word, or snapshot without find to see the page)"
           );
         } else {
           lines.push(
@@ -1933,7 +1933,7 @@ export class McpBrowserServer {
         }
         if (result?.status === "rejected") {
           return this.err(
-            `Filled ${this.label(args)}, but the page reset its value — it is likely controlled by a framework ` +
+            `Filled ${this.label(args)}, but the page reset its value; it is likely controlled by a framework ` +
               'that ignores programmatic input. Try interact action:"type", or press keys into it.'
           );
         }
@@ -1978,7 +1978,7 @@ export class McpBrowserServer {
         }
         if (result?.status === "rejected") {
           return this.err(
-            `Typed into ${this.label(args)}, but the page reset its value — it is likely controlled by a ` +
+            `Typed into ${this.label(args)}, but the page reset its value; it is likely controlled by a ` +
               "framework that ignores programmatic input."
           );
         }
@@ -2066,7 +2066,7 @@ export class McpBrowserServer {
         const covered = Math.abs(moved?.dx ?? 0) + Math.abs(moved?.dy ?? 0);
         if (covered === 0) {
           return this.ok(
-            `Scroll had no effect — ${sel ? this.label(args) : "the page"} is already at the ${direction} limit.`
+            `Scroll had no effect: ${sel ? this.label(args) : "the page"} is already at the ${direction} limit.`
           );
         }
         return this.ok(
@@ -2115,7 +2115,7 @@ export class McpBrowserServer {
           return this.err(this.notFoundError(args, sel));
         if (result === "not_focusable") {
           return this.err(
-            `${this.label(args)} did not take focus — it is not a focusable element. ` +
+            `${this.label(args)} did not take focus: it is not a focusable element. ` +
               "Give it a tabindex, or aim at the input inside it."
           );
         }
@@ -2137,7 +2137,7 @@ export class McpBrowserServer {
         if (result === "unchanged") {
           return this.err(
             `Clicked ${this.label(args)}, but it is still ${want ? "unchecked" : "checked"}. ` +
-              "The control may be disabled or handled by a custom widget — take a snapshot to check."
+              "The control may be disabled or handled by a custom widget. Take a snapshot to check."
           );
         }
         return this.ok(

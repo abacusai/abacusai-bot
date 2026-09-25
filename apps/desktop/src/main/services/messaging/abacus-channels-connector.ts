@@ -134,7 +134,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
     return this.linked ? SELF_CHAT_ID : null;
   }
 
-  /** How the bot appears in the chat app, once linked — the name its chat carries. */
+  /** How the bot appears in the chat app, once linked: the name its chat carries. */
   sharedBotName(): string | null {
     return this.linked ? this.botName : null;
   }
@@ -169,7 +169,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
   ): Promise<void> {
     if (chatId !== SELF_CHAT_ID)
       throw new Error(
-        "The Abacus AI bot only talks to you — it cannot message other people."
+        "The Abacus AI bot only talks to you. It cannot message other people."
       );
     for (const chunk of chunkMessage(text, MAX_MESSAGE_LENGTH[this.channel])) {
       const messageId = replyContext?.message_id;
@@ -242,7 +242,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
           : this.link.deepLink
         : undefined;
     if (url == null || !isWebUrl(url))
-      throw new Error("There is no install link to open — press Link first.");
+      throw new Error("There is no install link to open. Press Link first.");
     if (this.linkWindow != null && !this.linkWindow.isDestroyed()) {
       void this.linkWindow.loadURL(url);
       this.linkWindow.show();
@@ -292,8 +292,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
       if (!this.running || this.link.status !== "pending") return;
       // A code that ran out while the user was still finding their phone is
       // replaced rather than reported. The server sets the lifetime and will
-      // not honour a stale code, so the pane cannot simply keep showing this
-      // one — but "that code expired, link again" asks the user to redo by
+      // not honour a stale code, so the pane cannot keep showing this
+      // one. But "that code expired, link again" asks the user to redo by
       // hand what the app can do for them, and the QR they are looking at
       // becomes a QR that silently does nothing.
       if (
@@ -305,7 +305,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
           // another below would leave two loops polling the same link.
           await this.pair();
           this.callbacks.onLog(
-            `${this.channel}: the pairing code ran out — showing a fresh one`
+            `${this.channel}: the pairing code ran out; showing a fresh one`
           );
           return;
         } catch (error) {
@@ -407,7 +407,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
         if (!this.running) return;
         failures += 1;
         const message = error instanceof Error ? error.message : String(error);
-        this.callbacks.onLog(`${this.id}: inbox poll failed — ${message}`);
+        this.callbacks.onLog(`${this.id}: inbox poll failed: ${message}`);
         if (failures >= 3) this.callbacks.onState("error", message);
         await this.sleep(Math.min(1000 * 2 ** failures, 60_000));
         if (this.running && failures >= 3) await this.refreshStatus();
@@ -430,7 +430,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
     // No lane for this channel: a lost message is worse than a mislabelled
     // one, so deliver here and say so.
     this.callbacks.onLog(
-      `${this.id}: a ${channel} message arrived with no ${channel} lane running — delivered here`
+      `${this.id}: a ${channel} message arrived with no ${channel} lane running; delivered it here`
     );
     this.deliver(entry);
   }
@@ -452,7 +452,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
         ];
       } catch (error) {
         this.callbacks.onLog(
-          `abacus-${this.channel}: could not save an attachment — ${error instanceof Error ? error.message : String(error)}`
+          `abacus-${this.channel}: could not save an attachment: ${error instanceof Error ? error.message : String(error)}`
         );
         return [];
       }

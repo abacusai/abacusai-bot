@@ -12,8 +12,8 @@
  * is owed the list as well, on its first message.
  *
  * These tests pin both halves: the note itself, and that every way the user has
- * of changing the environment — a messaging connector, an MCP server, a connector
- * (which is an MCP server), a skill — actually raises it.
+ * of changing the environment (a messaging connector, an MCP server, a connector,
+ * which is an MCP server, or a skill) actually raises it.
  */
 import fs from "fs";
 import os from "os";
@@ -97,7 +97,7 @@ describe("the note itself", () => {
    * connected" counted messaging platforms, and the only other trace was an
    * MCP server called `abacus-connectors`, which names nothing behind it. So
    * the note said "(0): none" over a live Gmail, and the model had nothing to
-   * read that said otherwise — nor who the account belonged to.
+   * read that said otherwise, nor who the account belonged to.
    */
   it("names the account connectors, and who each is connected as", () => {
     const notice = formatEnvironmentNotice({
@@ -275,7 +275,7 @@ describe("who is owed a note", () => {
 
 /**
  * The regression guard. Each case is a real path a user takes in the UI, and
- * each must raise the flag for a conversation that is already open — this is
+ * each must raise the flag for a conversation that is already open. This is
  * what stops the reported bug coming back for a connector, an MCP server, a
  * connector or a skill that is added later.
  */

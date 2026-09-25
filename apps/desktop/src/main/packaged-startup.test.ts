@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
  * Whether the packaged app can load what it imports.
  *
  * The packaged main process runs from inside app.asar, which contains this
- * app's own bundles and its production dependencies — and nothing else. An
+ * app's own bundles and its production dependencies, and nothing else. An
  * import of anything outside that set is not a slow start or a missing feature:
  * the process dies at module load, before a line of our code runs, and Electron
  * shows "A JavaScript error occurred in the main process" over an app that
@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
  * 1.0.5 and 1.0.6 shipped exactly that, from one import of the agent's barrel
  * that dragged in a package which ships BESIDE the asar for the agent's own
  * process. Typecheck was green, every unit suite was green, and the smoke test
- * that launches the packaged app was green too — it watched the pid, and a
+ * that launches the packaged app was green too. It watched the pid, and a
  * process sitting on a fatal dialog keeps its pid.
  *
  * So this reads the built bundles and resolves every bare import against what
@@ -55,7 +55,7 @@ const packageOf = (specifier: string): string => {
 };
 
 /**
- * A bare package specifier and nothing else — `pkg`, `@scope/pkg`, `pkg/sub`.
+ * A bare package specifier and nothing else: `pkg`, `@scope/pkg`, `pkg/sub`.
  *
  * The bundles are megabytes of code containing every string the app can print,
  * and an import pattern loose enough to span a newline will eventually match

@@ -8,13 +8,13 @@ import { forChat } from "./chat-markdown";
 
 describe("forChat", () => {
   it("gives WhatsApp its own single-asterisk bold and bullet glyph", () => {
-    const out = forChat("- **GPT-6 Astra** — their newest model", "whatsapp");
-    expect(out).toBe("• *GPT-6 Astra* — their newest model");
+    const out = forChat("- **GPT-6 Astra**: their newest model", "whatsapp");
+    expect(out).toBe("• *GPT-6 Astra*: their newest model");
   });
 
   it("leaves Telegram plain words, markers and all", () => {
-    const out = forChat("- **GPT-6 Astra** — _newest_", "telegram");
-    expect(out).toBe("• GPT-6 Astra — newest");
+    const out = forChat("- **GPT-6 Astra**: _newest_", "telegram");
+    expect(out).toBe("• GPT-6 Astra: newest");
   });
 
   it("keeps Discord's own markdown", () => {

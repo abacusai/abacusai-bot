@@ -1,7 +1,7 @@
 /**
  * Turning a messaging platform on must not wait for it to connect.
  *
- * Every connector's `start()` opens a real connection — SMTP verify plus IMAP
+ * Every connector's `start()` opens a real connection: SMTP verify plus IMAP
  * login, Slack's auth.test, Discord's /users/@me. That was awaited through
  * syncConnectors into the IPC call behind the enable toggle, and the toggle
  * disables itself while that call is in flight. A slow handshake left it
@@ -38,7 +38,7 @@ const gateway = (): InstanceType<typeof MessagingGatewayService> =>
     emitChanged: () => {},
   } as never);
 
-/** A connector whose start never settles — a host that accepts and says nothing. */
+/** A connector whose start never settles: a host that accepts and says nothing. */
 const hangingConnector = (): { started: boolean; connector: unknown } => {
   const state = { started: false };
   return {

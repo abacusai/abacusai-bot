@@ -1,9 +1,9 @@
 /**
  * The contract between the connect page and the model picker.
  *
- * Three registries describe a provider — PROVIDER_ENV_VARS (where its key is
+ * Three registries describe a provider: PROVIDER_ENV_VARS (where its key is
  * stored), PROVIDER_KEY_FIELDS (the card on the connect page), and
- * MODEL_CATALOG (what the picker offers once the key exists) — and they only
+ * MODEL_CATALOG (what the picker offers once the key exists). They only
  * work in agreement. A provider present in one and missing in another is a
  * silent dead end: a card that stores a key nothing reads, or a key that
  * connects a provider no model in the picker is gated on. Each drift here is
@@ -46,14 +46,14 @@ describe("every connect-page card", () => {
   });
 
   it("points at a key, not at the connect flow", () => {
-    // Every card's link answers the same question — where do I get the key —
+    // Every card's link answers the same question (where do I get the key?),
     // and the two providers with a browser sign-in are no exception: the
     // Connect button next to the link is what performs the sign-in.
     //
     // Abacus's link used to be the sign-in page carrying `AbacusAIBot=1`, the
     // flag that puts that page into connect mode. It then looks for the
-    // loopback handshake only startAbacusAuth can mint — the challenge, the
-    // port, the callback path — and refuses with "This connect link is invalid
+    // loopback handshake only startAbacusAuth can mint: the challenge, the
+    // port, the callback path. It refuses with "This connect link is invalid
     // or incomplete" without them. Deleting the key and reaching for this link
     // was the shortest route to that dead end.
     for (const field of PROVIDER_KEY_FIELDS) {

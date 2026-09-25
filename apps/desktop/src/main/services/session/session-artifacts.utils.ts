@@ -157,7 +157,7 @@ function settledToolCall(
   };
 }
 
-/** `example.com/docs/page` — the host plus enough path to tell two links apart. */
+/** `example.com/docs/page`: the host plus enough path to tell two links apart. */
 function linkTitle(url: string): string {
   try {
     const parsed = new URL(url);

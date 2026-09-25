@@ -1,7 +1,7 @@
 /**
  * How a connector gets connected and disconnected, by kind, in one place.
- * Every surface with a Connect button — the Connectors page, onboarding, the
- * card the agent raises in a chat — calls this rather than knowing what a
+ * Every surface with a Connect button (the Connectors page, onboarding, the
+ * card the agent raises in a chat) calls this rather than knowing what a
  * platform hop, a credential store or an MCP install is. The renderer's only
  * job is to collect fields when the kind needs them (registry `connectUi`).
  */
@@ -27,7 +27,7 @@ export interface FlowSources {
   };
   /**
    * Store (or clear, with "") an agent credential by provider id. Announcing
-   * it — the gateway, running agents, the renderer — is the caller's.
+   * it to the gateway, running agents and the renderer is the caller's job.
    */
   credential: { save: (provider: string, value: string) => void };
   mcp: {

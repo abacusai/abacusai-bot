@@ -79,7 +79,7 @@ const describeTurnComplete = (
     return line;
   }
   if (cacheHitsSeen.has(sessionId) && total >= CACHE_WATCH_MIN_INPUT)
-    return `${line} — PROMPT CACHE MISS after hits: the cached prefix changed`;
+    return `${line}; PROMPT CACHE MISS after hits: the cached prefix changed`;
   return line;
 };
 

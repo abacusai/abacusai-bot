@@ -1,6 +1,6 @@
 /**
- * Linking a self lane — the shared Abacus AI bots, WhatsApp's "Message
- * yourself" — must leave the user with a working conversation, not a
+ * Linking a self lane (the shared Abacus AI bots, WhatsApp's "Message
+ * yourself") must leave the user with a working conversation, not a
  * dashboard of switches: the moment the link proves which chat is theirs, a
  * dedicated bot is created and that chat starts answering. Only the self
  * lane: the first cut of this feature flipped the global respondToInbound
@@ -10,7 +10,7 @@
  *
  * The invariant pinned here is ONCE EVER. The link callback re-fires on every
  * app start (restored links) and every relink, and the bootstrap must not ride
- * it into recreating a bot the user deleted — the stored per-lane flag absorbs
+ * it into recreating a bot the user deleted; the stored per-lane flag absorbs
  * every firing after the first.
  *
  * The own-account Telegram lane once minted its own bot through BotFather and
@@ -107,7 +107,7 @@ const service = (): {
       buildConnector: (id: MessagingPlatformId) => unknown;
     }
   ).buildConnector = (id: MessagingPlatformId) => {
-    // Reuse the real callback wiring — the bootstrap trigger is what is
+    // Reuse the real callback wiring; the bootstrap trigger is what is
     // under test, and rebuilding it here would test the test.
     const real = build(id) as { callbacks: Callbacks };
     captured.push(real.callbacks);
@@ -152,7 +152,7 @@ describe("the Abacus AI Telegram self-lane bootstrap", () => {
 
     expect(createCalls).toEqual(["abacus_telegram"]);
     expect(settings.selfBotIds.abacus_telegram).toBe("bot-telegram");
-    // The global switch answers every chat as the user — the bootstrap must
+    // The global switch answers every chat as the user; the bootstrap must
     // leave it exactly where the user had it, and the general bot alone.
     expect(settings.botId).toBeNull();
     expect(settings.respondToInbound).toBe(false);
@@ -198,7 +198,7 @@ describe("the Abacus AI Telegram self-lane bootstrap", () => {
 /**
  * The Abacus AI Discord bot's chat is a lane of its own. The first cut fed
  * it through the old Telegram bootstrap, so the Discord DM turned up in the
- * app under "AbacusAI Bot <-> You" — a bot whose brief said it lived in
+ * app under "AbacusAI Bot <-> You", a bot whose brief said it lived in
  * Telegram.
  */
 describe("the Abacus AI Discord self-lane bootstrap", () => {
@@ -251,7 +251,7 @@ describe("the Abacus AI Discord self-lane bootstrap", () => {
  * WhatsApp's "Message yourself" chat is a self lane like the others: the link
  * proving the user's own number mints its bot and that chat starts answering,
  * with nothing to switch on. It used to ride the old Telegram bootstrap bot,
- * so a WhatsApp-only user got no bot at all — and the global switch stays off.
+ * so a WhatsApp-only user got no bot at all, and the global switch stays off.
  */
 describe("the WhatsApp self-lane bootstrap", () => {
   it("creates its own bot on first link, once ever", async () => {

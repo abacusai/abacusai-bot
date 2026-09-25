@@ -2,7 +2,7 @@
  * Sending to a platform that is not linked.
  *
  * The guard used to ask whether ANY platform was running, and "running" only
- * means a connector object exists — a phone that unlinks the device leaves one
+ * means a connector object exists: a phone that unlinks the device leaves one
  * in place, restarting for a fresh QR. So with Telegram up and WhatsApp not, a
  * WhatsApp send walked past the guard and came back reported as sent.
  */
@@ -112,7 +112,7 @@ describe("sending to a platform that is not linked", () => {
 
 describe("reading from a platform that is not linked", () => {
   it("blames the connection, not how the user named the chat", async () => {
-    // History is stored, so an empty read is fine while a platform is down —
+    // History is stored, so an empty read is fine while a platform is down,
     // but "try naming the exact person" sends the agent asking the user to
     // rename a chat that was never the problem.
     const text = await call(

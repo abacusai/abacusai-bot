@@ -30,7 +30,7 @@ afterEach(() => {
  * A request that does not outlive its own response.
  *
  * Every service here binds the same fixed port, so all these tests talk to one
- * origin — and `fetch` is undici, which pools connections per origin. A socket
+ * origin, and `fetch` is undici, which pools connections per origin. A socket
  * pooled against one test's service was handed the next test's first request,
  * reaching a listener that had already stopped: ECONNRESET, on a call whose
  * assertion had nothing to do with it. That was main's only red test for a

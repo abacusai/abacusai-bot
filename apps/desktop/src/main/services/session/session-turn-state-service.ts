@@ -140,7 +140,7 @@ export class SessionTurnStateService {
       return false;
     }
 
-    // Any event from the CLI counts as activity — reset the inactivity timer.
+    // Any event from the CLI counts as activity.
     this.resetActivityTimer(workspaceId, sessionId);
 
     if (
@@ -165,7 +165,7 @@ export class SessionTurnStateService {
     } else if (event?.type === "error") {
       this.set(workspaceId, sessionId, "error");
     }
-    // turn_complete intentionally ignored — see class JSDoc.
+    // turn_complete intentionally ignored. See class JSDoc.
 
     return true;
   }

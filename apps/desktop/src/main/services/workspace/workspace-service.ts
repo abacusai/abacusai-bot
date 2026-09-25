@@ -189,7 +189,7 @@ export class WorkspaceService {
       const stat = await fsp.stat(workspacePath);
       return { workspaceId, path: workspacePath, exists: stat.isDirectory() };
     } catch (error) {
-      // Only ENOENT/ENOTDIR means "gone" — a permission error or a stalled
+      // Only ENOENT/ENOTDIR means "gone". A permission error or a stalled
       // network mount must not offer to delete the workspace.
       const code = (error as NodeJS.ErrnoException).code;
       return {

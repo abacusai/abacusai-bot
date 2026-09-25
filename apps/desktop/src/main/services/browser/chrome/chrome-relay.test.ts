@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * The relay against a stand-in for the Playwright Extension: the same wire
- * protocol the real one speaks — `chrome.*` calls with positional arguments,
+ * protocol the real one speaks: `chrome.*` calls with positional arguments,
  * `chrome.*` events back, `extension.initialized` to end the handshake.
  */
 import { WebSocket } from "ws";

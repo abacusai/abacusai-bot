@@ -157,7 +157,7 @@ describe("the bot chat's transcript", () => {
     await h.inbound("Hey tell me abt Nepal flood");
     h.delta("<reply>Over 1,300 dead, rescue ongoing.</reply>");
     // "Hey" arriving behind a real question steers the same turn, and only
-    // the last reply of a turn is sent — so the answer used to be dropped and
+    // the last reply of a turn is sent, so the answer used to be dropped and
     // the model would then say "as I said above" about words nobody got.
     await h.inbound("Hey");
 
@@ -195,12 +195,12 @@ describe("the bot chat's transcript", () => {
     const h = harness();
 
     await h.inbound("what is Astra?");
-    h.delta("<reply>- **GPT-6 Astra** — OpenAI's newest</reply>");
+    h.delta("<reply>- **GPT-6 Astra**: OpenAI's newest</reply>");
     h.idle();
 
-    expect(h.sent).toEqual(["• *GPT-6 Astra* — OpenAI's newest"]);
+    expect(h.sent).toEqual(["• *GPT-6 Astra*: OpenAI's newest"]);
     expect(h.shown[1]?.content).toBe(
-      "[Response from AbacusAI Bot] • *GPT-6 Astra* — OpenAI's newest"
+      "[Response from AbacusAI Bot] • *GPT-6 Astra*: OpenAI's newest"
     );
   });
 });

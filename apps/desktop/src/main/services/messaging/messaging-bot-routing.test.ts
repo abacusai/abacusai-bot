@@ -2,7 +2,7 @@
  * Inbound delivery to a bot's forever chat.
  *
  * With a bot named in the gateway settings, every approved message lands in
- * that bot's one session — framed with who sent it, serialized across chats
+ * that bot's one session, framed with who sent it, serialized across chats
  * that share the session, and answered back to the chat whose message the
  * turn was actually about.
  */
@@ -105,7 +105,7 @@ describe("delivering into the bot's chat", () => {
     expect(h.openedChats()).toBe(1);
     expect(h.prompts).toHaveLength(1);
     // The framing is what this pins. Every auto-reply prompt also carries the
-    // one-line reminder that what it writes goes to the sender — restated per
+    // one-line reminder that what it writes goes to the sender, restated per
     // turn, because the rules preamble rides only on the first one.
     expect(h.prompts[0]).toContain(
       "[Discord message from Ada] are we still on for 3pm?"

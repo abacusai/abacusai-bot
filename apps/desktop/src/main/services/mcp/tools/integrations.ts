@@ -68,7 +68,7 @@ export const INTEGRATIONS_TOOLS: ToolDefinition[] = [
     toolsets: ["homeassistant"],
     ready: homeAssistantReady,
     description:
-      "Call a Home Assistant service to change something. This affects real devices in the user's home — be sure before calling it.",
+      "Call a Home Assistant service to change something. This affects real devices in the user's home. Be sure before calling it.",
     inputSchema: {
       type: "object",
       properties: {

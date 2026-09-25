@@ -120,7 +120,7 @@ describe("messaging connectors", () => {
     ).toEqual({ state: "connected" });
   });
 
-  it("are pending when enabled and configured but not live — a broken link is not a connection", () => {
+  it("are pending when enabled and configured but not live, since a broken link is not a connection", () => {
     const stale = snapshot([
       platform("whatsapp", {
         enabled: true,

@@ -3,7 +3,7 @@
  * `TOOLSETS` registry the Capabilities pane and the exclude list are built
  * from, and the description strings the pane shows. They used to be kept in
  * step by hand, and `design` and `deck_export_pdf` once shipped with a
- * definition and no registry entry — advertised nowhere, callable by nothing,
+ * definition and no registry entry: advertised nowhere, callable by nothing,
  * and no test noticed. So the agreement is asserted, not trusted.
  */
 import fs from "fs";

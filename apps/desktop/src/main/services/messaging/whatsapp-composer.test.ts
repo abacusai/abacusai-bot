@@ -2,10 +2,10 @@
  * Opening a chat's message box, and what is said when it does not appear.
  *
  * The report: a user linked WhatsApp, asked the bot to message himself, and
- * was told WhatsApp "needs to be set up on your phone first — scan a QR code".
+ * was told WhatsApp "needs to be set up on your phone first, scan a QR code".
  * It was linked; the QR had been scanned a minute earlier. The chat had opened
- * and the composer simply had not mounted yet, and the only thing the tool
- * said about that was "The message box did not open" — so the model invented
+ * and the composer had not mounted yet, and the only thing the tool
+ * said about that was "The message box did not open", so the model invented
  * the rest.
  */
 import { describe, expect, it, vi } from "vitest";
@@ -67,7 +67,7 @@ const connectorWith = (
 describe("one driver at a time", () => {
   /**
    * The inbound sweep runs every five seconds and a send waits seconds for a
-   * composer, so they overlap constantly — and the sweep's self lookup types
+   * composer, so they overlap constantly, and the sweep's self lookup types
    * into the search box, which replaces whatever conversation the send just
    * opened. The send then waits out its timeout on a chat no longer on screen.
    */
@@ -135,8 +135,8 @@ describe("waiting for the message box", () => {
   });
 
   it("opens the chat again when the box has not mounted yet", async () => {
-    // The minutes after a link: the chat list is already there — it is what
-    // the row was found in — but the conversation pane has not finished
+    // The minutes after a link: the chat list is already there. It is what
+    // the row was found in, but the conversation pane has not finished
     // mounting, so the first wait times out on a chat that is perfectly fine.
     const { openComposer, opens, logs } = connectorWith([
       { ok: false, error: "The message box did not open." },

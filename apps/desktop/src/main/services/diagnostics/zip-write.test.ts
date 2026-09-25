@@ -2,7 +2,7 @@
  * The writer, checked against the reader this repo already has.
  *
  * A bundle nobody can open is worse than no bundle, and "it opened in my zip
- * tool" is not something a test can assert — so every case here writes an
+ * tool" is not something a test can assert, so every case here writes an
  * archive and reads it back through services/pptx/zip.ts, which is a separate
  * implementation of the same spec.
  */
@@ -58,7 +58,7 @@ describe("building a zip", () => {
   });
 
   it("keeps non-ASCII names and content intact", () => {
-    const content = Buffer.from("réponse du modèle — 429\n", "utf8");
+    const content = Buffer.from("réponse du modèle, 429\n", "utf8");
 
     expect(roundTrip("logs/journée.log", content)?.toString("utf8")).toBe(
       content.toString("utf8")

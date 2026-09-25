@@ -1,15 +1,15 @@
 /**
  * The chat connectors' windows are hidden and driven, not looked at.
  *
- * Each one loads a real web app — WhatsApp Web, Telegram Web, Discord — and
+ * Each one loads a real web app (WhatsApp Web, Telegram Web, Discord) and
  * each of those plays a sound when a message arrives. With the window hidden
  * that sound has no window behind it to explain it: the user hears a
  * notification from nowhere, for a message the app is about to tell them about
  * itself. So every window is muted where it is built.
  *
  * Asserted against the source because the alternative is booting Electron for
- * four `new BrowserWindow` calls. What matters is the invariant — no window is
- * built without being muted — and that is what a new connector would break.
+ * four `new BrowserWindow` calls. What matters is the invariant: no window is
+ * built without being muted, and that is what a new connector would break.
  */
 import fs from "fs";
 import path from "path";

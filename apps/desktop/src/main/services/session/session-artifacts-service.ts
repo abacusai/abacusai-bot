@@ -30,7 +30,7 @@ export class SessionArtifactsService {
   constructor(
     private readonly deps: {
       resolveWorkspacePath: (workspaceId: string) => string | null;
-      /** Remote workspaces have no host paths to record — see recordFromNdjson. */
+      /** Remote workspaces have no host paths to record. See recordFromNdjson. */
       isWorkspaceRemote: (workspaceId: string) => boolean;
       onChanged: () => void;
     }

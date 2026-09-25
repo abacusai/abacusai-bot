@@ -1,7 +1,7 @@
 /**
  * `auto_reply`: "reply whenever X messages me" as one tool call.
  *
- * Bots-only — routing inbound messages to the calling bot's own
+ * Bots-only: routing inbound messages to the calling bot's own
  * chat needs a calling bot. The user naming a sender in the bot's chat is the
  * approval the pairing queue exists to collect, so allowing them here skips
  * the queue; strangers stay unanswered either way.
@@ -133,7 +133,7 @@ describe("turning auto-reply on from a bot's chat", () => {
       "bot-session"
     );
 
-    expect(text).toContain("say which one");
+    expect(text).toContain("Say which one");
     expect(autoReply.enable).not.toHaveBeenCalled();
   });
 

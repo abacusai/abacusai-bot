@@ -49,7 +49,7 @@ describe("rendererCspHeaders", () => {
     expect(headers).toBeUndefined();
   });
 
-  it("does not touch app:// subresources — the top document's CSP covers them", () => {
+  it("does not touch app:// subresources, which the top document's CSP covers", () => {
     const original = { "content-type": ["application/javascript"] };
     const headers = rendererCspHeaders({
       resourceType: "script",

@@ -2,8 +2,8 @@
  * The gateway surface behind the agent's messaging tools, in the default
  * agent-initiated-only mode (respondToInbound off).
  *
- * The contract worth pinning: an incoming message is recorded — into the log
- * read_chat_messages reads, and into the contact list, auto-approved — and
+ * The contract worth pinning: an incoming message is recorded (into the log
+ * read_chat_messages reads, and into the contact list, auto-approved) and
  * nothing else happens: no session, no turn, no reply. Sends are user-driven
  * from a desktop chat, go to whoever the user names, are logged, and fail
  * loudly (a platform that is not running, a delivery error) so the model can
@@ -21,7 +21,7 @@ vi.mock("./messaging-config-service", async (importOriginal) => {
     ...actual,
     // The gateway's message log persists to disk now; unstubbed, every test
     // read the previous tests' entries (and the suite wrote into the real
-    // ~/.abacusai-bot) — the source of three cross-contaminated failures.
+    // ~/.abacusai-bot): the source of three cross-contaminated failures.
     readStoredMessageLog: () => [],
     writeStoredMessageLog: () => {},
     readGatewaySettings: () => ({
@@ -195,7 +195,7 @@ describe("inbound with listening off", () => {
 
   it("reads a chat live when the connector can open it, over the log", async () => {
     // A connector that drives a real client answers "check X's messages" from
-    // the actual chat, not the passive log — which for a chat nothing arrived
+    // the actual chat, not the passive log, which for a chat nothing arrived
     // in while running would otherwise be empty.
     const gateway = gatewayWith({
       sendText: async () => {},
@@ -369,8 +369,8 @@ describe("the chat list", () => {
 /**
  * "me" as a recipient.
  *
- * The user's own account is the one address no address book holds — connecting
- * is what establishes it — so asking them for it is asking about the phone
+ * The user's own account is the one address no address book holds. Connecting
+ * is what establishes it, so asking them for it is asking about the phone
  * they just paired. Resolved here rather than in the tool: it is the platform
  * that knows.
  */
@@ -412,7 +412,7 @@ describe("sending to yourself", () => {
 
   /**
    * Not silently treated as a contact named "me": that would either miss and
-   * read as an unknown name, or — worse — match somebody actually called Me.
+   * read as an unknown name, or, worse, match somebody actually called Me.
    */
   it("says the platform has not said yet, rather than guessing", async () => {
     const { service, sent } = withSelf(null);

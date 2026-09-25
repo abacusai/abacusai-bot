@@ -2,7 +2,7 @@
  * Only the turn's last assistant message is the reply.
  *
  * The report: Ma asked about the weather and received, verbatim, "Let me
- * check the weather for you." — the narration before the web search — then
+ * check the weather for you." (the narration before the web search), then
  * the model's planning, then the actual reply. A turn that calls a tool
  * produces several assistant messages; the words for the other person are
  * the ones after the last tool round, and nothing before them.

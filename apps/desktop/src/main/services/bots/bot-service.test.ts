@@ -64,9 +64,7 @@ describe("creating a bot", () => {
     const persona = fs.readFileSync(personaPath(bot.id), "utf8");
     expect(persona).toContain("# Scout");
     expect(persona).toContain("**Role:** Research Scout");
-    expect(persona).toContain(
-      "**Your mission — yours alone:** Watch the news."
-    );
+    expect(persona).toContain("**Your mission, yours alone:** Watch the news.");
   });
 
   it("tells the bot to introduce itself once, not after every tool result", () => {
@@ -108,7 +106,7 @@ describe("opening the forever chat", () => {
     expect(callbacks.sendMessage).toHaveBeenCalledWith(
       "ws-default",
       "session-1",
-      expect.stringContaining("no second greeting")
+      expect.stringContaining("No second greeting")
     );
   });
 
@@ -138,7 +136,7 @@ describe("opening the forever chat", () => {
   });
 
   it("introduces itself once ever, not once per remint", async () => {
-    // The session store lost across a relaunch remints the chat — but it is
+    // The session store lost across a relaunch remints the chat, but it is
     // the same ongoing conversation to the user, who once got a fresh
     // self-introduction on Telegram for every remint.
     const callbacks = makeCallbacks({ sessionExists: () => false });
@@ -173,7 +171,7 @@ describe("opening the forever chat", () => {
 
   it("moves a bot pinned elsewhere into the bot folder", async () => {
     // Bots work in one place. A bot pinned to a project workspace by an
-    // earlier build does not keep its chat there — it gets one in the bot
+    // earlier build does not keep its chat there. It gets one in the bot
     // folder the next time it is opened. The old transcript stays in that
     // workspace's session list; the bot just stops pointing at it.
     const callbacks = makeCallbacks();
@@ -439,7 +437,7 @@ describe("the persona env", () => {
 describe("where a bot's chat goes", () => {
   it("waits for a workspace that has to be created first", async () => {
     // A first run has no workspace at all, and the bot maker is the screen it
-    // opens on — so resolving one is allowed to be async. Returning the
+    // opens on, so resolving one is allowed to be async. Returning the
     // promise itself would have made the workspace id the string "[object
     // Promise]" and every bot chat land in a folder that does not exist.
     const service = new BotService(

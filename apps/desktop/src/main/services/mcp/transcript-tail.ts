@@ -1,7 +1,7 @@
 /**
  * The last few user/assistant turns of one agent session log (pi's jsonl).
- * Read tolerant — a malformed line is skipped, a missing file is an empty
- * history — because this feeds a tool answer, never a failure.
+ * Read tolerant: a malformed line is skipped, a missing file is an empty
+ * history, because this feeds a tool answer, never a failure.
  */
 import fs from "node:fs";
 

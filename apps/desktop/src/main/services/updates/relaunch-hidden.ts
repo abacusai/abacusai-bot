@@ -22,7 +22,7 @@ export function markRelaunchHidden(): void {
   updatesStore.set("relaunchHiddenUntil", Date.now() + RELAUNCH_HIDDEN_TTL_MS);
 }
 
-/** Undo the mark — the install hand-off failed, no restart is coming. */
+/** Undo the mark. The install hand-off failed, no restart is coming. */
 export function clearRelaunchHidden(): void {
   updatesStore.delete("relaunchHiddenUntil");
 }

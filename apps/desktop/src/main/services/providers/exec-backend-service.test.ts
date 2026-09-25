@@ -1,6 +1,6 @@
 /**
  * The docker backend runs commands in a Linux container with the workspace
- * bind-mounted at its host path — which only works when that path is a POSIX
+ * bind-mounted at its host path, which only works when that path is a POSIX
  * one. On Windows it must be reported unsupported, not probed for a binary
  * that would make it look ready.
  */

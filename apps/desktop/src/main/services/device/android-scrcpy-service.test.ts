@@ -1,9 +1,9 @@
 /**
  * The scrcpy mirror runs entirely on events from a child process and two
  * sockets, so anything it leaves unhandled lands on the main process. These
- * cases drive the paths where that used to happen — a socket dropped while
+ * cases drive the paths where that used to happen (a socket dropped while
  * connecting, adb failing to start, and a length prefix from the device that
- * no frame could have — against fakes, with no device involved.
+ * no frame could have) against fakes, with no device involved.
  */
 import { EventEmitter } from "events";
 import os from "os";
@@ -159,7 +159,7 @@ describe("the scrcpy mirror", () => {
     video.emit("data", frame);
 
     expect(service.isActive()).toBe(false);
-    // A desync must reach the owner's restart path — a mirror that simply
+    // A desync must reach the owner's restart path. A mirror that simply
     // stops leaves the panel frozen on its last frame.
     expect(restart).toHaveBeenCalledTimes(1);
   });

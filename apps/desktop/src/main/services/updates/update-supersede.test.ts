@@ -3,7 +3,7 @@
  *
  * From the field: a window left open for twenty hours across twenty releases.
  * The first release downloaded, the pill went up, and the periodic check then
- * skipped itself for as long as `downloaded` was true — so clicking "Relaunch
+ * skipped itself for as long as `downloaded` was true, so clicking "Relaunch
  * to update" at hour twenty installed the build from hour zero, and the
  * relaunched app immediately put the pill up again for everything it missed.
  * Checks now run through the downloaded state, and these tests pin down what
@@ -37,7 +37,7 @@ vi.mock("./relaunch-hidden", () => ({
 
 const { UpdateService } = await import("./update-service");
 
-/** A service with 1.0.19 fully downloaded — the pill is up. */
+/** A service with 1.0.19 fully downloaded. The pill is up. */
 const withDownloadedBuild = (): InstanceType<typeof UpdateService> => {
   const service = new UpdateService();
   autoUpdater.emit("update-available", { version: "1.0.19" });
@@ -98,7 +98,7 @@ describe("a check that finds the same build again", () => {
 
     expect(service.getStatus().downloaded).toBe(true);
     expect(service.getStatus().updateInfo?.version).toBe("1.0.19");
-    // The build is already on disk — a cache re-check is not a new download.
+    // The build is already on disk. A cache re-check is not a new download.
     expect(service.getStatus().downloading).toBe(false);
   });
 });
@@ -117,7 +117,7 @@ describe("a check the pill must survive", () => {
 });
 
 describe("a feed that no longer offers the downloaded build", () => {
-  it("forgives a single stale answer — one CDN edge can lag another", () => {
+  it("forgives a single stale answer: one CDN edge can lag another", () => {
     const service = withDownloadedBuild();
 
     autoUpdater.emit("update-not-available", { version: "1.0.18" });
@@ -152,14 +152,14 @@ describe("a feed that no longer offers the downloaded build", () => {
 describe("electron-updater's switches, kept in step with the pending build", () => {
   it("stops auto-downloading once a build is on disk", () => {
     // Left on, every same-version re-check would re-hash the cached archive
-    // and re-stage it — the check must be one YAML fetch.
+    // and re-stage it. The check must be one YAML fetch.
     withDownloadedBuild();
 
     expect(autoUpdater.autoDownload).toBe(false);
     expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
   });
 
-  it("resumes downloading — and parks install-on-quit — when superseded", () => {
+  it("resumes downloading, and parks install-on-quit, when superseded", () => {
     withDownloadedBuild();
 
     autoUpdater.emit("update-available", { version: "1.0.20" });

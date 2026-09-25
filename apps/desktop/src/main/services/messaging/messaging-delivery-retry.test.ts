@@ -1,6 +1,6 @@
 /**
  * A reply that fails to deliver is retried, and a failure that survives the
- * retries is recorded — never dropped. One console line was all a failed
+ * retries is recorded, never dropped. One console line was all a failed
  * delivery used to leave: the sender chat showed the reply as sent, the
  * recipient got nothing, and nobody knew.
  */
@@ -78,7 +78,7 @@ describe("auto-reply delivery", () => {
     await done;
 
     expect(attempts).toBe(2);
-    // One row, the words that went out — the traffic view and
+    // One row, the words that went out: the traffic view and
     // read_chat_messages used to show only the other side of a conversation.
     const rows = loggedIn(gateway);
     expect(rows).toHaveLength(1);

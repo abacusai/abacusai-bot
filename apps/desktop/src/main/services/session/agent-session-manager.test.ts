@@ -413,7 +413,7 @@ describe("recording the log a session is writing", () => {
 
     upgraded.recordAgentSession("old-session", "log-2", "/logs/log-2.jsonl");
 
-    // `log-1` is not recovered — nothing recorded it as a list. It stays
+    // `log-1` is not recovered: nothing recorded it as a list. It stays
     // claimed through `agentSessionId`, which search reads as well.
     expect(readStored()[0]?.agentSessionIds).toEqual(["log-2"]);
     expect(readStored()[0]?.agentSessionId).toBe("log-2");
@@ -554,7 +554,7 @@ describe("the per-account session stash", () => {
   it("re-homes an orphaned bot chat into a workspace that exists", () => {
     // The bot folder lost its registry entry and came back under a new id.
     // The chat is still the bot's chat, and its transcript is keyed by
-    // session id — so it moves rather than being abandoned for a fresh one.
+    // session id, so it moves rather than being abandoned for a fresh one.
     const owner = {
       kind: "bot" as const,
       botId: "bot-1",

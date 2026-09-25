@@ -170,7 +170,7 @@ export class IosStreamService {
       if (len <= 0 || len > MAX_FRAME_BYTES) {
         this.stop();
         return;
-      } // desync — bail
+      } // desync: bail
       if (this.buffer.length < 4 + len) return;
       const frame = this.buffer.subarray(4, 4 + len);
       this.emit(streamId, frame);

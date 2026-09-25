@@ -222,7 +222,7 @@ export class ConversationTerminalRuntimeRegistry {
   /**
    * True while any PTY is running or being spawned. Exited terminals are
    * removed from the map by their own onExit, so this never sticks on a dead
-   * shell — but a live one counts even sitting at a prompt, because from here
+   * shell, but a live one counts even sitting at a prompt, because from here
    * a quiet dev server and an idle shell look the same.
    */
   hasLiveRuntimes(): boolean {

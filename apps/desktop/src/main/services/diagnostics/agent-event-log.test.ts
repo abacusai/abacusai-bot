@@ -1,8 +1,8 @@
 /**
  * What the agent was doing, as the log file records it.
  *
- * A report arrives without a transcript — the transcript is the user's own
- * work — so these lines are the only account of the run a maintainer gets.
+ * A report arrives without a transcript. The transcript is the user's own
+ * work, so these lines are the only account of the run a maintainer gets.
  * Each case is a question that used to be unanswerable from a dump: which
  * model, which tool call, why it was refused, what the provider said.
  *
@@ -136,7 +136,7 @@ describe("what gets written", () => {
 });
 
 describe("what stays out", () => {
-  it("drops streamed text and thinking — that is the transcript", () => {
+  it("drops streamed text and thinking: that is the transcript", () => {
     expect(line({ type: "text_delta", content: "Sure, I can" })).toBeNull();
     expect(line({ type: "thinking_delta", content: "hmm" })).toBeNull();
   });

@@ -1,8 +1,8 @@
 /**
- * What may be handed to `shell.openPath` — "double-click this file". The paths
+ * What may be handed to `shell.openPath` ("double-click this file"). The paths
  * reaching it include file links out of model-generated markdown, so the guard
  * must hold against traversal, symlink escapes, and the forms each OS runs
- * instead of showing — not just honest paths.
+ * instead of showing, not just honest paths.
  */
 import fs from "fs";
 import os from "os";
@@ -113,7 +113,7 @@ describe("what may be opened directly", () => {
     }
   });
 
-  it("refuses paths that do not exist — there is nothing legitimate to open", () => {
+  it("refuses paths that do not exist: there is nothing legitimate to open", () => {
     expect(opensDirectly(path.join(root, "missing.txt"), [root])).toBe(false);
     expect(opensDirectly("\\\\attacker\\share\\payload.bat", [root])).toBe(
       false
@@ -139,7 +139,7 @@ describe("what may be opened directly", () => {
     );
   });
 
-  it("on Windows, checks the resolved target too — a benign link to an exe is still an exe", () => {
+  it("on Windows, checks the resolved target too: a benign link to an exe is still an exe", () => {
     const link = path.join(root, "readme.md");
     expect(opensDirectly(link, [root], "win32")).toBe(false);
     expect(opensDirectly(link, [root], "darwin")).toBe(true);
@@ -214,7 +214,7 @@ describe("what may be opened directly", () => {
     "still opens a document on a filesystem that marks every file executable",
     () => {
       // FAT, exFAT and NTFS have no Unix permissions, so their drivers report one
-      // synthesized mode for the whole mount — a workspace on a USB stick comes
+      // synthesized mode for the whole mount. A workspace on a USB stick comes
       // back as 0755 for the README as much as for a binary.
       const p = path.join(root, "readme-on-a-usb-stick.md");
       fs.writeFileSync(p, "# Notes\n", { mode: 0o777 });
@@ -336,13 +336,13 @@ describe("hasWindowsExecutableExtension", () => {
 
 /**
  * The temp directory is an allowed root because that is where the agent writes
- * scratch files — a plot written to /tmp and linked in the reply has to open.
+ * scratch files. A plot written to /tmp and linked in the reply has to open.
  * On Linux that directory is shared with every other local account, so what
  * separates ours from theirs is who owns the file.
  */
 describe("files in the shared temp directory", () => {
-  // A real directory in the real temp directory — that is the point of these
-  // cases — but its own, so two test workers on one machine cannot collide.
+  // A real directory in the real temp directory (that is the point of these
+  // cases), but its own, so two test workers on one machine cannot collide.
   const scratch = (): string => {
     const dir = fs.realpathSync(
       fs.mkdtempSync(path.join(os.tmpdir(), "open-guard-scratch-"))
@@ -376,7 +376,7 @@ describe("files in the shared temp directory", () => {
   });
 
   // The guard compares the file's owner against `process.getuid()`, which
-  // Windows does not have — and does not need, since it gives every account its
+  // Windows does not have, and does not need, since it gives every account its
   // own temp directory. Passing `"linux"` cannot conjure a uid to compare, so
   // the case is one this platform has no way to be wrong about.
   it.skipIf(process.getuid == null)(

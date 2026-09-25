@@ -2,7 +2,7 @@
  * `needs_login` is a healthy connector waiting on a human, and the gateway
  * treats it that way.
  *
- * The old shape — "waiting for a QR scan" reported as `error` — combined with
+ * The old shape ("waiting for a QR scan" reported as `error`) combined with
  * syncConnectors evicting every errored connector on every sync to produce the
  * ghost pop-ups: connect WhatsApp, close the dialog without scanning, then
  * connect Discord, and WhatsApp's login window came back. The restart reset
@@ -66,7 +66,7 @@ const service = (): {
       buildConnector: (id: MessagingPlatformId) => unknown;
     }
   ).buildConnector = (id: MessagingPlatformId) => {
-    // Reuse the real callback wiring — the state handling is what is under
+    // Reuse the real callback wiring; the state handling is what is under
     // test, and rebuilding it here would test the test.
     const real = build(id) as { callbacks?: Callbacks };
     const callbacks = (real as unknown as { callbacks: Callbacks }).callbacks;

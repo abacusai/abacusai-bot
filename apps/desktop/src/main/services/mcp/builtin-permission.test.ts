@@ -1,6 +1,6 @@
 /**
  * The built-in MCP servers prompt from the desktop process, so they have to be
- * told which session is calling — otherwise "Bypass" (which the agent process
+ * told which session is calling. Otherwise "Bypass" (which the agent process
  * enforces on its own tools) means nothing to them, and a device tap still
  * raises a modal. These cover the wiring that carries the session id.
  */

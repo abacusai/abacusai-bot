@@ -2,7 +2,7 @@
  * The two copies of the wire protocol, checked against each other.
  *
  * `packages/agent/src/protocol.ts` and this directory's `agent-types.ts` are
- * the same contract written twice — the agent package builds on its own and
+ * the same contract written twice. The agent package builds on its own and
  * cannot import from the app's source tree, so the duplication is deliberate.
  * Both files say "change both together", and nothing enforced it: the agent
  * started emitting `subtask_start` / `subtask_end` and the app's copy never

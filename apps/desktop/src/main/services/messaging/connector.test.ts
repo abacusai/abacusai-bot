@@ -2,8 +2,8 @@
  * The two preview filters that keep a chat-list sweep honest.
  *
  * Both come from one real transcript: "typing…" delivered as a message from
- * the sender, and the bot's own outgoing replies reported back in as inbound
- * — a badge left by an earlier real message keeps the row in the sweep, and
+ * the sender, and the bot's own outgoing replies reported back in as inbound:
+ * a badge left by an earlier real message keeps the row in the sweep, and
  * the preview then shows whatever was said LAST, direction unknown.
  */
 import { describe, expect, it } from "vitest";
@@ -40,7 +40,7 @@ describe("isEphemeralPreview", () => {
 describe("previewMatchesSent", () => {
   /**
    * The report: a bot answering a group read its own replies back as incoming
-   * messages and answered those, then answered the answers — including
+   * messages and answered those, then answered the answers, including
    * commentary meant for the user, delivered to the group.
    *
    * A group preview names its speaker. Ours reads "You: ", which matched
@@ -69,7 +69,7 @@ describe("previewMatchesSent", () => {
   it("can mistake a prefixed message for an echo, and that is the trade", () => {
     // The honest limit of matching on text. "Reminder: pick up the keys" is a
     // message, not a speaker, so dropping its first word makes it look like
-    // something we sent — and it would be skipped.
+    // something we sent, and it would be skipped.
     //
     // Taken knowingly. Missing this costs one dropped message in a contrived
     // case; missing an echo costs a loop that spams a real group with the

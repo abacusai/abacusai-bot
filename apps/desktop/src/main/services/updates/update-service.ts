@@ -126,7 +126,7 @@ export class UpdateService {
 
     autoUpdater.on("update-available", (info: UpdateInfo) => {
       console.log(
-        `[UpdateService] ${info.version} available (running ${app.getVersion()}) — downloading`
+        `[UpdateService] ${info.version} available (running ${app.getVersion()}), downloading`
       );
       this.notOfferedStrikes = 0;
       // Installing a superseded build would relaunch straight into another
@@ -163,11 +163,11 @@ export class UpdateService {
         this.notOfferedStrikes += 1;
         if (this.notOfferedStrikes >= 2) {
           this.dropDownloadedBuild(
-            `downloaded ${this.downloadedVersion ?? "build"} no longer offered — dropping it`
+            `downloaded ${this.downloadedVersion ?? "build"} no longer offered, dropping it`
           );
         } else {
           console.log(
-            `[UpdateService] downloaded ${this.downloadedVersion ?? "build"} not offered by this check — dropping it if that repeats`
+            `[UpdateService] downloaded ${this.downloadedVersion ?? "build"} not offered by this check, dropping it if that repeats`
           );
         }
       }
@@ -198,7 +198,7 @@ export class UpdateService {
     });
 
     autoUpdater.on("update-downloaded", (info: UpdateInfo) => {
-      console.log(`[UpdateService] ${info.version} downloaded — pill is up`);
+      console.log(`[UpdateService] ${info.version} downloaded, pill is up`);
       this.notOfferedStrikes = 0;
       this.status.downloading = false;
       this.status.downloaded = true;
@@ -281,7 +281,7 @@ export class UpdateService {
     }
 
     console.log(
-      `[UpdateService] ${this.status.updateInfo?.version ?? "update"} ready and the app is idle — restarting silently`
+      `[UpdateService] ${this.status.updateInfo?.version ?? "update"} ready and the app is idle, restarting silently`
     );
     this.stopAutoRestartPoll();
     void this.installUpdate({ silent: true, relaunchHidden });
@@ -302,7 +302,7 @@ export class UpdateService {
         versionLessThan(app.getVersion(), criticalBelow);
       if (critical !== this.status.criticalUpdate) {
         console.log(
-          `[UpdateService] criticalBelow=${String(criticalBelow)} — critical: ${critical}`
+          `[UpdateService] criticalBelow=${String(criticalBelow)}, critical: ${critical}`
         );
         this.status.criticalUpdate = critical;
         this.emitStatusUpdate();
@@ -389,7 +389,7 @@ export class UpdateService {
   private startQuitWatchdog(): void {
     setTimeout(() => {
       console.warn(
-        `[UpdateService] Still running ${QUIT_STALL_MS / 1000}s after install hand-off — forcing quit`
+        `[UpdateService] Still running ${QUIT_STALL_MS / 1000}s after install hand-off, forcing quit`
       );
       this.status.installStalled = true;
       this.emitStatusUpdate();
@@ -405,7 +405,7 @@ export class UpdateService {
 
     setTimeout(() => {
       console.warn(
-        `[UpdateService] Still running ${QUIT_FORCE_MS / 1000}s after install hand-off — exiting`
+        `[UpdateService] Still running ${QUIT_FORCE_MS / 1000}s after install hand-off, exiting`
       );
       app.exit(0);
     }, QUIT_FORCE_MS).unref();
@@ -417,7 +417,7 @@ export class UpdateService {
 
   async checkForUpdatesOnStartup(): Promise<void> {
     if (!app.isPackaged) {
-      console.log("[UpdateService] dev build — not checking for updates");
+      console.log("[UpdateService] dev build, not checking for updates");
       return;
     }
     this.checkForUpdates();

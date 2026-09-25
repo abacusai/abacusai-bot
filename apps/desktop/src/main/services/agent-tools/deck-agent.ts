@@ -17,7 +17,7 @@ const MAX_SLIDES = 20;
 const DEFAULT_SLIDES = 5;
 
 export type DeckRequest = {
-  /** What the deck is about — the brief, in the caller's words. */
+  /** What the deck is about: the brief, in the caller's words. */
   context: string;
   /** Where the finished PDF goes. */
   outputPath: string;

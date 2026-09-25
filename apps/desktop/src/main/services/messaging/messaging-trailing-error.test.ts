@@ -3,7 +3,7 @@
  *
  * Not every provider failure lands mid-turn. The agent reads the failure off
  * pi's state once `prompt()` has resolved, which is after the turn's idle
- * event — so an error can arrive at a route that has already flushed its reply
+ * event, so an error can arrive at a route that has already flushed its reply
  * and gone free. Forwarding one sent a second chat message holding nothing but
  * raw provider text ("Provider finish_reason: MALFORMED_FUNCTION_CALL"), about
  * a turn that had in fact just answered the question correctly.

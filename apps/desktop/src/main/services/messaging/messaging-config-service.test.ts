@@ -6,7 +6,7 @@
  * mode. Every inbound message is checked against `approvedUserIds`, so the ways
  * that set could be wrong are the ways a stranger gets a shell.
  *
- * Written against the real store rather than a mock — the file format is half
+ * Written against the real store rather than a mock: the file format is half
  * the contract, and a test that stubs it cannot catch a row being read back
  * differently from how it was written.
  */
@@ -113,7 +113,7 @@ describe("a store that is not what we expect", () => {
   it("ignores rows whose id is not a string", () => {
     // Telegram ids are numbers on the wire. A row written as a number would
     // never match the string the connector checks with, so it is dropped rather
-    // than compared loosely — a `==` here would be an authorisation bug.
+    // than compared loosely; a `==` here would be an authorisation bug.
     writeStore([
       { platform: "telegram", userId: 12345, status: "approved", chatId: "1" },
       { platform: "telegram", userId: "ok", status: "approved", chatId: "2" },

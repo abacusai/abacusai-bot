@@ -2,7 +2,7 @@
  * The desktop half of the store the app and the CLI share.
  *
  * The shared core is covered in packages/agent/src/memory-store.test.ts. What
- * is only here is the UI's own entry points — and the reason they matter is
+ * is only here is the UI's own entry points, and the reason they matter is
  * that they run on the process that draws every window, alongside an agent
  * session writing the same two files.
  */
@@ -87,15 +87,15 @@ describe("clearing a store from the memory panel", () => {
 /**
  * The two copies of this store, compared where they must not drift.
  *
- * The whole file cannot be diffed — the desktop copy carries the UI's own entry
- * points and the messages are worded per surface — but the locking is not a
+ * The whole file cannot be diffed. The desktop copy carries the UI's own entry
+ * points and the messages are worded per surface, but the locking is not a
  * per-surface concern: it is one protocol two processes speak to each other
  * through a file on disk. A fix applied to one copy and not the other leaves
  * the app and the terminal disagreeing about when a lock may be broken, which
  * is the one disagreement that loses an entry silently.
  */
 describe("the locking shared with the agent package's copy", () => {
-  const START = "// ── shared lock — keep byte-identical with the other copy";
+  const START = "// Shared lock: keep byte-identical with the other copy.";
   const END = "// ── end shared lock";
 
   const sharedRegion = (file: string): string => {

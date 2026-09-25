@@ -3,7 +3,7 @@
  *
  * The rule that matters: two accounts must never share one. The email is what
  * names the folder, and when it cannot be read the credential names it
- * instead — because the fallback used to be a single shared constant, which
+ * instead, because the fallback used to be a single shared constant, which
  * meant every account whose lookup failed stashed into and restored from the
  * same place. One person signing out and another signing in under the same
  * broken condition would have handed over a whole conversation history.
@@ -42,7 +42,7 @@ describe("naming an account's stash", () => {
 
   it("cannot collide with an email-derived folder", () => {
     // Namespaced, so the two kinds are also told apart by a human reading the
-    // tree — and a key that happens to hash like an email cannot claim it.
+    // tree, and a key that happens to hash like an email cannot claim it.
     expect(accountStashKey(null, "some-key")).toMatch(/^key-/);
     expect(accountStashKey("ada@example.com")).not.toMatch(/^key-/);
   });

@@ -94,7 +94,7 @@ const writeEntries = (target: MemoryTarget, entries: string[]): void => {
   }
 };
 
-// ── shared lock — keep byte-identical with the other copy ─────────────────
+// Shared lock: keep byte-identical with the other copy.
 
 /**
  * How long a writer waits, and the backstop past which a lock is broken even
@@ -319,7 +319,7 @@ const applyMemoryActionLocked = (
     const content = (input.content ?? "").trim();
 
     if (content.length === 0)
-      return { ok: false, message: "Nothing to add — content was empty." };
+      return { ok: false, message: "Nothing to add: content was empty." };
 
     if (content.length > MAX_ENTRY_CHARS) {
       return {
@@ -338,7 +338,7 @@ const applyMemoryActionLocked = (
     ) {
       return {
         ok: true,
-        message: "Already remembered — nothing changed.",
+        message: "Already remembered, nothing changed.",
         entries,
       };
     }
@@ -364,7 +364,7 @@ const applyMemoryActionLocked = (
     if (content.length === 0)
       return {
         ok: false,
-        message: "Nothing to replace it with — content was empty.",
+        message: "Nothing to replace it with: content was empty.",
       };
 
     if (content.length > MAX_ENTRY_CHARS) {
@@ -443,7 +443,7 @@ const forgetEntryAtLocked = (
     return {
       ok: false,
       message:
-        "Memory changed while you were looking at it — reopened with the current entries.",
+        "Memory changed while you were looking at it. Reopened with the current entries.",
       entries,
     };
   }

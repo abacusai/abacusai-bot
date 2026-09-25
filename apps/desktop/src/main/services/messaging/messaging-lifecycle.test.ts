@@ -2,7 +2,7 @@
  * A connector that has been stopped must go quiet.
  *
  * Stopping one does not silence it. Its handshake is still in flight, its
- * socket has frames queued, its long poll is parked on a response — and every
+ * socket has frames queued, its long poll is parked on a response, and every
  * callback names only the platform, so a superseded connector could report
  * itself connected, overwrite a newer attempt's state with its own failure, or
  * hand the agent a message from a platform the user had switched off.
@@ -71,7 +71,7 @@ const service = (): {
       buildConnector: (id: MessagingPlatformId) => unknown;
     }
   ).buildConnector = (id: MessagingPlatformId) => {
-    // Reuse the real callback wiring — the generation stamp is what is under
+    // Reuse the real callback wiring; the generation stamp is what is under
     // test, and rebuilding it here would test the test.
     const real = build(id) as { callbacks?: Callbacks };
     const callbacks = (real as unknown as { callbacks: Callbacks }).callbacks;
@@ -135,7 +135,7 @@ describe("a connector that has been stopped", () => {
     const stopped = captured[0]!;
 
     // Spied at the routing boundary rather than at sendMessage. A message that
-    // reaches handleInbound has already escaped the guard — whether it then
+    // reaches handleInbound has already escaped the guard: whether it then
     // finds a workspace to run in is a different question, and asserting on
     // that would pass for the wrong reason in a gateway with none configured.
     const routed: string[] = [];

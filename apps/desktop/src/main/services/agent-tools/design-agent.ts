@@ -30,7 +30,7 @@ export type DesignResult = {
   canvasPath: string;
   directory: string;
   name: string;
-  /** `png` is empty for a screen whose export failed — the HTML is still there. */
+  /** `png` is empty for a screen whose export failed. The HTML is still there. */
   screens: Array<{ id: string; title: string; frame: string; png: string }>;
   palette: string;
   fidelity: string;

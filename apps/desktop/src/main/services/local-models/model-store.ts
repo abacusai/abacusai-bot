@@ -2,7 +2,7 @@
  * The GGUF files on disk under `~/.abacusai-bot/models/`, and how they get
  * there: one streamed download per model, hashed on the way in and kept only
  * when the digest matches the catalog's pin. A download that stops halfway
- * leaves its `.part` behind and resumes from it next time — these files are
+ * leaves its `.part` behind and resumes from it next time. These files are
  * gigabytes, and a laptop lid closes.
  */
 import { createHash } from "node:crypto";
@@ -77,7 +77,7 @@ const hashOf = (file: string, upTo: number): ReturnType<typeof createHash> => {
 /**
  * Download the model, resuming a partial file, and keep it only if its digest
  * is the pinned one. Resolves with the final path; throws on a mismatch (the
- * partial is discarded — asking again until the digest matches is how a
+ * partial is discarded. Asking again until the digest matches is how a
  * download accepts the wrong file) or when `signal` aborts (the partial stays).
  */
 export async function downloadModel(
@@ -156,7 +156,7 @@ export async function downloadModel(
   if (received !== spec.sizeBytes || digest !== spec.sha256) {
     fs.rmSync(part, { force: true });
     throw new Error(
-      `${spec.file}: checksum mismatch — expected ${spec.sha256}, got ${digest} (${received} bytes)`
+      `${spec.file}: checksum mismatch: expected ${spec.sha256}, got ${digest} (${received} bytes)`
     );
   }
 
