@@ -304,7 +304,7 @@ function formatAccount(account: AbacusAccountInfo | null | undefined): string {
 
 export function buildLogDump(input: LogDumpInput): string {
   const header = [
-    "AbacusAIBot log dump",
+    "AbacusAI Bot log dump",
     `generated: ${new Date().toISOString()}`,
     `version: ${input.appVersion}${input.isPackaged ? "" : " (development build)"}`,
     `electron: ${process.versions.electron}  node: ${process.versions.node}  chrome: ${process.versions.chrome}`,

@@ -2,7 +2,7 @@ import os from "os";
 import path from "path";
 
 /**
- * Where AbacusAIBot keeps everything: `~/.abacusai-bot/`. Config, credentials,
+ * Where AbacusAI Bot keeps everything: `~/.abacusai-bot/`. Config, credentials,
  * the model catalog, skills and session state live under this one folder.
  * `ABACUSAI_BOT_HOME` overrides it, which is how tests get an isolated
  * directory. The agent subprocess computes the same path independently in

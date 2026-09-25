@@ -290,7 +290,7 @@ const obtainClient = async (
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
-      client_name: "AbacusAIBot",
+      client_name: "AbacusAI Bot",
       redirect_uris: [redirectUri],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
@@ -358,15 +358,15 @@ export interface McpOAuthOptions {
   openUrl?: (url: string) => Promise<void>;
 }
 
-const RESPONSE_PAGE = `<!doctype html><meta charset="utf-8"><title>AbacusAIBot</title>
+const RESPONSE_PAGE = `<!doctype html><meta charset="utf-8"><title>AbacusAI Bot</title>
 <body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#111;color:#eee">
-<div style="text-align:center"><h2>Signed in</h2><p>You can close this tab and return to AbacusAIBot.</p></div>`;
+<div style="text-align:center"><h2>Signed in</h2><p>You can close this tab and return to AbacusAI Bot.</p></div>`;
 
 const errorPage = (
   detail: string
-): string => `<!doctype html><meta charset="utf-8"><title>AbacusAIBot</title>
+): string => `<!doctype html><meta charset="utf-8"><title>AbacusAI Bot</title>
 <body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#111;color:#eee">
-<div style="text-align:center"><h2>Sign-in failed</h2><p>${detail.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch)}</p><p>You can close this tab and try again from AbacusAIBot.</p></div>`;
+<div style="text-align:center"><h2>Sign-in failed</h2><p>${detail.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch)}</p><p>You can close this tab and try again from AbacusAI Bot.</p></div>`;
 
 /**
  * Whether a discovered authorization endpoint may be opened. It is

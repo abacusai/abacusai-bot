@@ -1,5 +1,5 @@
 /**
- * AbacusAIBot's on-disk config: `~/.abacusai-bot/config.json`. Small and
+ * AbacusAI Bot's on-disk config: `~/.abacusai-bot/config.json`. Small and
  * hand-editable. API keys may live here, but the environment always wins, so a
  * shell profile or secrets manager can supply a key without it reaching disk.
  */

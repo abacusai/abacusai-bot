@@ -84,7 +84,7 @@ export const localMcpServerToken = (serverName: string): string => {
   return token;
 };
 
-// All AbacusAIBot state lives under one folder.
+// All AbacusAI Bot state lives under one folder.
 export const DESKTOP_DIR = abacusBotHome();
 const RUNTIME_DIR = path.join(DESKTOP_DIR, "runtime");
 const STATE_PATH = path.join(DESKTOP_DIR, "state.json");

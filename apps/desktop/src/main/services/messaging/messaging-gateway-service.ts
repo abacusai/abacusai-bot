@@ -2378,4 +2378,4 @@ const QUEUE_FULL_NOTICE =
   "I'm still working through what you've already sent, so that last one didn't get queued. Send it again once I've replied.";
 
 const NO_WORKSPACE_NOTICE =
-  "No workspace is set for messaging yet. Pick one in AbacusAIBot under Settings → Connectors (messaging settings), then try again.";
+  "No workspace is set for messaging yet. Pick one in AbacusAI Bot under Settings → Connectors (messaging settings), then try again.";

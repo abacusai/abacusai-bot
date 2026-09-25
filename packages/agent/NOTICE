@@ -3,7 +3,7 @@ Copyright (c) 2026 Abacus.AI, Inc.
 
 Licensed under the MIT License. See LICENSE.
 
-This package is the agent behind the AbacusAIBot desktop app. It contains the
+This package is the agent behind the AbacusAI Bot desktop app. It contains the
 session, tools, permission gate, and harness. The package is private and is
 never published. The desktop build compiles it into its own output.
 
@@ -17,7 +17,7 @@ This product depends on software from third parties:
 
   - pi / @earendil-works/pi-coding-agent (https://github.com/badlogic/pi-mono)
     by Mario Zechner, MIT License. The agent loop, provider layer and extension
-    model are pi's; this package adapts them to AbacusAIBot's NDJSON protocol and
+    model are pi's; this package adapts them to AbacusAI Bot's NDJSON protocol and
     wraps them in the harness above.
 
   - ast-grep (https://github.com/ast-grep/ast-grep), MIT License. Structural

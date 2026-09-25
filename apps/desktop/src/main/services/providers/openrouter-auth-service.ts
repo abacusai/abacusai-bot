@@ -192,7 +192,7 @@ const RESPONSE_PAGE = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AbacusAIBot connected</title>
+<title>AbacusAI Bot connected</title>
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -208,7 +208,7 @@ const RESPONSE_PAGE = `<!doctype html>
 </head>
 <body>
   <div class="card">
-    <h1>AbacusAIBot is connected</h1>
+    <h1>AbacusAI Bot is connected</h1>
     <p>You can close this tab and go back to the app.</p>
   </div>
 </body>

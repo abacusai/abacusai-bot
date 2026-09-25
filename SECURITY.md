@@ -1,6 +1,6 @@
 # Security policy
 
-AbacusAIBot is a local desktop agent with access to files, commands, browsers, devices, and connected services. This document defines the supported versions, trust boundaries, and private reporting process.
+AbacusAI Bot is a local desktop agent with access to files, commands, browsers, devices, and connected services. This document defines the supported versions, trust boundaries, and private reporting process.
 
 ## Supported versions
 
@@ -30,7 +30,7 @@ We may ask you to validate a fix. Coordinate public disclosure with the maintain
 
 ## Trust model
 
-AbacusAIBot runs as the signed-in operating-system user. Anything that user can access may be reachable by the application after approval or when permissions are bypassed.
+AbacusAI Bot runs as the signed-in operating-system user. Anything that user can access may be reachable by the application after approval or when permissions are bypassed.
 
 - **Supervised sessions:** Default and Auto-Accept modes ask before defined consequential actions. Approval prompts reduce accidental actions but are not an isolation boundary.
 - **Bots and routines:** Bot chats and routine runs use full tool permissions without the session mode picker. They run as the operating-system user. Routine instructions name their own folder and every workspace registered in the app, but Bypass mode can reach other user-accessible paths.

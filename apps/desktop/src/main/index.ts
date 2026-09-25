@@ -139,6 +139,8 @@ import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 
+const APP_DISPLAY_NAME = "AbacusAI Bot";
+
 const isolatedDevelopmentUserData =
   !app.isPackaged && process.env.ABACUSAI_BOT_USERDATA;
 
@@ -497,7 +499,7 @@ async function createWindow() {
 
     backgroundColor,
     icon: appIcon,
-    title: "AbacusAI-Bot",
+    title: APP_DISPLAY_NAME,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === "darwin"
@@ -818,7 +820,7 @@ async function createWindow() {
         buttons: ["Restart", "Quit"],
         defaultId: 0,
         cancelId: 1,
-        title: "AbacusAI-Bot",
+        title: APP_DISPLAY_NAME,
         message: "The app keeps crashing",
         detail:
           "The application window has crashed repeatedly. Restart to try again.",
@@ -836,7 +838,7 @@ async function createWindow() {
         buttons: ["Wait", "Reload"],
         defaultId: 0,
         cancelId: 0,
-        title: "AbacusAI-Bot",
+        title: APP_DISPLAY_NAME,
         message: "The app is not responding",
         detail: "You can keep waiting, or reload the window to recover.",
       });
@@ -884,9 +886,10 @@ async function createWindow() {
   loadAppContent();
 }
 
-// Before `whenReady`, or a dev run shows "Electron" in the menu bar. On Linux
-// this is also the WM_CLASS; keep it in step with `StartupWMClass` in
-// electron-builder.yml.
+// Before `whenReady`, or a dev run shows "Electron" in the menu bar. Keep the
+// hyphen: Chromium names its keychain entry (and so the cookie encryption key)
+// after this, and on Linux it is the WM_CLASS. Menus and titles use
+// APP_DISPLAY_NAME instead.
 app.setName("AbacusAI-Bot");
 
 // Privileged schemes must be registered before `whenReady`.
@@ -1062,13 +1065,38 @@ app
     });
 
     app.setAboutPanelOptions({
-      applicationName: "AbacusAIBot",
+      applicationName: APP_DISPLAY_NAME,
       applicationVersion: app.getVersion(),
       copyright: `Copyright © ${new Date().getFullYear()} Abacus.AI`,
       credits: "Open source under the MIT License",
       website: "https://github.com/abacusai/abacusai-bot/blob/main/README.md",
       iconPath: resourcePath("icon2.png"),
     });
+    if (process.platform === "darwin") {
+      // The default menu labels its items from app.name, which keeps the hyphen.
+      Menu.setApplicationMenu(
+        Menu.buildFromTemplate([
+          {
+            label: APP_DISPLAY_NAME,
+            submenu: [
+              { role: "about", label: `About ${APP_DISPLAY_NAME}` },
+              { type: "separator" },
+              { role: "services" },
+              { type: "separator" },
+              { role: "hide", label: `Hide ${APP_DISPLAY_NAME}` },
+              { role: "hideOthers" },
+              { role: "unhide" },
+              { type: "separator" },
+              { role: "quit", label: `Quit ${APP_DISPLAY_NAME}` },
+            ],
+          },
+          { role: "fileMenu" },
+          { role: "editMenu" },
+          { role: "viewMenu" },
+          { role: "windowMenu" },
+        ])
+      );
+    }
     ipcMain.handle("get-app-version", () => app.getVersion());
     ipcMain.handle("window:show-about", () => app.showAboutPanel());
     ipcMain.handle(

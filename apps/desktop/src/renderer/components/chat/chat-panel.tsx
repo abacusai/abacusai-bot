@@ -777,7 +777,7 @@ export const ChatPanel = (): JSX.Element => {
     staleTime: 60_000,
   }).data?.defaultModel;
 
-  // AbacusAIBot's own catalog (main process), not a cloud account's model list.
+  // AbacusAI Bot's own catalog (main process), not a cloud account's model list.
   const modelsQuery = useQuery({
     queryKey: workspaceQueryKeys.modelBots,
     queryFn: async () => window.api.agent.listModels(),

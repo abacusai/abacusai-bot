@@ -1,5 +1,5 @@
 /**
- * Model providers. AbacusAIBot is bring-your-own-model, and every shape is a pi
+ * Model providers. AbacusAI Bot is bring-your-own-model, and every shape is a pi
  * provider underneath: Anthropic or OpenAI by key or the OAuth pi stores,
  * OpenRouter including its `:free` tier, Gemini and Abacus registered here, and
  * any OpenAI-compatible endpoint declared in config as a custom provider. A
@@ -18,7 +18,7 @@ import { abacusV1BaseUrl } from "./abacus-endpoint.js";
 import type { AbacusBotConfig, CustomProviderConfig } from "./config.js";
 import { missingCatalogSupplements } from "./model-catalog.js";
 
-/** Providers AbacusAIBot surfaces by name, in the order the UI shows them. */
+/** Providers AbacusAI Bot surfaces by name, in the order the UI shows them. */
 export const BUILTIN_PROVIDERS = [
   "abacus",
   "anthropic",
@@ -96,7 +96,7 @@ export function writeCatalogSupplement(agentDir: string): string {
 export async function createModelRuntime(
   agentDir: string
 ): Promise<ModelRuntime> {
-  // Credentials and the model catalog live beside the rest of AbacusAIBot's
+  // Credentials and the model catalog live beside the rest of AbacusAI Bot's
   // state rather than in pi's default `~/.pi/agent`, so an install never
   // clobbers a user's own pi setup.
   return ModelRuntime.create({

@@ -29,7 +29,7 @@ const piPrompt = (): string =>
     "- When working on pi topics, read the docs and examples, and follow .md cross-references before implementing",
     "- Always read pi .md files completely and follow links to related docs (e.g., tui.md for TUI API details)",
     "",
-    "You are the Abacus AI Bot.",
+    "You are the AbacusAI Bot.",
     "",
     "Current working directory: /work",
   ].join("\n");
@@ -66,7 +66,7 @@ describe("pi's documentation section", () => {
     expect(trimmed).not.toContain("Pi documentation");
     // Everything around it survives: the guidelines before, our text after.
     expect(trimmed).toContain("Guidelines:");
-    expect(trimmed).toContain("You are the Abacus AI Bot.");
+    expect(trimmed).toContain("You are the AbacusAI Bot.");
     expect(trimmed).toContain("Current working directory: /work");
   });
 
