@@ -294,47 +294,68 @@ describe("redirects into scratch space", () => {
     }
   );
 
-  // Skipped on Windows: SCRATCH_PREFIXES holds the 8.3 short form of the temp
-  // dir while the guard tests a long-form real path, so it never matches.
-  it.skipIf(process.platform === "win32")(
-    "treats this platform's own temp dir as scratch, not just /tmp",
+  it("treats this platform's own temp dir as scratch, not just /tmp", async () => {
+    // os.tmpdir() is what Windows actually uses; the hardcoded POSIX list
+    // left every temp write there prompting.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-scratch-"));
+    const log = path.join(dir, "server.log");
+    fs.writeFileSync(log, "from the last run");
+    const result = await pi.fire(
+      "tool_call",
+      bashCall(`echo x > ${log}`),
+      ctx()
+    );
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(result).toBeUndefined();
+  });
+
+  it.skipIf(process.platform !== "win32")(
+    "treats an 8.3 short-name path in temp as scratch",
     async () => {
-      // os.tmpdir() is what Windows actually uses; the hardcoded POSIX list
-      // left every temp write there prompting.
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-scratch-"));
-      const log = path.join(dir, "server.log");
-      fs.writeFileSync(log, "from the last run");
-      const result = await pi.fire(
-        "tool_call",
-        bashCall(`echo x > ${log}`),
-        ctx()
+      const longDir = fs.mkdtempSync(
+        path.join(os.tmpdir(), "guardrails-scratch-longname-")
       );
-      fs.rmSync(dir, { recursive: true, force: true });
-      expect(result).toBeUndefined();
+      try {
+        const cp = await import("node:child_process");
+        const shortDir = cp
+          .execSync(`for %I in ("${longDir}") do @echo %~sI`, {
+            shell: "cmd.exe",
+          })
+          .toString()
+          .trim();
+
+        if (shortDir && shortDir !== longDir) {
+          const log = path.join(shortDir, "server.log");
+          fs.writeFileSync(log, "from the last run");
+          const result = await pi.fire(
+            "tool_call",
+            bashCall(`echo x > ${log}`),
+            ctx()
+          );
+          expect(result).toBeUndefined();
+        }
+      } finally {
+        fs.rmSync(longDir, { recursive: true, force: true });
+      }
     }
   );
 
-  // Skipped on Windows: the carve-out lists os.tmpdir()'s 8.3 short name, which
-  // never matches the long name the target realpaths to, so the write is blocked.
-  it.skipIf(process.platform === "win32")(
-    "lets the write tool into this platform's temp dir as well",
-    async () => {
-      // The guards judge realpath()ed targets, and on macOS realpath maps
-      // /var/folders/... to /private/var/folders/... — a form the lexical prefix
-      // list missed, so a mktemp file could be shell-redirected but not written
-      // with the tools.
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-tools-"));
-      const result = await pi.fire(
-        "tool_call",
-        writeCall(path.join(dir, "notes.txt")),
-        ctx()
-      );
-      fs.rmSync(dir, { recursive: true, force: true });
-      expect(result).toBeUndefined();
-    }
-  );
+  it("lets the write tool into this platform's temp dir as well", async () => {
+    // The guards judge realpath()ed targets, and on macOS realpath maps
+    // /var/folders/... to /private/var/folders/... — a form the lexical prefix
+    // list missed, so a mktemp file could be shell-redirected but not written
+    // with the tools.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-tools-"));
+    const result = await pi.fire(
+      "tool_call",
+      writeCall(path.join(dir, "notes.txt")),
+      ctx()
+    );
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(result).toBeUndefined();
+  });
 
-  // Skipped on Windows: same short-form vs long-form mismatch as above.
+  // Skipped on Windows: /etc/hosts is a POSIX path.
   it.skipIf(process.platform === "win32")(
     "does not treat a link parked in temp as scratch — the target decides",
     async () => {
@@ -389,8 +410,7 @@ describe("symlinks and the workspace guard", () => {
     ).toBeUndefined();
   });
 
-  // Skipped on Windows: /tmp is not scratch space there, and the temp dir that
-  // is does not match the carve-out once the target has been realpath'd.
+  // Skipped on Windows: /tmp is not the platform temp directory.
   it.skipIf(process.platform === "win32")(
     "leaves the scratch carve-out alone",
     async () => {

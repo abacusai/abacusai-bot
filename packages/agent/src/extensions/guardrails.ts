@@ -187,9 +187,13 @@ const OVERWRITE_REDIRECT_RE = /(?<![>\d&])>(?![>&|=])\s*([^\s;|&()<>]+)/g;
  */
 const realTmpdir = (() => {
   try {
-    return fs.realpathSync(os.tmpdir());
+    return fs.realpathSync.native(os.tmpdir());
   } catch {
-    return os.tmpdir();
+    try {
+      return fs.realpathSync(os.tmpdir());
+    } catch {
+      return os.tmpdir();
+    }
   }
 })();
 
