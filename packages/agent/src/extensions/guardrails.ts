@@ -183,19 +183,11 @@ const OVERWRITE_REDIRECT_RE = /(?<![>\d&])>(?![>&|=])\s*([^\s;|&()<>]+)/g;
  * Temp dirs exempt from the overwrite-redirect guard: a server log in /tmp is
  * the agent's own file, rewritten every restart, and "append instead" makes
  * the model read yesterday's crash as today's. The platform temp dir's
- * realpath is included because the guards judge realpath()ed targets.
+ * realpath is included because the guards judge realpathed targets; it goes
+ * through the same realPathOf so both sides agree (on Windows a plain
+ * realpath keeps the 8.3 short name, while realPathOf expands it).
  */
-const realTmpdir = (() => {
-  try {
-    return fs.realpathSync.native(os.tmpdir());
-  } catch {
-    try {
-      return fs.realpathSync(os.tmpdir());
-    } catch {
-      return os.tmpdir();
-    }
-  }
-})();
+const realTmpdir = realPathOf(os.tmpdir()) ?? os.tmpdir();
 
 const SCRATCH_PREFIXES = [
   "/tmp/",
