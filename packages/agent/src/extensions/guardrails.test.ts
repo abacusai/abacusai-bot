@@ -4,6 +4,7 @@
  * — so these pin exactly that pair. Either half alone is worse than the
  * refusal was: a copy nobody can find, or an overwrite with no copy.
  */
+import * as cp from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -316,7 +317,6 @@ describe("redirects into scratch space", () => {
         path.join(os.tmpdir(), "guardrails-scratch-longname-")
       );
       try {
-        const cp = await import("node:child_process");
         const shortDir = cp
           .execSync(`for %I in ("${longDir}") do @echo %~sI`, {
             shell: "cmd.exe",
