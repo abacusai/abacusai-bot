@@ -4,9 +4,9 @@
  * This pair is duplicated like static-server and todo-store, but it is not a
  * textual copy: the desktop side adds the UI-facing list/forget methods and the
  * two have been refactored differently, so comparing source would fail on
- * shape rather than behaviour. What has to match is what a model sees — the
+ * shape rather than behaviour. What has to match is what a model sees: the
  * same limits, the same refusals, the same wording, and bytes on disk either
- * side can read — because one store is written by both surfaces and a model
+ * side can read, because one store is written by both surfaces and a model
  * that learned this tool in the app must not meet a different one in the
  * terminal.
  *
