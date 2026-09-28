@@ -306,7 +306,10 @@ describe("bot message feedback", () => {
       />
     );
     expect(screen.queryByRole("button", { name: /copy/i })).toBeNull();
-    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(
+      screen.getByRole("button", { name: /reactions.feedback/i })
+    );
     fireEvent.click(screen.getByRole("button", { name: /feedback.helpful/i }));
     await waitFor(() =>
       expect(onRateTurn).toHaveBeenCalledWith("reply-1", "up", undefined)
@@ -314,9 +317,12 @@ describe("bot message feedback", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("button", { name: /feedback.notHelpful/i })
+          .getByRole("button", { name: /reactions.feedback/i })
           .hasAttribute("disabled")
       ).toBe(false)
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /reactions.feedback/i })
     );
     fireEvent.click(
       screen.getByRole("button", { name: /feedback.notHelpful/i })

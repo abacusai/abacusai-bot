@@ -79,19 +79,22 @@ const spokenItems = (items: AgentRenderItem[]): AgentRenderItem[] =>
 const BotBubble = ({
   children,
   tone = "said",
+  feedback,
 }: {
   children: ReactNode;
   /** A notification is the bot reporting a condition, not speaking. */
   tone?: "said" | "notice";
+  feedback?: ReactNode;
 }): JSX.Element => (
   <div
-    className={`${BUBBLE_MAX_WIDTH} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
+    className={`${BUBBLE_MAX_WIDTH} relative ${feedback ? "mb-3" : ""} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
       tone === "notice"
         ? "bg-muted/60 text-muted-foreground"
         : "bg-sidebar text-foreground"
     }`}
   >
     {children}
+    {feedback && <div className="absolute end-2 -bottom-3">{feedback}</div>}
   </div>
 );
 
@@ -251,7 +254,9 @@ export const BotMessageList = ({
 
   const renderRow = (item: (typeof rows)[number]): JSX.Element =>
     item.kind === "user" ? (
-      <div className="flex flex-col gap-0.5">
+      <div
+        className={`relative flex flex-col gap-0.5 ${botReactions.has(item.id) ? "mb-3" : ""}`}
+      >
         <UserMessageBubble
           content={item.text}
           images={item.images}
@@ -260,7 +265,7 @@ export const BotMessageList = ({
         />
         {botReactions.has(item.id) && (
           <span
-            className="bg-muted me-2 self-end rounded-full px-2 py-0.5 text-sm"
+            className="bg-muted ring-background absolute end-2 -bottom-3 rounded-full px-2 py-0.5 text-sm ring-2"
             role="img"
             aria-label={t("reactions.agent", {
               emoji: botReactions.get(item.id),
@@ -279,16 +284,12 @@ export const BotMessageList = ({
       >
         {item.items.map((part) =>
           part.kind === "text" ? (
-            <div
+            <BotBubble
               key={part.id}
-              className="flex w-full flex-col items-start gap-0.5"
-            >
-              <BotBubble>
-                <Markdown content={part.content} />
-              </BotBubble>
-              {onRateTurn != null &&
+              feedback={
+                onRateTurn != null &&
                 !part.streaming &&
-                !(isWorking && item.sourceIndex === chatItems.length - 1) && (
+                !(isWorking && item.sourceIndex === chatItems.length - 1) ? (
                   <FeedbackRow
                     variant="bot"
                     content={part.content}
@@ -297,8 +298,11 @@ export const BotMessageList = ({
                       onRateTurn(part.id, rating, comment)
                     }
                   />
-                )}
-            </div>
+                ) : undefined
+              }
+            >
+              <Markdown content={part.content} />
+            </BotBubble>
           ) : part.kind === "notification" ? (
             wantsUpgradeCard(part.actions) ? (
               <div key={part.id} className="max-w-md">

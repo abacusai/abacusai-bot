@@ -2137,6 +2137,7 @@
     "yesterday": "어제"
   },
   "reactions": {
+    "feedback": "이 답변에 반응하기",
     "agent": "에이전트가 {{emoji}}로 반응했습니다"
   }
 }

@@ -144,8 +144,21 @@ it("rolls back bot feedback when IPC rejects", async () => {
       onRate={onRate}
     />
   );
+  fireEvent.click(screen.getByRole("button", { name: /reactions.feedback/i }));
   const up = screen.getByRole("button", { name: /feedback.helpful/i });
   fireEvent.click(up);
   await waitFor(() => expect(onRate).toHaveBeenCalledWith("up"));
-  await waitFor(() => expect(up.getAttribute("aria-pressed")).toBe("false"));
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole("button", { name: /reactions.feedback/i })
+        .hasAttribute("disabled")
+    ).toBe(false)
+  );
+  fireEvent.click(screen.getByRole("button", { name: /reactions.feedback/i }));
+  expect(
+    screen
+      .getByRole("button", { name: /feedback.helpful/i })
+      .getAttribute("aria-pressed")
+  ).toBe("false");
 });

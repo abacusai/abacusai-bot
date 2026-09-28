@@ -2137,6 +2137,7 @@
     "yesterday": "Ieri"
   },
   "reactions": {
+    "feedback": "Reagisci a questa risposta",
     "agent": "L’agente ha reagito con {{emoji}}"
   }
 }

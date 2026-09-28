@@ -1,4 +1,4 @@
-import { Check, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Check, Copy, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 /**
  * Per-turn feedback row: thumbs, copy, and the compute-points chip, rendered
  * under the LAST bot text segment of a settled turn so a turn gets one row.
@@ -93,6 +93,7 @@ export const FeedbackRow = ({
   // The "tell us more" box: opens on a thumbs-down, which is already sent;
   // the text is a follow-up, so closing it without writing loses nothing.
   const [askingMore, setAskingMore] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [comment, setComment] = useState("");
 
   // Optimistic: the thumb fills at once and reverts if the report failed, so a
@@ -105,6 +106,7 @@ export const FeedbackRow = ({
       setVerdict(next);
       setRating(true);
       setAskingMore(next === "down");
+      setPickerOpen(false);
       void onRate(next === "none" ? "clear" : next)
         .catch(() => false)
         .then((ok) => {
@@ -146,7 +148,7 @@ export const FeedbackRow = ({
     });
   }, [content]);
 
-  return (
+  const controls = (
     <div
       className={
         variant === "bot"
@@ -327,5 +329,39 @@ export const FeedbackRow = ({
         </Tooltip>
       )}
     </div>
+  );
+  if (variant !== "bot") return controls;
+  const ReactionIcon =
+    verdict === "up" ? ThumbsUp : verdict === "down" ? ThumbsDown : Plus;
+  return (
+    <Popover
+      open={pickerOpen || askingMore}
+      onOpenChange={(open) => {
+        setPickerOpen(open);
+        if (!open) setAskingMore(false);
+      }}
+    >
+      <PopoverTrigger
+        aria-label={t("reactions.feedback")}
+        title={t("reactions.feedback")}
+        disabled={rating}
+        data-id="bot-message-feedback-trigger"
+        className={`bg-background border-border text-muted-foreground hover:bg-muted ring-background focus-visible:outline-ring flex size-6 items-center justify-center rounded-full border shadow-sm ring-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${verdict === "up" ? "text-emerald-600 dark:text-emerald-400" : verdict === "down" ? "text-rose-600 dark:text-rose-400" : ""}`}
+      >
+        <ReactionIcon
+          className={`size-3.5 ${verdict !== "none" ? "fill-current" : ""}`}
+        />
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="end"
+        className="w-auto rounded-full p-1"
+      >
+        <PopoverTitle className="sr-only">
+          {t("reactions.feedback")}
+        </PopoverTitle>
+        {controls}
+      </PopoverContent>
+    </Popover>
   );
 };
