@@ -632,9 +632,9 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     }
   );
 
-  ipcMain.handle(IpcChannels.RemoveRoutine, (_event, id: string) => {
-    serviceHost.removeRoutine(id);
-  });
+  ipcMain.handle(IpcChannels.RemoveRoutine, (_event, id: string) =>
+    serviceHost.removeRoutine(id)
+  );
 
   ipcMain.handle(
     IpcChannels.RunRoutine,

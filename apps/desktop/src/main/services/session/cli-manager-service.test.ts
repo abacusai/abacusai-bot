@@ -82,6 +82,28 @@ describe("disposing the manager", () => {
   });
 });
 
+describe("stopping a session before removing its workspace", () => {
+  it("waits for the process to close", async () => {
+    const manager = service();
+    await manager.startSession({
+      workspaceId: "workspace-1",
+      sessionId: "session-1",
+    });
+
+    if (process.platform === "win32") {
+      expect(() =>
+        fs.rmSync(workspace!, { recursive: true, force: true })
+      ).toThrow();
+    }
+    await manager.stopSessionAndWait("workspace-1", "session-1");
+    expect(
+      manager.getRuntimeDiagnostics().find((entry) => entry.live)
+    ).toBeUndefined();
+    fs.rmSync(workspace!, { recursive: true, force: true });
+    expect(fs.existsSync(workspace!)).toBe(false);
+  });
+});
+
 describe("the child's stdin", () => {
   it("has an error handler from the start, so an async EPIPE cannot crash the app", async () => {
     const manager = service();
