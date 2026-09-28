@@ -193,9 +193,7 @@ export class DebugSyncService {
           `[debug-sync] disabled for this run (${outcome.reason}). Sync is best-effort and this will not succeed by retrying`
         );
       } else {
-        console.warn(
-          `[debug-sync] gave up on ${sessionId}: ${outcome.reason}`
-        );
+        console.warn(`[debug-sync] gave up on ${sessionId}: ${outcome.reason}`);
       }
     }
   }

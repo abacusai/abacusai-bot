@@ -754,8 +754,7 @@ export const signInToMcpServer = async (
           // needs saying.
           finish({
             ok: false,
-            error:
-              "Sign-in timed out. Try signing in again.",
+            error: "Sign-in timed out. Try signing in again.",
           }),
         SIGN_IN_TIMEOUT_MS
       );
