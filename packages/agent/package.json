@@ -2,7 +2,7 @@
   "name": "@abacus-ai/agent",
   "version": "1.0.1",
   "private": true,
-  "description": "The private agent process used by the AbacusAIBot desktop app.",
+  "description": "The private agent process used by the AbacusAI Bot desktop app.",
   "type": "module",
   "exports": {
     ".": {

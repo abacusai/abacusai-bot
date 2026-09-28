@@ -116,7 +116,7 @@ export default function (pi: ExtensionAPI) {
       stoppedBecause = stoppedMessage(cap);
       if (ctx.hasUI)
         ctx.ui.notify(
-          `AbacusAIBot: turn budget (${cap}) exhausted — stopping this run`,
+          `AbacusAI Bot: turn budget (${cap}) exhausted — stopping this run`,
           "warning"
         );
       ctx.abort();

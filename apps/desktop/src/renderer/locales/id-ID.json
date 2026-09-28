@@ -829,7 +829,7 @@
       "label": "SSH"
     },
     "title": "Execution backend",
-    "unimplemented": "AbacusAIBot can't run commands here yet.",
+    "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
@@ -1136,8 +1136,8 @@
       "deliverToBotNone": "No bot — one session per sender"
     },
     "setup": {
-      "discord": "Klik Hubungkan dan jendela login Discord terbuka. Pindai QR dengan aplikasi Discord, atau masuk dengan email dan kata sandi. AbacusAIBot lalu mengirim pesan sebagai akun Discord Anda — tanpa bot, tanpa token.",
-      "telegram": "Klik Hubungkan dan jendela login Telegram terbuka. Masuk di sana seperti biasa — pindai QR dengan ponsel (Setelan, Perangkat, Tautkan Perangkat), atau gunakan nomor telepon atau passkey. AbacusAIBot lalu mengirim pesan sebagai akun Telegram Anda sendiri. Tanpa kunci API, tanpa bot.",
+      "discord": "Klik Hubungkan dan jendela login Discord terbuka. Pindai QR dengan aplikasi Discord, atau masuk dengan email dan kata sandi. AbacusAI Bot lalu mengirim pesan sebagai akun Discord Anda — tanpa bot, tanpa token.",
+      "telegram": "Klik Hubungkan dan jendela login Telegram terbuka. Masuk di sana seperti biasa — pindai QR dengan ponsel (Setelan, Perangkat, Tautkan Perangkat), atau gunakan nomor telepon atau passkey. AbacusAI Bot lalu mengirim pesan sebagai akun Telegram Anda sendiri. Tanpa kunci API, tanpa bot.",
       "whatsapp": "Aktifkan ini, lalu pindai kode QR di bawah dari WhatsApp di ponsel Anda (Pengaturan, Perangkat tertaut, Tautkan perangkat). Ini menautkan AbacusAI Bot sebagai perangkat pada akun tersebut, jadi gunakan nomor khusus, bukan nomor pribadi Anda."
     },
     "stepSignIn": "First — sign in to {{app}}",
@@ -1190,7 +1190,7 @@
     "enableTitle": "Notify me",
     "soundSubtitle": "Uses your system notification sound.",
     "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAIBot tells you while you are looking elsewhere",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
     "title": "Notifications"
   },
   "notifications": {
@@ -1211,7 +1211,7 @@
     "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
     "setupConnectorsCta": "Browse connectors",
     "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAIBot",
+    "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
@@ -1222,7 +1222,7 @@
     "welcomeCapabilityModels": "Access",
     "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "Rekan kerja AI open-source pribadimu dengan memori persisten",
-    "welcomeTitle": "Welcome to AbacusAIBot",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
@@ -1234,7 +1234,7 @@
     "setupExistingLater": "Connect later",
     "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedTitleName": "Abacus AI Bot",
+    "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
@@ -1633,7 +1633,7 @@
         "body": "Token dan biaya per model dan per sesi, supaya harga sebuah proses tidak pernah mengejutkan di belakang."
       },
       "welcome": {
-        "title": "Selamat datang di AbacusAIBot",
+        "title": "Selamat datang di AbacusAI Bot",
         "body": "Keliling singkat jendela ini: apa saja panelnya dan untuk apa. Lima belas perhentian pendek, dan Anda boleh berhenti kapan saja."
       }
     }
@@ -1785,7 +1785,7 @@
     "deleteWorkspace": "Hapus ruang kerja",
     "deleteWorkspaceConfirmLabel": "Ketik nama ruang kerja untuk konfirmasi:",
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
-    "deleteWorkspaceDescription": "Ini menghapus \"{{name}}\" dan obrolannya dari AbacusAIBot. File dan folder Anda di disk tidak dihapus dan akan tetap utuh. Tindakan ini tidak dapat dibatalkan.",
+    "deleteWorkspaceDescription": "Ini menghapus \"{{name}}\" dan obrolannya dari AbacusAI Bot. File dan folder Anda di disk tidak dihapus dan akan tetap utuh. Tindakan ini tidak dapat dibatalkan.",
     "deleteWorkspaceNameMismatch": "Nama tidak cocok",
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",

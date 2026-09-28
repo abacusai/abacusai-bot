@@ -1,5 +1,5 @@
 /**
- * AbacusAIBot's static model catalog, shown by the composer's model picker.
+ * AbacusAI Bot's static model catalog, shown by the composer's model picker.
  * Every id is a real pi model reference (`provider/model-id`), so selecting one
  * resolves and runs. Order is display order. `requiresEnv` lets the picker tell
  * "runs now" from "needs a key first".

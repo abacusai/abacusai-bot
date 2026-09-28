@@ -117,7 +117,7 @@ export default function (pi: ExtensionAPI) {
         entry.overran = true;
         if (ctx.hasUI) {
           ctx.ui.notify(
-            `AbacusAIBot: ${event.toolName} has run past its ${seconds}s budget — still waiting`,
+            `AbacusAI Bot: ${event.toolName} has run past its ${seconds}s budget — still waiting`,
             "warning"
           );
         }

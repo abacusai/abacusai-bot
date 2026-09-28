@@ -2,7 +2,7 @@
   "name": "abacusai-bot",
   "version": "1.0.12",
   "private": true,
-  "description": "AbacusAIBot — an open-source desktop coding agent that runs on your machine, with your models.",
+  "description": "AbacusAI Bot — an open-source desktop coding agent that runs on your machine, with your models.",
   "homepage": "https://github.com/abacusai/abacusai-bot",
   "license": "MIT",
   "author": "Abacus.AI, Inc. <support@abacus.ai>",

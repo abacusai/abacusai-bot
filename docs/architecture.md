@@ -55,7 +55,7 @@ main so switching routes does not destroy them.
 
 ## State ownership
 
-- Main writes persistent app data under the configured AbacusAIBot home.
+- Main writes persistent app data under the configured AbacusAI Bot home.
 - Electron Store holds main-process preferences and window state.
 - Renderer local storage holds disposable interface preferences.
 - Main memory holds live services and runtimes that disappear on restart.

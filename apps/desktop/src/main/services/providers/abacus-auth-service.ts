@@ -303,7 +303,7 @@ const responsePage = (): string => {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AbacusAIBot connected</title>
+<title>AbacusAI Bot connected</title>
 <style>
   :root { color-scheme: light dark; }
   body {
