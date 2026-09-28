@@ -63,12 +63,18 @@ const mount = (): void => {
   render((<FirstBotDialog armed onDone={() => {}} />) as JSX.Element);
 };
 
+const reportFunnelStep = vi.fn();
+
 beforeEach(() => {
   bots.current = [];
   dialog.close = null;
   dialog.created = null;
   deleteBot.mockReset();
+  reportFunnelStep.mockReset();
   createBot.mockReset().mockResolvedValue(bot({ id: "made" }));
+  (globalThis.window as unknown as { api: unknown }).api = {
+    reportFunnelStep,
+  };
 });
 
 describe("the first bot", () => {
@@ -101,6 +107,10 @@ describe("the first bot", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(createBot).not.toHaveBeenCalled();
+    expect(reportFunnelStep).toHaveBeenCalledWith(
+      "first_bot_skipped",
+      "has_bots"
+    );
   });
 
   it("takes the bot back when the popup is cancelled", async () => {
@@ -113,6 +123,10 @@ describe("the first bot", () => {
     // the form never asked for a bot; leaving it in their list is the app
     // deciding for them.
     expect(deleteBot).toHaveBeenCalledWith("made");
+    expect(reportFunnelStep.mock.calls.map(([step]) => step)).toEqual([
+      "first_bot_shown",
+      "first_bot_cancelled",
+    ]);
   });
 
   it("keeps the bot when the popup is closed by Create", async () => {
@@ -125,5 +139,9 @@ describe("the first bot", () => {
     dialog.close?.();
 
     expect(deleteBot).not.toHaveBeenCalled();
+    expect(reportFunnelStep.mock.calls.map(([step]) => step)).toEqual([
+      "first_bot_shown",
+      "first_bot_kept",
+    ]);
   });
 });

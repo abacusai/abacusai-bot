@@ -109,11 +109,16 @@ describe("TourTooltip", () => {
   });
 });
 
+const reportFunnelStep = vi.fn();
+
 describe("WelcomeTour", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     tourProps.current = null;
     useTourStore.setState({ isOpen: true });
+    (globalThis.window as unknown as { api: unknown }).api = {
+      reportFunnelStep,
+    };
   });
 
   it("hands Tourlight the same steps array across renders", async () => {
@@ -245,6 +250,20 @@ describe("WelcomeTour", () => {
     expect(stale).not.toHaveBeenCalled();
   });
 
+  it("reports a finished lap and a skipped one apart", () => {
+    const onFinish = vi.fn();
+    const view = render(<WelcomeTour onFinish={onFinish} />);
+
+    tourProps.current?.onSkip?.();
+    expect(reportFunnelStep).toHaveBeenCalledWith("tour_skipped");
+    expect(onFinish).toHaveBeenCalledOnce();
+
+    view.rerender(<WelcomeTour onFinish={onFinish} />);
+    tourProps.current?.onComplete?.();
+    expect(reportFunnelStep).toHaveBeenCalledWith("tour_done");
+    expect(reportFunnelStep).toHaveBeenCalledTimes(2);
+  });
+
   it("closes the lap and returns to the workspace", () => {
     const { unmount } = render(<WelcomeTour />);
 
@@ -269,6 +288,9 @@ describe("WelcomeTourGate", () => {
     tourProps.current = null;
     useTourStore.setState({ isOpen: false, runId: 0 });
     useAccountStore.setState({ loaded: true, onboarded: true });
+    (globalThis.window as unknown as { api: unknown }).api = {
+      reportFunnelStep,
+    };
   });
 
   it("shows an existing user nothing, however empty their storage is", async () => {

@@ -70,6 +70,7 @@ export function hasGoogleChrome(
     }
   });
 }
+import { funnelDetail, isFunnelStep } from "#shared/funnel";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 import type {
   ImportLocalSkillsRequest,
@@ -110,6 +111,7 @@ import {
   readNotificationSettings,
   readSettings,
 } from "./services/config/settings";
+import { reportFunnelStep } from "./services/debug-sync/funnel-beacon";
 import {
   buildLogDump,
   collectEnvironmentInfo,
@@ -1213,6 +1215,18 @@ app
     ipcMain.handle("account:skip", () => skipOnboarding());
     ipcMain.handle("account:sign-out", () => signOut());
     ipcMain.handle("account:forget", () => forgetAccount());
+
+    // First-run milestones; see services/debug-sync/funnel-beacon.ts.
+    ipcMain.on("funnel:step", (_event, step: unknown, detail: unknown) => {
+      if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+    });
+    reportFunnelStep(
+      "app_opened",
+      (readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? "").trim().length >
+        0
+        ? "signed_in"
+        : "signed_out"
+    );
 
     ipcMain.handle("open-folder-dialog", async () => {
       const result = await showOpenDialogFromApp({

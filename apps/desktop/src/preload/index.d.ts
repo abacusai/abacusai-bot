@@ -1,5 +1,6 @@
 import type { AccountState } from "#shared/account";
 import type { AgentApi, OpenFilePathResult } from "#shared/contracts";
+import type { FunnelStep } from "#shared/funnel";
 import type { PptxReadResult } from "#shared/pptx";
 import type {
   ImportLocalSkillsRequest,
@@ -74,6 +75,7 @@ interface CustomAPI {
   // Local account (optional sign-in; see apps/desktop/src/shared/account.ts)
   getAccountState: () => Promise<AccountState>;
   skipAccountOnboarding: () => Promise<AccountState>;
+  reportFunnelStep: (step: FunnelStep, detail?: string) => void;
   signOutAccount: () => Promise<AccountState>;
   /** Sign-out plus forgetting onboarding: the flow runs again from the top. */
   forgetAccount: () => Promise<AccountState>;

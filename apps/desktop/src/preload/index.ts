@@ -7,6 +7,7 @@ import {
 
 import type { AccountState } from "#shared/account";
 import type { OpenFilePathResult } from "#shared/contracts";
+import type { FunnelStep } from "#shared/funnel";
 import type { PptxReadResult } from "#shared/pptx";
 import type { UpdateStatus } from "#shared/update";
 
@@ -89,6 +90,11 @@ const api = {
   setThemeSource: (source: "system" | "light" | "dark"): Promise<boolean> =>
     ipcRenderer.invoke("theme:set", source),
   platform: process.platform,
+
+  // First-run milestones (see shared/funnel.ts); fire-and-forget.
+  reportFunnelStep: (step: FunnelStep, detail?: string): void => {
+    ipcRenderer.send("funnel:step", step, detail);
+  },
 
   // Local account (optional sign-in; see apps/desktop/src/shared/account.ts)
   getAccountState: (): Promise<AccountState> =>
