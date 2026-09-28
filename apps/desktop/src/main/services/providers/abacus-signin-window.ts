@@ -189,6 +189,20 @@ export const openSignInWindow = async ({
 
   const signInSession = session.fromPartition(PARTITION);
   await forgetAbacusSession(signInSession).catch(() => {});
+  // This session remembers provider logins, so Microsoft would silently reuse
+  // the last account; its authorize request is rewritten to ask for the
+  // picker, as Google's popup does. At the request, not the popup: a reload
+  // from did-create-window loses the race with the popup's own first load.
+  signInSession.webRequest.onBeforeRequest(
+    { urls: ["https://login.microsoftonline.com/*"] },
+    (details, callback) => {
+      const picker =
+        details.resourceType === "mainFrame"
+          ? withMicrosoftAccountPicker(details.url)
+          : null;
+      callback(picker != null ? { redirectURL: picker } : {});
+    }
+  );
 
   const win = new BrowserWindow({
     show: false,
@@ -366,11 +380,7 @@ export const openSignInWindow = async ({
   };
 
   // A provider popup's own links open in the browser.
-  win.webContents.on("did-create-window", (popup, { url: opened }) => {
-    // This window remembers provider sessions, so Microsoft would silently
-    // reuse the last account; ask it for its picker, as Google's popup does.
-    const picker = withMicrosoftAccountPicker(opened);
-    if (picker != null) void popup.loadURL(picker).catch(() => {});
+  win.webContents.on("did-create-window", (popup) => {
     popup.webContents.setWindowOpenHandler(({ url: target }) => {
       if (isSafeExternalUrl(target)) void shell.openExternal(target);
       return { action: "deny" };
