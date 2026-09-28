@@ -78,8 +78,9 @@ const GOOGLE_REDIRECT_URI = "https://abacus.ai/oauth/callback";
  * subdomain, `apps` on apps.abacus.ai); without it the backend reads the
  * sign-in as coming from the platform portal and refuses ChatLLM Teams users.
  */
-const callPageApi = (method: string, data: unknown): string => `
+const callPageApi = (origin: string, method: string, data: unknown): string => `
   (() => {
+    if (location.origin !== ${JSON.stringify(origin)}) return null;
     const host = location.hostname.toLowerCase();
     const suffix = '.abacus.ai';
     const headers = { 'content-type': 'application/json' };
@@ -208,7 +209,8 @@ export const openSignInWindow = async ({
   if (parentWindow() == null) return null;
 
   const signInSession = session.fromPath(signInSessionPath());
-  await forgetAbacusSession(signInSession).catch(() => {});
+  await forgetAbacusSession(signInSession);
+  const signInOrigin = new URL(url).origin;
   // This session remembers provider logins, so Microsoft would silently reuse
   // the last account; its authorize request is rewritten to ask for the
   // picker, as Google's popup does. At the request, not the popup: a reload
@@ -242,9 +244,16 @@ export const openSignInWindow = async ({
   // Set once the window is ours to close: a close after this is not the user's.
   let released = false;
 
+  const closePopups = (): void => {
+    for (const popup of win.getChildWindows()) {
+      if (!popup.isDestroyed()) popup.close();
+    }
+  };
+
   const release = (): void => {
     if (released) return;
     released = true;
+    closePopups();
     if (!win.isDestroyed()) win.close();
   };
 
@@ -305,12 +314,18 @@ export const openSignInWindow = async ({
    */
   let googleInFlight = false;
   const signInWithGoogle = async (): Promise<void> => {
-    if (googleInFlight || released) return;
+    if (
+      googleInFlight ||
+      released ||
+      new URL(win.webContents.getURL()).origin !== signInOrigin
+    )
+      return;
     googleInFlight = true;
     try {
       const ids = (await win.webContents.executeJavaScript(
-        callPageApi("_getSSOClientIds", {})
+        callPageApi(signInOrigin, "_getSSOClientIds", {})
       )) as { result?: { google?: unknown } } | null;
+      if (released) return;
       const clientId = ids?.result?.google;
       if (typeof clientId !== "string" || clientId.length === 0) {
         handOff();
@@ -347,7 +362,15 @@ export const openSignInWindow = async ({
           resolve(value);
         };
         const watch = (event: Electron.Event, target: string): void => {
-          if (!target.startsWith(GOOGLE_REDIRECT_URI)) return;
+          const callback = new URL(target);
+          const expected = new URL(GOOGLE_REDIRECT_URI);
+          if (
+            callback.origin !== expected.origin ||
+            callback.pathname !== expected.pathname
+          ) {
+            guard(event, target);
+            return;
+          }
           event.preventDefault();
           const params = new URL(target).searchParams;
           settle(params.get("state") === state ? params.get("code") : null);
@@ -363,13 +386,17 @@ export const openSignInWindow = async ({
           return { action: "deny" };
         });
         popup.on("closed", () => settle(null));
-        void popup.loadURL(auth.toString()).catch(() => {});
+        void popup.loadURL(auth.toString()).catch(() => {
+          if (done) return;
+          settle(null);
+          handOff();
+        });
       });
       // Closed by the user: stay on the page, nothing to report.
       if (code == null || released) return;
 
       const signedIn = (await win.webContents.executeJavaScript(
-        callPageApi("_googleCodeSignIn", {
+        callPageApi(signInOrigin, "_googleCodeSignIn", {
           googleCode: code,
           signupSource: "AbacusAIBot",
         })
@@ -401,6 +428,8 @@ export const openSignInWindow = async ({
 
   // A provider popup's own links open in the browser.
   win.webContents.on("did-create-window", (popup) => {
+    popup.webContents.on("will-navigate", (event) => guard(event, event.url));
+    popup.webContents.on("will-redirect", (event) => guard(event, event.url));
     popup.webContents.setWindowOpenHandler(({ url: target }) => {
       if (isSafeExternalUrl(target)) void shell.openExternal(target);
       return { action: "deny" };
@@ -408,14 +437,33 @@ export const openSignInWindow = async ({
   });
 
   win.webContents.on("did-finish-load", () => {
-    void win.webContents.executeJavaScript(HINT_JS, true).catch(() => {});
-    void win.webContents.executeJavaScript(GOOGLE_JS, true).catch(() => {});
+    if (released || new URL(win.webContents.getURL()).origin !== signInOrigin)
+      return;
+    void win.webContents
+      .executeJavaScript(
+        `if (location.origin === ${JSON.stringify(signInOrigin)}) { ${HINT_JS} }`,
+        true
+      )
+      .catch(() => {});
+    void win.webContents
+      .executeJavaScript(
+        `if (location.origin === ${JSON.stringify(signInOrigin)}) { ${GOOGLE_JS} }`,
+        true
+      )
+      .catch(() => {});
   });
   win.webContents.on("console-message", (event) => {
+    if (
+      released ||
+      event.frame !== win.webContents.mainFrame ||
+      new URL(win.webContents.getURL()).origin !== signInOrigin
+    )
+      return;
     if (event.message === BROWSER_MESSAGE) handOff();
     else if (event.message === GOOGLE_MESSAGE) void signInWithGoogle();
   });
 
+  win.on("close", closePopups);
   win.on("closed", () => {
     if (released) return;
     released = true;
