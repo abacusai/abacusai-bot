@@ -32,7 +32,7 @@ processes and MCP logs for a tool that is still running.
 pipes, redirects, heredocs and the usual coreutils work without Git Bash or
 WSL. It is not GNU bash: arrays and `**` globs are missing, and busybox's
 tools lack some GNU flags. Paths are native Windows paths, written with
-forward slashes. Installed programs on PATH — node, python, git, `npm.cmd` —
+forward slashes. Installed programs on PATH (node, python, git, `npm.cmd`)
 run as themselves. The shell is installed on first use under
 `%LOCALAPPDATA%\abacusai-bot\posix-shell`; delete that directory to reset it.
 
@@ -44,9 +44,8 @@ Capabilities → Terminal & Processes holds the same setting. A shell that is no
 installed is listed but cannot be picked, and a stored one that disappears
 falls back to the system default.
 
-macOS and Linux have no such menu: the terminal opens the login shell `$SHELL`
-names, which is the choice the user already made and the one their dotfiles are
-written for.
+macOS and Linux have no such menu: the terminal opens the login shell that
+`$SHELL` names.
 
 ## Docker execution fails
 

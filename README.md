@@ -1,9 +1,9 @@
-# AbacusAI Bot — 100% free, open-source personal agents for your messaging apps, tools and services
+# AbacusAI Bot: 100% free, open-source personal agents for your messaging apps, tools and services
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: light)" srcset="docs/media/banner-light.png">
-    <img src="docs/media/banner-dark.png" alt="AbacusAI Bot — 100% free, open source. Your own personal agents for your messaging apps, tools and services.">
+    <img src="docs/media/banner-dark.png" alt="AbacusAI Bot: 100% free, open source. Your own personal agents for your messaging apps, tools and services.">
   </picture>
 </p>
 

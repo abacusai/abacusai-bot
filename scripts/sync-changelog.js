@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Keep CHANGELOG.md complete, one `## <version> — <date>` section per release.
+ * Keep CHANGELOG.md complete, one `## <version> (<date>)` section per release.
  * Hand-written sections (and `## Unreleased`) are kept verbatim; a release
  * nobody wrote up gets a one-line stand-in. Run as `pnpm changelog`, or from
  * the release build with `--upcoming <version>` and `--out <path>`. Needs `gh`.
@@ -58,7 +58,7 @@ const written = handWritten();
 const DEFAULT_NOTES = "Bug fixes, improvements in quality and speed.";
 
 const section = (version, date) =>
-  [`## ${version} — ${date}`, "", DEFAULT_NOTES].join("\n");
+  [`## ${version} (${date})`, "", DEFAULT_NOTES].join("\n");
 
 const published = releases
   .filter((release) => !release.draft && !release.prerelease)
@@ -87,7 +87,7 @@ if (upcomingVersion != null) {
     sections.unshift(
       unreleased.replace(
         /^## Unreleased.*$/mu,
-        `## ${upcomingVersion} — ${today}`
+        `## ${upcomingVersion} (${today})`
       )
     );
   } else {
@@ -104,8 +104,8 @@ writeFileSync(
   [
     "# Changelog",
     "",
-    "<!-- One section per version: `## 1.0.62 — 2026-09-09`. Write freely under",
-    "     it — prose, ### headings, bullets. Notes for the next release go under",
+    "<!-- One section per version: `## 1.0.62 (2026-09-09)`. Write freely under",
+    "     it: prose, ### headings, bullets. Notes for the next release go under",
     "     `## Unreleased`. Sections here are kept as written; a release nobody",
     '     wrote up says "Bug fixes, improvements in quality and speed." -->',
     "",
