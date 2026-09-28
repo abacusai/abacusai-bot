@@ -52,6 +52,24 @@ describe("workspace service initialize", () => {
     expect(service.getActiveWorkspace()?.path).toBe(repo);
   });
 
+  it("keeps a routine or bot folder's kind across a restart", () => {
+    const folder = path.resolve("/tmp/routine");
+    stored.set("localCode.workspaces", [
+      {
+        id: "w1",
+        label: "routine",
+        description: folder,
+        path: folder,
+        kind: "routine",
+      },
+    ]);
+
+    const service = new WorkspaceService();
+    service.initialize();
+
+    expect(service.getWorkspaces()[0]?.kind).toBe("routine");
+  });
+
   it("does not fall back to home when the only workspace is a tombstone", () => {
     stored.set("localCode.workspaces", [
       {

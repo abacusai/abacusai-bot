@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   createJob,
+  describeJob,
   retireOnceJob,
   dueJobs,
   getJob,
@@ -221,5 +222,18 @@ describe("a job that runs once", () => {
     const repeating = updateJob(job.id, { schedule: "0 9 * * *" });
     expect(repeating.runAt).toBeNull();
     expect(repeating.schedule).toBe("0 9 * * *");
+  });
+});
+
+describe("describing a job to the agent", () => {
+  it("names each trigger rather than calling every unscheduled job a webhook", () => {
+    const manual = createJob({ prompt: "do it" });
+    const hook = createJob({ webhook: true, prompt: "do it" });
+    const once = createJob({ runAt: Date.now() + 60_000, prompt: "do it" });
+
+    expect(describeJob(manual)).toContain("next: manual only");
+    expect(describeJob(hook)).toContain("next: on webhook");
+    expect(describeJob(once)).not.toContain("on webhook");
+    expect(describeJob(once)).toContain("once");
   });
 });
