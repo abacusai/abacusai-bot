@@ -431,8 +431,8 @@
       "list_whatsapp_chats": "WhatsApp की चैट और संपर्क सूचीबद्ध करें।",
       "ls": "किसी डायरेक्टरी की सामग्री सूचीबद्ध करें।",
       "memory": "Save and recall notes that outlive the session.",
-      "pdf": "Write, read, merge, split or fill a PDF.",
-      "ppt": "Build a slide deck from a brief and save it as a PDF.",
+      "pdf": "Read, merge, split, watermark, fill or reprint a PDF.",
+      "ppt": "Build a presentation and print it as a PDF.",
       "present_deliverable": "Present the finished files, most important first, and open the top one.",
       "read": "डिस्क से कोई फ़ाइल पढ़ें।",
       "read_discord_messages": "अनुरोध पर हाल के Discord संदेश पढ़ें।",
@@ -495,7 +495,7 @@
         "label": "BFL FLUX 3 Video"
       },
       "browser": {
-        "description": "Drive the built-in browser: open pages, read them, click and type.",
+        "description": "Drive the built-in browser: open pages, read them, click and type. Web tasks run in their own sub-agent.",
         "label": "Browser Automation"
       },
       "connectors": {
@@ -621,7 +621,7 @@
   "connectorRequest": {
     "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
     "connect": "Connect {{provider}}",
-    "connecting": "Connecting…",
+    "connecting": "Connecting… check your browser to complete the steps",
     "decline": "Not now",
     "failed": "Could not connect {{provider}}.",
     "stop": "कनेक्शन रोकें",
@@ -706,9 +706,9 @@
     "inviteCta": "Or invite friends for free credits"
   },
   "deepAgentCard": {
-    "body": "Open DeepAgent on the web",
+    "body": "For complex agentic tasks",
     "cta": "Go to Abacus AI Agent",
-    "title": "Go to DeepAgent"
+    "title": "Abacus AI Agent"
   },
   "deliverables": {
     "files": "Files",
@@ -833,7 +833,7 @@
     "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
-    "title": "We set up your first bot"
+    "title": "We have created your first bot for you, enjoy!"
   },
   "greeting": {
     "afternoon": {
@@ -1013,7 +1013,8 @@
     "signingIn": "Waiting for the browser…",
     "title": "MCP सर्वर",
     "toggleFailed": "सर्वर अपडेट करने में विफल।",
-    "toolCount": "{{count}} टूल",
+    "toolCount_one": "{{count}} टूल",
+    "toolCount_other": "{{count}} टूल",
     "urlRequired": "URL आवश्यक है।",
     "viewLogs": "लॉग",
     "abacusConnectors": {
@@ -1153,7 +1154,7 @@
     "sharedLink": {
       "title": "Abacus AI bot",
       "stepLink": "Then, link the Abacus AI bot",
-      "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
+      "intro": "Reach your agent from any device by messaging the shared Abacus AI bot. No token to paste: one scan or tap, and you're linked.",
       "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
       "link": "Link Abacus AI bot",
       "step1": "1. Add Abacus AI to your Discord (Add to My Apps).",
@@ -1166,8 +1167,8 @@
       "preparing": "Getting your link code…",
       "retry": "Try again",
       "waiting": "Waiting for the command to land in Discord…",
-      "linked": "Linked. DM the Abacus AI bot in Discord to talk to your agent.",
-      "linkedAs": "Linked as {{name}}. DM the Abacus AI bot in Discord to talk to your agent.",
+      "linked": "Linked. Message the Abacus AI bot in {{app}} to talk to your agent.",
+      "linkedAs": "Linked as {{name}}. Message the Abacus AI bot in {{app}} to talk to your agent.",
       "unlink": "Unlink",
       "telegramStep": "Scan this with your phone's camera app (not the scanner inside Telegram), or open the link on your phone, then tap Start.",
       "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
@@ -1195,28 +1196,28 @@
     "connectTitle": "Abacus.AI जोड़ें",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",
-    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
+    "setupAbacusNote": "An Abacus.AI account is still the shortest route: it is free, starts with $2 of credit and a few free models, and it is the one that brings the connectors.",
     "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
     "setupConnectorsCta": "Browse connectors",
     "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAI Bot",
+    "setupDoneCta": "Continue",
     "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
     "setupSaveCta": "Save",
     "setupSignInCta": "Sign in / Create Free Account",
     "signInCta": "Abacus.AI में साइन इन करें",
-    "skipCta": "Not now",
-    "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
+    "skipCta": "Skip for now",
+    "welcomeCapabilityModels": "100+ AI Models",
+    "welcomeFreeBadge": "Free forever",
     "welcomeTagline": "स्थायी मेमोरी वाला आपका निजी ओपन-सोर्स AI सहकर्मी",
-    "welcomeTitle": "Welcome to AbacusAI Bot",
+    "welcomeTitle": "AbacusAI Bot",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
-    "connectedCta": "Continue",
+    "connectedPromiseAgent": "open-source AI agent",
+    "connectedPromiseModels": "powerful AI models for free",
+    "connectedPromiseWork": "across your tools and services",
+    "connectedCta": "Get Started",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
@@ -1229,11 +1230,11 @@
     "connectedPromiseLocalLead": "Runs locally.",
     "connectedPromiseLocal": "Chat with it wherever you work.",
     "connectorsTitleLead": "Connect with your",
-    "connectorsTitleAccent": "tools & services",
-    "connectorsSubtitle": "Chat where you work",
+    "connectorsTitleAccent": "tools & services.",
+    "connectorsSubtitle": "Chat where you work.",
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
-    "connectorsMore": "{{count}}+ more in Settings",
+    "connectorsMore": "Many more",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
@@ -1298,7 +1299,8 @@
     "notSignedIn": "Sign in to Abacus.AI to invite friends.",
     "progressTitle": "{{sent}} of {{total}} invites sent",
     "progressGranted": "{{credits}} credits earned. Keep inviting: every friend who joins still pays.",
-    "friendsJoined": "{{count}} friends joined so far, {{credits}} credits earned from them.",
+    "friendsJoined_one": "{{count}} friend joined so far, {{credits}} credits earned from them.",
+    "friendsJoined_other": "{{count}} friends joined so far, {{credits}} credits earned from them.",
     "copyLink": "Copy invite link",
     "linkCopied": "Invite link copied",
     "gmailTitle": "From your Gmail",
@@ -1322,10 +1324,11 @@
     "selectAll": "Select all",
     "selectNone": "Select none",
     "messageLabel": "Your note to them",
-    "defaultMessage": "I've been using the AbacusAI Bot, a free open-source desktop AI agent that runs on free models. Worth a try.",
+    "defaultMessage": "I invite you to try the AbacusAI Bot, a free, open-source desktop AI agent.\nDownload it here (bot.abacus.ai): {{link}}\n\n- 100% free: it runs on amazing free LLMs, no credit card, no subscription.\n- Does real work on your computer: your files, terminal and browser, with your permission.\n- Connects to Gmail, Google Drive, Slack, WhatsApp, Telegram and Discord.\n- Runs bots and routines for you around the clock.\n\nIt is open source. If you like it, star the repo: https://github.com/abacusai/abacusai-bot",
     "sendInvites": "Send {{count}} invites",
     "sending": "Sending…",
-    "sentToast": "Invited {{count}} people",
+    "sentToast_one": "Invited {{count}} person",
+    "sentToast_other": "Invited {{count}} people",
     "sentToastDetail": "{{skipped}} already on Abacus.AI or invited before, {{failed}} could not be sent.",
     "milestoneToast": "{{credits}} credits added to your account",
     "errors": {
@@ -1391,7 +1394,8 @@
     "runAtPast": "That time has already passed.",
     "runAtRequired": "Pick a date and time to run at.",
     "runError": "रूटीन शुरू नहीं हो सका।",
-    "runHistory": "{{count}} हाल की रन",
+    "runHistory_one": "{{count}} हाल की रन",
+    "runHistory_other": "{{count}} हाल की रन",
     "runNow": "अभी चलाएँ",
     "runOutcome": {
       "completed": "Completed",
@@ -1454,7 +1458,7 @@
     "webhookCopied": "वेबहुक URL कॉपी हुआ।",
     "webhookHint": "HTTP POST से यह रूटीन फ़ायर करें।",
     "webhookLabel": "वेबहुक",
-    "webhookPublicPending": "Setting up the public link. This local one works meanwhile…",
+    "webhookPublicPending": "Creating your public webhook link…",
     "workspaceAddError": "That folder could not be added.",
     "workspaceChoose": "Choose a folder…",
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
@@ -1862,7 +1866,7 @@
       "permission": "Sends after you answer the permission prompt",
       "remove": "Remove",
       "step": "Sends at the agent's next step",
-      "turn": "Sends when this turn ends"
+      "turn": "Sends as the next turn"
     },
     "perm": {
       "addContext": "संदर्भ या निर्देश जोड़ें…",
@@ -1894,7 +1898,7 @@
     "premiumUpgrade": {
       "connectNote": "Connect a free source to keep going. No card needed",
       "continueOn": "Continue on {{model}} (free)",
-      "exhaustedTitle": "You've used up your free credits",
+      "exhaustedTitle": "You've used up your free Abacus.AI credits",
       "localNote": "Or run a model on this computer for free, with no limits",
       "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
@@ -2082,11 +2086,11 @@
         },
         "find-flights": {
           "name": "Find me flights",
-          "description": "Opens the browser, checks a couple of sites, and comes back with three real options and links. Books nothing."
+          "description": "Opens the browser, checks a couple of sites, and comes back with three real options, links, and a pick."
         },
         "process-a-spreadsheet": {
           "name": "Clean up a spreadsheet",
-          "description": "Reads every sheet, fixes the headers, types and duplicates, and saves a summarised copy beside the original."
+          "description": "Reads the spreadsheets here, fixes headers, types and duplicates, and saves a summarised copy beside each original."
         },
         "restyle-a-repo": {
           "name": "Restyle Excalidraw",
