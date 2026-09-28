@@ -178,8 +178,11 @@ export const sendReferralWhatsappInvites = async (
   const summary = await fetchReferralSummary();
   if (summary == null) return outcome({ error: "not-signed-in" });
   // The attributed link forwards to bot.abacus.ai, so it is the one download link in the message.
-  const text =
-    `${cleanMessage(message)}\n\nDownload it here (bot.abacus.ai): ${summary.inviteLink}`.trim();
+  // The default message already carries it; appending again sent it twice.
+  const base = cleanMessage(message);
+  const text = base.includes(summary.inviteLink)
+    ? base
+    : `${base}\n\nDownload it here (bot.abacus.ai): ${summary.inviteLink}`.trim();
   const delivered: string[] = [];
   let failed = 0;
   for (const chatId of list) {
