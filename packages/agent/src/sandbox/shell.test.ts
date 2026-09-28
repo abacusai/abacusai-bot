@@ -261,6 +261,17 @@ describe("the shell a command falls back to without a sandbox backend", () => {
     ).toEqual({ file: "C:\\bb\\sh.exe", args: ["-c", "npm test && ls"] });
   });
 
+  it("names the sh applet when running the shipped BusyBox directly", () => {
+    expect(
+      fallbackShell(
+        "printf ok",
+        "win32",
+        {},
+        { sh: "C:\\bb\\busybox.exe", args: ["sh"] }
+      )
+    ).toEqual({ file: "C:\\bb\\busybox.exe", args: ["sh", "-c", "printf ok"] });
+  });
+
   it("keeps the command as one argument on both platforms", () => {
     const command = 'echo "a b" && echo done';
 

@@ -215,6 +215,16 @@ describe("the container's command line", () => {
     ).toBe('"C:\\bb\\sh.exe" -c "echo \\"hi\\" > out.txt"');
   });
 
+  it("names the sh applet in a confined direct BusyBox command", () => {
+    expect(
+      containerCommandLine(
+        "printf ok",
+        {},
+        { sh: "C:\\bb\\busybox.exe", args: ["sh"] }
+      )
+    ).toBe('"C:\\bb\\busybox.exe" "sh" -c "printf ok"');
+  });
+
   it("falls back to cmd.exe without the payload", () => {
     expect(
       containerCommandLine("dir", { ComSpec: "C:\\W\\cmd.exe" }, null)

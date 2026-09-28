@@ -60,6 +60,8 @@ const MANIFEST_VERSION = 1;
 export interface PosixShell {
   /** The `sh` launcher; spawned as `sh.exe -c <command>`. */
   readonly sh: string;
+  /** Direct payloads need the applet name before shell flags. */
+  readonly args?: readonly string[];
   /** Applet launchers, put at the front of the child's PATH and nowhere else. */
   readonly bin: string;
   /** `BB_OVERRIDE_APPLETS` for the child: an installed tool wins over the applet. */
@@ -407,8 +409,8 @@ export function installPosixShell(
   if (platform !== "win32") return undefined;
   const env = options.env ?? process.env;
 
+  const payload = options.payload ?? findPayload(env);
   try {
-    const payload = options.payload ?? findPayload(env);
     if (payload == null) {
       warnOnce("no bundled busybox; bash needs Git Bash or bash.exe on PATH");
       return undefined;
@@ -432,15 +434,32 @@ export function installPosixShell(
     };
   } catch (error) {
     warnOnce(`could not install the bundled shell: ${String(error)}`);
-    return undefined;
+    // A cache can be locked or unwritable while the shipped executable is
+    // still runnable. BusyBox dispatches by argv[1] when invoked directly.
+    return payload != null && exists(payload)
+      ? {
+          sh: payload,
+          args: ["sh"],
+          bin: path.dirname(payload),
+          overrideApplets: busyboxOverrideApplets(),
+        }
+      : undefined;
   }
 }
 
 let resolved: PosixShell | undefined | null = null;
+let retryAt = 0;
+const RETRY_MS = 30_000;
 
-/** The bundled shell, installed once per process; undefined off Windows or without a payload. */
+/** Recheck failed installs after a short delay; keep successful installs cached. */
 export function posixShell(): PosixShell | undefined {
-  if (resolved === null) resolved = installPosixShell();
+  if (
+    resolved === null ||
+    ((resolved === undefined || resolved.args != null) && Date.now() >= retryAt)
+  ) {
+    resolved = installPosixShell();
+    retryAt = Date.now() + RETRY_MS;
+  }
 
   return resolved;
 }
@@ -448,6 +467,7 @@ export function posixShell(): PosixShell | undefined {
 /** Test seam: forget the memoised answer. */
 export function resetPosixShellForTesting(): void {
   resolved = null;
+  retryAt = 0;
   warned = false;
 }
 

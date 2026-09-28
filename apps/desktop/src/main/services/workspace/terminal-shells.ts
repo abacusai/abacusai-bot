@@ -94,6 +94,7 @@ export const busyboxPayload = (): string | undefined => {
 };
 
 let installedBusybox: PosixShell | undefined | null = null;
+let busyboxRetryAt = 0;
 
 /**
  * The materialised busybox, installed once per process. Verifying an install
@@ -104,10 +105,16 @@ const busybox = (
   env: NodeJS.ProcessEnv,
   platform: NodeJS.Platform
 ): PosixShell | undefined => {
-  if (installedBusybox !== null) return installedBusybox;
+  if (
+    installedBusybox !== null &&
+    ((installedBusybox !== undefined && installedBusybox.args == null) ||
+      Date.now() < busyboxRetryAt)
+  )
+    return installedBusybox;
   const payload = busyboxPayload();
   installedBusybox =
     payload == null ? undefined : installPosixShell({ payload, platform, env });
+  busyboxRetryAt = Date.now() + 30_000;
 
   return installedBusybox;
 };
@@ -115,6 +122,7 @@ const busybox = (
 /** Test seam: forget the memoised install. */
 export const resetBusyboxForTesting = (): void => {
   installedBusybox = null;
+  busyboxRetryAt = 0;
 };
 
 /**
@@ -202,7 +210,7 @@ const locate = (
         // rather than ConPTY (see terminal-session-service.ts). Without it
         // ash reads the pipe as a script: commands run, and nothing else
         // happens: no prompt, no line editing, no job control.
-        args: ["-i"],
+        args: [...(shell.args ?? []), "-i"],
         env: {
           ...shellEnv,
           // ash prints no prompt without one, and reads none from a profile

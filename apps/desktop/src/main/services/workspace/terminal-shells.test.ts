@@ -147,6 +147,22 @@ describe("terminal shells on Windows", () => {
     expect(resolved.env?.HOME).toBe("C:\\Users\\Someone");
   });
 
+  it("starts the shipped executable with the sh applet after an install failure", () => {
+    const payload = path.join(vendor, "busybox.exe");
+    fs.writeFileSync(payload, "");
+    installPosixShell.mockReturnValue({
+      sh: payload,
+      args: ["sh"],
+      bin: vendor,
+      overrideApplets: "",
+    });
+
+    expect(resolveTerminalShell("busybox", windows())).toMatchObject({
+      file: payload,
+      args: ["sh", "-i"],
+    });
+  });
+
   it("leaves a shell's own prompt and terminal alone", () => {
     fs.writeFileSync(path.join(vendor, "busybox.exe"), "");
     installPosixShell.mockReturnValue({
