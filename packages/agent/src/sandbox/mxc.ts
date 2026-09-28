@@ -151,10 +151,10 @@ export function containerCommandLine(
   command: string,
   env: NodeJS.ProcessEnv,
   /** Null says there is no bundled shell; leaving it out looks one up. */
-  shell: { sh: string } | null
+  shell: { sh: string; args?: readonly string[] } | null
 ): string {
   if (shell != null)
-    return `${quoteWindowsArgument(shell.sh)} -c ${quoteWindowsArgument(command)}`;
+    return `${quoteWindowsArgument(shell.sh)}${shell.args?.length ? ` ${shell.args.map(quoteWindowsArgument).join(" ")}` : ""} -c ${quoteWindowsArgument(command)}`;
 
   return `${env.ComSpec ?? "cmd.exe"} /d /s /c "${command}"`;
 }
@@ -164,7 +164,7 @@ export function buildConfig(
   command: string,
   cwd: string,
   env: NodeJS.ProcessEnv = process.env,
-  shell: { sh: string } | null = posixShell() ?? null
+  shell: { sh: string; args?: readonly string[] } | null = posixShell() ?? null
 ): Record<string, unknown> {
   const writable = [
     ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),

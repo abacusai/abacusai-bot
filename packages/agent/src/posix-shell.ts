@@ -3,6 +3,9 @@
  * it, and what the model is told about the shell it has. The install itself is
  * `posix-shell-install.ts`, which the desktop imports on its own.
  */
+import { spawn } from "node:child_process";
+import { access } from "node:fs/promises";
+
 import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
 
 import {
@@ -54,6 +57,72 @@ export function posixShellOperations(
   shell: PosixShell | undefined = posixShell()
 ): ShellOperations | null {
   if (shell == null) return null;
+  if (shell.args != null) {
+    const args = shell.args;
+    return {
+      exec: async (command, cwd, options) => {
+        if (options.signal?.aborted) throw new Error("aborted");
+        try {
+          await access(cwd);
+        } catch {
+          throw new Error(
+            `Working directory does not exist: ${cwd}\nCannot execute bash commands.`
+          );
+        }
+        const timeout = options.timeout;
+        if (
+          timeout != null &&
+          (!Number.isFinite(timeout) ||
+            timeout <= 0 ||
+            timeout * 1000 > 2_147_483_647)
+        )
+          throw new Error("Invalid timeout");
+        const child = spawn(shell.sh, [...args, "-c", command], {
+          cwd,
+          env: posixShellEnv(options.env ?? process.env, shell),
+          stdio: ["ignore", "pipe", "pipe"],
+          windowsHide: true,
+        });
+        return new Promise<{ exitCode: number | null }>((resolve, reject) => {
+          let settled = false;
+          let timedOut = false;
+          let grace: NodeJS.Timeout | undefined;
+          const kill = () => child.kill();
+          const timer =
+            timeout == null
+              ? undefined
+              : setTimeout(() => {
+                  timedOut = true;
+                  kill();
+                }, timeout * 1000);
+          const finish = (code: number | null, error?: Error) => {
+            if (settled) return;
+            settled = true;
+            if (timer != null) clearTimeout(timer);
+            if (grace != null) clearTimeout(grace);
+            options.signal?.removeEventListener("abort", kill);
+            child.stdout?.destroy();
+            child.stderr?.destroy();
+            if (options.signal?.aborted) reject(new Error("aborted"));
+            else if (timedOut) reject(new Error(`timeout:${timeout}`));
+            else if (error != null) reject(error);
+            else resolve({ exitCode: code });
+          };
+          child.stdout?.on("data", options.onData);
+          child.stderr?.on("data", options.onData);
+          child.on("error", (error) => finish(null, error));
+          child.on("exit", (code) => {
+            // A background child may inherit the pipes after ash exits.
+            grace = setTimeout(() => finish(code), 100);
+            grace.unref();
+          });
+          child.on("close", (code) => finish(code));
+          if (options.signal?.aborted) kill();
+          else options.signal?.addEventListener("abort", kill, { once: true });
+        });
+      },
+    };
+  }
   const local = createLocalBashOperations({ shellPath: shell.sh });
 
   return {
