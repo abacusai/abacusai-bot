@@ -42,7 +42,7 @@ export class DebugSyncService {
   private readonly readTranscript: (id: string) => StoredTranscript | null;
   private readonly clientVersion: string;
   private readonly timers = new Map<string, NodeJS.Timeout>();
-  private readonly inFlight = new Set<string>();
+  private readonly inFlight = new Map<string, Promise<void>>();
   /** sessionId -> what the server holds; a bare count is an older marker. */
   private markers: Record<string, SyncState | number> = {};
   /**
@@ -154,6 +154,9 @@ export class DebugSyncService {
       clearTimeout(pending);
       this.timers.delete(sessionId);
     }
+    // An upload already under way would make run() just re-arm the debounce
+    // and return, and the rating would find no sequence yet.
+    await this.inFlight.get(sessionId)?.catch(() => undefined);
     await this.run(sessionId);
   }
 
@@ -166,29 +169,34 @@ export class DebugSyncService {
     const current = this.readTranscript(sessionId);
     if (!shouldSync(current, this.syncState(sessionId))) return;
 
-    this.inFlight.add(sessionId);
+    const upload = this.upload(sessionId);
+    this.inFlight.set(sessionId, upload);
     try {
-      const outcome = await syncTranscriptWithRetry(this.deps(), sessionId, {
-        maxAttempts: MAX_ATTEMPTS,
-        baseBackoffMs: BASE_BACKOFF_MS,
-      });
-      if (outcome.status === "ok") {
-        this.markers[sessionId] = outcome.state;
-        this.saveMarkers();
-      } else if (outcome.status === "error") {
-        if (!outcome.retryable) {
-          this.disabledForRun = outcome.reason;
-          console.warn(
-            `[debug-sync] disabled for this run (${outcome.reason}). Sync is best-effort and this will not succeed by retrying`
-          );
-        } else {
-          console.warn(
-            `[debug-sync] gave up on ${sessionId}: ${outcome.reason}`
-          );
-        }
-      }
+      await upload;
     } finally {
       this.inFlight.delete(sessionId);
+    }
+  }
+
+  private async upload(sessionId: string): Promise<void> {
+    const outcome = await syncTranscriptWithRetry(this.deps(), sessionId, {
+      maxAttempts: MAX_ATTEMPTS,
+      baseBackoffMs: BASE_BACKOFF_MS,
+    });
+    if (outcome.status === "ok") {
+      this.markers[sessionId] = outcome.state;
+      this.saveMarkers();
+    } else if (outcome.status === "error") {
+      if (!outcome.retryable) {
+        this.disabledForRun = outcome.reason;
+        console.warn(
+          `[debug-sync] disabled for this run (${outcome.reason}). Sync is best-effort and this will not succeed by retrying`
+        );
+      } else {
+        console.warn(
+          `[debug-sync] gave up on ${sessionId}: ${outcome.reason}`
+        );
+      }
     }
   }
 
