@@ -443,8 +443,9 @@ export class AgentSessionManagerService {
     }
     session.status = state.status;
     session.agentStatus = state.agentStatus;
-    session.model = state.model;
-    session.mode = state.mode;
+    // A "starting" snapshot carries no model yet; keep the pinned one.
+    session.model = state.model ?? session.model;
+    session.mode = state.mode ?? session.mode;
     session.updatedAt = new Date().toISOString();
     // Debounced: this fires on every CLI state change, many per second while
     // streaming, but a crash must not lose the latest status entirely.
