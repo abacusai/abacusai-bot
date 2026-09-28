@@ -56,6 +56,10 @@ export interface ConnectedMcp {
   reconnect?: (name: string) => Promise<McpClient | null>;
   /** Fired after reconnect() changes a status, so the roster is re-emitted. */
   onStatusChange?: () => void;
+  /** Fired when a server that failed at startup comes up, with its tools now in `tools`. */
+  onToolsAdded?: () => void;
+  /** Stop retrying failed servers; called before this set is replaced or the session ends. */
+  retire?: () => void;
   tools: Array<{
     name: string;
     description: string;
@@ -242,6 +246,34 @@ const registeredToolMeta = new Map<string, ConnectorToolMeta>();
 export const connectorToolMeta = (toolName: string): ConnectorToolMeta | null =>
   registeredToolMeta.get(toolName) ?? connectorToolMetaByName(toolName);
 
+/**
+ * Waits before retrying a server that failed for a network reason. The startup
+ * ones are short because the session waits on them; past them the server keeps
+ * trying in the background, every five minutes in the end, and its tools join the
+ * session when it comes up. A laptop waking or changing Wi-Fi drops the first
+ * request, and one miss used to cost the chat that server's tools for good.
+ */
+const STARTUP_RETRY_DELAYS_MS = [1_000, 3_000];
+const RECOVERY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000];
+const RECOVERY_REPEAT_MS = 300_000;
+
+/**
+ * A failure worth retrying: no answer from the network (undici's "fetch
+ * failed") or a gateway saying it is briefly unavailable. A timeout, a sign-in
+ * or a refusal would fail the same way again.
+ */
+const isTransientConnectError = (error: unknown): boolean =>
+  error instanceof McpHttpError
+    ? [429, 502, 503, 504].includes(error.status)
+    : error instanceof TypeError && error.message === "fetch failed";
+
+const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
+  new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    // A background retry must never be what keeps the process alive.
+    if (options.unref === true) timer.unref?.();
+  });
+
 export async function connectMcpServers(
   configPath: string | undefined
 ): Promise<ConnectedMcp> {
@@ -285,7 +317,11 @@ export async function connectMcpServers(
     name: string,
     config: McpServerConfig,
     options: { forceRefresh?: boolean } = {}
-  ): Promise<{ client: McpClient | null; status: McpServerStatus }> => {
+  ): Promise<{
+    client: McpClient | null;
+    status: McpServerStatus;
+    transient?: boolean;
+  }> => {
     const builtin = config.isBuiltin === true ? { isBuiltin: true } : {};
 
     if (config.disabled === true) {
@@ -362,6 +398,7 @@ export async function connectMcpServers(
 
       return {
         client: null,
+        transient: isTransientConnectError(error),
         status: {
           id: name,
           name,
@@ -419,11 +456,27 @@ export async function connectMcpServers(
     }
   };
 
+  const connectWithRetries = async (
+    name: string,
+    config: McpServerConfig
+  ): ReturnType<typeof connectOne> => {
+    let outcome = await connectOne(name, config);
+    for (const delay of STARTUP_RETRY_DELAYS_MS) {
+      if (outcome.transient !== true) break;
+      await sleep(delay);
+      outcome = await connectOne(name, config);
+    }
+
+    return outcome;
+  };
+
+  const stillDown: Array<[string, McpServerConfig]> = [];
   await Promise.all(
     Object.entries(servers).map(async ([name, config]) => {
-      const outcome = await connectOne(name, config);
+      const outcome = await connectWithRetries(name, config);
       result.statuses.push(outcome.status);
       if (outcome.client != null) register(name, config, outcome.client, true);
+      else if (outcome.transient === true) stillDown.push([name, config]);
     })
   );
 
@@ -466,6 +519,44 @@ export async function connectMcpServers(
 
     return attempt;
   };
+
+  let retired = false;
+  result.retire = (): void => {
+    retired = true;
+  };
+
+  // A server the network kept down keeps trying. Its tools are advertised
+  // when it comes up, since the session never had them.
+  const recover = async (
+    name: string,
+    config: McpServerConfig
+  ): Promise<void> => {
+    for (let attempt = 0; ; attempt++) {
+      await sleep(RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS, {
+        unref: true,
+      });
+      if (retired) return;
+
+      const outcome = await connectOne(name, config);
+
+      if (retired) {
+        outcome.client?.close();
+        return;
+      }
+      if (outcome.client == null && outcome.transient === true) continue;
+
+      const index = result.statuses.findIndex((status) => status.id === name);
+      if (index >= 0) result.statuses[index] = outcome.status;
+      if (outcome.client != null) {
+        register(name, config, outcome.client, true);
+        result.onToolsAdded?.();
+      }
+      result.onStatusChange?.();
+
+      return;
+    }
+  };
+  for (const [name, config] of stillDown) void recover(name, config);
 
   return result;
 }
