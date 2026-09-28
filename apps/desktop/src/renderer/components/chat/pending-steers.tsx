@@ -3,6 +3,7 @@ import { useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { MessageQueueEntry } from "#renderer/conversation/agent-types";
+import { isImeComposing } from "#renderer/lib/ime";
 
 import { Button, Textarea } from "../ui";
 
@@ -100,6 +101,7 @@ const PendingSteerRow = ({
             onChange={(event) => setDraft(event.target.value)}
             onBlur={commit}
             onKeyDown={(event) => {
+              if (isImeComposing(event)) return;
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 commit();
