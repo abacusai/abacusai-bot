@@ -6,6 +6,7 @@ import { app, shell } from "electron";
 
 import type { AbacusAuthIntent } from "#shared/contracts";
 
+import { bringToFront } from "../../bring-to-front";
 import { readSettings } from "../config/settings";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 import {
@@ -199,6 +200,17 @@ export const startAbacusAuth = async (
       if (win != null) {
         if (outcome.state === "pending") win.close();
         else setTimeout(win.close, WINDOW_CLOSE_DELAY_MS);
+      }
+      // A browser sign-in left the user in the browser: bring them back.
+      // win.focus() alone does not activate an app in the background on
+      // macOS; stealing focus is the point here, the user just finished.
+      if (result.ok) {
+        bringToFront();
+        try {
+          if (process.platform === "darwin") app.focus({ steal: true });
+        } catch {
+          // No `app` outside electron (tests).
+        }
       }
       resolve(result);
     };
@@ -427,7 +439,13 @@ const responsePage = (): string => {
       if (tries++ > 40) return;
       fetch(url, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (o) {
         if (!o || o.state === "pending") { setTimeout(poll, 500); return; }
-        if (o.state === "ok") { report("ok"); return; }
+        if (o.state === "ok") {
+          report("ok");
+          // The app is already in front again. Browsers only let a script
+          // close a tab it opened, so this can fail; the text above stays.
+          setTimeout(function () { window.close(); }, 1200);
+          return;
+        }
         var reason = String(o.reason || "unknown").replace(/[^A-Za-z0-9_]/g, "").slice(0, 32);
         document.getElementById("title").textContent = "Sign-in did not finish in the app";
         document.getElementById("body").textContent =

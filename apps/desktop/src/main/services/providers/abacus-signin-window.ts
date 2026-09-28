@@ -7,11 +7,18 @@
  * Social sign-in stays here too: provider popups (Google, Apple, Microsoft,
  * GitHub, Okta) open as child windows on this window's session, so the
  * page's opener and BroadcastChannel callbacks work as they do in a browser,
- * and SAML redirects load in place. For Google that needs the page's
- * auth-code popup rather than its gapi.auth2 button, which cannot start in
- * an embedded browser; `botSurface=in_app` on the URL asks the page for it.
- * The user agent is left as Electron's own: Google accepts it, and rejects a
- * window that claims to be Chrome ("This browser or app may not be secure").
+ * and SAML redirects load in place.
+ *
+ * Google is driven from here instead: the page's Google button uses
+ * gapi.auth2, which cannot start in an embedded browser and fails silently.
+ * So its click is intercepted, Google's standard auth-code popup opens as a
+ * child window, the code is caught on its way to abacus.ai's OAuth callback,
+ * and the page's own sign-in API (`_googleCodeSignIn`) is called from inside
+ * the page so the session lands in this window. The window then goes to the
+ * connect page, which hands the one-time code to the loopback listener as
+ * every other sign-in does. The user agent is left as Electron's own: Google
+ * accepts it, and rejects a window claiming to be Chrome ("This browser or
+ * app may not be secure").
  *
  * The browser's own cookies are out of reach (they are encrypted to the
  * browser), so provider sessions are this window's own. Its partition
@@ -19,6 +26,8 @@
  * must not sign straight back in, but a provider the user already signed in
  * to here is remembered.
  */
+import { randomBytes } from "crypto";
+
 import { BrowserWindow, session, shell } from "electron";
 
 import { parentWindow, presentAsDialog } from "../../bring-to-front";
@@ -28,6 +37,40 @@ const PARTITION = "persist:abacus-signin";
 
 /** Logged by the injected "Use my browser instead" pill; see HINT_JS. */
 const BROWSER_MESSAGE = "abacus:sign-in-use-browser";
+
+/** Logged by the injected Google-button interceptor; see GOOGLE_JS. */
+const GOOGLE_MESSAGE = "abacus:sign-in-google";
+
+/**
+ * Catches a click on the page's Google button (by its label, which always
+ * names Google) before gapi.auth2 swallows it. No regex escapes: this is a
+ * template literal. Idempotent.
+ */
+const GOOGLE_JS = `(() => {
+  if (window.__abacusGoogleIntercept) return;
+  window.__abacusGoogleIntercept = true;
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('button, [role="button"], a') : null;
+    const words = (target ? target.textContent || '' : '').split(/[^A-Za-z]+/);
+    if (!words.includes('Google')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('${GOOGLE_MESSAGE}');
+  }, true);
+})();`;
+
+/** Where Google's auth-code popup returns; registered on the production client. */
+const GOOGLE_REDIRECT_URI = "https://abacus.ai/oauth/callback";
+
+/** Runs in the page: its API origin, its cookies, so the session lands here. */
+const callPageApi = (method: string, data: unknown): string => `
+  fetch('/api/v1/${method}', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: ${JSON.stringify(JSON.stringify(data))},
+  }).then((r) => r.json()).catch(() => null)`;
 
 /**
  * A pill on the sign-in page itself: the app's own "Use my browser instead"
@@ -54,6 +97,27 @@ const HINT_JS = `(() => {
 export type SignInWindow = {
   /** Close without reporting a dismissal; the flow has settled or moved on. */
   close: () => void;
+};
+
+/**
+ * Microsoft's authorize URL with its account picker forced on, or null when
+ * `url` is not one or already says what to prompt for.
+ */
+export const withMicrosoftAccountPicker = (url: string): string | null => {
+  try {
+    const parsed = new URL(url);
+    if (
+      parsed.hostname.toLowerCase() !== "login.microsoftonline.com" ||
+      !parsed.pathname.endsWith("/authorize") ||
+      parsed.searchParams.has("prompt")
+    )
+      return null;
+    parsed.searchParams.set("prompt", "select_account");
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 };
 
 /** Drop Abacus.AI's cookies and storage, keeping every provider's session. */
@@ -200,8 +264,113 @@ export const openSignInWindow = async ({
     return { action: "deny" };
   });
 
+  /**
+   * Google's auth-code popup, run from here (see the top of the file). Any
+   * failure short of the user closing the popup hands off to the browser,
+   * where the page's own Google button works.
+   */
+  let googleInFlight = false;
+  const signInWithGoogle = async (): Promise<void> => {
+    if (googleInFlight || released) return;
+    googleInFlight = true;
+    try {
+      const ids = (await win.webContents.executeJavaScript(
+        callPageApi("_getSSOClientIds", {})
+      )) as { result?: { google?: unknown } } | null;
+      const clientId = ids?.result?.google;
+      if (typeof clientId !== "string" || clientId.length === 0) {
+        handOff();
+        return;
+      }
+
+      const state = randomBytes(16).toString("hex");
+      const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+      auth.searchParams.set("client_id", clientId);
+      auth.searchParams.set("redirect_uri", GOOGLE_REDIRECT_URI);
+      auth.searchParams.set("response_type", "code");
+      auth.searchParams.set("scope", "openid email profile");
+      auth.searchParams.set("prompt", "select_account");
+      auth.searchParams.set("state", state);
+
+      const code = await new Promise<string | null>((resolve) => {
+        const popup = new BrowserWindow({
+          parent: win,
+          width: 480,
+          height: 640,
+          autoHideMenuBar: true,
+          webPreferences: {
+            session: win.webContents.session,
+            sandbox: true,
+            contextIsolation: true,
+            nodeIntegration: false,
+          },
+        });
+        let done = false;
+        const settle = (value: string | null): void => {
+          if (done) return;
+          done = true;
+          if (!popup.isDestroyed()) popup.close();
+          resolve(value);
+        };
+        const watch = (event: Electron.Event, target: string): void => {
+          if (!target.startsWith(GOOGLE_REDIRECT_URI)) return;
+          event.preventDefault();
+          const params = new URL(target).searchParams;
+          settle(params.get("state") === state ? params.get("code") : null);
+        };
+        popup.webContents.on("will-redirect", (event) =>
+          watch(event, event.url)
+        );
+        popup.webContents.on("will-navigate", (event) =>
+          watch(event, event.url)
+        );
+        popup.webContents.setWindowOpenHandler(({ url: target }) => {
+          if (isSafeExternalUrl(target)) void shell.openExternal(target);
+          return { action: "deny" };
+        });
+        popup.on("closed", () => settle(null));
+        void popup.loadURL(auth.toString()).catch(() => {});
+      });
+      // Closed by the user: stay on the page, nothing to report.
+      if (code == null || released) return;
+
+      const signedIn = (await win.webContents.executeJavaScript(
+        callPageApi("_googleCodeSignIn", {
+          googleCode: code,
+          signupSource: "AbacusAIBot",
+        })
+      )) as { success?: unknown; error?: unknown } | null;
+      if (signedIn?.success !== true) {
+        console.warn(
+          `[abacus-auth] Google sign-in refused: ${typeof signedIn?.error === "string" ? signedIn.error.slice(0, 120) : "no response"}`
+        );
+        handOff();
+        return;
+      }
+
+      // Signed in: the connect page mints the one-time code for the listener.
+      const connect = new URL("/chatllm/connect-bot/", url);
+      for (const key of ["botChallenge", "botPort", "botPath"]) {
+        const value = new URL(url).searchParams.get(key);
+        if (value != null) connect.searchParams.set(key, value);
+      }
+      void win.loadURL(connect.toString()).catch(() => {});
+    } catch (error) {
+      console.warn(
+        `[abacus-auth] Google sign-in failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      handOff();
+    } finally {
+      googleInFlight = false;
+    }
+  };
+
   // A provider popup's own links open in the browser.
-  win.webContents.on("did-create-window", (popup) => {
+  win.webContents.on("did-create-window", (popup, { url: opened }) => {
+    // This window remembers provider sessions, so Microsoft would silently
+    // reuse the last account; ask it for its picker, as Google's popup does.
+    const picker = withMicrosoftAccountPicker(opened);
+    if (picker != null) void popup.loadURL(picker).catch(() => {});
     popup.webContents.setWindowOpenHandler(({ url: target }) => {
       if (isSafeExternalUrl(target)) void shell.openExternal(target);
       return { action: "deny" };
@@ -210,9 +379,11 @@ export const openSignInWindow = async ({
 
   win.webContents.on("did-finish-load", () => {
     void win.webContents.executeJavaScript(HINT_JS, true).catch(() => {});
+    void win.webContents.executeJavaScript(GOOGLE_JS, true).catch(() => {});
   });
   win.webContents.on("console-message", (event) => {
     if (event.message === BROWSER_MESSAGE) handOff();
+    else if (event.message === GOOGLE_MESSAGE) void signInWithGoogle();
   });
 
   win.on("closed", () => {
@@ -235,13 +406,9 @@ export const openSignInWindow = async ({
     }
   );
 
-  // Asks the page for its popup-based Google button (see the top of the file).
-  const pageUrl = new URL(url);
-  pageUrl.searchParams.set("botSurface", "in_app");
-
   presentAsDialog(win);
   // Rejections are the did-fail-load cases above, already handled there.
-  void win.loadURL(pageUrl.toString()).catch(() => {});
+  void win.loadURL(url).catch(() => {});
 
   return { close: release };
 };
