@@ -269,15 +269,15 @@ export class UpdateService {
       return;
     }
 
-    // A hidden window can relaunch hidden on macOS (the dock reveals it);
-    // elsewhere it would be unreachable, so leave those to install-on-quit.
+    // macOS can relaunch hidden through the Dock. A hidden Windows window has
+    // no tray entry here, so restart it visibly instead of stranding the update.
     const windowVisible = BaseWindow.getAllWindows().some(
       (win) => !win.isDestroyed() && win.isVisible()
     );
     let relaunchHidden = false;
     if (!windowVisible) {
-      if (process.platform !== "darwin") return;
-      relaunchHidden = true;
+      if (process.platform === "darwin") relaunchHidden = true;
+      else if (process.platform !== "win32") return;
     }
 
     console.log(
