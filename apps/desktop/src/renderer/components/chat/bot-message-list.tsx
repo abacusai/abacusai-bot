@@ -2,6 +2,8 @@ import { Bot, ChevronRight } from "lucide-react";
 import { useMemo, type JSX, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { isMessageReaction } from "#shared/message-reactions";
+
 import type { SubtaskSummary } from "../../conversation";
 import { Markdown } from "../common/markdown";
 import { Button } from "../ui";
@@ -237,6 +239,15 @@ export const BotMessageList = ({
                     previous?.kind === "user"
                       ? botReactions.get(previous.id)
                       : undefined;
+                  // Hold a possible reaction preamble until we know whether it
+                  // becomes a badge, instead of flashing a bubble then removing it.
+                  if (
+                    part.kind === "text" &&
+                    isWorking &&
+                    sourceIndex === chatItems.length - 1 &&
+                    isMessageReaction(part.content.trim())
+                  )
+                    return false;
                   // Some models repeat a successful reaction as an emoji-only reply.
                   return !(
                     reaction != null &&
@@ -256,7 +267,7 @@ export const BotMessageList = ({
             item.items.length > 0 ||
             item.deliverables.length > 0
         ),
-    [chatItems, botReactions]
+    [chatItems, botReactions, isWorking]
   );
 
   // Read once per render: a clock moving between two rows could date them apart.
@@ -381,7 +392,10 @@ export const BotMessageList = ({
           </div>
         );
       })}
-      {isWorking && <WorkingBubble />}
+      {/* Keep the typing indicator out of layout changes, including reaction-only turns. */}
+      <div className="relative h-11 shrink-0" data-id="bot-message-status-slot">
+        {isWorking && <WorkingBubble />}
+      </div>
     </div>
   );
 };

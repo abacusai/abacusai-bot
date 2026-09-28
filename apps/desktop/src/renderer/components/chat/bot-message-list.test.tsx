@@ -71,6 +71,11 @@ describe("a bot's thread", () => {
     ];
     const { rerender } = render(<BotMessageList chatItems={items} />);
     expect(bubbles()).toContain("🤗");
+    rerender(<BotMessageList chatItems={items} isWorking />);
+    expect(bubbles()).toEqual(["You have got this. 🤗"]);
+    // An ordinary emoji-only reply must survive if no reaction was attached.
+    rerender(<BotMessageList chatItems={items} />);
+    expect(bubbles()).toContain("🤗");
     const completed: ChatRenderItem[] = [
       items[0]!,
       {
@@ -309,7 +314,12 @@ describe("while the bot is off doing something", () => {
       document.querySelector('[data-id="bot-message-working"]')
     ).toBeTruthy();
 
+    const slot = document.querySelector('[data-id="bot-message-status-slot"]');
+    expect(slot).toBeTruthy();
     rerender((<BotMessageList chatItems={items} />) as JSX.Element);
+    expect(document.querySelector('[data-id="bot-message-status-slot"]')).toBe(
+      slot
+    );
     expect(
       document.querySelector('[data-id="bot-message-working"]')
     ).toBeNull();
