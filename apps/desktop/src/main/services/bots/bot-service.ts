@@ -254,12 +254,19 @@ export class BotService {
         bot.name
       );
       // A model change lands when the chat next (re)starts.
-      if (changes.model !== undefined && bot.model != null)
-        this.callbacks.updateSessionModel(
-          bot.workspaceId,
-          bot.sessionId,
-          bot.model
-        );
+      // Back to "Default" (null) re-pins the default, as openChat does.
+      if (changes.model !== undefined) {
+        const model =
+          bot.model != null && bot.model.length > 0
+            ? bot.model
+            : this.callbacks.defaultModel();
+        if (model != null && model.length > 0)
+          this.callbacks.updateSessionModel(
+            bot.workspaceId,
+            bot.sessionId,
+            model
+          );
+      }
     }
     this.callbacks.emitChanged();
 
