@@ -272,6 +272,7 @@ export class BotSession {
     ]);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
 
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
 
@@ -1008,38 +1009,43 @@ export class BotSession {
   }
 
   async refreshMcp(): Promise<void> {
+    this.mcp.retire?.();
     for (const client of this.mcp.clients) client.close();
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.registerNewMcpTools();
+    this.emitMcpServers();
+  }
 
+  /** Give pi the MCP tools it has not seen: after a refresh, or a server coming up late. */
+  private registerNewMcpTools(): void {
     const pi = this.pi;
 
-    if (pi != null) {
-      for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
-        if (this.registeredMcpTools.has(tool.name)) continue;
-        if (tool.name.startsWith("browser_")) continue;
-        if (
-          tool.name === BOT_MEMORY_TOOL_NAME ||
-          tool.name.endsWith(`_${BOT_MEMORY_TOOL_NAME}`)
-        )
-          continue;
-        // A same-named MCP tool would shadow the one the prompt teaches.
-        if (tool.name === BOT_TIME_TOOL_NAME) continue;
+    if (pi == null) return;
 
-        this.registeredMcpTools.add(tool.name);
+    for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
+      if (this.registeredMcpTools.has(tool.name)) continue;
+      if (tool.name.startsWith("browser_")) continue;
+      if (
+        tool.name === BOT_MEMORY_TOOL_NAME ||
+        tool.name.endsWith(`_${BOT_MEMORY_TOOL_NAME}`)
+      )
+        continue;
+      // A same-named MCP tool would shadow the one the prompt teaches.
+      if (tool.name === BOT_TIME_TOOL_NAME) continue;
 
-        try {
-          pi.registerTool(tool as never);
-          // Registered mid-turn: pi offers it from the next turn on, so the
-          // turn is continued once it ends, naming what arrived.
-          if (this.turnRunning) this.toolsArrivedThisTurn.push(tool.name);
-        } catch {
-          this.registeredMcpTools.delete(tool.name);
-        }
+      this.registeredMcpTools.add(tool.name);
+
+      try {
+        pi.registerTool(tool as never);
+        // Registered mid-turn: pi offers it from the next turn on, so the
+        // turn is continued once it ends, naming what arrived.
+        if (this.turnRunning) this.toolsArrivedThisTurn.push(tool.name);
+      } catch {
+        this.registeredMcpTools.delete(tool.name);
       }
     }
-
-    this.emitMcpServers();
   }
 
   emitMcpServers(): void {
@@ -1066,6 +1072,7 @@ export class BotSession {
   }
 
   dispose(): void {
+    this.mcp.retire?.();
     for (const client of this.mcp.clients) client.close();
 
     this.unsubscribe?.();
