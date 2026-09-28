@@ -55,8 +55,19 @@ export default defineConfig({
             child.once("exit", (code: number | null) => {
               setTimeout(() => {
                 if ((devServer?.ws.clients.size ?? 0) === 0) process.exit(code);
+                // The relaunch is not this server's child: the plugin's next
+                // rebuild would message or kill the exited one and crash
+                // (ERR_IPC_CHANNEL_CLOSED). A no-op stands in; renderer edits
+                // still hot-reload, main/preload edits need a new `pnpm dev`.
+                (process as { electronApp?: unknown }).electronApp = {
+                  send: () => false,
+                  kill: () => false,
+                  on: () => undefined,
+                  once: () => undefined,
+                  removeAllListeners: () => undefined,
+                };
                 console.log(
-                  "[dev] app relaunched itself; keeping the dev server"
+                  "[dev] app relaunched itself; keeping the dev server (restart pnpm dev for main/preload changes)"
                 );
               }, RELAUNCH_GRACE_MS);
             });
