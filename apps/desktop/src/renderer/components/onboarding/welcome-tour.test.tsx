@@ -254,7 +254,7 @@ describe("WelcomeTour", () => {
     const onFinish = vi.fn();
     const view = render(<WelcomeTour onFinish={onFinish} />);
 
-    tourProps.current?.onSkip?.();
+    tourProps.current?.onSkip?.(0);
     expect(reportFunnelStep).toHaveBeenCalledWith("tour_skipped");
     expect(onFinish).toHaveBeenCalledOnce();
 

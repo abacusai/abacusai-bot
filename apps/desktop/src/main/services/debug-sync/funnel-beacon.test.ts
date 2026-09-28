@@ -21,7 +21,11 @@ vi.mock("../providers/abacus-host", () => ({
   abacusUserAgent: () => "test-agent",
 }));
 
-import { reportFunnelStep, reportFunnelStepOnce } from "./funnel-beacon";
+import {
+  reportFunnelStep,
+  reportFunnelStepOnce,
+  resetFunnelOnceForTests,
+} from "./funnel-beacon";
 
 const fetchMock = vi.fn(async () => new Response(null, { status: 404 }));
 
@@ -29,6 +33,7 @@ beforeEach(() => {
   home.current = fs.mkdtempSync(path.join(os.tmpdir(), "funnel-"));
   settings.current = {};
   fetchMock.mockClear();
+  resetFunnelOnceForTests();
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "log").mockImplementation(() => undefined);
 });
@@ -101,6 +106,11 @@ describe("reportFunnelStepOnce", () => {
     reportFunnelStepOnce("first_message");
     reportFunnelStepOnce("tour_done");
 
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // A new run reads the file back rather than reporting again.
+    resetFunnelOnceForTests();
+    reportFunnelStepOnce("first_message");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(
       JSON.parse(

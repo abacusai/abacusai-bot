@@ -71,17 +71,28 @@ export function reportFunnelStep(step: FunnelStep, detail?: string): void {
   });
 }
 
+/** Read once per run; after that a repeat costs a lookup, not a file read. */
+let seenOnce: Record<string, true> | null = null;
+
+/** Tests only: forget what this run has reported. */
+export function resetFunnelOnceForTests(): void {
+  seenOnce = null;
+}
+
 /** Report `step` the first time this install reaches it, and never again. */
 export function reportFunnelStepOnce(step: FunnelStep, detail?: string): void {
-  let seen: Record<string, true> = {};
-  try {
-    seen = JSON.parse(fs.readFileSync(onceFile(), "utf-8")) as Record<
-      string,
-      true
-    >;
-  } catch {
-    // First milestone of this install.
+  if (seenOnce == null) {
+    try {
+      seenOnce = JSON.parse(fs.readFileSync(onceFile(), "utf-8")) as Record<
+        string,
+        true
+      >;
+    } catch {
+      // First milestone of this install.
+      seenOnce = {};
+    }
   }
+  const seen = seenOnce;
   if (seen[step] === true) return;
   seen[step] = true;
   try {

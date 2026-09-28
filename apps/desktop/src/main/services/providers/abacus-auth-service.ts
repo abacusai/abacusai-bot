@@ -163,18 +163,20 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
     ): void => {
       if (settled) return;
       settled = true;
-      reportFunnelStep(
-        "signin_result",
-        result.ok
-          ? "ok"
-          : (reason ??
-              hint ??
-              (result.cancelled
-                ? "cancelled"
-                : result.error === ABACUS_TIMEOUT
-                  ? "timeout"
-                  : "listener"))
-      );
+      let outcomeCode = "ok";
+      // `=== false`, not `!`: the main tsconfig has strictNullChecks off, and
+      // only an equality check narrows the union there.
+      if (result.ok === false) {
+        outcomeCode =
+          reason ??
+          hint ??
+          (result.cancelled
+            ? "cancelled"
+            : result.error === ABACUS_TIMEOUT
+              ? "timeout"
+              : "listener");
+      }
+      reportFunnelStep("signin_result", outcomeCode);
       if (timer != null) clearTimeout(timer);
       abort.abort();
       if (inFlight?.close === close) inFlight = null;
