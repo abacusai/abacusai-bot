@@ -37,6 +37,12 @@ export interface StatusInputs {
   mcpServers: readonly McpServerInfo[];
   /** MCP servers the running agent reports waiting on a sign-in. */
   mcpAuthRequired?: ReadonlySet<string>;
+  /**
+   * MCP servers a sign-in has stored a token for. Outranks `mcpAuthRequired`:
+   * an agent says so until its next reconnect, which trails the token by
+   * seconds, and the card should not.
+   */
+  mcpSignedIn?: ReadonlySet<string>;
 }
 
 const statusOf = (
@@ -81,7 +87,8 @@ const statusOf = (
         (server) => server.id === connector.id
       );
       if (!installed) return { state: "available" };
-      return inputs.mcpAuthRequired?.has(connector.id) === true
+      return inputs.mcpAuthRequired?.has(connector.id) === true &&
+        inputs.mcpSignedIn?.has(connector.id) !== true
         ? { state: "pending", reason: "sign-in-required" }
         : { state: "connected" };
     }
@@ -111,6 +118,7 @@ export interface StatusSources {
   messaging: () => MessagingSnapshot | null;
   mcpServers: () => readonly McpServerInfo[];
   mcpAuthRequired?: () => ReadonlySet<string>;
+  mcpSignedIn?: () => ReadonlySet<string>;
 }
 
 /**
@@ -136,6 +144,9 @@ export class ConnectorStatusService {
       mcpServers: this.sources.mcpServers(),
       ...(this.sources.mcpAuthRequired != null
         ? { mcpAuthRequired: this.sources.mcpAuthRequired() }
+        : {}),
+      ...(this.sources.mcpSignedIn != null
+        ? { mcpSignedIn: this.sources.mcpSignedIn() }
         : {}),
     });
   }

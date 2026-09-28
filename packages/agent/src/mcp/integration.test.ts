@@ -72,9 +72,10 @@ function session(): Harness {
 }
 
 async function mcpServer(
-  tools: Parameters<typeof FakeMcpServer.start>[0]
+  tools: Parameters<typeof FakeMcpServer.start>[0],
+  options?: Parameters<typeof FakeMcpServer.start>[1]
 ): Promise<FakeMcpServer> {
-  const server = await FakeMcpServer.start(tools);
+  const server = await FakeMcpServer.start(tools, options);
 
   servers.push(server);
 
@@ -263,10 +264,12 @@ describe("connecting", () => {
 
     await harness.session.start();
 
+    // Ready does not wait out the retries; the verdict lands after them.
+    expect(harness.events.some((event) => event.type === "ready")).toBe(true);
+    await harness.session.awaitMcpSettled();
     expect(harness.servers).toEqual([
       expect.objectContaining({ name: "dead", status: "error" }),
     ]);
-    expect(harness.events.some((event) => event.type === "ready")).toBe(true);
   });
 
   it("skips a server the user disabled", async () => {
@@ -454,6 +457,300 @@ describe("refreshing", () => {
       .filter((event) => event.type === "tool_execution_complete");
 
     expect(JSON.stringify(results)).toContain("No MCP server is connected");
+  });
+});
+
+describe("a server that answers slowly", () => {
+  // Every chat and bot used to be ready only when the slowest server had
+  // answered: one remote server taking twenty seconds made every new chat
+  // take twenty seconds, and every connector card wait as long.
+  it("does not hold the session's start; its tools join when it lands", async () => {
+    const slow = await mcpServer([{ name: "lookup" }], { delayMs: 1_500 });
+    const quick = await mcpServer([{ name: "ping" }]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ slow: { url: slow.url }, quick: { url: quick.url } }),
+      "utf8"
+    );
+    process.env.ABACUSAI_BOT_MCP_SETTLE_MS = "400";
+
+    const harness = session();
+    const startedAt = Date.now();
+
+    try {
+      await harness.session.start();
+
+      expect(Date.now() - startedAt).toBeLessThan(1_400);
+      expect(harness.servers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: "quick", status: "connected" }),
+          expect.objectContaining({ name: "slow", status: "connecting" }),
+        ])
+      );
+
+      await harness.session.awaitMcpSettled();
+      await harness.session.send("hello");
+
+      expect(harness.servers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "slow",
+            status: "connected",
+            toolCount: 1,
+            connectMs: expect.any(Number),
+          }),
+        ])
+      );
+      expect(offeredTools()).toContain("slow_lookup");
+    } finally {
+      delete process.env.ABACUSAI_BOT_MCP_SETTLE_MS;
+    }
+  });
+
+  it("does not hold a refresh either", async () => {
+    const quick = await mcpServer([{ name: "ping" }]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ quick: { url: quick.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+
+    const slow = await mcpServer([{ name: "lookup" }], { delayMs: 1_500 });
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ quick: { url: quick.url }, slow: { url: slow.url } }),
+      "utf8"
+    );
+    process.env.ABACUSAI_BOT_MCP_SETTLE_MS = "400";
+    const startedAt = Date.now();
+
+    try {
+      await harness.session.refreshMcp();
+
+      expect(Date.now() - startedAt).toBeLessThan(1_400);
+      await harness.session.awaitMcpSettled();
+      await harness.session.send("hello");
+
+      expect(offeredTools()).toContain("slow_lookup");
+    } finally {
+      delete process.env.ABACUSAI_BOT_MCP_SETTLE_MS;
+    }
+  });
+});
+
+describe("a server that keeps its event stream open", () => {
+  // Some hosted servers answer over SSE and leave the stream open after the
+  // message. Reading it to the end meant every connect and every tool call
+  // lasted until the server hung up.
+  it("is connected and called as soon as its answer arrives", async () => {
+    const server = await mcpServer([{ name: "lookup", reply: () => "found" }], {
+      sse: "hold",
+    });
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ docs: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+    const startedAt = Date.now();
+
+    await harness.session.start();
+
+    expect(Date.now() - startedAt).toBeLessThan(2_500);
+    expect(harness.servers).toEqual([
+      expect.objectContaining({
+        name: "docs",
+        status: "connected",
+        toolCount: 1,
+      }),
+    ]);
+
+    provider.script((call, index) =>
+      index === 0 && call.tools.includes("docs_lookup")
+        ? { call: { name: "docs_lookup", args: {} } }
+        : { say: "done" }
+    );
+
+    await harness.session.send("look it up");
+
+    expect(server.calls).toEqual([{ name: "lookup", args: {} }]);
+  });
+});
+
+describe("a refresh that changes nothing about a server", () => {
+  it("keeps its connection and re-reads its tool list", async () => {
+    const server = await mcpServer([{ name: "lookup" }]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ docs: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+    server.setTools([{ name: "lookup" }, { name: "search" }]);
+    await harness.session.refreshMcp();
+    await harness.session.send("hello");
+
+    // One handshake, two listings: the gateway grows a tool per attached
+    // account and a refresh has to see it without a reconnect.
+    expect(server.initializations).toBe(1);
+    expect(server.requests.filter((m) => m === "tools/list")).toHaveLength(2);
+    expect(offeredTools()).toContain("docs_search");
+    expect(harness.servers).toEqual([
+      expect.objectContaining({ name: "docs", toolCount: 2 }),
+    ]);
+  });
+
+  it("reconnects it when asked to by name", async () => {
+    const server = await mcpServer([{ name: "lookup" }]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ docs: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+    await harness.session.refreshMcp({ force: ["docs"] });
+
+    expect(server.initializations).toBe(2);
+  });
+
+  it("reconnects it when its entry changed", async () => {
+    const server = await mcpServer([{ name: "lookup" }]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ docs: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({
+        mcpServers: { docs: { url: server.url, headers: { "X-Tenant": "b" } } },
+      }),
+      "utf8"
+    );
+    await harness.session.refreshMcp();
+
+    expect(server.initializations).toBe(2);
+  });
+});
+
+describe("a server with many tools", () => {
+  const many = Array.from({ length: 26 }, (_, index) => ({
+    name: `tool_${index}`,
+    description:
+      index === 3 ? "Creates a page in the workspace" : `Tool ${index}`,
+    inputSchema: {
+      type: "object",
+      properties: { title: { type: "string" } },
+    },
+    reply: (args: Record<string, unknown>) =>
+      `ran ${index} with ${JSON.stringify(args)}`,
+  }));
+
+  it("is offered as a lookup and a call, not as every schema", async () => {
+    const server = await mcpServer(many);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ notes: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+    await harness.session.send("hello");
+
+    expect(offeredTools()).toContain("notes_tools");
+    expect(offeredTools()).toContain("notes_call");
+    expect(offeredTools()).not.toContain("notes_tool_3");
+    // The roster still counts what the server has, not what is advertised.
+    expect(harness.servers).toEqual([
+      expect.objectContaining({ name: "notes", toolCount: 26 }),
+    ]);
+  });
+
+  it("describes a tool on request and runs it by name", async () => {
+    const server = await mcpServer(many);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ notes: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+
+    provider.script((call, index) => {
+      if (index === 0)
+        return { call: { name: "notes_tools", args: { query: "page" } } };
+      if (index === 1)
+        return {
+          call: {
+            name: "notes_call",
+            args: { tool: "tool_3", arguments: { title: "Plan" } },
+          },
+        };
+      return { say: "done" };
+    });
+
+    await harness.session.send("make a page");
+
+    const results = harness.events
+      .filter(
+        (event): event is Extract<DesktopEvent, { type: "event" }> =>
+          event.type === "event"
+      )
+      .map((event) => event.event)
+      .filter((event) => event.type === "tool_execution_complete");
+    const text = JSON.stringify(results);
+
+    expect(text).toContain("tool_3");
+    expect(text).toContain("Creates a page");
+    expect(text).toContain('"title"');
+    expect(server.calls).toEqual([{ name: "tool_3", args: { title: "Plan" } }]);
+  });
+
+  it("leaves a small server's tools as they are", async () => {
+    const server = await mcpServer(many.slice(0, 24));
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ notes: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+    await harness.session.send("hello");
+
+    expect(offeredTools()).toContain("notes_tool_3");
+    expect(offeredTools()).not.toContain("notes_tools");
   });
 });
 

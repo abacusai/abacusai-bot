@@ -126,8 +126,12 @@ class HttpTransport implements McpTransport {
 
   /**
    * The JSON-RPC message out of a response, whether framed as a plain JSON
-   * body or as a short SSE stream. For SSE the `data:` line answering our id
-   * wins; keep-alives and unrelated events fall through.
+   * body or as an SSE stream. The stream is read as it arrives and the
+   * `data:` line answering our id ends the read: some servers keep the stream
+   * open for seconds after the answer, and waiting for it to close held every
+   * connect and every tool call for that long. Keep-alives and unrelated
+   * events fall through; an unmatched response stands in if the stream ends
+   * without ours.
    */
   private async parseResponse(
     response: Response,
@@ -139,11 +143,17 @@ class HttpTransport implements McpTransport {
       return (await response.json()) as JsonRpcResponse;
     }
 
-    const text = await response.text();
+    if (response.body == null) {
+      throw new Error("The server answered with an empty event stream.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffered = "";
     let fallback: JsonRpcResponse | null = null;
 
-    for (const line of text.split("\n")) {
-      if (!line.startsWith("data:")) continue;
+    const consider = (line: string): JsonRpcResponse | null => {
+      if (!line.startsWith("data:")) return null;
 
       try {
         const message = JSON.parse(line.slice(5).trim()) as JsonRpcResponse;
@@ -157,6 +167,34 @@ class HttpTransport implements McpTransport {
       } catch {
         // Keep-alive or partial frame; not ours.
       }
+
+      return null;
+    };
+
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+
+        if (done) break;
+
+        buffered += decoder.decode(value, { stream: true });
+        const lines = buffered.split("\n");
+        buffered = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const matched = consider(line.replace(/\r$/, ""));
+
+          if (matched != null) return matched;
+        }
+      }
+
+      const last = consider(buffered.replace(/\r$/, ""));
+
+      if (last != null) return last;
+    } finally {
+      // Ours arrived (or the stream ended): whatever the server still holds
+      // open is not waited for.
+      reader.cancel().catch(() => undefined);
     }
 
     if (fallback != null) return fallback;
@@ -426,8 +464,29 @@ export class McpClient {
   private constructor(
     readonly name: string,
     private readonly transport: McpTransport,
-    readonly tools: McpToolInfo[]
-  ) {}
+    tools: McpToolInfo[]
+  ) {
+    this.tools = tools;
+  }
+
+  /** What the server offered at connect, or at the last `refreshTools`. */
+  tools: McpToolInfo[];
+
+  /**
+   * Re-run `tools/list` on the live connection. A refresh keeps a connected
+   * server rather than reconnecting it, and this is how it learns about a
+   * tool the server gained since (the connector gateway grows one per
+   * attached account).
+   */
+  async refreshTools(): Promise<McpToolInfo[]> {
+    const listed = (await this.transport.request("tools/list")) as
+      | { tools?: McpToolInfo[] }
+      | undefined;
+
+    this.tools = listed?.tools ?? [];
+
+    return this.tools;
+  }
 
   /**
    * Connect, handshake, and discover tools. Throws on any failure: an

@@ -165,6 +165,27 @@ describe("mcp connectors", () => {
       state: "available",
     });
   });
+
+  it("are connected from the moment a token is stored, whatever a lagging agent says", () => {
+    // The agents flip out of auth-required on their next reconnect, seconds
+    // after the sign-in; the card used to sit under Not installed until then.
+    const withNotion = inputs({
+      mcpServers: [
+        {
+          id: "notion",
+          name: "notion",
+          config: { url: "https://mcp.notion.com/mcp" },
+          isBuiltin: false,
+        },
+      ],
+      mcpAuthRequired: new Set(["notion"]),
+      mcpSignedIn: new Set(["notion"]),
+    });
+
+    expect(buildConnectorStatuses(withNotion).notion).toEqual({
+      state: "connected",
+    });
+  });
 });
 
 describe("the service", () => {

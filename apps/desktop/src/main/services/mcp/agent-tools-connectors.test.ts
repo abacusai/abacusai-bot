@@ -109,12 +109,14 @@ describe("asking for one", () => {
     const text = await call({ service: "slack", reason: "to read #general" });
 
     // The caller's session rides along so the Connect button lands in the chat
-    // that asked and not in whichever one the user happens to be reading.
+    // that asked and not in whichever one the user happens to be reading, and
+    // so the answer can wait for that chat's tools.
     expect(request).toHaveBeenCalledWith({
       connectorId: "abacus-slack",
       label: "Slack",
       reason: "to read #general",
       conversationKey: sessionConversationKey("ws-1", "session-1"),
+      callerSession: "session-1",
     });
     expect(text).toContain("connected now");
   });
@@ -207,6 +209,7 @@ describe("asking for one", () => {
       connectorId: "abacus-googledriveuser",
       label: "Google Drive",
       conversationKey: sessionConversationKey("ws-1", "session-1"),
+      callerSession: "session-1",
     });
     expect(text).toContain("connected now");
   });

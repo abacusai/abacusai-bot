@@ -7,7 +7,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "path";
 
-import { connectorById } from "@abacus-ai/connectors/registry";
+import {
+  connectorById,
+  GATEWAY_SERVER_NAME,
+} from "@abacus-ai/connectors/registry";
 import { app } from "electron";
 
 import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
@@ -294,7 +297,10 @@ import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
 import { McpBrowserServer } from "./services/mcp/mcp-browser-server";
 import { McpConfigService } from "./services/mcp/mcp-config-service";
 import { McpDeviceServer } from "./services/mcp/mcp-device-server";
-import { signInToMcpServer } from "./services/mcp/mcp-oauth-service";
+import {
+  signInToMcpServer,
+  storedMcpTokenUrls,
+} from "./services/mcp/mcp-oauth-service";
 import {
   listPairing,
   readGatewaySettings,
@@ -429,6 +435,13 @@ const SELF_LANE_BOTS: Record<
  * that a run of connector reads finishes between compactions.
  */
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
+
+/**
+ * How long a connect answer waits for the connector's tools to reach the
+ * session that asked. The sessions refresh right after a connect; one that
+ * takes longer gets told the tools are on their way instead.
+ */
+const TOOLS_ARRIVAL_WAIT_MS = 20_000;
 
 export class ServiceHost {
   private initializedAt: string | null = null;
@@ -724,8 +737,61 @@ export class ServiceHost {
   private readonly connectorGate = new ConnectorGate(
     (event) => this.emitEvent(event),
     async (connectorId) =>
-      (await this.listConnectorStatuses())[connectorId]?.account ?? null
+      (await this.listConnectorStatuses())[connectorId]?.account ?? null,
+    (input) => this.watchToolsArrival(input)
   );
+
+  /**
+   * Whether a connector's tools have reached the session that asked for it.
+   * A platform connector's tool joins the connector gateway's list; a server
+   * connector is its own entry. Started at the ask, so a listing newer than
+   * that moment is the refresh that followed the connect.
+   */
+  private watchToolsArrival(input: {
+    connectorId: string;
+    callerSession: string;
+  }): () => Promise<"arrived" | "pending"> {
+    const connector = connectorById(input.connectorId);
+    const serverId =
+      connector?.kind === "platform"
+        ? GATEWAY_SERVER_NAME
+        : connector?.kind === "mcp"
+          ? connector.id
+          : null;
+    const session = (): AgentMcpServer[] | undefined =>
+      this.agentManagerService
+        .getRuntimeDiagnostics()
+        .find(
+          (runtime) => runtime.live && runtime.sessionId === input.callerSession
+        )?.mcpServers;
+    const read = (): AgentMcpServer | undefined =>
+      session()?.find((server) => server.id === serverId);
+    const askedAt = new Date().toISOString();
+
+    return async () => {
+      // No MCP tools involved, or no running session to carry them.
+      if (serverId == null || connector == null || session() == null)
+        return "arrived";
+
+      const deadline = Date.now() + TOOLS_ARRIVAL_WAIT_MS;
+
+      while (Date.now() < deadline) {
+        const now = read();
+
+        // The agent re-lists the server's tools on the refresh that follows
+        // a connect; a listing newer than the ask is that refresh landing.
+        if (
+          now?.status === "connected" &&
+          now.listedAt != null &&
+          now.listedAt > askedAt
+        )
+          return "arrived";
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      return "pending";
+    };
+  }
 
   /**
    * One answer to "is it connected?" per registry connector. The platform's
@@ -757,6 +823,17 @@ export class ServiceHost {
         for (const server of runtime.mcpServers.values())
           if (server.status === "auth-required") waiting.add(server.id);
       return waiting;
+    },
+    mcpSignedIn: () => {
+      const urls = storedMcpTokenUrls();
+      return new Set(
+        this.mcpConfigService
+          .listUserServers("code")
+          .filter(
+            (server) => server.config.url != null && urls.has(server.config.url)
+          )
+          .map((server) => server.id)
+      );
     },
   });
 

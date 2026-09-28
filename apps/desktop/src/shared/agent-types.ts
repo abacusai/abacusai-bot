@@ -436,6 +436,8 @@ export interface CliMcpServerSnapshot {
   connectedAt?: string;
   updatedAt?: string;
   toolCount: number;
+  connectMs?: number;
+  listedAt?: string;
 }
 
 export interface CliMcpLogEntry {

@@ -297,8 +297,8 @@ export class NdjsonHost {
         return;
 
       case "mcp_restart_server":
-        // Reconnected as a set: an HTTP server has no process to bounce alone.
-        await this.session.refreshMcp();
+        // The named server is reconnected; the rest keep their connections.
+        await this.session.refreshMcp({ force: [command.serverId] });
 
         return;
 

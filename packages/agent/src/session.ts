@@ -597,6 +597,8 @@ export class AbacusBotSession {
     clients: [],
     statuses: [],
     routes: new Map(),
+    configs: {},
+    settled: Promise.resolve(),
     tools: [],
   };
   /** MCP tool names pi already has, so `refreshMcp` registers only what is new. */
@@ -1030,6 +1032,9 @@ export class AbacusBotSession {
       this.registeredMcpTools.add(name);
     }
     this.browserTaskRegistered = roster.browserTaskRegistered;
+    // From here on a server that settles late registers its own tools; until
+    // now the roster read them live, so an early arrival is already in it.
+    this.rosterBuilt = true;
     const customTools = roster.tools;
 
     // Resumes the chat where the last process left it; undefined keeps pi's
@@ -1111,22 +1116,42 @@ export class AbacusBotSession {
         status: status.status,
         toolCount: status.toolCount,
         ...(status.error ? { error: status.error } : {}),
+        ...(status.connectMs != null ? { connectMs: status.connectMs } : {}),
+        ...(status.listedAt != null ? { listedAt: status.listedAt } : {}),
       })),
     });
   }
 
-  /** Reconnect every server: the desktop's "refresh" action. */
-  async refreshMcp(): Promise<void> {
-    this.mcp.retire?.();
-    for (const client of this.mcp.clients) {
-      client.close();
-    }
+  /**
+   * Re-read the server list: the desktop's "refresh" action, and what follows
+   * an added server, a sign-in or an attached account. A server that is
+   * unchanged and connected keeps its connection (its tools stay callable,
+   * its list is re-read); the rest connect afresh. `force` names servers to
+   * reconnect regardless (the restart button).
+   */
+  async refreshMcp(options: { force?: readonly string[] } = {}): Promise<void> {
+    const previous = this.mcp;
 
-    this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    previous.retire?.();
+
+    this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG, {
+      previous,
+      ...(options.force != null ? { force: options.force } : {}),
+    });
     this.mcp.onStatusChange = () => this.emitMcpServers();
     this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    // Whatever the new set did not carry over is closed, and only now: a
+    // kept connection must not be closed under the set that kept it.
+    for (const client of previous.clients) {
+      if (!this.mcp.clients.includes(client)) client.close();
+    }
     this.registerNewMcpTools();
     this.emitMcpServers();
+  }
+
+  /** Resolves once every MCP server has settled, past the startup budget too. */
+  awaitMcpSettled(): Promise<void> {
+    return this.mcp.settled;
   }
 
   /**
@@ -1139,7 +1164,7 @@ export class AbacusBotSession {
   private registerNewMcpTools(): void {
     const pi = this.pi;
 
-    if (pi == null) return;
+    if (pi == null || !this.rosterBuilt) return;
 
     const excluded = excludedTools();
 
@@ -1167,6 +1192,8 @@ export class AbacusBotSession {
 
   /** Whether the browser sub-agent owns the browser tools this session. */
   private browserTaskRegistered = false;
+  /** Set once the startup roster is built; before that, no tool needs registering by hand. */
+  private rosterBuilt = false;
 
   /** The browser tools as the sub-agent would receive them right now. */
   browserToolsForTest(): unknown[] {

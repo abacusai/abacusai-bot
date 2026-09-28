@@ -40,11 +40,38 @@ export interface McpServerStatus {
   id: string;
   name: string;
   transport: string;
-  status: "connected" | "error" | "disconnected" | "auth-required";
+  status:
+    | "connecting"
+    | "connected"
+    | "error"
+    | "disconnected"
+    | "auth-required";
   error?: string;
   toolCount: number;
   /** A server the app hosts itself, rather than one the user added. */
   isBuiltin?: boolean;
+  /** How long the connect took, so a slow server can be named. */
+  connectMs?: number;
+  /** When its tool list was last read; a refresh after a connect moves it. */
+  listedAt?: string;
+}
+
+/**
+ * A tool the model sees. Most map straight to a remote tool through
+ * `routes`; a `proxy` entry stands in for a large server's whole list
+ * (see LAZY_TOOLS_ABOVE) and is answered by the agent itself.
+ */
+export interface McpAdvertisedTool {
+  name: string;
+  description: string;
+  schema: Record<string, unknown>;
+  proxy?: {
+    server: string;
+    kind: "list" | "call";
+    client: McpClient;
+    /** pi-side name for each of the server's remote tools. */
+    qualifiedNames: ReadonlyMap<string, string>;
+  };
 }
 
 export interface ConnectedMcp {
@@ -52,6 +79,10 @@ export interface ConnectedMcp {
   statuses: McpServerStatus[];
   /** pi tool name -> the client and remote tool name it maps to. */
   routes: Map<string, { client: McpClient; toolName: string }>;
+  /** The config each server was connected with, so a refresh can tell what changed. */
+  configs: Record<string, McpServerConfig>;
+  /** Resolves once every server has settled, including the ones past the budget. */
+  settled: Promise<void>;
   /** Reconnect one server with a refreshed token; null when it still cannot. */
   reconnect?: (name: string) => Promise<McpClient | null>;
   /** Fired after reconnect() changes a status, so the roster is re-emitted. */
@@ -60,11 +91,24 @@ export interface ConnectedMcp {
   onToolsAdded?: () => void;
   /** Stop retrying failed servers; called before this set is replaced or the session ends. */
   retire?: () => void;
-  tools: Array<{
-    name: string;
-    description: string;
-    schema: Record<string, unknown>;
-  }>;
+  tools: McpAdvertisedTool[];
+}
+
+export interface ConnectOptions {
+  /**
+   * The set being replaced. A server whose config is unchanged and which was
+   * connected keeps its connection and only re-lists its tools; the rest are
+   * connected afresh. Clients not carried over are the caller's to close.
+   */
+  previous?: ConnectedMcp;
+  /** Servers to reconnect even when unchanged (the desktop's restart button). */
+  force?: readonly string[];
+  /**
+   * How long to wait for the slow servers before returning with the ones that
+   * made it. The rest settle in the background and announce themselves
+   * through `onToolsAdded` / `onStatusChange`. 0 waits for all of them.
+   */
+  settleBudgetMs?: number;
 }
 
 /**
@@ -228,7 +272,14 @@ const noServers = (error: string, expected = false): ConnectedMcp => {
     process.stderr.write(`[mcp] ${error}\n`);
   }
 
-  return { clients: [], statuses: [], routes: new Map(), tools: [] };
+  return {
+    clients: [],
+    statuses: [],
+    routes: new Map(),
+    configs: {},
+    settled: Promise.resolve(),
+    tools: [],
+  };
 };
 
 /**
@@ -266,6 +317,45 @@ const RECOVERY_REPEAT_MS = 300_000;
 const KEY_REFUSED_RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
 /**
+ * How long a connect waits for its slowest server. The session, and with it
+ * every chat and bot, used to be ready only when the last server answered:
+ * one remote server taking twenty seconds made every new chat take twenty
+ * seconds. Past the budget the session goes on with what it has, and a late
+ * server's tools join it when they land (the same path a recovered server
+ * takes). Local built-ins answer in well under a second.
+ */
+const SETTLE_BUDGET_MS = 3_000;
+
+const settleBudget = (): number => {
+  const raw = process.env.ABACUSAI_BOT_MCP_SETTLE_MS;
+  const parsed = raw == null ? Number.NaN : Number(raw);
+
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : SETTLE_BUDGET_MS;
+};
+
+/**
+ * A user server with more tools than this is offered through two proxies
+ * (`<server>_tools` to look schemas up, `<server>_call` to run one) instead
+ * of every tool with its full schema. Notion and Canva bring forty-odd tools
+ * each, and their schemas alone tripled the tokens of every request in the
+ * session; the registry's smaller servers (PayPal's ten, Playwright's
+ * twenty-odd) stay direct. Built-ins and the connector gateway are always
+ * offered in full.
+ */
+const LAZY_TOOLS_ABOVE = 24;
+
+const lazyToolsAbove = (): number => {
+  const raw = process.env.ABACUSAI_BOT_MCP_LAZY_ABOVE;
+  const parsed = raw == null ? Number.NaN : Number(raw);
+
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : LAZY_TOOLS_ABOVE;
+};
+
+/** Whether two server entries would connect the same way. */
+const sameConfig = (a: McpServerConfig, b: McpServerConfig): boolean =>
+  JSON.stringify(a) === JSON.stringify(b);
+
+/**
  * A failure worth retrying: no answer from the network (undici's "fetch
  * failed") or a gateway saying it is briefly unavailable. A timeout, a sign-in
  * or a refusal would fail the same way again.
@@ -283,7 +373,8 @@ const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
   });
 
 export async function connectMcpServers(
-  configPath: string | undefined
+  configPath: string | undefined,
+  options: ConnectOptions = {}
 ): Promise<ConnectedMcp> {
   // Without a named file, fall back to the app's own server list so an agent
   // started outside the app still sees the connectors added there.
@@ -313,12 +404,21 @@ export async function connectMcpServers(
   const servers = fromDesktopConfig
     ? withoutDesktopOnlyServers(config.servers)
     : config.servers;
+
+  let settledResolve: () => void = () => undefined;
   const result: ConnectedMcp = {
     clients: [],
     statuses: [],
     routes: new Map(),
+    configs: servers,
+    settled: new Promise<void>((resolve) => {
+      settledResolve = resolve;
+    }),
     tools: [],
   };
+  let retired = false;
+  /** Set once the caller has the result: later changes are announced. */
+  let returned = false;
 
   // One connect attempt, shared by the startup fan-out and reconnect().
   const connectOne = async (
@@ -348,6 +448,7 @@ export async function connectMcpServers(
     }
 
     const transportKind = config.url != null ? "http" : "stdio";
+    const startedAt = Date.now();
     // Held outside the try so a failed connect can close it; nulled once the
     // client owns it so a later throw cannot close a live connection.
     let transport: McpTransport | null = null;
@@ -391,6 +492,8 @@ export async function connectMcpServers(
           transport: transportKind,
           status: "connected",
           toolCount: client.tools.length,
+          connectMs: Date.now() - startedAt,
+          listedAt: new Date().toISOString(),
           ...builtin,
         },
       };
@@ -426,21 +529,48 @@ export async function connectMcpServers(
               ? error.message
               : String(error),
           toolCount: 0,
+          connectMs: Date.now() - startedAt,
           ...builtin,
         },
       };
     }
   };
 
-  // Both spellings route; only the qualified name is advertised. `advertise`
-  // is false on a reconnect, since pi's tool list is fixed for the session.
+  const setStatus = (status: McpServerStatus): void => {
+    const index = result.statuses.findIndex((entry) => entry.id === status.id);
+
+    if (index >= 0) result.statuses[index] = status;
+    else result.statuses.push(status);
+  };
+
+  /** The tool names each client is advertised under, for `unregister`. */
+  const advertisedNames = new Map<McpClient, Set<string>>();
+
+  /** Drop a client's routes and advertised tools, ahead of re-registering. */
+  const unregister = (client: McpClient): void => {
+    for (const [key, route] of result.routes)
+      if (route.client === client) result.routes.delete(key);
+    const names = advertisedNames.get(client);
+    if (names != null)
+      result.tools = result.tools.filter((tool) => !names.has(tool.name));
+    advertisedNames.delete(client);
+  };
+
+  /**
+   * Both spellings route; only the qualified name is advertised. A server
+   * past LAZY_TOOLS_ABOVE is advertised as two proxies instead of its list.
+   */
   const register = (
     name: string,
     config: McpServerConfig,
     client: McpClient,
     advertise: boolean
   ): void => {
-    result.clients.push(client);
+    if (!result.clients.includes(client)) result.clients.push(client);
+
+    const isBuiltin = config.isBuiltin === true;
+    const qualifiedNames = new Map<string, string>();
+    const offered: McpAdvertisedTool[] = [];
 
     for (const tool of client.tools) {
       // The registry is the allowlist for the gateway: a tool the account
@@ -451,8 +581,9 @@ export async function connectMcpServers(
           ? gatewayToolMeta(tool.name, tool._meta)
           : null;
       if (name === GATEWAY_SERVER_NAME && meta == null) continue;
-      const qualified = qualify(name, tool, config.isBuiltin === true);
+      const qualified = qualify(name, tool, isBuiltin);
 
+      qualifiedNames.set(tool.name, qualified);
       result.routes.set(qualified, { client, toolName: tool.name });
       const alternate =
         qualified === tool.name ? `${name}_${tool.name}` : tool.name;
@@ -463,13 +594,33 @@ export async function connectMcpServers(
         registeredToolMeta.set(alternate, meta);
       }
 
-      if (advertise)
-        result.tools.push({
-          name: qualified,
-          description: tool.description ?? `${tool.name} (via ${name})`,
-          schema: tool.inputSchema ?? { type: "object", properties: {} },
-        });
+      offered.push({
+        name: qualified,
+        description: tool.description ?? `${tool.name} (via ${name})`,
+        schema: tool.inputSchema ?? { type: "object", properties: {} },
+      });
     }
+
+    if (!advertise) return;
+
+    const lazy =
+      !isBuiltin &&
+      name !== GATEWAY_SERVER_NAME &&
+      offered.length > lazyToolsAbove();
+    const toAdvertise = lazy
+      ? proxyTools(name, client, qualifiedNames)
+      : offered;
+    const names = new Set<string>();
+
+    for (const tool of toAdvertise) {
+      // A name already advertised (a tool kept from the previous set) is
+      // replaced in place, so pi's list and ours agree.
+      const index = result.tools.findIndex((entry) => entry.name === tool.name);
+      if (index >= 0) result.tools[index] = tool;
+      else result.tools.push(tool);
+      names.add(tool.name);
+    }
+    advertisedNames.set(client, names);
   };
 
   const connectWithRetries = async (
@@ -487,62 +638,6 @@ export async function connectMcpServers(
   };
 
   const stillDown: Array<[string, McpServerConfig, "network" | "key"]> = [];
-  await Promise.all(
-    Object.entries(servers).map(async ([name, config]) => {
-      const outcome = await connectWithRetries(name, config);
-      result.statuses.push(outcome.status);
-      if (outcome.client != null) register(name, config, outcome.client, true);
-      else if (outcome.transient === true)
-        stillDown.push([name, config, "network"]);
-      else if (outcome.keyRefused === true)
-        stillDown.push([name, config, "key"]);
-    })
-  );
-
-  // Two tool calls that 401 together share one reconnect.
-  const inFlight = new Map<string, Promise<McpClient | null>>();
-  result.reconnect = (name: string): Promise<McpClient | null> => {
-    const config = servers[name];
-    if (config == null || config.disabled === true)
-      return Promise.resolve(null);
-
-    const pending = inFlight.get(name);
-    if (pending != null) return pending;
-
-    const attempt = (async (): Promise<McpClient | null> => {
-      const outcome = await connectOne(name, config, { forceRefresh: true });
-
-      const previous = result.clients.find((client) => client.name === name);
-      if (previous != null) {
-        result.clients = result.clients.filter((client) => client !== previous);
-        for (const [key, route] of result.routes)
-          if (route.client === previous) result.routes.delete(key);
-        try {
-          previous.close();
-        } catch {
-          /* already gone */
-        }
-      }
-
-      const index = result.statuses.findIndex((status) => status.id === name);
-      if (index >= 0) result.statuses[index] = outcome.status;
-      else result.statuses.push(outcome.status);
-
-      if (outcome.client != null) register(name, config, outcome.client, false);
-      result.onStatusChange?.();
-
-      return outcome.client;
-    })().finally(() => inFlight.delete(name));
-
-    inFlight.set(name, attempt);
-
-    return attempt;
-  };
-
-  let retired = false;
-  result.retire = (): void => {
-    retired = true;
-  };
 
   // A server the network kept down keeps trying; one whose new key was
   // refused tries a few times over the first minute. Its tools are advertised
@@ -574,8 +669,7 @@ export async function connectMcpServers(
       )
         continue;
 
-      const index = result.statuses.findIndex((status) => status.id === name);
-      if (index >= 0) result.statuses[index] = outcome.status;
+      setStatus(outcome.status);
       if (outcome.client != null) {
         register(name, config, outcome.client, true);
         result.onToolsAdded?.();
@@ -585,7 +679,242 @@ export async function connectMcpServers(
       return;
     }
   };
+
+  /** What one fresh connect leaves behind, once it has settled. */
+  const settleConnect = (
+    name: string,
+    config: McpServerConfig,
+    outcome: Awaited<ReturnType<typeof connectOne>>
+  ): void => {
+    if (retired) {
+      outcome.client?.close();
+      return;
+    }
+
+    setStatus(outcome.status);
+    if (outcome.client != null) register(name, config, outcome.client, true);
+    else if (outcome.transient === true || outcome.keyRefused === true) {
+      // Before the caller has the result the retries wait for it; after, a
+      // late failure starts its own.
+      const why = outcome.transient === true ? "network" : "key";
+      if (returned) void recover(name, config, why);
+      else stillDown.push([name, config, why]);
+    }
+
+    if (returned) {
+      if (outcome.client != null) result.onToolsAdded?.();
+      result.onStatusChange?.();
+    }
+  };
+
+  const previous = options.previous;
+  const force = new Set(options.force ?? []);
+
+  /** The previous set's connection for a server, when it can be carried over. */
+  const carriedOver = (
+    name: string,
+    config: McpServerConfig
+  ): { client: McpClient; status: McpServerStatus } | null => {
+    if (previous == null || force.has(name) || config.disabled === true)
+      return null;
+    const was = previous.configs[name];
+    if (was == null || !sameConfig(was, config)) return null;
+    const status = previous.statuses.find((entry) => entry.id === name);
+    const client = previous.clients.find((entry) => entry.name === name);
+    if (status?.status !== "connected" || client == null) return null;
+
+    return { client, status };
+  };
+
+  const connectServer = async (
+    name: string,
+    config: McpServerConfig
+  ): Promise<void> => {
+    const carried = carriedOver(name, config);
+
+    if (carried == null) {
+      setStatus({
+        id: name,
+        name,
+        transport: config.url != null ? "http" : "stdio",
+        status: "connecting",
+        toolCount: 0,
+        ...(config.isBuiltin === true ? { isBuiltin: true } : {}),
+      });
+      settleConnect(name, config, await connectWithRetries(name, config));
+      return;
+    }
+
+    // Kept: the connection stands, its tools stay callable throughout, and
+    // only the list is re-read (the gateway grows a tool per attached account).
+    const { client: kept, status: before } = carried;
+    setStatus(before);
+    register(name, config, kept, true);
+
+    const startedAt = Date.now();
+    try {
+      await kept.refreshTools();
+      if (retired) return;
+      unregister(kept);
+      register(name, config, kept, true);
+      setStatus({
+        ...before,
+        toolCount: kept.tools.length,
+        connectMs: Date.now() - startedAt,
+        listedAt: new Date().toISOString(),
+      });
+      if (returned) {
+        result.onToolsAdded?.();
+        result.onStatusChange?.();
+      }
+    } catch {
+      // The connection had died under us: connect it afresh like any other.
+      if (retired) return;
+      unregister(kept);
+      result.clients = result.clients.filter((client) => client !== kept);
+      try {
+        kept.close();
+      } catch {
+        /* already gone */
+      }
+      settleConnect(name, config, await connectWithRetries(name, config));
+    }
+  };
+
+  // The app's own servers are local and answer at once, and the system
+  // prompt is built from their tool names, so they are always waited for.
+  // The budget applies to the user's servers, the remote ones among them
+  // being what can take twenty seconds.
+  const builtin: Promise<void>[] = [];
+  const user: Promise<void>[] = [];
+  for (const [name, config] of Object.entries(servers))
+    (config.isBuiltin === true ? builtin : user).push(
+      connectServer(name, config)
+    );
+
+  const all = Promise.all([...builtin, ...user]).then(() => undefined);
+  void all.then(settledResolve);
+  const budget = options.settleBudgetMs ?? settleBudget();
+  const userSettled = Promise.all(user).then(() => undefined);
+
+  await Promise.all(builtin);
+  if (budget > 0)
+    await Promise.race([userSettled, sleep(budget, { unref: true })]);
+  else await userSettled;
+
+  returned = true;
   for (const [name, config, why] of stillDown) void recover(name, config, why);
+  stillDown.length = 0;
+
+  // Two tool calls that 401 together share one reconnect.
+  const inFlight = new Map<string, Promise<McpClient | null>>();
+  result.reconnect = (name: string): Promise<McpClient | null> => {
+    const config = servers[name];
+    if (config == null || config.disabled === true)
+      return Promise.resolve(null);
+
+    const pending = inFlight.get(name);
+    if (pending != null) return pending;
+
+    const attempt = (async (): Promise<McpClient | null> => {
+      const outcome = await connectOne(name, config, { forceRefresh: true });
+
+      const previousClient = result.clients.find(
+        (client) => client.name === name
+      );
+      if (previousClient != null) {
+        result.clients = result.clients.filter(
+          (client) => client !== previousClient
+        );
+        for (const [key, route] of result.routes)
+          if (route.client === previousClient) result.routes.delete(key);
+        try {
+          previousClient.close();
+        } catch {
+          /* already gone */
+        }
+      }
+
+      setStatus(outcome.status);
+
+      if (outcome.client != null) register(name, config, outcome.client, false);
+      result.onStatusChange?.();
+
+      return outcome.client;
+    })().finally(() => inFlight.delete(name));
+
+    inFlight.set(name, attempt);
+
+    return attempt;
+  };
+
+  result.retire = (): void => {
+    retired = true;
+  };
 
   return result;
 }
+
+/**
+ * The two tools that stand in for a large server: one to read the list and
+ * the schemas, one to call. The names are in the description, so the model
+ * knows what is there without a call, at a fraction of the schemas' size.
+ */
+const proxyTools = (
+  server: string,
+  client: McpClient,
+  qualifiedNames: ReadonlyMap<string, string>
+): McpAdvertisedTool[] => {
+  const names = [...qualifiedNames.keys()];
+  const proxy = { server, client, qualifiedNames };
+
+  return [
+    {
+      name: `${server}_tools`,
+      description:
+        `The ${server} server's tools (${names.length}), offered on demand to keep the ` +
+        `prompt small: ${names.join(", ")}. Call this with the names you need (or a ` +
+        "query to search their descriptions) to get each one's description and input " +
+        `schema, then run one with ${server}_call. Call it before ${server}_call the ` +
+        "first time you use a tool, and never guess a schema.",
+      schema: {
+        type: "object",
+        properties: {
+          names: {
+            type: "array",
+            items: { type: "string" },
+            description: "Tool names to describe in full.",
+          },
+          query: {
+            type: "string",
+            description:
+              "Words to search the tool names and descriptions for, when unsure which tool you need.",
+          },
+        },
+      },
+      proxy: { ...proxy, kind: "list" },
+    },
+    {
+      name: `${server}_call`,
+      description:
+        `Run one of the ${server} server's tools by name, with the arguments its ` +
+        `schema from ${server}_tools asks for.`,
+      schema: {
+        type: "object",
+        properties: {
+          tool: {
+            type: "string",
+            description: `The tool's name, as listed by ${server}_tools.`,
+          },
+          arguments: {
+            type: "object",
+            description: "The tool's arguments, matching its input schema.",
+            additionalProperties: true,
+          },
+        },
+        required: ["tool"],
+      },
+      proxy: { ...proxy, kind: "call" },
+    },
+  ];
+};

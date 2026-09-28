@@ -107,6 +107,95 @@ describe("answering a connect ask", () => {
   });
 
   /**
+   * "Its tools are in your tool list now" was said the moment the account
+   * attached; the tools arrived with the next refresh, and the model told
+   * the user in between that it could not see them.
+   */
+  it("waits for the tools to reach the asking session before saying they are there", async () => {
+    let landed = false;
+    const watch = vi.fn(() => async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return landed ? ("arrived" as const) : ("pending" as const);
+    });
+    const events: IpcEvent[] = [];
+    const gate = new ConnectorGate(
+      (event) => events.push(event),
+      undefined,
+      watch
+    );
+    const pending = gate.ask({
+      connectorId: "gmailuser",
+      label: "Gmail",
+      conversationKey: botThread,
+      callerSession: "session-1",
+    });
+    const emitted = events[0];
+    if (emitted?.type !== "connector-request") throw new Error("no ask");
+    // The watch starts with the ask, so its baseline predates the connect.
+    expect(watch).toHaveBeenCalledWith({
+      connectorId: "gmailuser",
+      callerSession: "session-1",
+    });
+
+    landed = true;
+    await gate.respond({
+      requestId: emitted.request.requestId,
+      conversationKey: botThread,
+      outcome: "connected",
+    });
+
+    expect(await pending).toContain("Its tools are in your tool list now");
+  });
+
+  it("says the tools are on their way when they have not landed in time", async () => {
+    const events: IpcEvent[] = [];
+    const gate = new ConnectorGate(
+      (event) => events.push(event),
+      undefined,
+      () => async () => "pending"
+    );
+    const pending = gate.ask({
+      connectorId: "gmailuser",
+      label: "Gmail",
+      conversationKey: botThread,
+      callerSession: "session-1",
+    });
+    const emitted = events[0];
+    if (emitted?.type !== "connector-request") throw new Error("no ask");
+
+    await gate.respond({
+      requestId: emitted.request.requestId,
+      conversationKey: botThread,
+      outcome: "connected",
+    });
+
+    const outcome = await pending;
+    expect(outcome).toContain("Gmail is connected now");
+    expect(outcome).toContain("will be announced");
+    expect(outcome).not.toContain("in your tool list now");
+  });
+
+  it("does not watch for tools when the ask has no session, or its own hint", async () => {
+    const watch = vi.fn(() => async () => "arrived" as const);
+    const gate = new ConnectorGate(() => undefined, undefined, watch);
+
+    void gate.ask({
+      connectorId: "gmailuser",
+      label: "Gmail",
+      conversationKey: botThread,
+    });
+    void gate.ask({
+      connectorId: "github",
+      label: "GitHub",
+      conversationKey: botThread,
+      callerSession: "session-1",
+      connectedHint: "Use gh.",
+    });
+
+    expect(watch).not.toHaveBeenCalled();
+  });
+
+  /**
    * The agent is suspended inside the tool call, so a stop that does not
    * release it hangs the turn and leaves the button on screen with nothing
    * behind it.

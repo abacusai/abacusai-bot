@@ -7,6 +7,35 @@
 
 ## Unreleased
 
+A new chat, a new bot and a connector card no longer wait on the slowest
+MCP server. The agent used to connect every server before it was ready and
+to tear all of them down and reconnect on every refresh, so one remote
+server taking twenty seconds made every new chat take twenty seconds and
+left a just-signed-in PayPal, Notion or Canva under "Not installed" for as
+long. Now the app's own servers are waited for, the user's servers get three
+seconds, and anything slower joins the session when it lands. A refresh
+keeps the connections that have not changed and only re-reads their tool
+lists. The main log names how long each server took to connect.
+
+A response streamed over SSE is read as it arrives, and the message
+answering the request ends the read. A server that kept the stream open
+after answering used to hold every connect and tool call until it hung up.
+
+`connect_connector` now says "its tools are in your tool list" only once
+they are, in the chat that asked; if they are still on their way it says so
+and tells the model to wait for the note announcing them. Google Calendar
+and Google Drive were reported connected and then, in the same breath,
+unusable.
+
+A server with more than two dozen tools is offered through two tools, one to
+look its schemas up and one to call, instead of every schema on every
+request. Notion and Canva between them had tripled the size of each request.
+
+On Windows, a server started with `npx` failed to spawn with "ENOENT" on
+machines with Node plainly installed. The app appended its own directory to
+the agent's `PATH` under a second spelling of the variable, and the agent
+resolved commands against that copy alone.
+
 Pasting a model provider's API key is the same dialog everywhere: from
 onboarding, from the Models page, and from Connect Gemini in the model picker,
 which now opens it in place instead of sending you to Settings. It names the

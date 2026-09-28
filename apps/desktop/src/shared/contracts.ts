@@ -1276,6 +1276,10 @@ export interface AgentMcpServer {
   connectedAt?: string;
   updatedAt?: string;
   toolCount: number;
+  /** How long the connect took, reported by the agent. */
+  connectMs?: number;
+  /** When the agent last read its tool list. */
+  listedAt?: string;
 }
 
 export interface AgentMcpLogEntry {

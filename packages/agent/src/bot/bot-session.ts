@@ -195,6 +195,8 @@ export class BotSession {
     clients: [],
     statuses: [],
     routes: new Map(),
+    configs: {},
+    settled: Promise.resolve(),
     tools: [],
   };
   private readonly registeredMcpTools = new Set<string>();
@@ -276,6 +278,7 @@ export class BotSession {
     ]);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    this.mcp.onStatusChange = () => this.emitMcpServers();
     this.mcp.onToolsAdded = () => this.registerNewMcpTools();
 
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
@@ -1015,11 +1018,20 @@ export class BotSession {
   }
 
   async refreshMcp(): Promise<void> {
-    this.mcp.retire?.();
-    for (const client of this.mcp.clients) client.close();
+    const previous = this.mcp;
 
-    this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    previous.retire?.();
+
+    // Unchanged, connected servers keep their connections (see the same
+    // step in session.ts); only what the new set left behind is closed.
+    this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG, {
+      previous,
+    });
+    this.mcp.onStatusChange = () => this.emitMcpServers();
     this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    for (const client of previous.clients) {
+      if (!this.mcp.clients.includes(client)) client.close();
+    }
     this.registerNewMcpTools();
     this.emitMcpServers();
   }

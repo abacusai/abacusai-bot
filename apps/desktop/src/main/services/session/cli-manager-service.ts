@@ -245,6 +245,27 @@ const buildStoppedState = (
   agentStatus: AgentStatus.Idle,
 });
 
+/**
+ * Append a directory to the environment's PATH, under whatever spelling the
+ * variable already has. Windows spells it `Path`; writing `PATH` beside it
+ * gave the child two variables, and whichever it read first (the agent's own
+ * resolver reads `PATH`) held the vendor directory alone. `npx` then failed
+ * to spawn with ENOENT on a machine with Node plainly installed.
+ */
+export const appendToPath = (
+  env: Record<string, string>,
+  dir: string,
+  separator: string = delimiter
+): void => {
+  const key =
+    Object.keys(env).find((name) => name.toUpperCase() === "PATH") ?? "PATH";
+  const current = env[key] ?? "";
+
+  if (current.split(separator).includes(dir)) return;
+
+  env[key] = current === "" ? dir : `${current}${separator}${dir}`;
+};
+
 const sanitizeEnv = (env: NodeJS.ProcessEnv): Record<string, string> => {
   const next: Record<string, string> = {};
   for (const [key, value] of Object.entries(env)) {
@@ -291,7 +312,7 @@ function logMcpOutcome(
     return;
   const detail =
     next.status === "connected"
-      ? `${next.toolCount} tool(s)`
+      ? `${next.toolCount} tool(s)${next.connectMs != null ? ` in ${next.connectMs}ms` : ""}`
       : next.status === "auth-required"
         ? "needs a sign-in"
         : (next.error ?? "");
@@ -313,6 +334,8 @@ const snapshotFromCli = (s: CliMcpServerSnapshot): AgentMcpServer => ({
   ...(s.pid != null ? { pid: s.pid } : {}),
   ...(s.connectedAt != null ? { connectedAt: s.connectedAt } : {}),
   ...(s.updatedAt != null ? { updatedAt: s.updatedAt } : {}),
+  ...(s.connectMs != null ? { connectMs: s.connectMs } : {}),
+  ...(s.listedAt != null ? { listedAt: s.listedAt } : {}),
 });
 
 const parseMode = (value: unknown): AgentMode | null => {
@@ -502,15 +525,7 @@ export class AgentManagerService {
     // win). A PATH nicety must never break a spawn, hence the guard.
     try {
       const vendor = agentVendorDir();
-      if (
-        existsSync(vendor) &&
-        !(sanitized.PATH ?? "").split(delimiter).includes(vendor)
-      ) {
-        sanitized.PATH =
-          sanitized.PATH == null || sanitized.PATH === ""
-            ? vendor
-            : `${sanitized.PATH}${delimiter}${vendor}`;
-      }
+      if (existsSync(vendor)) appendToPath(sanitized, vendor);
     } catch {
       // Vendor resolution unavailable; the agent falls back to PATH.
     }

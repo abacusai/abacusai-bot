@@ -68,6 +68,18 @@ const readAuthFile = (): McpAuthFile => {
   }
 };
 
+/**
+ * The server URLs a sign-in has stored a token for. A card reads as connected
+ * from the moment the token lands, rather than when every running agent has
+ * reconnected and stopped reporting `auth-required`.
+ */
+export const storedMcpTokenUrls = (): Set<string> =>
+  new Set(
+    Object.entries(readAuthFile().servers ?? {})
+      .filter(([, record]) => (record.accessToken ?? "").length > 0)
+      .map(([url]) => url)
+  );
+
 const writeAuthFile = (file: McpAuthFile): void => {
   const target = authFilePath();
   fs.mkdirSync(path.dirname(target), { recursive: true });

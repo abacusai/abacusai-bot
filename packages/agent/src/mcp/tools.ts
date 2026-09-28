@@ -14,7 +14,7 @@ import {
   saveAttachmentBlocks,
 } from "./attachments.js";
 import { McpHttpError } from "./client.js";
-import type { ConnectedMcp } from "./index.js";
+import type { ConnectedMcp, McpAdvertisedTool } from "./index.js";
 
 interface PiToolDefinitionLike {
   name: string;
@@ -46,7 +46,44 @@ export function buildMcpToolDefinitions(
       execute: async (_toolCallId: string, params: Record<string, unknown>) => {
         // Resolved at call time: refreshMcp replaces the ConnectedMcp, so a
         // route captured at registration would go stale.
-        const route = getMcp().routes.get(tool.name);
+        const current = getMcp();
+        const proxy =
+          current.tools.find((entry) => entry.name === tool.name)?.proxy ??
+          tool.proxy;
+
+        if (proxy?.kind === "list") return describeProxiedTools(proxy, params);
+
+        // A proxied call names the remote tool itself; everything else is the
+        // tool it was registered as.
+        let routeName = tool.name;
+        let callArgs = params ?? {};
+
+        if (proxy?.kind === "call") {
+          const asked = String(params?.tool ?? "").trim();
+          routeName = proxy.qualifiedNames.get(asked) ?? asked;
+          const given = params?.arguments;
+          callArgs =
+            given != null && typeof given === "object" && !Array.isArray(given)
+              ? (given as Record<string, unknown>)
+              : {};
+
+          if (asked.length === 0 || !current.routes.has(routeName)) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text:
+                    `${proxy.server} has no tool called "${asked}". Its tools are: ` +
+                    `${[...proxy.qualifiedNames.keys()].join(", ")}. Look one up with ${proxy.server}_tools first.`,
+                },
+              ],
+              details: { server: proxy.server },
+              isError: true,
+            };
+          }
+        }
+
+        const route = current.routes.get(routeName);
 
         if (route == null) {
           return {
@@ -62,16 +99,16 @@ export function buildMcpToolDefinitions(
         }
 
         try {
-          return await callRoute(route);
+          return await callRoute(route, callArgs);
         } catch (error) {
           // A 401 mid-session is an expired token: reconnect this one server
           // and retry once before asking the person to sign in.
           if (error instanceof McpHttpError && error.status === 401) {
             const fresh = await getMcp().reconnect?.(route.client.name);
-            const retry = fresh != null ? getMcp().routes.get(tool.name) : null;
+            const retry = fresh != null ? getMcp().routes.get(routeName) : null;
             if (retry != null) {
               try {
-                return await callRoute(retry);
+                return await callRoute(retry, callArgs);
               } catch (again) {
                 return failure(route, again);
               }
@@ -114,16 +151,19 @@ export function buildMcpToolDefinitions(
           };
         }
 
-        async function callRoute(route: {
-          client: ConnectedMcp["clients"][number];
-          toolName: string;
-        }) {
+        async function callRoute(
+          route: {
+            client: ConnectedMcp["clients"][number];
+            toolName: string;
+          },
+          args: Record<string, unknown>
+        ) {
           // Attachment params carry local paths; file content is substituted
           // here so no base64 crosses the model's context. Gateway only: any
           // other server honouring the marker could read workspace files.
           const isTrustedGateway =
             route.client.name === ATTACHMENT_TRUSTED_SERVER;
-          let callParams = params ?? {};
+          let callParams = args;
           const attachmentParams = isTrustedGateway
             ? attachmentParamNames(tool.schema)
             : [];
@@ -174,3 +214,97 @@ export function buildMcpToolDefinitions(
     };
   });
 }
+
+/** How much of a description the bare listing shows; the full one comes with the schema. */
+const LISTING_DESCRIPTION_CHARS = 160;
+
+/**
+ * Answer a `<server>_tools` call: the named tools (or those matching the
+ * query) with their descriptions and schemas, or, asked for nothing in
+ * particular, every tool with a line of description.
+ */
+const describeProxiedTools = (
+  proxy: NonNullable<McpAdvertisedTool["proxy"]>,
+  params: Record<string, unknown>
+): {
+  content: Array<{ type: "text"; text: string }>;
+  details: unknown;
+  isError?: boolean;
+} => {
+  const names = Array.isArray(params?.names)
+    ? params.names.filter((name): name is string => typeof name === "string")
+    : [];
+  const query = String(params?.query ?? "")
+    .trim()
+    .toLowerCase();
+  const words = query.length > 0 ? query.split(/\s+/) : [];
+  const tools = proxy.client.tools;
+
+  const wanted =
+    names.length > 0 || words.length > 0
+      ? tools.filter(
+          (tool) =>
+            names.includes(tool.name) ||
+            names.includes(proxy.qualifiedNames.get(tool.name) ?? "") ||
+            words.some((word) =>
+              `${tool.name} ${tool.description ?? ""}`
+                .toLowerCase()
+                .includes(word)
+            )
+        )
+      : null;
+
+  if (wanted == null) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: [
+            `${proxy.server} offers ${tools.length} tools. Ask for the ones you need by name to get their schemas:`,
+            "",
+            ...tools.map(
+              (tool) =>
+                `- ${tool.name}: ${(tool.description ?? "").replace(/\s+/g, " ").slice(0, LISTING_DESCRIPTION_CHARS)}`
+            ),
+          ].join("\n"),
+        },
+      ],
+      details: { server: proxy.server, count: tools.length },
+    };
+  }
+
+  if (wanted.length === 0) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `${proxy.server} has nothing matching that. Its tools are: ${tools.map((tool) => tool.name).join(", ")}.`,
+        },
+      ],
+      details: { server: proxy.server },
+      isError: true,
+    };
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: wanted
+          .map((tool) =>
+            [
+              `## ${tool.name}`,
+              tool.description ?? "",
+              "Input schema:",
+              JSON.stringify(
+                tool.inputSchema ?? { type: "object", properties: {} }
+              ),
+              `Run it with ${proxy.server}_call, tool "${tool.name}".`,
+            ].join("\n")
+          )
+          .join("\n\n"),
+      },
+    ],
+    details: { server: proxy.server, tools: wanted.map((tool) => tool.name) },
+  };
+};

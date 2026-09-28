@@ -267,6 +267,8 @@ export interface McpAgentToolsServerOptions {
       conversationKey: ConversationKey;
       /** For the model on connect, when it is not "tools are in your list". */
       connectedHint?: string;
+      /** The agent session that asked, so the answer can wait for its tools. */
+      callerSession?: string;
     }) => Promise<string>;
     /** Resolves to null or an error sentence. */
     disconnect?: (connectorId: string) => Promise<string | null>;
@@ -1624,6 +1626,7 @@ export class McpAgentToolsServer {
         connectorId: match.id,
         label: match.name,
         conversationKey,
+        ...(callerSession != null ? { callerSession } : {}),
         ...(match.kind === "credential"
           ? { connectedHint: `Use ${match.via}: they are authenticated now.` }
           : {}),

@@ -17,6 +17,24 @@ type EmitEvent = (event: IpcEvent) => void;
 /** Who a just-connected connector is connected as, when the platform says. */
 type DescribeAccount = (connectorId: string) => Promise<string | null>;
 
+/**
+ * Started when an ask goes up, awaited when it is answered "connected": have
+ * the connector's tools reached the session that asked? "Its tools are in
+ * your tool list now" was said the moment the account attached, while the
+ * tools arrived with the next refresh, and the model answered in between
+ * that it could not see them.
+ */
+export type WatchToolsArrival = (input: {
+  connectorId: string;
+  callerSession: string;
+}) => () => Promise<"arrived" | "pending">;
+
+/** What the model reads when the tools have not landed by the time it is told. */
+export const TOOLS_PENDING_HINT =
+  "Its tools are being added to your tool list now and will be announced in this " +
+  "conversation the moment they land. Wait for that note before calling one; " +
+  "do not report that you lack them, and never guess a name.";
+
 /** What the tool call resolves to, in the model's own reading. */
 export const CONNECTOR_OUTCOME_TEXT: Record<
   RespondConnectorRequest["outcome"],
@@ -51,13 +69,16 @@ export class ConnectorGate {
       request: ConnectorRequest;
       /** What became usable on connect, when it is not MCP tools. */
       connectedHint?: string;
+      /** Whether the tools reached the asking session; see WatchToolsArrival. */
+      toolsArrived?: () => Promise<"arrived" | "pending">;
       resolve: (outcome: string) => void;
     }
   >();
 
   constructor(
     private readonly emitEvent: EmitEvent,
-    private readonly describeAccount?: DescribeAccount
+    private readonly describeAccount?: DescribeAccount,
+    private readonly watchToolsArrival?: WatchToolsArrival
   ) {}
 
   /**
@@ -82,8 +103,20 @@ export class ConnectorGate {
     conversationKey: ConversationKey;
     /** The sentence for the model on connect, when it is not "tools are in your list". */
     connectedHint?: string;
+    /** The agent session that asked, so the answer can wait for its tools. */
+    callerSession?: string;
   }): Promise<string> {
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // Started now: what the session had before the connect is the baseline.
+    const toolsArrived =
+      this.watchToolsArrival != null &&
+      input.callerSession != null &&
+      input.connectedHint == null
+        ? this.watchToolsArrival({
+            connectorId: input.connectorId,
+            callerSession: input.callerSession,
+          })
+        : undefined;
 
     const request: ConnectorRequest = {
       requestId,
@@ -103,6 +136,7 @@ export class ConnectorGate {
         ...(input.connectedHint != null
           ? { connectedHint: input.connectedHint }
           : {}),
+        ...(toolsArrived != null ? { toolsArrived } : {}),
         resolve,
       });
       this.emitEvent({
@@ -131,13 +165,25 @@ export class ConnectorGate {
             ? await this.describeAccount(waiting.connectorId).catch(() => null)
             : null) ?? undefined)
         : request.error;
-    waiting.resolve(
-      CONNECTOR_OUTCOME_TEXT[request.outcome](
-        waiting.label,
-        detail,
-        waiting.connectedHint
-      )
-    );
+    const text = (hint: string | undefined): string =>
+      CONNECTOR_OUTCOME_TEXT[request.outcome](waiting.label, detail, hint);
+
+    // The card is cleared now; the model's answer may still wait for the
+    // tools, off this call, so the click that answered is not held with it.
+    if (request.outcome === "connected" && waiting.toolsArrived != null) {
+      void waiting
+        .toolsArrived()
+        .catch(() => "pending" as const)
+        .then((arrival) =>
+          waiting.resolve(
+            text(
+              arrival === "pending" ? TOOLS_PENDING_HINT : waiting.connectedHint
+            )
+          )
+        );
+    } else {
+      waiting.resolve(text(waiting.connectedHint));
+    }
     this.emitEvent({
       type: "connector-cleared",
       requestId: request.requestId,

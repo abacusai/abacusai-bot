@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AgentManagerService,
+  appendToPath,
   killWithEscalation,
   type ExecFileLike,
   serializeCommand,
@@ -314,5 +315,38 @@ describe("a command on its way to the agent", () => {
     const command = { type: "send", message: "tabs\tand\nnewlines" };
 
     expect(serializeCommand(command)).toBe(JSON.stringify(command));
+  });
+});
+
+describe("the vendor directory on the child's PATH", () => {
+  it("joins the variable under the spelling Windows gives it", () => {
+    // Writing PATH beside Path handed the child two variables; the agent's
+    // resolver read the vendor-only one and could not find npx.
+    const env: Record<string, string> = {
+      Path: "C:\\Windows;C:\\Program Files\\nodejs\\",
+    };
+
+    appendToPath(env, "C:\\vendor", ";");
+
+    expect(env).toEqual({
+      Path: "C:\\Windows;C:\\Program Files\\nodejs\\;C:\\vendor",
+    });
+  });
+
+  it("appends to PATH elsewhere, once", () => {
+    const env: Record<string, string> = { PATH: "/usr/bin" };
+
+    appendToPath(env, "/vendor", ":");
+    appendToPath(env, "/vendor", ":");
+
+    expect(env).toEqual({ PATH: "/usr/bin:/vendor" });
+  });
+
+  it("creates the variable when there is none", () => {
+    const env: Record<string, string> = {};
+
+    appendToPath(env, "/vendor", ":");
+
+    expect(env).toEqual({ PATH: "/vendor" });
   });
 });

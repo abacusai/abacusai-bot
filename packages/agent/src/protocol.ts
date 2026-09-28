@@ -481,6 +481,10 @@ export interface CliMcpServerSnapshot {
   connectedAt?: string;
   updatedAt?: string;
   toolCount: number;
+  /** How long the connect took, for the one server that holds the others up. */
+  connectMs?: number;
+  /** When its tool list was last read. */
+  listedAt?: string;
 }
 
 export interface CliMcpLogEntry {
