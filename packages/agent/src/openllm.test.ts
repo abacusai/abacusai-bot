@@ -14,10 +14,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  accountCreditsFromEnv,
   isOpenLlmReference,
   OPENLLM_COOLDOWN_MS,
   OPENLLM_ID,
+  OPENLLM_STARTER_CREDITS,
   openLlmCandidates,
+  openLlmPhase,
+  starterCreditsLimit,
   cooldownForFailures,
   OPENLLM_COOLDOWN_STEPS_MS,
   OpenLlmRotation,
@@ -576,5 +580,141 @@ describe("a pool whose account has closed a tier", () => {
     expect(rotation.pick(pool, withoutGemini)?.id).toBe(
       "openrouter/z-ai/glm-5.2:free"
     );
+  });
+});
+
+describe("the starter phase of a new account", () => {
+  // The platform lists Muse Spark first in the free pool. Its 30 to 60
+  // seconds to a first token is what a new user met on day one; DeepSeek
+  // Flash answers in a few seconds, so the first credits go there.
+  const freePool = () => [
+    choice({
+      id: "abacus/muse-spark-1.3-contributor",
+      poolEligible: true,
+      poolRank: 0,
+    }),
+    choice({
+      id: "abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+      poolEligible: true,
+      poolRank: 1,
+    }),
+    choice({
+      id: "abacus/deepseek-ai/DeepSeek-V4.1-Flash",
+      poolEligible: true,
+      poolRank: 2,
+    }),
+    choice({
+      id: "abacus/deepseek-ai/DeepSeek-V4-Flash-0731",
+      poolEligible: true,
+      poolRank: 3,
+    }),
+    choice({ id: "openrouter/deepseek/deepseek-chat-v3:free" }),
+  ];
+  const standard = [
+    "abacus/muse-spark-1.3-contributor",
+    "abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+    "abacus/deepseek-ai/DeepSeek-V4.1-Flash",
+    "abacus/deepseek-ai/DeepSeek-V4-Flash-0731",
+    "openrouter/deepseek/deepseek-chat-v3:free",
+  ];
+
+  it("puts DeepSeek Flash ahead of the platform's first pick until the threshold, in the platform's order among them", () => {
+    const order = openLlmCandidates(freePool(), {
+      used: 496,
+      granted: 2000,
+    }).map((c) => c.id);
+
+    expect(order).toEqual([
+      "abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+      "abacus/deepseek-ai/DeepSeek-V4.1-Flash",
+      "abacus/deepseek-ai/DeepSeek-V4-Flash-0731",
+      "abacus/muse-spark-1.3-contributor",
+      "openrouter/deepseek/deepseek-chat-v3:free",
+    ]);
+  });
+
+  it("returns to the platform's order once the threshold is spent, exactly at it", () => {
+    expect(
+      openLlmCandidates(freePool(), {
+        used: OPENLLM_STARTER_CREDITS,
+        granted: 2000,
+      }).map((c) => c.id)
+    ).toEqual(standard);
+    expect(
+      openLlmCandidates(freePool(), { used: 1_999, granted: 2000 }).map(
+        (c) => c.id
+      )
+    ).toEqual(standard);
+    expect(
+      openLlmCandidates(freePool(), {
+        used: OPENLLM_STARTER_CREDITS - 1,
+        granted: 2000,
+      })[0]?.id
+    ).toBe("abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp");
+  });
+
+  it("keeps the platform's order when the account does not report credits", () => {
+    expect(openLlmPhase({ used: null, granted: 2000 })).toBeNull();
+    expect(openLlmPhase({ used: 10, granted: null })).toBeNull();
+    expect(
+      openLlmCandidates(freePool(), { used: null, granted: null }).map(
+        (c) => c.id
+      )
+    ).toEqual(standard);
+  });
+
+  it("changes nothing for a paid account, whose pool is the low router alone", () => {
+    const paid = [
+      choice({
+        id: "abacus/route-llm-code-low",
+        poolEligible: true,
+        poolRank: 0,
+      }),
+      choice({ id: "openrouter/deepseek/deepseek-chat-v3:free" }),
+    ];
+
+    expect(
+      openLlmCandidates(paid, { used: 0, granted: 2000 }).map((c) => c.id)
+    ).toEqual([
+      "abacus/route-llm-code-low",
+      "openrouter/deepseek/deepseek-chat-v3:free",
+    ]);
+  });
+
+  it("spends a smaller grant entirely in the starter phase", () => {
+    expect(openLlmPhase({ used: 499, granted: 500 })).toBe("starter");
+  });
+
+  it("reads the figures the desktop hands over, and an override of the threshold", () => {
+    expect(
+      accountCreditsFromEnv({
+        ABACUSAI_BOT_CREDITS_USED: "496",
+        ABACUSAI_BOT_CREDITS_GRANTED: "2000",
+      } as NodeJS.ProcessEnv)
+    ).toEqual({ used: 496, granted: 2000 });
+    expect(accountCreditsFromEnv({} as NodeJS.ProcessEnv)).toEqual({
+      used: null,
+      granted: null,
+    });
+    expect(
+      accountCreditsFromEnv({
+        ABACUSAI_BOT_CREDITS_USED: "lots",
+      } as NodeJS.ProcessEnv).used
+    ).toBeNull();
+
+    expect(starterCreditsLimit({} as NodeJS.ProcessEnv)).toBe(
+      OPENLLM_STARTER_CREDITS
+    );
+    expect(
+      starterCreditsLimit({
+        ABACUSAI_BOT_OPENLLM_STARTER_CREDITS: "400",
+      } as NodeJS.ProcessEnv)
+    ).toBe(400);
+    expect(
+      starterCreditsLimit({
+        ABACUSAI_BOT_OPENLLM_STARTER_CREDITS: "-1",
+      } as NodeJS.ProcessEnv)
+    ).toBe(OPENLLM_STARTER_CREDITS);
+    expect(openLlmPhase({ used: 450, granted: 2000 }, 400)).toBe("standard");
   });
 });

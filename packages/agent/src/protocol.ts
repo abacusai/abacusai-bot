@@ -441,6 +441,12 @@ export type DesktopCommand =
   | { type: "mcp_list_servers" }
   /** Re-read stored API keys and provider catalogs without restarting. */
   | { type: "refresh_providers" }
+  /** The account's credits, re-read by the desktop; see openllm.ts's starter phase. */
+  | {
+      type: "account_credits";
+      creditsUsed: number | null;
+      creditsGranted: number | null;
+    }
   | { type: "mcp_refresh" }
   | { type: "mcp_restart_server"; serverId: string }
   | {

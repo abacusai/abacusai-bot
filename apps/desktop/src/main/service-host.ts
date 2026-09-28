@@ -248,6 +248,7 @@ import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-s
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import {
   buildAgentAuthEnv,
+  buildAgentCreditsEnv,
   buildAgentConfigEnv,
 } from "./services/config/agent-env";
 import {
@@ -304,6 +305,10 @@ import {
   MessagingGatewayService,
   type SelfLanePlatform,
 } from "./services/messaging/messaging-gateway-service";
+import {
+  cachedAbacusAccount,
+  onAbacusAccount,
+} from "./services/providers/abacus";
 import {
   cancelConnectorConnect,
   disconnectAbacusConnector,
@@ -1165,7 +1170,10 @@ export class ServiceHost {
       return workspace.path;
     },
     resolveArtifact: () => this.artifactResolverService.resolveBundledCliPath(),
-    resolveAuthEnv: () => buildAgentAuthEnv(),
+    resolveAuthEnv: () => ({
+      ...buildAgentAuthEnv(),
+      ...buildAgentCreditsEnv(cachedAbacusAccount()),
+    }),
     resolveAdditionalConfigEnv: async (sessionId: string) =>
       this.buildAdditionalConfigEnv("code", sessionId),
     emitStateUpdated: (workspaceId, sessionId, state) => {
@@ -1515,6 +1523,20 @@ export class ServiceHost {
     }
 
     this.startedAt = new Date().toISOString();
+    // Running agents learn the account's credits as the desktop re-reads
+    // them, so a chat that crosses the router's starter threshold moves on
+    // without a restart. Only a change is sent: the account is read often.
+    let lastCredits: string | null = null;
+    onAbacusAccount((account) => {
+      const key = `${account.credits_used ?? ""}/${account.credits_granted ?? ""}`;
+      if (key === lastCredits) return;
+      lastCredits = key;
+      this.agentManagerService.broadcastCommand({
+        type: "account_credits",
+        creditsUsed: account.credits_used,
+        creditsGranted: account.credits_granted,
+      });
+    });
     // Signed-out sessions have no key and are skipped inside the service.
     this.transcriptService.setOnPersist((sessionId) => {
       this.debugSyncService.enqueue(sessionId);

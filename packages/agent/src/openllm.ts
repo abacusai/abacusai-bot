@@ -12,6 +12,74 @@ import type { ModelChoice } from "./providers.js";
 /** Must match the `openllm/auto` entry in the desktop catalog. */
 export const OPENLLM_ID = "openllm/auto";
 
+/**
+ * The Abacus account's credits, as the desktop last read them: the starter
+ * grant and how much of it is spent. Either is null when the deployment does
+ * not say (an org account), and then the pool keeps the platform's order.
+ */
+export interface AccountCredits {
+  used: number | null;
+  granted: number | null;
+}
+
+/**
+ * The first credits of a new account go to DeepSeek Flash rather than the
+ * platform's first pick. Muse Spark leads the free pool on the platform's
+ * order, and its 30 to 60 seconds to a first token is what a new user meets
+ * on day one; Flash answers in a few seconds. Once this much of the grant is
+ * spent the platform's order stands, so the cheaper model carries the rest.
+ */
+export const OPENLLM_STARTER_CREDITS = 1_300;
+
+const numberOrNull = (raw: string | undefined): number | null => {
+  const parsed = raw == null || raw.trim() === "" ? Number.NaN : Number(raw);
+
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+/** The starter threshold, overridable to try the switch without spending. */
+export const starterCreditsLimit = (
+  env: NodeJS.ProcessEnv = process.env
+): number => {
+  const parsed = numberOrNull(env.ABACUSAI_BOT_OPENLLM_STARTER_CREDITS);
+
+  return parsed != null && parsed >= 0 ? parsed : OPENLLM_STARTER_CREDITS;
+};
+
+/** What the desktop handed this process at spawn. */
+export const accountCreditsFromEnv = (
+  env: NodeJS.ProcessEnv = process.env
+): AccountCredits => ({
+  used: numberOrNull(env.ABACUSAI_BOT_CREDITS_USED),
+  granted: numberOrNull(env.ABACUSAI_BOT_CREDITS_GRANTED),
+});
+
+let accountCredits: AccountCredits = accountCreditsFromEnv();
+
+/** The desktop re-reads the account now and then and sends the figures on. */
+export const setAccountCredits = (credits: AccountCredits): void => {
+  accountCredits = credits;
+};
+
+export const currentAccountCredits = (): AccountCredits => accountCredits;
+
+export type OpenLlmPhase = "starter" | "standard";
+
+/**
+ * Which phase the account is in, or null when its credits are unknown. The
+ * grant's size is not compared: a smaller grant spends its whole life in the
+ * starter phase, which is the point of it.
+ */
+export const openLlmPhase = (
+  credits: AccountCredits,
+  limit: number = starterCreditsLimit()
+): OpenLlmPhase | null =>
+  credits.used == null || credits.granted == null
+    ? null
+    : credits.used < limit
+      ? "starter"
+      : "standard";
+
 export const isOpenLlmReference = (
   reference: string | null | undefined
 ): boolean => reference?.trim() === OPENLLM_ID;
@@ -200,17 +268,41 @@ const abacusRank = (choice: ModelChoice): number => {
   return choice.poolRank ?? Number.MAX_SAFE_INTEGER;
 };
 
+/** The models the starter phase moves to the front of the Abacus slice. */
+const STARTER_FAMILY = /deepseek.*flash/i;
+
 /**
- * The models OpenLLM may route to, best first: by source, then family within
- * OpenRouter, then context window (a transcript outgrows a small one fast),
- * then label so the order is stable run to run.
+ * In the starter phase, DeepSeek Flash ahead of the rest of the Abacus slice;
+ * among the Flash models, and in every other phase, the platform's order.
  */
-export function openLlmCandidates(models: ModelChoice[]): ModelChoice[] {
+const starterRank = (
+  choice: ModelChoice,
+  phase: OpenLlmPhase | null
+): number =>
+  phase === "starter" &&
+  choice.provider === "abacus" &&
+  STARTER_FAMILY.test(choice.modelId)
+    ? 0
+    : 1;
+
+/**
+ * The models OpenLLM may route to, best first: by source, then the starter
+ * phase within Abacus, then family within OpenRouter, then context window (a
+ * transcript outgrows a small one fast), then label so the order is stable
+ * run to run.
+ */
+export function openLlmCandidates(
+  models: ModelChoice[],
+  credits: AccountCredits = currentAccountCredits()
+): ModelChoice[] {
+  const phase = openLlmPhase(credits);
+
   return models
     .filter(inPool)
     .sort(
       (a, b) =>
         (SOURCE_RANK[a.provider] ?? 99) - (SOURCE_RANK[b.provider] ?? 99) ||
+        starterRank(a, phase) - starterRank(b, phase) ||
         abacusRank(a) - abacusRank(b) ||
         familyRank(a) - familyRank(b) ||
         b.contextWindow - a.contextWindow ||

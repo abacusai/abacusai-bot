@@ -28,6 +28,27 @@ export function buildAgentAuthEnv(): Record<string, string> {
   return credentialEnv();
 }
 
+/**
+ * The account's credits at spawn, for the router's starter phase
+ * (packages/agent/src/openllm.ts): DeepSeek Flash leads the free pool until
+ * the first 1,300 credits are spent. Nothing when the deployment does not
+ * report credits; the agent then keeps the platform's order.
+ */
+export function buildAgentCreditsEnv(
+  account: {
+    credits_used: number | null;
+    credits_granted: number | null;
+  } | null
+): Record<string, string> {
+  if (account?.credits_used == null || account.credits_granted == null)
+    return {};
+
+  return {
+    ABACUSAI_BOT_CREDITS_USED: String(account.credits_used),
+    ABACUSAI_BOT_CREDITS_GRANTED: String(account.credits_granted),
+  };
+}
+
 /** Everything besides auth and the MCP config path. See the call site. */
 export function buildAgentConfigEnv(
   runtimeMcpPath: string | null

@@ -14,8 +14,13 @@ vi.mock("./abacus-host", () => ({
 
 vi.stubGlobal("fetch", fetchMock);
 
-const { abacusCredentialRejected, clearAbacusCache, fetchAbacusAccount } =
-  await import("./abacus");
+const {
+  abacusCredentialRejected,
+  cachedAbacusAccount,
+  clearAbacusCache,
+  fetchAbacusAccount,
+  onAbacusAccount,
+} = await import("./abacus");
 
 beforeEach(() => {
   fetchMock.mockReset();
@@ -161,5 +166,30 @@ describe("whether the key has been refused outright", () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 403 }));
 
     await expect(fetchAbacusAccount(true)).resolves.toBeNull();
+  });
+});
+
+describe("hearing about the account", () => {
+  it("tells listeners on every fresh read, and keeps the last read to hand", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          user_id: "u1",
+          plan: "Free",
+          credits_used: 496,
+          credits_granted: 2000,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    const heard: Array<number | null> = [];
+    const off = onAbacusAccount((account) => heard.push(account.credits_used));
+
+    const account = await fetchAbacusAccount(true);
+
+    expect(account?.credits_used).toBe(496);
+    expect(heard).toEqual([496]);
+    expect(cachedAbacusAccount()?.credits_granted).toBe(2000);
+    off();
   });
 });

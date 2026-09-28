@@ -10,6 +10,7 @@ import * as readline from "node:readline";
 
 import { isBotSession } from "./bot/bot-config.js";
 import { BotSession } from "./bot/bot-session.js";
+import { setAccountCredits } from "./openllm.js";
 import {
   AgentStatus,
   type DesktopCommand,
@@ -193,6 +194,16 @@ export class NdjsonHost {
 
       case "refresh_providers":
         await this.session.refreshProviders();
+
+        return;
+
+      case "account_credits":
+        // Read on the next pick, so a session that crosses the starter
+        // threshold moves to the platform's order without a restart.
+        setAccountCredits({
+          used: command.creditsUsed,
+          granted: command.creditsGranted,
+        });
 
         return;
 

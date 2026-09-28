@@ -396,6 +396,11 @@ export type DesktopCommand =
   | { type: "mcp_list_servers" }
   /** Re-read stored API keys and provider catalogs without restarting. */
   | { type: "refresh_providers" }
+  | {
+      type: "account_credits";
+      creditsUsed: number | null;
+      creditsGranted: number | null;
+    }
   | { type: "mcp_refresh" }
   | { type: "mcp_restart_server"; serverId: string }
   | {

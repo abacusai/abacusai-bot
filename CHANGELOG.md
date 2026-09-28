@@ -7,6 +7,14 @@
 
 ## Unreleased
 
+A new Abacus.AI account's first 1,300 credits run on DeepSeek Flash. RouteLLM -
+Open used to start every chat on the first model the platform lists, Muse
+Spark, whose 30 to 60 seconds to a first token was what a new user met on
+day one. Flash answers in a few seconds. Once those credits are spent the
+platform's order stands and Muse Spark carries the rest; failover between
+them works as before in both phases. Accounts that report no credits, and
+paid plans, are unchanged.
+
 The app reports which first-run setup steps it reached, so a setup that stops
 partway can be found and fixed. It follows the same setting as the log sync.
 

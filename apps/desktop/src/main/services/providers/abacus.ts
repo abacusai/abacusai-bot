@@ -268,6 +268,35 @@ const withCurrentConfigured = (
 
 let accountCache: { value: AbacusAccountInfo; at: number } | null = null;
 
+/** The last account read, without a network round trip; null before the first. */
+export const cachedAbacusAccount = (): AbacusAccountInfo | null =>
+  accountCache?.value ?? null;
+
+type AccountListener = (account: AbacusAccountInfo) => void;
+const accountListeners = new Set<AccountListener>();
+
+/**
+ * Hear every fresh account read. The router's starter phase turns on the
+ * credits figure, and running agents learn it from here rather than at
+ * their next spawn.
+ */
+export const onAbacusAccount = (listener: AccountListener): (() => void) => {
+  accountListeners.add(listener);
+
+  return () => accountListeners.delete(listener);
+};
+
+const rememberAccount = (value: AbacusAccountInfo): void => {
+  accountCache = { value, at: Date.now() };
+  for (const listener of accountListeners) {
+    try {
+      listener(value);
+    } catch (error) {
+      console.error("[abacus] account listener failed:", error);
+    }
+  }
+};
+
 export const clearAbacusCache = (): void => {
   cache = null;
   accountCache = null;
@@ -388,7 +417,7 @@ export const fetchAbacusAccount = async (
       if (!modelsResponse.ok) return accountCache?.value ?? null;
 
       const value = connectedAccountWithoutProfile();
-      accountCache = { value, at: Date.now() };
+      rememberAccount(value);
 
       return value;
     }
@@ -414,7 +443,7 @@ export const fetchAbacusAccount = async (
       credits_used: body.credits_used ?? null,
       credits_granted: body.credits_granted ?? null,
     };
-    accountCache = { value, at: Date.now() };
+    rememberAccount(value);
 
     return value;
   } catch {
