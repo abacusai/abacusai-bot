@@ -77,6 +77,17 @@ describe("markdown to HTML", () => {
   });
 });
 
+describe("loose lists", () => {
+  const loose = "1. First\n\n2. Second\n\n3. Third";
+
+  it("stay one list when items are separated by blank lines", () => {
+    expect(markdownToHtml(loose)).toContain(
+      "<ol><li>First</li><li>Second</li><li>Third</li></ol>"
+    );
+    expect(markdownToText(loose)).toContain("3. Third");
+  });
+});
+
 describe("markdown to text", () => {
   const text = markdownToText(BRIEF);
 

@@ -63,7 +63,9 @@ function parseBlocks(markdown: string): Block[] {
   for (const raw of markdown.replace(/\r\n?/g, "\n").split("\n")) {
     const line = raw.trimEnd();
     if (line.trim().length === 0) {
-      close();
+      // A loose list (blank lines between items) is still one list, or every
+      // item would restart at "1.". Whatever follows closes it anyway.
+      if (open?.kind !== "list") close();
       continue;
     }
     const heading = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*$/.exec(line);
