@@ -174,6 +174,8 @@ export type AgentEvent =
         name?: string;
         /** The provider's own sentence, for the log rather than the screen. */
         detail?: string;
+        /** `upgrade-abacus` renders the upgrade card instead of the error. */
+        actions?: NotificationAction[];
         segmentData?: {
           message?: string;
           type?: string;

@@ -179,16 +179,19 @@ export class AgentSessionManagerService {
 
   /**
    * Settle a routine run. Only ever moves forward: a run that failed stays
-   * failed even if a trailing idle arrives after the error.
+   * failed even if a trailing idle arrives after the error. True when the
+   * outcome changed.
    */
-  setRunOutcome(sessionId: string, outcome: RoutineRunOutcome): void {
+  setRunOutcome(sessionId: string, outcome: RoutineRunOutcome): boolean {
     const session = this.sessions.get(sessionId);
-    if (session == null || session.routineId == null) return;
-    if (session.runOutcome === "failed" && outcome === "completed") return;
-    if (session.runOutcome === outcome) return;
+    if (session == null || session.routineId == null) return false;
+    if (session.runOutcome === "failed" && outcome === "completed")
+      return false;
+    if (session.runOutcome === outcome) return false;
     session.runOutcome = outcome;
     session.updatedAt = new Date().toISOString();
     this.persist();
+    return true;
   }
 
   /** The sessions a bot owns, straight off the records, with no registry. */
