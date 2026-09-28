@@ -750,7 +750,13 @@ export const signInToMcpServer = async (
 
       timer = setTimeout(
         () =>
-          finish({ ok: false, error: "Sign-in timed out.", cancelled: true }),
+          // Not a cancel: the UI hides cancelled results, and a timeout
+          // needs saying.
+          finish({
+            ok: false,
+            error:
+              "Sign-in timed out. Try signing in again.",
+          }),
         SIGN_IN_TIMEOUT_MS
       );
       inFlight.set(serverUrl, close);
