@@ -2,6 +2,8 @@ import { Bot, ChevronRight } from "lucide-react";
 import { useMemo, type JSX, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { isMessageReaction } from "#shared/message-reactions";
+
 import type { SubtaskSummary } from "../../conversation";
 import { Markdown } from "../common/markdown";
 import { Button } from "../ui";
@@ -10,6 +12,8 @@ import { wantsModelSwitch } from "./agent-message";
 import { BUBBLE_MAX_WIDTH } from "./bubble-width";
 import { turnDeliverables } from "./deliverables";
 import { DeliverablesPill } from "./deliverables-pill";
+import { FeedbackRow } from "./feedback-row";
+import { agentReactions } from "./message-reactions";
 import {
   PremiumUpgradeCard,
   exhaustedScope,
@@ -77,19 +81,22 @@ const spokenItems = (items: AgentRenderItem[]): AgentRenderItem[] =>
 const BotBubble = ({
   children,
   tone = "said",
+  feedback,
 }: {
   children: ReactNode;
   /** A notification is the bot reporting a condition, not speaking. */
   tone?: "said" | "notice";
+  feedback?: ReactNode;
 }): JSX.Element => (
   <div
-    className={`${BUBBLE_MAX_WIDTH} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
+    className={`${BUBBLE_MAX_WIDTH} group/bot-message relative ${tone === "said" ? "mb-3" : ""} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
       tone === "notice"
         ? "bg-muted/60 text-muted-foreground"
         : "bg-sidebar text-foreground"
     }`}
   >
     {children}
+    {feedback && <div className="absolute end-2 -bottom-3">{feedback}</div>}
   </div>
 );
 
@@ -195,12 +202,18 @@ const WorkingBubble = (): JSX.Element => (
 );
 
 export const BotMessageList = ({
+  onRateTurn,
   chatItems,
   times,
   isWorking = false,
   onOpenSubtask,
   onSwitchModel,
 }: {
+  onRateTurn?: (
+    segmentId: string,
+    rating: "up" | "down" | "clear",
+    comment?: string
+  ) => Promise<boolean>;
   chatItems: ChatRenderItem[];
   /** When each segment first arrived, by segment id. See persistence.ts. */
   times?: Map<string, number>;
@@ -210,6 +223,7 @@ export const BotMessageList = ({
   onSwitchModel?: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();
+  const botReactions = useMemo(() => agentReactions(chatItems), [chatItems]);
   const rows = useMemo(
     () =>
       chatItems
@@ -219,7 +233,28 @@ export const BotMessageList = ({
             ? { ...item, sourceIndex }
             : {
                 ...item,
-                items: spokenItems(item.items),
+                items: spokenItems(item.items).filter((part) => {
+                  const previous = chatItems[sourceIndex - 1];
+                  const reaction =
+                    previous?.kind === "user"
+                      ? botReactions.get(previous.id)
+                      : undefined;
+                  // Hold a possible reaction preamble until we know whether it
+                  // becomes a badge, instead of flashing a bubble then removing it.
+                  if (
+                    part.kind === "text" &&
+                    isWorking &&
+                    sourceIndex === chatItems.length - 1 &&
+                    isMessageReaction(part.content.trim())
+                  )
+                    return false;
+                  // Some models repeat a successful reaction as an emoji-only reply.
+                  return !(
+                    reaction != null &&
+                    part.kind === "text" &&
+                    part.content.trim() === reaction
+                  );
+                }),
                 deliverables: turnDeliverables(item.items),
                 sourceIndex,
               }
@@ -232,7 +267,7 @@ export const BotMessageList = ({
             item.items.length > 0 ||
             item.deliverables.length > 0
         ),
-    [chatItems]
+    [chatItems, botReactions, isWorking]
   );
 
   // Read once per render: a clock moving between two rows could date them apart.
@@ -242,12 +277,26 @@ export const BotMessageList = ({
 
   const renderRow = (item: (typeof rows)[number]): JSX.Element =>
     item.kind === "user" ? (
-      <UserMessageBubble
-        content={item.text}
-        images={item.images}
-        files={item.files}
-        dataId={`bot-message-user-${item.id}`}
-      />
+      <div className="relative mb-3 flex flex-col gap-0.5">
+        <UserMessageBubble
+          content={item.text}
+          images={item.images}
+          files={item.files}
+          dataId={`bot-message-user-${item.id}`}
+        />
+        {botReactions.has(item.id) && (
+          <span
+            className="bg-muted ring-background absolute end-2 -bottom-3 rounded-full px-2 py-0.5 text-sm ring-2"
+            role="img"
+            aria-label={t("reactions.agent", {
+              emoji: botReactions.get(item.id),
+            })}
+            title={t("reactions.agent", { emoji: botReactions.get(item.id) })}
+          >
+            {botReactions.get(item.id)}
+          </span>
+        )}
+      </div>
     ) : (
       // Consecutive bot bubbles sit closer together, as one person's run groups.
       <div
@@ -256,7 +305,23 @@ export const BotMessageList = ({
       >
         {item.items.map((part) =>
           part.kind === "text" ? (
-            <BotBubble key={part.id}>
+            <BotBubble
+              key={part.id}
+              feedback={
+                onRateTurn != null &&
+                !part.streaming &&
+                !(isWorking && item.sourceIndex === chatItems.length - 1) ? (
+                  <FeedbackRow
+                    variant="bot"
+                    content={part.content}
+                    creditsTotal={0}
+                    onRate={(rating, comment) =>
+                      onRateTurn(part.id, rating, comment)
+                    }
+                  />
+                ) : undefined
+              }
+            >
               <Markdown content={part.content} />
             </BotBubble>
           ) : part.kind === "notification" ? (
@@ -327,7 +392,10 @@ export const BotMessageList = ({
           </div>
         );
       })}
-      {isWorking && <WorkingBubble />}
+      {/* Keep the typing indicator out of layout changes, including reaction-only turns. */}
+      <div className="relative h-11 shrink-0" data-id="bot-message-status-slot">
+        {isWorking && <WorkingBubble />}
+      </div>
     </div>
   );
 };

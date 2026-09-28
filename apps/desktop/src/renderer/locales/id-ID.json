@@ -2135,5 +2135,9 @@
       "select": "Select worktree"
     },
     "yesterday": "Kemarin"
+  },
+  "reactions": {
+    "feedback": "Beri reaksi pada balasan ini",
+    "agent": "Agen bereaksi dengan {{emoji}}"
   }
 }

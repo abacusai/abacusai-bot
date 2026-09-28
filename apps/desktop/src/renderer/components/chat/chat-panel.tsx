@@ -601,16 +601,11 @@ export const ChatPanel = (): JSX.Element => {
       rating: "up" | "down" | "clear",
       comment?: string
     ): Promise<boolean> => {
-      // The synced transcript is this same segment list, so the rated turn is
-      // named by its position here, not by the user/bot turn counter, which
-      // skips the tool and status segments in between.
-      const eventSequenceNumber = workspaceConversationStore
-        .getSegments(sessionId)
-        .findIndex((segment) => segment.id === segmentId);
-      if (eventSequenceNumber < 0) return false;
+      // Main knows where the server holds the segment; a position here is not
+      // it, since the transcript is rewritten after upload.
       const outcome = await window.api.agent.submitTurnFeedback({
         sessionId,
-        eventSequenceNumber,
+        segmentId,
         rating,
         model,
         ...(comment != null && comment.length > 0 ? { comment } : {}),
@@ -2146,6 +2141,8 @@ export const ChatPanel = (): JSX.Element => {
                          was asked. Handed to the list rather than dropped after
                          it, or anything the bot said next renders above it. */
                       <BotMessageList
+                        key={activeSessionId}
+                        onRateTurn={isBotChat ? handleRateTurn : undefined}
                         chatItems={chatItems}
                         times={
                           activeSessionId == null

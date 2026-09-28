@@ -116,6 +116,10 @@ import {
   FLUSH_CUSTOM_TYPE,
   flushPrompt,
 } from "./bot-prompts.js";
+import {
+  BOT_REACTION_TOOL_NAME,
+  buildBotReactionTool,
+} from "./bot-reaction-tool.js";
 import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "./bot-time-tool.js";
 
 export interface BotSessionOptions {
@@ -374,7 +378,8 @@ export class BotSession {
         !isBrowserTool(tool) &&
         tool.name !== BOT_MEMORY_TOOL_NAME &&
         !tool.name.endsWith(`_${BOT_MEMORY_TOOL_NAME}`) &&
-        tool.name !== BOT_TIME_TOOL_NAME
+        tool.name !== BOT_TIME_TOOL_NAME &&
+        tool.name !== BOT_REACTION_TOOL_NAME
     );
 
     for (const tool of mcpTools) this.registeredMcpTools.add(tool.name);
@@ -403,6 +408,7 @@ export class BotSession {
     const customTools = [
       buildBotMemoryTool(this.home),
       buildBotTimeTool(),
+      buildBotReactionTool(),
       botBashTool(this.options.cwd),
       ...browserTaskTools,
       ...mcpTools,
@@ -1033,7 +1039,11 @@ export class BotSession {
       )
         continue;
       // A same-named MCP tool would shadow the one the prompt teaches.
-      if (tool.name === BOT_TIME_TOOL_NAME) continue;
+      if (
+        tool.name === BOT_TIME_TOOL_NAME ||
+        tool.name === BOT_REACTION_TOOL_NAME
+      )
+        continue;
 
       this.registeredMcpTools.add(tool.name);
 
@@ -1383,7 +1393,7 @@ export class BotSession {
           ...(this.config.allowedCommands ?? []),
           ...this.sessionAllowedCommands,
         ],
-        allowedTools: [...this.sessionAllowedTools],
+        allowedTools: [BOT_REACTION_TOOL_NAME, ...this.sessionAllowedTools],
         allowedReadPaths: this.config.allowedReadPaths ?? [],
         allowedWritePaths: [],
         allowedOrigins: [],

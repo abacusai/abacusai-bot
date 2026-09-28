@@ -1,4 +1,4 @@
-import { Check, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Check, Copy, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 /**
  * Per-turn feedback row: thumbs, copy, and the compute-points chip, rendered
  * under the LAST bot text segment of a settled turn so a turn gets one row.
@@ -62,11 +62,14 @@ type Verdict = "none" | "up" | "down";
 
 export const FeedbackRow = ({
   content,
+  variant = "default",
   credits,
   creditsTotal,
   onRate,
 }: {
   content: string;
+  /** Bot threads reveal the feedback control on message hover or keyboard focus. */
+  variant?: "default" | "bot";
   /** This turn's compute points, when the turn reported any. */
   credits?: number;
   /** Running conversation total, for the tooltip. */
@@ -90,6 +93,7 @@ export const FeedbackRow = ({
   // The "tell us more" box: opens on a thumbs-down, which is already sent;
   // the text is a follow-up, so closing it without writing loses nothing.
   const [askingMore, setAskingMore] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [comment, setComment] = useState("");
 
   // Optimistic: the thumb fills at once and reverts if the report failed, so a
@@ -102,7 +106,9 @@ export const FeedbackRow = ({
       setVerdict(next);
       setRating(true);
       setAskingMore(next === "down");
+      setPickerOpen(false);
       void onRate(next === "none" ? "clear" : next)
+        .catch(() => false)
         .then((ok) => {
           if (ok) return;
           setVerdict(previous);
@@ -115,6 +121,7 @@ export const FeedbackRow = ({
   );
 
   const sendComment = useCallback(() => {
+    if (rating) return;
     const text = comment.trim().slice(0, MAX_FEEDBACK_COMMENT);
     if (onRate == null || text.length === 0) {
       setAskingMore(false);
@@ -122,6 +129,7 @@ export const FeedbackRow = ({
     }
     setRating(true);
     void onRate("down", text)
+      .catch(() => false)
       .then((ok) => {
         if (ok) {
           setAskingMore(false);
@@ -131,7 +139,7 @@ export const FeedbackRow = ({
         toast.error(t("workspace.feedback.failed"));
       })
       .finally(() => setRating(false));
-  }, [comment, onRate, t]);
+  }, [comment, onRate, rating, t]);
 
   const copy = useCallback(() => {
     void navigator.clipboard.writeText(content).then(() => {
@@ -140,13 +148,21 @@ export const FeedbackRow = ({
     });
   }, [content]);
 
-  return (
+  const controls = (
     <div
-      className="flex w-full items-center justify-between gap-2"
+      className={
+        variant === "bot"
+          ? "flex items-center"
+          : "flex w-full items-center justify-between gap-2"
+      }
       data-id="local-code-feedback-row"
     >
       <div
-        className="flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/assistant:opacity-100 group-hover/assistant:opacity-100"
+        className={
+          variant === "bot"
+            ? "bg-muted/40 border-border/50 text-muted-foreground flex items-center gap-0.5 rounded-full border p-0.5"
+            : "flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/assistant:opacity-100 group-hover/assistant:opacity-100"
+        }
         data-id="local-code-feedback-actions"
       >
         {onRate != null && (
@@ -158,15 +174,27 @@ export const FeedbackRow = ({
                     variant="ghost"
                     size="icon-sm"
                     data-id="local-code-feedback-up"
+                    disabled={rating}
+                    className={
+                      variant === "bot"
+                        ? "size-7 rounded-full transition-colors aria-pressed:bg-emerald-500/15 aria-pressed:text-emerald-600 dark:aria-pressed:text-emerald-400"
+                        : undefined
+                    }
                     aria-pressed={verdict === "up"}
                     onClick={() => rate("up")}
                     aria-label={t("workspace.feedback.helpful")}
                   />
                 }
               >
-                <ThumbsUp
-                  className={verdict === "up" ? "fill-current" : undefined}
-                />
+                {variant === "bot" ? (
+                  <span aria-hidden className="text-lg leading-none">
+                    {"👍"}
+                  </span>
+                ) : (
+                  <ThumbsUp
+                    className={verdict === "up" ? "fill-current" : undefined}
+                  />
+                )}
               </TooltipTrigger>
               <TooltipContent side="top">
                 {t("workspace.feedback.helpful")}
@@ -196,17 +224,29 @@ export const FeedbackRow = ({
                         variant="ghost"
                         size="icon-sm"
                         data-id="local-code-feedback-down"
+                        disabled={rating}
+                        className={
+                          variant === "bot"
+                            ? "size-7 rounded-full transition-colors aria-pressed:bg-rose-500/15 aria-pressed:text-rose-600 dark:aria-pressed:text-rose-400"
+                            : undefined
+                        }
                         aria-pressed={verdict === "down"}
                         onClick={() => rate("down")}
                         aria-label={t("workspace.feedback.notHelpful")}
                       />
                     }
                   >
-                    <ThumbsDown
-                      className={
-                        verdict === "down" ? "fill-current" : undefined
-                      }
-                    />
+                    {variant === "bot" ? (
+                      <span aria-hidden className="text-lg leading-none">
+                        {"👎"}
+                      </span>
+                    ) : (
+                      <ThumbsDown
+                        className={
+                          verdict === "down" ? "fill-current" : undefined
+                        }
+                      />
+                    )}
                   </TooltipTrigger>
                   <TooltipContent side="top">
                     {t("workspace.feedback.notHelpful")}
@@ -259,32 +299,34 @@ export const FeedbackRow = ({
             </Popover>
           </>
         )}
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                data-id="local-code-feedback-copy"
-                onClick={copy}
-                aria-label={
-                  copied
-                    ? t("workspace.feedback.copied")
-                    : t("workspace.feedback.copy")
-                }
-              />
-            }
-          >
-            <CopyIcon />
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            {copied
-              ? t("workspace.feedback.copied")
-              : t("workspace.feedback.copy")}
-          </TooltipContent>
-        </Tooltip>
+        {variant !== "bot" && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  data-id="local-code-feedback-copy"
+                  onClick={copy}
+                  aria-label={
+                    copied
+                      ? t("workspace.feedback.copied")
+                      : t("workspace.feedback.copy")
+                  }
+                />
+              }
+            >
+              <CopyIcon />
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {copied
+                ? t("workspace.feedback.copied")
+                : t("workspace.feedback.copy")}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
-      {credits != null && (
+      {variant !== "bot" && credits != null && (
         <Tooltip>
           <TooltipTrigger
             render={
@@ -299,5 +341,41 @@ export const FeedbackRow = ({
         </Tooltip>
       )}
     </div>
+  );
+  if (variant !== "bot") return controls;
+  return (
+    <Popover
+      open={pickerOpen || askingMore}
+      onOpenChange={(open) => {
+        setPickerOpen(open);
+        if (!open) setAskingMore(false);
+      }}
+    >
+      <PopoverTrigger
+        aria-label={t("reactions.feedback")}
+        title={t("reactions.feedback")}
+        disabled={rating}
+        data-id="bot-message-feedback-trigger"
+        className={`bg-background border-border text-muted-foreground hover:bg-muted ring-background focus-visible:outline-ring flex size-6 items-center justify-center rounded-full border shadow-sm ring-2 transition-[color,background-color,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 ${verdict === "none" && !pickerOpen && !askingMore ? "pointer-events-none opacity-0 group-focus-within/bot-message:pointer-events-auto group-focus-within/bot-message:opacity-100 group-hover/bot-message:pointer-events-auto group-hover/bot-message:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100" : ""} ${verdict === "up" ? "text-emerald-600 dark:text-emerald-400" : verdict === "down" ? "text-rose-600 dark:text-rose-400" : ""}`}
+      >
+        {verdict === "none" ? (
+          <Plus className="size-3.5" />
+        ) : (
+          <span aria-hidden className="text-base leading-none">
+            {verdict === "up" ? "👍" : "👎"}
+          </span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="end"
+        className="w-auto rounded-full p-1"
+      >
+        <PopoverTitle className="sr-only">
+          {t("reactions.feedback")}
+        </PopoverTitle>
+        {controls}
+      </PopoverContent>
+    </Popover>
   );
 };

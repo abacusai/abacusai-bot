@@ -2135,5 +2135,9 @@
       "select": "Select worktree"
     },
     "yesterday": "昨日"
+  },
+  "reactions": {
+    "feedback": "この返信にリアクション",
+    "agent": "エージェントが{{emoji}}でリアクションしました"
   }
 }

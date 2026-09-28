@@ -1111,8 +1111,8 @@ export type TranscriptSegment = Record<string, unknown>;
 /** A thumbs up/down on one assistant turn; `clear` withdraws it. */
 export interface TurnFeedbackInput {
   sessionId: string;
-  /** Index of the rated bot text segment in the stored transcript. */
-  eventSequenceNumber: number;
+  /** The rated bot text segment. */
+  segmentId: string;
   rating: "up" | "down" | "clear";
   comment?: string;
   model?: string | null;

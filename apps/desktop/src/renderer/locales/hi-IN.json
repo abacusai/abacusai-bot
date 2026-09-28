@@ -2135,5 +2135,9 @@
       "select": "Select worktree"
     },
     "yesterday": "कल"
+  },
+  "reactions": {
+    "feedback": "इस जवाब पर प्रतिक्रिया दें",
+    "agent": "एजेंट ने {{emoji}} से प्रतिक्रिया दी"
   }
 }
