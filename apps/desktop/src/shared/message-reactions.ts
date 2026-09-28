@@ -3,6 +3,7 @@ export const MESSAGE_REACTION_EMOJIS = [
   "❤️",
   "😂",
   "🎉",
+  "🔥",
   "😮",
   "😢",
   "🙏",

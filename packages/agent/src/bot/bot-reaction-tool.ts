@@ -5,6 +5,7 @@ export const BOT_REACTION_EMOJIS = [
   "❤️",
   "😂",
   "🎉",
+  "🔥",
   "😮",
   "😢",
   "🙏",
