@@ -87,7 +87,7 @@ const BotBubble = ({
   feedback?: ReactNode;
 }): JSX.Element => (
   <div
-    className={`${BUBBLE_MAX_WIDTH} group/bot-message relative ${feedback ? "mb-3" : ""} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
+    className={`${BUBBLE_MAX_WIDTH} group/bot-message relative ${tone === "said" ? "mb-3" : ""} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
       tone === "notice"
         ? "bg-muted/60 text-muted-foreground"
         : "bg-sidebar text-foreground"
@@ -266,9 +266,7 @@ export const BotMessageList = ({
 
   const renderRow = (item: (typeof rows)[number]): JSX.Element =>
     item.kind === "user" ? (
-      <div
-        className={`relative flex flex-col gap-0.5 ${botReactions.has(item.id) ? "mb-3" : ""}`}
-      >
+      <div className="relative mb-3 flex flex-col gap-0.5">
         <UserMessageBubble
           content={item.text}
           images={item.images}
