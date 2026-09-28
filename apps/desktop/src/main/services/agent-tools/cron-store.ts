@@ -396,7 +396,12 @@ export const retireOnceJob = (id: string): void => {
 
 export const describeJob = (job: CronJob): string => {
   const next = (() => {
-    if (job.schedule == null) return "on webhook";
+    if (job.runAt != null)
+      return job.lastRunAt != null
+        ? "done (ran once)"
+        : new Date(job.runAt).toLocaleString();
+    if (job.schedule == null)
+      return job.webhookToken != null ? "on webhook" : "manual only";
     try {
       return nextRun(job.schedule)?.toLocaleString() ?? "never";
     } catch {
@@ -408,6 +413,7 @@ export const describeJob = (job: CronJob): string => {
     job.lastRunAt != null ? new Date(job.lastRunAt).toLocaleString() : "never";
   const triggers = [
     job.schedule != null ? job.schedule : null,
+    job.runAt != null ? "once" : null,
     job.webhookToken != null ? "webhook" : null,
   ]
     .filter((part) => part != null)
