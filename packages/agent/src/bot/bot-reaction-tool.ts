@@ -21,7 +21,7 @@ export function buildBotReactionTool() {
     name: BOT_REACTION_TOOL_NAME,
     label: BOT_REACTION_TOOL_NAME,
     description:
-      "Attach one emoji reaction to the user's message in this turn. Use this proactively for clear feelings, praise, thanks, humor, achievements, or dissatisfaction with your work, in any language, even when the same message also requests a task. Match the tone: support for distress, appreciation for praise, acknowledgement for criticism. Skip neutral task-only, automated, scheduled, or internal messages. A reaction supplements your answer or work; it never replaces it. Calling again replaces the reaction.",
+      "Attach one emoji reaction badge to the user's message in this turn. Invoke this tool to react; never send an emoji-only assistant message or use reply text as a substitute. Use this proactively for clear feelings, praise, thanks, humor, achievements, or dissatisfaction with your work, in any language, even when the same message also requests a task. Match the tone: support for distress, appreciation for praise, acknowledgement for criticism. Skip neutral task-only, automated, scheduled, or internal messages. A reaction supplements your answer or work; it never replaces it. Calling again replaces the reaction.",
     parameters: {
       type: "object",
       properties: { emoji: { type: "string", enum: [...BOT_REACTION_EMOJIS] } },

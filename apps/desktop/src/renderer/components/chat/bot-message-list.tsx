@@ -231,7 +231,19 @@ export const BotMessageList = ({
             ? { ...item, sourceIndex }
             : {
                 ...item,
-                items: spokenItems(item.items),
+                items: spokenItems(item.items).filter((part) => {
+                  const previous = chatItems[sourceIndex - 1];
+                  const reaction =
+                    previous?.kind === "user"
+                      ? botReactions.get(previous.id)
+                      : undefined;
+                  // Some models repeat a successful reaction as an emoji-only reply.
+                  return !(
+                    reaction != null &&
+                    part.kind === "text" &&
+                    part.content.trim() === reaction
+                  );
+                }),
                 deliverables: turnDeliverables(item.items),
                 sourceIndex,
               }
@@ -244,7 +256,7 @@ export const BotMessageList = ({
             item.items.length > 0 ||
             item.deliverables.length > 0
         ),
-    [chatItems]
+    [chatItems, botReactions]
   );
 
   // Read once per render: a clock moving between two rows could date them apart.

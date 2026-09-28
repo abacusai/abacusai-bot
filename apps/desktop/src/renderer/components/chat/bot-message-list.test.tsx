@@ -42,6 +42,67 @@ const bubbles = (): string[] =>
   );
 
 describe("a bot's thread", () => {
+  it("hides an emoji-only duplicate only after the reaction succeeds", () => {
+    const items: ChatRenderItem[] = [
+      { kind: "user", id: "u1", text: "A hard day" },
+      {
+        kind: "agent",
+        id: "a1",
+        items: [
+          text("emoji", "🤗"),
+          {
+            kind: "tool_group",
+            id: "g1",
+            summary: "",
+            state: "running",
+            tools: [
+              {
+                id: "r1",
+                name: "react_to_message",
+                streamingArgs: false,
+                input: { emoji: "🤗" },
+                state: "running",
+              },
+            ],
+          },
+          text("answer", "You have got this. 🤗"),
+        ],
+      },
+    ];
+    const { rerender } = render(<BotMessageList chatItems={items} />);
+    expect(bubbles()).toContain("🤗");
+    const completed: ChatRenderItem[] = [
+      items[0]!,
+      {
+        kind: "agent",
+        id: "a1",
+        items: [
+          text("emoji", "🤗"),
+          {
+            kind: "tool_group",
+            id: "g1",
+            summary: "",
+            state: "done",
+            tools: [
+              {
+                id: "r1",
+                name: "react_to_message",
+                streamingArgs: false,
+                input: { emoji: "🤗" },
+                state: "done",
+                result: { id: "r1", content: JSON.stringify({ emoji: "🤗" }) },
+              },
+            ],
+          },
+          text("answer", "You have got this. 🤗"),
+        ],
+      },
+    ];
+    rerender(<BotMessageList chatItems={completed} />);
+    expect(bubbles()).toEqual(["You have got this. 🤗"]);
+    expect(screen.getByRole("img")).toBeTruthy();
+  });
+
   it("splits a turn into a bubble either side of the work", () => {
     const items: ChatRenderItem[] = [
       { kind: "user", id: "u1", text: "what's in this folder?" },
