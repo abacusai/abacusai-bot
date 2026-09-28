@@ -33,7 +33,7 @@ const browserBusy = { running: false };
 
 const BUSY_MESSAGE =
   "A browser run is already in progress and this session has one browser. Wait for its result, " +
-  "then call browser_task again for this task — one run at a time.";
+  "then call browser_task again for this task, one run at a time.";
 
 interface PiToolDefinitionLike {
   name: string;
@@ -117,12 +117,12 @@ export function buildBrowserTaskTool(
       "Do something on a real website that needs a real browser.",
       "",
       "NOT the way to read the web. `web_search` finds pages and `web_fetch` reads one, and",
-      "between them they answer most questions about anything public — documentation, an",
+      "between them they answer most questions about anything public: documentation, an",
       'article, a repository, a reference page, "what is the current X". Both return text in',
       "seconds. A browser run takes minutes, holds a lock no other run can pass, and arrives at",
       "the same answer. Look something up that way first; come here when that is not enough.",
       "",
-      "Hands the whole job to a sub-agent that has the browser — it navigates, fills forms,",
+      "Hands the whole job to a sub-agent that has the browser: it navigates, fills forms,",
       "clicks through, waits for results, and reports what it found. You get its conclusion,",
       "not the twenty snapshots it took to get there.",
       "",
@@ -139,15 +139,15 @@ export function buildBrowserTaskTool(
       "need to see rendered.",
       "",
       "If a fetch returned a login wall, a consent screen, an empty shell or a page that clearly",
-      "rendered nothing, that is the signal to come here — not a reason to give up.",
+      "rendered nothing, that is the signal to come here, not a reason to give up.",
       "",
       "Describe the task the way you would to a person who cannot see this conversation: what",
       "to do, on which site, and what to report back. Name the specifics you need in",
-      'report_fields (e.g. ["price", "departure time", "airline"]) — a report that skips',
+      'report_fields (e.g. ["price", "departure time", "airline"]); a report that skips',
       "one is sent back for it.",
       "",
       "This session has one browser, so its tasks run one at a time: a second call while one",
-      "is running is refused, not queued — wait for the result and call again. When you want",
+      "is running is refused, not queued. Wait for the result and call again. When you want",
       "five lookups on one site, ask for all five in a single task and have it report a row",
       "for each.",
       "",
@@ -155,7 +155,7 @@ export function buildBrowserTaskTool(
       "book anything, enter card or ID details, or fill a CAPTCHA. When it stops for that, its",
       'report ends with "NEEDS USER:" and what they must do. Tell the user to open the Browser',
       "pane in this chat and do that step; when they say it is done, call this tool again with",
-      "continue_from_last: true and their message as the task — the same sub-agent carries on",
+      "continue_from_last: true and their message as the task; the same sub-agent carries on",
       "from the same page with everything it already found.",
     ].join("\n"),
     parameters: Type.Object({
@@ -287,9 +287,9 @@ export function buildBrowserTaskTool(
             "do the step above, and reply here. Then call browser_task with continue_from_last: true and " +
             "their reply as the task; the same sub-agent continues with everything it has found.)"
           : result.stoppedBy === "turn-limit"
-            ? "\n\n(The browser sub-agent hit its limit — this is what it had, and may be incomplete.)"
+            ? "\n\n(The browser sub-agent hit its limit; this is what it had, and may be incomplete.)"
             : result.stoppedBy === "timeout"
-              ? "\n\n(The browser sub-agent ran out of time — this is what it had, and may be incomplete.)"
+              ? "\n\n(The browser sub-agent ran out of time; this is what it had, and may be incomplete.)"
               : "";
 
       return {

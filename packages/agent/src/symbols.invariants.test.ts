@@ -4,7 +4,7 @@
  *
  * The unit tests pin behaviour against source strings a person chose. That
  * catches what was anticipated. This runs the indexer over this repository's own
- * source — several thousand real files, including the awkward ones — and asserts
+ * source (several thousand real files, including the awkward ones) and asserts
  * the invariants a caller relies on. It is the difference between "the cases I
  * imagined pass" and "nothing in a real tree makes it lie or throw".
  *
@@ -96,7 +96,7 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
       for (const symbol of symbols) {
         if (symbol.line < 1 || symbol.line > lines) {
           failures.push(
-            `${path.relative(REPO_ROOT, file)}:${symbol.line} — file has ${lines} lines`
+            `${path.relative(REPO_ROOT, file)}:${symbol.line}: file has ${lines} lines`
           );
         }
       }
@@ -113,8 +113,8 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
       for (const symbol of symbols) {
         if (symbol.name === "" || symbol.name === "default") continue;
 
-        // A CSS selector list legitimately spans lines — `*,\n*::before,\n*::after {`
-        // starts on the line holding `*,` — so the first component is what has
+        // A CSS selector list legitimately spans lines: `*,\n*::before,\n*::after {`
+        // starts on the line holding `*,`, so the first component is what has
         // to be there, not the joined text.
         const head = symbol.name
           .split(",")[0]!
@@ -125,7 +125,7 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
         // the source, so anything else means the position is invented.
         if (head !== "" && !lines[symbol.line - 1]?.includes(head)) {
           failures.push(
-            `${path.relative(REPO_ROOT, file)}:${symbol.line} — "${symbol.name}" not on that line`
+            `${path.relative(REPO_ROOT, file)}:${symbol.line}: "${symbol.name}" not on that line`
           );
         }
       }
@@ -144,7 +144,7 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
           symbol.signature.includes("\r")
         ) {
           failures.push(
-            `${path.relative(REPO_ROOT, file)}:${symbol.line} — multi-line signature`
+            `${path.relative(REPO_ROOT, file)}:${symbol.line}: multi-line signature`
           );
         }
       }
@@ -160,12 +160,12 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
       for (const symbol of symbols) {
         if (symbol.signature.trim() === "") {
           failures.push(
-            `${path.relative(REPO_ROOT, file)}:${symbol.line} — empty signature`
+            `${path.relative(REPO_ROOT, file)}:${symbol.line}: empty signature`
           );
         }
         if (symbol.signature.length > 200) {
           failures.push(
-            `${path.relative(REPO_ROOT, file)}:${symbol.line} — ${symbol.signature.length} chars`
+            `${path.relative(REPO_ROOT, file)}:${symbol.line}: ${symbol.signature.length} chars`
           );
         }
       }
@@ -181,7 +181,7 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
       for (let index = 1; index < symbols.length; index++) {
         if (symbols[index]!.line < symbols[index - 1]!.line) {
           failures.push(
-            `${path.relative(REPO_ROOT, file)} — line ${symbols[index]!.line} after ${symbols[index - 1]!.line}`
+            `${path.relative(REPO_ROOT, file)}: line ${symbols[index]!.line} after ${symbols[index - 1]!.line}`
           );
         }
       }
@@ -216,7 +216,7 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
       for (const symbol of symbols) {
         if (symbol.container.some((name) => name.trim() === "")) {
           failures.push(
-            `${path.relative(REPO_ROOT, file)}:${symbol.line} — empty container name`
+            `${path.relative(REPO_ROOT, file)}:${symbol.line}: empty container name`
           );
         }
       }
@@ -259,7 +259,7 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
 
         if (!covered) {
           failures.push(
-            `${path.relative(REPO_ROOT, file)}:${line} — ${statement.text().split("\n")[0]!.slice(0, 60)}`
+            `${path.relative(REPO_ROOT, file)}:${line}: ${statement.text().split("\n")[0]!.slice(0, 60)}`
           );
         }
       }

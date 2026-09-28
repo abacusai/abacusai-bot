@@ -1,5 +1,5 @@
 /**
- * `serve` — putting a page the agent wrote on a URL. The desktop also serves
+ * `serve`: putting a page the agent wrote on a URL. The desktop also serves
  * this over MCP; registering it here means an agent spawned without that server
  * can still open a page, since `bash` runs a command to completion and kills a
  * dev server the moment it reports ready. Name, actions, schema and output
@@ -43,19 +43,19 @@ export function buildServeTool(
     label: SERVE_TOOL_NAME,
     description: [
       "Serve a directory over http and get back a URL, so a web page you wrote can actually",
-      "be opened. Static files only — html, css, js, images.",
+      "be opened. Static files only: html, css, js, images.",
       "",
       "Use it the moment you have written a page the user is meant to look at. `bash` cannot",
       "do this: it runs a command to completion, so a dev server started there is killed as",
       "soon as it reports being ready, and the URL answers nothing.",
       "",
-      "Then hand the URL to present_deliverable — that is what records it. A URL in prose is",
+      "Then hand the URL to present_deliverable: that is what records it. A URL in prose is",
       "not recorded.",
       "",
       "Actions:",
-      '  "start" — serve a directory (directory). Serving it again returns the same URL.',
-      '  "stop"  — stop serving one (directory).',
-      '  "list"  — what is being served right now.',
+      '  "start": serve a directory (directory). Serving it again returns the same URL.',
+      '  "stop":  stop serving one (directory).',
+      '  "list":  what is being served right now.',
     ].join("\n"),
     parameters: {
       type: "object",

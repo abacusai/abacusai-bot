@@ -2,7 +2,7 @@
  * What the component tools report when the user presses Stop.
  *
  * Each of these keys "completed" off a file existing, and a stopped run can
- * easily have written one — the deck is printed several turns before the
+ * easily have written one: the deck is printed several turns before the
  * sub-agent is finished with it. Reporting that as a success puts a green
  * checkmark on the card and tells the model to hand the fragment over as the
  * finished deliverable.

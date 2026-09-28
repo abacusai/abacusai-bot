@@ -8,8 +8,8 @@
  * to be non-standard), and Gemini 3 hands back a thought signature with every
  * tool call that it demands back on the next request, which the OpenAI wire
  * format has nowhere to put. Both faults are silent at compile time and total
- * at runtime — the first broke every turn, the second every turn with a tool
- * call — so the transport is pinned here rather than left to review.
+ * at runtime: the first broke every turn, the second every turn with a tool
+ * call, so the transport is pinned here rather than left to review.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";

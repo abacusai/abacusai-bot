@@ -2,7 +2,7 @@
  * Recall across both front ends.
  *
  * The failures worth pinning here are the quiet ones. Search does not throw
- * when it reads the wrong store — it just answers "nothing", which is
+ * when it reads the wrong store: it just answers "nothing", which is
  * indistinguishable from a conversation that genuinely never happened. So the
  * two on-disk layouts are written here as literals rather than through the
  * app's own writers: a test that builds its fixtures with the code under test
@@ -220,7 +220,7 @@ describe("conversations that left only an agent log", () => {
 
   it("reads the session id from the log rather than from its filename", () => {
     // The filename carries a timestamp prefix, and ownership is decided on the
-    // id — taking it from the name would never match what the app recorded.
+    // id: taking it from the name would never match what the app recorded.
     writeSessionLog({ id: "log-1", said: ["a thing was said"] });
 
     expect(searchSessions("a thing")[0]?.sessionId).toBe("log-1");
@@ -321,7 +321,7 @@ describe("a conversation that is in both stores", () => {
 
 describe("the conversation asking the question", () => {
   it("is left out of its own results", () => {
-    // Every query matches the session it was typed into — the prompt is in the
+    // Every query matches the session it was typed into: the prompt is in the
     // log by the time the tool runs. Reporting it reads as "you have discussed
     // this before" pointing at the discussion in progress.
     writeSessionLog({
@@ -463,7 +463,7 @@ describe("when nothing on disk says when it happened", () => {
   it("ignores a timestamp that is not a date", () => {
     writeTranscript("s1", [botSays("findable")], "the day before yesterday");
 
-    // Not parseable, so the file answers instead — never NaN, which would make
+    // Not parseable, so the file answers instead. Never NaN, which would make
     // every comparison in the sort false and the order arbitrary.
     expect(Number.isNaN(searchSessions("findable")[0]?.updatedAt)).toBe(false);
     expect(searchSessions("findable")[0]?.updatedAt).toBeGreaterThan(
@@ -608,7 +608,7 @@ describe("excerpts of awkward text", () => {
   it("never cuts a character in half", () => {
     // The bounds are character offsets either side of the match, and an emoji is
     // two of them. An odd offset used to cut between the pair and leave an
-    // unpaired surrogate — a replacement glyph on screen, and not text worth
+    // unpaired surrogate: a replacement glyph on screen, and not text worth
     // handing to an encoder. The gap makes the boundary land mid-pair.
     const party = "🎉".repeat(60);
     const lone =
@@ -635,7 +635,7 @@ describe("excerpts of awkward text", () => {
   it("keeps the split character whole rather than dropping it, at either end", () => {
     // Moving off the pair can go either way; outward keeps the character, inward
     // eats one that was inside the window. The counts differ by exactly one, so
-    // they are what pins the direction — `toContain` cannot tell them apart.
+    // they are what pins the direction: `toContain` cannot tell them apart.
     const count = (excerpt: string): number =>
       [...excerpt.matchAll(/🎉/gu)].length;
     const party = "🎉".repeat(200);
@@ -656,7 +656,7 @@ describe("excerpts of awkward text", () => {
   });
 
   it("does not spend the budget saying the same line three times", () => {
-    // A conversation repeats itself — a line quoted back, a command run twice.
+    // A conversation repeats itself: a line quoted back, a command run twice.
     // Three copies of one line is not evidence of three things.
     writeTranscript("s1", [
       botSays("the same line"),

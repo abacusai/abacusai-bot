@@ -4,9 +4,9 @@ import { fakePi } from "@abacus-ai/test-support/fake-pi";
  * "let me list the contents of both directories", called `read` on a directory
  * three times, then guessed three filenames that did not exist and gave up.
  *
- * So the assertions are about what the model is told next — that a directory
+ * So the assertions are about what the model is told next: that a directory
  * needs `ls`, and that a missing file needs a listing rather than another
- * guess — and about the two things that must not change: the call still failed,
+ * guess, and about the two things that must not change: the call still failed,
  * and results that were fine are left alone.
  */
 import { describe, expect, it } from "vitest";

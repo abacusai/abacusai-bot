@@ -26,7 +26,7 @@
  * The palette is the only thing that changes: every rule below draws from these
  * variables, so a look is a palette swap and nothing else has to know.
  *
- * A dark document must also be printed full-bleed — see `.bleed` — because the
+ * A dark document must also be printed full-bleed (see `.bleed`) because the
  * page margins are painted by Chromium, not by this stylesheet, and no rule here
  * can reach them. A dark text column inside white margins is the failure this
  * pairing exists to prevent.

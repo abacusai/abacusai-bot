@@ -4,7 +4,7 @@
  * Its own entry point (`@abacus-ai/agent/posix-shell`) because two processes
  * need it and only one of them is the agent. The desktop's Electron main
  * offers the same shell in the terminal panel, and main may only import leaf
- * modules of this package — the index leaves the native-addon packages
+ * modules of this package; the index leaves the native-addon packages
  * external and they are not inside the app's asar (see
  * src/main/agent-import-surface.test.ts). Nothing here imports pi.
  *
@@ -14,7 +14,7 @@
  * applet.
  *
  * pi's own bash tool looks for Git Bash, then bash.exe on PATH, and otherwise
- * throws — so on a stock Windows install every command the model wrote failed
+ * throws, so on a stock Windows install every command the model wrote failed
  * with "No bash shell found", routines included. cmd.exe or PowerShell would
  * break the POSIX habits every model has; a bundled ash keeps pipes, `&&`,
  * redirects, heredocs and the coreutils working with nothing to install.

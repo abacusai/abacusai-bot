@@ -2,14 +2,14 @@
  * Every tool the agent registers, and what the gate decides about it.
  *
  * The gate keys on tool names, so a tool added without a thought for this file
- * is ungated by default — which is how `background` shipped able to run a shell
+ * is ungated by default, which is how `background` shipped able to run a shell
  * command in plan mode, a mode documented as "no file changes and no shell
  * commands". Nothing failed when that happened, because nothing was looking at
  * the whole roster at once.
  *
  * So this is the roster, as a table. A new tool has to be added here, and the
  * companion check in parity.e2e.test.ts fails if the agent offers one that is
- * not listed — which is what makes forgetting hard rather than silent.
+ * not listed, which is what makes forgetting hard rather than silent.
  */
 import { describe, expect, it } from "vitest";
 
@@ -145,7 +145,7 @@ const CASES: Case[] = [
 
   // Fetches a third-party SKILL.md and writes it where the agent reads its
   // instructions from. A write and an outbound fetch at once, and what lands is
-  // text this agent will then follow — so acceptEdits, which is about edits to
+  // text this agent will then follow, so acceptEdits, which is about edits to
   // the code in front of you, is not an answer to it.
   {
     name: "skill_add",
@@ -156,7 +156,7 @@ const CASES: Case[] = [
   },
 
   // Puts a directory on an http port. Not a disk mutation, and the same
-  // outbound-channel reasoning `web_fetch` already carries — more so, since the
+  // outbound-channel reasoning `web_fetch` already carries, and more so, since the
   // directory is the model's choice and an absolute path is accepted.
   {
     name: "serve",
@@ -193,7 +193,7 @@ const CASES: Case[] = [
     acceptEdits: "allow",
     plan: "allow",
     because:
-      "same footing as web_search — a scoped search, not a model-chosen URL",
+      "same footing as web_search: a scoped search, not a model-chosen URL",
   },
 
   // Reads inside the workspace never prompt.
@@ -362,7 +362,7 @@ describe("the gate, tool by tool", () => {
 
 describe("the same tools, reaching outside the workspace", () => {
   // The workspace is the boundary in both directions, and each of these takes
-  // its path under a different argument name — so the gate has to understand
+  // its path under a different argument name, so the gate has to understand
   // every spelling or the check silently passes.
   it.each([
     ["read", { path: "/etc/hosts" }],

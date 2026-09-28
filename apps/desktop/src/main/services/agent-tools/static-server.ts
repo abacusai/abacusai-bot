@@ -187,7 +187,7 @@ const startDirectory = async (root: string): Promise<ServedDirectory> => {
 
   const entries = await fs.readdir(root).catch(() => [] as string[]);
   if (entries.length === 0)
-    throw new Error(`${root} is empty — there is nothing to serve.`);
+    throw new Error(`${root} is empty. There is nothing to serve.`);
 
   const port = await freePort();
   const server = http.createServer((request, response) => {

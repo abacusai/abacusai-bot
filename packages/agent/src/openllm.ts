@@ -1,6 +1,6 @@
 /**
  * OpenLLM: one picker entry standing for "every model I can run for free right
- * now" — Abacus's cheap drivers, a Studio key's daily quota, OpenRouter's
+ * now": Abacus's cheap drivers, a Studio key's daily quota, OpenRouter's
  * `:free` tier. The sources fail independently, so pooled with automatic
  * fallback they keep the agent working. The id is virtual: never sent
  * to pi's fuzzy-matching resolver, the session swaps in a concrete free model.
@@ -57,7 +57,7 @@ export interface FailureScope {
   free?: boolean;
 }
 
-/** Out of paid-for capacity, as providers phrase it — not a mere rate limit. */
+/** Out of paid-for capacity, as providers phrase it: not a mere rate limit. */
 export function isOutOfCredits(raw: string): boolean {
   const status = raw.match(/^\s*(\d{3})\b/)?.[1];
   if (status === "402") return true;
@@ -121,7 +121,7 @@ export function accountWideFailure(
  * The pool's sources, in the order tried. Abacus first: paid for, tuned for
  * agent loops, and never free-tier rate-limited. Then a Studio key's Gemini
  * quota, then OpenRouter's `:free` models, and last the models the app serves
- * on this machine — never rate-limited, but slower than any of the above.
+ * on this machine: never rate-limited, but slower than any of the above.
  */
 const SOURCE_RANK: Record<string, number> = {
   abacus: 0,
@@ -136,7 +136,7 @@ const LOCAL_PROVIDER = "local";
 /**
  * Abacus's CHAT router, never pooled: above 5000 tokens of context it
  * short-circuits to a Flash model, which an agent passes on its system prompt
- * alone — see CHAT_ROUTER_ID in providers.ts.
+ * alone. See CHAT_ROUTER_ID in providers.ts.
  */
 const ABACUS_CHAT_ROUTER = "route-llm";
 
@@ -284,7 +284,7 @@ export class OpenLlmRotation {
 
   /**
    * Forget every cooldown. Called when the account's situation changed under
-   * us — a key added, credits topped up, a plan upgraded — where the reason a
+   * us (a key added, credits topped up, a plan upgraded) where the reason a
    * model or a whole provider was sidelined may no longer hold.
    */
   clearCooldowns(): void {
@@ -298,7 +298,7 @@ export class OpenLlmRotation {
 
   /**
    * Whether every candidate is in a class the account refused: the pool is
-   * not busy but shut, and waiting will not open it — only a new source will.
+   * not busy but shut, and waiting will not open it: only a new source will.
    */
   poolShut(candidates: ModelChoice[]): boolean {
     const now = this.now();

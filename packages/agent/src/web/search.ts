@@ -328,7 +328,7 @@ export function parseGroundingChunks(
 
 const noResults =
   "The provider returned no search results for that query. Nothing was found, " +
-  "or the search did not run — either way there are no sources to cite. " +
+  "or the search did not run; either way there are no sources to cite. " +
   "Try a different query; do not cite URLs from memory.";
 
 const providerFailed = (error: unknown): WebSearchError =>
@@ -655,8 +655,8 @@ export async function search(
     throw new WebSearchError(
       "NO_PROVIDER",
       "Web search needs an API key. It reuses whichever one the app already uses " +
-        "for models — an Abacus subscription, Claude, DeepSeek, OpenAI, Gemini or " +
-        "OpenRouter all work — so adding one in Settings starts search too; there " +
+        "for models: an Abacus subscription, Claude, DeepSeek, OpenAI, Gemini or " +
+        "OpenRouter all work, so adding one in Settings starts search too; there " +
         "is no separate search signup."
     );
   }
@@ -690,7 +690,7 @@ export async function search(
         throw new WebSearchError(
           "NO_RESULTS",
           `The search returned nothing from ${sites.join(" or ")}. Say so rather than ` +
-            "answering from memory — results from elsewhere were discarded, not hidden."
+            "answering from memory: results from elsewhere were discarded, not hidden."
         );
       }
 

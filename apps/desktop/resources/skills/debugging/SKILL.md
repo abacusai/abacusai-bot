@@ -1,6 +1,6 @@
 ---
 name: Debugging
-description: Track down a bug methodically instead of guessing — reproducing it, bisecting the cause, and confirming the fix. Use when something is broken, intermittent, or behaving differently than expected, especially after a few obvious fixes have failed.
+description: Track down a bug methodically instead of guessing: reproducing it, bisecting the cause, and confirming the fix. Use when something is broken, intermittent, or behaving differently than expected, especially after a few obvious fixes have failed.
 ---
 
 # Debugging
@@ -15,7 +15,7 @@ un-reasoned about later.
 know you fixed it. An intermittent bug that "seems fine now" is a bug you have
 not fixed. Find the smallest input that triggers it.
 
-**2. Read the actual error.** All of it — the message, the type, and the deepest
+**2. Read the actual error.** All of it: the message, the type, and the deepest
 frame in *your* code, not the top frame in a library. Stack traces are read
 bottom-up for cause and top-down for context.
 
@@ -26,9 +26,9 @@ Do not reason about what it should be.
 
 **4. Bisect.** Halve the search space each step, in whichever dimension is
 cheapest:
-   - *time* — `git bisect`, or diff against the last known-good commit
-   - *code path* — does it fail with the middle layer stubbed out?
-   - *input* — does half the input still trigger it?
+   - *time*: `git bisect`, or diff against the last known-good commit
+   - *code path*: does it fail with the middle layer stubbed out?
+   - *input*: does half the input still trigger it?
 
 **5. Fix the cause, not the symptom.** A `try/except` around the error, a
 null-check on the crash line, or a retry loop each make the symptom disappear
@@ -44,12 +44,12 @@ break the neighbours.
   timing-related, concurrent, or inside a hot loop.
 - **Rubber-ducking works** because stating the assumption out loud is what
   exposes it as an assumption.
-- **When it works in one environment and not another**, diff the environments —
+- **When it works in one environment and not another**, diff the environments:
   versions, env vars, working directory, permissions, clock, locale.
 - **When it broke "for no reason"**, something changed. A dependency resolved to
   a new version, a cache expired, a certificate rolled, data grew past a limit.
 - **Intermittent almost always means** concurrency, ordering, timing, uninitialised
-  memory, network, or a clock. That list is short — walk it.
+  memory, network, or a clock. That list is short: walk it.
 
 ## Say what you found
 

@@ -147,7 +147,7 @@ function workspace(): string {
 
 /**
  * Drive the parent to `document`, then drive the document sub-agent to the
- * first tool that needs the host — which is where a real render request comes
+ * first tool that needs the host, which is where a real render request comes
  * from. Both agents share this provider, so they are told apart by their tools.
  */
 function driveDocumentTask(): (call: { tools: string[] }) => Reply {
@@ -653,7 +653,7 @@ describe("a message sent mid-turn", () => {
   // The report: Stop, send "Sort them by time", nothing happens; send a
   // follow-up, and "Sort them by time" runs again under a second bubble.
   // The desktop reports idle the instant Stop is pressed, while the host is
-  // still aborting — a message sent in that window fell into the queue and
+  // still aborting: a message sent in that window fell into the queue and
   // sat there until the *next* turn ended.
   it("runs a message sent while Stop is landing, once, as the next turn", async () => {
     const host = start(workspace(), ["--permission-mode", "YOLO"]);

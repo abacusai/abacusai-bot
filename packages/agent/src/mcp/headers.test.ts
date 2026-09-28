@@ -2,7 +2,7 @@
  * Which header placeholders expand, and where the result may be sent.
  *
  * The expansion exists for one entry (the Abacus connector gateway), but every
- * server entry goes through it — including entries imported from another
+ * server entry goes through it, including entries imported from another
  * tool's config or typed into mcp-code.json by hand.
  */
 import { describe, expect, it } from "vitest";

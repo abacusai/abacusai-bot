@@ -1,7 +1,7 @@
 /**
  * `AbacusBotSession`, driven directly against a loopback model.
  *
- * This class is the whole agent — both front ends are thin shells around it —
+ * This class is the whole agent (both front ends are thin shells around it),
  * and it was the least-covered file in the package. The e2e suites reach it
  * through a subprocess, which is right for the front ends and clumsy for the
  * session's own behaviour: what a stop does to a pending approval, what a reset
@@ -168,7 +168,7 @@ afterAll(async () => {
 /**
  * Wait until the provider has gone a whole interval without a new request.
  *
- * `dispose` returns before the requests a session already has in flight do —
+ * `dispose` returns before the requests a session already has in flight do:
  * an aborted turn in particular can still have one on the wire. Clearing the
  * call log while one is outstanding does not drop it: it lands in the *next*
  * test, where `firstCall` then describes the disposed session rather than the
@@ -198,7 +198,7 @@ afterEach(async () => {
   await settled();
   provider.calls.length = 0;
   provider.script(() => ({ say: "ok" }));
-  // The router's cooldowns outlive the session that learned them — that is the
+  // The router's cooldowns outlive the session that learned them: that is the
   // point of them (openllm-cooldowns.ts), and they are keyed on the home
   // directory every test in this file shares. So one test rate-limiting
   // `openrouter/big:free` moved the *next* test's pool order under it, and the suite
@@ -236,7 +236,7 @@ describe("starting", () => {
     const harness = session();
 
     // A model nobody has heard of would otherwise start a session that dies on
-    // the first token, so it falls back to one that runs — but never silently.
+    // the first token, so it falls back to one that runs, but never silently.
     // A turn answered by a model the user did not choose, with nothing said,
     // reads as their choice having been ignored. A warning, not an error: the
     // session works, it is just not the model that was asked for.
@@ -280,7 +280,7 @@ describe("a model call that goes silent", () => {
     expect(harness.text).toContain("finished after all");
     expect(harness.agent("error")).toHaveLength(0);
     expect(log.lines.join("")).toContain(
-      "fake/fake-1 stopped answering after 0.7s — asking it again."
+      "fake/fake-1 stopped answering after 0.7s. Asking it again."
     );
     expect(chatNotices(harness).join("\n")).not.toMatch(/asking it again/);
     // Two calls: the one that stalled and the one that answered.
@@ -341,7 +341,7 @@ describe("a model call that goes silent", () => {
 
   it("leaves a running tool alone when a sibling call has already returned", async () => {
     // Two calls in one message: the quick one ends, the slow one (a browser
-    // sub-agent, in practice) keeps going. The model has not gone quiet — it
+    // sub-agent, in practice) keeps going. The model has not gone quiet: it
     // is not being asked anything until the slow one ends too.
     const harness = session({ mode: "yolo" });
     const log = captureLog();
@@ -504,7 +504,7 @@ describe("approvals", () => {
   /**
    * The whole chain, not just its first word. Almost every command the agent
    * writes is `cd somewhere && do something`, and remembering only `cd` left
-   * the half that does the work asking again on the very next call — so
+   * the half that does the work asking again on the very next call, so
    * "always" looked like a button that did nothing.
    */
   it("remembers every part of a chain it was told to always allow", async () => {
@@ -683,8 +683,8 @@ describe("changing the model", () => {
   it("keeps one unusable custom provider from hiding every other one", async () => {
     // pi validates a provider as it is registered, and an entry with no
     // `baseUrl` throws. The registration loop used to let that out, so every
-    // provider after it — the custom entry the desktop had just written, for
-    // one — was never registered, and the pick that needed it could not
+    // provider after it (the custom entry the desktop had just written, for
+    // one) was never registered, and the pick that needed it could not
     // resolve.
     const harness = session();
 
@@ -793,7 +793,7 @@ describe("resetting the conversation", () => {
     await harness.until(() => provider.calls.length > 0);
 
     // Aborting alone leaves pi's transcript intact, so every old message would
-    // still be sent — and billed — with the next prompt.
+    // still be sent, and billed, with the next prompt.
     const sent = JSON.stringify(provider.firstCall?.messages ?? []);
 
     expect(sent).not.toContain("remember the number 41");
@@ -883,7 +883,7 @@ describe("without a host attached", () => {
  * ending it, and running out of pool surfaces the error instead of spinning.
  *
  * The pool here is an "openrouter" custom provider pointing at the loopback
- * fake, its models named `:free` so they count as the free tier — a custom
+ * fake, its models named `:free` so they count as the free tier: a custom
  * provider is the one kind a test can conjure without the network. pi's own retry loop is disabled for these:
  * it would otherwise re-send the same failing call with exponential backoff
  * before the rotation gets its turn, which tests the backoff and not the
@@ -945,7 +945,7 @@ describe("OpenLLM", () => {
 
     // Starting a session is not routing a turn. The desktop starts one
     // whenever an old chat is reopened, so a line here landed at the end of a
-    // conversation the user had only just opened — under an answer from last
+    // conversation the user had only just opened, under an answer from last
     // week, with nothing sent.
     expect(
       harness
@@ -1000,7 +1000,7 @@ describe("OpenLLM", () => {
 
   it("routes every turn, not just the first one in a session", async () => {
     // Reopening a chat and sending a message is a turn like any other, and it
-    // is routed like any other — the line the startup notice used to write is
+    // is routed like any other: the line the startup notice used to write is
     // owed to the message, not to the session being opened.
     const harness = session({ mode: "yolo" });
 
@@ -1011,7 +1011,7 @@ describe("OpenLLM", () => {
     await harness.until(() => harness.agent("turn_complete").length > 1);
 
     // Both turns ran and were routed; neither narrated it. The rotation state
-    // is what this is really about — it must not collapse two turns into one
+    // is what this is really about: it must not collapse two turns into one
     // episode just because nothing is drawn any more.
     expect(harness.agent("turn_complete").length).toBe(2);
     expect(
@@ -1046,7 +1046,7 @@ describe("OpenLLM", () => {
     expect(harness.agent("error")).toHaveLength(0);
     // The rotation is logged, not shown: the chat carries the answer.
     expect(log.lines.join("")).toMatch(
-      /failed \(no reply in 1s\) — routing to openrouter\/small:free/
+      /failed \(no reply in 1s\), routing to openrouter\/small:free/
     );
     expect(chatNotices(harness).join("\n")).not.toMatch(/routing to/);
     // Still the router in the picker: which model answered is its business.
@@ -1094,7 +1094,7 @@ describe("OpenLLM", () => {
       harness.agent("notification").filter((e) => e.notificationKey != null)
     ).toEqual([]);
     expect(log.lines.join("")).toContain(
-      "openrouter/big:free failed (429) — routing to openrouter/small:free…"
+      "openrouter/big:free failed (429), routing to openrouter/small:free…"
     );
     log.restore();
   });
@@ -1120,7 +1120,7 @@ describe("OpenLLM", () => {
     const failure = log.lines.find((line) => line.includes("failed"));
 
     expect(failure).toContain(
-      "openrouter/big:free failed (429) — routing to openrouter/small:free…"
+      "openrouter/big:free failed (429), routing to openrouter/small:free…"
     );
     expect(failure).not.toMatch(/openrouter\.ai|retry shortly/);
     log.restore();
@@ -1198,7 +1198,7 @@ describe("OpenLLM", () => {
    *
    * The tests above disable it to isolate the rotation; these two pin how the
    * two loops share a failure. On OpenLLM, one same-model retry is the whole
-   * budget — the pool's answer to a failing provider is a different model,
+   * budget: the pool's answer to a failing provider is a different model,
    * and the second and third retries were half a minute of backoff against a
    * model that stays rate-limited for the next five. On a concrete model the
    * full configured budget stands: with no fallback, retries are the only
@@ -1286,7 +1286,7 @@ describe("a provider failure the turn recovered from", () => {
     const retries = log.lines.filter((line) => line.includes("retrying"));
 
     expect(retries.at(0)).toContain(
-      "The model provider is rate-limited — retrying (attempt 2)."
+      "The model provider is rate-limited; retrying (attempt 2)."
     );
     expect(retries.join("\n")).not.toMatch(
       /openrouter\.ai|429|add your own key/

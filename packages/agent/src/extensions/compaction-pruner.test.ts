@@ -1,7 +1,7 @@
 import { fakePi } from "@abacus-ai/test-support/fake-pi";
 /**
  * The pruner rewrites what the summarizer reads. The dangerous mistake would
- * be rewriting what the SESSION holds — those message objects are the
+ * be rewriting what the SESSION holds: those message objects are the
  * transcript, and editing one in place would corrupt history to save tokens.
  */
 import { describe, expect, it } from "vitest";
@@ -50,7 +50,7 @@ describe("what gets pruned", () => {
 });
 
 describe("what survives", () => {
-  it("leaves a short result alone — often it is the whole answer", async () => {
+  it("leaves a short result alone: often it is the whole answer", async () => {
     const short = message({
       toolName: "run_tests",
       content: [{ type: "text", text: "3 passed, 0 failed" }],
@@ -71,7 +71,7 @@ describe("what survives", () => {
     ])) as Array<{ content: Array<{ text: string }> }>;
 
     expect(pruned!.content[0]!.text.startsWith("boom")).toBe(true);
-    // Still trimmed, though — an error is worth its tokens, not unlimited ones.
+    // Still trimmed, though: an error is worth its tokens, not unlimited ones.
     expect(pruned!.content[0]!.text.length).toBeLessThan(2_000);
   });
 
@@ -90,7 +90,7 @@ describe("what survives", () => {
     expect(b).toBe(assistant);
   });
 
-  it("leaves non-text blocks alone — prose cannot stand in for a screenshot", async () => {
+  it("leaves non-text blocks alone: prose cannot stand in for a screenshot", async () => {
     const withImage = message({
       content: [{ type: "image", source: { data: "x".repeat(9_000) } }],
     });
@@ -101,7 +101,7 @@ describe("what survives", () => {
 });
 
 describe("the session transcript", () => {
-  it("is never mutated — pruning builds new objects", async () => {
+  it("is never mutated: pruning builds new objects", async () => {
     const block = { type: "text", text: `${HUGE} tail` };
     const original = message({ content: [block] });
     const originalText = block.text;
@@ -123,7 +123,7 @@ describe("the session transcript", () => {
 
     await pi.fire("session_before_compact", { preparation });
 
-    // The same array object, untouched — no needless churn on the way to a
+    // The same array object, untouched: no needless churn on the way to a
     // summarizer that would have been fine either way.
     expect(preparation.messagesToSummarize).toBe(messages);
   });

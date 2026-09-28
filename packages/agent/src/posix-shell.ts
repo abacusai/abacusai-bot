@@ -46,8 +46,8 @@ export interface ShellOperations {
 
 /**
  * pi's local bash operations pointed at the bundled `sh`, with every child's
- * environment set here — including a background job's, which arrives without
- * one — so the applet directory never has to be on this process's own PATH.
+ * environment set here (including a background job's, which arrives without
+ * one), so the applet directory never has to be on this process's own PATH.
  * Null where there is no bundled shell, so the caller keeps pi's own path.
  */
 export function posixShellOperations(
@@ -70,7 +70,7 @@ const WINDOWS_SHELL_PROMPT = [
   "`bash` runs in a POSIX shell (busybox ash) on Windows: pipes, `&&`, redirects, `$(...)`,",
   "heredocs and grep/sed/awk/find/head/tail/wc/sort all work. Ignore any advice to use cmd.exe",
   "or PowerShell syntax in it.",
-  "- Paths are native Windows paths, not WSL — there is no /mnt/c. Write them quoted, with",
+  "- Paths are native Windows paths, not WSL: there is no /mnt/c. Write them quoted, with",
   "  forward slashes and the drive letter: 'C:/Users/Name With Spaces/project'. An unquoted",
   "  backslash is a shell escape.",
   "- ash is not GNU bash: no arrays, no `**` globstar, and busybox's coreutils lack some GNU",

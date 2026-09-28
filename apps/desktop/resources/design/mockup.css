@@ -7,7 +7,7 @@
  * follows. That is what stops a mockup from looking like six unrelated
  * screenshots.
  *
- * No network. No webfonts, no icon package, no CDN — a mockup that only looks
+ * No network. No webfonts, no icon package, no CDN. A mockup that only looks
  * right while online is not a deliverable, and these get exported to PNG.
  * Icons are inline SVG in the catalog for the same reason.
  */
@@ -153,7 +153,7 @@ body {
 /* ── Wireframe fidelity ─────────────────────────────────────────────────────
    One class on the frame turns a high-fidelity screen into a wireframe:
    colour drains, images become hatched blocks, type goes greyscale. Layout
-   and hierarchy — the things a wireframe is actually for — are untouched. */
+   and hierarchy (the things a wireframe is actually for) are untouched. */
 
 .frame.wire {
   --accent: #6b7280;

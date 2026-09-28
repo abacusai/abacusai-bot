@@ -3,7 +3,7 @@
  * be steered by whatever it just read.
  *
  * The tests run against real servers on 127.0.0.1 rather than a mocked fetch,
- * because most of what is being asserted is behaviour of the network stack —
+ * because most of what is being asserted is behaviour of the network stack:
  * how a URL normalizes, what a redirect does, whether a declared
  * content-length is believed. A mock would let us assert our own assumptions
  * back at ourselves.
@@ -59,7 +59,7 @@ beforeAll(async () => {
       response.end();
     } else if (url === "/fat-redirect") {
       // A 302 whose body is far larger than the stream buffer. Real sites do
-      // this constantly — a rendered "you are being redirected" page, or a
+      // this constantly: a rendered "you are being redirected" page, or a
       // full 404 page with a Location header on it.
       response.writeHead(302, {
         location: "/plain",
@@ -234,7 +234,7 @@ describe("redirects", () => {
   it("follows one carrying a body larger than the stream buffer, promptly", async () => {
     // The 3xx body has to be dropped before the next hop. Left unread it keeps
     // the transfer suspended, and the graceful close of the previous hop's
-    // dispatcher waits on it — so the whole fetch used to sit there until the
+    // dispatcher waits on it, so the whole fetch used to sit there until the
     // timeout fired and report "Timed out", however fast the server was.
     const started = Date.now();
     const result = await fetchUrl(`${origin}/fat-redirect`, {
@@ -303,7 +303,7 @@ describe("response bodies", () => {
 describe("an already-aborted signal", () => {
   // A signal that is aborted before the call never fires an `abort` event, so
   // registering a listener would miss it and the request would run the full
-  // timeout — the case where the user has already pressed Stop. It must give
+  // timeout: the case where the user has already pressed Stop. It must give
   // up at once, without dispatching to the server.
   it("returns without dispatching to the server", async () => {
     const controller = new AbortController();
@@ -340,14 +340,14 @@ describe("what stays reachable", () => {
     expect(result.text).toContain("plain body");
   });
 
-  it("allows an IPv4-mapped loopback — mapped is not the same as link-local", async () => {
+  it("allows an IPv4-mapped loopback: mapped is not the same as link-local", async () => {
     const port = (server.address() as { port: number }).port;
     const result = await fetchUrl(`http://[::ffff:127.0.0.1]:${port}/plain`);
     expect(result.status).toBe(200);
   });
 
   /**
-   * A NAME, not an address — which is the whole point of this one.
+   * A NAME, not an address. That is the whole point of this one.
    *
    * Every other case here dials an IP literal, and undici skips the pinned
    * `lookup` entirely for those. So a lookup that answered in the wrong shape
@@ -391,7 +391,7 @@ describe("the pinned lookup", () => {
 
   it("offers every vetted address, so one dead family is not the end of it", () => {
     // `localhost` resolves to both, and a server bound to one of them is the
-    // ordinary case — handing over only the first turns that into ECONNREFUSED.
+    // ordinary case: handing over only the first turns that into ECONNREFUSED.
     const { args } = call(["::1", "127.0.0.1"], { all: true });
     expect(args[0]).toEqual([
       { address: "::1", family: 6 },

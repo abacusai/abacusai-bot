@@ -197,7 +197,7 @@ describe("being told it finished", () => {
     const [message] = pi.messages;
 
     expect(String(message?.content)).toContain("build complete");
-    // Queued as a follow-up that starts a turn — filing it without this would
+    // Queued as a follow-up that starts a turn: filing it without this would
     // leave the result sitting unread until the user happened to type again.
     expect(message?.options).toEqual({
       deliverAs: "followUp",
@@ -217,7 +217,7 @@ describe("being told it finished", () => {
   });
 
   it("stays quiet about a job the agent killed on purpose", async () => {
-    // It already knows — it asked. Waking a turn to say so is noise the user
+    // It already knows: it asked. Waking a turn to say so is noise the user
     // pays for.
     const pi = withExtension();
     const { tool } = bashTool();
@@ -233,8 +233,8 @@ describe("being told it finished", () => {
 
 describe("surviving a stop", () => {
   /**
-   * The queue a follow-up sits in is cleared when a turn is stopped — on
-   * purpose, because one that survives Stop is a Stop button that halts the
+   * The queue a follow-up sits in is cleared when a turn is stopped (on
+   * purpose), because one that survives Stop is a Stop button that halts the
    * reply and lets the agent carry straight on. A build that finished at that
    * moment must not be swept up with it, so the news is held here until
    * something actually picks it up.
@@ -415,8 +415,8 @@ describe("fetch_background_output", () => {
   });
 
   it("does not swallow an unsent notice when an earlier one is read", async () => {
-    // The regression: notices used to be dropped by position — "the first n
-    // went out" — and reading one removes it from the middle, so the count
+    // The regression: notices used to be dropped by position ("the first n
+    // went out"), and reading one removes it from the middle, so the count
     // then discarded a notice that had never been sent. That job finished and
     // was never mentioned again.
     const pi = withExtension();
@@ -464,8 +464,8 @@ describe("fetch_background_output", () => {
 
 describe("output too big to hand over whole", () => {
   it("keeps the tail, and says the rest was dropped", async () => {
-    // The verdict is at the end — a failing build's error is its last lines,
-    // not its first — so the front is what goes.
+    // The verdict is at the end: a failing build's error is its last lines,
+    // not its first, so the front is what goes.
     const pi = withExtension();
     const { tool } = bashTool();
 

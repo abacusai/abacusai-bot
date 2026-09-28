@@ -18,7 +18,7 @@ const LEAD = 80;
 const TRAIL = 120;
 
 export interface SessionHit {
-  /** The session's own id — the desktop's for a transcript, pi's for a log. */
+  /** The session's own id: the desktop's for a transcript, pi's for a log. */
   sessionId: string;
   /** Where it came from, so a result can say so. */
   origin: "desktop" | "agent-log";

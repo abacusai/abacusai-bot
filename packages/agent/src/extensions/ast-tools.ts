@@ -332,8 +332,8 @@ export default function (pi: ExtensionAPI) {
     name: "code_map",
     label: "Code Map",
     description:
-      "Deterministic symbol index. Lists what a file or directory DEFINES — functions, classes, " +
-      "methods, interfaces, types, enums, exported constants, CSS rules — each with its line number " +
+      "Deterministic symbol index. Lists what a file or directory DEFINES: functions, classes, " +
+      "methods, interfaces, types, enums, exported constants, CSS rules, each with its line number " +
       "and full signature, nested under the class or namespace that holds it. " +
       "Use it to answer 'where is X defined' and 'what is in this module' without reading whole files: " +
       "one call over a directory replaces a dozen reads. " +
@@ -521,29 +521,29 @@ export default function (pi: ExtensionAPI) {
       if (capped) {
         notes.push(
           terms.length === 0
-            ? `output capped after ${filesRead} of ${scan.files.length} file(s) — narrow with path, or pass a query`
-            : `output capped: ${omittedSymbols} more match(es) in ${omittedFiles} unshown file(s) — narrow with path or query`
+            ? `output capped after ${filesRead} of ${scan.files.length} file(s); narrow with path, or pass a query`
+            : `output capped: ${omittedSymbols} more match(es) in ${omittedFiles} unshown file(s); narrow with path or query`
         );
       }
       if (trimmedSymbols > 0) {
         notes.push(
-          `${trimmedSymbols} symbol(s) trimmed from files that are shown — index one of them directly for all of it`
+          `${trimmedSymbols} symbol(s) trimmed from files that are shown; index one of them directly for all of it`
         );
       }
       if (scan.stoppedEarly === "files") {
         notes.push(
-          `scan stopped at ${MAX_FILES} files (${scan.overflow}+ not visited) — index a subdirectory for the rest`
+          `scan stopped at ${MAX_FILES} files (${scan.overflow}+ not visited); index a subdirectory for the rest`
         );
       }
       if (scan.stoppedEarly === "depth")
         notes.push(`scan stopped at depth ${MAX_DEPTH}`);
       if (scan.stoppedEarly === "time" || ranOutOfTime) {
         notes.push(
-          `stopped at its ${CALL_BUDGET_MS / 1_000}s budget after ${filesRead} file(s) — index a subdirectory`
+          `stopped at its ${CALL_BUDGET_MS / 1_000}s budget after ${filesRead} file(s); index a subdirectory`
         );
       }
       if (scan.stoppedEarly === "aborted" || aborted)
-        notes.push("interrupted — results are partial");
+        notes.push("interrupted; results are partial");
       if (skippedContent > 0)
         notes.push(
           `${skippedContent} file(s) skipped as generated, minified or too large`
