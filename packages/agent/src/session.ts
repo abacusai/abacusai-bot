@@ -747,6 +747,7 @@ export class AbacusBotSession {
     // MCP servers first: pi takes the custom tool list up front.
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onStatusChange = () => this.emitMcpServers();
+    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
 
     const hostServices = this.options.hostServices !== false;
     const toolNames = new Set([
@@ -1116,12 +1117,14 @@ export class AbacusBotSession {
 
   /** Reconnect every server: the desktop's "refresh" action. */
   async refreshMcp(): Promise<void> {
+    this.mcp.retire?.();
     for (const client of this.mcp.clients) {
       client.close();
     }
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onStatusChange = () => this.emitMcpServers();
+    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
     this.registerNewMcpTools();
     this.emitMcpServers();
   }
@@ -1173,6 +1176,7 @@ export class AbacusBotSession {
   }
 
   dispose(): void {
+    this.mcp.retire?.();
     for (const client of this.mcp.clients) {
       client.close();
     }
