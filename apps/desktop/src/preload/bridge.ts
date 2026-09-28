@@ -17,6 +17,7 @@ import type {
   ReferralGmailContact,
   ReferralWhatsappContact,
   ReferralInviteOutcome,
+  AbacusAuthMode,
   AbacusAuthOutcome,
   AbacusSignOutResult,
   ConnectorOutcome,
@@ -471,12 +472,15 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ipcRenderer.invoke(
         IpcChannels.StartOpenRouterAuth
       ) as Promise<OpenRouterAuthOutcome>,
-    startAbacusAuth: () =>
+    startAbacusAuth: (mode?: AbacusAuthMode) =>
       ipcRenderer.invoke(
-        IpcChannels.StartAbacusAuth
+        IpcChannels.StartAbacusAuth,
+        mode
       ) as Promise<AbacusAuthOutcome>,
     cancelAbacusAuth: () =>
       ipcRenderer.invoke(IpcChannels.CancelAbacusAuth) as Promise<void>,
+    reopenAbacusAuth: () =>
+      ipcRenderer.invoke(IpcChannels.ReopenAbacusAuth) as Promise<void>,
     cancelOpenRouterAuth: () =>
       ipcRenderer.invoke(IpcChannels.CancelOpenRouterAuth) as Promise<void>,
     signOutAbacus: (options: { keepOtherApiKeys: boolean }) =>

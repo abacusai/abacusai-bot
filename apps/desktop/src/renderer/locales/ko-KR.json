@@ -1247,7 +1247,16 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "setupKeyDialogLink": "Open {{provider}}",
+    "waitingCta": "브라우저를 기다리는 중…",
+    "waitingBody": "브라우저에서 완료한 뒤 돌아오세요. 앱이 자동으로 이어갑니다.",
+    "waitingReopen": "페이지 다시 열기",
+    "connectHintSignUp": "브라우저가 열리고 무료 Abacus.AI 계정을 만듭니다.",
+    "connectHintSignIn": "브라우저가 열리고 Abacus.AI 계정으로 로그인합니다.",
+    "haveAccountLead": "이미 Abacus.AI 계정이 있으신가요?",
+    "haveAccountCta": "로그인",
+    "newAccountLead": "Abacus.AI가 처음이신가요?",
+    "newAccountCta": "무료 계정 만들기"
   },
   "openFile": {
     "failed": "해당 파일을 열지 못했습니다.",

@@ -72,6 +72,7 @@ vi.mock("../../stores/account-store", () => ({
 
 const startAbacusAuth = vi.fn(async () => ({ ok: true }) as const);
 const cancelAbacusAuth = vi.fn(async () => undefined);
+const reopenAbacusAuth = vi.fn(async () => undefined);
 const skipAccountOnboarding = vi.fn(async () => ({ onboarded: true }));
 const switchWorkspace = vi.fn(async () => undefined);
 const getAbacusAccount = vi.fn(
@@ -153,6 +154,7 @@ beforeEach(() => {
       getSettings,
       startAbacusAuth,
       cancelAbacusAuth,
+      reopenAbacusAuth,
       getAbacusAccount,
       listModels,
       switchWorkspace,
@@ -187,6 +189,51 @@ describe("the sign-in wall", () => {
     fireEvent.click(byId("onboarding-connect"));
 
     await waitFor(() => expect(missing("onboarding-error")).toBe(true));
+  });
+});
+
+describe("which form the browser opens on", () => {
+  it("leads a first run with sign-up", async () => {
+    mount();
+
+    fireEvent.click(byId("onboarding-connect"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signup")
+    );
+  });
+
+  it("lets an existing account sign in from a first run", async () => {
+    mount();
+
+    fireEvent.click(byId("onboarding-alternate-auth"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
+    );
+  });
+
+  it("leads a returning profile with sign-in", async () => {
+    onboarded = true;
+    mount();
+
+    fireEvent.click(byId("onboarding-connect"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
+    );
+  });
+
+  it("offers the browser page again while it waits", async () => {
+    startAbacusAuth.mockReturnValue(new Promise(() => {}));
+    mount();
+
+    fireEvent.click(byId("onboarding-connect"));
+    await waitFor(() => byId("onboarding-waiting"));
+    fireEvent.click(byId("onboarding-reopen-auth"));
+
+    expect(reopenAbacusAuth).toHaveBeenCalledTimes(1);
+    expect(missing("onboarding-alternate-auth")).toBe(true);
   });
 });
 

@@ -1247,7 +1247,16 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "setupKeyDialogLink": "Open {{provider}}",
+    "waitingCta": "Warte auf deinen Browser…",
+    "waitingBody": "Schließe den Vorgang im Browser ab und komm dann zurück. Die App übernimmt automatisch.",
+    "waitingReopen": "Seite erneut öffnen",
+    "connectHintSignUp": "Öffnet deinen Browser, um dein kostenloses Abacus.AI-Konto zu erstellen.",
+    "connectHintSignIn": "Öffnet deinen Browser, um dich mit deinem Abacus.AI-Konto anzumelden.",
+    "haveAccountLead": "Du hast schon ein Abacus.AI-Konto?",
+    "haveAccountCta": "Anmelden",
+    "newAccountLead": "Neu bei Abacus.AI?",
+    "newAccountCta": "Kostenloses Konto erstellen"
   },
   "openFile": {
     "failed": "Diese Datei konnte nicht geöffnet werden.",

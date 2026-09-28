@@ -1247,7 +1247,16 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "setupKeyDialogLink": "Open {{provider}}",
+    "waitingCta": "Menunggu browser Anda…",
+    "waitingBody": "Selesaikan di browser, lalu kembali. Aplikasi akan melanjutkan sendiri.",
+    "waitingReopen": "Buka halaman lagi",
+    "connectHintSignUp": "Membuka browser untuk membuat akun Abacus.AI gratis Anda.",
+    "connectHintSignIn": "Membuka browser untuk masuk dengan akun Abacus.AI Anda.",
+    "haveAccountLead": "Sudah punya akun Abacus.AI?",
+    "haveAccountCta": "Masuk",
+    "newAccountLead": "Baru di Abacus.AI?",
+    "newAccountCta": "Buat akun gratis"
   },
   "openFile": {
     "failed": "Tidak dapat membuka berkas itu.",

@@ -76,7 +76,7 @@ describe.each(FLOWS)("an unanswered $name sign-in", (flow) => {
 
     expect(result.ok).toBe(false);
     // The cause is in the browser, so the message has to point there.
-    expect(result.ok === false && result.error).toMatch(/press Connect again/i);
+    expect(result.ok === false && result.error).toMatch(/(try|Connect) again/i);
   }, 20_000);
 
   it("leaves nothing behind, so the next press is a clean attempt", async () => {

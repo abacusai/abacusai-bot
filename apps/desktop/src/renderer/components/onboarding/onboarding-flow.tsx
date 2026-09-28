@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import type { AbacusAuthMode } from "#shared/contracts";
 import { isPayingAbacusTier } from "#shared/models";
 
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
@@ -182,11 +183,11 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   };
 
   /** Sign in; the settle effect moves off the wall once the facts change. */
-  const connect = async (): Promise<void> => {
+  const connect = async (mode: AbacusAuthMode): Promise<void> => {
     setBusy(true);
     setError(null);
     try {
-      const result = await signInToAbacus();
+      const result = await signInToAbacus(mode);
       if (result.ok !== true) {
         // A cancelled sign-in is a decision, not an error.
         if (result.cancelled !== true) setError(result.error);
@@ -230,7 +231,11 @@ export const OnboardingFlow = (): React.ReactElement | null => {
           <SignInStep
             busy={busy}
             error={error}
-            onConnect={() => void connect()}
+            // A profile that has been through first-run is a returning
+            // account: sign-in is the likelier errand.
+            primaryMode={onboarded ? "signin" : "signup"}
+            onConnect={(mode) => void connect(mode)}
+            onReopen={() => void window.api.agent.reopenAbacusAuth()}
             onCancel={() => void window.api.agent.cancelAbacusAuth()}
             dots={dots}
           />

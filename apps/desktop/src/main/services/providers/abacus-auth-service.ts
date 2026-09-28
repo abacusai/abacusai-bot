@@ -4,6 +4,7 @@ import type { AddressInfo } from "net";
 
 import { app, shell } from "electron";
 
+import { bringToFront } from "../../bring-to-front";
 import { readSettings } from "../config/settings";
 import { reportFunnelStep } from "../debug-sync/funnel-beacon";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
@@ -25,7 +26,13 @@ const AUTH_TIMEOUT_MS = 20 * 60 * 1000;
 
 /** Says what to do next, because the usual cause is fixed in the browser. */
 const ABACUS_TIMEOUT =
-  "Timed out waiting for Abacus.AI sign-in. Sign in at abacus.ai, then press Connect again.";
+  "Timed out waiting for Abacus.AI sign-in. Finish signing in in your browser, then try again.";
+
+/**
+ * Which face the browser page shows first. Each links to the other, but the
+ * first one decides whether an existing account holder meets a sign-up form.
+ */
+export type AbacusAuthMode = "signup" | "signin";
 
 export type AbacusAuthResult =
   | { ok: true; key: string }
@@ -50,14 +57,25 @@ const codeChallengeFor = (verifier: string): string =>
   crypto.createHash("sha256").update(verifier).digest("base64url");
 
 /** One in-flight attempt at a time, same rationale as the OpenRouter service. */
-let inFlight: { close: () => void } | null = null;
+let inFlight: { close: () => void; url?: string } | null = null;
 
 export const cancelAbacusAuth = (): void => {
   inFlight?.close();
   inFlight = null;
 };
 
-export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
+/**
+ * Open the waiting attempt's page again, for a tab the user closed or lost.
+ * Same URL, same listener: a second attempt would orphan the first tab.
+ */
+export const reopenAbacusAuth = (): void => {
+  const url = inFlight?.url;
+  if (url != null) void shell.openExternal(url).catch(() => {});
+};
+
+export const startAbacusAuth = async (
+  mode: AbacusAuthMode = "signin"
+): Promise<AbacusAuthResult> => {
   cancelAbacusAuth();
 
   const verifier = crypto.randomBytes(32).toString("base64url");
@@ -122,6 +140,12 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
       }
       accepted = true;
       reportFunnelStep("browser_returned");
+      // The user is done in the browser; leaving them on a tab that says
+      // "go back to the app" makes them hunt for the window.
+      bringToFront();
+      // The browser is frontmost, and macOS will not hand a background app
+      // focus unless asked outright; the user just finished this hop.
+      if (process.platform === "darwin") app.focus({ steal: true });
 
       const code = url.searchParams.get("code");
       // Answer the browser before the exchange so the tab says "done" at once.
@@ -211,13 +235,14 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
       }, AUTH_TIMEOUT_MS);
 
       const authUrl = new URL(SIGNIN_PATH, abacusAppHost());
-      authUrl.searchParams.set("isSignUp", "1");
+      if (mode === "signup") authUrl.searchParams.set("isSignUp", "1");
       authUrl.searchParams.set("AbacusAIBot", "1");
       authUrl.searchParams.set("botChallenge", codeChallengeFor(verifier));
       authUrl.searchParams.set("botPort", String(port));
       authUrl.searchParams.set("botPath", callbackPath);
 
-      reportFunnelStep("signup_clicked");
+      if (inFlight?.close === close) inFlight.url = authUrl.toString();
+      reportFunnelStep("signup_clicked", mode);
       void shell.openExternal(authUrl.toString()).catch((error: unknown) => {
         finish(
           {
