@@ -43,7 +43,7 @@ export type BridgeSendResult = {
   ack: number;
 };
 
-/** How the bridge runs page scripts — the connector's `run()` and a raw eval. */
+/** How the bridge runs page scripts: the connector's `run()` and a raw eval. */
 export type BridgeHost = {
   run: <T>(script: string, args: Record<string, unknown>) => Promise<T | null>;
   raw: (code: string) => Promise<void>;
@@ -85,7 +85,7 @@ export const resolveJid = (
   if (prefix.length === 1) return { jid: prefix[0]!.jid };
   if (exact.length > 1 || loose.length > 1 || prefix.length > 1)
     return {
-      error: `More than one WhatsApp chat is called "${trimmed}" — say which one.`,
+      error: `More than one WhatsApp chat is called "${trimmed}". Say which one.`,
     };
   return { error: `No WhatsApp chat called "${trimmed}".` };
 };
@@ -148,7 +148,7 @@ export class WhatsAppBridge {
           {}
         );
         this.host.log(
-          `whatsapp-web: bridge did not attach — WhatsApp's modules were not found; using the page driver ${JSON.stringify(probe)}`
+          `whatsapp-web: bridge did not attach (WhatsApp's modules were not found); using the page driver ${JSON.stringify(probe)}`
         );
       }
       this.attached = false;
@@ -169,7 +169,7 @@ export class WhatsAppBridge {
     } catch {
       this.library = null;
       this.host.log(
-        `whatsapp-web: vendor/${LIBRARY} is not present — run \`pnpm vendor\`; using the page driver`
+        `whatsapp-web: vendor/${LIBRARY} is not present (run \`pnpm vendor\`); using the page driver`
       );
     }
     return this.library;
@@ -192,7 +192,7 @@ export class WhatsAppBridge {
     });
     if (rows == null)
       this.host.log(
-        "whatsapp-web: the chat list did not answer in time — WhatsApp is still syncing; it will be read again"
+        "whatsapp-web: the chat list did not answer in time (WhatsApp is still syncing); it will be read again"
       );
     return Array.isArray(rows) ? rows : [];
   }
@@ -208,7 +208,7 @@ export class WhatsAppBridge {
     }>(SEND_SCRIPT, { jid, text, ackWaitMs: ACK_WAIT_MS });
     if (sent == null)
       throw new Error(
-        "WhatsApp did not answer the send — the page may be reloading."
+        "WhatsApp did not answer the send. The page may be reloading."
       );
     if (sent.ok !== true || sent.id == null)
       throw new Error(
@@ -273,7 +273,7 @@ export class QueuedSendError extends Error {
     readonly ack: number
   ) {
     super(
-      "WhatsApp queued the message on this device but its server has not accepted it yet — " +
+      "WhatsApp queued the message on this device but its server has not accepted it yet: " +
         "the connection may be down. It was NOT resent."
     );
     this.name = "QueuedSendError";
@@ -325,7 +325,7 @@ const WAIT_READY_SCRIPT = `
         const senderName = contact
           ? (contact.pushname || contact.name || contact.formattedName || null)
           : null;
-        // Whether this is the user's own chat, from the chat itself — so a
+        // Whether this is the user's own chat, read from the chat itself, so a
         // fresh link whose chat list is still syncing can tell the user's
         // own words apart from ours without the list.
         let chatIsMe = null;

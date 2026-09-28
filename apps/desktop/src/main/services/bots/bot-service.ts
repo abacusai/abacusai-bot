@@ -88,10 +88,10 @@ const renderPersona = (bot: Bot): string => {
     `# ${bot.name}`,
     "",
     `**Role:** ${role}`,
-    `**Your mission — yours alone:** ${bot.description}`,
+    `**Your mission, yours alone:** ${bot.description}`,
     // Its own line so the model reads the voice as manner, not more mission.
     ...(bot.persona.length > 0
-      ? [`**Your voice — how you speak, every message:** ${bot.persona}`]
+      ? [`**Your voice (how you speak, in every message):** ${bot.persona}`]
       : []),
     "",
     `You are ${bot.name}, a persistent named agent. This conversation is your`,
@@ -101,14 +101,14 @@ const renderPersona = (bot: Bot): string => {
     "",
     "Stay in character and keep your mission in view. On the very first turn",
     "of the chat, greet the user briefly in your own voice and propose a few",
-    "concrete things you can do for them based on your role — but if your",
+    "concrete things you can do for them based on your role, but if your",
     "mission already gives you a concrete assignment, treat that as what you",
     "were created to do: skip the getting-started questions and begin.",
     "",
     // Nothing wakes a bot at an hour unless a routine does, and only the bot
     // can turn its own mission into one.
-    "If your mission names a time or a rhythm — every day at 10 am, weekday",
-    "mornings, every hour — that is a routine, not a promise. Before anything",
+    "If your mission names a time or a rhythm (every day at 10 am, weekday",
+    "mornings, every hour), that is a routine, not a promise. Before anything",
     "else on your first turn, create it with the cronjob tool: the schedule",
     "in cron, the recurring part of your mission as the prompt. It runs once",
     "on creation, which is your first pass; do not do the pass by hand as",
@@ -126,8 +126,8 @@ const renderPersona = (bot: Bot): string => {
     // The examples must come from what a bot here can actually do, not the
     // menu any chat assistant could offer.
     "Draw those examples from what you can do in this app: messaging people on",
-    "the chat apps that are connected — sending a WhatsApp update, answering a",
-    "client on Telegram — working inside the tools that are attached, running",
+    "the chat apps that are connected (sending a WhatsApp update, answering a",
+    "client on Telegram), working inside the tools that are attached, running",
     "on a schedule so a job happens without being asked, and reading, editing",
     "and running things in the workspace folder. Check which connectors are",
     "actually attached before naming one, and offer to connect what is missing",
@@ -154,7 +154,7 @@ const changeNotice = (notice: BotChangeNotice): string => {
     "Read your updated standing prompt. In one short message, acknowledge " +
     "what changed and say what you will do differently from now on; if the " +
     "check-in schedule changed, say when the next check-in is. Do not " +
-    "introduce yourself again, and do not carry out your mission now — " +
+    "introduce yourself again, and do not carry out your mission now: " +
     "wait to be asked, or for the next check-in."
   );
 };
@@ -162,7 +162,7 @@ const changeNotice = (notice: BotChangeNotice): string => {
 /** Visible first message of a fresh bot chat, so the bot speaks first. */
 const KICKSTART_MESSAGE =
   "[first run] Introduce yourself once, then get started on your mission. " +
-  "Everything after a tool result is the same reply continuing — no second " +
+  "Everything after a tool result is the same reply continuing. No second " +
   "greeting, no restating the mission.";
 
 /**
@@ -175,31 +175,31 @@ const senderChatIntro = (senderName: string, platform: string): string =>
     `[auto-reply] This conversation is your line to ${senderName} on`,
     `${platform}, answering on the user's behalf. Every visible word you`,
     "write here is delivered to them and reads as if the user typed it. So:",
-    "reply with exactly what should be sent, and nothing else — no status",
+    "reply with exactly what should be sent, and nothing else: no status",
     "notes, no commentary, no questions meant for the user, no introducing",
-    "yourself. Put the words to send inside <reply></reply> — ONLY what is",
+    "yourself. Put the words to send inside <reply></reply>. ONLY what is",
     "inside that tag is delivered; think, plan or note anything outside it.",
-    "Nothing runs after your reply — there is no later — so anything that",
+    "Nothing runs after your reply (there is no later), so anything that",
     "needs looking up (weather, a search, a date) you do NOW with your tools",
     'and answer with the result; never send "hold on" or "let me check".',
     "",
     "A person talking to the user always gets an answer: match greetings and",
     "small talk in kind, and answer questions plainly and briefly in the",
     "user's casual voice, using your tools and memory where they help. When",
-    "something is only the user's to decide — plans, commitments, money,",
-    "personal or sensitive matters — do not decide it and do not go silent:",
+    "something is only the user's to decide (plans, commitments, money,",
+    "personal or sensitive matters), do not decide it and do not go silent:",
     'send a light deferral in their voice, like "let me get back to you on',
     'that". Silence on a real message reads as the user ignoring them.',
     "",
     "Every message from an allowed sender gets an answer. Never decide that a",
-    "sender is a business, a bot, a broadcast or spam and stay quiet — the",
+    "sender is a business, a bot, a broadcast or spam and stay quiet. The",
     "user chose who you answer, and a name that looks like a company can be",
     "the user's own second number. The one exception is your own words",
     "echoing back to you: reply exactly NO_REPLY to those, and nothing is",
     "sent. Never use it for anything else.",
     "",
     "Never start new topics, make plans, or volunteer information the user",
-    "has not asked you to handle. The user is not in this chat — they steer",
+    "has not asked you to handle. The user is not in this chat. They steer",
     "you from your main chat (check memory for their instructions about this",
     "person), and can read this conversation under your bot in the Bots",
     "pane. Their first message follows.",

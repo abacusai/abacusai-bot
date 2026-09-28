@@ -1,5 +1,5 @@
 // The account-profile home MUST resolve before any import below reads a path
-// under abacusBotHome() — stores open files at module load. Keep this first.
+// under abacusBotHome(). Stores open files at module load. Keep this first.
 import "./profile-home-init";
 import { execFile } from "child_process";
 import { existsSync, mkdirSync } from "fs";
@@ -809,7 +809,7 @@ async function createWindow() {
       if (rendererReloadTimestamps.length < 2) {
         rendererReloadTimestamps.push(now);
         console.warn(
-          `[recovery] renderer gone (${details.reason}) — auto-reloading`
+          `[recovery] renderer gone (${details.reason}), auto-reloading`
         );
         loadAppContent();
         return;
@@ -858,7 +858,7 @@ async function createWindow() {
         if (!isMainFrame || errorCode === -3) return;
         if (validatedURL && validatedURL.startsWith("data:text/html")) return;
         console.warn(
-          `[recovery] did-fail-load (${errorCode} ${errorDescription}) — showing error page`
+          `[recovery] did-fail-load (${errorCode} ${errorDescription}), showing error page`
         );
         if (!mainWindow.isDestroyed()) {
           mainWindow.show();
@@ -1012,12 +1012,12 @@ app
                 })
               );
             } catch {
-              /* directory unreadable — skip this workspace */
+              /* directory unreadable: skip this workspace */
             }
           })
         );
       } catch {
-        /* ignore overall failures — cleanup is non-essential */
+        /* cleanup is non-essential */
       }
     })();
     ipcMain.handle("open-external", async (_event, url: string) => {

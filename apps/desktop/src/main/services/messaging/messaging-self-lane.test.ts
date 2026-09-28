@@ -1,7 +1,7 @@
 /**
  * The self lane: the user typing at their own chat (WhatsApp's
  * message-yourself, a shared Abacus AI bot's DM) is answered whenever the
- * auto-reply bot exists — and ONLY the user. The global respondToInbound
+ * auto-reply bot exists, and ONLY the user. The global respondToInbound
  * switch governs other people, and no bootstrap touches it: the first cut
  * flipped it, and a friend's WhatsApp "hi" got answered as the user the
  * moment a link finished.
@@ -144,7 +144,7 @@ describe("the self lane", () => {
     // Over LOOP_BURST (20) messages inside the window reads as an echo loop.
     for (let i = 0; i < 25; i += 1) await h.inbound("ME", `echo ${i}`);
 
-    // A later message gets nothing — the lane really is holding.
+    // A later message gets nothing; the lane really is holding.
     const before = h.prompts.length;
     await h.inbound("ME", "hi again");
     expect(h.prompts).toHaveLength(before);

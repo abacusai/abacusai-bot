@@ -4,7 +4,7 @@
  * These are the lines that decide whether an interaction happened: whether the
  * `<select>` took the value, whether the click landed on a disabled control,
  * whether the element handed to `fill` has a value to set. Scripting the
- * server's *reply* proves none of it — delete the check inside the script and
+ * server's *reply* proves none of it. Delete the check inside the script and
  * such a test still passes, which is exactly what a mutation run showed. So
  * each script is compiled and executed here against a stand-in element.
  *
@@ -335,7 +335,7 @@ describe("typing", () => {
 
   it("refuses the body, which is what document.activeElement is on a fresh page", () => {
     // The old script called the input value setter on <body> and threw
-    // "Illegal invocation" — an error that said nothing about the real problem.
+    // "Illegal invocation", an error that said nothing about the real problem.
     const source = typeScript("document.activeElement", "hi");
     const document = { body: null };
 

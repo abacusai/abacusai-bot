@@ -6,8 +6,8 @@
  * the time: the snapshot still renders, the ref still resolves, and the click
  * lands somewhere nobody asked for.
  *
- * The walker itself runs in the page and needs real layout — `offsetParent`,
- * non-zero rects, computed `cursor` — so it is not exercised here. These are
+ * The walker itself runs in the page and needs real layout (`offsetParent`,
+ * non-zero rects, computed `cursor`), so it is not exercised here. These are
  * the two halves of it that are pure.
  */
 import fs from "fs";
@@ -61,7 +61,7 @@ describe("the ref map every click resolves through", () => {
 
   it("holds no entry for an element the walker could not address", () => {
     // The walker emits `unreachable` instead of a ref when neither selector
-    // form finds the element again — inside a shadow root, or nested past the
+    // form finds the element again: inside a shadow root, or nested past the
     // cap. A ref here would resolve to whatever the truncated selector happened
     // to match, which is how a click landed on the wrong element.
     const map = refMapOf({
@@ -183,7 +183,7 @@ describe("rendering the page for the model", () => {
 describe("escapes inside the page script", () => {
   // The walker is a JavaScript program written inside a TypeScript template
   // literal, and a template literal eats escapes it does not recognise: a lone
-  // \s reaches the page as the letter s. It has bitten twice — once turning a
+  // \s reaches the page as the letter s. It has bitten twice: once turning a
   // character class into an unterminated one, once turning /\s+/g into /s+/g,
   // which silently replaced every "s" in every label with a space. Neither
   // failed loudly; the second produced "A li t item".

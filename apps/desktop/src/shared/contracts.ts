@@ -771,7 +771,7 @@ export type ConnectorOutcome = AbacusConnectorOutcome;
 
 /**
  * Where a registry connector stands on this machine. `pending` is attached
- * but not usable yet — a messaging platform awaiting its link, an MCP server
+ * but not usable yet: a messaging platform awaiting its link, an MCP server
  * awaiting its sign-in. `unavailable` cannot be connected from here at all
  * (signed out of Abacus, or the account does not offer the service).
  */
@@ -930,7 +930,7 @@ export interface DeviceStatus {
   android: boolean;
   /** Maestro binary present (enables iOS snapshot + text-input fallback). */
   maestro: boolean;
-  /** Native sim-input helper present — iOS taps/swipes without Maestro. */
+  /** Native sim-input helper present: iOS taps/swipes without Maestro. */
   iosNativeInput: boolean;
   enabled: boolean;
   approval: BrowserApproval;
@@ -1804,7 +1804,7 @@ export interface AgentApi {
   /** Every registry connector's state on this machine, keyed by connector id. */
   listConnectorStatuses: () => Promise<ConnectorStatuses>;
   /**
-   * Connect a connector whose flow takes no fields — a browser hop or a plain
+   * Connect a connector whose flow takes no fields: a browser hop or a plain
    * install. Resolves when the platform confirms, the user cancels, or it
    * times out.
    */

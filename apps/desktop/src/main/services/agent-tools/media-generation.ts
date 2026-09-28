@@ -8,7 +8,7 @@ import { credentialFor } from "../config/settings";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { downloadGenerated, writeGenerated } from "./generated-files";
 
-// Environment first, then Settings → API keys — this runs in the main process,
+// Environment first, then Settings → API keys. This runs in the main process,
 // where a Finder launch means an empty environment (see credentialFor).
 const env = (name: string): string => credentialFor(name);
 
@@ -440,7 +440,7 @@ export const submitVideo = async (payload: {
           if (payload.keyframes != null || payload.continueFrom != null) {
             throw new Error(
               "The FAL video backend cannot honor keyframes or continue an existing video. " +
-                "Those need BFL_API_KEY — despite their names, the xai_video_* tools run on BFL or FAL, not xAI."
+                "Those need BFL_API_KEY. Despite their names, the xai_video_* tools run on BFL or FAL, not xAI."
             );
           }
 
@@ -570,7 +570,7 @@ export const videoPromptingGuide = (): string =>
     '- Put the subject first, style last. Leading with "cinematic, 4k, trending" spends',
     "  the strongest part of the prompt on adjectives the model applies loosely anyway.",
     "- Keep it to one continuous action. Two actions usually produce a hard cut or a blend.",
-    "- Negatives are weak in most video models — describe what you do want instead.",
+    "- Negatives are weak in most video models. Describe what you do want instead.",
     "",
     "Generation takes minutes. Submit, then poll with bfl_flux3_get_result.",
   ].join("\n");

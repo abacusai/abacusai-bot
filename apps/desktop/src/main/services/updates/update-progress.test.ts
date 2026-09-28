@@ -2,7 +2,7 @@
  * What the status says after a download dies.
  *
  * From a real log dump: `net::ERR_NETWORK_CHANGED` killed a transfer partway
- * through — moving between wifi and a VPN is enough — and the status kept the
+ * through (moving between wifi and a VPN is enough), and the status kept the
  * last progress figure it had seen. The renderer draws its bar and its
  * percentage straight off that number, so the row sat at "41%" with a spinner
  * over it for hours, through two more failed attempts, until the app was
@@ -10,7 +10,7 @@
  *
  * There is deliberately no retry machinery of our own to test here. A failed
  * download surfaces at once, the strip offers a manual retry, and the next
- * periodic check — ten minutes away at most — re-runs the download via
+ * periodic check (ten minutes away at most) re-runs the download via
  * autoDownload. A bespoke backoff ladder used to live in the service, from
  * the era when the only other retry was a six-hourly check.
  */

@@ -79,7 +79,7 @@ const MEASURE_DECK = `(() => {
 
 /** Swapping webfonts and undecoded images print as fallback type and blanks. */
 const AWAIT_READY = `(async () => {
-  try { await document.fonts.ready } catch { /* no font API — nothing to wait on */ }
+  try { await document.fonts.ready } catch { /* no font API: nothing to wait on */ }
   await Promise.all([...document.images].map((img) =>
     img.complete ? null : new Promise((resolve) => {
       // addEventListener, not onload/onerror: assigning the properties would
@@ -130,7 +130,7 @@ const MARK_DECK = `(() => {
     }
 
     // Centring written as \`top: 50%; transform: translateY(-50%)\` does not
-    // survive printing — the printed page puts such content back at its
+    // survive printing. The printed page puts such content back at its
     // untransformed position. A pure translation is exactly equivalent to a
     // margin of the same size, and margins do participate in paged layout, so
     // the offset is moved there and the transform dropped. Rotations and
@@ -235,7 +235,7 @@ const printStyles = (widthPx: number, heightPx: number): string => `
     page-break-after: auto !important;
   }
   /* On-screen deck chrome that should not reach paper: navigation buttons,
-     keyboard hints, progress bars. Page numbers are left alone — those belong
+     keyboard hints, progress bars. Page numbers are left alone. Those belong
      on a printed slide. */
   .overlay, .tapzones, .deck-nav, .deck-hint, .progress, [data-deck-chrome],
   [class*="keyboard-hint"], [class*="nav-btn"], [class*="nav-controls"],

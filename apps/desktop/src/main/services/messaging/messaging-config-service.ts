@@ -69,7 +69,7 @@ export const readStoredMessageLog = (): unknown[] => {
 export const writeStoredMessageLog = (entries: unknown[]): void => {
   const target = messageLogPath();
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  // Temp file + rename, chmod before rename — same reasoning as writeConfig.
+  // Temp file + rename, chmod before rename: same reasoning as writeConfig.
   const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
   fs.writeFileSync(tmp, `${JSON.stringify(entries)}\n`, "utf8");
   try {
@@ -174,7 +174,7 @@ export const setPlatformEnabled = (
 };
 
 /**
- * Merge field edits. An empty string clears the stored value — that is how the
+ * Merge field edits. An empty string clears the stored value: that is how the
  * UI's clear button is expressed, so it must delete rather than store `''`.
  */
 export const savePlatformValues = (

@@ -197,7 +197,7 @@ export class ExperienceStore {
       : path.join(this.#active.directory, "renderer");
   }
 
-  /** Renderer tree for an app:// hostname — active or staged versions only. */
+  /** Renderer tree for an app:// hostname. Active or staged versions only. */
   rendererDirectoryFor(version: string): string | undefined {
     if (version !== "" && version === this.version) {
       return this.rendererDirectory ?? undefined;

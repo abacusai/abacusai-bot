@@ -16,7 +16,7 @@ export type CronTrigger = "schedule" | "webhook" | "manual" | "create";
 export interface CronRun {
   at: number;
   trigger: CronTrigger;
-  /** Short outcome, capped — "started session x", or why it did not. */
+  /** Short outcome, capped: "started session x", or why it did not. */
   result: string;
 }
 
@@ -227,7 +227,7 @@ export const nextRun = (
     at.setMinutes(at.getMinutes() + 1);
   }
 
-  // Reachable for impossible dates like "30 2 30 2 *" — February 30th.
+  // Reachable for impossible dates like "30 2 30 2 *" (February 30th).
   return null;
 };
 

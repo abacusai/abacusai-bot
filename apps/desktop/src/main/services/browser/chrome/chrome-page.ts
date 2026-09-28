@@ -1,7 +1,7 @@
 /**
  * One tab in the user's Chrome, presented to the browser tools as the page
  * surface they already drive (`BrowserPage`). Everything goes over CDP through
- * the relay; the synchronous reads — URL, title, loading, history — come from
+ * the relay; the synchronous reads (URL, title, loading, history) come from
  * state kept current by the tab's own CDP events.
  */
 import type { BrowserPage, DidFailLoadListener } from "../browser-target";

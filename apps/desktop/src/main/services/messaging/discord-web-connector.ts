@@ -97,7 +97,7 @@ export const sendProbe = (text: string): string => {
   return best.length > 0 ? best.slice(0, 40).trim() : text.slice(0, 40);
 };
 
-/** `guildId/channelId` — the server-channel form of a chat id. */
+/** `guildId/channelId`: the server-channel form of a chat id. */
 const parseGuildChannel = (
   value: string
 ): { guildId: string; channelId: string } | null => {
@@ -111,9 +111,9 @@ export class DiscordWebConnector implements MessagingConnector {
   private window: BrowserWindow | null = null;
   private running = false;
   private loggedIn = false;
-  /** Consecutive signed-out polls after a login — see checkLogin. */
+  /** Consecutive signed-out polls after a login. See checkLogin. */
   private signedOutTicks = 0;
-  /** Consecutive polls stuck between login form and app — see checkLogin. */
+  /** Consecutive polls stuck between login form and app. See checkLogin. */
   private bootStuckTicks = 0;
   private loginTimer: NodeJS.Timeout | null = null;
   private inboundTimer: NodeJS.Timeout | null = null;
@@ -130,7 +130,7 @@ export class DiscordWebConnector implements MessagingConnector {
     string,
     Array<{ chatId: string; name: string }>
   >();
-  /** When the last channel crawl ran — the sweep retries a failed one. */
+  /** When the last channel crawl ran; the sweep retries a failed one. */
   private lastCrawlAt = 0;
   /** The rail-shape diagnostic runs once per connect, and only on failure. */
   private railShapeLogged = false;
@@ -153,7 +153,7 @@ export class DiscordWebConnector implements MessagingConnector {
 
   /** Everything that drives the shared page runs through this queue. */
   private queue: Promise<unknown> = Promise.resolve();
-  /** Serialized tasks currently holding the page — checkLogin stands aside. */
+  /** Serialized tasks currently holding the page; checkLogin stands aside. */
   private driving = 0;
 
   /** Tasks queued for the page, the running one included. */
@@ -220,9 +220,7 @@ export class DiscordWebConnector implements MessagingConnector {
 
   async sendText(chatId: string, text: string): Promise<void> {
     if (!this.loggedIn)
-      throw new Error(
-        "Discord is not logged in yet — finish signing in first."
-      );
+      throw new Error("Discord is not logged in yet. Finish signing in first.");
     return this.serialize(() => this.sendTextNow(chatId, text));
   }
 
@@ -257,7 +255,7 @@ export class DiscordWebConnector implements MessagingConnector {
     );
     if (box?.ok !== true)
       throw new Error(
-        `The message box for ${chatId} did not open — no permission to post there, or the channel did not load.`
+        `The message box for ${chatId} did not open. No permission to post there, or the channel did not load.`
       );
 
     // A trusted click places the Slate caret; a synthetic one does not.
@@ -314,7 +312,7 @@ export class DiscordWebConnector implements MessagingConnector {
       });
       if (typed?.has !== true)
         throw new Error(
-          `Could not type into the composer for ${chatId} — the page kept focus elsewhere.`
+          `Could not type into the composer for ${chatId}. The page kept focus elsewhere.`
         );
     }
 
@@ -339,7 +337,7 @@ export class DiscordWebConnector implements MessagingConnector {
         {}
       );
       this.callbacks.onLog(
-        `discord-web: send to ${chatId} vanished — page ${JSON.stringify(shape)}`
+        `discord-web: send to ${chatId} vanished, page ${JSON.stringify(shape)}`
       );
       throw new Error(
         `The message to ${chatId} cleared the composer but never appeared in the channel.`
@@ -369,9 +367,7 @@ export class DiscordWebConnector implements MessagingConnector {
     caption?: string
   ): Promise<void> {
     if (!this.loggedIn)
-      throw new Error(
-        "Discord is not logged in yet — finish signing in first."
-      );
+      throw new Error("Discord is not logged in yet. Finish signing in first.");
     return this.serialize(() => this.sendFileNow(chatId, filePath, caption));
   }
 
@@ -394,7 +390,7 @@ export class DiscordWebConnector implements MessagingConnector {
       );
       if (box?.ok !== true)
         throw new Error(
-          `The message box for ${chatId} did not open — no permission to post there, or the channel did not load.`
+          `The message box for ${chatId} did not open. No permission to post there, or the channel did not load.`
         );
 
       await setFileInput(
@@ -437,7 +433,7 @@ export class DiscordWebConnector implements MessagingConnector {
       );
       if (still?.uploading === true)
         throw new Error(
-          `The file was staged but did not send to ${chatId} — the upload chip is still showing.`
+          `The file was staged but did not send to ${chatId}. The upload chip is still showing.`
         );
     } finally {
       if (opened.onGuildPage) await this.goHome();
@@ -482,17 +478,17 @@ export class DiscordWebConnector implements MessagingConnector {
     if (this.pending >= MAX_QUEUED_READS)
       return Promise.reject(
         new Error(
-          `Discord is busy with another chat right now — could not ${what} live; the stored messages are what there is for the moment. Try again shortly.`
+          `Discord is busy with another chat right now, so it could not ${what} live. The stored messages are what there is for the moment. Try again shortly.`
         )
       );
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.callbacks.onLog(
-          `discord-web: ${what} did not finish within ${Math.round(this.readDeadlineMs / 1000)}s — answering from the stored copy`
+          `discord-web: ${what} did not finish within ${Math.round(this.readDeadlineMs / 1000)}s, answering from the stored copy`
         );
         reject(
           new Error(
-            `Discord did not finish the live ${what} within ${Math.round(this.readDeadlineMs / 1000)}s — the stored messages are what there is for the moment.`
+            `Discord did not finish the live ${what} within ${Math.round(this.readDeadlineMs / 1000)}s. The stored messages are what there is for the moment.`
           )
         );
       }, this.readDeadlineMs);
@@ -547,7 +543,7 @@ export class DiscordWebConnector implements MessagingConnector {
               {}
             );
             this.callbacks.onLog(
-              `discord-web: forum posts carry no thread ids — card shape ${JSON.stringify(shape)}`
+              `discord-web: forum posts carry no thread ids, card shape ${JSON.stringify(shape)}`
             );
           }
           return posts.map((post) => {
@@ -559,7 +555,7 @@ export class DiscordWebConnector implements MessagingConnector {
               userName: null,
               text:
                 post.snippet.length > 0
-                  ? `${ref} ${post.title} — ${post.snippet}`
+                  ? `${ref} ${post.title}: ${post.snippet}`
                   : `${ref} ${post.title}`,
               direction: "in" as const,
               at: new Date().toISOString(),
@@ -576,7 +572,7 @@ export class DiscordWebConnector implements MessagingConnector {
           {}
         );
         this.callbacks.onLog(
-          `discord-web: nothing readable in ${chatId} — page shape ${JSON.stringify(shape)}`
+          `discord-web: nothing readable in ${chatId}, page shape ${JSON.stringify(shape)}`
         );
       }
       return rows ?? [];
@@ -665,7 +661,7 @@ export class DiscordWebConnector implements MessagingConnector {
     );
     if (bar?.ok !== true || bar.x == null || bar.y == null) {
       this.callbacks.onLog(
-        `discord-web: no search bar in scope ${scopeId} — skipping`
+        `discord-web: no search bar in scope ${scopeId}, skipping`
       );
       return [];
     }
@@ -719,7 +715,7 @@ export class DiscordWebConnector implements MessagingConnector {
         chatId: channel?.chatId ?? scopeId,
         name:
           hit.name.length > 0
-            ? `#${hit.name}${guildName.length > 0 ? ` — ${guildName}` : ""}`
+            ? `#${hit.name}${guildName.length > 0 ? ` (${guildName})` : ""}`
             : guildName || scopeId,
         snippet: normalizeScrapedText(hit.text),
         when: hit.when,
@@ -793,7 +789,7 @@ export class DiscordWebConnector implements MessagingConnector {
       if (this.bootStuckTicks >= STUCK_BOOT_POLLS) {
         this.bootStuckTicks = 0;
         this.callbacks.onLog(
-          "discord-web: stuck on the boot spinner — reloading the page"
+          "discord-web: stuck on the boot spinner, reloading the page"
         );
         const win = this.window;
         if (win != null && !win.isDestroyed())
@@ -815,7 +811,7 @@ export class DiscordWebConnector implements MessagingConnector {
       this.contactsRead = false;
       this.callbacks.onState(
         "needs_login",
-        "Discord is signed out — the session expired. Reconnect to sign in again."
+        "Discord is signed out because the session expired. Reconnect to sign in again."
       );
       this.pollLogin();
     }
@@ -828,7 +824,7 @@ export class DiscordWebConnector implements MessagingConnector {
     presentAsDialog(win);
   }
 
-  /** True once the user has signed in — surfaced to the connect dialog. */
+  /** True once the user has signed in; surfaced to the connect dialog. */
   get isLoggedIn(): boolean {
     return this.loggedIn;
   }
@@ -946,7 +942,7 @@ export class DiscordWebConnector implements MessagingConnector {
           {}
         );
         this.callbacks.onLog(
-          `discord-web: no servers found — rail shape ${JSON.stringify(shape)}`
+          `discord-web: no servers found, rail shape ${JSON.stringify(shape)}`
         );
       }
       return;
@@ -981,7 +977,7 @@ export class DiscordWebConnector implements MessagingConnector {
             guild.guildId,
             channels.slice(0, MAX_CHANNELS_PER_GUILD).map((row) => ({
               chatId: `${guild.guildId}/${row.channelId}`,
-              name: `#${row.name} — ${guild.name}`,
+              name: `#${row.name} (${guild.name})`,
             }))
           );
           channelCount += Math.min(channels.length, MAX_CHANNELS_PER_GUILD);
@@ -1060,7 +1056,7 @@ export class DiscordWebConnector implements MessagingConnector {
             chatId,
             rows.slice(0, MAX_CHANNELS_PER_GUILD).map((row) => ({
               chatId: `${chatId}/${row.channelId}`,
-              name: `#${row.name} — ${name}`,
+              name: `#${row.name} (${name})`,
             }))
           );
           channel = `${chatId}/${rows[0].channelId}`;
@@ -1220,7 +1216,7 @@ const CONTACTS_SCRIPT = `
     seen.add(id);
     const label = a.getAttribute('aria-label') || '';
     const nameEl = a.querySelector('[class*="name"]');
-    // The aria-label ends with live presence ("…, Idle") — stripped, or the
+    // The aria-label ends with live presence ("…, Idle"). Strip it, or the
     // same person becomes a new contact every time their status changes.
     const name = (label || (nameEl ? nameEl.textContent : '') || '')
       .replace(/,\\s*(Online|Idle|Do Not Disturb|Offline|Streaming)$/i, '')
@@ -1274,7 +1270,7 @@ const GUILDS_SCRIPT = `
     add(m[1], nameOf(el), badgeIn(el));
   }
   // Server icons carry the guild id in their CDN URL. The name comes off the
-  // enclosing tree/list item only — a wider [aria-label] ancestor is the whole
+  // enclosing tree/list item only. A wider [aria-label] ancestor is the whole
   // rail, which would name every server "Servers sidebar".
   for (const img of document.querySelectorAll('img[src*="/icons/"]')) {
     const m = String(img.getAttribute('src')).match(/\\/icons\\/(\\d+)\\//);
@@ -1345,7 +1341,7 @@ const OPEN_ANCHOR_SCRIPT = `
   return { found: true };
 `;
 
-/** Press a server's icon on the guild rail — an SPA hop into that server. */
+/** Press a server's icon on the guild rail: an SPA hop into that server. */
 const OPEN_GUILD_SCRIPT = `
   const press = (el) => {
     const r = el.getBoundingClientRect();
@@ -1453,14 +1449,14 @@ const SEND_FAILURE_SHAPE_SCRIPT = `
   };
 `;
 
-/** Whether the composer is empty — the confirmation that a send went out. */
+/** Whether the composer is empty: the confirmation that a send went out. */
 const COMPOSER_EMPTY_SCRIPT = `
   const box = document.querySelector('div[role="textbox"][data-slate-editor="true"], div[role="textbox"]');
   if (!box) return { empty: true };
   // Slate keeps a zero-width placeholder in an "empty" editor; treat it as empty.
   // The backslashes are doubled because this is a template literal: written
   // singly, TypeScript reads the escapes itself and the browser receives
-  // /[<zero-width><bom>s]/ — a regex that strips the letter "s" and leaves
+  // /[<zero-width><bom>s]/: a regex that strips the letter "s" and leaves
   // whitespace, so a box holding only spaces read as non-empty.
   return { empty: box.textContent.replace(/[\\u200B\\uFEFF\\s]/g, '').length === 0 };
 `;
@@ -1485,7 +1481,7 @@ const READ_CURRENT_SCRIPT = `
   // Who am I? The account panel carries the logged-in username.
   const meEl = document.querySelector('[class*="nameTag"] [class*="username"], [class*="panelTitleContainer"] [class*="text"]');
   const me = meEl ? meEl.textContent.trim() : '';
-  // The list is virtualized — items unload as they scroll away — so rows
+  // The list is virtualized (items unload as they scroll away), so rows
   // accumulate in a map keyed by message id (snowflakes sort by time).
   const store = new Map();
   const collect = () => {
@@ -1654,7 +1650,7 @@ const SEARCH_RESULTS_SCRIPT = `
     if (el.id && el.id.indexOf('message-content-') === 0) {
       const container = el.closest('li') || el;
       const timeEl = container.querySelector('time');
-      // Embeds (bot posts) keep their text outside message-content — fall
+      // Embeds (bot posts) keep their text outside message-content, so fall
       // back to the whole result item.
       const text = el.textContent.trim() || container.textContent.trim();
       hits.push({

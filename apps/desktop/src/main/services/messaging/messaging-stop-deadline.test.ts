@@ -4,18 +4,18 @@
  * `stop()` is awaited through syncConnectors into the IPC call behind the Save
  * button and the enable toggle, and the pane disables both while that call is
  * in flight. Nothing bounded that await, so one connector whose stop() never
- * settled parked every save on the pane — including saves for other platforms,
+ * settled parked every save on the pane, including saves for other platforms,
  * because syncConnectors sweeps the whole catalog and evicts any connector
  * sitting in `error` before deciding what to run.
  *
  * The case that found it was the email connector, since removed: its IMAP
- * `logout()` waited on a reply a half-open socket — a NAT timeout, a
- * sleep/wake, a network switch — would never send, and nothing threw because
+ * `logout()` waited on a reply a half-open socket (a NAT timeout, a
+ * sleep/wake, a network switch) would never send, and nothing threw because
  * the socket was not `destroyed`. That is the "Slack connector is on saving
  * state for a long time" report, and the same one again for Telegram: the
  * platform being saved was never the one that was stuck. Any connector can
  * hang that way, which is why the deadline is the gateway's rather than one
- * connector's — a stuck Discord stands in for it here.
+ * connector's; a stuck Discord stands in for it here.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

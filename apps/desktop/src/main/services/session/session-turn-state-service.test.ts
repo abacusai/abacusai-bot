@@ -1,8 +1,8 @@
 /**
  * What the user sees when a turn stops coming back.
  *
- * A real session went silent for ten minutes and ended with "Agent timed out."
- * — no clue whether the model had stalled or a shell command was wedged, and
+ * A real session went silent for ten minutes and ended with "Agent timed out.",
+ * with no clue whether the model had stalled or a shell command was wedged, and
  * nothing in the transcript, because a tool that hangs before it starts never
  * emits a card to persist. The last thing the session was seen doing is the
  * only diagnosis available, so it has to survive into the message.
@@ -166,7 +166,7 @@ describe("waiting on a person is not a wedged agent", () => {
 
 /**
  * The reported bug: a bash crawl that printed nothing for ten minutes was
- * declared wedged and had its turn ended. Silence is not death — the agent
+ * declared wedged and had its turn ended. Silence is not death. The agent
  * says so on a timer for as long as a call is outstanding.
  */
 describe("a tool that runs quietly is not a wedged agent", () => {
@@ -206,7 +206,7 @@ describe("a tool that runs quietly is not a wedged agent", () => {
   });
 
   it("keeps the heartbeat out of the transcript", () => {
-    // Liveness for the watchdog, not something the user should see — and
+    // Liveness for the watchdog, not something the user should see, and
     // forwarding it would re-render the transcript on a timer.
     service.markSent(WS, SESSION);
 
@@ -263,7 +263,7 @@ describe("a tool that runs quietly is not a wedged agent", () => {
  *
  * It was not: the watchdog flipped the phase to idle and said so, but nothing
  * suppressed the turn it had given up on. When the slow tool finally landed,
- * its events were forwarded like any others and the session went busy again —
+ * its events were forwarded like any others and the session went busy again,
  * after the user had been told it was over and invited to send a new message.
  */
 describe("a turn the watchdog gave up on stays given up on", () => {
@@ -316,7 +316,7 @@ describe("a turn the watchdog gave up on stays given up on", () => {
   });
 
   it("comes back to life when the user sends the next message", () => {
-    // Suppression is for the abandoned turn, not the session — the advice in
+    // Suppression is for the abandoned turn, not the session. The advice in
     // the timeout message ("send a message to pick it back up") has to work.
     timeOut();
 

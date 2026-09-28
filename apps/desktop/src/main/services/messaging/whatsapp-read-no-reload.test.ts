@@ -1,7 +1,7 @@
 /**
  * A chat the store has not loaded is answered, not chased by reloading
  * WhatsApp Web. The reload path detaches the bridge, drops its inbound
- * queue and restarts WhatsApp's sync — four reads in a turn kept a fresh
+ * queue and restarts WhatsApp's sync: four reads in a turn kept a fresh
  * link "syncing" for fifteen minutes.
  */
 import { describe, expect, it, vi } from "vitest";

@@ -448,7 +448,7 @@ export const TOOLSETS_FOR_DISPLAY: Toolset[] = TOOLSETS.filter(
   (set) => set.status === "ready"
 );
 
-/** Groups whose tools exist today — the only ones a toggle can actually deliver. */
+/** Groups whose tools exist today: the only ones a toggle can actually deliver. */
 export const READY_TOOLSETS: Toolset[] = TOOLSETS.filter(
   (set) => set.status === "ready"
 );

@@ -68,7 +68,7 @@ describe("what it refuses", () => {
   });
 
   it("refuses an object that is neither a wrapper nor an entry", () => {
-    // No command, no url, no recognised wrapper — importing it would create a
+    // No command, no url, no recognised wrapper: importing it would create a
     // server that could never start.
     expect(parse('{"name":"thing","description":"nope"}').kind).toBe("invalid");
   });

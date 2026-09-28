@@ -2,7 +2,7 @@
  * A reply the model wrapped before a tool call is still the reply.
  *
  * Text before a tool call is treated as narration and dropped, which is
- * right for "Let me check the weather" — but a model that answered "Love
+ * right for "Let me check the weather", but a model that answered "Love
  * you too" inside <reply>, then filed a memory note, ended its turn with
  * nothing after the tool call, and the wrapped answer went with the
  * narration. Nothing was sent, and nothing was logged as failed.

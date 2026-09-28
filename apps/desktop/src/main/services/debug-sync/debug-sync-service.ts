@@ -160,7 +160,7 @@ export class DebugSyncService {
         if (!outcome.retryable) {
           this.disabledForRun = outcome.reason;
           console.warn(
-            `[debug-sync] disabled for this run (${outcome.reason}) — sync is best-effort and this will not succeed by retrying`
+            `[debug-sync] disabled for this run (${outcome.reason}). Sync is best-effort and this will not succeed by retrying`
           );
         } else {
           console.warn(

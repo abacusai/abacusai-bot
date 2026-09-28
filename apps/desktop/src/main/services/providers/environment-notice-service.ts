@@ -50,7 +50,7 @@ export const formatEnvironmentNotice = (
     formatGroup("Connectors connected", snapshot.accountConnectors),
     formatGroup("MCP servers and connectors configured", snapshot.mcpServers),
     formatGroup("Skills available", snapshot.skills),
-    'Everything listed is available to you right now — use it when it is relevant, instead of saying you lack access. A connector listed as connected needs no connecting, and the account named beside it is the user\'s own — that is who they mean by "me", so do not ask them for it. A service NOT listed can usually still be attached: call connect_connector for it instead of reporting no access or asking whether to connect. This note is automatic; do not mention it to the user.',
+    'Everything listed is available to you right now. Use it when it is relevant instead of saying you lack access. A connector listed as connected needs no connecting, and the account named beside it is the user\'s own: that is who they mean by "me", so do not ask them for it. A service NOT listed can usually still be attached: call connect_connector for it instead of reporting no access or asking whether to connect. This note is automatic; do not mention it to the user.',
     "</system_reminder>",
   ].join("\n");
 
@@ -85,7 +85,7 @@ export const messageWithEnvironmentNotice = (
  *
  * A single counter, not a per-session list of changes: the note always states
  * the whole environment, so a session only needs to know whether it has seen
- * the latest one. A conversation never told is owed one too — a tool list is
+ * the latest one. A conversation never told is owed one too. A tool list is
  * a list of names, not a statement that the service asked about is behind one.
  */
 export class EnvironmentNoticeService {

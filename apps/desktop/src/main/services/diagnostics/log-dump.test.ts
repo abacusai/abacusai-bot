@@ -5,7 +5,7 @@
  * a session that died before anyone could press the menu item, a spawn whose
  * interpreter was never named, an MCP server that never connected, usage that
  * looks wrong, and a machine whose OS build and PATH were nowhere in the file.
- * The last one is the opposite worry — that collecting more of the machine
+ * The last one is the opposite worry: that collecting more of the machine
  * starts shipping the user's secrets.
  */
 import os from "node:os";

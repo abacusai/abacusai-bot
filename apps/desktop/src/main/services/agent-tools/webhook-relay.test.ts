@@ -85,7 +85,7 @@ afterEach(() => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
-/** Drive one poll cycle directly — the interval timer is not what's under test. */
+/** Drive one poll cycle directly. The interval timer is not what's under test. */
 const tickOnce = async (relay: WebhookRelay): Promise<void> => {
   await (relay as unknown as { tick: () => Promise<void> }).tick();
 };

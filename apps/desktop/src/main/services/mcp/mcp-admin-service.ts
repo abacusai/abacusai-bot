@@ -432,7 +432,7 @@ function readImportFile(filePath: string): string {
   }
   if (stat.size > IMPORT_FILE_MAX_BYTES) {
     throw new Error(
-      `The file is too large to import (${Math.round(stat.size / 1024 / 1024)}MB — max 50MB).`
+      `The file is too large to import (${Math.round(stat.size / 1024 / 1024)}MB, max 50MB).`
     );
   }
   return fs.readFileSync(filePath, "utf-8");

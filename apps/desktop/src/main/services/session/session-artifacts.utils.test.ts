@@ -28,7 +28,7 @@ describe("present_deliverable", () => {
     const drafts = extractArtifacts(
       presentCall(
         [
-          { path: REPORT, label: "Morning Brief — 15 Sep 2026" },
+          { path: REPORT, label: "Morning Brief: 15 Sep 2026" },
           { path: "https://example.com/app", label: "The app" },
         ],
         `${artifactPathLine(REPORT)}\n${artifactPathLine("https://example.com/app")}`
@@ -39,7 +39,7 @@ describe("present_deliverable", () => {
     expect(
       drafts.map((draft) => [draft.kind, draft.title, draft.location])
     ).toEqual([
-      ["file", "Morning Brief — 15 Sep 2026", REPORT],
+      ["file", "Morning Brief: 15 Sep 2026", REPORT],
       ["link", "The app", "https://example.com/app"],
     ]);
   });
@@ -48,7 +48,7 @@ describe("present_deliverable", () => {
     const drafts = extractArtifacts(
       presentCall(
         [
-          { path: REPORT, label: "Morning Brief — 15 Sep 2026" },
+          { path: REPORT, label: "Morning Brief: 15 Sep 2026" },
           { path: GHOST, label: "placeholder" },
         ],
         `Not presented, because there is no file at these paths: ${GHOST}\n\n${artifactPathLine(REPORT)}`
@@ -57,7 +57,7 @@ describe("present_deliverable", () => {
     );
 
     expect(drafts.map((draft) => draft.title)).toEqual([
-      "Morning Brief — 15 Sep 2026",
+      "Morning Brief: 15 Sep 2026",
     ]);
   });
 

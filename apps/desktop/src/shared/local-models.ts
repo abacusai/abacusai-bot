@@ -5,8 +5,8 @@
  *
  * Each row is one GGUF file, pinned by digest: it is executed by a native
  * runtime on the user's machine, so a floating "latest" is not an option. All
- * three are instruction-tuned Qwen builds that drive an agent loop — tool
- * calling and a 32k context are the bar, not benchmark scores — at the 4-bit
+ * three are instruction-tuned Qwen builds that drive an agent loop (tool
+ * calling and a 32k context are the bar, not benchmark scores) at the 4-bit
  * quantisation that fits the memory they are recommended for.
  */
 

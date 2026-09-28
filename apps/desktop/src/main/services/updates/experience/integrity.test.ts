@@ -9,7 +9,7 @@ import { verifyExperience } from "./integrity";
 
 /**
  * Builder and verifier are two views of one canon: what
- * `apps/updater/src/manifest.ts` produces, this module must accept — and
+ * `apps/updater/src/manifest.ts` produces, this module must accept, and
  * must reject the moment a byte differs.
  */
 const FOUNDATION = "1.2.3";
@@ -51,7 +51,7 @@ describe("experience integrity", () => {
     const { current, root } = await buildFixture();
 
     try {
-      // Same size, different bytes — the digest is what must catch it.
+      // Same size, different bytes. The digest is what must catch it.
       await fs.writeFile(
         path.join(current, "agent", "main.js"),
         "process.exit(1);"

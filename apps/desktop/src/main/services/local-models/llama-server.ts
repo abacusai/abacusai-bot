@@ -1,7 +1,7 @@
 /**
  * One llama.cpp server process, serving one model on a loopback port. Started
  * by the proxy when a request for its model arrives and stopped when the
- * machine has been quiet for a while — the model is gigabytes of memory, and
+ * machine has been quiet for a while. The model is gigabytes of memory, and
  * an app idling in the dock should not hold them.
  */
 import { spawn, type ChildProcess } from "node:child_process";

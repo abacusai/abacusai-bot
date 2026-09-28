@@ -5,7 +5,7 @@
  * `send_chat_message`, `list_chats` and `read_chat_messages` are withheld from
  * `tools/list` while no platform is running, and a session keeps the list it
  * was handed when it started. So a bot that asked the user to connect WhatsApp,
- * and was told it was connected, still had no send tool — and said so. The
+ * and was told it was connected, still had no send tool, and said so. The
  * environment note was already correct and made no difference: words the model
  * reads are not the same as a `tools/list` running again.
  */

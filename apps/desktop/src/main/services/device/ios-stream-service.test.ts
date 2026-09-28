@@ -1,7 +1,7 @@
 /**
  * The iOS mirror listens on the renderer's WebContents so it can stop pushing
  * frames when the window goes away. Every start adds that listener, so every
- * stop has to take it back off — otherwise they pile up on a WebContents that
+ * stop has to take it back off, otherwise they pile up on a WebContents that
  * outlives many mirror sessions.
  */
 import { EventEmitter } from "events";

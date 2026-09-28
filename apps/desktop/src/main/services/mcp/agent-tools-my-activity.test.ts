@@ -1,5 +1,5 @@
 /**
- * `my_activity`: a bot's own history, readable from any of its chats — a
+ * `my_activity`: a bot's own history, readable from any of its chats. A
  * channel session is minted fresh, and "what have you done so far" was
  * honestly answered "nothing" by a bot with a day of work in its main chat.
  * Channels are excluded unconditionally: what happens in a channel stays in
@@ -92,7 +92,7 @@ describe("my_activity", () => {
     expect(text).toContain("Connected Gmail");
   });
 
-  it("skips the calling conversation — its contents are already in context", async () => {
+  it("skips the calling conversation: its contents are already in context", async () => {
     const own = writeLog("own.jsonl", [["assistant", "own-line"]]);
 
     const text = await call(

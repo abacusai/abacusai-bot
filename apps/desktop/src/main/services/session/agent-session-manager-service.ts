@@ -33,9 +33,9 @@ type SessionRecord = {
   runOutcome?: RoutineRunOutcome | null;
   /** For a routine run: what fired it. */
   runTrigger?: string | null;
-  /** The routine this session edits — the editor turn behind its composer. */
+  /** The routine this session edits: the editor turn behind its composer. */
   editorFor?: string | null;
-  /** Minted by the bot service — a bot chat of some kind, never a session. */
+  /** Minted by the bot service: a bot chat of some kind, never a session. */
   botOwned?: boolean;
   /** Parentage, stamped at mint. The one authoritative bot<->session link. */
   owner?: SessionOwner | null;
@@ -46,7 +46,7 @@ type SessionRecord = {
   agentSessionIds?: string[];
 };
 
-// Persisted, so the old name stays — see workspace-store.ts.
+// Persisted, so the old name stays. See workspace-store.ts.
 const SESSIONS_STORAGE_KEY = "localCode.agentSessions";
 
 const toListItem = (record: SessionRecord): AgentSessionListItem => ({
@@ -191,14 +191,14 @@ export class AgentSessionManagerService {
     this.persist();
   }
 
-  /** The sessions a bot owns, straight off the records — no registry. */
+  /** The sessions a bot owns, straight off the records, with no registry. */
   listOwnedBy(botId: string): AgentSessionListItem[] {
     return [...this.sessions.values()]
       .filter((record) => record.owner?.botId === botId)
       .map((record) => toListItem(record));
   }
 
-  /** Bot-owned records parked as orphans — their workspace is gone. */
+  /** Bot-owned records parked as orphans. Their workspace is gone. */
   ownedOrphans(): AgentSessionListItem[] {
     return this.orphanedRecords
       .filter((record) => record.owner != null)
@@ -253,7 +253,7 @@ export class AgentSessionManagerService {
     return record?.routineId != null || record?.owner?.role === "routine";
   }
 
-  /** Find a bot conversation by its find-or-reuse key — registry-free. */
+  /** Find a bot conversation by its find-or-reuse key, without the registry. */
   findOwned(
     botId: string,
     role: SessionOwner["role"],

@@ -323,7 +323,7 @@ const responsePage = (): string => {
   <div class="card">
     <h1 id="title">Abacus.AI is connected</h1>
     <p id="body">You can close this tab and go back to the app.</p>
-    <p id="plan" style="margin-top:.6rem">New account? Your free plan is already active — DeepSeek V4 Flash, Kimi, Qwen, GLM and more coding models are ready to use. <a href="https://apps.abacus.ai/chatllm/" rel="noreferrer">Manage your account</a> or upgrade anytime.</p>
+    <p id="plan" style="margin-top:.6rem">New account? Your free plan is already active. DeepSeek V4 Flash, Kimi, Qwen, GLM and more coding models are ready to use. <a href="https://apps.abacus.ai/chatllm/" rel="noreferrer">Manage your account</a> or upgrade anytime.</p>
   </div>
   <script>
   (function () {

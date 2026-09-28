@@ -56,7 +56,7 @@ describe("creating a bot", () => {
 });
 
 describe("legacy records", () => {
-  it("drops a stored connector grant on read — bots are unrestricted now", () => {
+  it("drops a stored connector grant on read, since bots are unrestricted now", () => {
     const bot = createBot({ name: "Old", description: "x" });
     const file = path.join(home, "bots.json");
     const raw = JSON.parse(fs.readFileSync(file, "utf8")) as Record<

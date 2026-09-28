@@ -58,7 +58,7 @@ describe("reads while the page is busy", () => {
     await expect(connector.readChat("123/458", 10)).rejects.toThrow(
       /busy with another chat/
     );
-    // A send is never turned away — it waits its turn.
+    // A send is never turned away; it waits its turn.
     const sent = connector.sendText("123/456", "hi");
 
     release();

@@ -321,7 +321,6 @@ export class GitService {
     }
 
     try {
-      // Run the two reads in parallel — they're independent.
       const [currentBranchOutput, allBranchesOutput] = await Promise.all([
         execFileAsync("git", ["-C", workspacePath, "branch", "--show-current"]),
         execFileAsync("git", [

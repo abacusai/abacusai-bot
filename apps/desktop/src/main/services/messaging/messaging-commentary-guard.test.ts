@@ -2,15 +2,15 @@
  * The last door before a reply reaches someone who is not the user.
  *
  * The report: asked about a news story, the bot sent the group a numbered
- * menu — "1. Answer as you — tell me your take and I'll send it in your
- * casual style" — addressed to the user, delivered to everyone in the chat.
+ * menu: "1. Answer as you: tell me your take and I'll send it in your
+ * casual style", addressed to the user, delivered to everyone in the chat.
  * The preamble forbids that in terms: "no status notes, no commentary, no
  * questions meant for the user". The model did it anyway.
  *
  * An instruction a model can forget is not a guarantee, and the one thing
  * this feature must never do is talk to the wrong person in the user's name.
  * So the door checks, and it checks for machine-shaped phrases rather than
- * for tone — judgement is what already failed.
+ * for tone; judgement is what already failed.
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -86,7 +86,7 @@ describe("a reply that is talking to the user", () => {
   });
 
   it("never leaks the sentinel into a chat", () => {
-    expect(flushed("NO_REPLY — this looks automated")).toBe(
+    expect(flushed("NO_REPLY, this looks automated")).toBe(
       "let me get back to you on that"
     );
   });

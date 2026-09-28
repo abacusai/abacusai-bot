@@ -32,13 +32,13 @@ interface PptxSlide {
   addImage(options: Record<string, unknown>): void;
 }
 
-/** A 16:9 slide, in inches — the canvas every deck template is designed against. */
+/** A 16:9 slide, in inches: the canvas every deck template is designed against. */
 const SLIDE_W = 13.333;
 const SLIDE_H = 7.5;
 
 /**
- * Text smaller than this is almost always decoration a slide repeats — a page
- * number, a rule label — and each one costs a text box in the result.
+ * Text smaller than this is almost always decoration a slide repeats (a page
+ * number, a rule label), and each one costs a text box in the result.
  */
 const MIN_PT = 5;
 
@@ -177,7 +177,7 @@ const EXTRACT = String.raw`(() => {
     }
 
     // One run per text node, measured with a Range so the box is the glyphs' own
-    // box rather than the block's — a heading in a tall container would otherwise
+    // box rather than the block's. A heading in a tall container would otherwise
     // land at the top of the container instead of where it is drawn.
     const walker = document.createTreeWalker(slide, NodeFilter.SHOW_TEXT)
     let node
@@ -331,7 +331,7 @@ const PREPARE = String.raw`(async () => {
 
   if (stage && stage.shadowRoot) {
     // The component owns the geometry, and its shadow CSS outranks anything we
-    // could set inline — for slotted elements an !important rule in the shadow
+    // could set inline. For slotted elements an !important rule in the shadow
     // tree beats the light DOM's own inline !important. So ask it, rather than
     // fight it: noscale drops the fit-to-window transform, and marking every
     // slide active is what its own CSS keys visibility off. Measured on a real
@@ -339,7 +339,7 @@ const PREPARE = String.raw`(async () => {
     stage.setAttribute('noscale', '')
     for (const slide of slides) slide.setAttribute('data-deck-active', '')
   } else {
-    // No component in this window — its script is a relative <script src> that
+    // No component in this window. Its script is a relative <script src> that
     // does not always load, and an unupgraded <deck-stage> is an inline element
     // sizing nothing, which is where the 0x0 came from. Nothing is styling the
     // slides now, so inline geometry lands unopposed.
@@ -396,7 +396,7 @@ export const exportDeckPptx = async (
     throw new Error("the page reported no slides");
   if (unmeasurableSlides(captures)) {
     throw new Error(
-      "every slide measured 0x0 — the deck was still scaled or hidden when it was captured"
+      "every slide measured 0x0. The deck was still scaled or hidden when it was captured"
     );
   }
 

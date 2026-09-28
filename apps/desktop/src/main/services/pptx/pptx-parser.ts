@@ -223,7 +223,7 @@ function readCoreTitle(zip: ZipArchive): string | null {
   return title != null && title.length > 0 ? title : null;
 }
 
-/** First target whose part path matches a predicate — layouts, masters, themes. */
+/** First target whose part path matches a predicate: layouts, masters, themes. */
 function relTarget(rels: Map<string, string>, test: RegExp): string | null {
   for (const target of rels.values()) {
     if (test.test(target)) return target;

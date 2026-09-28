@@ -56,7 +56,7 @@ function recordingClient(): { client: AndroidInputClient; lines: string[] } {
 /**
  * Splits a command line into words the way a POSIX shell does, and returns
  * null when the line contains anything the shell would read as syntax rather
- * than as text — which is exactly what must never come from a caller's value.
+ * than as text, which is exactly what must never come from a caller's value.
  */
 function shellWords(line: string): string[] | null {
   const SYNTAX = '";&|<>()$`*?~#!{}\n\r';
@@ -122,7 +122,7 @@ describe("typing text on an Android device", () => {
     expect(lines[0]).not.toMatch(/[\r\n]/);
     const words = shellWords(lines[0]);
     expect(words).not.toBeNull();
-    // `input`, `text`, and one argument — never a second command.
+    // `input`, `text`, and one argument. Never a second command.
     expect(words).toHaveLength(3);
     expect(words?.slice(0, 2)).toEqual(["input", "text"]);
   });

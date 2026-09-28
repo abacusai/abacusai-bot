@@ -124,7 +124,7 @@ const firstNonEmpty = (...values: Array<string | undefined>): string => {
   return "";
 };
 
-/** Width/height from a PNG IHDR — avoids pulling in an image library. */
+/** Width/height from a PNG IHDR, without pulling in an image library. */
 const readPngSize = (
   buffer: Buffer
 ): { width: number; height: number } | null => {
@@ -137,7 +137,7 @@ const readPngSize = (
 const tail = (text: string, chars = 6000): string =>
   text.length > chars ? `…${text.slice(-chars)}` : text;
 
-/** Maestro banners/notification boxes surround its JSON — silence what we can
+/** Maestro banners/notification boxes surround its JSON. Silence what we can
  *  and extract the first balanced JSON object from mixed output. */
 const MAESTRO_ENV = {
   MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: "true",
@@ -459,7 +459,7 @@ const jdkVersion = (home: string): number => {
     const m = release.match(/JAVA_VERSION="(\d+)/);
     if (m != null) return Number(m[1]);
   } catch {
-    /* no release file — fall back to the path */
+    /* no release file: fall back to the path */
   }
   const fromPath = home.match(/(?:openjdk|jdk|temurin|zulu)[@-]?(\d+)/i);
   return fromPath != null ? Number(fromPath[1]) : 0;
@@ -505,7 +505,7 @@ export async function filterLogLines(
       finish(() =>
         reject(
           new Error(
-            `Filter ${JSON.stringify(filter)} did not finish within ${timeoutMs}ms — use a simpler pattern.`
+            `Filter ${JSON.stringify(filter)} did not finish within ${timeoutMs}ms. Use a simpler pattern.`
           )
         )
       );
@@ -575,7 +575,7 @@ export class DeviceService {
         JSON.stringify([...this.bootedByUs])
       );
     } catch {
-      /* best effort — quit-time cleanup still works this run */
+      /* best effort: quit-time cleanup still works this run */
     }
   }
 
@@ -697,7 +697,7 @@ export class DeviceService {
     const p = this.getToolchain().adbPath;
     if (p == null)
       throw new Error(
-        "adb not found — install the Android SDK platform-tools or set ANDROID_HOME."
+        "adb not found. Install the Android SDK platform-tools or set ANDROID_HOME."
       );
     return p;
   }
@@ -809,7 +809,7 @@ export class DeviceService {
         });
       }
     } catch {
-      /* adb misbehaving — fall through to AVD list */
+      /* adb misbehaving: fall through to AVD list */
     }
     const tc = this.getToolchain();
     if (tc.emulatorPath != null) {
@@ -893,7 +893,7 @@ export class DeviceService {
         );
         showChrome = stdout.trim();
       } catch {
-        /* key unset — Simulator defaults to bezels on */
+        /* key unset: Simulator defaults to bezels on */
       }
       if (showChrome !== "0") {
         await run("/usr/bin/defaults", [
@@ -910,7 +910,7 @@ export class DeviceService {
         }
       }
     } catch {
-      /* cosmetic — mirror still works, taps may be slightly off */
+      /* cosmetic: the mirror still works, taps may be slightly off */
     }
     const openArgs = focus ? ["-a", "Simulator"] : ["-g", "-a", "Simulator"];
     if (udid != null) openArgs.push("--args", "-CurrentDeviceUDID", udid);
@@ -1206,7 +1206,7 @@ export class DeviceService {
       const text = fs.readFileSync(config, "utf-8");
       fs.writeFileSync(config, upsertIniLine(text, "hw.keyboard", "yes"));
     } catch {
-      /* no config.ini — the AVD still boots, just without a keyboard */
+      /* no config.ini: the AVD still boots, just without a keyboard */
     }
   }
 
@@ -1328,7 +1328,7 @@ export class DeviceService {
             });
           }
         } catch {
-          /* device already gone / adb missing — nothing to clean up */
+          /* device already gone / adb missing: nothing to clean up */
         }
       })
     );
@@ -1339,7 +1339,7 @@ export class DeviceService {
       return {
         success: false,
         error:
-          "Automatic install is not supported on Windows — see docs.maestro.dev.",
+          "Automatic install is not supported on Windows. See docs.maestro.dev.",
       };
     }
     try {
@@ -1405,7 +1405,7 @@ export class DeviceService {
             break;
           }
         } catch {
-          /* unreadable package.json — keep looking */
+          /* unreadable package.json: keep looking */
         }
       }
     }
@@ -1522,7 +1522,7 @@ export class DeviceService {
       if (scheme == null)
         return {
           success: false,
-          output: "Could not determine an Xcode scheme — pass one explicitly.",
+          output: "Could not determine an Xcode scheme. Pass one explicitly.",
         };
     }
     const configuration = opts.configuration ?? "Debug";
@@ -1583,7 +1583,7 @@ export class DeviceService {
           ]);
           appId = bid.trim() || undefined;
         } catch {
-          /* Info.plist variant — agent can find it */
+          /* Info.plist variant: the agent can find it */
         }
       }
       return { success: true, artifactPath, appId, output: tail(stdout, 2000) };
@@ -1696,7 +1696,7 @@ export class DeviceService {
           const trimmed = line.trim();
           if (trimmed.startsWith("#") || !trimmed.startsWith(key)) continue;
           const value = trimmed.slice(trimmed.indexOf("=") + 1).trim();
-          // Java .properties escaping — paths arrive with `\:` and `\\`.
+          // Java .properties escaping: paths arrive with `\:` and `\\`.
           const unescaped = value.replace(/\\:/g, ":").replace(/\\\\/g, "\\");
           if (unescaped !== "") return unescaped;
         }
@@ -1762,7 +1762,7 @@ export class DeviceService {
       if (!fs.existsSync(candidate)) continue;
       if (fs.existsSync(path.join(candidate, "bin", exeName("java"))))
         return { JAVA_HOME: candidate };
-      // A JVM *container* dir — rank what is inside it.
+      // A JVM *container* dir: rank what is inside it.
       try {
         const inner = fs
           .readdirSync(candidate)
@@ -1780,7 +1780,7 @@ export class DeviceService {
         const best = pickGradleJdk(inner);
         if (best != null) return { JAVA_HOME: best.home };
       } catch {
-        /* unreadable — next candidate */
+        /* unreadable: next candidate */
       }
     }
     return undefined;
@@ -2002,7 +2002,7 @@ export class DeviceService {
       if (points != null && points.w > 0) {
         const scale = Math.round(pixels.width / points.w);
         note +=
-          ` The screen is ${points.w}x${points.h} points (${scale}x) — device_interact coordinates are in POINTS,` +
+          ` The screen is ${points.w}x${points.h} points (${scale}x). device_interact coordinates are in POINTS,` +
           " so divide any pixel coordinate read off this image by the scale, or use an @eN ref from device_snapshot.";
       } else if (platform === "ios") {
         note +=
@@ -2125,8 +2125,8 @@ export class DeviceService {
     if (maestro == null) {
       throw new Error(
         "iOS snapshot/interaction requires Maestro, which is not installed. " +
-          'Install it with: curl -Ls "https://get.maestro.mobile.dev" | bash — ' +
-          "meanwhile, use device_screenshot to see the screen and deep links (device_app open_url) to navigate."
+          'Install it with: curl -Ls "https://get.maestro.mobile.dev" | bash. ' +
+          "Meanwhile, use device_screenshot to see the screen and deep links (device_app open_url) to navigate."
       );
     }
     return maestro;
@@ -2241,7 +2241,7 @@ export class DeviceService {
         const idPart = item.resourceId !== "" ? ` id=${item.resourceId}` : "";
         lines.push(`${ref}${idPart} "${item.label}"`);
       } else if (!visible && item.label !== "") {
-        lines.push(`(offscreen — scroll to reach) "${item.label}"`);
+        lines.push(`(offscreen, scroll to reach) "${item.label}"`);
       } else if (item.label !== "") {
         lines.push(`(text) "${item.label}"`);
       }
@@ -2329,11 +2329,11 @@ export class DeviceService {
       const entry = this.refMap.get(args.ref);
       if (entry == null)
         throw new Error(
-          `Unknown ref ${args.ref} — take a new device_snapshot first.`
+          `Unknown ref ${args.ref}. Take a new device_snapshot first.`
         );
       if (entry.deviceId !== deviceId)
         throw new Error(
-          `Ref ${args.ref} belongs to another device — take a new device_snapshot.`
+          `Ref ${args.ref} belongs to another device. Take a new device_snapshot.`
         );
       return { x: entry.x, y: entry.y };
     }
@@ -2502,7 +2502,7 @@ export class DeviceService {
       this.refMap.set(`@e${i + 1}`, { deviceId: device.id, x: p.x, y: p.y })
     );
     if (lines.length === 0) {
-      return "No elements found in the UI hierarchy. The screen may be rendering with a game/canvas surface — use device_screenshot instead.";
+      return "No elements found in the UI hierarchy. The screen may be rendering with a game/canvas surface. Use device_screenshot instead.";
     }
     return `Interactive elements (@eN refs are tappable via device_interact; refs valid until the next snapshot):\n${lines.join("\n")}`;
   }
@@ -2514,11 +2514,11 @@ export class DeviceService {
         const entry = this.refMap.get(args.ref);
         if (entry == null)
           throw new Error(
-            `Unknown ref ${args.ref} — take a new device_snapshot first.`
+            `Unknown ref ${args.ref}. Take a new device_snapshot first.`
           );
         if (entry.deviceId !== device.id)
           throw new Error(
-            `Ref ${args.ref} belongs to another device — take a new device_snapshot.`
+            `Ref ${args.ref} belongs to another device. Take a new device_snapshot.`
           );
         return { x: entry.x, y: entry.y };
       }

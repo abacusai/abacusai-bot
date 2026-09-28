@@ -6,7 +6,7 @@
  * exactly the way that rationale cares about: created in the bot's own chat
  * when the user asks, listed in the Routines panel, fired back into the same
  * visible conversation. So a bot caller is served the tool even with the
- * toolset off, while a session still is not — "send me a daily summary"
+ * toolset off, while a session still is not: "send me a daily summary"
  * has to work in the one chat where it is most natural to ask.
  */
 import fs from "fs";
@@ -138,7 +138,7 @@ describe("with the cronjob toolset switched on", () => {
 /**
  * A bot's `list` is scoped to its own routines. Every routine on the machine
  * used to come back, and a freshly created bot reading the room adopted the
- * user's unrelated schedules as its own mission backlog — greeting the user
+ * user's unrelated schedules as its own mission backlog, greeting the user
  * with plans to run them.
  */
 describe("what a bot sees in the routine list", () => {
@@ -225,7 +225,7 @@ describe("the first fire of a new routine", () => {
     expect(runner.fires[0]?.trigger).toBe("create");
     expect(text).toContain("The first one is running now");
     // The double-send guard: the fire performs the task, so the creating
-    // agent is told in the same breath not to also do it — a bot once sent
+    // agent is told in the same breath not to also do it: a bot once sent
     // the meeting summary itself while the first fire sent it in parallel.
     expect(text).toContain("do NOT also do that task");
   });
@@ -289,7 +289,7 @@ describe("the first fire of a new routine", () => {
 /**
  * Renaming used to be create-only, and a real routine paid for it: a bot
  * repurposed "History trivia every 5 min" to send geography, changed the
- * prompt, saw that the name no longer matched, and — having no way to fix it —
+ * prompt, saw that the name no longer matched, and, having no way to fix it,
  * told itself the name was "just a label". The panel and every `list` the
  * model reads back kept describing the old job.
  */
