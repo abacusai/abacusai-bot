@@ -23,11 +23,12 @@ export interface AccountCredits {
 }
 
 /**
- * The first credits of a new account go to DeepSeek Flash rather than the
- * platform's first pick. Muse Spark leads the free pool on the platform's
- * order, and its 30 to 60 seconds to a first token is what a new user meets
- * on day one; Flash answers in a few seconds. Once this much of the grant is
- * spent the platform's order stands, so the cheaper model carries the rest.
+ * The first credits of a new account go to DeepSeek V4 Flash Vision rather
+ * than the platform's first pick. Muse Spark leads the free pool on the
+ * platform's order, and its 30 to 60 seconds to a first token is what a new
+ * user meets on day one; Flash Vision answers in a few seconds and can see
+ * attached images. Once this much of the grant is spent the platform's order
+ * stands, so the cheaper model carries the rest.
  */
 export const OPENLLM_STARTER_CREDITS = 1_300;
 
@@ -268,12 +269,16 @@ const abacusRank = (choice: ModelChoice): number => {
   return choice.poolRank ?? Number.MAX_SAFE_INTEGER;
 };
 
-/** The models the starter phase moves to the front of the Abacus slice. */
-const STARTER_FAMILY = /deepseek.*flash/i;
+/**
+ * The one model the starter phase moves to the front of the Abacus slice.
+ * The same id as FLASH_VISION_ID in providers.ts; named here so the router
+ * does not import the provider module.
+ */
+export const STARTER_MODEL_ID = "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp";
 
 /**
- * In the starter phase, DeepSeek Flash ahead of the rest of the Abacus slice;
- * among the Flash models, and in every other phase, the platform's order.
+ * In the starter phase, Flash Vision ahead of the rest of the Abacus slice;
+ * everything else, and every other phase, keeps the platform's order.
  */
 const starterRank = (
   choice: ModelChoice,
@@ -281,7 +286,7 @@ const starterRank = (
 ): number =>
   phase === "starter" &&
   choice.provider === "abacus" &&
-  STARTER_FAMILY.test(choice.modelId)
+  choice.modelId === STARTER_MODEL_ID
     ? 0
     : 1;
 

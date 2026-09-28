@@ -30,8 +30,8 @@ export function buildAgentAuthEnv(): Record<string, string> {
 
 /**
  * The account's credits at spawn, for the router's starter phase
- * (packages/agent/src/openllm.ts): DeepSeek Flash leads the free pool until
- * the first 1,300 credits are spent. Nothing when the deployment does not
+ * (packages/agent/src/openllm.ts): DeepSeek V4 Flash Vision leads the free
+ * pool until the first 1,300 credits are spent. Nothing when the deployment does not
  * report credits; the agent then keeps the platform's order.
  */
 export function buildAgentCreditsEnv(

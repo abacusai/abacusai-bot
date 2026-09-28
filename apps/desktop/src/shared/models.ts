@@ -36,7 +36,7 @@ export const MODEL_CATALOG: AbacusBotModel[] = [
     label: "RouteLLM - Open",
     provider: "openllm",
     tier: "default",
-    note: "Every free model you can run (cheap Abacus routes, Gemini's free quota, OpenRouter free tier), with automatic fallback when one fails or rate-limits. A new Abacus.AI account starts on DeepSeek Flash and moves to Muse Spark after its first 1,300 credits",
+    note: "Every free model you can run (cheap Abacus routes, Gemini's free quota, OpenRouter free tier), with automatic fallback when one fails or rate-limits. A new Abacus.AI account starts on DeepSeek V4 Flash Vision and moves to Muse Spark after its first 1,300 credits",
     requiresEnv: "OPENROUTER_API_KEY",
   },
   // Fetch-failure fallback only: the live per-account catalog supersedes every

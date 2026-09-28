@@ -585,8 +585,8 @@ describe("a pool whose account has closed a tier", () => {
 
 describe("the starter phase of a new account", () => {
   // The platform lists Muse Spark first in the free pool. Its 30 to 60
-  // seconds to a first token is what a new user met on day one; DeepSeek
-  // Flash answers in a few seconds, so the first credits go there.
+  // seconds to a first token is what a new user met on day one; DeepSeek V4
+  // Flash Vision answers in a few seconds, so the first credits go there.
   const freePool = () => [
     choice({
       id: "abacus/muse-spark-1.3-contributor",
@@ -618,7 +618,7 @@ describe("the starter phase of a new account", () => {
     "openrouter/deepseek/deepseek-chat-v3:free",
   ];
 
-  it("puts DeepSeek Flash ahead of the platform's first pick until the threshold, in the platform's order among them", () => {
+  it("puts Flash Vision alone ahead of the platform's first pick until the threshold; the rest keep their order", () => {
     const order = openLlmCandidates(freePool(), {
       used: 496,
       granted: 2000,
@@ -626,9 +626,9 @@ describe("the starter phase of a new account", () => {
 
     expect(order).toEqual([
       "abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+      "abacus/muse-spark-1.3-contributor",
       "abacus/deepseek-ai/DeepSeek-V4.1-Flash",
       "abacus/deepseek-ai/DeepSeek-V4-Flash-0731",
-      "abacus/muse-spark-1.3-contributor",
       "openrouter/deepseek/deepseek-chat-v3:free",
     ]);
   });
