@@ -36,6 +36,9 @@ machines with Node plainly installed. The app appended its own directory to
 the agent's `PATH` under a second spelling of the variable, and the agent
 resolved commands against that copy alone.
 
+The app reports which first-run setup steps it reached, so a setup that stops
+partway can be found and fixed. It follows the same setting as the log sync.
+
 Pasting a model provider's API key is the same dialog everywhere: from
 onboarding, from the Models page, and from Connect Gemini in the model picker,
 which now opens it in place instead of sending you to Settings. It names the

@@ -120,6 +120,11 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   // read as signed out and bounce the user back onto the wall. Until the read
   // lands, the route is drawn as signed out and nothing moves.
   const signedIn = credential.isPending ? null : credential.data === true;
+
+  // Each screen as it comes up, once the key read has settled which it is.
+  useEffect(() => {
+    if (signedIn != null) window.api.reportFunnelStep(`screen_${step}`);
+  }, [step, signedIn]);
   const steps = stepsFor({
     signedIn: signedIn === true,
     paying: isPayingAbacusTier(abacusAccount?.subscription_tier),
@@ -141,6 +146,7 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     finishing.current = true;
     setBusy(true);
     writeStoredStep(null);
+    window.api.reportFunnelStep("onboarding_done");
     if (activeWorkspaceId != null) {
       activateWorkspaceSession(activeWorkspaceId, null);
       void window.api.agent.switchWorkspace(activeWorkspaceId);

@@ -5,6 +5,7 @@ import type { AddressInfo } from "net";
 import { app, shell } from "electron";
 
 import { readSettings } from "../config/settings";
+import { reportFunnelStep } from "../debug-sync/funnel-beacon";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 
 /**
@@ -120,6 +121,7 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
         return;
       }
       accepted = true;
+      reportFunnelStep("browser_returned");
 
       const code = url.searchParams.get("code");
       // Answer the browser before the exchange so the tab says "done" at once.
@@ -153,9 +155,28 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
      * still waiting to hear how the exchange went, so the listener lingers
      * for it; a cancel or timeout has no tab to inform and closes at once.
      */
-    const finish = (result: AbacusAuthResult, reason?: string): void => {
+    const finish = (
+      result: AbacusAuthResult,
+      reason?: string,
+      // For the funnel report only: a failure with no tab to tell.
+      hint?: string
+    ): void => {
       if (settled) return;
       settled = true;
+      let outcomeCode = "ok";
+      // `=== false`, not `!`: the main tsconfig has strictNullChecks off, and
+      // only an equality check narrows the union there.
+      if (result.ok === false) {
+        outcomeCode =
+          reason ??
+          hint ??
+          (result.cancelled
+            ? "cancelled"
+            : result.error === ABACUS_TIMEOUT
+              ? "timeout"
+              : "listener");
+      }
+      reportFunnelStep("signin_result", outcomeCode);
       if (timer != null) clearTimeout(timer);
       abort.abort();
       if (inFlight?.close === close) inFlight = null;
@@ -196,14 +217,19 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
       authUrl.searchParams.set("botPort", String(port));
       authUrl.searchParams.set("botPath", callbackPath);
 
+      reportFunnelStep("signup_clicked");
       void shell.openExternal(authUrl.toString()).catch((error: unknown) => {
-        finish({
-          ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Could not open the browser.",
-        });
+        finish(
+          {
+            ok: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Could not open the browser.",
+          },
+          undefined,
+          "open_browser"
+        );
       });
     });
   });

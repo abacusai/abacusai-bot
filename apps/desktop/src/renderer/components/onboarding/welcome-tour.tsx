@@ -80,11 +80,17 @@ const TourDefinition = ({
 
   // Skip and finish land in the same place: a skipped lap must not leave the
   // user with the overlay gone and no onboarding step to answer.
-  const leave = useCallback((): void => {
-    console.log("[tour] over");
-    close();
-    onFinishRef.current?.();
-  }, [close]);
+  const leave = useCallback(
+    (how: "tour_done" | "tour_skipped"): void => {
+      console.log("[tour] over");
+      window.api.reportFunnelStep(how);
+      close();
+      onFinishRef.current?.();
+    },
+    [close]
+  );
+  const complete = useCallback(() => leave("tour_done"), [leave]);
+  const skip = useCallback(() => leave("tour_skipped"), [leave]);
   const renderTooltip = useCallback(
     (props: TooltipRenderProps) => <TourTooltip {...props} />,
     []
@@ -121,8 +127,8 @@ const TourDefinition = ({
       <SpotlightTour
         id={TOUR_ID}
         steps={steps}
-        onComplete={leave}
-        onSkip={leave}
+        onComplete={complete}
+        onSkip={skip}
         renderTooltip={renderTooltip}
       />
       <TourStarter />

@@ -59,6 +59,7 @@ export const FirstBotDialog = ({
     // of those meant almost nobody reached their first bot: the check read
     // "they already have bots" about bots they never made.
     if (botsQuery.data.some((bot) => bot.channel == null)) {
+      window.api.reportFunnelStep("first_bot_skipped", "has_bots");
       onDone();
       return;
     }
@@ -66,6 +67,7 @@ export const FirstBotDialog = ({
       (entry) => entry.id === FIRST_BOT_TEMPLATE_ID
     );
     if (template == null) {
+      window.api.reportFunnelStep("first_bot_skipped", "no_template");
       onDone();
       return;
     }
@@ -78,10 +80,16 @@ export const FirstBotDialog = ({
         avatarColor: template.avatarColor,
         avatarShape: template.avatarShape,
       })
-      .then(setBot)
+      .then((made) => {
+        window.api.reportFunnelStep("first_bot_shown");
+        setBot(made);
+      })
       // A first bot that could not be made is not worth a popup: the bot
       // maker is right there behind this, and it says nothing was made.
-      .catch(onDone);
+      .catch(() => {
+        window.api.reportFunnelStep("first_bot_skipped", "create_failed");
+        onDone();
+      });
     // `createBot` and `t` are stable enough; the effect is about `armed`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [armed, botsQuery.data, onDone]);
@@ -104,6 +112,7 @@ export const FirstBotDialog = ({
       return;
     }
     const made = bot.id;
+    window.api.reportFunnelStep("first_bot_cancelled");
     close();
     deleteBot.mutate(made);
   };
@@ -116,6 +125,7 @@ export const FirstBotDialog = ({
       onClose={cancel}
       onCreated={(saved) => {
         keptRef.current = true;
+        window.api.reportFunnelStep("first_bot_kept");
         close();
         void navigate({ to: "/bots/$botId", params: { botId: saved.id } });
       }}
