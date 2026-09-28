@@ -27,9 +27,10 @@
  * packaged app is missing anything. So this reads what the build actually
  * bundles and what the packaging actually copies, and compares them.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { builtinModules } from "node:module";
+import os from "node:os";
 import path from "node:path";
 
 import { init, parse } from "es-module-lexer";
@@ -194,5 +195,44 @@ describe("what the agent copy leaves behind", () => {
 
   it("keeps the entry point the app spawns", () => {
     expect(fs.existsSync(path.join(AGENT_DIST, "main.js"))).toBe(true);
+  });
+
+  it("parses as ESM below a user's CommonJS package", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "agent-module-type-"));
+    try {
+      const agent = path.join(
+        home,
+        "AppData",
+        "Local",
+        "Programs",
+        "Bot",
+        "resources",
+        "agent"
+      );
+      fs.mkdirSync(agent, { recursive: true });
+      fs.writeFileSync(
+        path.join(home, "package.json"),
+        '{"type":"commonjs"}\n'
+      );
+      fs.copyFileSync(
+        path.join(AGENT_DIST, "main.js"),
+        path.join(agent, "main.js")
+      );
+      fs.copyFileSync(
+        path.join(AGENT_DIST, "package.json"),
+        path.join(agent, "package.json")
+      );
+
+      const probe = spawnSync(
+        process.execPath,
+        ["--check", path.join(agent, "main.js")],
+        {
+          encoding: "utf8",
+        }
+      );
+      expect(probe.status, probe.stderr).toBe(0);
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   });
 });

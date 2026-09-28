@@ -688,6 +688,8 @@ export class AgentManagerService {
       if (current == null || current.process !== child) {
         return;
       }
+      const exitedBeforeReady =
+        !current.spawnResultReported && current.state.status === "starting";
       // Early exit before ever reaching ready counts as a failed spawn.
       if (!current.spawnResultReported) {
         logCliSpawnFailure(
@@ -703,12 +705,15 @@ export class AgentManagerService {
         );
         this.reportSpawnResultOnce(request.sessionId);
       }
-      const isError = current.state.status === "error";
+      const isError = current.state.status === "error" || exitedBeforeReady;
       current.state = {
         ...current.state,
         status: isError ? "error" : "stopped",
         pid: null,
         exitCode: code,
+        error: exitedBeforeReady
+          ? `The local agent exited before it was ready (exit code ${code ?? "unknown"}).`
+          : current.state.error,
         stoppedAt: new Date().toISOString(),
       };
       this.options.emitStateUpdated(current.workspaceId, current.sessionId, {

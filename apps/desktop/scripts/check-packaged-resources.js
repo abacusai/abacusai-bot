@@ -30,6 +30,7 @@ const REQUIRED = [
   "LICENSE",
   "THIRD-PARTY-NOTICES.txt",
   "agent/main.js",
+  "agent/package.json",
   // Left out of the agent bundle because it loads a native addon, so it has to
   // be resolvable from beside the bundle at run time.
   "agent/node_modules/@ast-grep/napi",
@@ -108,6 +109,16 @@ function main() {
   const shipped = FORBIDDEN.filter((relative) =>
     fs.existsSync(path.join(resources, relative))
   );
+
+  const agentPackage = path.join(resources, "agent", "package.json");
+  if (fs.existsSync(agentPackage)) {
+    const manifest = JSON.parse(fs.readFileSync(agentPackage, "utf8"));
+    if (manifest.type !== "module") {
+      throw new Error(
+        `The packaged agent must declare type=module in ${agentPackage}`
+      );
+    }
+  }
 
   if (shipped.length > 0) {
     console.error(
