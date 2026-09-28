@@ -9,6 +9,10 @@ export const BOT_REACTION_EMOJIS = [
   "😢",
   "🙏",
   "👀",
+  "🤗",
+  "😊",
+  "💪",
+  "🤔",
 ] as const;
 
 export function buildBotReactionTool() {
@@ -16,7 +20,7 @@ export function buildBotReactionTool() {
     name: BOT_REACTION_TOOL_NAME,
     label: BOT_REACTION_TOOL_NAME,
     description:
-      "React to the user's message in this turn with one emoji. Use sparingly when a warm acknowledgement fits the meaning and tone, in any language. Do not react to automated messages or use a reaction instead of answering a question or doing requested work. Calling again replaces the reaction.",
+      "Attach one emoji reaction to the user's message in this turn. Use this proactively for clear feelings, praise, thanks, humor, achievements, or dissatisfaction with your work, in any language, even when the same message also requests a task. Match the tone: support for distress, appreciation for praise, acknowledgement for criticism. Skip neutral task-only, automated, scheduled, or internal messages. A reaction supplements your answer or work; it never replaces it. Calling again replaces the reaction.",
     parameters: {
       type: "object",
       properties: { emoji: { type: "string", enum: [...BOT_REACTION_EMOJIS] } },
