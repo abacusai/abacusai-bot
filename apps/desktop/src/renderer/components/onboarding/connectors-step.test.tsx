@@ -40,18 +40,18 @@ const byId = (id: string): HTMLElement => {
 
 const gmail = "abacus-gmailuser";
 
-const mountStep = (): ReturnType<typeof render> => {
-  const client = new QueryClient({
+const stepElement = (
+  client: QueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    (
-      <QueryClientProvider client={client}>
-        <ConnectorsStep {...handlers} />
-      </QueryClientProvider>
-    ) as JSX.Element
-  );
-};
+  })
+): JSX.Element =>
+  (
+    <QueryClientProvider client={client}>
+      <ConnectorsStep {...handlers} />
+    </QueryClientProvider>
+  ) as JSX.Element;
+
+const mountStep = (): ReturnType<typeof render> => render(stepElement());
 
 const mount = async (): Promise<void> => {
   mountStep();
@@ -132,6 +132,20 @@ describe("a hop the user walks away from", () => {
     view.unmount();
 
     expect(cancelConnectorConnect).toHaveBeenCalled();
+  });
+
+  it("is not abandoned by a re-render while the browser is still open", async () => {
+    hangingHop();
+    const view = mountStep();
+    await waitFor(() => byId("onboarding-connectors-grid"));
+    fireEvent.click(byId(`onboarding-connector-${gmail}-connect`));
+    await waitFor(() => expect(connectConnector).toHaveBeenCalled());
+    cancelConnectorConnect.mockClear();
+
+    view.rerender(stepElement());
+    view.rerender(stepElement());
+
+    expect(cancelConnectorConnect).not.toHaveBeenCalled();
   });
 });
 

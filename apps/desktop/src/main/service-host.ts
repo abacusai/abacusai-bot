@@ -49,6 +49,7 @@ import type {
   ListMcpServersRequest,
   AgentMcpLogEntry,
   AgentMcpServer,
+  AgentMcpStatus,
   McpBrowserStatus,
   DefaultAgentMode,
   SandboxSupport,
@@ -794,8 +795,10 @@ export class ServiceHost {
       },
     },
     mcp: {
+      // Restore rather than refuse when the name is taken: the earlier Add
+      // wrote the entry, and this click is the user trying the sign-in again.
       add: (name, entry) =>
-        this.addMcpServer({ mode: "code", name, config: entry }),
+        this.ensureMcpServer({ mode: "code", name, config: entry }),
       remove: (name) => this.removeMcpServer({ mode: "code", name }),
       signIn: (name) => this.mcpOAuthSignIn({ mode: "code", name }),
     },
@@ -812,6 +815,39 @@ export class ServiceHost {
       type: "connector-status-changed",
       emittedAt: new Date().toISOString(),
     });
+  }
+
+  private connectorStatusTimer: NodeJS.Timeout | null = null;
+
+  /**
+   * The same, coalesced: a session reconnecting re-reports every server in a
+   * burst, and each re-read costs a platform listing.
+   */
+  private connectorStatusChangedSoon(): void {
+    if (this.connectorStatusTimer != null) return;
+    this.connectorStatusTimer = setTimeout(() => {
+      this.connectorStatusTimer = null;
+      this.connectorStatusChanged();
+    }, 300);
+    this.connectorStatusTimer.unref?.();
+  }
+
+  /**
+   * An MCP connector reads as connected only once no running agent is
+   * waiting on its sign-in, so a session's server flipping into or out of
+   * `auth-required` moves a status the renderer has to re-read. Without
+   * this a just-signed-in card sat under "Not installed" until something
+   * unrelated refreshed the table.
+   */
+  private mcpRuntimeMovedConnectorStatus(
+    servers: ReadonlyArray<{ id: string; status: AgentMcpStatus }>
+  ): void {
+    const moved = servers.some(
+      (server) =>
+        connectorById(server.id)?.kind === "mcp" &&
+        server.status !== "connecting"
+    );
+    if (moved) this.connectorStatusChangedSoon();
   }
 
   async connectConnector(connectorId: string): Promise<ConnectorOutcome> {
@@ -1269,8 +1305,12 @@ export class ServiceHost {
         servers,
         emittedAt: new Date().toISOString(),
       });
+      this.mcpRuntimeMovedConnectorStatus(servers);
     },
     emitMcpRuntimeStatus: (workspaceId, sessionId, event) => {
+      this.mcpRuntimeMovedConnectorStatus([
+        { id: event.serverId, status: event.status },
+      ]);
       this.emitEvent({
         type: "mcp-runtime-status",
         workspaceId,

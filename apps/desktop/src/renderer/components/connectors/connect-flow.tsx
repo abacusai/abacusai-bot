@@ -52,7 +52,11 @@ type PairingAsk = {
 export interface ConnectFlow {
   /** Run the connector's flow; resolves when it is over, however it ended. */
   start: (connector: ConnectorDefinition) => Promise<ConnectResult>;
-  /** Give up on a browser hop in flight, resolving it as cancelled. */
+  /**
+   * Give up on a browser hop in flight, resolving it as cancelled. Stable
+   * across renders, unlike the flow object itself (`dialogs` is fresh JSX
+   * every time), so an unmount cleanup keys on this, never on the flow.
+   */
   cancel: () => void;
   /** The dialogs the flow may need; mount once wherever `start` is used. */
   dialogs: JSX.Element;

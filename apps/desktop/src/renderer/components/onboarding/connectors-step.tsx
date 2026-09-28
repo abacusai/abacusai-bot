@@ -67,8 +67,11 @@ export const ConnectorsStep = ({
   const [error, setError] = useState<string | null>(null);
 
   // Leaving the step abandons any connect in flight, or the loopback listener
-  // holds its port for the full five-minute window.
-  useEffect(() => () => flow.cancel(), [flow]);
+  // holds its port for the full five-minute window. Keyed on the stable
+  // `cancel`: the flow object is new every render, and a cleanup keyed on it
+  // would cancel the hop on any re-render.
+  const cancelFlow = flow.cancel;
+  useEffect(() => () => cancelFlow(), [cancelFlow]);
 
   /**
    * Give up on the hop in flight: it resolves on the loopback ping or after
