@@ -355,7 +355,11 @@ export class WorkspaceService {
           ? candidate.label
           : this.workspaceLabelFromPath(workspacePath),
       description: workspacePath,
-      ...(candidate.kind === "auto" ? { kind: "auto" as const } : {}),
+      ...(candidate.kind === "auto" ||
+      candidate.kind === "routine" ||
+      candidate.kind === "bot"
+        ? { kind: candidate.kind }
+        : {}),
       // Tombstones survive restarts; everything else re-derives active/idle.
       status: candidate.status === "deleted" ? "deleted" : "idle",
       path: workspacePath,
