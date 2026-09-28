@@ -38,7 +38,10 @@ const respondFile = (
     "content-type": "application/octet-stream",
     "x-content-type-options": "nosniff",
   });
-  createReadStream(file).pipe(response);
+  const stream = createReadStream(file);
+  // Unreadable or gone since the stat: drop this response, not the server.
+  stream.once("error", () => response.destroy());
+  stream.pipe(response);
 };
 
 export const createServer = (paths: UpdaterPaths): http.Server =>
