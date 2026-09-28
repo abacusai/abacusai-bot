@@ -21,10 +21,12 @@ type WindowOptions = {
 };
 let lastWindow: WindowOptions | null = null;
 let windowAvailable = true;
+let windowReady: Promise<void> | null = null;
 const closeWindow = vi.fn();
 vi.mock("./abacus-signin-window", () => ({
   openSignInWindow: async (options: WindowOptions) => {
     lastWindow = options;
+    if (windowReady != null) await windowReady;
     return windowAvailable ? { close: closeWindow } : null;
   },
 }));
@@ -53,6 +55,7 @@ beforeEach(() => {
   closeWindow.mockReset();
   lastWindow = null;
   windowAvailable = true;
+  windowReady = null;
 });
 
 afterEach(() => {
@@ -136,5 +139,95 @@ describe("an in-app sign-in", () => {
 
     const result = await attempt;
     expect(result.ok === false && result.cancelled).toBe(true);
+  });
+});
+
+const deferred = <T>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+};
+
+const configResponse = () => ({
+  ok: true,
+  json: async () => ({ success: true, result: { inAppSignIn: true } }),
+});
+
+describe("sign-in startup races", () => {
+  it("settles cancellation before config returns and never opens a surface", async () => {
+    const config = deferred<ReturnType<typeof configResponse>>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => config.promise)
+    );
+    const attempt = startAbacusAuth();
+    cancelAbacusAuth();
+    await expect(attempt).resolves.toMatchObject({
+      ok: false,
+      cancelled: true,
+    });
+    config.resolve(configResponse());
+    await settle();
+    expect(lastWindow).toBeNull();
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it("does not let an older config response supersede the latest attempt", async () => {
+    const firstConfig = deferred<ReturnType<typeof configResponse>>();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementationOnce(() => firstConfig.promise)
+        .mockResolvedValue(configResponse())
+    );
+    const first = startAbacusAuth();
+    const second = startAbacusAuth();
+    await expect(first).resolves.toMatchObject({ cancelled: true });
+    await settle();
+    const currentWindow = lastWindow;
+    firstConfig.resolve(configResponse());
+    await settle();
+    expect(lastWindow).toBe(currentWindow);
+    expect(closeWindow).not.toHaveBeenCalled();
+    cancelAbacusAuth();
+    await expect(second).resolves.toMatchObject({ cancelled: true });
+  });
+
+  it("remembers a browser request during the config lookup", async () => {
+    const config = deferred<ReturnType<typeof configResponse>>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => config.promise)
+    );
+    void startAbacusAuth();
+    openAbacusAuthInBrowser();
+    config.resolve(configResponse());
+    await settle();
+    expect(lastWindow).toBeNull();
+    expect(openExternal).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes a late window without cancelling the browser attempt", async () => {
+    answer({ success: true, result: { inAppSignIn: true } });
+    const ready = deferred<void>();
+    windowReady = ready.promise;
+    const attempt = startAbacusAuth();
+    const finished = vi.fn();
+    void attempt.then(finished);
+    await settle();
+    expect(lastWindow).not.toBeNull();
+    openAbacusAuthInBrowser();
+    // Dismissal during the pending window open must not cancel the hand-off.
+    lastWindow?.onDismissed();
+    ready.resolve();
+    await settle();
+    expect(closeWindow).toHaveBeenCalledTimes(1);
+    expect(openExternal).toHaveBeenCalledTimes(1);
+    expect(finished).not.toHaveBeenCalled();
+    cancelAbacusAuth();
+    await expect(attempt).resolves.toMatchObject({ cancelled: true });
   });
 });

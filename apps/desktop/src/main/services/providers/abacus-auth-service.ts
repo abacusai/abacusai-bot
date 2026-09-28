@@ -75,9 +75,6 @@ export const openAbacusAuthInBrowser = (): void => {
 };
 
 export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
-  // Before the cancel, so a second click during the lookup still leaves
-  // exactly one attempt standing.
-  const variant: SignInVariant = await resolveSignInVariant();
   cancelAbacusAuth();
 
   const verifier = crypto.randomBytes(32).toString("base64url");
@@ -87,6 +84,8 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
 
   return new Promise<AbacusAuthResult>((resolve) => {
     let settled = false;
+    let variant: SignInVariant = "browser";
+    let browserRequested = false;
     let accepted = false;
     let timer: NodeJS.Timeout | null = null;
     let linger: NodeJS.Timeout | null = null;
@@ -202,13 +201,15 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
       finish({ ok: false, error: error.message });
     });
 
-    // Registered before listen's callback: a second click in that window must
-    // still cancel this attempt, or its loopback server leaks.
+    // Register before the config lookup so cancellation and newer attempts
+    // also supersede a sign-in whose surface has not been resolved yet.
     inFlight = { close, openInBrowser: () => openInBrowser() };
 
     let authUrl: URL | null = null;
     const openInBrowser = (): void => {
-      if (settled || authUrl == null) return;
+      if (settled) return;
+      browserRequested = true;
+      if (authUrl == null) return;
       signInWindow?.close();
       signInWindow = null;
       void shell.openExternal(authUrl.toString()).catch((error: unknown) => {
@@ -222,47 +223,56 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
       });
     };
 
-    // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
-    server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address() as AddressInfo;
+    void resolveSignInVariant().then((resolvedVariant) => {
+      if (settled) return;
+      variant = resolvedVariant;
 
-      timer = setTimeout(() => {
-        finish({
-          ok: false,
-          error: ABACUS_TIMEOUT,
-        });
-      }, AUTH_TIMEOUT_MS);
+      // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
+      server.listen(0, "127.0.0.1", () => {
+        const { port } = server.address() as AddressInfo;
 
-      const url = new URL(SIGNIN_PATH, abacusAppHost());
-      url.searchParams.set("isSignUp", "1");
-      url.searchParams.set("AbacusAIBot", "1");
-      url.searchParams.set("botChallenge", codeChallengeFor(verifier));
-      url.searchParams.set("botPort", String(port));
-      url.searchParams.set("botPath", callbackPath);
-      authUrl = url;
+        timer = setTimeout(() => {
+          finish({
+            ok: false,
+            error: ABACUS_TIMEOUT,
+          });
+        }, AUTH_TIMEOUT_MS);
 
-      console.log(`[abacus-auth] sign-in surface: ${variant}`);
-      if (variant !== "in_app") {
-        openInBrowser();
-        return;
-      }
-      void openSignInWindow({
-        url: url.toString(),
-        port,
-        callbackPath,
-        onHandOff: openInBrowser,
-        onDismissed: close,
-      })
-        .then((win) => {
-          if (win == null) {
-            openInBrowser();
-            return;
-          }
-          // Settled while the window was opening (a cancel): shut it again.
-          if (settled) win.close();
-          else signInWindow = win;
+        const url = new URL(SIGNIN_PATH, abacusAppHost());
+        url.searchParams.set("isSignUp", "1");
+        url.searchParams.set("AbacusAIBot", "1");
+        url.searchParams.set("botChallenge", codeChallengeFor(verifier));
+        url.searchParams.set("botPort", String(port));
+        url.searchParams.set("botPath", callbackPath);
+        authUrl = url;
+
+        console.log(`[abacus-auth] sign-in surface: ${variant}`);
+        if (browserRequested || variant !== "in_app") {
+          openInBrowser();
+          return;
+        }
+        void openSignInWindow({
+          url: url.toString(),
+          port,
+          callbackPath,
+          onHandOff: openInBrowser,
+          onDismissed: () => {
+            if (!browserRequested) close();
+          },
         })
-        .catch(() => openInBrowser());
+          .then((win) => {
+            if (win == null) {
+              if (!browserRequested) openInBrowser();
+              return;
+            }
+            // A cancel or browser hand-off may happen while storage is clearing.
+            if (settled || browserRequested) win.close();
+            else signInWindow = win;
+          })
+          .catch(() => {
+            if (!browserRequested) openInBrowser();
+          });
+      });
     });
   });
 };
