@@ -83,13 +83,17 @@ export class IosStreamService {
     });
     // Without a reader the stderr buffer fills and the helper blocks.
     proc.stderr?.on("data", () => {});
+    // A replaced helper exits after the next start() armed its waiter; only
+    // this stream's own helper may fail this stream's startup.
     proc.on("exit", () => {
+      if (this.streamId !== currentId) return;
       this.readyWaiter?.(null);
-      if (this.streamId === currentId) this.proc = null;
+      this.proc = null;
     });
     proc.on("error", () => {
+      if (this.streamId !== currentId) return;
       this.readyWaiter?.(null);
-      if (this.streamId === currentId) this.stop();
+      this.stop();
     });
 
     // Wait for the helper's report so setup failures surface as structured
