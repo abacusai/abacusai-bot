@@ -29,6 +29,11 @@ export interface FlowSources {
    */
   credential: { save: (provider: string, value: string) => void };
   mcp: {
+    /**
+     * Add the server, or restore its entry if the name is already taken. A
+     * second Add on a card whose sign-in never finished is a retry, not a
+     * clash: the entry stays and the sign-in runs again.
+     */
     add: (
       name: string,
       entry: McpServerEntry

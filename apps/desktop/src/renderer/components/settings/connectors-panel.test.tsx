@@ -382,4 +382,51 @@ describe("walking away from a connect", () => {
 
     expect(cancelConnectorConnect).toHaveBeenCalled();
   });
+
+  // The hop outlives many renders: statuses re-read, a chat app changes
+  // state, a session reports its servers. None of that is walking away, and
+  // a cancel here closed the listener while the user was still signing in.
+  it("survives the panel re-rendering while the browser is still open", async () => {
+    await mount();
+
+    fireEvent.click(byId(`connector-add-${connectors[0]!.id}`));
+    await waitFor(() => expect(connectConnector).toHaveBeenCalled());
+    // The first click cancels any earlier hop before it starts its own; the
+    // fresh identity through each re-render below is what is under test.
+    cancelConnectorConnect.mockClear();
+
+    for (let round = 0; round < 3; round += 1) {
+      statuses = { ...statuses };
+      await queryClient.invalidateQueries();
+      await waitFor(() =>
+        expect(
+          byId(`connector-add-${connectors[0]!.id}`).textContent
+        ).toContain("connectors.adding")
+      );
+    }
+
+    expect(cancelConnectorConnect).not.toHaveBeenCalled();
+  });
+});
+
+describe("a card that failed once", () => {
+  it("drops the failure when a later attempt connects", async () => {
+    const id = connectors[0]!.id;
+    await mount();
+
+    fireEvent.click(byId(`connector-add-${id}`));
+    await waitFor(() => expect(pending.has(id)).toBe(true));
+    pending.get(id)!({ ok: false, error: "no" });
+    await waitFor(() => byId(`connector-error-${id}`));
+
+    fireEvent.click(byId(`connector-add-${id}`));
+    await waitFor(() => expect(pending.has(id)).toBe(true));
+    statuses = { ...statuses, [id]: { state: "connected" } };
+    pending.get(id)!({ ok: true });
+
+    await waitFor(() => byId(`connector-remove-${id}`));
+    expect(
+      document.querySelector(`[data-id="connector-error-${id}"]`)
+    ).toBeNull();
+  });
 });

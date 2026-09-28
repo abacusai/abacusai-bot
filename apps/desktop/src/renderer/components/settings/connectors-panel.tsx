@@ -121,8 +121,12 @@ export const ConnectorsPanel = (): JSX.Element => {
 
   // Leaving the panel abandons any connect still in flight. Without this the
   // loopback listener holds its port and sits out the full window for a flow
-  // the user has walked away from.
-  useEffect(() => () => flow.cancel(), [flow]);
+  // the user has walked away from. Keyed on the stable `cancel`, not the flow
+  // object: that is new every render, and a cleanup keyed on it ran on every
+  // status or messaging update, closing the listener while the user was still
+  // in the browser ("127.0.0.1 refused to connect" on the way back).
+  const cancelFlow = flow.cancel;
+  useEffect(() => () => cancelFlow(), [cancelFlow]);
 
   // Reconnect the running agent to the servers as they are now. Its MCP
   // clients connect once at session start with the credentials of that moment,
@@ -224,6 +228,10 @@ export const ConnectorsPanel = (): JSX.Element => {
           return;
         }
         connected = true;
+        // A failure from an earlier attempt on this card is no longer true.
+        setConnectError((current) =>
+          current?.id === connector.id ? null : current
+        );
         await refresh();
         await reconnectRunningAgent();
         // Added either way: the server itself is fine, its first browser
