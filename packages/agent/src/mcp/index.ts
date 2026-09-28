@@ -258,6 +258,14 @@ const RECOVERY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000];
 const RECOVERY_REPEAT_MS = 300_000;
 
 /**
+ * The connector gateway can refuse a key minted moments ago that it accepts a
+ * few seconds later: seen on the first chat after signing in. Its refusal
+ * gets a few background tries over the first minute, then stands, so a key
+ * that is really refused is not retried for the life of the session.
+ */
+const KEY_REFUSED_RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
+
+/**
  * A failure worth retrying: no answer from the network (undici's "fetch
  * failed") or a gateway saying it is briefly unavailable. A timeout, a sign-in
  * or a refusal would fail the same way again.
@@ -321,6 +329,7 @@ export async function connectMcpServers(
     client: McpClient | null;
     status: McpServerStatus;
     transient?: boolean;
+    keyRefused?: boolean;
   }> => {
     const builtin = config.isBuiltin === true ? { isBuiltin: true } : {};
 
@@ -342,11 +351,13 @@ export async function connectMcpServers(
     // Held outside the try so a failed connect can close it; nulled once the
     // client owns it so a later throw cannot close a live connection.
     let transport: McpTransport | null = null;
+    let sentKey = false;
 
     try {
       // A stored OAuth token rides along on http servers unless the config
       // carries its own Authorization header or `oauth: false`.
       const expansion = expandHeaderEnvPlaceholders(config.headers, config.url);
+      sentKey = expansion.credentialExpanded;
       let headers = expansion.headers;
       if (
         config.url != null &&
@@ -399,6 +410,11 @@ export async function connectMcpServers(
       return {
         client: null,
         transient: isTransientConnectError(error),
+        keyRefused:
+          name === GATEWAY_SERVER_NAME &&
+          sentKey &&
+          error instanceof McpHttpError &&
+          (error.status === 401 || error.status === 403),
         status: {
           id: name,
           name,
@@ -470,13 +486,16 @@ export async function connectMcpServers(
     return outcome;
   };
 
-  const stillDown: Array<[string, McpServerConfig]> = [];
+  const stillDown: Array<[string, McpServerConfig, "network" | "key"]> = [];
   await Promise.all(
     Object.entries(servers).map(async ([name, config]) => {
       const outcome = await connectWithRetries(name, config);
       result.statuses.push(outcome.status);
       if (outcome.client != null) register(name, config, outcome.client, true);
-      else if (outcome.transient === true) stillDown.push([name, config]);
+      else if (outcome.transient === true)
+        stillDown.push([name, config, "network"]);
+      else if (outcome.keyRefused === true)
+        stillDown.push([name, config, "key"]);
     })
   );
 
@@ -525,16 +544,21 @@ export async function connectMcpServers(
     retired = true;
   };
 
-  // A server the network kept down keeps trying. Its tools are advertised
+  // A server the network kept down keeps trying; one whose new key was
+  // refused tries a few times over the first minute. Its tools are advertised
   // when it comes up, since the session never had them.
   const recover = async (
     name: string,
-    config: McpServerConfig
+    config: McpServerConfig,
+    why: "network" | "key"
   ): Promise<void> => {
     for (let attempt = 0; ; attempt++) {
-      await sleep(RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS, {
-        unref: true,
-      });
+      const delay =
+        why === "key"
+          ? KEY_REFUSED_RETRY_DELAYS_MS[attempt]
+          : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
+      if (delay == null) return;
+      await sleep(delay, { unref: true });
       if (retired) return;
 
       const outcome = await connectOne(name, config);
@@ -543,7 +567,12 @@ export async function connectMcpServers(
         outcome.client?.close();
         return;
       }
-      if (outcome.client == null && outcome.transient === true) continue;
+      if (
+        outcome.client == null &&
+        (outcome.transient === true ||
+          (why === "key" && outcome.keyRefused === true))
+      )
+        continue;
 
       const index = result.statuses.findIndex((status) => status.id === name);
       if (index >= 0) result.statuses[index] = outcome.status;
@@ -556,7 +585,7 @@ export async function connectMcpServers(
       return;
     }
   };
-  for (const [name, config] of stillDown) void recover(name, config);
+  for (const [name, config, why] of stillDown) void recover(name, config, why);
 
   return result;
 }
