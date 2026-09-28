@@ -10,6 +10,11 @@ go to the model provider you use. Connectors, messaging, search, and other tools
 send data to the services involved in carrying out your requests. The app also
 connects to online services for sign-in, account information, and app updates.
 
+During first-run setup, the app also reports which setup steps it reached
+(for example that it was opened, that sign-in was started, and which screens
+were shown), under a random per-install identifier, so that setup problems can
+be found and fixed. These reports carry no account details or content.
+
 ## Diagnostics and sensitive content
 
 Diagnostic information helps us investigate errors and improve the product.
