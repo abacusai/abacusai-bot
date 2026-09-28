@@ -142,7 +142,9 @@ const isExecutableForm = (
 /** True when `target` is `root` or inside it (boundary-aware, not substring). */
 const isWithin = (root: string, target: string): boolean => {
   const rel = path.relative(root, target);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+  // "..env" is a file inside root; only a ".." segment escapes it.
+  const escapes = rel === ".." || rel.startsWith(`..${path.sep}`);
+  return rel === "" || (!escapes && !path.isAbsolute(rel));
 };
 
 /** Realpath'd like the targets (macOS: /var/folders -> /private/var/folders). */

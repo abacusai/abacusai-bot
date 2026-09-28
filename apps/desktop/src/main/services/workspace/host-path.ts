@@ -123,7 +123,12 @@ export async function openHostFile(
   }
 
   const rel = path.relative(realRoot, realFile);
-  const escapes = !rel || rel.startsWith("..") || path.isAbsolute(rel);
+  // "..env" is a file inside root; only a ".." segment escapes it.
+  const escapes =
+    !rel ||
+    rel === ".." ||
+    rel.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(rel);
   if (escapes && realFile !== realRoot) {
     return { ok: false, error: "outside-root" };
   }
