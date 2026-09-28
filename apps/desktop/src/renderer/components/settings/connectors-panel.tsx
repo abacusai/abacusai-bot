@@ -72,11 +72,11 @@ import {
 } from "./messaging-connectors";
 
 /**
- * Connectors — the registry, and what is connected from it.
+ * Connectors: the registry, and what is connected from it.
  *
  * Every card is a registry entry; its status comes from main's one table and
  * connecting runs the one flow per kind (connect-flow.tsx). This panel knows
- * nothing about what a platform hop or an MCP install is — it renders cards
+ * nothing about what a platform hop or an MCP install is. It renders cards
  * and reports outcomes.
  */
 
@@ -413,8 +413,8 @@ export const ConnectorsPanel = (): JSX.Element => {
                       (entry) => entry.id === connector.platform
                     );
                     const status = statusOf(statuses, connector.id);
-                    // Attached but not live — a broken link, or a shared-bot
-                    // lane still to be linked — offers Connect straight away,
+                    // Attached but not live (a broken link, or a shared-bot
+                    // lane still to be linked) offers Connect straight away,
                     // with the badge saying why.
                     const attached =
                       status.state === "connected" ||
@@ -550,7 +550,7 @@ const authLabelKey = (connector: ConnectorDefinition): string | null => {
     case "credential":
       return "connectors.auth.token";
     case "messaging":
-      // Messaging cards wear their live state instead of an auth badge —
+      // Messaging cards wear their live state instead of an auth badge:
       // "Connected" says more than naming the pairing mechanism would.
       return null;
     case "mcp":
@@ -585,7 +585,7 @@ const ConnectorCard = ({
   onSignIn?: (() => void) | undefined;
   error?: string | null;
   statusBadge?: ReactNode;
-  /** Opens the card's manage dialog — pairing, credentials, the QR. */
+  /** Opens the card's manage dialog: pairing, credentials, the QR. */
   onManage?: (() => void) | undefined;
   onAdd: () => void;
   onRemove: () => void;

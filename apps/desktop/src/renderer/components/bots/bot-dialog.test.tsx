@@ -1,7 +1,7 @@
 /**
  * Editing a bot is the create form with the bot in it.
  *
- * The edit dialog used to be a different form — other labels, no check-ins —
+ * The edit dialog used to be a different form (other labels, no check-ins),
  * so a bot given a schedule at creation could never be shown it again. Now
  * both are one form: the same fields under the same ids, the bot's own
  * check-in read back off Routines, and the bot's chat told once when an

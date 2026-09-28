@@ -371,7 +371,7 @@ const ExecBackendPicker = (): JSX.Element => {
         {t("execBackends.title")}
       </h3>
 
-      {/* Only shown when they diverge — otherwise it is noise on every render. */}
+      {/* Only shown when they diverge; otherwise it is noise on every render. */}
       {state.effective !== state.selected && (
         <Alert data-id="exec-backend-fallback">
           <AlertDescription>

@@ -86,7 +86,7 @@ export const AbacusBotLogo = ({
     <AppIconMark size={size} />
     {markOnly ? null : (
       <span className="text-foreground text-sm font-semibold tracking-tight whitespace-nowrap">
-        {/* brand wordmark — not translated */}
+        {/* brand wordmark: not translated */}
         Abacus
         <span className="text-secondary-foreground font-normal">
           {" "}

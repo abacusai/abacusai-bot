@@ -375,7 +375,7 @@ const RoutineEditorComposer = ({
 
 /**
  * One chat a bot answers on its own. The conversation is the run; the
- * header carries the grant — pause keeps the pairing and stops the answers,
+ * header carries the grant: pause keeps the pairing and stops the answers,
  * remove takes the sender off the list and the chat with them.
  */
 const AutoReplyPage = ({ sessionId }: { sessionId: string }): JSX.Element => {

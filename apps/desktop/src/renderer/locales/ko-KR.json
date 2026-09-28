@@ -93,7 +93,7 @@
       "templatesDivider": "Or start with a template"
     },
     "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models — the bot loop is built for them.",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
     "modelLabel": "Model",
     "nameLabel": "이름",
     "namePlaceholder": "예: Scout",
@@ -129,7 +129,7 @@
     "save": "저장",
     "saveError": "봇을 저장하지 못했습니다.",
     "senderChat": "{{platform}}에서 {{sender}}와의 자동 답장 채팅",
-    "senderChatReadOnly": "자동 답장 대화 — {{bot}}이(가) 여기서 회원님 대신 {{sender}}에게 답장합니다. 볼 수는 있지만 입력할 수 없습니다. 답장 방식을 바꾸려면 {{bot}}의 채팅에서 말해 주세요.",
+    "senderChatReadOnly": "자동 답장 대화입니다. {{bot}}이(가) 여기서 회원님 대신 {{sender}}에게 답장합니다. 볼 수는 있지만 입력할 수 없습니다. 답장 방식을 바꾸려면 {{bot}}의 채팅에서 말해 주세요.",
     "templates": {
       "appointment-assistant": {
         "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
@@ -256,7 +256,7 @@
         "name": "News Radar"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox—forms, renewals, appointments, and follow-ups.",
+        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
         "name": "Personal Admin"
       },
       "portfolio-pulse": {
@@ -314,8 +314,8 @@
     "unpin": "Unpin",
     "viewBots": "봇",
     "viewSessions": "세션",
-    "channelChatReadOnly": "This conversation lives in {{app}} — message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp — message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
   },
   "browserPermission": {
     "allow": "허용",
@@ -336,7 +336,7 @@
       "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
       "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
       "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
       "install": "Install the extension",
       "connect": "Connect",
       "disconnect": "Disconnect",
@@ -478,8 +478,8 @@
       "noMatches": "No toolset matches that.",
       "noModelTools": "This capability doesn't add any tools the model calls directly.",
       "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned — this isn't a missing API key.",
-      "restartNote": "Changes apply to the next session — the agent is handed its tool list when a session starts.",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
+      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
       "resizePanels": "Resize toolsets and details",
       "searchPlaceholder": "Search toolsets and tools…",
       "toolCount_one": "{{count}} tool",
@@ -629,7 +629,7 @@
   },
   "connectors": {
     "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}} — try again.",
+    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
     "abacusConnecting": "Finish connecting {{name}} in your browser…",
     "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
@@ -673,7 +673,7 @@
     "noneInstalled": "No 커넥터 added yet.",
     "notInstalled": "설치되지 않음",
     "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL — add this to your app",
+    "redirectUrlLabel": "Redirect URL: add this to your app",
     "remove": "Remove",
     "removeFailed": "Could not remove {{name}}.",
     "removed": "{{name}} removed.",
@@ -681,7 +681,7 @@
     "signInAction": "Sign in",
     "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
     "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added — opening your browser to sign in…",
+    "signingIn": "{{name}} added. Opening your browser to sign in…",
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
@@ -689,10 +689,10 @@
   },
   "creditsCard": {
     "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going — no card needed.",
+    "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer — free, with no limits.",
+    "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
@@ -739,7 +739,7 @@
     "keyHome": "홈",
     "keyRecents": "최근 앱",
     "maestroInstallFailed": "Maestro 설치에 실패했습니다",
-    "maestroInstalled": "Maestro가 설치되었습니다 — 이제 iOS 시뮬레이터와 상호작용할 수 있습니다",
+    "maestroInstalled": "Maestro가 설치되었습니다. 이제 iOS 시뮬레이터와 상호작용할 수 있습니다",
     "modeLive": "실시간",
     "modePoll": "느림(스크린샷)",
     "noDevices": "기기 없음",
@@ -830,7 +830,7 @@
     },
     "title": "Execution backend",
     "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
     "title": "We set up your first bot"
@@ -915,7 +915,7 @@
     "nextRun": "다음 {{time}}",
     "runNow": "지금 실행",
     "startFailed": "실행을 시작하지 못했습니다.",
-    "started": "시작됨 — 전용 세션에서 실행됩니다."
+    "started": "시작됨. 전용 세션에서 실행됩니다."
   },
   "persona": {
     "title": "We learnt this about you",
@@ -981,7 +981,7 @@
       "oauthSection": "OAuth(선택 사항)",
       "scopePlaceholder": "범위(공백으로 구분, 선택 사항)",
       "titleAdd": "사용자 지정 MCP에 연결",
-      "titleEdit": "MCP 서버 편집 — {{name}}",
+      "titleEdit": "MCP 서버 편집: {{name}}",
       "transportHttp": "Streamable HTTP",
       "transportStdio": "STDIO",
       "url": "URL",
@@ -1033,7 +1033,7 @@
       "title_other": "{{count}} Abacus connectors, served through this server:",
       "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
       "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now — sign in to Abacus.AI, or try again."
+      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
     }
   },
   "memory": {
@@ -1041,7 +1041,7 @@
     "clearConfirm": "Forget everything here?",
     "clearNo": "Keep",
     "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions — a preference of yours, a fact about your setup.",
+    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
     "forget": "Forget this",
     "loading": "Reading memory…",
     "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
@@ -1052,7 +1052,7 @@
         "title": "The agent's own notes"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here — and in every prompt from the next message on.",
+        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
         "title": "Always remember"
       },
       "user": {
@@ -1065,7 +1065,7 @@
     "writeFailed": "아무것도 삭제되지 않았습니다. 같은 순간에 다른 세션이 메모리에 쓰는 중이었습니다. 다시 시도해 주세요.",
     "instructions": {
       "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with — tone, language, house style, things to never do.",
+      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
       "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
       "save": "Save",
       "saveFailed": "Could not save. Check that the settings folder is writable.",
@@ -1093,9 +1093,9 @@
       "telegram": "내 Telegram에서 에이전트와 대화하고, 나로서 사람들에게 메시지를 보내게 하세요. 휴대폰으로 QR을 스캔해 연결합니다.",
       "whatsapp": "WhatsApp 대화에서 에이전트를 실행합니다."
     },
-    "discordConnected": "연결됨 — 에이전트가 당신의 Discord 계정으로 메시지를 보냅니다.",
+    "discordConnected": "연결됨. 에이전트가 당신의 Discord 계정으로 메시지를 보냅니다.",
     "discordOpenLogin": "Discord 로그인 열기",
-    "discordScan": "Discord 로그인 창이 열렸습니다 — Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요.",
+    "discordScan": "Discord 로그인 창이 열렸습니다. Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요.",
     "doneConnect": "Continue",
     "enablePlatform": "플랫폼 활성화",
     "fields": {
@@ -1127,20 +1127,20 @@
       "gatewayEnabled": "메시징 사용",
       "gatewayEnabledHelp": "설정을 잃지 않고 모든 커넥터를 한 번에 끕니다.",
       "respondToInbound": "수신 메시지에 응답",
-      "respondToInboundHelp": "끄면 수신 채팅은 기록만 되어 요청 시 에이전트가 읽을 수 있습니다 — 아무것도 실행되지 않고 답장도 없습니다. 켜면 승인된 발신자가 원격으로 에이전트를 구동할 수 있습니다.",
+      "respondToInboundHelp": "끄면 수신 채팅은 기록만 되어 요청 시 에이전트가 읽을 수 있습니다. 아무것도 실행되지 않고 답장도 없습니다. 켜면 승인된 발신자가 원격으로 에이전트를 구동할 수 있습니다.",
       "workspace": "작업 공간",
       "workspaceActive": "활성 작업 공간 따르기",
       "workspaceHelp": "수신 메시지를 어떤 프로젝트에서 실행할지 정합니다.",
       "deliverToBot": "Deliver messages to a bot",
       "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot — one session per sender"
+      "deliverToBotNone": "No bot (one session per sender)"
     },
     "setup": {
-      "discord": "연결을 클릭하면 Discord 로그인 창이 열립니다. Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요. 그러면 AbacusAI Bot이 당신의 Discord 계정으로 메시지를 보냅니다 — 봇도 토큰도 필요 없습니다.",
-      "telegram": "연결을 클릭하면 Telegram 로그인 창이 열립니다. 평소처럼 로그인하세요 — 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 전화번호 또는 패스키를 사용하세요. 그러면 AbacusAI Bot이 당신의 Telegram 계정으로 메시지를 보냅니다. API 키도 봇도 필요 없습니다.",
+      "discord": "연결을 클릭하면 Discord 로그인 창이 열립니다. Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요. 그러면 AbacusAI Bot이 당신의 Discord 계정으로 메시지를 보냅니다(봇도 토큰도 필요 없습니다).",
+      "telegram": "연결을 클릭하면 Telegram 로그인 창이 열립니다. 평소처럼 로그인하세요. 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 전화번호 또는 패스키를 사용하세요. 그러면 AbacusAI Bot이 당신의 Telegram 계정으로 메시지를 보냅니다. API 키도 봇도 필요 없습니다.",
       "whatsapp": "이 항목을 켠 뒤 휴대폰의 WhatsApp으로 아래 QR 코드를 스캔하세요(설정, 연결된 기기, 기기 연결). 이렇게 하면 AbacusAI Bot이 해당 계정의 기기로 연결되므로 개인 번호 대신 전용 번호를 사용하세요."
     },
-    "stepSignIn": "First — sign in to {{app}}",
+    "stepSignIn": "First, sign in to {{app}}",
     "states": {
       "connected": "연결됨",
       "connecting": "연결 중",
@@ -1153,18 +1153,18 @@
       "rate_limited": "Rate limited",
       "syncing": "동기화 중"
     },
-    "telegramConnected": "연결됨 — 에이전트가 당신의 Telegram 계정으로 메시지를 보냅니다.",
+    "telegramConnected": "연결됨. 에이전트가 당신의 Telegram 계정으로 메시지를 보냅니다.",
     "telegramOpenLogin": "Telegram 로그인 열기",
-    "telegramScan": "Telegram 로그인 창이 열렸습니다 — 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 거기서 전화번호로 로그인하세요.",
+    "telegramScan": "Telegram 로그인 창이 열렸습니다. 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 거기서 전화번호로 로그인하세요.",
     "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
     "unsavedChanges": "저장되지 않은 변경 사항",
-    "whatsappConnected": "연결됨 — 에이전트가 당신의 WhatsApp 계정으로 메시지를 보냅니다.",
+    "whatsappConnected": "연결됨. 에이전트가 당신의 WhatsApp 계정으로 메시지를 보냅니다.",
     "whatsappOpenLogin": "WhatsApp 로그인 열기",
-    "whatsappScan": "WhatsApp 로그인 창이 열렸습니다 — 휴대폰의 WhatsApp에서 QR을 스캔하세요: 설정, 연결된 기기, 기기 연결.",
-    "whatsappSyncing": "연결됨 — WhatsApp이 채팅을 이 기기로 동기화하고 있습니다. 처음에는 몇 분 걸립니다. 완료될 때까지 휴대폰의 WhatsApp과 이 앱을 열어 두세요.",
+    "whatsappScan": "WhatsApp 로그인 창이 열렸습니다. 휴대폰의 WhatsApp에서 QR을 스캔하세요: 설정, 연결된 기기, 기기 연결.",
+    "whatsappSyncing": "연결됨. WhatsApp이 채팅을 이 기기로 동기화하고 있습니다. 처음에는 몇 분 걸립니다. 완료될 때까지 휴대폰의 WhatsApp과 이 앱을 열어 두세요.",
     "sharedLink": {
       "title": "Abacus AI bot",
-      "stepLink": "Then — link the Abacus AI bot",
+      "stepLink": "Then, link the Abacus AI bot",
       "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
       "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
       "link": "Link Abacus AI bot",
@@ -1213,7 +1213,7 @@
     "setupConnectorsTitle": "Connectors",
     "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
+    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
     "setupSaveCta": "Save",
     "setupSignInCta": "Sign in / Create Free Account",
@@ -1232,7 +1232,7 @@
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
+    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
     "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
@@ -1246,7 +1246,7 @@
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
     "connectorsMore": "{{count}}+ more in Settings",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved — please try signing in again.",
+    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1410,7 +1410,7 @@
       "failed": "Failed",
       "running": "Running"
     },
-    "runReadOnly": "루틴 실행 — 이 세션은 루틴의 보고서입니다. 읽을 수는 있지만 답장할 수 없으며, 다음 실행은 새로 시작됩니다. 동작을 바꾸려면 루틴을 편집하세요.",
+    "runReadOnly": "루틴 실행. 이 세션은 루틴의 보고서입니다. 읽을 수는 있지만 답장할 수 없으며, 다음 실행은 새로 시작됩니다. 동작을 바꾸려면 루틴을 편집하세요.",
     "runsEmpty": "No runs yet.",
     "runsIn": "runs in {{folder}}",
     "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
@@ -1466,7 +1466,7 @@
     "webhookCopied": "웹훅 URL을 복사했습니다.",
     "webhookHint": "HTTP POST로 이 루틴을 실행합니다.",
     "webhookLabel": "웹훅",
-    "webhookPublicPending": "Setting up the public link — this local one works meanwhile…",
+    "webhookPublicPending": "Setting up the public link. This local one works meanwhile…",
     "workspaceAddError": "That folder could not be added.",
     "workspaceChoose": "Choose a folder…",
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
@@ -1540,7 +1540,7 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash) — the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
       "label": "BusyBox sh"
     },
     "cmd": {
@@ -1579,7 +1579,7 @@
     "steps": {
       "artifacts": {
         "title": "결과물",
-        "body": "세션이 만든 파일 — 문서, 이미지, 보고서 — 이 대화 곳곳에 흩어지지 않고 한곳에 모입니다."
+        "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다."
       },
       "bots": {
         "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요.",
@@ -1589,7 +1589,7 @@
       },
       "capabilities": {
         "title": "기능",
-        "body": "에이전트가 쓸 수 있는 것 전부 — 커넥터, 스킬, 도구, MCP 서버. 여기서 켜면 다음 세션부터 사용합니다."
+        "body": "에이전트가 쓸 수 있는 것 전부입니다. 커넥터, 스킬, 도구, MCP 서버. 여기서 켜면 다음 세션부터 사용합니다."
       },
       "changes": {
         "title": "변경 사항",
@@ -1601,7 +1601,7 @@
       },
       "makeBot": {
         "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect — with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
       },
       "memory": {
         "title": "메모리",
@@ -1655,7 +1655,7 @@
   },
   "updatePill": {
     "downloading": "업데이트 다운로드 중… {{percent}}%",
-    "failed": "Update download failed — retry",
+    "failed": "Update download failed. Retry",
     "installing": "Restarting…",
     "relaunch": "Relaunch to update",
     "retrying": "Retrying…",
@@ -1666,7 +1666,7 @@
     "dailyTitle": "일별 활동",
     "empty": "아직 기록된 사용량이 없습니다. 대화를 실행한 뒤 다시 확인하세요.",
     "errorCount": "오류 {{count}}",
-    "errorsHint": "공급자 오류 — 대부분 RouteLLM - Open이 우회한 무료 등급 속도 제한입니다.",
+    "errorsHint": "공급자 오류입니다. 대부분 RouteLLM - Open이 우회한 무료 등급 속도 제한입니다.",
     "loading": "세션 로그 읽는 중…",
     "notBilled": "청구 없음",
     "openrouterCard": "OpenRouter 크레딧",
@@ -1679,7 +1679,7 @@
     "readFailed": "세션 로그를 읽을 수 없습니다.",
     "refresh": "새로고침",
     "requestCount": "{{count}}건",
-    "subtitle": "이 컴퓨터가 모델별로 사용한 양 — 로컬 세션 로그에서 읽습니다. 어떤 데이터도 컴퓨터 밖으로 나가지 않습니다.",
+    "subtitle": "이 컴퓨터가 모델별로 사용한 양입니다. 로컬 세션 로그에서 읽습니다. 어떤 데이터도 컴퓨터 밖으로 나가지 않습니다.",
     "title": "사용량",
     "today": "오늘",
     "unpricedHint": "일부 모델은 공개된 가격이 없습니다. 토큰은 집계되지만 비용은 포함되지 않습니다.",
@@ -1765,7 +1765,7 @@
     "composerNeedsModel": "시작하려면 모델을 연결하세요",
     "composerNeedsWorkspace": "시작하려면 작업 폴더를 선택하세요",
     "composerPlaceholder": "코드베이스에 대해 무엇이든 질문하세요…",
-    "composerPlaceholderBusy": "Send now to steer the agent — it lands at its next step",
+    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
     "composerTasks": {
       "dismiss": "Dismiss tasks for this turn",
       "now": "now",
@@ -1837,7 +1837,7 @@
       "configureBeforeSending": "Connect a model before sending a message.",
       "configureProviders": "Configure model providers",
       "connectGoogleAi": "Google AI Studio 연결",
-      "connectGoogleAiNote": "무료 Gemini 할당량 — API 키를 받아 여기에 붙여넣기",
+      "connectGoogleAiNote": "무료 Gemini 할당량. API 키를 받아 여기에 붙여넣기",
       "connectModels": "Connect models",
       "connectOpenRouter": "OpenRouter 연결",
       "connectOpenRouterNote": "브라우저 로그인 한 번으로 무료 모델이 RouteLLM - Open과 이 목록에 추가됩니다",
@@ -1904,10 +1904,10 @@
       "reviews": "승인 {{approved}}건 · 변경 요청 {{changes}}건 · 대기 {{requested}}건"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going — no card needed",
+      "connectNote": "Connect a free source to keep going. No card needed",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Or run a model on this computer — free, no limits",
+      "localNote": "Or run a model on this computer for free, with no limits",
       "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
     },
@@ -1957,7 +1957,7 @@
       "split": "분할",
       "stop": "로딩 중지",
       "toggleTooltip": "미리보기 전환",
-      "truncatedFile": "This file is too large to open in full — only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
       "tryAgain": "Try again",
       "unified": "통합",
       "zoom": "Zoom",
@@ -2025,7 +2025,7 @@
       "modelCta": "모델 선택"
     },
     "sendMessage": "보내기 (Enter)",
-    "sendUndeliverable": "Couldn't reach the agent for this chat — your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
     "sessionOptions": "세션 옵션",
     "sessions": "세션",
     "showRightPanel": "패널 표시",
@@ -2121,7 +2121,7 @@
       "description": "{{path}}이(가) 더 이상 존재하지 않습니다. 이 워크스페이스에 다른 폴더를 지정하거나 워크스페이스를 삭제하세요.",
       "relocate": "폴더 선택",
       "relocated": "워크스페이스 폴더가 업데이트되었습니다",
-      "sendBlocked": "보낼 수 없습니다 — {{path}}이(가) 더 이상 존재하지 않습니다.",
+      "sendBlocked": "보낼 수 없습니다: {{path}}이(가) 더 이상 존재하지 않습니다.",
       "title": "폴더를 찾을 수 없습니다"
     },
     "workspaceOptions": "작업 공간 옵션",

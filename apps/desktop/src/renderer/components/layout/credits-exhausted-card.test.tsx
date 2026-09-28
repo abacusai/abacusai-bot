@@ -132,7 +132,7 @@ describe("shouldShowCreditsCard", () => {
   });
 
   it("tells a paid tier that ran out, without selling them their own plan", () => {
-    // The card is still owed — their turns have stopped — but the copy is
+    // The card is still owed (their turns have stopped), but the copy is
     // the paid one; an Upgrade pitch would point at the plan they pay for.
     expect(
       shouldShowCreditsCard({

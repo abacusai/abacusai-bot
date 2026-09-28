@@ -51,7 +51,7 @@ let nextTerminalId = 1;
  * Main keys a PTY by conversation and terminal id, and hands a new terminal
  * the scrollback of whatever is already running under that id. While the
  * first tab was always `terminal-1`, closing every tab and opening the panel
- * again produced that id a second time — so the "new" terminal came up
+ * again produced that id a second time, so the "new" terminal came up
  * attached to the old shell, showing everything the last one had printed.
  */
 const createTerminalId = (): string => {
@@ -81,7 +81,7 @@ const withDefaultTab = (
 /**
  * An update that changes nothing writes nothing. Every component that reads a
  * scope re-renders on a store write, and the workspace view rebuilds the
- * conversation object it hands the panel on each render — so a write of an
+ * conversation object it hands the panel on each render, so a write of an
  * identical value from inside an effect that reads it is an endless loop of
  * renders, PTY attaches and scrollback replays. Returning `current` unchanged
  * is how an action says "nothing happened".

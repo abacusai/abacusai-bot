@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * The banner that is left after the update UI stopped saying everything twice.
  *
  * An ordinary update is the title bar's pill and nothing else. This bar is for
- * the one state the pill cannot express — the install was handed off and the
- * app never quit — and the thing worth pinning is that it appears for exactly
+ * the one state the pill cannot express (the install was handed off and the
+ * app never quit), and the thing worth pinning is that it appears for exactly
  * that and nothing else.
  */
 vi.mock("react-i18next", () => ({
@@ -58,7 +58,7 @@ describe("UpdateStalledBanner", () => {
       status({ downloaded: true, updateInfo: { version: "1.0.5" } })
     );
 
-    // A downloaded update is the pill's business — a second announcement here
+    // A downloaded update is the pill's business; a second announcement here
     // is what this component was cut down to stop doing.
     await waitFor(() => {
       expect(container.querySelector("[data-id='update-banner']")).toBeNull();

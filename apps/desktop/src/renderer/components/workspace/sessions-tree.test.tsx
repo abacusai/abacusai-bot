@@ -2,7 +2,7 @@
  * The sidebar's second section.
  *
  * What is pinned here is the pair's shape: two lists that read the same, and
- * the one thing that is not allowed to differ — a bot's chats are sessions
+ * the one thing that is not allowed to differ: a bot's chats are sessions
  * too, and listing them in both puts the same conversation on screen twice
  * under two different names.
  */
@@ -94,7 +94,7 @@ describe("the sessions section", () => {
       session("plain", "2026-08-27T10:00:00Z"),
       session("botchat", "2026-08-27T11:00:00Z"),
       // A routine's chat and a sender's are sessions too, and neither is on
-      // `bot.sessionId` — filtering that field alone listed them here as well.
+      // `bot.sessionId`; filtering that field alone listed them here as well.
       session("routine", "2026-08-27T12:00:00Z"),
       session("sender", "2026-08-27T13:00:00Z"),
     ];
@@ -175,7 +175,7 @@ describe("the sessions +", () => {
   it("leaves whatever pane is on screen, workspace or not", async () => {
     // Pressing + from artifacts or notifications used to do nothing visible:
     // the activator navigates only when it activated something, and with no
-    // workspace there is nothing to activate — so you sat on the old page.
+    // workspace there is nothing to activate, so you sat on the old page.
     sessions.current = [];
     botSessionIds.current = new Set();
     navigate.mockClear();
@@ -192,7 +192,7 @@ describe("the sessions +", () => {
 /**
  * The list is dated the way DeepAgent's chat list is: the freshest rows carry
  * no header at all, and only past them do the day labels appear. And the
- * section is its own scroller — the long list scrolls inside the sidebar,
+ * section is its own scroller: the long list scrolls inside the sidebar,
  * not the sidebar around it.
  */
 describe("how the sessions list is dated", () => {

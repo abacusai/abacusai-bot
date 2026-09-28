@@ -2,7 +2,7 @@
  * Walking the history, by the rules the gesture comes with.
  *
  * Up goes back, down comes forward, and stepping past the newest entry returns
- * whatever was being typed when the walk began — losing that draft is the one
+ * whatever was being typed when the walk began. Losing that draft is the one
  * thing a shell never does to you.
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -30,7 +30,7 @@ beforeEach(() => {
 
 const mounted = async (expected = 3) => {
   const view = renderHook(() => usePromptHistory("session-1"));
-  // Waiting on the call is not waiting on the state it sets — walking the
+  // Waiting on the call is not waiting on the state it sets: walking the
   // history before it lands is how this test flaked.
   await waitFor(() => expect(view.result.current.size).toBe(expected));
 

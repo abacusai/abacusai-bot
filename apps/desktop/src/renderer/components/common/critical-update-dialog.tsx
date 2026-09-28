@@ -17,7 +17,7 @@ import { useUpdateInstall, useUpdateStatus } from "./use-update-status";
 /** How long the dialog counts down before installing on its own. */
 const AUTO_INSTALL_SECONDS = 5 * 60;
 
-/** m:ss for the countdown line — 300 → "5:00", 61 → "1:01". */
+/** m:ss for the countdown line: 300 → "5:00", 61 → "1:01". */
 const formatCountdown = (seconds: number): string => {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;

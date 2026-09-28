@@ -116,19 +116,14 @@ export const WorkspaceSidebar = ({
           is always on screen, exactly one section is open, and it scrolls
           inside itself while the others fold to their header line.
           An open section sizes to its rows and shrinks only when they do not
-          fit — growing to fill left eight routines stranded above a column of
-          empty space with Sessions pinned to the bottom edge. One flowing scroller (what this replaced) put
-          N bot rows above the first session, so reaching a chat meant
-          scrolling past every bot every time; three nested scrollers before
-          that chained the wheel from box to column at a point nobody could
-          predict. Sizing is flex with min-h-0, not measured pixels. */}
+          fit. Growing to fill would strand a few rows above a column of empty
+          space with Sessions pinned to the bottom edge. Sizing is flex with
+          min-h-0, not measured pixels. */}
       <SidebarContent className="gap-0 overflow-hidden">
         {/* Two sections, not a toggle. A session is a bot you did not name,
-            so the two belong in one column as two lists of the same shape —
-            the toggle that used to switch between them hid whichever you
-            were not looking at, and made you remember which mode you left it
-            in. */}
-        {/* The pair is one thing to the tour — "what you have here" — so it
+            so the two belong in one column as two lists of the same shape.
+            A toggle hides whichever you are not looking at. */}
+        {/* The pair is one thing to the tour ("what you have here"), so it
             gets a wrapper to spotlight. Highlighting the bots alone would
             describe sessions while pointing away from them. */}
         <div className="flex min-h-0 flex-1 flex-col" data-id="sidebar-lists">
@@ -136,7 +131,7 @@ export const WorkspaceSidebar = ({
             <BotsTree />
           </div>
           {/* Between the two, and absent until there is one: a routine is
-              something a bot was given, so it reads as belonging under them —
+              something a bot was given, so it reads as belonging under them,
               and an empty section is a heading that only ever says "none". */}
           <RoutinesTree />
           <SessionsTree />

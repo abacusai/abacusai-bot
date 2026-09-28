@@ -919,7 +919,7 @@ const BucketHeader = ({
   );
 };
 
-/** "now" / "17m" / "16h" / "54d" — the coarsest unit that still says something. */
+/** "now" / "17m" / "16h" / "54d": the coarsest unit that still says something. */
 const SessionAgeLabel = ({
   timestamp,
   now,

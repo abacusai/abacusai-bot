@@ -58,7 +58,7 @@ describe("ToolGroupBlock", () => {
     );
 
     // The failure is the agent's to route around, and it usually does on the
-    // next line — a red row on every probe that came back empty read as the
+    // next line. A red row on every probe that came back empty read as the
     // chat going wrong.
     expect(
       screen

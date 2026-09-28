@@ -57,7 +57,7 @@ beforeEach(() => {
 });
 
 describe("signed in", () => {
-  it("shows the account, the plan, and the month's credits — any tier", async () => {
+  it("shows the account, the plan, and the month's credits on any tier", async () => {
     getAbacusAccount.mockResolvedValue({
       name: "Ada",
       email: "ada@example.com",

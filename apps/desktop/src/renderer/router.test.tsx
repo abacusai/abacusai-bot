@@ -143,7 +143,7 @@ describe("renderer route families", () => {
     // It used to swap the whole window for the focused settings shell, which
     // took the sidebar and the chat behind it with it. Memory and usage never
     // did that, and there was never a reason these four should. Notifications,
-    // devices and the browser moved with it — they share this route's parent,
+    // devices and the browser moved with it: they share this route's parent,
     // and their panels need the preload bridge to render enough to assert on.
     const { getByTestId } = renderRoute("/settings/account");
 

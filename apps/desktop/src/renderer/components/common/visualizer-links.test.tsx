@@ -2,7 +2,7 @@
  * Where a link inside a chart or a generated page goes when it is clicked.
  *
  * The browser, and so does every other link in the app. These used to open in
- * the right-hand preview, for symmetry with markdown anchors — and then the
+ * the right-hand preview, for symmetry with markdown anchors, and then the
  * anchors moved too. The pane is a viewer for what the agent made: a file it
  * wrote, a page it built. Somebody else's site in a webview with no address
  * bar, no tabs, no history and none of the user's sessions is the wrong place

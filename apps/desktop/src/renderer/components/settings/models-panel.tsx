@@ -310,9 +310,9 @@ export const ModelsSettingsPanel = ({
         ) : field.connect != null ? (
           <div className="flex shrink-0 items-center gap-1">
             {/* Live while its own hop is out. The sign-in can strand a user in
-                the browser — a signup funnel that drops the authorize step is
-                the common one — and the moment they most need to try again is
-                exactly when this used to be disabled. Pressing it restarts the
+                the browser (a signup funnel that drops the authorize step is
+                the common case), and that is the moment they most need to try
+                again. Pressing it restarts the
                 hop; the main process is single-flight and stands the old one
                 down. Only the other providers' buttons go quiet. */}
             <Button

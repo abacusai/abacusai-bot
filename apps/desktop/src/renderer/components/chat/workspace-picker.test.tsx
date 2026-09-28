@@ -56,7 +56,7 @@ describe("WorkspacePicker", () => {
     expect(trigger.className).toContain("@2xl:text-3xl");
     expect(trigger.className).toContain("min-w-0");
     // Character-based, not rem-based: the heading renders at two font sizes,
-    // and a fixed rem cap cut the name shorter at the larger one — which is
+    // and a fixed rem cap cut the name shorter at the larger one, which is
     // where the folder name was being clipped.
     expect(trigger.className).toContain("max-w-[24ch]");
     expect(trigger.className).not.toContain("max-w-64");

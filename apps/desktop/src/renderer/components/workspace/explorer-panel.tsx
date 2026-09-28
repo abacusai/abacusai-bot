@@ -185,7 +185,7 @@ export const ExplorerPanel = (): JSX.Element => {
               }
             })
             .catch(() => {
-              /* ignore — watcher will re-sync */
+              /* ignore; the watcher will re-sync */
             });
         }
       },

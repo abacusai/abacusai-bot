@@ -2,7 +2,7 @@
  * The sidebar title derived from a first message.
  *
  * Small, but it is the only text identifying a session in a list of them, and
- * it is built by stripping syntax and cutting on a length — two things that go
+ * it is built by stripping syntax and cutting on a length, two things that go
  * wrong quietly. A title that ends mid-word, or in a broken character, is the
  * kind of defect nobody files and everybody sees.
  */
@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { deriveSessionTitle } from "./transport";
 
-/** A high surrogate with no low surrogate after it — renders as `�`. */
+/** A high surrogate with no low surrogate after it; renders as `�`. */
 const LONE_SURROGATE =
   /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
@@ -57,7 +57,7 @@ describe("cutting it to length", () => {
   });
 
   it("breaks on a word boundary rather than mid-word", () => {
-    // The property is that the kept text ends where a word ends — so the
+    // The property is that the kept text ends where a word ends, so the
     // original continues with a space at exactly that point. Asserting on the
     // character before the ellipsis instead would be wrong: breaking cleanly
     // after "and" still leaves a letter there.

@@ -69,8 +69,8 @@ const browserFor = (
 
 /**
  * Open an item as a tab of a conversation's right pane and put it on screen.
- * One call does both halves — the preview store keeps the item, the
- * right-panel store gets the tab and makes it active — so the two never
+ * One call does both halves (the preview store keeps the item, the
+ * right-panel store gets the tab and makes it active), so the two never
  * disagree about what is showing.
  */
 export const openPreviewTab = (

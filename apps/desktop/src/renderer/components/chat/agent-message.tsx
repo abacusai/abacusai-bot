@@ -104,7 +104,7 @@ const NotificationBanner = ({
   message: string;
   severity: string;
   onRetry?: () => void;
-  /** Point the user at the model picker — a pinned model that keeps failing. */
+  /** Point the user at the model picker when a pinned model that keeps failing. */
   onSwitchModel?: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();

@@ -54,7 +54,6 @@ export const useCodeFolderContext = create<CodeFolderState>()(
           if (opts?.skipRecents) {
             set({ currentFolder: path });
           } else {
-            // Add to recents, removing duplicates and limiting to max
             const recents = get().recentFolders.filter((f) => f !== path);
             const newRecents = [path, ...recents].slice(0, MAX_RECENT_FOLDERS);
             set({ currentFolder: path, recentFolders: newRecents });

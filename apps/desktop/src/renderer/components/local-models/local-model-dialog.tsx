@@ -28,7 +28,7 @@ export const gigabytes = (bytes: number): string =>
 /**
  * "Use a local model", one click: the model this machine is recommended, its
  * size, a download with progress, and the model picked once it is ready. No
- * account, no key, no quota — the way on when every free source is used up.
+ * account, no key, no quota: the way on when every free source is used up.
  */
 export const LocalModelDialog = (): JSX.Element | null => {
   const { t } = useTranslation();

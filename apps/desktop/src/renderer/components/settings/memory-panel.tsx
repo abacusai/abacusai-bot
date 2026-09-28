@@ -73,7 +73,7 @@ const CustomInstructions = (): JSX.Element => {
 
   const saved = stored.data ?? "";
 
-  // Seed the box once the read lands, and re-seed if it changes underneath —
+  // Seed the box once the read lands, and re-seed if it changes underneath,
   // but never over something being typed, which is what the null draft means.
   useEffect(() => {
     if (stored.data != null) setDraft((current) => current ?? stored.data);
@@ -353,8 +353,8 @@ export const MemoryPanel = (): JSX.Element => {
             or not the agent has remembered anything yet. */}
         <CustomInstructions />
 
-        {/* Sessions and bots remember separately — a bot's memory is its own
-            and lives with the bot — so the page says which is which. */}
+        {/* Sessions and bots remember separately (a bot's memory is its own
+            and lives with the bot), so the page says which is which. */}
         <h2
           className="text-muted-foreground mb-4 text-[11px] font-semibold tracking-wide uppercase"
           data-id="memory-sessions-heading"

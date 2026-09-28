@@ -172,8 +172,8 @@ describe("what each card promises", () => {
 });
 
 describe("a hop the user walks away from", () => {
-  // Both hops listen on a loopback port and sit out their own timeout — five
-  // minutes for Abacus, one for OpenRouter — with the tile disabled and
+  // Both hops listen on a loopback port and sit out their own timeout (five
+  // minutes for Abacus, one for OpenRouter) with the tile disabled and
   // spinning until they answer. Nothing may leave the user stuck there.
   const hangingHop = (): void => {
     startOpenRouterAuth.mockReturnValue(new Promise(() => undefined) as never);
@@ -201,7 +201,7 @@ describe("a hop the user walks away from", () => {
   it("stays pressable so a stranded user can reopen the sign-in", async () => {
     // The regression: the tile was disabled for the whole twenty-minute
     // budget. Someone who signed up in the browser and never reached the
-    // authorize page — the signup funnel drops it — had nothing to press at
+    // authorize page (the signup funnel drops it) had nothing to press at
     // the one moment they needed to try again.
     hangingHop();
     await mount();
@@ -209,7 +209,7 @@ describe("a hop the user walks away from", () => {
     fireEvent.click(byId("onboarding-setup-provider-openrouter-connect"));
     await waitFor(() => byId("onboarding-setup-cancel"));
 
-    // The label does not change — it still says Connect, and it is still
+    // The label does not change: it still says Connect, and it is still
     // clickable. The spinner and the cancel carry the in-flight state.
     const tile = byId("onboarding-setup-provider-openrouter-connect");
     expect(tile.hasAttribute("disabled")).toBe(false);

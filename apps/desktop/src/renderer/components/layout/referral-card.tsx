@@ -21,7 +21,7 @@ const readDismissedUntil = (): number => {
 
 /**
  * The sidebar's pitch for the invite loop: free and basic plans, until the
- * milestone is paid. Closing it rests it for a week, not forever — the
+ * milestone is paid. Closing it rests it for a week, not forever: the
  * credits it offers are the answer to the wall these plans hit.
  */
 export const ReferralCard = (): JSX.Element | null => {

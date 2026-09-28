@@ -32,7 +32,7 @@ html[data-native-material="true"] #root {
   /*
    * Shipped rather than hoped for: the terminal and the editor both named
    * "JetBrains Mono" while nothing bundled it, so every machine silently fell
-   * back to its own generic monospace — different cell widths, different
+   * back to its own generic monospace: different cell widths, different
    * baseline, and a canvas terminal that measures one font and paints another.
    */
   --font-mono:
@@ -132,7 +132,7 @@ html[data-native-material="true"] #root {
   --th-tag: #116329;
   --th-type: #953800;
   --th-variable: #953800;
-  /* Terminal output stays dark in both themes — the ANSI palette we render it
+  /* Terminal output stays dark in both themes: the ANSI palette we render it
      with only reads on a dark surface. Same colours as the xterm theme in
      terminal-panel.tsx, so inline output matches the real terminal. */
   --terminal-background: #1e1e1e;
@@ -153,14 +153,14 @@ html[data-native-material="true"] #root {
   --popover-foreground: oklch(0.985 0 0);
   /* Lighter than the light theme's, not darker.
      
-     The dark palette inherited a primary at L=0.452 — dimmer than the L=0.518
-     it uses on white — so the accent sat below the text around it: headings,
+     The dark palette inherited a primary at L=0.452 (dimmer than the L=0.518
+     it uses on white), so the accent sat below the text around it: headings,
      the "Connected" ticks and the sidebar's active state all went muddy
      against a near-black card. An accent has to out-light its background, and
      this one was fighting one at L=0.205.
      
-     L=0.72 is where it reads clearly against a card at L=0.205 — the first
-     value that did was still muddy — and the extra chroma keeps it pink
+     L=0.72 is where it reads clearly against a card at L=0.205 (the first
+     value that did was still muddy), and the extra chroma keeps it pink
      rather than drifting grey as it lightens. Button text stays near-white:
      the call to action is a gradient into violet-700, so the type sits over
      the darker half of it. */
@@ -178,8 +178,8 @@ html[data-native-material="true"] #root {
   --ring: oklch(0.556 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  /* The sidebar's accent is the same colour by another name — the active
-     workspace, the send button — so it moves with --primary rather than
+  /* The sidebar's accent is the same colour by another name (the active
+     workspace, the send button), so it moves with --primary rather than
      sitting a step behind it and reading as a second, dimmer pink. */
   --sidebar-primary: oklch(0.72 0.26 324.591);
   --sidebar-primary-foreground: oklch(0.985 0.01 320.058);
@@ -306,7 +306,7 @@ body {
   font-weight: 400;
 }
 
-/* List markers are signposts, not content — prose renders them bold by
+/* List markers are signposts, not content. Prose renders them bold by
    default, which made every numbered step shout its own number. */
 .prose0 .prose :where(ol) > li::marker {
   font-weight: 400;
@@ -328,7 +328,7 @@ body {
   border-radius: 0;
 }
 
-/* List items are items, not paragraphs — the default vertical margins made a
+/* List items are items, not paragraphs. The default vertical margins made a
    five-bullet list as tall as a screen. */
 .prose0 .prose :where(ul, ol) > li {
   margin-top: 0.25em;
@@ -485,7 +485,7 @@ body {
 
 /* Mascot (AbacusBotMascot): beads circling the face, and the blink.
    Both transform about the centre of the 400x400 mark, so the origin is set
-   in user units rather than percentages — an SVG group's box is its contents,
+   in user units rather than percentages: an SVG group's box is its contents,
    which for the orbit ring is not the same as the canvas. */
 @keyframes abacus-mascot-orbit {
   to {
@@ -519,7 +519,7 @@ body {
 }
 
 /* Someone who has asked for less motion gets the idle mascot in every state.
-   It still reads correctly — idle is a legible, finished composition, not a
+   It still reads correctly: idle is a legible, finished composition, not a
    paused frame of an animation. */
 @media (prefers-reduced-motion: reduce) {
   .abacus-mascot-orbit,
@@ -1052,7 +1052,7 @@ body {
 }
 
 /* The clock on a time input, the calendar on a date input: Chromium draws
-   them for a light page unless told the control is dark — a black clock on
+   them for a light page unless told the control is dark: a black clock on
    a dark field, which read as no clock at all. Scoped to the inputs rather
    than the page: color-scheme on the root also decides the window's canvas,
    which the translucent sidebar relies on staying clear. */

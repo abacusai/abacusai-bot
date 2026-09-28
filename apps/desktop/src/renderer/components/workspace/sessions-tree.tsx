@@ -362,7 +362,7 @@ const SessionRow = ({
       </ContextMenu>
 
       {/* The same two actions, on a control the user can see. A context menu
-          is not an affordance — nothing on the row said they were there. */}
+          is not an affordance; nothing on the row said they were there. */}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={

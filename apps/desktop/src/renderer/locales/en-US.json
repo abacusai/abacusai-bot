@@ -87,16 +87,16 @@
       "getStarted": "Get started",
       "heading": "Create your",
       "headingAccent": "Bot",
-      "namePlaceholder": "Bot name, up to 30 characters — e.g. Gmail Consolidation Bot",
+      "namePlaceholder": "Bot name, up to 30 characters (e.g. Gmail Consolidation Bot)",
       "subtitle": "Name your bot and get started in seconds.",
       "suggestions": "Suggestions",
       "templatesDivider": "Or start with a template"
     },
     "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models — the bot loop is built for them.",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
     "modelLabel": "Model",
     "nameLabel": "Name",
-    "namePlaceholder": "Bot name, up to 30 characters — e.g. Gmail Consolidation Bot",
+    "namePlaceholder": "Bot name, up to 30 characters (e.g. Gmail Consolidation Bot)",
     "nameRequired": "A name is required.",
     "newBot": "New bot",
     "newDialog": {
@@ -129,7 +129,7 @@
     "save": "Save",
     "saveError": "Could not save the bot.",
     "senderChat": "Auto-reply chat with {{sender}} on {{platform}}",
-    "senderChatReadOnly": "Auto-reply conversation — {{bot}} answers {{sender}} here on your behalf. You can watch but not type; to change how it replies, tell {{bot}} in its own chat.",
+    "senderChatReadOnly": "Auto-reply conversation: {{bot}} answers {{sender}} here on your behalf. You can watch but not type; to change how it replies, tell {{bot}} in its own chat.",
     "templates": {
       "appointment-assistant": {
         "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
@@ -156,7 +156,7 @@
         "name": "Candidate Sourcer"
       },
       "chief-of-staff": {
-        "description": "Runs your workday across email, calendar, and Slack—and tells you exactly what to handle next.",
+        "description": "Runs your workday across email, calendar, and Slack, and tells you exactly what to handle next.",
         "name": "Chief of Staff"
       },
       "comment-mention-assistant": {
@@ -256,7 +256,7 @@
         "name": "News Radar"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox—forms, renewals, appointments, and follow-ups.",
+        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
         "name": "Personal Admin"
       },
       "portfolio-pulse": {
@@ -314,8 +314,8 @@
     "unpin": "Unpin",
     "viewBots": "Bots",
     "viewSessions": "Sessions",
-    "channelChatReadOnly": "This conversation lives in {{app}} — message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp — message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
   },
   "browserPermission": {
     "allow": "Allow",
@@ -336,7 +336,7 @@
       "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
       "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
       "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}} — {{count}} tab(s) in the AbacusAI Bot group.",
+      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
       "install": "Install the extension",
       "connect": "Connect",
       "disconnect": "Disconnect",
@@ -478,8 +478,8 @@
       "noMatches": "No toolset matches that.",
       "noModelTools": "This capability doesn't add any tools the model calls directly.",
       "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned — this isn't a missing API key.",
-      "restartNote": "Changes apply to the next session — the agent is handed its tool list when a session starts.",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
+      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
       "resizePanels": "Resize toolsets and details",
       "searchPlaceholder": "Search toolsets and tools…",
       "toolCount_one": "{{count}} tool",
@@ -539,7 +539,7 @@
         "label": "Memory"
       },
       "messaging": {
-        "description": "Send messages on connected chat apps — WhatsApp, Telegram, Discord — as the user or their bot.",
+        "description": "Send messages on connected chat apps (WhatsApp, Telegram, Discord) as the user or their bot.",
         "label": "Messaging"
       },
       "pdf": {
@@ -629,7 +629,7 @@
   },
   "connectors": {
     "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}} — try again.",
+    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
     "abacusConnecting": "Finish connecting {{name}} in your browser…",
     "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
@@ -673,7 +673,7 @@
     "noneInstalled": "No connectors added yet.",
     "notInstalled": "Not installed",
     "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL — add this to your app",
+    "redirectUrlLabel": "Redirect URL: add this to your app",
     "remove": "Remove",
     "removeFailed": "Could not remove {{name}}.",
     "removed": "{{name}} removed.",
@@ -681,7 +681,7 @@
     "signInAction": "Sign in",
     "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
     "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added — opening your browser to sign in…",
+    "signingIn": "{{name}} added. Opening your browser to sign in…",
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
@@ -689,10 +689,10 @@
   },
   "creditsCard": {
     "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going — no card needed.",
+    "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer — free, with no limits.",
+    "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
@@ -739,7 +739,7 @@
     "keyHome": "Home",
     "keyRecents": "Recents",
     "maestroInstallFailed": "Maestro installation failed",
-    "maestroInstalled": "Maestro installed — you can now interact with iOS simulators",
+    "maestroInstalled": "Maestro installed. You can now interact with iOS simulators",
     "modeLive": "Live",
     "modePoll": "Slow (screenshots)",
     "noDevices": "No devices",
@@ -782,7 +782,7 @@
     "androidDesc": "Install Android Studio, then create a virtual device under Tools → Device Manager.",
     "androidTitle": "Android · Android Studio",
     "download": "Download",
-    "iosDesc": "Install Xcode from the Mac App Store and open it once to finish setup — simulators will then appear here.",
+    "iosDesc": "Install Xcode from the Mac App Store and open it once to finish setup. Simulators will then appear here.",
     "iosRuntimeDesc": "Xcode is installed but no simulators were found. Open Xcode → Settings → Components and download an iOS runtime.",
     "iosTitle": "iOS · Xcode",
     "recheck": "Check again"
@@ -830,7 +830,7 @@
     },
     "title": "Execution backend",
     "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows — the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
   "firstBot": {
     "title": "We have created your first bot for you, enjoy!"
@@ -909,13 +909,13 @@
   },
   "jobs": {
     "delete": "Delete",
-    "empty": "Nothing is scheduled. Ask the agent in chat — \"every weekday at 9, summarize my inbox\" — and the job appears here.",
+    "empty": "Nothing is scheduled. Ask the agent in chat, for example \"every weekday at 9, summarize my inbox\", and the job appears here.",
     "enabled": "Enabled",
     "lastRun": "last {{time}}",
     "nextRun": "next {{time}}",
     "runNow": "Run now",
     "startFailed": "Could not start the run.",
-    "started": "Started — it runs in its own session."
+    "started": "Started. It runs in its own session."
   },
   "persona": {
     "title": "We learnt this about you",
@@ -981,7 +981,7 @@
       "oauthSection": "OAuth (optional)",
       "scopePlaceholder": "Scopes (space-separated, optional)",
       "titleAdd": "Connect to a custom MCP",
-      "titleEdit": "Edit MCP server — {{name}}",
+      "titleEdit": "Edit MCP server: {{name}}",
       "transportHttp": "Streamable HTTP",
       "transportStdio": "STDIO",
       "url": "URL",
@@ -1033,7 +1033,7 @@
       "title_other": "{{count}} Abacus connectors, served through this server:",
       "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
       "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now — sign in to Abacus.AI, or try again."
+      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
     }
   },
   "memory": {
@@ -1041,7 +1041,7 @@
     "clearConfirm": "Forget everything here?",
     "clearNo": "Keep",
     "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions — a preference of yours, a fact about your setup.",
+    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
     "forget": "Forget this",
     "loading": "Reading memory…",
     "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
@@ -1052,7 +1052,7 @@
         "title": "The agent's own notes"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here — and in every prompt from the next message on.",
+        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
         "title": "Always remember"
       },
       "user": {
@@ -1062,10 +1062,10 @@
     },
     "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
     "title": "Memory",
-    "writeFailed": "Nothing was deleted — a session was writing to memory at the same moment. Try again.",
+    "writeFailed": "Nothing was deleted. A session was writing to memory at the same moment. Try again.",
     "instructions": {
       "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with — tone, language, house style, things to never do.",
+      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
       "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
       "save": "Save",
       "saveFailed": "Could not save. Check that the settings folder is writable.",
@@ -1093,9 +1093,9 @@
       "telegram": "Chat with the agent from your own Telegram, and let it message people as you. Connects by scanning a QR code with your phone, or link the Abacus AI bot and just message it.",
       "whatsapp": "Chat with the agent from your own WhatsApp, and let it message people as you. Connects by scanning a QR code with your phone."
     },
-    "discordConnected": "Connected — the agent messages as your Discord account.",
+    "discordConnected": "Connected. The agent messages as your Discord account.",
     "discordOpenLogin": "Open Discord login",
-    "discordScan": "A Discord login window opened — scan its QR with the Discord mobile app, or log in with your email and password.",
+    "discordScan": "A Discord login window opened. Scan its QR with the Discord mobile app, or log in with your email and password.",
     "doneConnect": "Continue",
     "enablePlatform": "Enable platform",
     "fields": {
@@ -1127,20 +1127,20 @@
       "gatewayEnabled": "Messaging enabled",
       "gatewayEnabledHelp": "Turn every connector off at once without losing your setup.",
       "respondToInbound": "Respond to incoming messages",
-      "respondToInboundHelp": "Off, incoming chats are only recorded for the agent to read when you ask — nothing runs and nothing replies. On, approved senders can drive the agent remotely.",
+      "respondToInboundHelp": "Off: incoming chats are only recorded for the agent to read when you ask. Nothing runs and nothing replies. On: approved senders can drive the agent remotely.",
       "workspace": "Workspace",
       "workspaceActive": "Follow the active workspace",
       "workspaceHelp": "Which project incoming messages run against.",
       "deliverToBot": "Deliver messages to a bot",
       "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot — one session per sender"
+      "deliverToBotNone": "No bot (one session per sender)"
     },
     "setup": {
-      "discord": "Click Connect and a Discord login window opens. Scan the QR with the Discord app on your phone, or log in with your email and password. AbacusAI Bot then messages as your own Discord account — no bot, no token. Or link the Abacus AI bot below and DM it from anywhere.",
-      "telegram": "Click Connect and a Telegram login window opens. Log in there the way you already do — scan the QR with your phone (Settings, Devices, Link Desktop Device), or use your phone number or a passkey. AbacusAI Bot then messages as your own Telegram account. No API keys, no bot.",
+      "discord": "Click Connect and a Discord login window opens. Scan the QR with the Discord app on your phone, or log in with your email and password. AbacusAI Bot then messages as your own Discord account (no bot, no token). Or link the Abacus AI bot below and DM it from anywhere.",
+      "telegram": "Click Connect and a Telegram login window opens. Log in there the way you already do: scan the QR with your phone (Settings, Devices, Link Desktop Device), or use your phone number or a passkey. AbacusAI Bot then messages as your own Telegram account. No API keys, no bot.",
       "whatsapp": "Enable this, then scan the QR code below from WhatsApp on your phone (Settings, Linked devices, Link a device). This links AbacusAI Bot as a device on that account, so use a dedicated number rather than your personal one."
     },
-    "stepSignIn": "First — sign in to {{app}}",
+    "stepSignIn": "First, sign in to {{app}}",
     "states": {
       "connected": "Connected",
       "connecting": "Connecting",
@@ -1153,18 +1153,18 @@
       "rate_limited": "Rate limited",
       "syncing": "Syncing"
     },
-    "telegramConnected": "Connected — the agent reads your chats and messages other people as your Telegram account; messages to you arrive from your AbacusAI Bot.",
+    "telegramConnected": "Connected. The agent reads your chats and messages other people as your Telegram account; messages to you arrive from your AbacusAI Bot.",
     "telegramOpenLogin": "Open Telegram login",
-    "telegramScan": "A Telegram login window opened — scan its QR with your phone (Settings, Devices, Add Device), or log in there by phone.",
+    "telegramScan": "A Telegram login window opened. Scan its QR with your phone (Settings, Devices, Add Device), or log in there by phone.",
     "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
     "unsavedChanges": "Unsaved changes",
-    "whatsappConnected": "Connected — message me from your “Message yourself” chat in WhatsApp. The agent also messages people as your account.",
+    "whatsappConnected": "Connected. Message me from your “Message yourself” chat in WhatsApp. The agent also messages people as your account.",
     "whatsappOpenLogin": "Open WhatsApp login",
     "whatsappScan": "Open WhatsApp → Linked devices → Link a device, then scan the code above. Once linked, message me from your “Message yourself” chat.",
-    "whatsappSyncing": "Linked — WhatsApp is syncing your chats to this device. This takes a few minutes the first time. Keep WhatsApp open on your phone and keep this app open until it finishes.",
+    "whatsappSyncing": "Linked. WhatsApp is syncing your chats to this device. This takes a few minutes the first time. Keep WhatsApp open on your phone and keep this app open until it finishes.",
     "sharedLink": {
       "title": "Abacus AI bot",
-      "stepLink": "Then — link the Abacus AI bot",
+      "stepLink": "Then, link the Abacus AI bot",
       "intro": "Reach your agent from any device by messaging the shared Abacus AI bot. No token to paste: one scan or tap, and you're linked.",
       "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
       "link": "Link Abacus AI bot",
@@ -1202,7 +1202,7 @@
   },
   "onboarding": {
     "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "Your browser opens to sign in — or create an account. The app gets its own API key; your password never touches it.",
+    "connectBody": "Your browser opens to sign in, or create an account. The app gets its own API key; your password never touches it.",
     "connectCta": "Sign Up For Free",
     "connectTitle": "Connect Abacus.AI",
     "connectorsContinueCta": "Continue",
@@ -1213,7 +1213,7 @@
     "setupConnectorsTitle": "Connectors",
     "setupDoneCta": "Continue",
     "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key — check the paste for a stray line or URL.",
+    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
     "setupKeyPlaceholder": "Paste your {{provider}} API key",
     "setupSaveCta": "Save",
     "setupSignInCta": "Sign in / Create Free Account",
@@ -1232,7 +1232,7 @@
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier — 2000 credits across a mixture of open-source models",
+    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
     "connectedTitleName": "AbacusAI Bot",
     "connectedPromiseAgentLead": "Best-in-class,",
@@ -1246,7 +1246,7 @@
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
     "connectorsMore": "Many more",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved — please try signing in again.",
+    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1410,7 +1410,7 @@
       "failed": "Failed",
       "running": "Running"
     },
-    "runReadOnly": "A run of this routine — its report, not a conversation. Pick another run on the right, or edit the routine to change what it does.",
+    "runReadOnly": "A run of this routine. It's a report, not a conversation. Pick another run on the right, or edit the routine to change what it does.",
     "runsEmpty": "No runs yet.",
     "runsIn": "runs in {{folder}}",
     "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
@@ -1464,7 +1464,7 @@
     "title": "Routines",
     "updateError": "Could not update the routine.",
     "webhookCopied": "Webhook URL copied.",
-    "webhookHint": "Fire this routine with an HTTP POST. Signed in, the URL is public — paste it into any service that sends webhooks; events are held for you for up to a day.",
+    "webhookHint": "Fire this routine with an HTTP POST. Signed in, the URL is public: paste it into any service that sends webhooks; events are held for you for up to a day.",
     "webhookLabel": "Webhook",
     "webhookPublicPending": "Creating your public webhook link…",
     "workspaceAddError": "That folder could not be added.",
@@ -1540,7 +1540,7 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash) — the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
       "label": "BusyBox sh"
     },
     "cmd": {
@@ -1579,7 +1579,7 @@
     "steps": {
       "artifacts": {
         "title": "Artifacts",
-        "body": "The files a session produced — documents, images, reports — gathered in one place instead of scattered up the transcript."
+        "body": "The files a session produced (documents, images, reports) gathered in one place instead of scattered up the transcript."
       },
       "bots": {
         "body": "Standing agents with their own instructions, schedules and chats. Create one for a job you hand off more than once.",
@@ -1589,7 +1589,7 @@
       },
       "capabilities": {
         "title": "Capabilities",
-        "body": "Everything the agent can reach — connectors, skills, tools and MCP servers. Switch something on here and the next session can use it."
+        "body": "Everything the agent can reach: connectors, skills, tools and MCP servers. Switch something on here and the next session can use it."
       },
       "changes": {
         "title": "Changes",
@@ -1601,7 +1601,7 @@
       },
       "makeBot": {
         "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect — with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
       },
       "memory": {
         "title": "Memory",
@@ -1640,7 +1640,7 @@
   },
   "updateBanner": {
     "dismiss": "Dismiss",
-    "stalled": "Couldn't restart automatically — quit and reopen the app to finish updating.",
+    "stalled": "Couldn't restart automatically. Quit and reopen the app to finish updating.",
     "subtitle": "Relaunch to get the latest improvements and fixes.",
     "title": "A new version is ready",
     "whatsChanged": "See what changed"
@@ -1655,7 +1655,7 @@
   },
   "updatePill": {
     "downloading": "Downloading update… {{percent}}%",
-    "failed": "Update download failed — retry",
+    "failed": "Update download failed. Retry",
     "installing": "Restarting…",
     "relaunch": "Relaunch to update",
     "retrying": "Retrying…",
@@ -1666,7 +1666,7 @@
     "dailyTitle": "Daily activity",
     "empty": "No usage recorded yet. Run a conversation and come back.",
     "errorCount": "{{count}} err",
-    "errorsHint": "Provider errors — usually free-tier rate limits RouteLLM - Open rotated past.",
+    "errorsHint": "Provider errors: usually free-tier rate limits RouteLLM - Open rotated past.",
     "loading": "Reading session logs…",
     "notBilled": "Not billed",
     "openrouterCard": "OpenRouter credits",
@@ -1679,7 +1679,7 @@
     "readFailed": "Could not read the session logs.",
     "refresh": "Refresh",
     "requestCount": "{{count}} req",
-    "subtitle": "What this machine spent, per model — read from your local session logs. Nothing leaves your computer.",
+    "subtitle": "What this machine spent per model, read from your local session logs. Nothing leaves your computer.",
     "title": "Usage",
     "today": "Today",
     "unpricedHint": "Some models have no published price; their tokens are counted but their cost is not.",
@@ -1765,7 +1765,7 @@
     "composerNeedsModel": "Connect a model to start",
     "composerNeedsWorkspace": "Select a workspace folder to start",
     "composerPlaceholder": "Ask anything about your codebase…",
-    "composerPlaceholderBusy": "Send now to steer the agent — it lands at its next step",
+    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
     "composerTasks": {
       "dismiss": "Dismiss tasks for this turn",
       "now": "now",
@@ -1785,7 +1785,7 @@
     "deleteWorkspace": "Delete Workspace",
     "deleteWorkspaceConfirmLabel": "Type the workspace name to confirm:",
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
-    "deleteWorkspaceDescription": "This removes \"{{name}}\" from AbacusAI Bot. Its chats stay visible in the sidebar as read-only history — delete the workspace again to erase them for good. Your files and the folder on disk are not touched.",
+    "deleteWorkspaceDescription": "This removes \"{{name}}\" from AbacusAI Bot. Its chats stay visible in the sidebar as read-only history. Delete the workspace again to erase them for good. Your files and the folder on disk are not touched.",
     "deleteWorkspaceNameMismatch": "Name does not match",
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
@@ -1837,10 +1837,10 @@
       "configureBeforeSending": "Connect a model before sending a message.",
       "configureProviders": "Configure model providers",
       "connectGoogleAi": "Connect Google AI Studio",
-      "connectGoogleAiNote": "Free Gemini quota — fetch an API key and paste it here",
+      "connectGoogleAiNote": "Free Gemini quota: fetch an API key and paste it here",
       "connectModels": "Connect models",
       "connectOpenRouter": "Connect OpenRouter",
-      "connectOpenRouterNote": "Free models with one browser sign-in — they join RouteLLM - Open and this list",
+      "connectOpenRouterNote": "Free models with one browser sign-in: they join RouteLLM - Open and this list",
       "favorites": "Favorites",
       "noFavorites": "Favorite models appear here.",
       "noResults": "No models found.",
@@ -1851,7 +1851,7 @@
     },
     "modelPlaceholder": "Model",
     "modelProviderLocked": "This model is from a different provider. Start a new chat to use it.",
-    "modelSwitchFailed": "Couldn't switch models — the chat is still on its previous model.",
+    "modelSwitchFailed": "Couldn't switch models. The chat is still on its previous model.",
     "modelTier": {
       "default": "Recommended",
       "fast": "Fast & cheap",
@@ -1904,10 +1904,10 @@
       "reviews": "{{approved}} approved · {{changes}} changes requested · {{requested}} pending"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going — no card needed",
+      "connectNote": "Connect a free source to keep going. No card needed",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free Abacus.AI credits",
-      "localNote": "Or run a model on this computer — free, no limits",
+      "localNote": "Or run a model on this computer for free, with no limits",
       "poolOutTitle": "Every free source is used up for now",
       "switchNote": "Pick another model in the model picker to keep going"
     },
@@ -1957,7 +1957,7 @@
       "split": "Split",
       "stop": "Stop loading",
       "toggleTooltip": "Toggle Preview",
-      "truncatedFile": "This file is too large to open in full — only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
       "tryAgain": "Try again",
       "unified": "Unified",
       "zoom": "Zoom",
@@ -2025,7 +2025,7 @@
       "modelCta": "Select a model"
     },
     "sendMessage": "Send (Enter)",
-    "sendUndeliverable": "Couldn't reach the agent for this chat — your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
     "sessionOptions": "Session options",
     "sessions": "Sessions",
     "showRightPanel": "Show panel",
@@ -2121,7 +2121,7 @@
       "description": "{{path}} no longer exists. Point this workspace at another folder, or delete it.",
       "relocate": "Choose folder",
       "relocated": "Workspace folder updated",
-      "sendBlocked": "Can't send — {{path}} no longer exists.",
+      "sendBlocked": "Can't send: {{path}} no longer exists.",
       "title": "Folder not found"
     },
     "workspaceOptions": "Workspace options",
