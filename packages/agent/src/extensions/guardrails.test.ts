@@ -45,6 +45,18 @@ afterEach(() => {
 });
 
 describe("replacing an existing file", () => {
+  it("prunes only its own backups, not those of a longer-named sibling", async () => {
+    fs.writeFileSync(path.join(cwd, "Dockerfile.dev"), "dev");
+    for (let i = 0; i < 6; i++)
+      await pi.fire("tool_call", writeCall("Dockerfile.dev"), ctx());
+    fs.writeFileSync(path.join(cwd, "Dockerfile"), "prod");
+
+    await pi.fire("tool_call", writeCall("Dockerfile"), ctx());
+
+    const own = backupsIn().filter((n) => !n.startsWith("Dockerfile.dev."));
+    expect(own).toHaveLength(1);
+  });
+
   it("is allowed, and keeps what was there", async () => {
     fs.writeFileSync(path.join(cwd, "server.js"), "original contents");
 

@@ -242,12 +242,21 @@ function backUpExistingFile(abs: string, cwd: string): string | null {
   return destination;
 }
 
+/** What follows `<name>.` in a backup: the ISO stamp, a clash suffix, `.bak`. */
+const BACKUP_STAMP_SUFFIX = /^\d{4}-\d{2}-\d{2}T[\d-]+Z(?:-\d+)?\.bak$/;
+
 /** Keep the newest few copies of one file; drop the rest. */
 function pruneOldBackups(directory: string, name: string): void {
   try {
     const mine = fs
       .readdirSync(directory)
-      .filter((entry) => entry.startsWith(`${name}.`) && entry.endsWith(".bak"))
+      // Only this file's stamps: `Dockerfile.` must not claim the backups of
+      // `Dockerfile.dev`, which would sort first and be pruned in its place.
+      .filter(
+        (entry) =>
+          entry.startsWith(`${name}.`) &&
+          BACKUP_STAMP_SUFFIX.test(entry.slice(name.length + 1))
+      )
       .sort();
 
     for (const stale of mine.slice(
