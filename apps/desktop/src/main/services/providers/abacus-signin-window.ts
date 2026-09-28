@@ -72,14 +72,25 @@ const GOOGLE_JS = `(() => {
 /** Where Google's auth-code popup returns; registered on the production client. */
 const GOOGLE_REDIRECT_URI = "https://abacus.ai/oauth/callback";
 
-/** Runs in the page: its API origin, its cookies, so the session lands here. */
+/**
+ * Runs in the page: its API origin, its cookies, so the session lands here.
+ * X-Abacus-Org-Host is what the page's own API client sends (its host's
+ * subdomain, `apps` on apps.abacus.ai); without it the backend reads the
+ * sign-in as coming from the platform portal and refuses ChatLLM Teams users.
+ */
 const callPageApi = (method: string, data: unknown): string => `
-  fetch('/api/v1/${method}', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'content-type': 'application/json' },
-    body: ${JSON.stringify(JSON.stringify(data))},
-  }).then((r) => r.json()).catch(() => null)`;
+  (() => {
+    const host = location.hostname.toLowerCase();
+    const suffix = '.abacus.ai';
+    const headers = { 'content-type': 'application/json' };
+    if (host.endsWith(suffix)) headers['X-Abacus-Org-Host'] = host.slice(0, -suffix.length);
+    return fetch('/api/v1/${method}', {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: ${JSON.stringify(JSON.stringify(data))},
+    }).then((r) => r.json()).catch(() => null);
+  })()`;
 
 /**
  * A pill on the sign-in page itself: the app's own "Use my browser instead"
