@@ -32,8 +32,9 @@ import {
  */
 
 const fmtTokens = (value: number): string => {
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  // Thresholds sit where one decimal rounds up, so 999,960 reads 1.0M, not 1000.0K.
+  if (value >= 999_950_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+  if (value >= 999_950) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
 
   return String(value);
