@@ -1204,6 +1204,7 @@
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "Browser Anda terbuka untuk masuk — atau membuat akun. Aplikasi mendapat kunci API-nya sendiri; kata sandi Anda tidak pernah menyentuhnya.",
     "connectCta": "Daftar / Masuk",
+    "openInBrowserCta": "Gunakan browser saya",
     "connectTitle": "Hubungkan Abacus.AI",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",

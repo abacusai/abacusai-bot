@@ -21,6 +21,7 @@ export const SignInStep = ({
   error,
   onConnect,
   onCancel,
+  onOpenInBrowser,
   dots,
 }: {
   /** The browser hop is out; it can take minutes while an account is created. */
@@ -28,6 +29,8 @@ export const SignInStep = ({
   error: string | null;
   onConnect: () => void;
   onCancel: () => void;
+  /** Move the pending sign-in to the system browser. */
+  onOpenInBrowser: () => void;
   dots: ReactNode;
 }): JSX.Element => {
   const { t } = useTranslation();
@@ -107,15 +110,28 @@ export const SignInStep = ({
           {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
         </Button>
         {busy && (
-          <Button
-            variant="link"
-            size="sm"
-            data-id="onboarding-cancel-auth"
-            onClick={onCancel}
-            className="text-muted-foreground hover:text-secondary-foreground text-xs"
-          >
-            {t("common.cancel")}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* For anyone whose browser already holds their Abacus.AI session
+                or passwords; in the browser arm it reopens a closed tab. */}
+            <Button
+              variant="link"
+              size="sm"
+              data-id="onboarding-open-auth-in-browser"
+              onClick={onOpenInBrowser}
+              className="text-muted-foreground hover:text-secondary-foreground text-xs"
+            >
+              {t("onboarding.openInBrowserCta")}
+            </Button>
+            <Button
+              variant="link"
+              size="sm"
+              data-id="onboarding-cancel-auth"
+              onClick={onCancel}
+              className="text-muted-foreground hover:text-secondary-foreground text-xs"
+            >
+              {t("common.cancel")}
+            </Button>
+          </div>
         )}
       </div>
 

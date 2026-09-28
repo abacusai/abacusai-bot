@@ -226,6 +226,9 @@ export const OnboardingFlow = (): React.ReactElement | null => {
             error={error}
             onConnect={() => void connect()}
             onCancel={() => void window.api.agent.cancelAbacusAuth()}
+            onOpenInBrowser={() =>
+              void window.api.agent.openAbacusAuthInBrowser()
+            }
             dots={dots}
           />
         )}

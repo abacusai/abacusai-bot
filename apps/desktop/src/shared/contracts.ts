@@ -1800,6 +1800,8 @@ export interface AgentApi {
     keepOtherApiKeys: boolean;
   }) => Promise<AbacusSignOutResult>;
   cancelAbacusAuth: () => Promise<void>;
+  /** Move an in-flight Abacus.AI sign-in from the app window to the browser. */
+  openAbacusAuthInBrowser: () => Promise<void>;
   cancelOpenRouterAuth: () => Promise<void>;
   /** Every registry connector's state on this machine, keyed by connector id. */
   listConnectorStatuses: () => Promise<ConnectorStatuses>;

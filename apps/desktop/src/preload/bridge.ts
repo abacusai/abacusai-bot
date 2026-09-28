@@ -477,6 +477,8 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ) as Promise<AbacusAuthOutcome>,
     cancelAbacusAuth: () =>
       ipcRenderer.invoke(IpcChannels.CancelAbacusAuth) as Promise<void>,
+    openAbacusAuthInBrowser: () =>
+      ipcRenderer.invoke(IpcChannels.OpenAbacusAuthInBrowser) as Promise<void>,
     cancelOpenRouterAuth: () =>
       ipcRenderer.invoke(IpcChannels.CancelOpenRouterAuth) as Promise<void>,
     signOutAbacus: (options: { keepOtherApiKeys: boolean }) =>

@@ -6,6 +6,11 @@ import { app, shell } from "electron";
 
 import { readSettings } from "../config/settings";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
+import {
+  resolveSignInVariant,
+  type SignInVariant,
+} from "./abacus-signin-config";
+import { openSignInWindow, type SignInWindow } from "./abacus-signin-window";
 
 /**
  * "Connect Abacus.AI": a PKCE browser hop, same shape as the OpenRouter flow.
@@ -48,15 +53,31 @@ const RESULT_LINGER_MS = 15_000;
 const codeChallengeFor = (verifier: string): string =>
   crypto.createHash("sha256").update(verifier).digest("base64url");
 
+// How long the in-app window stays on the "connected" page: long enough for
+// its script to read the outcome and send the beacon, short enough to feel
+// like the app moved on by itself.
+const WINDOW_CLOSE_DELAY_MS = 1500;
+
 /** One in-flight attempt at a time, same rationale as the OpenRouter service. */
-let inFlight: { close: () => void } | null = null;
+let inFlight: { close: () => void; openInBrowser?: () => void } | null = null;
 
 export const cancelAbacusAuth = (): void => {
   inFlight?.close();
   inFlight = null;
 };
 
+/**
+ * Move an in-flight sign-in to the system browser: for a user who would
+ * rather use the session and passwords their browser already has.
+ */
+export const openAbacusAuthInBrowser = (): void => {
+  inFlight?.openInBrowser?.();
+};
+
 export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
+  // Before the cancel, so a second click during the lookup still leaves
+  // exactly one attempt standing.
+  const variant: SignInVariant = await resolveSignInVariant();
   cancelAbacusAuth();
 
   const verifier = crypto.randomBytes(32).toString("base64url");
@@ -70,6 +91,7 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
     let timer: NodeJS.Timeout | null = null;
     let linger: NodeJS.Timeout | null = null;
     let outcome: ExchangeOutcome = { state: "pending" };
+    let signInWindow: SignInWindow | null = null;
     const abort = new AbortController();
 
     const closeServer = (): void => {
@@ -143,8 +165,8 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
         return;
       }
 
-      void exchange(code, verifier, abort.signal).then(({ result, reason }) =>
-        finish(result, reason)
+      void exchange(code, verifier, variant, abort.signal).then(
+        ({ result, reason }) => finish(result, reason)
       );
     });
 
@@ -163,6 +185,12 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
       else if (reason != null) outcome = { state: "failed", reason };
       if (outcome.state === "pending") closeServer();
       else linger = setTimeout(closeServer, RESULT_LINGER_MS);
+      const win = signInWindow;
+      signInWindow = null;
+      if (win != null) {
+        if (outcome.state === "pending") win.close();
+        else setTimeout(win.close, WINDOW_CLOSE_DELAY_MS);
+      }
       resolve(result);
     };
 
@@ -176,7 +204,23 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
 
     // Registered before listen's callback: a second click in that window must
     // still cancel this attempt, or its loopback server leaks.
-    inFlight = { close };
+    inFlight = { close, openInBrowser: () => openInBrowser() };
+
+    let authUrl: URL | null = null;
+    const openInBrowser = (): void => {
+      if (settled || authUrl == null) return;
+      signInWindow?.close();
+      signInWindow = null;
+      void shell.openExternal(authUrl.toString()).catch((error: unknown) => {
+        finish({
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not open the browser.",
+        });
+      });
+    };
 
     // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
     server.listen(0, "127.0.0.1", () => {
@@ -189,22 +233,36 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
         });
       }, AUTH_TIMEOUT_MS);
 
-      const authUrl = new URL(SIGNIN_PATH, abacusAppHost());
-      authUrl.searchParams.set("isSignUp", "1");
-      authUrl.searchParams.set("AbacusAIBot", "1");
-      authUrl.searchParams.set("botChallenge", codeChallengeFor(verifier));
-      authUrl.searchParams.set("botPort", String(port));
-      authUrl.searchParams.set("botPath", callbackPath);
+      const url = new URL(SIGNIN_PATH, abacusAppHost());
+      url.searchParams.set("isSignUp", "1");
+      url.searchParams.set("AbacusAIBot", "1");
+      url.searchParams.set("botChallenge", codeChallengeFor(verifier));
+      url.searchParams.set("botPort", String(port));
+      url.searchParams.set("botPath", callbackPath);
+      authUrl = url;
 
-      void shell.openExternal(authUrl.toString()).catch((error: unknown) => {
-        finish({
-          ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Could not open the browser.",
-        });
-      });
+      console.log(`[abacus-auth] sign-in surface: ${variant}`);
+      if (variant !== "in_app") {
+        openInBrowser();
+        return;
+      }
+      void openSignInWindow({
+        url: url.toString(),
+        port,
+        callbackPath,
+        onHandOff: openInBrowser,
+        onDismissed: close,
+      })
+        .then((win) => {
+          if (win == null) {
+            openInBrowser();
+            return;
+          }
+          // Settled while the window was opening (a cancel): shut it again.
+          if (settled) win.close();
+          else signInWindow = win;
+        })
+        .catch(() => openInBrowser());
     });
   });
 };
@@ -223,6 +281,7 @@ const reasonCode = (value: string): string =>
 const exchange = async (
   code: string,
   verifier: string,
+  variant: SignInVariant,
   signal: AbortSignal
 ): Promise<{ result: AbacusAuthResult; reason?: string }> => {
   try {
@@ -232,7 +291,13 @@ const exchange = async (
         "content-type": "application/json",
         "user-agent": abacusUserAgent(),
       },
-      body: JSON.stringify({ authCode: code, verifier }),
+      // The arm this install was assigned, stamped on the account at its first
+      // connect so the experiment reads sign-ups per arm.
+      body: JSON.stringify({
+        authCode: code,
+        verifier,
+        signinVariant: variant,
+      }),
       signal,
     });
 

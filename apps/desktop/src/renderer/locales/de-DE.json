@@ -1204,6 +1204,7 @@
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "Dein Browser öffnet sich zum Anmelden — oder Registrieren. Die App erhält ihren eigenen API-Schlüssel; dein Passwort erreicht sie nie.",
     "connectCta": "Registrieren / Anmelden",
+    "openInBrowserCta": "Lieber meinen Browser verwenden",
     "connectTitle": "Abacus.AI verbinden",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",

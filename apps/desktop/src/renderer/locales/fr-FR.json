@@ -1204,6 +1204,7 @@
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "Votre navigateur s'ouvre pour vous connecter — ou créer un compte. L'application reçoit sa propre clé d'API ; votre mot de passe ne la traverse jamais.",
     "connectCta": "S'inscrire / Se connecter",
+    "openInBrowserCta": "Utiliser mon navigateur",
     "connectTitle": "Connecter Abacus.AI",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",

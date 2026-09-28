@@ -108,6 +108,7 @@ import {
 } from "./services/providers/abacus";
 import {
   cancelAbacusAuth,
+  openAbacusAuthInBrowser,
   startAbacusAuth,
 } from "./services/providers/abacus-auth-service";
 import { cancelConnectorConnect } from "./services/providers/abacus-connector-service";
@@ -734,6 +735,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
 
   ipcMain.handle(IpcChannels.CancelAbacusAuth, () => {
     cancelAbacusAuth();
+  });
+
+  ipcMain.handle(IpcChannels.OpenAbacusAuthInBrowser, () => {
+    openAbacusAuthInBrowser();
   });
 
   ipcMain.handle(IpcChannels.CancelOpenRouterAuth, () => {
