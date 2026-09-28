@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { isImeComposing } from "#renderer/lib/ime";
 import type { BotSenderChat, RoutineRunItem } from "#shared/contracts";
 import type { MessagingPairingDecisionRequest } from "#shared/messaging";
 
@@ -351,6 +352,7 @@ const RoutineEditorComposer = ({
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {
+            if (isImeComposing(event)) return;
             if (event.key === "Enter") {
               event.preventDefault();
               submit();

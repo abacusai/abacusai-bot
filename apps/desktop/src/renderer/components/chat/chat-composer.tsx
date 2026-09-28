@@ -38,6 +38,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { isImeComposing } from "#renderer/lib/ime";
 import type { SkillMetadata } from "#shared/agent-types";
 import { AgentMode, AgentStatus } from "#shared/agent-types";
 import type {
@@ -452,6 +453,7 @@ function PermActionList({
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
             onKeyDown={(e) => {
+              if (isImeComposing(e)) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 submitExpanded("allow");
@@ -587,6 +589,7 @@ function PermActionList({
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
             onKeyDown={(e) => {
+              if (isImeComposing(e)) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 submitExpanded("deny");
@@ -1163,6 +1166,7 @@ function AskUserQuestionPermissionUI({
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             onKeyDown={(e) => {
+              if (isImeComposing(e)) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 saveNote();
@@ -2488,6 +2492,7 @@ export const ChatComposer = ({
                   }}
                   onBlur={closeMentionPicker}
                   onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+                    if (isImeComposing(e)) return;
                     if (mentionOpen && mentionResults.length > 0) {
                       if (e.key === "ArrowDown") {
                         e.preventDefault();
