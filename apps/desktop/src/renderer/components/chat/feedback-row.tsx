@@ -186,9 +186,15 @@ export const FeedbackRow = ({
                   />
                 }
               >
-                <ThumbsUp
-                  className={verdict === "up" ? "fill-current" : undefined}
-                />
+                {variant === "bot" ? (
+                  <span aria-hidden className="text-lg leading-none">
+                    {"👍"}
+                  </span>
+                ) : (
+                  <ThumbsUp
+                    className={verdict === "up" ? "fill-current" : undefined}
+                  />
+                )}
               </TooltipTrigger>
               <TooltipContent side="top">
                 {t("workspace.feedback.helpful")}
@@ -230,11 +236,17 @@ export const FeedbackRow = ({
                       />
                     }
                   >
-                    <ThumbsDown
-                      className={
-                        verdict === "down" ? "fill-current" : undefined
-                      }
-                    />
+                    {variant === "bot" ? (
+                      <span aria-hidden className="text-lg leading-none">
+                        {"👎"}
+                      </span>
+                    ) : (
+                      <ThumbsDown
+                        className={
+                          verdict === "down" ? "fill-current" : undefined
+                        }
+                      />
+                    )}
                   </TooltipTrigger>
                   <TooltipContent side="top">
                     {t("workspace.feedback.notHelpful")}
@@ -331,8 +343,6 @@ export const FeedbackRow = ({
     </div>
   );
   if (variant !== "bot") return controls;
-  const ReactionIcon =
-    verdict === "up" ? ThumbsUp : verdict === "down" ? ThumbsDown : Plus;
   return (
     <Popover
       open={pickerOpen || askingMore}
@@ -348,9 +358,13 @@ export const FeedbackRow = ({
         data-id="bot-message-feedback-trigger"
         className={`bg-background border-border text-muted-foreground hover:bg-muted ring-background focus-visible:outline-ring flex size-6 items-center justify-center rounded-full border shadow-sm ring-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${verdict === "up" ? "text-emerald-600 dark:text-emerald-400" : verdict === "down" ? "text-rose-600 dark:text-rose-400" : ""}`}
       >
-        <ReactionIcon
-          className={`size-3.5 ${verdict !== "none" ? "fill-current" : ""}`}
-        />
+        {verdict === "none" ? (
+          <Plus className="size-3.5" />
+        ) : (
+          <span aria-hidden className="text-base leading-none">
+            {verdict === "up" ? "👍" : "👎"}
+          </span>
+        )}
       </PopoverTrigger>
       <PopoverContent
         side="top"
