@@ -131,3 +131,21 @@ describe("tell us more", () => {
     expect(screen.queryByPlaceholderText(/tellUsMorePlaceholder/i)).toBeNull();
   });
 });
+
+it("rolls back bot feedback when IPC rejects", async () => {
+  const onRate = vi.fn(async () => {
+    throw new Error("IPC unavailable");
+  });
+  render(
+    <FeedbackRow
+      variant="bot"
+      content="Answer"
+      creditsTotal={0}
+      onRate={onRate}
+    />
+  );
+  const up = screen.getByRole("button", { name: /feedback.helpful/i });
+  fireEvent.click(up);
+  await waitFor(() => expect(onRate).toHaveBeenCalledWith("up"));
+  await waitFor(() => expect(up.getAttribute("aria-pressed")).toBe("false"));
+});

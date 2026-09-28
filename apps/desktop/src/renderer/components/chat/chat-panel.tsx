@@ -2146,6 +2146,8 @@ export const ChatPanel = (): JSX.Element => {
                          was asked. Handed to the list rather than dropped after
                          it, or anything the bot said next renders above it. */
                       <BotMessageList
+                        key={activeSessionId}
+                        onRateTurn={isBotChat ? handleRateTurn : undefined}
                         chatItems={chatItems}
                         times={
                           activeSessionId == null

@@ -7,7 +7,7 @@
  * bubble, the feature would look like it worked while losing the thing it was
  * for.
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { JSX } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -286,5 +286,76 @@ describe("a failed turn that offers a different model", () => {
     expect(button).not.toBeNull();
     button!.click();
     expect(onSwitchModel).toHaveBeenCalled();
+  });
+});
+
+describe("bot message feedback", () => {
+  it("uses the existing feedback callback for the selected message and its negative comment", async () => {
+    const onRateTurn = vi.fn(async () => true);
+    render(
+      <BotMessageList
+        onRateTurn={onRateTurn}
+        chatItems={[
+          { kind: "user", id: "user-1", text: "Hello" },
+          {
+            kind: "agent",
+            id: "agent-1",
+            items: [text("reply-1", "Hello back")],
+          },
+        ]}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /copy/i })).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: /feedback.helpful/i }));
+    await waitFor(() =>
+      expect(onRateTurn).toHaveBeenCalledWith("reply-1", "up", undefined)
+    );
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: /feedback.notHelpful/i })
+          .hasAttribute("disabled")
+      ).toBe(false)
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /feedback.notHelpful/i })
+    );
+    const comment = await screen.findByPlaceholderText(
+      /tellUsMorePlaceholder/i
+    );
+    await waitFor(() =>
+      expect(onRateTurn).toHaveBeenCalledWith("reply-1", "down", undefined)
+    );
+    fireEvent.change(comment, { target: { value: "Wrong details" } });
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: /feedback.send/i })
+          .hasAttribute("disabled")
+      ).toBe(false)
+    );
+    fireEvent.click(screen.getByRole("button", { name: /feedback.send/i }));
+    await waitFor(() =>
+      expect(onRateTurn).toHaveBeenLastCalledWith(
+        "reply-1",
+        "down",
+        "Wrong details"
+      )
+    );
+  });
+  it("does not offer feedback on an unfinished reply", () => {
+    render(
+      <BotMessageList
+        isWorking
+        onRateTurn={vi.fn()}
+        chatItems={[
+          { kind: "agent", id: "agent-1", items: [text("reply-1", "Working")] },
+        ]}
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: /feedback.helpful/i })
+    ).toBeNull();
   });
 });

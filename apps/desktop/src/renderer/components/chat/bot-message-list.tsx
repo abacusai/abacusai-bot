@@ -10,6 +10,8 @@ import { wantsModelSwitch } from "./agent-message";
 import { BUBBLE_MAX_WIDTH } from "./bubble-width";
 import { turnDeliverables } from "./deliverables";
 import { DeliverablesPill } from "./deliverables-pill";
+import { FeedbackRow } from "./feedback-row";
+import { agentReactions } from "./message-reactions";
 import {
   PremiumUpgradeCard,
   exhaustedScope,
@@ -195,12 +197,18 @@ const WorkingBubble = (): JSX.Element => (
 );
 
 export const BotMessageList = ({
+  onRateTurn,
   chatItems,
   times,
   isWorking = false,
   onOpenSubtask,
   onSwitchModel,
 }: {
+  onRateTurn?: (
+    segmentId: string,
+    rating: "up" | "down" | "clear",
+    comment?: string
+  ) => Promise<boolean>;
   chatItems: ChatRenderItem[];
   /** When each segment first arrived, by segment id. See persistence.ts. */
   times?: Map<string, number>;
@@ -210,6 +218,7 @@ export const BotMessageList = ({
   onSwitchModel?: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();
+  const botReactions = useMemo(() => agentReactions(chatItems), [chatItems]);
   const rows = useMemo(
     () =>
       chatItems
@@ -242,12 +251,26 @@ export const BotMessageList = ({
 
   const renderRow = (item: (typeof rows)[number]): JSX.Element =>
     item.kind === "user" ? (
-      <UserMessageBubble
-        content={item.text}
-        images={item.images}
-        files={item.files}
-        dataId={`bot-message-user-${item.id}`}
-      />
+      <div className="flex flex-col gap-0.5">
+        <UserMessageBubble
+          content={item.text}
+          images={item.images}
+          files={item.files}
+          dataId={`bot-message-user-${item.id}`}
+        />
+        {botReactions.has(item.id) && (
+          <span
+            className="bg-muted me-2 self-end rounded-full px-2 py-0.5 text-sm"
+            role="img"
+            aria-label={t("reactions.agent", {
+              emoji: botReactions.get(item.id),
+            })}
+            title={t("reactions.agent", { emoji: botReactions.get(item.id) })}
+          >
+            {botReactions.get(item.id)}
+          </span>
+        )}
+      </div>
     ) : (
       // Consecutive bot bubbles sit closer together, as one person's run groups.
       <div
@@ -256,9 +279,26 @@ export const BotMessageList = ({
       >
         {item.items.map((part) =>
           part.kind === "text" ? (
-            <BotBubble key={part.id}>
-              <Markdown content={part.content} />
-            </BotBubble>
+            <div
+              key={part.id}
+              className="flex w-full flex-col items-start gap-0.5"
+            >
+              <BotBubble>
+                <Markdown content={part.content} />
+              </BotBubble>
+              {onRateTurn != null &&
+                !part.streaming &&
+                !(isWorking && item.sourceIndex === chatItems.length - 1) && (
+                  <FeedbackRow
+                    variant="bot"
+                    content={part.content}
+                    creditsTotal={0}
+                    onRate={(rating, comment) =>
+                      onRateTurn(part.id, rating, comment)
+                    }
+                  />
+                )}
+            </div>
           ) : part.kind === "notification" ? (
             wantsUpgradeCard(part.actions) ? (
               <div key={part.id} className="max-w-md">

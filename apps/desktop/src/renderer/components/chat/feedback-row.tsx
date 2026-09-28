@@ -62,11 +62,14 @@ type Verdict = "none" | "up" | "down";
 
 export const FeedbackRow = ({
   content,
+  variant = "default",
   credits,
   creditsTotal,
   onRate,
 }: {
   content: string;
+  /** Bot threads use a compact, always-visible thumbs-only control. */
+  variant?: "default" | "bot";
   /** This turn's compute points, when the turn reported any. */
   credits?: number;
   /** Running conversation total, for the tooltip. */
@@ -103,6 +106,7 @@ export const FeedbackRow = ({
       setRating(true);
       setAskingMore(next === "down");
       void onRate(next === "none" ? "clear" : next)
+        .catch(() => false)
         .then((ok) => {
           if (ok) return;
           setVerdict(previous);
@@ -115,6 +119,7 @@ export const FeedbackRow = ({
   );
 
   const sendComment = useCallback(() => {
+    if (rating) return;
     const text = comment.trim().slice(0, MAX_FEEDBACK_COMMENT);
     if (onRate == null || text.length === 0) {
       setAskingMore(false);
@@ -122,6 +127,7 @@ export const FeedbackRow = ({
     }
     setRating(true);
     void onRate("down", text)
+      .catch(() => false)
       .then((ok) => {
         if (ok) {
           setAskingMore(false);
@@ -131,7 +137,7 @@ export const FeedbackRow = ({
         toast.error(t("workspace.feedback.failed"));
       })
       .finally(() => setRating(false));
-  }, [comment, onRate, t]);
+  }, [comment, onRate, rating, t]);
 
   const copy = useCallback(() => {
     void navigator.clipboard.writeText(content).then(() => {
@@ -142,11 +148,19 @@ export const FeedbackRow = ({
 
   return (
     <div
-      className="flex w-full items-center justify-between gap-2"
+      className={
+        variant === "bot"
+          ? "flex items-center"
+          : "flex w-full items-center justify-between gap-2"
+      }
       data-id="local-code-feedback-row"
     >
       <div
-        className="flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/assistant:opacity-100 group-hover/assistant:opacity-100"
+        className={
+          variant === "bot"
+            ? "bg-muted/40 border-border/50 text-muted-foreground flex items-center gap-0.5 rounded-full border p-0.5"
+            : "flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/assistant:opacity-100 group-hover/assistant:opacity-100"
+        }
         data-id="local-code-feedback-actions"
       >
         {onRate != null && (
@@ -158,6 +172,12 @@ export const FeedbackRow = ({
                     variant="ghost"
                     size="icon-sm"
                     data-id="local-code-feedback-up"
+                    disabled={rating}
+                    className={
+                      variant === "bot"
+                        ? "size-7 rounded-full transition-colors aria-pressed:bg-emerald-500/15 aria-pressed:text-emerald-600 dark:aria-pressed:text-emerald-400"
+                        : undefined
+                    }
                     aria-pressed={verdict === "up"}
                     onClick={() => rate("up")}
                     aria-label={t("workspace.feedback.helpful")}
@@ -196,6 +216,12 @@ export const FeedbackRow = ({
                         variant="ghost"
                         size="icon-sm"
                         data-id="local-code-feedback-down"
+                        disabled={rating}
+                        className={
+                          variant === "bot"
+                            ? "size-7 rounded-full transition-colors aria-pressed:bg-rose-500/15 aria-pressed:text-rose-600 dark:aria-pressed:text-rose-400"
+                            : undefined
+                        }
                         aria-pressed={verdict === "down"}
                         onClick={() => rate("down")}
                         aria-label={t("workspace.feedback.notHelpful")}
@@ -259,32 +285,34 @@ export const FeedbackRow = ({
             </Popover>
           </>
         )}
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                data-id="local-code-feedback-copy"
-                onClick={copy}
-                aria-label={
-                  copied
-                    ? t("workspace.feedback.copied")
-                    : t("workspace.feedback.copy")
-                }
-              />
-            }
-          >
-            <CopyIcon />
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            {copied
-              ? t("workspace.feedback.copied")
-              : t("workspace.feedback.copy")}
-          </TooltipContent>
-        </Tooltip>
+        {variant !== "bot" && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  data-id="local-code-feedback-copy"
+                  onClick={copy}
+                  aria-label={
+                    copied
+                      ? t("workspace.feedback.copied")
+                      : t("workspace.feedback.copy")
+                  }
+                />
+              }
+            >
+              <CopyIcon />
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {copied
+                ? t("workspace.feedback.copied")
+                : t("workspace.feedback.copy")}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
-      {credits != null && (
+      {variant !== "bot" && credits != null && (
         <Tooltip>
           <TooltipTrigger
             render={

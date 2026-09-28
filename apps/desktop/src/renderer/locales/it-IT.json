@@ -2135,5 +2135,8 @@
       "select": "Select worktree"
     },
     "yesterday": "Ieri"
+  },
+  "reactions": {
+    "agent": "L’agente ha reagito con {{emoji}}"
   }
 }
