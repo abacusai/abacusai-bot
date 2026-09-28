@@ -148,10 +148,12 @@ export class LlamaServer {
       }
       await sleep(250);
     }
+    // Read before stop(), which clears the child and so `running`.
+    const timedOut = this.running;
     const tail = this.stderrTail.slice(-5).join("\n");
     this.stop();
     throw new Error(
-      this.running
+      timedOut
         ? `the model did not finish loading in time`
         : `the server stopped while loading${tail ? `:\n${tail}` : ""}`
     );
