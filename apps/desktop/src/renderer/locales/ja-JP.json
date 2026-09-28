@@ -1205,6 +1205,7 @@
     "connectBody": "ブラウザが開き、サインイン（またはアカウント作成）します。アプリは専用のAPIキーを受け取り、パスワードがアプリに渡ることはありません。",
     "connectCta": "サインアップ / サインイン",
     "openInBrowserCta": "ブラウザーを使う",
+    "haveAccountCta": "アカウントをお持ちの方",
     "connectTitle": "Abacus.AIを接続",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",

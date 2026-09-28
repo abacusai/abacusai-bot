@@ -731,6 +731,9 @@ export type OpenRouterAuthOutcome =
   | { ok: true }
   | { ok: false; error: string; cancelled?: boolean };
 /** Same contract: the key never leaves main. */
+/** Which first-screen button started an Abacus.AI sign-in. */
+export type AbacusAuthIntent = "signup" | "signin";
+
 export type AbacusAuthOutcome =
   | { ok: true }
   | { ok: false; error: string; cancelled?: boolean };
@@ -1790,8 +1793,8 @@ export interface AgentApi {
   removeLocalModel: (modelId: string) => Promise<void>;
   /** Browser sign-in; resolves when the user finishes, cancels, or it times out. */
   startOpenRouterAuth: () => Promise<OpenRouterAuthOutcome>;
-  /** Browser sign-in or sign-up; resolves when the user finishes, cancels, or it times out. */
-  startAbacusAuth: () => Promise<AbacusAuthOutcome>;
+  /** Sign-up or sign-in; resolves when the user finishes, cancels, or it times out. */
+  startAbacusAuth: (intent?: AbacusAuthIntent) => Promise<AbacusAuthOutcome>;
   /**
    * Stash this account's sessions, delete the Abacus key and its connector
    * gateway, and every other stored key too unless `keepOtherApiKeys`.

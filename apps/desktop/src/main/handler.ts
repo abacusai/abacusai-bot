@@ -693,8 +693,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     return { ok: true };
   });
 
-  ipcMain.handle(IpcChannels.StartAbacusAuth, async () => {
-    const result = await startAbacusAuth();
+  ipcMain.handle(IpcChannels.StartAbacusAuth, async (_event, intent) => {
+    const result = await startAbacusAuth(
+      intent === "signin" ? "signin" : "signup"
+    );
     if (result.ok !== true) {
       return {
         ok: false,

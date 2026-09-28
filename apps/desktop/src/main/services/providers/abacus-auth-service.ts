@@ -4,6 +4,8 @@ import type { AddressInfo } from "net";
 
 import { app, shell } from "electron";
 
+import type { AbacusAuthIntent } from "#shared/contracts";
+
 import { readSettings } from "../config/settings";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 import {
@@ -74,7 +76,15 @@ export const openAbacusAuthInBrowser = (): void => {
   inFlight?.openInBrowser?.();
 };
 
-export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
+/**
+ * `signin` is the "I already have an account" path: always the browser, where
+ * an existing abacus.ai session finishes it in one step. The install's arm is
+ * still resolved, so the account is stamped the same way whichever button
+ * was pressed.
+ */
+export const startAbacusAuth = async (
+  intent: AbacusAuthIntent = "signup"
+): Promise<AbacusAuthResult> => {
   cancelAbacusAuth();
 
   const verifier = crypto.randomBytes(32).toString("base64url");
@@ -239,15 +249,17 @@ export const startAbacusAuth = async (): Promise<AbacusAuthResult> => {
         }, AUTH_TIMEOUT_MS);
 
         const url = new URL(SIGNIN_PATH, abacusAppHost());
-        url.searchParams.set("isSignUp", "1");
+        if (intent === "signup") url.searchParams.set("isSignUp", "1");
         url.searchParams.set("AbacusAIBot", "1");
         url.searchParams.set("botChallenge", codeChallengeFor(verifier));
         url.searchParams.set("botPort", String(port));
         url.searchParams.set("botPath", callbackPath);
         authUrl = url;
 
-        console.log(`[abacus-auth] sign-in surface: ${variant}`);
-        if (browserRequested || variant !== "in_app") {
+        console.log(
+          `[abacus-auth] sign-in surface: ${variant} intent: ${intent}`
+        );
+        if (browserRequested || intent === "signin" || variant !== "in_app") {
           openInBrowser();
           return;
         }

@@ -1205,6 +1205,7 @@
     "connectBody": "Your browser opens to sign in — or create an account. The app gets its own API key; your password never touches it.",
     "connectCta": "Sign Up For Free",
     "openInBrowserCta": "Use my browser instead",
+    "haveAccountCta": "I already have an account",
     "connectTitle": "Connect Abacus.AI",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",

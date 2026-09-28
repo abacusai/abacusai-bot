@@ -2,6 +2,8 @@ import { Gift, Brain, Puzzle, Sparkles, UserRound } from "lucide-react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { AbacusAuthIntent } from "#shared/contracts";
+
 import logo from "../../assets/icon2.png";
 import { Button, Spinner } from "../ui";
 
@@ -27,7 +29,8 @@ export const SignInStep = ({
   /** The browser hop is out; it can take minutes while an account is created. */
   busy: boolean;
   error: string | null;
-  onConnect: () => void;
+  /** `signin` is the returning user's button; it always uses the browser. */
+  onConnect: (intent: AbacusAuthIntent) => void;
   onCancel: () => void;
   /** Move the pending sign-in to the system browser. */
   onOpenInBrowser: () => void;
@@ -99,7 +102,7 @@ export const SignInStep = ({
           size="lg"
           data-id="onboarding-connect"
           disabled={busy}
-          onClick={onConnect}
+          onClick={() => onConnect("signup")}
           className="from-primary h-14 w-full bg-gradient-to-b to-violet-700 text-base font-semibold shadow-lg"
         >
           {busy ? (
@@ -109,6 +112,17 @@ export const SignInStep = ({
           )}
           {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
         </Button>
+        {!busy && (
+          <Button
+            variant="link"
+            size="sm"
+            data-id="onboarding-have-account"
+            onClick={() => onConnect("signin")}
+            className="text-muted-foreground hover:text-secondary-foreground text-sm"
+          >
+            {t("onboarding.haveAccountCta")}
+          </Button>
+        )}
         {busy && (
           <div className="flex items-center gap-2">
             {/* For anyone whose browser already holds their Abacus.AI session

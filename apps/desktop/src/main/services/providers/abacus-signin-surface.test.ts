@@ -124,6 +124,15 @@ describe("an in-app sign-in", () => {
     expect(openExternal).toHaveBeenCalledWith(lastWindow?.url);
   });
 
+  it("sends a returning user to the browser's sign-in, not the window", async () => {
+    void startAbacusAuth("signin");
+    await settle();
+
+    expect(lastWindow).toBeNull();
+    const url = new URL(String(openExternal.mock.calls.at(-1)?.[0]));
+    expect(url.searchParams.has("isSignUp")).toBe(false);
+  });
+
   it("uses the browser when there is no window to open", async () => {
     windowAvailable = false;
     void startAbacusAuth();

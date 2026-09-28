@@ -1205,6 +1205,7 @@
     "connectBody": "Seu navegador abre para entrar — ou criar uma conta. O app recebe sua própria chave de API; sua senha nunca passa por ele.",
     "connectCta": "Cadastrar / Entrar",
     "openInBrowserCta": "Usar meu navegador",
+    "haveAccountCta": "Já tenho uma conta",
     "connectTitle": "Conectar Abacus.AI",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",
