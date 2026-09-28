@@ -21,19 +21,28 @@
  * app may not be secure").
  *
  * The browser's own cookies are out of reach (they are encrypted to the
- * browser), so provider sessions are this window's own. Its partition
- * persists and only Abacus.AI's state is cleared per attempt: a sign-out
- * must not sign straight back in, but a provider the user already signed in
- * to here is remembered.
+ * browser), so provider sessions are this window's own. Its session is
+ * install-wide and persists, and only Abacus.AI's state is cleared per
+ * attempt: a sign-out must not sign straight back in, but a provider account
+ * the user already signed in to here is offered again, whichever app account
+ * they sign out of.
  */
 import { randomBytes } from "crypto";
+import path from "path";
 
 import { BrowserWindow, session, shell } from "electron";
 
 import { parentWindow, presentAsDialog } from "../../bring-to-front";
 import { isSafeExternalUrl } from "../../external-links";
+import { profileBaseDir } from "../../profile-home";
 
-const PARTITION = "persist:abacus-signin";
+/**
+ * Install-wide, beside the profile registry: userData lives inside each
+ * account's profile, so a partition there would start empty after every
+ * sign-out or account switch and no provider account could be remembered.
+ */
+const signInSessionPath = (): string =>
+  path.join(profileBaseDir(), "sign-in-session");
 
 /** Logged by the injected "Use my browser instead" pill; see HINT_JS. */
 const BROWSER_MESSAGE = "abacus:sign-in-use-browser";
@@ -187,7 +196,7 @@ export const openSignInWindow = async ({
 }): Promise<SignInWindow | null> => {
   if (parentWindow() == null) return null;
 
-  const signInSession = session.fromPartition(PARTITION);
+  const signInSession = session.fromPath(signInSessionPath());
   await forgetAbacusSession(signInSession).catch(() => {});
   // This session remembers provider logins, so Microsoft would silently reuse
   // the last account; its authorize request is rewritten to ask for the
