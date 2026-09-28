@@ -3303,6 +3303,9 @@ export class ServiceHost {
   /** What each running routine session has said so far, for its run file. */
   private readonly routineRunText = new Map<string, string[]>();
 
+  /** Starts that deletion must let finish before collecting run sessions. */
+  private readonly routineRunStarts = new Map<string, Set<Promise<void>>>();
+
   /**
    * A run's end off its event stream: an error fails it, idle completes it.
    * The agent reports a failed turn after its idle, so a run filed as
@@ -3332,18 +3335,14 @@ export class ServiceHost {
     const text = this.routineRunText.get(sessionId);
     if (session?.routineId == null || text == null) return;
     const finishedJob = getJob(session.routineId);
-    recordRoutineRun(
-      finishedJob != null
-        ? this.routineHome(finishedJob)
-        : routineDir(session.routineId),
-      {
-        sessionId,
-        startedAt: session.createdAt,
-        endedAt: new Date().toISOString(),
-        outcome,
-        reply: text.join("").trim(),
-      }
-    );
+    if (finishedJob == null) return;
+    recordRoutineRun(this.routineHome(finishedJob), {
+      sessionId,
+      startedAt: session.createdAt,
+      endedAt: new Date().toISOString(),
+      outcome,
+      reply: text.join("").trim(),
+    });
     if (event.type !== "error") return;
     // No credits fails every fire the same way until the user tops up.
     if (ranOutOfAbacusCredits(event.error))
@@ -3597,23 +3596,37 @@ export class ServiceHost {
     return job;
   }
 
-  removeRoutine(id: string): void {
+  async removeRoutine(id: string): Promise<void> {
     const job = getJob(id);
     removeJob(id);
-    // Both homes: the records moved if the routine was given a project later.
-    removeRoutineDir(routineDir(id));
-    if (job != null) {
-      const home = this.routineHome(job);
-      if (home !== routineDir(id)) removeRoutineDir(home);
+    try {
+      await Promise.allSettled(this.routineRunStarts.get(id) ?? []);
+      const runs = this.agentSessionManagerService.listByRoutine(id);
+      // A run without a project uses the routine folder as its cwd. Windows
+      // refuses to remove it until the agent process has closed.
+      await Promise.all(
+        runs.map((run) =>
+          this.agentManagerService.stopSessionAndWait(run.workspaceId, run.id)
+        )
+      );
+      for (const run of runs) {
+        this.routineRunText.delete(run.id);
+        this.removeAgentSession(run.workspaceId, run.id);
+      }
+
+      // Both homes: the records moved if the routine was given a project later.
+      await removeRoutineDir(routineDir(id));
+      if (job != null) {
+        const home = this.routineHome(job);
+        if (home !== routineDir(id)) await removeRoutineDir(home);
+      }
+    } finally {
+      // The job was removed even if file cleanup failed; refresh the list.
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
     }
-    // Its runs go with it; nothing else lists them.
-    for (const run of this.agentSessionManagerService.listByRoutine(id)) {
-      this.removeAgentSession(run.workspaceId, run.id);
-    }
-    this.emitEvent({
-      type: "cronjobs-updated",
-      emittedAt: new Date().toISOString(),
-    });
   }
 
   /**
@@ -3761,6 +3774,24 @@ export class ServiceHost {
     trigger: CronTrigger,
     payload: string | null = null
   ): Promise<void> {
+    const start = this.startRoutineRun(jobId, trigger, payload);
+    const pending =
+      this.routineRunStarts.get(jobId) ?? new Set<Promise<void>>();
+    pending.add(start);
+    this.routineRunStarts.set(jobId, pending);
+    try {
+      await start;
+    } finally {
+      pending.delete(start);
+      if (pending.size === 0) this.routineRunStarts.delete(jobId);
+    }
+  }
+
+  private async startRoutineRun(
+    jobId: string,
+    trigger: CronTrigger,
+    payload: string | null
+  ): Promise<void> {
     const job = getJob(jobId);
     if (job == null) return;
 
@@ -3779,6 +3810,8 @@ export class ServiceHost {
     // every other runs in its own folder.
     const project = this.routineProject(job);
     const target = project?.id ?? (await this.ensureRoutineWorkspace(job.id));
+    // A deletion may have happened while the routine workspace was opening.
+    if (getJob(jobId) == null) return;
     const home = this.routineHome(job);
 
     const prompt = this.withBotVoice(
@@ -3830,6 +3863,9 @@ export class ServiceHost {
       sessionId: session.id,
       mode: readDefaultAgentMode(),
     });
+
+    // Deletion stops the session while startup is in flight.
+    if (getJob(jobId) == null) return;
 
     if (!started.success) {
       this.agentSessionManagerService.setRunOutcome(session.id, "failed");

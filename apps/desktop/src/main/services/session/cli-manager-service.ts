@@ -783,6 +783,29 @@ export class AgentManagerService {
     return this.stopSessionById(sessionId);
   }
 
+  /** Wait for close before deleting a session's working directory on Windows. */
+  async stopSessionAndWait(
+    workspaceId: string,
+    sessionId: string
+  ): Promise<void> {
+    const runtime = this.runtimes.get(sessionId);
+    if (runtime == null || runtime.workspaceId !== workspaceId) return;
+
+    await new Promise<void>((resolve, reject) => {
+      const child = runtime.process;
+      const timer = setTimeout(() => {
+        child.removeListener("close", onClose);
+        reject(new Error(`Timed out stopping agent session ${sessionId}.`));
+      }, 15_000);
+      const onClose = (): void => {
+        clearTimeout(timer);
+        resolve();
+      };
+      child.once("close", onClose);
+      if (runtime.state.status !== "stopping") this.stopSessionById(sessionId);
+    });
+  }
+
   applyStatePatch(
     workspaceId: string,
     sessionId: string,
