@@ -103,7 +103,9 @@ export function normalizeUnicode(text: string): string {
 const unicodeNormalized: Strategy = function* (content, find) {
   // Either side may hold the smart punctuation, so no early out on an ASCII
   // quote; and the compared blocks are joined without a trailing newline.
-  const target = normalizeUnicode(find.endsWith("\n") ? find.slice(0, -1) : find);
+  const target = normalizeUnicode(
+    find.endsWith("\n") ? find.slice(0, -1) : find
+  );
 
   const contentLines = content.split("\n");
   const findLineCount = countRequestedLines(find);

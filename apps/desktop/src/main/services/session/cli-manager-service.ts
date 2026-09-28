@@ -677,15 +677,10 @@ export class AgentManagerService {
 
     child.on("error", (error) => {
       resolveStartup();
-      logCliSpawnFailure(
-        request.workspaceId,
-        request.sessionId,
-        command,
-        {
-          code: (error as NodeJS.ErrnoException).code,
-          message: error.message,
-        }
-      );
+      logCliSpawnFailure(request.workspaceId, request.sessionId, command, {
+        code: (error as NodeJS.ErrnoException).code,
+        message: error.message,
+      });
       if (!ownsSession()) {
         return;
       }
@@ -708,17 +703,12 @@ export class AgentManagerService {
         !current.spawnResultReported && current.state.status === "starting";
       // Early exit before ever reaching ready counts as a failed spawn.
       if (!current.spawnResultReported) {
-        logCliSpawnFailure(
-          request.workspaceId,
-          request.sessionId,
-          command,
-          {
-            exitCode: code,
-            signal,
-            message: current.state.error ?? undefined,
-            stderrTail: current.stderrBuffer,
-          }
-        );
+        logCliSpawnFailure(request.workspaceId, request.sessionId, command, {
+          exitCode: code,
+          signal,
+          message: current.state.error ?? undefined,
+          stderrTail: current.stderrBuffer,
+        });
         this.reportSpawnResultOnce(request.sessionId);
       }
       const isError = current.state.status === "error" || exitedBeforeReady;
