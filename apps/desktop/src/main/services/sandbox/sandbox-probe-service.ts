@@ -62,7 +62,12 @@ export class SandboxProbeService {
             reject(error);
             return;
           }
-          resolve(parseProbe(stdout));
+          // A throw here would escape the promise and leave the check unsettled.
+          try {
+            resolve(parseProbe(stdout));
+          } catch (parseError) {
+            reject(parseError);
+          }
         }
       );
     });

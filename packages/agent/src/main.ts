@@ -46,11 +46,13 @@ async function main(): Promise<void> {
   const argv = process.argv.slice(2);
 
   // The desktop's one question before any session: can this machine confine
-  // a command? One JSON line, then exit; the probe is what decides whether
-  // the Auto mode is offered at all.
+  // a command? One JSON line, then exit once it has flushed: a pipe write can
+  // be asynchronous, and exiting first loses the line.
   if (argv.includes("--sandbox-probe")) {
-    process.stdout.write(`${JSON.stringify(await sandboxAvailability())}\n`);
-    process.exit(0);
+    const verdict = JSON.stringify(await sandboxAvailability());
+
+    process.stdout.write(`${verdict}\n`, () => process.exit(0));
+    return;
   }
 
   const model = readFlag(argv, "--model");

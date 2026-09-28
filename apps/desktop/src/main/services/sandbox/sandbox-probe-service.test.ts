@@ -61,4 +61,20 @@ describe("the sandbox probe", () => {
     await service.support();
     expect(resolved).toBe(1);
   });
+
+  it("turns a probe that exits cleanly but prints nothing into an unavailable sandbox", async () => {
+    const service = new SandboxProbeService(
+      () => ({
+        execPath: process.execPath,
+        execArgs: ["-e", "process.exit(0)", "--"],
+        agentRoot: "",
+      }),
+      "darwin",
+      "24.0.0"
+    );
+
+    const support = await service.support();
+    expect(support.available).toBe(false);
+    expect(support.reason).toContain("the sandbox probe failed");
+  });
 });
