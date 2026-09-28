@@ -144,7 +144,9 @@ export function parseGitignore(contents: string): IgnoreRules {
               .replace(/\*/g, "[^/]*")
               .replace(/\?/g, "[^/]")
       )
-      .join("/");
+      .join("/")
+      // Git's "**/" matches zero or more directories: `**/dist` covers `dist`.
+      .replace(/(^|\/)\(\?:\.\+\)\//g, "$1(?:.*/)?");
 
     const self = new RegExp(`^${body}$`);
     const under = new RegExp(`^${body}/`);
