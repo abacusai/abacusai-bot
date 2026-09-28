@@ -392,7 +392,7 @@ export const startConnectorConnect = (
                 {
                   ok: false,
                   error:
-                    "Timed out waiting for the connection. The user may still be mid-sign-in. Call connect_connector for it again to keep waiting; an an account attached late is picked up then.",
+                    "Timed out waiting for the connection. The user may still be mid-sign-in. Call connect_connector for it again to keep waiting; an account attached late is picked up then.",
                 },
                 // They are most likely still signing in; leave them to it.
                 { reveal: false }
