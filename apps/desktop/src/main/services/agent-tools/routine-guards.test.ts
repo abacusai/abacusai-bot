@@ -5,6 +5,7 @@ import type { RoutineRunItem } from "#shared/contracts";
 import {
   consecutiveFailures,
   hasRunInFlight,
+  ranOutOfAbacusCredits,
   ROUTINE_FAILURES_BEFORE_PAUSE,
   shouldPauseAfter,
   stuckRuns,
@@ -65,5 +66,19 @@ describe("the failure streak", () => {
     );
     expect(shouldPauseAfter(failures)).toBe(true);
     expect(shouldPauseAfter(failures.slice(1))).toBe(false);
+  });
+});
+
+describe("the out-of-credits pause", () => {
+  it("fires only on the upgrade the agent offers for Abacus.AI credits", () => {
+    expect(
+      ranOutOfAbacusCredits({
+        actions: [{ type: "switch-model" }, { type: "upgrade-abacus" }],
+      })
+    ).toBe(true);
+    expect(ranOutOfAbacusCredits({ actions: [{ type: "switch-model" }] })).toBe(
+      false
+    );
+    expect(ranOutOfAbacusCredits({})).toBe(false);
   });
 });

@@ -219,6 +219,7 @@ import {
 } from "./services/agent-tools/pdf-agent";
 import {
   hasRunInFlight,
+  ranOutOfAbacusCredits,
   ROUTINE_FAILURES_BEFORE_PAUSE,
   shouldPauseAfter,
   stuckRuns,
@@ -3302,7 +3303,11 @@ export class ServiceHost {
   /** What each running routine session has said so far, for its run file. */
   private readonly routineRunText = new Map<string, string[]>();
 
-  /** A run's end off its event stream: an error fails it, idle completes it. */
+  /**
+   * A run's end off its event stream: an error fails it, idle completes it.
+   * The agent reports a failed turn after its idle, so a run filed as
+   * completed can still fail; it is filed again when it does.
+   */
   private settleRoutineRun(sessionId: string, payload: DesktopEvent): void {
     if (payload.type !== "event") return;
     if (!this.agentSessionManagerService.isRoutineSession(sessionId)) return;
@@ -3320,12 +3325,12 @@ export class ServiceHost {
           ? "completed"
           : null;
     if (outcome == null) return;
-    this.agentSessionManagerService.setRunOutcome(sessionId, outcome);
-    // Once: an error's trailing idle must not overwrite the failure.
+    // An error's trailing idle must not overwrite the failure.
+    if (!this.agentSessionManagerService.setRunOutcome(sessionId, outcome))
+      return;
     const session = this.agentSessionManagerService.get(sessionId);
     const text = this.routineRunText.get(sessionId);
     if (session?.routineId == null || text == null) return;
-    this.routineRunText.delete(sessionId);
     const finishedJob = getJob(session.routineId);
     recordRoutineRun(
       finishedJob != null
@@ -3339,19 +3344,27 @@ export class ServiceHost {
         reply: text.join("").trim(),
       }
     );
-    if (outcome === "failed") this.pauseIfFailingRepeatedly(session.routineId);
+    if (event.type !== "error") return;
+    // No credits fails every fire the same way until the user tops up.
+    if (ranOutOfAbacusCredits(event.error))
+      this.pauseRoutine(session.routineId, "paused: out of Abacus.AI credits");
+    else this.pauseIfFailingRepeatedly(session.routineId);
   }
 
   /** A routine that keeps failing pauses itself rather than failing forever. */
   private pauseIfFailingRepeatedly(routineId: string): void {
-    const job = getJob(routineId);
-    if (job == null || !job.enabled) return;
     if (!shouldPauseAfter(this.listRoutineRuns(routineId))) return;
-    updateJob(routineId, { enabled: false });
-    recordRun(
+    this.pauseRoutine(
       routineId,
       `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`
     );
+  }
+
+  private pauseRoutine(routineId: string, reason: string): void {
+    const job = getJob(routineId);
+    if (job == null || !job.enabled) return;
+    updateJob(routineId, { enabled: false });
+    recordRun(routineId, reason);
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -3829,9 +3842,13 @@ export class ServiceHost {
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
       });
+      this.pauseIfFailingRepeatedly(jobId);
       return;
     }
 
+    // Earlier runs' text is kept until now, for a failure that lands late.
+    for (const run of this.listRoutineRuns(jobId))
+      this.routineRunText.delete(run.sessionId);
     // Seeded now so a run that never says a word still gets its file.
     this.routineRunText.set(session.id, []);
     this.sendAgentMessage({
