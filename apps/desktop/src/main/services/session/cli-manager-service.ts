@@ -526,6 +526,22 @@ export class AgentManagerService {
       ...(await this.options.resolveAdditionalConfigEnv(request.sessionId)),
     };
 
+    // A second start for this session may have spawned during the await;
+    // spawning again would orphan one child that stop and quit never kill.
+    const racedRuntime = this.runtimes.get(request.sessionId);
+    if (
+      racedRuntime != null &&
+      racedRuntime !== existingRuntime &&
+      (toStatus(racedRuntime) === "starting" ||
+        toStatus(racedRuntime) === "running")
+    ) {
+      return {
+        success: true,
+        created: false,
+        state: { ...racedRuntime.state },
+      };
+    }
+
     const spawnArgs: string[] = [...artifact.execArgs];
     if (request.model != null && request.model.length > 0)
       spawnArgs.push("--model", request.model);
@@ -664,7 +680,7 @@ export class AgentManagerService {
       logCliSpawnFailure(
         request.workspaceId,
         request.sessionId,
-        artifact.execArgs.join(" "),
+        command,
         {
           code: (error as NodeJS.ErrnoException).code,
           message: error.message,
@@ -695,7 +711,7 @@ export class AgentManagerService {
         logCliSpawnFailure(
           request.workspaceId,
           request.sessionId,
-          artifact.execArgs.join(" "),
+          command,
           {
             exitCode: code,
             signal,
