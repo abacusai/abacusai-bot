@@ -101,8 +101,9 @@ export function normalizeUnicode(text: string): string {
 }
 
 const unicodeNormalized: Strategy = function* (content, find) {
-  const target = normalizeUnicode(find);
-  if (target === find) return;
+  // Either side may hold the smart punctuation, so no early out on an ASCII
+  // quote; and the compared blocks are joined without a trailing newline.
+  const target = normalizeUnicode(find.endsWith("\n") ? find.slice(0, -1) : find);
 
   const contentLines = content.split("\n");
   const findLineCount = countRequestedLines(find);
@@ -417,10 +418,21 @@ export function resolveEdit(
 
       return {
         ok: true,
-        ranges: indices.map((start) => ({
-          start,
-          end: start + candidate.length,
-        })),
+        ranges: indices.map((start) => {
+          // Line-based strategies stop before the last newline; when oldText
+          // quoted it, take it too, or newText's own newline doubles it.
+          // Blank-line padding ("…\n\n") is noise the padded match trims.
+          let end = start + candidate.length;
+          if (
+            name !== "trimmed-boundary" &&
+            oldText.endsWith("\n") &&
+            !oldText.endsWith("\n\n") &&
+            !candidate.endsWith("\n") &&
+            content[end] === "\n"
+          )
+            end += 1;
+          return { start, end };
+        }),
         strategy: name,
         relaxed: name !== "exact",
       };

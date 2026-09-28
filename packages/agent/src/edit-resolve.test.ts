@@ -482,3 +482,32 @@ describe("cost on a large file", () => {
     expect(elapsed).toBeLessThan(500);
   });
 });
+
+describe("relaxed matches and the trailing newline", () => {
+  const apply = (content: string, oldText: string, newText: string) => {
+    const result = resolveEdit(content, oldText, newText, false);
+    if (!result.ok) throw new Error(result.failure.kind);
+    return spliceRanges(
+      content,
+      result.ranges.map((range) => ({ ...range, text: newText }))
+    );
+  };
+
+  it("does not leave a blank line behind a whole-line replacement", () => {
+    expect(apply("a\n\tfoo()\nb\n", "  foo()\n", "  bar()\n")).toBe(
+      "a\n  bar()\nb\n"
+    );
+  });
+
+  it("matches smart punctuation in the file from a plain quote", () => {
+    expect(apply("Say \u201chi\u201d \u2014 ok\n", 'Say "hi" - ok', "X")).toBe(
+      "X\n"
+    );
+  });
+
+  it("matches a normalized quote that ends in a newline", () => {
+    expect(apply("Say 'hi'\nz\n", "Say \u2018hi\u2019\n", "Y\n")).toBe(
+      "Y\nz\n"
+    );
+  });
+});
