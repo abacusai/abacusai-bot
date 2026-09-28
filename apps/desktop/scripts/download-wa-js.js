@@ -12,7 +12,7 @@
  * connector logs "bridge did not attach" and falls back to the page driver
  * until this pin moves to a release that knows the new modules.
  *
- * Idempotent — a correct file already on disk is left alone.
+ * Idempotent: a correct file already on disk is left alone.
  *
  * Usage:
  *   node scripts/download-wa-js.js

@@ -27,15 +27,10 @@ const alias = {
  * Main-process suites that need the machine to themselves.
  *
  * One spawns a real Electron to measure real layout; the other waits on
- * wall-clock timers for a browser pane to appear. Both were in the `main`
- * project, where every file runs flat out against a 5s default — so on a
- * loaded macOS runner the Electron spawn was killed outright ("the harness
- * would not run") and the pane never arrived inside its window. Neither
- * failure said anything about the code under test, and they landed on
- * different runs, which is how a contention problem looks from the outside.
- *
- * The agent package already separates its spawning suites this way; this is
- * the same split for the desktop's.
+ * wall-clock timers for a browser pane to appear. In the `main` project, where
+ * every file runs in parallel against a 5s default, a loaded macOS runner
+ * kills the Electron spawn and the pane misses its window. The agent package
+ * splits its spawning suites the same way.
  */
 /**
  * Loaded CI runners take seconds where a dev machine takes milliseconds:

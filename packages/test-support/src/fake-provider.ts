@@ -12,12 +12,14 @@ export interface RecordedCall {
   /** Tool names offered to the model: the roster the session built. */
   tools: string[];
   messages: Array<{ role: string; content: unknown }>;
-  /** Text of the user messages, in order — what the model was actually asked. */
+  /** Text of the user messages, in order: what the model was actually asked. */
   userText: string[];
 }
 
-/** What the fake model does with one request. */
-/** A reply, or a promise of one — a test may hold a request until something else lands. */
+/**
+ * What the fake model does with one request. It may return a promise, so a
+ * test can hold a request until something else lands.
+ */
 export type Responder = (
   call: RecordedCall,
   index: number
@@ -36,7 +38,7 @@ export type Reply =
   | { fail: { status: number; message: string } }
   /**
    * A stream that opens, says this much, and then never sends another byte
-   * or closes — the shape of a connection the server has finished with but
+   * or closes: the shape of a connection the server has finished with but
    * the client is still waiting on.
    */
   | { stall: { say?: string } };
@@ -100,7 +102,7 @@ export class FakeProvider {
     this.script((_call, index) => replies[index] ?? { say: "done" });
   }
 
-  /** The first request the agent made — the one carrying the user's prompt. */
+  /** The first request the agent made: the one carrying the user's prompt. */
   get firstCall(): RecordedCall | undefined {
     return this.calls[0];
   }
