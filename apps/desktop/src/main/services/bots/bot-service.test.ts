@@ -368,6 +368,25 @@ describe("the bot's model", () => {
       "openllm/auto"
     );
   });
+
+  it("repoints a live chat to the app default when the bot goes back to Default", async () => {
+    const callbacks = makeCallbacks({ defaultModel: () => "abacus/route-llm" });
+    const service = new BotService(callbacks);
+    const bot = service.create({
+      name: "Scout",
+      description: "Watch.",
+      model: "openllm/auto",
+    });
+    await service.openChat(bot.id);
+
+    service.update(bot.id, { model: null });
+
+    expect(callbacks.updateSessionModel).toHaveBeenLastCalledWith(
+      "ws-default",
+      "session-1",
+      "abacus/route-llm"
+    );
+  });
 });
 
 describe("an edit the bot should hear about", () => {
