@@ -87,7 +87,7 @@ const BotBubble = ({
   feedback?: ReactNode;
 }): JSX.Element => (
   <div
-    className={`${BUBBLE_MAX_WIDTH} relative ${feedback ? "mb-3" : ""} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
+    className={`${BUBBLE_MAX_WIDTH} group/bot-message relative ${feedback ? "mb-3" : ""} rounded-2xl px-3.5 py-2 text-sm leading-[1.5] [overflow-wrap:anywhere] ${
       tone === "notice"
         ? "bg-muted/60 text-muted-foreground"
         : "bg-sidebar text-foreground"

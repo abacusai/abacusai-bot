@@ -68,7 +68,7 @@ export const FeedbackRow = ({
   onRate,
 }: {
   content: string;
-  /** Bot threads use a compact, always-visible thumbs-only control. */
+  /** Bot threads reveal the feedback control on message hover or keyboard focus. */
   variant?: "default" | "bot";
   /** This turn's compute points, when the turn reported any. */
   credits?: number;
@@ -356,7 +356,7 @@ export const FeedbackRow = ({
         title={t("reactions.feedback")}
         disabled={rating}
         data-id="bot-message-feedback-trigger"
-        className={`bg-background border-border text-muted-foreground hover:bg-muted ring-background focus-visible:outline-ring flex size-6 items-center justify-center rounded-full border shadow-sm ring-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${verdict === "up" ? "text-emerald-600 dark:text-emerald-400" : verdict === "down" ? "text-rose-600 dark:text-rose-400" : ""}`}
+        className={`bg-background border-border text-muted-foreground hover:bg-muted ring-background focus-visible:outline-ring flex size-6 items-center justify-center rounded-full border shadow-sm ring-2 transition-[color,background-color,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 ${verdict === "none" && !pickerOpen && !askingMore ? "pointer-events-none opacity-0 group-focus-within/bot-message:pointer-events-auto group-focus-within/bot-message:opacity-100 group-hover/bot-message:pointer-events-auto group-hover/bot-message:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100" : ""} ${verdict === "up" ? "text-emerald-600 dark:text-emerald-400" : verdict === "down" ? "text-rose-600 dark:text-rose-400" : ""}`}
       >
         {verdict === "none" ? (
           <Plus className="size-3.5" />
