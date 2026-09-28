@@ -52,17 +52,36 @@ export const useDictation = (
     []
   );
 
-  useEffect(() => () => recorder.current?.cancel(), []);
+  // phase stays "idle" through the permission prompt and the mic open, so a
+  // second click there would start another recording and orphan the first.
+  const starting = useRef(false);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      recorder.current?.cancel();
+    };
+  }, []);
 
   const start = useCallback(async () => {
+    if (starting.current) return;
+    starting.current = true;
     setError(null);
-    const permitted = await window.api.agent.requestMicrophoneAccess();
-    if (!permitted) {
-      setError("permission-denied");
-      return;
-    }
     try {
-      recorder.current = await startRecording(setLevel);
+      const permitted = await window.api.agent.requestMicrophoneAccess();
+      if (!permitted) {
+        setError("permission-denied");
+        return;
+      }
+      const handle = await startRecording(setLevel);
+      // Unmounted while the mic opened: the cleanup has already run.
+      if (!mounted.current) {
+        handle.cancel();
+        return;
+      }
+      recorder.current = handle;
       setPhase("recording");
       // Start fetching the model while they talk, so the stop is quicker.
       void whisper().catch(() => undefined);
@@ -70,6 +89,8 @@ export const useDictation = (
       setError(
         failure instanceof MicrophoneError ? failure.reason : "unsupported"
       );
+    } finally {
+      starting.current = false;
     }
   }, []);
 
