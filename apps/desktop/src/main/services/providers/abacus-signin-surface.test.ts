@@ -5,6 +5,8 @@
  * hand-off or no window at all both fall back to the browser on the same
  * listener, and closing the window is a cancel.
  */
+import { createHash } from "node:crypto";
+
 import { shell } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,6 +34,7 @@ vi.mock("./abacus-signin-window", () => ({
 }));
 
 const openExternal = vi.mocked(shell.openExternal);
+const loopbackFetch = globalThis.fetch;
 
 const { resolveSignInVariant, resetSignInVariantCache } =
   await import("./abacus-signin-config");
@@ -238,5 +241,68 @@ describe("sign-in startup races", () => {
     expect(finished).not.toHaveBeenCalled();
     cancelAbacusAuth();
     await expect(attempt).resolves.toMatchObject({ cancelled: true });
+  });
+});
+
+describe("compatibility with the browser sign-in flow", () => {
+  it.each([
+    ["flag off", { success: true, result: { inAppSignIn: false } }, true],
+    ["older backend without the config endpoint", null, false],
+    ["malformed config", { success: true, result: {} }, true],
+  ])(
+    "completes the existing PKCE exchange with %s",
+    async (_case, body, ok) => {
+      const apiFetch = vi
+        .fn()
+        .mockResolvedValueOnce({ ok, json: async () => body })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, result: { apiKey: "test-key" } }),
+        });
+      vi.stubGlobal("fetch", apiFetch);
+      const attempt = startAbacusAuth();
+      await settle();
+      expect(lastWindow).toBeNull();
+      expect(openExternal).toHaveBeenCalledTimes(1);
+      const url = new URL(String(openExternal.mock.calls[0]![0]));
+      expect(url.searchParams.get("isSignUp")).toBe("1");
+      expect(url.searchParams.get("AbacusAIBot")).toBe("1");
+      const callback = `http://127.0.0.1:${url.searchParams.get("botPort")}/${url.searchParams.get("botPath")}`;
+      const response = await loopbackFetch(`${callback}?code=test-code`);
+      expect(response.ok).toBe(true);
+      await response.text();
+      await expect(attempt).resolves.toEqual({ ok: true, key: "test-key" });
+      const exchange = JSON.parse(apiFetch.mock.calls[1]![1].body);
+      expect(exchange.authCode).toBe("test-code");
+      expect(exchange.signinVariant).toBe("browser");
+      expect(
+        createHash("sha256").update(exchange.verifier).digest("base64url")
+      ).toBe(url.searchParams.get("botChallenge"));
+      const result = await loopbackFetch(`${callback}/result`);
+      expect(await result.json()).toEqual({ state: "ok" });
+    }
+  );
+
+  it("ignores the developer in-app override in packaged builds", async () => {
+    vi.stubEnv("ABACUSAI_BOT_SIGNIN_SURFACE", "in_app");
+    try {
+      answer({ success: true, result: { inAppSignIn: false } });
+      expect(await resolveSignInVariant()).toBe("browser");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("falls back to the browser when the config request times out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new DOMException("Timed out", "TimeoutError");
+      })
+    );
+    void startAbacusAuth();
+    await settle();
+    expect(lastWindow).toBeNull();
+    expect(openExternal).toHaveBeenCalledTimes(1);
   });
 });
