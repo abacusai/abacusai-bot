@@ -208,6 +208,8 @@ describe("diagnostics for a session that has gone", () => {
       expect(dead).toBeDefined();
       expect(dead?.stderr).toContain("ERR_MODULE_NOT_FOUND");
       expect(dead?.state.exitCode).toBe(3);
+      expect(dead?.state.status).toBe("error");
+      expect(dead?.state.error).toContain("exited before it was ready");
       expect(dead?.command).toContain(process.execPath);
     });
 
