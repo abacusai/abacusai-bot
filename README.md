@@ -39,14 +39,14 @@ Provider catalogs, quotas, and free-tier limits can change. The Models page show
 ## Product tour
 
 <details open>
-<summary>See onboarding</summary>
+<summary>See our product work its magic</summary>
 <br>
 <table>
   <tr>
-    <td><img src="docs/media/demo-onboarding.gif" alt="AbacusAI Bot onboarding for models, connectors, and the product tour"></td>
+    <td><img src="docs/media/demo-product.gif" alt="A bot is asked at 2am to fix the model pool giving up after five tries; it edits the code, runs the tests and opens a pull request"></td>
   </tr>
   <tr>
-    <td align="center">Sign in, connect the apps you use, choose a model, and meet your first bot.</td>
+    <td align="center">Ask for a fix at 2am. The bot edits the code, runs the tests, opens the pull request. Ship it and sleep. <a href="docs/media/demo-product.mp4">Watch with sound</a>.</td>
   </tr>
 </table>
 
