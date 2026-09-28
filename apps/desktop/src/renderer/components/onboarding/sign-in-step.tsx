@@ -2,6 +2,8 @@ import { Gift, Brain, Puzzle, Sparkles, UserRound } from "lucide-react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { AbacusAuthMode } from "#shared/contracts";
+
 import logo from "../../assets/icon2.png";
 import { Button, Spinner } from "../ui";
 
@@ -14,23 +16,32 @@ const CAPABILITIES = [
 
 /**
  * The sign-in wall. The app requires an account, so this is the one screen
- * with no way past it but the button.
+ * with no way past it but the buttons. A first run leads with sign-up and a
+ * returning profile with sign-in; each offers the other, because the browser
+ * page otherwise opens on the wrong form for everyone who already has an
+ * Abacus.AI account.
  */
 export const SignInStep = ({
   busy,
   error,
+  primaryMode,
   onConnect,
+  onReopen,
   onCancel,
   dots,
 }: {
   /** The browser hop is out; it can take minutes while an account is created. */
   busy: boolean;
   error: string | null;
-  onConnect: () => void;
+  /** What the big button does; the link under it does the other. */
+  primaryMode: AbacusAuthMode;
+  onConnect: (mode: AbacusAuthMode) => void;
+  onReopen: () => void;
   onCancel: () => void;
   dots: ReactNode;
 }): JSX.Element => {
   const { t } = useTranslation();
+  const signUpFirst = primaryMode === "signup";
 
   return (
     <div
@@ -91,12 +102,12 @@ export const SignInStep = ({
         </div>
       )}
 
-      <div className="mt-9 flex w-full flex-col items-center gap-4">
+      <div className="mt-9 flex w-full flex-col items-center gap-3">
         <Button
           size="lg"
           data-id="onboarding-connect"
           disabled={busy}
-          onClick={onConnect}
+          onClick={() => onConnect(primaryMode)}
           className="from-primary h-14 w-full bg-gradient-to-b to-violet-700 text-base font-semibold shadow-lg"
         >
           {busy ? (
@@ -104,18 +115,67 @@ export const SignInStep = ({
           ) : (
             <UserRound className="size-5" aria-hidden="true" />
           )}
-          {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
+          {busy
+            ? t("onboarding.waitingCta")
+            : signUpFirst
+              ? t("onboarding.connectCta")
+              : t("onboarding.signInCta")}
         </Button>
-        {busy && (
-          <Button
-            variant="link"
-            size="sm"
-            data-id="onboarding-cancel-auth"
-            onClick={onCancel}
-            className="text-muted-foreground hover:text-secondary-foreground text-xs"
+        {busy ? (
+          // The work is in another app now; say so, and give a way back to a
+          // tab that got closed or buried.
+          <div
+            className="flex flex-col items-center gap-1"
+            data-id="onboarding-waiting"
           >
-            {t("common.cancel")}
-          </Button>
+            <p className="text-secondary-foreground text-sm">
+              {t("onboarding.waitingBody")}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="link"
+                size="sm"
+                data-id="onboarding-reopen-auth"
+                onClick={onReopen}
+                className="text-xs"
+              >
+                {t("onboarding.waitingReopen")}
+              </Button>
+              <Button
+                variant="link"
+                size="sm"
+                data-id="onboarding-cancel-auth"
+                onClick={onCancel}
+                className="text-muted-foreground hover:text-secondary-foreground text-xs"
+              >
+                {t("common.cancel")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-muted-foreground text-xs">
+              {signUpFirst
+                ? t("onboarding.connectHintSignUp")
+                : t("onboarding.connectHintSignIn")}
+            </p>
+            <p className="text-secondary-foreground text-sm">
+              {signUpFirst
+                ? t("onboarding.haveAccountLead")
+                : t("onboarding.newAccountLead")}{" "}
+              <Button
+                variant="link"
+                size="sm"
+                data-id="onboarding-alternate-auth"
+                onClick={() => onConnect(signUpFirst ? "signin" : "signup")}
+                className="h-auto p-0 text-sm font-semibold"
+              >
+                {signUpFirst
+                  ? t("onboarding.haveAccountCta")
+                  : t("onboarding.newAccountCta")}
+              </Button>
+            </p>
+          </>
         )}
       </div>
 

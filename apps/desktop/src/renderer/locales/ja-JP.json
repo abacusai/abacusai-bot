@@ -1247,7 +1247,16 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "setupKeyDialogLink": "Open {{provider}}",
+    "waitingCta": "ブラウザでの操作を待っています…",
+    "waitingBody": "ブラウザで完了したら戻ってきてください。アプリが自動で続行します。",
+    "waitingReopen": "ページをもう一度開く",
+    "connectHintSignUp": "ブラウザが開き、無料の Abacus.AI アカウントを作成します。",
+    "connectHintSignIn": "ブラウザが開き、Abacus.AI アカウントでサインインします。",
+    "haveAccountLead": "Abacus.AI アカウントをお持ちですか？",
+    "haveAccountCta": "サインイン",
+    "newAccountLead": "Abacus.AI は初めてですか？",
+    "newAccountCta": "無料アカウントを作成"
   },
   "openFile": {
     "failed": "そのファイルを開けませんでした。",

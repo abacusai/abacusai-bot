@@ -726,6 +726,8 @@ export type LocalModelInstallOutcome =
 export type OpenRouterAuthOutcome =
   | { ok: true }
   | { ok: false; error: string; cancelled?: boolean };
+/** Which page the browser opens on: the sign-up form or the sign-in form. */
+export type AbacusAuthMode = "signup" | "signin";
 /** Same contract: the key never leaves main. */
 export type AbacusAuthOutcome =
   | { ok: true }
@@ -1786,8 +1788,13 @@ export interface AgentApi {
   removeLocalModel: (modelId: string) => Promise<void>;
   /** Browser sign-in; resolves when the user finishes, cancels, or it times out. */
   startOpenRouterAuth: () => Promise<OpenRouterAuthOutcome>;
-  /** Browser sign-in or sign-up; resolves when the user finishes, cancels, or it times out. */
-  startAbacusAuth: () => Promise<AbacusAuthOutcome>;
+  /**
+   * Browser sign-in or sign-up; resolves when the user finishes, cancels, or
+   * it times out. Opens on the sign-in form unless asked for sign-up.
+   */
+  startAbacusAuth: (mode?: AbacusAuthMode) => Promise<AbacusAuthOutcome>;
+  /** Open the waiting sign-in's browser page again, for a lost tab. */
+  reopenAbacusAuth: () => Promise<void>;
   /**
    * Stash this account's sessions, delete the Abacus key and its connector
    * gateway, and every other stored key too unless `keepOtherApiKeys`.

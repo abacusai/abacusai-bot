@@ -109,6 +109,7 @@ import {
 } from "./services/providers/abacus";
 import {
   cancelAbacusAuth,
+  reopenAbacusAuth,
   startAbacusAuth,
 } from "./services/providers/abacus-auth-service";
 import { cancelConnectorConnect } from "./services/providers/abacus-connector-service";
@@ -693,8 +694,11 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     return { ok: true };
   });
 
-  ipcMain.handle(IpcChannels.StartAbacusAuth, async () => {
-    const result = await startAbacusAuth();
+  ipcMain.handle(IpcChannels.StartAbacusAuth, async (_event, mode: unknown) => {
+    // Anything but an explicit sign-up opens the sign-in form.
+    const result = await startAbacusAuth(
+      mode === "signup" ? "signup" : "signin"
+    );
     if (result.ok !== true) {
       return {
         ok: false,
@@ -735,6 +739,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
 
   ipcMain.handle(IpcChannels.CancelAbacusAuth, () => {
     cancelAbacusAuth();
+  });
+
+  ipcMain.handle(IpcChannels.ReopenAbacusAuth, () => {
+    reopenAbacusAuth();
   });
 
   ipcMain.handle(IpcChannels.CancelOpenRouterAuth, () => {

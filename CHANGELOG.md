@@ -7,6 +7,12 @@
 
 ## Unreleased
 
+The first screen no longer sends everyone to the sign-up form. It has a
+"Sign in" link for people who already have an Abacus.AI account, and a
+signed-out returning account now leads with sign-in. While the browser is
+out, the screen says to finish there and can open the page again if the tab
+got closed. When the browser hands back, the app comes to the front.
+
 The app reports which first-run setup steps it reached, so a setup that stops
 partway can be found and fixed. It follows the same setting as the log sync.
 
