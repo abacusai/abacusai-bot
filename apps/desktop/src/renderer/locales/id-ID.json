@@ -1192,6 +1192,8 @@
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "Browser Anda terbuka untuk masuk atau membuat akun. Aplikasi mendapat kunci API-nya sendiri; kata sandi Anda tidak pernah menyentuhnya.",
     "connectCta": "Daftar / Masuk",
+    "openInBrowserCta": "Gunakan browser saya",
+    "haveAccountCta": "Saya sudah punya akun",
     "connectTitle": "Hubungkan Abacus.AI",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",
@@ -1247,7 +1249,9 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "setupKeyDialogLink": "Open {{provider}}",
+    "continueWithBrowser": "Lanjutkan dengan {{browser}} · {{profile}}",
+    "signInAnotherWay": "Masuk dengan cara lain"
   },
   "openFile": {
     "failed": "Tidak dapat membuka berkas itu.",

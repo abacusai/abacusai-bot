@@ -1,5 +1,7 @@
 import { toast } from "sonner";
 
+import type { AbacusAuthIntent } from "#shared/contracts";
+
 import i18n from "../i18n";
 
 /**
@@ -9,10 +11,14 @@ import i18n from "../i18n";
  * Failure and cancellation are each caller's business; a cancel is not an
  * error.
  */
-export const signInToAbacus = async (): Promise<
-  Awaited<ReturnType<typeof window.api.agent.startAbacusAuth>>
-> => {
-  const result = await window.api.agent.startAbacusAuth();
+export const signInToAbacus = async (
+  intent?: AbacusAuthIntent,
+  /** A Chromium profile picked on the sign-in screen; its session signs in. */
+  browserProfileId?: string
+): Promise<Awaited<ReturnType<typeof window.api.agent.startAbacusAuth>>> => {
+  const result = await (browserProfileId == null
+    ? window.api.agent.startAbacusAuth(intent)
+    : window.api.agent.startAbacusAuth(intent, browserProfileId));
 
   if (result.ok === true) {
     toast.success(i18n.t("onboarding.abacusConnected"));

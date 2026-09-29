@@ -1,15 +1,29 @@
+import type { ChildProcess } from "node:child_process";
 import { resolve } from "node:path";
 
 import { NATIVE_PACKAGES } from "@abacus-ai/config/native-packages";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 
 /** Loaded against Electron's own ABI, so never bundled. */
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
 
 const root = import.meta.dirname;
+
+// The dev server, for the relaunch check below.
+let devServer: ViteDevServer | null = null;
+
+/**
+ * Seconds a relaunched app gets to reconnect before its predecessor's exit
+ * is taken for a quit. Signing in as another account relaunches the app
+ * (app.relaunch in main/handler.ts), and the plugin's default ends the dev
+ * server with the Electron it spawned, stranding the relaunch on
+ * "Couldn't load the app". A relaunched renderer reconnects to HMR within a
+ * few seconds; a real quit leaves no client, and the server exits as before.
+ */
+const RELAUNCH_GRACE_MS = 8000;
 
 // The ONNX runtime's WebAssembly files are not in its export map, so the
 // transcriber reaches them through this alias. Hoisted node_modules, as
@@ -19,12 +33,45 @@ const ortDist = resolve(root, "../../node_modules/onnxruntime-web/dist");
 export default defineConfig({
   build: { outDir: "dist/renderer" },
   plugins: [
+    {
+      name: "abacus:dev-server-handle",
+      configureServer(server) {
+        devServer = server;
+      },
+    },
     tailwindcss(),
     react(),
     ...electron(
       simpleOptions({
         main: {
           input: "src/main/index.ts",
+          onstart: async ({ startup }) => {
+            await startup();
+            // Mounted by the plugin's startup(); not in Node's own Process type.
+            const child = (process as { electronApp?: ChildProcess })
+              .electronApp;
+            if (child == null) return;
+            child.removeAllListeners("exit");
+            child.once("exit", (code: number | null) => {
+              setTimeout(() => {
+                if ((devServer?.ws.clients.size ?? 0) === 0) process.exit(code);
+                // The relaunch is not this server's child: the plugin's next
+                // rebuild would message or kill the exited one and crash
+                // (ERR_IPC_CHANNEL_CLOSED). A no-op stands in; renderer edits
+                // still hot-reload, main/preload edits need a new `pnpm dev`.
+                (process as { electronApp?: unknown }).electronApp = {
+                  send: () => false,
+                  kill: () => false,
+                  on: () => undefined,
+                  once: () => undefined,
+                  removeAllListeners: () => undefined,
+                };
+                console.log(
+                  "[dev] app relaunched itself; keeping the dev server (restart pnpm dev for main/preload changes)"
+                );
+              }, RELAUNCH_GRACE_MS);
+            });
+          },
           bundleDeps: {
             both: {
               exclude: [...NATIVE_PACKAGES, ...ELECTRON_NATIVE],

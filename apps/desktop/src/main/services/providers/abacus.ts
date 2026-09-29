@@ -365,6 +365,7 @@ export const fetchAbacusAccount = async (
       signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) {
+      console.warn(`[abacus] /account answered ${response.status}`);
       // /account is not in every deployment; an authenticated /models call
       // still tells a connected user from an invalid key.
       if (response.status !== 404 && response.status !== 405) {

@@ -1192,6 +1192,8 @@
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "Seu navegador abre para entrar ou criar uma conta. O app recebe sua própria chave de API; sua senha nunca passa por ele.",
     "connectCta": "Cadastrar / Entrar",
+    "openInBrowserCta": "Usar meu navegador",
+    "haveAccountCta": "Já tenho uma conta",
     "connectTitle": "Conectar Abacus.AI",
     "connectorsContinueCta": "Continue",
     "connectorsSkipCta": "Continue without connectors",
@@ -1247,7 +1249,9 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "setupKeyDialogLink": "Open {{provider}}",
+    "continueWithBrowser": "Continuar com {{browser}} · {{profile}}",
+    "signInAnotherWay": "Entrar de outra forma"
   },
   "openFile": {
     "failed": "Não foi possível abrir esse arquivo.",

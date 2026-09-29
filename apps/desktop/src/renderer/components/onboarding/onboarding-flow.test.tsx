@@ -71,6 +71,13 @@ vi.mock("../../stores/account-store", () => ({
 }));
 
 const startAbacusAuth = vi.fn(async () => ({ ok: true }) as const);
+/** Chromium profiles main offers on the wall; none unless a test sets some. */
+let browserProfiles: Array<{
+  id: string;
+  browserName: string;
+  profileName: string;
+}> = [];
+const listBrowserSignInProfiles = vi.fn(async () => browserProfiles);
 const cancelAbacusAuth = vi.fn(async () => undefined);
 const skipAccountOnboarding = vi.fn(async () => ({ onboarded: true }));
 const switchWorkspace = vi.fn(async () => undefined);
@@ -144,6 +151,7 @@ beforeEach(() => {
   getSettings.mockResolvedValue({ apiKeys: {} });
   getAbacusAccount.mockResolvedValue({ subscription_tier: null });
   startAbacusAuth.mockResolvedValue({ ok: true });
+  browserProfiles = [];
 
   (globalThis.window as unknown as { api: unknown }).api = {
     skipAccountOnboarding,
@@ -152,6 +160,7 @@ beforeEach(() => {
       addWorkspace,
       getSettings,
       startAbacusAuth,
+      listBrowserSignInProfiles,
       cancelAbacusAuth,
       getAbacusAccount,
       listModels,
@@ -187,6 +196,78 @@ describe("the sign-in wall", () => {
     fireEvent.click(byId("onboarding-connect"));
 
     await waitFor(() => expect(missing("onboarding-error")).toBe(true));
+  });
+
+  it("sends returning users down the sign-in path, new ones down sign-up", async () => {
+    mount();
+    fireEvent.click(byId("onboarding-have-account"));
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
+    );
+  });
+
+  it("starts a sign-up from the main button", async () => {
+    mount();
+    fireEvent.click(byId("onboarding-connect"));
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signup")
+    );
+  });
+});
+
+describe("a browser already signed in to Abacus.AI", () => {
+  const chrome = {
+    id: "chrome::Default",
+    browserName: "Chrome",
+    profileName: "Work",
+  };
+
+  /** Open "I already have an account" once main has answered with profiles. */
+  const openMenu = async (): Promise<void> => {
+    // The link turns into the menu's trigger once the profiles have landed.
+    await waitFor(() =>
+      expect(
+        byId("onboarding-have-account").getAttribute("aria-haspopup")
+      ).toBe("menu")
+    );
+    fireEvent.click(byId("onboarding-have-account"));
+    await waitFor(() => byId("onboarding-continue-with-browser"));
+  };
+
+  it("is offered behind the returning user's link, not as more buttons", async () => {
+    browserProfiles = [chrome];
+    mount();
+
+    await waitFor(() => expect(listBrowserSignInProfiles).toHaveBeenCalled());
+    expect(missing("onboarding-continue-with-browser")).toBe(true);
+    await openMenu();
+  });
+
+  it("signs in with the picked profile", async () => {
+    browserProfiles = [chrome];
+    mount();
+    await openMenu();
+
+    fireEvent.click(byId("onboarding-continue-with-browser"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith(
+        "signin",
+        "chrome::Default"
+      )
+    );
+  });
+
+  it("still lets the user sign in another way", async () => {
+    browserProfiles = [chrome];
+    mount();
+    await openMenu();
+
+    fireEvent.click(byId("onboarding-signin-another-way"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
+    );
   });
 });
 

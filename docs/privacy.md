@@ -33,6 +33,14 @@ Desktop onboarding signs you in to Abacus.AI or creates an account. Connecting
 another model provider or service uses that service's account and authorization
 flow.
 
+When a sign-in opens in the app window, the first screen may offer to continue
+with a Chromium browser profile (Chrome, Edge, Brave, Arc and similar) whose
+cookie store names abacus.ai. Listing those profiles reads no cookie. Only when
+you pick one does the app start that browser in the background on a temporary
+copy of its cookie store and ask it for its Abacus.AI cookies, the same way the
+in-app browser imports a profile. They go into the sign-in window alone, the
+temporary copy is deleted, and no other site's cookies are read.
+
 The app stores pasted provider keys locally. Environment variables take
 precedence for model calls. Abacus.AI service connectors keep their service
 credentials in your linked Abacus.AI account.
