@@ -23,19 +23,6 @@ export const useWorkspaceMetadataQuery = () => {
   return useQuery(workspaceMetadataQueryOptions());
 };
 
-/**
- * The one folder bots work in, created on first ask. A bot has no project to
- * be pointed at, so its folder is settled in advance. `enabled` is the whole
- * of "first ask": nothing is created until the pane that runs there is shown.
- */
-export const useBotWorkspaceIdQuery = (enabled: boolean) =>
-  useQuery({
-    queryKey: workspaceQueryKeys.botWorkspaceId,
-    queryFn: () => window.api.agent.ensureBotWorkspace(),
-    enabled,
-    staleTime: Infinity,
-  });
-
 // Zustand, not the metadata query: the query lags a user-driven switch by a
 // refetch, long enough for a send in W2 to land in W1. Zustand is updated
 // synchronously by the switch/add handlers.

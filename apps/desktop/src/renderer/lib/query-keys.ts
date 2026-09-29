@@ -2,8 +2,6 @@ export const workspaceQueryKeys = {
   all: ["local-code"] as const,
   metadata: ["local-code", "metadata"] as const,
   activeWorkspaceId: ["local-code", "active-workspace-id"] as const,
-  /** The one folder bots work in; settled in advance, not asked for. */
-  botWorkspaceId: ["local-code", "bot-workspace-id"] as const,
   workspaceSnapshot: (workspaceId: string) =>
     ["local-code", "workspace-snapshot", workspaceId] as const,
 

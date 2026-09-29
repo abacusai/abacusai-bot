@@ -399,10 +399,6 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     }
   );
 
-  ipcMain.handle(IpcChannels.EnsureBotWorkspace, () => {
-    return serviceHost.ensureDefaultWorkspace();
-  });
-
   ipcMain.handle(IpcChannels.EnsureSessionHomeWorkspace, () => {
     return serviceHost.ensureSessionHomeWorkspace();
   });

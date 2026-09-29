@@ -284,10 +284,6 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
         path,
         isRemote
       ) as Promise<AddWorkspaceResult>,
-    ensureBotWorkspace: () =>
-      ipcRenderer.invoke(IpcChannels.EnsureBotWorkspace) as Promise<
-        string | null
-      >,
     ensureSessionHomeWorkspace: () =>
       ipcRenderer.invoke(IpcChannels.EnsureSessionHomeWorkspace) as Promise<
         string | null

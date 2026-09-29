@@ -1675,8 +1675,6 @@ export interface AgentApi {
     path: string,
     isRemote?: boolean
   ) => Promise<AddWorkspaceResult>;
-  /** The one folder bots work in, found or made. Null only when it could not be made. */
-  ensureBotWorkspace: () => Promise<string | null>;
   /** The "Auto workspace", added and selected on first ask. Null only when it could not be made. */
   ensureSessionHomeWorkspace: () => Promise<string | null>;
   /** Where the auto workspace lives, made or not. */
