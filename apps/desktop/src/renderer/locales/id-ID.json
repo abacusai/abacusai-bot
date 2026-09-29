@@ -6,23 +6,23 @@
     "upToDate": "Anda memakai versi terbaru"
   },
   "apiKeys": {
-    "configured": "Configured",
-    "connectAbacus": "Connect Abacus.AI",
-    "connectOpenRouter": "Connect OpenRouter",
-    "connecting": "Finish signing in in your browser…",
-    "filterPlaceholder": "Search model providers…",
-    "getKey": "Open provider site",
-    "invalidKey": "This does not look like an API key. Paste the key only.",
-    "moreProviders": "Other providers",
-    "noMatches": "No model providers match this search.",
-    "notVerified": "Saved, not checked",
-    "notVerifiedHint": "The app checks this key when you send a message.",
-    "remove": "Remove key",
-    "removeDescription": "Deletes the saved key from ~/.abacusai-bot/config.json. Existing chats keep using it until they are restarted.",
-    "removeTitle": "Remove the {{provider}} key?",
-    "replacePlaceholder": "Paste a new {{provider}} API key to replace the saved one",
-    "saveChanges": "Save",
-    "title": "Models"
+    "configured": "Dikonfigurasi",
+    "connectAbacus": "Hubungkan Abacus.AI",
+    "connectOpenRouter": "Hubungkan OpenRouter",
+    "connecting": "Selesaikan proses masuk di browser Anda…",
+    "filterPlaceholder": "Cari penyedia model…",
+    "getKey": "Buka situs penyedia",
+    "invalidKey": "Ini tidak terlihat seperti kunci API. Tempel kuncinya saja.",
+    "moreProviders": "Penyedia lain",
+    "noMatches": "Tidak ada penyedia model yang cocok dengan pencarian ini.",
+    "notVerified": "Tersimpan, belum diperiksa",
+    "notVerifiedHint": "Aplikasi memeriksa kunci ini saat Anda mengirim pesan.",
+    "remove": "Hapus kunci",
+    "removeDescription": "Menghapus kunci tersimpan dari ~/.abacusai-bot/config.json. Obrolan yang ada tetap memakainya sampai dimulai ulang.",
+    "removeTitle": "Hapus kunci {{provider}}?",
+    "replacePlaceholder": "Tempel kunci API {{provider}} baru untuk mengganti yang tersimpan",
+    "saveChanges": "Simpan",
+    "title": "Model"
   },
   "artifacts": {
     "columns": {
@@ -30,9 +30,9 @@
       "session": "Sesi",
       "title": "Judul / Nama"
     },
-    "copied": "Copied",
-    "copyPath": "Copy path",
-    "copyUrl": "Copy URL",
+    "copied": "Disalin",
+    "copyPath": "Salin jalur",
+    "copyUrl": "Salin URL",
     "emptyDescription": "Berkas yang ditulis agen dan halaman yang dibukanya dikumpulkan di sini.",
     "emptyTitle": "Belum ada artefak",
     "filters": {
@@ -43,21 +43,21 @@
     },
     "itemCount_one": "{{count}} item",
     "itemCount_other": "{{count}} item",
-    "missingFile": "This file is no longer on disk.",
+    "missingFile": "Berkas ini sudah tidak ada di disk.",
     "noMatchesDescription": "Coba nama, jalur, atau judul sesi yang lain.",
     "noMatchesTitle": "Tidak ada yang cocok",
-    "openedFolder": "Opened in your file manager.",
+    "openedFolder": "Dibuka di pengelola berkas Anda.",
     "refresh": "Muat ulang",
-    "revealInFolder": "Reveal in folder",
+    "revealInFolder": "Tampilkan di folder",
     "searchPlaceholder": "Cari artefak dan sesi…",
     "unknownSession": "Sesi terhapus"
   },
   "bots": {
-    "avatarColor": "Color",
-    "avatarLabel": "Avatar variant",
-    "botOptions": "Bot options",
+    "avatarColor": "Warna",
+    "avatarLabel": "Varian avatar",
+    "botOptions": "Opsi bot",
     "cancel": "Batal",
-    "changeAvatar": "Try another avatar",
+    "changeAvatar": "Coba avatar lain",
     "create": "Buat",
     "delete": "Hapus",
     "deleteBody": "Ini menghapus {{name}} beserta obrolannya. Tindakan ini tidak dapat dibatalkan.",
@@ -73,27 +73,27 @@
     "emptyTitle": "Belum ada bot",
     "home": {
       "categories": {
-        "featured": "Featured",
-        "finance": "Finance",
-        "marketing": "Marketing",
-        "personal-assistant": "Personal Assistant",
-        "productivity": "Productivity",
-        "recruiting": "Recruiting",
-        "research": "Research",
-        "social-media": "Social Media"
+        "featured": "Unggulan",
+        "finance": "Keuangan",
+        "marketing": "Pemasaran",
+        "personal-assistant": "Asisten Pribadi",
+        "productivity": "Produktivitas",
+        "recruiting": "Perekrutan",
+        "research": "Riset",
+        "social-media": "Media Sosial"
       },
-      "categoriesLabel": "Template categories",
-      "createCta": "Create Bot",
+      "categoriesLabel": "Kategori templat",
+      "createCta": "Buat Bot",
       "getStarted": "Mulai",
-      "heading": "Create your",
-      "headingAccent": "Bot",
+      "heading": "Buat",
+      "headingAccent": "Bot Anda",
       "namePlaceholder": "Bot baru",
-      "subtitle": "Name your bot and get started in seconds.",
+      "subtitle": "Beri nama bot Anda dan mulai dalam hitungan detik.",
       "suggestions": "Saran",
-      "templatesDivider": "Or start with a template"
+      "templatesDivider": "Atau mulai dengan templat"
     },
-    "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
+    "modelDefault": "Default aplikasi",
+    "modelHelp": "Model yang menjalankan obrolan bot ini. Bot bekerja baik dengan model yang murah: loop bot dirancang untuknya.",
     "modelLabel": "Model",
     "nameLabel": "Nama",
     "namePlaceholder": "mis. Scout",
@@ -101,221 +101,221 @@
     "newBot": "Bot baru",
     "newDialog": {
       "checkIn": {
-        "daily": "Daily",
-        "hourly": "Hourly",
-        "off": "Off",
-        "weekdays": "Weekdays",
-        "weekly": "Weekly"
+        "daily": "Harian",
+        "hourly": "Setiap jam",
+        "off": "Nonaktif",
+        "weekdays": "Hari kerja",
+        "weekly": "Mingguan"
       },
-      "checkInDayLabel": "Day",
-      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
-      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
-      "checkInLabel": "Scheduled check-ins",
-      "checkInRoutineName": "{{name}} check-in",
-      "checkInTimeLabel": "Time",
-      "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Keeps track of my research topics",
-      "instructionsLabel": "Instructions",
-      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
-      "moreOptions": "More options: description, scheduled check-ins, model",
-      "namePlaceholder": "Research Buddy",
-      "title": "New bot"
+      "checkInDayLabel": "Hari",
+      "checkInError": "Bot berhasil dibuat, tetapi check-in-nya tidak dapat dijadwalkan. Tambahkan satu di Rutinitas.",
+      "checkInHelp": "Bot ini aktif sesuai jadwal ini dan mengirim pesan kepada Anda secara proaktif.",
+      "checkInLabel": "Check-in terjadwal",
+      "checkInRoutineName": "Check-in {{name}}",
+      "checkInTimeLabel": "Waktu",
+      "descriptionLabel": "Deskripsi (opsional)",
+      "descriptionPlaceholder": "Melacak topik riset saya",
+      "instructionsLabel": "Instruksi",
+      "instructionsPlaceholder": "Kamu adalah asisten riset yang tajam dan ringkas. Lacak topik yang kusebut dan tampilkan pembaruan secara proaktif.",
+      "moreOptions": "Opsi lain: deskripsi, check-in terjadwal, model",
+      "namePlaceholder": "Teman Riset",
+      "title": "Bot baru"
     },
     "openError": "Tidak dapat membuka obrolan bot.",
     "personaLabel": "Persona",
-    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
-    "pin": "Pin",
-    "pinned": "Pinned",
+    "personaPlaceholder": "Humor kering, sangat ringkas, memanggilku \"bos\", membuka dengan satu emoji",
+    "pin": "Sematkan",
+    "pinned": "Disematkan",
     "save": "Simpan",
     "saveError": "Tidak dapat menyimpan bot.",
     "senderChat": "Obrolan balas-otomatis dengan {{sender}} di {{platform}}",
     "senderChatReadOnly": "Percakapan balas-otomatis: {{bot}} menjawab {{sender}} di sini atas nama Anda. Anda bisa melihat tetapi tidak mengetik; untuk mengubah cara membalas, beri tahu {{bot}} di obrolannya sendiri.",
     "templates": {
       "appointment-assistant": {
-        "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
-        "name": "Appointment Assistant"
+        "description": "Menjaga janji temu tetap teratur mulai dari konfirmasi hingga persiapan, pengingat, dan penjadwalan ulang.",
+        "name": "Asisten Janji Temu"
       },
       "bills-renewal-watch": {
-        "description": "Catches upcoming bills, renewals, free-trial endings, and price increases before they surprise you.",
-        "name": "Bills & Renewal Watch"
+        "description": "Menangkap tagihan mendatang, perpanjangan, akhir masa uji coba gratis, dan kenaikan harga sebelum membuat Anda kaget.",
+        "name": "Pemantau Tagihan & Perpanjangan"
       },
       "calendar-concierge": {
-        "description": "Handles scheduling back-and-forth and finds meeting times that actually fit your day.",
-        "name": "Calendar Concierge"
+        "description": "Menangani bolak-balik penjadwalan dan menemukan waktu rapat yang benar-benar cocok dengan hari Anda.",
+        "name": "Concierge Kalender"
       },
       "campaign-performance-digest": {
-        "description": "Turns campaign numbers into a short weekly read on what worked, what did not, and what to try next.",
-        "name": "Campaign Performance Digest"
+        "description": "Mengubah angka kampanye menjadi bacaan mingguan singkat tentang apa yang berhasil, apa yang tidak, dan apa yang perlu dicoba selanjutnya.",
+        "name": "Ringkasan Performa Kampanye"
       },
       "candidate-follow-up": {
-        "description": "Keeps candidates from falling through the cracks when feedback, scheduling, or next steps stall.",
-        "name": "Candidate Follow-Up"
+        "description": "Mencegah kandidat terlewat saat umpan balik, penjadwalan, atau langkah berikutnya macet.",
+        "name": "Tindak Lanjut Kandidat"
       },
       "candidate-sourcer": {
-        "description": "Finds candidates with clear job-relevant evidence and prepares personalized outreach for recruiter review.",
-        "name": "Candidate Sourcer"
+        "description": "Menemukan kandidat dengan bukti yang jelas dan relevan dengan pekerjaan, serta menyiapkan pendekatan personal untuk ditinjau perekrut.",
+        "name": "Pencari Kandidat"
       },
       "chief-of-staff": {
         "description": "Mengatur hari Anda lewat email, kalender, dan Slack, serta melibatkan Anda untuk keputusan.",
         "name": "Kepala Staf"
       },
       "comment-mention-assistant": {
-        "description": "Helps you respond quickly to the social comments and mentions that are actually worth your time.",
-        "name": "Comment & Mention Assistant"
+        "description": "Membantu Anda merespons cepat komentar dan sebutan sosial yang benar-benar layak mendapat perhatian Anda.",
+        "name": "Asisten Komentar & Sebutan"
       },
       "competitor-campaign-watch": {
-        "description": "Tracks how competitors are positioning themselves and what campaigns they are pushing right now.",
-        "name": "Competitor Campaign Watch"
+        "description": "Melacak bagaimana kompetitor memosisikan diri dan kampanye apa yang sedang mereka jalankan.",
+        "name": "Pemantau Kampanye Kompetitor"
       },
       "competitor-watch": {
-        "description": "Tracks meaningful competitor moves without flooding you with every small update.",
-        "name": "Competitor Watch"
+        "description": "Melacak pergerakan kompetitor yang berarti tanpa membanjiri Anda dengan setiap pembaruan kecil.",
+        "name": "Pemantau Kompetitor"
       },
       "content-calendar-manager": {
-        "description": "Keeps your content pipeline full and moving from idea to draft to publish-ready.",
-        "name": "Content Calendar Manager"
+        "description": "Menjaga alur konten Anda tetap penuh dan bergerak dari ide ke draf hingga siap terbit.",
+        "name": "Pengelola Kalender Konten"
       },
       "content-repurposer": {
-        "description": "Turns one strong idea into platform-native X and LinkedIn content without sounding copy-pasted.",
-        "name": "Content Repurposer"
+        "description": "Mengubah satu ide kuat menjadi konten native-platform untuk X dan LinkedIn tanpa terdengar seperti copy-paste.",
+        "name": "Pengubah Ulang Konten"
       },
       "customer-voice-miner": {
-        "description": "Turns real customer language from Gmail, Slack, and docs into sharper messaging and content ideas.",
-        "name": "Customer Voice Miner"
+        "description": "Mengubah bahasa asli pelanggan dari Gmail, Slack, dan dokumen menjadi pesan dan ide konten yang lebih tajam.",
+        "name": "Penggali Suara Pelanggan"
       },
       "daily-focus-planner": {
-        "description": "Turns your meetings, messages, and deadlines into a realistic plan for the day.",
-        "name": "Daily Focus Planner"
+        "description": "Mengubah rapat, pesan, dan tenggat waktu Anda menjadi rencana harian yang realistis.",
+        "name": "Perencana Fokus Harian"
       },
       "daily-post-writer": {
-        "description": "Finds one thing worth saying today and turns it into a polished post in your voice.",
-        "name": "Daily Post Writer"
+        "description": "Menemukan satu hal yang layak disampaikan hari ini dan mengubahnya menjadi postingan matang dengan gaya Anda.",
+        "name": "Penulis Postingan Harian"
       },
       "daily-stock-recommender": {
-        "description": "Surfaces a few stocks worth researching today with the thesis, catalyst, risks, and downside case.",
-        "name": "Daily Stock Recommender"
+        "description": "Menampilkan beberapa saham yang layak diriset hari ini lengkap dengan tesis, katalis, risiko, dan skenario terburuk.",
+        "name": "Rekomendasi Saham Harian"
       },
       "decision-researcher": {
-        "description": "Compares your real options on the criteria that matter and recommends the strongest choice.",
-        "name": "Decision Researcher"
+        "description": "Membandingkan opsi nyata Anda berdasarkan kriteria yang penting dan merekomendasikan pilihan terkuat.",
+        "name": "Peneliti Keputusan"
       },
       "deep-researcher": {
-        "description": "Turns a complex question into a decision-ready brief with evidence, uncertainty, and sources.",
-        "name": "Deep Researcher"
+        "description": "Mengubah pertanyaan kompleks menjadi ringkasan siap keputusan lengkap dengan bukti, ketidakpastian, dan sumber.",
+        "name": "Peneliti Mendalam"
       },
       "discord-agent": {
-        "description": "Your agent in Discord - DM it or add it to a server",
-        "name": "Discord Agent"
+        "description": "Agen Anda di Discord - kirim DM atau tambahkan ke server",
+        "name": "Agen Discord"
       },
       "earnings-watch": {
-        "description": "Tracks upcoming earnings and explains the numbers, surprises, guidance, and what changed after results.",
-        "name": "Earnings Watch"
+        "description": "Melacak laporan laba mendatang dan menjelaskan angka, kejutan, panduan, dan apa yang berubah setelah hasil diumumkan.",
+        "name": "Pemantau Laba"
       },
       "email-drafting": {
-        "description": "Finds emails that need a response and creates clear, context-aware Gmail drafts in your voice.",
-        "name": "Email Drafting"
+        "description": "Menemukan email yang perlu dibalas dan membuat draf Gmail yang jelas serta sesuai konteks dengan gaya Anda.",
+        "name": "Penyusun Draf Email"
       },
       "follow-up-tracker": {
-        "description": "Tracks who owes you a reply, who you owe, and when it is time to follow up.",
-        "name": "Follow-Up Tracker"
+        "description": "Melacak siapa yang berutang balasan kepada Anda, siapa yang Anda utangi balasan, dan kapan saatnya menindaklanjuti.",
+        "name": "Pelacak Tindak Lanjut"
       },
       "hiring-manager-brief": {
-        "description": "Prepares the hiring manager before each interview with the role, candidate context, and areas to probe.",
-        "name": "Hiring Manager Brief"
+        "description": "Menyiapkan manajer perekrutan sebelum setiap wawancara dengan konteks peran, kandidat, dan area yang perlu digali.",
+        "name": "Ringkasan untuk Manajer Perekrutan"
       },
       "inbox-to-calendar": {
-        "description": "Turns confirmed plans in Gmail into clean Google Calendar events so important dates never get lost.",
-        "name": "Inbox to Calendar"
+        "description": "Mengubah rencana yang sudah dikonfirmasi di Gmail menjadi acara Google Calendar yang rapi agar tanggal penting tidak pernah terlewat.",
+        "name": "Kotak Masuk ke Kalender"
       },
       "interview-coordinator": {
-        "description": "Handles interview scheduling across candidates and interviewers without endless back-and-forth.",
-        "name": "Interview Coordinator"
+        "description": "Menangani penjadwalan wawancara antar kandidat dan pewawancara tanpa bolak-balik tanpa akhir.",
+        "name": "Koordinator Wawancara"
       },
       "knowledge-finder": {
-        "description": "Finds the answer buried in your Gmail, Slack, or Google Drive history.",
-        "name": "Knowledge Finder"
+        "description": "Menemukan jawaban yang terkubur di riwayat Gmail, Slack, atau Google Drive Anda.",
+        "name": "Pencari Pengetahuan"
       },
       "launch-command-center": {
-        "description": "Keeps a launch moving by surfacing blockers, missing approvals, and commitments before they slip.",
-        "name": "Launch Command Center"
+        "description": "Menjaga peluncuran tetap berjalan dengan menampilkan penghambat, persetujuan yang hilang, dan komitmen sebelum meleset.",
+        "name": "Pusat Kendali Peluncuran"
       },
       "meeting-notes-actions": {
-        "description": "Turns meeting notes into decisions, owners, deadlines, and follow-ups you can act on.",
-        "name": "Meeting Notes & Actions"
+        "description": "Mengubah catatan rapat menjadi keputusan, penanggung jawab, tenggat waktu, dan tindak lanjut yang bisa Anda jalankan.",
+        "name": "Catatan & Tindakan Rapat"
       },
       "meeting-prep-bot": {
-        "description": "Creates a one-page meeting brief with the context, open issues, and questions you need before the call.",
-        "name": "Meeting Prep Bot"
+        "description": "Membuat ringkasan rapat satu halaman lengkap dengan konteks, isu terbuka, dan pertanyaan yang Anda butuhkan sebelum panggilan.",
+        "name": "Bot Persiapan Rapat"
       },
       "morning-brief": {
-        "description": "Starts your day with meetings, urgent messages, priorities, and the news worth knowing.",
-        "name": "Morning Brief"
+        "description": "Memulai hari Anda dengan rapat, pesan mendesak, prioritas, dan berita yang perlu diketahui.",
+        "name": "Ringkasan Pagi"
       },
       "news-radar": {
-        "description": "Delivers the most important developments from the last 24 hours without the duplicate headlines and noise.",
-        "name": "News Radar"
+        "description": "Menyajikan perkembangan terpenting dari 24 jam terakhir tanpa headline duplikat dan kebisingan.",
+        "name": "Radar Berita"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
-        "name": "Personal Admin"
+        "description": "Menangani urusan administrasi hidup yang menumpuk di kotak masuk Anda: formulir, perpanjangan, janji temu, dan tindak lanjut.",
+        "name": "Admin Pribadi"
       },
       "portfolio-pulse": {
-        "description": "Alerts you only when something materially changes the story for a stock you care about.",
-        "name": "Portfolio Pulse"
+        "description": "Memberi tahu Anda hanya saat ada perubahan material pada cerita saham yang Anda pedulikan.",
+        "name": "Denyut Portofolio"
       },
       "project-pulse": {
-        "description": "Gives you a clean project status without making you chase people for updates.",
-        "name": "Project Pulse"
+        "description": "Memberi Anda status proyek yang bersih tanpa harus mengejar orang untuk mendapatkan pembaruan.",
+        "name": "Denyut Proyek"
       },
       "research-paper-scout": {
-        "description": "Finds new papers worth reading and explains the contribution without making you read every abstract.",
-        "name": "Research Paper Scout"
+        "description": "Menemukan makalah baru yang layak dibaca dan menjelaskan kontribusinya tanpa membuat Anda membaca setiap abstrak.",
+        "name": "Pemandu Makalah Riset"
       },
       "resume-review-assistant": {
-        "description": "Maps each resume to the job requirements so a recruiter can review the evidence consistently.",
-        "name": "Resume Review Assistant"
+        "description": "Memetakan setiap resume ke persyaratan pekerjaan agar perekrut dapat meninjau bukti secara konsisten.",
+        "name": "Asisten Tinjauan Resume"
       },
       "social-inbox-manager": {
-        "description": "Pulls important comments, mentions, and DMs to the top so high-value conversations do not get missed.",
-        "name": "Social Inbox Manager"
+        "description": "Menarik komentar, sebutan, dan DM penting ke atas agar percakapan bernilai tinggi tidak terlewat.",
+        "name": "Pengelola Kotak Masuk Sosial"
       },
       "spending-digest": {
-        "description": "Turns Gmail receipts into a simple weekly spending summary and flags unusual purchases.",
-        "name": "Spending Digest"
+        "description": "Mengubah struk Gmail menjadi ringkasan pengeluaran mingguan yang sederhana dan menandai pembelian yang tidak biasa.",
+        "name": "Ringkasan Pengeluaran"
       },
       "telegram-agent": {
-        "description": "Your agent in Telegram - message it anytime",
-        "name": "Telegram Agent"
+        "description": "Agen Anda di Telegram - kirim pesan kapan saja",
+        "name": "Agen Telegram"
       },
       "travel-planner": {
-        "description": "Turns your bookings and preferences into a realistic day-by-day trip plan.",
-        "name": "Travel Planner"
+        "description": "Mengubah pemesanan dan preferensi Anda menjadi rencana perjalanan harian yang realistis.",
+        "name": "Perencana Perjalanan"
       },
       "trend-scout": {
-        "description": "Finds fast-growing conversations in your niche and gives you an original angle before everyone piles in.",
-        "name": "Trend Scout"
+        "description": "Menemukan percakapan yang berkembang cepat di niche Anda dan memberi Anda sudut pandang orisinal sebelum semua orang ikut membahasnya.",
+        "name": "Pemandu Tren"
       },
       "weekly-review": {
-        "description": "Closes the week with what moved forward, what slipped, and what matters next.",
-        "name": "Weekly Review"
+        "description": "Menutup minggu dengan apa yang bergerak maju, apa yang meleset, dan apa yang penting selanjutnya.",
+        "name": "Tinjauan Mingguan"
       },
       "whats-hot": {
-        "description": "Finds fast-rising stories and conversations across the internet before they become old news.",
-        "name": "What's Hot?"
+        "description": "Menemukan cerita dan percakapan yang cepat naik daun di seluruh internet sebelum menjadi berita basi.",
+        "name": "Apa yang Lagi Ramai?"
       },
       "whatsapp-agent": {
-        "description": "Your agent in WhatsApp - message it anytime",
-        "name": "WhatsApp Agent"
+        "description": "Agen Anda di WhatsApp - kirim pesan kapan saja",
+        "name": "Agen WhatsApp"
       }
     },
     "title": "Bot",
     "titleLabel": "Peran",
     "titlePlaceholder": "mis. Research Scout",
-    "unpin": "Unpin",
+    "unpin": "Lepas sematan",
     "viewBots": "Bot",
     "viewSessions": "Sesi",
-    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "Percakapan ini berlangsung di {{app}}. Kirim pesan ke bot Abacus AI di sana. Semua yang Anda dan bot katakan muncul di sini.",
+    "channelChatReadOnlyWhatsapp": "Percakapan ini berlangsung di WhatsApp. Kirim pesan ke diri Anda sendiri di sana, dari obrolan “Pesan untuk Diri Sendiri”. Semua yang Anda dan bot katakan muncul di sini."
   },
   "browserPermission": {
     "allow": "Izinkan",
@@ -332,19 +332,19 @@
     "approvalSubtitle": "Pilih apakah agen meminta persetujuan sebelum menjelajah.",
     "approvalTitle": "Persetujuan",
     "chrome": {
-      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
-      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
-      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
-      "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
-      "install": "Install the extension",
-      "connect": "Connect",
-      "disconnect": "Disconnect",
-      "tokenTitle": "Extension token",
-      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
-      "tokenSave": "Save token",
-      "tokenSaved": "Token saved.",
-      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+      "notFound": "Google Chrome atau Microsoft Edge tidak ditemukan di komputer ini.",
+      "extensionMissing": "Instal Playwright Extension di {{browser}} agar agen dapat mengendalikannya.",
+      "ready": "{{browser}} sudah siap. Hubungkan sekarang, atau tugas browser pertama agen akan meminta di {{browser}}.",
+      "connecting": "Menunggu Anda mengizinkan koneksi di browser Anda…",
+      "connected": "Terhubung ke {{browser}}: {{count}} tab di grup AbacusAI Bot.",
+      "install": "Instal ekstensi",
+      "connect": "Hubungkan",
+      "disconnect": "Putuskan",
+      "tokenTitle": "Token ekstensi",
+      "tokenPlaceholder": "Tempel token ekstensi untuk melewati halaman izin",
+      "tokenSave": "Simpan token",
+      "tokenSaved": "Token tersimpan.",
+      "tokenHint": "Opsional. Token ditampilkan di halaman izin ekstensi; setelah disimpan, aplikasi terhubung tanpa perlu bertanya setiap kali."
     },
     "clearAction": "Hapus semua data peramban",
     "clearSubtitle": "Hapus data situs dan cache dari browser dalam aplikasi",
@@ -353,16 +353,16 @@
     "dataSection": "Data",
     "done": "Selesai",
     "engine": {
-      "builtin": "Built-in browser",
-      "chrome": "My Chrome"
+      "builtin": "Browser bawaan",
+      "chrome": "Chrome saya"
     },
-    "engineSection": "Which browser",
-    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
-    "engineTitle": "Browser the agent uses",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page",
+    "engineSection": "Browser mana",
+    "engineSubtitle": "Browser bawaan aplikasi, atau Chrome Anda dengan login dan tab Anda sendiri.",
+    "engineTitle": "Browser yang dipakai agen",
+    "homepageInvalid": "Masukkan alamat web yang valid.",
+    "homepageSave": "Simpan",
+    "homepageSaved": "Beranda tersimpan.",
+    "homepageTitle": "Beranda",
     "masterSubtitle": "Izinkan agen mengontrol peramban bawaan",
     "masterTitle": "Browser",
     "permissionsSection": "Izin",
@@ -375,34 +375,34 @@
       "emptyTitle": "Belum ada skill"
     },
     "tabs": {
-      "label": "Capabilities",
+      "label": "Kemampuan",
       "mcp": "MCP",
       "connectors": "Konektor",
       "skills": "Skills",
       "tools": "Alat"
     },
     "toolDescriptions": {
-      "ast_edit": "Structural search-and-replace that cannot break the syntax.",
+      "ast_edit": "Pencarian dan penggantian struktural yang tidak bisa merusak sintaks.",
       "bash": "Menjalankan perintah shell di ruang kerja.",
-      "batch_edit": "Change several places in one file in a single edit.",
-      "batch_file_read": "Read several files in one go.",
-      "bfl_flux3_get_result": "Check whether a submitted job has finished.",
-      "bfl_flux3_image_to_video": "Start a video generation from a still image.",
-      "bfl_flux3_keyframes_to_video": "Start a video generation from keyframes.",
-      "bfl_flux3_prompting_guide": "Read the prompting guide for better results.",
-      "bfl_flux3_text_to_video": "Start a video generation from a prompt.",
-      "bfl_flux3_video_continuation": "Continue an existing video.",
+      "batch_edit": "Mengubah beberapa bagian dalam satu berkas sekaligus dalam satu edit.",
+      "batch_file_read": "Membaca beberapa berkas sekaligus.",
+      "bfl_flux3_get_result": "Memeriksa apakah tugas yang dikirim sudah selesai.",
+      "bfl_flux3_image_to_video": "Memulai pembuatan video dari gambar diam.",
+      "bfl_flux3_keyframes_to_video": "Memulai pembuatan video dari keyframe.",
+      "bfl_flux3_prompting_guide": "Membaca panduan prompt untuk hasil yang lebih baik.",
+      "bfl_flux3_text_to_video": "Memulai pembuatan video dari sebuah prompt.",
+      "bfl_flux3_video_continuation": "Melanjutkan video yang sudah ada.",
       "browser_execute": "Menjalankan JavaScript pada halaman yang terbuka.",
       "browser_interact": "Mengeklik, mengetik, menggulir, atau hover di halaman.",
       "browser_navigate": "Membuka URL di peramban bawaan.",
       "browser_snapshot": "Membaca halaman sebagai daftar elemen interaktif.",
-      "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
-      "code_map": "Index the functions and classes in a file or folder.",
-      "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",
-      "cronjob": "Create, list, pause, or run scheduled tasks.",
-      "deck_export_pdf": "Render an HTML slide deck to PDF, one page per slide.",
-      "delegate_task": "Hand a piece of work to a sub-agent.",
-      "design": "Design screens and export them as mockups.",
+      "browser_task": "Menyerahkan seluruh tugas web ke sub-agen browser dan menerima jawabannya.",
+      "code_map": "Mengindeks fungsi dan kelas dalam sebuah berkas atau folder.",
+      "connect_connector": "Meminta pengguna menghubungkan layanan, seperti Gmail atau Slack, agar alatnya tersedia.",
+      "cronjob": "Membuat, menampilkan, menjeda, atau menjalankan tugas terjadwal.",
+      "deck_export_pdf": "Merender slide HTML menjadi PDF, satu halaman per slide.",
+      "delegate_task": "Menyerahkan sebagian pekerjaan ke sub-agen.",
+      "design": "Mendesain layar dan mengekspornya sebagai mockup.",
       "device_app": "Memasang, membuka, menghentikan, atau menghapus aplikasi.",
       "device_boot": "Menyalakan simulator atau emulator.",
       "device_build": "Membangun ruang kerja untuk platform tujuan.",
@@ -412,338 +412,338 @@
       "device_screenshot": "Mengambil tangkapan layar perangkat sebagai gambar.",
       "device_shutdown": "Mematikan simulator atau emulator yang berjalan.",
       "device_snapshot": "Membaca layar sebagai daftar elemen.",
-      "disconnect_connector": "Detach a connected service's account.",
+      "disconnect_connector": "Melepaskan akun layanan yang terhubung.",
       "discord_auto_reply": "Balas pesan Discord dari orang pilihan secara otomatis (khusus bot).",
-      "document": "Write a document and print it as a PDF.",
+      "document": "Menulis dokumen dan mencetaknya sebagai PDF.",
       "edit": "Mengganti potongan teks yang persis di dalam berkas.",
-      "exit_plan_mode": "Ask to leave plan mode and start carrying out the plan.",
-      "fetch_background_output": "Read what a background command has printed, while it runs or after it finishes.",
+      "exit_plan_mode": "Meminta untuk keluar dari mode rencana dan mulai menjalankan rencananya.",
+      "fetch_background_output": "Membaca apa yang sudah dicetak oleh perintah latar belakang, saat berjalan atau setelah selesai.",
       "glob": "Menemukan berkas berdasarkan pola nama.",
       "grep": "Mencari isi berkas dengan ekspresi reguler.",
-      "ha_call_service": "Call a service to change something.",
-      "ha_get_state": "Read the current state of an entity.",
-      "ha_list_entities": "List Home Assistant entities.",
-      "ha_list_services": "List the services that can be called.",
-      "image_generate": "Generate an image from a prompt.",
-      "kill_process": "Stop a command running in the background.",
+      "ha_call_service": "Memanggil sebuah layanan untuk mengubah sesuatu.",
+      "ha_get_state": "Membaca status entitas saat ini.",
+      "ha_list_entities": "Menampilkan daftar entitas Home Assistant.",
+      "ha_list_services": "Menampilkan daftar layanan yang bisa dipanggil.",
+      "image_generate": "Membuat gambar dari sebuah prompt.",
+      "kill_process": "Menghentikan perintah yang berjalan di latar belakang.",
       "list_discord_chats": "Daftar chat dan kontak Discord.",
       "list_telegram_chats": "Daftar chat dan kontak Telegram.",
       "list_whatsapp_chats": "Daftar chat dan kontak WhatsApp.",
       "ls": "Menampilkan isi sebuah direktori.",
-      "memory": "Save and recall notes that outlive the session.",
-      "pdf": "Read, merge, split, watermark, fill or reprint a PDF.",
-      "ppt": "Build a presentation and print it as a PDF.",
-      "present_deliverable": "Present the finished files, most important first, and open the top one.",
+      "memory": "Menyimpan dan mengingat catatan yang bertahan melewati sesi.",
+      "pdf": "Membaca, menggabungkan, memisahkan, membubuhi watermark, mengisi, atau mencetak ulang PDF.",
+      "ppt": "Membuat presentasi dan mencetaknya sebagai PDF.",
+      "present_deliverable": "Menyajikan berkas yang sudah selesai, yang terpenting lebih dulu, dan membuka yang teratas.",
       "read": "Membaca berkas dari disk.",
       "read_discord_messages": "Baca pesan Discord terbaru, saat diminta.",
-      "read_output": "Read back output that was too large to show in full.",
+      "read_output": "Membaca kembali output yang terlalu besar untuk ditampilkan penuh.",
       "read_telegram_messages": "Baca pesan Telegram terbaru, saat diminta.",
       "read_whatsapp_messages": "Baca pesan WhatsApp terbaru, saat diminta.",
-      "run_tests": "Run the project's tests and report what passed and failed.",
+      "run_tests": "Menjalankan pengujian proyek dan melaporkan apa yang lolos dan gagal.",
       "send_discord_message": "Kirim pesan di Discord.",
       "send_telegram_message": "Kirim pesan di Telegram.",
       "send_whatsapp_message": "Kirim pesan di WhatsApp.",
       "serve": "Menyajikan folder melalui http agar halaman web yang Anda buat dapat dibuka.",
-      "session_search": "Search past conversations.",
-      "skill_add": "Install a skill from the marketplace.",
-      "skill_manage": "Create, edit, or remove a skill.",
-      "skill_view": "Read a skill's full instructions.",
-      "skills_list": "List the skills available to load.",
-      "spotify_albums": "Look up album details.",
-      "spotify_devices": "List and pick a playback device.",
-      "spotify_library": "Read and update your saved library.",
-      "spotify_playback": "Play, pause, skip, and control volume.",
-      "spotify_playlists": "Read and modify playlists.",
-      "spotify_queue": "See and add to the play queue.",
-      "spotify_search": "Search tracks, albums, artists, and playlists.",
+      "session_search": "Mencari percakapan sebelumnya.",
+      "skill_add": "Menginstal skill dari marketplace.",
+      "skill_manage": "Membuat, mengedit, atau menghapus skill.",
+      "skill_view": "Membaca instruksi lengkap sebuah skill.",
+      "skills_list": "Menampilkan daftar skill yang bisa dimuat.",
+      "spotify_albums": "Melihat detail album.",
+      "spotify_devices": "Menampilkan dan memilih perangkat pemutaran.",
+      "spotify_library": "Membaca dan memperbarui pustaka tersimpan Anda.",
+      "spotify_playback": "Memutar, menjeda, melewati, dan mengatur volume.",
+      "spotify_playlists": "Membaca dan mengubah playlist.",
+      "spotify_queue": "Melihat dan menambahkan ke antrean putar.",
+      "spotify_search": "Mencari lagu, album, artis, dan playlist.",
       "telegram_auto_reply": "Balas pesan Telegram dari orang pilihan secara otomatis (khusus bot).",
-      "text_to_speech": "Turn text into spoken audio.",
-      "todo": "Keep a plan for multi-step work and tick items off.",
-      "video_analyze": "Describe or answer questions about a video.",
-      "video_generate": "Generate a video from a prompt, image, or reference.",
-      "vision_analyze": "Describe or answer questions about an image.",
-      "web_fetch": "Fetch a web page and read it as text.",
-      "web_search": "Search the web and return ranked results.",
+      "text_to_speech": "Mengubah teks menjadi audio suara.",
+      "todo": "Menyimpan rencana untuk pekerjaan multi-langkah dan mencentang item yang selesai.",
+      "video_analyze": "Mendeskripsikan atau menjawab pertanyaan tentang sebuah video.",
+      "video_generate": "Membuat video dari sebuah prompt, gambar, atau referensi.",
+      "vision_analyze": "Mendeskripsikan atau menjawab pertanyaan tentang sebuah gambar.",
+      "web_fetch": "Mengambil halaman web dan membacanya sebagai teks.",
+      "web_search": "Mencari di web dan mengembalikan hasil yang diurutkan.",
       "whatsapp_auto_reply": "Balas pesan WhatsApp dari orang pilihan secara otomatis (khusus bot).",
       "write": "Membuat berkas atau menimpa yang sudah ada.",
-      "x_search": "Search public posts and threads on X.",
-      "xai_video_edit": "Edit an already generated video.",
-      "xai_video_extend": "Extend a generated video further."
+      "x_search": "Mencari postingan dan thread publik di X.",
+      "xai_video_edit": "Mengedit video yang sudah dibuat.",
+      "xai_video_extend": "Memperpanjang video yang sudah dibuat."
     },
     "tools": {
-      "alwaysOn": "Always on",
-      "disabledDetail": "Off. The agent isn't told these tools exist.",
-      "enabledDetail": "On. The agent can call these tools.",
+      "alwaysOn": "Selalu aktif",
+      "disabledDetail": "Nonaktif. Agen tidak diberi tahu bahwa alat ini ada.",
+      "enabledDetail": "Aktif. Agen dapat memanggil alat ini.",
       "mcpNote": "Server MCP yang terhubung menambahkan alatnya sendiri di luar daftar ini.",
-      "noMatches": "No toolset matches that.",
-      "noModelTools": "This capability doesn't add any tools the model calls directly.",
-      "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
-      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
-      "resizePanels": "Resize toolsets and details",
-      "searchPlaceholder": "Search toolsets and tools…",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools"
+      "noMatches": "Tidak ada toolset yang cocok dengan itu.",
+      "noModelTools": "Kemampuan ini tidak menambahkan alat yang dipanggil langsung oleh model.",
+      "planned": "Belum tersedia",
+      "plannedDetail": "Belum ada yang mengimplementasikan ini, jadi belum bisa diaktifkan. Ini ditampilkan agar Anda bisa melihat apa yang direncanakan. Ini bukan kunci API yang hilang.",
+      "restartNote": "Perubahan berlaku pada sesi berikutnya: agen diberi daftar alatnya saat sesi dimulai.",
+      "resizePanels": "Ubah ukuran toolset dan detail",
+      "searchPlaceholder": "Cari toolset dan alat…",
+      "toolCount_one": "{{count}} alat",
+      "toolCount_other": "{{count}} alat"
     },
     "toolsets": {
       "a2a": {
-        "description": "Agent-to-agent protocol support, so other agents can call this one and it can call them.",
+        "description": "Dukungan protokol agent-to-agent, sehingga agen lain dapat memanggil agen ini dan agen ini dapat memanggil mereka.",
         "label": "A2A"
       },
       "bfl": {
-        "description": "Black Forest Labs FLUX 3 video generation. Jobs take minutes, so submitting returns an id to poll.",
+        "description": "Pembuatan video Black Forest Labs FLUX 3. Tugas memakan waktu beberapa menit, jadi pengiriman mengembalikan id untuk dipantau.",
         "label": "BFL FLUX 3 Video"
       },
       "browser": {
-        "description": "Drive the built-in browser: open pages, read them, click and type. Web tasks run in their own sub-agent.",
-        "label": "Browser Automation"
+        "description": "Kendalikan browser bawaan: buka halaman, baca, klik, dan ketik. Tugas web berjalan di sub-agennya sendiri.",
+        "label": "Otomasi Browser"
       },
       "connectors": {
-        "description": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
-        "label": "Connectors"
+        "description": "Biarkan agen melihat konektor mana yang terhubung, dan menawarkan tombol Hubungkan untuk yang dibutuhkannya. Giliran agen menunggu Anda.",
+        "label": "Konektor"
       },
       "cronjob": {
-        "description": "Create and manage scheduled tasks that run on their own.",
-        "label": "Cron Jobs"
+        "description": "Membuat dan mengelola tugas terjadwal yang berjalan sendiri.",
+        "label": "Cron Job"
       },
       "delegation": {
-        "description": "Hand a self-contained piece of work to a sub-agent.",
-        "label": "Task Delegation"
+        "description": "Menyerahkan pekerjaan yang berdiri sendiri ke sub-agen.",
+        "label": "Delegasi Tugas"
       },
       "deliverables": {
-        "description": "Hand finished files to you as clickable links, open the first one in the preview pane, and file them all under Artifacts.",
-        "label": "Deliverables"
+        "description": "Menyerahkan berkas yang selesai kepada Anda sebagai tautan yang bisa diklik, membuka yang pertama di panel pratinjau, dan menyimpan semuanya di Artefak.",
+        "label": "Hasil Kerja"
       },
       "design": {
-        "description": "Design product screens as mockups or wireframes.",
-        "label": "Design"
+        "description": "Mendesain layar produk sebagai mockup atau wireframe.",
+        "label": "Desain"
       },
       "device": {
-        "description": "Build for and control iOS simulators and Android emulators.",
-        "label": "Devices"
+        "description": "Membangun untuk, dan mengendalikan, simulator iOS dan emulator Android.",
+        "label": "Perangkat"
       },
       "file": {
-        "description": "Read, write, and edit files, and search the workspace by name or contents.",
-        "label": "File Operations"
+        "description": "Membaca, menulis, dan mengedit berkas, serta mencari ruang kerja berdasarkan nama atau isi.",
+        "label": "Operasi Berkas"
       },
       "homeassistant": {
-        "description": "Read and control smart home devices through Home Assistant.",
+        "description": "Membaca dan mengendalikan perangkat rumah pintar lewat Home Assistant.",
         "label": "Home Assistant"
       },
       "image_gen": {
-        "description": "Generate images from a prompt.",
-        "label": "Image Generation"
+        "description": "Membuat gambar dari sebuah prompt.",
+        "label": "Pembuatan Gambar"
       },
       "memory": {
-        "description": "Remember things across sessions instead of starting cold every time.",
-        "label": "Memory"
+        "description": "Mengingat hal-hal lintas sesi alih-alih memulai dari nol setiap kali.",
+        "label": "Memori"
       },
       "messaging": {
         "description": "Kirim pesan lewat aplikasi chat yang terhubung (WhatsApp, Telegram, Discord) sebagai pengguna atau bot mereka.",
         "label": "Perpesanan"
       },
       "pdf": {
-        "description": "Write, read and edit PDF documents.",
-        "label": "PDFs"
+        "description": "Menulis, membaca, dan mengedit dokumen PDF.",
+        "label": "PDF"
       },
       "plan_mode": {
-        "description": "Lets the agent ask to leave plan mode and start carrying out the plan it showed you.",
-        "label": "Plan mode"
+        "description": "Memungkinkan agen meminta keluar dari mode rencana dan mulai menjalankan rencana yang ditunjukkannya kepada Anda.",
+        "label": "Mode rencana"
       },
       "ppt": {
-        "description": "Build a designed slide deck from a brief and show it in the preview pane.",
-        "label": "Slide decks"
+        "description": "Membuat slide presentasi yang dirancang dari sebuah brief dan menampilkannya di panel pratinjau.",
+        "label": "Slide presentasi"
       },
       "process": {
-        "description": "Start a command that keeps running, read what it has printed, and stop it. Also reads output that was too large to show in full.",
-        "label": "Background processes"
+        "description": "Memulai perintah yang terus berjalan, membaca apa yang sudah dicetaknya, dan menghentikannya. Juga membaca output yang terlalu besar untuk ditampilkan penuh.",
+        "label": "Proses latar belakang"
       },
       "session_search": {
-        "description": "Search past conversations and recall what was decided.",
-        "label": "Session Search"
+        "description": "Mencari percakapan sebelumnya dan mengingat apa yang telah diputuskan.",
+        "label": "Pencarian Sesi"
       },
       "skills": {
-        "description": "List, read, and manage skills as tools, rather than only loading them as context.",
+        "description": "Menampilkan, membaca, dan mengelola skill sebagai alat, bukan hanya memuatnya sebagai konteks.",
         "label": "Skills"
       },
       "spotify": {
-        "description": "Playback, search, playlists, and library access.",
+        "description": "Pemutaran, pencarian, playlist, dan akses pustaka.",
         "label": "Spotify"
       },
       "terminal": {
-        "description": "Run shell commands in the workspace.",
-        "label": "Terminal & Processes"
+        "description": "Menjalankan perintah shell di ruang kerja.",
+        "label": "Terminal & Proses"
       },
       "todo": {
-        "description": "Plan and track multi-step work so long tasks don't drift.",
-        "label": "Task Planning"
+        "description": "Merencanakan dan melacak pekerjaan multi-langkah agar tugas panjang tidak melenceng.",
+        "label": "Perencanaan Tugas"
       },
       "tts": {
-        "description": "Turn text into audio.",
+        "description": "Mengubah teks menjadi audio.",
         "label": "Text-to-Speech"
       },
       "video": {
-        "description": "Analyse video content. Needs a video-capable model.",
-        "label": "Video Analysis"
+        "description": "Menganalisis konten video. Membutuhkan model yang mendukung video.",
+        "label": "Analisis Video"
       },
       "video_gen": {
-        "description": "Generate video from a prompt, an image, or a reference.",
-        "label": "Video Generation"
+        "description": "Membuat video dari sebuah prompt, gambar, atau referensi.",
+        "label": "Pembuatan Video"
       },
       "vision": {
-        "description": "Look at images and describe or reason about what's in them.",
-        "label": "Vision / Image Analysis"
+        "description": "Melihat gambar dan mendeskripsikan atau bernalar tentang isinya.",
+        "label": "Vision / Analisis Gambar"
       },
       "web": {
-        "description": "Search the web and pull readable content out of pages.",
-        "label": "Web Search & Scraping"
+        "description": "Mencari di web dan mengambil konten yang bisa dibaca dari halaman.",
+        "label": "Pencarian & Scraping Web"
       },
       "x_search": {
-        "description": "Search public posts and threads on X.",
-        "label": "X (Twitter) Search"
+        "description": "Mencari postingan dan thread publik di X.",
+        "label": "Pencarian X (Twitter)"
       }
     }
   },
   "changelog": {
-    "current": "This version",
-    "empty": "No releases to show yet.",
-    "subtitle": "Every release, newest first. The version you are running is marked."
+    "current": "Versi ini",
+    "empty": "Belum ada rilis untuk ditampilkan.",
+    "subtitle": "Setiap rilis, terbaru lebih dulu. Versi yang Anda jalankan ditandai."
   },
   "common": {
-    "back": "Back",
-    "cancel": "Cancel",
+    "back": "Kembali",
+    "cancel": "Batal",
     "close": "Tutup",
-    "loading": "Loading",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
+    "loading": "Memuat",
+    "mobileSidebarDescription": "Menampilkan sidebar seluler.",
     "sidebar": "Sidebar",
-    "toggleSidebar": "Toggle sidebar"
+    "toggleSidebar": "Alihkan sidebar"
   },
   "connectorRequest": {
-    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
-    "connect": "Connect {{provider}}",
-    "connecting": "Connecting… check your browser to complete the steps",
-    "decline": "Not now",
-    "failed": "Could not connect {{provider}}.",
+    "body": "{{provider}} harus dihubungkan sebelum agen dapat menggunakannya. Ini menunggu Anda.",
+    "connect": "Hubungkan {{provider}}",
+    "connecting": "Menghubungkan… periksa browser Anda untuk menyelesaikan langkahnya",
+    "decline": "Nanti saja",
+    "failed": "Tidak dapat menghubungkan {{provider}}.",
     "stop": "Hentikan koneksi",
-    "title": "{{provider}} is not connected"
+    "title": "{{provider}} belum terhubung"
   },
   "connectors": {
-    "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
-    "abacusConnected": "{{name}} connected",
-    "abacusConnecting": "Finish connecting {{name}} in your browser…",
-    "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
-    "abacusDisconnected": "{{name}} disconnected",
-    "abacusSignInFailed": "Could not sign in to Abacus.AI. Please try again.",
-    "abacusSigningIn": "Sign in to Abacus.AI in your browser to continue…",
-    "add": "Add",
-    "addFailed": "Could not add {{name}}.",
-    "added": "{{name}} added.",
-    "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
-    "adding": "Adding…",
+    "abacusConnectCancelled": "Berhenti menambahkan {{name}}.",
+    "abacusConnectFailed": "Tidak dapat menambahkan {{name}}. Coba lagi.",
+    "abacusConnected": "{{name}} terhubung",
+    "abacusConnecting": "Selesaikan menghubungkan {{name}} di browser Anda…",
+    "abacusDisconnectFailed": "Tidak dapat memutuskan {{name}}. Silakan coba lagi.",
+    "abacusDisconnected": "{{name}} terputus",
+    "abacusSignInFailed": "Tidak dapat masuk ke Abacus.AI. Silakan coba lagi.",
+    "abacusSigningIn": "Masuk ke Abacus.AI di browser Anda untuk melanjutkan…",
+    "add": "Tambah",
+    "addFailed": "Tidak dapat menambahkan {{name}}.",
+    "added": "{{name}} ditambahkan.",
+    "agentKeyHint": "Disimpan sebagai kredensial agen di perangkat ini dan digunakan oleh alat yang dijalankan agen, tidak pernah dikirim ke Abacus.AI.",
+    "adding": "Menambahkan…",
     "auth": {
-      "key": "API key",
-      "oauth": "Sign-in",
-      "oauth-client": "Sign-in + app",
+      "key": "Kunci API",
+      "oauth": "Masuk",
+      "oauth-client": "Masuk + aplikasi",
       "token": "Token",
-      "abacus": "Abacus account"
+      "abacus": "Akun Abacus"
     },
-    "cancel": "Cancel",
+    "cancel": "Batal",
     "categories": {
-      "data": "Data & Analytics",
-      "development": "Development",
-      "featured": "Featured",
-      "infrastructure": "Infrastructure",
-      "payments": "Payments",
-      "productivity": "Productivity",
-      "support": "Customer Support",
-      "web": "Web & Browsers",
-      "abacus-connectors": "Abacus.AI Connectors"
+      "data": "Data & Analitik",
+      "development": "Pengembangan",
+      "featured": "Unggulan",
+      "infrastructure": "Infrastruktur",
+      "payments": "Pembayaran",
+      "productivity": "Produktivitas",
+      "support": "Dukungan Pelanggan",
+      "web": "Web & Browser",
+      "abacus-connectors": "Konektor Abacus.AI"
     },
-    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
+    "chromeMissing": "{{name}} mengendalikan Google Chrome, dan Chrome tidak ditemukan di komputer ini. Instal dari google.com/chrome agar alat browser dapat berfungsi.",
     "clientId": "Client ID",
-    "clientSecret": "Client secret (if issued)",
-    "connect": "Connect {{name}}",
-    "connectAction": "Connect",
+    "clientSecret": "Client secret (jika diterbitkan)",
+    "connect": "Hubungkan {{name}}",
+    "connectAction": "Hubungkan",
     "credentialHint": "Stored in this app's MCP configuration on your machine, and sent only to this konektor's server.",
-    "docs": "Open documentation",
+    "docs": "Buka dokumentasi",
     "marketplace": "Marketplace",
-    "mcpSignInFailed": "Sign-in failed: {{error}}",
+    "mcpSignInFailed": "Gagal masuk: {{error}}",
     "noMatches": "No konektor match that search.",
     "noneInstalled": "No konektor added yet.",
     "notInstalled": "Belum terpasang",
-    "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL: add this to your app",
-    "remove": "Remove",
-    "removeFailed": "Could not remove {{name}}.",
-    "removed": "{{name}} removed.",
+    "oauthClientHint": "Penyedia ini tidak mendaftarkan aplikasi secara otomatis, jadi buat satu di konsol developer-nya dan tempel kredensialnya di sini.",
+    "redirectUrlLabel": "Redirect URL: tambahkan ini ke aplikasi Anda",
+    "remove": "Hapus",
+    "removeFailed": "Tidak dapat menghapus {{name}}.",
+    "removed": "{{name}} dihapus.",
     "search": "Search konektor",
-    "signInAction": "Sign in",
-    "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
-    "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added. Opening your browser to sign in…",
-    "signingInAction": "Signing in…",
+    "signInAction": "Masuk",
+    "signInFailed": "{{name}} berhasil ditambahkan, tetapi proses masuk belum selesai: {{error}} Anda bisa mencoba lagi dari panel MCP.",
+    "signedIn": "{{name}} sudah masuk dan siap. Ini terhubung saat sesi berikutnya Anda dimulai.",
+    "signingIn": "{{name}} ditambahkan. Membuka browser Anda untuk masuk…",
+    "signingInAction": "Sedang masuk…",
     "token": "Token",
-    "whereToGet": "Where do I get this?",
-    "yours": "Yours",
+    "whereToGet": "Di mana saya mendapatkan ini?",
+    "yours": "Milik Anda",
     "descriptions": {
-      "messaging-whatsapp": "Chat with the agent from WhatsApp, and let it message people as you. Connects by scanning a QR code with your phone.",
-      "messaging-telegram": "Chat with the agent from Telegram, and let it message people as you. Connects by scanning a QR code with your phone.",
-      "messaging-discord": "Chat with the agent from Discord, and let it message people as you. Connects by scanning a QR code with the Discord app, or by linking the Abacus AI bot.",
-      "abacus-gmailuser": "Read, search, draft and send mail from your Gmail account.",
-      "abacus-googledriveuser": "Browse, read and manage files, docs and spreadsheets in your Drive.",
-      "abacus-googlecalendar": "Check availability, list events and schedule meetings on your calendar.",
-      "abacus-slack": "Search, read and post in your Slack workspace: one click, no Slack app to create.",
-      "abacus-outlook": "Read, search and send mail from your Outlook account.",
-      "abacus-onedrive": "Browse, read and manage files in your OneDrive.",
-      "abacus-jira": "Search, create and update issues in your Jira projects.",
-      "abacus-confluence": "Search and read pages in your Confluence spaces.",
-      "abacus-dropbox": "Browse, read and manage files in your Dropbox.",
-      "abacus-twitter": "Read and post on X with your own account.",
-      "github": "Repos, issues and pull requests through the gh CLI, with your own token, private repos included.",
-      "playwright": "Drive a real browser: navigate, click, fill forms, and read the page back.",
-      "huggingface": "Search models, datasets and Spaces, and read their cards.",
-      "cloudflare-docs": "The Cloudflare developer documentation, searchable by the agent.",
-      "zapier": "Thousands of app actions behind one server, wired to your Zapier account.",
-      "abacus-figmauser": "Read files, projects and design data from your Figma account.",
-      "abacus-zoom": "Look up meetings, recordings and users in your Zoom account (read-only).",
-      "abacus-docusign": "Envelopes, templates and signing workflows from your DocuSign account.",
-      "abacus-gcpcloud": "Compute, Storage, BigQuery and more, through your Google Cloud service account.",
-      "notion": "Search the workspace, read pages, and write notes back into it.",
-      "canva": "Find, create and export designs without leaving the conversation.",
-      "stripe": "Customers, payments and subscriptions, queried and created.",
-      "paypal": "Invoices, orders and disputes over PayPal’s own server."
+      "messaging-whatsapp": "Mengobrol dengan agen dari WhatsApp, dan biarkan agen mengirim pesan ke orang lain atas nama Anda. Terhubung dengan memindai kode QR menggunakan ponsel Anda.",
+      "messaging-telegram": "Mengobrol dengan agen dari Telegram, dan biarkan agen mengirim pesan ke orang lain atas nama Anda. Terhubung dengan memindai kode QR menggunakan ponsel Anda.",
+      "messaging-discord": "Mengobrol dengan agen dari Discord, dan biarkan agen mengirim pesan ke orang lain atas nama Anda. Terhubung dengan memindai kode QR menggunakan aplikasi Discord, atau dengan menautkan bot Abacus AI.",
+      "abacus-gmailuser": "Membaca, mencari, membuat draf, dan mengirim surel dari akun Gmail Anda.",
+      "abacus-googledriveuser": "Menjelajahi, membaca, dan mengelola berkas, dokumen, serta spreadsheet di Drive Anda.",
+      "abacus-googlecalendar": "Memeriksa ketersediaan, menampilkan acara, dan menjadwalkan rapat di kalender Anda.",
+      "abacus-slack": "Mencari, membaca, dan memposting di ruang kerja Slack Anda: satu klik, tanpa perlu membuat aplikasi Slack.",
+      "abacus-outlook": "Membaca, mencari, dan mengirim surel dari akun Outlook Anda.",
+      "abacus-onedrive": "Menjelajahi, membaca, dan mengelola berkas di OneDrive Anda.",
+      "abacus-jira": "Mencari, membuat, dan memperbarui issue di proyek Jira Anda.",
+      "abacus-confluence": "Mencari dan membaca halaman di ruang Confluence Anda.",
+      "abacus-dropbox": "Menjelajahi, membaca, dan mengelola berkas di Dropbox Anda.",
+      "abacus-twitter": "Membaca dan memposting di X dengan akun Anda sendiri.",
+      "github": "Repo, issue, dan pull request lewat gh CLI, dengan token Anda sendiri, termasuk repo privat.",
+      "playwright": "Mengendalikan browser sungguhan: navigasi, klik, isi formulir, dan baca kembali halamannya.",
+      "huggingface": "Mencari model, dataset, dan Space, serta membaca kartunya.",
+      "cloudflare-docs": "Dokumentasi developer Cloudflare, dapat dicari oleh agen.",
+      "zapier": "Ribuan aksi aplikasi di balik satu server, terhubung ke akun Zapier Anda.",
+      "abacus-figmauser": "Membaca berkas, proyek, dan data desain dari akun Figma Anda.",
+      "abacus-zoom": "Melihat rapat, rekaman, dan pengguna di akun Zoom Anda (hanya baca).",
+      "abacus-docusign": "Amplop, templat, dan alur kerja tanda tangan dari akun DocuSign Anda.",
+      "abacus-gcpcloud": "Compute, Storage, BigQuery, dan lainnya, lewat akun layanan Google Cloud Anda.",
+      "notion": "Mencari ruang kerja, membaca halaman, dan menulis catatan kembali ke dalamnya.",
+      "canva": "Menemukan, membuat, dan mengekspor desain tanpa meninggalkan percakapan.",
+      "stripe": "Pelanggan, pembayaran, dan langganan, dapat dicari dan dibuat.",
+      "paypal": "Faktur, pesanan, dan sengketa lewat server PayPal sendiri."
     }
   },
   "creditsCard": {
-    "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going. No card needed.",
+    "body": "Buka potensi penuhnya",
+    "connectBody": "Hubungkan sumber gratis untuk terus lanjut. Tanpa kartu.",
     "cta": "Upgrade",
-    "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer for free, with no limits.",
-    "or": "or",
-    "paidBody": "Top up your account to keep going.",
-    "paidTitle": "You've used all your Pro Abacus.AI credits",
-    "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
-    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
-    "switchTitle": "You've used all your free Abacus.AI credits",
-    "title": "You've used all your free Abacus.AI credits",
-    "topUpCta": "Top up",
-    "upsellBody": "Get access to premium models",
-    "upsellTitle": "Unlock the full potential",
-    "inviteCta": "Or invite friends for free credits"
+    "dismiss": "Tutup",
+    "localBody": "Atau jalankan model di komputer ini secara gratis, tanpa batas.",
+    "or": "atau",
+    "paidBody": "Isi ulang akun Anda untuk terus lanjut.",
+    "paidTitle": "Anda telah menghabiskan semua kredit Pro Abacus.AI",
+    "pickBody": "Pilih model lain di pemilih model di kanan bawah untuk terus lanjut.",
+    "switchBody": "Pilih model {{providers}} di pemilih model di kanan bawah untuk terus lanjut.",
+    "switchTitle": "Anda telah menghabiskan semua kredit gratis Abacus.AI",
+    "title": "Anda telah menghabiskan semua kredit gratis Abacus.AI",
+    "topUpCta": "Isi ulang",
+    "upsellBody": "Dapatkan akses ke model premium",
+    "upsellTitle": "Buka potensi penuhnya",
+    "inviteCta": "Atau undang teman untuk kredit gratis"
   },
   "deepAgentCard": {
-    "body": "For complex agentic tasks",
-    "cta": "Go to Abacus AI Agent",
+    "body": "Untuk tugas agentic yang kompleks",
+    "cta": "Buka Abacus AI Agent",
     "title": "Abacus AI Agent"
   },
   "deliverables": {
-    "files": "Files",
-    "openInBrowser": "Open in browser",
-    "showInFolder": "Show in folder",
-    "showLess": "Show less",
-    "showMore": "+{{count}} more"
+    "files": "Berkas",
+    "openInBrowser": "Buka di browser",
+    "showInFolder": "Tampilkan di folder",
+    "showLess": "Tampilkan lebih sedikit",
+    "showMore": "+{{count}} lagi"
   },
   "devicePanel": {
     "axPermissionNeeded": "Izin Aksesibilitas diperlukan untuk mencerminkan simulator tanpa menampilkan jendelanya.",
@@ -829,39 +829,39 @@
   },
   "execBackends": {
     "daytona": {
-      "description": "Run commands in a Daytona cloud sandbox.",
+      "description": "Menjalankan perintah di sandbox cloud Daytona.",
       "label": "Daytona"
     },
     "docker": {
-      "description": "Run commands in a container with the workspace mounted at the same path.",
+      "description": "Menjalankan perintah di kontainer dengan ruang kerja terpasang di jalur yang sama.",
       "label": "Docker"
     },
-    "fellBack": "{{selected}} isn't usable right now, so commands are running {{effective}}.",
-    "inUse": "In use",
+    "fellBack": "{{selected}} tidak bisa dipakai sekarang, jadi perintah berjalan {{effective}}.",
+    "inUse": "Sedang dipakai",
     "local": {
-      "description": "Run commands directly on this machine. No isolation.",
-      "label": "Local"
+      "description": "Menjalankan perintah langsung di komputer ini. Tanpa isolasi.",
+      "label": "Lokal"
     },
-    "missingBinary": "{{command}} wasn't found on your PATH.",
-    "missingEnv": "Set {{vars}} to use this backend.",
+    "missingBinary": "{{command}} tidak ditemukan di PATH Anda.",
+    "missingEnv": "Atur {{vars}} untuk memakai backend ini.",
     "modal": {
-      "description": "Run commands in a Modal cloud sandbox.",
+      "description": "Menjalankan perintah di sandbox cloud Modal.",
       "label": "Modal"
     },
     "singularity": {
-      "description": "Run commands in a Singularity/Apptainer container (HPC-friendly, rootless).",
+      "description": "Menjalankan perintah di kontainer Singularity/Apptainer (ramah HPC, tanpa root).",
       "label": "Singularity / Apptainer"
     },
     "ssh": {
-      "description": "Run commands on a remote host over SSH.",
+      "description": "Menjalankan perintah di host jarak jauh lewat SSH.",
       "label": "SSH"
     },
-    "title": "Execution backend",
-    "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "title": "Backend eksekusi",
+    "unimplemented": "AbacusAI Bot belum bisa menjalankan perintah di sini.",
+    "unsupportedPlatform": "Tidak tersedia di Windows: kontainer membutuhkan ruang kerja di jalur host POSIX. Gunakan backend lokal sebagai gantinya."
   },
   "firstBot": {
-    "title": "We have created your first bot for you, enjoy!"
+    "title": "Kami telah membuatkan bot pertama Anda, selamat menikmati!"
   },
   "greeting": {
     "afternoon": {
@@ -946,26 +946,26 @@
     "started": "Dimulai. Berjalan di sesinya sendiri."
   },
   "localModels": {
-    "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
-    "download": "Download {{size}} and use it",
-    "downloading": "{{received}} of {{total}} ({{percent}}%)",
-    "installed": "Installed",
-    "machine": "This computer has {{memory}} of memory.",
-    "onThisMachine": "On this machine",
-    "recommended": "Recommended",
-    "remove": "Remove",
-    "sectionHint": "Models the app downloads and runs here with the bundled llama.cpp. They join RouteLLM - Open as its last resort.",
-    "stopDownload": "Stop download",
-    "tight": "That is tight for this model; answers will be slow.",
-    "title": "Use a local model",
-    "unavailable": "This build of the app cannot run models locally.",
-    "use": "Use {{model}}",
-    "useLocal": "Use a local model",
-    "verifying": "Checking the download…"
+    "description": "Model yang berjalan di komputer ini: tanpa akun, tanpa kunci, tanpa kuota. Lebih lambat daripada cloud, tapi tidak akan pernah habis.",
+    "download": "Unduh {{size}} dan gunakan",
+    "downloading": "{{received}} dari {{total}} ({{percent}}%)",
+    "installed": "Terinstal",
+    "machine": "Komputer ini memiliki memori {{memory}}.",
+    "onThisMachine": "Di komputer ini",
+    "recommended": "Direkomendasikan",
+    "remove": "Hapus",
+    "sectionHint": "Model yang diunduh dan dijalankan aplikasi di sini dengan llama.cpp bawaan. Model ini bergabung dengan RouteLLM - Open sebagai pilihan terakhirnya.",
+    "stopDownload": "Hentikan unduhan",
+    "tight": "Ini pas-pasan untuk model ini; jawaban akan lambat.",
+    "title": "Gunakan model lokal",
+    "unavailable": "Build aplikasi ini tidak dapat menjalankan model secara lokal.",
+    "use": "Gunakan {{model}}",
+    "useLocal": "Gunakan model lokal",
+    "verifying": "Memeriksa unduhan…"
   },
   "logs": {
-    "saveFailed": "Could not save logs: {{error}}",
-    "saved": "Logs saved to {{path}}"
+    "saveFailed": "Tidak dapat menyimpan log: {{error}}",
+    "saved": "Log disimpan di {{path}}"
   },
   "mcpManagement": {
     "add": "Tambah",
@@ -1011,7 +1011,7 @@
       "file": "Impor dari file…",
       "paste": "Tempel JSON dari papan klip",
       "success": "{{count}} server diimpor.",
-      "deepagent": "Import from DeepAgent"
+      "deepagent": "Impor dari DeepAgent"
     },
     "namePlaceholder": "Nama server",
     "nameRequired": "Nama server wajib diisi.",
@@ -1028,17 +1028,17 @@
     "restartFailed": "Gagal memulai ulang: {{error}}",
     "runtimeStatus": {
       "authRequired": "Autentikasi diperlukan",
-      "connected": "Connected",
-      "connecting": "Connecting",
-      "disconnected": "Off",
+      "connected": "Terhubung",
+      "connecting": "Menghubungkan",
+      "disconnected": "Nonaktif",
       "error": "Error",
-      "idle": "Not connected"
+      "idle": "Belum terhubung"
     },
     "save": "Simpan",
     "signIn": "Masuk",
-    "signInDone": "Signed in to {{name}}.",
-    "signInFailed": "Sign-in failed: {{error}}",
-    "signingIn": "Waiting for the browser…",
+    "signInDone": "Berhasil masuk ke {{name}}.",
+    "signInFailed": "Gagal masuk: {{error}}",
+    "signingIn": "Menunggu browser…",
     "title": "Server MCP",
     "toggleFailed": "Gagal memperbarui server.",
     "toolCount_one": "{{count}} alat",
@@ -1046,64 +1046,64 @@
     "urlRequired": "URL wajib diisi.",
     "viewLogs": "Log",
     "abacusConnectors": {
-      "title_one": "{{count}} Abacus connector, served through this server:",
-      "title_other": "{{count}} Abacus connectors, served through this server:",
-      "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
-      "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
+      "title_one": "{{count}} konektor Abacus, disajikan lewat server ini:",
+      "title_other": "{{count}} konektor Abacus, disajikan lewat server ini:",
+      "none": "Belum ada konektor Abacus yang terhubung ke akun Anda. Hubungkan satu di halaman Konektor dan akan muncul di sini.",
+      "loading": "Membaca konektor mana yang terhubung…",
+      "unavailable": "Konektor mana yang terhubung tidak dapat dibaca saat ini. Masuk ke Abacus.AI, atau coba lagi."
     }
   },
   "memory": {
-    "clear": "Clear all",
-    "clearConfirm": "Forget everything here?",
-    "clearNo": "Keep",
-    "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
-    "forget": "Forget this",
-    "loading": "Reading memory…",
-    "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
-    "storeEmpty": "Nothing here yet.",
+    "clear": "Hapus semua",
+    "clearConfirm": "Lupakan semuanya di sini?",
+    "clearNo": "Simpan",
+    "clearYes": "Lupakan semua",
+    "empty": "Belum ada yang diingat. Agen menulis di sini dengan sendirinya saat mempelajari sesuatu yang layak dibawa antar-sesi: preferensi Anda, fakta tentang setup Anda.",
+    "forget": "Lupakan ini",
+    "loading": "Membaca memori…",
+    "readFailed": "Tidak dapat membaca apa yang diingat. Berkasnya ada di ~/.abacusai-bot/memories.",
+    "storeEmpty": "Belum ada apa pun di sini.",
     "stores": {
       "memory": {
-        "help": "Environment facts, project conventions, and tool quirks it worked out for itself.",
-        "title": "The agent's own notes"
+        "help": "Fakta lingkungan, konvensi proyek, dan keunikan alat yang berhasil dipahami sendiri oleh agen.",
+        "title": "Catatan agen sendiri"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
-        "title": "Always remember"
+        "help": "Apa yang Anda minta untuk disimpan. Katakan “ingat aku suka biru” di obrolan mana pun dan itu akan masuk ke sini, serta ke setiap prompt mulai dari pesan berikutnya.",
+        "title": "Selalu ingat"
       },
       "user": {
-        "help": "Preferences, habits, and how you like to work.",
-        "title": "About you"
+        "help": "Preferensi, kebiasaan, dan bagaimana Anda suka bekerja.",
+        "title": "Tentang Anda"
       }
     },
-    "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
-    "title": "Memory",
+    "subtitle": "Apa yang dipilih agen untuk diingat lintas sesi. Menghapus berlaku sekarang; sesi yang sudah terbuka tetap memakai apa yang dimulainya sampai dimulai ulang.",
+    "title": "Memori",
     "writeFailed": "Tidak ada yang dihapus. Sebuah sesi sedang menulis ke memori pada saat yang sama. Coba lagi.",
     "instructions": {
-      "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
-      "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
-      "save": "Save",
-      "saveFailed": "Could not save. Check that the settings folder is writable.",
-      "unsaved": "Unsaved",
-      "applies": "Applies to your next message, including in a chat already open."
+      "title": "Instruksi kustom",
+      "description": "Selalu dikirim ke model, di akhir instruksi setiap percakapan. Gunakan untuk bagaimana Anda ingin diajak bekerja: nada bicara, bahasa, gaya khas, hal yang tidak boleh dilakukan.",
+      "placeholder": "mis. Jawab dalam Bahasa Inggris British. Jangan pernah pakai emoji. Tunjukkan perintahnya sebelum kamu menjalankannya.",
+      "save": "Simpan",
+      "saveFailed": "Tidak dapat menyimpan. Periksa apakah folder pengaturan dapat ditulisi.",
+      "unsaved": "Belum disimpan",
+      "applies": "Berlaku untuk pesan Anda berikutnya, termasuk di obrolan yang sudah terbuka."
     },
-    "rememberedToast": "Added to my AI brain.",
+    "rememberedToast": "Ditambahkan ke otak AI saya.",
     "sections": {
-      "sessions": "Sessions",
-      "bots": "Bots"
+      "sessions": "Sesi",
+      "bots": "Bot"
     },
     "bots": {
-      "notes": "{{count}} day(s) of working notes on disk.",
-      "empty": "This bot has not saved any core memories yet."
+      "notes": "{{count}} hari catatan kerja di disk.",
+      "empty": "Bot ini belum menyimpan memori inti apa pun."
     }
   },
   "messaging": {
     "advanced": "Lanjutan ({{count}})",
     "approve": "Setujui",
     "approvedUsers": "Disetujui ({{count}})",
-    "cancelConnect": "Cancel",
+    "cancelConnect": "Batal",
     "clearField": "Hapus nilai ini",
     "descriptions": {
       "discord": "Ngobrol dengan agen dari Discord Anda sendiri, dan biarkan ia mengirim pesan sebagai Anda. Terhubung dengan memindai kode QR.",
@@ -1113,13 +1113,13 @@
     "discordConnected": "Terhubung. Agen mengirim pesan sebagai akun Discord Anda.",
     "discordOpenLogin": "Buka login Discord",
     "discordScan": "Jendela login Discord terbuka. Pindai QR-nya dengan aplikasi Discord, atau masuk dengan email dan kata sandi.",
-    "doneConnect": "Continue",
+    "doneConnect": "Lanjutkan",
     "enablePlatform": "Aktifkan platform",
     "fields": {
       "discordBotToken": "Token bot"
     },
     "fromEnvironment": "Diatur oleh {{key}} di environment Anda",
-    "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
+    "finishLinkFirst": "Selesaikan menautkan bot Abacus AI untuk menyelesaikan penyiapan.",
     "getCredentials": "Dapatkan kredensial Anda",
     "needsSetup": "Perlu disiapkan",
     "openSetupGuide": "Buka panduan penyiapan",
@@ -1128,7 +1128,7 @@
       "discord": "Discord",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
-      "abacusDiscord": "Abacus AI bot on Discord",
+      "abacusDiscord": "Bot Abacus AI di Discord",
       "abacusTelegram": "Telegram"
     },
     "recommended": "Direkomendasikan",
@@ -1148,67 +1148,67 @@
       "workspace": "Ruang kerja",
       "workspaceActive": "Ikuti ruang kerja aktif",
       "workspaceHelp": "Proyek tempat pesan masuk dijalankan.",
-      "deliverToBot": "Deliver messages to a bot",
-      "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot (one session per sender)"
+      "deliverToBot": "Kirim pesan ke bot",
+      "deliverToBotHelp": "Pesan masuk akan diarahkan ke obrolan bot ini, dengan kerangka siapa pengirimnya. Nonaktif berarti setiap pengirim mendapat sesinya sendiri.",
+      "deliverToBotNone": "Tanpa bot (satu sesi per pengirim)"
     },
     "setup": {
       "discord": "Klik Hubungkan dan jendela login Discord terbuka. Pindai QR dengan aplikasi Discord, atau masuk dengan email dan kata sandi. AbacusAI Bot lalu mengirim pesan sebagai akun Discord Anda (tanpa bot, tanpa token).",
       "telegram": "Klik Hubungkan dan jendela login Telegram terbuka. Masuk di sana seperti biasa: pindai QR dengan ponsel (Setelan, Perangkat, Tautkan Perangkat), atau gunakan nomor telepon atau passkey. AbacusAI Bot lalu mengirim pesan sebagai akun Telegram Anda sendiri. Tanpa kunci API, tanpa bot.",
       "whatsapp": "Aktifkan ini, lalu pindai kode QR di bawah dari WhatsApp di ponsel Anda (Pengaturan, Perangkat tertaut, Tautkan perangkat). Ini menautkan AbacusAI Bot sebagai perangkat pada akun tersebut, jadi gunakan nomor khusus, bukan nomor pribadi Anda."
     },
-    "stepSignIn": "First, sign in to {{app}}",
+    "stepSignIn": "Pertama, masuk ke {{app}}",
     "states": {
       "connected": "Terhubung",
       "connecting": "Menghubungkan",
       "disabled": "Nonaktif",
       "error": "Kesalahan",
-      "needs_link": "Finish linking",
-      "needs_login": "Waiting for login",
+      "needs_link": "Selesaikan penautan",
+      "needs_login": "Menunggu login",
       "not_configured": "Belum dikonfigurasi",
       "pending_restart": "Menunggu mulai ulang",
-      "rate_limited": "Rate limited",
+      "rate_limited": "Dibatasi laju",
       "syncing": "Menyinkronkan"
     },
     "telegramConnected": "Terhubung. Agen mengirim pesan sebagai akun Telegram Anda.",
     "telegramOpenLogin": "Buka login Telegram",
     "telegramScan": "Jendela login Telegram terbuka. Pindai QR-nya dengan ponsel Anda (Setelan, Perangkat, Tautkan Perangkat), atau masuk di sana lewat nomor telepon.",
-    "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
+    "twoStepSetup": "Dua langkah, dan Anda perlu keduanya: masuk ke {{app}}, lalu tautkan bot Abacus AI agar Anda bisa menjangkau agen Anda dari perangkat mana pun. Penyiapan belum selesai sampai keduanya selesai.",
     "unsavedChanges": "Perubahan belum disimpan",
     "whatsappConnected": "Terhubung. Agen mengirim pesan sebagai akun WhatsApp Anda.",
     "whatsappOpenLogin": "Buka login WhatsApp",
     "whatsappScan": "Jendela login WhatsApp terbuka. Pindai kode QR-nya dari WhatsApp di ponsel Anda: Pengaturan, Perangkat tertaut, Tautkan perangkat.",
     "whatsappSyncing": "Tertaut. WhatsApp sedang menyinkronkan chat Anda ke perangkat ini. Pertama kali butuh beberapa menit. Biarkan WhatsApp di ponsel dan aplikasi ini tetap terbuka sampai selesai.",
     "sharedLink": {
-      "title": "Abacus AI bot",
-      "stepLink": "Then, link the Abacus AI bot",
-      "intro": "Reach your agent from any device by messaging the shared Abacus AI bot. No token to paste: one scan or tap, and you're linked.",
-      "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
-      "link": "Link Abacus AI bot",
-      "step1": "1. Add Abacus AI to your Discord (Add to My Apps).",
-      "addToDiscord": "Add to Discord",
-      "step2Copy": "2. Copy this command:",
-      "step3Dm": "3. Open your chat with the bot (message icon on its profile), paste, and send:",
-      "openDm": "Open Abacus AI's chat",
-      "copy": "Copy",
-      "copied": "Copied",
-      "preparing": "Getting your link code…",
-      "retry": "Try again",
-      "waiting": "Waiting for the command to land in Discord…",
-      "linked": "Linked. Message the Abacus AI bot in {{app}} to talk to your agent.",
-      "linkedAs": "Linked as {{name}}. Message the Abacus AI bot in {{app}} to talk to your agent.",
-      "unlink": "Unlink",
-      "telegramStep": "Scan this with your phone's camera app (not the scanner inside Telegram), or open the link on your phone, then tap Start.",
-      "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
+      "title": "Bot Abacus AI",
+      "stepLink": "Lalu, tautkan bot Abacus AI",
+      "intro": "Jangkau agen Anda dari perangkat mana pun dengan mengirim pesan ke bot Abacus AI bersama. Tanpa token untuk ditempel: satu pindai atau ketuk, dan Anda tertaut.",
+      "requiredIntro": "Ini adalah separuh kedua dari penyiapan: menautkan bot Abacus AI adalah yang memungkinkan Anda mengirim pesan ke agen dari ponsel Anda. Ikuti langkah-langkah di bawah.",
+      "link": "Tautkan bot Abacus AI",
+      "step1": "1. Tambahkan Abacus AI ke Discord Anda (Add to My Apps).",
+      "addToDiscord": "Tambahkan ke Discord",
+      "step2Copy": "2. Salin perintah ini:",
+      "step3Dm": "3. Buka obrolan Anda dengan bot (ikon pesan di profilnya), tempel, dan kirim:",
+      "openDm": "Buka obrolan Abacus AI",
+      "copy": "Salin",
+      "copied": "Disalin",
+      "preparing": "Mengambil kode tautan Anda…",
+      "retry": "Coba lagi",
+      "waiting": "Menunggu perintah masuk ke Discord…",
+      "linked": "Tertaut. Kirim pesan ke bot Abacus AI di {{app}} untuk berbicara dengan agen Anda.",
+      "linkedAs": "Tertaut sebagai {{name}}. Kirim pesan ke bot Abacus AI di {{app}} untuk berbicara dengan agen Anda.",
+      "unlink": "Lepas tautan",
+      "telegramStep": "Pindai ini dengan aplikasi kamera ponsel Anda (bukan pemindai di dalam Telegram), atau buka tautannya di ponsel Anda, lalu ketuk Start.",
+      "waitingTelegram": "Menunggu Start diketuk di Telegram…"
     }
   },
   "notificationSettings": {
-    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
-    "enableTitle": "Notify me",
-    "soundSubtitle": "Uses your system notification sound.",
-    "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
-    "title": "Notifications"
+    "enableSubtitle": "Saat tugas selesai, atau alat menunggu persetujuan Anda. Hanya ketika jendela tidak sedang aktif.",
+    "enableTitle": "Beri tahu saya",
+    "soundSubtitle": "Menggunakan suara notifikasi sistem Anda.",
+    "soundTitle": "Putar suara",
+    "subtitle": "Apa yang AbacusAI Bot beri tahu ke Anda saat Anda sedang melihat ke tempat lain",
+    "title": "Notifikasi"
   },
   "notifications": {
     "codeSessionFallback": "Sesi Kode",
@@ -1218,65 +1218,65 @@
     "waitingForApproval": "Menunggu persetujuan: {{toolName}}"
   },
   "onboarding": {
-    "abacusConnected": "Abacus.AI is successfully connected",
+    "abacusConnected": "Abacus.AI berhasil terhubung",
     "connectBody": "Browser Anda terbuka untuk masuk atau membuat akun. Aplikasi mendapat kunci API-nya sendiri; kata sandi Anda tidak pernah menyentuhnya.",
     "connectCta": "Daftar / Masuk",
     "connectTitle": "Hubungkan Abacus.AI",
-    "connectorsContinueCta": "Continue",
-    "connectorsSkipCta": "Continue without connectors",
-    "setupAbacusNote": "An Abacus.AI account is still the shortest route: it is free, starts with $2 of credit and a few free models, and it is the one that brings the connectors.",
-    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
-    "setupConnectorsCta": "Browse connectors",
-    "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue",
-    "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "setupKeyPlaceholder": "Paste your {{provider}} API key",
-    "setupSaveCta": "Save",
-    "setupSignInCta": "Sign in / Create Free Account",
+    "connectorsContinueCta": "Lanjutkan",
+    "connectorsSkipCta": "Lanjutkan tanpa konektor",
+    "setupAbacusNote": "Akun Abacus.AI tetap jalur tercepat: gratis, dimulai dengan kredit $2 dan beberapa model gratis, dan inilah yang membawa konektor.",
+    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion, dan lainnya. Hubungkan yang Anda pakai dan agen bisa bekerja di dalamnya, bukan hanya membicarakannya.",
+    "setupConnectorsCta": "Jelajahi konektor",
+    "setupConnectorsTitle": "Konektor",
+    "setupDoneCta": "Lanjutkan",
+    "setupKeyHint": "Hanya disimpan di perangkat ini.",
+    "setupKeyInvalid": "Itu tidak terlihat seperti kunci API. Periksa tempelannya untuk baris atau URL yang nyasar.",
+    "setupKeyPlaceholder": "Tempel kunci API {{provider}} Anda",
+    "setupSaveCta": "Simpan",
+    "setupSignInCta": "Masuk / Buat Akun Gratis",
     "signInCta": "Masuk ke Abacus.AI",
-    "skipCta": "Skip for now",
-    "welcomeCapabilityModels": "100+ AI Models",
-    "welcomeFreeBadge": "Free forever",
+    "skipCta": "Lewati untuk sekarang",
+    "welcomeCapabilityModels": "100+ Model AI",
+    "welcomeFreeBadge": "Gratis selamanya",
     "welcomeTagline": "Rekan kerja AI open-source pribadimu dengan memori persisten",
     "welcomeTitle": "AbacusAI Bot",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "open-source AI agent",
-    "connectedPromiseModels": "powerful AI models for free",
-    "connectedPromiseWork": "across your tools and services",
-    "connectedCta": "Get Started",
-    "setupExistingTitle": "Existing subscriptions",
-    "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
-    "connectedTitleLead": "Welcome to",
+    "welcomeCapabilityMemory": "Memori Persisten",
+    "welcomeCapabilityConnectors": "100+ Konektor",
+    "connectedPromiseAgent": "agen AI open-source",
+    "connectedPromiseModels": "model AI canggih secara gratis",
+    "connectedPromiseWork": "di semua alat dan layanan Anda",
+    "connectedCta": "Mulai",
+    "setupExistingTitle": "Langganan yang sudah ada",
+    "setupExistingBody": "Bawa model dan alat berbayar Anda ke satu tempat",
+    "setupExistingLater": "Hubungkan nanti",
+    "setupAbacusGrant": "Akses ke tingkat gratis Abacus: 2000 kredit lintas berbagai model open-source",
+    "connectedTitleLead": "Selamat datang di",
     "connectedTitleName": "AbacusAI Bot",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
-    "connectorsTitleLead": "Connect with your",
-    "connectorsTitleAccent": "tools & services.",
-    "connectorsSubtitle": "Chat where you work.",
-    "connectorsConnectCta": "Connect",
-    "connectorsConnectedCta": "Connected",
-    "connectorsMore": "Many more",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
-    "setupTitleLead": "Hook up your",
-    "setupTitleAccent": "AI",
-    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
-    "setupBlurbAbacusLead": "Get world-class models free",
-    "setupBlurbAbacusAccent": "2000 free credits",
-    "setupBlurbOpenrouterLead": "Unlock",
-    "setupBlurbOpenrouterAccent": "FREE models",
-    "setupBlurbOpenrouterTail": "with one connection",
-    "setupBlurbGeminiLead": "Use Gemini",
-    "setupBlurbGeminiAccent": "free to create anything",
-    "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
-    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "connectedPromiseAgentLead": "Terbaik di kelasnya,",
+    "connectedPromiseModelsLead": "Akses ke",
+    "connectedPromiseWorkLead": "Selesaikan pekerjaan",
+    "connectedPromiseLocalLead": "Berjalan lokal.",
+    "connectedPromiseLocal": "Mengobrol dengannya di mana pun Anda bekerja.",
+    "connectorsTitleLead": "Hubungkan dengan",
+    "connectorsTitleAccent": "alat & layanan Anda.",
+    "connectorsSubtitle": "Mengobrol di tempat Anda bekerja.",
+    "connectorsConnectCta": "Hubungkan",
+    "connectorsConnectedCta": "Terhubung",
+    "connectorsMore": "Lebih banyak lagi",
+    "abacusUnidentified": "Tidak dapat memverifikasi akun mana yang memiliki kunci ini. Tidak ada yang disimpan. Silakan coba masuk lagi.",
+    "setupTitleLead": "Hubungkan",
+    "setupTitleAccent": "AI Anda",
+    "setupSubtitle": "Hubungkan model canggih untuk membuka lebih banyak fitur di dalam bot Anda.",
+    "setupBlurbAbacusLead": "Dapatkan model kelas dunia gratis",
+    "setupBlurbAbacusAccent": "2000 kredit gratis",
+    "setupBlurbOpenrouterLead": "Buka",
+    "setupBlurbOpenrouterAccent": "model GRATIS",
+    "setupBlurbOpenrouterTail": "dengan satu koneksi",
+    "setupBlurbGeminiLead": "Gunakan Gemini",
+    "setupBlurbGeminiAccent": "gratis untuk membuat apa saja",
+    "setupKeyDialogTitle": "Buka {{provider}} dan dapatkan kunci API Anda",
+    "setupKeyDialogBody": "Buka konsolnya, buat kunci, lalu tempel di sini. Jendela ini tetap terbuka selama Anda melakukannya.",
+    "setupKeyDialogLink": "Buka {{provider}}"
   },
   "openFile": {
     "failed": "Tidak dapat membuka berkas itu.",
@@ -1286,240 +1286,240 @@
     "revealed": "Membuka berkas itu akan menjalankannya, jadi berkas ditampilkan di pengelola berkas Anda."
   },
   "permissions": {
-    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
-    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session",
-    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
-    "sandboxDeniedAlways": "Always allow these this session",
-    "sandboxDeniedHost": "Reach {{host}}",
-    "sandboxDeniedRead": "Read {{path}}",
-    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
-    "sandboxDeniedWrite": "Write {{path}}"
+    "credentialAlways": "“Selalu” juga membuat ini tetap dapat dibaca untuk sisa sesi ini.",
+    "credentialRead": "Membaca penyimpanan kredensial yang biasanya disembunyikan sandbox:",
+    "networkHost": "Perintah dalam sandbox ingin menjangkau host yang tidak ada di daftar izin. Koneksi menunggu jawaban Anda.",
+    "networkHostAlways": "Selalu izinkan {{host}} untuk sesi ini",
+    "sandboxDenied": "Sandbox menolak sesuatu yang dicoba perintah ini. Izinkan?",
+    "sandboxDeniedAlways": "Selalu izinkan ini untuk sesi ini",
+    "sandboxDeniedHost": "Jangkau {{host}}",
+    "sandboxDeniedRead": "Baca {{path}}",
+    "sandboxDeniedRerun": "Jika Anda mengizinkannya, perintah berjalan lagi dengan akses tersebut.",
+    "sandboxDeniedWrite": "Tulis {{path}}"
   },
   "profile": {
-    "title": "Profile",
-    "connectedAccount": "Abacus.AI account",
-    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
-    "organization": "Organization",
-    "plan": "Plan",
-    "credits": "Credits this month",
-    "creditsValue": "{{used}} of {{granted}} used",
-    "members": "Team members",
-    "dangerZone": "Danger zone",
-    "permissionsTitle": "Default permission mode",
-    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
-    "permissionsFullAccess": "Full access",
-    "permissionsAuto": "Auto",
-    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
+    "title": "Profil",
+    "connectedAccount": "Akun Abacus.AI",
+    "notSignedIn": "Belum masuk ke Abacus.AI. Hubungkan di Pengaturan → Kunci API untuk melihat organisasi, paket, dan kredit Anda.",
+    "organization": "Organisasi",
+    "plan": "Paket",
+    "credits": "Kredit bulan ini",
+    "creditsValue": "{{used}} dari {{granted}} terpakai",
+    "members": "Anggota tim",
+    "dangerZone": "Zona berbahaya",
+    "permissionsTitle": "Mode izin default",
+    "permissionsDescription": "Mode yang dipakai sesi, bot, dan rutinitas baru. Akses penuh: tanpa prompt dan tanpa sandbox. Otomatis: tanpa prompt, tetapi sistem operasi membatasi perintah shell pada ruang kerja dan menyembunyikan penyimpanan kredensial.",
+    "permissionsFullAccess": "Akses penuh",
+    "permissionsAuto": "Otomatis",
+    "permissionsAutoWarning": "Anda akan mendapat lebih banyak prompt izin: sandbox bertanya sebelum perintah membaca penyimpanan kredensial, menulis di luar ruang kerja, atau menjangkau host baru.",
     "notSignedInShort": "Belum masuk"
   },
   "referralCard": {
-    "body": "We send the invites for you, from your Gmail or WhatsApp. {{count}} invites unlock the credits.",
-    "cta": "Invite friends",
-    "dismiss": "Dismiss",
-    "title": "Invite friends, earn {{credits}} credits"
+    "body": "Kami mengirim undangan untuk Anda, dari Gmail atau WhatsApp Anda. {{count}} undangan membuka kredit.",
+    "cta": "Undang teman",
+    "dismiss": "Tutup",
+    "title": "Undang teman, dapatkan {{credits}} kredit"
   },
   "referrals": {
-    "title": "Invite friends",
-    "lead": "Invite friends to the AbacusAI Bot and earn credits. We send the invites for you from your own Gmail or WhatsApp.",
-    "leadWithNumbers": "Invite {{count}} friends to the AbacusAI Bot and get {{credits}} credits. We send the invites for you from your own Gmail or WhatsApp, and every friend who joins earns you {{perFriend}} more.",
-    "notSignedIn": "Sign in to Abacus.AI to invite friends.",
-    "progressTitle": "{{sent}} of {{total}} invites sent",
-    "progressGranted": "{{credits}} credits earned. Keep inviting: every friend who joins still pays.",
-    "friendsJoined_one": "{{count}} friend joined so far, {{credits}} credits earned from them.",
-    "friendsJoined_other": "{{count}} friends joined so far, {{credits}} credits earned from them.",
-    "copyLink": "Copy invite link",
-    "linkCopied": "Invite link copied",
-    "gmailTitle": "From your Gmail",
-    "gmailBody": "The people you email most, ready to invite. Untick anyone you'd rather leave out, then send. Each invite goes from your own address.",
-    "connectGmail": "Connect Gmail",
-    "noGmailContacts": "No contacts found in your recent sent mail yet. Add addresses above.",
-    "addEmailsHint": "Connect Gmail to pick from your contacts, or add addresses above and we send from Abacus.AI.",
-    "addEmailsPlaceholder": "Add email addresses, separated by commas",
-    "addEmails": "Add",
-    "addEmailsEmpty": "Type an email address first.",
-    "addEmailsInvalid": "That does not look like an email address.",
-    "addPhonesPlaceholder": "Add phone numbers with country code, separated by commas",
-    "addPhones": "Add",
-    "addPhonesEmpty": "Type a phone number first.",
-    "addPhonesInvalid": "That does not look like a phone number. Include the country code, like +1 555 0100.",
-    "whatsappTitle": "From your WhatsApp",
-    "whatsappBody": "Your WhatsApp chats, ready to invite. Untick anyone you'd rather leave out, or add a number for someone not listed, then send. Each message goes from your own number, one chat at a time.",
-    "linkWhatsapp": "Link WhatsApp in Connectors",
-    "noWhatsappContacts": "No WhatsApp chats read yet. Give it a moment after linking, or add numbers above.",
-    "selectedCount": "{{selected}} of {{total}} selected",
-    "selectAll": "Select all",
-    "selectNone": "Select none",
-    "messageLabel": "Your note to them",
-    "defaultMessage": "I invite you to try the AbacusAI Bot, a free, open-source desktop AI agent.\nDownload it here (bot.abacus.ai): {{link}}\n\n- 100% free: it runs on amazing free LLMs, no credit card, no subscription.\n- Does real work on your computer: your files, terminal and browser, with your permission.\n- Connects to Gmail, Google Drive, Slack, WhatsApp, Telegram and Discord.\n- Runs bots and routines for you around the clock.\n\nIt is open source. If you like it, star the repo: https://github.com/abacusai/abacusai-bot",
-    "sendInvites": "Send {{count}} invites",
-    "sending": "Sending…",
-    "sentToast_one": "Invited {{count}} person",
-    "sentToast_other": "Invited {{count}} people",
-    "sentToastDetail": "{{skipped}} already on Abacus.AI or invited before, {{failed}} could not be sent.",
-    "milestoneToast": "{{credits}} credits added to your account",
+    "title": "Undang teman",
+    "lead": "Undang teman ke AbacusAI Bot dan dapatkan kredit. Kami mengirim undangan untuk Anda dari Gmail atau WhatsApp Anda sendiri.",
+    "leadWithNumbers": "Undang {{count}} teman ke AbacusAI Bot dan dapatkan {{credits}} kredit. Kami mengirim undangan untuk Anda dari Gmail atau WhatsApp Anda sendiri, dan setiap teman yang bergabung memberi Anda {{perFriend}} lagi.",
+    "notSignedIn": "Masuk ke Abacus.AI untuk mengundang teman.",
+    "progressTitle": "{{sent}} dari {{total}} undangan terkirim",
+    "progressGranted": "{{credits}} kredit diperoleh. Terus undang: setiap teman yang bergabung masih memberi hasil.",
+    "friendsJoined_one": "{{count}} teman sudah bergabung sejauh ini, {{credits}} kredit diperoleh dari mereka.",
+    "friendsJoined_other": "{{count}} teman sudah bergabung sejauh ini, {{credits}} kredit diperoleh dari mereka.",
+    "copyLink": "Salin tautan undangan",
+    "linkCopied": "Tautan undangan disalin",
+    "gmailTitle": "Dari Gmail Anda",
+    "gmailBody": "Orang-orang yang paling sering Anda email, siap diundang. Hapus centang siapa pun yang ingin Anda lewati, lalu kirim. Setiap undangan dikirim dari alamat Anda sendiri.",
+    "connectGmail": "Hubungkan Gmail",
+    "noGmailContacts": "Belum ada kontak ditemukan di email terkirim terbaru Anda. Tambahkan alamat di atas.",
+    "addEmailsHint": "Hubungkan Gmail untuk memilih dari kontak Anda, atau tambahkan alamat di atas dan kami akan mengirim dari Abacus.AI.",
+    "addEmailsPlaceholder": "Tambahkan alamat email, dipisahkan dengan koma",
+    "addEmails": "Tambah",
+    "addEmailsEmpty": "Ketik alamat email terlebih dahulu.",
+    "addEmailsInvalid": "Itu tidak terlihat seperti alamat email.",
+    "addPhonesPlaceholder": "Tambahkan nomor telepon dengan kode negara, dipisahkan dengan koma",
+    "addPhones": "Tambah",
+    "addPhonesEmpty": "Ketik nomor telepon terlebih dahulu.",
+    "addPhonesInvalid": "Itu tidak terlihat seperti nomor telepon. Sertakan kode negara, seperti +1 555 0100.",
+    "whatsappTitle": "Dari WhatsApp Anda",
+    "whatsappBody": "Obrolan WhatsApp Anda, siap diundang. Hapus centang siapa pun yang ingin Anda lewati, atau tambahkan nomor untuk seseorang yang belum terdaftar, lalu kirim. Setiap pesan dikirim dari nomor Anda sendiri, satu obrolan pada satu waktu.",
+    "linkWhatsapp": "Tautkan WhatsApp di Konektor",
+    "noWhatsappContacts": "Belum ada obrolan WhatsApp yang terbaca. Beri waktu sejenak setelah menautkan, atau tambahkan nomor di atas.",
+    "selectedCount": "{{selected}} dari {{total}} dipilih",
+    "selectAll": "Pilih semua",
+    "selectNone": "Batalkan semua pilihan",
+    "messageLabel": "Catatan Anda untuk mereka",
+    "defaultMessage": "Aku mengundangmu untuk mencoba AbacusAI Bot, agen AI desktop open-source yang gratis.\nUnduh di sini (bot.abacus.ai): {{link}}\n\n- 100% gratis: berjalan di atas LLM gratis yang luar biasa, tanpa kartu kredit, tanpa langganan.\n- Melakukan pekerjaan nyata di komputermu: berkas, terminal, dan browser, dengan izinmu.\n- Terhubung ke Gmail, Google Drive, Slack, WhatsApp, Telegram, dan Discord.\n- Menjalankan bot dan rutinitas untukmu sepanjang waktu.\n\nIni open source. Kalau kamu suka, beri bintang di repo-nya: https://github.com/abacusai/abacusai-bot",
+    "sendInvites": "Kirim {{count}} undangan",
+    "sending": "Mengirim…",
+    "sentToast_one": "{{count}} orang diundang",
+    "sentToast_other": "{{count}} orang diundang",
+    "sentToastDetail": "{{skipped}} sudah ada di Abacus.AI atau pernah diundang sebelumnya, {{failed}} tidak dapat dikirim.",
+    "milestoneToast": "{{credits}} kredit ditambahkan ke akun Anda",
     "errors": {
-      "gmail": "Gmail is not connected. Connect it and try again.",
-      "whatsapp": "WhatsApp is not linked or is still starting. Check Connectors and try again.",
-      "signedOut": "Sign in to Abacus.AI first.",
-      "unavailable": "Could not send the invites right now. Try again in a moment."
+      "gmail": "Gmail tidak terhubung. Hubungkan dan coba lagi.",
+      "whatsapp": "WhatsApp belum tertaut atau masih memulai. Periksa Konektor dan coba lagi.",
+      "signedOut": "Masuk ke Abacus.AI terlebih dahulu.",
+      "unavailable": "Tidak dapat mengirim undangan saat ini. Coba lagi sesaat lagi."
     }
   },
   "routines": {
-    "atLabel": "At",
-    "autoRepliesLeadSidebar": "Each chat a bot answers on its own is listed under Routines in the sidebar, with its conversation. Pause keeps the grant and stops the answers.",
+    "atLabel": "Pukul",
+    "autoRepliesLeadSidebar": "Setiap obrolan yang dijawab bot secara mandiri terdaftar di bawah Rutinitas di sidebar, beserta percakapannya. Jeda tetap mempertahankan izinnya dan menghentikan balasan.",
     "autoRepliesTitle": "Balasan otomatis",
-    "autoReplyLine": "{{bot}} answers here on {{platform}}. You can read; the sender drives the conversation.",
+    "autoReplyLine": "{{bot}} menjawab di sini di {{platform}}. Anda bisa membaca; pengirim yang mengarahkan percakapan.",
     "autoReplyOn": "Aktif",
     "autoReplyPaused": "Dijeda",
-    "autoReplyRowTitle": "{{bot}} auto-replies to {{sender}} on {{platform}}",
+    "autoReplyRowTitle": "{{bot}} membalas otomatis ke {{sender}} di {{platform}}",
     "cancel": "Batal",
     "copyWebhook": "Salin URL webhook",
     "create": "Buat",
     "createTitle": "Buat rutinitas",
-    "cronLabel": "Cron expression",
+    "cronLabel": "Ekspresi cron",
     "delete": "Hapus",
     "deleteBody": "Ini menghapus “{{name}}” beserta riwayat eksekusinya.",
     "deleteError": "Tidak dapat menghapus rutinitas.",
     "deleteTitle": "Hapus rutinitas",
     "edit": "Edit",
     "editTitle": "Edit rutinitas",
-    "editorPlaceholder": "Tell the routine how to change: \"every morning at 9 instead\", \"stop\"",
-    "editorSend": "Send",
-    "editorThinking": "Changing…",
+    "editorPlaceholder": "Beri tahu rutinitas cara berubah: \"setiap pagi jam 9 saja\", \"berhenti\"",
+    "editorSend": "Kirim",
+    "editorThinking": "Mengubah…",
     "empty": "Belum ada rutinitas. Buat satu, atau minta bot menjadwalkan sesuatu.",
     "enabled": "Aktif",
-    "firedByCreate": "on creation",
+    "firedByCreate": "saat dibuat",
     "firedByManual": "manual",
     "firedBySchedule": "jadwal",
     "firedByWebhook": "webhook",
     "lastRun": "Terakhir: {{time}}",
     "lead": "Yang berjalan sendiri: tugas terjadwal, pemicu webhook, dan apa yang mereka lakukan.",
-    "madeBy": "made by {{bot}}",
+    "madeBy": "dibuat oleh {{bot}}",
     "nameLabel": "Nama",
     "namePlaceholder": "mis. Ringkasan pagi",
     "newRoutine": "Rutinitas baru",
     "nextRun": "Berikutnya: {{time}}",
-    "noRunsYet": "This routine has not fired yet. Run it now, or wait for its next fire.",
-    "onLabel": "On",
-    "pageMissing": "This routine is gone.",
+    "noRunsYet": "Rutinitas ini belum pernah berjalan. Jalankan sekarang, atau tunggu pemicu berikutnya.",
+    "onLabel": "Pada",
+    "pageMissing": "Rutinitas ini sudah tidak ada.",
     "pause": "Jeda",
-    "pausedTitle": "Paused",
-    "presetCustom": "Custom",
+    "pausedTitle": "Dijeda",
+    "presetCustom": "Kustom",
     "presetDaily": "Harian",
     "presetHourly": "Setiap jam",
     "presetManual": "Manual",
-    "presetOnce": "Once",
+    "presetOnce": "Sekali",
     "presetWeekdays": "Hari kerja",
-    "presetWeekly": "Weekly",
+    "presetWeekly": "Mingguan",
     "promptLabel": "Instruksi",
     "promptPlaceholder": "Apa yang harus dijalankan? Tulis agar berdiri sendiri.",
     "promptRequired": "Instruksi wajib diisi.",
     "ranNow": "Rutinitas dimulai.",
     "resume": "Lanjutkan",
-    "runAtLabel": "Run at",
-    "runAtPast": "That time has already passed.",
-    "runAtRequired": "Pick a date and time to run at.",
+    "runAtLabel": "Jalankan pada",
+    "runAtPast": "Waktu itu sudah lewat.",
+    "runAtRequired": "Pilih tanggal dan waktu untuk menjalankan.",
     "runError": "Tidak dapat memulai rutinitas.",
     "runHistory_one": "{{count}} eksekusi terakhir",
     "runHistory_other": "{{count}} eksekusi terakhir",
     "runNow": "Jalankan sekarang",
     "runOutcome": {
-      "completed": "Completed",
-      "failed": "Failed",
-      "running": "Running"
+      "completed": "Selesai",
+      "failed": "Gagal",
+      "running": "Berjalan"
     },
     "runReadOnly": "Eksekusi rutinitas: sesi ini adalah laporan rutinitas. Anda bisa membacanya tapi tidak membalas; eksekusi berikutnya mulai dari awal. Untuk mengubah perilakunya, edit rutinitasnya.",
-    "runsEmpty": "No runs yet.",
-    "runsIn": "runs in {{folder}}",
-    "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
-    "runsTitle": "Runs",
+    "runsEmpty": "Belum ada eksekusi.",
+    "runsIn": "berjalan di {{folder}}",
+    "runsInHint": "Setiap pemicu berjalan di sesi barunya sendiri. Temukan rutinitas ini dan eksekusinya di bawah Rutinitas di sidebar.",
+    "runsTitle": "Eksekusi",
     "save": "Simpan",
     "saveError": "Tidak dapat menyimpan rutinitas.",
-    "scheduleDaily": "Daily at {{time}}",
-    "scheduleHint": "Local time. Fires only while the app is running.",
-    "scheduleHourly": "Every hour",
+    "scheduleDaily": "Harian pukul {{time}}",
+    "scheduleHint": "Waktu lokal. Hanya terpicu selama aplikasi berjalan.",
+    "scheduleHourly": "Setiap jam",
     "scheduleLabel": "Jadwal",
-    "scheduleManual": "On demand",
-    "scheduleManualHint": "Runs only when you press Run now or fire the webhook.",
-    "scheduleOnce": "Once on {{when}}",
-    "scheduleOnceHint": "Fires once at that time, then turns itself off. Local time; a moment the app slept through fires when it wakes.",
+    "scheduleManual": "Sesuai permintaan",
+    "scheduleManualHint": "Hanya berjalan saat Anda menekan Jalankan sekarang atau memicu webhook.",
+    "scheduleOnce": "Sekali pada {{when}}",
+    "scheduleOnceHint": "Terpicu sekali pada waktu itu, lalu nonaktif sendiri. Waktu lokal; momen saat aplikasi sedang tidur akan terpicu saat bangun.",
     "scheduleRequired": "Jadwal wajib diisi.",
-    "scheduleWeekdays": "Weekdays at {{time}}",
-    "scheduleWeekly": "{{day}}s at {{time}}",
+    "scheduleWeekdays": "Hari kerja pukul {{time}}",
+    "scheduleWeekly": "{{day}} pukul {{time}}",
     "statActive": "Aktif",
     "statFiredToday": "Terpicu hari ini",
     "statPaused": "Dijeda",
-    "templateWorksWith": "Reads from {{names}}",
+    "templateWorksWith": "Membaca dari {{names}}",
     "templates": {
       "morning-brief": {
-        "description": "What today needs from you: the calendar, the mail worth a reply, and anything addressed to you.",
-        "name": "Morning brief"
+        "description": "Apa yang hari ini butuhkan dari Anda: kalender, surel yang layak dibalas, dan apa pun yang ditujukan untuk Anda.",
+        "name": "Ringkasan pagi"
       },
       "inbox-triage": {
-        "description": "Sorts new mail into reply, read, and noise, and drafts the replies for you to send.",
-        "name": "Inbox triage"
+        "description": "Menyortir surel baru menjadi balas, baca, dan kebisingan, serta membuatkan draf balasan untuk Anda kirim.",
+        "name": "Triase kotak masuk"
       },
       "pr-digest": {
-        "description": "Open pull requests on this workspace, with the ones going stale first.",
-        "name": "Pull request digest"
+        "description": "Pull request terbuka di ruang kerja ini, dengan yang mulai basi lebih dulu.",
+        "name": "Ringkasan pull request"
       },
       "failing-tests": {
-        "description": "Runs the test suite and reports only what changed since the last run.",
-        "name": "Test watch"
+        "description": "Menjalankan test suite dan melaporkan hanya apa yang berubah sejak eksekusi terakhir.",
+        "name": "Pemantau pengujian"
       },
       "dependency-watch": {
-        "description": "Security advisories worth acting on, kept apart from version bumps that can wait.",
-        "name": "Dependency watch"
+        "description": "Advisory keamanan yang layak ditindaklanjuti, dipisahkan dari kenaikan versi yang bisa menunggu.",
+        "name": "Pemantau dependensi"
       },
       "week-in-review": {
-        "description": "What shipped this week from the commit history, grouped by theme, ending with what looks stuck.",
-        "name": "Week in review"
+        "description": "Apa yang dirilis minggu ini dari riwayat commit, dikelompokkan berdasarkan tema, diakhiri dengan apa yang tampak macet.",
+        "name": "Tinjauan minggu ini"
       }
     },
-    "templatesLead": "Or start from one of these",
-    "testRunHint": "Fire it right after creating, so you can see it work before the schedule does.",
-    "testRunLabel": "Run once now",
+    "templatesLead": "Atau mulai dari salah satu ini",
+    "testRunHint": "Picu segera setelah dibuat, agar Anda bisa melihatnya bekerja sebelum jadwalnya tiba.",
+    "testRunLabel": "Jalankan sekali sekarang",
     "title": "Rutinitas",
     "updateError": "Tidak dapat memperbarui rutinitas.",
     "webhookCopied": "URL webhook disalin.",
     "webhookHint": "Picu rutinitas ini dengan HTTP POST.",
     "webhookLabel": "Webhook",
-    "webhookPublicPending": "Creating your public webhook link…",
-    "workspaceAddError": "That folder could not be added.",
-    "workspaceChoose": "Choose a folder…",
-    "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
+    "webhookPublicPending": "Membuat tautan webhook publik Anda…",
+    "workspaceAddError": "Folder itu tidak dapat ditambahkan.",
+    "workspaceChoose": "Pilih folder…",
+    "workspaceHelp": "Tempat eksekusi berlangsung. Pilih proyek ketika instruksi membaca kode, pengujian, atau dependensinya.",
     "workspaceLabel": "Folder",
-    "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
-    "workspaceOwnFolder": "Its own folder"
+    "workspaceMissing": "Instruksi ini membaca kode sebuah proyek. Di folder tersendirinya tidak ada apa pun untuk dibaca.",
+    "workspaceOwnFolder": "Folder tersendiri"
   },
   "sessions": {
-    "delete": "Delete session",
-    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
-    "deleteError": "Could not delete that session. Try again.",
-    "deleteTitle": "Delete this session?",
-    "newSession": "New session",
-    "pin": "Pin",
-    "pinned": "Pinned",
-    "sessionOptions": "Session options",
-    "title": "Sessions",
-    "unpin": "Unpin",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "delete": "Hapus sesi",
+    "deleteBody": "“{{label}}” beserta transkripnya dihapus. Ini tidak dapat dibatalkan.",
+    "deleteError": "Tidak dapat menghapus sesi itu. Coba lagi.",
+    "deleteTitle": "Hapus sesi ini?",
+    "newSession": "Sesi baru",
+    "pin": "Sematkan",
+    "pinned": "Disematkan",
+    "sessionOptions": "Opsi sesi",
+    "title": "Sesi",
+    "unpin": "Lepas sematan",
+    "today": "Hari ini",
+    "yesterday": "Kemarin",
+    "daysAgo": "{{count}} hari yang lalu"
   },
   "sidebarNav": {
-    "app": "App",
+    "app": "Aplikasi",
     "artifacts": "Artefak",
     "capabilities": "Kemampuan",
     "connectors": "Konektor",
-    "memory": "Memory",
-    "messaging": "Messaging",
+    "memory": "Memori",
+    "messaging": "Pesan",
     "newSession": "Sesi baru",
-    "routines": "Routines",
+    "routines": "Rutinitas",
     "usage": "Penggunaan",
-    "whatsNew": "What's new"
+    "whatsNew": "Yang baru"
   },
   "skills": {
     "appliesToBoth": "Skill tersedia untuk agen di setiap ruang kerja.",
@@ -1560,29 +1560,29 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "Shell POSIX bawaan aplikasi (busybox ash), yang sama dengan yang dipakai alat bash agen, dengan grep, sed, awk, dan sejenisnya sudah terpasang.",
       "label": "BusyBox sh"
     },
     "cmd": {
-      "description": "The Windows command prompt.",
+      "description": "Command prompt Windows.",
       "label": "Command Prompt"
     },
-    "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
-    "inUse": "In use",
-    "notInstalled": "Not found on this machine.",
+    "fellBack": "{{selected}} tidak bisa dipakai sekarang, jadi terminal baru dibuka di {{effective}}.",
+    "inUse": "Sedang dipakai",
+    "notInstalled": "Tidak ditemukan di komputer ini.",
     "powershell": {
-      "description": "Windows PowerShell, the one that ships with Windows.",
+      "description": "Windows PowerShell, yang disertakan bersama Windows.",
       "label": "Windows PowerShell"
     },
     "pwsh": {
-      "description": "PowerShell 7 or later, installed separately.",
+      "description": "PowerShell 7 atau lebih baru, diinstal terpisah.",
       "label": "PowerShell"
     },
     "system": {
-      "description": "Whatever this machine calls its default shell.",
-      "label": "Default shell"
+      "description": "Shell default apa pun yang dipakai komputer ini.",
+      "label": "Shell default"
     },
-    "title": "Terminal shell"
+    "title": "Shell terminal"
   },
   "theme": {
     "dark": "Gelap",
@@ -1592,7 +1592,7 @@
   "tour": {
     "finish": "Mulai bekerja",
     "next": "Lanjut",
-    "optional": "Optional",
+    "optional": "Opsional",
     "progress": "Langkah {{current}} dari {{total}}",
     "replay": "Ikuti tur",
     "skip": "Lewati tur",
@@ -1603,8 +1603,8 @@
       },
       "bots": {
         "body": "Agen tetap dengan instruksi, jadwal, dan chat sendiri. Buat satu untuk pekerjaan yang sering Anda delegasikan.",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
+        "bulletBots": "Buat bot yang bisa dipakai ulang dengan instruksi, alat, dan obrolannya sendiri.",
+        "bulletSessions": "Gunakan sesi untuk tugas sekali pakai dan pekerjaan cepat.",
         "title": "Bot Anda"
       },
       "capabilities": {
@@ -1620,8 +1620,8 @@
         "body": "Sambungkan alat yang memang sudah Anda pakai. Akun Abacus.AI gratis memasang satu set sekaligus dengan sekali klik."
       },
       "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+        "title": "Buat bot",
+        "body": "Beri nama satu di sini, atau mulai dari templat di bawah. Bot membaca dan mengedit berkas, menjalankan perintah, dan bekerja di alat yang Anda hubungkan, dengan obrolan dan memorinya sendiri."
       },
       "memory": {
         "title": "Memori",
@@ -1646,7 +1646,7 @@
       "terminal": {
         "title": "Terminal",
         "body": "Shell sungguhan di workspace Anda, di folder yang sama dengan tempat agen bekerja. Tombol terminal di bilah judul menampilkan dan menyembunyikannya.",
-        "audience": "For developers & technical users"
+        "audience": "Untuk developer & pengguna teknis"
       },
       "usage": {
         "title": "Penggunaan",
@@ -1659,27 +1659,27 @@
     }
   },
   "updateBanner": {
-    "dismiss": "Dismiss",
+    "dismiss": "Tutup",
     "stalled": "Tidak dapat memulai ulang secara otomatis. Tutup aplikasi lalu buka kembali untuk menyelesaikan pembaruan.",
-    "subtitle": "Relaunch to get the latest improvements and fixes.",
-    "title": "A new version is ready",
-    "whatsChanged": "See what changed"
+    "subtitle": "Luncurkan ulang untuk mendapatkan pembaruan dan perbaikan terbaru.",
+    "title": "Versi baru sudah siap",
+    "whatsChanged": "Lihat apa yang berubah"
   },
   "updateCritical": {
-    "body": "This release fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "bodyWithVersion": "Version {{version}} fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "countdown": "Restarting automatically in {{time}}",
-    "restartNow": "Restart now",
-    "restarting": "Restarting…",
-    "title": "A required update is ready"
+    "body": "Rilis ini memperbaiki masalah kritis dan harus diinstal sebelum Anda melanjutkan. Aplikasi akan dimulai ulang untuk menerapkannya.",
+    "bodyWithVersion": "Versi {{version}} memperbaiki masalah kritis dan harus diinstal sebelum Anda melanjutkan. Aplikasi akan dimulai ulang untuk menerapkannya.",
+    "countdown": "Memulai ulang otomatis dalam {{time}}",
+    "restartNow": "Mulai ulang sekarang",
+    "restarting": "Memulai ulang…",
+    "title": "Pembaruan wajib sudah siap"
   },
   "updatePill": {
     "downloading": "Mengunduh pembaruan… {{percent}}%",
-    "failed": "Update download failed. Retry",
-    "installing": "Restarting…",
-    "relaunch": "Relaunch to update",
-    "retrying": "Retrying…",
-    "tooltip": "Version {{version}} is ready to install"
+    "failed": "Unduhan pembaruan gagal. Coba lagi",
+    "installing": "Memulai ulang…",
+    "relaunch": "Luncurkan ulang untuk memperbarui",
+    "retrying": "Mencoba lagi…",
+    "tooltip": "Versi {{version}} siap diinstal"
   },
   "usage": {
     "cardDetail": "{{requests}} permintaan · {{tokens}} token",
@@ -1704,25 +1704,25 @@
     "today": "Hari ini",
     "unpricedHint": "Beberapa model tidak memiliki harga yang dipublikasikan; token dihitung, tetapi biayanya tidak.",
     "window": "{{days}} hari terakhir",
-    "abacusPlan": "Abacus.AI plan",
-    "abacusCredits": "{{used}} / {{granted}} credits"
+    "abacusPlan": "Paket Abacus.AI",
+    "abacusCredits": "{{used}} / {{granted}} kredit"
   },
   "userMenu": {
     "about": "Tentang...",
     "browserSettings": "Browser",
     "deviceSettings": "Perangkat",
-    "dumpLogs": "Dump logs",
+    "dumpLogs": "Ekspor log",
     "keepAwake": "Tetap aktif saat bekerja",
     "language": "Bahasa",
     "mcpManagement": "Server MCP",
-    "notificationSettings": "Notifications",
+    "notificationSettings": "Notifikasi",
     "settings": "Pengaturan",
-    "signIn": "Sign in",
-    "signOut": "Sign out",
-    "signedOutRunningSessions": "Signed out. A chat that is already running keeps the key it started with until you start a new one.",
+    "signIn": "Masuk",
+    "signOut": "Keluar",
+    "signedOutRunningSessions": "Sudah keluar. Obrolan yang sudah berjalan tetap memakai kunci yang dimulainya sampai Anda memulai yang baru.",
     "skillsManagement": "Skills",
     "theme": "Tema",
-    "whatsNew": "What's new"
+    "whatsNew": "Yang baru"
   },
   "visualizer": {
     "loading": "Memuat visualisasi…"
@@ -1734,20 +1734,20 @@
     "ageMinutes": "{{count}} mnt",
     "ageNow": "baru saja",
     "agents": {
-      "emptyHint": "Sub-agents launched during a turn appear here.",
-      "emptyTitle": "No sub-agents yet",
+      "emptyHint": "Sub-agen yang diluncurkan selama giliran akan muncul di sini.",
+      "emptyTitle": "Belum ada sub-agen",
       "kind": {
         "browser": "Browser",
-        "component": "Component",
-        "delegate": "Delegate"
+        "component": "Komponen",
+        "delegate": "Delegasi"
       },
-      "mainAgent": "Main agent"
+      "mainAgent": "Agen utama"
     },
     "allPinned": "Semua di sini disematkan. Lepas sematan agar muncul di terbaru.",
     "attach": {
       "cancel": "Batal",
       "done": "Selesai",
-      "files": "Files or images…",
+      "files": "Berkas atau gambar…",
       "folder": "Folder…",
       "mentionTip": "Tips: ketik @ untuk merujuk berkas secara langsung.",
       "menuLabel": "Lampirkan",
@@ -1756,26 +1756,26 @@
       "saveFailed": "Tidak dapat menyimpan lampiran: {{error}}",
       "unknownError": "kesalahan tidak diketahui"
     },
-    "autoWorkspace": "Auto workspace",
+    "autoWorkspace": "Ruang kerja otomatis",
     "branch": {
-      "create": "Create “{{branch}}”",
+      "create": "Buat “{{branch}}”",
       "createFailed": "Tidak dapat membuat branch.",
-      "description": "Choose the Git branch this checkout uses. Switching changes the files the agent works on.",
+      "description": "Pilih branch Git yang dipakai checkout ini. Berpindah mengubah berkas yang dikerjakan agen.",
       "createdAndSwitched": "Membuat dan beralih ke {{name}}",
-      "loading": "Loading branches…",
-      "noResults": "No branches found.",
+      "loading": "Memuat branch…",
+      "noResults": "Tidak ada branch yang ditemukan.",
       "searchOrCreate": "Cari atau buat branch…",
-      "showing": "Showing {{count}} of {{total}} refs",
+      "showing": "Menampilkan {{count}} dari {{total}} ref",
       "stopAgentFirst": "Hentikan agen sebelum beralih",
       "switchFailed": "Tidak dapat beralih branch.",
       "switched": "Beralih ke {{name}}"
     },
     "cancel": "Batal",
     "chat": {
-      "conversation": "Conversation",
+      "conversation": "Percakapan",
       "continueBelow": "Anda masih dapat melanjutkan obrolan di bawah.",
       "historyLoadFailed": "Tidak dapat memuat riwayat percakapan.",
-      "scrollToBottom": "Scroll to bottom"
+      "scrollToBottom": "Gulir ke bawah"
     },
     "chatDeleted": "Obrolan dihapus",
     "chatRenamed": "Nama obrolan diganti",
@@ -1785,21 +1785,21 @@
     "composerNeedsModel": "Hubungkan model untuk memulai",
     "composerNeedsWorkspace": "Pilih folder ruang kerja untuk memulai",
     "composerPlaceholder": "Tanyakan apa saja tentang basis kode Anda…",
-    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
+    "composerPlaceholderBusy": "Kirim sekarang untuk mengarahkan agen. Ini akan sampai di langkah berikutnya",
     "composerTasks": {
-      "dismiss": "Dismiss tasks for this turn",
-      "now": "now",
-      "progressLabel": "Tasks: {{completed}} of {{total}} complete. Current task: {{current}}",
-      "title": "Tasks"
+      "dismiss": "Tutup tugas untuk giliran ini",
+      "now": "sekarang",
+      "progressLabel": "Tugas: {{completed}} dari {{total}} selesai. Tugas saat ini: {{current}}",
+      "title": "Tugas"
     },
     "confirmDelete": "Hapus",
     "createBotToSend": "Buat bot untuk mengirim pesan",
     "credits": {
-      "thisTurn": "This turn: {{credits}} credits",
-      "total": "Conversation total: {{credits}} credits",
-      "used": "{{credits}} credits used"
+      "thisTurn": "Giliran ini: {{credits}} kredit",
+      "total": "Total percakapan: {{credits}} kredit",
+      "used": "{{credits}} kredit terpakai"
     },
-    "currentCheckout": "Current checkout",
+    "currentCheckout": "Checkout saat ini",
     "deleteChat": "Hapus obrolan",
     "deleteChatDescription": "Obrolan ini dan riwayatnya akan dihapus secara permanen.",
     "deleteWorkspace": "Hapus ruang kerja",
@@ -1807,15 +1807,15 @@
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
     "deleteWorkspaceDescription": "Ini menghapus \"{{name}}\" dan obrolannya dari AbacusAI Bot. File dan folder Anda di disk tidak dihapus dan akan tetap utuh. Tindakan ini tidak dapat dibatalkan.",
     "deleteWorkspaceNameMismatch": "Nama tidak cocok",
-    "deleteWorkspacePermanently": "Delete Permanently",
-    "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
-    "deletedWorkspaceBadge": "Deleted",
-    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
+    "deleteWorkspacePermanently": "Hapus Permanen",
+    "deleteWorkspacePermanentlyDescription": "\"{{name}}\" sudah dihapus. Ini menghapus obrolan dan riwayatnya untuk selamanya. Berkas Anda dan folder di disk tidak tersentuh. Tindakan ini tidak dapat dibatalkan.",
+    "deletedWorkspaceBadge": "Dihapus",
+    "deletedWorkspaceReadOnly": "Ruang kerja ini telah dihapus, jadi obrolannya hanya-baca. Tambahkan kembali foldernya sebagai ruang kerja untuk melanjutkan percakapan ini.",
     "deliverable": {
-      "delivered": "Delivered",
-      "delivering": "Delivering",
-      "itemCount_one": "{{count}} deliverable",
-      "itemCount_other": "{{count}} deliverables"
+      "delivered": "Terkirim",
+      "delivering": "Mengirim",
+      "itemCount_one": "{{count}} hasil kerja",
+      "itemCount_other": "{{count}} hasil kerja"
     },
     "dropFilesHint": "Jatuhkan untuk melampirkan gambar atau menyebut file",
     "explorer": {
@@ -1824,15 +1824,15 @@
       "noWorkspace": "Tidak ada ruang kerja yang dipilih."
     },
     "feedback": {
-      "copied": "Copied",
-      "copy": "Copy",
-      "failed": "Couldn't send your feedback. Please try again.",
-      "helpful": "Good response",
-      "notHelpful": "Bad response",
-      "send": "Send",
-      "skip": "Skip",
-      "tellUsMore": "Tell us more",
-      "tellUsMorePlaceholder": "What went wrong?"
+      "copied": "Disalin",
+      "copy": "Salin",
+      "failed": "Tidak dapat mengirim masukan Anda. Silakan coba lagi.",
+      "helpful": "Respons bagus",
+      "notHelpful": "Respons buruk",
+      "send": "Kirim",
+      "skip": "Lewati",
+      "tellUsMore": "Ceritakan lebih lanjut",
+      "tellUsMorePlaceholder": "Apa yang salah?"
     },
     "fewerModels": "Lebih sedikit model",
     "fileEditor": {
@@ -1847,54 +1847,54 @@
     "hideRightPanel": "Sembunyikan panel",
     "hideSidebar": "Sembunyikan bilah samping",
     "hideTerminal": "Sembunyikan terminal",
-    "inspectorDescription": "Changes, files, agents, previews, and devices",
-    "inspectorTitle": "Workspace inspector",
+    "inspectorDescription": "Perubahan, berkas, agen, pratinjau, dan perangkat",
+    "inspectorTitle": "Inspektor ruang kerja",
     "messageBot": "Kirim pesan ke {{name}}",
     "modelPicker": {
-      "addFavorite": "Add {{model}} to favorites",
-      "compact": "Compact UI",
-      "configure": "Configure",
-      "configureBeforeSending": "Connect a model before sending a message.",
-      "configureProviders": "Configure model providers",
+      "addFavorite": "Tambahkan {{model}} ke favorit",
+      "compact": "UI ringkas",
+      "configure": "Konfigurasi",
+      "configureBeforeSending": "Hubungkan model sebelum mengirim pesan.",
+      "configureProviders": "Konfigurasi penyedia model",
       "connectGoogleAi": "Hubungkan Google AI Studio",
       "connectGoogleAiNote": "Kuota Gemini gratis: ambil kunci API lalu tempel di sini",
-      "connectModels": "Connect models",
+      "connectModels": "Hubungkan model",
       "connectOpenRouter": "Hubungkan OpenRouter",
       "connectOpenRouterNote": "Model gratis dengan sekali masuk lewat browser: bergabung ke RouteLLM - Open dan daftar ini",
-      "favorites": "Favorites",
-      "noFavorites": "Favorite models appear here.",
-      "noResults": "No models found.",
-      "onThisMachine": "On this machine",
-      "removeFavorite": "Remove {{model}} from favorites",
-      "search": "Search models…",
-      "title": "Choose a model"
+      "favorites": "Favorit",
+      "noFavorites": "Model favorit muncul di sini.",
+      "noResults": "Tidak ada model yang ditemukan.",
+      "onThisMachine": "Di komputer ini",
+      "removeFavorite": "Hapus {{model}} dari favorit",
+      "search": "Cari model…",
+      "title": "Pilih model"
     },
     "modelPlaceholder": "Model",
     "modelProviderLocked": "Model ini berasal dari penyedia yang berbeda. Mulai obrolan baru untuk menggunakannya.",
     "modelSwitchFailed": "Tidak dapat mengganti model. Chat masih menggunakan model sebelumnya.",
     "modelTier": {
-      "default": "Recommended",
-      "fast": "Fast & cheap",
-      "free": "Free",
-      "local": "Local / custom",
-      "strong": "For harder tasks"
+      "default": "Direkomendasikan",
+      "fast": "Cepat & murah",
+      "free": "Gratis",
+      "local": "Lokal / kustom",
+      "strong": "Untuk tugas yang lebih sulit"
     },
     "moreModels": "Model lainnya ({{count}})",
-    "navigationDescription": "Workspaces, conversations, and application settings",
-    "navigationTitle": "Workspace navigation",
-    "newBot": "New bot",
+    "navigationDescription": "Ruang kerja, percakapan, dan pengaturan aplikasi",
+    "navigationTitle": "Navigasi ruang kerja",
+    "newBot": "Bot baru",
     "newChat": "Obrolan baru",
     "noChats": "Belum ada obrolan",
     "noSessionsMatch": "Tidak ada sesi yang cocok dengan \"{{query}}\"",
     "noWorkspaces": "Belum ada ruang kerja yang ditambahkan",
     "noWorkspacesDescription": "Tambahkan folder untuk mulai membuat kode dengan agen",
-    "openPathInPreview": "Open in the preview pane",
+    "openPathInPreview": "Buka di panel pratinjau",
     "pendingSteer": {
       "edit": "Edit",
-      "permission": "Sends after you answer the permission prompt",
-      "remove": "Remove",
-      "step": "Sends at the agent's next step",
-      "turn": "Sends as the next turn"
+      "permission": "Terkirim setelah Anda menjawab prompt izin",
+      "remove": "Hapus",
+      "step": "Terkirim di langkah berikutnya agen",
+      "turn": "Terkirim sebagai giliran berikutnya"
     },
     "perm": {
       "addContext": "Tambahkan konteks atau instruksi…",
@@ -1916,24 +1916,24 @@
       "draft": "Draf",
       "label": "PR #{{number}}",
       "merged": "Digabungkan",
-      "none": "No PR",
-      "noneDescription": "No pull request for the current branch",
-      "open": "Open PR #{{number}}",
-      "openAction": "Open pull request",
+      "none": "Tidak ada PR",
+      "noneDescription": "Tidak ada pull request untuk branch saat ini",
+      "open": "Buka PR #{{number}}",
+      "openAction": "Buka pull request",
       "pending": "Terbuka",
       "reviews": "{{approved}} disetujui · {{changes}} perubahan diminta · {{requested}} tertunda"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going. No card needed",
-      "continueOn": "Continue on {{model}} (free)",
-      "exhaustedTitle": "You've used up your free Abacus.AI credits",
-      "localNote": "Or run a model on this computer for free, with no limits",
-      "poolOutTitle": "Every free source is used up for now",
-      "switchNote": "Pick another model in the model picker to keep going"
+      "connectNote": "Hubungkan sumber gratis untuk terus lanjut. Tanpa kartu",
+      "continueOn": "Lanjutkan di {{model}} (gratis)",
+      "exhaustedTitle": "Anda telah menghabiskan kredit gratis Abacus.AI",
+      "localNote": "Atau jalankan model di komputer ini secara gratis, tanpa batas",
+      "poolOutTitle": "Semua sumber gratis sudah habis untuk saat ini",
+      "switchNote": "Pilih model lain di pemilih model untuk terus lanjut"
     },
     "preview": {
-      "addSurface": "Add surface",
-      "address": "Browser address",
+      "addSurface": "Tambah surface",
+      "address": "Alamat browser",
       "addressPlaceholder": "Masukkan URL atau jalur file…",
       "back": "Kembali",
       "browserProfile": "Profil browser",
@@ -1943,95 +1943,95 @@
       "browserProfileImported": "Profil berhasil diimpor",
       "browserProfileNone": "Default (tanpa profil)",
       "browserProfileRefresh": "Segarkan profil",
-      "clearSiteData": "Clear site data",
-      "closeSurface": "Close {{title}}",
+      "clearSiteData": "Hapus data situs",
+      "closeSurface": "Tutup {{title}}",
       "developerTools": "Developer tools",
       "emptyDescription": "Buka file dari penjelajah, klik tautan di chat, atau jelajahi web.",
       "emptyTitle": "Tidak ada pratinjau terbuka",
       "forward": "Maju",
       "hardReload": "Hard reload",
-      "htmlShowRendered": "Show rendered deck",
-      "htmlShowSource": "Show source",
-      "imageError": "Could not show this image here ({{error}}).",
-      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
+      "htmlShowRendered": "Tampilkan slide yang dirender",
+      "htmlShowSource": "Tampilkan sumber",
+      "imageError": "Tidak dapat menampilkan gambar ini di sini ({{error}}).",
+      "imageOutsideWorkspace": "Berkas ini berada di luar ruang kerja, jadi tidak ditampilkan di sini. Buka di aplikasi eksternal.",
       "loading": "Memuat…",
-      "mdShowRendered": "Show rendered markdown",
-      "moreActions": "More browser actions",
+      "mdShowRendered": "Tampilkan markdown yang dirender",
+      "moreActions": "Aksi browser lainnya",
       "noProfiles": "Profil browser tidak ditemukan",
       "openBrowser": "Buka Browser",
       "openExternal": "Buka di aplikasi eksternal",
-      "pageUnavailable": "This page is unavailable",
-      "pptxError": "This presentation could not be read ({{error}}).",
-      "pptxMoreWarnings": "+{{count}} more",
-      "pptxNoNotes": "No speaker notes on this slide.",
-      "pptxNotes": "Notes",
-      "pptxSlideCount": "Slide {{current}} of {{total}}",
-      "pptxSlideFailed": "Slide {{number}} could not be rendered",
-      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
-      "pptxWarnings": "{{count}} rendering warning",
-      "pptxWarnings_other": "{{count}} rendering warnings",
+      "pageUnavailable": "Halaman ini tidak tersedia",
+      "pptxError": "Presentasi ini tidak dapat dibaca ({{error}}).",
+      "pptxMoreWarnings": "+{{count}} lagi",
+      "pptxNoNotes": "Tidak ada catatan pembicara di slide ini.",
+      "pptxNotes": "Catatan",
+      "pptxSlideCount": "Slide {{current}} dari {{total}}",
+      "pptxSlideFailed": "Slide {{number}} tidak dapat dirender",
+      "pptxSlidesFailed": "{{failed}} dari {{total}} slide tidak dapat dirender",
+      "pptxWarnings": "{{count}} peringatan rendering",
+      "pptxWarnings_other": "{{count}} peringatan rendering",
       "refresh": "Segarkan",
-      "reload": "Reload",
+      "reload": "Muat ulang",
       "sectionFileCount": "{{count}} file",
-      "sourceError": "Could not read this file ({{error}}).",
+      "sourceError": "Tidak dapat membaca berkas ini ({{error}}).",
       "split": "Terpisah",
       "stop": "Hentikan pemuatan",
       "toggleTooltip": "Alihkan pratinjau",
-      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
-      "tryAgain": "Try again",
+      "truncatedFile": "Berkas ini terlalu besar untuk dibuka penuh. Hanya bagian awal yang ditampilkan, dan pengeditan dinonaktifkan di sini agar penyimpanan tidak menimpa sisanya. Buka di editor eksternal untuk mengubahnya.",
+      "tryAgain": "Coba lagi",
       "unified": "Terpadu",
       "zoom": "Zoom",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "zoomReset": "Reset zoom"
+      "zoomIn": "Perbesar",
+      "zoomOut": "Perkecil",
+      "zoomReset": "Atur ulang zoom"
     },
-    "refreshModels": "Refresh models",
+    "refreshModels": "Segarkan model",
     "renameChat": "Ganti nama obrolan",
     "renameChatPlaceholder": "Masukkan nama obrolan baru",
     "renameEmptyName": "Nama tidak boleh kosong",
     "renameError": "Gagal mengganti nama",
     "renameWorkspace": "Ganti nama ruang kerja",
     "renameWorkspacePlaceholder": "Masukkan nama ruang kerja baru",
-    "resizeInspector": "Resize workspace inspector",
-    "resizeSidebar": "Resize workspace sidebar",
-    "resizeTerminal": "Resize terminal",
+    "resizeInspector": "Ubah ukuran inspektor ruang kerja",
+    "resizeSidebar": "Ubah ukuran sidebar ruang kerja",
+    "resizeTerminal": "Ubah ukuran terminal",
     "results": "Hasil",
     "retry": "Coba lagi",
     "retryMessage": "Lanjutkan dari tempat terakhir Anda berhenti",
     "revealInFinder": "Tampilkan di Finder",
     "rightPanel": {
-      "agentsDescription": "Follow subagents and workflows.",
+      "agentsDescription": "Ikuti subagen dan alur kerja.",
       "browser": "Browser",
-      "browserDescription": "Open a local app or URL.",
+      "browserDescription": "Buka aplikasi lokal atau URL.",
       "close": "Tutup panel",
-      "deviceUnavailable": "No device or simulator is available.",
-      "deviceDescription": "Preview the connected device.",
-      "emptyDescription": "Choose what to show in the right panel.",
-      "emptyTitle": "Open a surface",
-      "explorerDescription": "Browse and read workspace files.",
-      "files": "Files",
-      "open": "Open",
-      "tabs": "Inspector panels",
+      "deviceUnavailable": "Tidak ada perangkat atau simulator yang tersedia.",
+      "deviceDescription": "Pratinjau perangkat yang terhubung.",
+      "emptyDescription": "Pilih apa yang ditampilkan di panel kanan.",
+      "emptyTitle": "Buka surface",
+      "explorerDescription": "Jelajahi dan baca berkas ruang kerja.",
+      "files": "Berkas",
+      "open": "Buka",
+      "tabs": "Panel inspektor",
       "terminal": "Terminal",
-      "terminalDescription": "Start a shell in this workspace."
+      "terminalDescription": "Mulai shell di ruang kerja ini."
     },
     "rightTab": {
-      "agents": "Agents",
+      "agents": "Agen",
       "device": "Perangkat",
       "explorer": "Penjelajah",
       "preview": "Pratinjau"
     },
     "runtimeMode": {
-      "acceptEdits": "Auto-accept edits",
-      "acceptEditsDescription": "Apply file edits automatically and ask before other actions.",
-      "auto": "Auto",
-      "autoDescription": "Allow commands and edits without approval prompts, inside the sandbox.",
-      "fullAccess": "Full access",
-      "fullAccessDescription": "Allow commands and edits without approval prompts, with no sandbox.",
-      "plan": "Plan",
-      "planDescription": "Plan the work before making changes.",
-      "supervised": "Supervised",
-      "supervisedDescription": "Ask before edits and commands."
+      "acceptEdits": "Terima edit otomatis",
+      "acceptEditsDescription": "Terapkan edit berkas secara otomatis dan tanyakan sebelum tindakan lain.",
+      "auto": "Otomatis",
+      "autoDescription": "Izinkan perintah dan edit tanpa prompt persetujuan, di dalam sandbox.",
+      "fullAccess": "Akses penuh",
+      "fullAccessDescription": "Izinkan perintah dan edit tanpa prompt persetujuan, tanpa sandbox.",
+      "plan": "Rencana",
+      "planDescription": "Rencanakan pekerjaan sebelum membuat perubahan.",
+      "supervised": "Diawasi",
+      "supervisedDescription": "Tanyakan sebelum edit dan perintah."
     },
     "save": "Simpan",
     "searchSessions": "Cari sesi…",
@@ -2045,93 +2045,93 @@
       "modelCta": "Pilih model"
     },
     "sendMessage": "Kirim (Enter)",
-    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "Tidak dapat menjangkau agen untuk obrolan ini. Pesan Anda kembali ke kotak. Coba kirim lagi.",
     "sessionOptions": "Opsi sesi",
     "sessions": "Sesi",
     "showRightPanel": "Tampilkan panel",
     "showSidebar": "Tampilkan bilah samping",
     "showTerminal": "Tampilkan terminal",
-    "startSessionToSend": "Describe the work and press send to start a session",
-    "steerMessage": "Send to the running turn",
+    "startSessionToSend": "Jelaskan pekerjaannya dan tekan kirim untuk memulai sesi",
+    "steerMessage": "Kirim ke giliran yang sedang berjalan",
     "stopAgent": "Hentikan",
     "subtask": {
-      "agent": "Agent",
-      "backToMain": "Back to the main agent",
-      "didNotFinish": "did not finish",
-      "hitLimit": "stopped at its limit",
-      "needsYou": "needs you in the browser",
-      "budget": "over budget",
-      "main": "Main",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools",
-      "viewTranscript": "View this sub-agent's full transcript",
-      "working": "working"
+      "agent": "Agen",
+      "backToMain": "Kembali ke agen utama",
+      "didNotFinish": "belum selesai",
+      "hitLimit": "berhenti di batasnya",
+      "needsYou": "butuh Anda di browser",
+      "budget": "melebihi anggaran",
+      "main": "Utama",
+      "toolCount_one": "{{count}} alat",
+      "toolCount_other": "{{count}} alat",
+      "viewTranscript": "Lihat transkrip lengkap sub-agen ini",
+      "working": "bekerja"
     },
-    "switchModel": "Switch model",
+    "switchModel": "Ganti model",
     "terminal": {
-      "closeTab": "Close terminal tab",
+      "closeTab": "Tutup tab terminal",
       "hide": "Sembunyikan terminal",
-      "newTab": "New terminal",
-      "pickShell": "Open a different shell",
-      "tabs": "Terminal tabs"
+      "newTab": "Terminal baru",
+      "pickShell": "Buka shell yang berbeda",
+      "tabs": "Tab terminal"
     },
     "terminalRequiresWorkspace": "Pilih ruang kerja untuk menggunakan terminal",
     "thinking": {
-      "hide": "Hide the thought process",
-      "inProgress": "Thinking…",
-      "label": "Thinking",
-      "show": "Show the thought process"
+      "hide": "Sembunyikan proses berpikir",
+      "inProgress": "Berpikir…",
+      "label": "Berpikir",
+      "show": "Tampilkan proses berpikir"
     },
     "unpinChat": "Lepas sematan",
     "voice": {
-      "downloading": "Downloading the speech model… {{percent}}%",
+      "downloading": "Mengunduh model suara… {{percent}}%",
       "errors": {
-        "microphone-in-use": "The microphone is in use by another app.",
-        "no-microphone": "No microphone was found.",
-        "permission-denied": "Microphone access was denied. Allow it in system settings.",
-        "transcription-failed": "Could not transcribe that. Try again.",
-        "unsupported": "Recording is not available here."
+        "microphone-in-use": "Mikrofon sedang dipakai oleh aplikasi lain.",
+        "no-microphone": "Tidak ada mikrofon yang ditemukan.",
+        "permission-denied": "Akses mikrofon ditolak. Izinkan di pengaturan sistem.",
+        "transcription-failed": "Tidak dapat mentranskripsikan itu. Coba lagi.",
+        "unsupported": "Perekaman tidak tersedia di sini."
       },
-      "start": "Dictate",
-      "stop": "Stop and transcribe",
-      "transcribing": "Transcribing…"
+      "start": "Dikte",
+      "stop": "Hentikan dan transkripsikan",
+      "transcribing": "Mentranskripsikan…"
     },
     "welcome": {
       "addWorkspace": "Tambah ruang kerja baru",
-      "defaultWorkspace": "Default workspace: {{path}}",
+      "defaultWorkspace": "Ruang kerja default: {{path}}",
       "letsBuild": "Mari membangun",
       "noWorkspacesFound": "Tidak ada ruang kerja ditemukan",
       "searchWorkspaces": "Cari ruang kerja…",
       "selectWorkspace": "Pilih ruang kerja",
       "starters": {
         "build-a-store": {
-          "name": "Build an online store",
-          "description": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+          "name": "Bangun toko online",
+          "description": "Merek lilin butik: sebuah hero, grid produk, halaman produk dengan opsi aroma dan ukuran, keranjang geser, dan checkout."
         },
         "design-an-infographic": {
-          "name": "Turn a repo into an infographic",
-          "description": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+          "name": "Ubah repo menjadi infografis",
+          "description": "Mengkloning n8n, membaca sumbernya, dan menyusun poster satu halaman tentang apa yang sebenarnya terjadi saat sebuah alur kerja berjalan."
         },
         "find-flights": {
-          "name": "Find me flights",
-          "description": "Opens the browser, checks a couple of sites, and comes back with three real options, links, and a pick."
+          "name": "Carikan saya penerbangan",
+          "description": "Membuka browser, memeriksa beberapa situs, dan kembali dengan tiga opsi nyata, tautan, dan satu pilihan."
         },
         "process-a-spreadsheet": {
-          "name": "Clean up a spreadsheet",
-          "description": "Reads the spreadsheets here, fixes headers, types and duplicates, and saves a summarised copy beside each original."
+          "name": "Bersihkan spreadsheet",
+          "description": "Membaca spreadsheet di sini, memperbaiki header, tipe data, dan duplikat, lalu menyimpan salinan yang diringkas di sebelah masing-masing berkas asli."
         },
         "restyle-a-repo": {
-          "name": "Restyle Excalidraw",
-          "description": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+          "name": "Ubah gaya Excalidraw",
+          "description": "Mengkloning repo, membaca cara ia menata gayanya sendiri, dan membuat mockup toolbar bergaya baru dengan warnanya sendiri, tanpa terhubung ke apa pun."
         },
         "review-pull-requests": {
-          "name": "Review my pull requests",
-          "description": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+          "name": "Tinjau pull request saya",
+          "description": "Membaca setiap diff, menyebutkan bug dan pengujian yang hilang berdasarkan berkas dan baris, serta memposting tinjauan tanpa menyentuh kode Anda."
         }
       },
-      "switchWorkspace": "Switch workspace from {{workspace}}",
-      "whatShouldWeBuild": "What should we build in {{workspace}}?",
-      "whatShouldWeBuildPrefix": "What should we build in"
+      "switchWorkspace": "Ganti ruang kerja dari {{workspace}}",
+      "whatShouldWeBuild": "Apa yang harus kita bangun di {{workspace}}?",
+      "whatShouldWeBuildPrefix": "Apa yang harus kita bangun di"
     },
     "workspaceDeleted": "Ruang kerja dihapus",
     "workspaceMissing": {
@@ -2146,13 +2146,13 @@
     },
     "workspaceOptions": "Opsi ruang kerja",
     "workspaceRenamed": "Nama ruang kerja diganti",
-    "workspaces": "Workspaces",
+    "workspaces": "Ruang kerja",
     "worktree": {
-      "create": "New worktree",
-      "currentCheckout": "Current checkout",
-      "description": "Choose which checkout the agent will read and change for this chat.",
-      "error": "Worktree operation failed",
-      "select": "Select worktree"
+      "create": "Worktree baru",
+      "currentCheckout": "Checkout saat ini",
+      "description": "Pilih checkout mana yang akan dibaca dan diubah agen untuk obrolan ini.",
+      "error": "Operasi worktree gagal",
+      "select": "Pilih worktree"
     },
     "yesterday": "Kemarin"
   },
