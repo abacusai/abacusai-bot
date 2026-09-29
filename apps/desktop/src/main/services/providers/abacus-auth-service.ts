@@ -8,6 +8,7 @@ import type { AbacusAuthIntent } from "#shared/contracts";
 
 import { bringToFront } from "../../bring-to-front";
 import { readSettings } from "../config/settings";
+import { browserSignInCookies } from "./abacus-browser-profiles";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 import {
   resolveSignInVariant,
@@ -84,7 +85,12 @@ export const openAbacusAuthInBrowser = (): void => {
  * was pressed.
  */
 export const startAbacusAuth = async (
-  intent: AbacusAuthIntent = "signup"
+  intent: AbacusAuthIntent = "signup",
+  /**
+   * A Chromium profile the user picked on the sign-in screen: its Abacus.AI
+   * session signs in, in the app window, whatever the arm or intent.
+   */
+  browserProfileId?: string
 ): Promise<AbacusAuthResult> => {
   cancelAbacusAuth();
 
@@ -245,9 +251,16 @@ export const startAbacusAuth = async (
       });
     };
 
-    void resolveSignInVariant().then((resolvedVariant) => {
+    void Promise.all([
+      resolveSignInVariant(),
+      browserProfileId != null
+        ? browserSignInCookies(browserProfileId)
+        : Promise.resolve([]),
+    ]).then(([resolvedVariant, seedCookies]) => {
       if (settled) return;
       variant = resolvedVariant;
+      // An unreadable profile falls back to the plain flow for the intent.
+      const seeded = seedCookies.length > 0;
 
       // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
       server.listen(0, "127.0.0.1", () => {
@@ -269,9 +282,12 @@ export const startAbacusAuth = async (
         authUrl = url;
 
         console.log(
-          `[abacus-auth] sign-in surface: ${variant} intent: ${intent}`
+          `[abacus-auth] sign-in surface: ${variant} intent: ${intent}${seeded ? " seeded" : ""}`
         );
-        if (browserRequested || intent === "signin" || variant !== "in_app") {
+        if (
+          browserRequested ||
+          (!seeded && (intent === "signin" || variant !== "in_app"))
+        ) {
           openInBrowser();
           return;
         }
@@ -283,6 +299,7 @@ export const startAbacusAuth = async (
           onDismissed: () => {
             if (!browserRequested) close();
           },
+          ...(seeded ? { seedCookies } : {}),
         })
           .then((win) => {
             if (win == null) {

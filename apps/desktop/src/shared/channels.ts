@@ -162,6 +162,7 @@ export enum IpcChannels {
   SignOutAbacus = "agent:sign-out-abacus",
   CancelAbacusAuth = "agent:cancel-abacus-auth",
   OpenAbacusAuthInBrowser = "agent:open-abacus-auth-in-browser",
+  ListBrowserSignInProfiles = "agent:list-browser-sign-in-profiles",
   CancelOpenRouterAuth = "agent:cancel-openrouter-auth",
   ListConnectorStatuses = "agent:list-connector-statuses",
   ConnectConnector = "agent:connect-connector",

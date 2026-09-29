@@ -111,6 +111,7 @@ import {
   openAbacusAuthInBrowser,
   startAbacusAuth,
 } from "./services/providers/abacus-auth-service";
+import { listBrowserSignInProfiles } from "./services/providers/abacus-browser-profiles";
 import { cancelConnectorConnect } from "./services/providers/abacus-connector-service";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import {
@@ -693,26 +694,32 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     return { ok: true };
   });
 
-  ipcMain.handle(IpcChannels.StartAbacusAuth, async (_event, intent) => {
-    const result = await startAbacusAuth(
-      intent === "signin" ? "signin" : "signup"
-    );
-    if (result.ok !== true) {
-      return {
-        ok: false,
-        error: result.error,
-        ...(result.cancelled === true ? { cancelled: true } : {}),
-      };
+  ipcMain.handle(
+    IpcChannels.StartAbacusAuth,
+    async (_event, intent: unknown, browserProfileId: unknown) => {
+      const result = await startAbacusAuth(
+        intent === "signin" ? "signin" : "signup",
+        // Only an id from the listing resolves to a profile; anything else is
+        // a plain sign-in.
+        typeof browserProfileId === "string" ? browserProfileId : undefined
+      );
+      if (result.ok !== true) {
+        return {
+          ok: false,
+          error: result.error,
+          ...(result.cancelled === true ? { cancelled: true } : {}),
+        };
+      }
+
+      const adopted = await adoptAbacusCredential(result.key);
+      if (!adopted.ok) return adopted;
+
+      // Warm the catalog for same-profile sign-ins. A profile switch relaunches,
+      // and the new renderer reads it normally from the target profile.
+      await listAvailableModels(true);
+      return adopted;
     }
-
-    const adopted = await adoptAbacusCredential(result.key);
-    if (!adopted.ok) return adopted;
-
-    // Warm the catalog for same-profile sign-ins. A profile switch relaunches,
-    // and the new renderer reads it normally from the target profile.
-    await listAvailableModels(true);
-    return adopted;
-  });
+  );
 
   ipcMain.handle(
     IpcChannels.SignOutAbacus,
@@ -742,6 +749,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(IpcChannels.OpenAbacusAuthInBrowser, () => {
     openAbacusAuthInBrowser();
   });
+
+  ipcMain.handle(IpcChannels.ListBrowserSignInProfiles, () =>
+    listBrowserSignInProfiles()
+  );
 
   ipcMain.handle(IpcChannels.CancelOpenRouterAuth, () => {
     cancelOpenRouterAuth();

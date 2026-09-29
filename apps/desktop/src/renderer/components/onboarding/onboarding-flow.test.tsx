@@ -71,6 +71,13 @@ vi.mock("../../stores/account-store", () => ({
 }));
 
 const startAbacusAuth = vi.fn(async () => ({ ok: true }) as const);
+/** Chromium profiles main offers on the wall; none unless a test sets some. */
+let browserProfiles: Array<{
+  id: string;
+  browserName: string;
+  profileName: string;
+}> = [];
+const listBrowserSignInProfiles = vi.fn(async () => browserProfiles);
 const cancelAbacusAuth = vi.fn(async () => undefined);
 const skipAccountOnboarding = vi.fn(async () => ({ onboarded: true }));
 const switchWorkspace = vi.fn(async () => undefined);
@@ -144,6 +151,7 @@ beforeEach(() => {
   getSettings.mockResolvedValue({ apiKeys: {} });
   getAbacusAccount.mockResolvedValue({ subscription_tier: null });
   startAbacusAuth.mockResolvedValue({ ok: true });
+  browserProfiles = [];
 
   (globalThis.window as unknown as { api: unknown }).api = {
     skipAccountOnboarding,
@@ -151,6 +159,7 @@ beforeEach(() => {
       addWorkspace,
       getSettings,
       startAbacusAuth,
+      listBrowserSignInProfiles,
       cancelAbacusAuth,
       getAbacusAccount,
       listModels,
@@ -202,6 +211,33 @@ describe("the sign-in wall", () => {
     await waitFor(() =>
       expect(startAbacusAuth).toHaveBeenLastCalledWith("signup")
     );
+  });
+});
+
+describe("a browser already signed in to Abacus.AI", () => {
+  it("is offered on the wall and signs in with the picked profile", async () => {
+    browserProfiles = [
+      { id: "chrome::Default", browserName: "Chrome", profileName: "Work" },
+    ];
+    mount();
+
+    fireEvent.click(
+      await waitFor(() => byId("onboarding-continue-with-browser"))
+    );
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith(
+        "signin",
+        "chrome::Default"
+      )
+    );
+  });
+
+  it("leaves the wall as it was when there is none", async () => {
+    mount();
+
+    await waitFor(() => expect(listBrowserSignInProfiles).toHaveBeenCalled());
+    expect(missing("onboarding-browser-profiles")).toBe(true);
   });
 });
 

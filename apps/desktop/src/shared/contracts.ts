@@ -733,6 +733,12 @@ export type OpenRouterAuthOutcome =
 /** Same contract: the key never leaves main. */
 /** Which first-screen button started an Abacus.AI sign-in. */
 export type AbacusAuthIntent = "signup" | "signin";
+/** A Chromium profile that may hold an Abacus.AI session, offered at sign-in. */
+export interface BrowserSignInProfile {
+  id: string;
+  browserName: string;
+  profileName: string;
+}
 
 export type AbacusAuthOutcome =
   | { ok: true }
@@ -1794,7 +1800,16 @@ export interface AgentApi {
   /** Browser sign-in; resolves when the user finishes, cancels, or it times out. */
   startOpenRouterAuth: () => Promise<OpenRouterAuthOutcome>;
   /** Sign-up or sign-in; resolves when the user finishes, cancels, or it times out. */
-  startAbacusAuth: (intent?: AbacusAuthIntent) => Promise<AbacusAuthOutcome>;
+  /**
+   * With `browserProfileId`, that Chromium profile's Abacus.AI session signs
+   * in, in the app window.
+   */
+  startAbacusAuth: (
+    intent?: AbacusAuthIntent,
+    browserProfileId?: string
+  ) => Promise<AbacusAuthOutcome>;
+  /** Chromium profiles to offer as "Continue with …" (in-app arm only). */
+  listBrowserSignInProfiles: () => Promise<BrowserSignInProfile[]>;
   /**
    * Stash this account's sessions, delete the Abacus key and its connector
    * gateway, and every other stored key too unless `keepOtherApiKeys`.

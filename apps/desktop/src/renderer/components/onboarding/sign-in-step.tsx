@@ -1,8 +1,8 @@
-import { Gift, Brain, Puzzle, Sparkles, UserRound } from "lucide-react";
+import { Gift, Brain, Globe, Puzzle, Sparkles, UserRound } from "lucide-react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { AbacusAuthIntent } from "#shared/contracts";
+import type { AbacusAuthIntent, BrowserSignInProfile } from "#shared/contracts";
 
 import logo from "../../assets/icon2.png";
 import { Button, Spinner } from "../ui";
@@ -22,6 +22,8 @@ export const SignInStep = ({
   busy,
   error,
   onConnect,
+  browserProfiles = [],
+  onContinueWith,
   onCancel,
   onOpenInBrowser,
   dots,
@@ -31,6 +33,10 @@ export const SignInStep = ({
   error: string | null;
   /** `signin` is the returning user's button; it always uses the browser. */
   onConnect: (intent: AbacusAuthIntent) => void;
+  /** Chromium profiles that may already be signed in to Abacus.AI. */
+  browserProfiles?: BrowserSignInProfile[];
+  /** Sign in with a picked profile's session. */
+  onContinueWith?: (profileId: string) => void;
   onCancel: () => void;
   /** Move the pending sign-in to the system browser. */
   onOpenInBrowser: () => void;
@@ -98,6 +104,33 @@ export const SignInStep = ({
       )}
 
       <div className="mt-9 flex w-full flex-col items-center gap-4">
+        {!busy &&
+          browserProfiles.length > 0 &&
+          onContinueWith != null && (
+            // Someone already signed in to Abacus.AI in their browser: one
+            // click, no form. Above sign-up, because they are not new.
+            <div
+              className="flex w-full flex-col gap-2"
+              data-id="onboarding-browser-profiles"
+            >
+              {browserProfiles.map((profile) => (
+                <Button
+                  key={profile.id}
+                  variant="outline"
+                  size="lg"
+                  data-id="onboarding-continue-with-browser"
+                  onClick={() => onContinueWith(profile.id)}
+                  className="h-12 w-full justify-center gap-2 text-sm font-medium"
+                >
+                  <Globe className="size-4" aria-hidden="true" />
+                  {t("onboarding.continueWithBrowser", {
+                    browser: profile.browserName,
+                    profile: profile.profileName,
+                  })}
+                </Button>
+              ))}
+            </div>
+          )}
         <Button
           size="lg"
           data-id="onboarding-connect"

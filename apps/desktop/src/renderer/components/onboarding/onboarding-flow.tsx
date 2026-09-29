@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import type { AbacusAuthIntent } from "#shared/contracts";
@@ -177,11 +177,14 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   };
 
   /** Sign in; the settle effect moves off the wall once the facts change. */
-  const connect = async (intent: AbacusAuthIntent): Promise<void> => {
+  const connect = async (
+    intent: AbacusAuthIntent,
+    browserProfileId?: string
+  ): Promise<void> => {
     setBusy(true);
     setError(null);
     try {
-      const result = await signInToAbacus(intent);
+      const result = await signInToAbacus(intent, browserProfileId);
       if (result.ok !== true) {
         // A cancelled sign-in is a decision, not an error.
         if (result.cancelled !== true) setError(result.error);
@@ -205,6 +208,15 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     }
   };
 
+  // Chromium profiles holding an Abacus.AI session, offered on the wall. Main
+  // answers empty outside the in-app arm; a slow answer only adds buttons.
+  const browserProfiles = useQuery({
+    queryKey: ["onboarding", "browser-sign-in-profiles"],
+    queryFn: () => window.api.agent.listBrowserSignInProfiles(),
+    enabled: step === "auth",
+    staleTime: Infinity,
+  });
+
   if (step === "explainer") return <WelcomeTour onFinish={advance} />;
 
   const dots = <StepDots {...stepProgress(steps, step)} />;
@@ -226,6 +238,8 @@ export const OnboardingFlow = (): React.ReactElement | null => {
             busy={busy}
             error={error}
             onConnect={(intent) => void connect(intent)}
+            browserProfiles={browserProfiles.data ?? []}
+            onContinueWith={(profileId) => void connect("signin", profileId)}
             onCancel={() => void window.api.agent.cancelAbacusAuth()}
             onOpenInBrowser={() =>
               void window.api.agent.openAbacusAuthInBrowser()

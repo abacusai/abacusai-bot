@@ -47,7 +47,7 @@ interface BrowserDefinition {
   executables: Partial<Record<"darwin" | "win32" | "linux", string[]>>;
 }
 
-interface CDPCookie {
+export interface CDPCookie {
   name: string;
   value: string;
   domain: string;
@@ -529,7 +529,9 @@ async function waitForDevToolsPort(
 async function extractCookiesViaCDP(
   execPath: string,
   tempUserDataDir: string,
-  profileDir: string
+  profileDir: string,
+  // Only the cookies these URLs would send; all of them when omitted.
+  urls?: string[]
 ): Promise<CDPCookie[]> {
   const args = [
     `--user-data-dir=${tempUserDataDir}`,
@@ -574,7 +576,10 @@ async function extractCookiesViaCDP(
       throw new Error("No page target found");
     }
 
-    const cookies = await cdpGetAllCookies(pageTarget.webSocketDebuggerUrl);
+    const cookies = await cdpGetAllCookies(
+      pageTarget.webSocketDebuggerUrl,
+      urls
+    );
     return cookies;
   } finally {
     try {
@@ -592,7 +597,10 @@ async function extractCookiesViaCDP(
   }
 }
 
-function cdpGetAllCookies(wsUrl: string): Promise<CDPCookie[]> {
+function cdpGetAllCookies(
+  wsUrl: string,
+  urls?: string[]
+): Promise<CDPCookie[]> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       ws.close();
@@ -613,11 +621,11 @@ function cdpGetAllCookies(wsUrl: string): Promise<CDPCookie[]> {
         };
         if (msg.id === 1) {
           ws.send(
-            JSON.stringify({
-              id: 2,
-              method: "Network.getAllCookies",
-              params: {},
-            })
+            JSON.stringify(
+              urls == null
+                ? { id: 2, method: "Network.getAllCookies", params: {} }
+                : { id: 2, method: "Network.getCookies", params: { urls } }
+            )
           );
         } else if (msg.id === 2) {
           clearTimeout(timeout);
@@ -636,6 +644,110 @@ function cdpGetAllCookies(wsUrl: string): Promise<CDPCookie[]> {
       reject(new Error(`CDP WebSocket error: ${err}`));
     };
   });
+}
+
+// ── Discovery and cookie reads, for callers outside the profile switcher ────
+
+/** Every Chromium profile on this machine, across the known browsers. */
+export function discoverBrowserProfiles(): BrowserProfileInfo[] {
+  const results: BrowserProfileInfo[] = [];
+
+  for (const browser of BROWSERS) {
+    const root = getBrowserDataRoot(browser);
+    if (root == null || !fs.existsSync(root)) continue;
+
+    const localStateCache = readLocalState(root);
+    for (const dir of discoverProfileDirs(root)) {
+      const profileDataPath = path.join(root, dir);
+      results.push({
+        id: `${browser.key}::${dir}`,
+        browserName: browser.name,
+        browserKey: browser.key,
+        profileName: resolveProfileName(dir, profileDataPath, localStateCache),
+        profileDir: dir,
+        profileDataPath,
+        avatarIcon: localStateCache?.[dir]?.avatar_icon ?? undefined,
+      });
+    }
+  }
+
+  return results;
+}
+
+/** Where a profile keeps its cookie database: Network/ since Chrome 96. */
+const COOKIE_FILES = [
+  path.join("Network", "Cookies"),
+  path.join("Network", "Cookies-journal"),
+  "Cookies",
+  "Cookies-journal",
+];
+
+/**
+ * Whether a profile's cookie database mentions `host` at all. Host names are
+ * stored in the clear (only values are encrypted), so a byte search answers
+ * without launching the browser, which is the slow part.
+ */
+export async function profileMentionsHost(
+  profile: BrowserProfileInfo,
+  host: string
+): Promise<boolean> {
+  const needle = Buffer.from(host);
+  for (const file of COOKIE_FILES) {
+    try {
+      const bytes = await fsp.readFile(
+        path.join(profile.profileDataPath, file)
+      );
+      if (bytes.includes(needle)) return true;
+    } catch {
+      // Missing, or locked by the running browser.
+    }
+  }
+  return false;
+}
+
+/**
+ * The cookies a profile would send to `urls`, read by the browser itself from
+ * a temp copy of just its cookie store and Local State (which holds the key
+ * the store is encrypted with on Windows and Linux). Nothing is written to
+ * any Electron session; that is the caller's decision.
+ */
+export async function readProfileCookies(
+  profile: BrowserProfileInfo,
+  urls: string[]
+): Promise<CDPCookie[]> {
+  const browser = BROWSERS.find((b) => b.key === profile.browserKey);
+  const root = browser == null ? null : getBrowserDataRoot(browser);
+  const execPath =
+    browser == null ? null : await findBrowserExecutable(browser);
+  if (root == null || execPath == null) return [];
+
+  const tempDir = path.join(app.getPath("temp"), `bp-import-${randomUUID()}`);
+  try {
+    const dstProfile = path.join(tempDir, profile.profileDir);
+    await fsp.mkdir(path.join(dstProfile, "Network"), { recursive: true });
+    const copies: Array<[string, string]> = [
+      [path.join(root, "Local State"), path.join(tempDir, "Local State")],
+      ...COOKIE_FILES.map((file): [string, string] => [
+        path.join(profile.profileDataPath, file),
+        path.join(dstProfile, file),
+      ]),
+    ];
+    await Promise.all(
+      copies.map(([src, dst]) =>
+        fsp
+          .copyFile(src, dst, fsConstants.COPYFILE_FICLONE)
+          .catch(() => fsp.copyFile(src, dst))
+          .catch(() => {})
+      )
+    );
+
+    const now = Date.now() / 1000;
+    return (
+      await extractCookiesViaCDP(execPath, tempDir, profile.profileDir, urls)
+    ).filter((c) => c.value && !(c.expires > 0 && c.expires < now));
+  } finally {
+    fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 // ── Partition helpers ────────────────────────────────────────────────────────
@@ -673,34 +785,8 @@ export class BrowserProfilesService {
   listProfiles(): BrowserProfileInfo[] {
     if (this.cachedProfiles != null) return this.cachedProfiles;
 
-    const results: BrowserProfileInfo[] = [];
-
-    for (const browser of BROWSERS) {
-      const root = getBrowserDataRoot(browser);
-      if (root == null || !fs.existsSync(root)) continue;
-
-      const localStateCache = readLocalState(root);
-      const profileDirs = discoverProfileDirs(root);
-
-      for (const dir of profileDirs) {
-        const profileDataPath = path.join(root, dir);
-        const name = resolveProfileName(dir, profileDataPath, localStateCache);
-        const avatarIcon = localStateCache?.[dir]?.avatar_icon;
-
-        results.push({
-          id: `${browser.key}::${dir}`,
-          browserName: browser.name,
-          browserKey: browser.key,
-          profileName: name,
-          profileDir: dir,
-          profileDataPath,
-          avatarIcon: avatarIcon ?? undefined,
-        });
-      }
-    }
-
-    this.cachedProfiles = results;
-    return results;
+    this.cachedProfiles = discoverBrowserProfiles();
+    return this.cachedProfiles;
   }
 
   refreshProfiles(): BrowserProfileInfo[] {

@@ -20,6 +20,7 @@ type WindowOptions = {
   url: string;
   onHandOff: () => void;
   onDismissed: () => void;
+  seedCookies?: unknown[];
 };
 let lastWindow: WindowOptions | null = null;
 let windowAvailable = true;
@@ -31,6 +32,12 @@ vi.mock("./abacus-signin-window", () => ({
     if (windowReady != null) await windowReady;
     return windowAvailable ? { close: closeWindow } : null;
   },
+}));
+
+// The cookies a picked browser profile hands over; empty when unreadable.
+let profileCookies: unknown[] = [];
+vi.mock("./abacus-browser-profiles", () => ({
+  browserSignInCookies: async () => profileCookies,
 }));
 
 const openExternal = vi.mocked(shell.openExternal);
@@ -59,6 +66,7 @@ beforeEach(() => {
   lastWindow = null;
   windowAvailable = true;
   windowReady = null;
+  profileCookies = [];
 });
 
 afterEach(() => {
@@ -134,6 +142,24 @@ describe("an in-app sign-in", () => {
     expect(lastWindow).toBeNull();
     const url = new URL(String(openExternal.mock.calls.at(-1)?.[0]));
     expect(url.searchParams.has("isSignUp")).toBe(false);
+  });
+
+  it("signs in with a picked browser profile's session in the window", async () => {
+    profileCookies = [{ name: "auth", value: "v", domain: ".abacus.ai" }];
+    // "signin" alone would go to the browser; the picked profile keeps it here.
+    void startAbacusAuth("signin", "chrome::Default");
+    await settle();
+
+    expect(lastWindow?.seedCookies).toHaveLength(1);
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the plain flow when a picked profile has nothing to read", async () => {
+    void startAbacusAuth("signin", "chrome::Default");
+    await settle();
+
+    expect(lastWindow).toBeNull();
+    expect(openExternal).toHaveBeenCalledTimes(1);
   });
 
   it("uses the browser when there is no window to open", async () => {

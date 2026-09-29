@@ -20,8 +20,11 @@
  * accepts it, and rejects a window claiming to be Chrome ("This browser or
  * app may not be secure").
  *
- * The browser's own cookies are out of reach (they are encrypted to the
- * browser), so provider sessions are this window's own. Its session is
+ * Provider sessions are this window's own. When the user picks a Chromium
+ * profile on the sign-in screen, that profile's Abacus.AI cookies are copied
+ * in first (the in-app browser's import, filtered to Abacus.AI) and the
+ * window goes straight to the connect page, which finishes on the session
+ * it finds; it only shows itself if that session turns out to be gone. Its session is
  * install-wide and persists, and only Abacus.AI's state is cleared per
  * attempt: a sign-out must not sign straight back in, but a provider account
  * the user already signed in to here is offered again, whichever app account
@@ -35,6 +38,7 @@ import { BrowserWindow, session, shell } from "electron";
 import { parentWindow, presentAsDialog } from "../../bring-to-front";
 import { isSafeExternalUrl } from "../../external-links";
 import { profileBaseDir } from "../../profile-home";
+import type { CDPCookie } from "../browser/browser-profiles-service";
 
 /**
  * Install-wide, beside the profile registry: userData lives inside each
@@ -166,6 +170,61 @@ const forgetAbacusSession = async (
     await signInSession.clearStorageData({ origin, storages });
 };
 
+/**
+ * Copy a picked browser profile's Abacus.AI cookies into the sign-in session,
+ * as the in-app browser's import does. A cookie stored without a leading dot
+ * is host-only and stays so: naming a domain would widen it to subdomains.
+ */
+const seedAbacusSession = async (
+  signInSession: Electron.Session,
+  cookies: CDPCookie[]
+): Promise<void> => {
+  await Promise.allSettled(
+    cookies.map((cookie) =>
+      signInSession.cookies.set({
+        url: `https://${cookie.domain.replace(/^\./, "")}${cookie.path || "/"}`,
+        name: cookie.name,
+        value: cookie.value,
+        ...(cookie.domain.startsWith(".") ? { domain: cookie.domain } : {}),
+        path: cookie.path,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        expirationDate: cookie.session ? undefined : cookie.expires,
+        sameSite: seedSameSite(cookie.sameSite),
+      })
+    )
+  );
+};
+
+const seedSameSite = (
+  value?: string
+): "unspecified" | "no_restriction" | "lax" | "strict" => {
+  switch (value?.toLowerCase()) {
+    case "none":
+      return "no_restriction";
+    case "lax":
+      return "lax";
+    case "strict":
+      return "strict";
+    default:
+      return "unspecified";
+  }
+};
+
+// A seeded window stays hidden while the connect page finishes; past this it
+// shows itself, so a stalled page is never an invisible wait.
+const SEEDED_REVEAL_MS = 8000;
+
+/** The connect page for this attempt, which mints the code for a live session. */
+const connectUrlFor = (signInUrl: string): string => {
+  const connect = new URL("/chatllm/connect-bot/", signInUrl);
+  for (const key of ["botChallenge", "botPort", "botPath"]) {
+    const value = new URL(signInUrl).searchParams.get(key);
+    if (value != null) connect.searchParams.set(key, value);
+  }
+  return connect.toString();
+};
+
 /** The loopback callback this attempt listens on, and its result poll. */
 const isOwnCallback = (
   url: string,
@@ -197,10 +256,13 @@ export const openSignInWindow = async ({
   callbackPath,
   onHandOff,
   onDismissed,
+  seedCookies,
 }: {
   url: string;
   port: number;
   callbackPath: string;
+  /** A picked browser profile's Abacus.AI cookies: sign in with its session. */
+  seedCookies?: CDPCookie[];
   /** The flow needs the browser (asked for, or the page failed); the window is already closing. */
   onHandOff: () => void;
   /** The user closed the window before the flow settled. */
@@ -210,6 +272,8 @@ export const openSignInWindow = async ({
 
   const signInSession = session.fromPath(signInSessionPath());
   await forgetAbacusSession(signInSession);
+  const seeded = seedCookies != null && seedCookies.length > 0;
+  if (seeded) await seedAbacusSession(signInSession, seedCookies);
   const signInOrigin = new URL(url).origin;
   // This session remembers provider logins, so Microsoft would silently reuse
   // the last account; its authorize request is rewritten to ask for the
@@ -410,12 +474,7 @@ export const openSignInWindow = async ({
       }
 
       // Signed in: the connect page mints the one-time code for the listener.
-      const connect = new URL("/chatllm/connect-bot/", url);
-      for (const key of ["botChallenge", "botPort", "botPath"]) {
-        const value = new URL(url).searchParams.get(key);
-        if (value != null) connect.searchParams.set(key, value);
-      }
-      void win.loadURL(connect.toString()).catch(() => {});
+      void win.loadURL(connectUrlFor(url)).catch(() => {});
     } catch (error) {
       console.warn(
         `[abacus-auth] Google sign-in failed: ${error instanceof Error ? error.message : String(error)}`
@@ -484,9 +543,29 @@ export const openSignInWindow = async ({
     }
   );
 
-  presentAsDialog(win);
   // Rejections are the did-fail-load cases above, already handled there.
-  void win.loadURL(url).catch(() => {});
+  if (!seeded) {
+    presentAsDialog(win);
+    void win.loadURL(url).catch(() => {});
+    return { close: release };
+  }
+
+  // Seeded: the connect page either finishes out of sight or, with no live
+  // session, sends the user on to sign in, which is when the window is needed.
+  let shown = false;
+  const reveal = (): void => {
+    if (shown || released || win.isDestroyed()) return;
+    shown = true;
+    presentAsDialog(win);
+  };
+  const revealTimer = setTimeout(reveal, SEEDED_REVEAL_MS);
+  win.on("closed", () => clearTimeout(revealTimer));
+  win.webContents.on("did-navigate", (_event, target) => {
+    if (URL.canParse(target) && new URL(target).pathname.includes("/signin")) {
+      reveal();
+    }
+  });
+  void win.loadURL(connectUrlFor(url)).catch(() => {});
 
   return { close: release };
 };
