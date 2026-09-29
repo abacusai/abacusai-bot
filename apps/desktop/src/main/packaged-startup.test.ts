@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { builtinModules } from "node:module";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -46,6 +46,46 @@ const buildIfNeeded = (): void => {
   });
 };
 
+/** Where `name` resolves from `from`, the way Node walks up node_modules. */
+const resolvePackage = (name: string, from: string): string | undefined => {
+  for (let dir = from; ; dir = dirname(dir)) {
+    const candidate = resolve(dir, "node_modules", name, "package.json");
+    if (existsSync(candidate)) return dirname(candidate);
+    if (dir === dirname(dir)) return undefined;
+  }
+};
+
+/** Every package electron-builder packs: the production dependency tree. */
+const packagedDependencies = (): Set<string> => {
+  const packaged = new Set<string>();
+  const pending: Array<[string, string]> = Object.keys(
+    (
+      JSON.parse(readFileSync(resolve(DESKTOP, "package.json"), "utf8")) as {
+        dependencies: Record<string, string>;
+      }
+    ).dependencies
+  ).map((name) => [name, DESKTOP]);
+  while (pending.length > 0) {
+    const [name, from] = pending.pop()!;
+    if (packaged.has(name)) continue;
+    const dir = resolvePackage(name, from);
+    if (dir == null) continue;
+    packaged.add(name);
+    const manifest = JSON.parse(
+      readFileSync(resolve(dir, "package.json"), "utf8")
+    ) as {
+      dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+    };
+    for (const dependency of Object.keys({
+      ...manifest.dependencies,
+      ...manifest.optionalDependencies,
+    }))
+      pending.push([dependency, realpathSync(dir)]);
+  }
+  return packaged;
+};
+
 /** The package a specifier belongs to: `@scope/name/sub` → `@scope/name`. */
 const packageOf = (specifier: string): string => {
   const parts = specifier.split("/");
@@ -67,7 +107,9 @@ const bareImports = (source: string): string[] => {
   const found = new Set<string>();
   const patterns = [
     /(?:^|[\s;{}(])(?:import|export)\s*(?:[\w*{},\s]*?\s*from\s*)?["']([^"'.][^"']*)["']/g,
-    /\brequire\(\s*["']([^"'.][^"']*)["']\s*\)/g,
+    // `__require(` too: rolldown's CommonJS shim, which is how a bundled
+    // package's own requires come out, and what a `\b` cannot see past.
+    /(?:^|[^\w$.])(?:__)?require\(\s*["']([^"'.][^"']*)["']\s*\)/g,
     /\bimport\(\s*["']([^"'.][^"']*)["']\s*\)/g,
   ];
 
@@ -88,13 +130,12 @@ describe("the packaged bundles", () => {
   it("import nothing the packaged app does not contain", () => {
     buildIfNeeded();
 
-    const { dependencies } = JSON.parse(
-      readFileSync(resolve(DESKTOP, "package.json"), "utf8")
-    ) as { dependencies: Record<string, string> };
-    // electron-builder packages `files` plus production dependencies. A
-    // devDependency is a build-time thing and is not in the asar, so an import
-    // that resolves in `pnpm test` can still be missing in the shipped app.
-    const packaged = new Set(Object.keys(dependencies));
+    // electron-builder packages `files` plus production dependencies and
+    // everything they depend on. A devDependency is a build-time thing and is
+    // not in the asar, so an import that resolves in `pnpm test` can still be
+    // missing in the shipped app; a package inlined from devDependencies still
+    // requires its own dependencies at run time, so those must be in the tree.
+    const packaged = packagedDependencies();
 
     const unresolvable = BUNDLES.flatMap((bundle) =>
       bareImports(readFileSync(resolve(DESKTOP, bundle), "utf8"))

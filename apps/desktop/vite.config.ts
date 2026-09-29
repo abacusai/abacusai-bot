@@ -30,8 +30,12 @@ const RELAUNCH_GRACE_MS = 8000;
 // electron-builder.yml also relies on.
 const ortDist = resolve(root, "../../node_modules/onnxruntime-web/dist");
 
+// Hidden: written beside each bundle for generate-notices.js to read, never
+// referenced from it and never packaged (see electron-builder.yml).
+const sourcemap = "hidden";
+
 export default defineConfig({
-  build: { outDir: "dist/renderer" },
+  build: { outDir: "dist/renderer", sourcemap },
   plugins: [
     {
       name: "abacus:dev-server-handle",
@@ -86,7 +90,7 @@ export default defineConfig({
               include: ["extract-zip", "tuf-js", "@abacus-ai/connectors"],
             },
           },
-          options: { build: { outDir: "dist/main" } },
+          options: { build: { outDir: "dist/main", sourcemap } },
         },
         preload: {
           input: "src/preload/index.ts",
@@ -97,6 +101,7 @@ export default defineConfig({
           options: {
             build: {
               outDir: "dist/preload",
+              sourcemap,
               rolldownOptions: { output: { entryFileNames: "[name].cjs" } },
             },
           },

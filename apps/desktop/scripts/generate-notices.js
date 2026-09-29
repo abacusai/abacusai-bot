@@ -16,7 +16,13 @@ function resolvePackage(name, from) {
   }
 }
 
-function visit(directory) {
+/**
+ * `bundled`: reached through a source map rather than a declared dependency.
+ * A dependency of such a package that is not installed was not bundled
+ * either (a platform-specific runtime the bundle never imports), so it is
+ * skipped rather than treated as a broken install.
+ */
+function visit(directory, bundled = false) {
   const dir = fs.realpathSync(directory);
   if (packages.has(dir)) return;
   const pkg = readJson(path.join(dir, "package.json"));
@@ -27,8 +33,9 @@ function visit(directory) {
     ...pkg.peerDependencies,
   })) {
     const dependency = resolvePackage(name, dir);
-    if (dependency) visit(dependency);
+    if (dependency) visit(dependency, bundled);
     else if (
+      !bundled &&
       !pkg.optionalDependencies?.[name] &&
       !pkg.peerDependencies?.[name]
     ) {
@@ -39,32 +46,42 @@ function visit(directory) {
   }
 }
 
-// Source maps identify dependencies bundled into the shared desktop agent,
-// including its devDependencies. No separate list of bundled packages to maintain.
+// Source maps identify dependencies bundled into the desktop's own bundles and
+// the shared agent, including their devDependencies. No separate list of
+// bundled packages to maintain.
+function record(directory) {
+  const dir = fs.realpathSync(directory);
+  if (!packages.has(dir))
+    packages.set(dir, readJson(path.join(dir, "package.json")));
+}
+
 function visitSourceMaps(directory) {
   const maps = fs
     .readdirSync(directory)
-    .filter((name) => name.endsWith(".js.map"));
+    .filter((name) => name.endsWith(".map"));
   if (maps.length === 0)
-    throw new Error(
-      `Build the agent before packaging: no source maps in ${directory}`
-    );
+    throw new Error(`Build before packaging: no source maps in ${directory}`);
   for (const file of maps) {
     const map = readJson(path.join(directory, file));
     for (const source of map.sources) {
       if (!source.includes("node_modules/")) continue;
-      let dir = path.dirname(
-        path.resolve(directory, map.sourceRoot ?? "", source)
-      );
       let found = false;
-      while (dir.includes(`${path.sep}node_modules${path.sep}`)) {
-        const manifest = path.join(dir, "package.json");
-        if (fs.existsSync(manifest) && readJson(manifest).name) {
-          visit(dir);
-          found = true;
-          break;
+      // Relative to the map's directory, or to the build's outDir for a
+      // bundle written into a subdirectory of it (the renderer's assets/).
+      for (const base of [directory, path.dirname(directory)]) {
+        let dir = path.dirname(
+          path.resolve(base, map.sourceRoot ?? "", source)
+        );
+        while (dir.includes(`${path.sep}node_modules${path.sep}`)) {
+          const manifest = path.join(dir, "package.json");
+          if (fs.existsSync(manifest) && readJson(manifest).name) {
+            visit(dir, true);
+            found = true;
+            break;
+          }
+          dir = path.dirname(dir);
         }
-        dir = path.dirname(dir);
+        if (found) break;
       }
       if (!found)
         throw new Error(`Cannot resolve bundled dependency source: ${source}`);
@@ -72,10 +89,51 @@ function visitSourceMaps(directory) {
   }
 }
 
+// Packages the desktop source imports for their files rather than their code
+// (fonts, icons, avatar styles) become emitted assets that no source map
+// names. The import statements name them: a side-effect import of a package
+// (JS `import "pkg"` or CSS `@import "pkg"`), or an import of a file with an
+// asset extension from one. Test files are left out; nothing they import ships.
+const ASSET_IMPORT =
+  /(?:^|[\s;{}(@])import\s+["']([^"'.][^"']*)["']|\bfrom\s*["']([^"'.][^"']*\.(?:svg|png|jpe?g|gif|webp|css|woff2?|ttf|otf|wasm|json))["']/g;
+function visitSourceImports(directory) {
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== "test-support") walk(file);
+      } else if (
+        /\.(?:[cm]?[jt]sx?|css)$/.test(entry.name) &&
+        !/\.test\.[cm]?[jt]sx?$/.test(entry.name)
+      ) {
+        for (const match of fs
+          .readFileSync(file, "utf8")
+          .matchAll(ASSET_IMPORT)) {
+          const specifier = match[1] ?? match[2];
+          if (specifier.startsWith("node:") || specifier.startsWith("#"))
+            continue;
+          const parts = specifier.split("/");
+          const name = specifier.startsWith("@")
+            ? parts.slice(0, 2).join("/")
+            : parts[0];
+          const dependency = resolvePackage(name, desktop);
+          // The package alone: what it depends on is its build tooling, not
+          // part of the files copied out of it.
+          if (dependency) record(dependency);
+        }
+      }
+    }
+  };
+  walk(directory);
+}
+
 visit(desktop);
 visit(path.join(root, "packages/agent"));
 visit(path.join(root, "apps/updater"));
 visitSourceMaps(path.join(root, "packages/agent/dist"));
+for (const bundle of ["main", "preload", "renderer/assets"])
+  visitSourceMaps(path.join(desktop, "dist", bundle));
+visitSourceImports(path.join(desktop, "src"));
 
 const supplements = readJson(path.join(desktop, "build/licenses/sources.json"));
 const sections = [];
@@ -174,7 +232,7 @@ const output = path.join(desktop, "dist/THIRD-PARTY-NOTICES.txt");
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(
   output,
-  `Third-party software in AbacusAI Bot\nGenerated from installed desktop dependencies and bundled agent source maps.\nDependencies may include code removed by tree shaking.\n\n${entries.join("\n\n" + "=".repeat(72) + "\n\n")}\n`
+  `Third-party software in AbacusAI Bot\nGenerated from installed desktop dependencies, desktop source imports and bundled desktop and agent source maps.\nDependencies may include code removed by tree shaking.\n\n${entries.join("\n\n" + "=".repeat(72) + "\n\n")}\n`
 );
 console.log(
   `Generated desktop notices for ${entries.length} dependency and asset entries (${fallback.length} use declared SPDX terms).`

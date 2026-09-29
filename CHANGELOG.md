@@ -7,6 +7,9 @@
 
 ## Unreleased
 
+A smaller download and install: the package no longer carries a second copy
+of the interface libraries that are already built into the app.
+
 The app reports which first-run setup steps it reached, so a setup that stops
 partway can be found and fixed. It follows the same setting as the log sync.
 

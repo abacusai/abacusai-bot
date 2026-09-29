@@ -38,6 +38,18 @@ function fixture() {
   json("packages/agent/dist/main.js.map", {
     sources: ["../../../node_modules/bundled/index.js"],
   });
+  json("apps/desktop/dist/main/index.js.map", { sources: [] });
+  json("apps/desktop/dist/preload/index.cjs.map", { sources: [] });
+  json("apps/desktop/dist/renderer/assets/index.js.map", {
+    sources: ["../../../../../node_modules/rendered/index.js"],
+  });
+  // A font package imported for its CSS, an icon file, and a test's import.
+  write(
+    "apps/desktop/src/renderer/main.tsx",
+    'import "fonts/index.css";\nimport icon from "icons/logo.svg";\n'
+  );
+  write("apps/desktop/src/renderer/x.test.tsx", 'import "unused";\n');
+  write("apps/desktop/src/renderer/index.css", '@import "mono";\n');
   json("apps/desktop/build/licenses/sources.json", []);
   write("apps/desktop/resources/decks/TEMPLATES-LICENSE", "Template copyright");
   write("apps/desktop/resources/pdf/fonts/LICENSE-font.txt", "Font copyright");
@@ -45,6 +57,10 @@ function fixture() {
     "runtime",
     "updates",
     "bundled",
+    "rendered",
+    "fonts",
+    "icons",
+    "mono",
     "transitive",
     "unused",
   ]) {
@@ -96,7 +112,16 @@ function fixture() {
 it("includes runtime, bundled, transitive and asset licenses without unrelated dev tools", () => {
   const { run } = fixture();
   const result = run();
-  for (const name of ["runtime", "updates", "bundled", "transitive"])
+  for (const name of [
+    "runtime",
+    "updates",
+    "bundled",
+    "rendered",
+    "fonts",
+    "icons",
+    "mono",
+    "transitive",
+  ])
     expect(result).toContain(`${name}@1.0.0`);
   expect(result).not.toContain("unused@1.0.0");
   expect(result).toContain("Runtime attribution must be retained");
