@@ -6,23 +6,23 @@
     "upToDate": "最新バージョンです"
   },
   "apiKeys": {
-    "configured": "Configured",
-    "connectAbacus": "Connect Abacus.AI",
-    "connectOpenRouter": "Connect OpenRouter",
-    "connecting": "Finish signing in in your browser…",
-    "filterPlaceholder": "Search model providers…",
-    "getKey": "Open provider site",
-    "invalidKey": "This does not look like an API key. Paste the key only.",
-    "moreProviders": "Other providers",
-    "noMatches": "No model providers match this search.",
-    "notVerified": "Saved, not checked",
-    "notVerifiedHint": "The app checks this key when you send a message.",
-    "remove": "Remove key",
-    "removeDescription": "Deletes the saved key from ~/.abacusai-bot/config.json. Existing chats keep using it until they are restarted.",
-    "removeTitle": "Remove the {{provider}} key?",
-    "replacePlaceholder": "Paste a new {{provider}} API key to replace the saved one",
-    "saveChanges": "Save",
-    "title": "Models"
+    "configured": "設定済み",
+    "connectAbacus": "Abacus.AI を接続",
+    "connectOpenRouter": "OpenRouter を接続",
+    "connecting": "ブラウザでサインインを完了してください…",
+    "filterPlaceholder": "モデルプロバイダーを検索…",
+    "getKey": "プロバイダーのサイトを開く",
+    "invalidKey": "APIキーのようには見えません。キーのみを貼り付けてください。",
+    "moreProviders": "その他のプロバイダー",
+    "noMatches": "この検索に一致するモデルプロバイダーはありません。",
+    "notVerified": "保存済み、未確認",
+    "notVerifiedHint": "メッセージを送信すると、アプリがこのキーを確認します。",
+    "remove": "キーを削除",
+    "removeDescription": "~/.abacusai-bot/config.json に保存されたキーを削除します。既存のチャットは再起動するまでそのキーを使い続けます。",
+    "removeTitle": "{{provider}} のキーを削除しますか？",
+    "replacePlaceholder": "保存済みのキーを置き換える新しい {{provider}} APIキーを貼り付け",
+    "saveChanges": "保存",
+    "title": "モデル"
   },
   "artifacts": {
     "columns": {
@@ -30,9 +30,9 @@
       "session": "セッション",
       "title": "タイトル / 名前"
     },
-    "copied": "Copied",
-    "copyPath": "Copy path",
-    "copyUrl": "Copy URL",
+    "copied": "コピーしました",
+    "copyPath": "パスをコピー",
+    "copyUrl": "URLをコピー",
     "emptyDescription": "エージェントが書き込んだファイルと開いたページがここに集まります。",
     "emptyTitle": "成果物はまだありません",
     "filters": {
@@ -43,21 +43,21 @@
     },
     "itemCount_one": "{{count}} 件",
     "itemCount_other": "{{count}} 件",
-    "missingFile": "This file is no longer on disk.",
+    "missingFile": "このファイルはディスク上に存在しません。",
     "noMatchesDescription": "別の名前、パス、セッション名で試してください。",
     "noMatchesTitle": "一致するものがありません",
-    "openedFolder": "Opened in your file manager.",
+    "openedFolder": "ファイルマネージャーで開きました。",
     "refresh": "更新",
-    "revealInFolder": "Reveal in folder",
+    "revealInFolder": "フォルダーで表示",
     "searchPlaceholder": "成果物とセッションを検索…",
     "unknownSession": "削除されたセッション"
   },
   "bots": {
-    "avatarColor": "Color",
-    "avatarLabel": "Avatar variant",
-    "botOptions": "Bot options",
+    "avatarColor": "色",
+    "avatarLabel": "アバターのバリエーション",
+    "botOptions": "ボットのオプション",
     "cancel": "キャンセル",
-    "changeAvatar": "Try another avatar",
+    "changeAvatar": "別のアバターを試す",
     "create": "作成",
     "delete": "削除",
     "deleteBody": "{{name}} とそのチャットを削除します。この操作は元に戻せません。",
@@ -73,249 +73,249 @@
     "emptyTitle": "ボットはまだありません",
     "home": {
       "categories": {
-        "featured": "Featured",
-        "finance": "Finance",
-        "marketing": "Marketing",
-        "personal-assistant": "Personal Assistant",
-        "productivity": "Productivity",
-        "recruiting": "Recruiting",
-        "research": "Research",
-        "social-media": "Social Media"
+        "featured": "注目",
+        "finance": "ファイナンス",
+        "marketing": "マーケティング",
+        "personal-assistant": "パーソナルアシスタント",
+        "productivity": "生産性",
+        "recruiting": "採用",
+        "research": "リサーチ",
+        "social-media": "ソーシャルメディア"
       },
-      "categoriesLabel": "Template categories",
-      "createCta": "Create Bot",
+      "categoriesLabel": "テンプレートのカテゴリ",
+      "createCta": "ボットを作成",
       "getStarted": "はじめる",
-      "heading": "Create your",
-      "headingAccent": "Bot",
+      "heading": "あなたの",
+      "headingAccent": "ボットを作成",
       "namePlaceholder": "新しいボット",
-      "subtitle": "Name your bot and get started in seconds.",
+      "subtitle": "ボットに名前を付けて、数秒で始めましょう。",
       "suggestions": "おすすめ",
-      "templatesDivider": "Or start with a template"
+      "templatesDivider": "またはテンプレートから始める"
     },
-    "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
-    "modelLabel": "Model",
+    "modelDefault": "アプリのデフォルト",
+    "modelHelp": "このボットのチャットが使用するモデルです。ボットループは安価なモデルに最適化されているため、ボットは安価なモデルでも十分に機能します。",
+    "modelLabel": "モデル",
     "nameLabel": "名前",
     "namePlaceholder": "例: Scout",
     "nameRequired": "名前は必須です。",
     "newBot": "新しいボット",
     "newDialog": {
       "checkIn": {
-        "daily": "Daily",
-        "hourly": "Hourly",
-        "off": "Off",
-        "weekdays": "Weekdays",
-        "weekly": "Weekly"
+        "daily": "毎日",
+        "hourly": "毎時",
+        "off": "オフ",
+        "weekdays": "平日",
+        "weekly": "毎週"
       },
-      "checkInDayLabel": "Day",
-      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
-      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
-      "checkInLabel": "Scheduled check-ins",
-      "checkInRoutineName": "{{name}} check-in",
-      "checkInTimeLabel": "Time",
-      "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Keeps track of my research topics",
-      "instructionsLabel": "Instructions",
-      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
-      "moreOptions": "More options: description, scheduled check-ins, model",
-      "namePlaceholder": "Research Buddy",
-      "title": "New bot"
+      "checkInDayLabel": "曜日",
+      "checkInError": "ボットは作成されましたが、チェックインをスケジュールできませんでした。ルーティンから追加してください。",
+      "checkInHelp": "このスケジュールでボットが起動し、あなたに能動的にメッセージを送ります。",
+      "checkInLabel": "定期チェックイン",
+      "checkInRoutineName": "{{name}} のチェックイン",
+      "checkInTimeLabel": "時刻",
+      "descriptionLabel": "説明（任意）",
+      "descriptionPlaceholder": "自分のリサーチトピックを記録する",
+      "instructionsLabel": "指示",
+      "instructionsPlaceholder": "あなたは鋭く簡潔なリサーチアシスタントです。私が言及したトピックを追跡し、更新情報を積極的に伝えてください。",
+      "moreOptions": "その他のオプション: 説明、定期チェックイン、モデル",
+      "namePlaceholder": "リサーチバディ",
+      "title": "新しいボット"
     },
     "openError": "ボットのチャットを開けませんでした。",
-    "personaLabel": "Persona",
-    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
-    "pin": "Pin",
-    "pinned": "Pinned",
+    "personaLabel": "ペルソナ",
+    "personaPlaceholder": "皮肉っぽく、容赦なく簡潔で、私を「ボス」と呼び、冒頭に絵文字を1つ添える",
+    "pin": "ピン留め",
+    "pinned": "ピン留め済み",
     "save": "保存",
     "saveError": "ボットを保存できませんでした。",
     "senderChat": "{{platform}} での {{sender}} との自動返信チャット",
     "senderChatReadOnly": "自動返信の会話です。{{bot}} がここであなたに代わって {{sender}} に返信します。閲覧はできますが入力はできません。返信の仕方を変えるには、{{bot}} 自身のチャットで伝えてください。",
     "templates": {
       "appointment-assistant": {
-        "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
-        "name": "Appointment Assistant"
+        "description": "確認から準備、リマインダー、再調整まで、予定の管理を一括で行います。",
+        "name": "予約アシスタント"
       },
       "bills-renewal-watch": {
-        "description": "Catches upcoming bills, renewals, free-trial endings, and price increases before they surprise you.",
-        "name": "Bills & Renewal Watch"
+        "description": "請求書、更新、無料トライアルの終了、値上げなどを、驚く前に察知します。",
+        "name": "請求・更新ウォッチ"
       },
       "calendar-concierge": {
-        "description": "Handles scheduling back-and-forth and finds meeting times that actually fit your day.",
-        "name": "Calendar Concierge"
+        "description": "日程調整のやり取りを代行し、実際にあなたの一日に合う時間を見つけます。",
+        "name": "カレンダーコンシェルジュ"
       },
       "campaign-performance-digest": {
-        "description": "Turns campaign numbers into a short weekly read on what worked, what did not, and what to try next.",
-        "name": "Campaign Performance Digest"
+        "description": "キャンペーンの数字を、何が効いて何が効かなかったか、次に何を試すべきかを伝える週次の短いレポートにします。",
+        "name": "キャンペーン成果ダイジェスト"
       },
       "candidate-follow-up": {
-        "description": "Keeps candidates from falling through the cracks when feedback, scheduling, or next steps stall.",
-        "name": "Candidate Follow-Up"
+        "description": "フィードバック、日程調整、次のステップが止まったときに候補者を取りこぼさないようにします。",
+        "name": "候補者フォローアップ"
       },
       "candidate-sourcer": {
-        "description": "Finds candidates with clear job-relevant evidence and prepares personalized outreach for recruiter review.",
-        "name": "Candidate Sourcer"
+        "description": "職務に明確に合致する根拠を持つ候補者を見つけ、採用担当者のレビュー用にパーソナライズしたアウトリーチを準備します。",
+        "name": "候補者ソーサー"
       },
       "chief-of-staff": {
         "description": "メール・カレンダー・Slack を横断して一日を仕切り、判断はあなたに委ねます。",
         "name": "チーフオブスタッフ"
       },
       "comment-mention-assistant": {
-        "description": "Helps you respond quickly to the social comments and mentions that are actually worth your time.",
-        "name": "Comment & Mention Assistant"
+        "description": "本当に対応する価値のあるソーシャルのコメントやメンションに、素早く返信できるよう手伝います。",
+        "name": "コメント・メンションアシスタント"
       },
       "competitor-campaign-watch": {
-        "description": "Tracks how competitors are positioning themselves and what campaigns they are pushing right now.",
-        "name": "Competitor Campaign Watch"
+        "description": "競合がどのようにポジショニングし、現在どんなキャンペーンを展開しているかを追跡します。",
+        "name": "競合キャンペーンウォッチ"
       },
       "competitor-watch": {
-        "description": "Tracks meaningful competitor moves without flooding you with every small update.",
-        "name": "Competitor Watch"
+        "description": "細かな更新であふれさせることなく、意味のある競合の動きを追跡します。",
+        "name": "競合ウォッチ"
       },
       "content-calendar-manager": {
-        "description": "Keeps your content pipeline full and moving from idea to draft to publish-ready.",
-        "name": "Content Calendar Manager"
+        "description": "アイデアから下書き、公開準備まで、コンテンツパイプラインを満たして動かし続けます。",
+        "name": "コンテンツカレンダーマネージャー"
       },
       "content-repurposer": {
-        "description": "Turns one strong idea into platform-native X and LinkedIn content without sounding copy-pasted.",
-        "name": "Content Repurposer"
+        "description": "1つの強力なアイデアを、コピペ感のない X・LinkedIn 向けネイティブなコンテンツに変換します。",
+        "name": "コンテンツ再活用"
       },
       "customer-voice-miner": {
-        "description": "Turns real customer language from Gmail, Slack, and docs into sharper messaging and content ideas.",
-        "name": "Customer Voice Miner"
+        "description": "Gmail・Slack・ドキュメントに眠る実際の顧客の声を、鋭いメッセージングとコンテンツのアイデアに変えます。",
+        "name": "カスタマーボイスマイナー"
       },
       "daily-focus-planner": {
-        "description": "Turns your meetings, messages, and deadlines into a realistic plan for the day.",
-        "name": "Daily Focus Planner"
+        "description": "会議・メッセージ・締め切りを、その日の現実的なプランに変換します。",
+        "name": "デイリーフォーカスプランナー"
       },
       "daily-post-writer": {
-        "description": "Finds one thing worth saying today and turns it into a polished post in your voice.",
-        "name": "Daily Post Writer"
+        "description": "今日語る価値のある一つの話題を見つけ、あなたの言葉で磨き上げた投稿に仕上げます。",
+        "name": "デイリーポストライター"
       },
       "daily-stock-recommender": {
-        "description": "Surfaces a few stocks worth researching today with the thesis, catalyst, risks, and downside case.",
-        "name": "Daily Stock Recommender"
+        "description": "今日調べる価値のある銘柄を、投資テーゼ・カタリスト・リスク・下振れシナリオとともにいくつか提示します。",
+        "name": "デイリー銘柄レコメンダー"
       },
       "decision-researcher": {
-        "description": "Compares your real options on the criteria that matter and recommends the strongest choice.",
-        "name": "Decision Researcher"
+        "description": "重要な基準に基づいて実際の選択肢を比較し、最も有力な選択を提案します。",
+        "name": "ディシジョンリサーチャー"
       },
       "deep-researcher": {
-        "description": "Turns a complex question into a decision-ready brief with evidence, uncertainty, and sources.",
-        "name": "Deep Researcher"
+        "description": "複雑な問いを、根拠・不確実性・出典を備えた意思決定に使えるブリーフに変えます。",
+        "name": "ディープリサーチャー"
       },
       "discord-agent": {
-        "description": "Your agent in Discord - DM it or add it to a server",
-        "name": "Discord Agent"
+        "description": "Discord 上のあなたのエージェントです。DMするか、サーバーに追加してください",
+        "name": "Discord エージェント"
       },
       "earnings-watch": {
-        "description": "Tracks upcoming earnings and explains the numbers, surprises, guidance, and what changed after results.",
-        "name": "Earnings Watch"
+        "description": "今後の決算を追跡し、数字・サプライズ・ガイダンス・発表後の変化を解説します。",
+        "name": "決算ウォッチ"
       },
       "email-drafting": {
-        "description": "Finds emails that need a response and creates clear, context-aware Gmail drafts in your voice.",
-        "name": "Email Drafting"
+        "description": "返信が必要なメールを見つけ、あなたの言葉で状況を踏まえた明確な Gmail の下書きを作成します。",
+        "name": "メールドラフト作成"
       },
       "follow-up-tracker": {
-        "description": "Tracks who owes you a reply, who you owe, and when it is time to follow up.",
-        "name": "Follow-Up Tracker"
+        "description": "誰があなたへの返信を待っているか、誰に返信すべきか、いつフォローアップすべきかを追跡します。",
+        "name": "フォローアップトラッカー"
       },
       "hiring-manager-brief": {
-        "description": "Prepares the hiring manager before each interview with the role, candidate context, and areas to probe.",
-        "name": "Hiring Manager Brief"
+        "description": "各面接の前に、役割・候補者情報・確認すべきポイントを採用担当者に伝えます。",
+        "name": "採用担当者ブリーフ"
       },
       "inbox-to-calendar": {
-        "description": "Turns confirmed plans in Gmail into clean Google Calendar events so important dates never get lost.",
-        "name": "Inbox to Calendar"
+        "description": "Gmail で確定した予定を Google カレンダーのイベントに整理し、重要な日程を見逃さないようにします。",
+        "name": "受信トレイからカレンダーへ"
       },
       "interview-coordinator": {
-        "description": "Handles interview scheduling across candidates and interviewers without endless back-and-forth.",
-        "name": "Interview Coordinator"
+        "description": "候補者と面接官の間の面接日程調整を、延々としたやり取りなしで行います。",
+        "name": "面接コーディネーター"
       },
       "knowledge-finder": {
-        "description": "Finds the answer buried in your Gmail, Slack, or Google Drive history.",
-        "name": "Knowledge Finder"
+        "description": "Gmail・Slack・Google ドライブの履歴に埋もれた答えを見つけます。",
+        "name": "ナレッジファインダー"
       },
       "launch-command-center": {
-        "description": "Keeps a launch moving by surfacing blockers, missing approvals, and commitments before they slip.",
-        "name": "Launch Command Center"
+        "description": "ブロッカー・未承認事項・約束事項が手遅れになる前に表面化させ、ローンチを前に進め続けます。",
+        "name": "ローンチコマンドセンター"
       },
       "meeting-notes-actions": {
-        "description": "Turns meeting notes into decisions, owners, deadlines, and follow-ups you can act on.",
-        "name": "Meeting Notes & Actions"
+        "description": "議事録を、決定事項・担当者・期限・フォローアップというすぐ動ける形に変えます。",
+        "name": "議事録とアクション"
       },
       "meeting-prep-bot": {
-        "description": "Creates a one-page meeting brief with the context, open issues, and questions you need before the call.",
-        "name": "Meeting Prep Bot"
+        "description": "通話前に必要な背景・未解決の課題・質問をまとめた1ページのミーティングブリーフを作成します。",
+        "name": "ミーティング準備ボット"
       },
       "morning-brief": {
-        "description": "Starts your day with meetings, urgent messages, priorities, and the news worth knowing.",
-        "name": "Morning Brief"
+        "description": "会議・急ぎのメッセージ・優先事項・知っておくべきニュースで一日を始めます。",
+        "name": "モーニングブリーフ"
       },
       "news-radar": {
-        "description": "Delivers the most important developments from the last 24 hours without the duplicate headlines and noise.",
-        "name": "News Radar"
+        "description": "重複した見出しやノイズを省き、過去24時間で最も重要な動きを届けます。",
+        "name": "ニュースレーダー"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
-        "name": "Personal Admin"
+        "description": "受信トレイに溜まった各種手続き（フォーム、更新、予約、フォローアップ）を処理します。",
+        "name": "パーソナル事務"
       },
       "portfolio-pulse": {
-        "description": "Alerts you only when something materially changes the story for a stock you care about.",
-        "name": "Portfolio Pulse"
+        "description": "気にかけている銘柄のストーリーに重大な変化があったときだけ通知します。",
+        "name": "ポートフォリオパルス"
       },
       "project-pulse": {
-        "description": "Gives you a clean project status without making you chase people for updates.",
-        "name": "Project Pulse"
+        "description": "進捗を追いかけて聞き回る必要なく、プロジェクトの状況をすっきり把握できます。",
+        "name": "プロジェクトパルス"
       },
       "research-paper-scout": {
-        "description": "Finds new papers worth reading and explains the contribution without making you read every abstract.",
-        "name": "Research Paper Scout"
+        "description": "読む価値のある新しい論文を見つけ、すべての要旨を読まなくても貢献内容を解説します。",
+        "name": "リサーチペーパースカウト"
       },
       "resume-review-assistant": {
-        "description": "Maps each resume to the job requirements so a recruiter can review the evidence consistently.",
-        "name": "Resume Review Assistant"
+        "description": "各履歴書を職務要件に照らして整理し、採用担当者が根拠を一貫してレビューできるようにします。",
+        "name": "履歴書レビューアシスタント"
       },
       "social-inbox-manager": {
-        "description": "Pulls important comments, mentions, and DMs to the top so high-value conversations do not get missed.",
-        "name": "Social Inbox Manager"
+        "description": "重要なコメント・メンション・DMを上位に引き上げ、価値の高いやり取りを見逃さないようにします。",
+        "name": "ソーシャル受信箱マネージャー"
       },
       "spending-digest": {
-        "description": "Turns Gmail receipts into a simple weekly spending summary and flags unusual purchases.",
-        "name": "Spending Digest"
+        "description": "Gmail のレシートを簡潔な週次支出サマリーに変え、通常と異なる購入にフラグを立てます。",
+        "name": "支出ダイジェスト"
       },
       "telegram-agent": {
-        "description": "Your agent in Telegram - message it anytime",
-        "name": "Telegram Agent"
+        "description": "Telegram 上のあなたのエージェントです。いつでもメッセージを送ってください",
+        "name": "Telegram エージェント"
       },
       "travel-planner": {
-        "description": "Turns your bookings and preferences into a realistic day-by-day trip plan.",
-        "name": "Travel Planner"
+        "description": "予約と好みを、現実的な日ごとの旅行プランに変えます。",
+        "name": "トラベルプランナー"
       },
       "trend-scout": {
-        "description": "Finds fast-growing conversations in your niche and gives you an original angle before everyone piles in.",
-        "name": "Trend Scout"
+        "description": "あなたのニッチで急成長している話題を見つけ、みんなが乗り出す前に独自の切り口を提供します。",
+        "name": "トレンドスカウト"
       },
       "weekly-review": {
-        "description": "Closes the week with what moved forward, what slipped, and what matters next.",
-        "name": "Weekly Review"
+        "description": "前進したこと、遅れたこと、次に重要なことで一週間を締めくくります。",
+        "name": "週次レビュー"
       },
       "whats-hot": {
-        "description": "Finds fast-rising stories and conversations across the internet before they become old news.",
-        "name": "What's Hot?"
+        "description": "インターネット上で急速に広がっているニュースや会話を、古くなる前に見つけます。",
+        "name": "今話題のこと"
       },
       "whatsapp-agent": {
-        "description": "Your agent in WhatsApp - message it anytime",
-        "name": "WhatsApp Agent"
+        "description": "WhatsApp 上のあなたのエージェントです。いつでもメッセージを送ってください",
+        "name": "WhatsApp エージェント"
       }
     },
     "title": "ボット",
     "titleLabel": "役割",
     "titlePlaceholder": "例: Research Scout",
-    "unpin": "Unpin",
+    "unpin": "ピン留めを解除",
     "viewBots": "ボット",
     "viewSessions": "セッション",
-    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "この会話は {{app}} 上にあります。そこで Abacus AI ボットにメッセージを送ってください。あなたとボットのやり取りはすべてここにも表示されます。",
+    "channelChatReadOnlyWhatsapp": "この会話は WhatsApp 上にあります。そこにある「自分にメッセージ」チャットから、自分自身にメッセージを送ってください。あなたとボットのやり取りはすべてここにも表示されます。"
   },
   "browserPermission": {
     "allow": "許可",
@@ -332,19 +332,19 @@
     "approvalSubtitle": "エージェントがブラウズ前に承認を求めるかどうかを選択します。",
     "approvalTitle": "承認",
     "chrome": {
-      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
-      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
-      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
-      "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
-      "install": "Install the extension",
-      "connect": "Connect",
-      "disconnect": "Disconnect",
-      "tokenTitle": "Extension token",
-      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
-      "tokenSave": "Save token",
-      "tokenSaved": "Token saved.",
-      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+      "notFound": "このコンピューターに Google Chrome または Microsoft Edge が見つかりませんでした。",
+      "extensionMissing": "エージェントが操作できるように、{{browser}} に Playwright 拡張機能をインストールしてください。",
+      "ready": "{{browser}} の準備ができています。今すぐ接続するか、エージェントの最初のブラウザタスク時に {{browser}} で確認が表示されます。",
+      "connecting": "ブラウザで接続を許可するのをお待ちしています…",
+      "connected": "{{browser}} に接続済み: AbacusAI Bot グループ内のタブ {{count}} 件。",
+      "install": "拡張機能をインストール",
+      "connect": "接続",
+      "disconnect": "切断",
+      "tokenTitle": "拡張機能のトークン",
+      "tokenPlaceholder": "許可ページをスキップするには、拡張機能のトークンを貼り付けてください",
+      "tokenSave": "トークンを保存",
+      "tokenSaved": "トークンを保存しました。",
+      "tokenHint": "任意項目です。トークンは拡張機能の許可ページに表示されます。保存しておくと、毎回確認せずにアプリが接続します。"
     },
     "clearAction": "すべての閲覧データを削除",
     "clearSubtitle": "アプリ内ブラウザのサイトデータとキャッシュを削除します",
@@ -353,21 +353,21 @@
     "dataSection": "データ",
     "done": "完了",
     "engine": {
-      "builtin": "Built-in browser",
-      "chrome": "My Chrome"
+      "builtin": "内蔵ブラウザ",
+      "chrome": "自分の Chrome"
     },
-    "engineSection": "Which browser",
-    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
-    "engineTitle": "Browser the agent uses",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page",
+    "engineSection": "使用するブラウザ",
+    "engineSubtitle": "アプリ自体のブラウザか、ログイン状態やタブを保持したあなたの Chrome かを選べます。",
+    "engineTitle": "エージェントが使用するブラウザ",
+    "homepageInvalid": "有効なウェブアドレスを入力してください。",
+    "homepageSave": "保存",
+    "homepageSaved": "ホームページを保存しました。",
+    "homepageTitle": "ホームページ",
     "masterSubtitle": "エージェントに内蔵ブラウザーの操作を許可する",
-    "masterTitle": "Browser",
+    "masterTitle": "ブラウザ",
     "permissionsSection": "権限",
     "subtitle": "エージェントの組み込みブラウザを管理します。",
-    "title": "Browser"
+    "title": "ブラウザ"
   },
   "capabilities": {
     "skills": {
@@ -375,34 +375,34 @@
       "emptyTitle": "スキルはまだありません"
     },
     "tabs": {
-      "label": "Capabilities",
+      "label": "機能",
       "mcp": "MCP",
       "connectors": "コネクタ",
       "skills": "スキル",
       "tools": "ツール"
     },
     "toolDescriptions": {
-      "ast_edit": "Structural search-and-replace that cannot break the syntax.",
+      "ast_edit": "構文を壊すことのない、構造的な検索と置換を行います。",
       "bash": "ワークスペースでシェルコマンドを実行します。",
-      "batch_edit": "Change several places in one file in a single edit.",
-      "batch_file_read": "Read several files in one go.",
-      "bfl_flux3_get_result": "Check whether a submitted job has finished.",
-      "bfl_flux3_image_to_video": "Start a video generation from a still image.",
-      "bfl_flux3_keyframes_to_video": "Start a video generation from keyframes.",
-      "bfl_flux3_prompting_guide": "Read the prompting guide for better results.",
-      "bfl_flux3_text_to_video": "Start a video generation from a prompt.",
-      "bfl_flux3_video_continuation": "Continue an existing video.",
+      "batch_edit": "1つのファイル内の複数箇所を、1回の編集でまとめて変更します。",
+      "batch_file_read": "複数のファイルを一度に読み取ります。",
+      "bfl_flux3_get_result": "送信したジョブが完了したかどうかを確認します。",
+      "bfl_flux3_image_to_video": "静止画から動画生成を開始します。",
+      "bfl_flux3_keyframes_to_video": "キーフレームから動画生成を開始します。",
+      "bfl_flux3_prompting_guide": "より良い結果を得るためのプロンプトガイドを読みます。",
+      "bfl_flux3_text_to_video": "プロンプトから動画生成を開始します。",
+      "bfl_flux3_video_continuation": "既存の動画の続きを生成します。",
       "browser_execute": "開いているページでJavaScriptを実行します。",
       "browser_interact": "ページ上でクリック・入力・スクロール・ホバーします。",
       "browser_navigate": "内蔵ブラウザでURLを開きます。",
       "browser_snapshot": "ページを操作可能な要素の一覧として読み取ります。",
-      "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
-      "code_map": "Index the functions and classes in a file or folder.",
-      "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",
-      "cronjob": "Create, list, pause, or run scheduled tasks.",
-      "deck_export_pdf": "Render an HTML slide deck to PDF, one page per slide.",
-      "delegate_task": "Hand a piece of work to a sub-agent.",
-      "design": "Design screens and export them as mockups.",
+      "browser_task": "ウェブタスク全体をブラウザのサブエージェントに任せ、結果を受け取ります。",
+      "code_map": "ファイルまたはフォルダー内の関数とクラスをインデックス化します。",
+      "connect_connector": "Gmail や Slack などのサービスを接続するようユーザーに依頼し、そのツールを使えるようにします。",
+      "cronjob": "スケジュールされたタスクの作成、一覧表示、一時停止、実行を行います。",
+      "deck_export_pdf": "HTMLのスライドデッキを、スライドごとに1ページのPDFとして書き出します。",
+      "delegate_task": "作業の一部をサブエージェントに任せます。",
+      "design": "画面をデザインし、モックアップとして書き出します。",
       "device_app": "アプリのインストール・起動・終了・削除を行います。",
       "device_boot": "シミュレータまたはエミュレータを起動します。",
       "device_build": "対象プラットフォーム向けにワークスペースをビルドします。",
@@ -412,338 +412,338 @@
       "device_screenshot": "デバイスの画面を画像として取得します。",
       "device_shutdown": "起動中のシミュレータまたはエミュレータを終了します。",
       "device_snapshot": "画面を要素の一覧として読み取ります。",
-      "disconnect_connector": "Detach a connected service's account.",
+      "disconnect_connector": "接続済みサービスのアカウントを切断します。",
       "discord_auto_reply": "選んだ相手からの Discord メッセージに自動返信します（ボットのみ）。",
-      "document": "Write a document and print it as a PDF.",
+      "document": "文書を作成し、PDFとして印刷します。",
       "edit": "ファイル内の完全に一致するテキストを置き換えます。",
-      "exit_plan_mode": "Ask to leave plan mode and start carrying out the plan.",
-      "fetch_background_output": "Read what a background command has printed, while it runs or after it finishes.",
+      "exit_plan_mode": "プランモードを終了し、プランの実行を開始するよう依頼します。",
+      "fetch_background_output": "バックグラウンドコマンドが出力した内容を、実行中または完了後に読み取ります。",
       "glob": "名前のパターンでファイルを探します。",
       "grep": "正規表現でファイルの内容を検索します。",
-      "ha_call_service": "Call a service to change something.",
-      "ha_get_state": "Read the current state of an entity.",
-      "ha_list_entities": "List Home Assistant entities.",
-      "ha_list_services": "List the services that can be called.",
-      "image_generate": "Generate an image from a prompt.",
-      "kill_process": "Stop a command running in the background.",
+      "ha_call_service": "サービスを呼び出して何かを変更します。",
+      "ha_get_state": "エンティティの現在の状態を読み取ります。",
+      "ha_list_entities": "Home Assistant のエンティティを一覧表示します。",
+      "ha_list_services": "呼び出し可能なサービスを一覧表示します。",
+      "image_generate": "プロンプトから画像を生成します。",
+      "kill_process": "バックグラウンドで実行中のコマンドを停止します。",
       "list_discord_chats": "Discord のチャットと連絡先を一覧表示します。",
       "list_telegram_chats": "Telegram のチャットと連絡先を一覧表示します。",
       "list_whatsapp_chats": "WhatsApp のチャットと連絡先を一覧表示します。",
       "ls": "ディレクトリの中身を一覧表示します。",
-      "memory": "Save and recall notes that outlive the session.",
-      "pdf": "Read, merge, split, watermark, fill or reprint a PDF.",
-      "ppt": "Build a presentation and print it as a PDF.",
-      "present_deliverable": "Present the finished files, most important first, and open the top one.",
+      "memory": "セッションをまたいで残るメモを保存・呼び出しします。",
+      "pdf": "PDFの読み取り、結合、分割、透かしの追加、フォーム入力、再印刷を行います。",
+      "ppt": "プレゼンテーションを作成し、PDFとして印刷します。",
+      "present_deliverable": "完成したファイルを重要な順に提示し、最初のファイルを開きます。",
       "read": "ディスク上のファイルを読み取ります。",
       "read_discord_messages": "求めに応じて最近の Discord メッセージを読みます。",
-      "read_output": "Read back output that was too large to show in full.",
+      "read_output": "全体を表示しきれなかった出力を読み返します。",
       "read_telegram_messages": "求めに応じて最近の Telegram メッセージを読みます。",
       "read_whatsapp_messages": "求めに応じて最近の WhatsApp メッセージを読みます。",
-      "run_tests": "Run the project's tests and report what passed and failed.",
+      "run_tests": "プロジェクトのテストを実行し、成功と失敗を報告します。",
       "send_discord_message": "Discord でメッセージを送信します。",
       "send_telegram_message": "Telegram でメッセージを送信します。",
       "send_whatsapp_message": "WhatsApp でメッセージを送信します。",
       "serve": "作成した Web ページを開けるように、フォルダーを http で配信します。",
-      "session_search": "Search past conversations.",
-      "skill_add": "Install a skill from the marketplace.",
-      "skill_manage": "Create, edit, or remove a skill.",
-      "skill_view": "Read a skill's full instructions.",
-      "skills_list": "List the skills available to load.",
-      "spotify_albums": "Look up album details.",
-      "spotify_devices": "List and pick a playback device.",
-      "spotify_library": "Read and update your saved library.",
-      "spotify_playback": "Play, pause, skip, and control volume.",
-      "spotify_playlists": "Read and modify playlists.",
-      "spotify_queue": "See and add to the play queue.",
-      "spotify_search": "Search tracks, albums, artists, and playlists.",
+      "session_search": "過去の会話を検索します。",
+      "skill_add": "マーケットプレイスからスキルをインストールします。",
+      "skill_manage": "スキルの作成、編集、削除を行います。",
+      "skill_view": "スキルの完全な手順を読みます。",
+      "skills_list": "読み込み可能なスキルを一覧表示します。",
+      "spotify_albums": "アルバムの詳細を調べます。",
+      "spotify_devices": "再生デバイスを一覧表示して選択します。",
+      "spotify_library": "保存済みライブラリの読み取りと更新を行います。",
+      "spotify_playback": "再生・一時停止・スキップ・音量の操作を行います。",
+      "spotify_playlists": "プレイリストの読み取りと変更を行います。",
+      "spotify_queue": "再生キューの確認と追加を行います。",
+      "spotify_search": "曲・アルバム・アーティスト・プレイリストを検索します。",
       "telegram_auto_reply": "選んだ相手からの Telegram メッセージに自動返信します（ボットのみ）。",
-      "text_to_speech": "Turn text into spoken audio.",
-      "todo": "Keep a plan for multi-step work and tick items off.",
-      "video_analyze": "Describe or answer questions about a video.",
-      "video_generate": "Generate a video from a prompt, image, or reference.",
-      "vision_analyze": "Describe or answer questions about an image.",
-      "web_fetch": "Fetch a web page and read it as text.",
-      "web_search": "Search the web and return ranked results.",
+      "text_to_speech": "テキストを音声に変換します。",
+      "todo": "複数ステップの作業のプランを保持し、完了した項目にチェックを付けます。",
+      "video_analyze": "動画について説明したり、質問に答えたりします。",
+      "video_generate": "プロンプト・画像・参照素材から動画を生成します。",
+      "vision_analyze": "画像について説明したり、質問に答えたりします。",
+      "web_fetch": "ウェブページを取得し、テキストとして読み取ります。",
+      "web_search": "ウェブを検索し、順位付けされた結果を返します。",
       "whatsapp_auto_reply": "選んだ相手からの WhatsApp メッセージに自動返信します（ボットのみ）。",
       "write": "ファイルを新規作成、または既存のファイルを上書きします。",
-      "x_search": "Search public posts and threads on X.",
-      "xai_video_edit": "Edit an already generated video.",
-      "xai_video_extend": "Extend a generated video further."
+      "x_search": "X 上の公開投稿やスレッドを検索します。",
+      "xai_video_edit": "生成済みの動画を編集します。",
+      "xai_video_extend": "生成済みの動画をさらに延長します。"
     },
     "tools": {
-      "alwaysOn": "Always on",
-      "disabledDetail": "Off. The agent isn't told these tools exist.",
-      "enabledDetail": "On. The agent can call these tools.",
+      "alwaysOn": "常にオン",
+      "disabledDetail": "オフです。エージェントにはこれらのツールの存在が伝えられません。",
+      "enabledDetail": "オンです。エージェントはこれらのツールを呼び出せます。",
       "mcpNote": "接続中のMCPサーバーは、これらに加えて独自のツールを追加します。",
-      "noMatches": "No toolset matches that.",
-      "noModelTools": "This capability doesn't add any tools the model calls directly.",
-      "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
-      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
-      "resizePanels": "Resize toolsets and details",
-      "searchPlaceholder": "Search toolsets and tools…",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools"
+      "noMatches": "一致するツールセットはありません。",
+      "noModelTools": "この機能は、モデルが直接呼び出すツールを追加しません。",
+      "planned": "まだ利用できません",
+      "plannedDetail": "まだ実装されていないため、オンにできません。今後の予定として一覧に表示しています。APIキーが不足しているわけではありません。",
+      "restartNote": "変更は次回のセッションから適用されます。ツールの一覧はセッション開始時にエージェントへ渡されます。",
+      "resizePanels": "ツールセットと詳細のサイズを変更",
+      "searchPlaceholder": "ツールセットとツールを検索…",
+      "toolCount_one": "{{count}} 個のツール",
+      "toolCount_other": "{{count}} 個のツール"
     },
     "toolsets": {
       "a2a": {
-        "description": "Agent-to-agent protocol support, so other agents can call this one and it can call them.",
+        "description": "エージェント間（A2A）プロトコルのサポートです。他のエージェントがこのエージェントを呼び出したり、逆にこのエージェントが他を呼び出したりできます。",
         "label": "A2A"
       },
       "bfl": {
-        "description": "Black Forest Labs FLUX 3 video generation. Jobs take minutes, so submitting returns an id to poll.",
-        "label": "BFL FLUX 3 Video"
+        "description": "Black Forest Labs FLUX 3 による動画生成です。ジョブの完了には数分かかるため、送信するとポーリング用のIDが返されます。",
+        "label": "BFL FLUX 3 動画"
       },
       "browser": {
-        "description": "Drive the built-in browser: open pages, read them, click and type. Web tasks run in their own sub-agent.",
-        "label": "Browser Automation"
+        "description": "内蔵ブラウザを操作します: ページを開き、読み取り、クリックや入力を行います。ウェブタスクは専用のサブエージェントで実行されます。",
+        "label": "ブラウザ自動操作"
       },
       "connectors": {
-        "description": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
-        "label": "Connectors"
+        "description": "接続済みのコネクタをエージェントが確認できるようにし、必要なものがあれば接続ボタンを提示します。エージェントのターンはあなたの操作を待ちます。",
+        "label": "コネクタ"
       },
       "cronjob": {
-        "description": "Create and manage scheduled tasks that run on their own.",
-        "label": "Cron Jobs"
+        "description": "自動で実行されるスケジュールタスクを作成・管理します。",
+        "label": "Cron ジョブ"
       },
       "delegation": {
-        "description": "Hand a self-contained piece of work to a sub-agent.",
-        "label": "Task Delegation"
+        "description": "独立した作業をサブエージェントに任せます。",
+        "label": "タスクの委任"
       },
       "deliverables": {
-        "description": "Hand finished files to you as clickable links, open the first one in the preview pane, and file them all under Artifacts.",
-        "label": "Deliverables"
+        "description": "完成したファイルをクリック可能なリンクとして渡し、最初のファイルをプレビューパネルで開き、すべてを「成果物」にまとめます。",
+        "label": "成果物"
       },
       "design": {
-        "description": "Design product screens as mockups or wireframes.",
-        "label": "Design"
+        "description": "プロダクト画面をモックアップやワイヤーフレームとしてデザインします。",
+        "label": "デザイン"
       },
       "device": {
-        "description": "Build for and control iOS simulators and Android emulators.",
-        "label": "Devices"
+        "description": "iOS シミュレーターと Android エミュレーター向けにビルドし、操作します。",
+        "label": "デバイス"
       },
       "file": {
-        "description": "Read, write, and edit files, and search the workspace by name or contents.",
-        "label": "File Operations"
+        "description": "ファイルの読み取り・書き込み・編集を行い、名前や内容でワークスペースを検索します。",
+        "label": "ファイル操作"
       },
       "homeassistant": {
-        "description": "Read and control smart home devices through Home Assistant.",
+        "description": "Home Assistant を通じてスマートホームデバイスを読み取り・制御します。",
         "label": "Home Assistant"
       },
       "image_gen": {
-        "description": "Generate images from a prompt.",
-        "label": "Image Generation"
+        "description": "プロンプトから画像を生成します。",
+        "label": "画像生成"
       },
       "memory": {
-        "description": "Remember things across sessions instead of starting cold every time.",
-        "label": "Memory"
+        "description": "毎回ゼロから始めるのではなく、セッションをまたいで物事を記憶します。",
+        "label": "メモリ"
       },
       "messaging": {
         "description": "接続済みのチャットアプリ（WhatsApp、Telegram、Discord）から、ユーザー本人またはそのボットとしてメッセージを送信します。",
         "label": "メッセージング"
       },
       "pdf": {
-        "description": "Write, read and edit PDF documents.",
-        "label": "PDFs"
+        "description": "PDF文書の作成・読み取り・編集を行います。",
+        "label": "PDF"
       },
       "plan_mode": {
-        "description": "Lets the agent ask to leave plan mode and start carrying out the plan it showed you.",
-        "label": "Plan mode"
+        "description": "エージェントがプランモードを終了し、提示したプランの実行を開始するよう依頼できるようにします。",
+        "label": "プランモード"
       },
       "ppt": {
-        "description": "Build a designed slide deck from a brief and show it in the preview pane.",
-        "label": "Slide decks"
+        "description": "指示内容からデザイン済みのスライドデッキを作成し、プレビューパネルに表示します。",
+        "label": "スライドデッキ"
       },
       "process": {
-        "description": "Start a command that keeps running, read what it has printed, and stop it. Also reads output that was too large to show in full.",
-        "label": "Background processes"
+        "description": "実行し続けるコマンドを開始し、出力を読み取り、停止します。全体を表示しきれなかった出力の読み取りにも対応します。",
+        "label": "バックグラウンドプロセス"
       },
       "session_search": {
-        "description": "Search past conversations and recall what was decided.",
-        "label": "Session Search"
+        "description": "過去の会話を検索し、決定事項を思い出します。",
+        "label": "セッション検索"
       },
       "skills": {
-        "description": "List, read, and manage skills as tools, rather than only loading them as context.",
-        "label": "Skills"
+        "description": "コンテキストとして読み込むだけでなく、スキルをツールとして一覧表示・読み取り・管理します。",
+        "label": "スキル"
       },
       "spotify": {
-        "description": "Playback, search, playlists, and library access.",
+        "description": "再生、検索、プレイリスト、ライブラリへのアクセスです。",
         "label": "Spotify"
       },
       "terminal": {
-        "description": "Run shell commands in the workspace.",
-        "label": "Terminal & Processes"
+        "description": "ワークスペースでシェルコマンドを実行します。",
+        "label": "ターミナルとプロセス"
       },
       "todo": {
-        "description": "Plan and track multi-step work so long tasks don't drift.",
-        "label": "Task Planning"
+        "description": "複数ステップの作業をプランし、追跡することで長いタスクが脱線しないようにします。",
+        "label": "タスクプランニング"
       },
       "tts": {
-        "description": "Turn text into audio.",
-        "label": "Text-to-Speech"
+        "description": "テキストを音声に変換します。",
+        "label": "テキスト読み上げ"
       },
       "video": {
-        "description": "Analyse video content. Needs a video-capable model.",
-        "label": "Video Analysis"
+        "description": "動画コンテンツを解析します。動画に対応したモデルが必要です。",
+        "label": "動画解析"
       },
       "video_gen": {
-        "description": "Generate video from a prompt, an image, or a reference.",
-        "label": "Video Generation"
+        "description": "プロンプト・画像・参照素材から動画を生成します。",
+        "label": "動画生成"
       },
       "vision": {
-        "description": "Look at images and describe or reason about what's in them.",
-        "label": "Vision / Image Analysis"
+        "description": "画像を見て、その内容を説明したり推論したりします。",
+        "label": "ビジョン / 画像解析"
       },
       "web": {
-        "description": "Search the web and pull readable content out of pages.",
-        "label": "Web Search & Scraping"
+        "description": "ウェブを検索し、ページから読み取り可能なコンテンツを抽出します。",
+        "label": "ウェブ検索とスクレイピング"
       },
       "x_search": {
-        "description": "Search public posts and threads on X.",
-        "label": "X (Twitter) Search"
+        "description": "X 上の公開投稿やスレッドを検索します。",
+        "label": "X（Twitter）検索"
       }
     }
   },
   "changelog": {
-    "current": "This version",
-    "empty": "No releases to show yet.",
-    "subtitle": "Every release, newest first. The version you are running is marked."
+    "current": "このバージョン",
+    "empty": "表示できるリリースはまだありません。",
+    "subtitle": "すべてのリリースを新しい順に表示します。現在使用中のバージョンには印が付きます。"
   },
   "common": {
-    "back": "Back",
-    "cancel": "Cancel",
+    "back": "戻る",
+    "cancel": "キャンセル",
     "close": "閉じる",
-    "loading": "Loading",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "sidebar": "Sidebar",
-    "toggleSidebar": "Toggle sidebar"
+    "loading": "読み込み中",
+    "mobileSidebarDescription": "モバイル用のサイドバーを表示します。",
+    "sidebar": "サイドバー",
+    "toggleSidebar": "サイドバーの切り替え"
   },
   "connectorRequest": {
-    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
-    "connect": "Connect {{provider}}",
-    "connecting": "Connecting… check your browser to complete the steps",
-    "decline": "Not now",
-    "failed": "Could not connect {{provider}}.",
+    "body": "エージェントが使用する前に {{provider}} を接続する必要があります。あなたの操作をお待ちしています。",
+    "connect": "{{provider}} を接続",
+    "connecting": "接続しています… ブラウザで手順を完了してください",
+    "decline": "今はしない",
+    "failed": "{{provider}} を接続できませんでした。",
     "stop": "接続を中止",
-    "title": "{{provider}} is not connected"
+    "title": "{{provider}} は接続されていません"
   },
   "connectors": {
-    "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
-    "abacusConnected": "{{name}} connected",
-    "abacusConnecting": "Finish connecting {{name}} in your browser…",
-    "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
-    "abacusDisconnected": "{{name}} disconnected",
-    "abacusSignInFailed": "Could not sign in to Abacus.AI. Please try again.",
-    "abacusSigningIn": "Sign in to Abacus.AI in your browser to continue…",
-    "add": "Add",
-    "addFailed": "Could not add {{name}}.",
-    "added": "{{name}} added.",
-    "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
-    "adding": "Adding…",
+    "abacusConnectCancelled": "{{name}} の追加を中止しました。",
+    "abacusConnectFailed": "{{name}} を追加できませんでした。もう一度お試しください。",
+    "abacusConnected": "{{name}} を接続しました",
+    "abacusConnecting": "ブラウザで {{name}} の接続を完了してください…",
+    "abacusDisconnectFailed": "{{name}} を切断できませんでした。もう一度お試しください。",
+    "abacusDisconnected": "{{name}} を切断しました",
+    "abacusSignInFailed": "Abacus.AI にサインインできませんでした。もう一度お試しください。",
+    "abacusSigningIn": "続けるにはブラウザで Abacus.AI にサインインしてください…",
+    "add": "追加",
+    "addFailed": "{{name}} を追加できませんでした。",
+    "added": "{{name}} を追加しました。",
+    "agentKeyHint": "このマシン上にエージェントの認証情報として保存され、エージェントが実行するツールから使用されます。Abacus.AI に送信されることはありません。",
+    "adding": "追加しています…",
     "auth": {
-      "key": "API key",
-      "oauth": "Sign-in",
-      "oauth-client": "Sign-in + app",
-      "token": "Token",
-      "abacus": "Abacus account"
+      "key": "APIキー",
+      "oauth": "サインイン",
+      "oauth-client": "サインイン + アプリ",
+      "token": "トークン",
+      "abacus": "Abacus アカウント"
     },
-    "cancel": "Cancel",
+    "cancel": "キャンセル",
     "categories": {
-      "data": "Data & Analytics",
-      "development": "Development",
-      "featured": "Featured",
-      "infrastructure": "Infrastructure",
-      "payments": "Payments",
-      "productivity": "Productivity",
-      "support": "Customer Support",
-      "web": "Web & Browsers",
-      "abacus-connectors": "Abacus.AI Connectors"
+      "data": "データ・分析",
+      "development": "開発",
+      "featured": "注目",
+      "infrastructure": "インフラストラクチャー",
+      "payments": "決済",
+      "productivity": "生産性",
+      "support": "カスタマーサポート",
+      "web": "ウェブ・ブラウザ",
+      "abacus-connectors": "Abacus.AI コネクタ"
     },
-    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
-    "clientId": "Client ID",
-    "clientSecret": "Client secret (if issued)",
-    "connect": "Connect {{name}}",
-    "connectAction": "Connect",
+    "chromeMissing": "{{name}} は Google Chrome を操作しますが、このコンピューターに Chrome が見つかりませんでした。google.com/chrome からインストールすると、ブラウザツールが使用できるようになります。",
+    "clientId": "クライアントID",
+    "clientSecret": "クライアントシークレット（発行されている場合）",
+    "connect": "{{name}} を接続",
+    "connectAction": "接続",
     "credentialHint": "Stored in this app's MCP configuration on your machine, and sent only to this コネクタ's server.",
-    "docs": "Open documentation",
-    "marketplace": "Marketplace",
-    "mcpSignInFailed": "Sign-in failed: {{error}}",
+    "docs": "ドキュメントを開く",
+    "marketplace": "マーケットプレイス",
+    "mcpSignInFailed": "サインインに失敗しました: {{error}}",
     "noMatches": "No コネクタ match that search.",
     "noneInstalled": "No コネクタ added yet.",
     "notInstalled": "未インストール",
-    "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL: add this to your app",
-    "remove": "Remove",
-    "removeFailed": "Could not remove {{name}}.",
-    "removed": "{{name}} removed.",
+    "oauthClientHint": "このプロバイダーはアプリを自動登録しないため、開発者コンソールでアプリを作成し、その認証情報をここに貼り付けてください。",
+    "redirectUrlLabel": "リダイレクトURL: これをアプリに追加してください",
+    "remove": "削除",
+    "removeFailed": "{{name}} を削除できませんでした。",
+    "removed": "{{name}} を削除しました。",
     "search": "Search コネクタ",
-    "signInAction": "Sign in",
-    "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
-    "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added. Opening your browser to sign in…",
-    "signingInAction": "Signing in…",
-    "token": "Token",
-    "whereToGet": "Where do I get this?",
-    "yours": "Yours",
+    "signInAction": "サインイン",
+    "signInFailed": "{{name}} は追加されましたが、サインインが完了しませんでした: {{error}} MCPパネルから再試行できます。",
+    "signedIn": "{{name}} はサインイン済みで準備ができています。次回のセッション開始時に接続されます。",
+    "signingIn": "{{name}} を追加しました。サインインのためブラウザを開いています…",
+    "signingInAction": "サインインしています…",
+    "token": "トークン",
+    "whereToGet": "これはどこで取得できますか？",
+    "yours": "あなたの",
     "descriptions": {
-      "messaging-whatsapp": "Chat with the agent from WhatsApp, and let it message people as you. Connects by scanning a QR code with your phone.",
-      "messaging-telegram": "Chat with the agent from Telegram, and let it message people as you. Connects by scanning a QR code with your phone.",
-      "messaging-discord": "Chat with the agent from Discord, and let it message people as you. Connects by scanning a QR code with the Discord app, or by linking the Abacus AI bot.",
-      "abacus-gmailuser": "Read, search, draft and send mail from your Gmail account.",
-      "abacus-googledriveuser": "Browse, read and manage files, docs and spreadsheets in your Drive.",
-      "abacus-googlecalendar": "Check availability, list events and schedule meetings on your calendar.",
-      "abacus-slack": "Search, read and post in your Slack workspace: one click, no Slack app to create.",
-      "abacus-outlook": "Read, search and send mail from your Outlook account.",
-      "abacus-onedrive": "Browse, read and manage files in your OneDrive.",
-      "abacus-jira": "Search, create and update issues in your Jira projects.",
-      "abacus-confluence": "Search and read pages in your Confluence spaces.",
-      "abacus-dropbox": "Browse, read and manage files in your Dropbox.",
-      "abacus-twitter": "Read and post on X with your own account.",
-      "github": "Repos, issues and pull requests through the gh CLI, with your own token, private repos included.",
-      "playwright": "Drive a real browser: navigate, click, fill forms, and read the page back.",
-      "huggingface": "Search models, datasets and Spaces, and read their cards.",
-      "cloudflare-docs": "The Cloudflare developer documentation, searchable by the agent.",
-      "zapier": "Thousands of app actions behind one server, wired to your Zapier account.",
-      "abacus-figmauser": "Read files, projects and design data from your Figma account.",
-      "abacus-zoom": "Look up meetings, recordings and users in your Zoom account (read-only).",
-      "abacus-docusign": "Envelopes, templates and signing workflows from your DocuSign account.",
-      "abacus-gcpcloud": "Compute, Storage, BigQuery and more, through your Google Cloud service account.",
-      "notion": "Search the workspace, read pages, and write notes back into it.",
-      "canva": "Find, create and export designs without leaving the conversation.",
-      "stripe": "Customers, payments and subscriptions, queried and created.",
-      "paypal": "Invoices, orders and disputes over PayPal’s own server."
+      "messaging-whatsapp": "WhatsApp からエージェントとチャットし、あなたに代わって人にメッセージを送らせます。スマートフォンでQRコードをスキャンして接続します。",
+      "messaging-telegram": "Telegram からエージェントとチャットし、あなたに代わって人にメッセージを送らせます。スマートフォンでQRコードをスキャンして接続します。",
+      "messaging-discord": "Discord からエージェントとチャットし、あなたに代わって人にメッセージを送らせます。Discord アプリでQRコードをスキャンするか、Abacus AI ボットをリンクして接続します。",
+      "abacus-gmailuser": "自分の Gmail アカウントからメールを読み取り、検索し、下書きを作成し、送信します。",
+      "abacus-googledriveuser": "自分の Drive にあるファイル・ドキュメント・スプレッドシートの閲覧・読み取り・管理を行います。",
+      "abacus-googlecalendar": "自分のカレンダーで空き状況を確認し、予定を一覧表示し、会議をスケジュールします。",
+      "abacus-slack": "自分の Slack ワークスペースで検索・閲覧・投稿を行います。ワンクリックで接続でき、Slack アプリの作成は不要です。",
+      "abacus-outlook": "自分の Outlook アカウントからメールを読み取り、検索し、送信します。",
+      "abacus-onedrive": "自分の OneDrive にあるファイルの閲覧・読み取り・管理を行います。",
+      "abacus-jira": "自分の Jira プロジェクトの課題を検索・作成・更新します。",
+      "abacus-confluence": "自分の Confluence スペースのページを検索・閲覧します。",
+      "abacus-dropbox": "自分の Dropbox にあるファイルの閲覧・読み取り・管理を行います。",
+      "abacus-twitter": "自分のアカウントで X の閲覧・投稿を行います。",
+      "github": "gh CLI を通じて、自分のトークンでリポジトリ・課題・プルリクエストを扱います。プライベートリポジトリも含まれます。",
+      "playwright": "実際のブラウザを操作します: 移動、クリック、フォーム入力、ページの読み取りを行います。",
+      "huggingface": "モデル・データセット・Spaces を検索し、そのカードを読み取ります。",
+      "cloudflare-docs": "Cloudflare の開発者向けドキュメントをエージェントが検索できます。",
+      "zapier": "1つのサーバーの背後にある数千のアプリアクションを、あなたの Zapier アカウントに接続します。",
+      "abacus-figmauser": "自分の Figma アカウントからファイル・プロジェクト・デザインデータを読み取ります。",
+      "abacus-zoom": "自分の Zoom アカウントのミーティング・録画・ユーザーを確認します（読み取り専用）。",
+      "abacus-docusign": "自分の DocuSign アカウントのエンベロープ・テンプレート・署名ワークフローを扱います。",
+      "abacus-gcpcloud": "自分の Google Cloud サービスアカウントを通じて、Compute・Storage・BigQuery などを扱います。",
+      "notion": "ワークスペースを検索し、ページを読み取り、ノートを書き戻します。",
+      "canva": "会話を離れることなく、デザインの検索・作成・書き出しを行います。",
+      "stripe": "顧客・決済・サブスクリプションを照会・作成します。",
+      "paypal": "PayPal 自体のサーバーを通じて、請求書・注文・異議申し立てを扱います。"
     }
   },
   "creditsCard": {
-    "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going. No card needed.",
-    "cta": "Upgrade",
-    "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer for free, with no limits.",
-    "or": "or",
-    "paidBody": "Top up your account to keep going.",
-    "paidTitle": "You've used all your Pro Abacus.AI credits",
-    "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
-    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
-    "switchTitle": "You've used all your free Abacus.AI credits",
-    "title": "You've used all your free Abacus.AI credits",
-    "topUpCta": "Top up",
-    "upsellBody": "Get access to premium models",
-    "upsellTitle": "Unlock the full potential",
-    "inviteCta": "Or invite friends for free credits"
+    "body": "すべての機能を解放",
+    "connectBody": "無料のソースを接続すれば続けられます。カードは不要です。",
+    "cta": "アップグレード",
+    "dismiss": "閉じる",
+    "localBody": "または、このコンピューター上でモデルを無料・無制限で実行できます。",
+    "or": "または",
+    "paidBody": "続けるにはアカウントにチャージしてください。",
+    "paidTitle": "Pro Abacus.AI クレジットをすべて使い切りました",
+    "pickBody": "続けるには、右下のモデル選択で別のモデルを選んでください。",
+    "switchBody": "続けるには、右下のモデル選択で {{providers}} のモデルを選んでください。",
+    "switchTitle": "無料の Abacus.AI クレジットをすべて使い切りました",
+    "title": "無料の Abacus.AI クレジットをすべて使い切りました",
+    "topUpCta": "チャージ",
+    "upsellBody": "プレミアムモデルを利用できるようになります",
+    "upsellTitle": "すべての機能を解放",
+    "inviteCta": "または友達を招待して無料クレジットを獲得"
   },
   "deepAgentCard": {
-    "body": "For complex agentic tasks",
-    "cta": "Go to Abacus AI Agent",
+    "body": "複雑なエージェントタスク向け",
+    "cta": "Abacus AI Agent を開く",
     "title": "Abacus AI Agent"
   },
   "deliverables": {
-    "files": "Files",
-    "openInBrowser": "Open in browser",
-    "showInFolder": "Show in folder",
-    "showLess": "Show less",
-    "showMore": "+{{count}} more"
+    "files": "ファイル",
+    "openInBrowser": "ブラウザで開く",
+    "showInFolder": "フォルダーで表示",
+    "showLess": "表示を減らす",
+    "showMore": "他 {{count}} 件を表示"
   },
   "devicePanel": {
     "axPermissionNeeded": "ウインドウを表示せずにシミュレーターをミラーリングするにはアクセシビリティの許可が必要です。",
@@ -808,11 +808,11 @@
   "deviceSetup": {
     "androidAvdDesc": "Android SDK は見つかりましたが、仮想デバイスがありません。Android Studio の Tools → Device Manager で作成してください。",
     "androidDesc": "Android Studio をインストールし、Tools → Device Manager で仮想デバイスを作成してください。",
-    "androidTitle": "Android · Android Studio",
+    "androidTitle": "Android・Android Studio",
     "download": "ダウンロード",
     "iosDesc": "Mac App Store から Xcode をインストールし、一度開いてセットアップを完了してください。シミュレーターがここに表示されます。",
     "iosRuntimeDesc": "Xcode はインストール済みですが、シミュレーターが見つかりません。Xcode → 設定 → Components から iOS ランタイムをダウンロードしてください。",
-    "iosTitle": "iOS · Xcode",
+    "iosTitle": "iOS・Xcode",
     "recheck": "再確認する"
   },
   "diff": {
@@ -829,39 +829,39 @@
   },
   "execBackends": {
     "daytona": {
-      "description": "Run commands in a Daytona cloud sandbox.",
+      "description": "Daytona のクラウドサンドボックスでコマンドを実行します。",
       "label": "Daytona"
     },
     "docker": {
-      "description": "Run commands in a container with the workspace mounted at the same path.",
+      "description": "ワークスペースを同じパスにマウントしたコンテナ内でコマンドを実行します。",
       "label": "Docker"
     },
-    "fellBack": "{{selected}} isn't usable right now, so commands are running {{effective}}.",
-    "inUse": "In use",
+    "fellBack": "{{selected}} は現在使用できないため、コマンドは {{effective}} で実行されています。",
+    "inUse": "使用中",
     "local": {
-      "description": "Run commands directly on this machine. No isolation.",
-      "label": "Local"
+      "description": "このマシン上で直接コマンドを実行します。分離はありません。",
+      "label": "ローカル"
     },
-    "missingBinary": "{{command}} wasn't found on your PATH.",
-    "missingEnv": "Set {{vars}} to use this backend.",
+    "missingBinary": "{{command}} がPATH上に見つかりませんでした。",
+    "missingEnv": "このバックエンドを使用するには {{vars}} を設定してください。",
     "modal": {
-      "description": "Run commands in a Modal cloud sandbox.",
+      "description": "Modal のクラウドサンドボックスでコマンドを実行します。",
       "label": "Modal"
     },
     "singularity": {
-      "description": "Run commands in a Singularity/Apptainer container (HPC-friendly, rootless).",
+      "description": "Singularity/Apptainer コンテナ（HPC向け、rootless）でコマンドを実行します。",
       "label": "Singularity / Apptainer"
     },
     "ssh": {
-      "description": "Run commands on a remote host over SSH.",
+      "description": "SSH経由でリモートホスト上のコマンドを実行します。",
       "label": "SSH"
     },
-    "title": "Execution backend",
-    "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "title": "実行バックエンド",
+    "unimplemented": "AbacusAI Bot はここではまだコマンドを実行できません。",
+    "unsupportedPlatform": "Windows では利用できません: コンテナにはPOSIX形式のホストパスにあるワークスペースが必要です。代わりにローカルバックエンドを使用してください。"
   },
   "firstBot": {
-    "title": "We have created your first bot for you, enjoy!"
+    "title": "最初のボットを作成しました。お楽しみください！"
   },
   "greeting": {
     "afternoon": {
@@ -946,26 +946,26 @@
     "started": "開始しました。専用セッションで実行されます。"
   },
   "localModels": {
-    "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
-    "download": "Download {{size}} and use it",
-    "downloading": "{{received}} of {{total}} ({{percent}}%)",
-    "installed": "Installed",
-    "machine": "This computer has {{memory}} of memory.",
-    "onThisMachine": "On this machine",
-    "recommended": "Recommended",
-    "remove": "Remove",
-    "sectionHint": "Models the app downloads and runs here with the bundled llama.cpp. They join RouteLLM - Open as its last resort.",
-    "stopDownload": "Stop download",
-    "tight": "That is tight for this model; answers will be slow.",
-    "title": "Use a local model",
-    "unavailable": "This build of the app cannot run models locally.",
-    "use": "Use {{model}}",
-    "useLocal": "Use a local model",
-    "verifying": "Checking the download…"
+    "description": "このコンピューター上で動作するモデルです。アカウント・キー・クォータは不要です。クラウドより低速ですが、決して枯渇しません。",
+    "download": "{{size}} をダウンロードして使用",
+    "downloading": "{{total}} 中 {{received}}（{{percent}}%）",
+    "installed": "インストール済み",
+    "machine": "このコンピューターのメモリは {{memory}} です。",
+    "onThisMachine": "このマシン上",
+    "recommended": "おすすめ",
+    "remove": "削除",
+    "sectionHint": "アプリがダウンロードし、内蔵の llama.cpp でここで実行するモデルです。RouteLLM - Open の最後の手段として加わります。",
+    "stopDownload": "ダウンロードを停止",
+    "tight": "このモデルには容量が厳しく、応答が遅くなります。",
+    "title": "ローカルモデルを使用",
+    "unavailable": "このビルドのアプリでは、モデルをローカルで実行できません。",
+    "use": "{{model}} を使用",
+    "useLocal": "ローカルモデルを使用",
+    "verifying": "ダウンロードを確認しています…"
   },
   "logs": {
-    "saveFailed": "Could not save logs: {{error}}",
-    "saved": "Logs saved to {{path}}"
+    "saveFailed": "ログを保存できませんでした: {{error}}",
+    "saved": "ログを {{path}} に保存しました"
   },
   "mcpManagement": {
     "add": "追加",
@@ -1011,7 +1011,7 @@
       "file": "ファイルからインポート…",
       "paste": "クリップボードから JSON を貼り付け",
       "success": "{{count}} 件のサーバーをインポートしました。",
-      "deepagent": "Import from DeepAgent"
+      "deepagent": "DeepAgent からインポート"
     },
     "namePlaceholder": "サーバー名",
     "nameRequired": "サーバー名は必須です。",
@@ -1028,17 +1028,17 @@
     "restartFailed": "再起動に失敗しました: {{error}}",
     "runtimeStatus": {
       "authRequired": "認証が必要",
-      "connected": "Connected",
-      "connecting": "Connecting",
-      "disconnected": "Off",
-      "error": "Error",
-      "idle": "Not connected"
+      "connected": "接続済み",
+      "connecting": "接続中",
+      "disconnected": "オフ",
+      "error": "エラー",
+      "idle": "未接続"
     },
     "save": "保存",
     "signIn": "サインイン",
-    "signInDone": "Signed in to {{name}}.",
-    "signInFailed": "Sign-in failed: {{error}}",
-    "signingIn": "Waiting for the browser…",
+    "signInDone": "{{name}} にサインインしました。",
+    "signInFailed": "サインインに失敗しました: {{error}}",
+    "signingIn": "ブラウザでの操作を待っています…",
     "title": "MCPサーバー",
     "toggleFailed": "サーバーの更新に失敗しました。",
     "toolCount_one": "{{count}} 個のツール",
@@ -1046,64 +1046,64 @@
     "urlRequired": "URLは必須です。",
     "viewLogs": "ログ",
     "abacusConnectors": {
-      "title_one": "{{count}} Abacus connector, served through this server:",
-      "title_other": "{{count}} Abacus connectors, served through this server:",
-      "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
-      "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
+      "title_one": "このサーバー経由で提供される Abacus コネクタ {{count}} 件:",
+      "title_other": "このサーバー経由で提供される Abacus コネクタ {{count}} 件:",
+      "none": "アカウントにはまだ Abacus コネクタが接続されていません。「コネクタ」ページで接続すると、ここに表示されます。",
+      "loading": "接続済みのコネクタを確認しています…",
+      "unavailable": "接続済みのコネクタを現在確認できませんでした。Abacus.AI にサインインするか、もう一度お試しください。"
     }
   },
   "memory": {
-    "clear": "Clear all",
-    "clearConfirm": "Forget everything here?",
-    "clearNo": "Keep",
-    "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
-    "forget": "Forget this",
-    "loading": "Reading memory…",
-    "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
-    "storeEmpty": "Nothing here yet.",
+    "clear": "すべて削除",
+    "clearConfirm": "ここにあるものをすべて忘れさせますか？",
+    "clearNo": "保持",
+    "clearYes": "すべて忘れる",
+    "empty": "まだ何も記憶されていません。セッションをまたいで残す価値があると判断すると、エージェントが自らここに書き込みます。あなたの好みや、環境についての情報などです。",
+    "forget": "これを忘れる",
+    "loading": "メモリを読み込み中…",
+    "readFailed": "記憶されている内容を読み込めませんでした。ファイルは ~/.abacusai-bot/memories にあります。",
+    "storeEmpty": "まだここには何もありません。",
     "stores": {
       "memory": {
-        "help": "Environment facts, project conventions, and tool quirks it worked out for itself.",
-        "title": "The agent's own notes"
+        "help": "環境の情報、プロジェクトの規約、自分で把握したツールの癖などです。",
+        "title": "エージェント自身のメモ"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
-        "title": "Always remember"
+        "help": "あなたが記憶しておくよう頼んだ内容です。どのチャットでも「青が好きだと覚えておいて」のように伝えるとここに追加され、次のメッセージ以降、すべてのプロンプトに含まれます。",
+        "title": "常に記憶する"
       },
       "user": {
-        "help": "Preferences, habits, and how you like to work.",
-        "title": "About you"
+        "help": "好み、習慣、仕事の進め方についての情報です。",
+        "title": "あなたについて"
       }
     },
-    "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
-    "title": "Memory",
+    "subtitle": "エージェントがセッションをまたいで記憶することを選んだ内容です。削除はすぐに反映されますが、すでに開いているセッションは再起動するまで開始時点の内容を保持します。",
+    "title": "メモリ",
     "writeFailed": "削除されていません。同じタイミングで別のセッションがメモリに書き込んでいました。もう一度お試しください。",
     "instructions": {
-      "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
-      "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
-      "save": "Save",
-      "saveFailed": "Could not save. Check that the settings folder is writable.",
-      "unsaved": "Unsaved",
-      "applies": "Applies to your next message, including in a chat already open."
+      "title": "カスタム指示",
+      "description": "すべての会話の指示の末尾に、常にモデルへ送信されます。トーン、言語、ハウススタイル、絶対にしてほしくないことなど、あなたが望む対応の仕方に使ってください。",
+      "placeholder": "例: イギリス英語で答えてください。絵文字は使わないでください。コマンドを実行する前に見せてください。",
+      "save": "保存",
+      "saveFailed": "保存できませんでした。設定フォルダーに書き込み権限があるか確認してください。",
+      "unsaved": "未保存",
+      "applies": "次のメッセージから適用されます。すでに開いているチャットにも適用されます。"
     },
-    "rememberedToast": "Added to my AI brain.",
+    "rememberedToast": "私のAIの記憶に追加しました。",
     "sections": {
-      "sessions": "Sessions",
-      "bots": "Bots"
+      "sessions": "セッション",
+      "bots": "ボット"
     },
     "bots": {
-      "notes": "{{count}} day(s) of working notes on disk.",
-      "empty": "This bot has not saved any core memories yet."
+      "notes": "ディスク上に {{count}} 日分の作業メモがあります。",
+      "empty": "このボットはまだコアメモリを保存していません。"
     }
   },
   "messaging": {
     "advanced": "詳細設定 ({{count}})",
     "approve": "承認",
     "approvedUsers": "承認済み ({{count}})",
-    "cancelConnect": "Cancel",
+    "cancelConnect": "キャンセル",
     "clearField": "この値をクリア",
     "descriptions": {
       "discord": "自分のDiscordからエージェントとチャットし、あなたとして相手にメッセージを送らせます。QRコードのスキャンで接続します。",
@@ -1113,13 +1113,13 @@
     "discordConnected": "接続済みです。エージェントはあなたのDiscordアカウントとして送信します。",
     "discordOpenLogin": "Discordログインを開く",
     "discordScan": "Discordのログインウィンドウが開きました。DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。",
-    "doneConnect": "Continue",
+    "doneConnect": "続行",
     "enablePlatform": "プラットフォームを有効にする",
     "fields": {
       "discordBotToken": "ボットトークン"
     },
     "fromEnvironment": "環境変数 {{key}} で設定されています",
-    "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
+    "finishLinkFirst": "セットアップを完了するには、Abacus AI ボットのリンクを済ませてください。",
     "getCredentials": "認証情報を取得",
     "needsSetup": "設定が必要です",
     "openSetupGuide": "セットアップガイドを開く",
@@ -1128,7 +1128,7 @@
       "discord": "Discord",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
-      "abacusDiscord": "Abacus AI bot on Discord",
+      "abacusDiscord": "Discord 上の Abacus AI ボット",
       "abacusTelegram": "Telegram"
     },
     "recommended": "推奨",
@@ -1148,67 +1148,67 @@
       "workspace": "ワークスペース",
       "workspaceActive": "アクティブなワークスペースに従う",
       "workspaceHelp": "受信したメッセージをどのプロジェクトで実行するかを指定します。",
-      "deliverToBot": "Deliver messages to a bot",
-      "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot (one session per sender)"
+      "deliverToBot": "メッセージをボットに配信する",
+      "deliverToBotHelp": "受信したメッセージは、送信者情報付きでこのボットのチャットに届きます。オフにすると、送信者ごとに個別のセッションになります。",
+      "deliverToBotNone": "ボットなし（送信者ごとに1セッション）"
     },
     "setup": {
       "discord": "「接続」をクリックするとDiscordのログインウィンドウが開きます。DiscordアプリでQRをスキャンするか、メールとパスワードでログインしてください。するとAbacusAI Botはあなた自身のDiscordアカウントとして送信します（ボットもトークンも不要です）。",
       "telegram": "「接続」をクリックするとTelegramのログインウィンドウが開きます。いつも通りログインしてください。スマホでQRをスキャン（設定、デバイス、デバイスを追加）するか、電話番号かパスキーを使います。するとAbacusAI Botはあなた自身のTelegramアカウントとして送信します。APIキーもボットも不要です。",
       "whatsapp": "これを有効にしたうえで、スマートフォンの WhatsApp から下の QR コードをスキャンしてください（設定、リンク済みデバイス、デバイスをリンク）。AbacusAI Bot がそのアカウントのデバイスとしてリンクされるため、個人の番号ではなく専用の番号を使うことをおすすめします。"
     },
-    "stepSignIn": "First, sign in to {{app}}",
+    "stepSignIn": "まず、{{app}} にサインインしてください",
     "states": {
       "connected": "接続済み",
       "connecting": "接続中",
       "disabled": "無効",
       "error": "エラー",
-      "needs_link": "Finish linking",
-      "needs_login": "Waiting for login",
+      "needs_link": "リンクを完了してください",
+      "needs_login": "ログイン待ち",
       "not_configured": "未設定",
       "pending_restart": "再起動待ち",
-      "rate_limited": "Rate limited",
+      "rate_limited": "レート制限中",
       "syncing": "同期中"
     },
     "telegramConnected": "接続済みです。エージェントはあなたのTelegramアカウントとして送信します。",
     "telegramOpenLogin": "Telegramログインを開く",
     "telegramScan": "Telegramのログインウィンドウが開きました。スマホでQRをスキャンするか（設定、デバイス、デバイスを追加）、電話番号でログインしてください。",
-    "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
+    "twoStepSetup": "2つのステップがあり、どちらも必要です: {{app}} にサインインし、次に Abacus AI ボットをリンクすることで、どのデバイスからでもエージェントにアクセスできるようになります。両方完了するまでセットアップは終わりません。",
     "unsavedChanges": "未保存の変更",
     "whatsappConnected": "接続済みです。エージェントはあなたのWhatsAppアカウントとして送信します。",
     "whatsappOpenLogin": "WhatsAppログインを開く",
     "whatsappScan": "WhatsAppのログインウィンドウが開きました。スマートフォンの WhatsApp からその QR をスキャンしてください: 設定、リンク済みデバイス、デバイスをリンク。",
     "whatsappSyncing": "リンク済みです。WhatsApp がチャットをこのデバイスに同期しています。初回は数分かかります。完了するまで、スマートフォンの WhatsApp とこのアプリを開いたままにしてください。",
     "sharedLink": {
-      "title": "Abacus AI bot",
-      "stepLink": "Then, link the Abacus AI bot",
-      "intro": "Reach your agent from any device by messaging the shared Abacus AI bot. No token to paste: one scan or tap, and you're linked.",
-      "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
-      "link": "Link Abacus AI bot",
-      "step1": "1. Add Abacus AI to your Discord (Add to My Apps).",
-      "addToDiscord": "Add to Discord",
-      "step2Copy": "2. Copy this command:",
-      "step3Dm": "3. Open your chat with the bot (message icon on its profile), paste, and send:",
-      "openDm": "Open Abacus AI's chat",
-      "copy": "Copy",
-      "copied": "Copied",
-      "preparing": "Getting your link code…",
-      "retry": "Try again",
-      "waiting": "Waiting for the command to land in Discord…",
-      "linked": "Linked. Message the Abacus AI bot in {{app}} to talk to your agent.",
-      "linkedAs": "Linked as {{name}}. Message the Abacus AI bot in {{app}} to talk to your agent.",
-      "unlink": "Unlink",
-      "telegramStep": "Scan this with your phone's camera app (not the scanner inside Telegram), or open the link on your phone, then tap Start.",
-      "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
+      "title": "Abacus AI ボット",
+      "stepLink": "次に、Abacus AI ボットをリンクします",
+      "intro": "共有の Abacus AI ボットにメッセージを送るだけで、どのデバイスからでもエージェントにアクセスできます。トークンの貼り付けは不要です。1回のスキャンまたはタップでリンクされます。",
+      "requiredIntro": "これはセットアップの後半部分です。Abacus AI ボットをリンクすることで、スマートフォンからエージェントにメッセージを送れるようになります。以下の手順に従ってください。",
+      "link": "Abacus AI ボットをリンク",
+      "step1": "1. Discord に Abacus AI を追加します（「マイアプリに追加」）。",
+      "addToDiscord": "Discord に追加",
+      "step2Copy": "2. このコマンドをコピーします:",
+      "step3Dm": "3. ボットとのチャットを開き（プロフィールのメッセージアイコン）、貼り付けて送信します:",
+      "openDm": "Abacus AI のチャットを開く",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "preparing": "リンクコードを取得しています…",
+      "retry": "もう一度試す",
+      "waiting": "コマンドが Discord に届くのを待っています…",
+      "linked": "リンクしました。{{app}} で Abacus AI ボットにメッセージを送ると、エージェントと話せます。",
+      "linkedAs": "{{name}} としてリンクしました。{{app}} で Abacus AI ボットにメッセージを送ると、エージェントと話せます。",
+      "unlink": "リンク解除",
+      "telegramStep": "スマートフォンのカメラアプリでこれをスキャンする（Telegram内のスキャナーではありません）か、スマートフォンでリンクを開いてから「Start」をタップしてください。",
+      "waitingTelegram": "Telegram で Start がタップされるのを待っています…"
     }
   },
   "notificationSettings": {
-    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
-    "enableTitle": "Notify me",
-    "soundSubtitle": "Uses your system notification sound.",
-    "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
-    "title": "Notifications"
+    "enableSubtitle": "タスクが完了したとき、またはツールが承認を待っているときに通知します。ウィンドウにフォーカスがないときのみです。",
+    "enableTitle": "通知する",
+    "soundSubtitle": "システムの通知音を使用します。",
+    "soundTitle": "音を鳴らす",
+    "subtitle": "他のことをしている間に AbacusAI Bot が伝えてくれる内容です",
+    "title": "通知"
   },
   "notifications": {
     "codeSessionFallback": "コード セッション",
@@ -1218,65 +1218,65 @@
     "waitingForApproval": "承認を待っています: {{toolName}}"
   },
   "onboarding": {
-    "abacusConnected": "Abacus.AI is successfully connected",
+    "abacusConnected": "Abacus.AI の接続に成功しました",
     "connectBody": "ブラウザが開き、サインイン（またはアカウント作成）します。アプリは専用のAPIキーを受け取り、パスワードがアプリに渡ることはありません。",
     "connectCta": "サインアップ / サインイン",
     "connectTitle": "Abacus.AIを接続",
-    "connectorsContinueCta": "Continue",
-    "connectorsSkipCta": "Continue without connectors",
-    "setupAbacusNote": "An Abacus.AI account is still the shortest route: it is free, starts with $2 of credit and a few free models, and it is the one that brings the connectors.",
-    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
-    "setupConnectorsCta": "Browse connectors",
-    "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue",
-    "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "setupKeyPlaceholder": "Paste your {{provider}} API key",
-    "setupSaveCta": "Save",
-    "setupSignInCta": "Sign in / Create Free Account",
+    "connectorsContinueCta": "続行",
+    "connectorsSkipCta": "コネクタなしで続行",
+    "setupAbacusNote": "Abacus.AI アカウントは今も最短のルートです。無料で、$2分のクレジットといくつかの無料モデルから始まり、コネクタも利用できるようになります。",
+    "setupConnectorsBody": "Gmail、ドライブ、Slack、GitHub、Notion などです。使っているものを接続すれば、エージェントはそれについて話すだけでなく、実際に作業できるようになります。",
+    "setupConnectorsCta": "コネクタを見る",
+    "setupConnectorsTitle": "コネクタ",
+    "setupDoneCta": "続行",
+    "setupKeyHint": "このマシンにのみ保存されます。",
+    "setupKeyInvalid": "APIキーのようには見えません。余分な改行やURLが混ざっていないか確認してください。",
+    "setupKeyPlaceholder": "{{provider}} のAPIキーを貼り付け",
+    "setupSaveCta": "保存",
+    "setupSignInCta": "サインイン / 無料アカウントを作成",
     "signInCta": "Abacus.AIにサインイン",
-    "skipCta": "Skip for now",
-    "welcomeCapabilityModels": "100+ AI Models",
-    "welcomeFreeBadge": "Free forever",
+    "skipCta": "今はスキップ",
+    "welcomeCapabilityModels": "100以上のAIモデル",
+    "welcomeFreeBadge": "永久に無料",
     "welcomeTagline": "永続メモリを備えた、あなた専用のオープンソースAIコワーカー",
     "welcomeTitle": "AbacusAI Bot",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "open-source AI agent",
-    "connectedPromiseModels": "powerful AI models for free",
-    "connectedPromiseWork": "across your tools and services",
-    "connectedCta": "Get Started",
-    "setupExistingTitle": "Existing subscriptions",
-    "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
-    "connectedTitleLead": "Welcome to",
+    "welcomeCapabilityMemory": "永続的なメモリ",
+    "welcomeCapabilityConnectors": "100以上のコネクタ",
+    "connectedPromiseAgent": "オープンソースのAIエージェント",
+    "connectedPromiseModels": "強力なAIモデルを無料で",
+    "connectedPromiseWork": "あなたのツールやサービス全体で",
+    "connectedCta": "始める",
+    "setupExistingTitle": "既存のサブスクリプション",
+    "setupExistingBody": "有料のモデルやツールを1か所にまとめる",
+    "setupExistingLater": "後で接続",
+    "setupAbacusGrant": "Abacus 無料枠へのアクセス: 複数のオープンソースモデルにまたがる2000クレジット",
+    "connectedTitleLead": "ようこそ",
     "connectedTitleName": "AbacusAI Bot",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
-    "connectorsTitleLead": "Connect with your",
-    "connectorsTitleAccent": "tools & services.",
-    "connectorsSubtitle": "Chat where you work.",
-    "connectorsConnectCta": "Connect",
-    "connectorsConnectedCta": "Connected",
-    "connectorsMore": "Many more",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
-    "setupTitleLead": "Hook up your",
-    "setupTitleAccent": "AI",
-    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
-    "setupBlurbAbacusLead": "Get world-class models free",
-    "setupBlurbAbacusAccent": "2000 free credits",
-    "setupBlurbOpenrouterLead": "Unlock",
-    "setupBlurbOpenrouterAccent": "FREE models",
-    "setupBlurbOpenrouterTail": "with one connection",
-    "setupBlurbGeminiLead": "Use Gemini",
-    "setupBlurbGeminiAccent": "free to create anything",
-    "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
-    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}"
+    "connectedPromiseAgentLead": "最高クラスの、",
+    "connectedPromiseModelsLead": "アクセス",
+    "connectedPromiseWorkLead": "作業を進める",
+    "connectedPromiseLocalLead": "ローカルで動作します。",
+    "connectedPromiseLocal": "どこで作業していてもチャットできます。",
+    "connectorsTitleLead": "あなたの",
+    "connectorsTitleAccent": "ツールやサービスと接続。",
+    "connectorsSubtitle": "作業している場所でチャットしましょう。",
+    "connectorsConnectCta": "接続",
+    "connectorsConnectedCta": "接続済み",
+    "connectorsMore": "さらに多数",
+    "abacusUnidentified": "このキーがどのアカウントのものか確認できませんでした。何も保存されていません。もう一度サインインしてください。",
+    "setupTitleLead": "あなたの",
+    "setupTitleAccent": "AI を接続",
+    "setupSubtitle": "強力なモデルを接続して、ボットの機能をさらに引き出しましょう。",
+    "setupBlurbAbacusLead": "世界最高クラスのモデルを無料で",
+    "setupBlurbAbacusAccent": "無料クレジット2000",
+    "setupBlurbOpenrouterLead": "解放",
+    "setupBlurbOpenrouterAccent": "無料モデル",
+    "setupBlurbOpenrouterTail": "1回の接続で",
+    "setupBlurbGeminiLead": "Gemini を使う",
+    "setupBlurbGeminiAccent": "無料で何でも作成",
+    "setupKeyDialogTitle": "{{provider}} にアクセスしてAPIキーを取得",
+    "setupKeyDialogBody": "コンソールを開き、キーを作成してから、ここに貼り付けてください。作業中はこのウィンドウが開いたままになります。",
+    "setupKeyDialogLink": "{{provider}} を開く"
   },
   "openFile": {
     "failed": "そのファイルを開けませんでした。",
@@ -1286,240 +1286,240 @@
     "revealed": "そのファイルは開くと実行されるため、ファイルマネージャーで表示しました。"
   },
   "permissions": {
-    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
-    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session",
-    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
-    "sandboxDeniedAlways": "Always allow these this session",
-    "sandboxDeniedHost": "Reach {{host}}",
-    "sandboxDeniedRead": "Read {{path}}",
-    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
-    "sandboxDeniedWrite": "Write {{path}}"
+    "credentialAlways": "「常に許可」を選ぶと、このセッションの残りの間もこれらを読み取り可能な状態に保ちます。",
+    "credentialRead": "サンドボックスが通常隠している認証情報ストアを読み取ります:",
+    "networkHost": "サンドボックス化されたコマンドが、許可リストにないホストにアクセスしようとしています。接続はあなたの回答を待っています。",
+    "networkHostAlways": "このセッションでは {{host}} を常に許可",
+    "sandboxDenied": "このコマンドが試みた操作をサンドボックスが拒否しました。許可しますか？",
+    "sandboxDeniedAlways": "このセッションでは常にこれらを許可",
+    "sandboxDeniedHost": "{{host}} へのアクセス",
+    "sandboxDeniedRead": "{{path}} の読み取り",
+    "sandboxDeniedRerun": "許可すると、そのアクセス権でコマンドが再実行されます。",
+    "sandboxDeniedWrite": "{{path}} への書き込み"
   },
   "profile": {
-    "title": "Profile",
-    "connectedAccount": "Abacus.AI account",
-    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
-    "organization": "Organization",
-    "plan": "Plan",
-    "credits": "Credits this month",
-    "creditsValue": "{{used}} of {{granted}} used",
-    "members": "Team members",
-    "dangerZone": "Danger zone",
-    "permissionsTitle": "Default permission mode",
-    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
-    "permissionsFullAccess": "Full access",
-    "permissionsAuto": "Auto",
-    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
+    "title": "プロフィール",
+    "connectedAccount": "Abacus.AI アカウント",
+    "notSignedIn": "Abacus.AI にサインインしていません。組織・プラン・クレジットを確認するには、設定 → APIキー で接続してください。",
+    "organization": "組織",
+    "plan": "プラン",
+    "credits": "今月のクレジット",
+    "creditsValue": "{{granted}} 中 {{used}} 使用",
+    "members": "チームメンバー",
+    "dangerZone": "危険な操作",
+    "permissionsTitle": "デフォルトの権限モード",
+    "permissionsDescription": "新しいセッション・ボット・ルーティンがどのモードで動作するかです。フルアクセス: 確認なし・サンドボックスなし。自動: 確認はありませんが、OSがシェルコマンドをワークスペース内に限定し、認証情報ストアを隠します。",
+    "permissionsFullAccess": "フルアクセス",
+    "permissionsAuto": "自動",
+    "permissionsAutoWarning": "確認の回数は増えます: コマンドが認証情報ストアを読み取ろうとしたとき、ワークスペース外に書き込もうとしたとき、新しいホストにアクセスしようとしたときに、サンドボックスが確認を求めます。",
     "notSignedInShort": "サインインしていません"
   },
   "referralCard": {
-    "body": "We send the invites for you, from your Gmail or WhatsApp. {{count}} invites unlock the credits.",
-    "cta": "Invite friends",
-    "dismiss": "Dismiss",
-    "title": "Invite friends, earn {{credits}} credits"
+    "body": "招待はあなたに代わってこちらが送ります（Gmail または WhatsApp から）。{{count}} 件の招待でクレジットが解放されます。",
+    "cta": "友達を招待",
+    "dismiss": "閉じる",
+    "title": "友達を招待して {{credits}} クレジットを獲得"
   },
   "referrals": {
-    "title": "Invite friends",
-    "lead": "Invite friends to the AbacusAI Bot and earn credits. We send the invites for you from your own Gmail or WhatsApp.",
-    "leadWithNumbers": "Invite {{count}} friends to the AbacusAI Bot and get {{credits}} credits. We send the invites for you from your own Gmail or WhatsApp, and every friend who joins earns you {{perFriend}} more.",
-    "notSignedIn": "Sign in to Abacus.AI to invite friends.",
-    "progressTitle": "{{sent}} of {{total}} invites sent",
-    "progressGranted": "{{credits}} credits earned. Keep inviting: every friend who joins still pays.",
-    "friendsJoined_one": "{{count}} friend joined so far, {{credits}} credits earned from them.",
-    "friendsJoined_other": "{{count}} friends joined so far, {{credits}} credits earned from them.",
-    "copyLink": "Copy invite link",
-    "linkCopied": "Invite link copied",
-    "gmailTitle": "From your Gmail",
-    "gmailBody": "The people you email most, ready to invite. Untick anyone you'd rather leave out, then send. Each invite goes from your own address.",
-    "connectGmail": "Connect Gmail",
-    "noGmailContacts": "No contacts found in your recent sent mail yet. Add addresses above.",
-    "addEmailsHint": "Connect Gmail to pick from your contacts, or add addresses above and we send from Abacus.AI.",
-    "addEmailsPlaceholder": "Add email addresses, separated by commas",
-    "addEmails": "Add",
-    "addEmailsEmpty": "Type an email address first.",
-    "addEmailsInvalid": "That does not look like an email address.",
-    "addPhonesPlaceholder": "Add phone numbers with country code, separated by commas",
-    "addPhones": "Add",
-    "addPhonesEmpty": "Type a phone number first.",
-    "addPhonesInvalid": "That does not look like a phone number. Include the country code, like +1 555 0100.",
-    "whatsappTitle": "From your WhatsApp",
-    "whatsappBody": "Your WhatsApp chats, ready to invite. Untick anyone you'd rather leave out, or add a number for someone not listed, then send. Each message goes from your own number, one chat at a time.",
-    "linkWhatsapp": "Link WhatsApp in Connectors",
-    "noWhatsappContacts": "No WhatsApp chats read yet. Give it a moment after linking, or add numbers above.",
-    "selectedCount": "{{selected}} of {{total}} selected",
-    "selectAll": "Select all",
-    "selectNone": "Select none",
-    "messageLabel": "Your note to them",
-    "defaultMessage": "I invite you to try the AbacusAI Bot, a free, open-source desktop AI agent.\nDownload it here (bot.abacus.ai): {{link}}\n\n- 100% free: it runs on amazing free LLMs, no credit card, no subscription.\n- Does real work on your computer: your files, terminal and browser, with your permission.\n- Connects to Gmail, Google Drive, Slack, WhatsApp, Telegram and Discord.\n- Runs bots and routines for you around the clock.\n\nIt is open source. If you like it, star the repo: https://github.com/abacusai/abacusai-bot",
-    "sendInvites": "Send {{count}} invites",
-    "sending": "Sending…",
-    "sentToast_one": "Invited {{count}} person",
-    "sentToast_other": "Invited {{count}} people",
-    "sentToastDetail": "{{skipped}} already on Abacus.AI or invited before, {{failed}} could not be sent.",
-    "milestoneToast": "{{credits}} credits added to your account",
+    "title": "友達を招待",
+    "lead": "友達を AbacusAI Bot に招待してクレジットを獲得しましょう。招待は、あなたの Gmail または WhatsApp からこちらが代わりに送ります。",
+    "leadWithNumbers": "友達 {{count}} 人を AbacusAI Bot に招待すると、{{credits}} クレジットを獲得できます。招待は、あなたの Gmail または WhatsApp からこちらが代わりに送り、参加した友達1人につきさらに {{perFriend}} 獲得できます。",
+    "notSignedIn": "友達を招待するには Abacus.AI にサインインしてください。",
+    "progressTitle": "{{total}} 件中 {{sent}} 件の招待を送信済み",
+    "progressGranted": "{{credits}} クレジットを獲得しました。招待を続けましょう。参加した友達1人ごとに追加で獲得できます。",
+    "friendsJoined_one": "これまでに {{count}} 人の友達が参加し、{{credits}} クレジットを獲得しました。",
+    "friendsJoined_other": "これまでに {{count}} 人の友達が参加し、{{credits}} クレジットを獲得しました。",
+    "copyLink": "招待リンクをコピー",
+    "linkCopied": "招待リンクをコピーしました",
+    "gmailTitle": "Gmail から",
+    "gmailBody": "よくメールをやり取りしている相手を、招待できる状態で表示します。除外したい相手のチェックを外してから送信してください。各招待はあなた自身のアドレスから送られます。",
+    "connectGmail": "Gmail を接続",
+    "noGmailContacts": "最近の送信メールに連絡先が見つかりませんでした。上でアドレスを追加してください。",
+    "addEmailsHint": "Gmail を接続すると連絡先から選べます。または上でアドレスを追加すると、Abacus.AI から送信します。",
+    "addEmailsPlaceholder": "メールアドレスをカンマ区切りで追加",
+    "addEmails": "追加",
+    "addEmailsEmpty": "先にメールアドレスを入力してください。",
+    "addEmailsInvalid": "メールアドレスのようには見えません。",
+    "addPhonesPlaceholder": "国番号付きの電話番号をカンマ区切りで追加",
+    "addPhones": "追加",
+    "addPhonesEmpty": "先に電話番号を入力してください。",
+    "addPhonesInvalid": "電話番号のようには見えません。+1 555 0100 のように国番号を含めてください。",
+    "whatsappTitle": "WhatsApp から",
+    "whatsappBody": "あなたの WhatsApp のチャットを、招待できる状態で表示します。除外したい相手のチェックを外すか、リストにない相手は番号を追加してから送信してください。各メッセージはあなた自身の番号から、1件ずつ送られます。",
+    "linkWhatsapp": "コネクタで WhatsApp をリンク",
+    "noWhatsappContacts": "WhatsApp のチャットがまだ読み込まれていません。リンク後しばらく待つか、上で番号を追加してください。",
+    "selectedCount": "{{total}} 件中 {{selected}} 件を選択",
+    "selectAll": "すべて選択",
+    "selectNone": "選択解除",
+    "messageLabel": "相手へのメッセージ",
+    "defaultMessage": "無料でオープンソースのデスクトップAIエージェント、AbacusAI Bot を試してみませんか。\nこちらからダウンロードできます（bot.abacus.ai）: {{link}}\n\n- 100%無料: 優れた無料のLLMで動作し、クレジットカードもサブスクリプションも不要です。\n- パソコン上で実際の作業をこなします: あなたの許可のもと、ファイル・ターミナル・ブラウザを操作します。\n- Gmail、Google ドライブ、Slack、WhatsApp、Telegram、Discord に接続できます。\n- ボットやルーティンで、24時間365日あなたのために働きます。\n\nオープンソースです。気に入ったら、リポジトリにスターをお願いします: https://github.com/abacusai/abacusai-bot",
+    "sendInvites": "{{count}} 件の招待を送信",
+    "sending": "送信中…",
+    "sentToast_one": "{{count}} 人を招待しました",
+    "sentToast_other": "{{count}} 人を招待しました",
+    "sentToastDetail": "{{skipped}} 件はすでに Abacus.AI 利用中または招待済み、{{failed}} 件は送信できませんでした。",
+    "milestoneToast": "{{credits}} クレジットがアカウントに追加されました",
     "errors": {
-      "gmail": "Gmail is not connected. Connect it and try again.",
-      "whatsapp": "WhatsApp is not linked or is still starting. Check Connectors and try again.",
-      "signedOut": "Sign in to Abacus.AI first.",
-      "unavailable": "Could not send the invites right now. Try again in a moment."
+      "gmail": "Gmail が接続されていません。接続してからもう一度お試しください。",
+      "whatsapp": "WhatsApp がリンクされていないか、まだ起動中です。コネクタを確認してもう一度お試しください。",
+      "signedOut": "まず Abacus.AI にサインインしてください。",
+      "unavailable": "招待を送信できませんでした。しばらくしてからもう一度お試しください。"
     }
   },
   "routines": {
-    "atLabel": "At",
-    "autoRepliesLeadSidebar": "Each chat a bot answers on its own is listed under Routines in the sidebar, with its conversation. Pause keeps the grant and stops the answers.",
+    "atLabel": "時刻",
+    "autoRepliesLeadSidebar": "ボットが自分で応答している各チャットは、サイドバーの「ルーティン」にその会話とともに一覧表示されます。一時停止すると権限は保持したまま応答が止まります。",
     "autoRepliesTitle": "自動返信",
-    "autoReplyLine": "{{bot}} answers here on {{platform}}. You can read; the sender drives the conversation.",
+    "autoReplyLine": "{{bot}} が {{platform}} でここに応答しています。閲覧はできますが、会話は送信者が進めます。",
     "autoReplyOn": "オン",
     "autoReplyPaused": "一時停止中",
-    "autoReplyRowTitle": "{{bot}} auto-replies to {{sender}} on {{platform}}",
+    "autoReplyRowTitle": "{{bot}} が {{platform}} で {{sender}} に自動返信",
     "cancel": "キャンセル",
     "copyWebhook": "Webhook URL をコピー",
     "create": "作成",
     "createTitle": "ルーティンを作成",
-    "cronLabel": "Cron expression",
+    "cronLabel": "Cron式",
     "delete": "削除",
     "deleteBody": "「{{name}}」とその実行履歴を削除します。",
     "deleteError": "ルーティンを削除できませんでした。",
     "deleteTitle": "ルーティンを削除",
     "edit": "編集",
     "editTitle": "ルーティンを編集",
-    "editorPlaceholder": "Tell the routine how to change: \"every morning at 9 instead\", \"stop\"",
-    "editorSend": "Send",
-    "editorThinking": "Changing…",
+    "editorPlaceholder": "ルーティンの変更内容を伝えてください: 「毎朝9時に変更して」「停止して」など",
+    "editorSend": "送信",
+    "editorThinking": "変更しています…",
     "empty": "まだルーティンがありません。作成するか、ボットに予約を頼んでください。",
     "enabled": "有効",
-    "firedByCreate": "on creation",
+    "firedByCreate": "作成時",
     "firedByManual": "手動",
     "firedBySchedule": "スケジュール",
     "firedByWebhook": "Webhook",
     "lastRun": "前回: {{time}}",
     "lead": "自動で動くもの: スケジュール実行、Webhook 起動、その実行結果。",
-    "madeBy": "made by {{bot}}",
+    "madeBy": "{{bot}} が作成",
     "nameLabel": "名前",
     "namePlaceholder": "例: 朝のブリーフ",
     "newRoutine": "新しいルーティン",
     "nextRun": "次回: {{time}}",
-    "noRunsYet": "This routine has not fired yet. Run it now, or wait for its next fire.",
-    "onLabel": "On",
-    "pageMissing": "This routine is gone.",
+    "noRunsYet": "このルーティンはまだ実行されていません。今すぐ実行するか、次回の起動を待ってください。",
+    "onLabel": "曜日",
+    "pageMissing": "このルーティンは削除されています。",
     "pause": "一時停止",
-    "pausedTitle": "Paused",
-    "presetCustom": "Custom",
+    "pausedTitle": "一時停止中",
+    "presetCustom": "カスタム",
     "presetDaily": "毎日",
     "presetHourly": "毎時",
-    "presetManual": "Manual",
-    "presetOnce": "Once",
+    "presetManual": "手動",
+    "presetOnce": "1回のみ",
     "presetWeekdays": "平日",
-    "presetWeekly": "Weekly",
+    "presetWeekly": "毎週",
     "promptLabel": "指示",
     "promptPlaceholder": "何を実行しますか? 単体で通じるように書いてください。",
     "promptRequired": "指示は必須です。",
     "ranNow": "ルーティンを開始しました。",
     "resume": "再開",
-    "runAtLabel": "Run at",
-    "runAtPast": "That time has already passed.",
-    "runAtRequired": "Pick a date and time to run at.",
+    "runAtLabel": "実行時刻",
+    "runAtPast": "その時刻はすでに過ぎています。",
+    "runAtRequired": "実行する日時を選んでください。",
     "runError": "ルーティンを開始できませんでした。",
     "runHistory_one": "直近 {{count}} 件の実行",
     "runHistory_other": "直近 {{count}} 件の実行",
     "runNow": "今すぐ実行",
     "runOutcome": {
-      "completed": "Completed",
-      "failed": "Failed",
-      "running": "Running"
+      "completed": "完了",
+      "failed": "失敗",
+      "running": "実行中"
     },
     "runReadOnly": "ルーティン実行です。このセッションはルーティンのレポートです。閲覧はできますが返信はできません。次の実行は新しく始まります。動作を変えるにはルーティンを編集してください。",
-    "runsEmpty": "No runs yet.",
-    "runsIn": "runs in {{folder}}",
-    "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
-    "runsTitle": "Runs",
+    "runsEmpty": "実行履歴はまだありません。",
+    "runsIn": "{{folder}} で実行",
+    "runsInHint": "起動のたびに、専用の新しいセッションで実行されます。このルーティンとその実行履歴は、サイドバーの「ルーティン」にあります。",
+    "runsTitle": "実行履歴",
     "save": "保存",
     "saveError": "ルーティンを保存できませんでした。",
-    "scheduleDaily": "Daily at {{time}}",
-    "scheduleHint": "Local time. Fires only while the app is running.",
-    "scheduleHourly": "Every hour",
+    "scheduleDaily": "毎日 {{time}}",
+    "scheduleHint": "現地時間です。アプリが起動している間のみ実行されます。",
+    "scheduleHourly": "毎時",
     "scheduleLabel": "スケジュール",
-    "scheduleManual": "On demand",
-    "scheduleManualHint": "Runs only when you press Run now or fire the webhook.",
-    "scheduleOnce": "Once on {{when}}",
-    "scheduleOnceHint": "Fires once at that time, then turns itself off. Local time; a moment the app slept through fires when it wakes.",
+    "scheduleManual": "オンデマンド",
+    "scheduleManualHint": "「今すぐ実行」を押すか、Webhookを起動したときだけ実行されます。",
+    "scheduleOnce": "{{when}} に1回",
+    "scheduleOnceHint": "その時刻に一度だけ起動し、その後は自動的にオフになります。現地時間で、アプリがスリープしていた時刻は、起動時に実行されます。",
     "scheduleRequired": "スケジュールは必須です。",
-    "scheduleWeekdays": "Weekdays at {{time}}",
-    "scheduleWeekly": "{{day}}s at {{time}}",
+    "scheduleWeekdays": "平日 {{time}}",
+    "scheduleWeekly": "毎週{{day}} {{time}}",
     "statActive": "有効",
     "statFiredToday": "今日の起動",
     "statPaused": "一時停止",
-    "templateWorksWith": "Reads from {{names}}",
+    "templateWorksWith": "{{names}} から読み取ります",
     "templates": {
       "morning-brief": {
-        "description": "What today needs from you: the calendar, the mail worth a reply, and anything addressed to you.",
-        "name": "Morning brief"
+        "description": "今日必要になる情報: カレンダー、返信が必要なメール、あなた宛のもの。",
+        "name": "モーニングブリーフ"
       },
       "inbox-triage": {
-        "description": "Sorts new mail into reply, read, and noise, and drafts the replies for you to send.",
-        "name": "Inbox triage"
+        "description": "新着メールを返信・既読・ノイズに分類し、送信用の返信下書きを作成します。",
+        "name": "受信トレイの仕分け"
       },
       "pr-digest": {
-        "description": "Open pull requests on this workspace, with the ones going stale first.",
-        "name": "Pull request digest"
+        "description": "このワークスペースの未対応プルリクエストを、古くなっているものから順に表示します。",
+        "name": "プルリクエストダイジェスト"
       },
       "failing-tests": {
-        "description": "Runs the test suite and reports only what changed since the last run.",
-        "name": "Test watch"
+        "description": "テストスイートを実行し、前回の実行から変化した点だけを報告します。",
+        "name": "テストウォッチ"
       },
       "dependency-watch": {
-        "description": "Security advisories worth acting on, kept apart from version bumps that can wait.",
-        "name": "Dependency watch"
+        "description": "対応すべきセキュリティアドバイザリを、後回しにできるバージョン更新とは分けて表示します。",
+        "name": "依存関係ウォッチ"
       },
       "week-in-review": {
-        "description": "What shipped this week from the commit history, grouped by theme, ending with what looks stuck.",
-        "name": "Week in review"
+        "description": "コミット履歴から、今週リリースされたものをテーマごとにまとめ、停滞していそうな項目で締めくくります。",
+        "name": "週次レビュー"
       }
     },
-    "templatesLead": "Or start from one of these",
-    "testRunHint": "Fire it right after creating, so you can see it work before the schedule does.",
-    "testRunLabel": "Run once now",
+    "templatesLead": "またはこちらから始める",
+    "testRunHint": "作成直後に起動しておくと、スケジュールを待たずに動作を確認できます。",
+    "testRunLabel": "今すぐ1回実行",
     "title": "ルーティン",
     "updateError": "ルーティンを更新できませんでした。",
     "webhookCopied": "Webhook URL をコピーしました。",
     "webhookHint": "HTTP POST でこのルーティンを起動します。",
     "webhookLabel": "Webhook",
-    "webhookPublicPending": "Creating your public webhook link…",
-    "workspaceAddError": "That folder could not be added.",
-    "workspaceChoose": "Choose a folder…",
-    "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
-    "workspaceLabel": "Folder",
-    "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
-    "workspaceOwnFolder": "Its own folder"
+    "webhookPublicPending": "公開Webhookリンクを作成しています…",
+    "workspaceAddError": "そのフォルダーを追加できませんでした。",
+    "workspaceChoose": "フォルダーを選択…",
+    "workspaceHelp": "実行が行われる場所です。指示がコード・テスト・依存関係を読み取る場合は、プロジェクトを選んでください。",
+    "workspaceLabel": "フォルダー",
+    "workspaceMissing": "この指示はプロジェクトのコードを読み取ります。専用フォルダーには読み取るものがありません。",
+    "workspaceOwnFolder": "専用フォルダー"
   },
   "sessions": {
-    "delete": "Delete session",
-    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
-    "deleteError": "Could not delete that session. Try again.",
-    "deleteTitle": "Delete this session?",
-    "newSession": "New session",
-    "pin": "Pin",
-    "pinned": "Pinned",
-    "sessionOptions": "Session options",
-    "title": "Sessions",
-    "unpin": "Unpin",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "delete": "セッションを削除",
+    "deleteBody": "「{{label}}」とその履歴が削除されます。この操作は元に戻せません。",
+    "deleteError": "そのセッションを削除できませんでした。もう一度お試しください。",
+    "deleteTitle": "このセッションを削除しますか？",
+    "newSession": "新規セッション",
+    "pin": "ピン留め",
+    "pinned": "ピン留め済み",
+    "sessionOptions": "セッションオプション",
+    "title": "セッション",
+    "unpin": "ピン留めを解除",
+    "today": "今日",
+    "yesterday": "昨日",
+    "daysAgo": "{{count}} 日前"
   },
   "sidebarNav": {
-    "app": "App",
+    "app": "アプリ",
     "artifacts": "成果物",
     "capabilities": "機能",
     "connectors": "コネクタ",
-    "memory": "Memory",
-    "messaging": "Messaging",
+    "memory": "メモリ",
+    "messaging": "メッセージング",
     "newSession": "新規セッション",
-    "routines": "Routines",
+    "routines": "ルーティン",
     "usage": "使用状況",
-    "whatsNew": "What's new"
+    "whatsNew": "新着情報"
   },
   "skills": {
     "appliesToBoth": "スキルはすべてのワークスペースでエージェントが利用できます。",
@@ -1560,29 +1560,29 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "アプリに同梱されたPOSIXシェル（busybox ash）です。エージェントのbashツールが実行に使うのと同じシェルで、grep・sed・awk などが組み込まれています。",
       "label": "BusyBox sh"
     },
     "cmd": {
-      "description": "The Windows command prompt.",
-      "label": "Command Prompt"
+      "description": "Windows のコマンドプロンプトです。",
+      "label": "コマンドプロンプト"
     },
-    "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
-    "inUse": "In use",
-    "notInstalled": "Not found on this machine.",
+    "fellBack": "{{selected}} は現在使用できないため、新しいターミナルは {{effective}} で開きます。",
+    "inUse": "使用中",
+    "notInstalled": "このマシンには見つかりません。",
     "powershell": {
-      "description": "Windows PowerShell, the one that ships with Windows.",
+      "description": "Windows に標準搭載されている Windows PowerShell です。",
       "label": "Windows PowerShell"
     },
     "pwsh": {
-      "description": "PowerShell 7 or later, installed separately.",
+      "description": "別途インストールする PowerShell 7 以降です。",
       "label": "PowerShell"
     },
     "system": {
-      "description": "Whatever this machine calls its default shell.",
-      "label": "Default shell"
+      "description": "このマシンのデフォルトシェルです。",
+      "label": "デフォルトシェル"
     },
-    "title": "Terminal shell"
+    "title": "ターミナルシェル"
   },
   "theme": {
     "dark": "ダーク",
@@ -1592,7 +1592,7 @@
   "tour": {
     "finish": "はじめる",
     "next": "次へ",
-    "optional": "Optional",
+    "optional": "任意",
     "progress": "ステップ {{current}} / {{total}}",
     "replay": "ツアーを見る",
     "skip": "ツアーをスキップ",
@@ -1603,8 +1603,8 @@
       },
       "bots": {
         "body": "独自の指示・スケジュール・チャットを持つ常駐エージェントです。繰り返し任せる仕事にはボットを作りましょう。",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
+        "bulletBots": "独自の指示・ツール・チャットを持つ、再利用可能なボットを作成できます。",
+        "bulletSessions": "単発のタスクや簡単な作業にはセッションを使います。",
         "title": "あなたのボット"
       },
       "capabilities": {
@@ -1620,8 +1620,8 @@
         "body": "普段使っているツールを接続します。無料の Abacus.AI アカウントなら、ワンクリックでまとめて接続できます。"
       },
       "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+        "title": "ボットを作る",
+        "body": "ここで名前を付けるか、下のテンプレートから始めましょう。ボットはファイルを読み書きし、コマンドを実行し、接続したツールの中で動作し、専用のチャットとメモリを持ちます。"
       },
       "memory": {
         "title": "メモリ",
@@ -1646,7 +1646,7 @@
       "terminal": {
         "title": "ターミナル",
         "body": "ワークスペース内の本物のシェルで、エージェントと同じフォルダーを使います。タイトルバーのターミナルボタンで表示と非表示を切り替えます。",
-        "audience": "For developers & technical users"
+        "audience": "開発者・技術者向け"
       },
       "usage": {
         "title": "使用状況",
@@ -1659,27 +1659,27 @@
     }
   },
   "updateBanner": {
-    "dismiss": "Dismiss",
+    "dismiss": "閉じる",
     "stalled": "自動的に再起動できませんでした。アップデートを完了するには、アプリを終了してから再度開いてください。",
-    "subtitle": "Relaunch to get the latest improvements and fixes.",
-    "title": "A new version is ready",
-    "whatsChanged": "See what changed"
+    "subtitle": "再起動すると最新の改善と修正が適用されます。",
+    "title": "新しいバージョンの準備ができました",
+    "whatsChanged": "変更内容を見る"
   },
   "updateCritical": {
-    "body": "This release fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "bodyWithVersion": "Version {{version}} fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "countdown": "Restarting automatically in {{time}}",
-    "restartNow": "Restart now",
-    "restarting": "Restarting…",
-    "title": "A required update is ready"
+    "body": "このリリースは重大な問題を修正するもので、続行する前にインストールする必要があります。適用するためアプリが再起動します。",
+    "bodyWithVersion": "バージョン {{version}} は重大な問題を修正するもので、続行する前にインストールする必要があります。適用するためアプリが再起動します。",
+    "countdown": "{{time}} 後に自動的に再起動します",
+    "restartNow": "今すぐ再起動",
+    "restarting": "再起動しています…",
+    "title": "必須のアップデートの準備ができました"
   },
   "updatePill": {
     "downloading": "アップデートをダウンロード中… {{percent}}%",
-    "failed": "Update download failed. Retry",
-    "installing": "Restarting…",
-    "relaunch": "Relaunch to update",
-    "retrying": "Retrying…",
-    "tooltip": "Version {{version}} is ready to install"
+    "failed": "アップデートのダウンロードに失敗しました。再試行",
+    "installing": "再起動しています…",
+    "relaunch": "再起動してアップデート",
+    "retrying": "再試行しています…",
+    "tooltip": "バージョン {{version}} のインストール準備ができています"
   },
   "usage": {
     "cardDetail": "{{requests}} リクエスト · {{tokens}} トークン",
@@ -1704,25 +1704,25 @@
     "today": "今日",
     "unpricedHint": "一部のモデルは価格が公開されていません。トークンは集計されますが、コストは含まれません。",
     "window": "過去{{days}}日間",
-    "abacusPlan": "Abacus.AI plan",
-    "abacusCredits": "{{used}} / {{granted}} credits"
+    "abacusPlan": "Abacus.AI プラン",
+    "abacusCredits": "{{used}} / {{granted}} クレジット"
   },
   "userMenu": {
     "about": "バージョン情報...",
-    "browserSettings": "Browser",
+    "browserSettings": "ブラウザ",
     "deviceSettings": "デバイス",
-    "dumpLogs": "Dump logs",
+    "dumpLogs": "ログを書き出す",
     "keepAwake": "作業中はスリープしない",
     "language": "言語",
     "mcpManagement": "MCPサーバー",
-    "notificationSettings": "Notifications",
+    "notificationSettings": "通知",
     "settings": "設定",
-    "signIn": "Sign in",
-    "signOut": "Sign out",
-    "signedOutRunningSessions": "Signed out. A chat that is already running keeps the key it started with until you start a new one.",
+    "signIn": "サインイン",
+    "signOut": "サインアウト",
+    "signedOutRunningSessions": "サインアウトしました。すでに実行中のチャットは、新しく開始するまで開始時点のキーを使い続けます。",
     "skillsManagement": "スキル",
     "theme": "テーマ",
-    "whatsNew": "What's new"
+    "whatsNew": "新着情報"
   },
   "visualizer": {
     "loading": "ビジュアライゼーションを読み込み中…"
@@ -1734,20 +1734,20 @@
     "ageMinutes": "{{count}}分",
     "ageNow": "たった今",
     "agents": {
-      "emptyHint": "Sub-agents launched during a turn appear here.",
-      "emptyTitle": "No sub-agents yet",
+      "emptyHint": "ターン中に起動されたサブエージェントがここに表示されます。",
+      "emptyTitle": "サブエージェントはまだありません",
       "kind": {
-        "browser": "Browser",
-        "component": "Component",
-        "delegate": "Delegate"
+        "browser": "ブラウザ",
+        "component": "コンポーネント",
+        "delegate": "委任"
       },
-      "mainAgent": "Main agent"
+      "mainAgent": "メインエージェント"
     },
     "allPinned": "ここはすべてピン留め済みです。ピン留めを外すと最近の一覧に表示されます。",
     "attach": {
       "cancel": "キャンセル",
       "done": "完了",
-      "files": "Files or images…",
+      "files": "ファイルまたは画像…",
       "folder": "フォルダ…",
       "mentionTip": "ヒント: @ を入力するとファイルを直接参照できます。",
       "menuLabel": "添付",
@@ -1756,26 +1756,26 @@
       "saveFailed": "添付ファイルを保存できませんでした: {{error}}",
       "unknownError": "不明なエラー"
     },
-    "autoWorkspace": "Auto workspace",
+    "autoWorkspace": "自動ワークスペース",
     "branch": {
-      "create": "Create “{{branch}}”",
+      "create": "「{{branch}}」を作成",
       "createFailed": "ブランチを作成できませんでした。",
-      "description": "Choose the Git branch this checkout uses. Switching changes the files the agent works on.",
+      "description": "このチェックアウトで使用するGitブランチを選択します。切り替えると、エージェントが作業するファイルが変わります。",
       "createdAndSwitched": "{{name}} を作成して切り替えました",
-      "loading": "Loading branches…",
-      "noResults": "No branches found.",
+      "loading": "ブランチを読み込み中…",
+      "noResults": "ブランチが見つかりません。",
       "searchOrCreate": "ブランチを検索または作成…",
-      "showing": "Showing {{count}} of {{total}} refs",
+      "showing": "{{total}} 件中 {{count}} 件の参照を表示",
       "stopAgentFirst": "切り替える前にエージェントを停止してください",
       "switchFailed": "ブランチを切り替えられませんでした。",
       "switched": "{{name}} に切り替えました"
     },
     "cancel": "キャンセル",
     "chat": {
-      "conversation": "Conversation",
+      "conversation": "会話",
       "continueBelow": "下でチャットを続けることができます。",
       "historyLoadFailed": "会話履歴を読み込めませんでした。",
-      "scrollToBottom": "Scroll to bottom"
+      "scrollToBottom": "一番下までスクロール"
     },
     "chatDeleted": "チャットを削除しました",
     "chatRenamed": "チャットの名前を変更しました",
@@ -1785,21 +1785,21 @@
     "composerNeedsModel": "開始するにはモデルを接続してください",
     "composerNeedsWorkspace": "開始するにはワークスペースフォルダーを選択してください",
     "composerPlaceholder": "コードベースについて何でも聞いてください…",
-    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
+    "composerPlaceholderBusy": "今すぐ送信すると、エージェントの次のステップに反映されます",
     "composerTasks": {
-      "dismiss": "Dismiss tasks for this turn",
-      "now": "now",
-      "progressLabel": "Tasks: {{completed}} of {{total}} complete. Current task: {{current}}",
-      "title": "Tasks"
+      "dismiss": "このターンのタスクを閉じる",
+      "now": "今",
+      "progressLabel": "タスク: {{total}} 件中 {{completed}} 件完了。現在のタスク: {{current}}",
+      "title": "タスク"
     },
     "confirmDelete": "削除",
     "createBotToSend": "メッセージを送るにはボットを作成してください",
     "credits": {
-      "thisTurn": "This turn: {{credits}} credits",
-      "total": "Conversation total: {{credits}} credits",
-      "used": "{{credits}} credits used"
+      "thisTurn": "このターン: {{credits}} クレジット",
+      "total": "会話全体: {{credits}} クレジット",
+      "used": "{{credits}} クレジット使用"
     },
-    "currentCheckout": "Current checkout",
+    "currentCheckout": "現在のチェックアウト",
     "deleteChat": "チャットを削除",
     "deleteChatDescription": "このチャットとその履歴は完全に削除されます。",
     "deleteWorkspace": "ワークスペースを削除",
@@ -1807,15 +1807,15 @@
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
     "deleteWorkspaceDescription": "「{{name}}」とそのチャットを AbacusAI Bot から削除します。ディスク上のファイルとフォルダーは削除されず、そのまま残ります。この操作は取り消せません。",
     "deleteWorkspaceNameMismatch": "名前が一致しません",
-    "deleteWorkspacePermanently": "Delete Permanently",
-    "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
-    "deletedWorkspaceBadge": "Deleted",
-    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
+    "deleteWorkspacePermanently": "完全に削除",
+    "deleteWorkspacePermanentlyDescription": "「{{name}}」はすでに削除されています。これにより、そのチャットと履歴が完全に消去されます。ファイルとディスク上のフォルダーには影響しません。この操作は元に戻せません。",
+    "deletedWorkspaceBadge": "削除済み",
+    "deletedWorkspaceReadOnly": "このワークスペースは削除されたため、そのチャットは読み取り専用です。この会話を続けるには、フォルダーをワークスペースとして再度追加してください。",
     "deliverable": {
-      "delivered": "Delivered",
-      "delivering": "Delivering",
-      "itemCount_one": "{{count}} deliverable",
-      "itemCount_other": "{{count}} deliverables"
+      "delivered": "納品済み",
+      "delivering": "納品中",
+      "itemCount_one": "成果物 {{count}} 件",
+      "itemCount_other": "成果物 {{count}} 件"
     },
     "dropFilesHint": "画像を添付またはファイルをメンションするにはドロップ",
     "explorer": {
@@ -1824,15 +1824,15 @@
       "noWorkspace": "ワークスペースが選択されていません。"
     },
     "feedback": {
-      "copied": "Copied",
-      "copy": "Copy",
-      "failed": "Couldn't send your feedback. Please try again.",
-      "helpful": "Good response",
-      "notHelpful": "Bad response",
-      "send": "Send",
-      "skip": "Skip",
-      "tellUsMore": "Tell us more",
-      "tellUsMorePlaceholder": "What went wrong?"
+      "copied": "コピーしました",
+      "copy": "コピー",
+      "failed": "フィードバックを送信できませんでした。もう一度お試しください。",
+      "helpful": "良い応答",
+      "notHelpful": "悪い応答",
+      "send": "送信",
+      "skip": "スキップ",
+      "tellUsMore": "詳しく教えてください",
+      "tellUsMorePlaceholder": "何が問題でしたか？"
     },
     "fewerModels": "表示を減らす",
     "fileEditor": {
@@ -1847,54 +1847,54 @@
     "hideRightPanel": "パネルを非表示",
     "hideSidebar": "サイドバーを非表示",
     "hideTerminal": "ターミナルを非表示",
-    "inspectorDescription": "Changes, files, agents, previews, and devices",
-    "inspectorTitle": "Workspace inspector",
+    "inspectorDescription": "変更・ファイル・エージェント・プレビュー・デバイス",
+    "inspectorTitle": "ワークスペースインスペクター",
     "messageBot": "{{name}}にメッセージ",
     "modelPicker": {
-      "addFavorite": "Add {{model}} to favorites",
-      "compact": "Compact UI",
-      "configure": "Configure",
-      "configureBeforeSending": "Connect a model before sending a message.",
-      "configureProviders": "Configure model providers",
+      "addFavorite": "{{model}} をお気に入りに追加",
+      "compact": "コンパクトUI",
+      "configure": "設定",
+      "configureBeforeSending": "メッセージを送信する前にモデルを接続してください。",
+      "configureProviders": "モデルプロバイダーを設定",
       "connectGoogleAi": "Google AI Studioを接続",
       "connectGoogleAiNote": "無料のGemini枠。APIキーを取得してここに貼り付け",
-      "connectModels": "Connect models",
+      "connectModels": "モデルを接続",
       "connectOpenRouter": "OpenRouterを接続",
       "connectOpenRouterNote": "ブラウザで1回サインインするだけで無料モデルがRouteLLM - Openとこのリストに加わります",
-      "favorites": "Favorites",
-      "noFavorites": "Favorite models appear here.",
-      "noResults": "No models found.",
-      "onThisMachine": "On this machine",
-      "removeFavorite": "Remove {{model}} from favorites",
-      "search": "Search models…",
-      "title": "Choose a model"
+      "favorites": "お気に入り",
+      "noFavorites": "お気に入りのモデルがここに表示されます。",
+      "noResults": "モデルが見つかりません。",
+      "onThisMachine": "このマシン上",
+      "removeFavorite": "{{model}} をお気に入りから削除",
+      "search": "モデルを検索…",
+      "title": "モデルを選択"
     },
-    "modelPlaceholder": "Model",
+    "modelPlaceholder": "モデル",
     "modelProviderLocked": "このモデルは別のプロバイダーのものです。使用するには新しいチャットを開始してください。",
     "modelSwitchFailed": "モデルを切り替えられませんでした。チャットは引き続き以前のモデルを使用します。",
     "modelTier": {
-      "default": "Recommended",
-      "fast": "Fast & cheap",
-      "free": "Free",
-      "local": "Local / custom",
-      "strong": "For harder tasks"
+      "default": "おすすめ",
+      "fast": "高速・低コスト",
+      "free": "無料",
+      "local": "ローカル / カスタム",
+      "strong": "難しいタスク向け"
     },
     "moreModels": "その他のモデル ({{count}})",
-    "navigationDescription": "Workspaces, conversations, and application settings",
-    "navigationTitle": "Workspace navigation",
-    "newBot": "New bot",
+    "navigationDescription": "ワークスペース、会話、アプリの設定",
+    "navigationTitle": "ワークスペースナビゲーション",
+    "newBot": "新しいボット",
     "newChat": "新規チャット",
     "noChats": "チャットはまだありません",
     "noSessionsMatch": "\"{{query}}\" に一致するセッションはありません",
     "noWorkspaces": "ワークスペースがまだ追加されていません",
     "noWorkspacesDescription": "フォルダを追加してエージェントとコーディングを始めましょう",
-    "openPathInPreview": "Open in the preview pane",
+    "openPathInPreview": "プレビューパネルで開く",
     "pendingSteer": {
-      "edit": "Edit",
-      "permission": "Sends after you answer the permission prompt",
-      "remove": "Remove",
-      "step": "Sends at the agent's next step",
-      "turn": "Sends as the next turn"
+      "edit": "編集",
+      "permission": "権限の確認に回答した後に送信されます",
+      "remove": "削除",
+      "step": "エージェントの次のステップで送信されます",
+      "turn": "次のターンとして送信されます"
     },
     "perm": {
       "addContext": "コンテキストや指示を追加…",
@@ -1916,24 +1916,24 @@
       "draft": "下書き",
       "label": "PR #{{number}}",
       "merged": "マージ済み",
-      "none": "No PR",
-      "noneDescription": "No pull request for the current branch",
-      "open": "Open PR #{{number}}",
-      "openAction": "Open pull request",
+      "none": "PRなし",
+      "noneDescription": "現在のブランチにプルリクエストはありません",
+      "open": "PR #{{number}} を開く",
+      "openAction": "プルリクエストを開く",
       "pending": "オープン",
       "reviews": "承認 {{approved}} 件 · 変更リクエスト {{changes}} 件 · 保留中 {{requested}} 件"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going. No card needed",
-      "continueOn": "Continue on {{model}} (free)",
-      "exhaustedTitle": "You've used up your free Abacus.AI credits",
-      "localNote": "Or run a model on this computer for free, with no limits",
-      "poolOutTitle": "Every free source is used up for now",
-      "switchNote": "Pick another model in the model picker to keep going"
+      "connectNote": "無料のソースを接続すれば続けられます。カードは不要です",
+      "continueOn": "{{model}}（無料）で続ける",
+      "exhaustedTitle": "無料の Abacus.AI クレジットを使い切りました",
+      "localNote": "または、このコンピューター上でモデルを無料・無制限で実行できます",
+      "poolOutTitle": "現在、すべての無料ソースを使い切っています",
+      "switchNote": "続けるには、モデル選択で別のモデルを選んでください"
     },
     "preview": {
-      "addSurface": "Add surface",
-      "address": "Browser address",
+      "addSurface": "サーフェスを追加",
+      "address": "ブラウザのアドレス",
       "addressPlaceholder": "URLまたはファイルパスを入力…",
       "back": "戻る",
       "browserProfile": "ブラウザプロファイル",
@@ -1943,95 +1943,95 @@
       "browserProfileImported": "プロファイルが正常にインポートされました",
       "browserProfileNone": "デフォルト（プロファイルなし）",
       "browserProfileRefresh": "プロファイルを更新",
-      "clearSiteData": "Clear site data",
-      "closeSurface": "Close {{title}}",
-      "developerTools": "Developer tools",
+      "clearSiteData": "サイトデータを削除",
+      "closeSurface": "{{title}} を閉じる",
+      "developerTools": "開発者ツール",
       "emptyDescription": "エクスプローラーからファイルを開くか、チャット内のリンクをクリックするか、ウェブを閲覧してください。",
       "emptyTitle": "プレビューが開かれていません",
       "forward": "進む",
-      "hardReload": "Hard reload",
-      "htmlShowRendered": "Show rendered deck",
-      "htmlShowSource": "Show source",
-      "imageError": "Could not show this image here ({{error}}).",
-      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
+      "hardReload": "強制リロード",
+      "htmlShowRendered": "レンダリングされたデッキを表示",
+      "htmlShowSource": "ソースを表示",
+      "imageError": "この画像をここに表示できませんでした（{{error}}）。",
+      "imageOutsideWorkspace": "このファイルはワークスペースの外にあるため、ここには表示されません。代わりに外部アプリで開いてください。",
       "loading": "読み込み中…",
-      "mdShowRendered": "Show rendered markdown",
-      "moreActions": "More browser actions",
+      "mdShowRendered": "レンダリングされたMarkdownを表示",
+      "moreActions": "その他のブラウザ操作",
       "noProfiles": "ブラウザプロファイルが見つかりません",
       "openBrowser": "ブラウザを開く",
       "openExternal": "外部アプリで開く",
-      "pageUnavailable": "This page is unavailable",
-      "pptxError": "This presentation could not be read ({{error}}).",
-      "pptxMoreWarnings": "+{{count}} more",
-      "pptxNoNotes": "No speaker notes on this slide.",
-      "pptxNotes": "Notes",
-      "pptxSlideCount": "Slide {{current}} of {{total}}",
-      "pptxSlideFailed": "Slide {{number}} could not be rendered",
-      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
-      "pptxWarnings": "{{count}} rendering warning",
-      "pptxWarnings_other": "{{count}} rendering warnings",
+      "pageUnavailable": "このページは利用できません",
+      "pptxError": "このプレゼンテーションを読み込めませんでした（{{error}}）。",
+      "pptxMoreWarnings": "他 {{count}} 件",
+      "pptxNoNotes": "このスライドにスピーカーノートはありません。",
+      "pptxNotes": "ノート",
+      "pptxSlideCount": "スライド {{total}} 中 {{current}}",
+      "pptxSlideFailed": "スライド {{number}} をレンダリングできませんでした",
+      "pptxSlidesFailed": "{{total}} 件中 {{failed}} 件のスライドをレンダリングできませんでした",
+      "pptxWarnings": "レンダリングの警告 {{count}} 件",
+      "pptxWarnings_other": "レンダリングの警告 {{count}} 件",
       "refresh": "更新",
-      "reload": "Reload",
+      "reload": "再読み込み",
       "sectionFileCount": "{{count}} ファイル",
-      "sourceError": "Could not read this file ({{error}}).",
+      "sourceError": "このファイルを読み取れませんでした（{{error}}）。",
       "split": "分割",
       "stop": "読み込みを停止",
       "toggleTooltip": "プレビューの切り替え",
-      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
-      "tryAgain": "Try again",
+      "truncatedFile": "このファイルは大きすぎて全体を開けません。先頭部分のみ表示しており、保存で残りが上書きされないよう、ここでの編集は無効になっています。変更するには外部エディタで開いてください。",
+      "tryAgain": "もう一度試す",
       "unified": "統合",
-      "zoom": "Zoom",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "zoomReset": "Reset zoom"
+      "zoom": "ズーム",
+      "zoomIn": "拡大",
+      "zoomOut": "縮小",
+      "zoomReset": "ズームをリセット"
     },
-    "refreshModels": "Refresh models",
+    "refreshModels": "モデルを更新",
     "renameChat": "チャットの名前を変更",
     "renameChatPlaceholder": "新しいチャット名を入力してください",
     "renameEmptyName": "名前を空にすることはできません",
     "renameError": "名前の変更に失敗しました",
     "renameWorkspace": "ワークスペースの名前を変更",
     "renameWorkspacePlaceholder": "新しいワークスペース名を入力してください",
-    "resizeInspector": "Resize workspace inspector",
-    "resizeSidebar": "Resize workspace sidebar",
-    "resizeTerminal": "Resize terminal",
+    "resizeInspector": "ワークスペースインスペクターのサイズを変更",
+    "resizeSidebar": "ワークスペースサイドバーのサイズを変更",
+    "resizeTerminal": "ターミナルのサイズを変更",
     "results": "結果",
     "retry": "再試行",
     "retryMessage": "中断したところから続行してください",
     "revealInFinder": "Finderで表示",
     "rightPanel": {
-      "agentsDescription": "Follow subagents and workflows.",
-      "browser": "Browser",
-      "browserDescription": "Open a local app or URL.",
+      "agentsDescription": "サブエージェントとワークフローを追跡します。",
+      "browser": "ブラウザ",
+      "browserDescription": "ローカルアプリまたはURLを開きます。",
       "close": "パネルを閉じる",
-      "deviceUnavailable": "No device or simulator is available.",
-      "deviceDescription": "Preview the connected device.",
-      "emptyDescription": "Choose what to show in the right panel.",
-      "emptyTitle": "Open a surface",
-      "explorerDescription": "Browse and read workspace files.",
-      "files": "Files",
-      "open": "Open",
-      "tabs": "Inspector panels",
-      "terminal": "Terminal",
-      "terminalDescription": "Start a shell in this workspace."
+      "deviceUnavailable": "利用可能なデバイスやシミュレーターがありません。",
+      "deviceDescription": "接続中のデバイスをプレビューします。",
+      "emptyDescription": "右パネルに表示する内容を選んでください。",
+      "emptyTitle": "サーフェスを開く",
+      "explorerDescription": "ワークスペースのファイルを閲覧・読み取りします。",
+      "files": "ファイル",
+      "open": "開く",
+      "tabs": "インスペクターパネル",
+      "terminal": "ターミナル",
+      "terminalDescription": "このワークスペースでシェルを起動します。"
     },
     "rightTab": {
-      "agents": "Agents",
+      "agents": "エージェント",
       "device": "デバイス",
       "explorer": "エクスプローラー",
       "preview": "プレビュー"
     },
     "runtimeMode": {
-      "acceptEdits": "Auto-accept edits",
-      "acceptEditsDescription": "Apply file edits automatically and ask before other actions.",
-      "auto": "Auto",
-      "autoDescription": "Allow commands and edits without approval prompts, inside the sandbox.",
-      "fullAccess": "Full access",
-      "fullAccessDescription": "Allow commands and edits without approval prompts, with no sandbox.",
-      "plan": "Plan",
-      "planDescription": "Plan the work before making changes.",
-      "supervised": "Supervised",
-      "supervisedDescription": "Ask before edits and commands."
+      "acceptEdits": "編集を自動承認",
+      "acceptEditsDescription": "ファイルの編集は自動的に適用し、それ以外の操作は確認します。",
+      "auto": "自動",
+      "autoDescription": "サンドボックス内で、確認なしにコマンドと編集を許可します。",
+      "fullAccess": "フルアクセス",
+      "fullAccessDescription": "サンドボックスなしで、確認なしにコマンドと編集を許可します。",
+      "plan": "プラン",
+      "planDescription": "変更を加える前に作業計画を立てます。",
+      "supervised": "監督あり",
+      "supervisedDescription": "編集やコマンドの前に確認します。"
     },
     "save": "保存",
     "searchSessions": "セッションを検索…",
@@ -2045,93 +2045,93 @@
       "modelCta": "モデルを選択"
     },
     "sendMessage": "送信（Enter）",
-    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "このチャットのエージェントに接続できませんでした。メッセージは入力欄に戻されています。もう一度送信してください。",
     "sessionOptions": "セッションオプション",
     "sessions": "セッション",
     "showRightPanel": "パネルを表示",
     "showSidebar": "サイドバーを表示",
     "showTerminal": "ターミナルを表示",
-    "startSessionToSend": "Describe the work and press send to start a session",
-    "steerMessage": "Send to the running turn",
+    "startSessionToSend": "作業内容を入力し、送信を押してセッションを開始してください",
+    "steerMessage": "実行中のターンに送信",
     "stopAgent": "停止",
     "subtask": {
-      "agent": "Agent",
-      "backToMain": "Back to the main agent",
-      "didNotFinish": "did not finish",
-      "hitLimit": "stopped at its limit",
-      "needsYou": "needs you in the browser",
-      "budget": "over budget",
-      "main": "Main",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools",
-      "viewTranscript": "View this sub-agent's full transcript",
-      "working": "working"
+      "agent": "エージェント",
+      "backToMain": "メインエージェントに戻る",
+      "didNotFinish": "完了しませんでした",
+      "hitLimit": "上限に達して停止しました",
+      "needsYou": "ブラウザでの操作が必要です",
+      "budget": "予算超過",
+      "main": "メイン",
+      "toolCount_one": "{{count}} 個のツール",
+      "toolCount_other": "{{count}} 個のツール",
+      "viewTranscript": "このサブエージェントの全記録を表示",
+      "working": "作業中"
     },
-    "switchModel": "Switch model",
+    "switchModel": "モデルを切り替え",
     "terminal": {
-      "closeTab": "Close terminal tab",
+      "closeTab": "ターミナルタブを閉じる",
       "hide": "ターミナルを非表示",
-      "newTab": "New terminal",
-      "pickShell": "Open a different shell",
-      "tabs": "Terminal tabs"
+      "newTab": "新しいターミナル",
+      "pickShell": "別のシェルを開く",
+      "tabs": "ターミナルタブ"
     },
     "terminalRequiresWorkspace": "ターミナルを使用するにはワークスペースを選択してください",
     "thinking": {
-      "hide": "Hide the thought process",
-      "inProgress": "Thinking…",
-      "label": "Thinking",
-      "show": "Show the thought process"
+      "hide": "思考プロセスを隠す",
+      "inProgress": "考えています…",
+      "label": "思考",
+      "show": "思考プロセスを表示"
     },
     "unpinChat": "ピン留めを解除",
     "voice": {
-      "downloading": "Downloading the speech model… {{percent}}%",
+      "downloading": "音声モデルをダウンロードしています… {{percent}}%",
       "errors": {
-        "microphone-in-use": "The microphone is in use by another app.",
-        "no-microphone": "No microphone was found.",
-        "permission-denied": "Microphone access was denied. Allow it in system settings.",
-        "transcription-failed": "Could not transcribe that. Try again.",
-        "unsupported": "Recording is not available here."
+        "microphone-in-use": "マイクは別のアプリで使用中です。",
+        "no-microphone": "マイクが見つかりませんでした。",
+        "permission-denied": "マイクへのアクセスが拒否されました。システム設定で許可してください。",
+        "transcription-failed": "文字起こしできませんでした。もう一度お試しください。",
+        "unsupported": "ここでは録音を利用できません。"
       },
-      "start": "Dictate",
-      "stop": "Stop and transcribe",
-      "transcribing": "Transcribing…"
+      "start": "音声入力",
+      "stop": "停止して文字起こし",
+      "transcribing": "文字起こししています…"
     },
     "welcome": {
       "addWorkspace": "新しいワークスペースを追加",
-      "defaultWorkspace": "Default workspace: {{path}}",
+      "defaultWorkspace": "デフォルトのワークスペース: {{path}}",
       "letsBuild": "さあ、始めましょう",
       "noWorkspacesFound": "ワークスペースが見つかりません",
       "searchWorkspaces": "ワークスペースを検索…",
       "selectWorkspace": "ワークスペースを選択",
       "starters": {
         "build-a-store": {
-          "name": "Build an online store",
-          "description": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+          "name": "オンラインストアを作る",
+          "description": "ブティック風のキャンドルブランド: ヒーロー画像、商品グリッド、香りとサイズを選べる商品ページ、スライド式カートとチェックアウトを作成します。"
         },
         "design-an-infographic": {
-          "name": "Turn a repo into an infographic",
-          "description": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+          "name": "リポジトリをインフォグラフィックに変換",
+          "description": "n8n をクローンしてソースを読み取り、ワークフロー実行時に実際に何が起きるかを1ページのポスターにまとめます。"
         },
         "find-flights": {
-          "name": "Find me flights",
-          "description": "Opens the browser, checks a couple of sites, and comes back with three real options, links, and a pick."
+          "name": "フライトを探して",
+          "description": "ブラウザを開いて複数のサイトを確認し、実在する3つの選択肢・リンク・おすすめを持って戻ってきます。"
         },
         "process-a-spreadsheet": {
-          "name": "Clean up a spreadsheet",
-          "description": "Reads the spreadsheets here, fixes headers, types and duplicates, and saves a summarised copy beside each original."
+          "name": "スプレッドシートを整理",
+          "description": "ここにあるスプレッドシートを読み取り、見出し・型・重複を修正し、要約版を各原本の隣に保存します。"
         },
         "restyle-a-repo": {
-          "name": "Restyle Excalidraw",
-          "description": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+          "name": "Excalidraw のデザインを変更",
+          "description": "リポジトリをクローンし、そのスタイリング方法を読み取って、独自の配色で作り直したツールバーのモックアップを作成します（実際の動作には接続されません）。"
         },
         "review-pull-requests": {
-          "name": "Review my pull requests",
-          "description": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+          "name": "プルリクエストをレビューして",
+          "description": "各差分を読み取り、バグと不足しているテストをファイルと行で指摘し、コードには触れずにレビューを投稿します。"
         }
       },
-      "switchWorkspace": "Switch workspace from {{workspace}}",
-      "whatShouldWeBuild": "What should we build in {{workspace}}?",
-      "whatShouldWeBuildPrefix": "What should we build in"
+      "switchWorkspace": "{{workspace}} からワークスペースを切り替え",
+      "whatShouldWeBuild": "{{workspace}} で何を作りましょうか？",
+      "whatShouldWeBuildPrefix": "何を作りましょうか？"
     },
     "workspaceDeleted": "ワークスペースを削除しました",
     "workspaceMissing": {
@@ -2146,13 +2146,13 @@
     },
     "workspaceOptions": "ワークスペースオプション",
     "workspaceRenamed": "ワークスペースの名前を変更しました",
-    "workspaces": "Workspaces",
+    "workspaces": "ワークスペース",
     "worktree": {
-      "create": "New worktree",
-      "currentCheckout": "Current checkout",
-      "description": "Choose which checkout the agent will read and change for this chat.",
-      "error": "Worktree operation failed",
-      "select": "Select worktree"
+      "create": "新しいワークツリー",
+      "currentCheckout": "現在のチェックアウト",
+      "description": "このチャットでエージェントが読み書きするチェックアウトを選択します。",
+      "error": "ワークツリー操作に失敗しました",
+      "select": "ワークツリーを選択"
     },
     "yesterday": "昨日"
   },
