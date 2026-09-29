@@ -72,8 +72,6 @@ vi.mock("../../hooks/use-workspace-queries", () => ({
       workspaces: [{ id: "workspace", path: "/workspace" }],
     },
   }),
-  // The bots pane runs in the bot folder; the shell only needs an id back.
-  useBotWorkspaceIdQuery: () => ({ data: "bot-workspace" }),
   useSessionTurnStateQuery: () => ({ data: { isBusy: false } }),
 }));
 vi.mock("../../hooks/use-bots", () => ({
@@ -100,6 +98,9 @@ vi.mock("../../conversation/store", () => ({
   WorkspaceConversationProvider: ({ children }: { children: ReactNode }) => (
     <>{children}</>
   ),
+}));
+vi.mock("../../hooks/use-session-workspace", () => ({
+  useSessionWorkspace: () => undefined,
 }));
 vi.mock("../../providers/preview-link-context", () => ({
   PreviewLinkProvider: ({ children }: { children: ReactNode }) => (
@@ -494,5 +495,40 @@ describe("workspace shell structure", () => {
       mainArea: 50,
       rightPanel: 30,
     });
+  });
+
+  it("restores the sidebar out of the inspector when the centre has no room to give", () => {
+    const width = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(1600);
+    try {
+      const view = render(<WorkspaceView />);
+      fireEvent.click(
+        document.querySelector(
+          '[data-id="local-code-sidebar-toggle"]'
+        ) as HTMLButtonElement
+      );
+      // The inspector dragged out until the centre sits at its 320px minimum.
+      Object.assign(shellLayout, {
+        primarySidebar: 0,
+        mainArea: 20,
+        rightPanel: 80,
+      });
+
+      view.rerender(<WorkspaceView />);
+      fireEvent.click(
+        document.querySelector(
+          '[data-id="local-code-sidebar-toggle"]'
+        ) as HTMLButtonElement
+      );
+
+      expect(shellLayout).toEqual({
+        primarySidebar: 20,
+        mainArea: 20,
+        rightPanel: 60,
+      });
+    } finally {
+      width.mockRestore();
+    }
   });
 });

@@ -76,6 +76,18 @@ const showBotMaker = async (navigate: Navigate): Promise<void> => {
   await waitForBox(BOT_MAKER_TARGET);
 };
 
+const TERMINAL_TARGET = '[data-id="local-code-bottom-panel-toggle"]';
+
+/**
+ * Open a new session. The terminal belongs to sessions; a bot's pane has no
+ * toggle to point at.
+ */
+const showNewSession = async (navigate: Navigate): Promise<void> => {
+  useWorkspaceStore.getState().setNewPaneIntent("session");
+  await navigate({ to: "/sessions/new" });
+  await waitForBox(TERMINAL_TARGET);
+};
+
 export const TOUR_STOPS: readonly TourStop[] = [
   {
     key: "bots",
@@ -106,11 +118,10 @@ export const TOUR_STOPS: readonly TourStop[] = [
   {
     key: "terminal",
     icon: SquareTerminal,
-    // On the bots pane, scoped to the bot's folder. Tourlight skips a stop
-    // whose target is missing and still counts it.
-    target: '[data-id="local-code-bottom-panel-toggle"]',
+    // Tourlight skips a stop whose target is missing and still counts it.
+    target: TERMINAL_TARGET,
     placement: "bottom",
-    route: "/",
+    prepare: showNewSession,
     optional: true,
     subtitleKey: "tour.steps.terminal.audience",
   },

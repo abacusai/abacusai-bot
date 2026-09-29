@@ -67,8 +67,6 @@ type SurfaceAction = {
   id: SurfaceActionId;
   label: string;
   description: string;
-  disabled?: boolean;
-  disabledReason?: string;
 };
 
 const descriptorLegacyTab = (descriptor: RightPanelDescriptor): RightTabId => {
@@ -322,11 +320,6 @@ export const SecondarySidebarPanel = ({
       description: t("workspace.rightPanel.terminalDescription", {
         defaultValue: "Start a shell in this workspace.",
       }),
-      disabled: activeWorkspaceId == null,
-      disabledReason:
-        activeWorkspaceId == null
-          ? t("workspace.terminalRequiresWorkspace")
-          : undefined,
     },
     {
       id: "files",
@@ -337,24 +330,20 @@ export const SecondarySidebarPanel = ({
       id: "agents",
       label: t("workspace.rightTab.agents"),
       description: t("workspace.rightPanel.agentsDescription"),
-      disabled: subtasks.length === 0,
-      disabledReason: agentsReason,
     },
     {
       id: "device",
       label: t("workspace.rightTab.device"),
       description: t("workspace.rightPanel.deviceDescription"),
-      disabled: !deviceEnabled,
-      disabledReason: !deviceEnabled
-        ? t("workspace.rightPanel.deviceUnavailable", {
-            defaultValue: "No device or simulator is available.",
-          })
-        : undefined,
     },
   ];
-  const surfaceActions = allSurfaceActions.filter(
-    (action) => !hideDevelopmentActions || action.id !== "terminal"
-  );
+  // Agents and Device are left out while there is nothing to show, not
+  // greyed out: a disabled entry reads as something broken.
+  const surfaceActions = allSurfaceActions.filter((action) => {
+    if (action.id === "agents") return subtasks.length > 0;
+    if (action.id === "device") return deviceEnabled && !hideDevelopmentActions;
+    return !hideDevelopmentActions || action.id !== "terminal";
+  });
 
   const runSurfaceAction = (id: SurfaceActionId): void => {
     if (id === "browser") openBrowser();
@@ -496,8 +485,6 @@ export const SecondarySidebarPanel = ({
                 return (
                   <DropdownMenuItem
                     key={action.id}
-                    disabled={action.disabled}
-                    title={action.disabledReason}
                     onClick={() => runSurfaceAction(action.id)}
                   >
                     <SurfaceIcon id={action.id} />
@@ -556,8 +543,6 @@ export const SecondarySidebarPanel = ({
                       key={action.id}
                       variant="outline"
                       className="h-auto min-h-20 w-full min-w-0 items-start justify-start gap-3 overflow-hidden p-3 text-start whitespace-normal"
-                      disabled={action.disabled}
-                      title={action.disabledReason}
                       onClick={() => runSurfaceAction(action.id)}
                     >
                       <SurfaceIcon id={action.id} className="mt-0.5 shrink-0" />
@@ -566,7 +551,7 @@ export const SecondarySidebarPanel = ({
                           {action.label}
                         </span>
                         <span className="text-muted-foreground mt-1 block text-xs font-normal break-words">
-                          {action.disabledReason ?? action.description}
+                          {action.description}
                         </span>
                       </span>
                     </Button>

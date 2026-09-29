@@ -34,23 +34,27 @@ export function TitleBar({
   routeKind,
   compact,
   compactInspectorOpen,
+  inspectorAllowed,
   inspectorOpen,
   terminalOpen,
+  terminalReady,
   onToggleRightPanel,
   onToggleTerminal,
 }: {
   routeKind: WorkspaceRouteKind;
   compact: boolean;
   compactInspectorOpen: boolean;
+  inspectorAllowed: boolean;
   inspectorOpen: boolean;
   terminalOpen: boolean;
+  /** False until the session has a workspace for the terminal to open in. */
+  terminalReady: boolean;
   onToggleRightPanel: () => void;
   onToggleTerminal: () => void;
 }): JSX.Element {
   const { t } = useTranslation();
   const { isMobile, open, openMobile } = useSidebar();
 
-  const newPaneIntent = useWorkspaceStore((state) => state.newPaneIntent);
   const setActiveSessionId = useWorkspaceStore(
     (state) => state.setActiveSessionId
   );
@@ -72,6 +76,8 @@ export function TitleBar({
     (session) => session.id === activeSessionId
   );
   const hasActiveSession = activeSessionId != null;
+  // A bot's chat is its only one, so bot chrome offers no new chat.
+  const newChatShown = routeKind !== "bot" && hasActiveSession;
   // What the pane is showing when it is not the chat, or the breadcrumb falls
   // through to "New chat" over Messaging, Artifacts or Usage.
   const paneTitleKey = usePaneTitleKey();
@@ -82,10 +88,6 @@ export function TitleBar({
   // The terminal needs a conversation to attach to; pane destinations like
   // Artifacts and Usage have none.
   const terminalShown = routeKind === "session" && paneTitleKey == null;
-  const inspectorAllowed = routeKind !== "settings";
-  // The bots pane has its own folder whether or not a project is open, so an
-  // active workspace is not what makes the toggle live there.
-  const terminalReady = activeWorkspaceId != null || newPaneIntent === "bot";
   const switchWorkspace = (workspaceId: string): void => {
     activateSelection({ workspaceId, sessionId: null });
   };
@@ -101,7 +103,7 @@ export function TitleBar({
           paddingLeft:
             sidebarShown && !isMobile
               ? 16
-              : titlebarStartInset(hasActiveSession ? 92 : 60),
+              : titlebarStartInset(newChatShown ? 92 : 60),
           paddingRight: inspectorShown
             ? TITLEBAR_CONTENT_END_INSET
             : TITLEBAR_END_INSET,
@@ -132,13 +134,7 @@ export function TitleBar({
                   /
                 </span>
                 <span className="text-foreground max-w-72 truncate font-medium">
-                  {/* No session means one of the two + buttons was pressed and
-                      the pane is showing what it asks for: a bot's name, or a
-                      workspace to start a session in. */}
-                  {activeSession?.label ??
-                    (newPaneIntent === "bot"
-                      ? t("workspace.newBot")
-                      : t("workspace.newChat"))}
+                  {activeSession?.label ?? t("workspace.newChat")}
                 </span>
               </>
             )
@@ -182,7 +178,7 @@ export function TitleBar({
                 render={
                   <Button
                     size="icon"
-                    onClick={terminalReady ? onToggleTerminal : undefined}
+                    onClick={onToggleTerminal}
                     data-id="local-code-bottom-panel-toggle"
                     disabled={!terminalReady}
                     variant={terminalOpen ? "secondary" : "ghost"}
@@ -199,11 +195,9 @@ export function TitleBar({
                 }
               />
               <TooltipContent side="bottom">
-                {!terminalReady
-                  ? t("workspace.terminalRequiresWorkspace")
-                  : terminalOpen
-                    ? t("workspace.hideTerminal")
-                    : t("workspace.showTerminal")}
+                {terminalOpen
+                  ? t("workspace.hideTerminal")
+                  : t("workspace.showTerminal")}
               </TooltipContent>
             </Tooltip>
           )}
@@ -291,9 +285,11 @@ const BotTitleIdentity = (): JSX.Element => {
 };
 
 export function SidebarControl({
+  routeKind,
   compact,
   onToggle,
 }: {
+  routeKind: WorkspaceRouteKind;
   compact: boolean;
   onToggle: () => void;
 }): JSX.Element {
@@ -356,30 +352,32 @@ export function SidebarControl({
             : t("workspace.showSidebar")}
         </TooltipContent>
       </Tooltip>
-      {activeWorkspaceId != null && activeSessionId != null && (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                data-id="local-code-new-chat"
-                onClick={() => {
-                  setActiveSessionId(activeWorkspaceId, null);
-                  void navigate({ to: "/sessions/new" });
-                }}
-                className="text-muted-foreground"
-                aria-label={t("workspace.newChat")}
-              >
-                <SquarePen />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">
-            {t("workspace.newChat")}
-          </TooltipContent>
-        </Tooltip>
-      )}
+      {routeKind !== "bot" &&
+        activeWorkspaceId != null &&
+        activeSessionId != null && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-id="local-code-new-chat"
+                  onClick={() => {
+                    setActiveSessionId(activeWorkspaceId, null);
+                    void navigate({ to: "/sessions/new" });
+                  }}
+                  className="text-muted-foreground"
+                  aria-label={t("workspace.newChat")}
+                >
+                  <SquarePen />
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">
+              {t("workspace.newChat")}
+            </TooltipContent>
+          </Tooltip>
+        )}
     </div>
   );
 }

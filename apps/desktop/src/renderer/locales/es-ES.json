@@ -1974,7 +1974,6 @@
       "browser": "Browser",
       "browserDescription": "Open a local app or URL.",
       "close": "Cerrar panel",
-      "deviceUnavailable": "No device or simulator is available.",
       "deviceDescription": "Preview the connected device.",
       "emptyDescription": "Choose what to show in the right panel.",
       "emptyTitle": "Open a surface",
@@ -2045,7 +2044,6 @@
       "pickShell": "Open a different shell",
       "tabs": "Terminal tabs"
     },
-    "terminalRequiresWorkspace": "Selecciona un espacio de trabajo para usar el terminal",
     "thinking": {
       "hide": "Hide the thought process",
       "inProgress": "Thinking…",

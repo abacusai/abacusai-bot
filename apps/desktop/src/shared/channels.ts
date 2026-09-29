@@ -21,7 +21,6 @@ export enum IpcChannels {
   SaveApiKey = "agent:save-api-key",
   SetDefaultModel = "agent:set-default-model",
   AddWorkspace = "agent:add-workspace",
-  EnsureBotWorkspace = "agent:ensure-bot-workspace",
   EnsureSessionHomeWorkspace = "agent:ensure-session-home-workspace",
   GetSessionHomeWorkspacePath = "agent:get-session-home-workspace-path",
   SwitchWorkspace = "agent:switch-workspace",

@@ -51,7 +51,6 @@ vi.mock("react-i18next", () => ({
         "workspace.rightPanel.tabs": "Inspector panels",
         "workspace.rightTab.agents": "Agents",
         "workspace.rightTab.device": "Device",
-        "workspace.terminalRequiresWorkspace": "Select a workspace.",
       };
       return labels[key] ?? String(values?.defaultValue ?? key);
     },
@@ -434,19 +433,11 @@ describe("secondary sidebar descriptor integration", () => {
     expect(screen.queryByRole("menuitem", { name: /Diff/ })).toBeNull();
   });
 
-  it("keeps terminal external and explains unavailable Agents and Device actions", () => {
+  it("keeps terminal external and leaves out Agents and Device while they have nothing to show", () => {
     const props = renderPanel();
 
-    const agents = screen.getByRole("button", { name: /Agents/ });
-    const device = screen.getByRole("button", { name: /Device/ });
-    expect((agents as HTMLButtonElement).disabled).toBe(true);
-    expect(agents.getAttribute("title")).toBe(
-      "No subagents in this conversation."
-    );
-    expect((device as HTMLButtonElement).disabled).toBe(true);
-    expect(device.getAttribute("title")).toBe(
-      "No device or simulator is available."
-    );
+    expect(screen.queryByRole("button", { name: /Agents/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Device/ })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Terminal/ }));
     expect(props.onOpenTerminal).toHaveBeenCalledOnce();
