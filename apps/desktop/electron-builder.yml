@@ -8,6 +8,8 @@ directories:
 files:
   - dist/**
   - "!dist/THIRD-PARTY-NOTICES.txt"
+  # Read by generate-notices.js at build time only.
+  - "!**/*.map"
   - package.json
 
 beforePack: scripts/before-pack.cjs

@@ -248,6 +248,46 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@ff-labs/fff-node':
+        specifier: ^0.9.6
+        version: 0.9.6
+      '@lydell/node-pty':
+        specifier: 1.2.0-beta.15
+        version: 1.2.0-beta.15
+      electron-store:
+        specifier: ^8.2.0
+        version: 8.2.0
+      electron-updater:
+        specifier: ^6.8.3
+        version: 6.8.9(supports-color@7.2.0)
+      extract-zip:
+        specifier: ^2.0.1
+        version: 2.0.1(supports-color@7.2.0)
+      pptxgenjs:
+        specifier: ^4.0.1
+        version: 4.0.1
+      qrcode:
+        specifier: 1.5.4
+        version: 1.5.4
+      tuf-js:
+        specifier: ^6.0.0
+        version: 6.0.0(supports-color@7.2.0)
+      ws:
+        specifier: 8.21.3
+        version: 8.21.3
+    devDependencies:
+      '@abacus-ai/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
+      '@abacus-ai/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@abacus-ai/connectors':
+        specifier: workspace:*
+        version: link:../../packages/connectors
+      '@abacus-ai/updater':
+        specifier: workspace:*
+        version: link:../updater
       '@base-ui/react':
         specifier: ^1.7.0
         version: 1.7.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -257,21 +297,18 @@ importers:
       '@dicebear/styles':
         specifier: ^10.6.0
         version: 10.6.0
-      '@ff-labs/fff-node':
-        specifier: ^0.9.6
-        version: 0.9.6
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
       '@fontsource-variable/jetbrains-mono':
         specifier: ^5.3.0
         version: 5.3.0
+      '@huggingface/transformers':
+        specifier: ^4.3.0
+        version: 4.3.0
       '@lobehub/icons-static-svg':
         specifier: ^1.94.0
         version: 1.94.0
-      '@lydell/node-pty':
-        specifier: 1.2.0-beta.15
-        version: 1.2.0-beta.15
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -281,6 +318,9 @@ importers:
       '@shadcn/react':
         specifier: ^0.3.0
         version: 0.3.0(@types/react@19.2.18)(react@19.2.8)
+      '@tailwindcss/vite':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
       '@tanstack/highlight':
         specifier: 0.0.10
         version: 0.0.10
@@ -299,6 +339,12 @@ importers:
       '@tanstack/react-store':
         specifier: ^0.11.1
         version: 0.11.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@testing-library/dom':
+        specifier: ^10.4.1
+        version: 10.4.1
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tsparticles/engine':
         specifier: ^4.3.2
         version: 4.3.2
@@ -308,106 +354,6 @@ importers:
       '@tsparticles/slim':
         specifier: ^4.3.2
         version: 4.3.2
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      diff:
-        specifier: ^8.0.3
-        version: 8.0.4
-      electron-store:
-        specifier: ^8.2.0
-        version: 8.2.0
-      electron-updater:
-        specifier: ^6.8.3
-        version: 6.8.9(supports-color@7.2.0)
-      extract-zip:
-        specifier: ^2.0.1
-        version: 2.0.1(supports-color@7.2.0)
-      framer-motion:
-        specifier: ^12.29.0
-        version: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      ghostty-web:
-        specifier: ^0.4.0
-        version: 0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331)
-      i18next:
-        specifier: ^25.8.7
-        version: 25.10.10(typescript@7.0.2)
-      katex:
-        specifier: ^0.16.45
-        version: 0.16.47
-      lucide-react:
-        specifier: ^1.33.0
-        version: 1.33.0(react@19.2.8)
-      monaco-editor:
-        specifier: ^0.55.1
-        version: 0.55.1
-      pptxgenjs:
-        specifier: ^4.0.1
-        version: 4.0.1
-      qrcode:
-        specifier: 1.5.4
-        version: 1.5.4
-      react:
-        specifier: 'catalog:'
-        version: 19.2.8
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.8(react@19.2.8)
-      react-i18next:
-        specifier: ^16.5.4
-        version: 16.6.6(i18next@25.10.10(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
-      react-resizable-panels:
-        specifier: ^4.10.0
-        version: 4.12.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react-tourlight:
-        specifier: ^0.3.0
-        version: 0.3.0(patch_hash=150245916c8d1e3dbc7fb87a5a579fe59a7c5d2ebee040d25e6d5aa7d65618ee)(@floating-ui/react-dom@2.1.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      sonner:
-        specifier: ^2.0.7
-        version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      tuf-js:
-        specifier: ^6.0.0
-        version: 6.0.0(supports-color@7.2.0)
-      uuid:
-        specifier: ^13.0.2
-        version: 13.0.2
-      ws:
-        specifier: 8.21.3
-        version: 8.21.3
-      zustand:
-        specifier: ^5.0.10
-        version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
-    devDependencies:
-      '@abacus-ai/agent':
-        specifier: workspace:*
-        version: link:../../packages/agent
-      '@abacus-ai/config':
-        specifier: workspace:*
-        version: link:../../packages/config
-      '@abacus-ai/connectors':
-        specifier: workspace:*
-        version: link:../../packages/connectors
-      '@abacus-ai/updater':
-        specifier: workspace:*
-        version: link:../updater
-      '@huggingface/transformers':
-        specifier: ^4.3.0
-        version: 4.3.0
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-      '@testing-library/dom':
-        specifier: ^10.4.1
-        version: 10.4.1
-      '@testing-library/react':
-        specifier: ^16.3.2
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
@@ -429,21 +375,69 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.11(vitest@4.1.11)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      diff:
+        specifier: ^8.0.3
+        version: 8.0.4
       electron:
         specifier: 43.4.1
         version: 43.4.1(supports-color@7.2.0)
       electron-builder:
         specifier: ^26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)(supports-color@7.2.0)
+      framer-motion:
+        specifier: ^12.29.0
+        version: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      ghostty-web:
+        specifier: ^0.4.0
+        version: 0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331)
+      i18next:
+        specifier: ^25.8.7
+        version: 25.10.10(typescript@7.0.2)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@2.3.0)
+      katex:
+        specifier: ^0.16.45
+        version: 0.16.47
+      lucide-react:
+        specifier: ^1.33.0
+        version: 1.33.0(react@19.2.8)
+      monaco-editor:
+        specifier: ^0.55.1
+        version: 0.55.1
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
+      react-i18next:
+        specifier: ^16.5.4
+        version: 16.6.6(i18next@25.10.10(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+      react-resizable-panels:
+        specifier: ^4.10.0
+        version: 4.12.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react-tourlight:
+        specifier: ^0.3.0
+        version: 0.3.0(patch_hash=150245916c8d1e3dbc7fb87a5a579fe59a7c5d2ebee040d25e6d5aa7d65618ee)(@floating-ui/react-dom@2.1.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       shadcn:
         specifier: ^4.19.0
         version: 4.19.0(supports-color@7.2.0)(typescript@7.0.2)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       spdx-license-list:
         specifier: ^6.12.0
         version: 6.12.0
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -453,6 +447,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+      uuid:
+        specifier: ^13.0.2
+        version: 13.0.2
       vite:
         specifier: 'catalog:'
         version: 8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
@@ -462,6 +459,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@opentelemetry/api@1.9.0)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+      zustand:
+        specifier: ^5.0.10
+        version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
 
   apps/updater:
     dependencies:
