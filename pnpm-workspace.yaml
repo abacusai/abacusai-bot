@@ -40,12 +40,13 @@ allowBuilds:
 
 # dompurify below 3.4.13 carries known XSS bypasses and arrives transitively
 # through the markdown pipeline. deepmerge-ts below 8 breaks CJS/ESM interop.
-# fast-uri below 3.1.6 (via electron-store > conf > ajv) has four high SSRF /
-# host-confusion advisories (GHSA-5jgf-p345-68v8 and siblings).
+# fast-uri below 3.1.7 (via electron-store > conf > ajv, and the MCP SDK) has six
+# high SSRF / host-confusion advisories (GHSA-5jgf-p345-68v8, GHSA-qw65-cvwx-89v3
+# and siblings).
 overrides:
   dompurify: ^3.4.13
   deepmerge-ts: ^8.0.0
-  fast-uri: ^3.1.6
+  fast-uri: ^3.1.7
   # Packaging only, through electron-builder's plist reader: injection and
   # quadratic-parsing advisories against 0.8.x (GHSA-c7q8-3ch8-vqpv and five
   # siblings).
