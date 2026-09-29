@@ -111,6 +111,66 @@ describe("account profile ownership", () => {
     expect(registry.profiles["user-42_org-9"]).toBe(".");
   });
 
+  it("keeps bots and sessions when a later sign-in omits stable ids", async () => {
+    const {
+      activateProfile,
+      initProfileHome,
+      profileKeyFor,
+      legacyProfileKeyFor,
+    } = await import("./profile-home");
+    const account = {
+      user_id: "42",
+      organization_id: "9",
+      email: "ada@example.com",
+      organization: "acme",
+    };
+    const stableKey = profileKeyFor(account)!;
+    const legacyKey = legacyProfileKeyFor(account)!;
+    activateProfile(stableKey, "first-key", [legacyKey]);
+    fs.writeFileSync(path.join(sandbox, "workspaces.json"), "existing-bot");
+    fs.writeFileSync(path.join(sandbox, "sessions.json"), "existing-chat");
+
+    // Exercise an existing registry as well as first-login alias registration.
+    activateProfile(stableKey, "rotated-key", [legacyKey]);
+    expect(activateProfile(legacyKey, "next-login-key")).toBe(false);
+    initProfileHome();
+    expect(process.env.ABACUSAI_BOT_HOME).toBe(sandbox);
+    expect(fs.readFileSync(path.join(sandbox, "workspaces.json"), "utf8")).toBe(
+      "existing-bot"
+    );
+    expect(fs.readFileSync(path.join(sandbox, "sessions.json"), "utf8")).toBe(
+      "existing-chat"
+    );
+  });
+
+  it("backfills aliases for an existing stable profile", async () => {
+    fs.writeFileSync(
+      path.join(sandbox, "profiles.json"),
+      JSON.stringify({
+        active: "user-42_org-9",
+        profiles: { "user-42_org-9": "." },
+      })
+    );
+    const { activateProfile } = await import("./profile-home");
+    expect(
+      activateProfile("user-42_org-9", "key", ["ada@example.com_acme"])
+    ).toBe(false);
+    expect(activateProfile("ada@example.com_acme", "rotated-key")).toBe(false);
+  });
+
+  it("does not repoint an alias that already owns another profile", async () => {
+    const { activateProfile, initProfileHome } = await import("./profile-home");
+    activateProfile("ada@example.com_acme", "old-key");
+    activateProfile("user-42_org-9", "new-key");
+    initProfileHome();
+    expect(
+      activateProfile("user-42_org-9", "key", ["ada@example.com_acme"])
+    ).toBe(false);
+    expect(activateProfile("ada@example.com_acme", "old-key")).toBe(true);
+    initProfileHome();
+    expect(process.env.ABACUSAI_BOT_HOME).toBe(sandbox);
+  });
+
   it("ignores a corrupt registry path outside the app directory", async () => {
     fs.writeFileSync(
       path.join(sandbox, "profiles.json"),

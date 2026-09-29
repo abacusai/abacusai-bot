@@ -178,6 +178,15 @@ export const activateProfile = (
           ? "."
           : path.join("profiles", key);
   }
+  // Remember every identity supplied by this authenticated account response.
+  // Older deployments can omit stable ids on the next sign-in, so merely
+  // looking up aliases above only supports migration in one direction.
+  // Backfill existing profiles too, but never repoint a previously owned alias:
+  // both folders may contain data and must not be silently merged.
+  for (const alias of aliases) {
+    if (registry.profiles[alias] == null)
+      registry.profiles[alias] = registry.profiles[key];
+  }
   registry.active = key;
   writeRegistry(registry);
 

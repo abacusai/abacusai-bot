@@ -5,6 +5,7 @@
  * children are gone". A dispose that resolves while an agent still runs lets
  * that agent, and everything it spawned, outlive the app.
  */
+import type { ChildProcess } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -85,22 +86,34 @@ describe("disposing the manager", () => {
 describe("stopping a session before removing its workspace", () => {
   it("waits for the process to close", async () => {
     const manager = service();
-    await manager.startSession({
-      workspaceId: "workspace-1",
-      sessionId: "session-1",
-    });
+    try {
+      const started = await manager.startSession({
+        workspaceId: "workspace-1",
+        sessionId: "session-1",
+      });
+      expect(started.success).toBe(true);
 
-    if (process.platform === "win32") {
-      expect(() =>
-        fs.rmSync(workspace!, { recursive: true, force: true })
-      ).toThrow();
+      // Check the teardown contract directly: cwd deletion can succeed on
+      // Windows even while a child is running, so it is not a liveness probe.
+      const internals = manager as unknown as {
+        runtimes: Map<string, { process: ChildProcess }>;
+      };
+      const child = internals.runtimes.get("session-1")!.process;
+      const closed = vi.fn();
+      child.once("close", closed);
+      expect(child.exitCode).toBeNull();
+      expect(child.signalCode).toBeNull();
+
+      await manager.stopSessionAndWait("workspace-1", "session-1");
+      expect(closed).toHaveBeenCalledOnce();
+      expect(
+        manager.getRuntimeDiagnostics().find((entry) => entry.live)
+      ).toBeUndefined();
+      fs.rmSync(workspace!, { recursive: true, force: true });
+      expect(fs.existsSync(workspace!)).toBe(false);
+    } finally {
+      await manager.dispose();
     }
-    await manager.stopSessionAndWait("workspace-1", "session-1");
-    expect(
-      manager.getRuntimeDiagnostics().find((entry) => entry.live)
-    ).toBeUndefined();
-    fs.rmSync(workspace!, { recursive: true, force: true });
-    expect(fs.existsSync(workspace!)).toBe(false);
   });
 });
 
