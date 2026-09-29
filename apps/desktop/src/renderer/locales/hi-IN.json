@@ -616,7 +616,8 @@
     "loading": "लोड हो रहा है",
     "mobileSidebarDescription": "मोबाइल साइडबार दिखाता है।",
     "sidebar": "साइडबार",
-    "toggleSidebar": "साइडबार टॉगल करें"
+    "toggleSidebar": "साइडबार टॉगल करें",
+    "showAllLines": "सभी दिखाएँ ({{total}} पंक्तियाँ, {{more}} और)"
   },
   "connectorRequest": {
     "body": "एजेंट के इस्तेमाल से पहले {{provider}} को कनेक्ट करना होगा। यह आपका इंतज़ार कर रहा है।",

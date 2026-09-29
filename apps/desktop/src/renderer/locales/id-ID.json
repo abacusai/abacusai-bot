@@ -616,7 +616,8 @@
     "loading": "Memuat",
     "mobileSidebarDescription": "Menampilkan sidebar seluler.",
     "sidebar": "Sidebar",
-    "toggleSidebar": "Alihkan sidebar"
+    "toggleSidebar": "Alihkan sidebar",
+    "showAllLines": "Tampilkan semua ({{total}} baris, {{more}} lagi)"
   },
   "connectorRequest": {
     "body": "{{provider}} harus dihubungkan sebelum agen dapat menggunakannya. Ini menunggu Anda.",

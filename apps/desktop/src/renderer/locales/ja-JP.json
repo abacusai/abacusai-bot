@@ -616,7 +616,8 @@
     "loading": "読み込み中",
     "mobileSidebarDescription": "モバイル用のサイドバーを表示します。",
     "sidebar": "サイドバー",
-    "toggleSidebar": "サイドバーの切り替え"
+    "toggleSidebar": "サイドバーの切り替え",
+    "showAllLines": "すべて表示（{{total}} 行、残り {{more}} 行）"
   },
   "connectorRequest": {
     "body": "エージェントが使用する前に {{provider}} を接続する必要があります。あなたの操作をお待ちしています。",

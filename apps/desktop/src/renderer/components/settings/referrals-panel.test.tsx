@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
+    i18n: { language: "en-US" },
     t: (key: string, values?: Record<string, unknown>) =>
       values == null ? key : `${key} ${JSON.stringify(values)}`,
   }),

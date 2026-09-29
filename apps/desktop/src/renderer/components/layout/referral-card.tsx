@@ -25,7 +25,7 @@ const readDismissedUntil = (): number => {
  * credits it offers are the answer to the wall these plans hit.
  */
 export const ReferralCard = (): JSX.Element | null => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { data: account } = useAbacusAccountQuery();
   const { data: summary } = useReferralSummaryQuery();
@@ -40,7 +40,7 @@ export const ReferralCard = (): JSX.Element | null => {
     <UpsellCard
       dataId="sidebar-referral-card"
       title={t("referralCard.title", {
-        credits: summary.milestoneCredits.toLocaleString(),
+        credits: summary.milestoneCredits.toLocaleString(i18n.language),
       })}
       body={t("referralCard.body", { count: summary.milestoneInvites })}
       cta={t("referralCard.cta")}

@@ -2,7 +2,10 @@ import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en-US" },
+  }),
 }));
 vi.mock("./visualizer-segment", () => ({
   VisualizerSegment: ({ code }: { code: string }) => <div>{code}</div>,

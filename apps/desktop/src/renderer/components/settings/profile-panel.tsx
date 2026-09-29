@@ -102,7 +102,7 @@ const DangerZone = (): JSX.Element | null => {
 };
 
 export const ProfilePanel = (): JSX.Element => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const account = useAccountStore((state) => state.account);
   const { data: abacus } = useAbacusAccountQuery();
   const name =
@@ -120,8 +120,12 @@ export const ProfilePanel = (): JSX.Element => {
   const credits =
     abacus?.credits_granted != null && abacus.credits_granted > 0
       ? t("profile.creditsValue", {
-          used: Math.round(abacus.credits_used ?? 0).toLocaleString(),
-          granted: Math.round(abacus.credits_granted).toLocaleString(),
+          used: Math.round(abacus.credits_used ?? 0).toLocaleString(
+            i18n.language
+          ),
+          granted: Math.round(abacus.credits_granted).toLocaleString(
+            i18n.language
+          ),
         })
       : null;
 
