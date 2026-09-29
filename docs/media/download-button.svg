@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="56" viewBox="0 0 300 56" role="img" aria-label="Download AbacusAI Bot for free">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9a6bff"/>
+      <stop offset="0.55" stop-color="#814ee8"/>
+      <stop offset="1" stop-color="#6b38d3"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="298" height="54" rx="27" fill="url(#g)" stroke="#5e2fc0" stroke-width="1"/>
+  <rect x="1" y="1" width="298" height="27" rx="27" fill="#ffffff" fill-opacity="0.08"/>
+  <text x="138" y="35" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#ffffff">Download for free</text>
+  <g transform="translate(250 28)" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 -8v14M-6 0l6 6 6-6"/>
+  </g>
+</svg>
