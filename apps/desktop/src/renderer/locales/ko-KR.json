@@ -701,8 +701,7 @@
     "switchTitle": "You've used all your free Abacus.AI credits",
     "title": "You've used all your free Abacus.AI credits",
     "topUpCta": "Top up",
-    "upsellBody": "Get access to premium models",
-    "upsellTitle": "Unlock the full potential",
+    "upsellTitle": "Unlock the full potential on desktop and web",
     "inviteCta": "Or invite friends for free credits"
   },
   "deepAgentCard": {
@@ -1290,7 +1289,6 @@
     "notSignedInShort": "로그인되지 않음"
   },
   "referralCard": {
-    "body": "We send the invites for you, from your Gmail or WhatsApp. {{count}} invites unlock the credits.",
     "cta": "Invite friends",
     "dismiss": "Dismiss",
     "title": "Invite friends, earn {{credits}} credits"

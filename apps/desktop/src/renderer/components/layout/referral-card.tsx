@@ -42,7 +42,6 @@ export const ReferralCard = (): JSX.Element | null => {
       title={t("referralCard.title", {
         credits: summary.milestoneCredits.toLocaleString(),
       })}
-      body={t("referralCard.body", { count: summary.milestoneInvites })}
       cta={t("referralCard.cta")}
       onCta={() => {
         void navigate({ to: "/settings/referrals" });

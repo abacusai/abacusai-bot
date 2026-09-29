@@ -32,7 +32,7 @@ export const UpsellCard = ({
 }: {
   dataId: string;
   title: string;
-  body: string;
+  body?: string;
   /** Omitted for a card whose whole message is the text. */
   cta?: string;
   onCta?: () => void;
@@ -66,9 +66,11 @@ export const UpsellCard = ({
         <span className="text-[13px] leading-snug font-semibold text-balance">
           {title}
         </span>
-        <span className="text-muted-foreground text-xs leading-snug">
-          {body}
-        </span>
+        {body != null && (
+          <span className="text-muted-foreground text-xs leading-snug">
+            {body}
+          </span>
+        )}
       </span>
     </div>
     {cta != null && (
