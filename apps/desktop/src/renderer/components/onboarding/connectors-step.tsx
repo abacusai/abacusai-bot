@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   CONNECTORS,
+  connectorDescription,
   connectUi,
   type ConnectorDefinition,
   type PlatformConnector,
@@ -157,7 +158,7 @@ export const ConnectorsStep = ({
               key={connector.id}
               data-id={`onboarding-connector-${connector.id}`}
               data-connected={connected ? "" : undefined}
-              title={connector.description}
+              title={connectorDescription(t, connector)}
               className={cn(
                 "border-border bg-card/60 flex flex-col items-center gap-3 rounded-2xl border p-4",
                 connected && "border-primary/50"

@@ -26,6 +26,7 @@ import {
 
 import {
   CONNECTORS,
+  connectorDescription,
   connectUi,
   type ConnectorDefinition,
   type MessagingConnector,
@@ -339,10 +340,10 @@ export const ConnectorsPanel = (): JSX.Element => {
     return offered.filter(
       (connector) =>
         connector.name.toLowerCase().includes(needle) ||
-        connector.description.toLowerCase().includes(needle) ||
+        connectorDescription(t, connector).toLowerCase().includes(needle) ||
         connector.id.includes(needle)
     );
-  }, [query, statuses, loaded]);
+  }, [query, statuses, loaded, t]);
 
   // Messaging is always its own section: hopping between connected and not on
   // every reconnect would read as the page reshuffling itself.
@@ -621,7 +622,7 @@ const ConnectorCard = ({
           )}
           {statusBadge}
         </ItemTitle>
-        <ItemDescription>{connector.description}</ItemDescription>
+        <ItemDescription>{connectorDescription(t, connector)}</ItemDescription>
         {error != null && (
           <p
             className="text-destructive mt-1 text-xs"
