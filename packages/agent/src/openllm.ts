@@ -79,10 +79,12 @@ export function accountWideFailure(
   failure: string,
   provider: string | undefined
 ): FailureScope | null {
-  // An exhausted Abacus balance refuses every billed model alike; the $0 ones
-  // (a stealth preview) still serve, so the pool hops straight to them.
+  // An exhausted Abacus balance is refused before any model is looked at: the
+  // gate is the organization's, so the $0 models answer with the same sentence
+  // as the billed ones. Closing only the paid tier left those to fail one by
+  // one on per-model cooldowns, which then read as "busy" rather than "shut".
   if (provider === "abacus") {
-    return isOutOfCredits(failure) ? { provider: "abacus", free: false } : null;
+    return isOutOfCredits(failure) ? { provider: "abacus" } : null;
   }
 
   // A Studio key's free quota is the key's, not one model's: Google says so
@@ -219,6 +221,9 @@ export function openLlmCandidates(models: ModelChoice[]): ModelChoice[] {
 }
 
 /** How a scope is stored: the provider, plus the tier when tier-specific. */
+/** Scope refusals share the cooldown file under this prefix; see the constructor. */
+const SCOPE_STORE_PREFIX = "scope:";
+
 const scopeKey = (scope: FailureScope): string =>
   `${scope.provider}:${scope.free === undefined ? "all" : scope.free ? "free" : "paid"}`;
 
@@ -242,6 +247,12 @@ export class OpenLlmRotation {
     private readonly store?: CooldownStore
   ) {
     for (const [id, entry] of Object.entries(store?.read() ?? {})) {
+      // A class the account refused is kept the same way, so a new chat
+      // opened against a shut pool says so at once instead of failing first.
+      if (id.startsWith(SCOPE_STORE_PREFIX)) {
+        this.scopeUntil.set(id.slice(SCOPE_STORE_PREFIX.length), entry.until);
+        continue;
+      }
       this.cooldownUntil.set(id, entry.until);
       this.failures.set(id, entry.failures);
     }
@@ -279,7 +290,12 @@ export class OpenLlmRotation {
     scope: FailureScope,
     cooldownMs = OPENLLM_ACCOUNT_COOLDOWN_MS
   ): void {
-    this.scopeUntil.set(scopeKey(scope), this.now() + cooldownMs);
+    const until = this.now() + cooldownMs;
+
+    this.scopeUntil.set(scopeKey(scope), until);
+    this.store?.write({
+      [`${SCOPE_STORE_PREFIX}${scopeKey(scope)}`]: { until, failures: 0 },
+    });
   }
 
   /**
@@ -290,6 +306,11 @@ export class OpenLlmRotation {
   clearCooldowns(): void {
     for (const id of this.cooldownUntil.keys()) {
       this.store?.write({ [id]: { until: 0, failures: 0 } });
+    }
+    for (const key of this.scopeUntil.keys()) {
+      this.store?.write({
+        [`${SCOPE_STORE_PREFIX}${key}`]: { until: 0, failures: 0 },
+      });
     }
     this.cooldownUntil.clear();
     this.failures.clear();

@@ -1,7 +1,8 @@
 import type { AbacusAccountInfo } from "#shared/contracts";
 
 /** The plan-selection page, for a paid tier that wants more. */
-export const ABACUS_PLAN_URL = "https://apps.abacus.ai/chatllm/choose-plan/";
+/** Where Upgrade goes: the product page, so people see what they get before a plan picker. */
+export const ABACUS_PLAN_URL = "https://agent.abacus.ai/";
 
 /** Where a Pro account tops up, rather than the plan chooser it has used. */
 export const ABACUS_BUY_CREDITS_URL =

@@ -196,8 +196,9 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
     : canSwitch
       ? t("creditsCard.switchTitle")
       : t(paid ? "creditsCard.paidTitle" : "creditsCard.title");
+  // The upsell is its heading: what the plan is for is on the page it opens.
   const body = !exhausted
-    ? t("creditsCard.upsellBody")
+    ? undefined
     : canSwitch
       ? t("creditsCard.switchBody", {
           providers: joinProviderLabels(alternatives, t("creditsCard.or")),
