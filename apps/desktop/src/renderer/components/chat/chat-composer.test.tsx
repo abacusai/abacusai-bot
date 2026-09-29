@@ -505,12 +505,12 @@ describe("ChatComposer prompt history", () => {
 });
 
 /**
- * One box everywhere: a session runs the same compact composer a bot does.
- * What a session keeps is the two controls a person supervising a run needs:
- * what the agent is allowed to do, and which checkout it runs against. A bot
- * has neither, because nobody is watching it to make either call.
+ * The compact box keeps the two controls a person supervising a run needs
+ * whenever a mode can be picked: what the agent is allowed to do, and which
+ * checkout it runs against. A bot has neither, because nobody is watching it
+ * to make either call.
  */
-describe("the compact composer in a session", () => {
+describe("the compact composer where a mode can be picked", () => {
   it("still offers the permission mode", () => {
     renderComposer(true, { compact: true, canSelectMode: true });
 
@@ -563,12 +563,20 @@ describe("the caret and the text it sits on", () => {
   const padding = (className: string): string[] =>
     className.split(/\s+/).filter((name) => /^(p|ps|pe|px)-/.test(name));
 
-  it("reserves the send button's strip on both, not just the input", () => {
+  it("reserves the buttons' strip on both, not just the input", () => {
+    renderComposer(true, { inputValue: "hello", compact: true });
+    const { textarea, overlay } = boxes();
+
+    expect(padding(textarea)).toContain("pe-26");
+    expect(padding(overlay)).toContain("pe-26");
+  });
+
+  it("wraps at the same column when the buttons sit under the text", () => {
     renderComposer(true, { inputValue: "hello" });
     const { textarea, overlay } = boxes();
 
-    expect(padding(textarea)).toContain("pe-20");
-    expect(padding(overlay)).toContain("pe-20");
+    expect(padding(textarea)).toContain("pe-3.5");
+    expect(padding(overlay)).toContain("pe-3.5");
   });
 
   it("starts both at the same leading edge", () => {

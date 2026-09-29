@@ -270,9 +270,19 @@ const ProjectSwitcher = ({
   }).data;
 
   const active = workspaces.find((w) => w.id === activeWorkspaceId);
+  // The default is the app's own session folder, or nothing picked yet, which
+  // resolves to it. Any other workspace is named for what it is.
+  const onDefault = active == null || active.kind === "auto";
+  const pickable = useMemo(
+    () =>
+      workspaces.filter(
+        (workspace) =>
+          workspace.kind == null && !isAppInternalWorkspace(workspace)
+      ),
+    [workspaces]
+  );
   const defaultName = t("workspace.welcome.defaultWorkspace");
-  const displayName =
-    active != null ? workspaceDisplayName(active, t) : defaultName;
+  const displayName = onDefault ? defaultName : workspaceDisplayName(active, t);
   const defaultMatches = defaultName
     .toLowerCase()
     .includes(search.toLowerCase());
@@ -280,13 +290,13 @@ const ProjectSwitcher = ({
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return q.length === 0
-      ? workspaces
-      : workspaces.filter(
+      ? pickable
+      : pickable.filter(
           (w) =>
             w.label.toLowerCase().includes(q) ||
             (w.path ?? "").toLowerCase().includes(q)
         );
-  }, [workspaces, search]);
+  }, [pickable, search]);
 
   return (
     <DropdownMenu
@@ -331,17 +341,13 @@ const ProjectSwitcher = ({
               data-id="local-code-workspace-item-default"
               onClick={onSelectDefault}
               title={defaultWorkspacePath ?? undefined}
-              className={
-                active == null ? "bg-accent text-foreground" : undefined
-              }
+              className={onDefault ? "bg-accent text-foreground" : undefined}
             >
               <Laptop
-                className={
-                  active == null ? "text-primary" : "text-muted-foreground"
-                }
+                className={onDefault ? "text-primary" : "text-muted-foreground"}
               />
               <span className="min-w-0 flex-1 truncate">{defaultName}</span>
-              {active == null && <Check className="text-primary" />}
+              {onDefault && <Check className="text-primary" />}
             </DropdownMenuItem>
           )}
           {filtered.length === 0 ? (
@@ -436,12 +442,7 @@ const SessionWelcomeHeader = ({
       {/* One control for where the session runs: it reads "Default
           workspace" until the user picks a folder of their own. */}
       <ProjectSwitcher
-        // The app's own folders are not projects to pick from; the default
-        // one has the row of its own at the top.
-        workspaces={workspaces.filter(
-          (workspace) =>
-            workspace.kind == null && !isAppInternalWorkspace(workspace)
-        )}
+        workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
         onSwitchWorkspace={onSwitchWorkspace}
         onSelectDefault={onSelectDefault}
@@ -1314,16 +1315,13 @@ export const ChatPanel = (): JSX.Element => {
     if (workspaceId == null) {
       // No project picked: the chat runs in the app's own session folder,
       // made and selected here rather than asked for (see sessionDefaultWorkspace).
-      const autoWorkspaceId =
-        await window.api.agent.ensureSessionHomeWorkspace();
+      const autoWorkspaceId = await activateDefaultWorkspace(queryClient);
       if (autoWorkspaceId == null) {
         toast.warning(t("workspace.selectWorkspaceToSend"), {
           id: "local-code-no-workspace",
         });
         return;
       }
-      activateWorkspaceSession(autoWorkspaceId, null);
-      void window.api.agent.switchWorkspace(autoWorkspaceId);
       invalidateWorkspaceCaches();
       workspaceId = autoWorkspaceId;
     }
@@ -1947,10 +1945,12 @@ export const ChatPanel = (): JSX.Element => {
   // The bot maker owns the whole pane, no composer and no workspace wait: main
   // resolves the workspace when the chat opens. A new session keeps its
   // composer; asking for a workspace and a prompt are the same screen.
-  const showsBotMaker = !hasContent && paneIntent === "bot";
+  const showsBotMaker =
+    !hasContent && activeSessionId == null && paneIntent === "bot";
   // A new session is a centred page with the composer in the middle of it,
   // not a transcript with a box docked under it.
-  const showsSessionWelcome = !hasContent && paneIntent === "session";
+  const showsSessionWelcome =
+    !hasContent && activeSessionId == null && paneIntent === "session";
   // Transcripts live only in memory for now: nothing to re-fetch on open.
   const isExistingSessionLoading = false;
   // Session exists and has been used before (has a conversationId) but history failed to load
@@ -2051,6 +2051,9 @@ export const ChatPanel = (): JSX.Element => {
     <div
       className={`bg-background relative flex h-full min-h-0 flex-col ${showsSessionWelcome ? "overflow-y-auto" : ""}`}
       data-id="local-code-chat-panel"
+      // The whole pane is a drop zone for path-mentions, welcome page included.
+      onDrop={handlePanelDrop}
+      onDragOver={(event) => event.preventDefault()}
     >
       {showsBotMaker ? (
         // The bot maker fills the pane on its own, with no heading and no
@@ -2081,19 +2084,16 @@ export const ChatPanel = (): JSX.Element => {
           onAddWorkspace={() => void handleAddWorkspace()}
         />
       ) : (
-        /* Message area, also a drop zone for path-mentions */
+        /* Message area */
         <MessageScrollerProvider
           key={activeSessionId ?? "new-session"}
           autoScroll
-          // A transcript opens at its newest message; the welcome pane at its
-          // top, or the bot maker's name box lands off screen.
+          // A transcript opens at its newest message.
           defaultScrollPosition={activeSessionId == null ? "start" : "end"}
         >
           <MessageScroller className="min-h-0 flex-1">
             <MessageScrollerViewport
               aria-label={t("workspace.chat.conversation")}
-              onDrop={handlePanelDrop}
-              onDragOver={(event) => event.preventDefault()}
             >
               <MessageScrollerContent className="min-h-full gap-0">
                 <AnimatePresence mode="wait">

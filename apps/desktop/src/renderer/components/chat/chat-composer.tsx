@@ -1624,14 +1624,17 @@ const HighlightOverlay = ({
 }): JSX.Element => {
   const tokens = tokenize(value);
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+    <div
+      // Stops above the full composer's button row, as the textarea does.
+      className={`pointer-events-none absolute inset-x-0 top-0 overflow-hidden rounded-xl ${compact ? "bottom-0" : "bottom-10"}`}
+    >
       <div
         ref={overlayInnerRef}
         aria-hidden
-        // `pe-20` matches the textarea, which reserves that strip for the send
-        // button and so wraps a long line earlier than a `px-3.5` overlay
-        // would; any width the two do not share is caret drift.
-        className={`text-foreground w-full ps-3.5 pe-20 break-words whitespace-pre-wrap ${compact ? "py-2" : "pt-3 pb-2"}`}
+        // The trailing padding matches the textarea, which in the compact box
+        // reserves that strip for the microphone, stop and send and so wraps
+        // a long line earlier; any width the two do not share is caret drift.
+        className={`text-foreground w-full ps-3.5 break-words whitespace-pre-wrap ${compact ? "py-2 pe-26" : "pe-3.5 pt-3 pb-2"}`}
         style={{
           // Byte-for-byte the textarea's metrics; drift slides the caret off its glyph.
           fontSize: "14px",
@@ -2453,7 +2456,9 @@ export const ChatComposer = ({
                 isError={mentionSearchQuery.isError}
               />
               {/* Highlight overlay + transparent textarea stacked in a relative container */}
-              <div className="relative">
+              {/* The full composer keeps a row under the text for its buttons,
+                  outside what scrolls, so a long draft never runs under them. */}
+              <div className={compact ? "relative" : "relative pb-10"}>
                 <HighlightOverlay
                   value={inputValue}
                   placeholder={
@@ -2604,7 +2609,7 @@ export const ChatComposer = ({
                   // behind it. `block` matters on the one-line composer: an
                   // inline-block textarea sits on a text baseline and its descender
                   // strip pushed the caret above the pill's centre.
-                  className={`placeholder:text-muted-foreground relative w-full resize-none [scrollbar-width:none] bg-transparent ps-3.5 pe-20 focus:outline-none [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 ${compact ? "block py-2" : "pt-3 pb-11"}`}
+                  className={`placeholder:text-muted-foreground relative w-full resize-none [scrollbar-width:none] bg-transparent ps-3.5 focus:outline-none [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 ${compact ? "block py-2 pe-26" : "block pe-3.5 pt-3 pb-2"}`}
                   style={{
                     fontKerning: "none",
                     fontVariantLigatures: "none",
@@ -2789,13 +2794,11 @@ export const ChatComposer = ({
               {/* Absent, not disabled, in a bot's chat: a greyed-out picker
                   reads as broken. It survives the compact box: what the agent
                   may do is the one control a supervisor needs at hand. */}
-              {canSelectMode && (
-                <RuntimeModePicker
-                  value={selectedModeValue}
-                  onChange={onSelectMode}
-                  disabled={isAgentBusy}
-                />
-              )}
+              <RuntimeModePicker
+                value={selectedModeValue}
+                onChange={onSelectMode}
+                disabled={isAgentBusy}
+              />
             </div>
           )}
           <div className="ms-auto flex shrink-0 items-center">
