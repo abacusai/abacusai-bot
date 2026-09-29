@@ -67,8 +67,6 @@ type SurfaceAction = {
   id: SurfaceActionId;
   label: string;
   description: string;
-  disabled?: boolean;
-  disabledReason?: string;
 };
 
 const descriptorLegacyTab = (descriptor: RightPanelDescriptor): RightTabId => {
@@ -487,8 +485,6 @@ export const SecondarySidebarPanel = ({
                 return (
                   <DropdownMenuItem
                     key={action.id}
-                    disabled={action.disabled}
-                    title={action.disabledReason}
                     onClick={() => runSurfaceAction(action.id)}
                   >
                     <SurfaceIcon id={action.id} />
@@ -547,8 +543,6 @@ export const SecondarySidebarPanel = ({
                       key={action.id}
                       variant="outline"
                       className="h-auto min-h-20 w-full min-w-0 items-start justify-start gap-3 overflow-hidden p-3 text-start whitespace-normal"
-                      disabled={action.disabled}
-                      title={action.disabledReason}
                       onClick={() => runSurfaceAction(action.id)}
                     >
                       <SurfaceIcon id={action.id} className="mt-0.5 shrink-0" />
@@ -557,7 +551,7 @@ export const SecondarySidebarPanel = ({
                           {action.label}
                         </span>
                         <span className="text-muted-foreground mt-1 block text-xs font-normal break-words">
-                          {action.disabledReason ?? action.description}
+                          {action.description}
                         </span>
                       </span>
                     </Button>

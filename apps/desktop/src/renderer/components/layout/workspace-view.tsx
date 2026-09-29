@@ -1,3 +1,4 @@
+import { useRouterState } from "@tanstack/react-router";
 import {
   useCallback,
   useEffect,
@@ -98,14 +99,25 @@ export const WorkspaceView = ({
       ? null
       : (state.workspaceUiStates[activeWorkspaceId]?.activeSessionId ?? null)
   );
-  const showingBotsPane = newPaneIntent === "bot" && activeSessionId == null;
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  // Only the pages that can show it: a routine with no run picked also has no
+  // session active, and it is not a bot.
+  const onNewPanePage = pathname === "/" || pathname === "/bots/new";
+  const showingBotsPane =
+    onNewPanePage && newPaneIntent === "bot" && activeSessionId == null;
   // The bots pane is a bot surface on whichever route shows it, so it gets the
   // bot chrome: no terminal, no coding surfaces in the inspector.
   const chromeKind: WorkspaceRouteKind =
     routeKind === "session" && showingBotsPane ? "bot" : routeKind;
   const terminalAllowed = chromeKind === "session";
   const hideDevelopmentActions = chromeKind === "bot";
-  useSessionWorkspace(chromeKind === "session");
+  useSessionWorkspace(
+    chromeKind === "session" &&
+      activeSessionId == null &&
+      (pathname === "/" || pathname === "/sessions/new")
+  );
   // The bots pane is where a bot gets made: there is no conversation yet, so
   // nothing for a browser or a file tree to be about.
   const inspectorAllowed = routeKind !== "settings" && !showingBotsPane;
@@ -390,6 +402,7 @@ export const WorkspaceView = ({
         inspectorAllowed={inspectorAllowed}
         inspectorOpen={isRightPanelVisible}
         terminalOpen={isBottomPanelVisible}
+        terminalReady={terminalConversationKey != null}
         onToggleRightPanel={toggleRightPanel}
         onToggleTerminal={toggleTerminalPanel}
       />

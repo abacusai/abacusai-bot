@@ -1974,7 +1974,6 @@
       "browser": "Browser",
       "browserDescription": "Open a local app or URL.",
       "close": "パネルを閉じる",
-      "deviceUnavailable": "No device or simulator is available.",
       "deviceDescription": "Preview the connected device.",
       "emptyDescription": "Choose what to show in the right panel.",
       "emptyTitle": "Open a surface",

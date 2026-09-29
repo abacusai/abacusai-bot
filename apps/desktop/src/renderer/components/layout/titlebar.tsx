@@ -37,6 +37,7 @@ export function TitleBar({
   inspectorAllowed,
   inspectorOpen,
   terminalOpen,
+  terminalReady,
   onToggleRightPanel,
   onToggleTerminal,
 }: {
@@ -46,6 +47,8 @@ export function TitleBar({
   inspectorAllowed: boolean;
   inspectorOpen: boolean;
   terminalOpen: boolean;
+  /** False until the session has a workspace for the terminal to open in. */
+  terminalReady: boolean;
   onToggleRightPanel: () => void;
   onToggleTerminal: () => void;
 }): JSX.Element {
@@ -177,6 +180,7 @@ export function TitleBar({
                     size="icon"
                     onClick={onToggleTerminal}
                     data-id="local-code-bottom-panel-toggle"
+                    disabled={!terminalReady}
                     variant={terminalOpen ? "secondary" : "ghost"}
                     className="text-muted-foreground"
                     aria-label={

@@ -72,8 +72,6 @@ vi.mock("../../hooks/use-workspace-queries", () => ({
       workspaces: [{ id: "workspace", path: "/workspace" }],
     },
   }),
-  // The bots pane runs in the bot folder; the shell only needs an id back.
-  useBotWorkspaceIdQuery: () => ({ data: "bot-workspace" }),
   useSessionTurnStateQuery: () => ({ data: { isBusy: false } }),
 }));
 vi.mock("../../hooks/use-bots", () => ({
