@@ -14,7 +14,7 @@ import {
   type ConnectorToolMeta,
 } from "@abacus-ai/connectors/tool-meta";
 
-import { DEFAULT_ABACUS_V1 } from "../abacus-endpoint.js";
+import { DEFAULT_ABACUS_V1, sponsoredRunHeaders } from "../abacus-endpoint.js";
 import { abacusBotDir, desktopMcpConfigPath } from "../config.js";
 import { authHeadersForServer } from "./auth.js";
 import {
@@ -164,6 +164,8 @@ export const expandHeaderEnvPlaceholders = (
     expanded[name] = result;
     if (expandedHere) credentialExpanded = true;
   }
+  // The sponsored-run marker rides only where the credential itself went.
+  if (credentialExpanded) Object.assign(expanded, sponsoredRunHeaders(env));
 
   return { headers: expanded, credentialExpanded };
 };

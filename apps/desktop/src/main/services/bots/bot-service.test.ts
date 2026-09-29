@@ -467,3 +467,42 @@ describe("where a bot's chat goes", () => {
     await expect(service.openChat(bot.id)).rejects.toThrow(/No workspace/);
   });
 });
+
+describe("a sponsored first run", () => {
+  it("marks the bot's sessions on the house until its window passes, and no other bot's", () => {
+    const service = new BotService(makeCallbacks());
+    const sponsored = service.create({
+      name: "Chief of Staff",
+      description: "Draft my replies.",
+      sponsoredFirstRun: true,
+    });
+    const plain = service.create({
+      name: "Plain",
+      description: "Nothing free.",
+    });
+    recordBotSession(sponsored.id, "ws", "s-sponsored");
+    recordBotSession(plain.id, "ws", "s-plain");
+
+    expect(service.personaEnvForSession("s-sponsored")).toMatchObject({
+      ABACUSAI_BOT_SPONSORED_RUN: "cos-first-run",
+    });
+    expect(service.personaEnvForSession("s-plain")).not.toHaveProperty(
+      "ABACUSAI_BOT_SPONSORED_RUN"
+    );
+    expect(service.sponsoredRunEnvForBot(sponsored.id)).toEqual({
+      ABACUSAI_BOT_SPONSORED_RUN: "cos-first-run",
+    });
+    expect(service.sponsoredRunEnvForBot(plain.id)).toEqual({});
+
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime((sponsored.sponsoredUntil ?? 0) + 1);
+      expect(service.personaEnvForSession("s-sponsored")).not.toHaveProperty(
+        "ABACUSAI_BOT_SPONSORED_RUN"
+      );
+      expect(service.sponsoredRunEnvForBot(sponsored.id)).toEqual({});
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

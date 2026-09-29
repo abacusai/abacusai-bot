@@ -6,7 +6,7 @@ import { BrowserPermissionPrompt } from "./components/browser/browser-permission
 import { CriticalUpdateDialog } from "./components/common/critical-update-dialog";
 import { UpdateStalledBanner } from "./components/common/update-stalled-banner";
 import { LocalModelDialog } from "./components/local-models/local-model-dialog";
-import { FirstBotDialog } from "./components/onboarding/first-bot-dialog";
+import { FirstBot } from "./components/onboarding/first-bot";
 import { OnboardingFlow } from "./components/onboarding/onboarding-flow";
 import { WelcomeTourGate } from "./components/onboarding/welcome-tour";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -185,7 +185,7 @@ function App(): React.JSX.Element {
             {/* Last, so the tour points at a window that is actually there:
                 both gates above cover the app entirely. */}
             <WelcomeTourGate />
-            <FirstBotDialog armed={firstBotArmed} onDone={disarmFirstBot} />
+            <FirstBot armed={firstBotArmed} onDone={disarmFirstBot} />
           </WorkspaceStateProvider>
         )}
 

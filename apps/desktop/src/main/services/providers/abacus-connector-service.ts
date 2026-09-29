@@ -9,6 +9,7 @@ import type {
   AbacusConnectorInfo,
   AbacusConnectorOutcome,
   AbacusConnectorsSnapshot,
+  ConnectorConnectOptions,
 } from "#shared/contracts";
 
 import { bringToFront } from "../../bring-to-front";
@@ -271,8 +272,12 @@ export const cancelConnectorConnect = (): void => {
  * for its "done" ping, then confirm against the platform. Listener discipline
  * (GET-only, Host-checked, single-shot, timed) follows startAbacusAuth.
  */
+/** An account hint is forwarded to the provider only when it reads as an email. */
+const HINT_RE = /^[^\s@/?#&]{1,64}@[^\s@/?#&]{1,255}$/;
+
 export const startConnectorConnect = (
-  service: string
+  service: string,
+  options: ConnectorConnectOptions = {}
 ): Promise<AbacusConnectorOutcome> => {
   cancelConnectorConnect();
 
@@ -406,6 +411,10 @@ export const startConnectorConnect = (
       connectUrl.searchParams.set("service", serviceKey);
       connectUrl.searchParams.set("botPort", String(port));
       connectUrl.searchParams.set("botPath", callbackPath);
+      if (options.autostart === true)
+        connectUrl.searchParams.set("autostart", "1");
+      const hint = (options.hint ?? "").trim();
+      if (HINT_RE.test(hint)) connectUrl.searchParams.set("hint", hint);
 
       void shell.openExternal(connectUrl.toString()).catch((error: unknown) => {
         finish({
