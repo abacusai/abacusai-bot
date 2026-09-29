@@ -52,13 +52,19 @@ import type { BotTemplate } from "./bot-templates";
  * mission, persona or schedule, the bot's chat is told once.
  */
 
-/** The standing instruction a bot with no instructions starts with. */
+/**
+ * The standing instruction a bot with no instructions starts with. Plain and
+ * short on purpose: told to guess its lane and offer a menu, a bot with a
+ * throwaway name would pad a paragraph of guesses and then go poking through
+ * the workspace unasked, and users rated that first message down.
+ */
 export const NAME_ONLY_MISSION = [
-  "Your mission is not set yet. Take your best cue from your name. In your",
-  "first message, say what you guess your lane is, offer two or three concrete",
-  "jobs you could take on, and ask the user what they actually want you",
-  "handling. Once they tell you, treat that as your standing mission from then",
-  "on.",
+  "Your mission is not set yet, and you do not guess it. Your first message is",
+  "two short sentences: greet the user by your name, and ask what they want you",
+  "to do. No menu of offers, no guesses from your name or from the workspace,",
+  "and no tools until the user has answered: do not list, read or run anything",
+  "in the workspace. Once they tell you, treat that as your standing mission",
+  "from then on.",
 ].join(" ");
 
 /**
