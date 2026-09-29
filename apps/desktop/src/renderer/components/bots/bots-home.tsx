@@ -182,7 +182,7 @@ export const BotsHome = ({
 
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-1 flex-col items-center overflow-y-auto px-6 py-8"
+      className="flex h-full min-h-0 w-full flex-1 flex-col items-center overflow-y-auto px-6 pt-8"
       data-id="bots-home"
     >
       <NewBotDialog
@@ -196,7 +196,10 @@ export const BotsHome = ({
           onCreated(bot);
         }}
       />
-      <div className="my-auto flex w-full max-w-6xl flex-col items-center">
+      {/* Capped at the pane's height so the name box stays put and the
+          templates scroll beneath it. The page itself scrolls only when the
+          pane is too short to show even a row of them. */}
+      <div className="my-auto flex max-h-full w-full max-w-6xl flex-col items-center">
         {/* The bot's own face, not the mascot: it follows the name as typed
             and the pencil opens the picker. */}
         <BotAvatarPicker
@@ -215,7 +218,7 @@ export const BotsHome = ({
           {t("bots.home.subtitle")}
         </p>
 
-        <div className="mt-6 w-full max-w-xl">
+        <div className="mt-6 w-full max-w-xl shrink-0">
           <div className="relative">
             <BotIcon
               className="text-primary pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2"
@@ -248,8 +251,8 @@ export const BotsHome = ({
 
         {/* Each card opens the create dialog prefilled with that role, so
             everything stays editable before Create. */}
-        <div className="mt-8 w-full">
-          <div className="mx-auto mb-5 flex max-w-md items-center gap-3">
+        <div className="mt-8 flex min-h-48 w-full flex-col">
+          <div className="mx-auto mb-5 flex w-full max-w-md shrink-0 items-center gap-3">
             <span className="bg-border h-px flex-1" aria-hidden="true" />
             <span className="text-muted-foreground text-sm">
               {t("bots.home.templatesDivider")}
@@ -262,7 +265,7 @@ export const BotsHome = ({
           <div
             role="tablist"
             aria-label={t("bots.home.categoriesLabel")}
-            className="mb-5 flex flex-wrap justify-center gap-2"
+            className="mb-5 flex shrink-0 flex-wrap justify-center gap-2"
             data-id="bots-home-categories"
           >
             {BOT_TEMPLATE_CATEGORIES.map((id) => {
@@ -293,7 +296,7 @@ export const BotsHome = ({
               five, so a full page shows complete rows (ten featured, five per
               other tab). */}
           <div
-            className="grid grid-cols-[repeat(auto-fill,minmax(12.5rem,1fr))] gap-3"
+            className="scroll-fade-y scroll-fade-6 scrollbar-autohide grid min-h-0 grid-cols-[repeat(auto-fill,minmax(12.5rem,1fr))] gap-3 overflow-y-auto overscroll-contain pb-8"
             data-id="bots-home-suggestions"
           >
             {templates.map((template) => {

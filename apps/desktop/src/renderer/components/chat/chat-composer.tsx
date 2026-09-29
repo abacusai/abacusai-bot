@@ -160,6 +160,8 @@ export type ChatComposerProps = {
    * around a message box is the app looking busy at the user's expense.
    */
   compact?: boolean;
+  /** A new session's box: a column in the middle of the page, not full width. */
+  centered?: boolean;
   onSelectMode: (value: AgentMode) => void;
   activeWorkspaceId: string | null;
   worktrees: WorktreeListItem[];
@@ -1626,10 +1628,10 @@ const HighlightOverlay = ({
       <div
         ref={overlayInnerRef}
         aria-hidden
-        // `pe-12` matches the textarea, which reserves that strip for the send
+        // `pe-20` matches the textarea, which reserves that strip for the send
         // button and so wraps a long line earlier than a `px-3.5` overlay
         // would; any width the two do not share is caret drift.
-        className={`text-foreground w-full ps-3.5 pe-12 break-words whitespace-pre-wrap ${compact ? "py-2" : "pt-3 pb-2"}`}
+        className={`text-foreground w-full ps-3.5 pe-20 break-words whitespace-pre-wrap ${compact ? "py-2" : "pt-3 pb-2"}`}
         style={{
           // Byte-for-byte the textarea's metrics; drift slides the caret off its glyph.
           fontSize: "14px",
@@ -1701,6 +1703,7 @@ export const ChatComposer = ({
   onSelectWorktreeEnvironment,
   onModelsRefreshed,
   hasConversation = false,
+  centered = false,
   workspaceRoot,
   agentStatus,
   pendingPermission,
@@ -2340,7 +2343,7 @@ export const ChatComposer = ({
     >
       <div
         // Full window width, iMessage-style; the transcript stays a centered column.
-        className="relative mx-auto w-full"
+        className={`relative mx-auto w-full ${centered ? "max-w-3xl" : ""}`}
       >
         {tasksExpanded && todos != null && (
           <ComposerTasksDrawer
@@ -2369,10 +2372,6 @@ export const ChatComposer = ({
                 onAction={handleAttachAction}
                 asPlus
                 buttonClassName={composerControlRadius}
-              />
-              <DictationButton
-                onText={appendDictation}
-                className={composerControlRadius}
               />
             </div>
           )}
@@ -2605,7 +2604,7 @@ export const ChatComposer = ({
                   // behind it. `block` matters on the one-line composer: an
                   // inline-block textarea sits on a text baseline and its descender
                   // strip pushed the caret above the pill's centre.
-                  className={`placeholder:text-muted-foreground relative w-full resize-none [scrollbar-width:none] bg-transparent ps-3.5 pe-12 focus:outline-none [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 ${compact ? "block py-2" : "py-3"}`}
+                  className={`placeholder:text-muted-foreground relative w-full resize-none [scrollbar-width:none] bg-transparent ps-3.5 pe-20 focus:outline-none [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 ${compact ? "block py-2" : "pt-3 pb-11"}`}
                   style={{
                     fontKerning: "none",
                     fontVariantLigatures: "none",
@@ -2618,8 +2617,18 @@ export const ChatComposer = ({
                     caretColor: "var(--foreground, currentColor)",
                   }}
                 />
-                {/* Send (or stop) sits in the box with the message, bottom
-                  right; the toolbar below carries everything else. */}
+                {/* Attach sits in the box, bottom left, where a message is
+                  put together. The compact composer's + is beside the box. */}
+                {!compact && (
+                  <div
+                    className="absolute bottom-1.5 left-1.5 z-10"
+                    data-slot="composer-attach"
+                  >
+                    <AttachMenu onAction={handleAttachAction} />
+                  </div>
+                )}
+                {/* The microphone and send (or stop) sit in the box with the
+                  message, bottom right: both are ways of saying it. */}
                 <div
                   className={`absolute right-1.5 z-10 flex items-center gap-1 ${
                     compact && !compactComposerExpanded
@@ -2627,6 +2636,10 @@ export const ChatComposer = ({
                       : "bottom-1.5"
                   }`}
                 >
+                  <DictationButton
+                    onText={appendDictation}
+                    className={composerControlRadius}
+                  />
                   {isAgentBusy && (
                     <Tooltip>
                       <TooltipTrigger
@@ -2764,14 +2777,14 @@ export const ChatComposer = ({
           </div>
         )}
 
-        {/* Intent (mode, attach) on the left, the model on the right; send
-            lives inside the box. The compact composer keeps only the model:
-            its + moved beside the box and it has no mode to pick. */}
+        {/* The mode on the left, the model on the right; attach, the
+            microphone and send live inside the box. A bot's chat keeps only
+            the model: it has no mode to pick. */}
         <div
           className="flex min-w-0 flex-wrap items-center gap-1 px-1 pt-1"
           data-slot="composer-toolbar"
         >
-          {(canSelectMode || !compact) && (
+          {canSelectMode && (
             <div className="flex min-w-0 items-center gap-0.5 overflow-hidden">
               {/* Absent, not disabled, in a bot's chat: a greyed-out picker
                   reads as broken. It survives the compact box: what the agent
@@ -2783,10 +2796,6 @@ export const ChatComposer = ({
                   disabled={isAgentBusy}
                 />
               )}
-              {/* The + moved beside the box when compact, so the menu here
-                  would be the same action twice. */}
-              {!compact && <AttachMenu onAction={handleAttachAction} />}
-              {!compact && <DictationButton onText={appendDictation} />}
             </div>
           )}
           <div className="ms-auto flex shrink-0 items-center">

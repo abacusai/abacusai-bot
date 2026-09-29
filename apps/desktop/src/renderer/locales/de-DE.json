@@ -1728,7 +1728,7 @@
       "saveFailed": "Anhänge konnten nicht gespeichert werden: {{error}}",
       "unknownError": "unbekannter Fehler"
     },
-    "autoWorkspace": "Auto workspace",
+    "autoWorkspace": "Default workspace",
     "branch": {
       "create": "Create “{{branch}}”",
       "createFailed": "Branch konnte nicht erstellt werden.",
@@ -2068,7 +2068,7 @@
     },
     "welcome": {
       "addWorkspace": "Neuen Arbeitsbereich hinzufügen",
-      "defaultWorkspace": "Default workspace: {{path}}",
+      "defaultWorkspace": "Default workspace",
       "letsBuild": "Los geht's",
       "noWorkspacesFound": "Keine Arbeitsbereiche gefunden",
       "searchWorkspaces": "Arbeitsbereiche durchsuchen…",

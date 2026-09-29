@@ -567,8 +567,8 @@ describe("the caret and the text it sits on", () => {
     renderComposer(true, { inputValue: "hello" });
     const { textarea, overlay } = boxes();
 
-    expect(padding(textarea)).toContain("pe-12");
-    expect(padding(overlay)).toContain("pe-12");
+    expect(padding(textarea)).toContain("pe-20");
+    expect(padding(overlay)).toContain("pe-20");
   });
 
   it("starts both at the same leading edge", () => {

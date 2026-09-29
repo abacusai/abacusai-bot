@@ -79,6 +79,7 @@ import {
   useBotSenderChatsQuery,
 } from "../../hooks/use-bots";
 import { useDefaultAgentModeQuery } from "../../hooks/use-sandbox";
+import { activateDefaultWorkspace } from "../../hooks/use-session-workspace";
 import {
   useAgentSessionStateQuery,
   useWorkspaceAgentSessionsQuery,
@@ -248,21 +249,33 @@ const ProjectSwitcher = ({
   workspaces,
   activeWorkspaceId,
   onSwitchWorkspace,
+  onSelectDefault,
   onAddWorkspace,
 }: {
   workspaces: WorkspaceListItem[];
   activeWorkspaceId: string | null;
   onSwitchWorkspace: (id: string) => void;
+  /** Back to the app's own workspace, which is what nothing picked means. */
+  onSelectDefault: () => void;
   onAddWorkspace: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
+  // Where a send lands with nothing picked. Said on the default row's hover,
+  // for whoever wants the folder; the name is enough for everyone else.
+  const defaultWorkspacePath = useQuery({
+    queryKey: ["session-home-workspace-path"],
+    queryFn: () => window.api.agent.getSessionHomeWorkspacePath(),
+    staleTime: Infinity,
+  }).data;
 
   const active = workspaces.find((w) => w.id === activeWorkspaceId);
+  const defaultName = t("workspace.welcome.defaultWorkspace");
   const displayName =
-    active != null
-      ? workspaceDisplayName(active, t)
-      : t("workspace.welcome.selectWorkspace");
+    active != null ? workspaceDisplayName(active, t) : defaultName;
+  const defaultMatches = defaultName
+    .toLowerCase()
+    .includes(search.toLowerCase());
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -311,10 +324,32 @@ const ProjectSwitcher = ({
           </InputGroup>
         </div>
         <div className="max-h-52 overflow-y-auto p-1">
+          {/* Always an option, and not a row the user added, so there is
+              nothing here to remove. */}
+          {defaultMatches && (
+            <DropdownMenuItem
+              data-id="local-code-workspace-item-default"
+              onClick={onSelectDefault}
+              title={defaultWorkspacePath ?? undefined}
+              className={
+                active == null ? "bg-accent text-foreground" : undefined
+              }
+            >
+              <Laptop
+                className={
+                  active == null ? "text-primary" : "text-muted-foreground"
+                }
+              />
+              <span className="min-w-0 flex-1 truncate">{defaultName}</span>
+              {active == null && <Check className="text-primary" />}
+            </DropdownMenuItem>
+          )}
           {filtered.length === 0 ? (
-            <div className="text-muted-foreground px-3 py-3 text-center text-xs">
-              {t("workspace.welcome.noWorkspacesFound")}
-            </div>
+            defaultMatches ? null : (
+              <div className="text-muted-foreground px-3 py-3 text-center text-xs">
+                {t("workspace.welcome.noWorkspacesFound")}
+              </div>
+            )
           ) : (
             filtered.map((workspace) => {
               const isActive = workspace.id === activeWorkspaceId;
@@ -365,126 +400,100 @@ const STARTER_ICON: Record<string, LucideIcon> = {
   "find-flights": Plane,
 };
 
-const WelcomeScreen = ({
+/**
+ * The top of a new session: the greeting and the workspace it will run in.
+ * The composer sits right under it and the starters under that, so the page
+ * reads as one centred column with the box in the middle of it.
+ */
+const SessionWelcomeHeader = ({
   workspaces,
   activeWorkspaceId,
   onSwitchWorkspace,
+  onSelectDefault,
   onAddWorkspace,
-  onUsePrompt,
 }: {
   workspaces: WorkspaceListItem[];
   activeWorkspaceId: string | null;
   onSwitchWorkspace: (id: string) => void;
+  onSelectDefault: () => void;
   onAddWorkspace: () => void;
+}): JSX.Element => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+      data-id="local-code-welcome"
+      className="mt-auto flex w-full min-w-0 shrink-0 flex-col items-center gap-4 px-4 pt-8 pb-4 sm:px-6"
+    >
+      <div className="flex w-full min-w-0 flex-col items-center gap-4">
+        <div className="bg-sidebar border-border text-primary flex h-14 w-14 items-center justify-center rounded-2xl border">
+          <Laptop className="size-6" />
+        </div>
+        <Greeting />
+      </div>
+
+      {/* One control for where the session runs: it reads "Default
+          workspace" until the user picks a folder of their own. */}
+      <ProjectSwitcher
+        // The app's own folders are not projects to pick from; the default
+        // one has the row of its own at the top.
+        workspaces={workspaces.filter(
+          (workspace) =>
+            workspace.kind == null && !isAppInternalWorkspace(workspace)
+        )}
+        activeWorkspaceId={activeWorkspaceId}
+        onSwitchWorkspace={onSwitchWorkspace}
+        onSelectDefault={onSelectDefault}
+        onAddWorkspace={onAddWorkspace}
+      />
+    </motion.div>
+  );
+};
+
+const SessionStarters = ({
+  onUsePrompt,
+}: {
   /** Put a starter's prompt in the composer, for the user to edit and send. */
   onUsePrompt: (prompt: string) => void;
 }): JSX.Element => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const autoWorkspacePath = useQuery({
-    queryKey: ["session-home-workspace-path"],
-    queryFn: () => window.api.agent.getSessionHomeWorkspacePath(),
-    staleTime: Infinity,
-  }).data;
-  // Which + was pressed. Both land here (nothing active, nothing said), so
-  // the pane cannot tell a new bot from a new session without being told.
-  const newPaneIntent = useWorkspaceStore((state) => state.newPaneIntent);
-
-  const onOpenBot = (botId: string): void => {
-    void navigate({ to: "/bots/$botId", params: { botId } });
-  };
-
   return (
-    <motion.div
-      key="welcome"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-      data-id="local-code-welcome"
-      // Keyed off the same thing the branch below is, not off whether a
-      // workspace is selected: the session screen can show with one selected.
-      className={`@container flex min-w-0 flex-1 flex-col items-center ${newPaneIntent === "session" ? "justify-center gap-4 px-4 sm:gap-8 sm:px-6" : ""}`}
-    >
-      {newPaneIntent === "session" ? (
-        <>
-          <div className="flex w-full min-w-0 flex-col items-center gap-4">
-            <div className="bg-sidebar border-border text-primary flex h-14 w-14 items-center justify-center rounded-2xl border">
-              <Laptop className="size-6" />
-            </div>
-            <Greeting />
-          </div>
-
-          {/* The picker says what it is. A sentence above it telling the user
-              to pick a workspace was a caption for a control that already
-              reads as one, on the emptiest screen in the app. */}
-          <div className="flex flex-col items-center gap-1.5">
-            <ProjectSwitcher
-              workspaces={workspaces.filter(
-                (workspace) => !isAppInternalWorkspace(workspace)
-              )}
-              activeWorkspaceId={activeWorkspaceId}
-              onSwitchWorkspace={onSwitchWorkspace}
-              onAddWorkspace={onAddWorkspace}
-            />
-            {/* With nothing picked a send lands in the app's own auto
-                workspace, which the picker does not list, so its path is
-                said here, in advance. */}
-            {activeWorkspaceId == null && autoWorkspacePath != null && (
-              <p
-                className="text-muted-foreground max-w-md truncate text-center text-xs"
-                data-id="local-code-workspace-hint"
-                title={autoWorkspacePath}
-              >
-                {t("workspace.welcome.defaultWorkspace", {
-                  path: autoWorkspacePath,
-                })}
-              </p>
-            )}
-          </div>
-
-          {/* Openers. A card fills the composer rather than sending: the
+    // The deeper bottom padding lifts the column a little above the pane's
+    // middle, where a centred block reads as centred rather than sagging.
+    <div className="mb-auto flex w-full shrink-0 justify-center px-4 pt-3 pb-28 sm:px-6">
+      {/* Openers. A chip fills the composer rather than sending: the
               prompt is a draft to edit, because the file, the screen, the app it
-              talks about are still only in the user's head. */}
-          <div
-            className="grid w-full max-w-3xl grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3"
-            data-id="session-starters"
-          >
-            {SESSION_STARTERS.map((starter) => {
-              const Icon = STARTER_ICON[starter.id] ?? Sparkles;
-              return (
-                <button
-                  key={starter.id}
-                  type="button"
-                  data-id={`session-starter-${starter.id}`}
-                  onClick={() => onUsePrompt(starter.prompt)}
-                  className="border-border bg-card hover:border-primary/40 flex h-full flex-col items-start rounded-2xl border p-3.5 text-left transition-colors"
-                >
-                  <span className="flex w-full items-center gap-2.5">
-                    <span className="bg-muted text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
-                      <Icon className="size-5" aria-hidden="true" />
-                    </span>
-                    <span className="text-foreground min-w-0 text-sm leading-tight font-semibold">
-                      {t(`workspace.welcome.starters.${starter.id}.name`)}
-                    </span>
-                  </span>
-                  <span className="text-muted-foreground mt-2.5 line-clamp-3 text-xs leading-snug">
-                    {t(`workspace.welcome.starters.${starter.id}.description`)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        // The bot maker fills the pane on its own, with no heading and no composer:
-        // the first thing this app asks for is a bot, not a prompt.
-        <>
-          <HomeUpdateBanner />
-          <BotsHome onCreated={(bot) => onOpenBot(bot.id)} />
-        </>
-      )}
-    </motion.div>
+              talks about are still only in the user's head. Chips, not cards:
+              they wrap to whatever width the pane has instead of stacking into
+              a column that pushes the page into scrolling. */}
+      <div
+        className="flex w-full max-w-2xl flex-wrap justify-center gap-2"
+        data-id="session-starters"
+      >
+        {SESSION_STARTERS.map((starter) => {
+          const Icon = STARTER_ICON[starter.id] ?? Sparkles;
+          return (
+            <button
+              key={starter.id}
+              type="button"
+              data-id={`session-starter-${starter.id}`}
+              onClick={() => onUsePrompt(starter.prompt)}
+              title={t(`workspace.welcome.starters.${starter.id}.description`)}
+              className="border-border bg-card text-foreground hover:border-primary/40 flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors"
+            >
+              <Icon
+                className="text-primary size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <span className="truncate">
+                {t(`workspace.welcome.starters.${starter.id}.name`)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
@@ -492,6 +501,7 @@ const WelcomeScreen = ({
 
 export const ChatPanel = (): JSX.Element => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const activeWorkspaceId = useWorkspaceActiveWorkspaceId();
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1938,6 +1948,9 @@ export const ChatPanel = (): JSX.Element => {
   // resolves the workspace when the chat opens. A new session keeps its
   // composer; asking for a workspace and a prompt are the same screen.
   const showsBotMaker = !hasContent && paneIntent === "bot";
+  // A new session is a centred page with the composer in the middle of it,
+  // not a transcript with a box docked under it.
+  const showsSessionWelcome = !hasContent && paneIntent === "session";
   // Transcripts live only in memory for now: nothing to re-fetch on open.
   const isExistingSessionLoading = false;
   // Session exists and has been used before (has a conversationId) but history failed to load
@@ -2036,151 +2049,174 @@ export const ChatPanel = (): JSX.Element => {
 
   return (
     <div
-      className="bg-background relative flex h-full min-h-0 flex-col"
+      className={`bg-background relative flex h-full min-h-0 flex-col ${showsSessionWelcome ? "overflow-y-auto" : ""}`}
       data-id="local-code-chat-panel"
     >
-      {/* Message / welcome area, also a drop zone for path-mentions */}
-      <MessageScrollerProvider
-        key={activeSessionId ?? "new-session"}
-        autoScroll
-        // A transcript opens at its newest message; the welcome pane at its
-        // top, or the bot maker's name box lands off screen.
-        defaultScrollPosition={activeSessionId == null ? "start" : "end"}
-      >
-        <MessageScroller className="min-h-0 flex-1">
-          <MessageScrollerViewport
-            aria-label={t("workspace.chat.conversation")}
-            onDrop={handlePanelDrop}
-            onDragOver={(event) => event.preventDefault()}
-          >
-            <MessageScrollerContent className="min-h-full gap-0">
-              <AnimatePresence mode="wait">
-                {isExistingSessionLoading ? (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="mx-auto flex w-full flex-1 flex-col gap-4 px-5 pt-6 pb-6"
-                  >
-                    {[0.9, 0.7, 0.85, 0.6].map((width, i) => (
-                      <div key={i} className="flex flex-col gap-2">
-                        <div
-                          className="bg-muted h-3 animate-pulse rounded-full"
-                          style={{ width: `${width * 100}%` }}
-                        />
-                        {i % 2 === 0 && (
+      {showsBotMaker ? (
+        // The bot maker fills the pane on its own, with no heading and no
+        // composer: the first thing this app asks for is a bot, not a prompt.
+        // It sits outside the message scroller because it is a page, not a
+        // transcript: it scrolls its own templates and has no bottom to jump to.
+        <div
+          className="flex min-h-0 flex-1 flex-col items-center"
+          data-id="local-code-welcome"
+        >
+          <HomeUpdateBanner />
+          <BotsHome
+            onCreated={(bot) =>
+              void navigate({ to: "/bots/$botId", params: { botId: bot.id } })
+            }
+          />
+        </div>
+      ) : showsSessionWelcome ? (
+        <SessionWelcomeHeader
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          onSwitchWorkspace={handleSwitchWorkspace}
+          onSelectDefault={() =>
+            void activateDefaultWorkspace(queryClient).then(
+              invalidateWorkspaceCaches
+            )
+          }
+          onAddWorkspace={() => void handleAddWorkspace()}
+        />
+      ) : (
+        /* Message area, also a drop zone for path-mentions */
+        <MessageScrollerProvider
+          key={activeSessionId ?? "new-session"}
+          autoScroll
+          // A transcript opens at its newest message; the welcome pane at its
+          // top, or the bot maker's name box lands off screen.
+          defaultScrollPosition={activeSessionId == null ? "start" : "end"}
+        >
+          <MessageScroller className="min-h-0 flex-1">
+            <MessageScrollerViewport
+              aria-label={t("workspace.chat.conversation")}
+              onDrop={handlePanelDrop}
+              onDragOver={(event) => event.preventDefault()}
+            >
+              <MessageScrollerContent className="min-h-full gap-0">
+                <AnimatePresence mode="wait">
+                  {isExistingSessionLoading ? (
+                    <motion.div
+                      key="loading"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="mx-auto flex w-full flex-1 flex-col gap-4 px-5 pt-6 pb-6"
+                    >
+                      {[0.9, 0.7, 0.85, 0.6].map((width, i) => (
+                        <div key={i} className="flex flex-col gap-2">
                           <div
                             className="bg-muted h-3 animate-pulse rounded-full"
-                            style={{ width: `${(width - 0.15) * 100}%` }}
+                            style={{ width: `${width * 100}%` }}
                           />
-                        )}
-                      </div>
-                    ))}
-                  </motion.div>
-                ) : isHistoryLoadFailed ? (
-                  <motion.div
-                    key="history-error"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center"
-                  >
-                    <p className="text-secondary-foreground text-sm">
-                      {t("workspace.chat.historyLoadFailed")}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {t("workspace.chat.continueBelow")}
-                    </p>
-                  </motion.div>
-                ) : !hasContent ? (
-                  <WelcomeScreen
-                    key="welcome"
-                    onUsePrompt={useStarterPrompt}
-                    workspaces={workspaces}
-                    activeWorkspaceId={activeWorkspaceId}
-                    onSwitchWorkspace={handleSwitchWorkspace}
-                    onAddWorkspace={() => void handleAddWorkspace()}
-                  />
-                ) : chatItems.length === 0 && pendingNewSession != null ? (
-                  <motion.div
-                    key="pending-new-session"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.15 }}
-                    className="mx-auto flex w-full flex-col gap-4 px-5 pt-4 pb-6"
-                  >
-                    <UserMessageBubble content={pendingNewSession.message} />
-                    <ThinkingLoader isVisible={true} />
-                  </motion.div>
-                ) : (
-                  // Keyed by session: segment ids are only unique within a chat, so
-                  // a shared key reconciles another chat's message into this one.
-                  <motion.div
-                    key={`messages:${activeSessionId ?? "none"}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2 }}
-                    className="mx-auto flex w-full flex-col gap-4 px-5 pt-4 pb-6"
-                  >
-                    {subtaskScope != null && (
-                      <SubtaskScopeHeader
-                        summary={activeSubtask}
-                        onBack={() => setSubtaskScope(null)}
-                      />
-                    )}
-                    {/* A bot's chat is a thread, not a work log (see
+                          {i % 2 === 0 && (
+                            <div
+                              className="bg-muted h-3 animate-pulse rounded-full"
+                              style={{ width: `${(width - 0.15) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </motion.div>
+                  ) : isHistoryLoadFailed ? (
+                    <motion.div
+                      key="history-error"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center"
+                    >
+                      <p className="text-secondary-foreground text-sm">
+                        {t("workspace.chat.historyLoadFailed")}
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        {t("workspace.chat.continueBelow")}
+                      </p>
+                    </motion.div>
+                  ) : chatItems.length === 0 && pendingNewSession != null ? (
+                    <motion.div
+                      key="pending-new-session"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.15 }}
+                      className="mx-auto flex w-full flex-col gap-4 px-5 pt-4 pb-6"
+                    >
+                      <UserMessageBubble content={pendingNewSession.message} />
+                      <ThinkingLoader isVisible={true} />
+                    </motion.div>
+                  ) : (
+                    // Keyed by session: segment ids are only unique within a chat, so
+                    // a shared key reconciles another chat's message into this one.
+                    <motion.div
+                      key={`messages:${activeSessionId ?? "none"}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                      className="mx-auto flex w-full flex-col gap-4 px-5 pt-4 pb-6"
+                    >
+                      {subtaskScope != null && (
+                        <SubtaskScopeHeader
+                          summary={activeSubtask}
+                          onBack={() => setSubtaskScope(null)}
+                        />
+                      )}
+                      {/* A bot's chat is a thread, not a work log (see
                         bot-message-list.tsx), and so is a routine's run:
                         what it said, not the tools it used to say it.
                         Sessions keep the full transcript: there you are
                         supervising the agent. */}
-                    {isBotChat || isRoutineRun ? (
-                      /* The bot's question, in the thread and at the point it
+                      {isBotChat || isRoutineRun ? (
+                        /* The bot's question, in the thread and at the point it
                          was asked. Handed to the list rather than dropped after
                          it, or anything the bot said next renders above it. */
-                      <BotMessageList
-                        key={activeSessionId}
-                        onRateTurn={isBotChat ? handleRateTurn : undefined}
-                        chatItems={chatItems}
-                        times={
-                          activeSessionId == null
-                            ? undefined
-                            : segmentTimes(activeSessionId)
-                        }
-                        isWorking={isScopeBusy}
-                        onOpenSubtask={setSubtaskScope}
-                        onSwitchModel={handleSwitchModel}
-                      />
-                    ) : (
-                      <ChatMessageList
-                        chatItems={chatItems}
-                        isPending={isScopeBusy}
-                        currentTurnId={currentTurnId}
-                        agentStatus={agentStatus}
-                        onRetry={isAgentBusy ? undefined : handleRetry}
-                        onSwitchModel={handleSwitchModel}
-                        onPickModel={(modelId) =>
-                          handlePickModel(activeWorkspaceId, modelId)
-                        }
-                        onResume={isAgentBusy ? undefined : handleResumeOnPool}
-                        onRateTurn={handleRateTurn}
-                        creditsTotal={conversation.credits}
-                        onOpenSubtask={setSubtaskScope}
-                        statusLabel={statusLabel}
-                        conversationId={conversationId}
-                      />
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <ScrollToBottomBridge scrollRef={scrollToBottomRef} />
-          <ScrollToBottomButton />
-        </MessageScroller>
-      </MessageScrollerProvider>
+                        <BotMessageList
+                          key={activeSessionId}
+                          onRateTurn={isBotChat ? handleRateTurn : undefined}
+                          chatItems={chatItems}
+                          times={
+                            activeSessionId == null
+                              ? undefined
+                              : segmentTimes(activeSessionId)
+                          }
+                          isWorking={isScopeBusy}
+                          onOpenSubtask={setSubtaskScope}
+                          onSwitchModel={handleSwitchModel}
+                        />
+                      ) : (
+                        <ChatMessageList
+                          chatItems={chatItems}
+                          isPending={isScopeBusy}
+                          currentTurnId={currentTurnId}
+                          agentStatus={agentStatus}
+                          onRetry={isAgentBusy ? undefined : handleRetry}
+                          onSwitchModel={handleSwitchModel}
+                          onPickModel={(modelId) =>
+                            handlePickModel(activeWorkspaceId, modelId)
+                          }
+                          onResume={
+                            isAgentBusy ? undefined : handleResumeOnPool
+                          }
+                          onRateTurn={handleRateTurn}
+                          creditsTotal={conversation.credits}
+                          onOpenSubtask={setSubtaskScope}
+                          statusLabel={statusLabel}
+                          conversationId={conversationId}
+                        />
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <ScrollToBottomBridge scrollRef={scrollToBottomRef} />
+            <ScrollToBottomButton />
+          </MessageScroller>
+        </MessageScrollerProvider>
+      )}
 
       {/* A tombstoned workspace: say why the composer won't send, and name the
           way back (re-adding the folder revives the workspace). */}
@@ -2271,8 +2307,10 @@ export const ChatPanel = (): JSX.Element => {
           onSelectModel={handlePickModel}
           selectedModeValue={selectedModeValue}
           canSelectMode={!isBotChat}
-          // One box everywhere: two composers in one app read as two apps.
-          compact
+          // A bot's chat is a message box. A session is a workbench: mode,
+          // model, checkout, branch and pull request all sit around its box.
+          compact={isBotChat}
+          centered={showsSessionWelcome}
           // Never from a bot's chat: sessions share one sticky mode, so a
           // single write here would make every future session full access.
 
@@ -2305,6 +2343,9 @@ export const ChatPanel = (): JSX.Element => {
           }
           tasksTurnId={latestUserTurnId}
         />
+      )}
+      {showsSessionWelcome && (
+        <SessionStarters onUsePrompt={useStarterPrompt} />
       )}
 
       {missingWorkspace != null && activeWorkspaceId != null && (
