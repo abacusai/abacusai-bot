@@ -102,7 +102,7 @@
     "clsx": "^2.1.1",
     "diff": "^8.0.3",
     "electron": "43.4.1",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.17.0",
     "framer-motion": "^12.29.0",
     "ghostty-web": "^0.4.0",
     "i18next": "^25.8.7",
