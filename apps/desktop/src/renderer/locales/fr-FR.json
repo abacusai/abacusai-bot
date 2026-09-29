@@ -616,7 +616,8 @@
     "loading": "Chargement",
     "mobileSidebarDescription": "Affiche la barre latérale mobile.",
     "sidebar": "Barre latérale",
-    "toggleSidebar": "Afficher/masquer la barre latérale"
+    "toggleSidebar": "Afficher/masquer la barre latérale",
+    "showAllLines": "Tout afficher ({{total}} lignes, {{more}} de plus)"
   },
   "connectorRequest": {
     "body": "{{provider}} doit être connecté avant que l'agent puisse l'utiliser. Il attend votre action.",

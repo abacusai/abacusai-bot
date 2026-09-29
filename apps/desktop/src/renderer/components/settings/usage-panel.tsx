@@ -213,7 +213,7 @@ const ModelRow = ({
 };
 
 export const UsagePanel = (): JSX.Element => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const queryClient = useQueryClient();
   // The plan card is absent when no Abacus key is stored.
@@ -300,10 +300,10 @@ export const UsagePanel = (): JSX.Element => {
                       {t("usage.abacusCredits", {
                         used: Math.round(
                           abacus.data.credits_used ?? 0
-                        ).toLocaleString(),
+                        ).toLocaleString(i18n.language),
                         granted: Math.round(
                           abacus.data.credits_granted
-                        ).toLocaleString(),
+                        ).toLocaleString(i18n.language),
                       })}
                     </ItemActions>
                   )}

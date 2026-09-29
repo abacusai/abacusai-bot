@@ -485,6 +485,7 @@ export const Markdown = ({
   truncateLines,
   className,
 }: MarkdownProps) => {
+  const { t, i18n } = useTranslation();
   const processed = useMemo(
     () => prepareMarkdownUrls(prepareMath(processLatexSections(content ?? ""))),
     [content]
@@ -534,8 +535,10 @@ export const Markdown = ({
         className="mt-1"
         data-id="markdown-expand-truncated-btn"
       >
-        Show all ({lineCount.toLocaleString()} lines,{" "}
-        {(lineCount - truncateLines!).toLocaleString()} more)
+        {t("common.showAllLines", {
+          total: lineCount.toLocaleString(i18n.language),
+          more: (lineCount - truncateLines!).toLocaleString(i18n.language),
+        })}
       </Button>
     </>
   );

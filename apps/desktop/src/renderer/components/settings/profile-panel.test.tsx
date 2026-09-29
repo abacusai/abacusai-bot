@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
+    i18n: { language: "en-US" },
     t: (key: string, vars?: Record<string, string>) =>
       vars ? `${key}:${Object.values(vars).join("/")}` : key,
   }),

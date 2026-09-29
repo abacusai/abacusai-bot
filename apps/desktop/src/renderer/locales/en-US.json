@@ -616,7 +616,8 @@
     "loading": "Loading",
     "mobileSidebarDescription": "Displays the mobile sidebar.",
     "sidebar": "Sidebar",
-    "toggleSidebar": "Toggle sidebar"
+    "toggleSidebar": "Toggle sidebar",
+    "showAllLines": "Show all ({{total}} lines, {{more}} more)"
   },
   "connectorRequest": {
     "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",

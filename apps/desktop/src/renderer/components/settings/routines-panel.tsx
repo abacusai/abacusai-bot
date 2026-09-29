@@ -462,14 +462,18 @@ const RoutineCard = ({
             {routine.nextRunAt != null && (
               <span>
                 {t("routines.nextRun", {
-                  time: new Date(routine.nextRunAt).toLocaleString(),
+                  time: new Date(routine.nextRunAt).toLocaleString(
+                    i18n.language
+                  ),
                 })}
               </span>
             )}
             {routine.lastRunAt != null && (
               <span>
                 {t("routines.lastRun", {
-                  time: new Date(routine.lastRunAt).toLocaleString(),
+                  time: new Date(routine.lastRunAt).toLocaleString(
+                    i18n.language
+                  ),
                 })}
               </span>
             )}
@@ -564,7 +568,7 @@ const RoutineCard = ({
                   className="text-muted-foreground flex items-baseline gap-2 text-xs"
                 >
                   <span className="shrink-0 tabular-nums">
-                    {new Date(run.at).toLocaleString()}
+                    {new Date(run.at).toLocaleString(i18n.language)}
                   </span>
                   <Badge variant="outline">
                     {t(TRIGGER_BADGE[run.trigger])}

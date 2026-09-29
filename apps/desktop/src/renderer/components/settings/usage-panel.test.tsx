@@ -13,7 +13,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The panel renders translated strings; the keys are what the assertions read.
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en-US" },
+  }),
 }));
 
 import type {

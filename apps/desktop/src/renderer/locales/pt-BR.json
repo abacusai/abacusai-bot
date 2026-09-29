@@ -616,7 +616,8 @@
     "loading": "Carregando",
     "mobileSidebarDescription": "Exibe a barra lateral no celular.",
     "sidebar": "Barra lateral",
-    "toggleSidebar": "Alternar barra lateral"
+    "toggleSidebar": "Alternar barra lateral",
+    "showAllLines": "Mostrar tudo ({{total}} linhas, mais {{more}})"
   },
   "connectorRequest": {
     "body": "{{provider}} precisa estar conectado para que o agente possa usá-lo. Ele está esperando por você.",

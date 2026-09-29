@@ -616,7 +616,8 @@
     "loading": "Caricamento",
     "mobileSidebarDescription": "Mostra la barra laterale mobile.",
     "sidebar": "Barra laterale",
-    "toggleSidebar": "Mostra/nascondi barra laterale"
+    "toggleSidebar": "Mostra/nascondi barra laterale",
+    "showAllLines": "Mostra tutto ({{total}} righe, altre {{more}})"
   },
   "connectorRequest": {
     "body": "{{provider}} deve essere collegato prima che l'agente possa usarlo. È in attesa di te.",

@@ -133,179 +133,179 @@
     "templates": {
       "appointment-assistant": {
         "description": "Behält Termine im Blick, von der Bestätigung über die Vorbereitung bis zu Erinnerungen und Umbuchungen.",
-        "name": "Appointment Assistant"
+        "name": "Terminassistent"
       },
       "bills-renewal-watch": {
         "description": "Erkennt anstehende Rechnungen, Verlängerungen, endende Testphasen und Preiserhöhungen, bevor sie dich überraschen.",
-        "name": "Bills & Renewal Watch"
+        "name": "Rechnungen & Verlängerungen"
       },
       "calendar-concierge": {
         "description": "Übernimmt das Hin und Her bei der Terminplanung und findet Meeting-Zeiten, die wirklich in deinen Tag passen.",
-        "name": "Calendar Concierge"
+        "name": "Kalender-Concierge"
       },
       "campaign-performance-digest": {
         "description": "Macht aus Kampagnenzahlen eine kurze wöchentliche Übersicht darüber, was funktioniert hat, was nicht, und was als Nächstes zu versuchen ist.",
-        "name": "Campaign Performance Digest"
+        "name": "Kampagnen-Performance-Digest"
       },
       "candidate-follow-up": {
         "description": "Sorgt dafür, dass Kandidaten nicht durchs Raster fallen, wenn Feedback, Terminplanung oder nächste Schritte stocken.",
-        "name": "Candidate Follow-Up"
+        "name": "Kandidaten-Follow-up"
       },
       "candidate-sourcer": {
         "description": "Findet Kandidaten mit klar jobrelevanten Belegen und bereitet personalisierte Ansprache für die Prüfung durch Recruiter vor.",
-        "name": "Candidate Sourcer"
+        "name": "Kandidatensuche"
       },
       "chief-of-staff": {
         "description": "Organisiert deinen Tag über Mail, Kalender und Slack und holt dich für Entscheidungen dazu.",
-        "name": "Chief of Staff"
+        "name": "Stabschef"
       },
       "comment-mention-assistant": {
         "description": "Hilft dir, schnell auf die Social-Kommentare und Erwähnungen zu reagieren, die deine Zeit wirklich wert sind.",
-        "name": "Comment & Mention Assistant"
+        "name": "Kommentar- & Erwähnungsassistent"
       },
       "competitor-campaign-watch": {
         "description": "Verfolgt, wie sich Wettbewerber positionieren und welche Kampagnen sie gerade fahren.",
-        "name": "Competitor Campaign Watch"
+        "name": "Kampagnen der Konkurrenz"
       },
       "competitor-watch": {
         "description": "Verfolgt relevante Wettbewerber-Bewegungen, ohne dich mit jedem kleinen Update zu überfluten.",
-        "name": "Competitor Watch"
+        "name": "Konkurrenzbeobachtung"
       },
       "content-calendar-manager": {
         "description": "Hält deine Content-Pipeline voll und in Bewegung, von der Idee über den Entwurf bis zur Veröffentlichung.",
-        "name": "Content Calendar Manager"
+        "name": "Content-Kalender-Manager"
       },
       "content-repurposer": {
         "description": "Macht aus einer starken Idee plattformgerechten Content für X und LinkedIn, ohne dass er kopiert wirkt.",
-        "name": "Content Repurposer"
+        "name": "Content-Recycler"
       },
       "customer-voice-miner": {
         "description": "Macht aus echter Kundensprache aus Gmail, Slack und Dokumenten schärfere Botschaften und Content-Ideen.",
-        "name": "Customer Voice Miner"
+        "name": "Kundenstimmen-Analyse"
       },
       "daily-focus-planner": {
         "description": "Macht aus deinen Meetings, Nachrichten und Deadlines einen realistischen Plan für den Tag.",
-        "name": "Daily Focus Planner"
+        "name": "Tagesfokus-Planer"
       },
       "daily-post-writer": {
         "description": "Findet täglich eine Sache, die es wert ist, gesagt zu werden, und macht daraus einen ausgefeilten Post in deiner Stimme.",
-        "name": "Daily Post Writer"
+        "name": "Täglicher Post-Autor"
       },
       "daily-stock-recommender": {
         "description": "Zeigt täglich ein paar Aktien, die eine genauere Recherche wert sind, inklusive These, Auslöser, Risiken und Abwärtsszenario.",
-        "name": "Daily Stock Recommender"
+        "name": "Tägliche Aktienempfehlung"
       },
       "decision-researcher": {
         "description": "Vergleicht deine echten Optionen anhand der Kriterien, die zählen, und empfiehlt die stärkste Wahl.",
-        "name": "Decision Researcher"
+        "name": "Entscheidungsrecherche"
       },
       "deep-researcher": {
         "description": "Macht aus einer komplexen Frage ein entscheidungsreifes Briefing mit Belegen, Unsicherheiten und Quellen.",
-        "name": "Deep Researcher"
+        "name": "Tiefenrecherche"
       },
       "discord-agent": {
         "description": "Dein Agent in Discord – schreib ihm per DM oder füge ihn einem Server hinzu",
-        "name": "Discord Agent"
+        "name": "Discord-Agent"
       },
       "earnings-watch": {
         "description": "Verfolgt anstehende Quartalszahlen und erklärt die Zahlen, Überraschungen, den Ausblick und was sich nach den Ergebnissen geändert hat.",
-        "name": "Earnings Watch"
+        "name": "Quartalszahlen-Beobachter"
       },
       "email-drafting": {
         "description": "Findet E-Mails, die eine Antwort brauchen, und erstellt klare, kontextbewusste Gmail-Entwürfe in deiner Stimme.",
-        "name": "Email Drafting"
+        "name": "E-Mail-Entwürfe"
       },
       "follow-up-tracker": {
         "description": "Behält im Blick, wer dir eine Antwort schuldet, wem du eine schuldest, und wann es Zeit für ein Follow-up ist.",
-        "name": "Follow-Up Tracker"
+        "name": "Follow-up-Tracker"
       },
       "hiring-manager-brief": {
         "description": "Bereitet den Hiring Manager vor jedem Interview mit der Rolle, dem Kandidatenkontext und den zu klärenden Punkten vor.",
-        "name": "Hiring Manager Brief"
+        "name": "Briefing für Hiring Manager"
       },
       "inbox-to-calendar": {
         "description": "Macht aus bestätigten Plänen in Gmail saubere Google-Calendar-Termine, damit wichtige Termine nie verloren gehen.",
-        "name": "Inbox to Calendar"
+        "name": "Posteingang zu Kalender"
       },
       "interview-coordinator": {
         "description": "Übernimmt die Interview-Planung über Kandidaten und Interviewer hinweg, ohne endloses Hin und Her.",
-        "name": "Interview Coordinator"
+        "name": "Interview-Koordinator"
       },
       "knowledge-finder": {
         "description": "Findet die Antwort, die irgendwo in deinem Gmail-, Slack- oder Google-Drive-Verlauf vergraben ist.",
-        "name": "Knowledge Finder"
+        "name": "Wissensfinder"
       },
       "launch-command-center": {
         "description": "Hält einen Launch in Bewegung, indem er Blocker, fehlende Freigaben und Zusagen aufzeigt, bevor sie durchrutschen.",
-        "name": "Launch Command Center"
+        "name": "Launch-Zentrale"
       },
       "meeting-notes-actions": {
         "description": "Macht aus Meeting-Notizen Entscheidungen, Verantwortliche, Deadlines und Follow-ups, auf die du reagieren kannst.",
-        "name": "Meeting Notes & Actions"
+        "name": "Meeting-Notizen & Aufgaben"
       },
       "meeting-prep-bot": {
         "description": "Erstellt ein einseitiges Meeting-Briefing mit dem Kontext, offenen Fragen und Themen, die du vor dem Gespräch brauchst.",
-        "name": "Meeting Prep Bot"
+        "name": "Meeting-Vorbereitung"
       },
       "morning-brief": {
         "description": "Startet deinen Tag mit Meetings, dringenden Nachrichten, Prioritäten und den Neuigkeiten, die zählen.",
-        "name": "Morning Brief"
+        "name": "Morgenbriefing"
       },
       "news-radar": {
         "description": "Liefert die wichtigsten Entwicklungen der letzten 24 Stunden, ohne doppelte Schlagzeilen und Rauschen.",
-        "name": "News Radar"
+        "name": "News-Radar"
       },
       "personal-admin": {
         "description": "Übernimmt den Alltagskram in deinem Posteingang: Formulare, Verlängerungen, Termine und Follow-ups.",
-        "name": "Personal Admin"
+        "name": "Persönliche Verwaltung"
       },
       "portfolio-pulse": {
         "description": "Meldet sich nur, wenn sich für eine Aktie, die dich interessiert, wirklich etwas an der Geschichte ändert.",
-        "name": "Portfolio Pulse"
+        "name": "Portfolio-Puls"
       },
       "project-pulse": {
         "description": "Liefert dir einen sauberen Projektstatus, ohne dass du Leuten für Updates hinterherlaufen musst.",
-        "name": "Project Pulse"
+        "name": "Projekt-Puls"
       },
       "research-paper-scout": {
         "description": "Findet neue Paper, die es wert sind, gelesen zu werden, und erklärt den Beitrag, ohne dass du jedes Abstract lesen musst.",
-        "name": "Research Paper Scout"
+        "name": "Fachartikel-Scout"
       },
       "resume-review-assistant": {
         "description": "Ordnet jeden Lebenslauf den Anforderungen der Stelle zu, damit ein Recruiter die Belege einheitlich prüfen kann.",
-        "name": "Resume Review Assistant"
+        "name": "Lebenslauf-Prüfer"
       },
       "social-inbox-manager": {
         "description": "Holt wichtige Kommentare, Erwähnungen und DMs nach oben, damit wertvolle Unterhaltungen nicht untergehen.",
-        "name": "Social Inbox Manager"
+        "name": "Social-Media-Posteingang"
       },
       "spending-digest": {
         "description": "Macht aus Gmail-Quittungen eine einfache wöchentliche Ausgabenübersicht und markiert ungewöhnliche Käufe.",
-        "name": "Spending Digest"
+        "name": "Ausgabenübersicht"
       },
       "telegram-agent": {
         "description": "Dein Agent in Telegram – schreib ihm jederzeit",
-        "name": "Telegram Agent"
+        "name": "Telegram-Agent"
       },
       "travel-planner": {
         "description": "Macht aus deinen Buchungen und Vorlieben einen realistischen Tag-für-Tag-Reiseplan.",
-        "name": "Travel Planner"
+        "name": "Reiseplaner"
       },
       "trend-scout": {
         "description": "Findet schnell wachsende Unterhaltungen in deiner Nische und gibt dir einen originellen Blickwinkel, bevor alle draufspringen.",
-        "name": "Trend Scout"
+        "name": "Trend-Scout"
       },
       "weekly-review": {
         "description": "Schließt die Woche ab mit dem, was vorangekommen ist, was liegen geblieben ist, und was als Nächstes zählt.",
-        "name": "Weekly Review"
+        "name": "Wochenrückblick"
       },
       "whats-hot": {
         "description": "Findet schnell aufsteigende Geschichten und Unterhaltungen im gesamten Internet, bevor sie alte Nachrichten sind.",
-        "name": "What's Hot?"
+        "name": "Was ist angesagt?"
       },
       "whatsapp-agent": {
         "description": "Dein Agent in WhatsApp – schreib ihm jederzeit",
-        "name": "WhatsApp Agent"
+        "name": "WhatsApp-Agent"
       }
     },
     "title": "Bots",
@@ -616,7 +616,8 @@
     "loading": "Wird geladen",
     "mobileSidebarDescription": "Zeigt die mobile Seitenleiste an.",
     "sidebar": "Seitenleiste",
-    "toggleSidebar": "Seitenleiste ein-/ausblenden"
+    "toggleSidebar": "Seitenleiste ein-/ausblenden",
+    "showAllLines": "Alle anzeigen ({{total}} Zeilen, {{more}} weitere)"
   },
   "connectorRequest": {
     "body": "{{provider}} muss verbunden werden, bevor der Agent es nutzen kann. Er wartet auf dich.",
@@ -1455,27 +1456,27 @@
     "templates": {
       "morning-brief": {
         "description": "Was der heutige Tag von dir braucht: der Kalender, die Mails, die eine Antwort wert sind, und alles, was an dich gerichtet ist.",
-        "name": "Morning brief"
+        "name": "Morgenbriefing"
       },
       "inbox-triage": {
         "description": "Sortiert neue Mails in Antwort, Gelesen und Rauschen, und entwirft die Antworten zum Versenden.",
-        "name": "Inbox triage"
+        "name": "Posteingang sortieren"
       },
       "pr-digest": {
         "description": "Offene Pull Requests in diesem Workspace, die am längsten inaktiven zuerst.",
-        "name": "Pull request digest"
+        "name": "Pull-Request-Übersicht"
       },
       "failing-tests": {
         "description": "Führt die Test-Suite aus und meldet nur, was sich seit dem letzten Lauf geändert hat.",
-        "name": "Test watch"
+        "name": "Test-Überwachung"
       },
       "dependency-watch": {
         "description": "Sicherheitshinweise, auf die reagiert werden sollte, getrennt von Versions-Updates, die warten können.",
-        "name": "Dependency watch"
+        "name": "Abhängigkeiten im Blick"
       },
       "week-in-review": {
         "description": "Was diese Woche laut Commit-Verlauf fertiggestellt wurde, gruppiert nach Thema, mit dem Abschluss, was ins Stocken geraten ist.",
-        "name": "Week in review"
+        "name": "Wochenrückblick"
       }
     },
     "templatesLead": "Oder starte mit einer davon",
