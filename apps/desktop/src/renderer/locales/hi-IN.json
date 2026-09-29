@@ -1469,6 +1469,8 @@
     "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
     "deleteError": "Could not delete that session. Try again.",
     "deleteTitle": "Delete this session?",
+    "emptyDescription": "अपनी पसंद के फ़ोल्डर में एजेंट के साथ काम करने के लिए एक सत्र शुरू करें।",
+    "emptyTitle": "अभी तक कोई सत्र नहीं",
     "newSession": "New session",
     "pin": "Pin",
     "pinned": "Pinned",

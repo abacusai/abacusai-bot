@@ -1469,6 +1469,8 @@
     "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
     "deleteError": "Could not delete that session. Try again.",
     "deleteTitle": "Delete this session?",
+    "emptyDescription": "세션을 시작해 원하는 폴더에서 에이전트와 작업하세요.",
+    "emptyTitle": "아직 세션이 없습니다",
     "newSession": "New session",
     "pin": "Pin",
     "pinned": "Pinned",

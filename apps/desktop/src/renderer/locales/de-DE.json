@@ -1469,6 +1469,8 @@
     "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
     "deleteError": "Could not delete that session. Try again.",
     "deleteTitle": "Delete this session?",
+    "emptyDescription": "Starte eine Sitzung, um mit dem Agenten in einem Ordner deiner Wahl zu arbeiten.",
+    "emptyTitle": "Noch keine Sitzungen",
     "newSession": "New session",
     "pin": "Pin",
     "pinned": "Pinned",

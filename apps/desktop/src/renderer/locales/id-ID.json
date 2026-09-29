@@ -1469,6 +1469,8 @@
     "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
     "deleteError": "Could not delete that session. Try again.",
     "deleteTitle": "Delete this session?",
+    "emptyDescription": "Mulai sesi untuk bekerja dengan agen di folder pilihan Anda.",
+    "emptyTitle": "Belum ada sesi",
     "newSession": "New session",
     "pin": "Pin",
     "pinned": "Pinned",
