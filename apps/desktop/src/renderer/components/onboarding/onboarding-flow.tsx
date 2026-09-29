@@ -135,6 +135,8 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     connectorStatuses.loaded &&
     !isConnected(connectorStatuses.statuses, GMAIL_CONNECTOR_ID);
 
+  const webSignup = abacusAccount?.web_signup === true;
+
   const [step, setStepState] = useState<OnboardingStep>(
     () => readStoredStep() ?? "auth"
   );
@@ -160,6 +162,7 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     paying: isPayingAbacusTier(abacusAccount?.subscription_tier),
     onboarded,
     offerGmail,
+    webSignup,
   });
 
   // Onboarding owns the tour; a replay still up from before would fight it.
@@ -189,7 +192,12 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   }, [activateWorkspaceSession, activeWorkspaceId, apply, queryClient]);
 
   // The route changed under the current screen: keep it, move on, or leave.
-  const settled = signedIn == null ? step : settleStep(steps, step);
+  // A web signup's route is the Gmail question or nothing, which only the
+  // connector statuses can tell apart: hold the screen until they are in.
+  const routePending =
+    signedIn == null ||
+    (signedIn && webSignup && !onboarded && !connectorStatuses.loaded);
+  const settled = routePending ? step : settleStep(steps, step);
   useEffect(() => {
     if (settled == null) void finish();
     else if (settled !== step) setStep(settled);
@@ -226,19 +234,20 @@ export const OnboardingFlow = (): React.ReactElement | null => {
         if (result.cancelled !== true) setError(result.error);
         return;
       }
+      // The account first: it decides the route, and a credential flipped
+      // ahead of it would draw a screen the account then takes away.
+      queryClient.setQueryData(
+        workspaceQueryKeys.abacusAccount,
+        await window.api.agent.getAbacusAccount(true)
+      );
       // The hop stored the key, so a credential read still in flight would
       // answer for a moment before it existed; drop that read.
       await queryClient.cancelQueries({
         queryKey: settingsQueryKeys.models.abacusCredential,
       });
       queryClient.setQueryData(settingsQueryKeys.models.abacusCredential, true);
-      // The catalog changes with the credential, and the tier decides whether
-      // the models screen is in the route at all.
+      // The catalog changes with the credential.
       await window.api.agent.listModels(true);
-      queryClient.setQueryData(
-        workspaceQueryKeys.abacusAccount,
-        await window.api.agent.getAbacusAccount(true)
-      );
     } finally {
       setBusy(false);
     }

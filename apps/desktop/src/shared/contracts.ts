@@ -1596,6 +1596,8 @@ export interface AbacusAccountInfo {
   subscription_tier: string | null;
   credits_used: number | null;
   credits_granted: number | null;
+  /** The account was created on the website, before the app was installed. */
+  web_signup?: boolean;
 }
 
 /** The invite-friends loop as the platform reports it for this account. */

@@ -136,10 +136,10 @@ export const SignInStep = ({
               <DropdownMenuTrigger
                 render={
                   <Button
-                    variant="link"
-                    size="sm"
+                    variant="outline"
+                    size="lg"
                     data-id="onboarding-have-account"
-                    className="text-muted-foreground hover:text-secondary-foreground text-sm"
+                    className="h-12 w-full text-base"
                   />
                 }
               >
@@ -176,12 +176,14 @@ export const SignInStep = ({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
+            // A button, not a link: an account made on the website before
+            // the download has to find this one.
             <Button
-              variant="link"
-              size="sm"
+              variant="outline"
+              size="lg"
               data-id="onboarding-have-account"
               onClick={() => onConnect("signin")}
-              className="text-muted-foreground hover:text-secondary-foreground text-sm"
+              className="h-12 w-full text-base"
             >
               {t("onboarding.haveAccountCta")}
             </Button>
