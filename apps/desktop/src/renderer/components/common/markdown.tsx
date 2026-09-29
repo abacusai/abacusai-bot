@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
 
+import i18n from "../../i18n";
 import { usePreviewLinkHandler } from "../../providers/preview-link-context";
 import { useGlobalContext } from "../../stores/app-global";
 import { useCodeFolderContext } from "../../stores/code-folder-context";
@@ -311,7 +312,9 @@ const CodeBlock = ({
         variant="ghost"
         size="icon-sm"
         className="absolute top-1.5 right-1.5 z-10 opacity-0 transition-opacity group-focus-within/code:opacity-100 group-hover/code:opacity-100"
-        aria-label={copied ? "Copied" : "Copy code"}
+        aria-label={
+          copied ? i18n.t("uiText.copied") : i18n.t("uiText.copyCode")
+        }
         onClick={copy}
       >
         {copied ? <Check /> : <Copy />}
@@ -485,6 +488,7 @@ export const Markdown = ({
   truncateLines,
   className,
 }: MarkdownProps) => {
+  useTranslation();
   const processed = useMemo(
     () => prepareMarkdownUrls(prepareMath(processLatexSections(content ?? ""))),
     [content]
@@ -534,8 +538,10 @@ export const Markdown = ({
         className="mt-1"
         data-id="markdown-expand-truncated-btn"
       >
-        Show all ({lineCount.toLocaleString()} lines,{" "}
-        {(lineCount - truncateLines!).toLocaleString()} more)
+        {i18n.t("uiText.showAllTotalLinesRemainingMore", {
+          total: lineCount.toLocaleString(i18n.language),
+          remaining: (lineCount - truncateLines!).toLocaleString(i18n.language),
+        })}
       </Button>
     </>
   );

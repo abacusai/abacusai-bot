@@ -214,7 +214,9 @@ export const ModelsSettingsPanel = ({
         </ItemMedia>
         <ItemContent>
           <ItemTitle>{field.label}</ItemTitle>
-          <ItemDescription>{field.hint}</ItemDescription>
+          <ItemDescription>
+            {t(`providerHints.${field.provider}`, { defaultValue: field.hint })}
+          </ItemDescription>
         </ItemContent>
         <ItemActions>
           {configured[field.provider] && (
@@ -260,9 +262,11 @@ export const ModelsSettingsPanel = ({
 
         <div
           className="text-muted-foreground line-clamp-2 min-h-6.5 text-[0.625rem]"
-          title={field.hint}
+          title={t(`providerHints.${field.provider}`, {
+            defaultValue: field.hint,
+          })}
         >
-          {field.hint}
+          {t(`providerHints.${field.provider}`, { defaultValue: field.hint })}
         </div>
 
         {configured[field.provider] ? (
@@ -356,9 +360,12 @@ export const ModelsSettingsPanel = ({
   const query = filter.trim().toLowerCase();
   const matches = (field: ProviderKeyField): boolean =>
     query.length === 0 ||
-    [field.label, field.provider, field.envVar, field.hint].some((text) =>
-      text.toLowerCase().includes(query)
-    );
+    [
+      field.label,
+      field.provider,
+      field.envVar,
+      t(`providerHints.${field.provider}`, { defaultValue: field.hint }),
+    ].some((text) => text.toLowerCase().includes(query));
 
   const featured = PROVIDER_KEY_FIELDS.filter(
     (field) => field.featured === true && matches(field)

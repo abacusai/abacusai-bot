@@ -13,6 +13,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useEffect, useState, useMemo, type JSX } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { StreamingNestedToolCall } from "#shared/agent-types";
 import { presentedDeliverables } from "#shared/deliverables";
@@ -141,7 +142,9 @@ function componentToolLabel(
 
   if (base === "document") {
     const target = componentOutputPath(base, input);
-    const action = running ? "Writing document" : "Wrote document";
+    const action = running
+      ? i18n.t("uiText.writingDocument")
+      : i18n.t("uiText.wroteDocument");
     if (target == null) return { action };
     return { action, chip: basename(target), isFile: true, targetPath: target };
   }
@@ -151,19 +154,19 @@ function componentToolLabel(
     const isDeck = base === "ppt";
     const label = isReprint
       ? running
-        ? "Printing PDF"
-        : "Printed PDF"
+        ? i18n.t("uiText.printingPDF")
+        : i18n.t("uiText.printedPDF")
       : isDeck
         ? running
-          ? "Building deck"
-          : "Built deck"
+          ? i18n.t("uiText.buildingDeck")
+          : i18n.t("uiText.builtDeck")
         : running
-          ? "Building PDF"
-          : "Built PDF";
+          ? i18n.t("uiText.buildingPDF")
+          : i18n.t("uiText.builtPDF");
     const target = componentOutputPath(base, input);
     if (target == null)
       return {
-        action: running ? "Working" : "Ran",
+        action: running ? i18n.t("uiText.working") : i18n.t("uiText.ran"),
         chip: isDeck ? "deck" : "PDF",
       };
     return {
@@ -194,7 +197,9 @@ function componentToolLabel(
 
   if (base === "design") {
     const target = componentOutputPath(base, input);
-    const action = running ? "Designing" : "Designed";
+    const action = running
+      ? i18n.t("uiText.designing")
+      : i18n.t("uiText.designed");
     if (target == null) return { action };
     return {
       action,
@@ -206,11 +211,15 @@ function componentToolLabel(
 
   const target = str("path");
   if (target.length === 0)
-    return { action: running ? "Opening preview" : "Opened preview" };
+    return {
+      action: running
+        ? i18n.t("uiText.openingPreview")
+        : i18n.t("uiText.openedPreview"),
+    };
   // A served app comes back as a URL, which has no file to open.
   const isUrl = /^https?:\/\//i.test(target);
   return {
-    action: running ? "Opening" : "Opened",
+    action: running ? i18n.t("uiText.opening") : i18n.t("uiText.opened"),
     chip: isUrl ? truncate(target, 50) : basename(target),
     ...(isUrl ? {} : { isFile: true, targetPath: target }),
   };
@@ -302,9 +311,12 @@ function getToolLabel(tool: ToolRenderItem): {
       const limit = inp.limit != null ? Number(inp.limit) : undefined;
       let lineInfo: string | undefined;
       if (offset !== undefined && limit !== undefined) {
-        lineInfo = `lines ${offset}–${offset + limit - 1}`;
+        lineInfo = i18n.t("uiText.linesStartEnd", {
+          start: offset,
+          end: offset + limit - 1,
+        });
       } else if (limit !== undefined) {
-        lineInfo = `${limit} lines`;
+        lineInfo = i18n.t("uiText.countLines", { count: limit });
       }
       let filename = getFilename(inp);
       if (!running && tool.result != null) {
@@ -322,11 +334,12 @@ function getToolLabel(tool: ToolRenderItem): {
           const lc =
             tool.displayData?.lineCount ??
             tool.result.content?.split("\n").length;
-          if (lc && lc > 0) lineInfo = `${lc} lines`;
+          if (lc && lc > 0)
+            lineInfo = i18n.t("uiText.countLines", { count: lc });
         }
       }
       return {
-        action: running ? "Reading" : "Read",
+        action: running ? i18n.t("uiText.reading") : i18n.t("uiText.read"),
         chip: filename ?? undefined,
         isFile: true,
         lineInfo,
@@ -344,14 +357,17 @@ function getToolLabel(tool: ToolRenderItem): {
       return {
         action: running
           ? isNew
-            ? "Creating"
-            : "Writing"
+            ? i18n.t("uiText.creating")
+            : i18n.t("uiText.writing")
           : isNew
-            ? "Created"
-            : "Wrote",
+            ? i18n.t("uiText.created")
+            : i18n.t("uiText.wrote"),
         chip: filename ?? undefined,
         isFile: true,
-        lineInfo: lineCount != null ? `${lineCount} lines` : undefined,
+        lineInfo:
+          lineCount != null
+            ? i18n.t("uiText.countLines", { count: lineCount })
+            : undefined,
         targetPath: getFilePath(inp) ?? undefined,
       };
     }
@@ -371,7 +387,7 @@ function getToolLabel(tool: ToolRenderItem): {
               .join(" ")
           : undefined;
       return {
-        action: running ? "Editing" : "Edited",
+        action: running ? i18n.t("uiText.editing") : i18n.t("uiText.edited"),
         chip: filename ?? undefined,
         isFile: true,
         lineInfo: diffInfo,
@@ -380,7 +396,7 @@ function getToolLabel(tool: ToolRenderItem): {
     }
     case "delete":
       return {
-        action: running ? "Deleting" : "Deleted",
+        action: running ? i18n.t("uiText.deleting") : i18n.t("uiText.deleted"),
         chip: getFilename(inp) ?? undefined,
         isFile: true,
       };
@@ -388,27 +404,39 @@ function getToolLabel(tool: ToolRenderItem): {
       const rawCmd = str("command").split("\n")[0];
       const cmd = truncate(rawCmd, 60);
       return {
-        action: running ? "Running" : "Ran",
+        action: running ? i18n.t("uiText.running") : i18n.t("uiText.ran"),
         chip: cmd.length > 0 ? cmd : undefined,
       };
     }
     case "bash_output":
-      return { action: running ? "Getting output" : "Got output" };
+      return {
+        action: running
+          ? i18n.t("uiText.gettingOutput")
+          : i18n.t("uiText.gotOutput"),
+      };
     case "kill_shell":
-      return { action: running ? "Killing shell" : "Killed shell" };
+      return {
+        action: running
+          ? i18n.t("uiText.killingShell")
+          : i18n.t("uiText.killedShell"),
+      };
     case "glob":
       return {
-        action: running ? "Searching files" : "Searched files",
+        action: running
+          ? i18n.t("uiText.searchingFiles")
+          : i18n.t("uiText.searchedFiles"),
         chip: str("pattern").slice(0, 50) || undefined,
       };
     case "grep":
       return {
-        action: running ? "Searching" : "Searched",
+        action: running
+          ? i18n.t("uiText.searching")
+          : i18n.t("uiText.searched"),
         chip: str("pattern").slice(0, 50) || undefined,
       };
     case "ls":
       return {
-        action: running ? "Listing" : "Listed",
+        action: running ? i18n.t("uiText.listing") : i18n.t("uiText.listed"),
         chip: str("path") || ".",
         isFile: true,
         targetPath: str("path") || undefined,
@@ -416,17 +444,21 @@ function getToolLabel(tool: ToolRenderItem): {
       };
     case "codebase_search":
       return {
-        action: running ? "Searching codebase" : "Searched codebase",
+        action: running
+          ? i18n.t("uiText.searchingCodebase")
+          : i18n.t("uiText.searchedCodebase"),
         chip: str("query").slice(0, 50) || undefined,
       };
     case "web_search":
       return {
-        action: running ? "Searching web" : "Searched web",
+        action: running
+          ? i18n.t("uiText.searchingWeb")
+          : i18n.t("uiText.searchedWeb"),
         chip: str("query").slice(0, 50) || undefined,
       };
     case "web_fetch":
       return {
-        action: running ? "Fetching" : "Fetched",
+        action: running ? i18n.t("uiText.fetching") : i18n.t("uiText.fetched"),
         chip: str("url").slice(0, 50) || undefined,
       };
     case "task":
@@ -440,45 +472,63 @@ function getToolLabel(tool: ToolRenderItem): {
         tool.displayData?.nestedToolCalls?.length;
       const lineInfo =
         count != null && count > 0
-          ? `${count} tool${count !== 1 ? "s" : ""}`
+          ? i18n.t("workspace.subtask.toolCount", { count })
           : undefined;
       return {
-        action: running ? "Running sub-agent" : "Used sub-agent",
+        action: running
+          ? i18n.t("uiText.runningSubAgent")
+          : i18n.t("uiText.usedSubAgent"),
         chip: desc,
         lineInfo,
       };
     }
     case "todo_write":
-      return { action: running ? "Updating todos" : "Updated todos" };
+      return {
+        action: running
+          ? i18n.t("uiText.updatingTodos")
+          : i18n.t("uiText.updatedTodos"),
+      };
     case "ask_user_question":
       return {
-        action: running ? "Asking question" : "Asked question",
+        action: running
+          ? i18n.t("uiText.askingQuestion")
+          : i18n.t("uiText.askedQuestion"),
         chip:
           typeof inp.question === "string"
             ? truncate(inp.question as string, 50)
             : undefined,
       };
     case "enter_plan_mode":
-      return { action: running ? "Entering plan mode" : "Entered plan mode" };
+      return {
+        action: running
+          ? i18n.t("uiText.enteringPlanMode")
+          : i18n.t("uiText.enteredPlanMode"),
+      };
     case "exit_plan_mode":
-      return { action: running ? "Exiting plan mode" : "Exited plan mode" };
+      return {
+        action: running
+          ? i18n.t("uiText.exitingPlanMode")
+          : i18n.t("uiText.exitedPlanMode"),
+      };
     case "get_diagnostics":
       return {
-        action: running ? "Getting diagnostics" : "Got diagnostics",
+        action: running
+          ? i18n.t("uiText.gettingDiagnostics")
+          : i18n.t("uiText.gotDiagnostics"),
         chip: getFilename(inp) ?? undefined,
         isFile: true,
       };
     case "browser_navigate": {
       const action_nav = str("action");
       const navLabels: Record<string, [string, string]> = {
-        goto: ["Navigating to", "Navigated to"],
-        back: ["Going back", "Went back"],
-        forward: ["Going forward", "Went forward"],
-        reload: ["Reloading page", "Reloaded page"],
+        goto: [i18n.t("uiText.navigatingTo"), i18n.t("uiText.navigatedTo")],
+        back: [i18n.t("uiText.goingBack"), i18n.t("uiText.wentBack")],
+        forward: [i18n.t("uiText.goingForward"), i18n.t("uiText.wentForward")],
+        reload: [i18n.t("uiText.reloadingPage"), i18n.t("uiText.reloadedPage")],
       };
       const [runLabel, doneLabel] = navLabels[action_nav] ?? [
-        "Navigating",
-        "Navigated",
+        i18n.t("uiText.navigating"),
+        i18n.t("uiText.navigated"),
       ];
       return {
         action: running ? runLabel : doneLabel,
@@ -491,15 +541,21 @@ function getToolLabel(tool: ToolRenderItem): {
     case "browser_snapshot": {
       const action_snap = str("action");
       const snapLabels: Record<string, [string, string]> = {
-        snapshot: ["Scanning page", "Scanned page"],
-        screenshot: ["Taking screenshot", "Took screenshot"],
-        text: ["Getting page text", "Got page text"],
-        url: ["Getting page URL", "Got page URL"],
-        title: ["Getting page title", "Got page title"],
+        snapshot: [i18n.t("uiText.scanningPage"), i18n.t("uiText.scannedPage")],
+        screenshot: [
+          i18n.t("uiText.takingScreenshot"),
+          i18n.t("uiText.tookScreenshot"),
+        ],
+        text: [i18n.t("uiText.gettingPageText"), i18n.t("uiText.gotPageText")],
+        url: [i18n.t("uiText.gettingPageURL"), i18n.t("uiText.gotPageURL")],
+        title: [
+          i18n.t("uiText.gettingPageTitle"),
+          i18n.t("uiText.gotPageTitle"),
+        ],
       };
       const [runLabel, doneLabel] = snapLabels[action_snap] ?? [
-        "Capturing snapshot",
-        "Captured snapshot",
+        i18n.t("uiText.capturingSnapshot"),
+        i18n.t("uiText.capturedSnapshot"),
       ];
       const scopeChip =
         action_snap === "snapshot" && str("selector")
@@ -510,22 +566,28 @@ function getToolLabel(tool: ToolRenderItem): {
     case "browser_interact": {
       const action_int = str("action");
       const intLabels: Record<string, [string, string]> = {
-        click: ["Clicking", "Clicked"],
-        fill: ["Filling", "Filled"],
-        type: ["Typing", "Typed"],
-        scroll: ["Scrolling", "Scrolled"],
-        scroll_into_view: ["Scrolling to", "Scrolled to"],
-        select: ["Selecting option", "Selected option"],
-        hover: ["Hovering", "Hovered"],
-        focus: ["Focusing", "Focused"],
-        check: ["Checking", "Checked"],
-        uncheck: ["Unchecking", "Unchecked"],
-        press: ["Pressing", "Pressed"],
-        wait: ["Waiting", "Waited"],
+        click: [i18n.t("uiText.clicking"), i18n.t("uiText.clicked")],
+        fill: [i18n.t("uiText.filling"), i18n.t("uiText.filled")],
+        type: [i18n.t("uiText.typing"), i18n.t("uiText.typed")],
+        scroll: [i18n.t("uiText.scrolling"), i18n.t("uiText.scrolled")],
+        scroll_into_view: [
+          i18n.t("uiText.scrollingTo"),
+          i18n.t("uiText.scrolledTo"),
+        ],
+        select: [
+          i18n.t("uiText.selectingOption"),
+          i18n.t("uiText.selectedOption"),
+        ],
+        hover: [i18n.t("uiText.hovering"), i18n.t("uiText.hovered")],
+        focus: [i18n.t("uiText.focusing"), i18n.t("uiText.focused")],
+        check: [i18n.t("uiText.checking"), i18n.t("uiText.checked")],
+        uncheck: [i18n.t("uiText.unchecking"), i18n.t("uiText.unchecked")],
+        press: [i18n.t("uiText.pressing"), i18n.t("uiText.pressed")],
+        wait: [i18n.t("uiText.waiting"), i18n.t("uiText.waited")],
       };
       const [runLabel, doneLabel] = intLabels[action_int] ?? [
-        "Interacting",
-        "Interacted",
+        i18n.t("uiText.interacting"),
+        i18n.t("uiText.interacted"),
       ];
       const target =
         str("ref").slice(0, 20) ||
@@ -537,7 +599,9 @@ function getToolLabel(tool: ToolRenderItem): {
     case "browser_execute": {
       const snippet = str("code").split("\n")[0]?.slice(0, 50);
       return {
-        action: running ? "Executing JS" : "Executed JS",
+        action: running
+          ? i18n.t("uiText.executingJS")
+          : i18n.t("uiText.executedJS"),
         chip: snippet || undefined,
       };
     }
@@ -553,7 +617,7 @@ function getToolLabel(tool: ToolRenderItem): {
         if (label != null) return label;
       }
       return {
-        action: running ? "Running" : "Ran",
+        action: running ? i18n.t("uiText.running") : i18n.t("uiText.ran"),
         chip: toolDisplayName(tool.name),
       };
     }
@@ -690,7 +754,7 @@ const TodoList = ({
                   : "text-secondary-foreground"
             }
           >
-            {item?.content ?? "Task"}
+            {item?.content ?? i18n.t("uiText.task")}
           </span>
         </div>
       ))}
@@ -720,7 +784,7 @@ const BashOutput = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
   if (output.length === 0) {
     return (
       <div className="text-muted-foreground px-1 py-0.5 text-xs italic">
-        (no output)
+        {i18n.t("uiText.noOutput")}
       </div>
     );
   }
@@ -734,7 +798,7 @@ const BashOutput = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
             <span
               className={`font-mono text-[0.625rem] ${isError ? "text-red-400" : "text-green-400"}`}
             >
-              exit {exitCode}
+              {i18n.t("uiText.exitCodeCode", { code: exitCode })}
             </span>
           )}
           {durationMs != null && (
@@ -746,7 +810,7 @@ const BashOutput = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
       )}
       {hiddenLines > 0 && (
         <div className="text-text-terminal/60 border-b border-white/10 px-2 py-1 text-[0.625rem] italic">
-          … {hiddenLines} earlier lines hidden
+          {i18n.t("uiText.countEarlierLinesHidden", { count: hiddenLines })}
         </div>
       )}
       {/* ANSI output */}
@@ -858,7 +922,7 @@ const ReadFileExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
   if (content.length === 0) {
     return (
       <div className="text-muted-foreground px-1 py-0.5 text-xs italic">
-        (no content)
+        {i18n.t("uiText.noContent")}
       </div>
     );
   }
@@ -873,7 +937,7 @@ const ReadFileExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
       <CodeView code={shown} language={lang} startingLineNumber={offset ?? 1} />
       {hidden > 0 && (
         <div className="text-muted-foreground bg-muted border-border border-t px-2 py-1 text-xs italic">
-          … +{hidden} more lines
+          {i18n.t("uiText.countMoreLines", { count: hidden })}
         </div>
       )}
     </div>
@@ -894,7 +958,7 @@ const WriteEditExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
   if (newContent.length === 0) {
     return (
       <div className="text-muted-foreground px-1 py-0.5 text-xs italic">
-        (no content available)
+        {i18n.t("uiText.noContentAvailable")}
       </div>
     );
   }
@@ -910,7 +974,7 @@ const WriteEditExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
         <CodeView code={shown} language={lang} />
         {hidden > 0 && (
           <div className="text-muted-foreground bg-muted border-border border-t px-2 py-1 text-xs italic">
-            … +{hidden} more lines
+            {i18n.t("uiText.countMoreLines", { count: hidden })}
           </div>
         )}
       </div>
@@ -948,7 +1012,7 @@ const GenericExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
     <div className="border-border mt-1 overflow-hidden rounded-lg border text-xs">
       <div className="px-2 py-1.5">
         <div className="text-muted-foreground mb-1 text-[0.625rem] font-semibold tracking-wider uppercase">
-          Input
+          {i18n.t("uiText.input")}
         </div>
         <pre className="text-foreground bg-muted border-border max-h-25 overflow-y-auto rounded border p-1.5 font-mono leading-relaxed break-all whitespace-pre-wrap">
           {inputStr}
@@ -957,7 +1021,7 @@ const GenericExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
       {outputStr.length > 0 && (
         <div className="border-border border-t px-2 py-1.5">
           <div className="text-muted-foreground mb-1 text-[0.625rem] font-semibold tracking-wider uppercase">
-            Output
+            {i18n.t("uiText.output")}
           </div>
           <pre className="text-foreground bg-muted border-border max-h-25 overflow-y-auto rounded border p-1.5 font-mono leading-relaxed break-all whitespace-pre-wrap">
             {outputStr}
@@ -1004,7 +1068,7 @@ const AskUserQuestionExpand = ({
   if (isWaiting) {
     return (
       <div className="text-muted-foreground px-1 py-0.5 text-xs italic">
-        Waiting for response…
+        {i18n.t("uiText.waitingForResponse")}
       </div>
     );
   }
@@ -1012,7 +1076,7 @@ const AskUserQuestionExpand = ({
   if (questions.length === 0 && Object.keys(answers).length === 0) {
     return (
       <div className="text-muted-foreground px-1 py-0.5 text-xs italic">
-        (no questions)
+        {i18n.t("uiText.noQuestions")}
       </div>
     );
   }
@@ -1043,7 +1107,7 @@ const AskUserQuestionExpand = ({
               </div>
             ) : (
               <div className="text-muted-foreground ml-3 text-xs italic">
-                Skipped
+                {i18n.t("uiText.skipped")}
               </div>
             )}
           </div>
@@ -1144,7 +1208,9 @@ const TaskSubagentExpand = ({
   if (items.length === 0) {
     return (
       <div className="text-muted-foreground py-0.5 text-xs italic">
-        {isRunning ? "Running sub-agent…" : "(no tool calls recorded)"}
+        {isRunning
+          ? i18n.t("uiText.runningSubAgentLabel")
+          : i18n.t("uiText.noToolCallsRecorded")}
       </div>
     );
   }
@@ -1179,25 +1245,28 @@ const BrowserToolExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
   const actionStr = String(inp.action ?? "").trim();
 
   const inputLines: Array<[string, string]> = [];
-  if (actionStr) inputLines.push(["Action", actionStr]);
+  if (actionStr) inputLines.push([i18n.t("uiText.action"), actionStr]);
   if (tool.name === "browser_navigate" && inp.url)
     inputLines.push(["URL", String(inp.url)]);
   if (tool.name === "browser_interact") {
-    if (inp.ref) inputLines.push(["Ref", String(inp.ref)]);
-    else if (inp.selector) inputLines.push(["Selector", String(inp.selector)]);
-    if (inp.text) inputLines.push(["Text", String(inp.text)]);
-    if (inp.value) inputLines.push(["Value", String(inp.value)]);
-    if (inp.key) inputLines.push(["Key", String(inp.key)]);
-    if (inp.direction) inputLines.push(["Direction", String(inp.direction)]);
+    if (inp.ref) inputLines.push([i18n.t("uiText.ref"), String(inp.ref)]);
+    else if (inp.selector)
+      inputLines.push([i18n.t("uiText.selector"), String(inp.selector)]);
+    if (inp.text) inputLines.push([i18n.t("uiText.text"), String(inp.text)]);
+    if (inp.value) inputLines.push([i18n.t("uiText.value"), String(inp.value)]);
+    if (inp.key) inputLines.push([i18n.t("uiText.key"), String(inp.key)]);
+    if (inp.direction)
+      inputLines.push([i18n.t("uiText.direction"), String(inp.direction)]);
     if (inp.url_pattern)
-      inputLines.push(["URL Pattern", String(inp.url_pattern)]);
+      inputLines.push([i18n.t("uiText.urlPattern"), String(inp.url_pattern)]);
   }
   if (tool.name === "browser_snapshot") {
-    if (inp.selector) inputLines.push(["Scope", String(inp.selector)]);
-    if (inp.depth) inputLines.push(["Depth", String(inp.depth)]);
+    if (inp.selector)
+      inputLines.push([i18n.t("uiText.scope"), String(inp.selector)]);
+    if (inp.depth) inputLines.push([i18n.t("uiText.depth"), String(inp.depth)]);
   }
   if (tool.name === "browser_execute" && inp.code) {
-    inputLines.push(["Code", truncate(String(inp.code), 200)]);
+    inputLines.push([i18n.t("uiText.code"), truncate(String(inp.code), 200)]);
   }
 
   const isScreenshot =
@@ -1220,11 +1289,13 @@ const BrowserToolExpand = ({ tool }: { tool: ToolRenderItem }): JSX.Element => {
         </div>
       )}
       {isRunning && (
-        <div className="text-muted-foreground text-xs italic">Running…</div>
+        <div className="text-muted-foreground text-xs italic">
+          {i18n.t("uiText.runningLabel")}
+        </div>
       )}
       {!isRunning && screenshotPath && screenshotPath.length > 0 && (
         <div className="text-secondary-foreground text-xs">
-          Screenshot saved:{" "}
+          {i18n.t("uiText.screenshotSaved")}{" "}
           <span className="text-muted-foreground">{screenshotPath}</span>
         </div>
       )}
@@ -1531,7 +1602,7 @@ function ToolGroupIcon({
 export const ToolGroupBlock = ({
   id,
   tools,
-  summary,
+  summary: _summary,
   state,
   expanded: controlledExpanded,
   onExpandedChange,
@@ -1543,13 +1614,14 @@ export const ToolGroupBlock = ({
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
 }): JSX.Element => {
+  useTranslation();
   const [localExpanded, setLocalExpanded] = useState(false);
   const expanded = controlledExpanded ?? localExpanded;
   const setExpanded = (next: boolean): void => {
     if (onExpandedChange) onExpandedChange(next);
     else setLocalExpanded(next);
   };
-  const resolvedSummary = summary || summarizeToolGroup(tools);
+  const resolvedSummary = summarizeToolGroup(tools);
 
   return (
     <section className="my-0.5" data-tool-group={id}>

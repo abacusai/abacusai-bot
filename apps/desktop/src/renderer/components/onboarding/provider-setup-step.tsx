@@ -204,10 +204,7 @@ export const ProviderSetupStep = ({
             is, and repeating it on every step spends the top of the screen on
             what they already know instead of on what the step is asking. */}
         <h1 className="text-foreground text-4xl font-bold tracking-tight text-balance">
-          {t("onboarding.setupTitleLead")}{" "}
-          <span className="text-primary">
-            {t("onboarding.setupTitleAccent")}
-          </span>
+          {t("onboarding.setupTitle")}
         </h1>
         <p className="text-secondary-foreground mt-2 text-base">
           {t("onboarding.setupSubtitle")}
@@ -239,7 +236,9 @@ export const ProviderSetupStep = ({
               title={
                 field.provider === "abacus"
                   ? t("onboarding.setupAbacusGrant")
-                  : field.hint
+                  : t(`providerHints.${field.provider}`, {
+                      defaultValue: field.hint,
+                    })
               }
               className={cn(
                 "border-border bg-card/60 flex flex-col items-center gap-3 rounded-2xl border p-4",

@@ -9,6 +9,7 @@ import type { ReferralInviteOutcome } from "#shared/contracts";
 
 import { connectorById } from "../../connectors";
 import { useReferralSummaryQuery } from "../../hooks/use-referrals";
+import i18n from "../../i18n";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { useConnectFlow } from "../connectors/connect-flow";
 import {
@@ -381,7 +382,9 @@ export const ReferralsPanel = (): JSX.Element => {
     if (outcome.milestoneCreditsGranted > 0) {
       toast.success(
         t("referrals.milestoneToast", {
-          credits: outcome.milestoneCreditsGranted.toLocaleString(),
+          credits: outcome.milestoneCreditsGranted.toLocaleString(
+            i18n.language
+          ),
         })
       );
     }
@@ -466,9 +469,13 @@ export const ReferralsPanel = (): JSX.Element => {
             summary == null
               ? t("referrals.lead")
               : t("referrals.leadWithNumbers", {
-                  credits: summary.milestoneCredits.toLocaleString(),
+                  credits: summary.milestoneCredits.toLocaleString(
+                    i18n.language
+                  ),
                   count: summary.milestoneInvites,
-                  perFriend: summary.creditsPerFriend.toLocaleString(),
+                  perFriend: summary.creditsPerFriend.toLocaleString(
+                    i18n.language
+                  ),
                 })
           }
         />
@@ -492,7 +499,9 @@ export const ReferralsPanel = (): JSX.Element => {
                 <ItemTitle data-id="referrals-progress-title">
                   {summary.milestoneGranted
                     ? t("referrals.progressGranted", {
-                        credits: summary.milestoneCredits.toLocaleString(),
+                        credits: summary.milestoneCredits.toLocaleString(
+                          i18n.language
+                        ),
                       })
                     : t("referrals.progressTitle", {
                         sent: summary.invitesSent,
@@ -508,7 +517,7 @@ export const ReferralsPanel = (): JSX.Element => {
                     count: summary.friendsJoined,
                     credits: (
                       summary.friendsJoined * summary.creditsPerFriend
-                    ).toLocaleString(),
+                    ).toLocaleString(i18n.language),
                   })}
                 </p>
                 <div className="flex min-w-0 items-center gap-1">

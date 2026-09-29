@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import { useReferralSummaryQuery } from "../../hooks/use-referrals";
+import i18n from "../../i18n";
 import { durableStorage } from "../../lib/durable-storage";
 import { creditsTier } from "./credits-exhausted-card";
 import { UpsellCard } from "./upsell-card";
@@ -40,7 +41,7 @@ export const ReferralCard = (): JSX.Element | null => {
     <UpsellCard
       dataId="sidebar-referral-card"
       title={t("referralCard.title", {
-        credits: summary.milestoneCredits.toLocaleString(),
+        credits: summary.milestoneCredits.toLocaleString(i18n.language),
       })}
       cta={t("referralCard.cta")}
       onCta={() => {

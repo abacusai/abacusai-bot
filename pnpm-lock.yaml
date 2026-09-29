@@ -288,6 +288,9 @@ importers:
       '@abacus-ai/updater':
         specifier: workspace:*
         version: link:../updater
+      '@babel/parser':
+        specifier: ^7.29.8
+        version: 7.29.8
       '@base-ui/react':
         specifier: ^1.7.0
         version: 1.7.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

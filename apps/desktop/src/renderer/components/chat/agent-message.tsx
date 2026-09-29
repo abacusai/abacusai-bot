@@ -14,6 +14,8 @@ import { AgentStatus } from "#shared/agent-types";
 
 import { useToolGroupDisclosure } from "../../conversation";
 import { useSessionArtifactsQuery } from "../../hooks/use-workspace-queries";
+import i18n from "../../i18n";
+import { localizeAgentNotice } from "../../lib/localize-agent-notice";
 import { ImageLightbox } from "../common/image-lightbox";
 import { Markdown } from "../common/markdown";
 import { Button } from "../ui";
@@ -141,7 +143,9 @@ const NotificationBanner = ({
       className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${cfg.bg}`}
     >
       <NotificationIcon className={`size-3.5 shrink-0 ${cfg.text}`} />
-      <span className={`flex-1 ${cfg.text}`}>{message}</span>
+      <span className={`flex-1 ${cfg.text}`}>
+        {localizeAgentNotice(message)}
+      </span>
       {onSwitchModel != null && (
         <Button
           variant="secondary"
@@ -427,7 +431,11 @@ const UserImageThumbStrip = ({
             <div
               key={key}
               className="border-border bg-muted flex size-11 items-center justify-center rounded-lg border"
-              title={isErr ? `Image not found: ${img.fileName}` : img.fileName}
+              title={
+                isErr
+                  ? i18n.t("uiText.imageNotFound", { name: img.fileName })
+                  : img.fileName
+              }
               data-id={`local-code-user-image-${idx}`}
             >
               <StatusIcon

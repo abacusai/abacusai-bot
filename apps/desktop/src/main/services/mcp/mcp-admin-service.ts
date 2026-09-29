@@ -24,6 +24,7 @@ import type {
 } from "#shared/contracts";
 
 import { abacusBotHome } from "../../paths";
+import { nativeT } from "../config/native-i18n";
 import { credentialFor } from "../config/settings";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { environmentNoticeService } from "../providers/environment-notice-service";
@@ -220,7 +221,7 @@ export class McpAdminService {
       } else if (request.source === "file") {
         const { dialog } = await import("electron");
         const result = await dialog.showOpenDialog({
-          title: "Import MCP servers",
+          title: nativeT("importMcp"),
           properties: ["openFile"],
           filters: [{ name: "JSON", extensions: ["json"] }],
         });

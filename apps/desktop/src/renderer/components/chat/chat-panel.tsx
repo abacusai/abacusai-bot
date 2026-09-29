@@ -91,10 +91,12 @@ import {
   useSetSessionWorktreeMutation,
   useWorktreesQuery,
 } from "../../hooks/use-worktrees";
+import i18n from "../../i18n";
 import {
   composerDraftForKeyChange,
   writeComposerDraft,
 } from "../../lib/composer-draft";
+import { localizeAgentNotice } from "../../lib/localize-agent-notice";
 import { autoResolution } from "../../lib/permission-auto-resolve";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import { isAppInternalWorkspace } from "../../lib/workspace-utils";
@@ -1183,7 +1185,9 @@ export const ChatPanel = (): JSX.Element => {
       if (event.sessionId === activeSessionId) {
         toast.error(t("workspace.modelSwitchFailed"), {
           id: `local-code-model-unavailable-${event.sessionId}`,
-          ...(refusal.length > 0 ? { description: refusal } : {}),
+          ...(refusal.length > 0
+            ? { description: localizeAgentNotice(refusal) }
+            : {}),
         });
       }
     });
@@ -1591,7 +1595,9 @@ export const ChatPanel = (): JSX.Element => {
         });
       } else {
         const errorMessage =
-          error instanceof Error ? error.message : "Failed to send message";
+          error instanceof Error
+            ? error.message
+            : i18n.t("uiText.failedToSendMessage");
         if (wasNewSession) setInputValue(userMessage);
         toast.error(errorMessage);
       }
@@ -1722,7 +1728,7 @@ export const ChatPanel = (): JSX.Element => {
     if (path == null || path.trim().length === 0) return;
     const result = await window.api.agent.addWorkspace(path, false);
     if (!result.success) {
-      toast.error(result.error ?? "Unable to add workspace.");
+      toast.error(result.error ?? i18n.t("uiText.unableToAddWorkspace"));
       return;
     }
     const newWorkspaceId = result.workspaceId;

@@ -10,6 +10,7 @@ import type {
 } from "#shared/contracts";
 
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
+import i18n from "../../i18n";
 import { workspaceQueryKeys } from "../../lib/query-keys";
 import {
   FocusedPage,
@@ -188,7 +189,9 @@ const ModelRow = ({
               {t("usage.errorCount", { count: model.errors })}
             </span>
           ) : null}
-          <span className="ml-2">{fmtTokens(tokensOf(model))} tok</span>
+          <span className="ml-2">
+            {t("uiText.tokenCount", { tokens: fmtTokens(tokensOf(model)) })}
+          </span>
           <span
             className={
               model.billing === "billed"
@@ -299,10 +302,10 @@ export const UsagePanel = (): JSX.Element => {
                       {t("usage.abacusCredits", {
                         used: Math.round(
                           abacus.data.credits_used ?? 0
-                        ).toLocaleString(),
+                        ).toLocaleString(i18n.language),
                         granted: Math.round(
                           abacus.data.credits_granted
-                        ).toLocaleString(),
+                        ).toLocaleString(i18n.language),
                       })}
                     </ItemActions>
                   )}

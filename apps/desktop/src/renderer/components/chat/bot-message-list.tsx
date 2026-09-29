@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { isMessageReaction } from "#shared/message-reactions";
 
 import type { SubtaskSummary } from "../../conversation";
+import i18n from "../../i18n";
+import { localizeAgentNotice } from "../../lib/localize-agent-notice";
 import { Markdown } from "../common/markdown";
 import { Button } from "../ui";
 import { UserMessageBubble } from "./agent-message";
@@ -47,7 +49,7 @@ const QUIET_GAP_MS = 15 * 60 * 1000;
 /** "Yesterday 1:22 PM": the day only when it is not today. */
 const stampLabel = (at: number, now: number): string => {
   const when = new Date(at);
-  const time = when.toLocaleTimeString(undefined, {
+  const time = when.toLocaleTimeString(i18n.language, {
     hour: "numeric",
     minute: "2-digit",
   });
@@ -56,11 +58,11 @@ const stampLabel = (at: number, now: number): string => {
   const dayBefore = midnight.getTime() - 24 * 60 * 60 * 1000;
 
   if (at >= midnight.getTime()) return time;
-  if (at >= dayBefore) return `Yesterday ${time}`;
+  if (at >= dayBefore) return i18n.t("uiText.yesterdayAt", { time });
   // A week back stops being "last Tuesday" and starts being a date.
   const withinWeek = at >= midnight.getTime() - 6 * 24 * 60 * 60 * 1000;
   const day = when.toLocaleDateString(
-    undefined,
+    i18n.language,
     withinWeek ? { weekday: "long" } : { month: "short", day: "numeric" }
   );
   return `${day} ${time}`;
@@ -335,7 +337,7 @@ export const BotMessageList = ({
               </div>
             ) : (
               <BotBubble key={part.id} tone="notice">
-                {part.message}
+                {localizeAgentNotice(part.message)}
                 {wantsModelSwitch(part.actions) && onSwitchModel != null && (
                   <Button
                     variant="secondary"

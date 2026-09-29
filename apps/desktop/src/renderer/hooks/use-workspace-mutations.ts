@@ -9,6 +9,7 @@ import type {
   WorkspaceState,
 } from "#shared/contracts";
 
+import i18n from "../i18n";
 import { workspaceQueryKeys } from "../lib/query-keys";
 import type {
   ExpandedDirectory,
@@ -117,7 +118,9 @@ export const useWorkspaceWorkspaceMutations = (
     mutationFn: async (workspaceId) => {
       const result = await window.api.agent.switchWorkspace(workspaceId);
       if (!result.success) {
-        throw new Error(result.error ?? "Unable to switch workspace.");
+        throw new Error(
+          result.error ?? i18n.t("uiText.unableToSwitchWorkspace")
+        );
       }
       return result;
     },
@@ -235,7 +238,7 @@ export const useWorkspaceWorkspaceMutations = (
     mutationFn: async (path: string) => {
       const result = await window.api.agent.addWorkspace(path, false);
       if (!result.success) {
-        throw new Error(result.error ?? "Unable to add workspace.");
+        throw new Error(result.error ?? i18n.t("uiText.unableToAddWorkspace"));
       }
       return result;
     },
@@ -322,7 +325,9 @@ export const useWorkspaceWorkspaceMutations = (
     mutationFn: async (workspaceId: string) => {
       const result = await window.api.agent.removeWorkspace(workspaceId);
       if (!result.success) {
-        throw new Error(result.error ?? "Unable to remove workspace.");
+        throw new Error(
+          result.error ?? i18n.t("uiText.unableToRemoveWorkspace")
+        );
       }
       return result;
     },
@@ -345,7 +350,9 @@ export const useWorkspaceWorkspaceMutations = (
         label
       );
       if (!result.success) {
-        throw new Error(result.error ?? "Unable to rename workspace.");
+        throw new Error(
+          result.error ?? i18n.t("uiText.unableToRenameWorkspace")
+        );
       }
       return result;
     },
@@ -371,7 +378,9 @@ export const useWorkspaceWorkspaceMutations = (
         newPath
       );
       if (!result.success) {
-        throw new Error(result.error ?? "Unable to relocate workspace.");
+        throw new Error(
+          result.error ?? i18n.t("uiText.unableToRelocateWorkspace")
+        );
       }
       return result;
     },

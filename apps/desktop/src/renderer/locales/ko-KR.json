@@ -6,23 +6,23 @@
     "upToDate": "최신 버전입니다"
   },
   "apiKeys": {
-    "configured": "Configured",
-    "connectAbacus": "Connect Abacus.AI",
-    "connectOpenRouter": "Connect OpenRouter",
-    "connecting": "Finish signing in in your browser…",
-    "filterPlaceholder": "Search model providers…",
-    "getKey": "Open provider site",
-    "invalidKey": "This does not look like an API key. Paste the key only.",
-    "moreProviders": "Other providers",
-    "noMatches": "No model providers match this search.",
-    "notVerified": "Saved, not checked",
-    "notVerifiedHint": "The app checks this key when you send a message.",
-    "remove": "Remove key",
-    "removeDescription": "Deletes the saved key from ~/.abacusai-bot/config.json. Existing chats keep using it until they are restarted.",
-    "removeTitle": "Remove the {{provider}} key?",
-    "replacePlaceholder": "Paste a new {{provider}} API key to replace the saved one",
-    "saveChanges": "Save",
-    "title": "Models"
+    "configured": "구성됨",
+    "connectAbacus": "Abacus.AI 연결",
+    "connectOpenRouter": "OpenRouter 연결",
+    "connecting": "브라우저에서 로그인을 완료하세요…",
+    "filterPlaceholder": "모델 제공업체 검색…",
+    "getKey": "공급자 사이트 열기",
+    "invalidKey": "이것은 API 키처럼 보이지 않습니다. 키만 붙여넣으세요.",
+    "moreProviders": "기타 제공업체",
+    "noMatches": "이 검색과 일치하는 모델 제공자가 없습니다.",
+    "notVerified": "저장됨, 확인되지 않음",
+    "notVerifiedHint": "메시지를 보낼 때 앱은 이 키를 확인합니다.",
+    "remove": "키 제거",
+    "removeDescription": "~/.abacusai-bot/config.json.에서 저장된 키를 삭제합니다. 기존 채팅은 다시 시작될 때까지 계속 사용합니다.",
+    "removeTitle": "{{provider}} 키를 제거하시겠습니까?",
+    "replacePlaceholder": "저장된 키를 대체하려면 새 {{provider}} API 키를 붙여넣으세요.",
+    "saveChanges": "저장",
+    "title": "모델"
   },
   "artifacts": {
     "columns": {
@@ -30,9 +30,9 @@
       "session": "세션",
       "title": "제목 / 이름"
     },
-    "copied": "Copied",
-    "copyPath": "Copy path",
-    "copyUrl": "Copy URL",
+    "copied": "복사됨",
+    "copyPath": "경로 복사",
+    "copyUrl": "URL 복사",
     "emptyDescription": "에이전트가 작성한 파일과 연 페이지가 여기에 모입니다.",
     "emptyTitle": "아직 산출물이 없습니다",
     "filters": {
@@ -43,21 +43,22 @@
     },
     "itemCount_one": "{{count}}개 항목",
     "itemCount_other": "{{count}}개 항목",
-    "missingFile": "This file is no longer on disk.",
+    "missingFile": "이 파일은 더 이상 디스크에 없습니다.",
     "noMatchesDescription": "다른 이름, 경로 또는 세션 제목으로 시도해 보세요.",
     "noMatchesTitle": "일치하는 항목 없음",
-    "openedFolder": "Opened in your file manager.",
+    "openedFolder": "파일 관리자에서 열었습니다.",
     "refresh": "새로 고침",
-    "revealInFolder": "Reveal in folder",
+    "revealInFolder": "폴더에 공개",
     "searchPlaceholder": "산출물과 세션 검색…",
-    "unknownSession": "삭제된 세션"
+    "unknownSession": "삭제된 세션",
+    "itemCount_many": "{{count}}개 항목"
   },
   "bots": {
-    "avatarColor": "Color",
-    "avatarLabel": "Avatar variant",
-    "botOptions": "Bot options",
+    "avatarColor": "색상",
+    "avatarLabel": "아바타 변형",
+    "botOptions": "봇 옵션",
     "cancel": "취소",
-    "changeAvatar": "Try another avatar",
+    "changeAvatar": "다른 아바타를 사용해 보세요",
     "create": "만들기",
     "delete": "삭제",
     "deleteBody": "{{name}}와(과) 해당 채팅이 삭제됩니다. 되돌릴 수 없습니다.",
@@ -73,249 +74,250 @@
     "emptyTitle": "아직 봇이 없습니다",
     "home": {
       "categories": {
-        "featured": "Featured",
-        "finance": "Finance",
-        "marketing": "Marketing",
-        "personal-assistant": "Personal Assistant",
-        "productivity": "Productivity",
-        "recruiting": "Recruiting",
-        "research": "Research",
-        "social-media": "Social Media"
+        "featured": "추천",
+        "finance": "금융",
+        "marketing": "마케팅",
+        "personal-assistant": "개인 비서",
+        "productivity": "생산성",
+        "recruiting": "모집",
+        "research": "연구",
+        "social-media": "소셜 미디어"
       },
-      "categoriesLabel": "Template categories",
-      "createCta": "Create Bot",
+      "categoriesLabel": "템플릿 카테고리",
+      "createCta": "봇 생성",
       "getStarted": "시작하기",
-      "heading": "Create your",
-      "headingAccent": "Bot",
+      "heading": "당신의",
+      "headingAccent": "봇",
       "namePlaceholder": "새 봇",
-      "subtitle": "Name your bot and get started in seconds.",
+      "subtitle": "봇의 이름을 지정하고 몇 초 만에 시작하세요.",
       "suggestions": "추천",
-      "templatesDivider": "Or start with a template"
+      "templatesDivider": "아니면 템플릿으로 시작하세요",
+      "createHeading": "나만의 봇 만들기"
     },
-    "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
-    "modelLabel": "Model",
+    "modelDefault": "앱 기본값",
+    "modelHelp": "이 봇의 채팅이 실행되는 모델입니다. 봇은 값싼 모델에서 잘 작동합니다. 봇 루프는 이를 위해 만들어졌습니다.",
+    "modelLabel": "모델",
     "nameLabel": "이름",
     "namePlaceholder": "예: Scout",
     "nameRequired": "이름이 필요합니다.",
     "newBot": "새 봇",
     "newDialog": {
       "checkIn": {
-        "daily": "Daily",
-        "hourly": "Hourly",
-        "off": "Off",
-        "weekdays": "Weekdays",
-        "weekly": "Weekly"
+        "daily": "매일",
+        "hourly": "매시간",
+        "off": "끔",
+        "weekdays": "평일",
+        "weekly": "주간"
       },
-      "checkInDayLabel": "Day",
-      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
-      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
-      "checkInLabel": "Scheduled check-ins",
-      "checkInRoutineName": "{{name}} check-in",
-      "checkInTimeLabel": "Time",
-      "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Keeps track of my research topics",
-      "instructionsLabel": "Instructions",
-      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
-      "moreOptions": "More options: description, scheduled check-ins, model",
-      "namePlaceholder": "Research Buddy",
-      "title": "New bot"
+      "checkInDayLabel": "일",
+      "checkInError": "봇이 생성되었지만 체크인을 예약할 수 없습니다. 루틴 아래에 하나를 추가하세요.",
+      "checkInHelp": "봇은 이 일정에 따라 깨어나서 사용자에게 사전에 메시지를 보냅니다.",
+      "checkInLabel": "예정된 체크인",
+      "checkInRoutineName": "{{name}} 정기 확인",
+      "checkInTimeLabel": "시간",
+      "descriptionLabel": "설명(선택사항)",
+      "descriptionPlaceholder": "내 연구 주제를 추적합니다.",
+      "instructionsLabel": "지침",
+      "instructionsPlaceholder": "당신은 예리하고 간결한 연구 조교입니다. 내가 언급한 주제를 추적하고 사전에 업데이트를 표시하세요.",
+      "moreOptions": "추가 옵션: 설명, 예정된 체크인, 모델",
+      "namePlaceholder": "연구 친구",
+      "title": "새 봇"
     },
     "openError": "봇의 채팅을 열지 못했습니다.",
-    "personaLabel": "Persona",
-    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
-    "pin": "Pin",
-    "pinned": "Pinned",
+    "personaLabel": "페르소나",
+    "personaPlaceholder": "무미건조하고 간결하며 나를 '보스'라고 부르며 이모티콘 하나로 시작합니다.",
+    "pin": "고정",
+    "pinned": "고정됨",
     "save": "저장",
     "saveError": "봇을 저장하지 못했습니다.",
     "senderChat": "{{platform}}에서 {{sender}}와의 자동 답장 채팅",
     "senderChatReadOnly": "자동 답장 대화입니다. {{bot}}이(가) 여기서 회원님 대신 {{sender}}에게 답장합니다. 볼 수는 있지만 입력할 수 없습니다. 답장 방식을 바꾸려면 {{bot}}의 채팅에서 말해 주세요.",
     "templates": {
       "appointment-assistant": {
-        "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
-        "name": "Appointment Assistant"
+        "description": "확인부터 준비, 알림, 일정 변경까지 약속을 체계적으로 정리합니다.",
+        "name": "약속 도우미"
       },
       "bills-renewal-watch": {
-        "description": "Catches upcoming bills, renewals, free-trial endings, and price increases before they surprise you.",
-        "name": "Bills & Renewal Watch"
+        "description": "다가오는 청구서, 갱신, 무료 평가판 종료, 가격 인상 등을 놀라게 되기 전에 알아보세요.",
+        "name": "청구서 및 갱신 감시"
       },
       "calendar-concierge": {
-        "description": "Handles scheduling back-and-forth and finds meeting times that actually fit your day.",
-        "name": "Calendar Concierge"
+        "description": "앞뒤로 일정을 관리하고 실제로 하루에 맞는 회의 시간을 찾습니다.",
+        "name": "캘린더 컨시어지"
       },
       "campaign-performance-digest": {
-        "description": "Turns campaign numbers into a short weekly read on what worked, what did not, and what to try next.",
-        "name": "Campaign Performance Digest"
+        "description": "캠페인 수치를 효과가 있었던 것과 그렇지 않은 것, 다음에 시도할 것에 대한 짧은 주간 읽기로 전환합니다.",
+        "name": "캠페인 성과 다이제스트"
       },
       "candidate-follow-up": {
-        "description": "Keeps candidates from falling through the cracks when feedback, scheduling, or next steps stall.",
-        "name": "Candidate Follow-Up"
+        "description": "피드백, 일정 조정 또는 다음 단계가 지연될 때 후보자가 어려움을 겪는 것을 방지합니다.",
+        "name": "후보자 후속 조치"
       },
       "candidate-sourcer": {
-        "description": "Finds candidates with clear job-relevant evidence and prepares personalized outreach for recruiter review.",
-        "name": "Candidate Sourcer"
+        "description": "명확한 직무 관련 증거가 있는 후보자를 찾고 채용 담당자 검토를 위한 맞춤형 지원 활동을 준비합니다.",
+        "name": "후보자 출처"
       },
       "chief-of-staff": {
         "description": "메일·캘린더·Slack을 아우르며 하루를 관리하고 결정은 당신에게 맡깁니다.",
         "name": "비서실장"
       },
       "comment-mention-assistant": {
-        "description": "Helps you respond quickly to the social comments and mentions that are actually worth your time.",
-        "name": "Comment & Mention Assistant"
+        "description": "실제로 시간을 투자할 가치가 있는 소셜 댓글과 멘션에 빠르게 응답할 수 있도록 도와줍니다.",
+        "name": "댓글 및 언급 도우미"
       },
       "competitor-campaign-watch": {
-        "description": "Tracks how competitors are positioning themselves and what campaigns they are pushing right now.",
-        "name": "Competitor Campaign Watch"
+        "description": "경쟁업체가 어떻게 포지셔닝하고 있으며 현재 어떤 캠페인을 추진하고 있는지 추적합니다.",
+        "name": "경쟁사 캠페인 관찰"
       },
       "competitor-watch": {
-        "description": "Tracks meaningful competitor moves without flooding you with every small update.",
-        "name": "Competitor Watch"
+        "description": "작은 업데이트가 있을 때마다 홍수를 일으키지 않고 의미 있는 경쟁사의 움직임을 추적합니다.",
+        "name": "경쟁사 시계"
       },
       "content-calendar-manager": {
-        "description": "Keeps your content pipeline full and moving from idea to draft to publish-ready.",
-        "name": "Content Calendar Manager"
+        "description": "콘텐츠 파이프라인을 가득 채우고 아이디어에서 초안, 게시 준비까지 이동합니다.",
+        "name": "콘텐츠 캘린더 관리자"
       },
       "content-repurposer": {
-        "description": "Turns one strong idea into platform-native X and LinkedIn content without sounding copy-pasted.",
-        "name": "Content Repurposer"
+        "description": "하나의 강력한 아이디어를 복사 붙여넣기 소리 없이 플랫폼 고유의 X 및 LinkedIn 콘텐츠로 변환합니다.",
+        "name": "콘텐츠 재활용"
       },
       "customer-voice-miner": {
-        "description": "Turns real customer language from Gmail, Slack, and docs into sharper messaging and content ideas.",
-        "name": "Customer Voice Miner"
+        "description": "Gmail, Slack 및 문서의 실제 고객 언어를 더욱 선명한 메시징 및 콘텐츠 아이디어로 전환합니다.",
+        "name": "고객의 소리 마이너"
       },
       "daily-focus-planner": {
-        "description": "Turns your meetings, messages, and deadlines into a realistic plan for the day.",
-        "name": "Daily Focus Planner"
+        "description": "회의, 메시지, 마감일을 그날의 현실적인 계획으로 바꿔보세요.",
+        "name": "일일 포커스 플래너"
       },
       "daily-post-writer": {
-        "description": "Finds one thing worth saying today and turns it into a polished post in your voice.",
-        "name": "Daily Post Writer"
+        "description": "오늘 말할 가치가 있는 한 가지를 찾아서 당신의 목소리로 세련된 게시물로 바꿔보세요.",
+        "name": "데일리 포스트 작가"
       },
       "daily-stock-recommender": {
-        "description": "Surfaces a few stocks worth researching today with the thesis, catalyst, risks, and downside case.",
-        "name": "Daily Stock Recommender"
+        "description": "주제, 촉매제, 위험 및 단점 사례를 통해 오늘 연구할 가치가 있는 몇 가지 주식을 소개합니다.",
+        "name": "일일 주식 추천기"
       },
       "decision-researcher": {
-        "description": "Compares your real options on the criteria that matter and recommends the strongest choice.",
-        "name": "Decision Researcher"
+        "description": "중요한 기준에 따라 실제 옵션을 비교하고 가장 강력한 선택을 권장합니다.",
+        "name": "의사결정연구원"
       },
       "deep-researcher": {
-        "description": "Turns a complex question into a decision-ready brief with evidence, uncertainty, and sources.",
-        "name": "Deep Researcher"
+        "description": "증거, 불확실성, 출처를 포함하여 복잡한 질문을 의사결정 준비가 가능한 브리핑으로 전환합니다.",
+        "name": "심층 연구원"
       },
       "discord-agent": {
-        "description": "Your agent in Discord - DM it or add it to a server",
-        "name": "Discord Agent"
+        "description": "Discord의 에이전트 - DM으로 보내거나 서버에 추가하세요",
+        "name": "Discord 에이전트"
       },
       "earnings-watch": {
-        "description": "Tracks upcoming earnings and explains the numbers, surprises, guidance, and what changed after results.",
-        "name": "Earnings Watch"
+        "description": "향후 수익을 추적하고 수치, 놀라움, 지침 및 결과 이후 변경 사항을 설명합니다.",
+        "name": "수익 감시"
       },
       "email-drafting": {
-        "description": "Finds emails that need a response and creates clear, context-aware Gmail drafts in your voice.",
-        "name": "Email Drafting"
+        "description": "응답이 필요한 이메일을 찾아 음성으로 명확하고 상황을 인식하는 Gmail 초안을 만듭니다.",
+        "name": "이메일 초안 작성"
       },
       "follow-up-tracker": {
-        "description": "Tracks who owes you a reply, who you owe, and when it is time to follow up.",
-        "name": "Follow-Up Tracker"
+        "description": "답장을 보내야 할 사람, 답장을 보내야 할 사람, 후속 조치를 취해야 할 시기를 추적합니다.",
+        "name": "후속 추적기"
       },
       "hiring-manager-brief": {
-        "description": "Prepares the hiring manager before each interview with the role, candidate context, and areas to probe.",
-        "name": "Hiring Manager Brief"
+        "description": "각 인터뷰 전에 채용 관리자가 역할, 후보자 컨텍스트 및 조사할 영역을 준비합니다.",
+        "name": "채용 관리자 개요"
       },
       "inbox-to-calendar": {
-        "description": "Turns confirmed plans in Gmail into clean Google Calendar events so important dates never get lost.",
-        "name": "Inbox to Calendar"
+        "description": "Gmail에서 확인된 계획을 깔끔한 Google Calendar 이벤트로 전환하여 중요한 날짜가 손실되는 일이 없도록 합니다.",
+        "name": "받은편지함을 캘린더로"
       },
       "interview-coordinator": {
-        "description": "Handles interview scheduling across candidates and interviewers without endless back-and-forth.",
-        "name": "Interview Coordinator"
+        "description": "끝없이 왔다 갔다 하지 않고도 후보자와 면접관 간의 인터뷰 일정을 처리합니다.",
+        "name": "인터뷰 코디네이터"
       },
       "knowledge-finder": {
-        "description": "Finds the answer buried in your Gmail, Slack, or Google Drive history.",
-        "name": "Knowledge Finder"
+        "description": "Gmail, Slack 또는 Google Drive 기록에 묻혀 있는 답을 찾아보세요.",
+        "name": "지식 찾기"
       },
       "launch-command-center": {
-        "description": "Keeps a launch moving by surfacing blockers, missing approvals, and commitments before they slip.",
-        "name": "Launch Command Center"
+        "description": "방해 요소, 누락된 승인 및 약속이 미끄러지기 전에 표면화하여 출시를 계속 진행합니다.",
+        "name": "명령 센터 실행"
       },
       "meeting-notes-actions": {
-        "description": "Turns meeting notes into decisions, owners, deadlines, and follow-ups you can act on.",
-        "name": "Meeting Notes & Actions"
+        "description": "회의록을 의사결정, 소유자, 마감일, 조치할 수 있는 후속 조치로 전환합니다.",
+        "name": "회의 메모 및 작업"
       },
       "meeting-prep-bot": {
-        "description": "Creates a one-page meeting brief with the context, open issues, and questions you need before the call.",
-        "name": "Meeting Prep Bot"
+        "description": "통화 전에 필요한 상황, 미해결 문제, 질문이 포함된 한 페이지 분량의 회의 개요를 만듭니다.",
+        "name": "회의 준비 봇"
       },
       "morning-brief": {
-        "description": "Starts your day with meetings, urgent messages, priorities, and the news worth knowing.",
-        "name": "Morning Brief"
+        "description": "회의, 긴급 메시지, 우선순위, 알 만한 뉴스로 하루를 시작하세요.",
+        "name": "모닝브리프"
       },
       "news-radar": {
-        "description": "Delivers the most important developments from the last 24 hours without the duplicate headlines and noise.",
-        "name": "News Radar"
+        "description": "중복된 헤드라인과 잡음 없이 지난 24시간 동안의 가장 중요한 개발 내용을 전달합니다.",
+        "name": "뉴스 레이더"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
-        "name": "Personal Admin"
+        "description": "양식, 갱신, 약속, 후속 조치 등 받은 편지함에 있는 생활 관리자를 처리합니다.",
+        "name": "개인 관리자"
       },
       "portfolio-pulse": {
-        "description": "Alerts you only when something materially changes the story for a stock you care about.",
-        "name": "Portfolio Pulse"
+        "description": "관심 있는 주식에 대한 스토리가 실질적으로 변경되는 경우에만 알림을 보냅니다.",
+        "name": "포트폴리오 펄스"
       },
       "project-pulse": {
-        "description": "Gives you a clean project status without making you chase people for updates.",
-        "name": "Project Pulse"
+        "description": "업데이트를 위해 사람들을 추적하지 않고도 깨끗한 프로젝트 상태를 제공합니다.",
+        "name": "프로젝트 펄스"
       },
       "research-paper-scout": {
-        "description": "Finds new papers worth reading and explains the contribution without making you read every abstract.",
-        "name": "Research Paper Scout"
+        "description": "읽을 가치가 있는 새로운 논문을 찾고 초록을 모두 읽지 않고도 기여 내용을 설명합니다.",
+        "name": "연구 논문 스카우트"
       },
       "resume-review-assistant": {
-        "description": "Maps each resume to the job requirements so a recruiter can review the evidence consistently.",
-        "name": "Resume Review Assistant"
+        "description": "채용 담당자가 지속적으로 증거를 검토할 수 있도록 각 이력서를 직무 요구 사항에 매핑합니다.",
+        "name": "이력서 검토 도우미"
       },
       "social-inbox-manager": {
-        "description": "Pulls important comments, mentions, and DMs to the top so high-value conversations do not get missed.",
-        "name": "Social Inbox Manager"
+        "description": "중요한 댓글, 멘션, DM을 상단으로 끌어와서 중요한 대화를 놓치지 않도록 합니다.",
+        "name": "소셜 받은편지함 관리자"
       },
       "spending-digest": {
-        "description": "Turns Gmail receipts into a simple weekly spending summary and flags unusual purchases.",
-        "name": "Spending Digest"
+        "description": "Gmail 영수증을 간단한 주간 지출 요약으로 바꾸고 비정상적인 구매를 표시합니다.",
+        "name": "지출 다이제스트"
       },
       "telegram-agent": {
-        "description": "Your agent in Telegram - message it anytime",
-        "name": "Telegram Agent"
+        "description": "Telegram의 에이전트 - 언제든지 메시지를 보내세요.",
+        "name": "Telegram 에이전트"
       },
       "travel-planner": {
-        "description": "Turns your bookings and preferences into a realistic day-by-day trip plan.",
-        "name": "Travel Planner"
+        "description": "예약과 선호사항을 현실적인 일일 여행 계획으로 바꿔보세요.",
+        "name": "여행 플래너"
       },
       "trend-scout": {
-        "description": "Finds fast-growing conversations in your niche and gives you an original angle before everyone piles in.",
-        "name": "Trend Scout"
+        "description": "귀하의 틈새 시장에서 빠르게 성장하는 대화를 찾아 모두가 몰려들기 전에 독창적인 각도를 제공합니다.",
+        "name": "트렌드 스카우트"
       },
       "weekly-review": {
-        "description": "Closes the week with what moved forward, what slipped, and what matters next.",
-        "name": "Weekly Review"
+        "description": "앞으로 나아갈 일, 빠진 일, 다음에 중요한 일로 한 주를 마감합니다.",
+        "name": "주간 검토"
       },
       "whats-hot": {
-        "description": "Finds fast-rising stories and conversations across the internet before they become old news.",
-        "name": "What's Hot?"
+        "description": "오래된 뉴스가 되기 전에 인터넷에서 빠르게 떠오르는 이야기와 대화를 찾아보세요.",
+        "name": "핫한 소식은 무엇인가요?"
       },
       "whatsapp-agent": {
-        "description": "Your agent in WhatsApp - message it anytime",
-        "name": "WhatsApp Agent"
+        "description": "WhatsApp의 에이전트 - 언제든지 메시지를 보내세요.",
+        "name": "WhatsApp 에이전트"
       }
     },
     "title": "봇",
     "titleLabel": "역할",
     "titlePlaceholder": "예: Research Scout",
-    "unpin": "Unpin",
+    "unpin": "고정 해제",
     "viewBots": "봇",
     "viewSessions": "세션",
-    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "이 대화는 {{app}}에 있습니다. 거기에 Abacus AI bot 메시지를 보내세요. 귀하와 봇이 말하는 모든 내용이 여기에 표시됩니다.",
+    "channelChatReadOnlyWhatsapp": "이 대화는 WhatsApp에 있습니다. '자신에게 메시지 보내기' 채팅에서 자신에게 메시지를 보내세요. 귀하와 봇이 말하는 모든 내용이 여기에 표시됩니다."
   },
   "browserPermission": {
     "allow": "허용",
@@ -332,19 +334,19 @@
     "approvalSubtitle": "에이전트가 탐색 전에 승인을 요청할지 선택하세요.",
     "approvalTitle": "승인",
     "chrome": {
-      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
-      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
-      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
-      "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
-      "install": "Install the extension",
-      "connect": "Connect",
-      "disconnect": "Disconnect",
-      "tokenTitle": "Extension token",
-      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
-      "tokenSave": "Save token",
-      "tokenSaved": "Token saved.",
-      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+      "notFound": "이 컴퓨터에서 Google Chrome 또는 Microsoft Edge를 찾을 수 없습니다.",
+      "extensionMissing": "에이전트가 이를 구동할 수 있도록 {{browser}}에 Playwright 확장을 설치합니다.",
+      "ready": "{{browser}}가 준비되었습니다. 지금 연결하지 않으면 에이전트의 첫 번째 브라우저 작업이 {{browser}}에서 묻습니다.",
+      "connecting": "브라우저에서 연결을 허용하기를 기다리는 중...",
+      "connected": "AbacusAI Bot 그룹의 {{browser}}: {{count}} 탭에 연결되었습니다.",
+      "install": "확장 프로그램 설치",
+      "connect": "연결하다",
+      "disconnect": "연결 끊기",
+      "tokenTitle": "확장 토큰",
+      "tokenPlaceholder": "허용 페이지를 건너뛰려면 확장 프로그램의 토큰을 붙여넣으세요.",
+      "tokenSave": "토큰 저장",
+      "tokenSaved": "토큰이 저장되었습니다.",
+      "tokenHint": "선택 과목. 토큰은 확장 프로그램의 허용 페이지에 표시됩니다. 저장하면 앱이 매번 묻지 않고 연결됩니다."
     },
     "clearAction": "모든 브라우징 데이터 삭제",
     "clearSubtitle": "앱 내 브라우저의 사이트 데이터와 캐시를 삭제합니다",
@@ -353,21 +355,21 @@
     "dataSection": "데이터",
     "done": "완료",
     "engine": {
-      "builtin": "Built-in browser",
-      "chrome": "My Chrome"
+      "builtin": "내장 브라우저",
+      "chrome": "내 크롬"
     },
-    "engineSection": "Which browser",
-    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
-    "engineTitle": "Browser the agent uses",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page",
+    "engineSection": "어떤 브라우저",
+    "engineSubtitle": "앱 자체 브라우저 또는 로그인 및 탭이 있는 Chrome.",
+    "engineTitle": "상담원이 사용하는 브라우저",
+    "homepageInvalid": "유효한 웹 주소를 입력하세요.",
+    "homepageSave": "저장",
+    "homepageSaved": "홈페이지가 저장되었습니다.",
+    "homepageTitle": "홈페이지",
     "masterSubtitle": "에이전트가 내장 브라우저를 제어하도록 허용",
-    "masterTitle": "Browser",
+    "masterTitle": "브라우저",
     "permissionsSection": "권한",
     "subtitle": "에이전트의 내장 브라우저를 관리합니다.",
-    "title": "Browser"
+    "title": "브라우저"
   },
   "capabilities": {
     "skills": {
@@ -375,34 +377,34 @@
       "emptyTitle": "아직 스킬이 없습니다"
     },
     "tabs": {
-      "label": "Capabilities",
+      "label": "기능",
       "mcp": "MCP",
       "connectors": "커넥터",
       "skills": "스킬",
       "tools": "도구"
     },
     "toolDescriptions": {
-      "ast_edit": "Structural search-and-replace that cannot break the syntax.",
+      "ast_edit": "구문을 깨뜨릴 수 없는 구조적 검색 및 교체입니다.",
       "bash": "작업 폴더에서 셸 명령을 실행합니다.",
-      "batch_edit": "Change several places in one file in a single edit.",
-      "batch_file_read": "Read several files in one go.",
-      "bfl_flux3_get_result": "Check whether a submitted job has finished.",
-      "bfl_flux3_image_to_video": "Start a video generation from a still image.",
-      "bfl_flux3_keyframes_to_video": "Start a video generation from keyframes.",
-      "bfl_flux3_prompting_guide": "Read the prompting guide for better results.",
-      "bfl_flux3_text_to_video": "Start a video generation from a prompt.",
-      "bfl_flux3_video_continuation": "Continue an existing video.",
+      "batch_edit": "한 번의 편집으로 한 파일의 여러 위치를 변경할 수 있습니다.",
+      "batch_file_read": "한 번에 여러 파일을 읽습니다.",
+      "bfl_flux3_get_result": "제출된 작업이 완료되었는지 확인하세요.",
+      "bfl_flux3_image_to_video": "정지 이미지에서 비디오 생성을 시작합니다.",
+      "bfl_flux3_keyframes_to_video": "키프레임에서 비디오 생성을 시작합니다.",
+      "bfl_flux3_prompting_guide": "더 나은 결과를 얻으려면 프롬프트 가이드를 읽으십시오.",
+      "bfl_flux3_text_to_video": "프롬프트에서 비디오 생성을 시작합니다.",
+      "bfl_flux3_video_continuation": "기존 비디오를 계속합니다.",
       "browser_execute": "열린 페이지에서 JavaScript를 실행합니다.",
       "browser_interact": "페이지에서 클릭, 입력, 스크롤, 호버를 수행합니다.",
       "browser_navigate": "내장 브라우저에서 URL을 엽니다.",
       "browser_snapshot": "페이지를 상호작용 요소 목록으로 읽습니다.",
-      "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
-      "code_map": "Index the functions and classes in a file or folder.",
-      "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",
-      "cronjob": "Create, list, pause, or run scheduled tasks.",
-      "deck_export_pdf": "Render an HTML slide deck to PDF, one page per slide.",
-      "delegate_task": "Hand a piece of work to a sub-agent.",
-      "design": "Design screens and export them as mockups.",
+      "browser_task": "전체 웹 작업을 브라우저 하위 에이전트에 전달하고 답변을 받으세요.",
+      "code_map": "파일이나 폴더의 함수와 클래스를 색인화합니다.",
+      "connect_connector": "사용자에게 Gmail 또는 Slack와 같은 서비스를 연결하여 해당 도구를 사용할 수 있도록 요청하세요.",
+      "cronjob": "예약된 작업을 생성, 나열, 일시 중지 또는 실행합니다.",
+      "deck_export_pdf": "HTML 슬라이드 데크를 슬라이드당 한 페이지씩 PDF로 렌더링합니다.",
+      "delegate_task": "하위 에이전트에게 작업을 전달합니다.",
+      "design": "화면을 디자인하고 모형으로 내보냅니다.",
       "device_app": "앱을 설치, 실행, 종료 또는 삭제합니다.",
       "device_boot": "시뮬레이터나 에뮬레이터를 시작합니다.",
       "device_build": "대상 플랫폼용으로 작업 폴더를 빌드합니다.",
@@ -412,309 +414,310 @@
       "device_screenshot": "기기 화면을 이미지로 캡처합니다.",
       "device_shutdown": "실행 중인 시뮬레이터나 에뮬레이터를 종료합니다.",
       "device_snapshot": "화면을 요소 목록으로 읽습니다.",
-      "disconnect_connector": "Detach a connected service's account.",
+      "disconnect_connector": "연결된 서비스의 계정을 분리합니다.",
       "discord_auto_reply": "선택한 사람의 Discord 메시지에 자동으로 답장합니다(봇 전용).",
-      "document": "Write a document and print it as a PDF.",
+      "document": "문서를 작성하고 PDF로 인쇄하세요.",
       "edit": "파일 안의 정확히 일치하는 텍스트를 바꿉니다.",
-      "exit_plan_mode": "Ask to leave plan mode and start carrying out the plan.",
-      "fetch_background_output": "Read what a background command has printed, while it runs or after it finishes.",
+      "exit_plan_mode": "계획 모드를 종료하고 계획 실행을 시작하도록 요청합니다.",
+      "fetch_background_output": "실행되는 동안이나 완료된 후에 백그라운드 명령이 인쇄한 내용을 읽습니다.",
       "glob": "이름 패턴으로 파일을 찾습니다.",
       "grep": "정규식으로 파일 내용을 검색합니다.",
-      "ha_call_service": "Call a service to change something.",
-      "ha_get_state": "Read the current state of an entity.",
-      "ha_list_entities": "List Home Assistant entities.",
-      "ha_list_services": "List the services that can be called.",
-      "image_generate": "Generate an image from a prompt.",
-      "kill_process": "Stop a command running in the background.",
+      "ha_call_service": "무언가를 변경하려면 서비스를 호출하세요.",
+      "ha_get_state": "엔터티의 현재 상태를 읽습니다.",
+      "ha_list_entities": "Home Assistant 엔터티를 나열합니다.",
+      "ha_list_services": "호출할 수 있는 서비스를 나열합니다.",
+      "image_generate": "프롬프트에서 이미지를 생성합니다.",
+      "kill_process": "백그라운드에서 실행 중인 명령을 중지합니다.",
       "list_discord_chats": "Discord 채팅과 연락처를 나열합니다.",
       "list_telegram_chats": "Telegram 채팅과 연락처를 나열합니다.",
       "list_whatsapp_chats": "WhatsApp 채팅과 연락처를 나열합니다.",
       "ls": "디렉터리의 내용을 나열합니다.",
-      "memory": "Save and recall notes that outlive the session.",
-      "pdf": "Write, read, merge, split or fill a PDF.",
-      "ppt": "Build a slide deck from a brief and save it as a PDF.",
-      "present_deliverable": "Present the finished files, most important first, and open the top one.",
+      "memory": "세션이 끝난 후에도 지속되는 메모를 저장하고 불러오세요.",
+      "pdf": "PDF 읽기, 병합, 분할, 워터마크, 채우기 또는 재인쇄.",
+      "ppt": "프레젠테이션을 작성하고 PDF로 인쇄하세요.",
+      "present_deliverable": "완성된 파일 중 가장 중요한 파일을 먼저 제시하고 맨 위 파일을 엽니다.",
       "read": "디스크에서 파일을 읽습니다.",
       "read_discord_messages": "요청 시 최근 Discord 메시지를 읽습니다.",
-      "read_output": "Read back output that was too large to show in full.",
+      "read_output": "너무 커서 전체 내용을 표시할 수 없는 출력을 다시 읽어보세요.",
       "read_telegram_messages": "요청 시 최근 Telegram 메시지를 읽습니다.",
       "read_whatsapp_messages": "요청 시 최근 WhatsApp 메시지를 읽습니다.",
-      "run_tests": "Run the project's tests and report what passed and failed.",
+      "run_tests": "프로젝트의 테스트를 실행하고 통과한 것과 실패한 것을 보고합니다.",
       "send_discord_message": "Discord으로 메시지를 보냅니다.",
       "send_telegram_message": "Telegram으로 메시지를 보냅니다.",
       "send_whatsapp_message": "WhatsApp으로 메시지를 보냅니다.",
       "serve": "작성한 웹 페이지를 열 수 있도록 폴더를 http로 제공합니다.",
-      "session_search": "Search past conversations.",
-      "skill_add": "Install a skill from the marketplace.",
-      "skill_manage": "Create, edit, or remove a skill.",
-      "skill_view": "Read a skill's full instructions.",
-      "skills_list": "List the skills available to load.",
-      "spotify_albums": "Look up album details.",
-      "spotify_devices": "List and pick a playback device.",
-      "spotify_library": "Read and update your saved library.",
-      "spotify_playback": "Play, pause, skip, and control volume.",
-      "spotify_playlists": "Read and modify playlists.",
-      "spotify_queue": "See and add to the play queue.",
-      "spotify_search": "Search tracks, albums, artists, and playlists.",
+      "session_search": "과거 대화를 검색해 보세요.",
+      "skill_add": "마켓플레이스에서 스킬을 설치하세요.",
+      "skill_manage": "스킬을 생성, 편집 또는 제거합니다.",
+      "skill_view": "스킬의 전체 지침을 읽어보세요.",
+      "skills_list": "로드할 수 있는 기술을 나열합니다.",
+      "spotify_albums": "앨범 세부정보를 찾아보세요.",
+      "spotify_devices": "재생 장치를 나열하고 선택하세요.",
+      "spotify_library": "저장된 라이브러리를 읽고 업데이트하세요.",
+      "spotify_playback": "재생, 일시중지, 건너뛰기, 볼륨 조절이 가능합니다.",
+      "spotify_playlists": "재생 목록을 읽고 수정합니다.",
+      "spotify_queue": "재생 대기열을 확인하고 추가하세요.",
+      "spotify_search": "트랙, 앨범, 아티스트, 재생 목록을 검색하세요.",
       "telegram_auto_reply": "선택한 사람의 Telegram 메시지에 자동으로 답장합니다(봇 전용).",
-      "text_to_speech": "Turn text into spoken audio.",
-      "todo": "Keep a plan for multi-step work and tick items off.",
-      "video_analyze": "Describe or answer questions about a video.",
-      "video_generate": "Generate a video from a prompt, image, or reference.",
-      "vision_analyze": "Describe or answer questions about an image.",
-      "web_fetch": "Fetch a web page and read it as text.",
-      "web_search": "Search the web and return ranked results.",
+      "text_to_speech": "텍스트를 음성 오디오로 변환합니다.",
+      "todo": "다단계 작업에 대한 계획을 유지하고 항목을 선택하세요.",
+      "video_analyze": "동영상에 대한 질문에 대해 설명하거나 답변하세요.",
+      "video_generate": "프롬프트, 이미지 또는 참조에서 비디오를 생성합니다.",
+      "vision_analyze": "이미지에 대해 설명하거나 질문에 답하세요.",
+      "web_fetch": "웹페이지를 가져와서 텍스트로 읽어보세요.",
+      "web_search": "웹을 검색하고 순위가 매겨진 결과를 반환합니다.",
       "whatsapp_auto_reply": "선택한 사람의 WhatsApp 메시지에 자동으로 답장합니다(봇 전용).",
       "write": "파일을 만들거나 기존 파일을 덮어씁니다.",
-      "x_search": "Search public posts and threads on X.",
-      "xai_video_edit": "Edit an already generated video.",
-      "xai_video_extend": "Extend a generated video further."
+      "x_search": "X에서 공개 게시물과 스레드를 검색하세요.",
+      "xai_video_edit": "이미 생성된 비디오를 편집합니다.",
+      "xai_video_extend": "생성된 비디오를 더욱 확장합니다."
     },
     "tools": {
-      "alwaysOn": "Always on",
-      "disabledDetail": "Off. The agent isn't told these tools exist.",
-      "enabledDetail": "On. The agent can call these tools.",
+      "alwaysOn": "항상 켜짐",
+      "disabledDetail": "꺼짐. 상담원은 이러한 도구가 있다는 말을 듣지 않습니다.",
+      "enabledDetail": "에. 에이전트는 이러한 도구를 호출할 수 있습니다.",
       "mcpNote": "연결된 MCP 서버는 이 목록 외에 자체 도구를 추가합니다.",
-      "noMatches": "No toolset matches that.",
-      "noModelTools": "This capability doesn't add any tools the model calls directly.",
-      "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
-      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
-      "resizePanels": "Resize toolsets and details",
-      "searchPlaceholder": "Search toolsets and tools…",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools"
+      "noMatches": "일치하는 도구 세트가 없습니다.",
+      "noModelTools": "이 기능은 모델이 직접 호출하는 도구를 추가하지 않습니다.",
+      "planned": "아직 사용할 수 없음",
+      "plannedDetail": "아직 이를 구현한 것이 없으므로 켤 수 없습니다. 여기에 나열되어 있어 계획된 내용을 확인할 수 있습니다. 이것은 누락된 API 키가 아닙니다.",
+      "restartNote": "변경 사항은 다음 세션에 적용됩니다. 세션이 시작되면 에이전트에게 도구 목록이 전달됩니다.",
+      "resizePanels": "도구 세트 및 세부 정보 크기 조정",
+      "searchPlaceholder": "도구 세트 및 도구 검색…",
+      "toolCount_one": "도구 {{count}}개",
+      "toolCount_other": "{{count}} 도구",
+      "toolCount_many": "{{count}} 도구"
     },
     "toolsets": {
       "a2a": {
-        "description": "Agent-to-agent protocol support, so other agents can call this one and it can call them.",
+        "description": "에이전트 간 프로토콜이 지원되므로 다른 에이전트가 이 에이전트를 호출하고 다른 에이전트도 호출할 수 있습니다.",
         "label": "A2A"
       },
       "bfl": {
-        "description": "Black Forest Labs FLUX 3 video generation. Jobs take minutes, so submitting returns an id to poll.",
+        "description": "Black Forest Labs FLUX 3 비디오 생성. 작업에는 몇 분이 걸리므로 제출하면 폴링할 ID가 반환됩니다.",
         "label": "BFL FLUX 3 Video"
       },
       "browser": {
-        "description": "Drive the built-in browser: open pages, read them, click and type.",
-        "label": "Browser Automation"
+        "description": "내장된 브라우저를 구동하세요. 페이지를 열고, 읽고, 클릭하고 입력하세요. 웹 작업은 자체 하위 에이전트에서 실행됩니다.",
+        "label": "브라우저 자동화"
       },
       "connectors": {
-        "description": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
-        "label": "Connectors"
+        "description": "에이전트에게 어떤 커넥터가 연결되어 있는지 확인하고 필요한 커넥터에 대한 연결 버튼을 제공하세요. 그 차례가 당신을 기다립니다.",
+        "label": "커넥터"
       },
       "cronjob": {
-        "description": "Create and manage scheduled tasks that run on their own.",
-        "label": "Cron Jobs"
+        "description": "자체적으로 실행되는 예약된 작업을 생성하고 관리합니다.",
+        "label": "크론 작업"
       },
       "delegation": {
-        "description": "Hand a self-contained piece of work to a sub-agent.",
-        "label": "Task Delegation"
+        "description": "독립적인 작업을 하위 에이전트에게 전달합니다.",
+        "label": "업무위임"
       },
       "deliverables": {
-        "description": "Hand finished files to you as clickable links, open the first one in the preview pane, and file them all under Artifacts.",
-        "label": "Deliverables"
+        "description": "완성된 파일을 클릭 가능한 링크로 전달하고, 미리보기 창에서 첫 번째 파일을 열고, 모두 아티팩트 아래에 보관하세요.",
+        "label": "결과물"
       },
       "design": {
-        "description": "Design product screens as mockups or wireframes.",
-        "label": "Design"
+        "description": "제품 화면을 모형이나 와이어프레임으로 디자인합니다.",
+        "label": "디자인"
       },
       "device": {
-        "description": "Build for and control iOS simulators and Android emulators.",
-        "label": "Devices"
+        "description": "iOS 시뮬레이터 및 Android 에뮬레이터용으로 구축하고 제어하세요.",
+        "label": "기기"
       },
       "file": {
-        "description": "Read, write, and edit files, and search the workspace by name or contents.",
-        "label": "File Operations"
+        "description": "파일을 읽고, 쓰고, 편집하고, 이름이나 내용으로 작업공간을 검색하세요.",
+        "label": "파일 작업"
       },
       "homeassistant": {
-        "description": "Read and control smart home devices through Home Assistant.",
+        "description": "Home Assistant를 통해 스마트 홈 장치를 읽고 제어하세요.",
         "label": "Home Assistant"
       },
       "image_gen": {
-        "description": "Generate images from a prompt.",
-        "label": "Image Generation"
+        "description": "프롬프트에서 이미지를 생성합니다.",
+        "label": "이미지 생성"
       },
       "memory": {
-        "description": "Remember things across sessions instead of starting cold every time.",
-        "label": "Memory"
+        "description": "매번 냉정하게 시작하는 대신 세션 전반에 걸쳐 내용을 기억하십시오.",
+        "label": "메모리"
       },
       "messaging": {
         "description": "연결된 채팅 앱(WhatsApp, Telegram, Discord)에서 사용자 본인 또는 봇으로 메시지를 보냅니다.",
         "label": "메시징"
       },
       "pdf": {
-        "description": "Write, read and edit PDF documents.",
-        "label": "PDFs"
+        "description": "PDF 문서를 쓰고, 읽고, 편집하세요.",
+        "label": "PDF"
       },
       "plan_mode": {
-        "description": "Lets the agent ask to leave plan mode and start carrying out the plan it showed you.",
-        "label": "Plan mode"
+        "description": "에이전트가 계획 모드를 종료하고 표시된 계획 실행을 시작하도록 요청할 수 있습니다.",
+        "label": "계획 모드"
       },
       "ppt": {
-        "description": "Build a designed slide deck from a brief and show it in the preview pane.",
-        "label": "Slide decks"
+        "description": "개요에서 디자인된 슬라이드 데크를 만들고 미리 보기 창에 표시합니다.",
+        "label": "슬라이드 데크"
       },
       "process": {
-        "description": "Start a command that keeps running, read what it has printed, and stop it. Also reads output that was too large to show in full.",
-        "label": "Background processes"
+        "description": "계속 실행되는 명령을 시작하고, 인쇄된 내용을 읽고, 중지합니다. 전체를 표시하기에는 너무 큰 출력도 읽습니다.",
+        "label": "백그라운드 프로세스"
       },
       "session_search": {
-        "description": "Search past conversations and recall what was decided.",
-        "label": "Session Search"
+        "description": "과거 대화를 검색하고 결정된 내용을 기억해 보세요.",
+        "label": "세션 검색"
       },
       "skills": {
-        "description": "List, read, and manage skills as tools, rather than only loading them as context.",
-        "label": "Skills"
+        "description": "기술을 컨텍스트로만 로드하는 것이 아니라 도구로 나열하고 읽고 관리합니다.",
+        "label": "스킬"
       },
       "spotify": {
-        "description": "Playback, search, playlists, and library access.",
+        "description": "재생, 검색, 재생 목록 및 라이브러리 액세스.",
         "label": "Spotify"
       },
       "terminal": {
-        "description": "Run shell commands in the workspace.",
-        "label": "Terminal & Processes"
+        "description": "작업 공간에서 셸 명령을 실행합니다.",
+        "label": "터미널 및 프로세스"
       },
       "todo": {
-        "description": "Plan and track multi-step work so long tasks don't drift.",
-        "label": "Task Planning"
+        "description": "긴 작업이 표류하지 않도록 다단계 작업을 계획하고 추적합니다.",
+        "label": "작업 계획"
       },
       "tts": {
-        "description": "Turn text into audio.",
-        "label": "Text-to-Speech"
+        "description": "텍스트를 오디오로 변환합니다.",
+        "label": "텍스트 음성 변환"
       },
       "video": {
-        "description": "Analyse video content. Needs a video-capable model.",
-        "label": "Video Analysis"
+        "description": "비디오 콘텐츠를 분석합니다. 비디오 지원 모델이 필요합니다.",
+        "label": "영상분석"
       },
       "video_gen": {
-        "description": "Generate video from a prompt, an image, or a reference.",
-        "label": "Video Generation"
+        "description": "프롬프트, 이미지 또는 참조에서 비디오를 생성합니다.",
+        "label": "비디오 생성"
       },
       "vision": {
-        "description": "Look at images and describe or reason about what's in them.",
-        "label": "Vision / Image Analysis"
+        "description": "이미지를 보고 그 안에 무엇이 있는지 설명하거나 추론해 보세요.",
+        "label": "비전/이미지 분석"
       },
       "web": {
-        "description": "Search the web and pull readable content out of pages.",
-        "label": "Web Search & Scraping"
+        "description": "웹을 검색하고 페이지에서 읽을 수 있는 콘텐츠를 가져옵니다.",
+        "label": "웹 검색 및 스크래핑"
       },
       "x_search": {
-        "description": "Search public posts and threads on X.",
-        "label": "X (Twitter) Search"
+        "description": "X에서 공개 게시물과 스레드를 검색하세요.",
+        "label": "X (트위터) 검색"
       }
     }
   },
   "changelog": {
-    "current": "This version",
-    "empty": "No releases to show yet.",
-    "subtitle": "Every release, newest first. The version you are running is marked."
+    "current": "이 버전",
+    "empty": "아직 표시할 릴리스가 없습니다.",
+    "subtitle": "모든 릴리스가 최신 버전부터 시작됩니다. 실행 중인 버전이 표시되어 있습니다."
   },
   "common": {
-    "back": "Back",
-    "cancel": "Cancel",
+    "back": "뒤로",
+    "cancel": "취소",
     "close": "닫기",
-    "loading": "Loading",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "sidebar": "Sidebar",
-    "toggleSidebar": "Toggle sidebar"
+    "loading": "로드 중",
+    "mobileSidebarDescription": "모바일 사이드바를 표시합니다.",
+    "sidebar": "사이드바",
+    "toggleSidebar": "사이드바 전환"
   },
   "connectorRequest": {
-    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
-    "connect": "Connect {{provider}}",
-    "connecting": "Connecting…",
-    "decline": "Not now",
-    "failed": "Could not connect {{provider}}.",
+    "body": "{{provider}}를 연결해야 에이전트가 사용할 수 있습니다. 그것은 당신을 기다리고 있습니다.",
+    "connect": "{{provider}} 연결",
+    "connecting": "연결 중… 브라우저를 확인하여 단계를 완료하세요.",
+    "decline": "지금은 아님",
+    "failed": "{{provider}}를 연결할 수 없습니다.",
     "stop": "연결 중단",
-    "title": "{{provider}} is not connected"
+    "title": "{{provider}}가 연결되지 않았습니다"
   },
   "connectors": {
-    "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
-    "abacusConnected": "{{name}} connected",
-    "abacusConnecting": "Finish connecting {{name}} in your browser…",
-    "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
-    "abacusDisconnected": "{{name}} disconnected",
-    "abacusSignInFailed": "Could not sign in to Abacus.AI. Please try again.",
-    "abacusSigningIn": "Sign in to Abacus.AI in your browser to continue…",
-    "add": "Add",
-    "addFailed": "Could not add {{name}}.",
-    "added": "{{name}} added.",
-    "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
-    "adding": "Adding…",
+    "abacusConnectCancelled": "{{name}} 추가가 중지되었습니다.",
+    "abacusConnectFailed": "{{name}}를 추가할 수 없습니다. 다시 시도해 보세요.",
+    "abacusConnected": "{{name}} 연결됨",
+    "abacusConnecting": "브라우저에서 {{name}} 연결을 완료하세요…",
+    "abacusDisconnectFailed": "{{name}}의 연결을 끊을 수 없습니다. 다시 시도해 주세요.",
+    "abacusDisconnected": "{{name}} 연결이 끊어졌습니다.",
+    "abacusSignInFailed": "Abacus.AI에 로그인할 수 없습니다. 다시 시도해 주세요.",
+    "abacusSigningIn": "계속하려면 브라우저에서 Abacus.AI에 로그인하세요…",
+    "add": "추가",
+    "addFailed": "{{name}}를 추가할 수 없습니다.",
+    "added": "{{name}}가 추가되었습니다.",
+    "agentKeyHint": "이 시스템에 에이전트 자격 증명으로 저장되고 에이전트가 실행하는 도구에서 사용되며 Abacus.AI로 전송되지 않습니다.",
+    "adding": "추가 중…",
     "auth": {
-      "key": "API key",
-      "oauth": "Sign-in",
-      "oauth-client": "Sign-in + app",
-      "token": "Token",
-      "abacus": "Abacus account"
+      "key": "API 키",
+      "oauth": "로그인",
+      "oauth-client": "로그인 + 앱",
+      "token": "토큰",
+      "abacus": "Abacus 계정"
     },
-    "cancel": "Cancel",
+    "cancel": "취소",
     "categories": {
-      "data": "Data & Analytics",
-      "development": "Development",
-      "featured": "Featured",
-      "infrastructure": "Infrastructure",
-      "payments": "Payments",
-      "productivity": "Productivity",
-      "support": "Customer Support",
-      "web": "Web & Browsers",
-      "abacus-connectors": "Abacus.AI Connectors"
+      "data": "데이터 및 분석",
+      "development": "개발",
+      "featured": "추천",
+      "infrastructure": "인프라",
+      "payments": "결제",
+      "productivity": "생산성",
+      "support": "고객 지원",
+      "web": "웹 및 브라우저",
+      "abacus-connectors": "Abacus.AI 커넥터"
     },
-    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
-    "clientId": "Client ID",
-    "clientSecret": "Client secret (if issued)",
-    "connect": "Connect {{name}}",
-    "connectAction": "Connect",
-    "credentialHint": "Stored in this app's MCP configuration on your machine, and sent only to this 커넥터's server.",
-    "docs": "Open documentation",
-    "marketplace": "Marketplace",
-    "mcpSignInFailed": "Sign-in failed: {{error}}",
+    "chromeMissing": "{{name}}가 Google Chrome를 드라이브하는데 이 컴퓨터에서 Chrome을 찾을 수 없습니다. google.com/chrome에서 설치하면 브라우저 도구가 작동합니다.",
+    "clientId": "클라이언트 ID",
+    "clientSecret": "클라이언트 비밀번호(발급된 경우)",
+    "connect": "{{name}} 연결",
+    "connectAction": "연결하다",
+    "credentialHint": "내 컴퓨터의 앱 MCP 구성에 저장되며 이 커넥터의 서버로만 전송됩니다.",
+    "docs": "문서 열기",
+    "marketplace": "마켓플레이스",
+    "mcpSignInFailed": "로그인 실패: {{error}}",
     "noMatches": "No 커넥터 match that search.",
-    "noneInstalled": "No 커넥터 added yet.",
+    "noneInstalled": "아직 추가된 커넥터가 없습니다.",
     "notInstalled": "설치되지 않음",
-    "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL: add this to your app",
-    "remove": "Remove",
-    "removeFailed": "Could not remove {{name}}.",
-    "removed": "{{name}} removed.",
-    "search": "Search 커넥터",
-    "signInAction": "Sign in",
-    "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
-    "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added. Opening your browser to sign in…",
-    "signingInAction": "Signing in…",
-    "token": "Token",
-    "whereToGet": "Where do I get this?",
-    "yours": "Yours"
+    "oauthClientHint": "이 공급자는 앱을 자동으로 등록하지 않으므로 개발자 콘솔에서 앱을 만들고 여기에 자격 증명을 붙여넣습니다.",
+    "redirectUrlLabel": "리디렉션 URL: 앱에 추가하세요.",
+    "remove": "삭제",
+    "removeFailed": "{{name}}를 제거할 수 없습니다.",
+    "removed": "{{name}}가 제거되었습니다.",
+    "search": "커넥터 검색",
+    "signInAction": "로그인",
+    "signInFailed": "{{name}}가 추가되었지만 로그인이 완료되지 않았습니다. {{error}} MCP 패널에서 다시 시도할 수 있습니다.",
+    "signedIn": "{{name}}가 로그인되어 준비되었습니다. 다음 세션이 시작되면 연결됩니다.",
+    "signingIn": "{{name}}가 추가되었습니다. 로그인하기 위해 브라우저를 여는 중…",
+    "signingInAction": "로그인 중…",
+    "token": "토큰",
+    "whereToGet": "이건 어디서 구할 수 있나요?",
+    "yours": "너의 것"
   },
   "creditsCard": {
-    "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going. No card needed.",
-    "cta": "Upgrade",
-    "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer for free, with no limits.",
-    "or": "or",
-    "paidBody": "Top up your account to keep going.",
-    "paidTitle": "You've used all your Pro Abacus.AI credits",
-    "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
-    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
-    "switchTitle": "You've used all your free Abacus.AI credits",
-    "title": "You've used all your free Abacus.AI credits",
-    "topUpCta": "Top up",
-    "upsellTitle": "Unlock the full potential on desktop and web",
-    "inviteCta": "Or invite friends for free credits"
+    "body": "잠재력을 최대한 활용하세요",
+    "connectBody": "계속하려면 무료 소스를 연결하세요. 카드가 필요하지 않습니다.",
+    "cta": "업그레이드",
+    "dismiss": "닫기",
+    "localBody": "또는 이 컴퓨터에서 제한 없이 무료로 모델을 실행해 보세요.",
+    "or": "또는",
+    "paidBody": "계속하려면 계정을 충전하세요.",
+    "paidTitle": "Pro Abacus.AI 크레딧을 모두 사용했습니다.",
+    "pickBody": "계속하려면 오른쪽 하단의 모델 선택기에서 다른 모델을 선택하세요.",
+    "switchBody": "계속하려면 오른쪽 하단의 모델 선택기에서 {{providers}} 모델을 선택하세요.",
+    "switchTitle": "무료 Abacus.AI 크레딧을 모두 사용했습니다.",
+    "title": "무료 Abacus.AI 크레딧을 모두 사용했습니다.",
+    "topUpCta": "충전",
+    "upsellTitle": "데스크탑과 웹에서 잠재력을 최대한 활용하세요",
+    "inviteCta": "또는 친구를 초대하여 무료 크레딧을 받으세요"
   },
   "deepAgentCard": {
-    "body": "Open DeepAgent on the web",
-    "cta": "Go to Abacus AI Agent",
-    "title": "Go to DeepAgent"
+    "body": "복잡한 에이전트 작업용",
+    "cta": "Abacus AI Agent 바로가기",
+    "title": "주판 AI 에이전트"
   },
   "deliverables": {
-    "files": "Files",
-    "openInBrowser": "Open in browser",
-    "showInFolder": "Show in folder",
-    "showLess": "Show less",
-    "showMore": "+{{count}} more"
+    "files": "파일",
+    "openInBrowser": "브라우저에서 열기",
+    "showInFolder": "폴더에 표시",
+    "showLess": "간략히 보기",
+    "showMore": "+{{count}} 더보기"
   },
   "devicePanel": {
     "axPermissionNeeded": "창을 표시하지 않고 시뮬레이터를 미러링하려면 손쉬운 사용 권한이 필요합니다.",
@@ -779,7 +782,7 @@
   "deviceSetup": {
     "androidAvdDesc": "Android SDK는 있지만 가상 기기가 없습니다. Android Studio의 Tools → Device Manager에서 만드세요.",
     "androidDesc": "Android Studio를 설치한 다음 Tools → Device Manager에서 가상 기기를 만드세요.",
-    "androidTitle": "Android · Android Studio",
+    "androidTitle": "안드로이드 · 안드로이드 스튜디오",
     "download": "다운로드",
     "iosDesc": "Mac App Store에서 Xcode를 설치하고 한 번 실행하여 설정을 완료하세요. 그러면 시뮬레이터가 여기에 표시됩니다.",
     "iosRuntimeDesc": "Xcode가 설치되어 있지만 시뮬레이터를 찾을 수 없습니다. Xcode → 설정 → Components에서 iOS 런타임을 다운로드하세요.",
@@ -800,39 +803,39 @@
   },
   "execBackends": {
     "daytona": {
-      "description": "Run commands in a Daytona cloud sandbox.",
+      "description": "Daytona 클라우드 샌드박스에서 명령을 실행하세요.",
       "label": "Daytona"
     },
     "docker": {
-      "description": "Run commands in a container with the workspace mounted at the same path.",
+      "description": "동일한 경로에 마운트된 작업공간을 사용하여 컨테이너에서 명령을 실행합니다.",
       "label": "Docker"
     },
-    "fellBack": "{{selected}} isn't usable right now, so commands are running {{effective}}.",
-    "inUse": "In use",
+    "fellBack": "{{selected}}는 현재 사용할 수 없으므로 명령이 {{effective}}를 실행 중입니다.",
+    "inUse": "사용 중",
     "local": {
-      "description": "Run commands directly on this machine. No isolation.",
-      "label": "Local"
+      "description": "이 머신에서 직접 명령을 실행하세요. 격리가 없습니다.",
+      "label": "지역"
     },
-    "missingBinary": "{{command}} wasn't found on your PATH.",
-    "missingEnv": "Set {{vars}} to use this backend.",
+    "missingBinary": "PATH에서 {{command}}를 찾을 수 없습니다.",
+    "missingEnv": "이 백엔드를 사용하려면 {{vars}}를 설정하세요.",
     "modal": {
-      "description": "Run commands in a Modal cloud sandbox.",
+      "description": "Modal 클라우드 샌드박스에서 명령을 실행하세요.",
       "label": "Modal"
     },
     "singularity": {
-      "description": "Run commands in a Singularity/Apptainer container (HPC-friendly, rootless).",
+      "description": "Singularity/Apptainer 컨테이너(HPC 친화적, 루트 없음)에서 명령을 실행합니다.",
       "label": "Singularity / Apptainer"
     },
     "ssh": {
-      "description": "Run commands on a remote host over SSH.",
+      "description": "SSH를 통해 원격 호스트에서 명령을 실행합니다.",
       "label": "SSH"
     },
-    "title": "Execution backend",
-    "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "title": "실행 백엔드",
+    "unimplemented": "AbacusAI Bot는 아직 여기에서 명령을 실행할 수 없습니다.",
+    "unsupportedPlatform": "Windows에서는 사용할 수 없습니다. 컨테이너에는 POSIX 호스트 경로에 작업 공간이 필요합니다. 대신 로컬 백엔드를 사용하세요."
   },
   "firstBot": {
-    "title": "We set up your first bot"
+    "title": "우리는 당신을 위해 첫 번째 봇을 만들었습니다. 즐기세요!"
   },
   "greeting": {
     "afternoon": {
@@ -917,26 +920,26 @@
     "started": "시작됨. 전용 세션에서 실행됩니다."
   },
   "localModels": {
-    "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
-    "download": "Download {{size}} and use it",
-    "downloading": "{{received}} of {{total}} ({{percent}}%)",
-    "installed": "Installed",
-    "machine": "This computer has {{memory}} of memory.",
-    "onThisMachine": "On this machine",
-    "recommended": "Recommended",
-    "remove": "Remove",
-    "sectionHint": "Models the app downloads and runs here with the bundled llama.cpp. They join RouteLLM - Open as its last resort.",
-    "stopDownload": "Stop download",
-    "tight": "That is tight for this model; answers will be slow.",
-    "title": "Use a local model",
-    "unavailable": "This build of the app cannot run models locally.",
-    "use": "Use {{model}}",
-    "useLocal": "Use a local model",
-    "verifying": "Checking the download…"
+    "description": "이 컴퓨터에서 실행되는 모델: 계정, 키, 할당량이 없습니다. 클라우드보다 느리지만 결코 고갈되지 않습니다.",
+    "download": "{{size}}를 다운로드하여 사용하세요",
+    "downloading": "{{total}}의 {{received}} ({{percent}}%)",
+    "installed": "설치됨",
+    "machine": "이 컴퓨터에는 {{memory}} 메모리가 있습니다.",
+    "onThisMachine": "이 기계에서",
+    "recommended": "권장",
+    "remove": "삭제",
+    "sectionHint": "번들로 제공되는 llama.cpp를 사용하여 앱 다운로드 및 실행을 모델링합니다. 이들은 최후의 수단으로 RouteLLM - Open에 합류합니다.",
+    "stopDownload": "다운로드 중지",
+    "tight": "이 모델에는 빡빡한 수준입니다. 답변이 느릴 것입니다.",
+    "title": "로컬 모델 사용",
+    "unavailable": "이 앱 빌드는 모델을 로컬에서 실행할 수 없습니다.",
+    "use": "{{model}} 사용",
+    "useLocal": "로컬 모델 사용",
+    "verifying": "다운로드 확인 중…"
   },
   "logs": {
-    "saveFailed": "Could not save logs: {{error}}",
-    "saved": "Logs saved to {{path}}"
+    "saveFailed": "로그를 저장할 수 없습니다: {{error}}",
+    "saved": "{{path}}에 저장된 로그"
   },
   "mcpManagement": {
     "add": "추가",
@@ -969,7 +972,7 @@
       "scopePlaceholder": "범위(공백으로 구분, 선택 사항)",
       "titleAdd": "사용자 지정 MCP에 연결",
       "titleEdit": "MCP 서버 편집: {{name}}",
-      "transportHttp": "Streamable HTTP",
+      "transportHttp": "스트리밍 가능한 HTTP",
       "transportStdio": "STDIO",
       "url": "URL",
       "urlPlaceholder": "https://mcp.example.com/mcp"
@@ -982,7 +985,7 @@
       "file": "파일에서 가져오기…",
       "paste": "클립보드에서 JSON 붙여넣기",
       "success": "{{count}}개의 서버를 가져왔습니다.",
-      "deepagent": "Import from DeepAgent"
+      "deepagent": "DeepAgent에서 가져오기"
     },
     "namePlaceholder": "서버 이름",
     "nameRequired": "서버 이름은 필수입니다.",
@@ -995,85 +998,86 @@
     "refreshNoSession": "MCP 서버를 새로고침하려면 세션을 시작하세요.",
     "remove": "삭제",
     "removeFailed": "서버를 삭제하지 못했습니다.",
-    "restart": "재시작",
+    "restart": "다시 시작",
     "restartFailed": "재시작에 실패했습니다: {{error}}",
     "runtimeStatus": {
       "authRequired": "인증 필요",
-      "connected": "Connected",
-      "connecting": "Connecting",
-      "disconnected": "Off",
-      "error": "Error",
-      "idle": "Not connected"
+      "connected": "연결됨",
+      "connecting": "연결 중",
+      "disconnected": "끔",
+      "error": "오류",
+      "idle": "연결되지 않음"
     },
     "save": "저장",
     "signIn": "로그인",
-    "signInDone": "Signed in to {{name}}.",
-    "signInFailed": "Sign-in failed: {{error}}",
-    "signingIn": "Waiting for the browser…",
+    "signInDone": "{{name}}에 로그인했습니다.",
+    "signInFailed": "로그인 실패: {{error}}",
+    "signingIn": "브라우저를 기다리는 중…",
     "title": "MCP 서버",
     "toggleFailed": "서버를 업데이트하지 못했습니다.",
     "toolCount": "도구 {{count}}개",
     "urlRequired": "URL은 필수입니다.",
     "viewLogs": "로그",
     "abacusConnectors": {
-      "title_one": "{{count}} Abacus connector, served through this server:",
-      "title_other": "{{count}} Abacus connectors, served through this server:",
-      "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
-      "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
+      "title_one": "이 서버를 통해 제공되는 {{count}} Abacus 커넥터:",
+      "title_other": "이 서버를 통해 제공되는 {{count}} Abacus 커넥터:",
+      "none": "아직 귀하의 계정에 Abacus 커넥터가 연결되어 있지 않습니다. 커넥터 페이지에서 하나를 연결하면 여기에 표시됩니다.",
+      "loading": "어떤 커넥터가 부착되어 있는지 읽는 중…",
+      "unavailable": "현재 어떤 커넥터가 연결되어 있는지 읽을 수 없습니다. Abacus.AI에 로그인하거나 다시 시도하세요.",
+      "title_many": "이 서버를 통해 제공되는 {{count}} Abacus 커넥터:"
     }
   },
   "memory": {
-    "clear": "Clear all",
-    "clearConfirm": "Forget everything here?",
-    "clearNo": "Keep",
-    "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
-    "forget": "Forget this",
-    "loading": "Reading memory…",
-    "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
-    "storeEmpty": "Nothing here yet.",
+    "clear": "모두 지우기",
+    "clearConfirm": "여기 있는 내용을 모두 잊어버리셨나요?",
+    "clearNo": "유지하다",
+    "clearYes": "모두 잊어버리세요",
+    "empty": "아직 기억나는 것이 없습니다. 에이전트는 세션 간에 수행할 가치가 있는 정보(귀하의 선호도, 설정에 대한 사실)를 알게 되면 여기에 직접 기록합니다.",
+    "forget": "잊어버려",
+    "loading": "기억을 읽는 중…",
+    "readFailed": "기억되는 내용을 읽을 수 없습니다. 파일은 ~/.abacusai-bot/memories.에 있습니다.",
+    "storeEmpty": "아직 아무것도 없습니다.",
     "stores": {
       "memory": {
-        "help": "Environment facts, project conventions, and tool quirks it worked out for itself.",
-        "title": "The agent's own notes"
+        "help": "환경에 관한 사실, 프로젝트 규칙 및 도구의 특이한 점을 자체적으로 해결했습니다.",
+        "title": "상담원 본인의 메모"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
-        "title": "Always remember"
+        "help": "당신이 보관해달라고 요청한 것. 채팅에서 \"내가 파란색을 좋아한다는 것을 기억하세요\"라고 말하면 여기에 표시되고 다음 메시지의 모든 메시지에도 표시됩니다.",
+        "title": "항상 기억하세요"
       },
       "user": {
-        "help": "Preferences, habits, and how you like to work.",
-        "title": "About you"
+        "help": "선호도, 습관, 일하고 싶은 방식.",
+        "title": "당신에 대해"
       }
     },
-    "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
-    "title": "Memory",
+    "subtitle": "상담사가 세션 전반에 걸쳐 기억하기로 선택한 내용입니다. 이제 삭제가 적용됩니다. 이미 열려 있는 세션은 다시 시작될 때까지 시작된 세션을 유지합니다.",
+    "title": "메모리",
     "writeFailed": "아무것도 삭제되지 않았습니다. 같은 순간에 다른 세션이 메모리에 쓰는 중이었습니다. 다시 시도해 주세요.",
     "instructions": {
-      "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
-      "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
-      "save": "Save",
-      "saveFailed": "Could not save. Check that the settings folder is writable.",
-      "unsaved": "Unsaved",
-      "applies": "Applies to your next message, including in a chat already open."
+      "title": "맞춤 지침",
+      "description": "모든 대화 지침이 끝나면 항상 모델에게 전송됩니다. 어조, 언어, 하우스 스타일, 절대 하지 말아야 할 일 등 당신이 일하고 싶은 방식에 사용하세요.",
+      "placeholder": "예를 들어 영국식 영어로 대답하세요. 이모티콘은 절대 사용하지 마세요. 실행하기 전에 명령을 보여주세요.",
+      "save": "저장",
+      "saveFailed": "저장할 수 없습니다. 설정 폴더에 쓰기 가능한지 확인하세요.",
+      "unsaved": "저장되지 않음",
+      "applies": "이미 열려 있는 채팅을 포함하여 다음 메시지에 적용됩니다."
     },
-    "rememberedToast": "Added to my AI brain.",
+    "rememberedToast": "내 AI 두뇌에 추가되었습니다.",
     "sections": {
-      "sessions": "Sessions",
-      "bots": "Bots"
+      "sessions": "세션",
+      "bots": "봇"
     },
     "bots": {
-      "notes": "{{count}} day(s) of working notes on disk.",
-      "empty": "This bot has not saved any core memories yet."
+      "notes": "디스크에 있는 작업 노트의 {{count}}일입니다.",
+      "empty": "이 봇은 아직 핵심 메모리를 저장하지 않았습니다."
     }
   },
   "messaging": {
     "advanced": "고급 ({{count}})",
     "approve": "승인",
     "approvedUsers": "승인됨 ({{count}})",
-    "cancelConnect": "Cancel",
+    "cancelConnect": "취소",
     "clearField": "이 값 지우기",
     "descriptions": {
       "discord": "자신의 Discord에서 에이전트와 대화하고, 당신 명의로 사람들에게 메시지를 보내게 하세요. QR 코드 스캔으로 연결됩니다.",
@@ -1083,13 +1087,13 @@
     "discordConnected": "연결됨. 에이전트가 당신의 Discord 계정으로 메시지를 보냅니다.",
     "discordOpenLogin": "Discord 로그인 열기",
     "discordScan": "Discord 로그인 창이 열렸습니다. Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요.",
-    "doneConnect": "Continue",
+    "doneConnect": "계속",
     "enablePlatform": "플랫폼 활성화",
     "fields": {
       "discordBotToken": "봇 토큰"
     },
     "fromEnvironment": "환경 변수 {{key}}에서 설정됨",
-    "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
+    "finishLinkFirst": "Abacus AI bot 연결을 완료하여 설정을 완료하세요.",
     "getCredentials": "자격 증명 받기",
     "needsSetup": "설정 필요",
     "openSetupGuide": "설정 가이드 열기",
@@ -1098,7 +1102,7 @@
       "discord": "Discord",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
-      "abacusDiscord": "Abacus AI bot on Discord",
+      "abacusDiscord": "Discord의 Abacus AI bot",
       "abacusTelegram": "Telegram"
     },
     "recommended": "권장",
@@ -1118,32 +1122,32 @@
       "workspace": "작업 공간",
       "workspaceActive": "활성 작업 공간 따르기",
       "workspaceHelp": "수신 메시지를 어떤 프로젝트에서 실행할지 정합니다.",
-      "deliverToBot": "Deliver messages to a bot",
-      "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot (one session per sender)"
+      "deliverToBot": "봇에 메시지 전달",
+      "deliverToBotHelp": "수신 메시지는 보낸 사람과 함께 프레임에 포함되어 이 봇의 채팅으로 이동됩니다. 꺼짐은 각 발신자가 자신의 세션을 갖게 됨을 의미합니다.",
+      "deliverToBotNone": "봇 없음(발신자당 세션 1개)"
     },
     "setup": {
       "discord": "연결을 클릭하면 Discord 로그인 창이 열립니다. Discord 앱으로 QR을 스캔하거나 이메일과 비밀번호로 로그인하세요. 그러면 AbacusAI Bot이 당신의 Discord 계정으로 메시지를 보냅니다(봇도 토큰도 필요 없습니다).",
       "telegram": "연결을 클릭하면 Telegram 로그인 창이 열립니다. 평소처럼 로그인하세요. 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 전화번호 또는 패스키를 사용하세요. 그러면 AbacusAI Bot이 당신의 Telegram 계정으로 메시지를 보냅니다. API 키도 봇도 필요 없습니다.",
       "whatsapp": "이 항목을 켠 뒤 휴대폰의 WhatsApp으로 아래 QR 코드를 스캔하세요(설정, 연결된 기기, 기기 연결). 이렇게 하면 AbacusAI Bot이 해당 계정의 기기로 연결되므로 개인 번호 대신 전용 번호를 사용하세요."
     },
-    "stepSignIn": "First, sign in to {{app}}",
+    "stepSignIn": "먼저 {{app}}에 로그인하세요.",
     "states": {
       "connected": "연결됨",
       "connecting": "연결 중",
       "disabled": "비활성화됨",
       "error": "오류",
-      "needs_link": "Finish linking",
-      "needs_login": "Waiting for login",
+      "needs_link": "연결 완료",
+      "needs_login": "로그인을 기다리는 중",
       "not_configured": "구성되지 않음",
       "pending_restart": "재시작 대기 중",
-      "rate_limited": "Rate limited",
+      "rate_limited": "요금 제한",
       "syncing": "동기화 중"
     },
     "telegramConnected": "연결됨. 에이전트가 당신의 Telegram 계정으로 메시지를 보냅니다.",
     "telegramOpenLogin": "Telegram 로그인 열기",
     "telegramScan": "Telegram 로그인 창이 열렸습니다. 휴대폰으로 QR을 스캔하거나(설정, 기기, 기기 추가) 거기서 전화번호로 로그인하세요.",
-    "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
+    "twoStepSetup": "두 단계, 두 단계가 모두 필요합니다. {{app}}에 로그인한 다음 Abacus AI bot를 연결하면 어떤 장치에서든 에이전트에 연결할 수 있습니다. 둘 다 완료될 때까지 설정이 완료되지 않습니다.",
     "unsavedChanges": "저장되지 않은 변경 사항",
     "whatsappConnected": "연결됨. 에이전트가 당신의 WhatsApp 계정으로 메시지를 보냅니다.",
     "whatsappOpenLogin": "WhatsApp 로그인 열기",
@@ -1151,34 +1155,34 @@
     "whatsappSyncing": "연결됨. WhatsApp이 채팅을 이 기기로 동기화하고 있습니다. 처음에는 몇 분 걸립니다. 완료될 때까지 휴대폰의 WhatsApp과 이 앱을 열어 두세요.",
     "sharedLink": {
       "title": "Abacus AI bot",
-      "stepLink": "Then, link the Abacus AI bot",
-      "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
-      "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
-      "link": "Link Abacus AI bot",
-      "step1": "1. Add Abacus AI to your Discord (Add to My Apps).",
-      "addToDiscord": "Add to Discord",
-      "step2Copy": "2. Copy this command:",
-      "step3Dm": "3. Open your chat with the bot (message icon on its profile), paste, and send:",
-      "openDm": "Open Abacus AI's chat",
-      "copy": "Copy",
-      "copied": "Copied",
-      "preparing": "Getting your link code…",
-      "retry": "Try again",
-      "waiting": "Waiting for the command to land in Discord…",
-      "linked": "Linked. DM the Abacus AI bot in Discord to talk to your agent.",
-      "linkedAs": "Linked as {{name}}. DM the Abacus AI bot in Discord to talk to your agent.",
-      "unlink": "Unlink",
-      "telegramStep": "Scan this with your phone's camera app (not the scanner inside Telegram), or open the link on your phone, then tap Start.",
-      "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
+      "stepLink": "그런 다음 Abacus AI bot를 연결합니다.",
+      "intro": "공유된 Abacus AI bot로 메시지를 보내 어떤 장치에서든 에이전트에 연락하세요. 붙여넣을 토큰이 없습니다. 한 번 스캔하거나 탭하면 연결됩니다.",
+      "requiredIntro": "이것이 설정의 후반부입니다. Abacus AI bot를 연결하면 전화기에서 상담원에게 메시지를 보낼 수 있습니다. 아래 단계를 따르세요.",
+      "link": "Abacus AI bot 연결",
+      "step1": "1. Discord에 Abacus AI를 추가하세요(내 앱에 추가).",
+      "addToDiscord": "Discord에 추가",
+      "step2Copy": "2. 다음 명령을 복사합니다.",
+      "step3Dm": "3. 봇과의 채팅을 열고(프로필의 메시지 아이콘) 다음을 붙여넣고 보냅니다.",
+      "openDm": "Abacus AI 채팅 열기",
+      "copy": "복사",
+      "copied": "복사됨",
+      "preparing": "링크 코드를 받는 중…",
+      "retry": "다시 시도하세요",
+      "waiting": "Discord에 명령이 도착하기를 기다리는 중…",
+      "linked": "연결됨. 에이전트와 대화하려면 {{app}}의 Abacus AI bot에 메시지를 보내세요.",
+      "linkedAs": "{{name}}로 링크되었습니다. 에이전트와 대화하려면 {{app}}의 Abacus AI bot에 메시지를 보내세요.",
+      "unlink": "연결 해제",
+      "telegramStep": "휴대폰의 카메라 앱(Telegram 내부의 스캐너가 아님)으로 스캔하거나 휴대폰에서 링크를 연 다음 시작을 탭하세요.",
+      "waitingTelegram": "Telegram에서 시작이 탭되기를 기다리는 중…"
     }
   },
   "notificationSettings": {
-    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
-    "enableTitle": "Notify me",
-    "soundSubtitle": "Uses your system notification sound.",
-    "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
-    "title": "Notifications"
+    "enableSubtitle": "작업이 완료되거나 도구가 승인을 기다리고 있는 경우. 창에 초점이 맞춰져 있지 않은 동안에만.",
+    "enableTitle": "나에게 알림",
+    "soundSubtitle": "시스템 알림 소리를 사용합니다.",
+    "soundTitle": "소리 재생",
+    "subtitle": "다른 곳을 찾는 동안 AbacusAI Bot가 알려주는 내용",
+    "title": "알림"
   },
   "notifications": {
     "codeSessionFallback": "코드 세션",
@@ -1188,75 +1192,82 @@
     "waitingForApproval": "승인 대기 중: {{toolName}}"
   },
   "onboarding": {
-    "abacusConnected": "Abacus.AI is successfully connected",
+    "abacusConnected": "Abacus.AI가 성공적으로 연결되었습니다",
     "connectBody": "브라우저가 열려 로그인하거나 계정을 만들 수 있습니다. 앱은 전용 API 키를 받으며, 비밀번호는 앱에 전달되지 않습니다.",
-    "connectCta": "가입 / 로그인",
+    "connectCta": "무료로 가입",
     "openInBrowserCta": "내 브라우저 사용",
     "haveAccountCta": "이미 계정이 있습니다",
     "connectTitle": "Abacus.AI 연결",
-    "connectorsContinueCta": "Continue",
-    "connectorsSkipCta": "Continue without connectors",
-    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
-    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
-    "setupConnectorsCta": "Browse connectors",
-    "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAI Bot",
-    "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "setupKeyPlaceholder": "Paste your {{provider}} API key",
-    "setupSaveCta": "Save",
-    "setupSignInCta": "Sign in / Create Free Account",
+    "connectorsContinueCta": "계속",
+    "connectorsSkipCta": "커넥터 없이 계속하기",
+    "setupAbacusNote": "Abacus.AI 계정은 여전히 ​​가장 짧은 경로입니다. 무료이며 2달러의 크레딧과 몇 가지 무료 모델로 시작하며 커넥터를 제공하는 계정입니다.",
+    "setupConnectorsBody": "Gmail, 드라이브, Slack, GitHub, Notion 및 나머지. 사용하는 항목을 첨부하면 상담원이 단순히 이야기만 하는 것이 아니라 작업을 수행할 수 있습니다.",
+    "setupConnectorsCta": "커넥터 찾아보기",
+    "setupConnectorsTitle": "커넥터",
+    "setupDoneCta": "계속",
+    "setupKeyHint": "이 컴퓨터에만 저장됩니다.",
+    "setupKeyInvalid": "API 키처럼 보이지 않습니다. 잘못된 줄이나 URL이 있는지 붙여넣기를 확인하세요.",
+    "setupKeyPlaceholder": "{{provider}} API 키를 붙여넣으세요.",
+    "setupSaveCta": "저장",
+    "setupSignInCta": "로그인 / 무료 계정 만들기",
     "signInCta": "Abacus.AI에 로그인",
-    "skipCta": "Not now",
-    "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
-    "welcomeTagline": "지속 메모리를 갖춘 나만의 오픈소스 AI 동료",
-    "welcomeTitle": "Welcome to AbacusAI Bot",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
-    "connectedCta": "Continue",
-    "setupExistingTitle": "Existing subscriptions",
-    "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
-    "connectedTitleLead": "Welcome to",
+    "skipCta": "지금은 건너뛰세요",
+    "welcomeCapabilityModels": "100개 이상의 AI 모델",
+    "welcomeFreeBadge": "영원히 무료",
+    "welcomeTagline": "오픈 소스 에이전트 및 AI 동료",
+    "welcomeTitle": "AbacusAI Bot",
+    "welcomeCapabilityMemory": "영구 메모리",
+    "welcomeCapabilityConnectors": "100개 이상의 커넥터",
+    "connectedPromiseAgent": "오픈소스 AI 에이전트",
+    "connectedPromiseModels": "무료로 제공되는 강력한 AI 모델",
+    "connectedPromiseWork": "도구와 서비스 전반에 걸쳐",
+    "connectedCta": "시작하기",
+    "setupExistingTitle": "기존 구독",
+    "setupExistingBody": "유료 모델과 도구를 한 곳으로 가져오세요",
+    "setupExistingLater": "나중에 연결하세요",
+    "setupAbacusGrant": "Abacus 무료 등급에 대한 액세스: 오픈 소스 모델 혼합 전체에 걸쳐 2000크레딧",
+    "connectedTitleLead": "에 오신 것을 환영합니다",
     "connectedTitleName": "AbacusAI Bot",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
-    "connectorsTitleLead": "Connect with your",
-    "connectorsTitleAccent": "tools & services",
-    "connectorsSubtitle": "Chat where you work",
-    "connectorsConnectCta": "Connect",
-    "connectorsConnectedCta": "Connected",
-    "connectorsMore": "{{count}}+ more in Settings",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
-    "setupTitleLead": "Hook up your",
+    "connectedPromiseAgentLead": "동급 최고,",
+    "connectedPromiseModelsLead": "액세스",
+    "connectedPromiseWorkLead": "작업 완료",
+    "connectedPromiseLocalLead": "로컬로 실행됩니다.",
+    "connectedPromiseLocal": "어디서 일하든 채팅하세요.",
+    "connectorsTitleLead": "당신과 연결하세요",
+    "connectorsTitleAccent": "도구 및 서비스.",
+    "connectorsSubtitle": "당신이 일하는 곳에서 채팅하세요.",
+    "connectorsConnectCta": "연결하다",
+    "connectorsConnectedCta": "연결됨",
+    "connectorsMore": "더 많은 것",
+    "abacusUnidentified": "이 키가 속한 계정을 확인할 수 없습니다. 아무것도 저장되지 않았습니다. 다시 로그인해 보세요.",
+    "setupTitleLead": "당신의 연결",
     "setupTitleAccent": "AI",
-    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
-    "setupBlurbAbacusLead": "Get world-class models free",
-    "setupBlurbAbacusAccent": "2000 free credits",
-    "setupBlurbOpenrouterLead": "Unlock",
-    "setupBlurbOpenrouterAccent": "FREE models",
-    "setupBlurbOpenrouterTail": "with one connection",
-    "setupBlurbGeminiLead": "Use Gemini",
-    "setupBlurbGeminiAccent": "free to create anything",
-    "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
-    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}",
+    "setupSubtitle": "강력한 모델을 연결하여 봇 내부에서 더 많은 기능을 잠금 해제하세요.",
+    "setupBlurbAbacusLead": "세계적 수준의 모델을 무료로 받으세요",
+    "setupBlurbAbacusAccent": "2000 무료 크레딧",
+    "setupBlurbOpenrouterLead": "잠금 해제",
+    "setupBlurbOpenrouterAccent": "무료 모델",
+    "setupBlurbOpenrouterTail": "하나의 연결로",
+    "setupBlurbGeminiLead": "쌍둥이자리 사용",
+    "setupBlurbGeminiAccent": "무엇이든 자유롭게 만들 수 있다",
+    "setupKeyDialogTitle": "{{provider}}로 이동하여 API 키를 받으세요.",
+    "setupKeyDialogBody": "콘솔을 열고 키를 생성한 후 여기에 붙여넣습니다. 이 창은 작업하는 동안 열려 있습니다.",
+    "setupKeyDialogLink": "{{provider}} 열기",
     "continueWithBrowser": "{{browser}} · {{profile}}(으)로 계속",
     "signInAnotherWay": "다른 방법으로 로그인",
-    "gmailTitle": "Connect your Gmail?",
-    "gmailBody": "AbacusAI Bot can read your inbox and draft replies for you from {{email}}. You review and send them.",
-    "gmailNote": "One click on Google’s consent screen; you can disconnect any time in Connectors.",
-    "gmailAllowCta": "Allow",
-    "gmailNotNowCta": "Not now",
-    "gmailFailed": "Gmail did not connect. You can try again, or continue and connect it later."
+    "gmailTitle": "Gmail를 연결하시겠습니까?",
+    "gmailBody": "AbacusAI Bot는 {{email}}에서 받은 편지함과 임시 답장을 읽을 수 있습니다. 검토하고 보내드립니다.",
+    "gmailNote": "Google의 동의 화면을 한 번 클릭하세요. 커넥터에서는 언제든지 연결을 끊을 수 있습니다.",
+    "gmailAllowCta": "허용",
+    "gmailNotNowCta": "지금은 아님",
+    "gmailFailed": "Gmail가 연결되지 않았습니다. 다시 시도하거나 계속해서 나중에 연결할 수 있습니다.",
+    "connectedTitle": "AbacusAI Bot에 오신 것을 환영합니다",
+    "connectedPromiseAgentFull": "최고 수준의 오픈 소스 AI 에이전트",
+    "connectedPromiseModelsFull": "강력한 AI 모델을 무료로 이용하세요",
+    "connectedPromiseWorkFull": "사용 중인 도구와 서비스에서 작업을 완료하세요",
+    "connectedPromiseLocalFull": "로컬에서 실행됩니다. 어디서 작업하든 대화하세요.",
+    "connectorsTitle": "사용 중인 도구와 서비스를 연결하세요.",
+    "setupTitle": "AI 연결"
   },
   "openFile": {
     "failed": "해당 파일을 열지 못했습니다.",
@@ -1266,238 +1277,238 @@
     "revealed": "해당 파일은 열면 실행되므로 파일 관리자에서 표시했습니다."
   },
   "permissions": {
-    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
-    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session",
-    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
-    "sandboxDeniedAlways": "Always allow these this session",
-    "sandboxDeniedHost": "Reach {{host}}",
-    "sandboxDeniedRead": "Read {{path}}",
-    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
-    "sandboxDeniedWrite": "Write {{path}}"
+    "credentialAlways": "\"항상\"은 이 세션의 나머지 부분에서도 읽을 수 있도록 유지합니다.",
+    "credentialRead": "샌드박스가 숨기는 자격 증명 저장소를 읽습니다.",
+    "networkHost": "샌드박스 명령은 허용 목록에 없는 호스트에 연결하려고 합니다. 연결이 귀하의 답변을 기다리고 있습니다.",
+    "networkHostAlways": "이 세션을 항상 {{host}} 허용",
+    "sandboxDenied": "샌드박스는 이 명령이 시도한 것을 거부했습니다. 허용하시겠습니까?",
+    "sandboxDeniedAlways": "이 세션을 항상 허용합니다.",
+    "sandboxDeniedHost": "{{host}}에 도달하세요",
+    "sandboxDeniedRead": "{{path}} 읽기",
+    "sandboxDeniedRerun": "허용하면 해당 액세스 권한으로 명령이 다시 실행됩니다.",
+    "sandboxDeniedWrite": "{{path}} 쓰기"
   },
   "profile": {
-    "title": "Profile",
-    "connectedAccount": "Abacus.AI account",
-    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
-    "organization": "Organization",
-    "plan": "Plan",
-    "credits": "Credits this month",
-    "creditsValue": "{{used}} of {{granted}} used",
-    "members": "Team members",
-    "dangerZone": "Danger zone",
-    "permissionsTitle": "Default permission mode",
-    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
-    "permissionsFullAccess": "Full access",
-    "permissionsAuto": "Auto",
-    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
+    "title": "프로필",
+    "connectedAccount": "Abacus.AI 계정",
+    "notSignedIn": "Abacus.AI에 로그인되지 않았습니다. 설정 → API 키에 연결하여 조직, 계획 및 크레딧을 확인하세요.",
+    "organization": "조직",
+    "plan": "계획",
+    "credits": "이번 달 크레딧",
+    "creditsValue": "{{granted}}의 {{used}} 사용",
+    "members": "팀원",
+    "dangerZone": "위험지대",
+    "permissionsTitle": "기본 권한 모드",
+    "permissionsDescription": "새로운 세션, 봇 및 루틴이 실행됩니다. 전체 액세스: 프롬프트 및 샌드박스가 없습니다. 자동: 프롬프트가 표시되지 않지만 운영 체제는 셸 명령을 작업 공간으로 제한하고 자격 증명 저장소를 숨깁니다.",
+    "permissionsFullAccess": "전체 액세스",
+    "permissionsAuto": "자동",
+    "permissionsAutoWarning": "더 많은 권한 프롬프트가 표시됩니다. 샌드박스는 명령이 자격 증명 저장소를 읽거나, 작업 공간 외부에 쓰거나, 새 호스트에 도달하기 전에 묻습니다.",
     "notSignedInShort": "로그인되지 않음"
   },
   "referralCard": {
-    "cta": "Invite friends",
-    "dismiss": "Dismiss",
-    "title": "Invite friends, earn {{credits}} credits"
+    "cta": "친구 초대",
+    "dismiss": "닫기",
+    "title": "친구를 초대하고 {{credits}} 크레딧을 받으세요"
   },
   "referrals": {
-    "title": "Invite friends",
-    "lead": "Invite friends to the AbacusAI Bot and earn credits. We send the invites for you from your own Gmail or WhatsApp.",
-    "leadWithNumbers": "Invite {{count}} friends to the AbacusAI Bot and get {{credits}} credits. We send the invites for you from your own Gmail or WhatsApp, and every friend who joins earns you {{perFriend}} more.",
-    "notSignedIn": "Sign in to Abacus.AI to invite friends.",
-    "progressTitle": "{{sent}} of {{total}} invites sent",
-    "progressGranted": "{{credits}} credits earned. Keep inviting: every friend who joins still pays.",
-    "friendsJoined": "{{count}} friends joined so far, {{credits}} credits earned from them.",
-    "copyLink": "Copy invite link",
-    "linkCopied": "Invite link copied",
-    "gmailTitle": "From your Gmail",
-    "gmailBody": "The people you email most, ready to invite. Untick anyone you'd rather leave out, then send. Each invite goes from your own address.",
-    "connectGmail": "Connect Gmail",
-    "noGmailContacts": "No contacts found in your recent sent mail yet. Add addresses above.",
-    "addEmailsHint": "Connect Gmail to pick from your contacts, or add addresses above and we send from Abacus.AI.",
-    "addEmailsPlaceholder": "Add email addresses, separated by commas",
-    "addEmails": "Add",
-    "addEmailsEmpty": "Type an email address first.",
-    "addEmailsInvalid": "That does not look like an email address.",
-    "addPhonesPlaceholder": "Add phone numbers with country code, separated by commas",
-    "addPhones": "Add",
-    "addPhonesEmpty": "Type a phone number first.",
-    "addPhonesInvalid": "That does not look like a phone number. Include the country code, like +1 555 0100.",
-    "whatsappTitle": "From your WhatsApp",
-    "whatsappBody": "Your WhatsApp chats, ready to invite. Untick anyone you'd rather leave out, or add a number for someone not listed, then send. Each message goes from your own number, one chat at a time.",
-    "linkWhatsapp": "Link WhatsApp in Connectors",
-    "noWhatsappContacts": "No WhatsApp chats read yet. Give it a moment after linking, or add numbers above.",
-    "selectedCount": "{{selected}} of {{total}} selected",
-    "selectAll": "Select all",
-    "selectNone": "Select none",
-    "messageLabel": "Your note to them",
-    "defaultMessage": "I've been using the AbacusAI Bot, a free open-source desktop AI agent that runs on free models. Worth a try.",
-    "sendInvites": "Send {{count}} invites",
-    "sending": "Sending…",
-    "sentToast": "Invited {{count}} people",
-    "sentToastDetail": "{{skipped}} already on Abacus.AI or invited before, {{failed}} could not be sent.",
-    "milestoneToast": "{{credits}} credits added to your account",
+    "title": "친구 초대",
+    "lead": "AbacusAI Bot에 친구를 초대하고 크레딧을 받으세요. 귀하의 Gmail 또는 WhatsApp에서 초대장을 보내드립니다.",
+    "leadWithNumbers": "{{count}} 친구를 AbacusAI Bot에 초대하고 {{credits}} 크레딧을 받으세요. 귀하의 Gmail 또는 WhatsApp에서 초대장을 보내드리며, 참여하는 모든 친구는 귀하에게 {{perFriend}}를 더 많이 적립해 드립니다.",
+    "notSignedIn": "친구를 초대하려면 Abacus.AI에 로그인하세요.",
+    "progressTitle": "{{total}} 중 {{sent}} 초대장이 전송되었습니다.",
+    "progressGranted": "{{credits}} 크레딧을 획득했습니다. 계속 초대하세요. 가입하는 모든 친구는 여전히 비용을 지불합니다.",
+    "friendsJoined": "{{count}} 친구들이 지금까지 합류했고, 그들로부터 {{credits}} 크레딧을 얻었습니다.",
+    "copyLink": "초대 링크 복사",
+    "linkCopied": "초대 링크가 복사되었습니다.",
+    "gmailTitle": "Gmail에서",
+    "gmailBody": "이메일을 가장 많이 보내는 사람들을 초대할 준비가 되었습니다. 제외하고 싶은 사람을 선택 해제한 다음 보내세요. 각 초대는 귀하의 주소에서 전송됩니다.",
+    "connectGmail": "Gmail 연결",
+    "noGmailContacts": "최근 보낸 메일에는 아직 연락처가 없습니다. 위에 주소를 추가하세요.",
+    "addEmailsHint": "Gmail를 연결하여 연락처에서 선택하거나 위의 주소를 추가하면 Abacus.AI에서 전송됩니다.",
+    "addEmailsPlaceholder": "이메일 주소를 쉼표로 구분하여 추가하세요.",
+    "addEmails": "추가",
+    "addEmailsEmpty": "먼저 이메일 주소를 입력하세요.",
+    "addEmailsInvalid": "이메일 주소가 아닌 것 같습니다.",
+    "addPhonesPlaceholder": "국가 코드와 함께 전화번호를 쉼표로 구분하여 추가하세요.",
+    "addPhones": "추가",
+    "addPhonesEmpty": "먼저 전화번호를 입력하세요.",
+    "addPhonesInvalid": "전화번호가 아닌 것 같습니다. +1 555 0100과 같은 국가 코드를 포함하세요.",
+    "whatsappTitle": "WhatsApp에서",
+    "whatsappBody": "귀하의 WhatsApp 채팅을 초대할 준비가 되었습니다. 제외하고 싶은 사람을 선택 취소하거나 목록에 없는 사람의 전화번호를 추가한 다음 보내세요. 각 메시지는 한 번에 하나의 채팅으로 자신의 전화번호로 전송됩니다.",
+    "linkWhatsapp": "커넥터의 링크 WhatsApp",
+    "noWhatsappContacts": "아직 읽은 WhatsApp 채팅이 없습니다. 연결한 후 잠시 기다리거나 위에 숫자를 추가하세요.",
+    "selectedCount": "{{total}} 중 {{selected}}가 선택됨",
+    "selectAll": "모두 선택",
+    "selectNone": "없음을 선택하세요",
+    "messageLabel": "그들에게 보내는 메모",
+    "defaultMessage": "무료 오픈 소스 데스크톱 AI 에이전트인 AbacusAI Bot를 사용해 보시기 바랍니다. \n여기에서 다운로드하세요(bot.abacus.ai): {{link}}\n\n- 100% 무료: 놀라운 무료 LLMs에서 실행됩니다. 신용 카드도 없고, 아니요 구독.\n- 귀하의 허가를 받아 귀하의 컴퓨터에서 파일, 터미널 및 브라우저 등 실제 작업을 수행합니다.\n- Gmail, Google Drive, Slack, WhatsApp, Telegram 및 Discord.\n- 24시간 내내 봇과 루틴을 실행합니다.\n\n오픈 소스입니다. 마음에 드시면 저장소에 별표를 표시해 주세요: https://github.com/abacusai/abacusai-bot",
+    "sendInvites": "{{count}} 초대장 보내기",
+    "sending": "보내는 중…",
+    "sentToast": "{{count}} 사람들을 초대했습니다",
+    "sentToastDetail": "{{skipped}}는 이미 Abacus.AI에 있거나 이전에 초대되었으므로 {{failed}}를 보낼 수 없습니다.",
+    "milestoneToast": "{{credits}} 크레딧이 귀하의 계정에 추가되었습니다",
     "errors": {
-      "gmail": "Gmail is not connected. Connect it and try again.",
-      "whatsapp": "WhatsApp is not linked or is still starting. Check Connectors and try again.",
-      "signedOut": "Sign in to Abacus.AI first.",
-      "unavailable": "Could not send the invites right now. Try again in a moment."
+      "gmail": "Gmail가 연결되지 않았습니다. 연결하고 다시 시도해 보세요.",
+      "whatsapp": "WhatsApp가 연결되지 않았거나 아직 시작 중입니다. 커넥터를 확인하고 다시 시도하세요.",
+      "signedOut": "먼저 Abacus.AI에 로그인하세요.",
+      "unavailable": "지금은 초대장을 보낼 수 없습니다. 잠시 후에 다시 시도해 보세요."
     }
   },
   "routines": {
-    "atLabel": "At",
-    "autoRepliesLeadSidebar": "Each chat a bot answers on its own is listed under Routines in the sidebar, with its conversation. Pause keeps the grant and stops the answers.",
+    "atLabel": "~에",
+    "autoRepliesLeadSidebar": "봇이 자체적으로 응답하는 각 채팅은 대화와 함께 사이드바의 루틴 아래에 나열됩니다. Pause는 부여를 유지하고 답변을 중지합니다.",
     "autoRepliesTitle": "자동 답장",
-    "autoReplyLine": "{{bot}} answers here on {{platform}}. You can read; the sender drives the conversation.",
-    "autoReplyOn": "켜짐",
+    "autoReplyLine": "{{bot}}는 여기 {{platform}}에 답변합니다. 읽을 수 있습니다. 발신자가 대화를 주도합니다.",
+    "autoReplyOn": "켬",
     "autoReplyPaused": "일시중지됨",
-    "autoReplyRowTitle": "{{bot}} auto-replies to {{sender}} on {{platform}}",
+    "autoReplyRowTitle": "{{bot}}는 {{platform}}의 {{sender}}에 자동 응답합니다.",
     "cancel": "취소",
     "copyWebhook": "웹훅 URL 복사",
     "create": "만들기",
     "createTitle": "루틴 만들기",
-    "cronLabel": "Cron expression",
+    "cronLabel": "크론 표현",
     "delete": "삭제",
     "deleteBody": "“{{name}}”와 실행 기록이 삭제됩니다.",
     "deleteError": "루틴을 삭제하지 못했습니다.",
     "deleteTitle": "루틴 삭제",
     "edit": "편집",
     "editTitle": "루틴 편집",
-    "editorPlaceholder": "Tell the routine how to change: \"every morning at 9 instead\", \"stop\"",
-    "editorSend": "Send",
-    "editorThinking": "Changing…",
+    "editorPlaceholder": "루틴에 변경 방법을 알려주세요. \"대신 매일 아침 9시에\", \"중지\"",
+    "editorSend": "보내기",
+    "editorThinking": "변경 중…",
     "empty": "아직 루틴이 없습니다. 하나 만들거나 봇에게 예약을 부탁해 보세요.",
     "enabled": "활성",
-    "firedByCreate": "on creation",
+    "firedByCreate": "생성 시",
     "firedByManual": "수동",
     "firedBySchedule": "예약",
     "firedByWebhook": "웹훅",
     "lastRun": "마지막: {{time}}",
     "lead": "스스로 실행되는 것들: 예약 작업, 웹훅 트리거, 그리고 실행 결과.",
-    "madeBy": "made by {{bot}}",
+    "madeBy": "{{bot}}에 의해 만들어진",
     "nameLabel": "이름",
     "namePlaceholder": "예: 아침 브리핑",
     "newRoutine": "새 루틴",
     "nextRun": "다음: {{time}}",
-    "noRunsYet": "This routine has not fired yet. Run it now, or wait for its next fire.",
-    "onLabel": "On",
-    "pageMissing": "This routine is gone.",
+    "noRunsYet": "이 루틴은 아직 실행되지 않았습니다. 지금 실행하거나 다음 실행을 기다리세요.",
+    "onLabel": "켬",
+    "pageMissing": "이 루틴은 사라졌습니다.",
     "pause": "일시중지",
-    "pausedTitle": "Paused",
-    "presetCustom": "Custom",
+    "pausedTitle": "일시정지",
+    "presetCustom": "맞춤",
     "presetDaily": "매일",
     "presetHourly": "매시간",
-    "presetManual": "Manual",
-    "presetOnce": "Once",
+    "presetManual": "매뉴얼",
+    "presetOnce": "한 번",
     "presetWeekdays": "평일",
-    "presetWeekly": "Weekly",
+    "presetWeekly": "주간",
     "promptLabel": "지시",
     "promptPlaceholder": "무엇을 실행할까요? 단독으로 이해되게 적어 주세요.",
     "promptRequired": "지시가 필요합니다.",
     "ranNow": "루틴을 시작했습니다.",
     "resume": "재개",
-    "runAtLabel": "Run at",
-    "runAtPast": "That time has already passed.",
-    "runAtRequired": "Pick a date and time to run at.",
+    "runAtLabel": "다음에서 실행",
+    "runAtPast": "그 시기는 이미 지났습니다.",
+    "runAtRequired": "실행할 날짜와 시간을 선택하세요.",
     "runError": "루틴을 시작하지 못했습니다.",
     "runHistory": "최근 실행 {{count}}건",
     "runNow": "지금 실행",
     "runOutcome": {
-      "completed": "Completed",
-      "failed": "Failed",
-      "running": "Running"
+      "completed": "완료됨",
+      "failed": "실패",
+      "running": "실행 중"
     },
     "runReadOnly": "루틴 실행. 이 세션은 루틴의 보고서입니다. 읽을 수는 있지만 답장할 수 없으며, 다음 실행은 새로 시작됩니다. 동작을 바꾸려면 루틴을 편집하세요.",
-    "runsEmpty": "No runs yet.",
-    "runsIn": "runs in {{folder}}",
-    "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
-    "runsTitle": "Runs",
+    "runsEmpty": "아직 실행이 없습니다.",
+    "runsIn": "{{folder}}에서 실행됩니다.",
+    "runsInHint": "각 화재는 자체적인 새로운 세션에서 실행됩니다. 사이드바의 루틴에서 이 루틴과 해당 실행을 찾으세요.",
+    "runsTitle": "실행",
     "save": "저장",
     "saveError": "루틴을 저장하지 못했습니다.",
-    "scheduleDaily": "Daily at {{time}}",
-    "scheduleHint": "Local time. Fires only while the app is running.",
-    "scheduleHourly": "Every hour",
+    "scheduleDaily": "매일 {{time}}에서",
+    "scheduleHint": "현지 시간. 앱이 실행되는 동안에만 실행됩니다.",
+    "scheduleHourly": "매시간",
     "scheduleLabel": "예약",
-    "scheduleManual": "On demand",
-    "scheduleManualHint": "Runs only when you press Run now or fire the webhook.",
-    "scheduleOnce": "Once on {{when}}",
-    "scheduleOnceHint": "Fires once at that time, then turns itself off. Local time; a moment the app slept through fires when it wakes.",
+    "scheduleManual": "주문형",
+    "scheduleManualHint": "지금 실행을 누르거나 웹훅을 실행하는 경우에만 실행됩니다.",
+    "scheduleOnce": "{{when}}에 한 번",
+    "scheduleOnceHint": "이때 한 번 발사된 다음 저절로 꺼집니다. 현지 시간; 앱이 깨어날 때 불 속에서 잠을 자던 순간.",
     "scheduleRequired": "예약이 필요합니다.",
-    "scheduleWeekdays": "Weekdays at {{time}}",
-    "scheduleWeekly": "{{day}}s at {{time}}",
+    "scheduleWeekdays": "{{time}}의 평일",
+    "scheduleWeekly": "{{time}}의 {{day}}",
     "statActive": "활성",
     "statFiredToday": "오늘 실행",
     "statPaused": "일시정지",
-    "templateWorksWith": "Reads from {{names}}",
+    "templateWorksWith": "{{names}}에서 읽습니다.",
     "templates": {
       "morning-brief": {
-        "description": "What today needs from you: the calendar, the mail worth a reply, and anything addressed to you.",
-        "name": "Morning brief"
+        "description": "오늘 당신에게 필요한 것: 달력, 답장할 가치가 있는 우편물, 그리고 당신에게 전달된 모든 것.",
+        "name": "아침 브리핑"
       },
       "inbox-triage": {
-        "description": "Sorts new mail into reply, read, and noise, and drafts the replies for you to send.",
-        "name": "Inbox triage"
+        "description": "새 메일을 답장, 읽음, 소음으로 분류하고 보낼 답장 초안을 작성합니다.",
+        "name": "받은편지함 분류"
       },
       "pr-digest": {
-        "description": "Open pull requests on this workspace, with the ones going stale first.",
-        "name": "Pull request digest"
+        "description": "이 작업공간에서 풀 요청을 엽니다. 오래된 것부터 먼저 진행됩니다.",
+        "name": "풀 요청 다이제스트"
       },
       "failing-tests": {
-        "description": "Runs the test suite and reports only what changed since the last run.",
-        "name": "Test watch"
+        "description": "테스트 스위트를 실행하고 마지막 실행 이후 변경된 사항만 보고합니다.",
+        "name": "테스트 시계"
       },
       "dependency-watch": {
-        "description": "Security advisories worth acting on, kept apart from version bumps that can wait.",
-        "name": "Dependency watch"
+        "description": "조치를 취할 가치가 있는 보안 권고는 기다릴 수 있는 버전 범프와 별도로 유지됩니다.",
+        "name": "의존성 감시"
       },
       "week-in-review": {
-        "description": "What shipped this week from the commit history, grouped by theme, ending with what looks stuck.",
-        "name": "Week in review"
+        "description": "테마별로 그룹화된 커밋 기록에서 이번 주에 출시된 내용과 멈춰 있는 것으로 끝나는 내용입니다.",
+        "name": "검토 중인 주"
       }
     },
-    "templatesLead": "Or start from one of these",
-    "testRunHint": "Fire it right after creating, so you can see it work before the schedule does.",
-    "testRunLabel": "Run once now",
+    "templatesLead": "아니면 다음 중 하나부터 시작하세요.",
+    "testRunHint": "생성 후 바로 실행하면 일정이 시작되기 전에 작동하는 것을 확인할 수 있습니다.",
+    "testRunLabel": "지금 한 번 실행해 보세요",
     "title": "루틴",
     "updateError": "루틴을 업데이트하지 못했습니다.",
     "webhookCopied": "웹훅 URL을 복사했습니다.",
     "webhookHint": "HTTP POST로 이 루틴을 실행합니다.",
     "webhookLabel": "웹훅",
-    "webhookPublicPending": "Setting up the public link. This local one works meanwhile…",
-    "workspaceAddError": "That folder could not be added.",
-    "workspaceChoose": "Choose a folder…",
-    "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
-    "workspaceLabel": "Folder",
-    "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
-    "workspaceOwnFolder": "Its own folder"
+    "webhookPublicPending": "공개 웹훅 링크를 만드는 중…",
+    "workspaceAddError": "해당 폴더를 추가할 수 없습니다.",
+    "workspaceChoose": "폴더를 선택하세요…",
+    "workspaceHelp": "실행이 일어나는 곳. 명령어가 해당 코드, 테스트 또는 종속성을 읽을 때 프로젝트를 선택합니다.",
+    "workspaceLabel": "폴더",
+    "workspaceMissing": "이 명령어는 프로젝트의 코드를 읽습니다. 자체 폴더에는 읽을 내용이 없습니다.",
+    "workspaceOwnFolder": "자체 폴더"
   },
   "sessions": {
-    "delete": "Delete session",
-    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
-    "deleteError": "Could not delete that session. Try again.",
-    "deleteTitle": "Delete this session?",
+    "delete": "세션 삭제",
+    "deleteBody": "“{{label}}” 및 해당 내용이 삭제되었습니다. 이 작업은 취소할 수 없습니다.",
+    "deleteError": "해당 세션을 삭제할 수 없습니다. 다시 시도해 보세요.",
+    "deleteTitle": "이 세션을 삭제하시겠습니까?",
     "emptyDescription": "세션을 시작해 원하는 폴더에서 에이전트와 작업하세요.",
     "emptyTitle": "아직 세션이 없습니다",
-    "newSession": "New session",
-    "pin": "Pin",
-    "pinned": "Pinned",
-    "sessionOptions": "Session options",
-    "title": "Sessions",
-    "unpin": "Unpin",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "newSession": "새 세션",
+    "pin": "고정",
+    "pinned": "고정됨",
+    "sessionOptions": "세션 옵션",
+    "title": "세션",
+    "unpin": "고정 해제",
+    "today": "오늘",
+    "yesterday": "어제",
+    "daysAgo": "{{count}} 일 전"
   },
   "sidebarNav": {
-    "app": "App",
+    "app": "앱",
     "artifacts": "산출물",
     "capabilities": "기능",
     "connectors": "커넥터",
-    "memory": "Memory",
-    "messaging": "Messaging",
+    "memory": "메모리",
+    "messaging": "메시지",
     "newSession": "새 세션",
-    "routines": "Routines",
+    "routines": "루틴",
     "usage": "사용량",
-    "whatsNew": "What's new"
+    "whatsNew": "새로운 소식"
   },
   "skills": {
     "appliesToBoth": "스킬은 모든 워크스페이스에서 에이전트가 사용할 수 있습니다.",
@@ -1538,29 +1549,29 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "앱(busybox ash)과 함께 번들로 제공되는 POSIX 셸은 에이전트의 bash 도구가 실행되는 것과 동일하며 grep, sed, awk 및 친구들이 내장되어 있습니다.",
       "label": "BusyBox sh"
     },
     "cmd": {
-      "description": "The Windows command prompt.",
-      "label": "Command Prompt"
+      "description": "Windows 명령 프롬프트.",
+      "label": "명령 프롬프트"
     },
-    "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
-    "inUse": "In use",
-    "notInstalled": "Not found on this machine.",
+    "fellBack": "{{selected}}는 현재 사용할 수 없으므로 {{effective}}에 새 터미널이 열립니다.",
+    "inUse": "사용 중",
+    "notInstalled": "이 컴퓨터에서는 찾을 수 없습니다.",
     "powershell": {
-      "description": "Windows PowerShell, the one that ships with Windows.",
+      "description": "Windows PowerShell는 Windows와 함께 제공되는 제품입니다.",
       "label": "Windows PowerShell"
     },
     "pwsh": {
-      "description": "PowerShell 7 or later, installed separately.",
+      "description": "PowerShell 7 이상은 별도로 설치됩니다.",
       "label": "PowerShell"
     },
     "system": {
-      "description": "Whatever this machine calls its default shell.",
-      "label": "Default shell"
+      "description": "이 기계가 기본 쉘이라고 부르는 것은 무엇이든 상관없습니다.",
+      "label": "기본 쉘"
     },
-    "title": "Terminal shell"
+    "title": "터미널 쉘"
   },
   "theme": {
     "dark": "다크",
@@ -1570,7 +1581,7 @@
   "tour": {
     "finish": "시작하기",
     "next": "다음",
-    "optional": "Optional",
+    "optional": "선택사항",
     "progress": "{{total}}단계 중 {{current}}단계",
     "replay": "둘러보기",
     "skip": "둘러보기 건너뛰기",
@@ -1581,8 +1592,8 @@
       },
       "bots": {
         "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요.",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
+        "bulletBots": "자체 지침, 도구 및 채팅을 사용하여 재사용 가능한 봇을 만듭니다.",
+        "bulletSessions": "일회성 작업과 빠른 작업을 위해 세션을 사용하세요.",
         "title": "내 봇"
       },
       "capabilities": {
@@ -1598,8 +1609,8 @@
         "body": "이미 쓰고 있는 도구를 연결하세요. 무료 Abacus.AI 계정이면 한 번의 클릭으로 한 세트가 붙습니다."
       },
       "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+        "title": "봇 만들기",
+        "body": "여기에 이름을 지정하거나 아래 템플릿에서 시작하세요. 봇은 파일을 읽고 편집하고, 명령을 실행하고, 채팅과 자체 메모리를 통해 연결된 도구에서 작업합니다."
       },
       "memory": {
         "title": "메모리",
@@ -1624,7 +1635,7 @@
       "terminal": {
         "title": "터미널",
         "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다.",
-        "audience": "For developers & technical users"
+        "audience": "개발자 및 기술 사용자용"
       },
       "usage": {
         "title": "사용량",
@@ -1637,27 +1648,27 @@
     }
   },
   "updateBanner": {
-    "dismiss": "Dismiss",
+    "dismiss": "닫기",
     "stalled": "자동으로 다시 시작하지 못했습니다. 업데이트를 완료하려면 앱을 종료한 후 다시 여세요.",
-    "subtitle": "Relaunch to get the latest improvements and fixes.",
-    "title": "A new version is ready",
-    "whatsChanged": "See what changed"
+    "subtitle": "최신 개선 사항과 수정 사항을 얻으려면 다시 시작하세요.",
+    "title": "새 버전이 준비되었습니다",
+    "whatsChanged": "무엇이 바뀌었는지 확인하세요"
   },
   "updateCritical": {
-    "body": "This release fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "bodyWithVersion": "Version {{version}} fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "countdown": "Restarting automatically in {{time}}",
-    "restartNow": "Restart now",
-    "restarting": "Restarting…",
-    "title": "A required update is ready"
+    "body": "이 릴리스는 중요한 문제를 해결하므로 계속하기 전에 설치해야 합니다. 적용을 위해 앱이 다시 시작됩니다.",
+    "bodyWithVersion": "버전 {{version}}는 중요한 문제를 수정하므로 계속하기 전에 설치해야 합니다. 적용을 위해 앱이 다시 시작됩니다.",
+    "countdown": "{{time}}에서 자동으로 다시 시작",
+    "restartNow": "지금 다시 시작",
+    "restarting": "다시 시작하는 중…",
+    "title": "필수 업데이트가 준비되었습니다."
   },
   "updatePill": {
     "downloading": "업데이트 다운로드 중… {{percent}}%",
-    "failed": "Update download failed. Retry",
-    "installing": "Restarting…",
-    "relaunch": "Relaunch to update",
-    "retrying": "Retrying…",
-    "tooltip": "Version {{version}} is ready to install"
+    "failed": "업데이트 다운로드에 실패했습니다. 재시도",
+    "installing": "다시 시작하는 중…",
+    "relaunch": "업데이트하려면 다시 시작하세요.",
+    "retrying": "재시도 중…",
+    "tooltip": "버전 {{version}}를 설치할 준비가 되었습니다."
   },
   "usage": {
     "cardDetail": "요청 {{requests}}건 · 토큰 {{tokens}}",
@@ -1682,25 +1693,25 @@
     "today": "오늘",
     "unpricedHint": "일부 모델은 공개된 가격이 없습니다. 토큰은 집계되지만 비용은 포함되지 않습니다.",
     "window": "최근 {{days}}일",
-    "abacusPlan": "Abacus.AI plan",
-    "abacusCredits": "{{used}} / {{granted}} credits"
+    "abacusPlan": "Abacus.AI 요금제",
+    "abacusCredits": "{{used}} / {{granted}} 크레딧"
   },
   "userMenu": {
     "about": "정보...",
-    "browserSettings": "Browser",
+    "browserSettings": "브라우저",
     "deviceSettings": "기기",
-    "dumpLogs": "Dump logs",
+    "dumpLogs": "덤프 로그",
     "keepAwake": "작업 중 절전 모드 방지",
     "language": "언어",
     "mcpManagement": "MCP 서버",
-    "notificationSettings": "Notifications",
+    "notificationSettings": "알림",
     "settings": "설정",
-    "signIn": "Sign in",
-    "signOut": "Sign out",
-    "signedOutRunningSessions": "Signed out. A chat that is already running keeps the key it started with until you start a new one.",
+    "signIn": "로그인",
+    "signOut": "로그아웃",
+    "signedOutRunningSessions": "로그아웃되었습니다. 이미 실행 중인 채팅은 새 채팅을 시작할 때까지 시작된 키를 유지합니다.",
     "skillsManagement": "스킬",
     "theme": "테마",
-    "whatsNew": "What's new"
+    "whatsNew": "새로운 소식"
   },
   "visualizer": {
     "loading": "시각화를 불러오는 중…"
@@ -1712,20 +1723,20 @@
     "ageMinutes": "{{count}}분",
     "ageNow": "방금",
     "agents": {
-      "emptyHint": "Sub-agents launched during a turn appear here.",
-      "emptyTitle": "No sub-agents yet",
+      "emptyHint": "턴 중에 시작된 하위 에이전트가 여기에 표시됩니다.",
+      "emptyTitle": "아직 하위 에이전트가 없습니다.",
       "kind": {
-        "browser": "Browser",
-        "component": "Component",
-        "delegate": "Delegate"
+        "browser": "브라우저",
+        "component": "구성 요소",
+        "delegate": "위임"
       },
-      "mainAgent": "Main agent"
+      "mainAgent": "주체"
     },
     "allPinned": "여기는 모두 고정되어 있습니다. 고정을 해제하면 최근 목록에 표시됩니다.",
     "attach": {
       "cancel": "취소",
       "done": "완료",
-      "files": "Files or images…",
+      "files": "파일이나 이미지…",
       "folder": "폴더…",
       "mentionTip": "팁: @를 입력하면 파일을 바로 참조할 수 있습니다.",
       "menuLabel": "첨부",
@@ -1734,26 +1745,26 @@
       "saveFailed": "첨부 파일을 저장할 수 없습니다: {{error}}",
       "unknownError": "알 수 없는 오류"
     },
-    "autoWorkspace": "Default workspace",
+    "autoWorkspace": "기본 작업공간",
     "branch": {
-      "create": "Create “{{branch}}”",
+      "create": "“{{branch}}” 생성",
       "createFailed": "브랜치를 생성할 수 없습니다.",
-      "description": "Choose the Git branch this checkout uses. Switching changes the files the agent works on.",
+      "description": "이 체크아웃에서 사용하는 Git 분기를 선택하세요. 전환하면 에이전트가 작업하는 파일이 변경됩니다.",
       "createdAndSwitched": "{{name}}을(를) 생성하고 전환했습니다",
-      "loading": "Loading branches…",
-      "noResults": "No branches found.",
+      "loading": "지점 로드 중…",
+      "noResults": "지점을 찾을 수 없습니다.",
       "searchOrCreate": "브랜치 검색 또는 생성…",
-      "showing": "Showing {{count}} of {{total}} refs",
+      "showing": "{{total}} 심판의 {{count}} 표시 중",
       "stopAgentFirst": "전환하기 전에 에이전트를 중지하세요",
       "switchFailed": "브랜치를 전환할 수 없습니다.",
       "switched": "{{name}}(으)로 전환했습니다"
     },
     "cancel": "취소",
     "chat": {
-      "conversation": "Conversation",
+      "conversation": "대화",
       "continueBelow": "아래에서 계속 채팅할 수 있습니다.",
       "historyLoadFailed": "대화 기록을 불러올 수 없습니다.",
-      "scrollToBottom": "Scroll to bottom"
+      "scrollToBottom": "맨 아래로 스크롤"
     },
     "chatDeleted": "채팅이 삭제되었습니다",
     "chatRenamed": "채팅 이름이 변경되었습니다",
@@ -1763,21 +1774,21 @@
     "composerNeedsModel": "시작하려면 모델을 연결하세요",
     "composerNeedsWorkspace": "시작하려면 작업 폴더를 선택하세요",
     "composerPlaceholder": "코드베이스에 대해 무엇이든 질문하세요…",
-    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
+    "composerPlaceholderBusy": "지금 보내서 요원을 조종하세요. 다음 단계로 넘어갑니다",
     "composerTasks": {
-      "dismiss": "Dismiss tasks for this turn",
-      "now": "now",
-      "progressLabel": "Tasks: {{completed}} of {{total}} complete. Current task: {{current}}",
-      "title": "Tasks"
+      "dismiss": "이번 차례의 작업 닫기",
+      "now": "방금",
+      "progressLabel": "작업: {{total}}의 {{completed}}가 완료되었습니다. 현재 작업: {{current}}",
+      "title": "작업"
     },
     "confirmDelete": "삭제",
     "createBotToSend": "메시지를 보내려면 봇을 만드세요",
     "credits": {
-      "thisTurn": "This turn: {{credits}} credits",
-      "total": "Conversation total: {{credits}} credits",
-      "used": "{{credits}} credits used"
+      "thisTurn": "이번 턴: {{credits}} 크레딧",
+      "total": "대화 전체: {{credits}} 크레딧",
+      "used": "{{credits}} 크레딧 사용됨"
     },
-    "currentCheckout": "Current checkout",
+    "currentCheckout": "현재 결제",
     "deleteChat": "채팅 삭제",
     "deleteChatDescription": "이 채팅과 기록이 영구적으로 삭제됩니다.",
     "deleteWorkspace": "작업 공간 삭제",
@@ -1785,15 +1796,16 @@
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
     "deleteWorkspaceDescription": "\"{{name}}\" 및 해당 채팅이 AbacusAI Bot에서 제거됩니다. 디스크의 파일과 폴더는 삭제되지 않고 그대로 유지됩니다. 이 작업은 되돌릴 수 없습니다.",
     "deleteWorkspaceNameMismatch": "이름이 일치하지 않습니다",
-    "deleteWorkspacePermanently": "Delete Permanently",
-    "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
-    "deletedWorkspaceBadge": "Deleted",
-    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
+    "deleteWorkspacePermanently": "영구적으로 삭제",
+    "deleteWorkspacePermanentlyDescription": "\"{{name}}\"는 이미 삭제되었습니다. 이렇게 하면 채팅과 기록이 영원히 지워집니다. 디스크의 파일과 폴더는 건드리지 않습니다. 이 작업은 취소할 수 없습니다.",
+    "deletedWorkspaceBadge": "삭제됨",
+    "deletedWorkspaceReadOnly": "이 작업공간은 삭제되었으므로 채팅은 읽기 전용입니다. 이러한 대화를 계속하려면 해당 폴더를 작업 공간으로 다시 추가하세요.",
     "deliverable": {
-      "delivered": "Delivered",
-      "delivering": "Delivering",
-      "itemCount_one": "{{count}} deliverable",
-      "itemCount_other": "{{count}} deliverables"
+      "delivered": "배달됨",
+      "delivering": "전달",
+      "itemCount_one": "{{count}} 납품 가능",
+      "itemCount_other": "{{count}} 결과물",
+      "itemCount_many": "{{count}} 결과물"
     },
     "dropFilesHint": "이미지 첨부 또는 파일 언급을 위해 드롭",
     "explorer": {
@@ -1802,15 +1814,15 @@
       "noWorkspace": "선택된 작업 공간이 없습니다."
     },
     "feedback": {
-      "copied": "Copied",
-      "copy": "Copy",
-      "failed": "Couldn't send your feedback. Please try again.",
-      "helpful": "Good response",
-      "notHelpful": "Bad response",
-      "send": "Send",
-      "skip": "Skip",
-      "tellUsMore": "Tell us more",
-      "tellUsMorePlaceholder": "What went wrong?"
+      "copied": "복사됨",
+      "copy": "복사",
+      "failed": "의견을 보낼 수 없습니다. 다시 시도해 주세요.",
+      "helpful": "좋은 반응",
+      "notHelpful": "나쁜 반응",
+      "send": "보내기",
+      "skip": "건너뛰기",
+      "tellUsMore": "더 많은 정보를 알려주세요",
+      "tellUsMorePlaceholder": "무엇이 잘못되었나요?"
     },
     "fewerModels": "간략히 보기",
     "fileEditor": {
@@ -1825,54 +1837,54 @@
     "hideRightPanel": "패널 숨기기",
     "hideSidebar": "사이드바 숨기기",
     "hideTerminal": "터미널 숨기기",
-    "inspectorDescription": "Changes, files, agents, previews, and devices",
-    "inspectorTitle": "Workspace inspector",
+    "inspectorDescription": "변경 사항, 파일, 에이전트, 미리 보기 및 장치",
+    "inspectorTitle": "작업공간 검사기",
     "messageBot": "{{name}}에게 메시지",
     "modelPicker": {
-      "addFavorite": "Add {{model}} to favorites",
-      "compact": "Compact UI",
-      "configure": "Configure",
-      "configureBeforeSending": "Connect a model before sending a message.",
-      "configureProviders": "Configure model providers",
+      "addFavorite": "즐겨찾기에 {{model}} 추가",
+      "compact": "컴팩트한 UI",
+      "configure": "구성",
+      "configureBeforeSending": "메시지를 보내기 전에 모델을 연결하세요.",
+      "configureProviders": "모델 공급자 구성",
       "connectGoogleAi": "Google AI Studio 연결",
       "connectGoogleAiNote": "무료 Gemini 할당량. API 키를 받아 여기에 붙여넣기",
-      "connectModels": "Connect models",
+      "connectModels": "모델 연결",
       "connectOpenRouter": "OpenRouter 연결",
       "connectOpenRouterNote": "브라우저 로그인 한 번으로 무료 모델이 RouteLLM - Open과 이 목록에 추가됩니다",
-      "favorites": "Favorites",
-      "noFavorites": "Favorite models appear here.",
-      "noResults": "No models found.",
-      "onThisMachine": "On this machine",
-      "removeFavorite": "Remove {{model}} from favorites",
-      "search": "Search models…",
-      "title": "Choose a model"
+      "favorites": "즐겨찾기",
+      "noFavorites": "좋아하는 모델이 여기에 나타납니다.",
+      "noResults": "모델을 찾을 수 없습니다.",
+      "onThisMachine": "이 기계에서",
+      "removeFavorite": "즐겨찾기에서 {{model}} 제거",
+      "search": "모델 검색…",
+      "title": "모델을 선택하세요"
     },
-    "modelPlaceholder": "Model",
+    "modelPlaceholder": "모델",
     "modelProviderLocked": "이 모델은 다른 제공업체의 모델입니다. 사용하려면 새 채팅을 시작하세요.",
     "modelSwitchFailed": "모델을 전환할 수 없습니다. 채팅은 이전 모델을 계속 사용합니다.",
     "modelTier": {
-      "default": "Recommended",
-      "fast": "Fast & cheap",
-      "free": "Free",
-      "local": "Local / custom",
-      "strong": "For harder tasks"
+      "default": "권장",
+      "fast": "빠르고 저렴함",
+      "free": "무료",
+      "local": "로컬/커스텀",
+      "strong": "더 어려운 작업용"
     },
     "moreModels": "더 많은 모델 ({{count}})",
-    "navigationDescription": "Workspaces, conversations, and application settings",
-    "navigationTitle": "Workspace navigation",
-    "newBot": "New bot",
+    "navigationDescription": "작업 공간, 대화 및 애플리케이션 설정",
+    "navigationTitle": "작업공간 탐색",
+    "newBot": "새 봇",
     "newChat": "새 채팅",
     "noChats": "아직 채팅이 없습니다",
     "noSessionsMatch": "\"{{query}}\"과(와) 일치하는 세션이 없습니다",
     "noWorkspaces": "아직 추가된 작업 공간이 없습니다",
     "noWorkspacesDescription": "에이전트와 코딩을 시작하려면 폴더를 추가하세요",
-    "openPathInPreview": "Open in the preview pane",
+    "openPathInPreview": "미리보기 창에서 열기",
     "pendingSteer": {
-      "edit": "Edit",
-      "permission": "Sends after you answer the permission prompt",
-      "remove": "Remove",
-      "step": "Sends at the agent's next step",
-      "turn": "Sends when this turn ends"
+      "edit": "편집",
+      "permission": "권한 프롬프트에 응답한 후 전송됩니다.",
+      "remove": "삭제",
+      "step": "상담원의 다음 단계로 보냅니다.",
+      "turn": "다음 턴으로 보냅니다"
     },
     "perm": {
       "addContext": "컨텍스트 또는 지시 사항 추가…",
@@ -1892,26 +1904,26 @@
       "checksSummary": "성공 {{passed}} · 실패 {{failed}} · 실행 중 {{running}}",
       "closed": "닫힘",
       "draft": "초안",
-      "label": "PR #{{number}}",
+      "label": "홍보 #{{number}}",
       "merged": "병합됨",
-      "none": "No PR",
-      "noneDescription": "No pull request for the current branch",
-      "open": "Open PR #{{number}}",
-      "openAction": "Open pull request",
-      "pending": "열림",
+      "none": "홍보 없음",
+      "noneDescription": "현재 브랜치에 대한 풀 요청이 없습니다.",
+      "open": "PR #{{number}} 열기",
+      "openAction": "풀 요청 열기",
+      "pending": "열기",
       "reviews": "승인 {{approved}}건 · 변경 요청 {{changes}}건 · 대기 {{requested}}건"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going. No card needed",
-      "continueOn": "Continue on {{model}} (free)",
-      "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Or run a model on this computer for free, with no limits",
-      "poolOutTitle": "Every free source is used up for now",
-      "switchNote": "Pick another model in the model picker to keep going"
+      "connectNote": "계속하려면 무료 소스를 연결하세요. 카드가 필요하지 않습니다",
+      "continueOn": "{{model}}에서 계속하기(무료)",
+      "exhaustedTitle": "무료 Abacus.AI 크레딧을 모두 사용했습니다.",
+      "localNote": "또는 이 컴퓨터에서 제한 없이 무료로 모델을 실행해 보세요.",
+      "poolOutTitle": "현재 모든 무료 소스가 사용되었습니다.",
+      "switchNote": "계속하려면 모델 선택기에서 다른 모델을 선택하세요."
     },
     "preview": {
-      "addSurface": "Add surface",
-      "address": "Browser address",
+      "addSurface": "표면 추가",
+      "address": "브라우저 주소",
       "addressPlaceholder": "URL 또는 파일 경로를 입력하세요…",
       "back": "뒤로 가기",
       "browserProfile": "브라우저 프로필",
@@ -1921,94 +1933,95 @@
       "browserProfileImported": "프로필을 성공적으로 가져왔습니다",
       "browserProfileNone": "기본값 (프로필 없음)",
       "browserProfileRefresh": "프로필 새로고침",
-      "clearSiteData": "Clear site data",
-      "closeSurface": "Close {{title}}",
-      "developerTools": "Developer tools",
+      "clearSiteData": "사이트 데이터 지우기",
+      "closeSurface": "{{title}} 닫기",
+      "developerTools": "개발자 도구",
       "emptyDescription": "탐색기에서 파일을 열거나, 채팅의 링크를 클릭하거나, 웹을 탐색하세요.",
       "emptyTitle": "열린 미리보기가 없습니다",
       "forward": "앞으로 가기",
-      "hardReload": "Hard reload",
-      "htmlShowRendered": "Show rendered deck",
-      "htmlShowSource": "Show source",
-      "imageError": "Could not show this image here ({{error}}).",
-      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
+      "hardReload": "하드 리로드",
+      "htmlShowRendered": "렌더링된 데크 표시",
+      "htmlShowSource": "소스 표시",
+      "imageError": "이 이미지를 여기에 표시할 수 없습니다({{error}}).",
+      "imageOutsideWorkspace": "이 파일은 작업공간 외부에 있으므로 여기에 표시되지 않습니다. 대신 외부 앱에서 열어보세요.",
       "loading": "불러오는 중…",
-      "mdShowRendered": "Show rendered markdown",
-      "moreActions": "More browser actions",
+      "mdShowRendered": "렌더링된 마크다운 표시",
+      "moreActions": "추가 브라우저 작업",
       "noProfiles": "브라우저 프로필을 찾을 수 없습니다",
       "openBrowser": "브라우저 열기",
       "openExternal": "외부 앱에서 열기",
-      "pageUnavailable": "This page is unavailable",
-      "pptxError": "This presentation could not be read ({{error}}).",
-      "pptxMoreWarnings": "+{{count}} more",
-      "pptxNoNotes": "No speaker notes on this slide.",
-      "pptxNotes": "Notes",
-      "pptxSlideCount": "Slide {{current}} of {{total}}",
-      "pptxSlideFailed": "Slide {{number}} could not be rendered",
-      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
-      "pptxWarnings": "{{count}} rendering warning",
-      "pptxWarnings_other": "{{count}} rendering warnings",
+      "pageUnavailable": "이 페이지를 사용할 수 없습니다",
+      "pptxError": "이 프리젠테이션을 읽을 수 없습니다({{error}}).",
+      "pptxMoreWarnings": "+{{count}} 더보기",
+      "pptxNoNotes": "이 슬라이드에는 발표자 노트가 없습니다.",
+      "pptxNotes": "메모",
+      "pptxSlideCount": "{{total}}의 슬라이드 {{current}}",
+      "pptxSlideFailed": "슬라이드 {{number}}를 렌더링할 수 없습니다.",
+      "pptxSlidesFailed": "{{total}} 슬라이드 중 {{failed}}를 렌더링할 수 없습니다.",
+      "pptxWarnings_other": "{{count}} 렌더링 경고",
       "refresh": "새로고침",
-      "reload": "Reload",
+      "reload": "새로고침",
       "sectionFileCount": "{{count}}개 파일",
-      "sourceError": "Could not read this file ({{error}}).",
+      "sourceError": "이 파일({{error}})을 읽을 수 없습니다.",
       "split": "분할",
       "stop": "로딩 중지",
       "toggleTooltip": "미리보기 전환",
-      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
-      "tryAgain": "Try again",
+      "truncatedFile": "이 파일은 너무 커서 전체를 열 수 없습니다. 시작 부분만 표시되며 여기에서는 편집이 비활성화되므로 저장하면 나머지 부분을 덮어쓸 수 없습니다. 외부 편집기에서 열어서 변경하세요.",
+      "tryAgain": "다시 시도하세요",
       "unified": "통합",
-      "zoom": "Zoom",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "zoomReset": "Reset zoom"
+      "zoom": "줌",
+      "zoomIn": "확대",
+      "zoomOut": "축소",
+      "zoomReset": "확대/축소 재설정",
+      "pptxWarnings_many": "{{count}} 렌더링 경고",
+      "pptxWarnings_one": "{{count}} 렌더링 경고"
     },
-    "refreshModels": "Refresh models",
+    "refreshModels": "모델 새로 고침",
     "renameChat": "채팅 이름 변경",
     "renameChatPlaceholder": "새 채팅 이름 입력",
     "renameEmptyName": "이름은 비워 둘 수 없습니다",
     "renameError": "이름 변경 실패",
     "renameWorkspace": "작업 공간 이름 변경",
     "renameWorkspacePlaceholder": "새 작업 공간 이름 입력",
-    "resizeInspector": "Resize workspace inspector",
-    "resizeSidebar": "Resize workspace sidebar",
-    "resizeTerminal": "Resize terminal",
+    "resizeInspector": "작업 공간 검사기 크기 조정",
+    "resizeSidebar": "작업 공간 사이드바 크기 조정",
+    "resizeTerminal": "터미널 크기 조정",
     "results": "결과",
     "retry": "재시도",
     "retryMessage": "중단한 곳에서 계속하세요",
     "revealInFinder": "Finder에서 표시",
     "rightPanel": {
-      "agentsDescription": "Follow subagents and workflows.",
-      "browser": "Browser",
-      "browserDescription": "Open a local app or URL.",
+      "agentsDescription": "하위 에이전트 및 워크플로를 따릅니다.",
+      "browser": "브라우저",
+      "browserDescription": "로컬 앱 또는 URL을 엽니다.",
       "close": "패널 닫기",
-      "deviceDescription": "Preview the connected device.",
-      "emptyDescription": "Choose what to show in the right panel.",
-      "emptyTitle": "Open a surface",
-      "explorerDescription": "Browse and read workspace files.",
-      "files": "Files",
-      "open": "Open",
-      "tabs": "Inspector panels",
-      "terminal": "Terminal",
-      "terminalDescription": "Start a shell in this workspace."
+      "deviceDescription": "연결된 장치를 미리 봅니다.",
+      "emptyDescription": "오른쪽 패널에 표시할 내용을 선택하세요.",
+      "emptyTitle": "표면 열기",
+      "explorerDescription": "작업공간 파일을 찾아보고 읽습니다.",
+      "files": "파일",
+      "open": "열기",
+      "tabs": "검사기 패널",
+      "terminal": "터미널",
+      "terminalDescription": "이 작업공간에서 셸을 시작합니다."
     },
     "rightTab": {
-      "agents": "Agents",
+      "agents": "에이전트",
       "device": "기기",
       "explorer": "탐색기",
       "preview": "미리보기"
     },
     "runtimeMode": {
-      "acceptEdits": "Auto-accept edits",
-      "acceptEditsDescription": "Apply file edits automatically and ask before other actions.",
-      "auto": "Auto",
-      "autoDescription": "Allow commands and edits without approval prompts, inside the sandbox.",
-      "fullAccess": "Full access",
-      "fullAccessDescription": "Allow commands and edits without approval prompts, with no sandbox.",
-      "plan": "Plan",
-      "planDescription": "Plan the work before making changes.",
-      "supervised": "Supervised",
-      "supervisedDescription": "Ask before edits and commands."
+      "acceptEdits": "수정사항 자동 수락",
+      "acceptEditsDescription": "파일 편집 내용을 자동으로 적용하고 다른 작업을 수행하기 전에 물어보세요.",
+      "auto": "자동",
+      "autoDescription": "샌드박스 내에서 승인 메시지 없이 명령 및 편집을 허용합니다.",
+      "fullAccess": "전체 액세스",
+      "fullAccessDescription": "샌드박스 없이 승인 메시지 없이 명령 및 편집을 허용합니다.",
+      "plan": "계획",
+      "planDescription": "변경하기 전에 작업을 계획하십시오.",
+      "supervised": "감독됨",
+      "supervisedDescription": "편집 및 명령을 하기 전에 물어보세요."
     },
     "save": "저장",
     "searchSessions": "세션 검색…",
@@ -2022,92 +2035,93 @@
       "modelCta": "모델 선택"
     },
     "sendMessage": "보내기 (Enter)",
-    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "이 채팅의 상담원에게 연락할 수 없습니다. 귀하의 메시지가 상자에 다시 들어왔습니다. 다시 보내보세요.",
     "sessionOptions": "세션 옵션",
     "sessions": "세션",
     "showRightPanel": "패널 표시",
     "showSidebar": "사이드바 표시",
     "showTerminal": "터미널 표시",
-    "startSessionToSend": "Describe the work and press send to start a session",
-    "steerMessage": "Send to the running turn",
+    "startSessionToSend": "작업을 설명하고 보내기를 눌러 세션을 시작하세요.",
+    "steerMessage": "실행 턴으로 보내기",
     "stopAgent": "중지",
     "subtask": {
-      "agent": "Agent",
-      "backToMain": "Back to the main agent",
-      "didNotFinish": "did not finish",
-      "hitLimit": "stopped at its limit",
-      "needsYou": "needs you in the browser",
-      "budget": "over budget",
-      "main": "Main",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools",
-      "viewTranscript": "View this sub-agent's full transcript",
-      "working": "working"
+      "agent": "대리인",
+      "backToMain": "메인 에이전트로 돌아가기",
+      "didNotFinish": "끝나지 않았다",
+      "hitLimit": "한계에 멈췄다",
+      "needsYou": "브라우저에 당신이 필요합니다",
+      "budget": "예산 초과",
+      "main": "메인",
+      "toolCount_one": "도구 {{count}}개",
+      "toolCount_other": "{{count}} 도구",
+      "viewTranscript": "이 하위 에이전트의 전체 기록 보기",
+      "working": "일하는",
+      "toolCount_many": "{{count}} 도구"
     },
-    "switchModel": "Switch model",
+    "switchModel": "모델 전환",
     "terminal": {
-      "closeTab": "Close terminal tab",
+      "closeTab": "터미널 탭 닫기",
       "hide": "터미널 숨기기",
-      "newTab": "New terminal",
-      "pickShell": "Open a different shell",
-      "tabs": "Terminal tabs"
+      "newTab": "새로운 터미널",
+      "pickShell": "다른 쉘 열기",
+      "tabs": "터미널 탭"
     },
     "thinking": {
-      "hide": "Hide the thought process",
-      "inProgress": "Thinking…",
-      "label": "Thinking",
-      "show": "Show the thought process"
+      "hide": "사고 과정을 숨기세요",
+      "inProgress": "생각하다…",
+      "label": "생각",
+      "show": "사고 과정을 보여주세요"
     },
     "unpinChat": "고정 해제",
     "voice": {
-      "downloading": "Downloading the speech model… {{percent}}%",
+      "downloading": "음성 모델 다운로드 중… {{percent}}%",
       "errors": {
-        "microphone-in-use": "The microphone is in use by another app.",
-        "no-microphone": "No microphone was found.",
-        "permission-denied": "Microphone access was denied. Allow it in system settings.",
-        "transcription-failed": "Could not transcribe that. Try again.",
-        "unsupported": "Recording is not available here."
+        "microphone-in-use": "다른 앱에서 마이크를 사용 중입니다.",
+        "no-microphone": "마이크를 찾을 수 없습니다.",
+        "permission-denied": "마이크 액세스가 거부되었습니다. 시스템 설정에서 허용하세요.",
+        "transcription-failed": "스크립트를 작성할 수 없습니다. 다시 시도해 보세요.",
+        "unsupported": "여기서는 녹음이 불가능합니다."
       },
-      "start": "Dictate",
-      "stop": "Stop and transcribe",
-      "transcribing": "Transcribing…"
+      "start": "받아쓰기",
+      "stop": "중지하고 스크립트 작성",
+      "transcribing": "스크립트 작성 중…"
     },
     "welcome": {
       "addWorkspace": "새 작업 공간 추가",
-      "defaultWorkspace": "Default workspace",
+      "defaultWorkspace": "기본 작업공간",
       "letsBuild": "만들어 봅시다",
       "noWorkspacesFound": "작업 공간을 찾을 수 없습니다",
       "searchWorkspaces": "작업 공간 검색…",
       "selectWorkspace": "작업 공간 선택",
       "starters": {
         "build-a-store": {
-          "name": "Build an online store",
-          "description": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+          "name": "온라인 상점 구축",
+          "description": "부티크 양초 브랜드: 히어로, 제품 그리드, 향과 크기 옵션이 포함된 제품 페이지, 슬라이드아웃 카트 및 체크아웃."
         },
         "design-an-infographic": {
-          "name": "Turn a repo into an infographic",
-          "description": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+          "name": "저장소를 인포그래픽으로 전환",
+          "description": "n8n를 복제하고, 소스를 읽고, 워크플로가 실행될 때 실제로 어떤 일이 발생하는지에 대한 한 페이지 포스터를 배치합니다."
         },
         "find-flights": {
-          "name": "Find me flights",
-          "description": "Opens the browser, checks a couple of sites, and comes back with three real options and links. Books nothing."
+          "name": "항공편 찾기",
+          "description": "브라우저를 열고 몇 개의 사이트를 확인한 다음 세 가지 실제 옵션, 링크 및 선택 항목을 가지고 돌아옵니다."
         },
         "process-a-spreadsheet": {
-          "name": "Clean up a spreadsheet",
-          "description": "Reads every sheet, fixes the headers, types and duplicates, and saves a summarised copy beside the original."
+          "name": "스프레드시트 정리",
+          "description": "여기에서 스프레드시트를 읽고, 헤더, 유형 및 중복 항목을 수정하고, 각 원본 옆에 요약된 사본을 저장합니다."
         },
         "restyle-a-repo": {
-          "name": "Restyle Excalidraw",
-          "description": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+          "name": "리스타일 Excalidraw",
+          "description": "저장소를 복제하고, 스타일이 어떻게 지정되는지 읽고, 스타일이 변경된 도구 모음을 자체 색상으로 모형화합니다."
         },
         "review-pull-requests": {
-          "name": "Review my pull requests",
-          "description": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+          "name": "내 풀 요청 검토",
+          "description": "각 차이점을 읽고, 파일 및 줄별로 버그 및 누락된 테스트 이름을 지정하고, 코드를 건드리지 않고도 리뷰를 게시합니다."
         }
       },
-      "switchWorkspace": "Switch workspace from {{workspace}}",
-      "whatShouldWeBuild": "What should we build in {{workspace}}?",
-      "whatShouldWeBuildPrefix": "What should we build in"
+      "switchWorkspace": "{{workspace}}에서 작업 공간 전환",
+      "whatShouldWeBuild": "{{workspace}}에서는 무엇을 구축해야 할까요?",
+      "whatShouldWeBuildPrefix": "우리는 무엇을 구축해야합니까?"
     },
     "workspaceDeleted": "작업 공간이 삭제되었습니다",
     "workspaceMissing": {
@@ -2122,18 +2136,402 @@
     },
     "workspaceOptions": "작업 공간 옵션",
     "workspaceRenamed": "작업 공간 이름이 변경되었습니다",
-    "workspaces": "Workspaces",
+    "workspaces": "작업공간",
     "worktree": {
-      "create": "New worktree",
-      "currentCheckout": "Current checkout",
-      "description": "Choose which checkout the agent will read and change for this chat.",
-      "error": "Worktree operation failed",
-      "select": "Select worktree"
+      "create": "새 작업 트리",
+      "currentCheckout": "현재 결제",
+      "description": "상담원이 이 채팅에 대해 읽고 변경할 체크아웃을 선택하세요.",
+      "error": "작업 트리 작업이 실패했습니다.",
+      "select": "작업 트리 선택"
     },
     "yesterday": "어제"
   },
   "reactions": {
     "feedback": "이 답변에 반응하기",
     "agent": "에이전트가 {{emoji}}로 반응했습니다"
+  },
+  "native": {
+    "keepRunning": "백그라운드에서 계속 실행",
+    "quitAnyway": "종료하기",
+    "taskRunningTitle": "작업이 실행 중입니다.",
+    "taskRunningMessage": "작업이 아직 실행 중입니다.",
+    "taskRunningDetail": "백그라운드에서 계속 실행하시겠습니까, 아니면 종료하고 중지하시겠습니까?",
+    "backgroundTitle": "아직 실행 중인 작업",
+    "backgroundBody": "완료되면 알려드리겠습니다.",
+    "restart": "다시 시작",
+    "quit": "종료",
+    "wait": "기다리기",
+    "reload": "새로고침",
+    "crashMessage": "앱이 계속 충돌합니다",
+    "crashDetail": "응용 프로그램 창이 반복적으로 충돌했습니다. 다시 시도하려면 다시 시작하세요.",
+    "unresponsiveMessage": "앱이 응답하지 않습니다",
+    "unresponsiveDetail": "계속 기다리거나 창을 다시 로드하여 복구할 수 있습니다.",
+    "noSpellingSuggestions": "맞춤법 제안 없음",
+    "addToDictionary": "사전에 추가",
+    "credits": "MIT 라이선스에 따른 오픈 소스",
+    "aboutApp": "{{app}} 소개",
+    "hideApp": "{{app}} 숨기기",
+    "quitApp": "{{app}} 종료",
+    "saveLogs": "로그 저장",
+    "zipArchives": "우편 아카이브",
+    "selectFolder": "폴더 선택",
+    "selectImages": "이미지 선택",
+    "selectFiles": "파일 선택",
+    "images": "이미지",
+    "selectSkillFolders": "스킬 폴더 선택",
+    "selectSkillFiles": "스킬 파일 선택",
+    "skill": "스킬",
+    "importMcp": "MCP 서버 가져오기",
+    "services": "서비스",
+    "hideOthers": "다른 앱 가리기",
+    "showAll": "모두 보기",
+    "file": "파일",
+    "edit": "편집",
+    "view": "보기",
+    "window": "윈도우",
+    "close": "윈도우 닫기",
+    "undo": "실행 취소",
+    "redo": "다시 실행",
+    "cut": "잘라내기",
+    "copy": "복사",
+    "paste": "붙여넣기",
+    "selectAll": "모두 선택",
+    "forceReload": "강제 재장전",
+    "developerTools": "개발자 도구",
+    "resetZoom": "실제 크기",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "fullScreen": "전체 화면 전환",
+    "minimize": "최소화",
+    "zoom": "줌",
+    "front": "모두 앞으로 가져오기",
+    "loadFailed": "앱을 로드할 수 없습니다.",
+    "loadFailedDetail": "애플리케이션을 로드하지 못했습니다. 연결을 확인하고 다시 시도하세요.",
+    "retry": "재시도"
+  },
+  "uiText": {
+    "alwaysAllowRule": "항상 {{rule}} 허용",
+    "alwaysAllowAllRules": "항상 모두 허용: {{rules}}",
+    "runNameCommand": "{{name}} 명령을 실행하시겠습니까?",
+    "allowChangesToThisFile": "이 파일에 대한 변경을 허용하시겠습니까?",
+    "directoryDirectory": "디렉토리: {{directory}}",
+    "allowName": "{{name}}를 허용하시겠습니까?",
+    "modifyFileOutsideWorkspace": "작업공간 외부에서 파일을 수정하시겠습니까?",
+    "allowChangesOnce": "한 번 변경 허용",
+    "alwaysAllowDirectory": "항상 {{directory}} 허용",
+    "treatDirectoryAsPartOfTheWorkspace": "{{directory}}를 작업 공간의 일부로 처리",
+    "browserActionAction": "브라우저 작업: {{action}}",
+    "allowOnce": "한 번만 허용",
+    "alwaysAcceptEditsThisSession": "이 세션에서는 항상 수정사항을 수락합니다.",
+    "cancel": "취소",
+    "allow": "허용",
+    "yesImplementFullPermissionsGranted": "예, 구현합니다(전체 권한 부여됨)",
+    "deny": "거부",
+    "bash": "Bash",
+    "readFileOutsideWorkspace": "작업공간 외부에서 파일을 읽으시겠습니까?",
+    "createFileOutsideWorkspace": "작업공간 외부에서 파일을 생성하시겠습니까?",
+    "allowReadOnce": "한 번만 읽기 허용",
+    "createOnce": "한 번만 생성",
+    "yesImplementApproveEachEdit": "예, 구현합니다(각 수정사항 승인).",
+    "yesImplementAutoAcceptAllEdits": "예, 구현합니다(모든 수정사항 자동 수락).",
+    "noKeepPlanning": "아니요, 계속 계획하세요",
+    "continue": "계속",
+    "save": "저장",
+    "note": "참고:",
+    "back": "뒤로",
+    "editNote": "메모 수정",
+    "noteLabel": "+ 참고",
+    "skip": "건너뛰기",
+    "next": "다음 ›",
+    "submit": "제출",
+    "clickAnElementOnThePage": "페이지의 요소를 클릭하세요.",
+    "clearAndTypeIntoAnInputField": "입력 필드를 지우고 입력하세요.",
+    "typeTextIntoAnInputField": "입력 필드에 텍스트 입력",
+    "scrollThePage": "페이지 스크롤",
+    "scrollAnElementIntoView": "요소를 스크롤하여 보기",
+    "selectADropdownOption": "드롭다운 옵션을 선택하세요",
+    "hoverOverAnElement": "요소 위로 마우스를 가져가세요.",
+    "focusAnElement": "요소에 초점을 맞춥니다",
+    "checkACheckbox": "체크박스를 선택하세요",
+    "uncheckACheckbox": "체크박스를 선택 취소하세요.",
+    "pressAKeyboardKey": "키보드 키를 누르세요",
+    "waitForAPageCondition": "페이지 조건을 기다립니다",
+    "executeJavaScriptOnThePage": "페이지에서 JavaScript 실행",
+    "action": "액션",
+    "ref": "참조",
+    "selector": "선택기",
+    "text": "텍스트",
+    "value": "값",
+    "key": "키",
+    "code": "코드",
+    "direction": "방향",
+    "amount": "수량",
+    "unableToReadBranches": "분기를 읽을 수 없습니다.",
+    "exitCodeCode": "종료 코드: {{code}}",
+    "countEarlierLinesHidden": "{{count}} 이전 줄이 숨겨졌습니다.",
+    "countMoreLines": "{{count}} 더 많은 라인",
+    "linesStartEnd": "{{start}}~{{end}}줄",
+    "countLines": "{{count}}줄",
+    "writingDocument": "문서 작성 중",
+    "wroteDocument": "작성한 문서",
+    "printingPDF": "PDF 인쇄",
+    "printedPDF": "인쇄된 PDF",
+    "buildingDeck": "프레젠테이션 생성 중",
+    "builtDeck": "프레젠테이션 생성됨",
+    "buildingPDF": "PDF 작성",
+    "builtPDF": "PDF 내장",
+    "working": "일 중",
+    "ran": "실행됨",
+    "designing": "디자인",
+    "designed": "디자인됨",
+    "openingPreview": "미리보기 여는 중",
+    "openedPreview": "미리보기 열림",
+    "opening": "여는 중",
+    "opened": "개설됨",
+    "reading": "읽는 중",
+    "read": "읽음",
+    "creating": "만들기",
+    "writing": "글쓰기",
+    "created": "생성됨",
+    "wrote": "썼다",
+    "editing": "편집",
+    "edited": "편집됨",
+    "deleting": "삭제 중",
+    "deleted": "삭제됨",
+    "running": "실행 중",
+    "gettingOutput": "출력 받기",
+    "gotOutput": "출력을 얻었습니다",
+    "killingShell": "셸 종료 중",
+    "killedShell": "셸 종료됨",
+    "searchingFiles": "파일 검색 중",
+    "searchedFiles": "검색된 파일",
+    "searching": "검색 중",
+    "searched": "검색됨",
+    "listing": "상장",
+    "listed": "상장됨",
+    "searchingCodebase": "코드베이스 검색",
+    "searchedCodebase": "검색된 코드베이스",
+    "searchingWeb": "웹 검색 중",
+    "searchedWeb": "검색된 웹",
+    "fetching": "가져오는 중",
+    "fetched": "가져옴",
+    "runningSubAgent": "하위 에이전트 실행 중",
+    "usedSubAgent": "사용된 하위 에이전트",
+    "updatingTodos": "할 일 업데이트 중",
+    "updatedTodos": "업데이트된 할 일",
+    "askingQuestion": "질문하기",
+    "askedQuestion": "질문",
+    "enteringPlanMode": "계획 모드 들어가기",
+    "enteredPlanMode": "계획 모드에 들어갔습니다.",
+    "exitingPlanMode": "계획 모드 종료",
+    "exitedPlanMode": "계획 모드를 종료했습니다.",
+    "gettingDiagnostics": "진단 받기",
+    "gotDiagnostics": "진단을 받았습니다",
+    "navigatingTo": "다음으로 이동 중",
+    "navigatedTo": "다음으로 이동했습니다.",
+    "goingBack": "이전 페이지로 이동 중",
+    "wentBack": "이전 페이지로 이동함",
+    "goingForward": "다음 페이지로 이동 중",
+    "wentForward": "다음 페이지로 이동함",
+    "reloadingPage": "페이지 새로고침 중",
+    "reloadedPage": "새로고침된 페이지",
+    "navigating": "탐색",
+    "navigated": "탐색됨",
+    "scanningPage": "스캔 페이지",
+    "scannedPage": "스캔한 페이지",
+    "takingScreenshot": "스크린샷 찍기",
+    "tookScreenshot": "스크린샷을 찍었습니다.",
+    "gettingPageText": "페이지 텍스트 가져오기",
+    "gotPageText": "페이지 텍스트를 받았습니다.",
+    "gettingPageURL": "페이지 URL 가져오기",
+    "gotPageURL": "페이지 URL을 얻었습니다.",
+    "gettingPageTitle": "페이지 제목 가져오기",
+    "gotPageTitle": "페이지 제목을 얻었습니다.",
+    "capturingSnapshot": "스냅샷 캡처 중",
+    "capturedSnapshot": "캡처된 스냅샷",
+    "clicking": "클릭",
+    "clicked": "클릭됨",
+    "filling": "입력란 채우는 중",
+    "filled": "입력란 채움",
+    "typing": "타이핑",
+    "typed": "입력됨",
+    "scrolling": "스크롤링",
+    "scrolled": "스크롤됨",
+    "scrollingTo": "다음으로 스크롤",
+    "scrolledTo": "다음으로 스크롤됨",
+    "selectingOption": "옵션 선택",
+    "selectedOption": "선택한 옵션",
+    "hovering": "포인터 올리는 중",
+    "hovered": "포인터 올림",
+    "focusing": "집중",
+    "focused": "포커스됨",
+    "checking": "확인 중",
+    "checked": "선택됨",
+    "unchecking": "선택 취소 중",
+    "unchecked": "선택 해제됨",
+    "pressing": "누르기",
+    "pressed": "누르면",
+    "waiting": "대기 중",
+    "waited": "기다렸다",
+    "interacting": "상호작용",
+    "interacted": "상호작용함",
+    "executingJS": "JS 실행",
+    "executedJS": "실행된 JS",
+    "task": "작업",
+    "noOutput": "(출력 없음)",
+    "noContent": "(내용 없음)",
+    "noContentAvailable": "(사용 가능한 콘텐츠 없음)",
+    "input": "입력",
+    "output": "출력",
+    "waitingForResponse": "응답을 기다리는 중…",
+    "noQuestions": "(질문 없음)",
+    "skipped": "건너뛰었습니다.",
+    "runningSubAgentLabel": "하위 에이전트 실행 중…",
+    "noToolCallsRecorded": "(공구 호출이 기록되지 않음)",
+    "scope": "범위",
+    "depth": "깊이",
+    "runningLabel": "실행 중…",
+    "screenshotSaved": "저장된 스크린샷:",
+    "openPreview": "미리보기 열기",
+    "revealInFinder": "Finder에서 표시",
+    "rename": "이름 바꾸기",
+    "moveToTrash": "휴지통으로 이동",
+    "loadingFiles": "파일 로드 중...",
+    "close": "닫기",
+    "showAllTotalLinesRemainingMore": "모두 보기(총 {{total}}줄, {{remaining}}줄 더 있음)",
+    "yesterdayAt": "어제 {{time}}",
+    "failedToSendMessage": "메시지를 보내지 못했습니다.",
+    "unableToAddWorkspace": "작업공간을 추가할 수 없습니다.",
+    "thinking": "생각하다…",
+    "responding": "응답 중…",
+    "runningTool": "실행 도구…",
+    "waitingForApproval": "승인을 기다리는 중",
+    "loadingConversation": "대화 로드 중…",
+    "compactedContext": "압축된 이전 컨텍스트",
+    "image": "이미지",
+    "copied": "복사됨",
+    "copyCode": "코드 복사",
+    "pageActions": "페이지 작업",
+    "pageNavigation": "페이지 탐색",
+    "scrollToEnd": "끝까지 스크롤",
+    "scrollToStart": "스크롤하여 시작",
+    "screenRecordingPermissionRequired": "화면 녹화 권한이 필요합니다",
+    "simulatorWindowNotFound": "시뮬레이터 창을 찾을 수 없습니다",
+    "unableToSwitchWorkspace": "작업공간을 전환할 수 없습니다.",
+    "unableToRemoveWorkspace": "작업공간을 제거할 수 없습니다.",
+    "unableToRenameWorkspace": "작업공간 이름을 바꿀 수 없습니다.",
+    "unableToRelocateWorkspace": "작업공간을 재배치할 수 없습니다.",
+    "newChat": "새 채팅...",
+    "noWorkspaceSelected": "선택한 작업공간이 없습니다.",
+    "toolCallFailed": "도구 호출이 실패했습니다.",
+    "terminalFailedToStart": "터미널을 시작하지 못했습니다.",
+    "imageNotFound": "이미지를 찾을 수 없습니다: {{name}}",
+    "unknownConnector": "알 수 없는 커넥터 {{id}}.",
+    "limitReached": "{{feature}} 한도 도달({{type}})",
+    "moreLines": "({{count}} 더 많은 라인)",
+    "moreContent": "(더 많은 콘텐츠)",
+    "tokenCount": "{{tokens}} 토큰",
+    "urlPattern": "URL 패턴",
+    "noModelProvider": "모델 제공자가 설정되지 않았습니다. 설정에서 API 키를 추가하세요."
+  },
+  "toolSummary": {
+    "empty": "도구 사용",
+    "running": {
+      "read_one": "파일 {{count}}개 읽는 중",
+      "read_other": "파일 {{count}}개 읽는 중",
+      "edit_one": "파일 {{count}}개 변경 중",
+      "edit_other": "파일 {{count}}개 변경 중",
+      "command_one": "명령 {{count}}개 실행 중",
+      "command_other": "명령 {{count}}개 실행 중",
+      "search_one": "웹 검색 {{count}}회 실행 중",
+      "search_other": "웹 검색 {{count}}회 실행 중",
+      "code-search_one": "코드 검색 {{count}}회 실행 중",
+      "code-search_other": "코드 검색 {{count}}회 실행 중",
+      "other_one": "도구 {{count}}개 사용 중",
+      "other_other": "도구 {{count}}개 사용 중",
+      "read_many": "파일 {{count}}개 읽는 중",
+      "edit_many": "파일 {{count}}개 변경 중",
+      "command_many": "명령 {{count}}개 실행 중",
+      "search_many": "웹 검색 {{count}}회 실행 중",
+      "code-search_many": "코드 검색 {{count}}회 실행 중",
+      "other_many": "도구 {{count}}개 사용 중"
+    },
+    "settled": {
+      "read_one": "파일 {{count}}개 읽음",
+      "read_other": "파일 {{count}}개 읽음",
+      "edit_one": "파일 {{count}}개 변경됨",
+      "edit_other": "파일 {{count}}개 변경됨",
+      "command_one": "명령 {{count}}개 실행됨",
+      "command_other": "명령 {{count}}개 실행됨",
+      "search_one": "웹 검색 {{count}}회 완료",
+      "search_other": "웹 검색 {{count}}회 완료",
+      "code-search_one": "코드 검색 {{count}}회 완료",
+      "code-search_other": "코드 검색 {{count}}회 완료",
+      "other_one": "도구 {{count}}개 사용됨",
+      "other_other": "도구 {{count}}개 사용됨",
+      "read_many": "파일 {{count}}개 읽음",
+      "edit_many": "파일 {{count}}개 변경됨",
+      "command_many": "명령 {{count}}개 실행됨",
+      "search_many": "웹 검색 {{count}}회 완료",
+      "code-search_many": "코드 검색 {{count}}회 완료",
+      "other_many": "도구 {{count}}개 사용됨"
+    }
+  },
+  "connectorDescriptions": {
+    "messaging-whatsapp": "WhatsApp에서 에이전트와 대화하고 나를 대신해 메시지를 보내도록 허용합니다.",
+    "messaging-telegram": "Telegram에서 에이전트와 대화하고 나를 대신해 메시지를 보내도록 허용합니다.",
+    "messaging-discord": "Discord에서 에이전트와 대화하고 나를 대신해 메시지를 보내도록 허용합니다.",
+    "abacus-gmailuser": "Gmail에서 이메일을 읽고 검색하고 보냅니다.",
+    "abacus-googledriveuser": "Google Drive의 파일을 탐색하고 읽고 관리합니다.",
+    "abacus-googlecalendar": "가능한 시간과 일정을 확인하고 회의를 예약합니다.",
+    "abacus-slack": "Slack 워크스페이스에서 메시지를 검색하고 읽고 게시합니다.",
+    "abacus-outlook": "Outlook에서 이메일을 읽고 검색하고 보냅니다.",
+    "abacus-onedrive": "OneDrive의 파일을 탐색하고 읽고 관리합니다.",
+    "abacus-jira": "Jira 프로젝트에서 이슈를 검색하고 만들고 업데이트합니다.",
+    "abacus-confluence": "Confluence 공간에서 페이지를 검색하고 읽습니다.",
+    "abacus-dropbox": "Dropbox의 파일을 탐색하고 읽고 관리합니다.",
+    "abacus-twitter": "내 계정으로 X의 게시물을 읽고 게시합니다.",
+    "github": "내 토큰과 gh CLI로 비공개 저장소를 포함한 저장소, 이슈, 풀 리퀘스트를 관리합니다.",
+    "playwright": "브라우저를 제어하여 이동하고 클릭하고 양식을 작성하고 페이지를 읽습니다.",
+    "huggingface": "모델, 데이터 세트, Spaces를 검색하고 설명을 읽습니다.",
+    "cloudflare-docs": "Cloudflare 개발자 문서를 검색합니다.",
+    "zapier": "Zapier 계정을 통해 수천 가지 앱 작업에 접근합니다.",
+    "abacus-figmauser": "Figma 계정의 파일, 프로젝트, 디자인 데이터를 읽습니다.",
+    "abacus-zoom": "Zoom 회의, 녹화, 사용자를 조회합니다(읽기 전용).",
+    "abacus-docusign": "DocuSign 봉투, 템플릿, 서명 워크플로에 접근합니다.",
+    "abacus-gcpcloud": "Google Cloud 서비스 계정으로 Compute, Storage, BigQuery 등을 이용합니다.",
+    "notion": "워크스페이스를 검색하고 페이지를 읽고 메모를 작성합니다.",
+    "canva": "대화에서 디자인을 찾고 만들고 내보냅니다.",
+    "stripe": "고객, 결제, 구독을 조회하고 생성합니다.",
+    "paypal": "PayPal 서버를 통해 청구서, 주문, 분쟁에 접근합니다."
+  },
+  "connectorSetup": {
+    "github": {
+      "step0": "github.com/settings/tokens에서 개인 액세스 토큰을 만드세요. 원하는 저장소의 Contents, Pull requests, Issues에 필요한 읽기/쓰기 권한이 있는 fine-grained 토큰 또는 repo 범위의 classic 토큰을 사용하세요.",
+      "step1": "토큰은 한 번만 표시됩니다. 복사하여 아래에 붙여넣으세요.",
+      "tokenLabel": "개인 액세스 토큰"
+    }
+  },
+  "providerHints": {
+    "abacus": "호스팅 모델, 웹 검색, 이미지 및 음성 생성",
+    "deepseek": "DeepSeek 채팅 및 추론 모델",
+    "anthropic": "Claude Sonnet / Opus 모델",
+    "openai": "GPT / Codex 모델",
+    "gemini": "이미지 및 동영상 입력을 지원하는 Gemini 모델",
+    "openrouter": "하나의 계정으로 무료 및 유료 모델 이용",
+    "baseten": "호스팅된 DeepSeek / Kimi / GLM 모델",
+    "cerebras": "GPT-OSS / GLM용 고속 호스팅 추론",
+    "fireworks": "개방형 모델용 호스팅 추론",
+    "groq": "개방형 모델용 고속 호스팅 추론",
+    "huggingface": "Hugging Face를 통해 이용하는 추론 제공자",
+    "minimax": "긴 컨텍스트 창을 지원하는 MiniMax 모델",
+    "mistral": "EU에서 호스팅되는 Devstral 및 Mistral 모델",
+    "moonshotai": "Kimi K2.7 Code / Kimi K3 모델",
+    "nvidia": "호스팅된 Nemotron 및 기타 개방형 모델",
+    "opencode": "하나의 키로 선별된 코딩 모델 이용",
+    "together": "하나의 키로 DeepSeek, Kimi, GLM, Qwen 이용",
+    "vercel-ai-gateway": "Vercel AI Gateway를 통한 모델 접근",
+    "xai": "일반 및 코딩 작업용 Grok 모델",
+    "zai": "GLM Coding Plan을 통한 GLM 모델"
   }
 }

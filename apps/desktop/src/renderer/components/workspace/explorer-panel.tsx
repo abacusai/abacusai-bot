@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import type { FileTreeNode } from "#shared/contracts";
 
+import i18n from "../../i18n";
 import {
   workspaceQueryKeys,
   LOCAL_CODE_QUERY_STALE_TIMES,
@@ -354,7 +355,7 @@ export const ExplorerPanel = (): JSX.Element => {
               }}
             >
               <FileSearch />
-              Open Preview
+              {i18n.t("uiText.openPreview")}
             </Button>
           ) : null}
           {absPath != null && (
@@ -369,7 +370,7 @@ export const ExplorerPanel = (): JSX.Element => {
               }}
             >
               <FolderSearch />
-              Reveal in Finder
+              {i18n.t("uiText.revealInFinder")}
             </Button>
           )}
           <Button
@@ -383,7 +384,7 @@ export const ExplorerPanel = (): JSX.Element => {
             }}
           >
             <Pencil />
-            Rename
+            {i18n.t("uiText.rename")}
           </Button>
           <Button
             variant="ghost"
@@ -410,7 +411,7 @@ export const ExplorerPanel = (): JSX.Element => {
             }}
           >
             <Trash2 />
-            Move to Trash
+            {i18n.t("uiText.moveToTrash")}
           </Button>
         </div>
       );
@@ -434,7 +435,7 @@ export const ExplorerPanel = (): JSX.Element => {
     return (
       <div className={secondarySidebarPanelPaddingClassName}>
         <Empty className="flex-none items-start px-2 py-6 text-start">
-          <EmptyDescription>Loading files...</EmptyDescription>
+          <EmptyDescription>{i18n.t("uiText.loadingFiles")}</EmptyDescription>
         </Empty>
       </div>
     );

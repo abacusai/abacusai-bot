@@ -1,10 +1,18 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import {
+  FALLBACK_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  matchSupportedLanguage,
+} from "../shared/languages";
 import { durableStorage } from "./lib/durable-storage";
 import enUS from "./locales/en-US.json";
-
-export const FALLBACK_LANGUAGE = "en-US";
+export {
+  FALLBACK_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  matchSupportedLanguage,
+} from "../shared/languages";
 
 /**
  * Every locale except the fallback is an `import()`, so each ships as its own
@@ -25,47 +33,6 @@ const LOADERS: Record<string, () => Promise<{ default: object }>> = {
   "pt-BR": () => import("./locales/pt-BR.json"),
 };
 
-export const SUPPORTED_LANGUAGES = [FALLBACK_LANGUAGE, ...Object.keys(LOADERS)];
-
-/**
- * Spain gets `es-ES`; every other Spanish region, and bare `es`, gets the
- * Latin-American `es-419`, the larger region of the two bundles shipped.
- */
-export function matchSupportedLanguage(
-  languageTags: readonly string[]
-): string | undefined {
-  for (const tag of languageTags) {
-    const normalized = tag.toLowerCase();
-    const exact = SUPPORTED_LANGUAGES.find(
-      (code) => code.toLowerCase() === normalized
-    );
-    if (exact) {
-      return exact;
-    }
-
-    const [base] = normalized.split("-");
-    if (base === "es") {
-      // Intl.Locale finds the region past a script subtag (`es-Latn-ES`); an
-      // invalid injected value still gets the deliberate default.
-      let region: string | undefined;
-      try {
-        region = new Intl.Locale(tag).region;
-      } catch {
-        region = undefined;
-      }
-      return region?.toUpperCase() === "ES" ? "es-ES" : "es-419";
-    }
-
-    const related = SUPPORTED_LANGUAGES.find(
-      (code) => code.split("-")[0].toLowerCase() === base
-    );
-    if (related) {
-      return related;
-    }
-  }
-  return undefined;
-}
-
 /** The language the user last chose, as Zustand persisted it. */
 function storedLanguage(): string | undefined {
   try {
@@ -82,11 +49,17 @@ function storedLanguage(): string | undefined {
 }
 
 /**
- * Electron populates `navigator.languages` from the system settings, so this
- * needs no main-process round trip.
+ * The preload captures Electron’s OS preference list before first render.
+ * Browser previews fall back to navigator.languages.
  */
 function systemLanguage(): string | undefined {
-  return matchSupportedLanguage(navigator.languages);
+  return matchSupportedLanguage(
+    window.api?.systemLanguages ?? navigator.languages
+  );
+}
+
+export function initialLanguage(): string {
+  return storedLanguage() ?? systemLanguage() ?? FALLBACK_LANGUAGE;
 }
 
 function applyDocumentLanguage(code: string): void {
@@ -94,18 +67,23 @@ function applyDocumentLanguage(code: string): void {
   document.documentElement.dir = i18n.dir(code);
 }
 
+let languageRequest = 0;
 export async function changeLanguage(code: string): Promise<void> {
+  if (!SUPPORTED_LANGUAGES.includes(code)) return;
+  const request = ++languageRequest;
   const load = LOADERS[code];
   if (load && !i18n.hasResourceBundle(code, "translation")) {
     i18n.addResourceBundle(code, "translation", (await load()).default);
   }
+  if (request !== languageRequest) return;
   await i18n.changeLanguage(code);
   applyDocumentLanguage(code);
+  await window.api?.setAppLanguage?.(code);
 }
 
 /** Awaited before first render so non-English users see no English flash. */
 export async function initI18n(): Promise<void> {
-  const language = storedLanguage() ?? systemLanguage() ?? FALLBACK_LANGUAGE;
+  const language = initialLanguage();
 
   await i18n.use(initReactI18next).init({
     resources: { [FALLBACK_LANGUAGE]: { translation: enUS } },

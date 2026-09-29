@@ -20,6 +20,7 @@ import {
   toToolRenderItem,
 } from "../../conversation/tool-adapter";
 import { extractUserFileRefs } from "../../conversation/user-file-refs";
+import i18n from "../../i18n";
 import { computeFeedbackMessageIndices } from "./feedback-row";
 import { visibleUserText } from "./injected-text";
 
@@ -249,7 +250,10 @@ function buildAgentItems(
         items.push({
           kind: "notification",
           id: seg.id,
-          message: `${seg.featureName} limit reached (${seg.limitType})`,
+          message: i18n.t("uiText.limitReached", {
+            feature: seg.featureName,
+            type: seg.limitType,
+          }),
           severity: "warning",
         });
         break;
@@ -258,7 +262,7 @@ function buildAgentItems(
           kind: "thinking",
           id: seg.id,
           content: seg.compactionSummary,
-          title: "Compacted earlier context",
+          title: i18n.t("uiText.compactedContext"),
           streaming: false,
         });
         break;
@@ -457,16 +461,16 @@ export function getAgentStatusLabel(
   if (!isRunning) return null;
   switch (status) {
     case AgentStatus.Submitted:
-      return "Thinking…";
+      return i18n.t("uiText.thinking");
     case AgentStatus.Streaming:
-      return "Responding…";
+      return i18n.t("uiText.responding");
     case AgentStatus.ExecutingTool:
-      return "Running tool…";
+      return i18n.t("uiText.runningTool");
     case AgentStatus.WaitingForToolPermission:
-      return "Waiting for approval";
+      return i18n.t("uiText.waitingForApproval");
     case AgentStatus.LoadingConversation:
-      return "Loading conversation…";
+      return i18n.t("uiText.loadingConversation");
     default:
-      return "Working…";
+      return i18n.t("uiText.working");
   }
 }

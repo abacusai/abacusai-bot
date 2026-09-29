@@ -1,11 +1,23 @@
+import { cleanup } from "@testing-library/react";
 /**
  * What a renderer test can assume exists beyond jsdom: `window.api` (the
  * preload bridge) stubbed to a shape that answers rather than throws, and the
  * browser APIs Radix and the resizable panels call on mount. A test that cares
  * what a call returns overrides that method.
  */
-import { cleanup } from "@testing-library/react";
+import i18n from "i18next";
 import { afterEach, vi } from "vitest";
+
+import enUS from "../locales/en-US.json";
+
+// Components use both hooks and the shared i18next instance. Give both real
+// English resources so translated behavior is exercised rather than raw keys.
+await i18n.init({
+  lng: "en-US",
+  fallbackLng: "en-US",
+  resources: { "en-US": { translation: enUS } },
+  interpolation: { escapeValue: false },
+});
 
 /** Unmount between tests so no DOM leaks into the next one. */
 afterEach(() => {
@@ -36,7 +48,10 @@ if (!("ResizeObserver" in globalThis)) {
 if (typeof window !== "undefined") {
   // Node can expose an unusable localStorage global when no backing file was
   // configured. jsdom then inherits `undefined` instead of creating its own.
-  if (window.localStorage == null) {
+  if (
+    window.localStorage == null ||
+    typeof window.localStorage.getItem !== "function"
+  ) {
     const values = new Map<string, string>();
     Object.defineProperty(window, "localStorage", {
       configurable: true,

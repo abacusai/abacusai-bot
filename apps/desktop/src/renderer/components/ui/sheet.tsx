@@ -3,9 +3,12 @@
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "#renderer/components/ui/button";
 import { cn } from "#renderer/lib/cn";
+
+import i18n from "../../i18n";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -46,6 +49,7 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left";
   showCloseButton?: boolean;
 }) {
+  useTranslation();
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -71,7 +75,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{i18n.t("uiText.close")}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

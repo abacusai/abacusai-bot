@@ -33,7 +33,21 @@ type NotificationMetadata = {
   sessionId?: string;
 };
 
+const systemLanguages = ((): string[] | undefined => {
+  try {
+    const value: unknown = ipcRenderer.sendSync("language:system");
+    return Array.isArray(value) && value.every((tag) => typeof tag === "string")
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
 const api = {
+  systemLanguages,
+  setAppLanguage: (code: string): Promise<void> =>
+    ipcRenderer.invoke("language:set", code),
   openFolderDialog: (): Promise<string | null> =>
     ipcRenderer.invoke("open-folder-dialog"),
   openFilesDialog: (

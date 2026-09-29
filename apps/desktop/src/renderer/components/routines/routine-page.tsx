@@ -241,7 +241,9 @@ const ScheduledRoutinePage = ({
               {routine.nextRunAt != null && (
                 <p className="text-xs">
                   {t("routines.nextRun", {
-                    time: new Date(routine.nextRunAt).toLocaleString(),
+                    time: new Date(routine.nextRunAt).toLocaleString(
+                      i18n.language
+                    ),
                   })}
                 </p>
               )}
