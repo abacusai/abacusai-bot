@@ -22,6 +22,8 @@ export interface BrowserProfileInfo {
   profileDir: string;
   profileDataPath: string;
   avatarIcon?: string;
+  /** When the browser last had this profile open (Local State), if known. */
+  activeTime?: number;
 }
 
 export interface ImportProfileResult {
@@ -667,6 +669,7 @@ export function discoverBrowserProfiles(): BrowserProfileInfo[] {
         profileDir: dir,
         profileDataPath,
         avatarIcon: localStateCache?.[dir]?.avatar_icon ?? undefined,
+        activeTime: localStateCache?.[dir]?.active_time ?? undefined,
       });
     }
   }
