@@ -156,7 +156,7 @@
         "name": "Candidate Sourcer"
       },
       "chief-of-staff": {
-        "description": "Runs your workday across email, calendar, and Slack, and tells you exactly what to handle next.",
+        "description": "Keeps a lookout on your Gmail every morning and drafts your replies.",
         "name": "Chief of Staff"
       },
       "comment-mention-assistant": {
@@ -1250,7 +1250,13 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "Continue with {{browser}} · {{profile}}",
-    "signInAnotherWay": "Sign in another way"
+    "signInAnotherWay": "Sign in another way",
+    "gmailTitle": "Connect your Gmail?",
+    "gmailBody": "AbacusAI Bot can read your inbox and draft replies for you from {{email}}. You review and send them.",
+    "gmailNote": "One click on Google’s consent screen; you can disconnect any time in Connectors.",
+    "gmailAllowCta": "Allow",
+    "gmailNotNowCta": "Not now",
+    "gmailFailed": "Gmail did not connect. You can try again, or continue and connect it later."
   },
   "openFile": {
     "failed": "Could not open that file.",

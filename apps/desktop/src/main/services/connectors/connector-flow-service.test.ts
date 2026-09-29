@@ -36,8 +36,20 @@ describe("a platform connector", () => {
   it("runs the browser hop by service key and rewrites the gateway entry after", async () => {
     expect(await flow().connect("abacus-gmailuser")).toEqual({ ok: true });
 
-    expect(platformConnect).toHaveBeenCalledWith("gmailuser");
+    expect(platformConnect).toHaveBeenCalledWith("gmailuser", undefined);
     expect(ensureGateway).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands the hop's start options to the platform", async () => {
+    await flow().connect("abacus-gmailuser", {
+      autostart: true,
+      hint: "me@gmail.com",
+    });
+
+    expect(platformConnect).toHaveBeenCalledWith("gmailuser", {
+      autostart: true,
+      hint: "me@gmail.com",
+    });
   });
 
   it("leaves the gateway alone when the hop did not finish", async () => {

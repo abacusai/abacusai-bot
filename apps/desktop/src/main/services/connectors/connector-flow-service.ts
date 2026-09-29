@@ -13,12 +13,19 @@ import {
   type McpConnector,
 } from "@abacus-ai/connectors/registry";
 
-import type { ConnectorOutcome, McpServerEntry } from "#shared/contracts";
+import type {
+  ConnectorConnectOptions,
+  ConnectorOutcome,
+  McpServerEntry,
+} from "#shared/contracts";
 
 export interface FlowSources {
   /** The platform's browser hop and its inverse, by service key. */
   platform: {
-    connect: (service: string) => Promise<ConnectorOutcome>;
+    connect: (
+      service: string,
+      options?: ConnectorConnectOptions
+    ) => Promise<ConnectorOutcome>;
     disconnect: (service: string) => Promise<ConnectorOutcome>;
     /** Rewrites the gateway MCP entry after a connect: the file is user-editable. */
     ensureGateway: () => void;
@@ -94,7 +101,10 @@ export class ConnectorFlowService {
   constructor(private readonly sources: FlowSources) {}
 
   /** Connect a connector whose flow takes no fields. */
-  async connect(connectorId: string): Promise<ConnectorOutcome> {
+  async connect(
+    connectorId: string,
+    options?: ConnectorConnectOptions
+  ): Promise<ConnectorOutcome> {
     const connector = connectorById(connectorId);
     if (connector == null) return unknown(connectorId);
     const ui = connectUi(connector);
@@ -103,7 +113,10 @@ export class ConnectorFlowService {
     if (ui === "pairing")
       return failure(`${connector.name} is paired from its own dialog.`);
     if (connector.kind === "platform") {
-      const outcome = await this.sources.platform.connect(connector.service);
+      const outcome = await this.sources.platform.connect(
+        connector.service,
+        options
+      );
       if (outcome.ok) this.sources.platform.ensureGateway();
       return outcome;
     }

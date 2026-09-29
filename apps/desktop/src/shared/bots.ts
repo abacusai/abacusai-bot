@@ -30,9 +30,20 @@ export interface Bot {
   channel?: string | null;
   /** Per bot rather than per machine: the bot loop is tuned for cheap models. */
   model: string | null;
+  /**
+   * Until when the platform serves this bot's runs on the house (the Chief of
+   * Staff made at onboarding drafts the inbox before the account spends a
+   * credit). Null for every bot the user made.
+   */
+  sponsoredUntil?: number | null;
   createdAt: number;
   updatedAt: number;
 }
+
+/** How long a sponsored bot's runs stay on the house; the platform enforces its own window and spend cap too. */
+export const SPONSORED_FIRST_RUN_WINDOW_MS = 30 * 60 * 1000;
+/** The marker the app sends with a sponsored run's requests, as the platform expects it. */
+export const SPONSORED_RUN_MARKER = "cos-first-run";
 
 export interface BotCreateInput {
   name: string;
@@ -44,6 +55,8 @@ export interface BotCreateInput {
   workspaceId?: string | null;
   model?: string | null;
   channel?: string | null;
+  /** Make this bot's first runs free of charge for SPONSORED_FIRST_RUN_WINDOW_MS; onboarding's Chief of Staff only. */
+  sponsoredFirstRun?: boolean;
 }
 
 // What an edit changed that the bot should hear about in its chat, once. Name,

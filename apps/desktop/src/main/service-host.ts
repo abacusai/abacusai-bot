@@ -19,6 +19,7 @@ import type {
   BotUpdateInput,
 } from "#shared/bots";
 import type {
+  ConnectorConnectOptions,
   TranscriptSegment,
   TurnFeedbackInput,
   TurnFeedbackOutcome,
@@ -850,8 +851,11 @@ export class ServiceHost {
     if (moved) this.connectorStatusChangedSoon();
   }
 
-  async connectConnector(connectorId: string): Promise<ConnectorOutcome> {
-    const outcome = await this.connectorFlow.connect(connectorId);
+  async connectConnector(
+    connectorId: string,
+    options?: ConnectorConnectOptions
+  ): Promise<ConnectorOutcome> {
+    const outcome = await this.connectorFlow.connect(connectorId, options);
     this.connectorStatusChanged();
     return outcome;
   }
@@ -3856,7 +3860,19 @@ export class ServiceHost {
         : {}),
       // A run may use its own folder without the containment gate asking.
       ...this.routineFolderEnvForSession(sessionId),
+      ...this.sponsoredRunEnvForRoutineSession(sessionId),
     };
+  }
+
+  /** A routine run is its bot's work: while the bot's runs are sponsored, so is the run. */
+  private sponsoredRunEnvForRoutineSession(
+    sessionId: string | undefined
+  ): Record<string, string> {
+    if (sessionId == null) return {};
+    const routineId =
+      this.agentSessionManagerService.get(sessionId)?.routineId ?? null;
+    const botId = routineId != null ? (getJob(routineId)?.botId ?? null) : null;
+    return botId == null ? {} : this.botService.sponsoredRunEnvForBot(botId);
   }
 
   /**

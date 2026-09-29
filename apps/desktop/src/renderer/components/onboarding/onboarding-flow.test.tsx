@@ -4,7 +4,7 @@
  * onboarding-steps.test.ts.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import type { JSX } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -30,6 +30,34 @@ vi.mock("./connectors-step", () => ({
     </div>
   ),
 }));
+
+vi.mock("./gmail-permission-step", () => ({
+  GmailPermissionStep: ({
+    email,
+    onDone,
+  }: {
+    email: string;
+    onDone: (outcome: "connected" | "declined") => void;
+  }) => (
+    <div data-id="onboarding-gmail" data-email={email}>
+      <button data-id="stub-gmail-allow" onClick={() => onDone("connected")} />
+      <button data-id="stub-gmail-not-now" onClick={() => onDone("declined")} />
+    </div>
+  ),
+}));
+
+const connectStart = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
+vi.mock("../connectors/connect-flow", () => ({
+  useConnectFlow: () => ({
+    start: connectStart,
+    cancel: vi.fn(),
+    dialogs: null,
+  }),
+}));
+
+const listConnectorStatuses = vi.hoisted(() =>
+  vi.fn(async () => ({}) as Record<string, { state: string }>)
+);
 
 vi.mock("./provider-setup-step", () => ({
   ProviderSetupStep: ({
@@ -82,7 +110,11 @@ const cancelAbacusAuth = vi.fn(async () => undefined);
 const skipAccountOnboarding = vi.fn(async () => ({ onboarded: true }));
 const switchWorkspace = vi.fn(async () => undefined);
 const getAbacusAccount = vi.fn(
-  async () => ({ subscription_tier: null }) as { subscription_tier: unknown }
+  async () =>
+    ({ subscription_tier: null }) as {
+      subscription_tier: unknown;
+      email?: string;
+    }
 );
 const listModels = vi.fn(async () => [] as unknown[]);
 const addWorkspace = vi.fn(async () => ({
@@ -98,6 +130,9 @@ const signedInSettings = { apiKeys: { ABACUS_API_KEY: "abacus-key" } };
 const { OnboardingFlow } = await import("./onboarding-flow");
 const { durableStorage } = await import("../../lib/durable-storage");
 const { settingsQueryKeys } = await import("../../lib/settings-query-keys");
+
+const has = (id: string): boolean =>
+  document.querySelector(`[data-id="${id}"]`) != null;
 
 const byId = (id: string): HTMLElement => {
   const node = document.querySelector<HTMLElement>(`[data-id="${id}"]`);
@@ -151,6 +186,9 @@ beforeEach(() => {
   getSettings.mockResolvedValue({ apiKeys: {} });
   getAbacusAccount.mockResolvedValue({ subscription_tier: null });
   startAbacusAuth.mockResolvedValue({ ok: true });
+  listConnectorStatuses.mockResolvedValue({});
+  connectStart.mockClear();
+  durableStorage.removeItem("onboarding.gmailOffer");
   browserProfiles = [];
 
   (globalThis.window as unknown as { api: unknown }).api = {
@@ -165,6 +203,7 @@ beforeEach(() => {
       getAbacusAccount,
       listModels,
       switchWorkspace,
+      listConnectorStatuses,
     },
   };
 });
@@ -468,5 +507,65 @@ describe("the sign-in screen", () => {
     expect(byId("onboarding-free-badge").textContent).toContain(
       "onboarding.welcomeFreeBadge"
     );
+  });
+});
+
+describe("the Gmail question", () => {
+  const signedInGmail = async (): Promise<void> => {
+    getAbacusAccount.mockResolvedValue({
+      subscription_tier: null,
+      email: "someone@gmail.com",
+    });
+  };
+
+  it("is asked of a Google-hosted account right after sign-in, before the welcome", async () => {
+    await signedInGmail();
+    getSettings.mockResolvedValue(signedInSettings);
+    mount();
+
+    await waitFor(() => expect(has("onboarding-gmail")).toBe(true));
+    expect(byId("onboarding-gmail").getAttribute("data-email")).toBe(
+      "someone@gmail.com"
+    );
+    expect(has("onboarding-welcome-connected")).toBe(false);
+
+    fireEvent.click(byId("stub-gmail-allow"));
+    await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
+  });
+
+  it("is not asked of another address, nor when Gmail is already connected", async () => {
+    getAbacusAccount.mockResolvedValue({
+      subscription_tier: null,
+      email: "me@company.com",
+    });
+    getSettings.mockResolvedValue(signedInSettings);
+    mount();
+    await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
+    expect(has("onboarding-gmail")).toBe(false);
+    cleanup();
+
+    await signedInGmail();
+    listConnectorStatuses.mockResolvedValue({
+      "abacus-gmailuser": { state: "connected" },
+    });
+    mount();
+    await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
+    expect(has("onboarding-gmail")).toBe(false);
+  });
+
+  it("takes Not now as the answer, and does not ask again", async () => {
+    await signedInGmail();
+    getSettings.mockResolvedValue(signedInSettings);
+    mount();
+    await waitFor(() => expect(has("onboarding-gmail")).toBe(true));
+
+    fireEvent.click(byId("stub-gmail-not-now"));
+    await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
+    expect(durableStorage.getItem("onboarding.gmailOffer")).toBe("declined");
+    cleanup();
+
+    mount();
+    await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
+    expect(has("onboarding-gmail")).toBe(false);
   });
 });

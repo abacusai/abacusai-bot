@@ -14,7 +14,7 @@ import {
   resolveCliModel,
 } from "@earendil-works/pi-coding-agent";
 
-import { abacusV1BaseUrl } from "./abacus-endpoint.js";
+import { abacusV1BaseUrl, sponsoredRunHeaders } from "./abacus-endpoint.js";
 import type { AbacusBotConfig, CustomProviderConfig } from "./config.js";
 import { missingCatalogSupplements } from "./model-catalog.js";
 
@@ -488,6 +488,7 @@ export async function registerAbacusProvider(
   if (apiKey.length === 0) return;
 
   const live = await fetchAbacusCatalog(apiKey);
+  const sponsored = sponsoredRunHeaders();
 
   registry.registerProvider("abacus", {
     name: "Abacus.AI",
@@ -495,6 +496,7 @@ export async function registerAbacusProvider(
     apiKey,
     api: "openai-completions" as const,
     models: live.length > 0 ? live : STATIC_ABACUS_MODELS,
+    ...(Object.keys(sponsored).length > 0 ? { headers: sponsored } : {}),
   });
 }
 

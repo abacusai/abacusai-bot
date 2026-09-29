@@ -2,7 +2,10 @@ import { Check, ExternalLink } from "lucide-react";
 import { useCallback, useRef, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ConnectorOutcome } from "#shared/contracts";
+import type {
+  ConnectorConnectOptions,
+  ConnectorOutcome,
+} from "#shared/contracts";
 import { mcpOAuthRedirectUri } from "#shared/contracts";
 import type { MessagingPlatformId } from "#shared/messaging";
 
@@ -51,7 +54,10 @@ type PairingAsk = {
 
 export interface ConnectFlow {
   /** Run the connector's flow; resolves when it is over, however it ended. */
-  start: (connector: ConnectorDefinition) => Promise<ConnectResult>;
+  start: (
+    connector: ConnectorDefinition,
+    options?: ConnectorConnectOptions
+  ) => Promise<ConnectResult>;
   /**
    * Give up on a browser hop in flight, resolving it as cancelled. Stable
    * across renders, unlike the flow object itself (`dialogs` is fresh JSX
@@ -72,7 +78,10 @@ export const useConnectFlow = (): ConnectFlow => {
   messagingRef.current = messaging;
 
   const start = useCallback(
-    async (connector: ConnectorDefinition): Promise<ConnectResult> => {
+    async (
+      connector: ConnectorDefinition,
+      options?: ConnectorConnectOptions
+    ): Promise<ConnectResult> => {
       const ui = connectUi(connector);
 
       if (ui === "fields") {
@@ -108,8 +117,12 @@ export const useConnectFlow = (): ConnectFlow => {
         }
       }
 
+      // The options travel only when there are some, so a plain click is the
+      // same call it always was.
       return (
-        (await window.api?.agent?.connectConnector?.(connector.id)) ?? {
+        (await (options == null
+          ? window.api?.agent?.connectConnector?.(connector.id)
+          : window.api?.agent?.connectConnector?.(connector.id, options))) ?? {
           ok: false,
           error: "Connecting is not available.",
         }

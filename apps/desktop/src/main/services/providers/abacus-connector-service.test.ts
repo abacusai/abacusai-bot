@@ -286,3 +286,52 @@ describe("coming back from the browser hop", () => {
     expect(bringToFront).not.toHaveBeenCalled();
   });
 });
+
+describe("how the browser hop starts", () => {
+  // The service awaits the open's promise; the module mock's bare vi.fn() has none.
+  const openResolves = async (): Promise<void> => {
+    const { shell } = await import("electron");
+    (
+      shell.openExternal as unknown as {
+        mockResolvedValue: (value: unknown) => void;
+      }
+    ).mockResolvedValue(undefined);
+  };
+  const openedUrl = async (): Promise<URL> => {
+    const { shell } = await import("electron");
+    const calls = (
+      shell.openExternal as unknown as { mock: { calls: string[][] } }
+    ).mock.calls;
+    return new URL(calls[calls.length - 1]?.[0] ?? "");
+  };
+
+  it("asks the connect page to start on load with the account pre-selected", async () => {
+    await openResolves();
+    const hop = startConnectorConnect("gmailuser", {
+      autostart: true,
+      hint: "someone@gmail.com",
+    });
+    await vi.waitFor(async () =>
+      expect((await openedUrl()).searchParams.get("service")).toBe("gmailuser")
+    );
+    const url = await openedUrl();
+    expect(url.pathname).toBe("/chatllm/connect-connector");
+    expect(url.searchParams.get("autostart")).toBe("1");
+    expect(url.searchParams.get("hint")).toBe("someone@gmail.com");
+    cancelConnectorConnect();
+    await hop;
+  });
+
+  it("leaves a plain click alone, and drops a hint that is not an email", async () => {
+    await openResolves();
+    const hop = startConnectorConnect("slack", { hint: "not an email" });
+    await vi.waitFor(async () =>
+      expect((await openedUrl()).searchParams.get("service")).toBe("slack")
+    );
+    const url = await openedUrl();
+    expect(url.searchParams.has("autostart")).toBe(false);
+    expect(url.searchParams.has("hint")).toBe(false);
+    cancelConnectorConnect();
+    await hop;
+  });
+});

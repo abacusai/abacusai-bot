@@ -155,3 +155,33 @@ describe("expandHeaderEnvPlaceholders", () => {
     ).toEqual({ a: "${not_a_var}", b: "${}" });
   });
 });
+
+describe("the sponsored-run marker", () => {
+  it("rides with an expanded credential when the session is sponsored", () => {
+    const result = expandHeaderEnvPlaceholders(
+      { Authorization: "Bearer ${ABACUS_API_KEY}" },
+      TRUSTED,
+      { ...env, ABACUSAI_BOT_SPONSORED_RUN: "cos-first-run" }
+    );
+    expect(result.headers).toEqual({
+      Authorization: "Bearer s3cret",
+      "X-Abacus-Sponsored-Run": "cos-first-run",
+    });
+  });
+
+  it("stays home when no credential went out, and ignores a malformed marker", () => {
+    expect(
+      expandHeaderEnvPlaceholders({ Authorization: "Bearer abc" }, TRUSTED, {
+        ...env,
+        ABACUSAI_BOT_SPONSORED_RUN: "cos-first-run",
+      }).headers
+    ).toEqual({ Authorization: "Bearer abc" });
+    expect(
+      expandHeaderEnvPlaceholders(
+        { Authorization: "Bearer ${ABACUS_API_KEY}" },
+        TRUSTED,
+        { ...env, ABACUSAI_BOT_SPONSORED_RUN: "not a token; drop me" }
+      ).headers
+    ).toEqual({ Authorization: "Bearer s3cret" });
+  });
+});
