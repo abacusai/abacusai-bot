@@ -26,6 +26,7 @@ import {
   useScrollIntoSection,
 } from "../layout/sidebar-scroll";
 import { SidebarSectionLabel } from "../layout/sidebar-section-label";
+import { Button } from "../ui";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -38,6 +39,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "../ui/empty";
 import {
   SidebarGroup,
   SidebarGroupAction,
@@ -211,7 +219,26 @@ export const SessionsTree = (): JSX.Element => {
           {...{ [SIDEBAR_SCROLLER_ATTR]: "" }}
         >
           <div className="pb-1">
-            {sessions.length === 0 ? null : (
+            {sessions.length === 0 ? (
+              <Empty className="py-6">
+                <EmptyHeader>
+                  <EmptyTitle>{t("sessions.emptyTitle")}</EmptyTitle>
+                  <EmptyDescription>
+                    {t("sessions.emptyDescription")}
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button
+                    size="sm"
+                    data-id="new-session-empty-state"
+                    onClick={startNewSession}
+                  >
+                    <Plus />
+                    {t("sessions.newSession")}
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            ) : (
               <SidebarMenu>
                 {pinnedSessions.length > 0 && (
                   <>
