@@ -446,15 +446,16 @@ describe("failures the account owns rather than the model", () => {
     expect(accountWideFailure(failure, "openrouter")).toBeNull();
   });
 
-  it("reads an exhausted Abacus balance as every billed model's failure", () => {
-    // RouteLLM's credit gate refuses each billed model the same way; the $0
-    // preview is the one sibling it still serves, so only the paid tier closes.
+  it("reads an exhausted Abacus balance as the whole account's failure", () => {
+    // RouteLLM's credit gate answers before any model is looked at, so the $0
+    // models are refused with the same sentence as the billed ones: the whole
+    // provider closes, and the chat says the pool is shut rather than busy.
     expect(
       accountWideFailure(
         "429: You have no remaining credits to use the LLM apis.",
         "abacus"
       )
-    ).toEqual({ provider: "abacus", free: false });
+    ).toEqual({ provider: "abacus" });
     expect(accountWideFailure("503: Model is overloaded", "abacus")).toBeNull();
   });
 
@@ -528,7 +529,7 @@ describe("a pool whose account has closed a tier", () => {
     expect(rotation.pick(freeOnly)).toBeUndefined();
   });
 
-  it("hops an out-of-credits Abacus account straight to its $0 model", () => {
+  it("has nothing left on Abacus once the account is out of credits, $0 models included", () => {
     const rotation = new OpenLlmRotation(() => 0);
     const abacus = openLlmCandidates([
       choice({
@@ -545,9 +546,40 @@ describe("a pool whose account has closed a tier", () => {
       }),
     ]);
 
-    rotation.markScopeFailed({ provider: "abacus", free: false });
+    rotation.markScopeFailed({ provider: "abacus" });
 
-    expect(rotation.pick(abacus)?.id).toBe("abacus/stealth/union-alpha");
+    expect(rotation.pick(abacus)).toBeUndefined();
+    expect(rotation.poolShut(abacus)).toBe(true);
+  });
+
+  it("remembers a refused class across sessions, and forgets it with the rest", () => {
+    // The one user who opened sixty sessions against an empty balance: each
+    // new chat has to learn the pool is shut from the store, not by failing.
+    const entries: Record<string, { until: number; failures: number }> = {};
+    const store = {
+      read: () => ({ ...entries }),
+      write: (patch: Record<string, { until: number; failures: number }>) =>
+        Object.assign(entries, patch),
+    };
+    const abacus = openLlmCandidates([
+      choice({
+        id: "abacus/deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+        free: false,
+        poolEligible: true,
+      }),
+    ]);
+
+    new OpenLlmRotation(() => 0, store).markScopeFailed({ provider: "abacus" });
+    expect(entries["scope:abacus:all"]?.until).toBe(
+      OPENLLM_ACCOUNT_COOLDOWN_MS
+    );
+
+    const next = new OpenLlmRotation(() => 1, store);
+    expect(next.poolShut(abacus)).toBe(true);
+
+    next.clearCooldowns();
+    expect(entries["scope:abacus:all"]?.until).toBe(0);
+    expect(new OpenLlmRotation(() => 2, store).poolShut(abacus)).toBe(false);
   });
 
   it("keeps the paid tier, which is a different allowance", () => {
