@@ -1,3 +1,4 @@
+import i18n from "../../i18n";
 import type { ToolRenderItem, ToolRenderState } from "./render-utils";
 
 export type ToolGroupAction =
@@ -61,46 +62,23 @@ function actionCount(
 }
 
 function settledActionLabel(action: ToolGroupAction, count: number): string {
-  switch (action) {
-    case "read":
-      return `Read ${count} ${count === 1 ? "file" : "files"}`;
-    case "edit":
-      return `Changed ${count} ${count === 1 ? "file" : "files"}`;
-    case "command":
-      return `Ran ${count} ${count === 1 ? "command" : "commands"}`;
-    case "search":
-      return `Searched the web ${count} ${count === 1 ? "time" : "times"}`;
-    case "code-search":
-      return `Searched code ${count} ${count === 1 ? "time" : "times"}`;
-    case "other":
-      return `Used ${count} ${count === 1 ? "tool" : "tools"}`;
-  }
+  return i18n.t(`toolSummary.settled.${action}`, { count });
 }
 
 function runningActionLabel(action: ToolGroupAction, count: number): string {
-  switch (action) {
-    case "read":
-      return `Reading ${count} ${count === 1 ? "file" : "files"}`;
-    case "edit":
-      return `Changing ${count} ${count === 1 ? "file" : "files"}`;
-    case "command":
-      return `Running ${count} ${count === 1 ? "command" : "commands"}`;
-    case "search":
-      return `Searching the web ${count} ${count === 1 ? "time" : "times"}`;
-    case "code-search":
-      return `Searching code ${count === 1 ? "" : `${count} times`}`.trim();
-    case "other":
-      return `Using ${count} ${count === 1 ? "tool" : "tools"}`;
-  }
+  return i18n.t(`toolSummary.running.${action}`, { count });
 }
 
 function sentenceJoin(labels: string[]): string {
-  const normalized = labels.map((label, index) =>
-    index === 0 ? label : `${label.charAt(0).toLowerCase()}${label.slice(1)}`
-  );
-  if (normalized.length < 2) return normalized[0] ?? "";
-  if (normalized.length === 2) return normalized.join(" and ");
-  return `${normalized.slice(0, -1).join(", ")}, and ${normalized.at(-1)}`;
+  const normalized = (i18n.language || "en-US").startsWith("en")
+    ? labels.map((label, index) =>
+        index === 0 ? label : label.charAt(0).toLowerCase() + label.slice(1)
+      )
+    : labels;
+  return new Intl.ListFormat(i18n.language || "en-US", {
+    style: "long",
+    type: "conjunction",
+  }).format(normalized);
 }
 
 export function toolGroupState(
@@ -122,7 +100,7 @@ export function toolGroupSummaryKind(
 
 /** Mirrors T3's provider-neutral summary: action and count, never raw arguments. */
 export function summarizeToolGroup(tools: readonly ToolRenderItem[]): string {
-  if (tools.length === 0) return "Using tools";
+  if (tools.length === 0) return i18n.t("toolSummary.empty");
 
   const groups = new Map<ToolGroupAction, ToolRenderItem[]>();
   for (const tool of tools) {

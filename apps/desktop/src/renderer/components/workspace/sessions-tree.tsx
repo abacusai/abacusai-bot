@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { useBotOwnedSessionIds } from "../../hooks/use-bots";
 import { useAllAgentSessionsQuery } from "../../hooks/use-workspace-queries";
+import i18n from "../../i18n";
 import { useSidebarConversationRoute } from "../../lib/sidebar-conversation-route";
 import { useWorkspaceStore } from "../../stores/code-store";
 import { useSidebarAccordion } from "../../stores/sidebar-accordion-store";
@@ -152,7 +153,7 @@ export const SessionsTree = (): JSX.Element => {
       case "daysAgo":
         return t("sessions.daysAgo", { count: bucket.count });
       case "date":
-        return new Date(bucket.at).toLocaleDateString(undefined, {
+        return new Date(bucket.at).toLocaleDateString(i18n.language, {
           month: "short",
           day: "numeric",
           ...(bucket.sameYear ? {} : { year: "numeric" }),

@@ -255,8 +255,12 @@ export const ConnectorFieldsDialog = ({
             className="text-secondary-foreground marker:text-muted-foreground mt-3 list-decimal space-y-1 pl-4 text-xs"
             data-id="connector-credential-setup"
           >
-            {connector.setup.map((step) => (
-              <li key={step}>{step}</li>
+            {connector.setup.map((step, index) => (
+              <li key={step}>
+                {t(`connectorSetup.${connector.id}.step${index}`, {
+                  defaultValue: step,
+                })}
+              </li>
             ))}
           </ol>
         )}
@@ -283,7 +287,9 @@ export const ConnectorFieldsDialog = ({
                   t("connectors.token")
                 : field === "clientId" || field === "clientSecret"
                   ? t(`connectors.${field}`)
-                  : (described?.label ?? field);
+                  : field === "GH_TOKEN"
+                    ? t("connectorSetup.github.tokenLabel")
+                    : (described?.label ?? field);
             // Masked unless the registry says otherwise; undescribed fields
             // default to secret, the safe direction to be wrong in.
             const secret = described == null || described.secret === true;

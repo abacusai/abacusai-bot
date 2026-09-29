@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { type CSSProperties, type JSX, type ReactNode } from "react";
 
+import i18n from "../../i18n";
 import {
   TITLEBAR_END_INSET,
   TITLEBAR_START_INSET,
@@ -27,8 +28,8 @@ export function FocusedTitleBar({
   actions,
   leading,
   startInset = TITLEBAR_START_INSET,
-  actionsLabel = "Page actions",
-  backLabel = "Back",
+  actionsLabel = i18n.t("uiText.pageActions"),
+  backLabel = i18n.t("uiText.back"),
   titleId,
 }: FocusedTitleBarProps): JSX.Element {
   return (

@@ -135,10 +135,7 @@ export const ConnectorsStep = ({
       <div className="flex flex-col items-center text-center">
         {/* No logo or product name: three screens in, the window has said whose it is. */}
         <h1 className="text-foreground text-4xl font-bold tracking-tight text-balance">
-          {t("onboarding.connectorsTitleLead")}{" "}
-          <span className="text-primary">
-            {t("onboarding.connectorsTitleAccent")}
-          </span>
+          {t("onboarding.connectorsTitle")}
           <br />
           {t("onboarding.connectorsSubtitle")}
         </h1>
@@ -157,7 +154,9 @@ export const ConnectorsStep = ({
               key={connector.id}
               data-id={`onboarding-connector-${connector.id}`}
               data-connected={connected ? "" : undefined}
-              title={connector.description}
+              title={t(`connectorDescriptions.${connector.id}`, {
+                defaultValue: connector.description,
+              })}
               className={cn(
                 "border-border bg-card/60 flex flex-col items-center gap-3 rounded-2xl border p-4",
                 connected && "border-primary/50"

@@ -12,6 +12,7 @@ import type {
 } from "#shared/contracts";
 
 import { workspaceConversationTransport } from "../conversation/transport";
+import i18n from "../i18n";
 import { workspaceQueryKeys } from "../lib/query-keys";
 import { useAgentSessionStore } from "../stores/agent-session-store";
 
@@ -77,7 +78,7 @@ export const useCreateSessionMutation = () => {
       const placeholderId = `placeholder-${Date.now()}`;
       const placeholderSession: PlaceholderSession = {
         id: placeholderId,
-        label: "New Chat...",
+        label: i18n.t("uiText.newChat"),
         isLoading: true,
       };
 
@@ -177,7 +178,8 @@ export const useRemoveSessionMutation = (workspaceId: string | null) => {
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      if (workspaceId == null) throw new Error("No workspace selected");
+      if (workspaceId == null)
+        throw new Error(i18n.t("uiText.noWorkspaceSelected"));
       await window.api.agent.stopAgentSession({
         workspaceId,
         sessionId,

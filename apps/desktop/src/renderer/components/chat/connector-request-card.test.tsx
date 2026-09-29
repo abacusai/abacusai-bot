@@ -68,7 +68,7 @@ vi.mock("react-i18next", () => ({
         ? `${key}:${values.provider}`
         : values?.name != null
           ? `${key}:${values.name}`
-          : key,
+          : (values?.defaultValue ?? key),
   }),
 }));
 

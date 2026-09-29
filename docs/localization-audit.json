@@ -1,0 +1,149 @@
+{
+  "date": "2026-09-30",
+  "status": "source fixes and representative macOS visual checks completed; native-speaker review outstanding",
+  "locales": [
+    {
+      "locale": "de-DE",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 63
+    },
+    {
+      "locale": "en-US",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 0
+    },
+    {
+      "locale": "es-419",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 35
+    },
+    {
+      "locale": "es-ES",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 35
+    },
+    {
+      "locale": "fr-FR",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 50
+    },
+    {
+      "locale": "hi-IN",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 24
+    },
+    {
+      "locale": "id-ID",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 43
+    },
+    {
+      "locale": "it-IT",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 38
+    },
+    {
+      "locale": "ja-JP",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 28
+    },
+    {
+      "locale": "ko-KR",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 27
+    },
+    {
+      "locale": "pt-BR",
+      "keys": 2029,
+      "missing": 0,
+      "extra": 0,
+      "approved_identical_values": 38
+    }
+  ],
+  "validation": {
+    "catalog_parity": "passed",
+    "translation_coverage_placeholders_plurals": "passed",
+    "jsx_literal_guard": "passed",
+    "source_stage_tests": {
+      "files": 322,
+      "tests": 2826
+    },
+    "post_visual_targeted_tests": {
+      "files": 11,
+      "tests": 158
+    },
+    "final_layout_targeted_tests": {
+      "files": 3,
+      "tests": 33
+    }
+  },
+  "visual": {
+    "environment": "isolated development Electron profile on macOS; renderer-only preview account fixture",
+    "welcome_locales": [
+      "de-DE",
+      "en-US",
+      "es-419",
+      "es-ES",
+      "fr-FR",
+      "hi-IN",
+      "id-ID",
+      "it-IT",
+      "ja-JP",
+      "ko-KR",
+      "pt-BR"
+    ],
+    "additional_screens": {
+      "ja-JP": [
+        "language menu",
+        "bots home",
+        "routines list and creation modal",
+        "connectors",
+        "models",
+        "tools",
+        "MCP list and add-server dialog"
+      ],
+      "de-DE": [
+        "native menus",
+        "profile/sidebar/composer",
+        "MCP list",
+        "missing-provider error before correction"
+      ],
+      "hi-IN": [
+        "MCP list"
+      ]
+    },
+    "limitations": [
+      "Not every screen in every locale",
+      "No successful authentication or connector/task execution",
+      "Windows/Linux not visually tested",
+      "Some welcome copy corrected after initial screenshots"
+    ]
+  },
+  "intentional_original_language": [
+    "User-authored and generated content",
+    "Executable bot/routine template prompts",
+    "Third-party/provider output",
+    "Chromium/OS-managed control text"
+  ],
+  "translation_quality": "Machine-assisted drafts with manual corrections; structural checks are not native-speaker certification"
+}

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import i18n from "../../i18n";
 import { Button } from "../ui";
 
 /**
@@ -362,7 +363,9 @@ export function CodeDiffFull({
     >
       <span />
       <span>
-        {countMore != null ? `(${countMore} more lines)` : "(more content)"}
+        {countMore != null
+          ? i18n.t("uiText.moreLines", { count: countMore })
+          : i18n.t("uiText.moreContent")}
       </span>
       <Expand />
     </Button>

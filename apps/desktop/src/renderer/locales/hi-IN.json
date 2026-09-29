@@ -6,23 +6,23 @@
     "upToDate": "आप नवीनतम वर्शन पर हैं"
   },
   "apiKeys": {
-    "configured": "Configured",
-    "connectAbacus": "Connect Abacus.AI",
-    "connectOpenRouter": "Connect OpenRouter",
-    "connecting": "Finish signing in in your browser…",
-    "filterPlaceholder": "Search model providers…",
-    "getKey": "Open provider site",
-    "invalidKey": "This does not look like an API key. Paste the key only.",
-    "moreProviders": "Other providers",
-    "noMatches": "No model providers match this search.",
-    "notVerified": "Saved, not checked",
-    "notVerifiedHint": "The app checks this key when you send a message.",
-    "remove": "Remove key",
-    "removeDescription": "Deletes the saved key from ~/.abacusai-bot/config.json. Existing chats keep using it until they are restarted.",
-    "removeTitle": "Remove the {{provider}} key?",
-    "replacePlaceholder": "Paste a new {{provider}} API key to replace the saved one",
-    "saveChanges": "Save",
-    "title": "Models"
+    "configured": "विन्यस्त",
+    "connectAbacus": "Abacus.AI जोड़ें",
+    "connectOpenRouter": "OpenRouter कनेक्ट करें",
+    "connecting": "अपने ब्राउज़र में साइन इन करना समाप्त करें...",
+    "filterPlaceholder": "मॉडल प्रदाता खोजें...",
+    "getKey": "प्रदाता साइट खोलें",
+    "invalidKey": "यह API कुंजी जैसा नहीं दिखता है. केवल कुंजी चिपकाएँ.",
+    "moreProviders": "अन्य प्रदाता",
+    "noMatches": "कोई भी मॉडल प्रदाता इस खोज से मेल नहीं खाता।",
+    "notVerified": "सहेजा गया, जाँचा नहीं गया",
+    "notVerifiedHint": "जब आप कोई संदेश भेजते हैं तो ऐप इस कुंजी की जांच करता है।",
+    "remove": "कुंजी निकालें",
+    "removeDescription": "~/.abacusai-bot/config.json. से सहेजी गई कुंजी को हटा देता है मौजूदा चैट पुनः आरंभ होने तक इसका उपयोग करते रहते हैं।",
+    "removeTitle": "{{provider}} कुंजी निकालें?",
+    "replacePlaceholder": "सहेजी गई कुंजी को बदलने के लिए एक नई {{provider}} API कुंजी चिपकाएँ",
+    "saveChanges": "सहेजें",
+    "title": "मॉडल"
   },
   "artifacts": {
     "columns": {
@@ -30,9 +30,9 @@
       "session": "सत्र",
       "title": "शीर्षक / नाम"
     },
-    "copied": "Copied",
-    "copyPath": "Copy path",
-    "copyUrl": "Copy URL",
+    "copied": "नकल की गई",
+    "copyPath": "पथ कॉपी करें",
+    "copyUrl": "यूआरएल कॉपी करें",
     "emptyDescription": "एजेंट जो फ़ाइलें लिखता है और जो पेज खोलता है, वे यहाँ इकट्ठा होते हैं।",
     "emptyTitle": "अभी कोई आर्टिफ़ैक्ट नहीं",
     "filters": {
@@ -43,21 +43,22 @@
     },
     "itemCount_one": "{{count}} आइटम",
     "itemCount_other": "{{count}} आइटम",
-    "missingFile": "This file is no longer on disk.",
+    "missingFile": "यह फ़ाइल अब डिस्क पर नहीं है.",
     "noMatchesDescription": "कोई दूसरा नाम, पथ या सत्र का शीर्षक आज़माएँ।",
     "noMatchesTitle": "कुछ नहीं मिला",
-    "openedFolder": "Opened in your file manager.",
+    "openedFolder": "आपके फ़ाइल प्रबंधक में खोला गया.",
     "refresh": "रीफ़्रेश करें",
-    "revealInFolder": "Reveal in folder",
+    "revealInFolder": "फ़ोल्डर में प्रकट करें",
     "searchPlaceholder": "आर्टिफ़ैक्ट और सत्र खोजें…",
-    "unknownSession": "हटाया गया सत्र"
+    "unknownSession": "हटाया गया सत्र",
+    "itemCount_many": "{{count}} आइटम"
   },
   "bots": {
-    "avatarColor": "Color",
-    "avatarLabel": "Avatar variant",
-    "botOptions": "Bot options",
+    "avatarColor": "रंग",
+    "avatarLabel": "अवतार संस्करण",
+    "botOptions": "बॉट विकल्प",
     "cancel": "रद्द करें",
-    "changeAvatar": "Try another avatar",
+    "changeAvatar": "कोई अन्य अवतार आज़माएँ",
     "create": "बनाएँ",
     "delete": "हटाएँ",
     "deleteBody": "इससे {{name}} और उसकी चैट हट जाएगी। इसे पूर्ववत नहीं किया जा सकता।",
@@ -73,249 +74,250 @@
     "emptyTitle": "अभी कोई बॉट नहीं",
     "home": {
       "categories": {
-        "featured": "Featured",
-        "finance": "Finance",
-        "marketing": "Marketing",
-        "personal-assistant": "Personal Assistant",
-        "productivity": "Productivity",
-        "recruiting": "Recruiting",
-        "research": "Research",
-        "social-media": "Social Media"
+        "featured": "विशेष रुप से प्रदर्शित",
+        "finance": "वित्त",
+        "marketing": "मार्केटिंग",
+        "personal-assistant": "निजी सहायक",
+        "productivity": "उत्पादकता",
+        "recruiting": "भर्ती",
+        "research": "अनुसंधान",
+        "social-media": "सोशल मीडिया"
       },
-      "categoriesLabel": "Template categories",
-      "createCta": "Create Bot",
+      "categoriesLabel": "टेम्पलेट श्रेणियां",
+      "createCta": "बॉट बनाएं",
       "getStarted": "शुरू करें",
-      "heading": "Create your",
-      "headingAccent": "Bot",
+      "heading": "अपना बनाएं",
+      "headingAccent": "बॉट",
       "namePlaceholder": "नया बॉट",
-      "subtitle": "Name your bot and get started in seconds.",
+      "subtitle": "अपने बॉट को नाम दें और कुछ ही सेकंड में आरंभ करें।",
       "suggestions": "सुझाव",
-      "templatesDivider": "Or start with a template"
+      "templatesDivider": "या एक टेम्पलेट से शुरू करें",
+      "createHeading": "अपना बॉट बनाएँ"
     },
-    "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
-    "modelLabel": "Model",
+    "modelDefault": "ऐप डिफॉल्ट",
+    "modelHelp": "इस बॉट की चैट जिस मॉडल पर चलती है. बॉट सस्ते मॉडल पर अच्छा प्रदर्शन करते हैं: बॉट लूप उनके लिए बनाया गया है।",
+    "modelLabel": "मॉडल",
     "nameLabel": "नाम",
     "namePlaceholder": "जैसे Scout",
     "nameRequired": "नाम आवश्यक है।",
     "newBot": "नया बॉट",
     "newDialog": {
       "checkIn": {
-        "daily": "Daily",
-        "hourly": "Hourly",
-        "off": "Off",
-        "weekdays": "Weekdays",
-        "weekly": "Weekly"
+        "daily": "रोज़",
+        "hourly": "हर घंटे",
+        "off": "बंद",
+        "weekdays": "कार्यदिवस",
+        "weekly": "साप्ताहिक"
       },
-      "checkInDayLabel": "Day",
-      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
-      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
-      "checkInLabel": "Scheduled check-ins",
-      "checkInRoutineName": "{{name}} check-in",
-      "checkInTimeLabel": "Time",
-      "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Keeps track of my research topics",
-      "instructionsLabel": "Instructions",
-      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
-      "moreOptions": "More options: description, scheduled check-ins, model",
-      "namePlaceholder": "Research Buddy",
-      "title": "New bot"
+      "checkInDayLabel": "दिन",
+      "checkInError": "बॉट बनाया गया था, लेकिन इसका चेक-इन शेड्यूल नहीं किया जा सका। रूटीन के अंतर्गत एक जोड़ें.",
+      "checkInHelp": "बॉट इस शेड्यूल पर जागता है और आपको सक्रिय रूप से संदेश भेजता है।",
+      "checkInLabel": "अनुसूचित चेक-इन",
+      "checkInRoutineName": "{{name}} की नियमित जाँच",
+      "checkInTimeLabel": "समय",
+      "descriptionLabel": "विवरण (वैकल्पिक)",
+      "descriptionPlaceholder": "मेरे शोध विषयों पर नज़र रखता है",
+      "instructionsLabel": "अनुदेश",
+      "instructionsPlaceholder": "आप एक तेज़, संक्षिप्त शोध सहायक हैं। मेरे द्वारा उल्लिखित विषयों को ट्रैक करें और सक्रिय रूप से अपडेट पेश करें।",
+      "moreOptions": "अधिक विकल्प: विवरण, निर्धारित चेक-इन, मॉडल",
+      "namePlaceholder": "अनुसंधान मित्र",
+      "title": "नया बॉट"
     },
     "openError": "बॉट की चैट नहीं खुल सकी।",
-    "personaLabel": "Persona",
-    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
-    "pin": "Pin",
-    "pinned": "Pinned",
+    "personaLabel": "व्यक्तित्व",
+    "personaPlaceholder": "शुष्क बुद्धि, क्रूरतापूर्वक संक्षिप्त, मुझे \"बॉस\" कहता है, एक एकल इमोजी के साथ खुलता है",
+    "pin": "पिन करें",
+    "pinned": "पिन किया गया",
     "save": "सहेजें",
     "saveError": "बॉट सहेजा नहीं जा सका।",
     "senderChat": "{{platform}} पर {{sender}} के साथ स्वतः-उत्तर चैट",
     "senderChatReadOnly": "स्वतः-उत्तर वार्तालाप: {{bot}} यहाँ आपकी ओर से {{sender}} को उत्तर देता है। आप देख सकते हैं पर लिख नहीं सकते; बदलाव के लिए {{bot}} को उसकी अपनी चैट में बताएँ।",
     "templates": {
       "appointment-assistant": {
-        "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
-        "name": "Appointment Assistant"
+        "description": "तैयारी, अनुस्मारक और पुनर्निर्धारण के माध्यम से पुष्टि से लेकर नियुक्तियों को व्यवस्थित रखता है।",
+        "name": "नियुक्ति सहायक"
       },
       "bills-renewal-watch": {
-        "description": "Catches upcoming bills, renewals, free-trial endings, and price increases before they surprise you.",
-        "name": "Bills & Renewal Watch"
+        "description": "इससे पहले कि वे आपको आश्चर्यचकित कर दें, आगामी बिलों, नवीनीकरणों, निःशुल्क-परीक्षण की समाप्ति और मूल्य वृद्धि को पकड़ लें।",
+        "name": "बिल और नवीनीकरण देखें"
       },
       "calendar-concierge": {
-        "description": "Handles scheduling back-and-forth and finds meeting times that actually fit your day.",
-        "name": "Calendar Concierge"
+        "description": "आगे-पीछे शेड्यूलिंग को संभालता है और मीटिंग के ऐसे समय ढूंढता है जो वास्तव में आपके दिन के लिए उपयुक्त हों।",
+        "name": "कैलेंडर दरबान"
       },
       "campaign-performance-digest": {
-        "description": "Turns campaign numbers into a short weekly read on what worked, what did not, and what to try next.",
-        "name": "Campaign Performance Digest"
+        "description": "क्या काम किया, क्या नहीं किया और आगे क्या प्रयास करना है, इस पर अभियान संख्याओं को एक संक्षिप्त साप्ताहिक पठन में बदल देता है।",
+        "name": "अभियान प्रदर्शन डाइजेस्ट"
       },
       "candidate-follow-up": {
-        "description": "Keeps candidates from falling through the cracks when feedback, scheduling, or next steps stall.",
-        "name": "Candidate Follow-Up"
+        "description": "फीडबैक, शेड्यूलिंग या अगले चरण रुकने पर उम्मीदवारों को मुश्किल में पड़ने से बचाता है।",
+        "name": "उम्मीदवार अनुवर्ती"
       },
       "candidate-sourcer": {
-        "description": "Finds candidates with clear job-relevant evidence and prepares personalized outreach for recruiter review.",
-        "name": "Candidate Sourcer"
+        "description": "स्पष्ट नौकरी-प्रासंगिक साक्ष्य वाले उम्मीदवारों को ढूँढता है और भर्तीकर्ता समीक्षा के लिए व्यक्तिगत आउटरीच तैयार करता है।",
+        "name": "उम्मीदवार स्रोत्र"
       },
       "chief-of-staff": {
         "description": "मेल, कैलेंडर और Slack में आपका दिन संभालता है और फ़ैसलों के लिए आपसे पूछता है।",
         "name": "चीफ़ ऑफ़ स्टाफ़"
       },
       "comment-mention-assistant": {
-        "description": "Helps you respond quickly to the social comments and mentions that are actually worth your time.",
-        "name": "Comment & Mention Assistant"
+        "description": "आपको उन सामाजिक टिप्पणियों और उल्लेखों पर तुरंत प्रतिक्रिया देने में मदद करता है जो वास्तव में आपके समय के लायक हैं।",
+        "name": "टिप्पणी एवं उल्लेख सहायक"
       },
       "competitor-campaign-watch": {
-        "description": "Tracks how competitors are positioning themselves and what campaigns they are pushing right now.",
-        "name": "Competitor Campaign Watch"
+        "description": "यह ट्रैक करता है कि प्रतिस्पर्धी अपनी स्थिति किस प्रकार बना रहे हैं और वे अभी कौन से अभियान चला रहे हैं।",
+        "name": "प्रतियोगी अभियान देखें"
       },
       "competitor-watch": {
-        "description": "Tracks meaningful competitor moves without flooding you with every small update.",
-        "name": "Competitor Watch"
+        "description": "हर छोटे अपडेट से आपको प्रभावित किए बिना प्रतिस्पर्धी की सार्थक गतिविधियों को ट्रैक करता है।",
+        "name": "प्रतियोगी घड़ी"
       },
       "content-calendar-manager": {
-        "description": "Keeps your content pipeline full and moving from idea to draft to publish-ready.",
-        "name": "Content Calendar Manager"
+        "description": "आपकी सामग्री पाइपलाइन को पूर्ण रखता है और विचार से ड्राफ्ट और प्रकाशन के लिए तैयार रखता है।",
+        "name": "सामग्री कैलेंडर प्रबंधक"
       },
       "content-repurposer": {
-        "description": "Turns one strong idea into platform-native X and LinkedIn content without sounding copy-pasted.",
-        "name": "Content Repurposer"
+        "description": "कॉपी-पेस्ट किए बिना एक मजबूत विचार को प्लेटफ़ॉर्म-नेटिव X और LinkedIn सामग्री में बदल देता है।",
+        "name": "सामग्री पुनरुत्पादक"
       },
       "customer-voice-miner": {
-        "description": "Turns real customer language from Gmail, Slack, and docs into sharper messaging and content ideas.",
-        "name": "Customer Voice Miner"
+        "description": "Gmail, Slack और दस्तावेज़ों से वास्तविक ग्राहक भाषा को तीव्र संदेश और सामग्री विचारों में बदल देता है।",
+        "name": "ग्राहक आवाज खान में काम करनेवाला"
       },
       "daily-focus-planner": {
-        "description": "Turns your meetings, messages, and deadlines into a realistic plan for the day.",
-        "name": "Daily Focus Planner"
+        "description": "आपकी बैठकों, संदेशों और समय-सीमाओं को दिन के लिए एक यथार्थवादी योजना में बदल देता है।",
+        "name": "दैनिक फोकस योजनाकार"
       },
       "daily-post-writer": {
-        "description": "Finds one thing worth saying today and turns it into a polished post in your voice.",
-        "name": "Daily Post Writer"
+        "description": "आज कहने लायक एक बात ढूंढता हूं और उसे अपनी आवाज में एक बेहतरीन पोस्ट में बदल देता हूं।",
+        "name": "दैनिक पोस्ट लेखक"
       },
       "daily-stock-recommender": {
-        "description": "Surfaces a few stocks worth researching today with the thesis, catalyst, risks, and downside case.",
-        "name": "Daily Stock Recommender"
+        "description": "थीसिस, उत्प्रेरक, जोखिम और नकारात्मक पक्ष के मामले के साथ आज शोध करने लायक कुछ स्टॉक सामने आए हैं।",
+        "name": "दैनिक स्टॉक अनुशंसाकर्ता"
       },
       "decision-researcher": {
-        "description": "Compares your real options on the criteria that matter and recommends the strongest choice.",
-        "name": "Decision Researcher"
+        "description": "महत्वपूर्ण मानदंडों के आधार पर आपके वास्तविक विकल्पों की तुलना करता है और सबसे मजबूत विकल्प की अनुशंसा करता है।",
+        "name": "निर्णय शोधकर्ता"
       },
       "deep-researcher": {
-        "description": "Turns a complex question into a decision-ready brief with evidence, uncertainty, and sources.",
-        "name": "Deep Researcher"
+        "description": "एक जटिल प्रश्न को साक्ष्य, अनिश्चितता और स्रोतों के साथ निर्णय के लिए तैयार संक्षिप्त में बदल देता है।",
+        "name": "गहन शोधकर्ता"
       },
       "discord-agent": {
-        "description": "Your agent in Discord - DM it or add it to a server",
-        "name": "Discord Agent"
+        "description": "Discord में आपका एजेंट - इसे डीएम करें या सर्वर में जोड़ें",
+        "name": "Discord एजेंट"
       },
       "earnings-watch": {
-        "description": "Tracks upcoming earnings and explains the numbers, surprises, guidance, and what changed after results.",
-        "name": "Earnings Watch"
+        "description": "आगामी आय को ट्रैक करता है और संख्याओं, आश्चर्यों, मार्गदर्शन और परिणामों के बाद क्या बदलाव आया, इसकी व्याख्या करता है।",
+        "name": "कमाई पर नजर"
       },
       "email-drafting": {
-        "description": "Finds emails that need a response and creates clear, context-aware Gmail drafts in your voice.",
-        "name": "Email Drafting"
+        "description": "ऐसे ईमेल ढूंढता है जिनके लिए प्रतिक्रिया की आवश्यकता होती है और आपकी आवाज़ में स्पष्ट, संदर्भ-जागरूक Gmail ड्राफ्ट बनाता है।",
+        "name": "ईमेल प्रारूपण"
       },
       "follow-up-tracker": {
-        "description": "Tracks who owes you a reply, who you owe, and when it is time to follow up.",
-        "name": "Follow-Up Tracker"
+        "description": "यह ट्रैक करता है कि आपको किसे उत्तर देना है, आपको किसे उत्तर देना है और अनुवर्ती कार्रवाई करने का समय कब है।",
+        "name": "अनुवर्ती ट्रैकर"
       },
       "hiring-manager-brief": {
-        "description": "Prepares the hiring manager before each interview with the role, candidate context, and areas to probe.",
-        "name": "Hiring Manager Brief"
+        "description": "प्रत्येक साक्षात्कार से पहले भर्ती प्रबंधक को भूमिका, उम्मीदवार के संदर्भ और जांच के क्षेत्रों के बारे में तैयार करता है।",
+        "name": "नियुक्ति प्रबंधक संक्षिप्त"
       },
       "inbox-to-calendar": {
-        "description": "Turns confirmed plans in Gmail into clean Google Calendar events so important dates never get lost.",
-        "name": "Inbox to Calendar"
+        "description": "Gmail में पुष्टि की गई योजनाओं को साफ़ Google Calendar इवेंट में बदल देता है ताकि महत्वपूर्ण तिथियां कभी नष्ट न हों।",
+        "name": "कैलेंडर में इनबॉक्स करें"
       },
       "interview-coordinator": {
-        "description": "Handles interview scheduling across candidates and interviewers without endless back-and-forth.",
-        "name": "Interview Coordinator"
+        "description": "बिना किसी अंतहीन उतार-चढ़ाव के उम्मीदवारों और साक्षात्कारकर्ताओं के बीच साक्षात्कार शेड्यूल को संभालता है।",
+        "name": "साक्षात्कार समन्वयक"
       },
       "knowledge-finder": {
-        "description": "Finds the answer buried in your Gmail, Slack, or Google Drive history.",
-        "name": "Knowledge Finder"
+        "description": "आपके Gmail, Slack, या Google Drive इतिहास में छिपा हुआ उत्तर ढूंढता है।",
+        "name": "ज्ञान खोजक"
       },
       "launch-command-center": {
-        "description": "Keeps a launch moving by surfacing blockers, missing approvals, and commitments before they slip.",
-        "name": "Launch Command Center"
+        "description": "लॉन्च को फिसलने से पहले अवरोधकों, अनुपलब्ध अनुमोदनों और प्रतिबद्धताओं को सामने लाकर गतिशील बनाए रखता है।",
+        "name": "कमांड सेंटर लॉन्च करें"
       },
       "meeting-notes-actions": {
-        "description": "Turns meeting notes into decisions, owners, deadlines, and follow-ups you can act on.",
-        "name": "Meeting Notes & Actions"
+        "description": "मीटिंग नोट्स को निर्णयों, मालिकों, समय-सीमाओं और अनुवर्ती कार्रवाई में बदल देता है, जिस पर आप कार्रवाई कर सकते हैं।",
+        "name": "मीटिंग नोट्स एवं क्रियाएँ"
       },
       "meeting-prep-bot": {
-        "description": "Creates a one-page meeting brief with the context, open issues, and questions you need before the call.",
-        "name": "Meeting Prep Bot"
+        "description": "कॉल से पहले संदर्भ, खुले मुद्दों और आपके लिए आवश्यक प्रश्नों के साथ एक पेज की मीटिंग संक्षिप्त जानकारी तैयार करता है।",
+        "name": "प्रेप बॉट से मिलना"
       },
       "morning-brief": {
-        "description": "Starts your day with meetings, urgent messages, priorities, and the news worth knowing.",
-        "name": "Morning Brief"
+        "description": "आपके दिन की शुरुआत बैठकों, अत्यावश्यक संदेशों, प्राथमिकताओं और जानने योग्य समाचारों के साथ होती है।",
+        "name": "सुबह की संक्षिप्त जानकारी"
       },
       "news-radar": {
-        "description": "Delivers the most important developments from the last 24 hours without the duplicate headlines and noise.",
-        "name": "News Radar"
+        "description": "डुप्लिकेट हेडलाइंस और शोर के बिना पिछले 24 घंटों के सबसे महत्वपूर्ण घटनाक्रमों को प्रस्तुत करता है।",
+        "name": "समाचार राडार"
       },
       "personal-admin": {
-        "description": "Handles the life-admin sitting in your inbox: forms, renewals, appointments, and follow-ups.",
-        "name": "Personal Admin"
+        "description": "आपके इनबॉक्स में बैठे जीवन-व्यवस्थापक को संभालता है: फॉर्म, नवीनीकरण, नियुक्तियाँ और अनुवर्ती कार्रवाई।",
+        "name": "व्यक्तिगत व्यवस्थापक"
       },
       "portfolio-pulse": {
-        "description": "Alerts you only when something materially changes the story for a stock you care about.",
-        "name": "Portfolio Pulse"
+        "description": "आपको केवल तभी सचेत करता है जब कोई चीज़ उस स्टॉक की कहानी को भौतिक रूप से बदल देती है जिसकी आप परवाह करते हैं।",
+        "name": "पोर्टफोलियो पल्स"
       },
       "project-pulse": {
-        "description": "Gives you a clean project status without making you chase people for updates.",
-        "name": "Project Pulse"
+        "description": "आपको अपडेट के लिए लोगों का पीछा किए बिना एक स्वच्छ परियोजना का दर्जा देता है।",
+        "name": "प्रोजेक्ट पल्स"
       },
       "research-paper-scout": {
-        "description": "Finds new papers worth reading and explains the contribution without making you read every abstract.",
-        "name": "Research Paper Scout"
+        "description": "पढ़ने लायक नए पेपर ढूंढ़ता है और हर सार को आपको पढ़ाए बिना योगदान की व्याख्या करता है।",
+        "name": "शोध पत्र स्काउट"
       },
       "resume-review-assistant": {
-        "description": "Maps each resume to the job requirements so a recruiter can review the evidence consistently.",
-        "name": "Resume Review Assistant"
+        "description": "प्रत्येक बायोडाटा को नौकरी की आवश्यकताओं के अनुसार मैप करता है ताकि एक भर्तीकर्ता लगातार साक्ष्य की समीक्षा कर सके।",
+        "name": "समीक्षा सहायक फिर से शुरू करें"
       },
       "social-inbox-manager": {
-        "description": "Pulls important comments, mentions, and DMs to the top so high-value conversations do not get missed.",
-        "name": "Social Inbox Manager"
+        "description": "महत्वपूर्ण टिप्पणियों, उल्लेखों और डीएम को शीर्ष पर खींचता है ताकि उच्च-मूल्य वाली बातचीत छूट न जाए।",
+        "name": "सामाजिक इनबॉक्स प्रबंधक"
       },
       "spending-digest": {
-        "description": "Turns Gmail receipts into a simple weekly spending summary and flags unusual purchases.",
-        "name": "Spending Digest"
+        "description": "Gmail रसीदों को एक साधारण साप्ताहिक खर्च सारांश में बदल देता है और असामान्य खरीदारी को चिह्नित करता है।",
+        "name": "व्यय डाइजेस्ट"
       },
       "telegram-agent": {
-        "description": "Your agent in Telegram - message it anytime",
-        "name": "Telegram Agent"
+        "description": "Telegram में आपका एजेंट - इसे किसी भी समय संदेश भेजें",
+        "name": "Telegram एजेंट"
       },
       "travel-planner": {
-        "description": "Turns your bookings and preferences into a realistic day-by-day trip plan.",
-        "name": "Travel Planner"
+        "description": "आपकी बुकिंग और प्राथमिकताओं को यथार्थवादी दिन-प्रतिदिन की यात्रा योजना में बदल देता है।",
+        "name": "यात्रा योजनाकार"
       },
       "trend-scout": {
-        "description": "Finds fast-growing conversations in your niche and gives you an original angle before everyone piles in.",
-        "name": "Trend Scout"
+        "description": "आपके क्षेत्र में तेजी से बढ़ती बातचीत ढूंढता है और हर किसी के ढेर होने से पहले आपको एक मूल दृष्टिकोण देता है।",
+        "name": "ट्रेंड स्काउट"
       },
       "weekly-review": {
-        "description": "Closes the week with what moved forward, what slipped, and what matters next.",
-        "name": "Weekly Review"
+        "description": "क्या आगे बढ़ा, क्या फिसला, और आगे क्या मायने रखता है, इसके साथ सप्ताह का समापन होता है।",
+        "name": "साप्ताहिक समीक्षा"
       },
       "whats-hot": {
-        "description": "Finds fast-rising stories and conversations across the internet before they become old news.",
-        "name": "What's Hot?"
+        "description": "इससे पहले कि वे पुरानी ख़बरें बन जाएँ, इंटरनेट पर तेज़ी से उभरती कहानियाँ और बातचीत ढूँढता है।",
+        "name": "नवीनतम क्या है?"
       },
       "whatsapp-agent": {
-        "description": "Your agent in WhatsApp - message it anytime",
-        "name": "WhatsApp Agent"
+        "description": "WhatsApp में आपका एजेंट - इसे किसी भी समय संदेश भेजें",
+        "name": "WhatsApp एजेंट"
       }
     },
     "title": "बॉट",
     "titleLabel": "भूमिका",
     "titlePlaceholder": "जैसे Research Scout",
-    "unpin": "Unpin",
+    "unpin": "पिन हटाएँ",
     "viewBots": "बॉट",
     "viewSessions": "सत्र",
-    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnly": "यह वार्तालाप {{app}} में रहता है। वहां Abacus AI bot संदेश भेजें। आप और बॉट जो कुछ भी कहते हैं वह यहां दिखाई देता है।",
+    "channelChatReadOnlyWhatsapp": "यह वार्तालाप WhatsApp में रहता है। वहां अपने \"स्वयं को संदेश भेजें\" चैट से स्वयं को संदेश भेजें। आप और बॉट जो कुछ भी कहते हैं वह यहां दिखाई देता है।"
   },
   "browserPermission": {
     "allow": "अनुमति दें",
@@ -332,19 +334,19 @@
     "approvalSubtitle": "चुनें कि एजेंट ब्राउज़ करने से पहले स्वीकृति मांगे या नहीं।",
     "approvalTitle": "अनुमोदन",
     "chrome": {
-      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
-      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
-      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
-      "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
-      "install": "Install the extension",
-      "connect": "Connect",
-      "disconnect": "Disconnect",
-      "tokenTitle": "Extension token",
-      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
-      "tokenSave": "Save token",
-      "tokenSaved": "Token saved.",
-      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+      "notFound": "इस कंप्यूटर पर Google Chrome या Microsoft Edge नहीं मिला.",
+      "extensionMissing": "एजेंट को इसे चलाने देने के लिए {{browser}} में Playwright एक्सटेंशन इंस्टॉल करें।",
+      "ready": "{{browser}} तैयार है. अभी कनेक्ट करें, या एजेंट का पहला ब्राउज़र कार्य {{browser}} में पूछेगा।",
+      "connecting": "आपके ब्राउज़र में कनेक्शन की अनुमति देने की प्रतीक्षा की जा रही है...",
+      "connected": "{{browser}} से कनेक्टेड: AbacusAI Bot समूह में {{count}} टैब(टैबों)।",
+      "install": "एक्सटेंशन इंस्टॉल करें",
+      "connect": "कनेक्ट करें",
+      "disconnect": "डिस्कनेक्ट करें",
+      "tokenTitle": "एक्सटेंशन टोकन",
+      "tokenPlaceholder": "अनुमति पृष्ठ को छोड़ने के लिए एक्सटेंशन का टोकन चिपकाएँ",
+      "tokenSave": "टोकन सहेजें",
+      "tokenSaved": "टोकन सहेजा गया.",
+      "tokenHint": "वैकल्पिक। टोकन एक्सटेंशन के अनुमति पृष्ठ पर दिखाया गया है; इसे सहेजने पर, ऐप हर बार बिना पूछे कनेक्ट हो जाता है।"
     },
     "clearAction": "सभी ब्राउज़िंग डेटा साफ़ करें",
     "clearSubtitle": "इन-ऐप ब्राउज़र से साइट डेटा और कैश साफ़ करें",
@@ -353,21 +355,21 @@
     "dataSection": "डेटा",
     "done": "पूर्ण",
     "engine": {
-      "builtin": "Built-in browser",
-      "chrome": "My Chrome"
+      "builtin": "अंतर्निर्मित ब्राउज़र",
+      "chrome": "मेरा क्रोम"
     },
-    "engineSection": "Which browser",
-    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
-    "engineTitle": "Browser the agent uses",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page",
+    "engineSection": "कौन सा ब्राउज़र",
+    "engineSubtitle": "ऐप का अपना ब्राउज़र, या आपके लॉगिन और टैब वाला आपका Chrome।",
+    "engineTitle": "एजेंट जिस ब्राउज़र का उपयोग करता है",
+    "homepageInvalid": "एक वैध वेब पता दर्ज करें.",
+    "homepageSave": "सहेजें",
+    "homepageSaved": "होम पेज सहेजा गया.",
+    "homepageTitle": "होम पेज",
     "masterSubtitle": "एजेंट को अंतर्निहित ब्राउज़र नियंत्रित करने दें",
-    "masterTitle": "Browser",
+    "masterTitle": "ब्राउज़र",
     "permissionsSection": "अनुमतियाँ",
     "subtitle": "एजेंट के बिल्ट-इन ब्राउज़र को प्रबंधित करें।",
-    "title": "Browser"
+    "title": "ब्राउज़र"
   },
   "capabilities": {
     "skills": {
@@ -375,34 +377,34 @@
       "emptyTitle": "अभी कोई skill नहीं"
     },
     "tabs": {
-      "label": "Capabilities",
+      "label": "क्षमताएँ",
       "mcp": "MCP",
       "connectors": "कनेक्टर",
-      "skills": "Skills",
+      "skills": "कौशल",
       "tools": "टूल"
     },
     "toolDescriptions": {
-      "ast_edit": "Structural search-and-replace that cannot break the syntax.",
+      "ast_edit": "संरचनात्मक खोज-और-प्रतिस्थापन जो वाक्यविन्यास को तोड़ नहीं सकता।",
       "bash": "वर्कस्पेस में शेल कमांड चलाएँ।",
-      "batch_edit": "Change several places in one file in a single edit.",
-      "batch_file_read": "Read several files in one go.",
-      "bfl_flux3_get_result": "Check whether a submitted job has finished.",
-      "bfl_flux3_image_to_video": "Start a video generation from a still image.",
-      "bfl_flux3_keyframes_to_video": "Start a video generation from keyframes.",
-      "bfl_flux3_prompting_guide": "Read the prompting guide for better results.",
-      "bfl_flux3_text_to_video": "Start a video generation from a prompt.",
-      "bfl_flux3_video_continuation": "Continue an existing video.",
+      "batch_edit": "एक ही संपादन में एक फ़ाइल में कई स्थान बदलें।",
+      "batch_file_read": "एक बार में कई फ़ाइलें पढ़ें.",
+      "bfl_flux3_get_result": "जांचें कि सबमिट किया गया कार्य समाप्त हो गया है या नहीं।",
+      "bfl_flux3_image_to_video": "स्थिर छवि से वीडियो निर्माण प्रारंभ करें.",
+      "bfl_flux3_keyframes_to_video": "कीफ़्रेम से वीडियो निर्माण प्रारंभ करें.",
+      "bfl_flux3_prompting_guide": "बेहतर परिणामों के लिए प्रॉम्प्टिंग गाइड पढ़ें।",
+      "bfl_flux3_text_to_video": "एक प्रॉम्प्ट से वीडियो जनरेशन प्रारंभ करें.",
+      "bfl_flux3_video_continuation": "मौजूदा वीडियो जारी रखें.",
       "browser_execute": "खुले पेज पर JavaScript चलाएँ।",
       "browser_interact": "पेज पर क्लिक, टाइप, स्क्रॉल या होवर करें।",
       "browser_navigate": "बिल्ट-इन ब्राउज़र में कोई URL खोलें।",
       "browser_snapshot": "पेज को इंटरैक्टिव एलिमेंट की सूची के रूप में पढ़ें।",
-      "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
-      "code_map": "Index the functions and classes in a file or folder.",
-      "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",
-      "cronjob": "Create, list, pause, or run scheduled tasks.",
-      "deck_export_pdf": "Render an HTML slide deck to PDF, one page per slide.",
-      "delegate_task": "Hand a piece of work to a sub-agent.",
-      "design": "Design screens and export them as mockups.",
+      "browser_task": "संपूर्ण वेब कार्य ब्राउज़र उप-एजेंट को सौंपें और उत्तर वापस प्राप्त करें।",
+      "code_map": "किसी फ़ाइल या फ़ोल्डर में फ़ंक्शंस और कक्षाओं को अनुक्रमित करें।",
+      "connect_connector": "उपयोगकर्ता को Gmail या Slack जैसी सेवा संलग्न करने के लिए कहें, ताकि उसके उपकरण उपलब्ध हो जाएं।",
+      "cronjob": "निर्धारित कार्य बनाएं, सूचीबद्ध करें, रोकें या चलाएं।",
+      "deck_export_pdf": "एक HTML स्लाइड डेक को पीडीएफ में प्रस्तुत करें, प्रति स्लाइड एक पेज।",
+      "delegate_task": "किसी उप-एजेंट को कोई कार्य सौंपें।",
+      "design": "स्क्रीन डिज़ाइन करें और उन्हें मॉकअप के रूप में निर्यात करें।",
       "device_app": "ऐप इंस्टॉल, लॉन्च, बंद या अनइंस्टॉल करें।",
       "device_boot": "सिम्युलेटर या एमुलेटर शुरू करें।",
       "device_build": "लक्ष्य प्लेटफ़ॉर्म के लिए वर्कस्पेस बिल्ड करें।",
@@ -412,309 +414,310 @@
       "device_screenshot": "डिवाइस की स्क्रीन को इमेज के रूप में कैप्चर करें।",
       "device_shutdown": "चल रहे सिम्युलेटर या एमुलेटर को बंद करें।",
       "device_snapshot": "स्क्रीन को एलिमेंट की सूची के रूप में पढ़ें।",
-      "disconnect_connector": "Detach a connected service's account.",
+      "disconnect_connector": "किसी कनेक्टेड सेवा का खाता अलग करें.",
       "discord_auto_reply": "चुने हुए लोगों के Discord संदेशों का स्वतः उत्तर दें (केवल बॉट)।",
-      "document": "Write a document and print it as a PDF.",
+      "document": "एक दस्तावेज़ लिखें और इसे पीडीएफ के रूप में प्रिंट करें।",
       "edit": "फ़ाइल के अंदर ठीक वही टेक्स्ट बदलें।",
-      "exit_plan_mode": "Ask to leave plan mode and start carrying out the plan.",
-      "fetch_background_output": "Read what a background command has printed, while it runs or after it finishes.",
+      "exit_plan_mode": "योजना मोड छोड़ने और योजना को क्रियान्वित करना शुरू करने के लिए कहें।",
+      "fetch_background_output": "पढ़ें कि बैकग्राउंड कमांड ने चलने के दौरान या समाप्त होने के बाद क्या प्रिंट किया है।",
       "glob": "नाम के पैटर्न से फ़ाइलें ढूँढें।",
       "grep": "रेगुलर एक्सप्रेशन से फ़ाइलों की सामग्री खोजें।",
-      "ha_call_service": "Call a service to change something.",
-      "ha_get_state": "Read the current state of an entity.",
-      "ha_list_entities": "List Home Assistant entities.",
-      "ha_list_services": "List the services that can be called.",
-      "image_generate": "Generate an image from a prompt.",
-      "kill_process": "Stop a command running in the background.",
+      "ha_call_service": "कुछ बदलने के लिए किसी सेवा को कॉल करें।",
+      "ha_get_state": "किसी इकाई की वर्तमान स्थिति पढ़ें.",
+      "ha_list_entities": "Home Assistant इकाइयों की सूची बनाएं।",
+      "ha_list_services": "उन सेवाओं की सूची बनाएं जिन्हें कॉल किया जा सकता है।",
+      "image_generate": "प्रॉम्प्ट से एक छवि उत्पन्न करें.",
+      "kill_process": "पृष्ठभूमि में चल रहे किसी आदेश को रोकें.",
       "list_discord_chats": "Discord की चैट और संपर्क सूचीबद्ध करें।",
       "list_telegram_chats": "Telegram की चैट और संपर्क सूचीबद्ध करें।",
       "list_whatsapp_chats": "WhatsApp की चैट और संपर्क सूचीबद्ध करें।",
       "ls": "किसी डायरेक्टरी की सामग्री सूचीबद्ध करें।",
-      "memory": "Save and recall notes that outlive the session.",
-      "pdf": "Write, read, merge, split or fill a PDF.",
-      "ppt": "Build a slide deck from a brief and save it as a PDF.",
-      "present_deliverable": "Present the finished files, most important first, and open the top one.",
+      "memory": "सत्र से अधिक समय तक जीवित रहने वाले नोट्स को सहेजें और याद रखें।",
+      "pdf": "पीडीएफ पढ़ें, मर्ज करें, विभाजित करें, वॉटरमार्क करें, भरें या दोबारा प्रिंट करें।",
+      "ppt": "एक प्रेजेंटेशन बनाएं और इसे पीडीएफ के रूप में प्रिंट करें।",
+      "present_deliverable": "सबसे महत्वपूर्ण, सबसे पहले तैयार फ़ाइलें प्रस्तुत करें और सबसे ऊपर वाली फ़ाइलें खोलें।",
       "read": "डिस्क से कोई फ़ाइल पढ़ें।",
       "read_discord_messages": "अनुरोध पर हाल के Discord संदेश पढ़ें।",
-      "read_output": "Read back output that was too large to show in full.",
+      "read_output": "आउटपुट को वापस पढ़ें जो पूरा दिखाने के लिए बहुत बड़ा था।",
       "read_telegram_messages": "अनुरोध पर हाल के Telegram संदेश पढ़ें।",
       "read_whatsapp_messages": "अनुरोध पर हाल के WhatsApp संदेश पढ़ें।",
-      "run_tests": "Run the project's tests and report what passed and failed.",
+      "run_tests": "प्रोजेक्ट के परीक्षण चलाएँ और रिपोर्ट करें कि क्या उत्तीर्ण हुआ और क्या अनुत्तीर्ण हुआ।",
       "send_discord_message": "Discord पर संदेश भेजें।",
       "send_telegram_message": "Telegram पर संदेश भेजें।",
       "send_whatsapp_message": "WhatsApp पर संदेश भेजें।",
       "serve": "लिखे गए वेब पेज को खोलने के लिए एक फ़ोल्डर को http पर सर्व करें।",
-      "session_search": "Search past conversations.",
-      "skill_add": "Install a skill from the marketplace.",
-      "skill_manage": "Create, edit, or remove a skill.",
-      "skill_view": "Read a skill's full instructions.",
-      "skills_list": "List the skills available to load.",
-      "spotify_albums": "Look up album details.",
-      "spotify_devices": "List and pick a playback device.",
-      "spotify_library": "Read and update your saved library.",
-      "spotify_playback": "Play, pause, skip, and control volume.",
-      "spotify_playlists": "Read and modify playlists.",
-      "spotify_queue": "See and add to the play queue.",
-      "spotify_search": "Search tracks, albums, artists, and playlists.",
+      "session_search": "पिछली बातचीत खोजें.",
+      "skill_add": "बाज़ार से एक कौशल स्थापित करें.",
+      "skill_manage": "कोई कौशल बनाएँ, संपादित करें या हटाएँ।",
+      "skill_view": "किसी कौशल के पूर्ण निर्देश पढ़ें.",
+      "skills_list": "लोड करने के लिए उपलब्ध कौशलों की सूची बनाएं.",
+      "spotify_albums": "एल्बम विवरण देखें.",
+      "spotify_devices": "एक प्लेबैक डिवाइस की सूची बनाएं और चुनें।",
+      "spotify_library": "अपनी सहेजी गई लाइब्रेरी पढ़ें और अपडेट करें.",
+      "spotify_playback": "चलाएं, रोकें, छोड़ें और वॉल्यूम नियंत्रित करें।",
+      "spotify_playlists": "प्लेलिस्ट पढ़ें और संशोधित करें.",
+      "spotify_queue": "देखें और प्ले कतार में जोड़ें।",
+      "spotify_search": "ट्रैक, एल्बम, कलाकार और प्लेलिस्ट खोजें।",
       "telegram_auto_reply": "चुने हुए लोगों के Telegram संदेशों का स्वतः उत्तर दें (केवल बॉट)।",
-      "text_to_speech": "Turn text into spoken audio.",
-      "todo": "Keep a plan for multi-step work and tick items off.",
-      "video_analyze": "Describe or answer questions about a video.",
-      "video_generate": "Generate a video from a prompt, image, or reference.",
-      "vision_analyze": "Describe or answer questions about an image.",
-      "web_fetch": "Fetch a web page and read it as text.",
-      "web_search": "Search the web and return ranked results.",
+      "text_to_speech": "टेक्स्ट को बोले गए ऑडियो में बदलें.",
+      "todo": "बहु-चरणीय कार्य के लिए एक योजना रखें और आइटमों पर सही का निशान लगाएं।",
+      "video_analyze": "किसी वीडियो के बारे में वर्णन करें या प्रश्नों के उत्तर दें.",
+      "video_generate": "प्रॉम्प्ट, छवि या संदर्भ से एक वीडियो बनाएं।",
+      "vision_analyze": "किसी छवि के बारे में वर्णन करें या प्रश्नों के उत्तर दें.",
+      "web_fetch": "एक वेब पेज प्राप्त करें और इसे टेक्स्ट के रूप में पढ़ें।",
+      "web_search": "वेब पर खोजें और रैंक किए गए परिणाम लौटाएँ।",
       "whatsapp_auto_reply": "चुने हुए लोगों के WhatsApp संदेशों का स्वतः उत्तर दें (केवल बॉट)।",
       "write": "नई फ़ाइल बनाएँ या मौजूदा को बदलें।",
-      "x_search": "Search public posts and threads on X.",
-      "xai_video_edit": "Edit an already generated video.",
-      "xai_video_extend": "Extend a generated video further."
+      "x_search": "X पर सार्वजनिक पोस्ट और थ्रेड खोजें।",
+      "xai_video_edit": "पहले से जेनरेट किए गए वीडियो को संपादित करें.",
+      "xai_video_extend": "जनरेट किए गए वीडियो को आगे बढ़ाएं."
     },
     "tools": {
-      "alwaysOn": "Always on",
-      "disabledDetail": "Off. The agent isn't told these tools exist.",
-      "enabledDetail": "On. The agent can call these tools.",
+      "alwaysOn": "हमेशा चालू",
+      "disabledDetail": "बंद. एजेंट को यह नहीं बताया गया कि ये उपकरण मौजूद हैं।",
+      "enabledDetail": "पर। एजेंट इन टूल को कॉल कर सकता है.",
       "mcpNote": "जुड़े हुए MCP सर्वर इनके अलावा अपने टूल भी जोड़ते हैं।",
-      "noMatches": "No toolset matches that.",
-      "noModelTools": "This capability doesn't add any tools the model calls directly.",
-      "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
-      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
-      "resizePanels": "Resize toolsets and details",
-      "searchPlaceholder": "Search toolsets and tools…",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools"
+      "noMatches": "कोई भी टूलसेट उससे मेल नहीं खाता.",
+      "noModelTools": "यह क्षमता किसी भी उपकरण को नहीं जोड़ती है जिसे मॉडल सीधे कॉल करता है।",
+      "planned": "अभी तक उपलब्ध नहीं है",
+      "plannedDetail": "इसे अभी तक कोई भी लागू नहीं करता है, इसलिए इसे चालू नहीं किया जा सकता है। इसे यहां सूचीबद्ध किया गया है ताकि आप देख सकें कि क्या योजना बनाई गई है। यह कोई गुम API कुंजी नहीं है.",
+      "restartNote": "परिवर्तन अगले सत्र पर लागू होते हैं: सत्र शुरू होने पर एजेंट को उसकी टूल सूची सौंप दी जाती है।",
+      "resizePanels": "टूलसेट और विवरण का आकार बदलें",
+      "searchPlaceholder": "टूलसेट और टूल खोजें...",
+      "toolCount_one": "{{count}} टूल",
+      "toolCount_other": "{{count}} उपकरण",
+      "toolCount_many": "{{count}} उपकरण"
     },
     "toolsets": {
       "a2a": {
-        "description": "Agent-to-agent protocol support, so other agents can call this one and it can call them.",
+        "description": "एजेंट-टू-एजेंट प्रोटोकॉल समर्थन, ताकि अन्य एजेंट इसे कॉल कर सकें और यह उन्हें कॉल कर सके।",
         "label": "A2A"
       },
       "bfl": {
-        "description": "Black Forest Labs FLUX 3 video generation. Jobs take minutes, so submitting returns an id to poll.",
+        "description": "ब्लैक फॉरेस्ट लैब्स फ्लक्स 3 वीडियो पीढ़ी। कार्यों में कुछ मिनट लगते हैं, इसलिए मतदान के लिए रिटर्न एक आईडी सबमिट करें।",
         "label": "BFL FLUX 3 Video"
       },
       "browser": {
-        "description": "Drive the built-in browser: open pages, read them, click and type.",
-        "label": "Browser Automation"
+        "description": "अंतर्निहित ब्राउज़र चलाएं: पेज खोलें, उन्हें पढ़ें, क्लिक करें और टाइप करें। वेब कार्य अपने स्वयं के उप-एजेंट में चलते हैं।",
+        "label": "ब्राउज़र स्वचालन"
       },
       "connectors": {
-        "description": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
-        "label": "Connectors"
+        "description": "एजेंट को यह देखने दें कि आपके कौन से कनेक्टर संलग्न हैं, और आपको उसकी आवश्यकता के लिए एक कनेक्ट बटन प्रदान करें। इसकी बारी आपका इंतजार कर रही है.",
+        "label": "कनेक्टर"
       },
       "cronjob": {
-        "description": "Create and manage scheduled tasks that run on their own.",
-        "label": "Cron Jobs"
+        "description": "अपने आप चलने वाले निर्धारित कार्य बनाएं और प्रबंधित करें।",
+        "label": "क्रॉन जॉब्स"
       },
       "delegation": {
-        "description": "Hand a self-contained piece of work to a sub-agent.",
-        "label": "Task Delegation"
+        "description": "एक उप-एजेंट को स्वयं-निहित कार्य सौंपें।",
+        "label": "कार्य प्रतिनिधिमंडल"
       },
       "deliverables": {
-        "description": "Hand finished files to you as clickable links, open the first one in the preview pane, and file them all under Artifacts.",
-        "label": "Deliverables"
+        "description": "तैयार फ़ाइलें आपको क्लिक करने योग्य लिंक के रूप में सौंपें, पूर्वावलोकन फलक में पहली फ़ाइल खोलें, और उन सभी को कलाकृतियों के अंतर्गत फ़ाइल करें।",
+        "label": "डिलिवरेबल्स"
       },
       "design": {
-        "description": "Design product screens as mockups or wireframes.",
-        "label": "Design"
+        "description": "उत्पाद स्क्रीन को मॉकअप या वायरफ़्रेम के रूप में डिज़ाइन करें।",
+        "label": "डिज़ाइन"
       },
       "device": {
-        "description": "Build for and control iOS simulators and Android emulators.",
-        "label": "Devices"
+        "description": "आईओएस सिमुलेटर और एंड्रॉइड एमुलेटर बनाएं और नियंत्रित करें।",
+        "label": "डिवाइस"
       },
       "file": {
-        "description": "Read, write, and edit files, and search the workspace by name or contents.",
-        "label": "File Operations"
+        "description": "फ़ाइलें पढ़ें, लिखें और संपादित करें, और कार्यस्थान को नाम या सामग्री के आधार पर खोजें।",
+        "label": "फ़ाइल संचालन"
       },
       "homeassistant": {
-        "description": "Read and control smart home devices through Home Assistant.",
+        "description": "Home Assistant के माध्यम से स्मार्ट घरेलू उपकरणों को पढ़ें और नियंत्रित करें।",
         "label": "Home Assistant"
       },
       "image_gen": {
-        "description": "Generate images from a prompt.",
-        "label": "Image Generation"
+        "description": "प्रॉम्प्ट से छवियाँ उत्पन्न करें.",
+        "label": "छवि निर्माण"
       },
       "memory": {
-        "description": "Remember things across sessions instead of starting cold every time.",
-        "label": "Memory"
+        "description": "हर बार ठंडी शुरुआत करने के बजाय पूरे सत्र में चीजों को याद रखें।",
+        "label": "मेमोरी"
       },
       "messaging": {
         "description": "जुड़े चैट ऐप्स (WhatsApp, Telegram, Discord) पर उपयोगकर्ता या उनके बॉट के रूप में संदेश भेजें।",
         "label": "मैसेजिंग"
       },
       "pdf": {
-        "description": "Write, read and edit PDF documents.",
-        "label": "PDFs"
+        "description": "पीडीएफ दस्तावेज़ लिखें, पढ़ें और संपादित करें।",
+        "label": "पीडीएफ"
       },
       "plan_mode": {
-        "description": "Lets the agent ask to leave plan mode and start carrying out the plan it showed you.",
-        "label": "Plan mode"
+        "description": "एजेंट को योजना मोड छोड़ने और उसके द्वारा आपको दिखाई गई योजना को क्रियान्वित करने के लिए कहने दें।",
+        "label": "योजना मोड"
       },
       "ppt": {
-        "description": "Build a designed slide deck from a brief and show it in the preview pane.",
-        "label": "Slide decks"
+        "description": "संक्षेप में एक डिज़ाइन किया गया स्लाइड डेक बनाएं और इसे पूर्वावलोकन फलक में दिखाएं।",
+        "label": "स्लाइड डेक"
       },
       "process": {
-        "description": "Start a command that keeps running, read what it has printed, and stop it. Also reads output that was too large to show in full.",
-        "label": "Background processes"
+        "description": "एक कमांड प्रारंभ करें जो चलती रहती है, उसने जो मुद्रित किया है उसे पढ़ें और उसे रोकें। वह आउटपुट भी पढ़ता है जो पूर्ण रूप से दिखाने के लिए बहुत बड़ा था।",
+        "label": "पृष्ठभूमि प्रक्रियाएं"
       },
       "session_search": {
-        "description": "Search past conversations and recall what was decided.",
-        "label": "Session Search"
+        "description": "पिछली बातचीत खोजें और याद करें कि क्या निर्णय लिया गया था।",
+        "label": "सत्र खोज"
       },
       "skills": {
-        "description": "List, read, and manage skills as tools, rather than only loading them as context.",
-        "label": "Skills"
+        "description": "कौशलों को केवल संदर्भ के रूप में लोड करने के बजाय उन्हें टूल के रूप में सूचीबद्ध करें, पढ़ें और प्रबंधित करें।",
+        "label": "कौशल"
       },
       "spotify": {
-        "description": "Playback, search, playlists, and library access.",
+        "description": "प्लेबैक, खोज, प्लेलिस्ट और लाइब्रेरी एक्सेस।",
         "label": "Spotify"
       },
       "terminal": {
-        "description": "Run shell commands in the workspace.",
-        "label": "Terminal & Processes"
+        "description": "कार्यक्षेत्र में शेल कमांड चलाएँ।",
+        "label": "टर्मिनल और प्रक्रियाएँ"
       },
       "todo": {
-        "description": "Plan and track multi-step work so long tasks don't drift.",
-        "label": "Task Planning"
+        "description": "बहु-चरणीय कार्य की योजना बनाएं और ट्रैक करें ताकि लंबे कार्य भटकें नहीं।",
+        "label": "कार्य योजना"
       },
       "tts": {
-        "description": "Turn text into audio.",
-        "label": "Text-to-Speech"
+        "description": "टेक्स्ट को ऑडियो में बदलें.",
+        "label": "पाठ से वाक्"
       },
       "video": {
-        "description": "Analyse video content. Needs a video-capable model.",
-        "label": "Video Analysis"
+        "description": "वीडियो सामग्री का विश्लेषण करें. एक वीडियो-सक्षम मॉडल की आवश्यकता है.",
+        "label": "वीडियो विश्लेषण"
       },
       "video_gen": {
-        "description": "Generate video from a prompt, an image, or a reference.",
-        "label": "Video Generation"
+        "description": "किसी प्रॉम्प्ट, छवि या संदर्भ से वीडियो बनाएं।",
+        "label": "वीडियो जनरेशन"
       },
       "vision": {
-        "description": "Look at images and describe or reason about what's in them.",
-        "label": "Vision / Image Analysis"
+        "description": "छवियों को देखें और उनमें क्या है उसका वर्णन करें या तर्क करें।",
+        "label": "दृष्टि/छवि विश्लेषण"
       },
       "web": {
-        "description": "Search the web and pull readable content out of pages.",
-        "label": "Web Search & Scraping"
+        "description": "वेब पर खोजें और पृष्ठों से पठनीय सामग्री निकालें।",
+        "label": "वेब खोज एवं स्क्रैपिंग"
       },
       "x_search": {
-        "description": "Search public posts and threads on X.",
-        "label": "X (Twitter) Search"
+        "description": "X पर सार्वजनिक पोस्ट और थ्रेड खोजें।",
+        "label": "एक्स (ट्विटर) खोजें"
       }
     }
   },
   "changelog": {
-    "current": "This version",
-    "empty": "No releases to show yet.",
-    "subtitle": "Every release, newest first. The version you are running is marked."
+    "current": "यह संस्करण",
+    "empty": "अभी तक दिखाने के लिए कोई रिलीज़ नहीं है.",
+    "subtitle": "हर रिलीज़, सबसे पहले नवीनतम। आपके द्वारा चलाया जा रहा संस्करण चिह्नित है."
   },
   "common": {
-    "back": "Back",
-    "cancel": "Cancel",
+    "back": "वापस",
+    "cancel": "रद्द करें",
     "close": "बंद करें",
-    "loading": "Loading",
-    "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "sidebar": "Sidebar",
-    "toggleSidebar": "Toggle sidebar"
+    "loading": "लोड हो रहा है",
+    "mobileSidebarDescription": "मोबाइल साइडबार प्रदर्शित करता है.",
+    "sidebar": "साइडबार",
+    "toggleSidebar": "साइडबार टॉगल करें"
   },
   "connectorRequest": {
-    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
-    "connect": "Connect {{provider}}",
-    "connecting": "Connecting…",
-    "decline": "Not now",
-    "failed": "Could not connect {{provider}}.",
+    "body": "एजेंट द्वारा इसका उपयोग करने से पहले {{provider}} को कनेक्ट करना होगा। यह आपका इंतजार कर रहा है.",
+    "connect": "{{provider}} कनेक्ट करें",
+    "connecting": "कनेक्ट हो रहा है... चरणों को पूरा करने के लिए अपने ब्राउज़र की जाँच करें",
+    "decline": "अभी नहीं",
+    "failed": "{{provider}} कनेक्ट नहीं हो सका.",
     "stop": "कनेक्शन रोकें",
-    "title": "{{provider}} is not connected"
+    "title": "{{provider}} कनेक्ट नहीं है"
   },
   "connectors": {
-    "abacusConnectCancelled": "Stopped adding {{name}}.",
-    "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
-    "abacusConnected": "{{name}} connected",
-    "abacusConnecting": "Finish connecting {{name}} in your browser…",
-    "abacusDisconnectFailed": "Could not disconnect {{name}}. Please try again.",
-    "abacusDisconnected": "{{name}} disconnected",
-    "abacusSignInFailed": "Could not sign in to Abacus.AI. Please try again.",
-    "abacusSigningIn": "Sign in to Abacus.AI in your browser to continue…",
-    "add": "Add",
-    "addFailed": "Could not add {{name}}.",
-    "added": "{{name}} added.",
-    "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
-    "adding": "Adding…",
+    "abacusConnectCancelled": "{{name}} जोड़ना बंद कर दिया।",
+    "abacusConnectFailed": "{{name}} नहीं जोड़ा जा सका. पुनः प्रयास करें।",
+    "abacusConnected": "{{name}} कनेक्ट हुआ",
+    "abacusConnecting": "अपने ब्राउज़र में {{name}} कनेक्ट करना समाप्त करें…",
+    "abacusDisconnectFailed": "{{name}} को डिस्कनेक्ट नहीं किया जा सका. कृपया पुन: प्रयास करें।",
+    "abacusDisconnected": "{{name}} डिस्कनेक्ट हो गया",
+    "abacusSignInFailed": "Abacus.AI में साइन इन नहीं किया जा सका. कृपया पुन: प्रयास करें।",
+    "abacusSigningIn": "जारी रखने के लिए अपने ब्राउज़र में Abacus.AI में साइन इन करें…",
+    "add": "जोड़ें",
+    "addFailed": "{{name}} नहीं जोड़ा जा सका.",
+    "added": "{{name}} जोड़ा गया।",
+    "agentKeyHint": "इस मशीन पर एक एजेंट क्रेडेंशियल के रूप में संग्रहीत और एजेंट द्वारा चलाए जाने वाले टूल द्वारा उपयोग किया जाता है, कभी भी Abacus.AI पर नहीं भेजा जाता है।",
+    "adding": "जोड़ा जा रहा है...",
     "auth": {
-      "key": "API key",
-      "oauth": "Sign-in",
-      "oauth-client": "Sign-in + app",
-      "token": "Token",
-      "abacus": "Abacus account"
+      "key": "API कुंजी",
+      "oauth": "साइन-इन करें",
+      "oauth-client": "साइन-इन + ऐप",
+      "token": "टोकन",
+      "abacus": "Abacus खाता"
     },
-    "cancel": "Cancel",
+    "cancel": "रद्द करें",
     "categories": {
-      "data": "Data & Analytics",
-      "development": "Development",
-      "featured": "Featured",
-      "infrastructure": "Infrastructure",
-      "payments": "Payments",
-      "productivity": "Productivity",
-      "support": "Customer Support",
-      "web": "Web & Browsers",
-      "abacus-connectors": "Abacus.AI Connectors"
+      "data": "डेटा एवं विश्लेषिकी",
+      "development": "विकास",
+      "featured": "विशेष रुप से प्रदर्शित",
+      "infrastructure": "बुनियादी ढाँचा",
+      "payments": "भुगतान",
+      "productivity": "उत्पादकता",
+      "support": "ग्राहक सहायता",
+      "web": "वेब और ब्राउज़र",
+      "abacus-connectors": "Abacus.AI कनेक्टर्स"
     },
-    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
-    "clientId": "Client ID",
-    "clientSecret": "Client secret (if issued)",
-    "connect": "Connect {{name}}",
-    "connectAction": "Connect",
-    "credentialHint": "Stored in this app's MCP configuration on your machine, and sent only to this कनेक्टर's server.",
-    "docs": "Open documentation",
-    "marketplace": "Marketplace",
-    "mcpSignInFailed": "Sign-in failed: {{error}}",
+    "chromeMissing": "{{name}} Google Chrome ड्राइव करता है, और इस कंप्यूटर पर क्रोम नहीं मिला। इसे google.com/chrome से इंस्टॉल करें और ब्राउज़र टूल काम करने लगेंगे।",
+    "clientId": "ग्राहक आईडी",
+    "clientSecret": "ग्राहक रहस्य (यदि जारी किया गया हो)",
+    "connect": "{{name}} कनेक्ट करें",
+    "connectAction": "कनेक्ट करें",
+    "credentialHint": "यह आपके कंप्यूटर पर इस ऐप के MCP कॉन्फ़िगरेशन में सहेजा जाता है और केवल इस कनेक्टर के सर्वर को भेजा जाता है।",
+    "docs": "दस्तावेज़ खोलें",
+    "marketplace": "बाज़ार",
+    "mcpSignInFailed": "साइन-इन विफल: {{error}}",
     "noMatches": "No कनेक्टर match that search.",
-    "noneInstalled": "No कनेक्टर added yet.",
+    "noneInstalled": "अभी कोई कनेक्टर नहीं जोड़ा गया है।",
     "notInstalled": "इंस्टॉल नहीं किया गया",
-    "oauthClientHint": "This provider doesn't register apps automatically, so create one in its developer console and paste its credentials here.",
-    "redirectUrlLabel": "Redirect URL: add this to your app",
-    "remove": "Remove",
-    "removeFailed": "Could not remove {{name}}.",
-    "removed": "{{name}} removed.",
-    "search": "Search कनेक्टर",
-    "signInAction": "Sign in",
-    "signInFailed": "{{name}} was added, but the sign-in didn't finish: {{error}} You can retry from the MCP panel.",
-    "signedIn": "{{name}} is signed in and ready. It connects when your next session starts.",
-    "signingIn": "{{name}} added. Opening your browser to sign in…",
-    "signingInAction": "Signing in…",
-    "token": "Token",
-    "whereToGet": "Where do I get this?",
-    "yours": "Yours"
+    "oauthClientHint": "यह प्रदाता ऐप्स को स्वचालित रूप से पंजीकृत नहीं करता है, इसलिए इसके डेवलपर कंसोल में एक बनाएं और उसके क्रेडेंशियल यहां पेस्ट करें।",
+    "redirectUrlLabel": "रीडायरेक्ट यूआरएल: इसे अपने ऐप में जोड़ें",
+    "remove": "हटाएँ",
+    "removeFailed": "{{name}} को हटाया नहीं जा सका.",
+    "removed": "{{name}} हटा दिया गया।",
+    "search": "कनेक्टर खोजें",
+    "signInAction": "साइन इन करें",
+    "signInFailed": "{{name}} जोड़ा गया, लेकिन साइन-इन समाप्त नहीं हुआ: {{error}} आप MCP पैनल से पुनः प्रयास कर सकते हैं।",
+    "signedIn": "{{name}} साइन इन है और तैयार है। आपका अगला सत्र शुरू होने पर यह कनेक्ट हो जाता है।",
+    "signingIn": "{{name}} जोड़ा गया। साइन इन करने के लिए अपना ब्राउज़र खोल रहा हूँ…",
+    "signingInAction": "साइन इन किया जा रहा है...",
+    "token": "टोकन",
+    "whereToGet": "मुझे यह कहां मिलेगा?",
+    "yours": "आपका"
   },
   "creditsCard": {
-    "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going. No card needed.",
-    "cta": "Upgrade",
-    "dismiss": "Dismiss",
-    "localBody": "Or run a model on this computer for free, with no limits.",
-    "or": "or",
-    "paidBody": "Top up your account to keep going.",
-    "paidTitle": "You've used all your Pro Abacus.AI credits",
-    "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
-    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
-    "switchTitle": "You've used all your free Abacus.AI credits",
-    "title": "You've used all your free Abacus.AI credits",
-    "topUpCta": "Top up",
-    "upsellTitle": "Unlock the full potential on desktop and web",
-    "inviteCta": "Or invite friends for free credits"
+    "body": "पूरी क्षमता को अनलॉक करें",
+    "connectBody": "जारी रखने के लिए एक निःशुल्क स्रोत कनेक्ट करें। किसी कार्ड की आवश्यकता नहीं.",
+    "cta": "अपग्रेड करें",
+    "dismiss": "ख़ारिज करें",
+    "localBody": "या इस कंप्यूटर पर बिना किसी सीमा के मुफ़्त में एक मॉडल चलाएं।",
+    "or": "या",
+    "paidBody": "जारी रखने के लिए अपने खाते को टॉप अप करें।",
+    "paidTitle": "आपने अपने सभी Pro Abacus.AI क्रेडिट का उपयोग कर लिया है",
+    "pickBody": "जारी रखने के लिए नीचे दाईं ओर मॉडल पिकर में कोई अन्य मॉडल चुनें।",
+    "switchBody": "जारी रखने के लिए नीचे दाईं ओर मॉडल पिकर में एक {{providers}} मॉडल चुनें।",
+    "switchTitle": "आपने अपने सभी निःशुल्क Abacus.AI क्रेडिट का उपयोग कर लिया है",
+    "title": "आपने अपने सभी निःशुल्क Abacus.AI क्रेडिट का उपयोग कर लिया है",
+    "topUpCta": "टॉप अप",
+    "upsellTitle": "डेस्कटॉप और वेब पर पूरी क्षमता अनलॉक करें",
+    "inviteCta": "या निःशुल्क क्रेडिट के लिए मित्रों को आमंत्रित करें"
   },
   "deepAgentCard": {
-    "body": "Open DeepAgent on the web",
-    "cta": "Go to Abacus AI Agent",
-    "title": "Go to DeepAgent"
+    "body": "जटिल एजेंटिक कार्यों के लिए",
+    "cta": "अबेकस एआई एजेंट पर जाएं",
+    "title": "अबेकस एआई एजेंट"
   },
   "deliverables": {
-    "files": "Files",
-    "openInBrowser": "Open in browser",
-    "showInFolder": "Show in folder",
-    "showLess": "Show less",
-    "showMore": "+{{count}} more"
+    "files": "फ़ाइलें",
+    "openInBrowser": "ब्राउज़र में खोलें",
+    "showInFolder": "फ़ोल्डर में दिखाएँ",
+    "showLess": "कम दिखाओ",
+    "showMore": "+{{count}} अधिक"
   },
   "devicePanel": {
     "axPermissionNeeded": "सिम्युलेटर की विंडो दिखाए बिना उसे मिरर करने के लिए एक्सेसिबिलिटी अनुमति आवश्यक है।",
@@ -771,7 +774,7 @@
     "notDetected": "नहीं मिला",
     "subtitle": "Code एजेंट के लिए iOS सिम्युलेटर और Android एम्युलेटर टूल",
     "title": "डिवाइस",
-    "toolchainAndroid": "Android (adb)",
+    "toolchainAndroid": "एंड्रॉइड (एडीबी)",
     "toolchainIos": "iOS सिम्युलेटर (Xcode)",
     "toolchainMaestro": "Maestro (iOS इंटरैक्शन)",
     "toolchainSection": "पहचाने गए टूलचेन"
@@ -779,11 +782,11 @@
   "deviceSetup": {
     "androidAvdDesc": "Android SDK मिला लेकिन कोई वर्चुअल डिवाइस नहीं। Android Studio में Tools → Device Manager से एक बनाएँ।",
     "androidDesc": "Android Studio इंस्टॉल करें, फिर Tools → Device Manager में एक वर्चुअल डिवाइस बनाएँ।",
-    "androidTitle": "Android · Android Studio",
+    "androidTitle": "एंड्रॉइड · एंड्रॉइड स्टूडियो",
     "download": "डाउनलोड करें",
     "iosDesc": "Mac App Store से Xcode इंस्टॉल करें और सेटअप पूरा करने के लिए इसे एक बार खोलें। फिर सिम्युलेटर यहाँ दिखेंगे।",
     "iosRuntimeDesc": "Xcode इंस्टॉल है लेकिन कोई सिम्युलेटर नहीं मिला। Xcode → Settings → Components खोलें और एक iOS रनटाइम डाउनलोड करें।",
-    "iosTitle": "iOS · Xcode",
+    "iosTitle": "आईओएस · एक्सकोड",
     "recheck": "फिर से जाँचें"
   },
   "diff": {
@@ -800,39 +803,39 @@
   },
   "execBackends": {
     "daytona": {
-      "description": "Run commands in a Daytona cloud sandbox.",
+      "description": "डेटोना क्लाउड सैंडबॉक्स में कमांड चलाएँ।",
       "label": "Daytona"
     },
     "docker": {
-      "description": "Run commands in a container with the workspace mounted at the same path.",
+      "description": "एक ही पथ पर स्थापित कार्यक्षेत्र के साथ एक कंटेनर में कमांड चलाएँ।",
       "label": "Docker"
     },
-    "fellBack": "{{selected}} isn't usable right now, so commands are running {{effective}}.",
-    "inUse": "In use",
+    "fellBack": "{{selected}} अभी प्रयोग करने योग्य नहीं है, इसलिए कमांड {{effective}} चल रहे हैं।",
+    "inUse": "प्रयोग में है",
     "local": {
-      "description": "Run commands directly on this machine. No isolation.",
-      "label": "Local"
+      "description": "इस मशीन पर सीधे कमांड चलाएँ। कोई अलगाव नहीं.",
+      "label": "स्थानीय"
     },
-    "missingBinary": "{{command}} wasn't found on your PATH.",
-    "missingEnv": "Set {{vars}} to use this backend.",
+    "missingBinary": "{{command}} आपके PATH पर नहीं मिला.",
+    "missingEnv": "इस बैकएंड का उपयोग करने के लिए {{vars}} सेट करें।",
     "modal": {
-      "description": "Run commands in a Modal cloud sandbox.",
+      "description": "मॉडल क्लाउड सैंडबॉक्स में कमांड चलाएँ।",
       "label": "Modal"
     },
     "singularity": {
-      "description": "Run commands in a Singularity/Apptainer container (HPC-friendly, rootless).",
+      "description": "सिंगुलैरिटी/एपटेनर कंटेनर (एचपीसी-फ्रेंडली, रूटलेस) में कमांड चलाएँ।",
       "label": "Singularity / Apptainer"
     },
     "ssh": {
-      "description": "Run commands on a remote host over SSH.",
+      "description": "SSH पर रिमोट होस्ट पर कमांड चलाएँ।",
       "label": "SSH"
     },
-    "title": "Execution backend",
-    "unimplemented": "AbacusAI Bot can't run commands here yet.",
-    "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
+    "title": "निष्पादन बैकएंड",
+    "unimplemented": "AbacusAI Bot अभी तक यहां कमांड नहीं चला सकता।",
+    "unsupportedPlatform": "Windows पर उपलब्ध नहीं है: कंटेनर को POSIX होस्ट पथ पर कार्यक्षेत्र की आवश्यकता है। इसके बजाय स्थानीय बैकएंड का उपयोग करें।"
   },
   "firstBot": {
-    "title": "We set up your first bot"
+    "title": "हमने आपके लिए अपना पहला बॉट बनाया है, आनंद लें!"
   },
   "greeting": {
     "afternoon": {
@@ -917,26 +920,26 @@
     "started": "शुरू हुआ। यह अपने सत्र में चलता है।"
   },
   "localModels": {
-    "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
-    "download": "Download {{size}} and use it",
-    "downloading": "{{received}} of {{total}} ({{percent}}%)",
-    "installed": "Installed",
-    "machine": "This computer has {{memory}} of memory.",
-    "onThisMachine": "On this machine",
-    "recommended": "Recommended",
-    "remove": "Remove",
-    "sectionHint": "Models the app downloads and runs here with the bundled llama.cpp. They join RouteLLM - Open as its last resort.",
-    "stopDownload": "Stop download",
-    "tight": "That is tight for this model; answers will be slow.",
-    "title": "Use a local model",
-    "unavailable": "This build of the app cannot run models locally.",
-    "use": "Use {{model}}",
-    "useLocal": "Use a local model",
-    "verifying": "Checking the download…"
+    "description": "एक मॉडल जो इस कंप्यूटर पर चलता है: कोई खाता नहीं, कोई कुंजी नहीं, कोई कोटा नहीं। बादल से भी धीमा, लेकिन वह कभी ख़त्म नहीं होता।",
+    "download": "{{size}} डाउनलोड करें और इसका उपयोग करें",
+    "downloading": "{{total}} का {{received}} ({{percent}}%)",
+    "installed": "इंस्टॉल किया गया",
+    "machine": "इस कंप्यूटर में {{memory}} मेमोरी है।",
+    "onThisMachine": "इस मशीन पर",
+    "recommended": "अनुशंसित",
+    "remove": "हटाएँ",
+    "sectionHint": "मॉडल ऐप डाउनलोड होता है और बंडल किए गए llama.cpp के साथ यहां चलता है। वे अंतिम उपाय के रूप में रूटएलएलएम - ओपन से जुड़ते हैं।",
+    "stopDownload": "डाउनलोड बंद करो",
+    "tight": "यह इस मॉडल के लिए कठिन है; उत्तर धीमे होंगे.",
+    "title": "स्थानीय मॉडल का प्रयोग करें",
+    "unavailable": "ऐप का यह बिल्ड स्थानीय रूप से मॉडल नहीं चला सकता है।",
+    "use": "{{model}} का प्रयोग करें",
+    "useLocal": "स्थानीय मॉडल का प्रयोग करें",
+    "verifying": "डाउनलोड की जाँच की जा रही है..."
   },
   "logs": {
-    "saveFailed": "Could not save logs: {{error}}",
-    "saved": "Logs saved to {{path}}"
+    "saveFailed": "लॉग सहेजे नहीं जा सके: {{error}}",
+    "saved": "लॉग {{path}} में सहेजे गए"
   },
   "mcpManagement": {
     "add": "जोड़ें",
@@ -955,7 +958,7 @@
       "addHeader": "हेडर जोड़ें",
       "argumentPlaceholder": "तर्क",
       "arguments": "तर्क",
-      "clientIdPlaceholder": "OAuth Client ID",
+      "clientIdPlaceholder": "OAuth क्लाइंट आईडी",
       "clientSecretPlaceholder": "OAuth Client Secret (वैकल्पिक)",
       "command": "लॉन्च करने का कमांड",
       "commandPlaceholder": "उदा. npx, node, uvx",
@@ -969,9 +972,9 @@
       "scopePlaceholder": "स्कोप (स्पेस से अलग, वैकल्पिक)",
       "titleAdd": "एक कस्टम MCP से कनेक्ट करें",
       "titleEdit": "MCP सर्वर संपादित करें: {{name}}",
-      "transportHttp": "Streamable HTTP",
+      "transportHttp": "स्ट्रीम करने योग्य HTTP",
       "transportStdio": "STDIO",
-      "url": "URL",
+      "url": "यूआरएल",
       "urlPlaceholder": "https://mcp.example.com/mcp"
     },
     "hideLogs": "लॉग छिपाएँ",
@@ -982,7 +985,7 @@
       "file": "फ़ाइल से आयात करें…",
       "paste": "क्लिपबोर्ड से JSON पेस्ट करें",
       "success": "{{count}} सर्वर आयात किए गए।",
-      "deepagent": "Import from DeepAgent"
+      "deepagent": "डीपएजेंट से आयात करें"
     },
     "namePlaceholder": "सर्वर का नाम",
     "nameRequired": "सर्वर का नाम आवश्यक है।",
@@ -995,85 +998,86 @@
     "refreshNoSession": "MCP सर्वर रीफ़्रेश करने के लिए एक सत्र शुरू करें।",
     "remove": "हटाएँ",
     "removeFailed": "सर्वर हटाने में विफल।",
-    "restart": "पुनः आरंभ करें",
+    "restart": "पुनः शुरू करें",
     "restartFailed": "पुनः आरंभ करने में विफल: {{error}}",
     "runtimeStatus": {
       "authRequired": "प्रमाणीकरण आवश्यक",
-      "connected": "Connected",
-      "connecting": "Connecting",
-      "disconnected": "Off",
-      "error": "Error",
-      "idle": "Not connected"
+      "connected": "कनेक्टेड",
+      "connecting": "कनेक्ट हो रहा है",
+      "disconnected": "बंद",
+      "error": "त्रुटि",
+      "idle": "जुड़ा नहीं"
     },
     "save": "सहेजें",
     "signIn": "साइन इन करें",
-    "signInDone": "Signed in to {{name}}.",
-    "signInFailed": "Sign-in failed: {{error}}",
-    "signingIn": "Waiting for the browser…",
+    "signInDone": "{{name}} में साइन इन किया गया।",
+    "signInFailed": "साइन-इन विफल: {{error}}",
+    "signingIn": "ब्राउज़र की प्रतीक्षा की जा रही है...",
     "title": "MCP सर्वर",
     "toggleFailed": "सर्वर अपडेट करने में विफल।",
     "toolCount": "{{count}} टूल",
     "urlRequired": "URL आवश्यक है।",
     "viewLogs": "लॉग",
     "abacusConnectors": {
-      "title_one": "{{count}} Abacus connector, served through this server:",
-      "title_other": "{{count}} Abacus connectors, served through this server:",
-      "none": "No Abacus connectors are attached to your account yet. Connect one on the Connectors page and it appears here.",
-      "loading": "Reading which connectors are attached…",
-      "unavailable": "Which connectors are attached could not be read right now. Sign in to Abacus.AI, or try again."
+      "title_one": "{{count}} अबेकस कनेक्टर, इस सर्वर के माध्यम से परोसा गया:",
+      "title_other": "{{count}} अबेकस कनेक्टर, इस सर्वर के माध्यम से परोसा जाता है:",
+      "none": "आपके खाते से अभी तक कोई अबेकस कनेक्टर संलग्न नहीं है। कनेक्टर्स पृष्ठ पर एक को कनेक्ट करें और यह यहां दिखाई देता है।",
+      "loading": "पढ़ रहे हैं कि कौन से कनेक्टर संलग्न हैं...",
+      "unavailable": "कौन से कनेक्टर जुड़े हुए हैं अभी पढ़ा नहीं जा सका। Abacus.AI में साइन इन करें, या पुनः प्रयास करें।",
+      "title_many": "{{count}} अबेकस कनेक्टर, इस सर्वर के माध्यम से परोसा जाता है:"
     }
   },
   "memory": {
-    "clear": "Clear all",
-    "clearConfirm": "Forget everything here?",
-    "clearNo": "Keep",
-    "clearYes": "Forget all",
-    "empty": "Nothing remembered yet. The agent writes here on its own when it learns something worth carrying between sessions: a preference of yours, a fact about your setup.",
-    "forget": "Forget this",
-    "loading": "Reading memory…",
-    "readFailed": "Could not read what is remembered. The files are in ~/.abacusai-bot/memories.",
-    "storeEmpty": "Nothing here yet.",
+    "clear": "सब साफ़ करें",
+    "clearConfirm": "यहाँ सब कुछ भूल जाओ?",
+    "clearNo": "रखें",
+    "clearYes": "सब भूल जाओ",
+    "empty": "अभी तक कुछ याद नहीं आया. जब एजेंट को सत्रों के बीच ले जाने योग्य कुछ पता चलता है तो वह स्वयं ही यहां लिखता है: आपकी कोई प्राथमिकता, आपके सेटअप के बारे में कोई तथ्य।",
+    "forget": "इसे भूल जाओ",
+    "loading": "स्मृति पढ़ना...",
+    "readFailed": "जो याद है उसे पढ़ नहीं पाया. फ़ाइलें ~/.abacusai-bot/memories. में हैं",
+    "storeEmpty": "अभी तक यहां कुछ भी नहीं है.",
     "stores": {
       "memory": {
-        "help": "Environment facts, project conventions, and tool quirks it worked out for itself.",
-        "title": "The agent's own notes"
+        "help": "पर्यावरण संबंधी तथ्य, परियोजना परंपराएँ और उपकरण संबंधी विचित्रताएँ इसने अपने लिए काम कर लीं।",
+        "title": "एजेंट के अपने नोट्स"
       },
       "remember": {
-        "help": "What you asked to be kept. Say “remember I like blue” in any chat and it lands here, and in every prompt from the next message on.",
-        "title": "Always remember"
+        "help": "आपने जो रखने को कहा था. किसी भी चैट में \"याद रखें मुझे नीला रंग पसंद है\" कहें और यह यहां आ जाता है, और अगले संदेश से हर संकेत में।",
+        "title": "हमेशा याद रखें"
       },
       "user": {
-        "help": "Preferences, habits, and how you like to work.",
-        "title": "About you"
+        "help": "प्राथमिकताएँ, आदतें और आप कैसे काम करना पसंद करते हैं।",
+        "title": "आपके बारे में"
       }
     },
-    "subtitle": "What the agent has chosen to remember across sessions. Deleting takes effect now; a session already open keeps what it started with until it is restarted.",
-    "title": "Memory",
+    "subtitle": "एजेंट ने सत्रों के दौरान याद रखने के लिए क्या चुना है। हटाना अब प्रभावी होता है; पहले से खुला हुआ सत्र पुनः प्रारंभ होने तक वही रखता है जो उसने शुरू किया था।",
+    "title": "मेमोरी",
     "writeFailed": "कुछ भी नहीं हटाया गया। उसी समय एक सत्र मेमोरी में लिख रहा था। फिर से प्रयास करें।",
     "instructions": {
-      "title": "Custom instructions",
-      "description": "Always sent to the model, at the end of every conversation's instructions. Use it for how you want to be worked with: tone, language, house style, things to never do.",
-      "placeholder": "e.g. Answer in British English. Never use emoji. Show me the command before you run it.",
-      "save": "Save",
-      "saveFailed": "Could not save. Check that the settings folder is writable.",
-      "unsaved": "Unsaved",
-      "applies": "Applies to your next message, including in a chat already open."
+      "title": "कस्टम निर्देश",
+      "description": "प्रत्येक वार्तालाप के अंत में निर्देश हमेशा मॉडल को भेजे जाते हैं। आप जिस तरह से काम कराना चाहते हैं उसके लिए इसका उपयोग करें: लहजा, भाषा, घर की शैली, कभी न करने वाली चीजें।",
+      "placeholder": "जैसे ब्रिटिश अंग्रेजी में उत्तर दें. इमोजी का प्रयोग कभी न करें. इसे चलाने से पहले मुझे कमांड दिखाएँ।",
+      "save": "सहेजें",
+      "saveFailed": "सहेजा नहीं जा सका. जांचें कि सेटिंग्स फ़ोल्डर लिखने योग्य है।",
+      "unsaved": "सहेजा नहीं गया",
+      "applies": "यह आपके अगले संदेश पर लागू होता है, जिसमें पहले से खुली चैट भी शामिल है।"
     },
-    "rememberedToast": "Added to my AI brain.",
+    "rememberedToast": "मेरे AI मस्तिष्क में जोड़ा गया।",
     "sections": {
-      "sessions": "Sessions",
-      "bots": "Bots"
+      "sessions": "सत्र",
+      "bots": "बॉट"
     },
     "bots": {
-      "notes": "{{count}} day(s) of working notes on disk.",
-      "empty": "This bot has not saved any core memories yet."
+      "notes": "{{count}} डिस्क पर कार्यशील नोट्स का दिन।",
+      "empty": "इस बॉट ने अभी तक कोई मूल स्मृतियाँ सहेजी नहीं हैं."
     }
   },
   "messaging": {
     "advanced": "उन्नत ({{count}})",
     "approve": "स्वीकृत करें",
     "approvedUsers": "स्वीकृत ({{count}})",
-    "cancelConnect": "Cancel",
+    "cancelConnect": "रद्द करें",
     "clearField": "यह मान हटाएँ",
     "descriptions": {
       "discord": "अपने खुद के Discord से एजेंट के साथ चैट करें और उसे आपके रूप में लोगों को संदेश भेजने दें। QR कोड स्कैन करके कनेक्ट होता है।",
@@ -1083,13 +1087,13 @@
     "discordConnected": "कनेक्ट हो गया। एजेंट आपके Discord खाते के रूप में संदेश भेजता है।",
     "discordOpenLogin": "Discord लॉगिन खोलें",
     "discordScan": "एक Discord लॉगिन विंडो खुली। इसका QR Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें।",
-    "doneConnect": "Continue",
+    "doneConnect": "जारी रखें",
     "enablePlatform": "प्लेटफ़ॉर्म सक्षम करें",
     "fields": {
       "discordBotToken": "बॉट टोकन"
     },
     "fromEnvironment": "आपके एनवायरनमेंट में {{key}} द्वारा सेट किया गया",
-    "finishLinkFirst": "Finish linking the Abacus AI bot to complete setup.",
+    "finishLinkFirst": "सेटअप पूरा करने के लिए Abacus AI bot को लिंक करना समाप्त करें।",
     "getCredentials": "अपने क्रेडेंशियल लें",
     "needsSetup": "सेटअप बाकी है",
     "openSetupGuide": "सेटअप गाइड खोलें",
@@ -1098,7 +1102,7 @@
       "discord": "Discord",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
-      "abacusDiscord": "Abacus AI bot on Discord",
+      "abacusDiscord": "Discord पर Abacus AI bot",
       "abacusTelegram": "Telegram"
     },
     "recommended": "अनुशंसित",
@@ -1118,32 +1122,32 @@
       "workspace": "वर्कस्पेस",
       "workspaceActive": "सक्रिय वर्कस्पेस का अनुसरण करें",
       "workspaceHelp": "आने वाले संदेश किस प्रोजेक्ट पर चलेंगे।",
-      "deliverToBot": "Deliver messages to a bot",
-      "deliverToBotHelp": "Incoming messages go to this bot's chat, framed with who sent them. Off means each sender gets their own session.",
-      "deliverToBotNone": "No bot (one session per sender)"
+      "deliverToBot": "किसी बॉट को संदेश डिलीवर करें",
+      "deliverToBotHelp": "आने वाले संदेश इस बॉट की चैट में जाते हैं, जो उन्हें भेजने वाले के साथ फ़्रेम किया जाता है। बंद का मतलब है कि प्रत्येक प्रेषक को अपना स्वयं का सत्र मिलता है।",
+      "deliverToBotNone": "कोई बॉट नहीं (प्रति प्रेषक एक सत्र)"
     },
     "setup": {
       "discord": "Connect पर क्लिक करें, एक Discord लॉगिन विंडो खुलेगी। QR को Discord ऐप से स्कैन करें, या ईमेल और पासवर्ड से लॉगिन करें। फिर AbacusAI Bot आपके अपने Discord खाते के रूप में संदेश भेजता है (कोई बॉट नहीं, कोई टोकन नहीं)।",
       "telegram": "Connect पर क्लिक करें और एक Telegram लॉगिन विंडो खुलेगी। वहीं हमेशा की तरह लॉगिन करें: फ़ोन से QR स्कैन करें (Settings, Devices, Link Desktop Device), या अपना फ़ोन नंबर या passkey इस्तेमाल करें। फिर AbacusAI Bot आपके अपने Telegram खाते के रूप में संदेश भेजता है। कोई API कुंजी नहीं, कोई बॉट नहीं।",
       "whatsapp": "इसे सक्षम करें, फिर अपने फ़ोन के WhatsApp से नीचे दिया QR कोड स्कैन करें (सेटिंग्स, लिंक्ड डिवाइसेज़, डिवाइस लिंक करें)। इससे AbacusAI Bot उस खाते पर एक डिवाइस के रूप में जुड़ जाता है, इसलिए अपने निजी नंबर के बजाय एक अलग नंबर का उपयोग करें।"
     },
-    "stepSignIn": "First, sign in to {{app}}",
+    "stepSignIn": "सबसे पहले, {{app}} में साइन इन करें",
     "states": {
       "connected": "कनेक्टेड",
       "connecting": "कनेक्ट हो रहा है",
       "disabled": "अक्षम",
       "error": "त्रुटि",
-      "needs_link": "Finish linking",
-      "needs_login": "Waiting for login",
+      "needs_link": "लिंक करना समाप्त करें",
+      "needs_login": "लॉगिन की प्रतीक्षा की जा रही है",
       "not_configured": "कॉन्फ़िगर नहीं किया गया",
       "pending_restart": "पुनरारंभ बाकी है",
-      "rate_limited": "Rate limited",
+      "rate_limited": "दर सीमित",
       "syncing": "सिंक हो रहा है"
     },
     "telegramConnected": "जुड़ा। एजेंट आपके Telegram खाते के रूप में संदेश भेजता है।",
     "telegramOpenLogin": "Telegram लॉगिन खोलें",
     "telegramScan": "एक Telegram लॉगिन विंडो खुली। इसके QR को अपने फ़ोन से स्कैन करें (Settings, Devices, Add Device), या वहीं फ़ोन से लॉगिन करें।",
-    "twoStepSetup": "Two steps, and you need both: sign in to {{app}}, then link the Abacus AI bot so you can reach your agent from any device. Setup is not finished until both are done.",
+    "twoStepSetup": "दो चरण, और आपको दोनों की आवश्यकता है: {{app}} में साइन इन करें, फिर Abacus AI bot को लिंक करें ताकि आप किसी भी डिवाइस से अपने एजेंट तक पहुंच सकें। जब तक दोनों का काम पूरा नहीं हो जाता तब तक सेटअप समाप्त नहीं होता है.",
     "unsavedChanges": "बिना सहेजे बदलाव",
     "whatsappConnected": "जुड़ा। एजेंट आपके WhatsApp खाते के रूप में संदेश भेजता है।",
     "whatsappOpenLogin": "WhatsApp लॉगिन खोलें",
@@ -1151,34 +1155,34 @@
     "whatsappSyncing": "लिंक हो गया। WhatsApp आपकी चैट इस डिवाइस पर सिंक कर रहा है। पहली बार इसमें कुछ मिनट लगते हैं। पूरा होने तक फ़ोन पर WhatsApp और यह ऐप खुला रखें।",
     "sharedLink": {
       "title": "Abacus AI bot",
-      "stepLink": "Then, link the Abacus AI bot",
-      "intro": "Reach your agent from Discord through the shared Abacus AI bot. No token to paste: add the bot, send it one command.",
-      "requiredIntro": "This is the second half of the setup: linking the Abacus AI bot is what lets you message your agent from your phone. Follow the steps below.",
-      "link": "Link Abacus AI bot",
-      "step1": "1. Add Abacus AI to your Discord (Add to My Apps).",
-      "addToDiscord": "Add to Discord",
-      "step2Copy": "2. Copy this command:",
-      "step3Dm": "3. Open your chat with the bot (message icon on its profile), paste, and send:",
-      "openDm": "Open Abacus AI's chat",
-      "copy": "Copy",
-      "copied": "Copied",
-      "preparing": "Getting your link code…",
-      "retry": "Try again",
-      "waiting": "Waiting for the command to land in Discord…",
-      "linked": "Linked. DM the Abacus AI bot in Discord to talk to your agent.",
-      "linkedAs": "Linked as {{name}}. DM the Abacus AI bot in Discord to talk to your agent.",
-      "unlink": "Unlink",
-      "telegramStep": "Scan this with your phone's camera app (not the scanner inside Telegram), or open the link on your phone, then tap Start.",
-      "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
+      "stepLink": "फिर, Abacus AI bot को लिंक करें",
+      "intro": "साझा किए गए Abacus AI bot को संदेश भेजकर किसी भी डिवाइस से अपने एजेंट तक पहुंचें। चिपकाने के लिए कोई टोकन नहीं: एक स्कैन या टैप, और आप लिंक हो जाएंगे।",
+      "requiredIntro": "यह सेटअप का दूसरा भाग है: Abacus AI bot को लिंक करने से आप अपने एजेंट को अपने फोन से संदेश भेज सकते हैं। नीचे दिए गए चरणों का पालन करें.",
+      "link": "Abacus AI bot लिंक करें",
+      "step1": "1. अपने Discord में अबेकस AI जोड़ें (मेरे ऐप्स में जोड़ें)।",
+      "addToDiscord": "Discord में जोड़ें",
+      "step2Copy": "2. इस आदेश को कॉपी करें:",
+      "step3Dm": "3. बॉट (इसके प्रोफाइल पर संदेश आइकन) के साथ अपनी चैट खोलें, पेस्ट करें और भेजें:",
+      "openDm": "अबैकस एआई की चैट खोलें",
+      "copy": "कॉपी करें",
+      "copied": "नकल की गई",
+      "preparing": "आपका लिंक कोड प्राप्त हो रहा है...",
+      "retry": "पुनः प्रयास करें",
+      "waiting": "Discord में कमांड के आने की प्रतीक्षा की जा रही है...",
+      "linked": "जुड़ा हुआ. अपने एजेंट से बात करने के लिए {{app}} में Abacus AI bot पर संदेश भेजें।",
+      "linkedAs": "{{name}} के रूप में लिंक किया गया। अपने एजेंट से बात करने के लिए {{app}} में Abacus AI bot पर संदेश भेजें।",
+      "unlink": "अनलिंक करें",
+      "telegramStep": "इसे अपने फ़ोन के कैमरा ऐप से स्कैन करें (Telegram के अंदर स्कैनर से नहीं), या अपने फ़ोन पर लिंक खोलें, फिर स्टार्ट पर टैप करें।",
+      "waitingTelegram": "Telegram में स्टार्ट टैप होने की प्रतीक्षा की जा रही है..."
     }
   },
   "notificationSettings": {
-    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
-    "enableTitle": "Notify me",
-    "soundSubtitle": "Uses your system notification sound.",
-    "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
-    "title": "Notifications"
+    "enableSubtitle": "जब कोई कार्य समाप्त हो जाता है, या कोई उपकरण आपकी स्वीकृति की प्रतीक्षा कर रहा होता है। केवल तब जबकि विंडो फोकस्ड न हो।",
+    "enableTitle": "मुझे सूचित करें",
+    "soundSubtitle": "आपके सिस्टम अधिसूचना ध्वनि का उपयोग करता है।",
+    "soundTitle": "कोई ध्वनि बजाओ",
+    "subtitle": "जब आप कहीं और देख रहे हों तो AbacusAI Bot आपको क्या बताता है",
+    "title": "सूचनाएं"
   },
   "notifications": {
     "codeSessionFallback": "कोड सत्र",
@@ -1188,75 +1192,82 @@
     "waitingForApproval": "अनुमोदन की प्रतीक्षा: {{toolName}}"
   },
   "onboarding": {
-    "abacusConnected": "Abacus.AI is successfully connected",
+    "abacusConnected": "Abacus.AI सफलतापूर्वक कनेक्ट हो गया है",
     "connectBody": "साइन इन या खाता बनाने के लिए आपका ब्राउज़र खुलता है। ऐप को अपनी अलग API कुंजी मिलती है; आपका पासवर्ड कभी ऐप तक नहीं पहुँचता।",
-    "connectCta": "साइन अप / साइन इन",
+    "connectCta": "मुफ़्त में साइन अप करें",
     "openInBrowserCta": "मेरा ब्राउज़र इस्तेमाल करें",
     "haveAccountCta": "मेरा पहले से खाता है",
     "connectTitle": "Abacus.AI जोड़ें",
-    "connectorsContinueCta": "Continue",
-    "connectorsSkipCta": "Continue without connectors",
-    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
-    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
-    "setupConnectorsCta": "Browse connectors",
-    "setupConnectorsTitle": "Connectors",
-    "setupDoneCta": "Continue to AbacusAI Bot",
-    "setupKeyHint": "Stored on this machine only.",
-    "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "setupKeyPlaceholder": "Paste your {{provider}} API key",
-    "setupSaveCta": "Save",
-    "setupSignInCta": "Sign in / Create Free Account",
+    "connectorsContinueCta": "जारी रखें",
+    "connectorsSkipCta": "कनेक्टर्स के बिना जारी रखें",
+    "setupAbacusNote": "एक Abacus.AI खाता अभी भी सबसे छोटा रास्ता है: यह मुफ़्त है, $2 क्रेडिट और कुछ मुफ़्त मॉडल के साथ शुरू होता है, और यह वह है जो कनेक्टर्स लाता है।",
+    "setupConnectorsBody": "Gmail, ड्राइव, Slack, GitHub, नोशन और बाकी। जो आप उपयोग करते हैं उन्हें संलग्न करें और एजेंट उनमें काम कर सकता है, न कि केवल उनके बारे में बात कर सकता है।",
+    "setupConnectorsCta": "कनेक्टर्स ब्राउज़ करें",
+    "setupConnectorsTitle": "कनेक्टर",
+    "setupDoneCta": "जारी रखें",
+    "setupKeyHint": "इस मशीन पर ही संग्रहित है.",
+    "setupKeyInvalid": "यह API कुंजी जैसा नहीं दिखता है। किसी भटकी हुई लाइन या यूआरएल के लिए पेस्ट की जाँच करें।",
+    "setupKeyPlaceholder": "अपनी {{provider}} API कुंजी चिपकाएँ",
+    "setupSaveCta": "सहेजें",
+    "setupSignInCta": "साइन इन करें/ निःशुल्क खाता बनाएं",
     "signInCta": "Abacus.AI में साइन इन करें",
-    "skipCta": "Not now",
-    "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
-    "welcomeTagline": "स्थायी मेमोरी वाला आपका निजी ओपन-सोर्स AI सहकर्मी",
-    "welcomeTitle": "Welcome to AbacusAI Bot",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
-    "connectedCta": "Continue",
-    "setupExistingTitle": "Existing subscriptions",
-    "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
-    "connectedTitleLead": "Welcome to",
+    "skipCta": "अभी के लिए छोड़ें",
+    "welcomeCapabilityModels": "100+ एआई मॉडल",
+    "welcomeFreeBadge": "हमेशा के लिए मुफ़्त",
+    "welcomeTagline": "ओपन-सोर्स एजेंट और AI सहकर्मी",
+    "welcomeTitle": "AbacusAI Bot",
+    "welcomeCapabilityMemory": "सतत स्मृति",
+    "welcomeCapabilityConnectors": "100+ कनेक्टर्स",
+    "connectedPromiseAgent": "ओपन-सोर्स एआई एजेंट",
+    "connectedPromiseModels": "शक्तिशाली AI मॉडल निःशुल्क",
+    "connectedPromiseWork": "आपके सभी टूल और सेवाओं पर",
+    "connectedCta": "आरंभ करें",
+    "setupExistingTitle": "मौजूदा सदस्यताएँ",
+    "setupExistingBody": "अपने भुगतान किए गए मॉडल और टूल को एक स्थान पर लाएँ",
+    "setupExistingLater": "बाद में कनेक्ट करें",
+    "setupAbacusGrant": "अबेकस फ्री टियर तक पहुंच: ओपन-सोर्स मॉडल के मिश्रण में 2000 क्रेडिट",
+    "connectedTitleLead": "आपका स्वागत है",
     "connectedTitleName": "AbacusAI Bot",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
-    "connectorsTitleLead": "Connect with your",
-    "connectorsTitleAccent": "tools & services",
-    "connectorsSubtitle": "Chat where you work",
-    "connectorsConnectCta": "Connect",
-    "connectorsConnectedCta": "Connected",
-    "connectorsMore": "{{count}}+ more in Settings",
-    "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
-    "setupTitleLead": "Hook up your",
-    "setupTitleAccent": "AI",
-    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
-    "setupBlurbAbacusLead": "Get world-class models free",
-    "setupBlurbAbacusAccent": "2000 free credits",
-    "setupBlurbOpenrouterLead": "Unlock",
-    "setupBlurbOpenrouterAccent": "FREE models",
-    "setupBlurbOpenrouterTail": "with one connection",
-    "setupBlurbGeminiLead": "Use Gemini",
-    "setupBlurbGeminiAccent": "free to create anything",
-    "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
-    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}",
+    "connectedPromiseAgentLead": "श्रेणी में सर्वश्रेष्ठ,",
+    "connectedPromiseModelsLead": "पहुंच",
+    "connectedPromiseWorkLead": "काम पूरा करो",
+    "connectedPromiseLocalLead": "स्थानीय स्तर पर चलता है.",
+    "connectedPromiseLocal": "आप जहां भी काम करते हैं वहां इसके साथ चैट करें।",
+    "connectorsTitleLead": "अपने से जुड़ें",
+    "connectorsTitleAccent": "उपकरण एवं सेवाएँ।",
+    "connectorsSubtitle": "आप जहां काम करते हैं वहां चैट करें.",
+    "connectorsConnectCta": "कनेक्ट करें",
+    "connectorsConnectedCta": "कनेक्टेड",
+    "connectorsMore": "और भी बहुत कुछ",
+    "abacusUnidentified": "यह सत्यापित नहीं किया जा सका कि यह कुंजी किस खाते से संबंधित है. कुछ भी नहीं बचाया गया. कृपया दुबारा साइन - इन करने की प्रयास करें।",
+    "setupTitleLead": "अपने को जोड़ो",
+    "setupTitleAccent": "ऐ",
+    "setupSubtitle": "अपने बॉट के अंदर और अधिक अनलॉक करने के लिए शक्तिशाली मॉडल कनेक्ट करें।",
+    "setupBlurbAbacusLead": "विश्व स्तरीय मॉडल निःशुल्क प्राप्त करें",
+    "setupBlurbAbacusAccent": "2000 निःशुल्क क्रेडिट",
+    "setupBlurbOpenrouterLead": "अनलॉक",
+    "setupBlurbOpenrouterAccent": "मुफ़्त मॉडल",
+    "setupBlurbOpenrouterTail": "एक कनेक्शन के साथ",
+    "setupBlurbGeminiLead": "मिथुन राशि का प्रयोग करें",
+    "setupBlurbGeminiAccent": "कुछ भी बनाने के लिए स्वतंत्र",
+    "setupKeyDialogTitle": "{{provider}} पर जाएं और अपनी API कुंजी प्राप्त करें",
+    "setupKeyDialogBody": "कंसोल खोलें, एक कुंजी बनाएं, फिर उसे यहां चिपकाएं। आपके ऐसा करते समय यह विंडो खुली रहती है।",
+    "setupKeyDialogLink": "{{provider}} खोलें",
     "continueWithBrowser": "{{browser}} · {{profile}} के साथ जारी रखें",
     "signInAnotherWay": "किसी और तरीके से साइन इन करें",
-    "gmailTitle": "Connect your Gmail?",
-    "gmailBody": "AbacusAI Bot can read your inbox and draft replies for you from {{email}}. You review and send them.",
-    "gmailNote": "One click on Google’s consent screen; you can disconnect any time in Connectors.",
-    "gmailAllowCta": "Allow",
-    "gmailNotNowCta": "Not now",
-    "gmailFailed": "Gmail did not connect. You can try again, or continue and connect it later."
+    "gmailTitle": "अपना Gmail कनेक्ट करें?",
+    "gmailBody": "AbacusAI Bot आपके इनबॉक्स को पढ़ सकता है और {{email}} से आपके लिए उत्तरों का मसौदा तैयार कर सकता है। आप समीक्षा करें और उन्हें भेजें.",
+    "gmailNote": "Google की सहमति स्क्रीन पर एक क्लिक; आप कनेक्टर्स में किसी भी समय डिस्कनेक्ट कर सकते हैं।",
+    "gmailAllowCta": "अनुमति दें",
+    "gmailNotNowCta": "अभी नहीं",
+    "gmailFailed": "Gmail कनेक्ट नहीं हुआ. आप पुनः प्रयास कर सकते हैं, या जारी रख सकते हैं और बाद में इसे कनेक्ट कर सकते हैं।",
+    "connectedTitle": "AbacusAI Bot में आपका स्वागत है",
+    "connectedPromiseAgentFull": "बेहतरीन ओपन-सोर्स AI एजेंट",
+    "connectedPromiseModelsFull": "शक्तिशाली AI मॉडल मुफ़्त में इस्तेमाल करें",
+    "connectedPromiseWorkFull": "अपने टूल और सेवाओं में काम पूरा करें",
+    "connectedPromiseLocalFull": "आपके कंप्यूटर पर चलता है। जहाँ काम करें, वहीं चैट करें।",
+    "connectorsTitle": "अपने टूल और सेवाएँ कनेक्ट करें।",
+    "setupTitle": "अपना AI कनेक्ट करें"
   },
   "openFile": {
     "failed": "वह फ़ाइल नहीं खोली जा सकी।",
@@ -1266,238 +1277,238 @@
     "revealed": "उस फ़ाइल को खोलने पर वह चल जाती, इसलिए उसे आपके फ़ाइल मैनेजर में दिखाया गया।"
   },
   "permissions": {
-    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
-    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session",
-    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
-    "sandboxDeniedAlways": "Always allow these this session",
-    "sandboxDeniedHost": "Reach {{host}}",
-    "sandboxDeniedRead": "Read {{path}}",
-    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
-    "sandboxDeniedWrite": "Write {{path}}"
+    "credentialAlways": "\"हमेशा\" इन्हें इस शेष सत्र के लिए भी पठनीय रखता है।",
+    "credentialRead": "क्रेडेंशियल स्टोर को पढ़ता है, अन्यथा सैंडबॉक्स छिप जाता है:",
+    "networkHost": "एक सैंडबॉक्स्ड कमांड एक ऐसे होस्ट तक पहुंचना चाहता है जो अनुमति सूची में नहीं है। कनेक्शन आपके उत्तर की प्रतीक्षा कर रहा है.",
+    "networkHostAlways": "इस सत्र में हमेशा {{host}} को अनुमति दें",
+    "sandboxDenied": "सैंडबॉक्स ने इस कमांड द्वारा आजमाई गई किसी चीज़ को अस्वीकार कर दिया। इसे स्वीकृति दें?",
+    "sandboxDeniedAlways": "इस सत्र में हमेशा इन्हें अनुमति दें",
+    "sandboxDeniedHost": "{{host}} तक पहुंचें",
+    "sandboxDeniedRead": "{{path}} पढ़ें",
+    "sandboxDeniedRerun": "यदि आप इसकी अनुमति देते हैं, तो कमांड उस एक्सेस के साथ फिर से चलता है।",
+    "sandboxDeniedWrite": "{{path}} लिखें"
   },
   "profile": {
-    "title": "Profile",
-    "connectedAccount": "Abacus.AI account",
-    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
-    "organization": "Organization",
-    "plan": "Plan",
-    "credits": "Credits this month",
-    "creditsValue": "{{used}} of {{granted}} used",
-    "members": "Team members",
-    "dangerZone": "Danger zone",
-    "permissionsTitle": "Default permission mode",
-    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
-    "permissionsFullAccess": "Full access",
-    "permissionsAuto": "Auto",
-    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
+    "title": "प्रोफाइल",
+    "connectedAccount": "Abacus.AI खाता",
+    "notSignedIn": "Abacus.AI में साइन इन नहीं है। अपने संगठन, योजना और क्रेडिट को देखने के लिए सेटिंग्स → API कुंजियों से कनेक्ट करें।",
+    "organization": "संगठन",
+    "plan": "योजना",
+    "credits": "इस महीने क्रेडिट",
+    "creditsValue": "{{granted}} का {{used}} उपयोग किया गया",
+    "members": "टीम के सदस्य",
+    "dangerZone": "ख़तरे का क्षेत्र",
+    "permissionsTitle": "डिफ़ॉल्ट अनुमति मोड",
+    "permissionsDescription": "कौन से नए सत्र, बॉट और रूटीन चलते हैं। पूर्ण पहुंच: कोई संकेत नहीं और कोई सैंडबॉक्स नहीं। ऑटो: कोई संकेत नहीं, लेकिन ऑपरेटिंग सिस्टम शेल कमांड को कार्यक्षेत्र तक सीमित रखता है और क्रेडेंशियल स्टोर छुपाता है।",
+    "permissionsFullAccess": "पूर्ण पहुंच",
+    "permissionsAuto": "ऑटो",
+    "permissionsAutoWarning": "आपको अधिक अनुमति संकेत मिलेंगे: सैंडबॉक्स किसी कमांड को क्रेडेंशियल स्टोर पढ़ने, कार्यक्षेत्र के बाहर लिखने, या किसी नए होस्ट तक पहुंचने से पहले पूछता है।",
     "notSignedInShort": "साइन इन नहीं किया"
   },
   "referralCard": {
-    "cta": "Invite friends",
-    "dismiss": "Dismiss",
-    "title": "Invite friends, earn {{credits}} credits"
+    "cta": "मित्रों को आमंत्रित करें",
+    "dismiss": "ख़ारिज करें",
+    "title": "दोस्तों को आमंत्रित करें, {{credits}} क्रेडिट अर्जित करें"
   },
   "referrals": {
-    "title": "Invite friends",
-    "lead": "Invite friends to the AbacusAI Bot and earn credits. We send the invites for you from your own Gmail or WhatsApp.",
-    "leadWithNumbers": "Invite {{count}} friends to the AbacusAI Bot and get {{credits}} credits. We send the invites for you from your own Gmail or WhatsApp, and every friend who joins earns you {{perFriend}} more.",
-    "notSignedIn": "Sign in to Abacus.AI to invite friends.",
-    "progressTitle": "{{sent}} of {{total}} invites sent",
-    "progressGranted": "{{credits}} credits earned. Keep inviting: every friend who joins still pays.",
-    "friendsJoined": "{{count}} friends joined so far, {{credits}} credits earned from them.",
-    "copyLink": "Copy invite link",
-    "linkCopied": "Invite link copied",
-    "gmailTitle": "From your Gmail",
-    "gmailBody": "The people you email most, ready to invite. Untick anyone you'd rather leave out, then send. Each invite goes from your own address.",
-    "connectGmail": "Connect Gmail",
-    "noGmailContacts": "No contacts found in your recent sent mail yet. Add addresses above.",
-    "addEmailsHint": "Connect Gmail to pick from your contacts, or add addresses above and we send from Abacus.AI.",
-    "addEmailsPlaceholder": "Add email addresses, separated by commas",
-    "addEmails": "Add",
-    "addEmailsEmpty": "Type an email address first.",
-    "addEmailsInvalid": "That does not look like an email address.",
-    "addPhonesPlaceholder": "Add phone numbers with country code, separated by commas",
-    "addPhones": "Add",
-    "addPhonesEmpty": "Type a phone number first.",
-    "addPhonesInvalid": "That does not look like a phone number. Include the country code, like +1 555 0100.",
-    "whatsappTitle": "From your WhatsApp",
-    "whatsappBody": "Your WhatsApp chats, ready to invite. Untick anyone you'd rather leave out, or add a number for someone not listed, then send. Each message goes from your own number, one chat at a time.",
-    "linkWhatsapp": "Link WhatsApp in Connectors",
-    "noWhatsappContacts": "No WhatsApp chats read yet. Give it a moment after linking, or add numbers above.",
-    "selectedCount": "{{selected}} of {{total}} selected",
-    "selectAll": "Select all",
-    "selectNone": "Select none",
-    "messageLabel": "Your note to them",
-    "defaultMessage": "I've been using the AbacusAI Bot, a free open-source desktop AI agent that runs on free models. Worth a try.",
-    "sendInvites": "Send {{count}} invites",
-    "sending": "Sending…",
-    "sentToast": "Invited {{count}} people",
-    "sentToastDetail": "{{skipped}} already on Abacus.AI or invited before, {{failed}} could not be sent.",
-    "milestoneToast": "{{credits}} credits added to your account",
+    "title": "मित्रों को आमंत्रित करें",
+    "lead": "दोस्तों को AbacusAI Bot पर आमंत्रित करें और क्रेडिट अर्जित करें। हम आपके लिए आपके अपने Gmail या WhatsApp से आमंत्रण भेजते हैं।",
+    "leadWithNumbers": "{{count}} मित्रों को AbacusAI Bot पर आमंत्रित करें और {{credits}} क्रेडिट प्राप्त करें। हम आपके लिए आपके अपने Gmail या WhatsApp से निमंत्रण भेजते हैं, और इसमें शामिल होने वाला प्रत्येक मित्र आपको {{perFriend}} अधिक कमाता है।",
+    "notSignedIn": "मित्रों को आमंत्रित करने के लिए Abacus.AI में साइन इन करें।",
+    "progressTitle": "{{total}} में से {{sent}} आमंत्रण भेजा गया",
+    "progressGranted": "{{credits}} क्रेडिट अर्जित किये गये। आमंत्रित करते रहें: शामिल होने वाला प्रत्येक मित्र अभी भी भुगतान करता है।",
+    "friendsJoined": "{{count}} मित्र अब तक शामिल हुए, {{credits}} क्रेडिट उनसे अर्जित हुए।",
+    "copyLink": "आमंत्रण लिंक कॉपी करें",
+    "linkCopied": "आमंत्रण लिंक कॉपी किया गया",
+    "gmailTitle": "आपके Gmail से",
+    "gmailBody": "जिन लोगों को आप सबसे अधिक ईमेल करते हैं, वे आमंत्रित करने के लिए तैयार हैं। जिसे भी आप छोड़ना चाहें उसे अनचेक करें, फिर भेजें। प्रत्येक आमंत्रण आपके ही पते से जाता है।",
+    "connectGmail": "Gmail कनेक्ट करें",
+    "noGmailContacts": "आपके हाल ही में भेजे गए मेल में अभी तक कोई संपर्क नहीं मिला। ऊपर पते जोड़ें.",
+    "addEmailsHint": "अपने संपर्कों में से चुनने के लिए Gmail कनेक्ट करें, या ऊपर पते जोड़ें और हम Abacus.AI से भेजते हैं।",
+    "addEmailsPlaceholder": "अल्पविराम से अलग करके ईमेल पते जोड़ें",
+    "addEmails": "जोड़ें",
+    "addEmailsEmpty": "सबसे पहले एक ईमेल पता टाइप करें.",
+    "addEmailsInvalid": "वह ईमेल पता जैसा नहीं लगता.",
+    "addPhonesPlaceholder": "अल्पविराम से अलग किए गए देश कोड के साथ फ़ोन नंबर जोड़ें",
+    "addPhones": "जोड़ें",
+    "addPhonesEmpty": "सबसे पहले एक फ़ोन नंबर टाइप करें.",
+    "addPhonesInvalid": "वह फ़ोन नंबर जैसा नहीं लगता. देश कोड शामिल करें, जैसे +1 555 0100।",
+    "whatsappTitle": "आपके WhatsApp से",
+    "whatsappBody": "आपकी WhatsApp चैट, आमंत्रित करने के लिए तैयार हैं। जिसे आप छोड़ना चाहें उसे अनटिक करें, या किसी ऐसे व्यक्ति का नंबर जोड़ें जो सूचीबद्ध नहीं है, फिर भेजें। प्रत्येक संदेश आपके अपने नंबर से, एक समय में एक चैट से जाता है।",
+    "linkWhatsapp": "कनेक्टर्स में WhatsApp लिंक करें",
+    "noWhatsappContacts": "अभी तक कोई WhatsApp चैट नहीं पढ़ी गई। लिंक करने के बाद कुछ देर रुकें, या ऊपर दिए गए नंबर जोड़ें।",
+    "selectedCount": "{{total}} में से {{selected}} चयनित",
+    "selectAll": "सभी का चयन करें",
+    "selectNone": "कोई नहीं चुनें",
+    "messageLabel": "उन्हें आपका नोट",
+    "defaultMessage": "मैं आपको AbacusAI Bot, एक मुफ़्त, ओपन-सोर्स डेस्कटॉप AI एजेंट आज़माने के लिए आमंत्रित करता हूं। \n इसे यहां डाउनलोड करें (bot.abacus.ai): {{link}}\n\n- 100% मुफ़्त: यह अद्भुत मुफ़्त LLMs पर चलता है, कोई क्रेडिट कार्ड नहीं, नहीं सदस्यता.\n- आपके कंप्यूटर पर वास्तविक काम करता है: आपकी फ़ाइलें, टर्मिनल और ब्राउज़र, आपकी अनुमति से। \n- Gmail, Google Drive, Slack, WhatsApp, Telegram और से कनेक्ट होता है Discord.\n- चौबीसों घंटे आपके लिए बॉट और रूटीन चलाता है। \n\nयह खुला स्रोत है। यदि आपको यह पसंद है, तो रेपो को तारांकित करें: https://github.com/abacusai/abacusai-bot",
+    "sendInvites": "{{count}} आमंत्रण भेजें",
+    "sending": "भेजा जा रहा है...",
+    "sentToast": "{{count}} लोगों को आमंत्रित किया गया",
+    "sentToastDetail": "{{skipped}} पहले से ही Abacus.AI पर है या पहले आमंत्रित किया गया है, {{failed}} नहीं भेजा जा सका।",
+    "milestoneToast": "{{credits}} क्रेडिट आपके खाते में जोड़ा गया",
     "errors": {
-      "gmail": "Gmail is not connected. Connect it and try again.",
-      "whatsapp": "WhatsApp is not linked or is still starting. Check Connectors and try again.",
-      "signedOut": "Sign in to Abacus.AI first.",
-      "unavailable": "Could not send the invites right now. Try again in a moment."
+      "gmail": "Gmail कनेक्ट नहीं है. इसे कनेक्ट करें और पुनः प्रयास करें.",
+      "whatsapp": "WhatsApp लिंक नहीं है या अभी भी प्रारंभ हो रहा है। कनेक्टर्स की जाँच करें और पुनः प्रयास करें।",
+      "signedOut": "सबसे पहले Abacus.AI में साइन इन करें।",
+      "unavailable": "अभी आमंत्रण नहीं भेजा जा सका. थोड़ी देर में पुनः प्रयास करें."
     }
   },
   "routines": {
-    "atLabel": "At",
-    "autoRepliesLeadSidebar": "Each chat a bot answers on its own is listed under Routines in the sidebar, with its conversation. Pause keeps the grant and stops the answers.",
+    "atLabel": "पर",
+    "autoRepliesLeadSidebar": "प्रत्येक चैट जिसका बॉट स्वयं उत्तर देता है, उसकी बातचीत के साथ साइडबार में रूटीन के अंतर्गत सूचीबद्ध होती है। विराम अनुदान रखता है और उत्तर रोकता है।",
     "autoRepliesTitle": "स्वचालित जवाब",
-    "autoReplyLine": "{{bot}} answers here on {{platform}}. You can read; the sender drives the conversation.",
+    "autoReplyLine": "{{bot}} यहाँ {{platform}} पर उत्तर देता है। आप पढ़ सकते हैं; प्रेषक बातचीत चलाता है.",
     "autoReplyOn": "चालू",
     "autoReplyPaused": "रुका हुआ",
-    "autoReplyRowTitle": "{{bot}} auto-replies to {{sender}} on {{platform}}",
+    "autoReplyRowTitle": "{{bot}} {{platform}} पर {{sender}} का स्वत: उत्तर देता है",
     "cancel": "रद्द करें",
     "copyWebhook": "वेबहुक URL कॉपी करें",
     "create": "बनाएँ",
     "createTitle": "रूटीन बनाएँ",
-    "cronLabel": "Cron expression",
+    "cronLabel": "क्रोन अभिव्यक्ति",
     "delete": "हटाएँ",
     "deleteBody": "इससे “{{name}}” और उसका रन इतिहास हट जाएगा।",
     "deleteError": "रूटीन हटाया नहीं जा सका।",
     "deleteTitle": "रूटीन हटाएँ",
     "edit": "संपादित करें",
     "editTitle": "रूटीन संपादित करें",
-    "editorPlaceholder": "Tell the routine how to change: \"every morning at 9 instead\", \"stop\"",
-    "editorSend": "Send",
-    "editorThinking": "Changing…",
+    "editorPlaceholder": "दिनचर्या बताएं कि कैसे बदलाव करें: \"इसके बजाय हर सुबह 9 बजे\", \"रुकें\"",
+    "editorSend": "भेजें",
+    "editorThinking": "बदल रहा है...",
     "empty": "अभी कोई रूटीन नहीं। एक बनाएँ, या किसी बॉट से कुछ शेड्यूल करने को कहें।",
     "enabled": "सक्रिय",
-    "firedByCreate": "on creation",
+    "firedByCreate": "सृजन पर",
     "firedByManual": "मैनुअल",
     "firedBySchedule": "शेड्यूल",
     "firedByWebhook": "वेबहुक",
     "lastRun": "पिछला: {{time}}",
     "lead": "जो अपने आप चलता है: शेड्यूल किए काम, वेबहुक फ़ायर और उन्होंने क्या किया।",
-    "madeBy": "made by {{bot}}",
+    "madeBy": "{{bot}} द्वारा बनाया गया",
     "nameLabel": "नाम",
     "namePlaceholder": "जैसे सुबह का ब्रीफ़",
     "newRoutine": "नया रूटीन",
     "nextRun": "अगला: {{time}}",
-    "noRunsYet": "This routine has not fired yet. Run it now, or wait for its next fire.",
-    "onLabel": "On",
-    "pageMissing": "This routine is gone.",
+    "noRunsYet": "यह रूटीन अभी तक सक्रिय नहीं हुआ है. इसे अभी चलाएँ, या इसकी अगली आग की प्रतीक्षा करें।",
+    "onLabel": "चालू",
+    "pageMissing": "यह दिनचर्या ख़त्म हो गई है.",
     "pause": "रोकें",
-    "pausedTitle": "Paused",
-    "presetCustom": "Custom",
+    "pausedTitle": "रुके हुए",
+    "presetCustom": "कस्टम",
     "presetDaily": "रोज़",
     "presetHourly": "हर घंटे",
-    "presetManual": "Manual",
-    "presetOnce": "Once",
+    "presetManual": "मैनुअल",
+    "presetOnce": "एक बार",
     "presetWeekdays": "कार्यदिवस",
-    "presetWeekly": "Weekly",
+    "presetWeekly": "साप्ताहिक",
     "promptLabel": "निर्देश",
     "promptPlaceholder": "क्या चलना चाहिए? इसे स्वतंत्र रूप से समझ आने लायक लिखें।",
     "promptRequired": "निर्देश आवश्यक है।",
     "ranNow": "रूटीन शुरू हुआ।",
     "resume": "फिर शुरू करें",
-    "runAtLabel": "Run at",
-    "runAtPast": "That time has already passed.",
-    "runAtRequired": "Pick a date and time to run at.",
+    "runAtLabel": "पर चलाएँ",
+    "runAtPast": "वह समय पहले ही बीत चुका है.",
+    "runAtRequired": "चलाने के लिए एक दिनांक और समय चुनें.",
     "runError": "रूटीन शुरू नहीं हो सका।",
     "runHistory": "{{count}} हाल की रन",
     "runNow": "अभी चलाएँ",
     "runOutcome": {
-      "completed": "Completed",
-      "failed": "Failed",
-      "running": "Running"
+      "completed": "पूरा हुआ",
+      "failed": "असफल",
+      "running": "चल रहा है"
     },
     "runReadOnly": "रूटीन रन: यह सेशन रूटीन की रिपोर्ट है। आप इसे पढ़ सकते हैं पर जवाब नहीं दे सकते; अगला रन नए सिरे से शुरू होगा। इसका काम बदलने के लिए रूटीन संपादित करें।",
-    "runsEmpty": "No runs yet.",
-    "runsIn": "runs in {{folder}}",
-    "runsInHint": "Each fire runs in a fresh session of its own. Find this routine and its runs under Routines in the sidebar.",
-    "runsTitle": "Runs",
+    "runsEmpty": "अभी तक कोई रन नहीं.",
+    "runsIn": "{{folder}} में चलता है",
+    "runsInHint": "प्रत्येक आग अपने स्वयं के एक नए सत्र में चलती है। इस रूटीन और इसके रन को साइडबार में रूटीन के अंतर्गत खोजें।",
+    "runsTitle": "चलता है",
     "save": "सहेजें",
     "saveError": "रूटीन सहेजा नहीं जा सका।",
-    "scheduleDaily": "Daily at {{time}}",
-    "scheduleHint": "Local time. Fires only while the app is running.",
-    "scheduleHourly": "Every hour",
+    "scheduleDaily": "{{time}} पर प्रतिदिन",
+    "scheduleHint": "स्थानीय समय. ऐप चालू होने पर ही सक्रिय होता है।",
+    "scheduleHourly": "हर घंटे",
     "scheduleLabel": "शेड्यूल",
-    "scheduleManual": "On demand",
-    "scheduleManualHint": "Runs only when you press Run now or fire the webhook.",
-    "scheduleOnce": "Once on {{when}}",
-    "scheduleOnceHint": "Fires once at that time, then turns itself off. Local time; a moment the app slept through fires when it wakes.",
+    "scheduleManual": "मांग पर",
+    "scheduleManualHint": "केवल तभी चलता है जब आप अभी चलाएँ दबाएँ या वेबहुक सक्रिय करें।",
+    "scheduleOnce": "एक बार {{when}} पर",
+    "scheduleOnceHint": "उस समय एक बार फायर करता है, फिर अपने आप बंद हो जाता है। स्थानीय समय; एक पल के लिए जब ऐप जागता है तो वह आग के बीच सो जाता है।",
     "scheduleRequired": "शेड्यूल आवश्यक है।",
-    "scheduleWeekdays": "Weekdays at {{time}}",
-    "scheduleWeekly": "{{day}}s at {{time}}",
+    "scheduleWeekdays": "{{time}} पर कार्यदिवस",
+    "scheduleWeekly": "{{time}} पर {{day}}s",
     "statActive": "सक्रिय",
     "statFiredToday": "आज फ़ायर",
     "statPaused": "रुके हुए",
-    "templateWorksWith": "Reads from {{names}}",
+    "templateWorksWith": "{{names}} से पढ़ता है",
     "templates": {
       "morning-brief": {
-        "description": "What today needs from you: the calendar, the mail worth a reply, and anything addressed to you.",
-        "name": "Morning brief"
+        "description": "आज आपसे क्या चाहिए: कैलेंडर, उत्तर देने योग्य मेल, और आपको संबोधित कुछ भी।",
+        "name": "सुबह की संक्षिप्त जानकारी"
       },
       "inbox-triage": {
-        "description": "Sorts new mail into reply, read, and noise, and drafts the replies for you to send.",
-        "name": "Inbox triage"
+        "description": "नए मेल को उत्तर, पढ़ने और शोर के आधार पर क्रमबद्ध करता है, और आपके भेजने के लिए उत्तरों का मसौदा तैयार करता है।",
+        "name": "इनबॉक्स ट्राइएज"
       },
       "pr-digest": {
-        "description": "Open pull requests on this workspace, with the ones going stale first.",
-        "name": "Pull request digest"
+        "description": "इस कार्यक्षेत्र पर पुल अनुरोध खोलें, जिनमें से पहले पुराने हो जाएंगे।",
+        "name": "पुल अनुरोध डाइजेस्ट"
       },
       "failing-tests": {
-        "description": "Runs the test suite and reports only what changed since the last run.",
-        "name": "Test watch"
+        "description": "परीक्षण सूट चलाता है और केवल वही रिपोर्ट करता है जो पिछले रन के बाद से बदला गया है।",
+        "name": "परीक्षण घड़ी"
       },
       "dependency-watch": {
-        "description": "Security advisories worth acting on, kept apart from version bumps that can wait.",
-        "name": "Dependency watch"
+        "description": "कार्रवाई करने लायक सुरक्षा सलाह को उन वर्जन बाधाओं से अलग रखा गया है जो प्रतीक्षा कर सकते हैं।",
+        "name": "निर्भरता घड़ी"
       },
       "week-in-review": {
-        "description": "What shipped this week from the commit history, grouped by theme, ending with what looks stuck.",
-        "name": "Week in review"
+        "description": "इस सप्ताह प्रतिबद्ध इतिहास से जो भेजा गया, उसे थीम के आधार पर समूहीकृत किया गया, जो अटका हुआ दिखता है उसके साथ समाप्त होता है।",
+        "name": "समीक्षाधीन सप्ताह"
       }
     },
-    "templatesLead": "Or start from one of these",
-    "testRunHint": "Fire it right after creating, so you can see it work before the schedule does.",
-    "testRunLabel": "Run once now",
+    "templatesLead": "या इनमें से किसी एक से शुरुआत करें",
+    "testRunHint": "इसे बनाने के ठीक बाद सक्रिय करें, ताकि आप शेड्यूल पूरा होने से पहले इसे काम करते हुए देख सकें।",
+    "testRunLabel": "अभी एक बार दौड़ो",
     "title": "रूटीन",
     "updateError": "रूटीन अपडेट नहीं हो सका।",
     "webhookCopied": "वेबहुक URL कॉपी हुआ।",
     "webhookHint": "HTTP POST से यह रूटीन फ़ायर करें।",
     "webhookLabel": "वेबहुक",
-    "webhookPublicPending": "Setting up the public link. This local one works meanwhile…",
-    "workspaceAddError": "That folder could not be added.",
-    "workspaceChoose": "Choose a folder…",
-    "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
-    "workspaceLabel": "Folder",
-    "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
-    "workspaceOwnFolder": "Its own folder"
+    "webhookPublicPending": "आपका सार्वजनिक वेबहुक लिंक बनाया जा रहा है...",
+    "workspaceAddError": "वह फ़ोल्डर जोड़ा नहीं जा सका.",
+    "workspaceChoose": "एक फ़ोल्डर चुनें…",
+    "workspaceHelp": "जहां रन होता है. जब निर्देश उसके कोड, परीक्षण या निर्भरता को पढ़ता है तो एक प्रोजेक्ट चुनें।",
+    "workspaceLabel": "फ़ोल्डर",
+    "workspaceMissing": "यह निर्देश किसी प्रोजेक्ट का कोड पढ़ता है. इसके अपने फ़ोल्डर में पढ़ने के लिए कुछ भी नहीं है।",
+    "workspaceOwnFolder": "इसका अपना फ़ोल्डर है"
   },
   "sessions": {
-    "delete": "Delete session",
-    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
-    "deleteError": "Could not delete that session. Try again.",
-    "deleteTitle": "Delete this session?",
+    "delete": "सत्र हटाएँ",
+    "deleteBody": "\"{{label}}\" और इसकी प्रतिलिपि हटा दी गई है। इसे असंपादित नहीं किया जा सकता है।",
+    "deleteError": "उस सत्र को हटाया नहीं जा सका. पुनः प्रयास करें।",
+    "deleteTitle": "यह सत्र हटाएं?",
     "emptyDescription": "अपनी पसंद के फ़ोल्डर में एजेंट के साथ काम करने के लिए एक सत्र शुरू करें।",
     "emptyTitle": "अभी तक कोई सत्र नहीं",
-    "newSession": "New session",
-    "pin": "Pin",
-    "pinned": "Pinned",
-    "sessionOptions": "Session options",
-    "title": "Sessions",
-    "unpin": "Unpin",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "newSession": "नया सत्र",
+    "pin": "पिन करें",
+    "pinned": "पिन किया गया",
+    "sessionOptions": "सत्र विकल्प",
+    "title": "सत्र",
+    "unpin": "पिन हटाएँ",
+    "today": "आज",
+    "yesterday": "कल",
+    "daysAgo": "{{count}} दिन पहले"
   },
   "sidebarNav": {
-    "app": "App",
+    "app": "ऐप",
     "artifacts": "आर्टिफ़ैक्ट",
     "capabilities": "क्षमताएँ",
     "connectors": "कनेक्टर",
-    "memory": "Memory",
-    "messaging": "Messaging",
+    "memory": "मेमोरी",
+    "messaging": "मैसेजिंग",
     "newSession": "नया सत्र",
-    "routines": "Routines",
+    "routines": "रूटीन",
     "usage": "उपयोग",
-    "whatsNew": "What's new"
+    "whatsNew": "नया क्या है"
   },
   "skills": {
     "appliesToBoth": "स्किल्स हर वर्कस्पेस में एजेंट के लिए उपलब्ध हैं।",
@@ -1527,7 +1538,7 @@
       "global": "ग्लोबल",
       "project": "वर्कस्पेस"
     },
-    "title": "Skills",
+    "title": "कौशल",
     "uninstall": "Skill अनइंस्टॉल करें",
     "uninstallConfirm": "Skill \"{{id}}\" हटाएँ? इससे Skill फ़ाइल हट जाएगी।",
     "upload": "अपलोड करें",
@@ -1538,29 +1549,29 @@
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
+      "description": "POSIX शेल ऐप (बिजीबॉक्स ऐश) के साथ बंडल किया गया है, वही एजेंट का बैश टूल चलता है, जिसमें grep, sed, awk और मित्र अंतर्निहित होते हैं।",
       "label": "BusyBox sh"
     },
     "cmd": {
-      "description": "The Windows command prompt.",
-      "label": "Command Prompt"
+      "description": "Windows कमांड प्रॉम्प्ट।",
+      "label": "कमांड प्रॉम्प्ट"
     },
-    "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
-    "inUse": "In use",
-    "notInstalled": "Not found on this machine.",
+    "fellBack": "{{selected}} अभी प्रयोग करने योग्य नहीं है, इसलिए {{effective}} में नए टर्मिनल खुले हैं।",
+    "inUse": "प्रयोग में है",
+    "notInstalled": "इस मशीन पर नहीं मिला.",
     "powershell": {
-      "description": "Windows PowerShell, the one that ships with Windows.",
+      "description": "Windows PowerShell, वह जो Windows के साथ भेजा जाता है।",
       "label": "Windows PowerShell"
     },
     "pwsh": {
-      "description": "PowerShell 7 or later, installed separately.",
+      "description": "PowerShell 7 या बाद का संस्करण, अलग से स्थापित।",
       "label": "PowerShell"
     },
     "system": {
-      "description": "Whatever this machine calls its default shell.",
-      "label": "Default shell"
+      "description": "जिसे भी यह मशीन अपना डिफ़ॉल्ट शेल कहती है।",
+      "label": "डिफ़ॉल्ट शेल"
     },
-    "title": "Terminal shell"
+    "title": "टर्मिनल खोल"
   },
   "theme": {
     "dark": "डार्क",
@@ -1570,7 +1581,7 @@
   "tour": {
     "finish": "शुरू करें",
     "next": "आगे",
-    "optional": "Optional",
+    "optional": "वैकल्पिक",
     "progress": "चरण {{current}} / {{total}}",
     "replay": "टूर देखें",
     "skip": "टूर छोड़ें",
@@ -1581,8 +1592,8 @@
       },
       "bots": {
         "body": "अपने निर्देशों, शेड्यूल और चैट वाले स्थायी एजेंट। जो काम आप बार-बार सौंपते हैं, उसके लिए एक बनाएँ।",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
+        "bulletBots": "अपने स्वयं के निर्देशों, टूल और चैट के साथ पुन: प्रयोज्य बॉट बनाएं।",
+        "bulletSessions": "एकमुश्त कार्यों और त्वरित कार्य के लिए सत्रों का उपयोग करें।",
         "title": "आपके बॉट"
       },
       "capabilities": {
@@ -1598,8 +1609,8 @@
         "body": "जिन टूल्स में आप पहले से काम करते हैं उन्हें जोड़िए। मुफ़्त Abacus.AI अकाउंट एक क्लिक में पूरा सेट जोड़ देता है।"
       },
       "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+        "title": "एक बॉट बनाओ",
+        "body": "यहां किसी एक का नाम बताएं, या नीचे दिए गए टेम्पलेट से प्रारंभ करें। एक बॉट फाइलों को पढ़ता और संपादित करता है, कमांड चलाता है, और आपके द्वारा कनेक्ट किए गए टूल में चैट और अपनी मेमोरी के साथ काम करता है।"
       },
       "memory": {
         "title": "मेमोरी",
@@ -1624,7 +1635,7 @@
       "terminal": {
         "title": "टर्मिनल",
         "body": "आपके वर्कस्पेस में असली शेल, उसी फ़ोल्डर में जिसमें एजेंट काम करता है। टाइटल बार का टर्मिनल बटन इसे दिखाता और छिपाता है।",
-        "audience": "For developers & technical users"
+        "audience": "डेवलपर्स और तकनीकी उपयोगकर्ताओं के लिए"
       },
       "usage": {
         "title": "उपयोग",
@@ -1637,27 +1648,27 @@
     }
   },
   "updateBanner": {
-    "dismiss": "Dismiss",
+    "dismiss": "ख़ारिज करें",
     "stalled": "स्वतः पुनः आरंभ नहीं हो सका। अपडेट पूरा करने के लिए ऐप बंद करके फिर से खोलें।",
-    "subtitle": "Relaunch to get the latest improvements and fixes.",
-    "title": "A new version is ready",
-    "whatsChanged": "See what changed"
+    "subtitle": "नवीनतम सुधार और सुधार प्राप्त करने के लिए पुनः लॉन्च करें।",
+    "title": "एक नया संस्करण तैयार है",
+    "whatsChanged": "देखिये क्या बदला"
   },
   "updateCritical": {
-    "body": "This release fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "bodyWithVersion": "Version {{version}} fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",
-    "countdown": "Restarting automatically in {{time}}",
-    "restartNow": "Restart now",
-    "restarting": "Restarting…",
-    "title": "A required update is ready"
+    "body": "यह रिलीज़ एक गंभीर समस्या को ठीक करता है और जारी रखने से पहले इसे इंस्टॉल करना होगा। इसे लागू करने के लिए ऐप पुनः प्रारंभ होगा.",
+    "bodyWithVersion": "संस्करण {{version}} एक गंभीर समस्या को ठीक करता है और आपके जारी रखने से पहले इसे इंस्टॉल करना होगा। इसे लागू करने के लिए ऐप पुनः प्रारंभ होगा.",
+    "countdown": "{{time}} में स्वचालित रूप से पुनरारंभ हो रहा है",
+    "restartNow": "अभी पुनः आरंभ करें",
+    "restarting": "पुनः प्रारंभ हो रहा है...",
+    "title": "एक आवश्यक अद्यतन तैयार है"
   },
   "updatePill": {
     "downloading": "अपडेट डाउनलोड हो रहा है… {{percent}}%",
-    "failed": "Update download failed. Retry",
-    "installing": "Restarting…",
-    "relaunch": "Relaunch to update",
-    "retrying": "Retrying…",
-    "tooltip": "Version {{version}} is ready to install"
+    "failed": "अद्यतन डाउनलोड विफल रहा. पुनः प्रयास करें",
+    "installing": "पुनः प्रारंभ हो रहा है...",
+    "relaunch": "अद्यतन करने के लिए पुन: लॉन्च करें",
+    "retrying": "पुनः प्रयास किया जा रहा है...",
+    "tooltip": "संस्करण {{version}} इंस्टॉल करने के लिए तैयार है"
   },
   "usage": {
     "cardDetail": "{{requests}} अनुरोध · {{tokens}} टोकन",
@@ -1682,25 +1693,25 @@
     "today": "आज",
     "unpricedHint": "कुछ मॉडलों की कीमत प्रकाशित नहीं है; उनके टोकन गिने जाते हैं, लागत नहीं।",
     "window": "पिछले {{days}} दिन",
-    "abacusPlan": "Abacus.AI plan",
-    "abacusCredits": "{{used}} / {{granted}} credits"
+    "abacusPlan": "Abacus.AI प्लान",
+    "abacusCredits": "{{used}} / {{granted}} क्रेडिट"
   },
   "userMenu": {
     "about": "के बारे में...",
-    "browserSettings": "Browser",
+    "browserSettings": "ब्राउज़र",
     "deviceSettings": "डिवाइस",
-    "dumpLogs": "Dump logs",
+    "dumpLogs": "लॉग डंप करें",
     "keepAwake": "काम के दौरान जगाए रखें",
     "language": "भाषा",
     "mcpManagement": "MCP सर्वर",
-    "notificationSettings": "Notifications",
+    "notificationSettings": "सूचनाएं",
     "settings": "सेटिंग्स",
-    "signIn": "Sign in",
-    "signOut": "Sign out",
-    "signedOutRunningSessions": "Signed out. A chat that is already running keeps the key it started with until you start a new one.",
-    "skillsManagement": "Skills",
+    "signIn": "साइन इन करें",
+    "signOut": "साइन आउट करें",
+    "signedOutRunningSessions": "साइन आउट कर दिया गया. जो चैट पहले से चल रही है वह उस कुंजी को अपने पास रखती है जिससे वह शुरू हुई थी जब तक कि आप नई चैट शुरू नहीं करते।",
+    "skillsManagement": "कौशल",
     "theme": "थीम",
-    "whatsNew": "What's new"
+    "whatsNew": "नया क्या है"
   },
   "visualizer": {
     "loading": "विज़ुअलाइज़ेशन लोड हो रहा है…"
@@ -1712,20 +1723,20 @@
     "ageMinutes": "{{count}} मि",
     "ageNow": "अभी",
     "agents": {
-      "emptyHint": "Sub-agents launched during a turn appear here.",
-      "emptyTitle": "No sub-agents yet",
+      "emptyHint": "एक मोड़ के दौरान लॉन्च किए गए उप-एजेंट यहां दिखाई देते हैं।",
+      "emptyTitle": "अभी तक कोई उप-एजेंट नहीं है",
       "kind": {
-        "browser": "Browser",
-        "component": "Component",
-        "delegate": "Delegate"
+        "browser": "ब्राउज़र",
+        "component": "घटक",
+        "delegate": "प्रतिनिधि"
       },
-      "mainAgent": "Main agent"
+      "mainAgent": "मुख्य एजेंट"
     },
     "allPinned": "यहाँ सब कुछ पिन है। हाल के में दिखाने के लिए किसी चैट को अनपिन करें।",
     "attach": {
       "cancel": "रद्द करें",
       "done": "हो गया",
-      "files": "Files or images…",
+      "files": "फ़ाइलें या छवियाँ…",
       "folder": "फ़ोल्डर…",
       "mentionTip": "सुझाव: फ़ाइलों का सीधे उल्लेख करने के लिए @ टाइप करें।",
       "menuLabel": "संलग्न करें",
@@ -1734,26 +1745,26 @@
       "saveFailed": "अटैचमेंट सहेजे नहीं जा सके: {{error}}",
       "unknownError": "अज्ञात त्रुटि"
     },
-    "autoWorkspace": "Default workspace",
+    "autoWorkspace": "डिफ़ॉल्ट कार्यक्षेत्र",
     "branch": {
-      "create": "Create “{{branch}}”",
+      "create": "\"{{branch}}\" बनाएं",
       "createFailed": "ब्रांच नहीं बनाई जा सकी।",
-      "description": "Choose the Git branch this checkout uses. Switching changes the files the agent works on.",
+      "description": "वह Git शाखा चुनें जिसका उपयोग यह चेकआउट करता है। स्विच करने से वे फ़ाइलें बदल जाती हैं जिन पर एजेंट काम करता है।",
       "createdAndSwitched": "{{name}} बनाई गई और उस पर स्विच किया गया",
-      "loading": "Loading branches…",
-      "noResults": "No branches found.",
+      "loading": "शाखाएँ लोड हो रही हैं...",
+      "noResults": "कोई शाखा नहीं मिली.",
       "searchOrCreate": "ब्रांच खोजें या बनाएं…",
-      "showing": "Showing {{count}} of {{total}} refs",
+      "showing": "{{total}} रेफरी का {{count}} दिखाया जा रहा है",
       "stopAgentFirst": "स्विच करने से पहले एजेंट रोकें",
       "switchFailed": "ब्रांच स्विच नहीं हो सकी।",
       "switched": "{{name}} पर स्विच किया गया"
     },
     "cancel": "रद्द करें",
     "chat": {
-      "conversation": "Conversation",
+      "conversation": "बातचीत",
       "continueBelow": "आप नीचे चैट जारी रख सकते हैं।",
       "historyLoadFailed": "बातचीत का इतिहास लोड नहीं हो सका।",
-      "scrollToBottom": "Scroll to bottom"
+      "scrollToBottom": "नीचे स्क्रॉल करें"
     },
     "chatDeleted": "चैट हटाई गई",
     "chatRenamed": "चैट का नाम बदला गया",
@@ -1763,21 +1774,21 @@
     "composerNeedsModel": "शुरू करने के लिए एक मॉडल कनेक्ट करें",
     "composerNeedsWorkspace": "शुरू करने के लिए एक वर्कस्पेस फ़ोल्डर चुनें",
     "composerPlaceholder": "अपने कोडबेस के बारे में कुछ भी पूछें…",
-    "composerPlaceholderBusy": "Send now to steer the agent. It lands at its next step",
+    "composerPlaceholderBusy": "एजेंट को निर्देशित करने के लिए अभी भेजें। यह अपने अगले चरण पर उतरता है",
     "composerTasks": {
-      "dismiss": "Dismiss tasks for this turn",
-      "now": "now",
-      "progressLabel": "Tasks: {{completed}} of {{total}} complete. Current task: {{current}}",
-      "title": "Tasks"
+      "dismiss": "इस बारी के लिए कार्य ख़ारिज करें",
+      "now": "अभी",
+      "progressLabel": "कार्य: {{total}} में से {{completed}} पूर्ण। वर्तमान कार्य: {{current}}",
+      "title": "कार्य"
     },
     "confirmDelete": "हटाएं",
     "createBotToSend": "संदेश भेजने के लिए एक बॉट बनाएँ",
     "credits": {
-      "thisTurn": "This turn: {{credits}} credits",
-      "total": "Conversation total: {{credits}} credits",
-      "used": "{{credits}} credits used"
+      "thisTurn": "यह मोड़: {{credits}} क्रेडिट",
+      "total": "कुल बातचीत: {{credits}} क्रेडिट",
+      "used": "{{credits}} क्रेडिट इस्तेमाल हुए"
     },
-    "currentCheckout": "Current checkout",
+    "currentCheckout": "वर्तमान चेकआउट",
     "deleteChat": "चैट हटाएं",
     "deleteChatDescription": "यह चैट और इसका इतिहास स्थायी रूप से हटा दिया जाएगा।",
     "deleteWorkspace": "कार्यस्थान हटाएं",
@@ -1785,15 +1796,16 @@
     "deleteWorkspaceConfirmPlaceholder": "{{name}}",
     "deleteWorkspaceDescription": "यह \"{{name}}\" और उसकी चैट को AbacusAI Bot से हटा देता है। डिस्क पर आपकी फ़ाइलें और फ़ोल्डर नहीं हटाए जाते और अछूते रहेंगे। यह क्रिया पूर्ववत नहीं की जा सकती।",
     "deleteWorkspaceNameMismatch": "नाम मेल नहीं खाता",
-    "deleteWorkspacePermanently": "Delete Permanently",
-    "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
-    "deletedWorkspaceBadge": "Deleted",
-    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
+    "deleteWorkspacePermanently": "स्थायी रूप से हटाएँ",
+    "deleteWorkspacePermanentlyDescription": "\"{{name}}\" पहले ही हटा दिया गया था। इससे इसकी चैट और उनका इतिहास हमेशा के लिए मिट जाता है। आपकी फ़ाइलें और डिस्क पर मौजूद फ़ोल्डर को छुआ नहीं गया है. इस एक्शन को वापस नहीं किया जा सकता।",
+    "deletedWorkspaceBadge": "हटा दिया गया",
+    "deletedWorkspaceReadOnly": "यह कार्यक्षेत्र हटा दिया गया था, इसलिए इसकी चैट केवल पढ़ने के लिए हैं। इन वार्तालापों को जारी रखने के लिए इसके फ़ोल्डर को कार्यक्षेत्र के रूप में वापस जोड़ें।",
     "deliverable": {
-      "delivered": "Delivered",
-      "delivering": "Delivering",
-      "itemCount_one": "{{count}} deliverable",
-      "itemCount_other": "{{count}} deliverables"
+      "delivered": "वितरित",
+      "delivering": "पहुंचाना",
+      "itemCount_one": "{{count}} वितरण योग्य",
+      "itemCount_other": "{{count}} डिलिवरेबल्स",
+      "itemCount_many": "{{count}} डिलिवरेबल्स"
     },
     "dropFilesHint": "छवियाँ संलग्न करने या फ़ाइलें उल्लेख करने के लिए छोड़ें",
     "explorer": {
@@ -1802,15 +1814,15 @@
       "noWorkspace": "कोई वर्कस्पेस चयनित नहीं है।"
     },
     "feedback": {
-      "copied": "Copied",
-      "copy": "Copy",
-      "failed": "Couldn't send your feedback. Please try again.",
-      "helpful": "Good response",
-      "notHelpful": "Bad response",
-      "send": "Send",
-      "skip": "Skip",
-      "tellUsMore": "Tell us more",
-      "tellUsMorePlaceholder": "What went wrong?"
+      "copied": "नकल की गई",
+      "copy": "कॉपी करें",
+      "failed": "आपकी प्रतिक्रिया नहीं भेजी जा सकी. कृपया पुन: प्रयास करें।",
+      "helpful": "अच्छी प्रतिक्रिया",
+      "notHelpful": "ख़राब प्रतिक्रिया",
+      "send": "भेजें",
+      "skip": "छोड़ें",
+      "tellUsMore": "हमें और बताएं",
+      "tellUsMorePlaceholder": "क्या ग़लत हुआ?"
     },
     "fewerModels": "कम मॉडल",
     "fileEditor": {
@@ -1825,54 +1837,54 @@
     "hideRightPanel": "पैनल छिपाएं",
     "hideSidebar": "साइडबार छिपाएं",
     "hideTerminal": "टर्मिनल छिपाएं",
-    "inspectorDescription": "Changes, files, agents, previews, and devices",
-    "inspectorTitle": "Workspace inspector",
+    "inspectorDescription": "परिवर्तन, फ़ाइलें, एजेंट, पूर्वावलोकन और डिवाइस",
+    "inspectorTitle": "कार्यक्षेत्र निरीक्षक",
     "messageBot": "{{name}} को संदेश",
     "modelPicker": {
-      "addFavorite": "Add {{model}} to favorites",
-      "compact": "Compact UI",
-      "configure": "Configure",
-      "configureBeforeSending": "Connect a model before sending a message.",
-      "configureProviders": "Configure model providers",
+      "addFavorite": "पसंदीदा में {{model}} जोड़ें",
+      "compact": "कॉम्पैक्ट यूआई",
+      "configure": "कॉन्फ़िगर करें",
+      "configureBeforeSending": "संदेश भेजने से पहले एक मॉडल कनेक्ट करें.",
+      "configureProviders": "मॉडल प्रदाताओं को कॉन्फ़िगर करें",
       "connectGoogleAi": "Google AI Studio कनेक्ट करें",
       "connectGoogleAiNote": "मुफ़्त Gemini कोटा: API कुंजी लाकर यहाँ चिपकाएँ",
-      "connectModels": "Connect models",
+      "connectModels": "मॉडल कनेक्ट करें",
       "connectOpenRouter": "OpenRouter कनेक्ट करें",
       "connectOpenRouterNote": "एक ब्राउज़र साइन-इन से मुफ़्त मॉडल: RouteLLM - Open और इस सूची में जुड़ते हैं",
-      "favorites": "Favorites",
-      "noFavorites": "Favorite models appear here.",
-      "noResults": "No models found.",
-      "onThisMachine": "On this machine",
-      "removeFavorite": "Remove {{model}} from favorites",
-      "search": "Search models…",
-      "title": "Choose a model"
+      "favorites": "पसंदीदा",
+      "noFavorites": "पसंदीदा मॉडल यहां दिखाई देते हैं.",
+      "noResults": "कोई मॉडल नहीं मिला.",
+      "onThisMachine": "इस मशीन पर",
+      "removeFavorite": "पसंदीदा से {{model}} हटाएँ",
+      "search": "मॉडल खोजें…",
+      "title": "एक मॉडल चुनें"
     },
-    "modelPlaceholder": "Model",
+    "modelPlaceholder": "मॉडल",
     "modelProviderLocked": "यह मॉडल किसी अन्य प्रदाता का है। इसे उपयोग करने के लिए नई चैट शुरू करें।",
     "modelSwitchFailed": "मॉडल बदला नहीं जा सका। चैट अभी भी पिछले मॉडल पर चल रही है।",
     "modelTier": {
-      "default": "Recommended",
-      "fast": "Fast & cheap",
-      "free": "Free",
-      "local": "Local / custom",
-      "strong": "For harder tasks"
+      "default": "अनुशंसित",
+      "fast": "तेज़ और सस्ता",
+      "free": "मुफ़्त",
+      "local": "स्थानीय / कस्टम",
+      "strong": "कठिन कार्यों के लिए"
     },
     "moreModels": "और मॉडल ({{count}})",
-    "navigationDescription": "Workspaces, conversations, and application settings",
-    "navigationTitle": "Workspace navigation",
-    "newBot": "New bot",
+    "navigationDescription": "कार्यस्थान, वार्तालाप और एप्लिकेशन सेटिंग",
+    "navigationTitle": "कार्यस्थल नेविगेशन",
+    "newBot": "नया बॉट",
     "newChat": "नई चैट",
     "noChats": "अभी तक कोई चैट नहीं",
     "noSessionsMatch": "\"{{query}}\" से कोई सत्र मेल नहीं खाता",
     "noWorkspaces": "अभी तक कोई कार्यस्थान नहीं जोड़ा गया",
     "noWorkspacesDescription": "एजेंट के साथ कोडिंग शुरू करने के लिए एक फ़ोल्डर जोड़ें",
-    "openPathInPreview": "Open in the preview pane",
+    "openPathInPreview": "पूर्वावलोकन फलक में खोलें",
     "pendingSteer": {
-      "edit": "Edit",
-      "permission": "Sends after you answer the permission prompt",
-      "remove": "Remove",
-      "step": "Sends at the agent's next step",
-      "turn": "Sends when this turn ends"
+      "edit": "संपादित करें",
+      "permission": "आपके द्वारा अनुमति संकेत का उत्तर देने के बाद भेजता है",
+      "remove": "हटाएँ",
+      "step": "एजेंट के अगले चरण पर भेजता है",
+      "turn": "अगले मोड़ के रूप में भेजता है"
     },
     "perm": {
       "addContext": "संदर्भ या निर्देश जोड़ें…",
@@ -1885,33 +1897,33 @@
     },
     "pinChat": "चैट पिन करें",
     "pinHint": "पिन करने के लिए चैट पर Shift-क्लिक करें",
-    "pinnedSessions": "पिन किए गए",
+    "pinnedSessions": "पिन किया गया",
     "prStatus": {
       "approved": "स्वीकृत",
       "changes_requested": "बदलाव का अनुरोध",
       "checksSummary": "{{passed}} पास · {{failed}} विफल · {{running}} चल रहीं",
       "closed": "बंद",
       "draft": "ड्राफ़्ट",
-      "label": "PR #{{number}}",
+      "label": "पीआर #{{number}}",
       "merged": "मर्ज किया गया",
-      "none": "No PR",
-      "noneDescription": "No pull request for the current branch",
-      "open": "Open PR #{{number}}",
-      "openAction": "Open pull request",
-      "pending": "खुला",
+      "none": "कोई पीआर नहीं",
+      "noneDescription": "वर्तमान शाखा के लिए कोई पुल अनुरोध नहीं",
+      "open": "पीआर #{{number}} खोलें",
+      "openAction": "पुल अनुरोध खोलें",
+      "pending": "खोलें",
       "reviews": "{{approved}} स्वीकृत · {{changes}} बदलाव अनुरोधित · {{requested}} लंबित"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going. No card needed",
-      "continueOn": "Continue on {{model}} (free)",
-      "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Or run a model on this computer for free, with no limits",
-      "poolOutTitle": "Every free source is used up for now",
-      "switchNote": "Pick another model in the model picker to keep going"
+      "connectNote": "जारी रखने के लिए एक निःशुल्क स्रोत कनेक्ट करें। किसी कार्ड की आवश्यकता नहीं",
+      "continueOn": "{{model}} पर जारी रखें (निःशुल्क)",
+      "exhaustedTitle": "आपने अपने मुफ़्त Abacus.AI क्रेडिट का उपयोग कर लिया है",
+      "localNote": "या इस कंप्यूटर पर बिना किसी सीमा के मुफ़्त में एक मॉडल चलाएं",
+      "poolOutTitle": "फिलहाल हर मुफ़्त स्रोत का उपयोग हो चुका है",
+      "switchNote": "जारी रखने के लिए मॉडल पिकर में कोई अन्य मॉडल चुनें"
     },
     "preview": {
-      "addSurface": "Add surface",
-      "address": "Browser address",
+      "addSurface": "सतह जोड़ें",
+      "address": "ब्राउज़र पता",
       "addressPlaceholder": "URL या फ़ाइल पथ दर्ज करें…",
       "back": "पीछे जाएं",
       "browserProfile": "ब्राउज़र प्रोफ़ाइल",
@@ -1921,94 +1933,95 @@
       "browserProfileImported": "प्रोफ़ाइल सफलतापूर्वक आयात हुई",
       "browserProfileNone": "डिफ़ॉल्ट (कोई प्रोफ़ाइल नहीं)",
       "browserProfileRefresh": "प्रोफ़ाइल रीफ़्रेश करें",
-      "clearSiteData": "Clear site data",
-      "closeSurface": "Close {{title}}",
-      "developerTools": "Developer tools",
+      "clearSiteData": "साइट डेटा साफ़ करें",
+      "closeSurface": "{{title}} बंद करें",
+      "developerTools": "डेवलपर उपकरण",
       "emptyDescription": "एक्सप्लोरर से फ़ाइल खोलें, चैट में किसी लिंक पर क्लिक करें, या वेब ब्राउज़ करें।",
       "emptyTitle": "कोई पूर्वावलोकन खुला नहीं है",
       "forward": "आगे जाएं",
-      "hardReload": "Hard reload",
-      "htmlShowRendered": "Show rendered deck",
-      "htmlShowSource": "Show source",
-      "imageError": "Could not show this image here ({{error}}).",
-      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
+      "hardReload": "कठिन पुनः लोड",
+      "htmlShowRendered": "प्रस्तुत डेक दिखाएँ",
+      "htmlShowSource": "स्रोत दिखाएँ",
+      "imageError": "यह छवि यहां ({{error}}) नहीं दिखाई जा सकी.",
+      "imageOutsideWorkspace": "यह फ़ाइल कार्यक्षेत्र से बाहर है, इसलिए इसे यहां नहीं दिखाया गया है। इसके बजाय इसे किसी बाहरी ऐप में खोलें।",
       "loading": "लोड हो रहा है…",
-      "mdShowRendered": "Show rendered markdown",
-      "moreActions": "More browser actions",
+      "mdShowRendered": "प्रस्तुत मार्कडाउन दिखाएँ",
+      "moreActions": "अधिक ब्राउज़र क्रियाएँ",
       "noProfiles": "कोई ब्राउज़र प्रोफ़ाइल नहीं मिली",
       "openBrowser": "ब्राउज़र खोलें",
       "openExternal": "बाहरी ऐप में खोलें",
-      "pageUnavailable": "This page is unavailable",
-      "pptxError": "This presentation could not be read ({{error}}).",
-      "pptxMoreWarnings": "+{{count}} more",
-      "pptxNoNotes": "No speaker notes on this slide.",
-      "pptxNotes": "Notes",
-      "pptxSlideCount": "Slide {{current}} of {{total}}",
-      "pptxSlideFailed": "Slide {{number}} could not be rendered",
-      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
-      "pptxWarnings": "{{count}} rendering warning",
-      "pptxWarnings_other": "{{count}} rendering warnings",
+      "pageUnavailable": "यह पृष्ठ अनुपलब्ध है",
+      "pptxError": "यह प्रस्तुति पढ़ी नहीं जा सकी ({{error}}).",
+      "pptxMoreWarnings": "+{{count}} अधिक",
+      "pptxNoNotes": "इस स्लाइड पर कोई वक्ता नोट नहीं करता.",
+      "pptxNotes": "टिप्पणियाँ",
+      "pptxSlideCount": "{{total}} की स्लाइड {{current}}",
+      "pptxSlideFailed": "स्लाइड {{number}} प्रस्तुत नहीं किया जा सका",
+      "pptxSlidesFailed": "{{total}} स्लाइडों में से {{failed}} प्रस्तुत नहीं किया जा सका",
+      "pptxWarnings_other": "{{count}} चेतावनियाँ प्रस्तुत कर रहा है",
       "refresh": "रीफ़्रेश करें",
-      "reload": "Reload",
+      "reload": "फिर से लोड करें",
       "sectionFileCount": "{{count}} फ़ाइलें",
-      "sourceError": "Could not read this file ({{error}}).",
+      "sourceError": "इस फ़ाइल ({{error}}) को नहीं पढ़ा जा सका।",
       "split": "विभाजित",
       "stop": "लोडिंग रोकें",
       "toggleTooltip": "पूर्वावलोकन टॉगल करें",
-      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
-      "tryAgain": "Try again",
+      "truncatedFile": "यह फ़ाइल पूरी तरह खोलने के लिए बहुत बड़ी है. केवल आरंभ दिखाया गया है, और संपादन यहां अक्षम है इसलिए बचत बाकी को अधिलेखित नहीं कर सकती है। इसे बदलने के लिए इसे किसी बाहरी संपादक में खोलें।",
+      "tryAgain": "पुनः प्रयास करें",
       "unified": "एकीकृत",
-      "zoom": "Zoom",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "zoomReset": "Reset zoom"
+      "zoom": "ज़ूम करें",
+      "zoomIn": "ज़ूम इन करें",
+      "zoomOut": "ज़ूम आउट करें",
+      "zoomReset": "ज़ूम रीसेट करें",
+      "pptxWarnings_many": "{{count}} चेतावनियाँ प्रस्तुत कर रहा है",
+      "pptxWarnings_one": "{{count}} रेंडरिंग चेतावनी"
     },
-    "refreshModels": "Refresh models",
+    "refreshModels": "मॉडल ताज़ा करें",
     "renameChat": "चैट का नाम बदलें",
     "renameChatPlaceholder": "नया चैट नाम दर्ज करें",
     "renameEmptyName": "नाम खाली नहीं हो सकता",
     "renameError": "नाम बदलने में विफल",
     "renameWorkspace": "कार्यस्थान का नाम बदलें",
     "renameWorkspacePlaceholder": "नया कार्यस्थान नाम दर्ज करें",
-    "resizeInspector": "Resize workspace inspector",
-    "resizeSidebar": "Resize workspace sidebar",
-    "resizeTerminal": "Resize terminal",
+    "resizeInspector": "कार्यस्थान निरीक्षक का आकार बदलें",
+    "resizeSidebar": "कार्यस्थान साइडबार का आकार बदलें",
+    "resizeTerminal": "टर्मिनल का आकार बदलें",
     "results": "परिणाम",
     "retry": "पुनः प्रयास करें",
     "retryMessage": "जहाँ से छोड़ा था वहाँ से जारी रखें",
     "revealInFinder": "Finder में दिखाएं",
     "rightPanel": {
-      "agentsDescription": "Follow subagents and workflows.",
-      "browser": "Browser",
-      "browserDescription": "Open a local app or URL.",
+      "agentsDescription": "उप-एजेंटों और वर्कफ़्लो का पालन करें।",
+      "browser": "ब्राउज़र",
+      "browserDescription": "कोई स्थानीय ऐप या यूआरएल खोलें.",
       "close": "पैनल बंद करें",
-      "deviceDescription": "Preview the connected device.",
-      "emptyDescription": "Choose what to show in the right panel.",
-      "emptyTitle": "Open a surface",
-      "explorerDescription": "Browse and read workspace files.",
-      "files": "Files",
-      "open": "Open",
-      "tabs": "Inspector panels",
-      "terminal": "Terminal",
-      "terminalDescription": "Start a shell in this workspace."
+      "deviceDescription": "कनेक्टेड डिवाइस का पूर्वावलोकन करें.",
+      "emptyDescription": "चुनें कि दाएँ पैनल में क्या दिखाना है।",
+      "emptyTitle": "एक सतह खोलें",
+      "explorerDescription": "कार्यस्थान फ़ाइलें ब्राउज़ करें और पढ़ें.",
+      "files": "फ़ाइलें",
+      "open": "खोलें",
+      "tabs": "इंस्पेक्टर पैनल",
+      "terminal": "टर्मिनल",
+      "terminalDescription": "इस कार्यक्षेत्र में एक शेल प्रारंभ करें."
     },
     "rightTab": {
-      "agents": "Agents",
+      "agents": "एजेंट",
       "device": "डिवाइस",
       "explorer": "एक्सप्लोरर",
       "preview": "पूर्वावलोकन"
     },
     "runtimeMode": {
-      "acceptEdits": "Auto-accept edits",
-      "acceptEditsDescription": "Apply file edits automatically and ask before other actions.",
-      "auto": "Auto",
-      "autoDescription": "Allow commands and edits without approval prompts, inside the sandbox.",
-      "fullAccess": "Full access",
-      "fullAccessDescription": "Allow commands and edits without approval prompts, with no sandbox.",
-      "plan": "Plan",
-      "planDescription": "Plan the work before making changes.",
-      "supervised": "Supervised",
-      "supervisedDescription": "Ask before edits and commands."
+      "acceptEdits": "संपादन स्वतः स्वीकार करें",
+      "acceptEditsDescription": "फ़ाइल संपादन स्वचालित रूप से लागू करें और अन्य कार्यों से पहले पूछें।",
+      "auto": "ऑटो",
+      "autoDescription": "सैंडबॉक्स के अंदर बिना अनुमोदन संकेत के आदेश और संपादन की अनुमति दें।",
+      "fullAccess": "पूर्ण पहुंच",
+      "fullAccessDescription": "बिना किसी अनुमोदन संकेत के, बिना किसी सैंडबॉक्स के आदेश और संपादन की अनुमति दें।",
+      "plan": "योजना",
+      "planDescription": "बदलाव करने से पहले काम की योजना बनाएं.",
+      "supervised": "पर्यवेक्षित",
+      "supervisedDescription": "संपादन और आदेश से पहले पूछें."
     },
     "save": "सहेजें",
     "searchSessions": "सत्र खोजें…",
@@ -2022,92 +2035,93 @@
       "modelCta": "मॉडल चुनें"
     },
     "sendMessage": "भेजें (Enter)",
-    "sendUndeliverable": "Couldn't reach the agent for this chat. Your message is back in the box. Try sending it again.",
+    "sendUndeliverable": "इस चैट के लिए एजेंट तक नहीं पहुंचा जा सका. आपका संदेश वापस बॉक्स में है. इसे दोबारा भेजने का प्रयास करें.",
     "sessionOptions": "सत्र विकल्प",
     "sessions": "सत्र",
     "showRightPanel": "पैनल दिखाएं",
     "showSidebar": "साइडबार दिखाएं",
     "showTerminal": "टर्मिनल दिखाएं",
-    "startSessionToSend": "Describe the work and press send to start a session",
-    "steerMessage": "Send to the running turn",
+    "startSessionToSend": "कार्य का वर्णन करें और सत्र शुरू करने के लिए भेजें दबाएँ",
+    "steerMessage": "रनिंग टर्न पर भेजें",
     "stopAgent": "रोकें",
     "subtask": {
-      "agent": "Agent",
-      "backToMain": "Back to the main agent",
-      "didNotFinish": "did not finish",
-      "hitLimit": "stopped at its limit",
-      "needsYou": "needs you in the browser",
-      "budget": "over budget",
-      "main": "Main",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools",
-      "viewTranscript": "View this sub-agent's full transcript",
-      "working": "working"
+      "agent": "एजेंट",
+      "backToMain": "मुख्य एजेंट के पास वापस जाएँ",
+      "didNotFinish": "ख़त्म नहीं हुआ",
+      "hitLimit": "अपनी सीमा पर रुक गया",
+      "needsYou": "ब्राउज़र में आपकी आवश्यकता है",
+      "budget": "बजट से अधिक",
+      "main": "मुख्य",
+      "toolCount_one": "{{count}} टूल",
+      "toolCount_other": "{{count}} उपकरण",
+      "viewTranscript": "इस उप-एजेंट की पूरी प्रतिलेख देखें",
+      "working": "काम कर रहे हैं",
+      "toolCount_many": "{{count}} उपकरण"
     },
-    "switchModel": "Switch model",
+    "switchModel": "मॉडल स्विच करें",
     "terminal": {
-      "closeTab": "Close terminal tab",
+      "closeTab": "टर्मिनल टैब बंद करें",
       "hide": "टर्मिनल छिपाएं",
-      "newTab": "New terminal",
-      "pickShell": "Open a different shell",
-      "tabs": "Terminal tabs"
+      "newTab": "नया टर्मिनल",
+      "pickShell": "एक अलग शेल खोलें",
+      "tabs": "टर्मिनल टैब"
     },
     "thinking": {
-      "hide": "Hide the thought process",
-      "inProgress": "Thinking…",
-      "label": "Thinking",
-      "show": "Show the thought process"
+      "hide": "विचार प्रक्रिया को छुपाएं",
+      "inProgress": "सोच रहा हूँ...",
+      "label": "सोच रहा हूँ",
+      "show": "विचार प्रक्रिया दिखाएँ"
     },
     "unpinChat": "चैट अनपिन करें",
     "voice": {
-      "downloading": "Downloading the speech model… {{percent}}%",
+      "downloading": "भाषण मॉडल डाउनलोड हो रहा है... {{percent}}%",
       "errors": {
-        "microphone-in-use": "The microphone is in use by another app.",
-        "no-microphone": "No microphone was found.",
-        "permission-denied": "Microphone access was denied. Allow it in system settings.",
-        "transcription-failed": "Could not transcribe that. Try again.",
-        "unsupported": "Recording is not available here."
+        "microphone-in-use": "माइक्रोफ़ोन किसी अन्य ऐप द्वारा उपयोग में है.",
+        "no-microphone": "कोई माइक्रोफ़ोन नहीं मिला.",
+        "permission-denied": "माइक्रोफ़ोन पहुंच अस्वीकृत कर दी गई थी. इसे सिस्टम सेटिंग्स में अनुमति दें।",
+        "transcription-failed": "उसे लिपिबद्ध नहीं किया जा सका. पुनः प्रयास करें।",
+        "unsupported": "रिकॉर्डिंग यहां उपलब्ध नहीं है."
       },
-      "start": "Dictate",
-      "stop": "Stop and transcribe",
-      "transcribing": "Transcribing…"
+      "start": "हुक्म चलाना",
+      "stop": "रुकें और लिखें",
+      "transcribing": "प्रतिलेखन..."
     },
     "welcome": {
       "addWorkspace": "नया वर्कस्पेस जोड़ें",
-      "defaultWorkspace": "Default workspace",
+      "defaultWorkspace": "डिफ़ॉल्ट कार्यक्षेत्र",
       "letsBuild": "चलिए बनाते हैं",
       "noWorkspacesFound": "कोई वर्कस्पेस नहीं मिला",
       "searchWorkspaces": "वर्कस्पेस खोजें…",
       "selectWorkspace": "वर्कस्पेस चुनें",
       "starters": {
         "build-a-store": {
-          "name": "Build an online store",
-          "description": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+          "name": "एक ऑनलाइन स्टोर बनाएं",
+          "description": "एक बुटीक मोमबत्ती ब्रांड: एक हीरो, एक उत्पाद ग्रिड, खुशबू और आकार विकल्पों के साथ उत्पाद पृष्ठ, एक स्लाइड-आउट कार्ट और चेकआउट।"
         },
         "design-an-infographic": {
-          "name": "Turn a repo into an infographic",
-          "description": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+          "name": "रेपो को इन्फोग्राफिक में बदलें",
+          "description": "क्लोन n8n, स्रोत को पढ़ता है, और वर्कफ़्लो चलने पर वास्तव में क्या होता है इसका एक पेज पोस्टर तैयार करता है।"
         },
         "find-flights": {
-          "name": "Find me flights",
-          "description": "Opens the browser, checks a couple of sites, and comes back with three real options and links. Books nothing."
+          "name": "मेरे लिए उड़ानें ढूंढें",
+          "description": "ब्राउज़र खोलता है, कुछ साइटों की जाँच करता है, और तीन वास्तविक विकल्पों, लिंक और एक चयन के साथ वापस आता है।"
         },
         "process-a-spreadsheet": {
-          "name": "Clean up a spreadsheet",
-          "description": "Reads every sheet, fixes the headers, types and duplicates, and saves a summarised copy beside the original."
+          "name": "एक स्प्रेडशीट साफ़ करें",
+          "description": "यहां स्प्रैडशीट्स को पढ़ता है, हेडर, प्रकार और डुप्लिकेट को ठीक करता है, और प्रत्येक मूल के बगल में एक सारांशित प्रतिलिपि सहेजता है।"
         },
         "restyle-a-repo": {
-          "name": "Restyle Excalidraw",
-          "description": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+          "name": "Excalidraw को पुनर्स्थापित करें",
+          "description": "रेपो को क्लोन करता है, पढ़ता है कि यह कैसे खुद को स्टाइल करता है, और बिना किसी तार के अपने ही रंगों में एक पुनर्निर्मित टूलबार का नकल करता है।"
         },
         "review-pull-requests": {
-          "name": "Review my pull requests",
-          "description": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+          "name": "मेरे पुल अनुरोधों की समीक्षा करें",
+          "description": "प्रत्येक अंतर को पढ़ता है, फ़ाइल और लाइन के आधार पर बग और छूटे हुए परीक्षणों को नाम देता है, और आपके कोड को छुए बिना समीक्षा पोस्ट करता है।"
         }
       },
-      "switchWorkspace": "Switch workspace from {{workspace}}",
-      "whatShouldWeBuild": "What should we build in {{workspace}}?",
-      "whatShouldWeBuildPrefix": "What should we build in"
+      "switchWorkspace": "कार्यस्थल को {{workspace}} से बदलें",
+      "whatShouldWeBuild": "हमें {{workspace}} में क्या बनाना चाहिए?",
+      "whatShouldWeBuildPrefix": "हमें क्या बनाना चाहिए"
     },
     "workspaceDeleted": "कार्यस्थान हटाया गया",
     "workspaceMissing": {
@@ -2122,18 +2136,402 @@
     },
     "workspaceOptions": "कार्यस्थान विकल्प",
     "workspaceRenamed": "कार्यस्थान का नाम बदला गया",
-    "workspaces": "Workspaces",
+    "workspaces": "कार्यस्थान",
     "worktree": {
-      "create": "New worktree",
-      "currentCheckout": "Current checkout",
-      "description": "Choose which checkout the agent will read and change for this chat.",
-      "error": "Worktree operation failed",
-      "select": "Select worktree"
+      "create": "नया कार्यवृक्ष",
+      "currentCheckout": "वर्तमान चेकआउट",
+      "description": "चुनें कि एजेंट इस चैट के लिए कौन सा चेकआउट पढ़ेगा और बदलेगा।",
+      "error": "वर्कट्री ऑपरेशन विफल रहा",
+      "select": "वर्कट्री का चयन करें"
     },
     "yesterday": "कल"
   },
   "reactions": {
     "feedback": "इस जवाब पर प्रतिक्रिया दें",
     "agent": "एजेंट ने {{emoji}} से प्रतिक्रिया दी"
+  },
+  "native": {
+    "keepRunning": "बैकग्राउंड में चलते रहने दें",
+    "quitAnyway": "फिर भी बाहर निकलें",
+    "taskRunningTitle": "एक कार्य चल रहा है",
+    "taskRunningMessage": "एक कार्य अभी भी चल रहा है.",
+    "taskRunningDetail": "इसे पृष्ठभूमि में चालू रखें, या छोड़ें और बंद करें?",
+    "backgroundTitle": "कार्य अभी भी चल रहा है",
+    "backgroundBody": "जब यह समाप्त हो जाएगा तो हम आपको सूचित करेंगे।",
+    "restart": "पुनः शुरू करें",
+    "quit": "बाहर निकलें",
+    "wait": "प्रतीक्षा करें",
+    "reload": "फिर से लोड करें",
+    "crashMessage": "ऐप क्रैश होता रहता है",
+    "crashDetail": "एप्लिकेशन विंडो बार-बार क्रैश हो गई है. पुनः प्रयास करने के लिए पुनरारंभ करें.",
+    "unresponsiveMessage": "ऐप जवाब नहीं दे रहा है",
+    "unresponsiveDetail": "आप प्रतीक्षा करते रह सकते हैं, या पुनर्प्राप्ति के लिए विंडो को पुनः लोड कर सकते हैं।",
+    "noSpellingSuggestions": "कोई वर्तनी सुझाव नहीं",
+    "addToDictionary": "शब्दकोश में जोड़ें",
+    "credits": "एमआईटी लाइसेंस के तहत खुला स्रोत",
+    "aboutApp": "{{app}} के बारे में",
+    "hideApp": "{{app}} छिपाएँ",
+    "quitApp": "{{app}} से बाहर निकलें",
+    "saveLogs": "लॉग सहेजें",
+    "zipArchives": "ज़िप पुरालेख",
+    "selectFolder": "फ़ोल्डर चुनें",
+    "selectImages": "छवियाँ चुनें",
+    "selectFiles": "फ़ाइलें चुनें",
+    "images": "इमेज",
+    "selectSkillFolders": "कौशल फ़ोल्डर चुनें",
+    "selectSkillFiles": "कौशल फ़ाइलें चुनें",
+    "skill": "कौशल",
+    "importMcp": "MCP सर्वर आयात करें",
+    "services": "सेवाएँ",
+    "hideOthers": "अन्य छिपाएँ",
+    "showAll": "सभी दिखाएँ",
+    "file": "फ़ाइल",
+    "edit": "संपादित करें",
+    "view": "दृश्य",
+    "window": "विंडो",
+    "close": "विंडो बंद करें",
+    "undo": "पूर्ववत करें",
+    "redo": "फिर से करें",
+    "cut": "काटें",
+    "copy": "कॉपी करें",
+    "paste": "चिपकाएँ",
+    "selectAll": "सभी चुनें",
+    "forceReload": "बलपूर्वक पुनः लोड करें",
+    "developerTools": "डेवलपर उपकरण",
+    "resetZoom": "वास्तविक आकार",
+    "zoomIn": "ज़ूम इन करें",
+    "zoomOut": "ज़ूम आउट करें",
+    "fullScreen": "पूर्ण स्क्रीन टॉगल करें",
+    "minimize": "छोटा करें",
+    "zoom": "ज़ूम करें",
+    "front": "सभी को सामने लाओ",
+    "loadFailed": "ऐप लोड नहीं हो सका",
+    "loadFailedDetail": "एप्लिकेशन लोड होने में विफल रहा. अपना कनेक्शन जांचें और पुनः प्रयास करें।",
+    "retry": "पुनः प्रयास करें"
+  },
+  "uiText": {
+    "alwaysAllowRule": "हमेशा {{rule}} को अनुमति दें",
+    "alwaysAllowAllRules": "हमेशा सभी को अनुमति दें: {{rules}}",
+    "runNameCommand": "{{name}} कमांड चलाएँ?",
+    "allowChangesToThisFile": "इस फ़ाइल में परिवर्तन की अनुमति दें?",
+    "directoryDirectory": "निर्देशिका: {{directory}}",
+    "allowName": "{{name}} को अनुमति दें?",
+    "modifyFileOutsideWorkspace": "कार्यस्थान के बाहर फ़ाइल को संशोधित करें?",
+    "allowChangesOnce": "एक बार परिवर्तन की अनुमति दें",
+    "alwaysAllowDirectory": "हमेशा {{directory}} को अनुमति दें",
+    "treatDirectoryAsPartOfTheWorkspace": "{{directory}} को कार्यक्षेत्र का हिस्सा मानें",
+    "browserActionAction": "ब्राउज़र क्रिया: {{action}}",
+    "allowOnce": "एक बार अनुमति दें",
+    "alwaysAcceptEditsThisSession": "इस सत्र में हमेशा संपादन स्वीकार करें",
+    "cancel": "रद्द करें",
+    "allow": "अनुमति दें",
+    "yesImplementFullPermissionsGranted": "हां, लागू करें (पूर्ण अनुमतियां दी गई हैं)",
+    "deny": "अस्वीकार करें",
+    "bash": "Bash",
+    "readFileOutsideWorkspace": "कार्यस्थान के बाहर फ़ाइल पढ़ें?",
+    "createFileOutsideWorkspace": "कार्यस्थान के बाहर फ़ाइल बनाएँ?",
+    "allowReadOnce": "एक बार पढ़ने की इजाजत दीजिए",
+    "createOnce": "एक बार बनाएं",
+    "yesImplementApproveEachEdit": "हां, लागू करें (प्रत्येक संपादन को मंजूरी दें)",
+    "yesImplementAutoAcceptAllEdits": "हां, लागू करें (सभी संपादन स्वतः स्वीकार करें)",
+    "noKeepPlanning": "नहीं, योजना बनाते रहो",
+    "continue": "जारी रखें",
+    "save": "सहेजें",
+    "note": "ध्यान दें:",
+    "back": "वापस",
+    "editNote": "नोट संपादित करें",
+    "noteLabel": "+ नोट",
+    "skip": "छोड़ें",
+    "next": "अगला ›",
+    "submit": "सबमिट करें",
+    "clickAnElementOnThePage": "पृष्ठ पर किसी तत्व पर क्लिक करें",
+    "clearAndTypeIntoAnInputField": "साफ़ करें और इनपुट फ़ील्ड में टाइप करें",
+    "typeTextIntoAnInputField": "इनपुट फ़ील्ड में टेक्स्ट टाइप करें",
+    "scrollThePage": "पेज स्क्रॉल करें",
+    "scrollAnElementIntoView": "किसी तत्व को दृश्य में स्क्रॉल करें",
+    "selectADropdownOption": "एक ड्रॉपडाउन विकल्प चुनें",
+    "hoverOverAnElement": "किसी तत्व पर होवर करें",
+    "focusAnElement": "किसी तत्व पर फोकस करें",
+    "checkACheckbox": "एक चेकबॉक्स जांचें",
+    "uncheckACheckbox": "चेकबॉक्स को अनचेक करें",
+    "pressAKeyboardKey": "एक कुंजीपटल कुंजी दबाएँ",
+    "waitForAPageCondition": "पृष्ठ स्थिति की प्रतीक्षा करें",
+    "executeJavaScriptOnThePage": "पेज पर जावास्क्रिप्ट निष्पादित करें",
+    "action": "कार्रवाई",
+    "ref": "रेफरी",
+    "selector": "चयनकर्ता",
+    "text": "पाठ",
+    "value": "मान",
+    "key": "कुंजी",
+    "code": "कोड",
+    "direction": "दिशा",
+    "amount": "मात्रा",
+    "unableToReadBranches": "शाखाएँ पढ़ने में असमर्थ.",
+    "exitCodeCode": "निकास कोड: {{code}}",
+    "countEarlierLinesHidden": "{{count}} पिछली पंक्तियाँ छिपी हुई हैं",
+    "countMoreLines": "{{count}} अधिक पंक्तियाँ",
+    "linesStartEnd": "पंक्तियाँ {{start}}–{{end}}",
+    "countLines": "{{count}} पंक्तियाँ",
+    "writingDocument": "दस्तावेज़ लिखा जा रहा है",
+    "wroteDocument": "दस्तावेज़ लिखा",
+    "printingPDF": "पीडीएफ मुद्रण",
+    "printedPDF": "मुद्रित पीडीएफ",
+    "buildingDeck": "प्रस्तुति बनाई जा रही है",
+    "builtDeck": "प्रस्तुति बनाई गई",
+    "buildingPDF": "पीडीएफ का निर्माण",
+    "builtPDF": "निर्मित पीडीएफ",
+    "working": "कार्य करना",
+    "ran": "चलाया गया",
+    "designing": "डिजाइनिंग",
+    "designed": "डिज़ाइन किया गया",
+    "openingPreview": "पूर्वावलोकन खोला जा रहा है",
+    "openedPreview": "पूर्वावलोकन खोला गया",
+    "opening": "खोला जा रहा है",
+    "opened": "खोला गया",
+    "reading": "पढ़ा जा रहा है",
+    "read": "पढ़ा गया",
+    "creating": "बनाना",
+    "writing": "लेखन",
+    "created": "बनाया गया",
+    "wrote": "लिखा",
+    "editing": "संपादन",
+    "edited": "संपादित",
+    "deleting": "हटाना",
+    "deleted": "हटा दिया गया",
+    "running": "चल रहा है",
+    "gettingOutput": "आउटपुट मिल रहा है",
+    "gotOutput": "आउटपुट मिला",
+    "killingShell": "शेल बंद किया जा रहा है",
+    "killedShell": "शेल बंद किया गया",
+    "searchingFiles": "फ़ाइलें खोज रहे हैं",
+    "searchedFiles": "फ़ाइलें खोजी गईं",
+    "searching": "खोज रहे हैं",
+    "searched": "खोजा गया",
+    "listing": "सूचीकरण",
+    "listed": "सूचीबद्ध",
+    "searchingCodebase": "कोडबेस खोजा जा रहा है",
+    "searchedCodebase": "कोडबेस खोजा गया",
+    "searchingWeb": "वेब पर खोज रहा हूँ",
+    "searchedWeb": "वेब पर खोजा गया",
+    "fetching": "प्राप्त किया जा रहा है",
+    "fetched": "प्राप्त किया गया",
+    "runningSubAgent": "उप-एजेंट चल रहा है",
+    "usedSubAgent": "प्रयुक्त उप-एजेंट",
+    "updatingTodos": "कार्य अद्यतन किया जा रहा है",
+    "updatedTodos": "अद्यतन कार्य",
+    "askingQuestion": "प्रश्न पूछ रहा हूँ",
+    "askedQuestion": "प्रश्न पूछा",
+    "enteringPlanMode": "योजना मोड में प्रवेश करना",
+    "enteredPlanMode": "योजना मोड में प्रवेश किया",
+    "exitingPlanMode": "निकास योजना मोड",
+    "exitedPlanMode": "योजना मोड से बाहर निकलें",
+    "gettingDiagnostics": "निदान प्राप्त करना",
+    "gotDiagnostics": "निदान मिल गया",
+    "navigatingTo": "पर नेविगेट किया जा रहा है",
+    "navigatedTo": "पर नेविगेट किया गया",
+    "goingBack": "पीछे जा रहे हैं",
+    "wentBack": "पीछे गए",
+    "goingForward": "आगे जा रहे हैं",
+    "wentForward": "आगे गए",
+    "reloadingPage": "पृष्ठ पुनः लोड हो रहा है",
+    "reloadedPage": "पुनः लोड किया गया पृष्ठ",
+    "navigating": "नेविगेट करना",
+    "navigated": "नेविगेट किया गया",
+    "scanningPage": "स्कैनिंग पेज",
+    "scannedPage": "स्कैन किया गया पेज",
+    "takingScreenshot": "स्क्रीनशॉट ले रहा हूँ",
+    "tookScreenshot": "स्क्रीनशॉट लिया",
+    "gettingPageText": "पेज टेक्स्ट प्राप्त करना",
+    "gotPageText": "पेज टेक्स्ट मिला",
+    "gettingPageURL": "पेज यूआरएल प्राप्त करना",
+    "gotPageURL": "पेज यूआरएल मिला",
+    "gettingPageTitle": "पृष्ठ शीर्षक प्राप्त करना",
+    "gotPageTitle": "पेज का शीर्षक मिल गया",
+    "capturingSnapshot": "स्नैपशॉट कैप्चर करना",
+    "capturedSnapshot": "कैप्चर किया गया स्नैपशॉट",
+    "clicking": "क्लिक करना",
+    "clicked": "क्लिक किया",
+    "filling": "फ़ील्ड भरी जा रही है",
+    "filled": "फ़ील्ड भरी गई",
+    "typing": "टाइपिंग",
+    "typed": "टाइप किया हुआ",
+    "scrolling": "स्क्रॉल करना",
+    "scrolled": "स्क्रॉल किया गया",
+    "scrollingTo": "तक स्क्रॉल किया जा रहा है",
+    "scrolledTo": "तक स्क्रॉल किया गया",
+    "selectingOption": "विकल्प का चयन",
+    "selectedOption": "चयनित विकल्प",
+    "hovering": "कर्सर ऊपर ले जाया जा रहा है",
+    "hovered": "कर्सर ऊपर ले जाया गया",
+    "focusing": "ध्यान केन्द्रित करना",
+    "focused": "फ़ोकस किया गया",
+    "checking": "जाँच हो रही है",
+    "checked": "चेक किया गया",
+    "unchecking": "अनचेक करना",
+    "unchecked": "चेक हटाया गया",
+    "pressing": "दबाना",
+    "pressed": "दबाया हुआ",
+    "waiting": "इंतज़ार कर रहा हूँ",
+    "waited": "इंतज़ार किया",
+    "interacting": "बातचीत करना",
+    "interacted": "बातचीत की",
+    "executingJS": "जेएस निष्पादित करना",
+    "executedJS": "निष्पादित जे.एस",
+    "task": "कार्य",
+    "noOutput": "(कोई आउटपुट नहीं)",
+    "noContent": "(कोई सामग्री नहीं)",
+    "noContentAvailable": "(कोई सामग्री उपलब्ध नहीं)",
+    "input": "इनपुट",
+    "output": "आउटपुट",
+    "waitingForResponse": "प्रतिक्रिया की प्रतीक्षा में...",
+    "noQuestions": "(कोई प्रश्न नहीं)",
+    "skipped": "छोड़ दिया गया",
+    "runningSubAgentLabel": "उप-एजेंट चल रहा है...",
+    "noToolCallsRecorded": "(कोई टूल कॉल रिकॉर्ड नहीं की गई)",
+    "scope": "दायरा",
+    "depth": "गहराई",
+    "runningLabel": "चल रहा है…",
+    "screenshotSaved": "स्क्रीनशॉट सहेजा गया:",
+    "openPreview": "पूर्वावलोकन खोलें",
+    "revealInFinder": "Finder में दिखाएं",
+    "rename": "नाम बदलें",
+    "moveToTrash": "कूड़ेदान में ले जाएँ",
+    "loadingFiles": "फ़ाइलें लोड हो रही हैं...",
+    "close": "बंद करें",
+    "showAllTotalLinesRemainingMore": "सब दिखाएँ ({{total}} पंक्तियाँ, {{remaining}} और)",
+    "yesterdayAt": "कल {{time}}",
+    "failedToSendMessage": "संदेश भेजने में विफल",
+    "unableToAddWorkspace": "कार्यस्थान जोड़ने में असमर्थ.",
+    "thinking": "सोच रहा हूँ...",
+    "responding": "प्रत्युत्तर दे रहा हूँ...",
+    "runningTool": "चल रहा उपकरण...",
+    "waitingForApproval": "मंजूरी का इंतजार है",
+    "loadingConversation": "बातचीत लोड हो रही है...",
+    "compactedContext": "पहले के संदर्भ को संक्षिप्त किया गया",
+    "image": "छवि",
+    "copied": "नकल की गई",
+    "copyCode": "कोड कॉपी करें",
+    "pageActions": "पृष्ठ क्रियाएँ",
+    "pageNavigation": "पेज नेविगेशन",
+    "scrollToEnd": "अंत तक स्क्रॉल करें",
+    "scrollToStart": "प्रारंभ करने के लिए स्क्रॉल करें",
+    "screenRecordingPermissionRequired": "स्क्रीन रिकॉर्डिंग की अनुमति आवश्यक है",
+    "simulatorWindowNotFound": "सिम्युलेटर विंडो नहीं मिली",
+    "unableToSwitchWorkspace": "कार्यस्थान स्विच करने में असमर्थ.",
+    "unableToRemoveWorkspace": "कार्यस्थान निकालने में असमर्थ.",
+    "unableToRenameWorkspace": "कार्यस्थान का नाम बदलने में असमर्थ.",
+    "unableToRelocateWorkspace": "कार्यस्थल को स्थानांतरित करने में असमर्थ.",
+    "newChat": "नई चैट...",
+    "noWorkspaceSelected": "कोई कार्यक्षेत्र चयनित नहीं",
+    "toolCallFailed": "टूल कॉल विफल रही.",
+    "terminalFailedToStart": "टर्मिनल प्रारंभ होने में विफल रहा.",
+    "imageNotFound": "छवि नहीं मिली: {{name}}",
+    "unknownConnector": "अज्ञात कनेक्टर {{id}}.",
+    "limitReached": "{{feature}} सीमा पूरी हो गई ({{type}})",
+    "moreLines": "({{count}} अधिक पंक्तियाँ)",
+    "moreContent": "(अधिक सामग्री)",
+    "tokenCount": "{{tokens}} टोकन",
+    "urlPattern": "यूआरएल पैटर्न",
+    "noModelProvider": "कोई मॉडल प्रदाता कॉन्फ़िगर नहीं है। सेटिंग में API कुंजी जोड़ें।"
+  },
+  "toolSummary": {
+    "empty": "उपकरणों का उपयोग करना",
+    "running": {
+      "read_one": "{{count}} फ़ाइल पढ़ी जा रही है",
+      "read_other": "{{count}} फ़ाइलें पढ़ी जा रही हैं",
+      "edit_one": "{{count}} फ़ाइल बदली जा रही है",
+      "edit_other": "{{count}} फ़ाइलें बदली जा रही हैं",
+      "command_one": "{{count}} कमांड चलाया जा रहा है",
+      "command_other": "{{count}} कमांड चलाए जा रहे हैं",
+      "search_one": "वेब पर {{count}} बार खोज की जा रही है",
+      "search_other": "वेब पर {{count}} बार खोज की जा रही है",
+      "code-search_one": "कोड में {{count}} बार खोज की जा रही है",
+      "code-search_other": "कोड में {{count}} बार खोज की जा रही है",
+      "other_one": "{{count}} टूल इस्तेमाल किया जा रहा है",
+      "other_other": "{{count}} टूल इस्तेमाल किए जा रहे हैं",
+      "read_many": "{{count}} फ़ाइलें पढ़ी जा रही हैं",
+      "edit_many": "{{count}} फ़ाइलें बदली जा रही हैं",
+      "command_many": "{{count}} कमांड चलाए जा रहे हैं",
+      "search_many": "वेब पर {{count}} बार खोज की जा रही है",
+      "code-search_many": "कोड में {{count}} बार खोज की जा रही है",
+      "other_many": "{{count}} टूल इस्तेमाल किए जा रहे हैं"
+    },
+    "settled": {
+      "read_one": "{{count}} फ़ाइल पढ़ी गई",
+      "read_other": "{{count}} फ़ाइलें पढ़ी गईं",
+      "edit_one": "{{count}} फ़ाइल बदली गई",
+      "edit_other": "{{count}} फ़ाइलें बदली गईं",
+      "command_one": "{{count}} कमांड चलाया गया",
+      "command_other": "{{count}} कमांड चलाए गए",
+      "search_one": "वेब पर {{count}} बार खोज की गई",
+      "search_other": "वेब पर {{count}} बार खोज की गई",
+      "code-search_one": "कोड में {{count}} बार खोज की गई",
+      "code-search_other": "कोड में {{count}} बार खोज की गई",
+      "other_one": "{{count}} टूल इस्तेमाल किया गया",
+      "other_other": "{{count}} टूल इस्तेमाल किए गए",
+      "read_many": "{{count}} फ़ाइलें पढ़ी गईं",
+      "edit_many": "{{count}} फ़ाइलें बदली गईं",
+      "command_many": "{{count}} कमांड चलाए गए",
+      "search_many": "वेब पर {{count}} बार खोज की गई",
+      "code-search_many": "कोड में {{count}} बार खोज की गई",
+      "other_many": "{{count}} टूल इस्तेमाल किए गए"
+    }
+  },
+  "connectorDescriptions": {
+    "messaging-whatsapp": "WhatsApp से एजेंट के साथ चैट करें और उसे अपनी ओर से संदेश भेजने दें।",
+    "messaging-telegram": "Telegram से एजेंट के साथ चैट करें और उसे अपनी ओर से संदेश भेजने दें।",
+    "messaging-discord": "Discord से एजेंट के साथ चैट करें और उसे अपनी ओर से संदेश भेजने दें।",
+    "abacus-gmailuser": "Gmail में ईमेल पढ़ें, खोजें और भेजें।",
+    "abacus-googledriveuser": "Google Drive में फ़ाइलें ब्राउज़ करें, पढ़ें और प्रबंधित करें।",
+    "abacus-googlecalendar": "उपलब्ध समय और इवेंट देखें और मीटिंग शेड्यूल करें।",
+    "abacus-slack": "अपने Slack कार्यक्षेत्र में संदेश खोजें, पढ़ें और पोस्ट करें।",
+    "abacus-outlook": "Outlook में ईमेल पढ़ें, खोजें और भेजें।",
+    "abacus-onedrive": "OneDrive में फ़ाइलें ब्राउज़ करें, पढ़ें और प्रबंधित करें।",
+    "abacus-jira": "अपने Jira प्रोजेक्ट में समस्याएँ खोजें, बनाएँ और अपडेट करें।",
+    "abacus-confluence": "अपने Confluence स्पेस में पेज खोजें और पढ़ें।",
+    "abacus-dropbox": "Dropbox में फ़ाइलें ब्राउज़ करें, पढ़ें और प्रबंधित करें।",
+    "abacus-twitter": "अपने खाते से X पर पढ़ें और पोस्ट करें।",
+    "github": "अपने टोकन और gh CLI से निजी रिपॉज़िटरी सहित रिपॉज़िटरी, इश्यू और पुल अनुरोध प्रबंधित करें।",
+    "playwright": "ब्राउज़र चलाएँ: नेविगेट करें, क्लिक करें, फ़ॉर्म भरें और पेज पढ़ें।",
+    "huggingface": "मॉडल, डेटासेट और Spaces खोजें और उनके विवरण पढ़ें।",
+    "cloudflare-docs": "Cloudflare डेवलपर दस्तावेज़ खोजें।",
+    "zapier": "अपने Zapier खाते से हज़ारों ऐप कार्रवाइयाँ इस्तेमाल करें।",
+    "abacus-figmauser": "अपने Figma खाते की फ़ाइलें, प्रोजेक्ट और डिज़ाइन डेटा पढ़ें।",
+    "abacus-zoom": "Zoom में मीटिंग, रिकॉर्डिंग और उपयोगकर्ता देखें (केवल पढ़ने के लिए)।",
+    "abacus-docusign": "DocuSign के एनवेलप, टेम्पलेट और हस्ताक्षर कार्यप्रवाह इस्तेमाल करें।",
+    "abacus-gcpcloud": "अपने Google Cloud सेवा खाते से Compute, Storage, BigQuery और अन्य सेवाएँ इस्तेमाल करें।",
+    "notion": "कार्यक्षेत्र में खोजें, पेज पढ़ें और नोट लिखें।",
+    "canva": "बातचीत में ही डिज़ाइन खोजें, बनाएँ और निर्यात करें।",
+    "stripe": "ग्राहक, भुगतान और सदस्यताएँ देखें और बनाएँ।",
+    "paypal": "PayPal के सर्वर से चालान, ऑर्डर और विवाद देखें।"
+  },
+  "connectorSetup": {
+    "github": {
+      "step0": "github.com/settings/tokens पर व्यक्तिगत एक्सेस टोकन बनाएँ: इच्छित रिपॉज़िटरी के लिए Contents, Pull requests और Issues की आवश्यक पढ़ने/लिखने की अनुमतियों वाला fine-grained टोकन, या repo स्कोप वाला classic टोकन।",
+      "step1": "टोकन कॉपी करें (यह केवल एक बार दिखता है) और नीचे पेस्ट करें।",
+      "tokenLabel": "व्यक्तिगत एक्सेस टोकन"
+    }
+  },
+  "providerHints": {
+    "abacus": "होस्ट किए गए मॉडल, वेब खोज, छवि और वाणी निर्माण",
+    "deepseek": "DeepSeek चैट और तर्क मॉडल",
+    "anthropic": "Claude Sonnet / Opus मॉडल",
+    "openai": "GPT / Codex मॉडल",
+    "gemini": "छवि और वीडियो इनपुट वाले Gemini मॉडल",
+    "openrouter": "एक खाते से मुफ़्त और सशुल्क मॉडल",
+    "baseten": "होस्ट किए गए DeepSeek / Kimi / GLM मॉडल",
+    "cerebras": "GPT-OSS / GLM के लिए तेज़ होस्टेड इन्फ़रेंस",
+    "fireworks": "खुले मॉडल के लिए होस्टेड इन्फ़रेंस",
+    "groq": "खुले मॉडल के लिए तेज़ होस्टेड इन्फ़रेंस",
+    "huggingface": "Hugging Face से उपलब्ध इन्फ़रेंस प्रदाता",
+    "minimax": "लंबी संदर्भ विंडो वाले MiniMax मॉडल",
+    "mistral": "यूरोपीय संघ में होस्ट किए गए Devstral और Mistral मॉडल",
+    "moonshotai": "Kimi K2.7 Code / Kimi K3 मॉडल",
+    "nvidia": "होस्ट किए गए Nemotron और अन्य खुले मॉडल",
+    "opencode": "एक कुंजी से चुने हुए कोडिंग मॉडल",
+    "together": "एक कुंजी से DeepSeek, Kimi, GLM और Qwen",
+    "vercel-ai-gateway": "Vercel AI Gateway से मॉडल एक्सेस",
+    "xai": "सामान्य और कोडिंग कार्यों के लिए Grok मॉडल",
+    "zai": "GLM Coding Plan से GLM मॉडल"
   }
 }

@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 
 import { BrowserPermissionPrompt } from "./components/browser/browser-permission-prompt";
@@ -57,6 +58,7 @@ export const resolveNeedsOnboarding = ({
 /** Root shell for route content and app-lifetime Electron event bridges. */
 function App(): React.JSX.Element {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   // A renderer swap keeps the old renderer until the first commit fires this.
   useEffect(() => {
@@ -166,6 +168,7 @@ function App(): React.JSX.Element {
       >
         <LocalModelDialog />
         <Toaster
+          containerAriaLabel={t("notificationSettings.title")}
           position="top-right"
           offset={{ top: TITLEBAR_HEIGHT + 10 }}
           richColors

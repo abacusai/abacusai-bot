@@ -119,7 +119,7 @@ const AutoRepliesSection = (): JSX.Element | null => {
             className="border-border bg-card/60 flex items-center gap-3 rounded-lg border px-3 py-2"
             data-id={`auto-reply-${row.platform}-${row.userId}`}
           >
-            <div className="min-w-0 flex-1">
+            <div className="h-auto min-h-7 min-w-0 flex-1 px-1 py-1 text-center break-words whitespace-normal">
               <div className="truncate text-sm">
                 {row.userName ?? row.userId}
               </div>
@@ -462,14 +462,18 @@ const RoutineCard = ({
             {routine.nextRunAt != null && (
               <span>
                 {t("routines.nextRun", {
-                  time: new Date(routine.nextRunAt).toLocaleString(),
+                  time: new Date(routine.nextRunAt).toLocaleString(
+                    i18n.language
+                  ),
                 })}
               </span>
             )}
             {routine.lastRunAt != null && (
               <span>
                 {t("routines.lastRun", {
-                  time: new Date(routine.lastRunAt).toLocaleString(),
+                  time: new Date(routine.lastRunAt).toLocaleString(
+                    i18n.language
+                  ),
                 })}
               </span>
             )}
@@ -564,7 +568,7 @@ const RoutineCard = ({
                   className="text-muted-foreground flex items-baseline gap-2 text-xs"
                 >
                   <span className="shrink-0 tabular-nums">
-                    {new Date(run.at).toLocaleString()}
+                    {new Date(run.at).toLocaleString(i18n.language)}
                   </span>
                   <Badge variant="outline">
                     {t(TRIGGER_BADGE[run.trigger])}
@@ -897,8 +901,8 @@ export const RoutineDialog = ({
               if (next != null) patchSchedule({ preset: next });
             }}
             variant="outline"
-            spacing={0}
-            className="w-full"
+            spacing={1}
+            className="grid w-full grid-cols-3 items-stretch gap-1 sm:grid-cols-4"
             aria-label={t("routines.scheduleLabel")}
             data-id="routine-preset-group"
           >
@@ -906,7 +910,7 @@ export const RoutineDialog = ({
               <ToggleGroupItem
                 key={preset}
                 value={preset}
-                className="min-w-0 flex-1"
+                className="h-auto min-h-7 min-w-0 flex-1 px-1 py-1 text-center break-words whitespace-normal"
                 data-id={`routine-preset-${preset}`}
               >
                 {t(PRESET_LABEL[preset])}
