@@ -65,7 +65,7 @@ describe("parentWindow", () => {
     expect(parentWindow()).toBe(win);
   });
 
-  it("refuses a destroyed window — no parent beats a dead one", () => {
+  it("refuses a destroyed window: no parent beats a dead one", () => {
     setMainWindow(window(true));
 
     expect(parentWindow()).toBeUndefined();
@@ -81,7 +81,7 @@ describe("parentWindow", () => {
 
 /**
  * The reveal. Connectors boot before the main window exists, so the parent
- * they name at construction is often nobody — this is what makes the login
+ * they name at construction is often nobody. This is what makes the login
  * window a child of the app by the time it is on screen.
  */
 describe("presentAsDialog", () => {
@@ -167,7 +167,7 @@ describe("presentAsDialog", () => {
     });
   });
 
-  it("adopts before showing — macOS attaches the child at the show", () => {
+  it("adopts before showing: macOS attaches the child at the show", () => {
     const main = mainWindow({ x: 0, y: 0, width: 2000, height: 1200 });
     setMainWindow(main);
     const { win, adoptions } = dialog({ width: 1100, height: 760 });
@@ -190,7 +190,7 @@ describe("presentAsDialog", () => {
     expect(focus).toHaveBeenCalled();
   });
 
-  it("shrinks a window wider than its parent — it has to fit", () => {
+  it("shrinks a window wider than its parent so it fits", () => {
     setMainWindow(mainWindow({ x: 0, y: 0, width: 900, height: 600 }));
     const { win, setBounds } = dialog({ width: 1100, height: 760 });
 
@@ -277,7 +277,7 @@ describe("presentAsDialog", () => {
 
 /**
  * The way out of the login window. It has no close button of its own, so Esc
- * (and Cmd/Ctrl+W) must hide it, and the app has to be raised behind it — a
+ * (and Cmd/Ctrl+W) must hide it, and the app has to be raised behind it. A
  * hidden window hands focus to whatever the OS pleases, which is not
  * necessarily the app the user was in.
  */
@@ -358,7 +358,7 @@ describe("dismissOnEscape", () => {
     expect(hide).not.toHaveBeenCalled();
   });
 
-  it("leaves a hidden window alone — the driver types into it constantly", () => {
+  it("leaves a hidden window alone, since the driver types into it constantly", () => {
     const { hide, press } = loginWindow(false);
 
     press({ type: "keyDown", key: "Escape" });

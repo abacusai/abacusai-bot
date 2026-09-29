@@ -3,7 +3,7 @@
  *
  * Two destinations, and the split is what this pins. A web link goes to the
  * browser: the preview pane is a viewer for what the agent made, and it has
- * none of a browser's furniture — no address bar to see where you have landed,
+ * none of a browser's furniture: no address bar to see where you have landed,
  * no tabs, no history, none of the sessions the user is signed into. A path on
  * disk still opens in the pane, because showing you a file it just wrote is
  * exactly what the pane is for.

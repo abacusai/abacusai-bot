@@ -131,7 +131,7 @@ describe("right panel store", () => {
     const refreshedFileOne = createResourceRightPanelDescriptor({
       resourceType: "file",
       resourceKey: "/workspace/src/app.tsx",
-      title: "app.tsx — refreshed",
+      title: "app.tsx: refreshed",
       metadata: { revision: 2 },
     });
 
@@ -162,12 +162,12 @@ describe("right panel store", () => {
     const agentsOne = createResourceRightPanelDescriptor({
       resourceType: "agents",
       resourceKey: "run-one",
-      title: "Agents — run one",
+      title: "Agents: run one",
     });
     const agentsTwo = createResourceRightPanelDescriptor({
       resourceType: "agents",
       resourceKey: "run-two",
-      title: "Agents — run two",
+      title: "Agents: run two",
     });
     const state = reduce(
       createRightPanelState(),

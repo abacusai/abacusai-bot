@@ -22,7 +22,7 @@ import {
 /**
  * Both switches ship on. These only fire while the window is unfocused, which
  * is exactly when a finished turn or a blocked permission would otherwise go
- * unnoticed — an agent that waits silently for approval looks like one that
+ * unnoticed. An agent that waits silently for approval looks like one that
  * hung.
  */
 export const NotificationSettingsPanel = (): JSX.Element => {

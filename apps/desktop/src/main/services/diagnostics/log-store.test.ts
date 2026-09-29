@@ -4,7 +4,7 @@
  * The reports this exists for are the ones nobody can press a button during:
  * an app that dies before its window opens, a renderer that took its own
  * buffer down with it, a user who quit yesterday and was asked for logs today.
- * So the cases here are about what is on disk afterwards — including what is
+ * So the cases here are about what is on disk afterwards, including what is
  * deliberately not: days past the window, and anything that looks like a key.
  */
 import fs from "node:fs";
@@ -74,7 +74,7 @@ describe("writing", () => {
     expect(text).toContain("second");
   });
 
-  it("scrubs on the way in — these files sit on disk for days", () => {
+  it("scrubs on the way in, since these files sit on disk for days", () => {
     const store = new LogStore(dir, at("2026-08-21T10:00:00"));
 
     store.start();
@@ -101,7 +101,7 @@ describe("writing", () => {
 });
 
 describe("before the app starts it", () => {
-  it("writes nothing — a unit test must not append to the real log directory", () => {
+  it("writes nothing: a unit test must not append to the real log directory", () => {
     const store = new LogStore(dir, at("2026-08-21T10:00:00"));
 
     store.append("agent", "from some test's child process");

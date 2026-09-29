@@ -10,7 +10,7 @@ import { ConnectorLogo } from "../settings/connector-logo";
 /**
  * The platform connectors behind the `abacus-connectors` MCP server, by name:
  * a bare "3 tools" pill says nothing to someone who connected nothing here.
- * Registry entries only — the registry is the allowlist, so a service
+ * Registry entries only: the registry is the allowlist, so a service
  * attached elsewhere that this app does not take is not behind this server.
  */
 export const AbacusConnectorsSummary = (): JSX.Element => {

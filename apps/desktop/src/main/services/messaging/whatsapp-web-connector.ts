@@ -74,7 +74,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private window: BrowserWindow | null = null;
   private running = false;
   private loggedIn = false;
-  /** Consecutive signed-out polls after a login — see checkLogin. */
+  /** Consecutive signed-out polls after a login. See checkLogin. */
   private signedOutTicks = 0;
   /** The self lookup runs once per link; see findSelf. */
   private selfLookupDone = false;
@@ -84,7 +84,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private inboundTimer: NodeJS.Timeout | null = null;
   private contacts: Array<{ chatId: string; name: string; isGroup?: boolean }> =
     [];
-  /** The account's own number ("+digits") — what "me" resolves to. */
+  /** The account's own number ("+digits"): what "me" resolves to. */
   private self: string | null = null;
   /** The self chat's display title, for the inbound sweep's always-watch. */
   private selfDisplayName: string | null = null;
@@ -102,13 +102,13 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private bridgeReady = false;
   /** The account's WhatsApp id, from the bridge. */
   private selfJid: string | null = null;
-  /** The own chat's id when it differs from the phone jid — the lid. */
+  /** The own chat's id when it differs from the phone jid: the lid. */
   private ownChatJid: string | null = null;
   /** The page's answers on whether a chat is the user's own, per jid. */
   private ownChatVerdicts = new Map<string, boolean>();
-  /** The chat list as the bridge last saw it — names resolve against it. */
+  /** The chat list as the bridge last saw it; names resolve against it. */
   private bridgeChats: BridgeChat[] = [];
-  /** Message ids this session sent — the exact echo guard, when the bridge is on. */
+  /** Message ids this session sent: the exact echo guard, when the bridge is on. */
   private sentIds = new Set<string>();
   /** chat+text -> the id of a send WhatsApp queued but never acked; a retry
    * checks that id first so a late delivery is not sent twice. */
@@ -129,7 +129,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
    * takes the lock; a nested claim would wait on its own caller.
    */
   private queue: Promise<unknown> = Promise.resolve();
-  /** Serialized tasks currently holding the page — see checkLogin. */
+  /** Serialized tasks currently holding the page. See checkLogin. */
   private driving = 0;
 
   private serialize<T>(task: () => Promise<T>): Promise<T> {
@@ -208,7 +208,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private async sendTextNow(chatId: string, text: string): Promise<void> {
     if (!this.loggedIn)
       throw new Error(
-        "WhatsApp is not linked yet — scan the QR in the login window first."
+        "WhatsApp is not linked yet. Scan the QR in the login window first."
       );
 
     // Remembered BEFORE the send: the bridge queues our own message as inbound
@@ -245,7 +245,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
         const vanished = message.includes("could not see it in the chat");
         if (!heldText && !vanished) throw error;
         this.callbacks.onLog(
-          "whatsapp-web: the page went stale mid-send — reloading it, then verify before any resend"
+          "whatsapp-web: the page went stale mid-send; reloading it and verifying before any resend"
         );
         this.lastNumberOpened = null;
         // Reload IN PLACE, never recreate the window: a renderer killed
@@ -269,13 +269,13 @@ export class WhatsAppWebConnector implements MessagingConnector {
           });
           if (check?.found === true) {
             this.callbacks.onLog(
-              "whatsapp-web: the send had landed after all — not resending"
+              "whatsapp-web: the send had landed after all, not resending"
             );
             continue;
           }
         }
         this.callbacks.onLog(
-          "whatsapp-web: verified absent after the heal — resending"
+          "whatsapp-web: verified absent after the heal, resending"
         );
         await this.sendChunk(chatId, chunk);
       }
@@ -364,7 +364,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     if (verdict) this.rememberOwnChat(message.jid);
     else
       this.callbacks.onLog(
-        `whatsapp-web: own outgoing in ${message.jid} is not the self chat — not inbound`
+        `whatsapp-web: own outgoing in ${message.jid} is not the self chat, not inbound`
       );
     return verdict;
   }
@@ -408,7 +408,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       if (ack >= 1) {
         this.queuedSends.delete(key);
         this.callbacks.onLog(
-          "whatsapp-web: the earlier queued send has since been accepted — not resending"
+          "whatsapp-web: the earlier queued send has since been accepted, not resending"
         );
         return;
       }
@@ -427,7 +427,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     }
   }
 
-  /** Outgoing bubbles whose text matches — the heal's stale-match baseline. */
+  /** Outgoing bubbles whose text matches: the heal's stale-match baseline. */
   private async matchingOutCount(
     chatId: string,
     chunk: string
@@ -510,7 +510,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
         `The message to ${chatId} cleared the composer but this check could ` +
           `not see it in the chat (${sent?.error ?? "no answer"}). Do NOT ` +
           "resend it yet: first read the chat (read_chat_messages) and check " +
-          "whether it actually arrived — a resend after a send that in fact " +
+          "whether it actually arrived. A resend after a send that in fact " +
           "worked delivers the same message twice. Resend only if the read " +
           "shows it truly missing."
       );
@@ -545,7 +545,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
         lastError = `a different chat opened (top bar: ${matches?.bar ?? "unreadable"})`;
         if (attempt === 0) {
           this.callbacks.onLog(
-            `whatsapp-web: asked for ${chatId} but ${lastError} — trying once more`
+            `whatsapp-web: asked for ${chatId} but ${lastError}, trying once more`
           );
           await delay(COMPOSER_RETRY_DELAY_MS);
         }
@@ -565,7 +565,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       lastError = composer?.error ?? "no message box";
       if (attempt === 0) {
         this.callbacks.onLog(
-          `whatsapp-web: no message box in ${chatId} yet — trying once more`
+          `whatsapp-web: no message box in ${chatId} yet, trying once more`
         );
         await delay(COMPOSER_RETRY_DELAY_MS);
       }
@@ -577,7 +577,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       `WhatsApp is linked, but its message box did not appear for "${chatId}" (${lastError}). ` +
         "Nothing was sent. This happens while WhatsApp is still loading an " +
         "account it has just linked. Do not tell the user to set up WhatsApp " +
-        "or scan a QR — it is already linked. Say the send did not go through " +
+        "or scan a QR; it is already linked. Say the send did not go through " +
         "and offer to try again in a moment."
     );
   }
@@ -604,7 +604,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     if (win == null || win.isDestroyed())
       throw new Error("WhatsApp is not running.");
     if (!this.loggedIn)
-      throw new Error("WhatsApp is not linked yet — scan the QR first.");
+      throw new Error("WhatsApp is not linked yet. Scan the QR first.");
 
     // Waits out the same not-yet-mounted pane a text send does; the attach
     // button appears no sooner than the composer.
@@ -639,7 +639,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     );
     if (preview?.open === true)
       throw new Error(
-        `The file was staged but did not send to ${chatId} — the preview is still open.`
+        `The file was staged but did not send to ${chatId}. The preview is still open.`
       );
     this.rememberSent(chatId, caption ?? "");
   }
@@ -752,7 +752,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     if (this.self == null) return this.contacts;
     const title =
       this.selfDisplayName != null && this.selfDisplayName !== this.self
-        ? ` — shown in WhatsApp as "${this.selfDisplayName}"`
+        ? `, shown in WhatsApp as "${this.selfDisplayName}"`
         : "";
     const me = {
       chatId: this.self,
@@ -843,13 +843,13 @@ export class WhatsAppWebConnector implements MessagingConnector {
         `whatsapp-web: ${jid} is not in the store (${read.reason}); not reloading the page for it`
       );
       throw new Error(
-        `WhatsApp has not loaded the chat "${chatId}" on this device yet — it does that for a while after linking. Ask again in a minute; no browser or reload is needed.`
+        `WhatsApp has not loaded the chat "${chatId}" on this device yet. It does that for a while after linking. Ask again in a minute; no browser or reload is needed.`
       );
     }
     const opened = await this.openChat(chatId);
     if (!opened.ok)
       throw new Error(
-        `WhatsApp could not open the chat with ${chatId}, so its messages could not be read${opened.error == null ? "" : `: ${opened.error}`}. This is not the same as the chat being empty — check the contact or number.`
+        `WhatsApp could not open the chat with ${chatId}, so its messages could not be read${opened.error == null ? "" : `: ${opened.error}`}. This is not the same as the chat being empty. Check the contact or number.`
       );
     const rows = await this.run<
       Array<{
@@ -978,7 +978,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       this.selfLinkedAnnounced = false;
       this.callbacks.onState(
         "needs_login",
-        "WhatsApp is no longer linked — the phone unlinked this device or the session expired. Reconnect and scan the QR again."
+        "WhatsApp is no longer linked. The phone unlinked this device or the session expired. Reconnect and scan the QR again."
       );
       this.pollLogin();
     }
@@ -992,7 +992,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     presentAsDialog(win);
   }
 
-  /** True once the user has linked the device — surfaced to the connect dialog. */
+  /** True once the user has linked the device; surfaced to the connect dialog. */
   get isLoggedIn(): boolean {
     return this.loggedIn;
   }
@@ -1051,7 +1051,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
         continue;
       if (isSelfRow && botOutput) {
         this.callbacks.onLog(
-          "whatsapp-web: a bot's words in the self chat, not the user's — not reporting it"
+          "whatsapp-web: a bot's words in the self chat, not the user's; not reporting it"
         );
         continue;
       }
@@ -1085,7 +1085,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     const { messages, loggedOut } = await this.bridge.drain();
     if (loggedOut) {
       this.callbacks.onLog(
-        "whatsapp-web: the bridge saw a logout — the phone unlinked this device"
+        "whatsapp-web: the bridge saw a logout: the phone unlinked this device"
       );
       // The login poll's own check confirms it and moves the state.
       this.signedOutTicks = 40;
@@ -1103,7 +1103,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
       // phone. Raw text, before normalization strips the signature.
       if (isSelfChat && message.fromMe && looksLikeBotOutput(message.text)) {
         this.callbacks.onLog(
-          "whatsapp-web: a bot's words in the self chat, not the user's — not reporting it"
+          "whatsapp-web: a bot's words in the self chat, not the user's; not reporting it"
         );
         continue;
       }
@@ -1153,7 +1153,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
         {}
       );
       this.callbacks.onLog(
-        `whatsapp-web: pane shape ${JSON.stringify(shape)} — ${this.contacts.length} contacts read`
+        `whatsapp-web: pane shape ${JSON.stringify(shape)}, ${this.contacts.length} contacts read`
       );
     }
     await this.findSelf();
@@ -1198,7 +1198,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     );
     if (found?.digits == null || found.digits.length === 0) {
       this.callbacks.onLog(
-        `whatsapp-web: could not read the linked account's own number (${found?.how ?? "no answer"}) — ` +
+        `whatsapp-web: could not read the linked account's own number (${found?.how ?? "no answer"}); ` +
           "sending to yourself will not work until it can"
       );
       return;
@@ -1285,8 +1285,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private ensureWindow(): BrowserWindow | null {
     if (this.window != null && !this.window.isDestroyed()) return this.window;
     if (!this.running) return null;
-    // Hidden even when logged out: whoever needs the user's eyes on it —
-    // showLoginWindow, the login-screen check — shows it explicitly.
+    // Hidden even when logged out: whoever needs the user's eyes on it
+    // (showLoginWindow, the login-screen check) shows it explicitly.
     const win = this.buildWindow(false);
     void win.loadURL(WHATSAPP_WEB_URL, { userAgent: userAgent() });
     this.window = win;
@@ -1369,7 +1369,7 @@ const HELPERS = `
  * cached business contact as "me", and every self-send goes to a stranger.
  */
 const OWN_DIGITS_SCRIPT = `
-  // Only WhatsApp's own record of the LINKED account counts — these are the
+  // Only WhatsApp's own record of the LINKED account counts: these are the
   // keys WhatsApp Web stores its login identity under. Scanning every
   // stored value for anything WID-shaped once crowned a cached business
   // contact as "me".
@@ -1475,7 +1475,7 @@ const FIND_CHAT_SCRIPT = `
   if (direct) return { ok: true, ...centre(direct) };
 
   // The search box has been an <input> and a contenteditable across builds;
-  // type whichever exists, and VERIFY the text landed — a query that never
+  // type whichever exists, and VERIFY the text landed: a query that never
   // typed searches nothing and reads as "no such chat" for every chat
   // outside the rendered sidebar.
   let search = document.querySelector('[data-testid="chat-list-search-container"] input, #side input[role="textbox"]');
@@ -1528,7 +1528,7 @@ const FIND_CHAT_SCRIPT = `
   };
 `;
 
-/** Re-scan search results for the target row — after trusted typing. */
+/** Re-scan search results for the target row after trusted typing. */
 const FIND_ROW_AFTER_TYPE_SCRIPT = `
   ${HELPERS}
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1562,7 +1562,7 @@ const FIND_ROW_AFTER_TYPE_SCRIPT = `
 /** How long to let WhatsApp settle before asking for the message box again. */
 const COMPOSER_RETRY_DELAY_MS = 2_000;
 
-/** Is a composer on screen right now — the "still on that chat" check. */
+/** Whether a composer is on screen right now: the "still on that chat" check. */
 const COMPOSER_PRESENT_SCRIPT = `
   return { ok: !!document.querySelector('footer [contenteditable="true"]') };
 `;
@@ -1641,7 +1641,7 @@ const SENT_VERIFY_SCRIPT = `
   const mainRect = main.getBoundingClientRect();
   const midline = mainRect.x + mainRect.width / 2;
   // The testid and the legacy classes have both been seen absent in the
-  // field — a verify that cannot see ANY bubbles fails a send that worked,
+  // field: a verify that cannot see ANY bubbles fails a send that worked,
   // and the resend it provokes duplicates the message. Message rows are the
   // fallback: they exist as long as the conversation renders at all.
   const allBubbles = () => {
@@ -1653,7 +1653,7 @@ const SENT_VERIFY_SCRIPT = `
   while (Date.now() < end) {
     const bubbles = allBubbles();
     // A NEW bubble must exist. Without this, an older message with similar
-    // text vouched for a send that never happened — a chat full of test
+    // text vouched for a send that never happened: a chat full of test
     // jokes always has a bubble that matches "here's a joke".
     if (args.priorCount >= 0 && bubbles.length <= args.priorCount) {
       await sleep(250);
@@ -1667,7 +1667,7 @@ const SENT_VERIFY_SCRIPT = `
       if (!isOut) continue;
       // Only the LAST outgoing bubble answers.
       if (!norm(b.innerText).includes(head)) break;
-      // The bubble exists — now demand the server's tick. A half-dead web
+      // The bubble exists. Now demand the server's tick. A half-dead web
       // session renders the bubble with a pending clock and never delivers
       // it; that message exists only on this screen, and reporting it sent
       // is exactly the lie this read-back exists to prevent.
@@ -1675,7 +1675,7 @@ const SENT_VERIFY_SCRIPT = `
         return { ok: true };
       if (!b.querySelector('[data-icon="msg-time"]'))
         // No status icon at all: the markup changed. Bubble presence is the
-        // best evidence left — take it rather than failing every send.
+        // best evidence left, so take it rather than failing every send.
         return { ok: true };
       break;
     }
@@ -1686,18 +1686,18 @@ const SENT_VERIFY_SCRIPT = `
   return {
     ok: false,
     error: pending
-      ? 'the message is stuck pending — it never reached WhatsApp'
+      ? 'the message is stuck pending and never reached WhatsApp'
       : 'no new outgoing bubble with the sent text',
   };
 `;
 
-/** How many bubbles the open chat shows — the read-back's "new" baseline. */
+/** How many bubbles the open chat shows: the read-back's "new" baseline. */
 const BUBBLE_COUNT_SCRIPT = `
   const primary = document.querySelectorAll('#main [data-testid="msg-container"], #main .message-in, #main .message-out').length;
   return { bubbles: primary > 0 ? primary : document.querySelectorAll('#main [role="row"]').length };
 `;
 
-/** How many outgoing bubbles already carry the text — the pre-send baseline. */
+/** How many outgoing bubbles already carry the text: the pre-send baseline. */
 const MATCHING_OUT_COUNT_SCRIPT = `
   const norm = (s) => (s || '').replace(/[\\u200B\\uFEFF]/g, '').replace(/\\s+/g, ' ').trim();
   const head = norm(args.head);
@@ -1747,7 +1747,7 @@ const RECENT_OUT_SCRIPT = `
       // than before the send.
       if (matches > prior) return { found: true };
       // No early "absent": a chat fresh off a renderer heal hydrates oldest
-      // first, so the count climbs as it renders — only the deadline can
+      // first, so the count climbs as it renders. Only the deadline can
       // conclude nothing new arrived.
     }
     await sleep(300);
@@ -1768,12 +1768,12 @@ const SEND_BUTTON_SCRIPT = `
   return { ok: true, x: r.x + r.width / 2, y: r.y + r.height / 2 };
 `;
 
-/** Whether the composer is empty — a fast pre-check before the read-back. */
+/** Whether the composer is empty: a fast pre-check before the read-back. */
 const COMPOSER_EMPTY_SCRIPT = `
   const box = document.querySelector('footer [contenteditable="true"]');
   if (!box) return { empty: true };
   // Doubled backslashes: written singly, TypeScript would eat the escapes and
-  // the page would receive a regex stripping the letter "s" — see the Discord
+  // the page would receive a regex stripping the letter "s". See the Discord
   // connector's identical note.
   return { empty: box.textContent.replace(/[\\u200B\\uFEFF\\s]/g, '').length === 0 };
 `;
@@ -1791,7 +1791,7 @@ const READ_CHAT_SCRIPT = `
   while (Date.now() - t0 < 6000) {
     bubbles = [...document.querySelectorAll('#main [data-testid="msg-container"], #main .message-in, #main .message-out')];
     // The testid and the legacy classes have both been seen absent in the
-    // field — the send verifier learned this first; a reader without the
+    // field. The send verifier learned this first; a reader without the
     // same fallback answered "0 messages" for every chat on those builds.
     if (!bubbles.length)
       bubbles = [...document.querySelectorAll('#main [role="row"]')];
@@ -1803,7 +1803,7 @@ const READ_CHAT_SCRIPT = `
   const midline = mainRect.x + mainRect.width / 2;
   // WhatsApp renders every emoji as an <img alt="…">, so textContent drops
   // them: a 👍-only reply read as an empty bubble, fell through to the
-  // innerText fallback below, and came back as its own time label — the
+  // innerText fallback below, and came back as its own time label. The
   // agent reported "9:30 pm" as the message. Read text with the alt texts
   // put back in their place.
   const withEmoji = (el) => {
@@ -1818,8 +1818,8 @@ const READ_CHAT_SCRIPT = `
     const textEl = b.querySelector('span.selectable-text, .selectable-text');
     let text = withEmoji(textEl);
     if (text.length === 0) {
-      // Business and template bubbles — boarding passes, fund statements,
-      // list messages, image captions — carry no .selectable-text, and
+      // Business and template bubbles (boarding passes, fund statements,
+      // list messages, image captions) carry no .selectable-text, and
       // skipping them read whole business chats as empty. Take the bubble's
       // rendered text instead: noisier (a trailing time, button labels), but
       // a message the user can see must never be one the agent cannot.
@@ -1832,14 +1832,14 @@ const READ_CHAT_SCRIPT = `
     const meta = b.querySelector('[data-pre-plain-text]');
     const pre = meta ? meta.getAttribute('data-pre-plain-text') : '';
     const m = pre.match(/^\\[(.+?)\\]\\s*(.*?):\\s*$/);
-    // "[7:23 pm, 5/10/2026] Name:" — the date is in the ACCOUNT's locale
+    // In "[7:23 pm, 5/10/2026] Name:" the date is in the ACCOUNT's locale
     // order, day-first for most of the world, and new Date() reads bare
     // slashes month-first: 5/10 became October 5th, 31/8 didn't parse at
     // all and fell back to "now". The agent then reported messages from
     // phantom future dates and called today's history ambiguous. Parse the
     // fields by hand: a value over 12 settles which one is the day, and an
     // ambiguous pair is day-first unless that puts the message in the
-    // future — messages cannot be from tomorrow.
+    // future. Messages cannot be from tomorrow.
     let at = null;
     if (m) {
       const t = m[1].match(/(\\d{1,2}):(\\d{2})\\s*([ap]m)?\\s*,\\s*(\\d{1,2})\\/(\\d{1,2})\\/(\\d{2,4})/i);

@@ -2,7 +2,7 @@
  * The `abacus-connectors` MCP server row said "3 tools" and nothing else,
  * and a user who had attached nothing in this app asked what the three
  * were. They are the account's platform connectors; this names them, from
- * the registry — a service attached elsewhere that this app does not take is
+ * the registry. A service attached elsewhere that this app does not take is
  * not behind this server and is not listed.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

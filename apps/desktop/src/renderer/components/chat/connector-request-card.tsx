@@ -21,9 +21,9 @@ import { Button, Spinner } from "../ui";
  * with a sentence the model can act on. Shown only in the conversation that
  * asked; another conversation's ask gets its sidebar dot until it is opened.
  *
- * Connecting runs the same flow as the Connectors page — a browser hop, the
+ * Connecting runs the same flow as the Connectors page (a browser hop, the
  * fields dialog, a pairing dialog, whichever the registry says the connector
- * needs — so a token card like GitHub is one click here too.
+ * needs), so a token card like GitHub is one click here too.
  */
 
 /** Flag the conversation an ask arrived for, when it is not the one on screen. */
@@ -146,7 +146,7 @@ export const ConnectorRequestCard = (): JSX.Element | null => {
         await answer("connected");
         return;
       }
-      // Cancelling is a decision, not a failure — but the agent is still
+      // Cancelling is a decision, not a failure, but the agent is still
       // waiting, and it is waiting on an answer either way.
       if (result.cancelled === true) {
         await answer("declined");
@@ -194,10 +194,10 @@ export const ConnectorRequestCard = (): JSX.Element | null => {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {/* Never disabled: a user who clicked Connect and changed their
-              mind in the browser used to come back to a card that was all
-              spinner — the agent suspended in the tool call, no way out until
-              the timeout. Mid-hop, declining cancels the browser wait, whose
+          {/* Never disabled: a user who clicks Connect and changes their
+              mind in the browser must not come back to a card that is all
+              spinner, with the agent suspended in the tool call and no way out
+              until the timeout. Mid-hop, declining cancels the browser wait, whose
               resolution (cancelled) answers the agent "declined"; answering
               here too would answer twice. */}
           <Button

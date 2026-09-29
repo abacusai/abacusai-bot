@@ -3,9 +3,9 @@
  *
  * Nothing in src/shared had tests, and this is the file in it with the most
  * reach: it decides which tools the model is told about, on both the desktop and
- * the CLI. The failures it can produce are quiet ones — a tool withheld from a
+ * the CLI. The failures it can produce are quiet ones (a tool withheld from a
  * group the user switched on, or a default that drifts away from what the docs
- * promise — so the invariants are asserted here rather than trusted.
+ * promise), so the invariants are asserted here rather than trusted.
  */
 import { describe, expect, it } from "vitest";
 
@@ -160,7 +160,7 @@ describe("the defaults the docs promise", () => {
 /**
  * A tool the agent registers but the session then excludes is invisible from
  * the outside: the model simply never sees it, and the failure looks like the
- * model choosing not to use it. That has shipped here before — the sandboxed
+ * model choosing not to use it. That has shipped here before: the sandboxed
  * `bash` was registered and excluded under the same name, and every macOS
  * session answered a shell call with "Tool bash not found".
  *
@@ -243,7 +243,7 @@ describe("the always-on tools are in the registry", () => {
   /**
    * The switch does not exist, so a stored `false` is stale state or a
    * hand-edited settings file. Reading it as "off" would put these tools in
-   * `excludeTools` while the panel went on showing them as on — and because the
+   * `excludeTools` while the panel went on showing them as on, and because the
    * agent registers them itself, that withholds them for real.
    */
   it.each(["process", "plan_mode"])(

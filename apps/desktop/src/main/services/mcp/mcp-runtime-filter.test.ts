@@ -1,6 +1,6 @@
 /**
- * The runtime MCP config carries every user server for every session — bots
- * included. The per-bot connector grant that used to filter this file is
+ * The runtime MCP config carries every user server for every session,
+ * bots included. The per-bot connector grant that used to filter this file is
  * gone: a bot that needs a service asks for it with connect_connector, and
  * the Connect button is the gate. Its own file because the service resolves
  * the home directory at import time, so these tests re-import the module

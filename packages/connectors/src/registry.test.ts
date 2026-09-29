@@ -1,6 +1,6 @@
 /**
  * The registry is the one list every surface reads, so the things a surface
- * used to assume about a connector are checked here instead: every entry can
+ * would otherwise assume about a connector are checked here instead: every entry can
  * be connected, every platform entry names the tools it takes, ids and
  * service keys are unique, and what a model calls a connector resolves.
  */
@@ -172,7 +172,7 @@ describe("what the model is told", () => {
       })
     ).toBe("abacus-gmailuser  Gmail  connected as Gmail - ada@example.com");
     expect(describeForListing(gmail, { state: "available" })).toContain(
-      "not connected — ask for it with this tool"
+      "not connected: ask for it with this tool"
     );
     const github = connectorById("github")!;
     expect(describeForListing(github, { state: "connected" })).toContain(

@@ -5,7 +5,7 @@ import type { AddressInfo } from "net";
 import { shell } from "electron";
 
 /**
- * "Connect OpenRouter" — OAuth PKCE instead of copy-pasting a key. The flow
+ * "Connect OpenRouter": OAuth PKCE instead of copy-pasting a key. The flow
  * needs no registered client id and accepts a loopback callback on any port,
  * so the app opens the browser, listens on 127.0.0.1, and exchanges the code
  * for a key. That key is the same kind as a pasted one and lands in
@@ -192,7 +192,7 @@ const RESPONSE_PAGE = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AbacusAIBot connected</title>
+<title>AbacusAI Bot connected</title>
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -208,7 +208,7 @@ const RESPONSE_PAGE = `<!doctype html>
 </head>
 <body>
   <div class="card">
-    <h1>AbacusAIBot is connected</h1>
+    <h1>AbacusAI Bot is connected</h1>
     <p>You can close this tab and go back to the app.</p>
   </div>
 </body>

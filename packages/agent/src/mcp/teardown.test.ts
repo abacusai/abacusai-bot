@@ -175,7 +175,7 @@ describe("killing a server that runs behind a cmd.exe wrapper", () => {
   });
 
   it("kills the child itself when taskkill is not on PATH", async () => {
-    // Without this the server was never signalled at all — the leak the tree
+    // Without this the server was never signalled at all: the leak the tree
     // kill was added to close.
     const target = child();
 

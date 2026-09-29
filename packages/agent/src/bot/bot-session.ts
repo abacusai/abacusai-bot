@@ -116,6 +116,10 @@ import {
   FLUSH_CUSTOM_TYPE,
   flushPrompt,
 } from "./bot-prompts.js";
+import {
+  BOT_REACTION_TOOL_NAME,
+  buildBotReactionTool,
+} from "./bot-reaction-tool.js";
 import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "./bot-time-tool.js";
 
 export interface BotSessionOptions {
@@ -174,7 +178,7 @@ export function botBashTool(
 export class BotSession {
   /** Steers handed to pi that have not reached the model yet, oldest first. */
   private readonly pendingSteers: string[] = [];
-  /** True while the router is what the user picked — see currentModelReference. */
+  /** True while the router is what the user picked. See currentModelReference. */
   private openLlmActive = false;
   private session: AgentSession | undefined;
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
@@ -219,10 +223,10 @@ export class BotSession {
   private contextCompactions = 0;
   private continuingPastMalformedToolCall = false;
   private pendingContextCompaction: string | null = null;
-  /** A reply in the wrong language, to be asked for again — once per turn. */
+  /** A reply in the wrong language, to be asked for again (once per turn). */
   private pendingLanguageRepair: ReplyLanguageMismatch | null = null;
   private languageRepairsThisTurn = 0;
-  /** Whether a user turn is in flight — a refresh landing now is mid-turn. */
+  /** Whether a user turn is in flight: a refresh landing now is mid-turn. */
   private turnRunning = false;
   /** MCP tools registered while this turn ran; pi offers them next turn. */
   private toolsArrivedThisTurn: string[] = [];
@@ -230,13 +234,13 @@ export class BotSession {
   private toolArrivalsThisTurn = 0;
 
   // Memory machinery.
-  /** The provider's usage for the turn's last request — set at agent_end. */
+  /** The provider's usage for the turn's last request, set at agent_end. */
   private lastTurnUsage: TurnUsage | null = null;
   /** Rough transcript size in chars, updated at every agent_end. */
   private estimatedTranscriptChars = 0;
   /** One flush per compaction cycle; reset when a compaction happens. */
   private flushedSinceCompaction = false;
-  /** True while a flush/consolidation turn runs — its output stays hidden. */
+  /** True while a flush/consolidation turn runs: its output stays hidden. */
   private hiddenTurn = false;
   /** What the current prompt's memory block was built from. */
   private promptMemoryFingerprint = "";
@@ -272,6 +276,7 @@ export class BotSession {
     ]);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
 
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
 
@@ -373,7 +378,8 @@ export class BotSession {
         !isBrowserTool(tool) &&
         tool.name !== BOT_MEMORY_TOOL_NAME &&
         !tool.name.endsWith(`_${BOT_MEMORY_TOOL_NAME}`) &&
-        tool.name !== BOT_TIME_TOOL_NAME
+        tool.name !== BOT_TIME_TOOL_NAME &&
+        tool.name !== BOT_REACTION_TOOL_NAME
     );
 
     for (const tool of mcpTools) this.registeredMcpTools.add(tool.name);
@@ -402,6 +408,7 @@ export class BotSession {
     const customTools = [
       buildBotMemoryTool(this.home),
       buildBotTimeTool(),
+      buildBotReactionTool(),
       botBashTool(this.options.cwd),
       ...browserTaskTools,
       ...mcpTools,
@@ -1008,38 +1015,47 @@ export class BotSession {
   }
 
   async refreshMcp(): Promise<void> {
+    this.mcp.retire?.();
     for (const client of this.mcp.clients) client.close();
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
+    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.registerNewMcpTools();
+    this.emitMcpServers();
+  }
 
+  /** Give pi the MCP tools it has not seen: after a refresh, or a server coming up late. */
+  private registerNewMcpTools(): void {
     const pi = this.pi;
 
-    if (pi != null) {
-      for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
-        if (this.registeredMcpTools.has(tool.name)) continue;
-        if (tool.name.startsWith("browser_")) continue;
-        if (
-          tool.name === BOT_MEMORY_TOOL_NAME ||
-          tool.name.endsWith(`_${BOT_MEMORY_TOOL_NAME}`)
-        )
-          continue;
-        // A same-named MCP tool would shadow the one the prompt teaches.
-        if (tool.name === BOT_TIME_TOOL_NAME) continue;
+    if (pi == null) return;
 
-        this.registeredMcpTools.add(tool.name);
+    for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
+      if (this.registeredMcpTools.has(tool.name)) continue;
+      if (tool.name.startsWith("browser_")) continue;
+      if (
+        tool.name === BOT_MEMORY_TOOL_NAME ||
+        tool.name.endsWith(`_${BOT_MEMORY_TOOL_NAME}`)
+      )
+        continue;
+      // A same-named MCP tool would shadow the one the prompt teaches.
+      if (
+        tool.name === BOT_TIME_TOOL_NAME ||
+        tool.name === BOT_REACTION_TOOL_NAME
+      )
+        continue;
 
-        try {
-          pi.registerTool(tool as never);
-          // Registered mid-turn: pi offers it from the next turn on, so the
-          // turn is continued once it ends, naming what arrived.
-          if (this.turnRunning) this.toolsArrivedThisTurn.push(tool.name);
-        } catch {
-          this.registeredMcpTools.delete(tool.name);
-        }
+      this.registeredMcpTools.add(tool.name);
+
+      try {
+        pi.registerTool(tool as never);
+        // Registered mid-turn: pi offers it from the next turn on, so the
+        // turn is continued once it ends, naming what arrived.
+        if (this.turnRunning) this.toolsArrivedThisTurn.push(tool.name);
+      } catch {
+        this.registeredMcpTools.delete(tool.name);
       }
     }
-
-    this.emitMcpServers();
   }
 
   emitMcpServers(): void {
@@ -1066,6 +1082,7 @@ export class BotSession {
   }
 
   dispose(): void {
+    this.mcp.retire?.();
     for (const client of this.mcp.clients) client.close();
 
     this.unsubscribe?.();
@@ -1376,7 +1393,7 @@ export class BotSession {
           ...(this.config.allowedCommands ?? []),
           ...this.sessionAllowedCommands,
         ],
-        allowedTools: [...this.sessionAllowedTools],
+        allowedTools: [BOT_REACTION_TOOL_NAME, ...this.sessionAllowedTools],
         allowedReadPaths: this.config.allowedReadPaths ?? [],
         allowedWritePaths: [],
         allowedOrigins: [],
@@ -1428,7 +1445,7 @@ export class BotSession {
                 type: "reject_with_message",
                 message:
                   `No answer after ${Math.round(budget / 60_000)} minutes, so this was not approved. ` +
-                  `Do not retry the same call — say what you need approved and stop.`,
+                  `Do not retry the same call. Say what you need approved and stop.`,
               });
             }, budget)
           : undefined;
@@ -1631,7 +1648,7 @@ function estimateChars(messages: readonly unknown[]): number {
 const NO_MODEL_CONFIGURED =
   "No model provider is configured. Add an API key in Settings.";
 
-/** First sentence of a provider failure — bots never dump provider prose. */
+/** First sentence of a provider failure: bots never dump provider prose. */
 function compactFailure(raw: string): string {
   const first = raw.split(/[.\n]/)[0]?.trim() ?? "";
 

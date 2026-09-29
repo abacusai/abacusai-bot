@@ -33,8 +33,8 @@ import {
  * says what each kind needs (`connectUi`); this runs it: a browser hop or a
  * plain install goes straight to main, a kind that takes fields opens the one
  * fields dialog, a chat app opens its pairing dialog. Every path resolves to
- * the same outcome, so a caller — the Connectors page, onboarding, the card
- * the agent raised in a chat — never branches on kind itself.
+ * the same outcome, so a caller (the Connectors page, onboarding, the card
+ * the agent raised in a chat) never branches on kind itself.
  */
 
 export type ConnectResult = ConnectorOutcome;
@@ -52,7 +52,11 @@ type PairingAsk = {
 export interface ConnectFlow {
   /** Run the connector's flow; resolves when it is over, however it ended. */
   start: (connector: ConnectorDefinition) => Promise<ConnectResult>;
-  /** Give up on a browser hop in flight, resolving it as cancelled. */
+  /**
+   * Give up on a browser hop in flight, resolving it as cancelled. Stable
+   * across renders, unlike the flow object itself (`dialogs` is fresh JSX
+   * every time), so an unmount cleanup keys on this, never on the flow.
+   */
   cancel: () => void;
   /** The dialogs the flow may need; mount once wherever `start` is used. */
   dialogs: JSX.Element;

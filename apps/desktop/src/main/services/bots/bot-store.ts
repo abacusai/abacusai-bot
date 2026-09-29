@@ -68,7 +68,7 @@ export const createBot = (input: BotCreateInput): Bot => {
 
   const description = input.description.trim().slice(0, MAX_BOT_DESCRIPTION);
   if (description.length === 0)
-    throw new Error("A bot needs a description — it is the bot's mission.");
+    throw new Error("A bot needs a description. It is the bot's mission.");
 
   const bots = read();
   if (bots.length >= MAX_BOTS)
@@ -109,7 +109,7 @@ export const updateBot = (id: string, changes: BotUpdateInput): Bot => {
 
   if (merged.name.length === 0) throw new Error("A bot needs a name.");
   if (merged.description.length === 0)
-    throw new Error("A bot needs a description — it is the bot's mission.");
+    throw new Error("A bot needs a description. It is the bot's mission.");
 
   bots[index] = merged;
   write(bots);

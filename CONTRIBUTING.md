@@ -1,6 +1,6 @@
 # Contributing
 
-AbacusAIBot accepts community input through issues. The maintainers currently keep implementation, documentation, and release responsibility within the project team, so external pull requests are not reviewed.
+AbacusAI Bot accepts community input through issues. The maintainers currently keep implementation, documentation, and release responsibility within the project team, so external pull requests are not reviewed.
 
 You may inspect, modify, and distribute forks under the [MIT license](LICENSE). The policy above only describes how changes enter this repository.
 
@@ -19,7 +19,7 @@ Search existing issues before opening a new one. Keep one problem per issue and 
 
 A useful report contains:
 
-- the AbacusAIBot version or source commit;
+- the AbacusAI Bot version or source commit;
 - operating system and architecture;
 - model provider and permission mode when relevant;
 - exact steps to reproduce the problem;

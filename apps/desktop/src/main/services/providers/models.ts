@@ -57,7 +57,7 @@ const readConfig = (): AbacusBotConfigShape => {
 /**
  * The plan tier's default, as of the last catalog read. A session spawned
  * with no model of its own starts here rather than on the agent's built-in
- * fallback, which is the free pool whatever the tier — so a Pro account's new
+ * fallback, which is the free pool whatever the tier, so a Pro account's new
  * chat, bot or routine used to open on an empty pool and fall back with a
  * warning before the composer's pick could correct it.
  */
@@ -179,8 +179,26 @@ export const listAvailableModels = async (
             model.provider !== "groq" ||
             groqLive.has(model.id.slice("groq/".length))
         );
+  // OpenRouter is connected for its free models, and a new OpenRouter account
+  // has no balance: every paid row from pi's catalog answered 402, `:batch`
+  // rows cannot chat, and `:free` rows the live list no longer carries answer
+  // 404. Off a paying tier only the live free list is offered; a paying tier
+  // keeps the paid rows, marked, for users with credits on OpenRouter.
+  const payingTier =
+    abacusAccount?.subscription_tier != null &&
+    ["basic", "go", "pro", "max"].includes(abacusAccount.subscription_tier);
+  const liveOpenRouterIds = new Set(openRouterFree.map((model) => model.id));
+  const servableExpanded = withoutRetiredGroq.flatMap((model) => {
+    if (model.provider !== "openrouter") return [model];
+    if (!payingTier || model.id.endsWith(":batch")) return [];
+    if (model.tier !== "free")
+      return [{ ...model, note: "Needs OpenRouter credits" }];
+    return openRouterFree.length === 0 || liveOpenRouterIds.has(model.id)
+      ? [model]
+      : [];
+  });
   const expandedProviders = new Set(
-    withoutRetiredGroq.map((model) => model.provider)
+    servableExpanded.map((model) => model.provider)
   );
 
   // The live list and an expanded catalog supersede the curated rows they
@@ -209,9 +227,6 @@ export const listAvailableModels = async (
 
   // A paying tier lives on its RouteLLM router and has no OpenLLM at all,
   // whatever other keys are configured.
-  const payingTier =
-    abacusAccount?.subscription_tier != null &&
-    ["basic", "go", "pro", "max"].includes(abacusAccount.subscription_tier);
   const presented = payingTier
     ? withoutStaticAbacus.filter((model) => model.provider !== "openllm")
     : withoutStaticAbacus;
@@ -219,10 +234,9 @@ export const listAvailableModels = async (
   // The free tier's dropdown is OpenLLM plus its plan models; the low code
   // router stays off the list (still OpenLLM's routing lane underneath). The
   // live OpenRouter list wins over a catalog row for the same id.
-  const liveIds = new Set(openRouterFree.map((model) => model.id));
   const composed = [
     ...presented,
-    ...withoutRetiredGroq.filter((model) => !liveIds.has(model.id)),
+    ...servableExpanded.filter((model) => !liveOpenRouterIds.has(model.id)),
     ...openRouterFree,
     ...abacusModels,
     ...custom,

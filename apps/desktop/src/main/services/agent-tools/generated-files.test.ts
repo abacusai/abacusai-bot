@@ -2,13 +2,13 @@
  * The SSRF guard on generated-asset downloads.
  *
  * The URL comes back in a provider response, so it is attacker-influenceable,
- * and this fetch runs in the main process — a permissive check turns it into a
+ * and this fetch runs in the main process. A permissive check turns it into a
  * probe against the desktop's own network: localhost services, the LAN, and
  * 169.254.169.254 for cloud instance credentials.
  *
  * The guard is correct because `new URL()` normalises before it is consulted:
  * 2130706433, 0177.0.0.1, 0x7f.0.0.1 and 127.1 all become 127.0.0.1. That is
- * the property worth pinning — it is invisible in the source, and anyone
+ * the property worth pinning. It is invisible in the source, and anyone
  * replacing the parser with hand-rolled string work would silently reopen every
  * one of these.
  */
@@ -85,7 +85,7 @@ describe("what it refuses outright", () => {
 describe("loopback wearing a different encoding", () => {
   it("refuses every alternate spelling of 127.0.0.1", () => {
     // These are the classic SSRF filter bypasses. They are caught because
-    // `new URL()` normalises the host before the guard reads it — not because
+    // `new URL()` normalises the host before the guard reads it, not because
     // the guard enumerates them. Replace the parser and these all come back.
     for (const url of [
       "https://2130706433/a", // decimal

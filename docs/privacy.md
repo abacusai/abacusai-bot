@@ -1,6 +1,6 @@
 # Privacy and local data
 
-AbacusAIBot sends conversation transcripts, application logs, and diagnostic
+AbacusAI Bot sends conversation transcripts, application logs, and diagnostic
 information to Abacus.AI over HTTPS for product improvement and troubleshooting.
 This happens automatically when an Abacus.AI key is saved in the app, including
 for conversations using other model providers.
@@ -9,6 +9,11 @@ Your prompts and any files or workspace content included in a conversation also
 go to the model provider you use. Connectors, messaging, search, and other tools
 send data to the services involved in carrying out your requests. The app also
 connects to online services for sign-in, account information, and app updates.
+
+During first-run setup, the app also reports which setup steps it reached
+(for example that it was opened, that sign-in was started, and which screens
+were shown), under a random per-install identifier, so that setup problems can
+be found and fixed. These reports carry no account details or content.
 
 ## Diagnostics and sensitive content
 

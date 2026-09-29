@@ -40,6 +40,9 @@ vi.mock("./abacus-browser-profiles", () => ({
   browserSignInCookies: async () => profileCookies,
 }));
 
+const { reportFunnelStep } = vi.hoisted(() => ({ reportFunnelStep: vi.fn() }));
+vi.mock("../debug-sync/funnel-beacon", () => ({ reportFunnelStep }));
+
 const openExternal = vi.mocked(shell.openExternal);
 const loopbackFetch = globalThis.fetch;
 
@@ -60,6 +63,7 @@ const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 50));
 
 beforeEach(() => {
   resetSignInVariantCache();
+  reportFunnelStep.mockClear();
   openExternal.mockReset();
   openExternal.mockResolvedValue(undefined);
   closeWindow.mockReset();
@@ -72,6 +76,29 @@ beforeEach(() => {
 afterEach(() => {
   cancelAbacusAuth();
   vi.unstubAllGlobals();
+});
+
+describe("sign-in funnel across surfaces", () => {
+  it.each([true, false])(
+    "reports one start with inAppSignIn=%s, including hand-off",
+    async (inAppSignIn) => {
+      answer({ success: true, result: { inAppSignIn } });
+      void startAbacusAuth();
+      await settle();
+      expect(
+        reportFunnelStep.mock.calls.filter(
+          ([step]) => step === "signup_clicked"
+        )
+      ).toHaveLength(1);
+      lastWindow?.onHandOff();
+      expect(
+        reportFunnelStep.mock.calls.filter(
+          ([step]) => step === "signup_clicked"
+        )
+      ).toHaveLength(1);
+      expect(openExternal).toHaveBeenCalledTimes(1);
+    }
+  );
 });
 
 describe("the assigned sign-in arm", () => {

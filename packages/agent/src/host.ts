@@ -378,8 +378,8 @@ export class NdjsonHost {
   }
 
   /**
-   * A message sent mid-turn: steer it now, park it behind the prompt, or —
-   * while a stop is landing — hold it for the turn after.
+   * A message sent mid-turn: steer it now, park it behind the prompt, or,
+   * while a stop is landing, hold it for the turn after.
    */
   private async admit(message: string): Promise<void> {
     const entry: QueueEntry = {
@@ -432,7 +432,7 @@ export class NdjsonHost {
   }
 
   /**
-   * pi's steering queue is text in, text out — no ids — so an edit or a
+   * pi's steering queue is text in, text out, with no ids, so an edit or a
    * removal rebuilds it from what remains here, in order.
    */
   private async resyncSteers(): Promise<void> {

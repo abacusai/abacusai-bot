@@ -49,6 +49,7 @@ import type {
   ListMcpServersRequest,
   AgentMcpLogEntry,
   AgentMcpServer,
+  AgentMcpStatus,
   McpBrowserStatus,
   DefaultAgentMode,
   SandboxSupport,
@@ -197,15 +198,6 @@ import {
   type RenderDesignRequest,
 } from "./services/agent-tools/design-agent";
 import {
-  emailPersona,
-  emailPersonaPrompt,
-  GMAIL_CONNECTOR_ID,
-  hasEmailPersona,
-  PERSONA_POLL_MS,
-  PERSONA_WAIT_MS,
-  personaProgress,
-} from "./services/agent-tools/gmail-persona";
-import {
   applyMemoryAction,
   forgetAll,
   forgetEntryAt,
@@ -219,6 +211,7 @@ import {
 } from "./services/agent-tools/pdf-agent";
 import {
   hasRunInFlight,
+  ranOutOfAbacusCredits,
   ROUTINE_FAILURES_BEFORE_PAUSE,
   shouldPauseAfter,
   stuckRuns,
@@ -387,10 +380,10 @@ const SELF_LANE_BOTS: Record<
       "You are the user's personal assistant living in their Discord DM " +
       "with the Abacus AI bot. Every message they send to that DM comes " +
       "to you, and every reply you write is delivered straight back to " +
-      'them there — replying IS messaging them, so when they say "send ' +
+      'them there. Replying IS messaging them, so when they say "send ' +
       'me X" or "message me on Discord", just answer with X; never ' +
       "say you cannot reach them and never ask which chat is theirs. " +
-      "They can ask you for anything you can do — questions, tasks with " +
+      "They can ask you for anything you can do: questions, tasks with " +
       "your tools, code, documents, schedules, messages to other " +
       "people. Be a helpful, concise assistant and keep replies " +
       "chat-sized (Discord caps a message at 2000 characters).",
@@ -404,10 +397,10 @@ const SELF_LANE_BOTS: Record<
       "You are the user's personal assistant living in their WhatsApp " +
       '"Message yourself" chat. Every message they send to that chat comes ' +
       "to you, and every reply you write is delivered straight back to " +
-      'them there — replying IS messaging them, so when they say "send ' +
+      'them there. Replying IS messaging them, so when they say "send ' +
       'me X" or "message me", just answer with X; never say you ' +
       "cannot reach them and never ask which chat is theirs. They can " +
-      "ask you for anything you can do — questions, tasks with your " +
+      "ask you for anything you can do: questions, tasks with your " +
       "tools, code, documents, schedules, messages to other people. Be " +
       "a helpful, concise assistant and keep replies chat-sized.",
   },
@@ -421,10 +414,10 @@ const SELF_LANE_BOTS: Record<
       "You are the user's personal assistant living in their Telegram chat " +
       "with the Abacus AI bot. Every message they send to that chat comes " +
       "to you, and every reply you write is delivered straight back to " +
-      'them there — replying IS messaging them, so when they say "send ' +
+      'them there. Replying IS messaging them, so when they say "send ' +
       'me X" or "message me", just answer with X; never say you ' +
       "cannot reach them and never ask which chat is theirs. They can " +
-      "ask you for anything you can do — questions, tasks with your " +
+      "ask you for anything you can do: questions, tasks with your " +
       "tools, code, documents, schedules, messages to other people. Be " +
       "a helpful, concise assistant and keep replies chat-sized.",
   },
@@ -778,7 +771,7 @@ export class ServiceHost {
     this.credentialSaver = save;
   }
 
-  /** How each kind connects and disconnects — the one implementation every Connect button uses. */
+  /** How each kind connects and disconnects. The one implementation every Connect button uses. */
   readonly connectorFlow = new ConnectorFlowService({
     platform: {
       connect: startConnectorConnect,
@@ -791,8 +784,6 @@ export class ServiceHost {
           name: ABACUS_CONNECTORS_SERVER_NAME,
           config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
         }),
-      onConnected: (connectorId) =>
-        void this.learnPersonaFromGmail(connectorId),
     },
     credential: {
       save: (provider, value) => {
@@ -804,8 +795,10 @@ export class ServiceHost {
       },
     },
     mcp: {
+      // Restore rather than refuse when the name is taken: the earlier Add
+      // wrote the entry, and this click is the user trying the sign-in again.
       add: (name, entry) =>
-        this.addMcpServer({ mode: "code", name, config: entry }),
+        this.ensureMcpServer({ mode: "code", name, config: entry }),
       remove: (name) => this.removeMcpServer({ mode: "code", name }),
       signIn: (name) => this.mcpOAuthSignIn({ mode: "code", name }),
     },
@@ -822,6 +815,39 @@ export class ServiceHost {
       type: "connector-status-changed",
       emittedAt: new Date().toISOString(),
     });
+  }
+
+  private connectorStatusTimer: NodeJS.Timeout | null = null;
+
+  /**
+   * The same, coalesced: a session reconnecting re-reports every server in a
+   * burst, and each re-read costs a platform listing.
+   */
+  private connectorStatusChangedSoon(): void {
+    if (this.connectorStatusTimer != null) return;
+    this.connectorStatusTimer = setTimeout(() => {
+      this.connectorStatusTimer = null;
+      this.connectorStatusChanged();
+    }, 300);
+    this.connectorStatusTimer.unref?.();
+  }
+
+  /**
+   * An MCP connector reads as connected only once no running agent is
+   * waiting on its sign-in, so a session's server flipping into or out of
+   * `auth-required` moves a status the renderer has to re-read. Without
+   * this a just-signed-in card sat under "Not installed" until something
+   * unrelated refreshed the table.
+   */
+  private mcpRuntimeMovedConnectorStatus(
+    servers: ReadonlyArray<{ id: string; status: AgentMcpStatus }>
+  ): void {
+    const moved = servers.some(
+      (server) =>
+        connectorById(server.id)?.kind === "mcp" &&
+        server.status !== "connecting"
+    );
+    if (moved) this.connectorStatusChangedSoon();
   }
 
   async connectConnector(connectorId: string): Promise<ConnectorOutcome> {
@@ -1279,8 +1305,12 @@ export class ServiceHost {
         servers,
         emittedAt: new Date().toISOString(),
       });
+      this.mcpRuntimeMovedConnectorStatus(servers);
     },
     emitMcpRuntimeStatus: (workspaceId, sessionId, event) => {
+      this.mcpRuntimeMovedConnectorStatus([
+        { id: event.serverId, status: event.status },
+      ]);
       this.emitEvent({
         type: "mcp-runtime-status",
         workspaceId,
@@ -1449,7 +1479,7 @@ export class ServiceHost {
             error: {
               message:
                 `Agent timed out: nothing came back for ${INACTIVITY_TIMEOUT_MINUTES} minutes${doing}. ` +
-                `The turn was stopped — send a message to pick it back up.`,
+                `The turn was stopped. Send a message to pick it back up.`,
             },
           },
         },
@@ -2382,7 +2412,7 @@ export class ServiceHost {
     // The chat's remembered model beats the composer's: the renderer starts a
     // session before its list has loaded, and the agent would then report the
     // wrong model back over the record that should have chosen it. With
-    // neither, the plan tier's default — not the agent's own fallback, which
+    // neither, the plan tier's default. Not the agent's own fallback, which
     // is the free pool whatever the tier.
     const remembered = this.agentSessionManagerService.get(
       request.sessionId
@@ -3302,7 +3332,14 @@ export class ServiceHost {
   /** What each running routine session has said so far, for its run file. */
   private readonly routineRunText = new Map<string, string[]>();
 
-  /** A run's end off its event stream: an error fails it, idle completes it. */
+  /** Starts that deletion must let finish before collecting run sessions. */
+  private readonly routineRunStarts = new Map<string, Set<Promise<void>>>();
+
+  /**
+   * A run's end off its event stream: an error fails it, idle completes it.
+   * The agent reports a failed turn after its idle, so a run filed as
+   * completed can still fail; it is filed again when it does.
+   */
   private settleRoutineRun(sessionId: string, payload: DesktopEvent): void {
     if (payload.type !== "event") return;
     if (!this.agentSessionManagerService.isRoutineSession(sessionId)) return;
@@ -3320,38 +3357,42 @@ export class ServiceHost {
           ? "completed"
           : null;
     if (outcome == null) return;
-    this.agentSessionManagerService.setRunOutcome(sessionId, outcome);
-    // Once: an error's trailing idle must not overwrite the failure.
+    // An error's trailing idle must not overwrite the failure.
+    if (!this.agentSessionManagerService.setRunOutcome(sessionId, outcome))
+      return;
     const session = this.agentSessionManagerService.get(sessionId);
     const text = this.routineRunText.get(sessionId);
     if (session?.routineId == null || text == null) return;
-    this.routineRunText.delete(sessionId);
     const finishedJob = getJob(session.routineId);
-    recordRoutineRun(
-      finishedJob != null
-        ? this.routineHome(finishedJob)
-        : routineDir(session.routineId),
-      {
-        sessionId,
-        startedAt: session.createdAt,
-        endedAt: new Date().toISOString(),
-        outcome,
-        reply: text.join("").trim(),
-      }
-    );
-    if (outcome === "failed") this.pauseIfFailingRepeatedly(session.routineId);
+    if (finishedJob == null) return;
+    recordRoutineRun(this.routineHome(finishedJob), {
+      sessionId,
+      startedAt: session.createdAt,
+      endedAt: new Date().toISOString(),
+      outcome,
+      reply: text.join("").trim(),
+    });
+    if (event.type !== "error") return;
+    // No credits fails every fire the same way until the user tops up.
+    if (ranOutOfAbacusCredits(event.error))
+      this.pauseRoutine(session.routineId, "paused: out of Abacus.AI credits");
+    else this.pauseIfFailingRepeatedly(session.routineId);
   }
 
   /** A routine that keeps failing pauses itself rather than failing forever. */
   private pauseIfFailingRepeatedly(routineId: string): void {
-    const job = getJob(routineId);
-    if (job == null || !job.enabled) return;
     if (!shouldPauseAfter(this.listRoutineRuns(routineId))) return;
-    updateJob(routineId, { enabled: false });
-    recordRun(
+    this.pauseRoutine(
       routineId,
       `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`
     );
+  }
+
+  private pauseRoutine(routineId: string, reason: string): void {
+    const job = getJob(routineId);
+    if (job == null || !job.enabled) return;
+    updateJob(routineId, { enabled: false });
+    recordRun(routineId, reason);
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -3584,158 +3625,37 @@ export class ServiceHost {
     return job;
   }
 
-  removeRoutine(id: string): void {
+  async removeRoutine(id: string): Promise<void> {
     const job = getJob(id);
     removeJob(id);
-    // Both homes: the records moved if the routine was given a project later.
-    removeRoutineDir(routineDir(id));
-    if (job != null) {
-      const home = this.routineHome(job);
-      if (home !== routineDir(id)) removeRoutineDir(home);
-    }
-    // Its runs go with it; nothing else lists them.
-    for (const run of this.agentSessionManagerService.listByRoutine(id)) {
-      this.removeAgentSession(run.workspaceId, run.id);
-    }
-    this.emitEvent({
-      type: "cronjobs-updated",
-      emittedAt: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Gmail just connected: a hidden session reads the user's recent sent mail
-   * and files an "Email persona" entry in the USER profile. Once per profile,
-   * and never in the way — a failure only means the profile stays as it was.
-   */
-  async learnPersonaFromGmail(connectorId: string): Promise<void> {
-    if (connectorId !== GMAIL_CONNECTOR_ID) return;
-    if (hasEmailPersona()) {
-      console.info("[persona] already learnt; not running again");
-      return;
-    }
     try {
-      // The Auto workspace, where ordinary chats live: the run shows in the
-      // session list under its own name while it works.
-      const target = await this.ensureSessionHomeWorkspace();
-      if (target == null) {
-        console.warn("[persona] no workspace to run in");
-        return;
-      }
-      const session = this.agentSessionManagerService.create(target);
-      this.emitEvent({
-        type: "local-cli-session-created",
-        workspaceId: target,
-        sessionId: session.id,
-        session,
-        emittedAt: new Date().toISOString(),
-      });
-      this.updateAgentSessionLabel(target, session.id, "Generating persona…");
-      this.emitEvent({
-        type: "user-persona-progress",
-        percent: 0,
-        emittedAt: new Date().toISOString(),
-      });
-      const started = await this.startAgentSession({
-        workspaceId: target,
-        sessionId: session.id,
-        mode: readDefaultAgentMode(),
-      });
-      if (!started.success) {
-        console.warn(
-          `[persona] session did not start: ${started.error ?? "unknown"}`
-        );
-        this.emitEvent({
-          type: "user-persona-progress",
-          percent: -1,
-          emittedAt: new Date().toISOString(),
-        });
-        return;
-      }
-      this.sendAgentMessage({
-        workspaceId: target,
-        sessionId: session.id,
-        message: emailPersonaPrompt(),
-      });
-      console.info(`[persona] reading sent mail in session ${session.id}`);
-      this.announcePersonaWhenWritten(target, session.id);
-    } catch (error) {
-      console.warn(
-        `[persona] Gmail profile failed: ${error instanceof Error ? error.message : String(error)}`
+      await Promise.allSettled(this.routineRunStarts.get(id) ?? []);
+      const runs = this.agentSessionManagerService.listByRoutine(id);
+      // A run without a project uses the routine folder as its cwd. Windows
+      // refuses to remove it until the agent process has closed.
+      await Promise.all(
+        runs.map((run) =>
+          this.agentManagerService.stopSessionAndWait(run.workspaceId, run.id)
+        )
       );
+      for (const run of runs) {
+        this.routineRunText.delete(run.id);
+        this.removeAgentSession(run.workspaceId, run.id);
+      }
+
+      // Both homes: the records moved if the routine was given a project later.
+      await removeRoutineDir(routineDir(id));
+      if (job != null) {
+        const home = this.routineHome(job);
+        if (home !== routineDir(id)) await removeRoutineDir(home);
+      }
+    } finally {
+      // The job was removed even if file cleanup failed; refresh the list.
       this.emitEvent({
-        type: "user-persona-progress",
-        percent: -1,
+        type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
       });
     }
-  }
-
-  /**
-   * Existing users: Gmail was connected before this feature existed, so the
-   * first start after the update learns the persona the same way.
-   */
-  async learnPersonaIfGmailConnected(): Promise<void> {
-    if (hasEmailPersona()) return;
-    const snapshot = await listAbacusConnectors();
-    if (!snapshot.ok) {
-      console.info(
-        `[persona] connectors unavailable at start: ${snapshot.error}`
-      );
-      return;
-    }
-    if (snapshot.connected.gmailuser == null) {
-      console.info("[persona] Gmail not connected; nothing to learn from");
-      return;
-    }
-    await this.learnPersonaFromGmail(GMAIL_CONNECTOR_ID);
-  }
-
-  /**
-   * The renderer shows the run's progress (estimated) and then the persona
-   * itself, the moment the entry appears; a run that never writes it ends
-   * with -1 so the screen is not held forever.
-   */
-  private announcePersonaWhenWritten(
-    workspaceId: string,
-    sessionId: string
-  ): void {
-    const startedAt = Date.now();
-    const deadline = startedAt + PERSONA_WAIT_MS;
-    const poll = (): void => {
-      const text = emailPersona();
-      if (text != null) {
-        console.info("[persona] learnt; showing it");
-        this.updateAgentSessionLabel(workspaceId, sessionId, "Your persona");
-        this.emitEvent({
-          type: "user-persona-progress",
-          percent: 100,
-          emittedAt: new Date().toISOString(),
-        });
-        this.emitEvent({
-          type: "user-persona-learned",
-          text,
-          emittedAt: new Date().toISOString(),
-        });
-        return;
-      }
-      if (Date.now() >= deadline) {
-        console.warn("[persona] the run did not write a persona in time");
-        this.emitEvent({
-          type: "user-persona-progress",
-          percent: -1,
-          emittedAt: new Date().toISOString(),
-        });
-        return;
-      }
-      this.emitEvent({
-        type: "user-persona-progress",
-        percent: personaProgress(Date.now() - startedAt),
-        emittedAt: new Date().toISOString(),
-      });
-      setTimeout(poll, PERSONA_POLL_MS).unref();
-    };
-    setTimeout(poll, PERSONA_POLL_MS).unref();
   }
 
   /**
@@ -3747,6 +3667,24 @@ export class ServiceHost {
     jobId: string,
     trigger: CronTrigger,
     payload: string | null = null
+  ): Promise<void> {
+    const start = this.startRoutineRun(jobId, trigger, payload);
+    const pending =
+      this.routineRunStarts.get(jobId) ?? new Set<Promise<void>>();
+    pending.add(start);
+    this.routineRunStarts.set(jobId, pending);
+    try {
+      await start;
+    } finally {
+      pending.delete(start);
+      if (pending.size === 0) this.routineRunStarts.delete(jobId);
+    }
+  }
+
+  private async startRoutineRun(
+    jobId: string,
+    trigger: CronTrigger,
+    payload: string | null
   ): Promise<void> {
     const job = getJob(jobId);
     if (job == null) return;
@@ -3766,6 +3704,8 @@ export class ServiceHost {
     // every other runs in its own folder.
     const project = this.routineProject(job);
     const target = project?.id ?? (await this.ensureRoutineWorkspace(job.id));
+    // A deletion may have happened while the routine workspace was opening.
+    if (getJob(jobId) == null) return;
     const home = this.routineHome(job);
 
     const prompt = this.withBotVoice(
@@ -3818,6 +3758,9 @@ export class ServiceHost {
       mode: readDefaultAgentMode(),
     });
 
+    // Deletion stops the session while startup is in flight.
+    if (getJob(jobId) == null) return;
+
     if (!started.success) {
       this.agentSessionManagerService.setRunOutcome(session.id, "failed");
       recordRun(
@@ -3829,9 +3772,13 @@ export class ServiceHost {
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
       });
+      this.pauseIfFailingRepeatedly(jobId);
       return;
     }
 
+    // Earlier runs' text is kept until now, for a failure that lands late.
+    for (const run of this.listRoutineRuns(jobId))
+      this.routineRunText.delete(run.sessionId);
     // Seeded now so a run that never says a word still gets its file.
     this.routineRunText.set(session.id, []);
     this.sendAgentMessage({

@@ -1,8 +1,8 @@
 /**
  * The message must reach an agent, or the user must be told it did not.
  *
- * The bug this covers: a session whose CLI had died — crashed mid-turn, killed
- * with the app, start-retries exhausted an hour earlier — accepted sends and
+ * The bug this covers: a session whose CLI had died (crashed mid-turn, killed
+ * with the app, start-retries exhausted an hour earlier) accepted sends and
  * dropped them. The dispatch returned false, the boolean went nowhere, and the
  * transcript kept the echo. You typed, and nothing ever happened.
  *

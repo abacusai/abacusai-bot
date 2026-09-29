@@ -207,7 +207,7 @@ export const REPLY_LANGUAGE_PROMPT = [
   "",
   "Always answer in the language the user writes in, and keep to it for the",
   "whole reply. Never switch language partway through an answer, and never",
-  "answer in a language the user has not used — whatever language the tool",
+  "answer in a language the user has not used, whatever language the tool",
   "results, documents or messages you read were in.",
 ].join("\n");
 
@@ -215,4 +215,4 @@ export const REPLY_LANGUAGE_PROMPT = [
 export const replyLanguageRepairPrompt = (
   mismatch: ReplyLanguageMismatch
 ): string =>
-  `Your last reply was written in ${SCRIPT_NAMES[mismatch.got]}, but the user writes in ${SCRIPT_NAMES[mismatch.expected]}. Write that reply again now, in full, in the user's language — and keep answering in it.`;
+  `Your last reply was written in ${SCRIPT_NAMES[mismatch.got]}, but the user writes in ${SCRIPT_NAMES[mismatch.expected]}. Write that reply again now, in full, in the user's language, and keep answering in it.`;

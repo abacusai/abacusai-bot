@@ -181,7 +181,7 @@ async function applyFileEdits(
           return fail(
             `${label} could only be matched loosely, and the match spans ` +
               `${result.failure.matchedLines} lines for a ${result.failure.askedLines}-line ` +
-              `oldText — too much to replace safely. Re-read ${filePath} and quote the exact text.`
+              `oldText: too much to replace safely. Re-read ${filePath} and quote the exact text.`
           );
       }
     }
@@ -286,7 +286,7 @@ export default function (pi: ExtensionAPI) {
       "Replace exact text in a file. Pass path, oldText and newText. " +
       "Read the file first so oldText matches what is actually there, and keep it as small as it can be " +
       "while still identifying one place. " +
-      "Set replaceAll: true to change every occurrence — use it for renames rather than padding oldText " +
+      "Set replaceAll: true to change every occurrence. Use it for renames rather than padding oldText " +
       "with context until it is unique. " +
       "To change several separate places in the same file, use batch_edit instead of calling this repeatedly.",
     parameters: editSchema,
@@ -318,7 +318,7 @@ export default function (pi: ExtensionAPI) {
     description:
       "Replace text in several places in one file, in a single call. " +
       "Read the file first. Every oldText is matched against the original file, not against the result of " +
-      "earlier edits, so the edits must not overlap — merge nearby changes into one entry. " +
+      "earlier edits, so the edits must not overlap: merge nearby changes into one entry. " +
       "Prefer this over calling edit repeatedly on the same file. For a single change, use edit.",
     parameters: batchEditSchema,
     promptSnippet: "Replace text in several places in one file, in one call",

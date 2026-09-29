@@ -100,6 +100,7 @@ import {
   setDefaultModel,
   storedKeyProviders,
 } from "./services/config/settings";
+import { reportFunnelStepOnce } from "./services/debug-sync/funnel-beacon";
 import { LocalModelService } from "./services/local-models/local-model-service";
 import {
   abacusCredentialRejected,
@@ -634,9 +635,9 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     }
   );
 
-  ipcMain.handle(IpcChannels.RemoveRoutine, (_event, id: string) => {
-    serviceHost.removeRoutine(id);
-  });
+  ipcMain.handle(IpcChannels.RemoveRoutine, (_event, id: string) =>
+    serviceHost.removeRoutine(id)
+  );
 
   ipcMain.handle(
     IpcChannels.RunRoutine,
@@ -890,6 +891,9 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(
     IpcChannels.SendAgentMessage,
     (_event, request: SendAgentMessageRequest) => {
+      // Typed by the user: bots' own kickstarts and channel traffic do not
+      // pass through here.
+      reportFunnelStepOnce("first_message");
       // false means the renderer has an on-screen echo to take back.
       return serviceHost.sendAgentMessage(request);
     }

@@ -3,8 +3,8 @@
  * connecting through the one flow, and the browser hop that flow runs for a
  * platform connector.
  *
- * That hop is single-flight in the main process — starting one connect
- * cancels any other — and the panel has to show that truth rather than a card
+ * That hop is single-flight in the main process (starting one connect
+ * cancels any other), and the panel has to show that truth rather than a card
  * per click. It also has to let go of a connect the user walked away from,
  * because the listener waiting for it holds a loopback port for five minutes.
  * And a token card connects from the same page through the same dialog the
@@ -128,7 +128,7 @@ beforeEach(() => {
   connectConnector = vi.fn(
     (id: string) =>
       new Promise((resolve) => {
-        // Starting a connect cancels whatever was already running — the main
+        // Starting a connect cancels whatever was already running. The main
         // process does exactly this, and it is what makes the state tricky.
         for (const [other, resolveOther] of pending) {
           if (other === id) continue;
@@ -180,7 +180,7 @@ describe("two connectors, one browser hop", () => {
       expect(connectConnector).toHaveBeenCalledWith(first.id)
     );
 
-    // Still an Add button — nothing has connected — reading "Adding…", and
+    // Still an Add button (nothing has connected), reading "Adding…", and
     // not disabled: a hop that goes nowhere is one click from a fresh one.
     const button = byId(`connector-add-${first.id}`);
     expect(button.textContent).toContain("connectors.adding");
@@ -279,7 +279,7 @@ describe("what main says is connected", () => {
 });
 
 describe("a token card", () => {
-  it("opens the fields dialog and connects through it — no browser hop", async () => {
+  it("opens the fields dialog and connects through it without a browser hop", async () => {
     await mount();
 
     fireEvent.click(byId("connector-add-github"));
@@ -333,7 +333,7 @@ describe("the messaging section", () => {
     await waitFor(() => byId("messaging-detail-whatsapp"));
   });
 
-  it("connects Telegram in one click, like WhatsApp — QR, not a token", async () => {
+  it("connects Telegram in one click, like WhatsApp: QR, not a token", async () => {
     await mount();
     await waitFor(() => byId("connector-add-messaging-telegram"));
 
@@ -381,5 +381,52 @@ describe("walking away from a connect", () => {
     view.unmount();
 
     expect(cancelConnectorConnect).toHaveBeenCalled();
+  });
+
+  // The hop outlives many renders: statuses re-read, a chat app changes
+  // state, a session reports its servers. None of that is walking away, and
+  // a cancel here closed the listener while the user was still signing in.
+  it("survives the panel re-rendering while the browser is still open", async () => {
+    await mount();
+
+    fireEvent.click(byId(`connector-add-${connectors[0]!.id}`));
+    await waitFor(() => expect(connectConnector).toHaveBeenCalled());
+    // The first click cancels any earlier hop before it starts its own; the
+    // fresh identity through each re-render below is what is under test.
+    cancelConnectorConnect.mockClear();
+
+    for (let round = 0; round < 3; round += 1) {
+      statuses = { ...statuses };
+      await queryClient.invalidateQueries();
+      await waitFor(() =>
+        expect(
+          byId(`connector-add-${connectors[0]!.id}`).textContent
+        ).toContain("connectors.adding")
+      );
+    }
+
+    expect(cancelConnectorConnect).not.toHaveBeenCalled();
+  });
+});
+
+describe("a card that failed once", () => {
+  it("drops the failure when a later attempt connects", async () => {
+    const id = connectors[0]!.id;
+    await mount();
+
+    fireEvent.click(byId(`connector-add-${id}`));
+    await waitFor(() => expect(pending.has(id)).toBe(true));
+    pending.get(id)!({ ok: false, error: "no" });
+    await waitFor(() => byId(`connector-error-${id}`));
+
+    fireEvent.click(byId(`connector-add-${id}`));
+    await waitFor(() => expect(pending.has(id)).toBe(true));
+    statuses = { ...statuses, [id]: { state: "connected" } };
+    pending.get(id)!({ ok: true });
+
+    await waitFor(() => byId(`connector-remove-${id}`));
+    expect(
+      document.querySelector(`[data-id="connector-error-${id}"]`)
+    ).toBeNull();
   });
 });

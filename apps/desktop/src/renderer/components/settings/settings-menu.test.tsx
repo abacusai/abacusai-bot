@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
  * The Settings menu's account row, from the outside.
  *
  * It offered "Sign in" to somebody who was already signed in, and no way to
- * sign out. The row read the local account file — a name and an email collected
- * during onboarding — while what a user means by "signed in" is the Abacus.AI
+ * sign out. The row read the local account file (a name and an email collected
+ * during onboarding), while what a user means by "signed in" is the Abacus.AI
  * connection that mints their key. Skipping onboarding leaves no account on
  * file, so the row said "Sign in" however connected you were, and the only
  * action behind it cleared a profile that had never been created.
@@ -54,7 +54,7 @@ vi.mock("../../stores/language-store", () => ({
 const signOutAccount = vi.fn();
 const forgetAccount = vi.fn();
 
-// No account on file — the state anyone who skipped onboarding is in, and the
+// No account on file: the state anyone who skipped onboarding is in, and the
 // one that produced the bug.
 vi.mock("../../stores/account-store", () => ({
   useAccountStore: (selector: (state: unknown) => unknown) =>
@@ -186,7 +186,7 @@ describe("the account row", () => {
 
   it("signs out in one sweep: sessions stashed, every key deleted, no dialog", async () => {
     // The whole sweep is main's (SignOutAbacus); the renderer never touches
-    // the keys itself, and there is no choice to make — the other keys go too.
+    // the keys itself, and there is no choice to make: the other keys go too.
     storedKeys = { ABACUS_API_KEY: "abacus-key", OPENAI_API_KEY: "sk-test" };
     await mountMenu();
     await waitFor(() =>
@@ -206,7 +206,7 @@ describe("the account row", () => {
 
   it("forgets the local account outright when there is no session to end", async () => {
     // This is what puts the first-run flow back for somebody who skipped
-    // onboarding — the full forget, not a sign-out, which now keeps the
+    // onboarding: the full forget, not a sign-out, which keeps the
     // onboarded answer for the account's return.
     await mountMenu();
     await waitFor(() => expect(accountRowLabel()).toContain("userMenu.signIn"));
@@ -244,7 +244,7 @@ describe("the memory button beside the account", () => {
 
   it("marks itself while the memory page is the one on screen", () => {
     // The button is the only way back out of the memory page, so it has to say
-    // when you are already on it — otherwise it reads as a place you have not
+    // when you are already on it; otherwise it reads as a place you have not
     // been.
     pathname = "/settings/memory";
     const client = new QueryClient({

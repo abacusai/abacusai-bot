@@ -498,7 +498,7 @@ export type AgentEvent =
     }
   | { type: "network_status"; online: boolean }
   | { type: "credits"; creditsUsed: number }
-  /** @deprecated ndjson island only — remove with the island */
+  /** @deprecated ndjson island only; remove with the island */
   | {
       type: "session_info";
       contextPercent: number;

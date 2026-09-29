@@ -155,6 +155,7 @@ beforeEach(() => {
 
   (globalThis.window as unknown as { api: unknown }).api = {
     skipAccountOnboarding,
+    reportFunnelStep: vi.fn(),
     agent: {
       addWorkspace,
       getSettings,

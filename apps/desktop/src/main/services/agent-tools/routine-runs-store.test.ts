@@ -86,7 +86,7 @@ describe("a routine's folder", () => {
     expect(countRoutineRuns(routineDir("job-1"))).toBe(2);
   });
 
-  it("goes with the routine", () => {
+  it("goes with the routine", async () => {
     recordRoutineRun(routineDir("job-1"), {
       sessionId: "s1",
       startedAt: "2026-09-03T09:00:00.000Z",
@@ -94,7 +94,7 @@ describe("a routine's folder", () => {
       outcome: "completed",
       reply: "hi",
     });
-    removeRoutineDir(routineDir("job-1"));
+    await removeRoutineDir(routineDir("job-1"));
     expect(fs.existsSync(routineDir("job-1"))).toBe(false);
     expect(readLastRoutineRun(routineDir("job-1"))).toBeNull();
   });
@@ -106,7 +106,7 @@ describe("a routine's folder", () => {
  * the project's git status.
  */
 describe("a routine's folder inside a project", () => {
-  it("sits under the app's dot-folder and ignores itself", () => {
+  it("sits under the app's dot-folder and ignores itself", async () => {
     const project = fs.mkdtempSync(path.join(os.tmpdir(), "routine-project-"));
     const dir = routineDirInWorkspace(project, "job-2");
 
@@ -128,7 +128,7 @@ describe("a routine's folder inside a project", () => {
     // Nothing landed in the app's own home for it.
     expect(fs.existsSync(routineDir("job-2"))).toBe(false);
 
-    removeRoutineDir(dir);
+    await removeRoutineDir(dir);
     expect(fs.existsSync(dir)).toBe(false);
     // The project itself is untouched.
     expect(fs.existsSync(project)).toBe(true);

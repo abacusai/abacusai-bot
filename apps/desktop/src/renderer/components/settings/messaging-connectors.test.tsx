@@ -1,7 +1,7 @@
 /**
  * Backing out of a connect that has not finished.
  *
- * WhatsApp, Telegram and Discord connect by making the user wait — scan this
+ * WhatsApp, Telegram and Discord connect by making the user wait: scan this
  * QR, finish in this login window. Enabling the platform is what starts that
  * wait, so a user who changes their mind mid-way had nothing to click: the
  * dialog offered only the thing they had decided against, and closing it left
@@ -101,7 +101,7 @@ describe("cancelling a connect", () => {
       fireEvent.click(button!);
 
       // Disabling is what stops the bridge or closes the login window, and it
-      // is the path the card's Remove button already takes — so the platform
+      // is the path the card's Remove button already takes, so the platform
       // lands back on not-connected rather than a state of its own.
       expect(updatePlatform).toHaveBeenCalledWith({
         platformId: id,
@@ -118,7 +118,7 @@ describe("cancelling a connect", () => {
   });
 
   /**
-   * Nothing to cancel before the connect has started — the card's Connect
+   * Nothing to cancel before the connect has started: the card's Connect
    * button is what begins it, and an inert Cancel beside that would only ask
    * the user what it meant.
    */
@@ -133,7 +133,7 @@ describe("cancelling a connect", () => {
  * Finishing a connect that worked.
  *
  * The connected state had no button at all: the QR disappeared, a green line
- * appeared, and the only way out was the close cross or a click outside —
+ * appeared, and the only way out was the close cross or a click outside,
  * neither of which looks like the end of a flow you were just walked through,
  * and neither of which tells you the thing you were waiting for has happened.
  */
@@ -151,7 +151,7 @@ describe("finishing a connect", () => {
     });
   }
 
-  it("leaves the platform connected — it is a dismissal, not a decision", () => {
+  it("leaves the platform connected: it is a dismissal, not a decision", () => {
     show(platform("whatsapp", "connected"));
 
     fireEvent.click(doneButton("whatsapp")!);
@@ -161,7 +161,7 @@ describe("finishing a connect", () => {
   });
 
   it("replaces Cancel rather than joining it", () => {
-    // The reciprocal — Cancel gone once connected — is in the suite above.
+    // The reciprocal (Cancel gone once connected) is in the suite above.
     show(platform("whatsapp", "connected"));
 
     expect(cancelButton("whatsapp")).toBeNull();
@@ -253,7 +253,7 @@ describe.each([
   });
 
   /**
-   * A lane the server does not offer cannot be a required step — requiring it
+   * A lane the server does not offer cannot be a required step: requiring it
    * would strand the card on "finish linking" with nothing to click.
    */
   it("falls back to the old, optional shape when the lane is unavailable", () => {
@@ -266,7 +266,7 @@ describe.each([
   });
 
   /**
-   * Closing a setup stopped halfway leaves nothing enabled behind it — both
+   * Closing a setup stopped halfway leaves nothing enabled behind it: both
    * the platform session and the lane go back to off.
    */
   it("backs both halves out when the dialog is closed unfinished", () => {

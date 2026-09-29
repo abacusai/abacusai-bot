@@ -1,6 +1,6 @@
 /**
  * The bot's clock. The bar: a bot asked to prep an 8:30 call must never
- * answer "What time is it now?" — this tool is where that answer comes from.
+ * answer "What time is it now?" This tool is where that answer comes from.
  */
 import { describe, expect, it } from "vitest";
 
@@ -62,7 +62,7 @@ describe("describeTimezone", () => {
     );
   });
 
-  it('spells a zero offset out — a CI runner in UTC read "UTC (UTC, UTC)"', () => {
+  it('spells a zero offset out: a CI runner in UTC read "UTC (UTC, UTC)"', () => {
     expect(describeTimezone("UTC")).toBe("UTC (UTC, UTC+00:00)");
   });
 

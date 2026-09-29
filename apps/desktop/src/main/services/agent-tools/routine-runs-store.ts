@@ -121,6 +121,11 @@ export const countRoutineRuns = (home: string): number => {
 };
 
 /** Remove a routine's records folder; never anything above it. */
-export const removeRoutineDir = (home: string): void => {
-  fs.rmSync(home, { recursive: true, force: true });
+export const removeRoutineDir = async (home: string): Promise<void> => {
+  await fs.promises.rm(home, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
 };

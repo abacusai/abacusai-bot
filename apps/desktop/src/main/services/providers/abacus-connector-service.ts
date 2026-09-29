@@ -59,7 +59,7 @@ export const abacusApiCall = async (
       method: httpMethod,
       headers: {
         apikey: key,
-        // Cloudflare 403s Node's default agent — see abacusUserAgent.
+        // Cloudflare 403s Node's default agent. See abacusUserAgent.
         "user-agent": abacusUserAgent(),
         ...(httpMethod === "POST"
           ? { "content-type": "application/json" }
@@ -333,7 +333,7 @@ export const startConnectorConnect = (
             error:
               "The sign-in finished, but the connector did not appear on " +
               "this app's Abacus account. Your browser is likely signed " +
-              "into a different Abacus account — the connector attached " +
+              "into a different Abacus account. The connector attached " +
               "there instead. In the browser, sign into the same account " +
               "this app uses, then connect again.",
           });
@@ -392,7 +392,7 @@ export const startConnectorConnect = (
                 {
                   ok: false,
                   error:
-                    "Timed out waiting for the connection. The user may still be mid-sign-in — call connect_connector for it again to keep waiting, and an account attached late is picked up then.",
+                    "Timed out waiting for the connection. The user may still be mid-sign-in. Call connect_connector for it again to keep waiting; an an account attached late is picked up then.",
                 },
                 // They are most likely still signing in; leave them to it.
                 { reveal: false }

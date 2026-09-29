@@ -27,13 +27,13 @@ export const CONNECTOR_OUTCOME_TEXT: Record<
   connected: (label, account, connectedHint) =>
     `${label} is connected now${
       account != null && account.length > 0 ? `, as ${account}` : ""
-    }. Carry on with what you were doing — do not ask again${
+    }. Carry on with what you were doing. Do not ask again${
       account != null && account.length > 0
         ? `, and do not ask the user who they are on ${label}: that account is who they mean by "me"`
         : ""
     }. ${
       connectedHint ??
-      "Its tools are in your tool list now — call one you can actually see, never a name you have guessed at."
+      "Its tools are in your tool list now. Call one you can actually see, never a name you have guessed at."
     }`,
   declined: (label) =>
     `The user did not connect ${label}. Do not ask again in this turn: say what you cannot do without it, and offer whatever part of the task does not need it.`,

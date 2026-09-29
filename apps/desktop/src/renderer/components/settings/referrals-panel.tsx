@@ -349,8 +349,10 @@ export const ReferralsPanel = (): JSX.Element => {
     };
   }, [whatsappConnected]);
 
-  // Leaving the page abandons a Gmail connect in flight.
-  useEffect(() => () => flow.cancel(), [flow]);
+  // Leaving the page abandons a Gmail connect in flight. Keyed on the stable
+  // `cancel`: the flow object is new every render.
+  const cancelFlow = flow.cancel;
+  useEffect(() => () => cancelFlow(), [cancelFlow]);
 
   const report = (outcome: ReferralInviteOutcome): void => {
     if (!outcome.ok) {

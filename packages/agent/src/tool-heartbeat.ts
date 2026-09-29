@@ -38,7 +38,7 @@ export class ToolHeartbeat {
     return this.running.size;
   }
 
-  /** Calls young enough to still be credible — what the heartbeat reports. */
+  /** Calls young enough to still be credible: what the heartbeat reports. */
   private vouchedFor(): number {
     const now = Date.now();
     let count = 0;

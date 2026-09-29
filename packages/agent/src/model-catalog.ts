@@ -26,7 +26,7 @@ import * as xai from "@earendil-works/pi-ai/providers/xai.models";
 import * as zai from "@earendil-works/pi-ai/providers/zai.models";
 
 export interface BuiltinCatalogModel {
-  /** `provider/modelId` — what the agent resolves and the app stores. */
+  /** `provider/modelId`: what the agent resolves and the app stores. */
   id: string;
   /** The vendor's own name for it, for the picker. */
   label: string;

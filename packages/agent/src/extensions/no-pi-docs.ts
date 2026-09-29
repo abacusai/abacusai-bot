@@ -1,7 +1,7 @@
 /**
  * pi's default system prompt ends with a section pointing the model at pi's
- * own documentation — `docs/skills.md`, `docs/extensions.md`, its TUI and
- * SDK — resolved beside the agent bundle. None of it ships with this app, and
+ * own documentation (`docs/skills.md`, `docs/extensions.md`, its TUI and
+ * SDK) resolved beside the agent bundle. None of it ships with this app, and
  * none of it is about this app: a user asking how skills work sent the model
  * to read a file that does not exist. The section is cut per turn; the rest
  * of pi's prompt, and everything appended to it, is untouched.

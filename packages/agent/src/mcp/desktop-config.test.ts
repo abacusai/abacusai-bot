@@ -3,8 +3,8 @@
  *
  * The desktop composes a list per spawn and names it in
  * `ABACUSAI_BOT_MCP_CONFIG`. Nothing writes that variable for an agent run
- * outside the app, so a connector installed there — a connector IS an MCP
- * server — would not exist at all. The user's half of that list is a plain file
+ * outside the app, so a connector installed there (a connector IS an MCP
+ * server) would not exist at all. The user's half of that list is a plain file
  * anything can read, so it is read directly.
  */
 import * as fs from "node:fs";

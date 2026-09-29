@@ -38,7 +38,7 @@ describe("the temp area the app treats as the user's", () => {
 /**
  * Where a bot works when nobody has said where.
  *
- * It used to be the user's home directory — read and write of everything they
+ * It used to be the user's home directory. Read and write of everything they
  * own, granted to every bot for want of anywhere better to stand. A bot has no
  * project to be pointed at the way a session does, so it gets a directory of
  * its own inside the app's home rather than the run of the machine.

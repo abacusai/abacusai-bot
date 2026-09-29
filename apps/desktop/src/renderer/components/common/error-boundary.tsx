@@ -84,7 +84,7 @@ const ErrorFallback = ({
           </Button>
         </div>
 
-        {/* Escalation: shown after repeated identical crashes — the persisted
+        {/* Escalation: shown after repeated identical crashes. The persisted
             UI state is the likely culprit, so offer to wipe it. */}
         {showReset && (
           <div className="mb-2 flex flex-col items-center gap-2">
@@ -173,7 +173,7 @@ export class ErrorBoundary extends React.Component<
       try {
         durableStorage.removeItem(key);
       } catch {
-        /* best-effort — keep clearing the rest even if one throws */
+        /* best-effort: keep clearing the rest even if one throws */
       }
     }
     window.location.reload();

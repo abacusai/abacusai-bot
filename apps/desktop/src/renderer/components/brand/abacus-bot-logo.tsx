@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import appIcon from "../../assets/icon2.png";
 
 /**
- * The AbacusAIBot mark. SVG rather than a bitmap: crisp at any DPI, and the
+ * The AbacusAI Bot mark. SVG rather than a bitmap: crisp at any DPI, and the
  * tile keeps its own dark background so the mark reads identically in both
  * themes; only the wordmark follows the theme.
  */
@@ -86,7 +86,7 @@ export const AbacusBotLogo = ({
     <AppIconMark size={size} />
     {markOnly ? null : (
       <span className="text-foreground text-sm font-semibold tracking-tight whitespace-nowrap">
-        {/* brand wordmark — not translated */}
+        {/* brand wordmark: not translated */}
         Abacus
         <span className="text-secondary-foreground font-normal">
           {" "}

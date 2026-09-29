@@ -15,17 +15,29 @@ vi.mock("../diagnostics/client-environment", () => ({
 const { FeedbackService, sanitizeFeedback } =
   await import("./feedback-service");
 
+/** Where the server holds each segment once uploaded. */
+const uploaded: Record<string, number> = { "text:0:9": 3, "text:0:2": 1 };
+
 const service = (
   fetchImpl: typeof fetch,
   flush = vi.fn(async () => undefined)
 ) => ({
   flush,
   service: new FeedbackService({
-    debugSync: { flush } as never,
+    debugSync: {
+      flush,
+      sequenceOf: (_sessionId: string, segmentId: string) =>
+        uploaded[segmentId] ?? null,
+    },
     clientVersion: "1.2.3",
     fetchImpl,
   }),
 });
+
+const postedSequence = (fetchImpl: typeof fetch): unknown => {
+  const init = vi.mocked(fetchImpl).mock.calls[0]?.[1];
+  return JSON.parse(String(init?.body)).event_sequence_number;
+};
 
 const reply = (status: number, body: unknown = {}): Response =>
   new Response(JSON.stringify(body), {
@@ -53,7 +65,7 @@ describe("reporting a turn's thumbs", () => {
 
     const outcome = await feedback.submit({
       sessionId: "sess-1",
-      eventSequenceNumber: 3,
+      segmentId: "text:0:9",
       rating: "down",
       model: "abacus/stealth/union-alpha",
     });
@@ -87,10 +99,41 @@ describe("reporting a turn's thumbs", () => {
     expect(
       await feedback.submit({
         sessionId: "sess-1",
-        eventSequenceNumber: 3,
+        segmentId: "text:0:9",
         rating: "up",
       })
     ).toEqual({ ok: false, reason: "that turn has not been synced yet" });
+  });
+
+  it("rates an earlier reply under the sequence that reply was uploaded as", async () => {
+    const fetchImpl = vi.fn(async () =>
+      reply(200, { ok: true })
+    ) as unknown as typeof fetch;
+    const { service: feedback } = service(fetchImpl);
+
+    expect(
+      await feedback.submit({
+        sessionId: "sess-1",
+        segmentId: "text:0:2",
+        rating: "up",
+      })
+    ).toEqual({ ok: true });
+    expect(postedSequence(fetchImpl)).toBe(1);
+  });
+
+  it("does not post a rating for a reply the server does not hold", async () => {
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+    const { service: feedback, flush } = service(fetchImpl);
+
+    expect(
+      await feedback.submit({
+        sessionId: "sess-1",
+        segmentId: "text:0:404",
+        rating: "up",
+      })
+    ).toEqual({ ok: false, reason: "not-synced" });
+    expect(flush).toHaveBeenCalledWith("sess-1");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("does not post without an Abacus.AI key", async () => {
@@ -101,7 +144,7 @@ describe("reporting a turn's thumbs", () => {
     expect(
       await feedback.submit({
         sessionId: "sess-1",
-        eventSequenceNumber: 0,
+        segmentId: "text:0:9",
         rating: "up",
       })
     ).toEqual({ ok: false, reason: "no-key" });
@@ -115,14 +158,14 @@ describe("what the renderer may send", () => {
     expect(
       sanitizeFeedback({
         sessionId: "sess-1",
-        eventSequenceNumber: 2,
+        segmentId: "text:0:2",
         rating: "down",
         comment: "  too slow  ",
         model: "abacus/x",
       })
     ).toEqual({
       sessionId: "sess-1",
-      eventSequenceNumber: 2,
+      segmentId: "text:0:2",
       rating: "down",
       comment: "too slow",
       model: "abacus/x",
@@ -130,7 +173,7 @@ describe("what the renderer may send", () => {
     expect(
       sanitizeFeedback({
         sessionId: "s",
-        eventSequenceNumber: 0,
+        segmentId: "t",
         rating: "up",
         comment: "x".repeat(5000),
       })?.comment
@@ -141,24 +184,12 @@ describe("what the renderer may send", () => {
     ["no object", "up"],
     [
       "a session id with a path in it",
-      { sessionId: "../etc", eventSequenceNumber: 0, rating: "up" },
+      { sessionId: "../etc", segmentId: "t", rating: "up" },
     ],
-    [
-      "a negative index",
-      { sessionId: "s", eventSequenceNumber: -1, rating: "up" },
-    ],
-    [
-      "a fractional index",
-      { sessionId: "s", eventSequenceNumber: 1.5, rating: "up" },
-    ],
-    [
-      "a string index",
-      { sessionId: "s", eventSequenceNumber: "1", rating: "up" },
-    ],
-    [
-      "an unknown rating",
-      { sessionId: "s", eventSequenceNumber: 1, rating: "meh" },
-    ],
+    ["no segment", { sessionId: "s", rating: "up" }],
+    ["an empty segment id", { sessionId: "s", segmentId: "", rating: "up" }],
+    ["a numeric segment id", { sessionId: "s", segmentId: 1, rating: "up" }],
+    ["an unknown rating", { sessionId: "s", segmentId: "t", rating: "meh" }],
   ])("refuses %s", (_label, input) => {
     expect(sanitizeFeedback(input)).toBeNull();
   });

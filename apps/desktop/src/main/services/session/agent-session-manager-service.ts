@@ -33,9 +33,9 @@ type SessionRecord = {
   runOutcome?: RoutineRunOutcome | null;
   /** For a routine run: what fired it. */
   runTrigger?: string | null;
-  /** The routine this session edits — the editor turn behind its composer. */
+  /** The routine this session edits: the editor turn behind its composer. */
   editorFor?: string | null;
-  /** Minted by the bot service — a bot chat of some kind, never a session. */
+  /** Minted by the bot service: a bot chat of some kind, never a session. */
   botOwned?: boolean;
   /** Parentage, stamped at mint. The one authoritative bot<->session link. */
   owner?: SessionOwner | null;
@@ -46,7 +46,7 @@ type SessionRecord = {
   agentSessionIds?: string[];
 };
 
-// Persisted, so the old name stays — see workspace-store.ts.
+// Persisted, so the old name stays. See workspace-store.ts.
 const SESSIONS_STORAGE_KEY = "localCode.agentSessions";
 
 const toListItem = (record: SessionRecord): AgentSessionListItem => ({
@@ -179,26 +179,29 @@ export class AgentSessionManagerService {
 
   /**
    * Settle a routine run. Only ever moves forward: a run that failed stays
-   * failed even if a trailing idle arrives after the error.
+   * failed even if a trailing idle arrives after the error. True when the
+   * outcome changed.
    */
-  setRunOutcome(sessionId: string, outcome: RoutineRunOutcome): void {
+  setRunOutcome(sessionId: string, outcome: RoutineRunOutcome): boolean {
     const session = this.sessions.get(sessionId);
-    if (session == null || session.routineId == null) return;
-    if (session.runOutcome === "failed" && outcome === "completed") return;
-    if (session.runOutcome === outcome) return;
+    if (session == null || session.routineId == null) return false;
+    if (session.runOutcome === "failed" && outcome === "completed")
+      return false;
+    if (session.runOutcome === outcome) return false;
     session.runOutcome = outcome;
     session.updatedAt = new Date().toISOString();
     this.persist();
+    return true;
   }
 
-  /** The sessions a bot owns, straight off the records — no registry. */
+  /** The sessions a bot owns, straight off the records, with no registry. */
   listOwnedBy(botId: string): AgentSessionListItem[] {
     return [...this.sessions.values()]
       .filter((record) => record.owner?.botId === botId)
       .map((record) => toListItem(record));
   }
 
-  /** Bot-owned records parked as orphans — their workspace is gone. */
+  /** Bot-owned records parked as orphans. Their workspace is gone. */
   ownedOrphans(): AgentSessionListItem[] {
     return this.orphanedRecords
       .filter((record) => record.owner != null)
@@ -253,7 +256,7 @@ export class AgentSessionManagerService {
     return record?.routineId != null || record?.owner?.role === "routine";
   }
 
-  /** Find a bot conversation by its find-or-reuse key — registry-free. */
+  /** Find a bot conversation by its find-or-reuse key, without the registry. */
   findOwned(
     botId: string,
     role: SessionOwner["role"],

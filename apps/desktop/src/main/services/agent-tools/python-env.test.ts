@@ -2,7 +2,7 @@
  * Recovering from Debian's incomplete Python.
  *
  * Debian and Ubuntu ship python3 without the venv module. `python3 -m venv`
- * then fails AFTER writing the environment's skeleton — bin/python included —
+ * then fails AFTER writing the environment's skeleton (bin/python included),
  * so a naive "does the interpreter exist" check believes the venv is ready,
  * and every pip run after that dies with "No module named pip". Installing
  * python3-venv later did not help, because the broken skeleton was never
@@ -177,7 +177,7 @@ describe("a venv left behind without pip", () => {
   it("reinstalls everything asked for, not just what was missing before", async () => {
     // The probe runs against the OLD venv, and the recovery deletes that venv
     // whole. Installing only the previously-missing set leaves the packages the
-    // old venv already had gone, while the caller is told it succeeded — and
+    // old venv already had gone, while the caller is told it succeeded, and
     // the script then dies on ModuleNotFoundError.
     writeSkeleton();
     install({

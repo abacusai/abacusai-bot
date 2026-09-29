@@ -98,7 +98,7 @@ export const sessionAge = (
 };
 
 /**
- * `today` carries no header — the freshest sessions should read as the list
+ * `today` carries no header: the freshest sessions should read as the list
  * itself, not as a bucket. Everything else is labelled.
  */
 export type SessionBucket =
@@ -107,7 +107,7 @@ export type SessionBucket =
   | { kind: "month"; monthStart: number; sameYear: boolean };
 
 export interface SessionGroup<T> {
-  /** Stable across renders — safe as a React key. */
+  /** Stable across renders, safe as a React key. */
   id: string;
   bucket: SessionBucket;
   sessions: T[];
@@ -241,7 +241,7 @@ export type SidebarDateBucket =
   | { kind: "date"; at: number; sameYear: boolean };
 
 export interface SidebarSessionGroup<T> {
-  /** Stable across renders — safe as a React key. */
+  /** Stable across renders, safe as a React key. */
   id: string;
   bucket: SidebarDateBucket;
   sessions: T[];

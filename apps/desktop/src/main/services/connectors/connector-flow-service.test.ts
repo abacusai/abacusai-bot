@@ -1,6 +1,6 @@
 /**
  * One connect and one disconnect per connector kind, so every Connect button
- * in the app — the page, onboarding, the card the agent raises — does the
+ * in the app (the page, onboarding, the card the agent raises) does the
  * same thing for the same connector.
  */
 import { connectorById } from "@abacus-ai/connectors/registry";
@@ -38,27 +38,6 @@ describe("a platform connector", () => {
 
     expect(platformConnect).toHaveBeenCalledWith("gmailuser");
     expect(ensureGateway).toHaveBeenCalledTimes(1);
-  });
-
-  it("tells the app which connector attached, after the gateway entry is in place", async () => {
-    const calls: string[] = [];
-    const service = new ConnectorFlowService({
-      platform: {
-        connect: async () => ({ ok: true }),
-        disconnect: async () => ({ ok: true }),
-        ensureGateway: () => {
-          calls.push("gateway");
-        },
-        onConnected: (id) => {
-          calls.push(id);
-        },
-      },
-      credential: { save: saveCredential },
-      mcp: { add: addServer, remove: removeServer, signIn },
-      homeDir: () => "/home/ada",
-    });
-    expect((await service.connect("abacus-gmailuser")).ok).toBe(true);
-    expect(calls).toEqual(["gateway", "abacus-gmailuser"]);
   });
 
   it("leaves the gateway alone when the hop did not finish", async () => {

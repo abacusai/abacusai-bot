@@ -1,13 +1,11 @@
 /**
- * Merging PATH-like lists, kept on its own because of who needs it.
+ * Merging PATH-like lists, kept in a module with no imports but `node:path`.
  *
- * It used to live in `sandbox/shell.ts`, which imports `posix-shell.ts`, which
- * imports pi. `posix-shell-install.ts` is an entry point the desktop's Electron
- * main imports (see tsdown.config.ts), and main may not reach pi: those
- * packages are left external and are not inside the app's asar. Taking one
- * twenty-line helper from `sandbox/shell.ts` pulled the whole agent in behind
- * it — 6.7 MB, pi-tui and yaml included — and the packaged app stopped
- * starting. A module with no imports but `node:path` cannot do that to anyone.
+ * `posix-shell-install.ts` is an entry point the desktop's Electron main
+ * imports (see tsdown.config.ts), and main may not reach pi: those packages are
+ * left external and are not inside the app's asar. Importing this helper from
+ * `sandbox/shell.ts` pulled the whole agent in behind it (6.7 MB) and the
+ * packaged app stopped starting.
  */
 import * as path from "node:path";
 

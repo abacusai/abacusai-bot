@@ -50,14 +50,19 @@ export function fallbackShell(
    * The bundled POSIX shell on Windows, where it is installed
    * (posix-shell.ts). Null says there is none; leaving it out looks one up.
    */
-  bundled: { sh: string } | null = (platform === "win32"
+  bundled: { sh: string; args?: readonly string[] } | null = (platform ===
+  "win32"
     ? posixShell()
     : undefined) ?? null
 ): { file: string; args: string[]; windowsVerbatimArguments?: boolean } {
   if (platform === "win32") {
     // The model writes for the POSIX shell it was told it has; cmd.exe is
     // only for a machine with no bundled shell payload.
-    if (bundled != null) return { file: bundled.sh, args: ["-c", command] };
+    if (bundled != null)
+      return {
+        file: bundled.sh,
+        args: [...(bundled.args ?? []), "-c", command],
+      };
 
     return {
       file: env.ComSpec ?? "cmd.exe",

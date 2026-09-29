@@ -1,5 +1,5 @@
 /**
- * `design` — the parent-facing tool for mockups; the work is in design-task.ts.
+ * `design`: the parent-facing tool for mockups; the work is in design-task.ts.
  */
 import { Type } from "typebox";
 
@@ -57,7 +57,7 @@ export function buildDesignTool(
     parameters: Type.Object({
       brief: Type.String({
         description:
-          "What the product is, who uses it, and what belongs on each screen — as if to someone who has not read this conversation.",
+          "What the product is, who uses it, and what belongs on each screen, as if to someone who has not read this conversation.",
       }),
       output_dir: Type.String({
         description:
@@ -101,7 +101,7 @@ export function buildDesignTool(
       const brief = typeof params.brief === "string" ? params.brief.trim() : "";
       const requestedDir =
         typeof params.output_dir === "string" ? params.output_dir.trim() : "";
-      // Resolved here, where the workspace is known — see workspace-path.ts.
+      // Resolved here, where the workspace is known; see workspace-path.ts.
       const outputDir =
         requestedDir.length > 0
           ? resolveInWorkspace(requestedDir, context.cwd)

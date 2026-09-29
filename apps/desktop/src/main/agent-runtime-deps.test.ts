@@ -4,7 +4,7 @@
  * The agent is not part of the asar: `extraResources` copies
  * `packages/agent/dist` to `Resources/agent/` and the app spawns `main.js`
  * there as an ordinary Node process. That process resolves bare imports the
- * ordinary way — upwards from its own directory — so it can only ever see
+ * ordinary way, upwards from its own directory, so it can only ever see
  * `Resources/agent/node_modules`. Nothing in app.asar, and nothing in the
  * repository's own node_modules, is reachable from it.
  *
@@ -12,7 +12,7 @@
  *
  *   - 1.0.3 shipped `dist/` as tsc output rather than the tsdown bundle. tsc
  *     emits one file per source with every dependency left as a bare import,
- *     so the agent asked for `@earendil-works/pi-coding-agent` — a
+ *     so the agent asked for `@earendil-works/pi-coding-agent`. A
  *     devDependency, deliberately never shipped, because the bundler is
  *     supposed to inline it. Every spawn died on ERR_MODULE_NOT_FOUND and the
  *     app could not run a single turn.
@@ -20,16 +20,17 @@
  *   - The packages the bundler is told never to inline (they load .node
  *     addons) were not all copied beside the agent. `@earendil-works/pi-tui`
  *     is imported by the chunk every entry point shares, so its absence was
- *     not a missing feature — it was the same total failure to spawn.
+ *     not a missing feature. It was the same total failure to spawn.
  *
  * Neither is visible in a normal test run, a typecheck, or a build that
  * succeeds: the repository's own node_modules resolves all of it, and only the
  * packaged app is missing anything. So this reads what the build actually
  * bundles and what the packaging actually copies, and compares them.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { builtinModules } from "node:module";
+import os from "node:os";
 import path from "node:path";
 
 import { init, parse } from "es-module-lexer";
@@ -54,7 +55,7 @@ const isBuiltin = (specifier: string): boolean =>
 
 /**
  * Every bare specifier the built agent imports, static and dynamic alike. A
- * dynamic one fails later than a static one rather than less badly — the first
+ * dynamic one fails later than a static one rather than less badly. The first
  * time the feature behind it is used, in front of a user.
  */
 const bundleImports = async (): Promise<Set<string>> => {
@@ -163,7 +164,7 @@ describe("what the packaged agent can resolve", () => {
 /**
  * The other half of getting `extraResources` right: not shipping what the
  * agent cannot use. Source maps were 24 MB of the 39 MB copied beside it, and
- * nothing ever read them — the agent is spawned as a plain Node process, with
+ * nothing ever read them. The agent is spawned as a plain Node process, with
  * no --enable-source-maps anywhere. The filter is easy to drop during an
  * unrelated edit and impossible to notice, since the app works either way.
  */
@@ -194,5 +195,44 @@ describe("what the agent copy leaves behind", () => {
 
   it("keeps the entry point the app spawns", () => {
     expect(fs.existsSync(path.join(AGENT_DIST, "main.js"))).toBe(true);
+  });
+
+  it("parses as ESM below a user's CommonJS package", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "agent-module-type-"));
+    try {
+      const agent = path.join(
+        home,
+        "AppData",
+        "Local",
+        "Programs",
+        "Bot",
+        "resources",
+        "agent"
+      );
+      fs.mkdirSync(agent, { recursive: true });
+      fs.writeFileSync(
+        path.join(home, "package.json"),
+        '{"type":"commonjs"}\n'
+      );
+      fs.copyFileSync(
+        path.join(AGENT_DIST, "main.js"),
+        path.join(agent, "main.js")
+      );
+      fs.copyFileSync(
+        path.join(AGENT_DIST, "package.json"),
+        path.join(agent, "package.json")
+      );
+
+      const probe = spawnSync(
+        process.execPath,
+        ["--check", path.join(agent, "main.js")],
+        {
+          encoding: "utf8",
+        }
+      );
+      expect(probe.status, probe.stderr).toBe(0);
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   });
 });

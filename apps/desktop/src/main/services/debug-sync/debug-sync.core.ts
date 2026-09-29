@@ -1,8 +1,9 @@
 /**
  * Debug-sync core: decides whether to send a transcript and does the send.
  * No electron, fs, or path aliases, so it runs under plain `node` for tests.
- * The server keeps an append-only log with one row per segment, so each turn
- * ships only `segments.slice(syncedCount)` tagged with its index.
+ * The server keeps an append-only log, so each segment is sent once, under the
+ * next free sequence: the local transcript is rewritten in place, and a
+ * segment's position in it is not where the server holds it.
  */
 
 import type { ClientEnvironment } from "../diagnostics/client-environment";
@@ -35,8 +36,7 @@ export interface SyncDeps {
   readKey: () => string | undefined;
   syncUrl: () => string;
   readTranscript: (sessionId: string) => StoredTranscript | null;
-  /** The marker: how many of the session's segments are already synced. */
-  readSyncedCount: (sessionId: string) => number;
+  readSyncState: (sessionId: string) => SyncState;
   clientMeta: () => SyncClientMeta;
   /** Injected for tests; defaults to global fetch. */
   fetchImpl?: typeof fetch;
@@ -44,8 +44,70 @@ export interface SyncDeps {
   log?: (message: string, extra?: unknown) => void;
 }
 
+/** What the server holds for a session. */
+export interface SyncState {
+  /** The sequence the next uploaded segment gets. */
+  next: number;
+  /** Segment key to the sequence it was uploaded under. */
+  sequences: Record<string, number>;
+}
+
+export const emptySyncState = (): SyncState => ({ next: 0, sequences: {} });
+
+/**
+ * A segment's identity in the upload log. Both frames of a sub-agent bracket
+ * share an id, so the frame's status is part of it; an id-less segment falls
+ * back to its position.
+ */
+export function syncKey(segment: unknown, index: number): string {
+  const record =
+    typeof segment === "object" && segment != null
+      ? (segment as Record<string, unknown>)
+      : {};
+  const id = record.id;
+  if (typeof id !== "string" || id.length === 0) return `@${index}`;
+  return record.type === "subtask"
+    ? `subtask:${String(record.status)}:${id}`
+    : id;
+}
+
+/**
+ * State for a marker written as a plain count: the first `count` segments are
+ * taken as uploaded where they now sit.
+ */
+export function syncStateFromCount(
+  transcript: StoredTranscript | null,
+  count: number
+): SyncState {
+  const sequences: Record<string, number> = {};
+  const segments = Array.isArray(transcript?.segments)
+    ? transcript.segments
+    : [];
+  segments.slice(0, count).forEach((segment, index) => {
+    const key = syncKey(segment, index);
+    if (!(key in sequences)) sequences[key] = index;
+  });
+  return { next: count, sequences };
+}
+
+/** The transcript's segments the server does not hold yet, in order. */
+export function unsyncedSegments(
+  transcript: StoredTranscript,
+  state: SyncState
+): Array<{ key: string; segment: unknown }> {
+  const pending: Array<{ key: string; segment: unknown }> = [];
+  const seen = new Set<string>();
+  transcript.segments.forEach((segment, index) => {
+    const key = syncKey(segment, index);
+    if (key in state.sequences || seen.has(key)) return;
+    seen.add(key);
+    pending.push({ key, segment });
+  });
+  return pending;
+}
+
 export type SyncOutcome =
-  | { status: "ok"; sessionId: string; events: number; syncedThrough: number }
+  | { status: "ok"; sessionId: string; events: number; state: SyncState }
   | { status: "skipped"; sessionId: string; reason: "no-key" | "empty" }
   | { status: "error"; sessionId: string; reason: string; retryable: boolean };
 
@@ -57,30 +119,38 @@ const DEFAULT_TIMEOUT_MS = 15_000;
  */
 export function shouldSync(
   transcript: StoredTranscript | null,
-  syncedCount: number | undefined
+  state: SyncState
 ): boolean {
   if (transcript == null) return false;
   if (!Array.isArray(transcript.segments) || transcript.segments.length === 0)
     return false;
-  return transcript.segments.length > (syncedCount ?? 0);
+  return unsyncedSegments(transcript, state).length > 0;
 }
 
+/** The upload, and the state the server is in once it lands. */
 export function buildSyncPayload(
   transcript: StoredTranscript,
   meta: SyncClientMeta,
-  syncedCount: number
-): SyncPayload {
+  state: SyncState
+): { payload: SyncPayload; after: SyncState } {
+  const sequences = { ...state.sequences };
+  let next = Math.max(0, state.next);
   const events: SyncEvent[] = [];
-  for (let i = Math.max(0, syncedCount); i < transcript.segments.length; i++) {
-    events.push({ event_sequence_number: i, segment: transcript.segments[i] });
+  for (const { key, segment } of unsyncedSegments(transcript, state)) {
+    sequences[key] = next;
+    events.push({ event_sequence_number: next, segment });
+    next += 1;
   }
   return {
-    session_id: transcript.sessionId,
-    device_id: meta.deviceId,
-    platform: meta.environment.platform,
-    client_version: meta.clientVersion,
-    environment: meta.environment,
-    events,
+    payload: {
+      session_id: transcript.sessionId,
+      device_id: meta.deviceId,
+      platform: meta.environment.platform,
+      client_version: meta.clientVersion,
+      environment: meta.environment,
+      events,
+    },
+    after: { next, sequences },
   };
 }
 
@@ -104,12 +174,13 @@ export async function syncTranscriptOnce(
   )
     return { status: "skipped", sessionId, reason: "empty" };
 
-  const syncedCount = deps.readSyncedCount(sessionId);
-  const total = transcript.segments.length;
-  if (total <= syncedCount)
+  const { payload, after } = buildSyncPayload(
+    transcript,
+    deps.clientMeta(),
+    deps.readSyncState(sessionId)
+  );
+  if (payload.events.length === 0)
     return { status: "skipped", sessionId, reason: "empty" };
-
-  const payload = buildSyncPayload(transcript, deps.clientMeta(), syncedCount);
   const body = JSON.stringify(payload);
   const doFetch = deps.fetchImpl ?? fetch;
   const controller = new AbortController();
@@ -131,13 +202,13 @@ export async function syncTranscriptOnce(
 
     if (resp.ok) {
       deps.log?.(
-        `[debug-sync] synced ${sessionId}: ${payload.events.length} event(s) through ${total}`
+        `[debug-sync] synced ${sessionId}: ${payload.events.length} event(s) through ${after.next}`
       );
       return {
         status: "ok",
         sessionId,
         events: payload.events.length,
-        syncedThrough: total,
+        state: after,
       };
     }
 

@@ -65,17 +65,17 @@ const SYSTEM_PROMPT = [
   "The order of work:",
   "  1. If the brief points at files, read them first. A document about code should be",
   "     about the code, not about the brief.",
-  "  2. `document_templates` — the looks available, and what each suits. Choose the one that",
+  "  2. `document_templates`: the looks available, and what each suits. Choose the one that",
   "     fits; never skip this, and never leave the template unset.",
-  "  3. `set_document` — the title, a one-sentence standfirst, the shape and that template.",
+  "  3. `set_document`: the title, a one-sentence standfirst, the shape and that template.",
   "  4. `write_section` once per section, in order.",
-  "  5. `render_document` — prints it and returns the path. Call this exactly once,",
+  "  5. `render_document`: prints it and returns the path. Call this exactly once,",
   "     when every section is written.",
   "",
   "Style is the document's SHAPE and is separate from the template, which is its LOOK:",
-  "  report    — analysis, findings, proposals, anything with structure and tables",
-  "  editorial — essays, narrative pieces, long-form argument",
-  "  memo      — short internal notes, one or two pages, no cover page",
+  "  report:    analysis, findings, proposals, anything with structure and tables",
+  "  editorial: essays, narrative pieces, long-form argument",
+  "  memo:      short internal notes, one or two pages, no cover page",
   "",
   "A report shape in the Press look is a perfectly good document; so is an editorial shape",
   "in Ledger. Pick the shape from what the content is and the template from how it should",
@@ -89,7 +89,7 @@ const SYSTEM_PROMPT = [
   "Writing the sections:",
   "  - HTML fragments only: <p>, <ul>/<li>, <ol>, <table>, <blockquote>, <h3> for",
   "    sub-headings, <strong>, <em>, <code>. No <html>, <body>, <style>, <script>, no",
-  "    class attributes, no inline styles, no <h1> or <h2> — your heading is printed",
+  "    class attributes, no inline styles, no <h1> or <h2>. Your heading is printed",
   "    for you, so do not repeat it in the body.",
   "  - Use ONLY facts from the brief and from files you have read. Invent no",
   "    statistics, dates, names, quotes or comparisons. Where you lack a specific,",
@@ -102,7 +102,7 @@ const SYSTEM_PROMPT = [
   "  - The layout is not yours. Paper size, margins, the stylesheet and the cover belong to",
   "    the renderer; theme and text size are arguments to set_document. Ask for content.",
   "",
-  "Your final message is not the document — it has already been printed. Say what you",
+  "Your final message is not the document; it has already been printed. Say what you",
   "wrote and where it is, in two sentences.",
 ].join("\n");
 
@@ -185,7 +185,7 @@ const buildDraftTools = (
     label: "document_templates",
     description:
       "The looks a document can be printed in: each one's name, what it suits, and its " +
-      "mood. Call this before set_document and choose one — there is no undecorated option, " +
+      "mood. Call this before set_document and choose one: there is no undecorated option, " +
       "because an undecorated document is not a neutral choice but the absence of one.",
     parameters: Type.Object({}),
     execute: async () => {
@@ -220,7 +220,7 @@ const buildDraftTools = (
       template: Type.Optional(
         Type.String({
           description:
-            "A slug from document_templates. Required in practice — always choose one.",
+            "A slug from document_templates. Required in practice: always choose one.",
         })
       ),
       theme: Type.Optional(
@@ -272,7 +272,7 @@ const buildDraftTools = (
     label: "write_section",
     description:
       "Append one section: its heading, and its body as an HTML fragment. Sections print " +
-      "in the order they are written. The heading is printed for you — do not repeat it in the body.\n\n" +
+      "in the order they are written. The heading is printed for you; do not repeat it in the body.\n\n" +
       'Images work: `<img src="https://…">` is fetched and embedded when the document is ' +
       "printed, as is a path to a local file. Use `<figure>` with a `<figcaption>` for a caption. " +
       "An image that cannot be fetched is dropped and reported, so check what render_document says " +
@@ -306,7 +306,7 @@ const buildDraftTools = (
     label: "render_document",
     description:
       "Print the document and return its path. Call once, when every section is written. " +
-      "The page layout, stylesheet and paper size are not yours to choose — this owns them.",
+      "The page layout, stylesheet and paper size are not yours to choose: this owns them.",
     parameters: Type.Object({}),
     execute: async () => {
       if (draft.title.length === 0) return failed("Call set_document first.");
@@ -373,7 +373,7 @@ const buildDraftTools = (
                   "Do not describe the document as illustrated unless it has the images you meant.",
                 ]
               : []),
-            "You are done — say what you wrote.",
+            "You are done. Say what you wrote.",
           ].join("\n"),
           { pdfPath: result.pdfPath }
         );

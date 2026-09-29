@@ -2,7 +2,7 @@
  * The shared bots' inbox is one queue per account, not one per channel.
  * With Discord and Telegram both linked, each lane's poll drained the whole
  * queue, and a Telegram message came in through whichever poll returned
- * first — logged, routed and answered as Discord. An entry now reaches the
+ * first and was logged, routed and answered as Discord. An entry now reaches the
  * lane its channel names, whichever lane fetched it.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";

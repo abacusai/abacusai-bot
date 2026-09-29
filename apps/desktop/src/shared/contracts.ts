@@ -682,10 +682,6 @@ export type IpcEvent =
   | ({ type: "messaging-updated" } & IpcEventBase)
   | ({ type: "bots-updated" } & IpcEventBase)
   | ({ type: "cronjobs-updated" } & IpcEventBase)
-  // The Gmail persona landed in the USER profile; the renderer shows it once.
-  | ({ type: "user-persona-learned"; text: string } & IpcEventBase)
-  // The persona run is under way; percent is an estimate against a typical run.
-  | ({ type: "user-persona-progress"; percent: number } & IpcEventBase)
   // The composer echoes the user's own messages; a turn driven from main has
   // nothing to render it, so this is that echo.
   | ({
@@ -780,7 +776,7 @@ export type ConnectorOutcome = AbacusConnectorOutcome;
 
 /**
  * Where a registry connector stands on this machine. `pending` is attached
- * but not usable yet — a messaging platform awaiting its link, an MCP server
+ * but not usable yet: a messaging platform awaiting its link, an MCP server
  * awaiting its sign-in. `unavailable` cannot be connected from here at all
  * (signed out of Abacus, or the account does not offer the service).
  */
@@ -830,7 +826,7 @@ export interface WriteFileResult {
   error?: string;
 }
 
-/** MCP configs are namespaced by mode; AbacusAIBot only has the one. */
+/** MCP configs are namespaced by mode; AbacusAI Bot only has the one. */
 export type McpMode = "code";
 
 export interface McpOAuthEntry {
@@ -939,7 +935,7 @@ export interface DeviceStatus {
   android: boolean;
   /** Maestro binary present (enables iOS snapshot + text-input fallback). */
   maestro: boolean;
-  /** Native sim-input helper present — iOS taps/swipes without Maestro. */
+  /** Native sim-input helper present: iOS taps/swipes without Maestro. */
   iosNativeInput: boolean;
   enabled: boolean;
   approval: BrowserApproval;
@@ -1120,8 +1116,8 @@ export type TranscriptSegment = Record<string, unknown>;
 /** A thumbs up/down on one assistant turn; `clear` withdraws it. */
 export interface TurnFeedbackInput {
   sessionId: string;
-  /** Index of the rated bot text segment in the stored transcript. */
-  eventSequenceNumber: number;
+  /** The rated bot text segment. */
+  segmentId: string;
   rating: "up" | "down" | "clear";
   comment?: string;
   model?: string | null;
@@ -1824,7 +1820,7 @@ export interface AgentApi {
   /** Every registry connector's state on this machine, keyed by connector id. */
   listConnectorStatuses: () => Promise<ConnectorStatuses>;
   /**
-   * Connect a connector whose flow takes no fields — a browser hop or a plain
+   * Connect a connector whose flow takes no fields: a browser hop or a plain
    * install. Resolves when the platform confirms, the user cancels, or it
    * times out.
    */

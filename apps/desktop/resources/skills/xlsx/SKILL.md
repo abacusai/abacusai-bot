@@ -1,6 +1,6 @@
 ---
 name: Excel / Spreadsheets
-description: Read, edit, analyse, and create .xlsx, .xlsm, and .csv spreadsheets — adding columns, writing formulas, formatting cells, building charts, and cleaning messy tabular data. Use whenever a spreadsheet is the input or the deliverable.
+description: Read, edit, analyse, and create .xlsx, .xlsm, and .csv spreadsheets: adding columns, writing formulas, formatting cells, building charts, and cleaning messy tabular data. Use whenever a spreadsheet is the input or the deliverable.
 ---
 
 # Working with spreadsheets
@@ -21,7 +21,7 @@ and they expect it back, use `openpyxl` and edit in place.
 
 ## Look before you write
 
-Never assume row 0 is the header — real files have title rows, logos, and blank
+Never assume row 0 is the header: real files have title rows, logos, and blank
 spacers above the table:
 
 ```python
@@ -42,7 +42,7 @@ ws["D2"] = "=SUM(B2:C2)"
 
 This means a file you wrote will show the formula's *cached* value as `None`
 until Excel opens it. If a downstream step needs the computed number, compute it
-in Python as well — do not read it back expecting a value.
+in Python as well. Do not read it back expecting a value.
 
 Reading with `data_only=True` gives you the last value **Excel** cached. On a
 file that Excel has never opened, that is `None`.
@@ -58,5 +58,5 @@ file that Excel has never opened, that is `None`.
   as `None`.
 - Writing with `pandas.to_excel` on an existing path **replaces the whole file**,
   not the sheet.
-- Numbers stored as text are extremely common in exported data — `df.dtypes`
+- Numbers stored as text are extremely common in exported data: `df.dtypes`
   showing `object` for a numeric column is the tell.

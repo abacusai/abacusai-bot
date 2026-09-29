@@ -308,7 +308,7 @@ export const buildImageDownloadName = (
     try {
       last = decodeURIComponent(last);
     } catch {
-      /* malformed escape — keep as-is */
+      /* malformed escape; keep as-is */
     }
     segment = last;
   }
@@ -335,7 +335,7 @@ export const buildImageDownloadName = (
   if (base.length > MAX_DOWNLOAD_BASENAME) {
     base = base.slice(0, MAX_DOWNLOAD_BASENAME).replace(/-+$/, "");
   }
-  if (!base) base = `image-${Date.now()}`; // no usable URL name — stay collision-free
+  if (!base) base = `image-${Date.now()}`; // no usable URL name; stay collision-free
 
   return `${base}.${ext}`;
 };

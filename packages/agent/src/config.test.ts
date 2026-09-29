@@ -3,8 +3,8 @@
  *
  * The desktop app writes provider keys to `apiKeys` in config.json and injects
  * them when it spawns the agent, so the app always worked. Nothing in this
- * package read that field, so the terminal client — same machine, same
- * `~/.abacusai-bot`, same file — behaved as though the user had no keys at
+ * package read that field, so the terminal client (same machine, same
+ * `~/.abacusai-bot`, same file) behaved as though the user had no keys at
  * all: it either refused to start or silently fell back to whatever other
  * provider happened to be configured.
  *
@@ -101,7 +101,7 @@ describe("what the environment still decides", () => {
 describe("config that cannot be trusted", () => {
   it("ignores blanks, non-strings, and names that are not env vars", () => {
     // config.json is hand-editable, and this writes into the process
-    // environment — so anything that isn't plainly a key is skipped rather
+    // environment, so anything that isn't plainly a key is skipped rather
     // than coerced into one.
     writeConfig({
       apiKeys: {

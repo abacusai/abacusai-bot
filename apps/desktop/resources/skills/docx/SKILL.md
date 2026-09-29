@@ -1,6 +1,6 @@
 ---
 name: Word documents
-description: Create, read, and edit .docx Word documents — headings, tables, styles, headers and footers, tracked changes, and converting content into a polished document. Use whenever a Word document is the input or the deliverable.
+description: Create, read, and edit .docx Word documents: headings, tables, styles, headers and footers, tracked changes, and converting content into a polished document. Use whenever a Word document is the input or the deliverable.
 ---
 
 # Working with Word documents
@@ -33,7 +33,7 @@ for child in doc.element.body.iterchildren():
 
 ## Writing
 
-Use the built-in styles rather than manual formatting — they are what make a
+Use the built-in styles rather than manual formatting: they are what make a
 document look native and what the user's own template expects:
 
 ```python
@@ -60,5 +60,5 @@ template will not exist in a blank one.
   means editing `w:ins`/`w:del` elements in the XML directly.
 - Headers and footers live on `section.header` / `section.footer`, not on the
   document.
-- `.doc` (the old binary format) is **not** supported — convert with LibreOffice
+- `.doc` (the old binary format) is **not** supported. Convert with LibreOffice
   first: `soffice --headless --convert-to docx`.

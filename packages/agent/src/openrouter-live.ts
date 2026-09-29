@@ -2,7 +2,7 @@
  * OpenRouter's live catalog, for what the bundled snapshot cannot say: which
  * models take tools. The agent sends tools with every request, and a model
  * without them answers each one with "No endpoints found that support tool
- * use" — a music model in the free tier, or a text model whose free endpoint
+ * use": a music model in the free tier, or a text model whose free endpoint
  * dropped tools since the snapshot was cut. Read once per process; offline,
  * the snapshot stands and the pool behaves as before.
  */
@@ -56,7 +56,7 @@ export async function refreshOpenRouterLive(
 /**
  * Whether an OpenRouter model may take tools: what the live catalog says when
  * it has answered, and yes otherwise. A model the live catalog no longer lists
- * is out too — a retired free slug fails the same way.
+ * is out too: a retired free slug fails the same way.
  */
 export function openRouterTakesTools(modelId: string): boolean {
   return toolCapable == null || toolCapable.has(modelId);

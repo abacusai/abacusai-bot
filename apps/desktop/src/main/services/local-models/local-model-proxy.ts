@@ -60,7 +60,7 @@ export const modelInBody = (body: Buffer): string | null => {
 /**
  * The endpoints a request may be forwarded to: the OpenAI-style API the agent
  * speaks. The forwarded path is always one of these literals, never the
- * request line itself — a loopback proxy that forwarded whatever it was
+ * request line itself. A loopback proxy that forwarded whatever it was
  * given would be a way to reach somewhere else.
  */
 const FORWARDED_PATHS = [

@@ -2,15 +2,14 @@
  * The `code_map` contract, as the model experiences it.
  *
  * ast_edit, the other tool this extension registers, is covered in
- * ast-tools.test.ts — that one is about writing files, this one about reading
+ * ast-tools.test.ts: that one is about writing files, this one about reading
  * them.
  *
  * The symbol classification is tested in symbols.test.ts and the walk in
- * workspace-scan.test.ts. What is left — and what these cover — is everything
+ * workspace-scan.test.ts. What is left, and what these cover, is everything
  * the model has to be told rather than shown: which limit stopped the scan, why
  * a file type produced nothing, and whether "no result" means "not there" or
- * "not looked at". Every one of those was previously a bare "No symbols found",
- * which is the same sentence for four different situations.
+ * "not looked at". A bare "No symbols found" says the same thing for all four.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -284,8 +283,8 @@ describe("saying what happened", () => {
 
   it("gives the watchdog longer than the tool spends on itself", async () => {
     // code_map stops at 20s and returns a partial map. If the watchdog fired
-    // first that map would be replaced by a killed call, which returns nothing
-    // — so the ordering between the two numbers is the thing worth pinning.
+    // first that map would be replaced by a killed call, which returns nothing,
+    // so the ordering between the two numbers is the thing worth pinning.
     const { budgetSecondsFor } = await import("./tool-timeouts.js");
 
     expect(budgetSecondsFor("code_map")).toBeGreaterThan(20);
@@ -293,7 +292,7 @@ describe("saying what happened", () => {
 
   it("stops and says so when the caller aborts partway through reading files", async () => {
     // Aborting BEFORE the walk is a different code path from aborting after it,
-    // and the second is the one that happens in practice — the user presses Stop
+    // and the second is the one that happens in practice: the user presses Stop
     // while files are being parsed. The signal flips on its third reading so the
     // break lands mid-loop rather than depending on timing.
     for (let file = 0; file < 5; file++)
@@ -318,7 +317,7 @@ describe("saying what happened", () => {
 
   it("stops at its own time budget and returns what it has", async () => {
     // The walk had a budget and the parse loop did not, so a big tree could sit
-    // there until the watchdog killed the call — and a killed call returns
+    // there until the watchdog killed the call, and a killed call returns
     // nothing. The clock is moved rather than waited on: a test that really
     // took twenty seconds would be a test nobody runs.
     for (let file = 0; file < 6; file++)
@@ -357,7 +356,7 @@ describe("saying what happened", () => {
   });
 
   // Writes 2,100 real files first, which a cold CI disk can take longer than
-  // the default 5s over — seen flaking on the macOS runner.
+  // the default 5s over, seen flaking on the macOS runner.
   it(
     "says when the walk stopped at its file limit, and how much it missed",
     { timeout: 30_000 },
@@ -461,7 +460,7 @@ describe("paths", () => {
       "shipped()"
     );
     // The same file is invisible to a directory scan, which is the point of the
-    // skip list — asking for it by name is a decision, finding it by accident
+    // skip list: asking for it by name is a decision, finding it by accident
     // is not.
     expect(textOf(await codeMap())).not.toContain("shipped()");
   });

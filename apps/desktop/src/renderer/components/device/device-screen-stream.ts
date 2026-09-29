@@ -32,7 +32,7 @@ export class AndroidStreamPlayer {
   async start(deviceId: string): Promise<void> {
     if (!AndroidStreamPlayer.isSupported()) {
       console.warn(
-        "[device-stream] WebCodecs VideoDecoder unavailable in this renderer — staying on screenshot polling."
+        "[device-stream] WebCodecs VideoDecoder unavailable in this renderer; staying on screenshot polling."
       );
       this.onFatal("WebCodecs unavailable");
       return;
@@ -62,7 +62,7 @@ export class AndroidStreamPlayer {
     this.watchdog = setTimeout(() => {
       if (!this.painted && !this.disposed) {
         console.warn(
-          `[device-stream] Android stream produced no decoded frame in ${AndroidStreamPlayer.FIRST_FRAME_TIMEOUT_MS}ms (chunks received: ${this.received}) — falling back to polling`
+          `[device-stream] Android stream produced no decoded frame in ${AndroidStreamPlayer.FIRST_FRAME_TIMEOUT_MS}ms (chunks received: ${this.received}); falling back to polling`
         );
         this.onFatal("no frames decoded");
       }
@@ -100,7 +100,7 @@ export class AndroidStreamPlayer {
   private received = 0;
   private onChunk(chunk: DeviceStreamChunk): void {
     if (this.disposed || chunk.streamId !== this.streamId) return;
-    if (chunk.format === "mjpeg") return; // not ours — that's the iOS framebuffer path
+    if (chunk.format === "mjpeg") return; // not ours; that's the iOS framebuffer path
     try {
       const data =
         chunk.data instanceof Uint8Array
@@ -108,7 +108,7 @@ export class AndroidStreamPlayer {
           : new Uint8Array(chunk.data);
       this.received += 1;
       if (chunk.isKey) {
-        // Every keyframe carries SPS/PPS — (re)configure lazily so segment
+        // Every keyframe carries SPS/PPS, so (re)configure lazily so segment
         // restarts (screenrecord's 3-minute limit) recover transparently.
         const codec = this.codecFromSps(data);
         if (this.decoder == null || !this.configured) {
@@ -116,7 +116,7 @@ export class AndroidStreamPlayer {
             this.ensureDecoder(codec);
           } else {
             console.warn(
-              "[device-stream] keyframe without parseable SPS — cannot configure decoder"
+              "[device-stream] keyframe without parseable SPS; cannot configure decoder"
             );
           }
         }
@@ -149,7 +149,7 @@ export class AndroidStreamPlayer {
       }
     }
     this.decoder = new VideoDecoder({
-      // paint() takes ownership of the frame and closes it — decode can burst
+      // paint() takes ownership of the frame and closes it. Decode can burst
       // several frames between two display refreshes and only the newest is
       // worth uploading.
       output: (frame) => this.paint(frame),
@@ -298,7 +298,7 @@ export class MjpegStreamPlayer {
     this.watchdog = setTimeout(() => {
       if (!this.painted && !this.disposed) {
         console.warn(
-          "[device-stream] iOS native mirror produced no frames — falling back to window capture"
+          "[device-stream] iOS native mirror produced no frames; falling back to window capture"
         );
         this.onFatal("no frames from framebuffer");
       }
@@ -326,7 +326,7 @@ export class MjpegStreamPlayer {
       chunk.format !== "mjpeg"
     )
       return;
-    if (this.decoding) return; // drop under backpressure — never queue
+    if (this.decoding) return; // drop under backpressure; never queue
     this.decoding = true;
     try {
       const data =
@@ -343,7 +343,7 @@ export class MjpegStreamPlayer {
       this.paint(bitmap);
       bitmap.close();
     } catch {
-      /* skip a corrupt frame — the next one recovers */
+      /* skip a corrupt frame; the next one recovers */
     } finally {
       this.decoding = false;
     }

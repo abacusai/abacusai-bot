@@ -5,7 +5,7 @@
  * failures back as a follow-up. The cap is what stops that from being a cycle,
  * so the way it reads its own configuration is worth pinning: it used to become
  * NaN for any malformed value, and `retriesUsed >= NaN` is false for every
- * number — a cap that never caps.
+ * number: a cap that never caps.
  */
 import { describe, expect, it } from "vitest";
 
@@ -23,7 +23,7 @@ describe("how many follow-ups the loop may send", () => {
 
   it("treats an empty-but-set variable as unset, not as zero", () => {
     // Number('') is 0, which would switch verification off entirely for anyone
-    // who exported the variable without a value — the same trap the docs warn
+    // who exported the variable without a value. That is the same trap the docs warn
     // about for API keys.
     expect(resolveMaxRetries("")).toBe(1);
     expect(resolveMaxRetries("   ")).toBe(1);

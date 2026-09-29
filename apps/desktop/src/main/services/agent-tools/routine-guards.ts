@@ -44,3 +44,13 @@ export const consecutiveFailures = (runs: RoutineRunItem[]): number => {
 
 export const shouldPauseAfter = (runs: RoutineRunItem[]): boolean =>
   consecutiveFailures(runs) >= ROUTINE_FAILURES_BEFORE_PAUSE;
+
+/**
+ * A run stopped by an empty Abacus.AI balance, which every later fire would
+ * hit too. The agent offers the upgrade only then, and only for a model
+ * Abacus.AI serves.
+ */
+export const ranOutOfAbacusCredits = (error: {
+  actions?: Array<{ type: string }>;
+}): boolean =>
+  error.actions?.some((action) => action.type === "upgrade-abacus") === true;

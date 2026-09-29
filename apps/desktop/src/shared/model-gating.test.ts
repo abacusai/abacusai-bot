@@ -2,7 +2,7 @@
  * The two questions the UI asks the catalog.
  *
  * "Can this app answer a message?" gates the composer, and it has to agree
- * with the model picker exactly — one of them deciding differently is a
+ * with the model picker exactly. One of them deciding differently is a
  * blocked composer next to a dropdown full of models.
  *
  * "Is this a paid account?" routes onboarding. It reads the catalog rather

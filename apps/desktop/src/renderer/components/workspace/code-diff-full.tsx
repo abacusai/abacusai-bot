@@ -298,7 +298,7 @@ export function CodeDiffFull({
     return { displayLines, countMore };
   }, [allLines, maxLines, maxHeight, isRightPanel]);
 
-  // Expand in place — reveals the full diff inside the message.
+  // Expand in place: reveals the full diff inside the message.
   const handleExpand = useCallback(() => setIsExpandedInline(true), []);
 
   if (allLines.length === 0) {

@@ -4,7 +4,7 @@
  * What matters here is that a deliverable never reports as shown when it is
  * not: the desktop's version exists partly because a path named in prose is
  * neither linked nor recorded, and a version that cheerfully listed files that
- * are not there would be worse than none — the model would tell the user the
+ * are not there would be worse than none: the model would tell the user the
  * work was delivered and the user would find nothing.
  */
 import fs from "fs";

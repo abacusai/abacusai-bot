@@ -71,14 +71,14 @@
       "category": "dashboard",
       "frames": "desktop",
       "description": "A table of records. A Status column is appended automatically from each row's status and tone (good/warn/bad/plain).",
-      "slots": { "title": "text", "columns": "list of text (do NOT include Status — it is added for you)", "rows": "list of {cells, status, tone}" },
+      "slots": { "title": "text", "columns": "list of text (do NOT include Status; it is added for you)", "rows": "list of {cells, status, tone}" },
       "html": "<div class=\"card\" style=\"padding:0\"><div class=\"between\" style=\"padding:18px 20px;border-bottom:1px solid var(--line)\"><h3 class=\"h3\">{{title}}</h3><span class=\"rowline\"><span class=\"input small\" style=\"width:200px\">Search…</span></span></div><table class=\"table\"><thead><tr>{{#columns}}<th>{{.}}</th>{{/columns}}<th>Status</th></tr></thead><tbody>{{#rows}}<tr>{{#cells}}<td>{{.}}</td>{{/cells}}<td><span class=\"pill {{tone}}\">{{status}}</span></td></tr>{{/rows}}</tbody></table></div>"
     },
     {
       "name": "list-detail",
       "category": "dashboard",
       "frames": "desktop",
-      "description": "A list beside a detail panel — inbox, records, review queues.",
+      "description": "A list beside a detail panel: inbox, records, review queues.",
       "slots": { "items": "list of {title, sub}", "detail_title": "text", "detail_body": "text", "fields": "list of {label, value}" },
       "html": "<div class=\"cols\" style=\"grid-template-columns:340px 1fr;gap:20px\"><div class=\"card\" style=\"padding:6px\">{{#items}}<div class=\"rowline\" style=\"padding:13px 14px;gap:12px;border-bottom:1px solid var(--line)\"><span class=\"avatar\">{{initial}}</span><span class=\"stack tight grow\"><span class=\"h3\" style=\"font-size:14px\">{{title}}</span><span class=\"tiny\">{{sub}}</span></span></div>{{/items}}</div><div class=\"card stack\"><h2 class=\"h2\">{{detail_title}}</h2><p class=\"body\">{{detail_body}}</p><div class=\"divider\"></div><div class=\"cols two\">{{#fields}}<div class=\"stack tight\"><span class=\"tiny\">{{label}}</span><span class=\"small\" style=\"color:var(--ink)\">{{value}}</span></div>{{/fields}}</div></div></div>"
     },

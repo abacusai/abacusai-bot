@@ -4,7 +4,7 @@
  * A flat default was wrong for everyone whose key was not the one it named:
  * they started on a provider they had no credentials for and were then moved to
  * whatever happened to be first in a catalog. The mapping below is the contract
- * — one cheap, fast driver per provider — and the null case is what lets both
+ * (one cheap, fast driver per provider), and the null case is what lets both
  * front ends say "configure a model" instead of failing on the first token.
  */
 import { describe, expect, it } from "vitest";
@@ -34,7 +34,7 @@ describe("one default per provider", () => {
   it("gives the free-pool keys OpenLLM, not any single model", () => {
     // Every model on the free tier rate-limits; parking a session on one of
     // them dies on the first busy day. The router starts on the best model in
-    // the pool and switches when it fails — see openllm.ts. An Abacus key
+    // the pool and switches when it fails; see openllm.ts. An Abacus key
     // lands there too: the pool holds its cheap drivers (route-llm-code-low
     // leads that slice), and a free key added later widens the pool with no
     // default change.
@@ -75,7 +75,7 @@ describe("no provider configured", () => {
   });
 
   it("ignores a key for a provider with no default of its own", () => {
-    // A variable no entry names — the shape any future provider's key has
+    // A variable no entry names: the shape any future provider's key has
     // until someone deliberately gives it a default.
     expect(defaultModelFor({ COHERE_API_KEY: "test-key" })).toBeNull();
   });

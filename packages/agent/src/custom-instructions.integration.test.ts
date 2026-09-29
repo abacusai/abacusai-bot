@@ -144,7 +144,7 @@ describe("standing instructions in a real turn", () => {
     const after = prompt.slice(prompt.indexOf("SPARROW.") + "SPARROW.".length);
 
     // pi's trailer is its skills list (when a tool can read them) and the
-    // cwd line — nothing of ours may sit between SPARROW and those.
+    // cwd line: nothing of ours may sit between SPARROW and those.
     expect(after.trim()).toMatch(
       /^(The following skills provide[\s\S]*)?Current working directory:/
     );

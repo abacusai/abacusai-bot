@@ -2,7 +2,7 @@
  * The signal is the run's, not the tool call's.
  *
  * pi builds one AbortController per run and threads it through every tool it
- * invokes, so a listener added and never removed lives as long as the run —
+ * invokes, so a listener added and never removed lives as long as the run:
  * one per sub-agent call, each holding its delegation's closure alive.
  */
 import { getEventListeners } from "node:events";

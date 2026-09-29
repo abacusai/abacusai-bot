@@ -122,7 +122,7 @@ function buildAgentItems(
   const items: AgentRenderItem[] = [];
   let turnCredits: number | undefined;
   let creditsSegmentId: string | null = null;
-  // The turn's last bot text — where the feedback row attaches.
+  // The turn's last bot text, where the feedback row attaches.
   let feedbackText: {
     id: string;
     messageIndex: number;
@@ -234,7 +234,7 @@ function buildAgentItems(
         });
         break;
       case "credits":
-        // Held back — folded into this turn's feedback row below so both sit on
+        // Held back: folded into this turn's feedback row below so both sit on
         // one line. Emitted standalone only when the turn has no feedback row.
         turnCredits = (turnCredits ?? 0) + seg.creditsUsed;
         creditsSegmentId = seg.id;
@@ -334,7 +334,7 @@ export function buildChatItems(
       flushAgent();
       const images = extractTempImageRefs(seg.content);
       const { files, text } = extractUserFileRefs(visibleUserText(seg.content));
-      // The app talking to itself — a routine fire, an environment notice — is
+      // The app talking to itself (a routine fire, an environment notice) is
       // not a message the reader sent, so it gets no bubble.
       if (text.length === 0 && images.length === 0 && files.length === 0)
         continue;

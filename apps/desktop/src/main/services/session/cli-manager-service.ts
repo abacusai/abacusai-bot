@@ -101,13 +101,13 @@ type AgentManagerServiceOptions = {
   ) => void;
   emitSystemReady: (workspaceId: string, sessionId: string) => void;
   emitSessionClosed: (workspaceId: string, sessionId: string) => void;
-  /** Full MCP runtime snapshot for a session — broadcast on update. */
+  /** Full MCP runtime snapshot for a session. Broadcast on update. */
   emitMcpRuntimeServers: (
     workspaceId: string,
     sessionId: string,
     servers: AgentMcpServer[]
   ) => void;
-  /** Per-server status transition — fires on every change. */
+  /** Per-server status transition. Fires on every change. */
   emitMcpRuntimeStatus: (
     workspaceId: string,
     sessionId: string,
@@ -172,7 +172,7 @@ export type ExecFileLike = (
 /**
  * One command, one line. JSON leaves U+2028 and U+2029 unescaped (they are
  * legal inside a JSON string) but the agent reads stdin with readline, which
- * ends a line on either — so a persona pasted from Apple Notes arrived as two
+ * ends a line on either, so a persona pasted from Apple Notes arrived as two
  * malformed lines and the routine never ran. Both are valid JSON escapes.
  */
 export function serializeCommand(command: unknown): string {
@@ -296,7 +296,7 @@ function logMcpOutcome(
         ? "needs a sign-in"
         : (next.error ?? "");
   console.log(
-    `[mcp] ${next.name}: ${next.status}${detail.length > 0 ? ` — ${detail}` : ""} (session ${sessionId.slice(0, 8)})`
+    `[mcp] ${next.name}: ${next.status}${detail.length > 0 ? ` (${detail})` : ""} (session ${sessionId.slice(0, 8)})`
   );
 }
 
@@ -360,7 +360,7 @@ const logCliSpawnFailure = (
 
 export class AgentManagerService {
   private readonly runtimes = new Map<string, CliRuntime>();
-  /** Sessions whose process has gone — see ExitedRuntimeRecord. */
+  /** Sessions whose process has gone. See ExitedRuntimeRecord. */
   private readonly exited: ExitedRuntimeRecord[] = [];
 
   constructor(private readonly options: AgentManagerServiceOptions) {}
@@ -688,6 +688,8 @@ export class AgentManagerService {
       if (current == null || current.process !== child) {
         return;
       }
+      const exitedBeforeReady =
+        !current.spawnResultReported && current.state.status === "starting";
       // Early exit before ever reaching ready counts as a failed spawn.
       if (!current.spawnResultReported) {
         logCliSpawnFailure(
@@ -703,12 +705,15 @@ export class AgentManagerService {
         );
         this.reportSpawnResultOnce(request.sessionId);
       }
-      const isError = current.state.status === "error";
+      const isError = current.state.status === "error" || exitedBeforeReady;
       current.state = {
         ...current.state,
         status: isError ? "error" : "stopped",
         pid: null,
         exitCode: code,
+        error: exitedBeforeReady
+          ? `The local agent exited before it was ready (exit code ${code ?? "unknown"}).`
+          : current.state.error,
         stoppedAt: new Date().toISOString(),
       };
       this.options.emitStateUpdated(current.workspaceId, current.sessionId, {
@@ -776,6 +781,29 @@ export class AgentManagerService {
       };
     }
     return this.stopSessionById(sessionId);
+  }
+
+  /** Wait for close before deleting a session's working directory on Windows. */
+  async stopSessionAndWait(
+    workspaceId: string,
+    sessionId: string
+  ): Promise<void> {
+    const runtime = this.runtimes.get(sessionId);
+    if (runtime == null || runtime.workspaceId !== workspaceId) return;
+
+    await new Promise<void>((resolve, reject) => {
+      const child = runtime.process;
+      const timer = setTimeout(() => {
+        child.removeListener("close", onClose);
+        reject(new Error(`Timed out stopping agent session ${sessionId}.`));
+      }, 15_000);
+      const onClose = (): void => {
+        clearTimeout(timer);
+        resolve();
+      };
+      child.once("close", onClose);
+      if (runtime.state.status !== "stopping") this.stopSessionById(sessionId);
+    });
   }
 
   applyStatePatch(

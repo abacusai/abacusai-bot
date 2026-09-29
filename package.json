@@ -2,7 +2,7 @@
   "name": "abacusai-bot",
   "version": "1.0.12",
   "private": true,
-  "description": "AbacusAIBot — an open-source desktop coding agent that runs on your machine, with your models.",
+  "description": "AbacusAI Bot: free, open-source personal agents for your messaging apps, tools and services.",
   "homepage": "https://github.com/abacusai/abacusai-bot",
   "license": "MIT",
   "author": "Abacus.AI, Inc. <support@abacus.ai>",
@@ -37,5 +37,5 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621"
+  "packageManager": "pnpm@12.6.0+sha512.3ef68f951cb111ac204b4a5a16f0b2ddf0da56a96e0413e81d855d9f0b55ef926714709028e1cd00c405c2c5fb7b9e8ec4dc46777c805d0373c2f2ff00fd20ec"
 }

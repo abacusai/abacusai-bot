@@ -284,7 +284,7 @@ describe("secondary sidebar descriptor integration", () => {
   it("shows a URL the agent presented, with no browser open first", async () => {
     // The `present_deliverable` path: openUrlInPreview opens a URL with no
     // resourceId, so a browser resource is minted for it. The tab has to be a
-    // browser tab — nothing renders `resourceType: "url"` — and point at a
+    // browser tab (nothing renders `resourceType: "url"`) and point at a
     // real resource, or the pane opens blank.
     renderPanel();
 
@@ -317,7 +317,7 @@ describe("secondary sidebar descriptor integration", () => {
 
   it("shows only the conversation's own previews, so switching chats swaps rather than leaks", async () => {
     // The pane belongs to whichever chat the shell says is on screen. A file
-    // presented in another chat must not become a tab here — the old global
+    // presented in another chat must not become a tab here. The old global
     // store mirrored every chat's items into the active scope on each switch.
     const otherScope = rightPanelScopeKey({
       workspaceId: "workspace-one",
@@ -356,8 +356,8 @@ describe("secondary sidebar descriptor integration", () => {
 
   it("shows each chat its own deliverable: a PDF in one, only the deck in the next", async () => {
     // What `present_deliverable` does, per conversation: the pane is tied to
-    // the chat. A deck presented in the next chat must not sit beside — or
-    // behind — the PDF the previous chat produced.
+    // the chat. A deck presented in the next chat must not sit beside (or
+    // behind) the PDF the previous chat produced.
     const nextChat = rightPanelScopeKey({
       workspaceId: "workspace-one",
       sessionId: "session-two",

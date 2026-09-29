@@ -2,7 +2,7 @@
  * What may be handed to the OS as an external link.
  *
  * `shell.openExternal` dispatches on the scheme, so the reachable set is every
- * protocol handler on the machine — and the URLs reaching it are not all ours.
+ * protocol handler on the machine, and the URLs reaching it are not all ours.
  * The preview pane's "open externally" button passes the webview's current
  * location, and a webview renders HTML the agent wrote, from whatever the agent
  * was reading. Before this the URL was passed through unread.

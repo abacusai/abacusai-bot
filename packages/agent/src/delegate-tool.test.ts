@@ -1,6 +1,6 @@
 /**
  * Whether a session gets `delegate_task`. A bot never does: a delegate starts
- * blank, so the bot re-describes its own state to it and gets that wrong —
+ * blank, so the bot re-describes its own state to it and gets that wrong,
  * one routine handed a delegate a spill id as a file path, and the delegate's
  * "neither file exists" landed in the user's chat as the bot's own words.
  */

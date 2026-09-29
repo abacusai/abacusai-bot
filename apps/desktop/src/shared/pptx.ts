@@ -62,7 +62,7 @@ export type PptxTableCell = {
   fill: PptxFill;
   colSpan: number;
   rowSpan: number;
-  /** True for cells covered by a merge — kept out of the rendered grid. */
+  /** True for cells covered by a merge, kept out of the rendered grid. */
   merged: boolean;
 };
 
@@ -100,7 +100,7 @@ export type PptxShape = PptxShapeBase &
         rows: Array<{ heightEmu: number; cells: PptxTableCell[] }>;
       }
     | {
-        /** Charts, SmartArt, OLE and media — shown as a labelled frame. */
+        /** Charts, SmartArt, OLE and media, shown as a labelled frame. */
         kind: "placeholder-frame";
         label: string;
         fill: PptxFill;

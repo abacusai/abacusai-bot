@@ -156,7 +156,7 @@ export class DiagnosticsSyncService {
       } else if (resp.status >= 400 && resp.status < 500) {
         this.disabledForRun = `http ${resp.status}`;
         console.warn(
-          `[diagnostics-sync] disabled for this run (http ${resp.status}) — best-effort, will not succeed by retrying`
+          `[diagnostics-sync] disabled for this run (http ${resp.status}). Best-effort, will not succeed by retrying`
         );
       }
       // 5xx: lastSent stays unset so the next interval retries.

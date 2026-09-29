@@ -7,6 +7,8 @@
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 
+import { Agent } from "undici";
+
 import { resolveSpawn } from "./windows-spawn.js";
 
 export interface McpToolInfo {
@@ -41,6 +43,17 @@ const TOOL_CALL_TIMEOUT_MS = 15 * 60_000;
 
 const timeoutFor = (method: string): number =>
   method === "tools/call" ? TOOL_CALL_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+
+/**
+ * Node's fetch gives up on a response whose headers take over 300s, whatever
+ * the signal allows, and a server sends none until the tool is done — so a
+ * call waiting on the user (connect_connector) died at five minutes as "fetch
+ * failed". The per-method signal above is the one deadline.
+ */
+const LONG_CALL_DISPATCHER = new Agent({
+  headersTimeout: TOOL_CALL_TIMEOUT_MS,
+  bodyTimeout: TOOL_CALL_TIMEOUT_MS,
+});
 
 /** How much of a stdio server's stderr to keep for its exit message. */
 const STDERR_TAIL_CHARS = 4000;
@@ -155,7 +168,7 @@ class HttpTransport implements McpTransport {
 
   async request(method: string, params?: unknown): Promise<unknown> {
     const id = ++this.nextId;
-    const response = await fetch(this.url, {
+    const init = {
       method: "POST",
       headers: this.requestHeaders(),
       body: JSON.stringify({
@@ -166,7 +179,11 @@ class HttpTransport implements McpTransport {
       }),
       redirect: this.redirectMode,
       signal: AbortSignal.timeout(timeoutFor(method)),
-    });
+      dispatcher: LONG_CALL_DISPATCHER,
+    };
+    // Cast at the boundary: `dispatcher` is an undici extension the DOM
+    // RequestInit type does not carry, and Node's fetch is undici.
+    const response = await fetch(this.url, init as unknown as RequestInit);
 
     if (!response.ok) {
       throw new McpHttpError(

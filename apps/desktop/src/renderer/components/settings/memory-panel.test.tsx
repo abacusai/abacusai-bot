@@ -146,7 +146,7 @@ describe("a delete the store refused", () => {
   it("takes the message back down once a delete succeeds", async () => {
     // Asserting on a fresh mount would prove nothing: the message starts
     // hidden. It has to be shown first, so that clearing it is what is
-    // measured — otherwise a panel that never clears it passes.
+    // measured; otherwise a panel that never clears it passes.
     forgetAllMemories.mockRejectedValueOnce(new Error("busy"));
     await mount();
 
@@ -190,7 +190,7 @@ describe("custom instructions", () => {
     await mount("memory-instructions-input");
 
     // The box renders independently of the lists, so wait for the lists to
-    // settle before asserting they collapsed — otherwise this races the query.
+    // settle before asserting they collapsed; otherwise this races the query.
     await waitFor(() => expect(byId("memory-empty")).toBeTruthy());
     expect(box()).toBeTruthy();
   });

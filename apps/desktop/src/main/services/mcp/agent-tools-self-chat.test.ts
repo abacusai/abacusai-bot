@@ -3,7 +3,7 @@
  *
  * The "me" row is the agent's only way to know: it is not in any address book,
  * and the connector has to work it out from WhatsApp's own UI. When that
- * lookup missed, the row simply vanished from the answer — and the model
+ * lookup missed, the row simply vanished from the answer, and the model
  * filled the gap by asking the user for the number of the phone they had just
  * paired, which is the one thing it should never have to ask.
  */
@@ -51,7 +51,7 @@ describe("who the user is on a platform", () => {
     });
 
     expect(text).toContain("Alex (You)");
-    expect(text).toMatch(/the user — "me"/);
+    expect(text).toMatch(/the user, "me"/);
   });
 
   it("says it does not know, rather than leaving the row out in silence", async () => {

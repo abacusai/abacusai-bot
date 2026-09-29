@@ -3,7 +3,7 @@
  *
  * The common way these flows fail is not an error: the browser opens and
  * nothing ever comes back to the loopback listener. Every flow waits twenty
- * minutes now — sign-up is the app's mandatory front door, and account
+ * minutes now. Sign-up is the app's mandatory front door, and account
  * creation, consent screens and 2FA have each outrun every shorter window
  * someone thought was generous. The
  * half worth testing is what happens next: the attempt has to leave nothing

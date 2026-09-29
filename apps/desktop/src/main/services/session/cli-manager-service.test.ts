@@ -3,7 +3,7 @@
  *
  * dispose() is what app quit awaits, and its contract is "resolved means the
  * children are gone". A dispose that resolves while an agent still runs lets
- * that agent — and everything it spawned — outlive the app.
+ * that agent, and everything it spawned, outlive the app.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -79,6 +79,28 @@ describe("disposing the manager", () => {
 
   it("resolves immediately when nothing is running", async () => {
     await service().dispose();
+  });
+});
+
+describe("stopping a session before removing its workspace", () => {
+  it("waits for the process to close", async () => {
+    const manager = service();
+    await manager.startSession({
+      workspaceId: "workspace-1",
+      sessionId: "session-1",
+    });
+
+    if (process.platform === "win32") {
+      expect(() =>
+        fs.rmSync(workspace!, { recursive: true, force: true })
+      ).toThrow();
+    }
+    await manager.stopSessionAndWait("workspace-1", "session-1");
+    expect(
+      manager.getRuntimeDiagnostics().find((entry) => entry.live)
+    ).toBeUndefined();
+    fs.rmSync(workspace!, { recursive: true, force: true });
+    expect(fs.existsSync(workspace!)).toBe(false);
   });
 });
 
@@ -208,6 +230,8 @@ describe("diagnostics for a session that has gone", () => {
       expect(dead).toBeDefined();
       expect(dead?.stderr).toContain("ERR_MODULE_NOT_FOUND");
       expect(dead?.state.exitCode).toBe(3);
+      expect(dead?.state.status).toBe("error");
+      expect(dead?.state.error).toContain("exited before it was ready");
       expect(dead?.command).toContain(process.execPath);
     });
 

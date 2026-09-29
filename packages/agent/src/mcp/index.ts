@@ -56,6 +56,10 @@ export interface ConnectedMcp {
   reconnect?: (name: string) => Promise<McpClient | null>;
   /** Fired after reconnect() changes a status, so the roster is re-emitted. */
   onStatusChange?: () => void;
+  /** Fired when a server that failed at startup comes up, with its tools now in `tools`. */
+  onToolsAdded?: () => void;
+  /** Stop retrying failed servers; called before this set is replaced or the session ends. */
+  retire?: () => void;
   tools: Array<{
     name: string;
     description: string;
@@ -242,6 +246,42 @@ const registeredToolMeta = new Map<string, ConnectorToolMeta>();
 export const connectorToolMeta = (toolName: string): ConnectorToolMeta | null =>
   registeredToolMeta.get(toolName) ?? connectorToolMetaByName(toolName);
 
+/**
+ * Waits before retrying a server that failed for a network reason. The startup
+ * ones are short because the session waits on them; past them the server keeps
+ * trying in the background, every five minutes in the end, and its tools join the
+ * session when it comes up. A laptop waking or changing Wi-Fi drops the first
+ * request, and one miss used to cost the chat that server's tools for good.
+ */
+const STARTUP_RETRY_DELAYS_MS = [1_000, 3_000];
+const RECOVERY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000];
+const RECOVERY_REPEAT_MS = 300_000;
+
+/**
+ * The connector gateway can refuse a key minted moments ago that it accepts a
+ * few seconds later: seen on the first chat after signing in. Its refusal
+ * gets a few background tries over the first minute, then stands, so a key
+ * that is really refused is not retried for the life of the session.
+ */
+const KEY_REFUSED_RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
+
+/**
+ * A failure worth retrying: no answer from the network (undici's "fetch
+ * failed") or a gateway saying it is briefly unavailable. A timeout, a sign-in
+ * or a refusal would fail the same way again.
+ */
+const isTransientConnectError = (error: unknown): boolean =>
+  error instanceof McpHttpError
+    ? [429, 502, 503, 504].includes(error.status)
+    : error instanceof TypeError && error.message === "fetch failed";
+
+const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
+  new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    // A background retry must never be what keeps the process alive.
+    if (options.unref === true) timer.unref?.();
+  });
+
 export async function connectMcpServers(
   configPath: string | undefined
 ): Promise<ConnectedMcp> {
@@ -285,7 +325,12 @@ export async function connectMcpServers(
     name: string,
     config: McpServerConfig,
     options: { forceRefresh?: boolean } = {}
-  ): Promise<{ client: McpClient | null; status: McpServerStatus }> => {
+  ): Promise<{
+    client: McpClient | null;
+    status: McpServerStatus;
+    transient?: boolean;
+    keyRefused?: boolean;
+  }> => {
     const builtin = config.isBuiltin === true ? { isBuiltin: true } : {};
 
     if (config.disabled === true) {
@@ -306,11 +351,13 @@ export async function connectMcpServers(
     // Held outside the try so a failed connect can close it; nulled once the
     // client owns it so a later throw cannot close a live connection.
     let transport: McpTransport | null = null;
+    let sentKey = false;
 
     try {
       // A stored OAuth token rides along on http servers unless the config
       // carries its own Authorization header or `oauth: false`.
       const expansion = expandHeaderEnvPlaceholders(config.headers, config.url);
+      sentKey = expansion.credentialExpanded;
       let headers = expansion.headers;
       if (
         config.url != null &&
@@ -362,6 +409,12 @@ export async function connectMcpServers(
 
       return {
         client: null,
+        transient: isTransientConnectError(error),
+        keyRefused:
+          name === GATEWAY_SERVER_NAME &&
+          sentKey &&
+          error instanceof McpHttpError &&
+          (error.status === 401 || error.status === 403),
         status: {
           id: name,
           name,
@@ -391,7 +444,7 @@ export async function connectMcpServers(
 
     for (const tool of client.tools) {
       // The registry is the allowlist for the gateway: a tool the account
-      // has attached but no entry names (GitHub's, say — a token on its own
+      // has attached but no entry names (GitHub's, say, where a token on its own
       // card does that job) is not offered.
       const meta =
         name === GATEWAY_SERVER_NAME
@@ -419,11 +472,30 @@ export async function connectMcpServers(
     }
   };
 
+  const connectWithRetries = async (
+    name: string,
+    config: McpServerConfig
+  ): ReturnType<typeof connectOne> => {
+    let outcome = await connectOne(name, config);
+    for (const delay of STARTUP_RETRY_DELAYS_MS) {
+      if (outcome.transient !== true) break;
+      await sleep(delay);
+      outcome = await connectOne(name, config);
+    }
+
+    return outcome;
+  };
+
+  const stillDown: Array<[string, McpServerConfig, "network" | "key"]> = [];
   await Promise.all(
     Object.entries(servers).map(async ([name, config]) => {
-      const outcome = await connectOne(name, config);
+      const outcome = await connectWithRetries(name, config);
       result.statuses.push(outcome.status);
       if (outcome.client != null) register(name, config, outcome.client, true);
+      else if (outcome.transient === true)
+        stillDown.push([name, config, "network"]);
+      else if (outcome.keyRefused === true)
+        stillDown.push([name, config, "key"]);
     })
   );
 
@@ -466,6 +538,54 @@ export async function connectMcpServers(
 
     return attempt;
   };
+
+  let retired = false;
+  result.retire = (): void => {
+    retired = true;
+  };
+
+  // A server the network kept down keeps trying; one whose new key was
+  // refused tries a few times over the first minute. Its tools are advertised
+  // when it comes up, since the session never had them.
+  const recover = async (
+    name: string,
+    config: McpServerConfig,
+    why: "network" | "key"
+  ): Promise<void> => {
+    for (let attempt = 0; ; attempt++) {
+      const delay =
+        why === "key"
+          ? KEY_REFUSED_RETRY_DELAYS_MS[attempt]
+          : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
+      if (delay == null) return;
+      await sleep(delay, { unref: true });
+      if (retired) return;
+
+      const outcome = await connectOne(name, config);
+
+      if (retired) {
+        outcome.client?.close();
+        return;
+      }
+      if (
+        outcome.client == null &&
+        (outcome.transient === true ||
+          (why === "key" && outcome.keyRefused === true))
+      )
+        continue;
+
+      const index = result.statuses.findIndex((status) => status.id === name);
+      if (index >= 0) result.statuses[index] = outcome.status;
+      if (outcome.client != null) {
+        register(name, config, outcome.client, true);
+        result.onToolsAdded?.();
+      }
+      result.onStatusChange?.();
+
+      return;
+    }
+  };
+  for (const [name, config, why] of stillDown) void recover(name, config, why);
 
   return result;
 }

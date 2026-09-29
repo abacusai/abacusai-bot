@@ -42,7 +42,7 @@ interface McpTokenRecord {
 
 interface McpAuthFile {
   servers?: Record<string, McpTokenRecord>;
-  /** DCR results keyed by issuer — plus the redirect URI they were registered with. */
+  /** DCR results keyed by issuer, plus the redirect URI they were registered with. */
   clients?: Record<
     string,
     { clientId: string; clientSecret?: string; redirectUri?: string }
@@ -170,7 +170,7 @@ const discoverAuthorizationServer = async (
       // Not a 401: the server is open, or failing in a way OAuth will not fix.
       throw new Error(
         probe.ok || probe.status < 400
-          ? "This server did not ask for a sign-in — it may already be accessible."
+          ? "This server did not ask for a sign-in. It may already be accessible."
           : `The server answered HTTP ${probe.status}, not a sign-in challenge.`
       );
     }
@@ -279,7 +279,7 @@ const obtainClient = async (
 
   if (metadata.registration_endpoint == null) {
     throw new Error(
-      "This provider does not support automatic client registration — it needs credentials from its own " +
+      "This provider does not support automatic client registration; it needs credentials from its own " +
         `developer console. Create an app there with ${redirectUri} as its redirect URL, then open this ` +
         "server\u2019s Edit dialog and fill in the OAuth client id (and secret, if issued) before " +
         "signing in again."
@@ -290,7 +290,7 @@ const obtainClient = async (
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
-      client_name: "AbacusAIBot",
+      client_name: "AbacusAI Bot",
       redirect_uris: [redirectUri],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
@@ -358,15 +358,15 @@ export interface McpOAuthOptions {
   openUrl?: (url: string) => Promise<void>;
 }
 
-const RESPONSE_PAGE = `<!doctype html><meta charset="utf-8"><title>AbacusAIBot</title>
+const RESPONSE_PAGE = `<!doctype html><meta charset="utf-8"><title>AbacusAI Bot</title>
 <body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#111;color:#eee">
-<div style="text-align:center"><h2>Signed in</h2><p>You can close this tab and return to AbacusAIBot.</p></div>`;
+<div style="text-align:center"><h2>Signed in</h2><p>You can close this tab and return to AbacusAI Bot.</p></div>`;
 
 const errorPage = (
   detail: string
-): string => `<!doctype html><meta charset="utf-8"><title>AbacusAIBot</title>
+): string => `<!doctype html><meta charset="utf-8"><title>AbacusAI Bot</title>
 <body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#111;color:#eee">
-<div style="text-align:center"><h2>Sign-in failed</h2><p>${detail.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch)}</p><p>You can close this tab and try again from AbacusAIBot.</p></div>`;
+<div style="text-align:center"><h2>Sign-in failed</h2><p>${detail.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch)}</p><p>You can close this tab and try again from AbacusAI Bot.</p></div>`;
 
 /**
  * Whether a discovered authorization endpoint may be opened. It is
@@ -504,8 +504,8 @@ export const signInToMcpServer = async (
         oauthLog(
           serverUrl,
           result.ok
-            ? "signed in — tokens saved"
-            : `${result.cancelled === true ? "cancelled" : "failed"} — ${result.error}`
+            ? "signed in: tokens saved"
+            : `${result.cancelled === true ? "cancelled" : "failed"}: ${result.error}`
         );
         if (timer != null) clearTimeout(timer);
         // Closing a server that never listened is an error, not a no-op.

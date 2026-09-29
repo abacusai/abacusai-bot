@@ -1,7 +1,7 @@
 /**
  * How a connector gets connected and disconnected, by kind, in one place.
- * Every surface with a Connect button — the Connectors page, onboarding, the
- * card the agent raises in a chat — calls this rather than knowing what a
+ * Every surface with a Connect button (the Connectors page, onboarding, the
+ * card the agent raises in a chat) calls this rather than knowing what a
  * platform hop, a credential store or an MCP install is. The renderer's only
  * job is to collect fields when the kind needs them (registry `connectUi`).
  */
@@ -22,15 +22,18 @@ export interface FlowSources {
     disconnect: (service: string) => Promise<ConnectorOutcome>;
     /** Rewrites the gateway MCP entry after a connect: the file is user-editable. */
     ensureGateway: () => void;
-    /** A service just attached; whatever follows from that (fire and forget). */
-    onConnected?: (connectorId: string) => void;
   };
   /**
    * Store (or clear, with "") an agent credential by provider id. Announcing
-   * it — the gateway, running agents, the renderer — is the caller's.
+   * it to the gateway, running agents and the renderer is the caller's job.
    */
   credential: { save: (provider: string, value: string) => void };
   mcp: {
+    /**
+     * Add the server, or restore its entry if the name is already taken. A
+     * second Add on a card whose sign-in never finished is a retry, not a
+     * clash: the entry stays and the sign-in runs again.
+     */
     add: (
       name: string,
       entry: McpServerEntry
@@ -101,10 +104,7 @@ export class ConnectorFlowService {
       return failure(`${connector.name} is paired from its own dialog.`);
     if (connector.kind === "platform") {
       const outcome = await this.sources.platform.connect(connector.service);
-      if (outcome.ok) {
-        this.sources.platform.ensureGateway();
-        this.sources.platform.onConnected?.(connectorId);
-      }
+      if (outcome.ok) this.sources.platform.ensureGateway();
       return outcome;
     }
     if (connector.kind === "mcp") return this.installMcp(connector, {});

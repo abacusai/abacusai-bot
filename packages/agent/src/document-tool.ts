@@ -1,5 +1,5 @@
 /**
- * `document` — the parent-facing tool for "write me a document". The run is a
+ * `document`: the parent-facing tool for "write me a document". The run is a
  * sub-agent so the parent's transcript carries a path, not the prose; bracketed
  * like `delegate_task` for its own card. The work is in document-task.ts.
  */
@@ -55,8 +55,8 @@ export function buildDocumentTool(
       "stylesheet and cover are fixed, which is what makes the output look the same every",
       "time. Ask for content, not formatting.",
       "",
-      "For an existing PDF — reading it, merging, splitting, watermarking, filling a form, or",
-      "reprinting one of these documents after editing its HTML source — use `pdf`.",
+      "For an existing PDF (reading it, merging, splitting, watermarking, filling a form, or",
+      "reprinting one of these documents after editing its HTML source), use `pdf`.",
       "",
       "Hand the result over with present_deliverable.",
     ].join("\n"),

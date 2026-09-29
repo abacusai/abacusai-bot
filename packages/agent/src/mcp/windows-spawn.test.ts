@@ -47,7 +47,7 @@ describe("resolving a command the way cmd.exe would", () => {
 
   it("prefers the .cmd shim over its extensionless POSIX twin", () => {
     // Both files exist in a real Windows npm bin directory. Windows cannot
-    // execute the sh script (error 193), and cmd.exe would never pick it —
+    // execute the sh script (error 193), and cmd.exe would never pick it:
     // only PATHEXT extensions count.
     expect(resolveWin32Command("npx", bin, PATHEXT)).toBe(
       path.join(bin, "npx.cmd")
@@ -105,7 +105,7 @@ describe("the cmd.exe command line", () => {
 
   it("doubles the backslashes that sit against an EMBEDDED quote too", () => {
     // Microsoft's rule halves a backslash run whenever it meets a quote, not
-    // only at the end of a token — so a JSON argument like {"root":"C:\"}
+    // only at the end of a token, so a JSON argument like {"root":"C:\"}
     // lost a backslash and shifted its own token boundaries.
     expect(cmdCommandLine("C:\\t.cmd", ['{"root":"C:\\"}'])).toBe(
       '"C:\\t.cmd" "{""root"":""C:\\\\""}"'
@@ -185,7 +185,7 @@ describe("resolveSpawn", () => {
     ).toThrow(/%ODD%/);
   });
 
-  it("passes an undefined %name% through — cmd leaves those literal", () => {
+  it("passes an undefined %name% through: cmd leaves those literal", () => {
     const spec = resolveSpawn("npx", ["100%%pure%"], "win32", {
       PATH: bin,
       PATHEXT,

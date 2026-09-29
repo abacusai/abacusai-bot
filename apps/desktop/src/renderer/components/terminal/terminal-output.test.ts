@@ -2,7 +2,7 @@
  * What the transcript makes of a finished bash call.
  *
  * Two things happen to command output on its way to the screen, and both had
- * teeth. The result parser decided whether the output was shown at all — and
+ * teeth. The result parser decided whether the output was shown at all, and
  * threw it away for any command that printed JSON. The ANSI translation writes
  * its result into the page as raw HTML, so it is also the place where a
  * command's output could stop being data and start being markup.
@@ -26,7 +26,7 @@ describe("reading a bash result", () => {
   });
 
   it("shows the output of a command that printed a JSON array", () => {
-    // `gh api /repos/.../issues`, `jq` over a list — an array is an object to
+    // `gh api /repos/.../issues`, `jq` over a list: an array is an object to
     // `typeof`, which is how it fell into the same hole.
     const raw = '[{"number":1},{"number":2}]';
 
@@ -85,7 +85,7 @@ describe("reading a bash result", () => {
 
   it("does not mistake JSON output for an envelope just because it has an exit code field", () => {
     // A command printing its own report with a string `exitCode` is data, not
-    // an envelope — the fields have to have the right types too.
+    // an envelope; the fields have to have the right types too.
     const raw = '{"exitCode":"zero","output":42}';
 
     expect(parseBashResult(raw).output).toBe(raw);
@@ -173,7 +173,7 @@ describe("reporting how long a command took", () => {
 /**
  * Which end of a long command's output the card keeps.
  *
- * Everything worth reading is at the bottom — the failing assertion, the stack
+ * Everything worth reading is at the bottom: the failing assertion, the stack
  * trace, and the `Command exited with code N` pi appends last. The card used to
  * keep the FIRST lines, so expanding a noisy build showed its opening banner
  * and hid the reason it failed.

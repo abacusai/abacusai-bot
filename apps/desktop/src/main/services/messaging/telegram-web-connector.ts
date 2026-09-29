@@ -77,7 +77,7 @@ export class TelegramWebConnector implements MessagingConnector {
   private window: BrowserWindow | null = null;
   private running = false;
   private loggedIn = false;
-  /** Consecutive signed-out polls after a login — see checkLogin. */
+  /** Consecutive signed-out polls after a login. See checkLogin. */
   private signedOutTicks = 0;
   private loginTimer: NodeJS.Timeout | null = null;
   private inboundTimer: NodeJS.Timeout | null = null;
@@ -135,7 +135,7 @@ export class TelegramWebConnector implements MessagingConnector {
     // Muted: a hidden page still plays the web app's new-message sound.
     this.window.webContents.setAudioMuted(true);
     // Gone entirely, not just auto-hidden: Alt would bring it back. Windows
-    // and Linux only — macOS has no per-window menu, and no removeMenu.
+    // and Linux only. macOS has no per-window menu, and no removeMenu.
     if (process.platform !== "darwin") this.window.removeMenu();
     // No close button of its own: Esc and the injected pill are the way out.
     dismissOnEscape(this.window);
@@ -175,7 +175,7 @@ export class TelegramWebConnector implements MessagingConnector {
   async sendText(chatId: string, text: string): Promise<void> {
     if (!this.loggedIn)
       throw new Error(
-        "Telegram is not logged in yet — finish signing in first."
+        "Telegram is not logged in yet. Finish signing in first."
       );
 
     const target = chatId.trim();
@@ -200,7 +200,7 @@ export class TelegramWebConnector implements MessagingConnector {
       ) {
         // A long-open page goes stale, web-k ignoring input, until reloaded.
         this.callbacks.onLog(
-          `telegram-web: send failed on a possibly stale page (${result?.error ?? "no result"}) — reloading and retrying`
+          `telegram-web: send failed on a possibly stale page (${result?.error ?? "no result"}), reloading and retrying`
         );
         const win = this.recreateWindow();
         if (win != null && !win.isDestroyed()) {
@@ -261,7 +261,7 @@ export class TelegramWebConnector implements MessagingConnector {
     this.loginTimer = setInterval(() => void this.checkLogin(), LOGIN_POLL_MS);
   }
 
-  /** Consecutive login polls the page failed to answer — see checkLogin. */
+  /** Consecutive login polls the page failed to answer. See checkLogin. */
   private notReadyTicks = 0;
 
   /** See MessagingConnector.probeLive: one login check now, then the answer. */
@@ -285,7 +285,7 @@ export class TelegramWebConnector implements MessagingConnector {
       if (this.notReadyTicks >= 8) {
         this.notReadyTicks = 0;
         this.callbacks.onLog(
-          "telegram-web: the page never became ready — reloading it"
+          "telegram-web: the page never became ready, reloading it"
         );
         const win = this.ensureWindow();
         if (win != null && !win.isDestroyed())
@@ -300,7 +300,7 @@ export class TelegramWebConnector implements MessagingConnector {
       if (this.notReadyTicks >= 8) {
         this.notReadyTicks = 0;
         this.callbacks.onLog(
-          "telegram-web: page is neither signed in nor showing a login — reloading it"
+          "telegram-web: page is neither signed in nor showing a login, reloading it"
         );
         const win = this.ensureWindow();
         if (win != null && !win.isDestroyed())
@@ -336,7 +336,7 @@ export class TelegramWebConnector implements MessagingConnector {
       this.callbacks.onState(
         state.loginError != null ? "rate_limited" : "needs_login",
         state.loginError != null
-          ? `Telegram is refusing sign-ins right now — its login page says: "${state.loginError}". ` +
+          ? `Telegram is refusing sign-ins right now. Its login page says: "${state.loginError}". ` +
               "This is Telegram rate-limiting login attempts; wait a while " +
               "before trying the QR again."
           : "Telegram is not signed in. Scan the QR from your phone to connect."
@@ -354,7 +354,7 @@ export class TelegramWebConnector implements MessagingConnector {
       this.loggedIn = false;
       this.callbacks.onState(
         "needs_login",
-        "Telegram is signed out — the session was ended from another device or expired. Reconnect to sign in again."
+        "Telegram is signed out. The session was ended from another device or expired. Reconnect to sign in again."
       );
       this.pollLogin();
     }
@@ -368,7 +368,7 @@ export class TelegramWebConnector implements MessagingConnector {
     presentAsDialog(win);
   }
 
-  /** True once the user has signed in — surfaced to the connect dialog. */
+  /** True once the user has signed in; surfaced to the connect dialog. */
   get isLoggedIn(): boolean {
     return this.loggedIn;
   }
@@ -450,7 +450,7 @@ export class TelegramWebConnector implements MessagingConnector {
       title: "Log in to Telegram",
       // A child of the app window so it shares the app's Space (see start()).
       ...(parentWindow() != null ? { parent: parentWindow() } : {}),
-      // Never modal, frameless, like the window built in start() — see there.
+      // Never modal, frameless, like the window built in start(). See there.
       autoHideMenuBar: true,
       frame: false,
       // See start(): painting and unthrottled so the driver works while hidden.
@@ -466,9 +466,9 @@ export class TelegramWebConnector implements MessagingConnector {
     // Muted: a hidden page still plays the web app's new-message sound.
     win.webContents.setAudioMuted(true);
     // Gone entirely, not just auto-hidden: Alt would bring it back. Windows
-    // and Linux only — macOS has no per-window menu, and no removeMenu.
+    // and Linux only. macOS has no per-window menu, and no removeMenu.
     if (process.platform !== "darwin") win.removeMenu();
-    // Esc backs out of the login window — see start().
+    // Esc backs out of the login window. See start().
     dismissOnEscape(win);
     win.on("closed", () => {
       this.window = null;
@@ -513,14 +513,14 @@ export class TelegramWebConnector implements MessagingConnector {
 /** Logged in ⇢ the auth pages are gone. The sturdiest signal Telegram gives. */
 const LOGIN_STATE_SCRIPT = `
   const loginVisible = document.body.classList.contains('has-auth-pages');
-  // Signed in means the chat UI is actually there — never merely "not the
+  // Signed in means the chat UI is actually there, never merely "not the
   // login page". A blank or half-booted page has no auth class either, and
   // it once wore a Connected badge while nothing could send or read.
   const chatUi = document.querySelector(
     '#chatlist-container, .chatlist-chat, #column-left .chatlist'
   ) != null;
-  // When the login page is refusing — Telegram rate-limits QR attempts with
-  // "too many attempts, please try later" — that sentence is the one thing
+  // When the login page is refusing (Telegram rate-limits QR attempts with
+  // "too many attempts, please try later"), that sentence is the one thing
   // the user needs to hear. A tester was told to keep scanning a QR that
   // Telegram itself had locked.
   let loginError = null;
@@ -639,7 +639,7 @@ const TALK_SCRIPT = `
   const text = String(args.text || '');
   if (text.length === 0) return { ok: false, error: 'Nothing to send.' };
 
-  // The chat must already have a row in the list — telegram-web-k's search
+  // The chat must already have a row in the list; telegram-web-k's search
   // ignores synthetic input, so there is no typing a name here.
   let row = null;
   if (requirePeer.length > 0) {
@@ -675,7 +675,7 @@ const TALK_SCRIPT = `
   }
 
   // Real messages carry data-mid; date and service bubbles do not. Everything
-  // newer than this watermark happened after our send — history backfill
+  // newer than this watermark happened after our send; history backfill
   // (smaller mids) can never fake a reply.
   const maxMid = Math.max(0, ...[...document.querySelectorAll('.bubbles .bubble[data-mid]')]
     .map((b) => Number(b.getAttribute('data-mid')) || 0));

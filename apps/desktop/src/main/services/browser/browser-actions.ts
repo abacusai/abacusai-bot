@@ -205,7 +205,7 @@ export function navigationRefusal(raw: string): string | null {
 
   if (scheme === "javascript" || scheme === "data") {
     return (
-      `Refusing to navigate to a ${scheme}: URL — it would run as script in the page that is already loaded. ` +
+      `Refusing to navigate to a ${scheme}: URL. It would run as script in the page that is already loaded. ` +
       "Use browser_execute if you meant to run code in the current page."
     );
   }
@@ -284,7 +284,7 @@ const RECIPES: Array<{ hosts: RegExp; tip: string }> = [
   {
     hosts: /(^|\.)google\.(com|co\.[a-z]{2}|[a-z]{2,3})$/,
     tip:
-      "Google: search pages take the query in the URL — /search?q=..., /travel/flights?q=Flights from BLR to DEL on 2026-09-20 one way, " +
+      "Google: search pages take the query in the URL. /search?q=..., /travel/flights?q=Flights from BLR to DEL on 2026-09-20 one way, " +
       '/maps/search/coffee+near+Indiranagar. On Flights, airport boxes are autocompletes: use interact action:"pick". ' +
       'Prices sit in the results list; extract with selector "li" or read the text.',
   },
@@ -308,12 +308,12 @@ const RECIPES: Array<{ hosts: RegExp; tip: string }> = [
     hosts:
       /(^|\.)(booking|agoda|expedia|makemytrip|goibibo|skyscanner|kayak)\.(com|co\.[a-z]{2}|[a-z]{2,3})$/,
     tip:
-      'Travel site: destination boxes are autocompletes (interact action:"pick"), date fields open a calendar — click the day ' +
+      'Travel site: destination boxes are autocompletes (interact action:"pick"), date fields open a calendar. Click the day ' +
       "cell by ref and check which month is showing. Results load after the page says it has loaded: wait for text or a URL pattern.",
   },
   {
     hosts: /(^|\.)(linkedin|x|twitter|facebook|instagram)\.com$/,
-    tip: "Social site: most content is behind a login wall and the feed loads as you scroll. If a sign-in page appears, stop and report it — do not enter credentials.",
+    tip: "Social site: most content is behind a login wall and the feed loads as you scroll. If a sign-in page appears, stop and report it. Do not enter credentials.",
   },
 ];
 

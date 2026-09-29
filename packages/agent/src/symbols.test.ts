@@ -141,7 +141,7 @@ export const notAFunction = compute(1, 2)
 
     expect(names(symbols)).toContain("Card");
     expect(names(symbols)).toContain("Input");
-    // Still listed — it is an exported module constant — but as a const, and
+    // Still listed (it is an exported module constant) but as a const, and
     // that distinction is the point of the unwrapping.
     expect(find(symbols, "notAFunction")?.kind).toBe("const");
   });
@@ -331,7 +331,7 @@ export const routes = {
 
   it("keeps two declarations that share a line, a name and a kind", () => {
     // Overloads. A dedupe filter keyed on (line, container, name, kind) treated
-    // these as one declaration and dropped the second — which is why there is
+    // these as one declaration and dropped the second, which is why there is
     // no such filter: it never removed a real duplicate in 5,610 files, and the
     // only things it ever removed were real.
     const symbols = index(
@@ -347,7 +347,7 @@ export const routes = {
   });
 
   it("names an anonymous default export rather than leaving it blank", () => {
-    // Anonymous, so there is no declaration node to name — it arrives as the
+    // Anonymous, so there is no declaration node to name: it arrives as the
     // value of the export, and `default` is what an importer has to call it.
     expect(index("a.ts", "export default function () {}")[0]).toMatchObject({
       kind: "default",

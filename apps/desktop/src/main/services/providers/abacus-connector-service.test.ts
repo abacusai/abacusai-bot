@@ -20,7 +20,7 @@ const {
 
 /**
  * One platform reply, in the envelope the API actually uses. `null` stands for
- * a call that fails outright — a 500, or the network being down.
+ * a call that fails outright: a 500, or the network being down.
  */
 type Reply = { success: true; result: unknown } | null;
 
@@ -106,7 +106,7 @@ describe("buildConnectorsSnapshot", () => {
   /**
    * The platform names an attachment after the account behind it. Dropping
    * that name left the agent unable to say who the user is on a service they
-   * had just connected — it asked them for their own Gmail address.
+   * had just connected. It asked them for their own Gmail address.
    */
   it("keeps who each connector is connected as", () => {
     const snapshot = buildConnectorsSnapshot(
@@ -175,7 +175,7 @@ describe("disconnecting a connector", () => {
 
   it("reports success when the delete worked but the confirming list is unavailable", async () => {
     // A successful DELETE carries a null result, so a service that answers the
-    // delete and then goes unreachable used to be reported as a failure — for
+    // delete and then goes unreachable used to be reported as a failure, for
     // a connector that had in fact just been removed.
     answer("_listValidAgentConnectors", catalog, null);
     answer("_listActiveUserLevelConnectors", connected("slack"), null);
@@ -221,7 +221,7 @@ describe("disconnecting a connector", () => {
 
   it("does not mistake an inherited property for a connected service", async () => {
     // "constructor" is a legal-looking service name, and on a plain object it
-    // read back as a truthy connector id — enough to send a junk delete to the
+    // read back as a truthy connector id, enough to send a junk delete to the
     // platform for a connector nobody has.
     answer("_listValidAgentConnectors", catalog);
     answer("_listActiveUserLevelConnectors", connected("slack"));
@@ -261,7 +261,7 @@ describe("listing connectors without a key", () => {
 
 /**
  * The sign-in happens in the user's own browser, and on macOS a full-screen
- * window is in a Space of its own — so opening the browser moves them out of
+ * window is in a Space of its own, so opening the browser moves them out of
  * the app. Nothing moved them back, and what they were left looking at was a
  * bare Space and an app they had to go and find.
  */

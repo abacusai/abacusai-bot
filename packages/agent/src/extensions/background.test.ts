@@ -4,7 +4,7 @@ import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
  * The point of backgrounding is that the process is still there afterwards.
  *
  * So these spawn real ones. A mocked child_process would happily report a
- * server as "running" in exactly the case this exists to catch — the command
+ * server as "running" in exactly the case this exists to catch: the command
  * that prints "Serving…" and then dies.
  *
  * There is one way in: `bash` with `background: true`. `fetch_background_output`
@@ -76,7 +76,7 @@ const run = async (
 const start = (command: string): Promise<string> =>
   run(backgroundBash(), { command, background: true });
 
-// The processes are tracked per process, not per extension instance — one agent
+// The processes are tracked per process, not per extension instance: one agent
 // has one set of children however many tools reach them, and that is what makes
 // cleanup and `kill_process` cover everything. So a test has to clear them, or
 // it inherits the previous one's servers and its ids start at bg-7.
@@ -90,7 +90,7 @@ afterEach(() => {
 
 describe("a command that stays up", () => {
   it("is still running when the call returns", async () => {
-    // Prints, then sleeps — the shape of every dev server.
+    // Prints, then sleeps: the shape of every dev server.
     const out = await start("echo listening on 8080; sleep 30");
 
     expect(out).toContain("bg-1");
@@ -139,7 +139,7 @@ describe("a command that stays up", () => {
  * reaped is the machine's business, not theirs. A fixed wait made it theirs:
  * on a loaded CI runner 400ms was not always enough, and the test failed on a
  * process that was a moment from exiting rather than on one wrongly reported
- * as running — the thing it exists to catch. Polling asserts the same claim
+ * as running, the thing it exists to catch. Polling asserts the same claim
  * without pinning it to a machine's speed.
  */
 async function fetchOnceGone(id = "bg-1"): Promise<string> {

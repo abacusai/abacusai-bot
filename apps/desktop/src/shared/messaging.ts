@@ -35,9 +35,9 @@ export const SHARED_BOT_PLATFORM_OF: Partial<
 export const describePlatformForAgent = (id: MessagingPlatformId): string => {
   switch (id) {
     case "abacus_discord":
-      return "abacus_discord (the shared Abacus AI Discord bot: DMs with the user only — not the user's Discord account, servers or channels)";
+      return "abacus_discord (the shared Abacus AI Discord bot: DMs with the user only, not the user's Discord account, servers or channels)";
     case "abacus_telegram":
-      return "abacus_telegram (the shared Abacus AI Telegram bot: DMs with the user only — not the user's Telegram account)";
+      return "abacus_telegram (the shared Abacus AI Telegram bot: DMs with the user only, not the user's Telegram account)";
     default:
       return id;
   }
@@ -259,7 +259,7 @@ export const messagingPlatformSpec = (
 ): (typeof MESSAGING_PLATFORM_CATALOG)[number] | undefined =>
   MESSAGING_PLATFORM_CATALOG.find((entry) => entry.id === id);
 
-/** `••••••cdef` — enough to recognise a key without revealing it. */
+/** `••••••cdef`: enough to recognise a key without revealing it. */
 export const redactSecret = (value: string): string => {
   const tail = value.slice(-4);
   return `${"•".repeat(6)}${tail}`;

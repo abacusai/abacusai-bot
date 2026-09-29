@@ -209,7 +209,7 @@ export class TerminalSessionService {
     this.registry.disposeAll();
   }
 
-  /** True while any terminal PTY is alive — a restart would kill it. */
+  /** True while any terminal PTY is alive. A restart would kill it. */
   hasLiveSessions(): boolean {
     return this.registry.hasLiveRuntimes();
   }

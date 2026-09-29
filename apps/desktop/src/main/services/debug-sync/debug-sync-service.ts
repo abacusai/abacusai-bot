@@ -17,9 +17,12 @@ import { clientEnvironment } from "../diagnostics/client-environment";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import type { StoredTranscript } from "../session/transcript-service";
 import {
+  emptySyncState,
+  syncStateFromCount,
   syncTranscriptWithRetry,
   shouldSync,
   type SyncDeps,
+  type SyncState,
 } from "./debug-sync.core";
 import { deviceId } from "./device-id";
 
@@ -40,8 +43,8 @@ export class DebugSyncService {
   private readonly clientVersion: string;
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly inFlight = new Set<string>();
-  /** sessionId -> count of segments already synced. */
-  private markers: Record<string, number> = {};
+  /** sessionId -> what the server holds; a bare count is an older marker. */
+  private markers: Record<string, SyncState | number> = {};
   /**
    * Set on the first permanent failure (4xx), after which the service stays
    * quiet for the run; otherwise every new turn would re-enqueue an upload
@@ -83,7 +86,7 @@ export class DebugSyncService {
     }
     for (const sessionId of ids) {
       const transcript = this.readTranscript(sessionId);
-      if (shouldSync(transcript, this.syncedCount(sessionId)))
+      if (shouldSync(transcript, this.syncState(sessionId)))
         this.enqueue(sessionId);
     }
   }
@@ -96,10 +99,26 @@ export class DebugSyncService {
     return toggle && (key ?? "").trim().length > 0;
   }
 
-  /** A non-numeric or absent marker means resync from 0. */
-  private syncedCount(sessionId: string): number {
+  /** An absent or malformed marker means resync from 0. */
+  private syncState(sessionId: string): SyncState {
     const marker = this.markers[sessionId];
-    return typeof marker === "number" ? marker : 0;
+    if (typeof marker === "number")
+      return syncStateFromCount(this.readTranscript(sessionId), marker);
+    if (
+      typeof marker === "object" &&
+      marker != null &&
+      typeof marker.next === "number" &&
+      typeof marker.sequences === "object" &&
+      marker.sequences != null
+    )
+      return marker;
+    return emptySyncState();
+  }
+
+  /** The sequence the server holds a segment under, once it is uploaded. */
+  sequenceOf(sessionId: string, segmentId: string): number | null {
+    const sequence = this.syncState(sessionId).sequences[segmentId];
+    return typeof sequence === "number" ? sequence : null;
   }
 
   private deps(): SyncDeps {
@@ -107,7 +126,7 @@ export class DebugSyncService {
       readKey: () => readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus],
       syncUrl: () => this.syncUrl(),
       readTranscript: this.readTranscript,
-      readSyncedCount: (id) => this.syncedCount(id),
+      readSyncState: (id) => this.syncState(id),
       clientMeta: () => ({
         clientVersion: this.clientVersion,
         deviceId: deviceId(),
@@ -145,7 +164,7 @@ export class DebugSyncService {
       return;
     }
     const current = this.readTranscript(sessionId);
-    if (!shouldSync(current, this.syncedCount(sessionId))) return;
+    if (!shouldSync(current, this.syncState(sessionId))) return;
 
     this.inFlight.add(sessionId);
     try {
@@ -154,13 +173,13 @@ export class DebugSyncService {
         baseBackoffMs: BASE_BACKOFF_MS,
       });
       if (outcome.status === "ok") {
-        this.markers[sessionId] = outcome.syncedThrough;
+        this.markers[sessionId] = outcome.state;
         this.saveMarkers();
       } else if (outcome.status === "error") {
         if (!outcome.retryable) {
           this.disabledForRun = outcome.reason;
           console.warn(
-            `[debug-sync] disabled for this run (${outcome.reason}) — sync is best-effort and this will not succeed by retrying`
+            `[debug-sync] disabled for this run (${outcome.reason}). Sync is best-effort and this will not succeed by retrying`
           );
         } else {
           console.warn(
@@ -173,7 +192,7 @@ export class DebugSyncService {
     }
   }
 
-  private loadMarkers(): Record<string, number> {
+  private loadMarkers(): Record<string, SyncState | number> {
     try {
       return JSON.parse(fs.readFileSync(MARKER_FILE(), "utf-8"));
     } catch {

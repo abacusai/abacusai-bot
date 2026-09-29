@@ -8,6 +8,7 @@ import type { AbacusAuthIntent } from "#shared/contracts";
 
 import { bringToFront } from "../../bring-to-front";
 import { readSettings } from "../config/settings";
+import { reportFunnelStep } from "../debug-sync/funnel-beacon";
 import { browserSignInCookies } from "./abacus-browser-profiles";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 import {
@@ -158,6 +159,7 @@ export const startAbacusAuth = async (
         return;
       }
       accepted = true;
+      reportFunnelStep("browser_returned");
 
       const code = url.searchParams.get("code");
       // Answer the browser before the exchange so the tab says "done" at once.
@@ -191,9 +193,28 @@ export const startAbacusAuth = async (
      * still waiting to hear how the exchange went, so the listener lingers
      * for it; a cancel or timeout has no tab to inform and closes at once.
      */
-    const finish = (result: AbacusAuthResult, reason?: string): void => {
+    const finish = (
+      result: AbacusAuthResult,
+      reason?: string,
+      // For the funnel report only: a failure with no tab to tell.
+      hint?: string
+    ): void => {
       if (settled) return;
       settled = true;
+      let outcomeCode = "ok";
+      // `=== false`, not `!`: the main tsconfig has strictNullChecks off, and
+      // only an equality check narrows the union there.
+      if (result.ok === false) {
+        outcomeCode =
+          reason ??
+          hint ??
+          (result.cancelled
+            ? "cancelled"
+            : result.error === ABACUS_TIMEOUT
+              ? "timeout"
+              : "listener");
+      }
+      reportFunnelStep("signin_result", outcomeCode);
       if (timer != null) clearTimeout(timer);
       abort.abort();
       if (inFlight?.close === close) inFlight = null;
@@ -241,13 +262,17 @@ export const startAbacusAuth = async (
       signInWindow?.close();
       signInWindow = null;
       void shell.openExternal(authUrl.toString()).catch((error: unknown) => {
-        finish({
-          ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Could not open the browser.",
-        });
+        finish(
+          {
+            ok: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Could not open the browser.",
+          },
+          undefined,
+          "open_browser"
+        );
       });
     };
 
@@ -280,6 +305,7 @@ export const startAbacusAuth = async (
         url.searchParams.set("botPort", String(port));
         url.searchParams.set("botPath", callbackPath);
         authUrl = url;
+        reportFunnelStep("signup_clicked");
 
         console.log(
           `[abacus-auth] sign-in surface: ${variant} intent: ${intent}${seeded ? " seeded" : ""}`
@@ -419,7 +445,7 @@ const responsePage = (): string => {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AbacusAIBot connected</title>
+<title>AbacusAI Bot connected</title>
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -439,7 +465,7 @@ const responsePage = (): string => {
   <div class="card">
     <h1 id="title">Abacus.AI is connected</h1>
     <p id="body">You can close this tab and go back to the app.</p>
-    <p id="plan" style="margin-top:.6rem">New account? Your free plan is already active — DeepSeek V4 Flash, Kimi, Qwen, GLM and more coding models are ready to use. <a href="https://apps.abacus.ai/chatllm/" rel="noreferrer">Manage your account</a> or upgrade anytime.</p>
+    <p id="plan" style="margin-top:.6rem">Your free plan is active now! DeepSeek, Muse, Gemini and more coding models are ready to use.</p>
   </div>
   <script>
   (function () {

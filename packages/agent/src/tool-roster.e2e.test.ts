@@ -3,7 +3,7 @@
  * permission decision.
  *
  * Both checks are against the real roster the NDJSON host builds, because a
- * tool nobody thought about is ungated and unswitchable by default — which is
+ * tool nobody thought about is ungated and unswitchable by default, which is
  * how `background` shipped able to run a shell command in plan mode.
  */
 import { spawn } from "node:child_process";
@@ -64,7 +64,7 @@ async function hostTools(): Promise<string[]> {
       stdio: ["pipe", "pipe", "pipe"],
     });
     let seen = "";
-    // The host is asked to stop, and the promise settles on its exit — not
+    // The host is asked to stop, and the promise settles on its exit, not
     // on the ask. Settling early let afterAll remove the temp dirs while the
     // host was still writing its agent state into one and holding the other
     // open: ENOTEMPTY on Linux, EBUSY on Windows.
@@ -128,7 +128,7 @@ afterAll(async () => {
 describe("the tools the agent registers", () => {
   it("are all switchable from the Capabilities pane", async () => {
     // The pane is built from `TOOLSETS`, and so is the exclude list the agent
-    // is spawned with — so a tool missing from it is a tool with no off
+    // is spawned with, so a tool missing from it is a tool with no off
     // switch. `background` was exactly that: switching Terminal off left it
     // registered, so the toggle read "no shell" and meant "no `bash`".
     const declared = fs.readFileSync(TOOLSETS, "utf8");

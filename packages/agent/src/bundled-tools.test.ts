@@ -1,7 +1,7 @@
 /**
  * Two things are being tested here, and they are worth keeping apart.
  *
- * The first half is the PATH arithmetic — pure, fast, and true regardless of
+ * The first half is the PATH arithmetic: pure, fast, and true regardless of
  * what is on the machine.
  *
  * The second half is the claim that actually matters, and it needs the real
@@ -88,8 +88,8 @@ describe("useBundledTools", () => {
  * has run, which is part of `npm run build` rather than of `npm test`.
  *
  * Skipping locally is a convenience for a contributor who has only ever run the
- * tests. On CI it is a bug — a suite that quietly stops checking the thing it
- * was written for is worse than one that is red — so there it fails instead.
+ * tests. On CI it is a bug: a suite that quietly stops checking the thing it
+ * was written for is worse than one that is red, so there it fails instead.
  */
 const shipped = fileURLToPath(new URL("../vendor", import.meta.url));
 const exe = process.platform === "win32" ? ".exe" : "";
@@ -132,7 +132,7 @@ describe.skipIf(!haveBinaries)(
      *     over by a download.
      *
      * In a child process because pi reads its managed directory once, at import
-     * time — HOME has to be set before the module loads.
+     * time: HOME has to be set before the module loads.
      */
     function search(
       tool: "grep" | "find",

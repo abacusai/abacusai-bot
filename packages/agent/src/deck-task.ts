@@ -52,15 +52,15 @@ const SYSTEM_PROMPT = [
   "You write the words of one deck and then stop. You write no markup and choose no layout.",
   "",
   "The order of work:",
-  "  1. If the brief points at the workspace, read it first. Otherwise go straight on —",
+  "  1. If the brief points at the workspace, read it first. Otherwise go straight on:",
   "     a deck brief does not need investigating.",
-  "  2. `deck_templates` — the catalogue. Pick the one whose feel matches the brief: a",
+  "  2. `deck_templates`: the catalogue. Pick the one whose feel matches the brief: a",
   "     pitch is not a lecture, a memorial is not a launch.",
-  "  3. `deck_slots` — that template's slides, each with its role and its text slots.",
-  "  4. `render_deck` — every slide's text in one call, which prints the PDF.",
+  "  3. `deck_slots`: that template's slides, each with its role and its text slots.",
+  "  4. `render_deck`: every slide's text in one call, which prints the PDF.",
   "",
   "Those four tools are sufficient, and bash is not one of the four. Do not go reading how",
-  "they are implemented — a run that spends its calls grepping this repo writes no slides.",
+  "they are implemented. A run that spends its calls grepping this repo writes no slides.",
   "",
   "How the text goes in: for each slide, an array of strings in the same order deck_slots",
   "listed that slide's slots. First string replaces the first slot, second the second. An",
@@ -86,7 +86,7 @@ const SYSTEM_PROMPT = [
   "layout is the template's and is not yours to adjust. Do not try to open the PDF.",
   "",
   "Call deck_slots once, for the template you chose. Reading several templates' slots to",
-  "compare them spends the run without improving the deck — the catalogue entry is what you",
+  "compare them spends the run without improving the deck: the catalogue entry is what you",
   "choose on. If a template offers fewer slides than asked for, use what it offers.",
   "",
   "Do not investigate how these tools work. Their descriptions are complete, and the source",
@@ -257,7 +257,7 @@ const buildTools = (
     label: "render_deck",
     description:
       "Write every slide and print the deck, in one call. For each slide, give its text as " +
-      "an array of strings in the same order deck_slots listed that slide's slots — the " +
+      "an array of strings in the same order deck_slots listed that slide's slots: the " +
       "first string replaces the first slot, and so on. Use an empty string to keep the " +
       "template's own text for a slot.",
     parameters: Type.Object({
@@ -300,7 +300,7 @@ const buildTools = (
 
         if (ids == null) {
           notes.push(
-            `No slide ${index} — the deck has slides 1 to ${draft.known.size}. Skipped.`
+            `No slide ${index}: the deck has slides 1 to ${draft.known.size}. Skipped.`
           );
           continue;
         }
@@ -313,7 +313,7 @@ const buildTools = (
         // would hide a filler that miscounted and shifted every slot by one.
         if (text.length !== ids.length) {
           notes.push(
-            `Slide ${index}: ${text.length} strings for ${ids.length} slots — ${text.length > ids.length ? "extras ignored" : "the rest keep the template text"}.`
+            `Slide ${index}: ${text.length} strings for ${ids.length} slots (${text.length > ids.length ? "extras ignored" : "the rest keep the template text"}).`
           );
         }
 
@@ -360,16 +360,16 @@ const buildTools = (
             `Printed ${result.slides ?? slides.length} slides to ${result.pdfPath}`,
             ...(result.pptxPath != null
               ? [
-                  `Editable PowerPoint: ${result.pptxPath} — same words, plain layout, not the template's design.`,
+                  `Editable PowerPoint: ${result.pptxPath} (same words, plain layout, not the template's design).`,
                 ]
               : [
-                  `No editable PowerPoint this time: ${result.pptxError ?? "the export failed"}. The PDF above is unaffected — say so if the user asked for one.`,
+                  `No editable PowerPoint this time: ${result.pptxError ?? "the export failed"}. The PDF above is unaffected; say so if the user asked for one.`,
                 ]),
             ...(result.htmlPath != null
               ? [`HTML source: ${result.htmlPath}`]
               : []),
             ...notes,
-            "You are done — say what the deck covers.",
+            "You are done. Say what the deck covers.",
           ].join("\n"),
           { pdfPath: result.pdfPath }
         );

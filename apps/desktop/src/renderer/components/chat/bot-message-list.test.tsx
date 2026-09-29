@@ -7,7 +7,7 @@
  * bubble, the feature would look like it worked while losing the thing it was
  * for.
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { JSX } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,6 +42,72 @@ const bubbles = (): string[] =>
   );
 
 describe("a bot's thread", () => {
+  it("hides an emoji-only duplicate only after the reaction succeeds", () => {
+    const items: ChatRenderItem[] = [
+      { kind: "user", id: "u1", text: "A hard day" },
+      {
+        kind: "agent",
+        id: "a1",
+        items: [
+          text("emoji", "🤗"),
+          {
+            kind: "tool_group",
+            id: "g1",
+            summary: "",
+            state: "running",
+            tools: [
+              {
+                id: "r1",
+                name: "react_to_message",
+                streamingArgs: false,
+                input: { emoji: "🤗" },
+                state: "running",
+              },
+            ],
+          },
+          text("answer", "You have got this. 🤗"),
+        ],
+      },
+    ];
+    const { rerender } = render(<BotMessageList chatItems={items} />);
+    expect(bubbles()).toContain("🤗");
+    rerender(<BotMessageList chatItems={items} isWorking />);
+    expect(bubbles()).toEqual(["You have got this. 🤗"]);
+    // An ordinary emoji-only reply must survive if no reaction was attached.
+    rerender(<BotMessageList chatItems={items} />);
+    expect(bubbles()).toContain("🤗");
+    const completed: ChatRenderItem[] = [
+      items[0]!,
+      {
+        kind: "agent",
+        id: "a1",
+        items: [
+          text("emoji", "🤗"),
+          {
+            kind: "tool_group",
+            id: "g1",
+            summary: "",
+            state: "done",
+            tools: [
+              {
+                id: "r1",
+                name: "react_to_message",
+                streamingArgs: false,
+                input: { emoji: "🤗" },
+                state: "done",
+                result: { id: "r1", content: JSON.stringify({ emoji: "🤗" }) },
+              },
+            ],
+          },
+          text("answer", "You have got this. 🤗"),
+        ],
+      },
+    ];
+    rerender(<BotMessageList chatItems={completed} />);
+    expect(bubbles()).toEqual(["You have got this. 🤗"]);
+    expect(screen.getByRole("img")).toBeTruthy();
+  });
+
   it("splits a turn into a bubble either side of the work", () => {
     const items: ChatRenderItem[] = [
       { kind: "user", id: "u1", text: "what's in this folder?" },
@@ -49,7 +115,7 @@ describe("a bot's thread", () => {
         kind: "agent",
         id: "a1",
         items: [
-          text("t1", "On it — let me look."),
+          text("t1", "On it, let me look."),
           toolGroup("g1"),
           text("t2", "Four folders and a stray zip."),
         ],
@@ -59,7 +125,7 @@ describe("a bot's thread", () => {
     render((<BotMessageList chatItems={items} />) as JSX.Element);
 
     expect(bubbles()).toEqual([
-      "On it — let me look.",
+      "On it, let me look.",
       "Four folders and a stray zip.",
     ]);
   });
@@ -81,7 +147,7 @@ describe("a bot's thread", () => {
 
   it("drops a turn that only did work and said nothing", () => {
     // An empty bubble reads as a message that failed to load, which is worse
-    // than the turn simply not appearing until the bot has something to say.
+    // than the turn not appearing until the bot has something to say.
     const items: ChatRenderItem[] = [
       { kind: "agent", id: "a1", items: [toolGroup("g1")] },
       { kind: "agent", id: "a2", items: [text("t1", "  ")] },
@@ -122,7 +188,7 @@ describe("a bot's thread", () => {
 
     expect(screen.queryByText("Wrote 1 file")).toBeNull();
     expect(bubbles()).toEqual(["Here you go."]);
-    // Both turns keep their card — the second said nothing but still delivered.
+    // Both turns keep their card; the second said nothing but still delivered.
     expect(
       document.querySelectorAll('[data-id="deliverables-card"]')
     ).toHaveLength(2);
@@ -166,7 +232,7 @@ describe("when the thread says the time", () => {
   const now = new Date("2026-08-27T14:00:00").getTime();
 
   // The component reads the clock itself (`Date.now()`), and these stamps are
-  // written relative to the fixed `now` above — so without pinning it, what
+  // written relative to the fixed `now` above, so without pinning it what
   // "yesterday" renders as depends on the day the suite runs. This passed for
   // exactly one day, 2026-08-27, and named a weekday from the 28th on.
   //
@@ -248,7 +314,12 @@ describe("while the bot is off doing something", () => {
       document.querySelector('[data-id="bot-message-working"]')
     ).toBeTruthy();
 
+    const slot = document.querySelector('[data-id="bot-message-status-slot"]');
+    expect(slot).toBeTruthy();
     rerender((<BotMessageList chatItems={items} />) as JSX.Element);
+    expect(document.querySelector('[data-id="bot-message-status-slot"]')).toBe(
+      slot
+    );
     expect(
       document.querySelector('[data-id="bot-message-working"]')
     ).toBeNull();
@@ -286,5 +357,82 @@ describe("a failed turn that offers a different model", () => {
     expect(button).not.toBeNull();
     button!.click();
     expect(onSwitchModel).toHaveBeenCalled();
+  });
+});
+
+describe("bot message feedback", () => {
+  it("uses the existing feedback callback for the selected message and its negative comment", async () => {
+    const onRateTurn = vi.fn(async () => true);
+    render(
+      <BotMessageList
+        onRateTurn={onRateTurn}
+        chatItems={[
+          { kind: "user", id: "user-1", text: "Hello" },
+          {
+            kind: "agent",
+            id: "agent-1",
+            items: [text("reply-1", "Hello back")],
+          },
+        ]}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /copy/i })).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(
+      screen.getByRole("button", { name: /reactions.feedback/i })
+    );
+    fireEvent.click(screen.getByRole("button", { name: /feedback.helpful/i }));
+    await waitFor(() =>
+      expect(onRateTurn).toHaveBeenCalledWith("reply-1", "up", undefined)
+    );
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: /reactions.feedback/i })
+          .hasAttribute("disabled")
+      ).toBe(false)
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /reactions.feedback/i })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /feedback.notHelpful/i })
+    );
+    const comment = await screen.findByPlaceholderText(
+      /tellUsMorePlaceholder/i
+    );
+    await waitFor(() =>
+      expect(onRateTurn).toHaveBeenCalledWith("reply-1", "down", undefined)
+    );
+    fireEvent.change(comment, { target: { value: "Wrong details" } });
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: /feedback.send/i })
+          .hasAttribute("disabled")
+      ).toBe(false)
+    );
+    fireEvent.click(screen.getByRole("button", { name: /feedback.send/i }));
+    await waitFor(() =>
+      expect(onRateTurn).toHaveBeenLastCalledWith(
+        "reply-1",
+        "down",
+        "Wrong details"
+      )
+    );
+  });
+  it("does not offer feedback on an unfinished reply", () => {
+    render(
+      <BotMessageList
+        isWorking
+        onRateTurn={vi.fn()}
+        chatItems={[
+          { kind: "agent", id: "agent-1", items: [text("reply-1", "Working")] },
+        ]}
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: /feedback.helpful/i })
+    ).toBeNull();
   });
 });

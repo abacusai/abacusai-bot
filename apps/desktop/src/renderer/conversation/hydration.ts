@@ -25,7 +25,7 @@ export function conversationSegmentsToSegments(
         outcome?: SubtaskStatus;
       };
       if (seg.status === "created") {
-        // A new bracket while one is open is a hand-back — close the previous.
+        // A new bracket while one is open is a hand-back: close the previous.
         if (activeSubtaskId !== null) finalizeSubtask(out, activeSubtaskId);
         activeSubtaskId = seg.id;
         out.push({

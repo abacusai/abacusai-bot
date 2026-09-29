@@ -2,7 +2,7 @@
  * `~/.abacusai-bot/config.json`, as the app reads and writes it.
  *
  * This file is hand-editable, shared with the agent subprocess, and written by
- * several things at once — so the two properties that matter most are that a
+ * several things at once, so the two properties that matter most are that a
  * write merges rather than replaces (a blind overwrite eats someone's local
  * provider definition), and that a reader never sees a half-written file. It
  * also holds API keys, which is why the mode and the "environment wins" rule
@@ -547,7 +547,7 @@ describe("whether pi holds an OAuth credential", () => {
 
   it("is false for a provider that is not in the file", async () => {
     // Treating "no env var" as "always available" made Codex look configured on
-    // a machine with no credentials at all — and it then got auto-selected.
+    // a machine with no credentials at all, and it then got auto-selected.
     writeAgentAuth({ anthropic: { refresh: "token" } });
     const { hasOAuthCredential } = await load();
 

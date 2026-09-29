@@ -28,7 +28,7 @@ export const MEDIA_TOOLS: ToolDefinition[] = [
     name: "video_analyze",
     toolsets: ["video"],
     description:
-      "Watch a video and answer a question about it. Needs a video-capable model — not every vision provider accepts video.",
+      "Watch a video and answer a question about it. Needs a video-capable model; not every vision provider accepts video.",
     inputSchema: {
       type: "object",
       properties: {
@@ -79,7 +79,7 @@ export const MEDIA_TOOLS: ToolDefinition[] = [
     name: "video_generate",
     toolsets: ["video_gen"],
     description:
-      "Start generating a video from a prompt, optionally driven by a still image. Returns a job id — generation takes minutes, so poll with bfl_flux3_get_result.",
+      "Start generating a video from a prompt, optionally driven by a still image. Returns a job id. Generation takes minutes, so poll with bfl_flux3_get_result.",
     inputSchema: {
       type: "object",
       properties: {
