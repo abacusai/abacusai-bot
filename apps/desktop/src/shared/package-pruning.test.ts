@@ -102,6 +102,23 @@ it.each(
     ]) {
       remove.push(f.write(path.join(f.modules, "runtime", name)));
     }
+    keep.push(f.write(path.join(f.resources, "icon2.png")));
+    remove.push(f.write(path.join(f.resources, "icon.ico")));
+    (platform === "darwin" ? keep : remove).push(
+      f.write(path.join(f.resources, "icon.icns"))
+    );
+    for (const name of [
+      "zod/index.js",
+      "zod/index.cjs",
+      "zod/LICENSE",
+      "node-forge/lib/index.js",
+      "node-forge/LICENSE",
+    ]) {
+      keep.push(f.write(path.join(f.modules, name)));
+    }
+    for (const name of ["zod/src/index.ts", "node-forge/dist/forge.min.js"]) {
+      remove.push(f.write(path.join(f.modules, name)));
+    }
     const parser = path.join(f.modules, "@ast-grep/lang-python");
     const osName = { darwin: "macOS", linux: "Linux", win32: "Windows" }[
       platform!

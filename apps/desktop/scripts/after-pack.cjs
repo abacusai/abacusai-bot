@@ -65,6 +65,13 @@ module.exports = async function afterPack(context) {
     }
   }
 
+  // The Windows icon is embedded in the executable. Only macOS needs the
+  // .icns file in the installed app; the runtime uses icon2.png on every OS.
+  await remove(path.join(resources, "icon.ico"));
+  if (electronPlatformName !== "darwin") {
+    await remove(path.join(resources, "icon.icns"));
+  }
+
   // extraResources does not receive electron-builder's node_modules exclusions.
   const agentModules = path.join(resources, "agent/node_modules");
   async function removeBuildMetadata(dir) {
@@ -77,6 +84,10 @@ module.exports = async function afterPack(context) {
     }
   }
   await removeBuildMetadata(agentModules);
+  // Zod's normal Node exports use compiled JS/CJS, and node-forge's Node
+  // entry is lib/index.js. Keep those; omit TS sources and browser bundles.
+  await remove(path.join(agentModules, "zod/src"));
+  await remove(path.join(agentModules, "node-forge/dist"));
 
   // These loaders select the target's exact OS/architecture, with no fallback
   // to a different architecture. Unknown/universal targets retain all binaries.
