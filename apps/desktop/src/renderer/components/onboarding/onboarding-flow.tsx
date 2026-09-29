@@ -69,6 +69,8 @@ const writeStoredStep = (step: OnboardingStep | null): void => {
 };
 
 /** Card width per step; the model list needs room or it grows a scrollbar. */
+/** Once per install: a sign-in the user closed is not started on them again. */
+const AUTO_SIGN_IN_KEY = "onboarding.autoSignIn";
 const GMAIL_CONNECTOR_ID = "abacus-gmailuser";
 const GMAIL_OFFER_KEY = "onboarding.gmailOffer";
 /** Google-hosted consumer addresses; a Workspace domain cannot be told from the address alone. */
@@ -261,6 +263,29 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     enabled: step === "auth",
     staleTime: Infinity,
   });
+
+  // An account made on the website minutes ago has its session waiting in
+  // the browser: go there unasked, and the wall is only ever seen in passing.
+  const autoSignIn = useQuery({
+    queryKey: ["onboarding", "auto-sign-in"],
+    queryFn: () => window.api.agent.shouldAutoSignIn(),
+    enabled:
+      step === "auth" &&
+      signedIn === false &&
+      !onboarded &&
+      durableStorage.getItem(AUTO_SIGN_IN_KEY) == null,
+    staleTime: Infinity,
+  });
+  const autoSignInStarted = useRef(false);
+  useEffect(() => {
+    if (autoSignIn.data !== true || autoSignInStarted.current) return;
+    autoSignInStarted.current = true;
+    durableStorage.setItem(AUTO_SIGN_IN_KEY, "started");
+    window.api.reportFunnelStep("auto_signin");
+    void connect("signin");
+    // `connect` is rebuilt every render; the effect is about the answer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSignIn.data]);
 
   if (step === "explainer") return <WelcomeTour onFinish={advance} />;
 

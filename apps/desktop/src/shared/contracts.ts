@@ -1816,6 +1816,8 @@ export interface AgentApi {
   ) => Promise<AbacusAuthOutcome>;
   /** Chromium profiles to offer as "Continue with …" (in-app arm only). */
   listBrowserSignInProfiles: () => Promise<BrowserSignInProfile[]>;
+  /** The account was just made on the website: sign in without waiting for a click. */
+  shouldAutoSignIn: () => Promise<boolean>;
   /**
    * Stash this account's sessions, delete the Abacus key and its connector
    * gateway, and every other stored key too unless `keepOtherApiKeys`.

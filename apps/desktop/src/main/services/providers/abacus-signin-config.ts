@@ -32,12 +32,19 @@ const overrideVariant = (): SignInVariant | null => {
   return raw === "in_app" || raw === "browser" ? raw : null;
 };
 
-// One arm per launch; the server keeps it stable across launches.
-let cached: SignInVariant | null = null;
+interface SignInConfig {
+  variant: SignInVariant;
+  /** Start the sign-in without waiting for a click. */
+  autoSignIn: boolean;
+}
 
-export const resolveSignInVariant = async (): Promise<SignInVariant> => {
-  const override = overrideVariant();
-  if (override != null) return override;
+/** The flow every release before the arms shipped, and nothing unasked. */
+const FALLBACK: SignInConfig = { variant: "browser", autoSignIn: false };
+
+// One answer per launch; the server keeps the arm stable across launches.
+let cached: SignInConfig | null = null;
+
+const resolveSignInConfig = async (): Promise<SignInConfig> => {
   if (cached != null) return cached;
 
   try {
@@ -50,23 +57,36 @@ export const resolveSignInVariant = async (): Promise<SignInVariant> => {
       body: JSON.stringify({ deviceId: deviceId() }),
       signal: AbortSignal.timeout(CONFIG_TIMEOUT_MS),
     });
-    if (!response.ok) return "browser";
+    if (!response.ok) return FALLBACK;
 
     const payload = (await response.json().catch(() => null)) as {
       success?: unknown;
-      result?: { inAppSignIn?: unknown };
+      result?: { inAppSignIn?: unknown; autoSignIn?: unknown };
     } | null;
-    if (payload?.success !== true) return "browser";
+    if (payload?.success !== true) return FALLBACK;
 
-    cached = payload.result?.inAppSignIn === true ? "in_app" : "browser";
+    cached = {
+      variant: payload.result?.inAppSignIn === true ? "in_app" : "browser",
+      autoSignIn: payload.result?.autoSignIn === true,
+    };
     return cached;
   } catch (error) {
     console.warn(
       `[abacus-auth] sign-in config unavailable: ${error instanceof Error ? error.name : "unknown"}`
     );
-    return "browser";
+    return FALLBACK;
   }
 };
+
+export const resolveSignInVariant = async (): Promise<SignInVariant> =>
+  overrideVariant() ?? (await resolveSignInConfig()).variant;
+
+/**
+ * Whether the server asked this install to start its sign-in by itself: the
+ * account was just created on the website, where its session is waiting.
+ */
+export const shouldAutoSignIn = async (): Promise<boolean> =>
+  (await resolveSignInConfig()).autoSignIn;
 
 /** Tests only. */
 export const resetSignInVariantCache = (): void => {
