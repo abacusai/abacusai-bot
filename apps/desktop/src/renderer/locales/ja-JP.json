@@ -1728,7 +1728,7 @@
       "saveFailed": "添付ファイルを保存できませんでした: {{error}}",
       "unknownError": "不明なエラー"
     },
-    "autoWorkspace": "Auto workspace",
+    "autoWorkspace": "Default workspace",
     "branch": {
       "create": "Create “{{branch}}”",
       "createFailed": "ブランチを作成できませんでした。",
@@ -2068,7 +2068,7 @@
     },
     "welcome": {
       "addWorkspace": "新しいワークスペースを追加",
-      "defaultWorkspace": "Default workspace: {{path}}",
+      "defaultWorkspace": "Default workspace",
       "letsBuild": "さあ、始めましょう",
       "noWorkspacesFound": "ワークスペースが見つかりません",
       "searchWorkspaces": "ワークスペースを検索…",

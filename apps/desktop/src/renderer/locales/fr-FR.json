@@ -1728,7 +1728,7 @@
       "saveFailed": "Impossible d'enregistrer les pièces jointes : {{error}}",
       "unknownError": "erreur inconnue"
     },
-    "autoWorkspace": "Auto workspace",
+    "autoWorkspace": "Default workspace",
     "branch": {
       "create": "Create “{{branch}}”",
       "createFailed": "Impossible de créer la branche.",
@@ -2068,7 +2068,7 @@
     },
     "welcome": {
       "addWorkspace": "Ajouter un nouvel espace de travail",
-      "defaultWorkspace": "Default workspace: {{path}}",
+      "defaultWorkspace": "Default workspace",
       "letsBuild": "C'est parti",
       "noWorkspacesFound": "Aucun espace de travail trouvé",
       "searchWorkspaces": "Rechercher des espaces de travail…",
