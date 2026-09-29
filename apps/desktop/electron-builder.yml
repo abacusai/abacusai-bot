@@ -13,11 +13,11 @@ files:
   - package.json
 
 beforePack: scripts/before-pack.cjs
-# Prune staged locales and agent build metadata before signing/update hashes.
 afterPack: scripts/after-pack.cjs
 
-# Maximum compression reduces AppImage and macOS archive sizes at build-time
-# cost. NSIS keeps its differential-update dictionary; DEB needs its own level.
+# Smaller installers for a slower packaging step: the app archive inside the
+# Windows installer and the AppImage are compressed harder, and the dmg uses
+# the denser format.
 compression: maximum
 
 # Runtime resources and license notices live outside app.asar.
@@ -122,8 +122,6 @@ npmRebuild: false
 win:
   executableName: AbacusBot
   icon: resources/icon.ico
-# Keep separate installers even when a local invocation builds both arches.
-# Differential packages stay enabled for electron-updater.
 nsis:
   buildUniversalInstaller: false
   differentialPackage: true
