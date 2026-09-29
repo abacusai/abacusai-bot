@@ -2045,7 +2045,6 @@
       "pickShell": "Open a different shell",
       "tabs": "Terminal tabs"
     },
-    "terminalRequiresWorkspace": "터미널을 사용하려면 작업 공간을 선택하세요",
     "thinking": {
       "hide": "Hide the thought process",
       "inProgress": "Thinking…",

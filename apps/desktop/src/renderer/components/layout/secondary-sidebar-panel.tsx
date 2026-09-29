@@ -322,11 +322,6 @@ export const SecondarySidebarPanel = ({
       description: t("workspace.rightPanel.terminalDescription", {
         defaultValue: "Start a shell in this workspace.",
       }),
-      disabled: activeWorkspaceId == null,
-      disabledReason:
-        activeWorkspaceId == null
-          ? t("workspace.terminalRequiresWorkspace")
-          : undefined,
     },
     {
       id: "files",
@@ -337,24 +332,20 @@ export const SecondarySidebarPanel = ({
       id: "agents",
       label: t("workspace.rightTab.agents"),
       description: t("workspace.rightPanel.agentsDescription"),
-      disabled: subtasks.length === 0,
-      disabledReason: agentsReason,
     },
     {
       id: "device",
       label: t("workspace.rightTab.device"),
       description: t("workspace.rightPanel.deviceDescription"),
-      disabled: !deviceEnabled,
-      disabledReason: !deviceEnabled
-        ? t("workspace.rightPanel.deviceUnavailable", {
-            defaultValue: "No device or simulator is available.",
-          })
-        : undefined,
     },
   ];
-  const surfaceActions = allSurfaceActions.filter(
-    (action) => !hideDevelopmentActions || action.id !== "terminal"
-  );
+  // Agents and Device are left out while there is nothing to show, not
+  // greyed out: a disabled entry reads as something broken.
+  const surfaceActions = allSurfaceActions.filter((action) => {
+    if (action.id === "agents") return subtasks.length > 0;
+    if (action.id === "device") return deviceEnabled && !hideDevelopmentActions;
+    return !hideDevelopmentActions || action.id !== "terminal";
+  });
 
   const runSurfaceAction = (id: SurfaceActionId): void => {
     if (id === "browser") openBrowser();

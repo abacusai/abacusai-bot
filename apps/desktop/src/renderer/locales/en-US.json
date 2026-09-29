@@ -2045,7 +2045,6 @@
       "pickShell": "Open a different shell",
       "tabs": "Terminal tabs"
     },
-    "terminalRequiresWorkspace": "Select a workspace to use the terminal",
     "thinking": {
       "hide": "Hide the thought process",
       "inProgress": "Thinking…",

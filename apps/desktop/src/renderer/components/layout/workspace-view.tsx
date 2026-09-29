@@ -21,10 +21,8 @@ import {
 } from "#shared/conversation-scope";
 
 import { WorkspaceConversationProvider } from "../../conversation/store";
-import {
-  useBotWorkspaceIdQuery,
-  useWorkspaceMetadataQuery,
-} from "../../hooks/use-workspace-queries";
+import { useSessionWorkspace } from "../../hooks/use-session-workspace";
+import { useWorkspaceMetadataQuery } from "../../hooks/use-workspace-queries";
 import { revealAgentBrowser } from "../../lib/agent-browser";
 import type { WorkspaceRouteKind } from "../../lib/workspace-route";
 import { PreviewLinkProvider } from "../../providers/preview-link-context";
@@ -62,6 +60,10 @@ import { WorkspaceSidebar } from "./workspace-sidebar";
 
 export const secondarySidebarPanelPaddingClassName = "h-full overflow-auto p-2";
 
+const PRIMARY_SIDEBAR_MIN_WIDTH = 240;
+const MAIN_AREA_MIN_WIDTH = 320;
+const RIGHT_PANEL_MIN_WIDTH = 280;
+
 export const WorkspaceView = ({
   mainContent,
   routeKind = "session",
@@ -75,9 +77,6 @@ export const WorkspaceView = ({
   routeKind?: WorkspaceRouteKind;
 } = {}): JSX.Element => {
   const { t } = useTranslation();
-  const terminalAllowed = routeKind === "session";
-  const inspectorAllowed = routeKind !== "settings";
-  const hideDevelopmentActions = routeKind === "bot";
   const [isCompact, setIsCompact] = useState(
     () => window.matchMedia("(max-width: 959px)").matches
   );
@@ -99,37 +98,36 @@ export const WorkspaceView = ({
       ? null
       : (state.workspaceUiStates[activeWorkspaceId]?.activeSessionId ?? null)
   );
-  // The bots pane runs in the bot folder, so its terminal is scoped there; a
-  // terminal sitting on it is how the user learns which folder that is.
   const showingBotsPane = newPaneIntent === "bot" && activeSessionId == null;
-  const botWorkspaceQuery = useBotWorkspaceIdQuery(showingBotsPane);
-  const botWorkspaceId = botWorkspaceQuery.data ?? null;
+  // The bots pane is a bot surface on whichever route shows it, so it gets the
+  // bot chrome: no terminal, no coding surfaces in the inspector.
+  const chromeKind: WorkspaceRouteKind =
+    routeKind === "session" && showingBotsPane ? "bot" : routeKind;
+  const terminalAllowed = chromeKind === "session";
+  const hideDevelopmentActions = chromeKind === "bot";
+  useSessionWorkspace(chromeKind === "session");
+  // The bots pane is where a bot gets made: there is no conversation yet, so
+  // nothing for a browser or a file tree to be about.
+  const inspectorAllowed = routeKind !== "settings" && !showingBotsPane;
 
-  const terminalConversation = showingBotsPane
-    ? botWorkspaceId == null
-      ? null
-      : draftConversationRef(botWorkspaceId)
-    : activeWorkspaceId == null
+  const terminalConversation =
+    activeWorkspaceId == null
       ? null
       : activeSessionId == null
         ? draftConversationRef(activeWorkspaceId)
         : sessionConversationRef(activeWorkspaceId, activeSessionId);
   const terminalConversationKey =
     terminalConversation == null ? null : conversationKey(terminalConversation);
-  // The bots pane's inspector is scoped to the bot folder for the same reason
-  // its terminal is: that is the workspace the bot will run in.
   const rightPanelConversationKey =
-    showingBotsPane && botWorkspaceId != null
-      ? rightPanelScopeKey({ workspaceId: botWorkspaceId, sessionId: null })
-      : activeWorkspaceId == null
-        ? rightPanelScopeKey({
-            workspaceId: "__no-workspace__",
-            sessionId: null,
-          })
-        : rightPanelScopeKey({
-            workspaceId: activeWorkspaceId,
-            sessionId: activeSessionId,
-          });
+    activeWorkspaceId == null
+      ? rightPanelScopeKey({
+          workspaceId: "__no-workspace__",
+          sessionId: null,
+        })
+      : rightPanelScopeKey({
+          workspaceId: activeWorkspaceId,
+          sessionId: activeSessionId,
+        });
   // Published for everything that opens a pane without being rendered inside
   // one: click handlers and the agent's preview events read it from the store.
   useEffect(() => {
@@ -170,6 +168,7 @@ export const WorkspaceView = ({
 
   const primaryPanelRef = useRef<PanelImperativeHandle>(null);
   const shellGroupRef = useRef<GroupImperativeHandle>(null);
+  const shellElementRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<PanelImperativeHandle>(null);
   const terminalPanelRef = useRef<PanelImperativeHandle>(null);
   const lastPrimaryPanelSizeRef = useRef(18);
@@ -235,10 +234,34 @@ export const WorkspaceView = ({
         panelId === "primarySidebar"
           ? lastPrimaryPanelSizeRef.current
           : lastRightPanelSizeRef.current;
+      // The centre gives what it can spare above its minimum and the opposite
+      // pane gives the rest. Taking it all from a centre already squeezed to
+      // its minimum leaves a layout the group cannot honour, and it drops the
+      // opposite pane to make room.
+      const shellWidth = shellElementRef.current?.clientWidth ?? 0;
+      const toPercent = (pixels: number): number =>
+        shellWidth > 0 ? (pixels / shellWidth) * 100 : 0;
+      const oppositeId =
+        panelId === "primarySidebar" ? "rightPanel" : "primarySidebar";
+      const oppositeSize = layout[oppositeId] ?? 0;
+      const oppositeMinSize = toPercent(
+        oppositeId === "rightPanel"
+          ? RIGHT_PANEL_MIN_WIDTH
+          : PRIMARY_SIDEBAR_MIN_WIDTH
+      );
+      const fromCenter = Math.min(
+        restoredSize,
+        Math.max(0, centerSize - toPercent(MAIN_AREA_MIN_WIDTH))
+      );
+      const fromOpposite = Math.min(
+        restoredSize - fromCenter,
+        Math.max(0, oppositeSize - oppositeMinSize)
+      );
       group.setLayout({
         ...layout,
-        [panelId]: restoredSize,
-        mainArea: centerSize - restoredSize,
+        [panelId]: fromCenter + fromOpposite,
+        mainArea: centerSize - fromCenter,
+        [oppositeId]: oppositeSize - fromOpposite,
       });
     },
     []
@@ -333,8 +356,6 @@ export const WorkspaceView = ({
       closeTerminalPanel();
       return;
     }
-    // The conversation key is the requirement, not an active workspace: the
-    // bots pane's terminal is scoped to the bot folder, not to anything active.
     if (terminalConversationKey == null) return;
     terminalRuntimeActions.setOpen(terminalConversationKey, true);
   }, [closeTerminalPanel, isBottomPanelVisible, terminalConversationKey]);
@@ -363,9 +384,10 @@ export const WorkspaceView = ({
   const chatSurface = (
     <div className="bg-background flex h-full min-w-0 flex-col overflow-hidden">
       <TitleBar
-        routeKind={routeKind}
+        routeKind={chromeKind}
         compact={isCompact}
         compactInspectorOpen={compactInspectorOpen}
+        inspectorAllowed={inspectorAllowed}
         inspectorOpen={isRightPanelVisible}
         terminalOpen={isBottomPanelVisible}
         onToggleRightPanel={toggleRightPanel}
@@ -423,10 +445,8 @@ export const WorkspaceView = ({
       <ResizableHandle
         withHandle
         aria-label={t("workspace.resizeTerminal")}
-        className={
-          activeWorkspaceId == null || !terminalAllowed ? "hidden" : undefined
-        }
-        disabled={activeWorkspaceId == null || !terminalAllowed}
+        className={!terminalAllowed ? "hidden" : undefined}
+        disabled={!terminalAllowed}
       />
 
       <ResizablePanel
@@ -504,11 +524,18 @@ export const WorkspaceView = ({
           {isCompact ? (
             <>
               <WorkspaceSidebar />
-              <SidebarControl compact onToggle={() => undefined} />
+              <SidebarControl
+                routeKind={chromeKind}
+                compact
+                onToggle={() => undefined}
+              />
               {workspaceInset}
             </>
           ) : (
-            <div className="relative h-full min-h-0 w-full min-w-0">
+            <div
+              ref={shellElementRef}
+              className="relative h-full min-h-0 w-full min-w-0"
+            >
               <ResizablePanelGroup
                 id="local-code-shell-horizontal-v2"
                 orientation="horizontal"
@@ -529,8 +556,8 @@ export const WorkspaceView = ({
                 <ResizablePanel
                   id="primarySidebar"
                   panelRef={primaryPanelRef}
-                  defaultSize={240}
-                  minSize={240}
+                  defaultSize={PRIMARY_SIDEBAR_MIN_WIDTH}
+                  minSize={PRIMARY_SIDEBAR_MIN_WIDTH}
                   maxSize={420}
                   collapsible
                   collapsedSize={0}
@@ -552,7 +579,7 @@ export const WorkspaceView = ({
                 <ResizablePanel
                   id="mainArea"
                   defaultSize="100%"
-                  minSize={320}
+                  minSize={MAIN_AREA_MIN_WIDTH}
                   groupResizeBehavior="preserve-relative-size"
                   className="min-w-0"
                 >
@@ -570,7 +597,7 @@ export const WorkspaceView = ({
                   id="rightPanel"
                   panelRef={rightPanelRef}
                   defaultSize={420}
-                  minSize={280}
+                  minSize={RIGHT_PANEL_MIN_WIDTH}
                   maxSize={960}
                   collapsible
                   collapsedSize={0}
@@ -590,7 +617,11 @@ export const WorkspaceView = ({
                 </ResizablePanel>
               </ResizablePanelGroup>
 
-              <SidebarControl compact={false} onToggle={togglePrimaryPanel} />
+              <SidebarControl
+                routeKind={chromeKind}
+                compact={false}
+                onToggle={togglePrimaryPanel}
+              />
             </div>
           )}
         </SidebarProvider>

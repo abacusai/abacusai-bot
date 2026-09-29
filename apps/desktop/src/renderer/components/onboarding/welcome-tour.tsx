@@ -16,6 +16,7 @@ import {
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import { defaultWorkspaceSearch } from "../../lib/route-search";
 import { useAccountStore } from "../../stores/account-store";
+import { useWorkspaceStore } from "../../stores/code-store";
 import { useTourStore } from "../../stores/tour-store";
 import { TOUR_ID, TOUR_STOPS } from "./tour-stops";
 import { TourTooltip } from "./tour-tooltip";
@@ -150,9 +151,11 @@ export const WelcomeTour = ({
     select: (state) => state.location.pathname,
   });
 
-  // The lap ends on the workspace, not on whichever page the last stop left.
+  // The lap ends on the workspace, not on whichever page the last stop left,
+  // and on the bot maker, not the new session the terminal stop opened.
   useEffect(
     () => () => {
+      useWorkspaceStore.getState().setNewPaneIntent("bot");
       void navigateRef.current({
         to: "/",
         search: defaultWorkspaceSearch,

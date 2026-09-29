@@ -48,12 +48,10 @@ import {
   allAgentSessionsQueryOptions,
   sessionArtifactsQueryOptions,
   useAllAgentSessionsQuery,
-  useWorkspaceMetadataQuery,
   workspaceMetadataQueryOptions,
 } from "./hooks/use-workspace-queries";
 import { parseWorkspaceSearch } from "./lib/route-search";
 import { useWorkspaceRouteKind } from "./lib/workspace-route";
-import { isAppInternalWorkspace } from "./lib/workspace-utils";
 import { useWorkspaceStore } from "./stores/code-store";
 
 type RouterContext = { queryClient: QueryClient };
@@ -170,31 +168,11 @@ const newSessionRoute = createRoute({
 });
 
 function NewSessionRoute(): JSX.Element {
-  const workspaces = useWorkspaceMetadataQuery().data?.workspaces;
-  const activeWorkspaceId = useWorkspaceStore(
-    (state) => state.activeWorkspaceId
-  );
   useEffect(() => {
     const store = useWorkspaceStore.getState();
     store.setNewPaneIntent("session");
     store.deselectWorkspace();
   }, []);
-  // A new session opens on the last-used workspace once the list says it still
-  // exists. Keyed on the active workspace too: the sidebar's + clears it after
-  // navigating, and that clear is all that changes.
-  useEffect(() => {
-    if (workspaces == null || activeWorkspaceId != null) return;
-    const store = useWorkspaceStore.getState();
-    const last = workspaces.find(
-      (workspace) =>
-        workspace.id === store.lastPickedWorkspaceId &&
-        workspace.status !== "deleted" &&
-        !isAppInternalWorkspace(workspace)
-    );
-    if (last == null) return;
-    store.activateWorkspaceSession(last.id, null);
-    void window.api.agent.switchWorkspace(last.id);
-  }, [workspaces, activeWorkspaceId]);
   return <ChatPanel />;
 }
 
