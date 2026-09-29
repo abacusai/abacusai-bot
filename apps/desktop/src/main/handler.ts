@@ -15,6 +15,7 @@ import type {
   BrowserApproval,
   BrowserEngine,
   ClearBrowserDataRequest,
+  ConnectorConnectOptions,
   GetMcpRuntimeServersRequest,
   GetMcpServerLogsRequest,
   ImportMcpServersRequest,
@@ -763,8 +764,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     serviceHost.listConnectorStatuses()
   );
 
-  ipcMain.handle(IpcChannels.ConnectConnector, (_event, connectorId: string) =>
-    serviceHost.connectConnector(connectorId)
+  ipcMain.handle(
+    IpcChannels.ConnectConnector,
+    (_event, connectorId: string, options?: ConnectorConnectOptions) =>
+      serviceHost.connectConnector(connectorId, options)
   );
 
   ipcMain.handle(

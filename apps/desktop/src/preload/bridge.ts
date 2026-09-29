@@ -9,6 +9,7 @@ import type {
 } from "#shared/bots";
 import { IpcChannels } from "#shared/channels";
 import type {
+  ConnectorConnectOptions,
   LocalModelInstallOutcome,
   BotChatPreview,
   BotSenderChat,
@@ -498,10 +499,14 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ipcRenderer.invoke(
         IpcChannels.ListConnectorStatuses
       ) as Promise<ConnectorStatuses>,
-    connectConnector: (connectorId: string) =>
+    connectConnector: (
+      connectorId: string,
+      options?: ConnectorConnectOptions
+    ) =>
       ipcRenderer.invoke(
         IpcChannels.ConnectConnector,
-        connectorId
+        connectorId,
+        options
       ) as Promise<ConnectorOutcome>,
     submitConnectorFields: (
       connectorId: string,

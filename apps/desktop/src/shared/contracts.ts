@@ -801,6 +801,16 @@ export type ConnectorStatuses = Record<string, ConnectorStatus>;
 // env placeholder expanded at connect time, so the key is never persisted.
 export const ABACUS_CONNECTORS_SERVER_NAME = GATEWAY_SERVER_NAME;
 
+/**
+ * How the browser hop should start. `autostart` sends the connect page straight to the provider's
+ * consent on load, for a caller that has already asked the user in the app; `hint` is the account to
+ * pre-select there. Both are only ever forwarded into the connect URL.
+ */
+export interface ConnectorConnectOptions {
+  autostart?: boolean;
+  hint?: string;
+}
+
 export const abacusConnectorsMcpEntry = (mcpUrl: string): McpServerEntry => ({
   url: mcpUrl,
   headers: { Authorization: "Bearer ${ABACUS_API_KEY}" },
@@ -1824,7 +1834,10 @@ export interface AgentApi {
    * install. Resolves when the platform confirms, the user cancels, or it
    * times out.
    */
-  connectConnector: (connectorId: string) => Promise<ConnectorOutcome>;
+  connectConnector: (
+    connectorId: string,
+    options?: ConnectorConnectOptions
+  ) => Promise<ConnectorOutcome>;
   /** Connect a connector whose flow asked for fields, with what the user typed. */
   submitConnectorFields: (
     connectorId: string,

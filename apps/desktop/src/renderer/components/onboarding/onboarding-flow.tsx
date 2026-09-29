@@ -4,8 +4,13 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { AbacusAuthIntent } from "#shared/contracts";
 import { isPayingAbacusTier } from "#shared/models";
 
+import { CONNECTORS } from "../../connectors";
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import { useAbacusCredentialQuery } from "../../hooks/use-abacus-credential";
+import {
+  isConnected,
+  useConnectorStatuses,
+} from "../../hooks/use-connector-statuses";
 import { signInToAbacus } from "../../lib/abacus-sign-in";
 import { cn } from "../../lib/cn";
 import { durableStorage } from "../../lib/durable-storage";
@@ -14,8 +19,10 @@ import { settingsQueryKeys } from "../../lib/settings-query-keys";
 import { useAccountStore } from "../../stores/account-store";
 import { useWorkspaceStore } from "../../stores/code-store";
 import { useTourStore } from "../../stores/tour-store";
+import { useConnectFlow } from "../connectors/connect-flow";
 import { WindowDragRegion } from "../layout/window-drag-region";
 import { ConnectorsStep } from "./connectors-step";
+import { GmailPermissionStep } from "./gmail-permission-step";
 import {
   isOnboardingStep,
   nextStep,
@@ -62,8 +69,15 @@ const writeStoredStep = (step: OnboardingStep | null): void => {
 };
 
 /** Card width per step; the model list needs room or it grows a scrollbar. */
+const GMAIL_CONNECTOR_ID = "abacus-gmailuser";
+const GMAIL_OFFER_KEY = "onboarding.gmailOffer";
+/** Google-hosted consumer addresses; a Workspace domain cannot be told from the address alone. */
+const isGoogleHostedEmail = (email: string): boolean =>
+  /@(gmail|googlemail)\.com$/i.test(email.trim());
+
 const CARD_WIDTH: Record<Exclude<OnboardingStep, "explainer">, string> = {
   auth: "max-w-2xl",
+  gmail: "max-w-2xl",
   welcome: "max-w-xl",
   connectors: "max-w-3xl",
   models: "max-w-2xl",
@@ -105,6 +119,21 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   );
   const credential = useAbacusCredentialQuery();
   const { data: abacusAccount } = useAbacusAccountQuery();
+  const connectorStatuses = useConnectorStatuses();
+  const connectFlow = useConnectFlow();
+  // "Not now" is an answer: the connectors screen keeps the Gmail tile, this card does not come back.
+  const [gmailDeclined, setGmailDeclined] = useState(
+    () => durableStorage.getItem(GMAIL_OFFER_KEY) === "declined"
+  );
+  const email = abacusAccount?.email ?? "";
+  const gmailConnector =
+    CONNECTORS.find((connector) => connector.id === GMAIL_CONNECTOR_ID) ?? null;
+  const offerGmail =
+    gmailConnector != null &&
+    !gmailDeclined &&
+    isGoogleHostedEmail(email) &&
+    connectorStatuses.loaded &&
+    !isConnected(connectorStatuses.statuses, GMAIL_CONNECTOR_ID);
 
   const [step, setStepState] = useState<OnboardingStep>(
     () => readStoredStep() ?? "auth"
@@ -130,6 +159,7 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     signedIn: signedIn === true,
     paying: isPayingAbacusTier(abacusAccount?.subscription_tier),
     onboarded,
+    offerGmail,
   });
 
   // Onboarding owns the tour; a replay still up from before would fight it.
@@ -252,6 +282,32 @@ export const OnboardingFlow = (): React.ReactElement | null => {
             }
             dots={dots}
           />
+        )}
+        {step === "gmail" && gmailConnector != null && (
+          <>
+            {connectFlow.dialogs}
+            <GmailPermissionStep
+              email={email}
+              dots={dots}
+              onAllow={() =>
+                connectFlow.start(gmailConnector, {
+                  autostart: true,
+                  hint: email,
+                })
+              }
+              onDone={(outcome) => {
+                if (outcome === "declined") {
+                  window.api.reportFunnelStep("gmail_declined");
+                  durableStorage.setItem(GMAIL_OFFER_KEY, "declined");
+                  setGmailDeclined(true);
+                } else {
+                  window.api.reportFunnelStep("gmail_allowed");
+                  void connectorStatuses.refresh();
+                }
+                advance();
+              }}
+            />
+          </>
         )}
         {step === "welcome" && <WelcomeStep onNext={advance} dots={dots} />}
         {step === "connectors" && (

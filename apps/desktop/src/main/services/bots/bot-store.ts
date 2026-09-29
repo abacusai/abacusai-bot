@@ -14,6 +14,7 @@ import {
   MAX_BOT_NAME,
   MAX_BOT_TITLE,
   MAX_BOTS,
+  SPONSORED_FIRST_RUN_WINDOW_MS,
   defaultAvatarColor,
   defaultAvatarShape,
   type Bot,
@@ -43,6 +44,7 @@ const read = (): Bot[] => {
         ...rest,
         model: rest.model ?? null,
         persona: rest.persona ?? "",
+        sponsoredUntil: rest.sponsoredUntil ?? null,
         avatarShape: rest.avatarShape ?? defaultAvatarShape(rest.name),
       };
     });
@@ -86,6 +88,10 @@ export const createBot = (input: BotCreateInput): Bot => {
     workspaceId: input.workspaceId ?? null,
     sessionId: null,
     model: input.model ?? null,
+    sponsoredUntil:
+      input.sponsoredFirstRun === true
+        ? Date.now() + SPONSORED_FIRST_RUN_WINDOW_MS
+        : null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };

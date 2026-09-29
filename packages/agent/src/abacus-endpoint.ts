@@ -20,3 +20,19 @@ export const abacusV1BaseUrl = (
   }
   return DEFAULT_ABACUS_V1;
 };
+
+/**
+ * The desktop marks a session the platform serves on the house (the Chief of
+ * Staff's first run) with this env var; every request to Abacus carries it as
+ * a header, and the platform decides whether the run still qualifies. The
+ * value is a short token, so a planted env cannot smuggle anything else in.
+ */
+export const SPONSORED_RUN_HEADER = "X-Abacus-Sponsored-Run";
+const SPONSORED_RUN_RE = /^[a-z0-9-]{1,40}$/;
+
+export const sponsoredRunHeaders = (
+  env: NodeJS.ProcessEnv = process.env
+): Record<string, string> => {
+  const value = (env.ABACUSAI_BOT_SPONSORED_RUN ?? "").trim();
+  return SPONSORED_RUN_RE.test(value) ? { [SPONSORED_RUN_HEADER]: value } : {};
+};

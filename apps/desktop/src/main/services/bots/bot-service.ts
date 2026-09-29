@@ -7,12 +7,13 @@
 import fs from "fs";
 import path from "path";
 
-import type {
-  BotChangeNotice,
-  Bot,
-  BotChatHandle,
-  BotCreateInput,
-  BotUpdateInput,
+import {
+  type Bot,
+  type BotChangeNotice,
+  type BotChatHandle,
+  type BotCreateInput,
+  type BotUpdateInput,
+  SPONSORED_RUN_MARKER,
 } from "#shared/bots";
 import type { SessionOwner } from "#shared/contracts";
 
@@ -204,6 +205,12 @@ const senderChatIntro = (senderName: string, platform: string): string =>
     "person), and can read this conversation under your bot in the Bots",
     "pane. Their first message follows.",
   ].join(" ");
+
+/** Set while the platform serves the bot's runs on the house; every request of those runs carries it as a header. */
+const sponsoredRunEnv = (bot: Bot): Record<string, string> =>
+  bot.sponsoredUntil != null && Date.now() < bot.sponsoredUntil
+    ? { ABACUSAI_BOT_SPONSORED_RUN: SPONSORED_RUN_MARKER }
+    : {};
 
 export class BotService {
   constructor(private readonly callbacks: BotServiceCallbacks) {}
@@ -467,7 +474,14 @@ export class BotService {
     return {
       ABACUSAI_BOT_PERSONA: personaPath(bot.id),
       ABACUSAI_BOT_BOT_DIR: botDir(bot.id),
+      ...sponsoredRunEnv(bot),
     };
+  }
+
+  /** The sponsored-run marker for a routine session, which is the bot's work too; empty once the window has passed. */
+  sponsoredRunEnvForBot(botId: string): Record<string, string> {
+    const bot = getBot(botId);
+    return bot == null ? {} : sponsoredRunEnv(bot);
   }
 
   private writePersona(bot: Bot): void {
