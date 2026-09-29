@@ -22,7 +22,7 @@ const profile = (id: string, hasAbacus: boolean) => ({
   hasAbacus,
 });
 let profiles = [profile("Default", true), profile("Profile 1", false)];
-const readProfileCookies = vi.fn(async () => [
+const readProfileCookies = vi.fn(async (..._args: unknown[]) => [
   { name: "auth", value: "v", domain: ".abacus.ai" },
 ]);
 vi.mock("../browser/browser-profiles-service", () => ({

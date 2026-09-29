@@ -6,6 +6,13 @@ import type { AbacusAuthIntent, BrowserSignInProfile } from "#shared/contracts";
 
 import logo from "../../assets/icon2.png";
 import { Button, Spinner } from "../ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 /** The pitch, as three headlines: one per thing worth knowing before signing up. */
 const CAPABILITIES = [
@@ -33,7 +40,10 @@ export const SignInStep = ({
   error: string | null;
   /** `signin` is the returning user's button; it always uses the browser. */
   onConnect: (intent: AbacusAuthIntent) => void;
-  /** Chromium profiles that may already be signed in to Abacus.AI. */
+  /**
+   * Chromium profiles that may already be signed in to Abacus.AI, offered
+   * behind "I already have an account".
+   */
   browserProfiles?: BrowserSignInProfile[];
   /** Sign in with a picked profile's session. */
   onContinueWith?: (profileId: string) => void;
@@ -104,33 +114,6 @@ export const SignInStep = ({
       )}
 
       <div className="mt-9 flex w-full flex-col items-center gap-4">
-        {!busy &&
-          browserProfiles.length > 0 &&
-          onContinueWith != null && (
-            // Someone already signed in to Abacus.AI in their browser: one
-            // click, no form. Above sign-up, because they are not new.
-            <div
-              className="flex w-full flex-col gap-2"
-              data-id="onboarding-browser-profiles"
-            >
-              {browserProfiles.map((profile) => (
-                <Button
-                  key={profile.id}
-                  variant="outline"
-                  size="lg"
-                  data-id="onboarding-continue-with-browser"
-                  onClick={() => onContinueWith(profile.id)}
-                  className="h-12 w-full justify-center gap-2 text-sm font-medium"
-                >
-                  <Globe className="size-4" aria-hidden="true" />
-                  {t("onboarding.continueWithBrowser", {
-                    browser: profile.browserName,
-                    profile: profile.profileName,
-                  })}
-                </Button>
-              ))}
-            </div>
-          )}
         <Button
           size="lg"
           data-id="onboarding-connect"
@@ -145,17 +128,64 @@ export const SignInStep = ({
           )}
           {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
         </Button>
-        {!busy && (
-          <Button
-            variant="link"
-            size="sm"
-            data-id="onboarding-have-account"
-            onClick={() => onConnect("signin")}
-            className="text-muted-foreground hover:text-secondary-foreground text-sm"
-          >
-            {t("onboarding.haveAccountCta")}
-          </Button>
-        )}
+        {!busy &&
+          (browserProfiles.length > 0 && onContinueWith != null ? (
+            // A browser already signed in to Abacus.AI: the returning user's
+            // link offers its profiles, so the screen keeps two choices.
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="link"
+                    size="sm"
+                    data-id="onboarding-have-account"
+                    className="text-muted-foreground hover:text-secondary-foreground text-sm"
+                  />
+                }
+              >
+                {t("onboarding.haveAccountCta")}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="center"
+                className="w-auto min-w-72"
+                data-id="onboarding-browser-profiles"
+              >
+                {browserProfiles.map((profile) => (
+                  <DropdownMenuItem
+                    key={profile.id}
+                    data-id="onboarding-continue-with-browser"
+                    onClick={() => onContinueWith(profile.id)}
+                    className="text-sm"
+                  >
+                    <Globe aria-hidden="true" />
+                    {t("onboarding.continueWithBrowser", {
+                      browser: profile.browserName,
+                      profile: profile.profileName,
+                    })}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  data-id="onboarding-signin-another-way"
+                  onClick={() => onConnect("signin")}
+                  className="text-sm"
+                >
+                  <UserRound aria-hidden="true" />
+                  {t("onboarding.signInAnotherWay")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="link"
+              size="sm"
+              data-id="onboarding-have-account"
+              onClick={() => onConnect("signin")}
+              className="text-muted-foreground hover:text-secondary-foreground text-sm"
+            >
+              {t("onboarding.haveAccountCta")}
+            </Button>
+          ))}
         {busy && (
           <div className="flex items-center gap-2">
             {/* For anyone whose browser already holds their Abacus.AI session

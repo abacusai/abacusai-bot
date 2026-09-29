@@ -215,15 +215,39 @@ describe("the sign-in wall", () => {
 });
 
 describe("a browser already signed in to Abacus.AI", () => {
-  it("is offered on the wall and signs in with the picked profile", async () => {
-    browserProfiles = [
-      { id: "chrome::Default", browserName: "Chrome", profileName: "Work" },
-    ];
+  const chrome = {
+    id: "chrome::Default",
+    browserName: "Chrome",
+    profileName: "Work",
+  };
+
+  /** Open "I already have an account" once main has answered with profiles. */
+  const openMenu = async (): Promise<void> => {
+    // The link turns into the menu's trigger once the profiles have landed.
+    await waitFor(() =>
+      expect(
+        byId("onboarding-have-account").getAttribute("aria-haspopup")
+      ).toBe("menu")
+    );
+    fireEvent.click(byId("onboarding-have-account"));
+    await waitFor(() => byId("onboarding-continue-with-browser"));
+  };
+
+  it("is offered behind the returning user's link, not as more buttons", async () => {
+    browserProfiles = [chrome];
     mount();
 
-    fireEvent.click(
-      await waitFor(() => byId("onboarding-continue-with-browser"))
-    );
+    await waitFor(() => expect(listBrowserSignInProfiles).toHaveBeenCalled());
+    expect(missing("onboarding-continue-with-browser")).toBe(true);
+    await openMenu();
+  });
+
+  it("signs in with the picked profile", async () => {
+    browserProfiles = [chrome];
+    mount();
+    await openMenu();
+
+    fireEvent.click(byId("onboarding-continue-with-browser"));
 
     await waitFor(() =>
       expect(startAbacusAuth).toHaveBeenLastCalledWith(
@@ -233,11 +257,16 @@ describe("a browser already signed in to Abacus.AI", () => {
     );
   });
 
-  it("leaves the wall as it was when there is none", async () => {
+  it("still lets the user sign in another way", async () => {
+    browserProfiles = [chrome];
     mount();
+    await openMenu();
 
-    await waitFor(() => expect(listBrowserSignInProfiles).toHaveBeenCalled());
-    expect(missing("onboarding-browser-profiles")).toBe(true);
+    fireEvent.click(byId("onboarding-signin-another-way"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
+    );
   });
 });
 

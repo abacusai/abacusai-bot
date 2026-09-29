@@ -1262,7 +1262,8 @@
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
-    "continueWithBrowser": "{{browser}} · {{profile}}(으)로 계속"
+    "continueWithBrowser": "{{browser}} · {{profile}}(으)로 계속",
+    "signInAnotherWay": "다른 방법으로 로그인"
   },
   "openFile": {
     "failed": "해당 파일을 열지 못했습니다.",

@@ -1262,7 +1262,8 @@
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
-    "continueWithBrowser": "{{browser}} · {{profile}} के साथ जारी रखें"
+    "continueWithBrowser": "{{browser}} · {{profile}} के साथ जारी रखें",
+    "signInAnotherWay": "किसी और तरीके से साइन इन करें"
   },
   "openFile": {
     "failed": "वह फ़ाइल नहीं खोली जा सकी।",
