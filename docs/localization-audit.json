@@ -128,9 +128,7 @@
         "MCP list",
         "missing-provider error before correction"
       ],
-      "hi-IN": [
-        "MCP list"
-      ]
+      "hi-IN": ["MCP list"]
     },
     "limitations": [
       "Not every screen in every locale",
