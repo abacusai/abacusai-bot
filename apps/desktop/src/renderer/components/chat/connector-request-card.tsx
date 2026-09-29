@@ -9,6 +9,7 @@ import {
 } from "#shared/conversation-scope";
 
 import { connectorById, connectUi } from "../../connectors";
+import i18n from "../../i18n";
 import { cn } from "../../lib/cn";
 import { useActiveConversationKey } from "../../stores/active-conversation-store";
 import { useWorkspaceStore } from "../../stores/code-store";
@@ -134,7 +135,10 @@ export const ConnectorRequestCard = (): JSX.Element | null => {
 
   const connect = async (): Promise<void> => {
     if (connector == null) {
-      await answer("failed", `Unknown connector ${current.connectorId}.`);
+      await answer(
+        "failed",
+        i18n.t("uiText.unknownConnector", { id: current.connectorId })
+      );
       return;
     }
     setBusy(true);

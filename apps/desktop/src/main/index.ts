@@ -71,6 +71,11 @@ export function hasGoogleChrome(
   });
 }
 import { funnelDetail, isFunnelStep } from "#shared/funnel";
+import {
+  matchSupportedLanguage,
+  FALLBACK_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+} from "#shared/languages";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 import type {
   ImportLocalSkillsRequest,
@@ -106,6 +111,7 @@ import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
+import { nativeT, setNativeLanguage } from "./services/config/native-i18n";
 import { registerRendererState } from "./services/config/renderer-state";
 import {
   readNotificationSettings,
@@ -301,8 +307,87 @@ setBringToFront(() => {
   revealMainWindow();
 });
 
-// One notification per background stint. Main-process strings stay in
-// English: i18n is renderer-only.
+function updateApplicationMenu(): void {
+  app.setAboutPanelOptions({
+    applicationName: APP_DISPLAY_NAME,
+    applicationVersion: app.getVersion(),
+    copyright: `Copyright © ${new Date().getFullYear()} Abacus.AI`,
+    credits: nativeT("credits"),
+    website: "https://github.com/abacusai/abacusai-bot/blob/main/README.md",
+    iconPath: resourcePath("icon2.png"),
+  });
+  if (process.platform === "darwin") {
+    // The default menu labels its items from app.name, which keeps the hyphen.
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        {
+          label: APP_DISPLAY_NAME,
+          submenu: [
+            {
+              role: "about",
+              label: nativeT("aboutApp", { app: APP_DISPLAY_NAME }),
+            },
+            { type: "separator" },
+            { role: "services", label: nativeT("services") },
+            { type: "separator" },
+            {
+              role: "hide",
+              label: nativeT("hideApp", { app: APP_DISPLAY_NAME }),
+            },
+            { role: "hideOthers", label: nativeT("hideOthers") },
+            { role: "unhide", label: nativeT("showAll") },
+            { type: "separator" },
+            {
+              role: "quit",
+              label: nativeT("quitApp", { app: APP_DISPLAY_NAME }),
+            },
+          ],
+        },
+        {
+          label: nativeT("file"),
+          submenu: [{ role: "close", label: nativeT("close") }],
+        },
+        {
+          label: nativeT("edit"),
+          submenu: [
+            { role: "undo", label: nativeT("undo") },
+            { role: "redo", label: nativeT("redo") },
+            { role: "cut", label: nativeT("cut") },
+            { role: "copy", label: nativeT("copy") },
+            { role: "paste", label: nativeT("paste") },
+            { role: "selectAll", label: nativeT("selectAll") },
+          ],
+        },
+        {
+          label: nativeT("view"),
+          submenu: [
+            { role: "reload", label: nativeT("reload") },
+            { role: "forceReload", label: nativeT("forceReload") },
+            {
+              label: nativeT("developerTools"),
+              accelerator: "Alt+CommandOrControl+I",
+              click: () => rendererHost?.webContents.toggleDevTools(),
+            },
+            { role: "resetZoom", label: nativeT("resetZoom") },
+            { role: "zoomIn", label: nativeT("zoomIn") },
+            { role: "zoomOut", label: nativeT("zoomOut") },
+            { role: "togglefullscreen", label: nativeT("fullScreen") },
+          ],
+        },
+        {
+          label: nativeT("window"),
+          submenu: [
+            { role: "minimize", label: nativeT("minimize") },
+            { role: "zoom", label: nativeT("zoom") },
+            { role: "front", label: nativeT("front") },
+          ],
+        },
+      ])
+    );
+  }
+}
+
+// One notification per background stint, using the selected app language.
 let backgroundTaskNotified = false;
 function notifyTaskRunningInBackground(): void {
   if (backgroundTaskNotified) return;
@@ -311,8 +396,8 @@ function notifyTaskRunningInBackground(): void {
   backgroundTaskNotified = true;
   try {
     const notification = new Notification({
-      title: "Task still running",
-      body: "We'll notify you when it finishes.",
+      title: nativeT("backgroundTitle"),
+      body: nativeT("backgroundBody"),
       silent: !prefs.sound,
     });
     notification.on("click", () => revealMainWindow());
@@ -624,12 +709,12 @@ async function createWindow() {
 
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: "question",
-      buttons: ["Keep running in background", "Quit anyway"],
+      buttons: [nativeT("keepRunning"), nativeT("quitAnyway")],
       defaultId: 0,
       cancelId: 0,
-      title: "A task is running",
-      message: "A task is still running.",
-      detail: "Keep it running in the background, or quit and stop it?",
+      title: nativeT("taskRunningTitle"),
+      message: nativeT("taskRunningMessage"),
+      detail: nativeT("taskRunningDetail"),
     });
 
     if (choice === 0) {
@@ -661,8 +746,14 @@ async function createWindow() {
   };
 
   // Shown when the renderer fails to load, so the React ErrorBoundary never
-  // mounts. A data: URL works with no disk or network; strings stay English.
+  // mounts. A localized data: URL works with no disk or network.
   const buildErrorPageUrl = (target: string): string => {
+    const escapeHtml = (text: string): string =>
+      text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
     const html = `<!doctype html><html><head><meta charset="utf-8"/>
 <style>
   html,body{height:100%;margin:0}
@@ -676,13 +767,12 @@ async function createWindow() {
   button:hover{background:#6b4ee6}
 </style></head>
 <body>
-  <h1>Couldn't load the app</h1>
-  <p>The application failed to load. Check your connection and try again.</p>
-  <button onclick="location.href=${JSON.stringify(target)}">Retry</button>
+  <h1>${escapeHtml(nativeT("loadFailed"))}</h1>
+  <p>${escapeHtml(nativeT("loadFailedDetail"))}</p>
+  <button onclick="location.href=${escapeHtml(JSON.stringify(target))}">${escapeHtml(nativeT("retry"))}</button>
 </body></html>`;
     return "data:text/html;charset=utf-8," + encodeURIComponent(html);
   };
-  const errorPageUrl = buildErrorPageUrl(rendererUrl ?? "app://renderer");
 
   let rendererReloadTimestamps: number[] = [];
   let windowRevealed = false;
@@ -736,10 +826,13 @@ async function createWindow() {
             });
           }
         } else {
-          template.push({ label: "No spelling suggestions", enabled: false });
+          template.push({
+            label: nativeT("noSpellingSuggestions"),
+            enabled: false,
+          });
         }
         template.push({
-          label: "Add to dictionary",
+          label: nativeT("addToDictionary"),
           click: () =>
             contents.session.addWordToSpellCheckerDictionary(misspelledWord),
         });
@@ -819,13 +912,12 @@ async function createWindow() {
 
       const choice = dialog.showMessageBoxSync(mainWindow, {
         type: "error",
-        buttons: ["Restart", "Quit"],
+        buttons: [nativeT("restart"), nativeT("quit")],
         defaultId: 0,
         cancelId: 1,
         title: APP_DISPLAY_NAME,
-        message: "The app keeps crashing",
-        detail:
-          "The application window has crashed repeatedly. Restart to try again.",
+        message: nativeT("crashMessage"),
+        detail: nativeT("crashDetail"),
       });
       // `quit`, not `exit`: before-quit tears the terminal PTYs down first.
       if (choice === 0) app.relaunch();
@@ -837,12 +929,12 @@ async function createWindow() {
       console.error("[recovery] renderer unresponsive");
       const choice = dialog.showMessageBoxSync(mainWindow, {
         type: "warning",
-        buttons: ["Wait", "Reload"],
+        buttons: [nativeT("wait"), nativeT("reload")],
         defaultId: 0,
         cancelId: 0,
         title: APP_DISPLAY_NAME,
-        message: "The app is not responding",
-        detail: "You can keep waiting, or reload the window to recover.",
+        message: nativeT("unresponsiveMessage"),
+        detail: nativeT("unresponsiveDetail"),
       });
       if (choice === 1) {
         loadAppContent();
@@ -864,7 +956,9 @@ async function createWindow() {
         );
         if (!mainWindow.isDestroyed()) {
           mainWindow.show();
-          void contents.loadURL(errorPageUrl).catch(() => undefined);
+          void contents
+            .loadURL(buildErrorPageUrl(rendererUrl ?? "app://renderer"))
+            .catch(() => undefined);
         }
       }
     );
@@ -961,7 +1055,31 @@ app
         );
     });
     workspaceServiceHost.start();
-    registerRendererState();
+    const rendererState = registerRendererState();
+    const systemLanguages = app.getPreferredSystemLanguages();
+    let savedLanguage: unknown;
+    try {
+      savedLanguage = JSON.parse(
+        rendererState.snapshot()["abacusai-bot-language"] ?? "null"
+      )?.state?.languageCode;
+    } catch {
+      /* Invalid saved state falls back to the OS. */
+    }
+    setNativeLanguage(
+      typeof savedLanguage === "string" &&
+        SUPPORTED_LANGUAGES.includes(savedLanguage)
+        ? savedLanguage
+        : (matchSupportedLanguage(systemLanguages) ?? FALLBACK_LANGUAGE)
+    );
+    ipcMain.on("language:system", (event) => {
+      event.returnValue = systemLanguages;
+    });
+    ipcMain.handle("language:set", (_event, code: unknown) => {
+      if (typeof code !== "string" || matchSupportedLanguage([code]) !== code)
+        return;
+      setNativeLanguage(code);
+      updateApplicationMenu();
+    });
     registerIpcHandlers(workspaceServiceHost);
     registerBrowserRuntimeIpcHandlers(
       browserRuntime,
@@ -1060,39 +1178,7 @@ app
       shell.showItemInFolder(filePath);
     });
 
-    app.setAboutPanelOptions({
-      applicationName: APP_DISPLAY_NAME,
-      applicationVersion: app.getVersion(),
-      copyright: `Copyright © ${new Date().getFullYear()} Abacus.AI`,
-      credits: "Open source under the MIT License",
-      website: "https://github.com/abacusai/abacusai-bot/blob/main/README.md",
-      iconPath: resourcePath("icon2.png"),
-    });
-    if (process.platform === "darwin") {
-      // The default menu labels its items from app.name, which keeps the hyphen.
-      Menu.setApplicationMenu(
-        Menu.buildFromTemplate([
-          {
-            label: APP_DISPLAY_NAME,
-            submenu: [
-              { role: "about", label: `About ${APP_DISPLAY_NAME}` },
-              { type: "separator" },
-              { role: "services" },
-              { type: "separator" },
-              { role: "hide", label: `Hide ${APP_DISPLAY_NAME}` },
-              { role: "hideOthers" },
-              { role: "unhide" },
-              { type: "separator" },
-              { role: "quit", label: `Quit ${APP_DISPLAY_NAME}` },
-            ],
-          },
-          { role: "fileMenu" },
-          { role: "editMenu" },
-          { role: "viewMenu" },
-          { role: "windowMenu" },
-        ])
-      );
-    }
+    updateApplicationMenu();
     ipcMain.handle("get-app-version", () => app.getVersion());
     ipcMain.handle("window:show-about", () => app.showAboutPanel());
     ipcMain.handle(
@@ -1158,12 +1244,12 @@ app
     ipcMain.handle("save-logs", async (_event, rendererLogs: string) => {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       const result = await showSaveDialogFromApp({
-        title: "Save logs",
+        title: nativeT("saveLogs"),
         defaultPath: path.join(
           app.getPath("downloads"),
           `abacusai-bot-logs-${stamp}.zip`
         ),
-        filters: [{ name: "Zip Archives", extensions: ["zip"] }],
+        filters: [{ name: nativeT("zipArchives"), extensions: ["zip"] }],
       });
       if (result.canceled || !result.filePath) return { success: false };
 
@@ -1231,7 +1317,7 @@ app
     ipcMain.handle("open-folder-dialog", async () => {
       const result = await showOpenDialogFromApp({
         properties: ["openDirectory", "dontAddToRecent", "createDirectory"],
-        title: "Select Folder",
+        title: nativeT("selectFolder"),
       });
       return result?.filePaths?.[0] || null;
     });
@@ -1406,19 +1492,19 @@ app
       );
     }
 
-    // `kind: 'image'` narrows the picker for the composer's "Images" item.
+    // `kind: 'image'` narrows the picker for the composer's nativeT("images") item.
     ipcMain.handle(
       "open-files-dialog",
       async (_event, kind?: "all" | "image") => {
         const imagesOnly = kind === "image";
         const result = await showOpenDialogFromApp({
           properties: ["openFile", "multiSelections"],
-          title: imagesOnly ? "Select Images" : "Select Files",
+          title: imagesOnly ? nativeT("selectImages") : nativeT("selectFiles"),
           ...(imagesOnly
             ? {
                 filters: [
                   {
-                    name: "Images",
+                    name: nativeT("images"),
                     extensions: [
                       "png",
                       "jpg",
@@ -1701,14 +1787,14 @@ app
         const result = await showOpenDialogFromApp({
           title:
             kind === "folder"
-              ? "Select skill folder(s)"
-              : "Select skill file(s)",
+              ? nativeT("selectSkillFolders")
+              : nativeT("selectSkillFiles"),
           properties:
             kind === "folder"
               ? ["openDirectory", "multiSelections", "dontAddToRecent"]
               : ["openFile", "multiSelections", "dontAddToRecent"],
           ...(kind === "file"
-            ? { filters: [{ name: "Skill", extensions: ["md"] }] }
+            ? { filters: [{ name: nativeT("skill"), extensions: ["md"] }] }
             : {}),
         });
         if (result.canceled || result.filePaths.length === 0) {

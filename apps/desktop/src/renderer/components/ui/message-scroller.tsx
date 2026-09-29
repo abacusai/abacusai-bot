@@ -10,6 +10,8 @@ import * as React from "react";
 import { Button } from "#renderer/components/ui/button";
 import { cn } from "#renderer/lib/cn";
 
+import i18n from "../../i18n";
+
 function MessageScrollerProvider(
   props: React.ComponentProps<typeof MessageScrollerPrimitive.Provider>
 ) {
@@ -107,7 +109,9 @@ function MessageScrollerButton({
         <>
           <ArrowDownIcon />
           <span className="sr-only">
-            {direction === "end" ? "Scroll to end" : "Scroll to start"}
+            {direction === "end"
+              ? i18n.t("uiText.scrollToEnd")
+              : i18n.t("uiText.scrollToStart")}
           </span>
         </>
       )}

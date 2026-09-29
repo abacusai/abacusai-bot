@@ -1,5 +1,7 @@
 import type { DeviceStreamChunk } from "#shared/contracts";
 
+import i18n from "../../i18n";
+
 /**
  * WebCodecs H.264 decode pipeline for the Android device stream.
  * Consumes Annex-B access units from the main-process DeviceStreamService
@@ -387,10 +389,10 @@ export const captureSimulatorWindow = async (
       source.screenPermission !== "granted"
     ) {
       throw new ScreenPermissionError(
-        source.error ?? "Screen Recording permission required"
+        source.error ?? i18n.t("uiText.screenRecordingPermissionRequired")
       );
     }
-    throw new Error(source?.error ?? "Simulator window not found");
+    throw new Error(source?.error ?? i18n.t("uiText.simulatorWindowNotFound"));
   }
   const constraints = {
     audio: false,

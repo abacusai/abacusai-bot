@@ -211,8 +211,7 @@ export const BotsHome = ({
         />
 
         <h1 className="mt-4 text-center text-3xl font-bold tracking-tight">
-          {t("bots.home.heading")}{" "}
-          <span className="text-primary">{t("bots.home.headingAccent")}</span>
+          {t("bots.home.createHeading")}
         </h1>
         <p className="text-muted-foreground mt-2 text-center">
           {t("bots.home.subtitle")}

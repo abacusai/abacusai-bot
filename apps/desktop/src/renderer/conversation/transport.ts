@@ -22,6 +22,7 @@ import type {
   StopProcessingResult,
   UserAttachment,
 } from ".";
+import i18n from "../i18n";
 import type {
   AgentLoopEvent,
   MessageQueueEntry,
@@ -415,7 +416,7 @@ export class WorkspaceConversationTransport implements ConversationTransport {
           // The legacy wire folds errors and rejections into one flag; `error`
           // is the honest default and a real rejection's text still reads right.
           ...(failed && {
-            error: output.length > 0 ? output : "The tool call failed.",
+            error: output.length > 0 ? output : i18n.t("uiText.toolCallFailed"),
           }),
           ...(data != null && { data }),
         };

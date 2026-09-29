@@ -35,7 +35,7 @@
   "scripts": {
     "build": "vite build",
     "check:i18n": "node scripts/check-jsx-i18n.js",
-    "check:locales": "node scripts/sync-locales.js --check",
+    "check:locales": "node scripts/sync-locales.js --check && node scripts/check-translation-coverage.js",
     "check:packaged": "node scripts/check-packaged-resources.js",
     "dev": "vite",
     "experience": "node scripts/build-experience.js",
@@ -69,6 +69,7 @@
     "@abacus-ai/config": "workspace:*",
     "@abacus-ai/connectors": "workspace:*",
     "@abacus-ai/updater": "workspace:*",
+    "@babel/parser": "^7.29.8",
     "@base-ui/react": "^1.7.0",
     "@dicebear/core": "^10.7.0",
     "@dicebear/styles": "^10.6.0",

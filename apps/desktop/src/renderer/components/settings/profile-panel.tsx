@@ -11,6 +11,7 @@ import {
   useSandboxSupportQuery,
   useSetDefaultAgentMode,
 } from "../../hooks/use-sandbox";
+import i18n from "../../i18n";
 import { displayName, useAccountStore } from "../../stores/account-store";
 import {
   FocusedPage,
@@ -120,8 +121,12 @@ export const ProfilePanel = (): JSX.Element => {
   const credits =
     abacus?.credits_granted != null && abacus.credits_granted > 0
       ? t("profile.creditsValue", {
-          used: Math.round(abacus.credits_used ?? 0).toLocaleString(),
-          granted: Math.round(abacus.credits_granted).toLocaleString(),
+          used: Math.round(abacus.credits_used ?? 0).toLocaleString(
+            i18n.language
+          ),
+          granted: Math.round(abacus.credits_granted).toLocaleString(
+            i18n.language
+          ),
         })
       : null;
 

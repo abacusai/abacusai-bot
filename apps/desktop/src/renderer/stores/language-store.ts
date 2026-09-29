@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import { changeLanguage } from "../i18n";
+import { changeLanguage, initialLanguage, SUPPORTED_LANGUAGES } from "../i18n";
 import { durableStorage } from "../lib/durable-storage";
 
 interface LanguageState {
@@ -12,9 +12,9 @@ interface LanguageState {
 export const useLanguageStore = create<LanguageState>()(
   persist(
     (set, get) => ({
-      languageCode: "en-US",
+      languageCode: initialLanguage(),
       setLanguageCode: (code) => {
-        if (get().languageCode !== code) {
+        if (SUPPORTED_LANGUAGES.includes(code) && get().languageCode !== code) {
           set({ languageCode: code });
           void changeLanguage(code);
         }
@@ -22,6 +22,17 @@ export const useLanguageStore = create<LanguageState>()(
     }),
     {
       name: "abacusai-bot-language",
+      merge: (persisted, current) => {
+        const saved = (persisted as Partial<LanguageState> | undefined)
+          ?.languageCode;
+        return {
+          ...current,
+          languageCode:
+            typeof saved === "string" && SUPPORTED_LANGUAGES.includes(saved)
+              ? saved
+              : current.languageCode,
+        };
+      },
       storage: createJSONStorage(() => durableStorage),
     }
   )

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import logo from "../../assets/icon2.png";
 import { Button } from "../ui";
 
-/** What the account just bought. Two keys per row so a translator can move the emphasis. */
+/** Complete sentences let each language choose its own word order. */
 const PROMISES = [
   { key: "Agent", icon: Award },
   { key: "Models", icon: Gift },
@@ -31,10 +31,7 @@ export const WelcomeStep = ({
       <img src={logo} alt="" className="size-16 rounded-2xl shadow-sm" />
 
       <h1 className="text-foreground mt-7 text-4xl font-bold tracking-tight text-balance">
-        {t("onboarding.connectedTitleLead")}{" "}
-        <span className="text-primary">
-          {t("onboarding.connectedTitleName")}
-        </span>
+        {t("onboarding.connectedTitle")}
       </h1>
 
       <ul className="divide-border/60 mt-8 flex w-full flex-col divide-y text-left">
@@ -52,12 +49,7 @@ export const WelcomeStep = ({
               />
             </span>
             <span className="text-base leading-snug">
-              <span className="text-foreground font-semibold">
-                {t(`onboarding.connectedPromise${key}Lead`)}
-              </span>{" "}
-              <span className="text-secondary-foreground">
-                {t(`onboarding.connectedPromise${key}`)}
-              </span>
+              {t(`onboarding.connectedPromise${key}Full`)}
             </span>
           </li>
         ))}

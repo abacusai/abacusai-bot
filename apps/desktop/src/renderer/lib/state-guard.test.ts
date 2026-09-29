@@ -19,7 +19,8 @@ const RENDERER = path.resolve(import.meta.dirname, "..");
 
 // The one module allowed to touch the origin's storage (fallback, migration,
 // legacy wipe).
-const ALLOWED = new Set(["lib/durable-storage.ts"]);
+// The test harness supplies jsdom storage; it is not application code.
+const ALLOWED = new Set(["lib/durable-storage.ts", "test-support/setup.ts"]);
 
 const USAGE = /(?:window\.)?(?:localStorage|sessionStorage)\s*[.[]/;
 

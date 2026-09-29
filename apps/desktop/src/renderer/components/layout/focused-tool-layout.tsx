@@ -1,6 +1,7 @@
 import { Outlet } from "@tanstack/react-router";
 import { type CSSProperties, type JSX, type ReactNode, useId } from "react";
 
+import i18n from "../../i18n";
 import { TITLEBAR_START_INSET } from "../../lib/window-chrome";
 import { AbacusBotLogo } from "../brand/abacus-bot-logo";
 import {
@@ -36,7 +37,7 @@ function FocusedToolFrame({
   actionsLabel,
   backLabel,
   sidebar,
-  sidebarLabel = "Page navigation",
+  sidebarLabel = i18n.t("uiText.pageNavigation"),
   children,
   titleId,
 }: FocusedToolFrameProps): JSX.Element {

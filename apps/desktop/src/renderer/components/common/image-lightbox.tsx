@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import type { JSX } from "react";
 import { useTranslation } from "react-i18next";
 
+import i18n from "../../i18n";
 import { Button } from "../ui";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "../ui/dialog";
 
@@ -16,7 +17,7 @@ export const ImageLightbox = ({
   isOpen,
   onClose,
   imageUrl,
-  alt = "Image",
+  alt = i18n.t("uiText.image"),
 }: ImageLightboxProps): JSX.Element => {
   const { t } = useTranslation();
 

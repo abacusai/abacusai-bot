@@ -162,6 +162,8 @@ interface CustomAPI {
 
   // Owned by main; a null snapshot means no store and the renderer falls back
   // to localStorage. Optional: an older shell's preload predates these.
+  systemLanguages?: string[];
+  setAppLanguage?: (code: string) => Promise<void>;
   durableState?: {
     snapshot: Record<string, string> | null;
     set: (key: string, value: string) => void;

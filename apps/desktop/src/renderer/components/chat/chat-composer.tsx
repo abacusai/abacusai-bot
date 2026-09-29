@@ -56,6 +56,7 @@ import type {
 import type { TodoState } from "../../conversation/derivations";
 import { workspaceConversationTransport } from "../../conversation/transport";
 import { usePromptHistory } from "../../hooks/use-prompt-history";
+import i18n from "../../i18n";
 import {
   formatFileMention,
   getMentionAtCursor,
@@ -399,9 +400,9 @@ const COMPOSER_MAX_HEIGHT = 200;
 
 function PermActionList({
   onDecide,
-  allowLabel = "Allow once",
+  allowLabel = i18n.t("uiText.allowOnce"),
   showAllowAlways = false,
-  alwaysAllowLabel = "Always accept edits this session",
+  alwaysAllowLabel = i18n.t("uiText.alwaysAcceptEditsThisSession"),
   alwaysAllowRule,
   alwaysAllowRules,
   showAllowYolo = false,
@@ -464,10 +465,10 @@ function PermActionList({
           />
           <div className="flex items-center justify-end gap-1">
             <Button variant="ghost" size="xs" onClick={cancel}>
-              Cancel
+              {i18n.t("uiText.cancel")}
             </Button>
             <Button size="xs" onClick={() => submitExpanded("allow")}>
-              Allow
+              {i18n.t("uiText.allow")}
             </Button>
           </div>
         </div>
@@ -510,7 +511,7 @@ function PermActionList({
           className={rowBtn}
         >
           <CircleCheck className="shrink-0 text-green-400" />
-          Always allow {alwaysAllowRule}
+          {i18n.t("uiText.alwaysAllowRule", { rule: alwaysAllowRule })}
         </Button>
       )}
 
@@ -529,8 +530,9 @@ function PermActionList({
             className={rowBtn}
           >
             <CircleCheck className="shrink-0 text-green-400" />
-            Always allow all:{" "}
-            {multipleRules.map((r) => `Bash(${r})`).join(", ")}
+            {i18n.t("uiText.alwaysAllowAllRules", {
+              rules: multipleRules.map((r) => `Bash(${r})`).join(", "),
+            })}
           </Button>
           {multipleRules.map((rule) => (
             <Button
@@ -546,7 +548,7 @@ function PermActionList({
               className={rowBtn}
             >
               <CircleCheck className="shrink-0 text-green-400" />
-              Always allow Bash({rule})
+              {i18n.t("uiText.alwaysAllowRule", { rule: `Bash(${rule})` })}
             </Button>
           ))}
         </>
@@ -575,7 +577,7 @@ function PermActionList({
           className={rowBtn}
         >
           <CircleCheck className="shrink-0 text-orange-400" />
-          Yes, implement (full permissions granted)
+          {i18n.t("uiText.yesImplementFullPermissionsGranted")}
         </Button>
       )}
 
@@ -599,7 +601,7 @@ function PermActionList({
           />
           <div className="flex items-center justify-end gap-1">
             <Button variant="ghost" size="xs" onClick={cancel}>
-              Cancel
+              {i18n.t("uiText.cancel")}
             </Button>
             <Button
               variant="outline"
@@ -607,7 +609,7 @@ function PermActionList({
               onClick={() => submitExpanded("deny")}
               className="hover:border-red-400/30 hover:text-red-400"
             >
-              Deny
+              {i18n.t("uiText.deny")}
             </Button>
           </div>
         </div>
@@ -621,7 +623,7 @@ function PermActionList({
             className={`${rowBtn} hover:border-red-400/30 hover:text-red-400`}
           >
             <X />
-            Deny
+            {i18n.t("uiText.deny")}
           </Button>
           <Button
             variant="ghost"
@@ -651,7 +653,8 @@ function BashPermissionUI({
 }): JSX.Element {
   const { t } = useTranslation();
   const command = String(tool.toolInput.command ?? "").trim();
-  const displayName = getProp<string>(tool.toolInput, "_displayName") ?? "Bash";
+  const displayName =
+    getProp<string>(tool.toolInput, "_displayName") ?? i18n.t("uiText.bash");
   const credentialPaths =
     tool.request?.type === "run_terminal"
       ? (tool.request.credentialPaths ?? [])
@@ -669,7 +672,7 @@ function BashPermissionUI({
       <div className="flex items-start gap-2">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
         <span className="text-foreground text-xs font-medium">
-          Run {displayName} command?
+          {i18n.t("uiText.runNameCommand", { name: displayName })}
         </span>
       </div>
       {command.length > 0 && (
@@ -809,13 +812,12 @@ function EditFilePermissionUI({
     getProp<string>(tool.toolInput, "path") ??
     "";
   const short = file.length > 50 ? `…${file.slice(-50)}` : file;
-  const displayName = getProp<string>(tool.toolInput, "_displayName") ?? "Edit";
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start gap-2">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
         <span className="text-foreground text-xs font-medium">
-          {displayName} file?
+          {i18n.t("uiText.allowChangesToThisFile")}
         </span>
       </div>
       {short.length > 0 && (
@@ -826,7 +828,7 @@ function EditFilePermissionUI({
       <PermActionList
         onDecide={onDecide}
         showAllowAlways={true}
-        alwaysAllowLabel="Always accept edits this session"
+        alwaysAllowLabel={i18n.t("uiText.alwaysAcceptEditsThisSession")}
       />
     </div>
   );
@@ -866,10 +868,10 @@ function OutsideDirPermissionUI({
     false;
   const question =
     verb === "read"
-      ? "Read file outside workspace?"
+      ? i18n.t("uiText.readFileOutsideWorkspace")
       : isNewFile
-        ? "Create file outside workspace?"
-        : `${verb.charAt(0).toUpperCase() + verb.slice(1)} file outside workspace?`;
+        ? i18n.t("uiText.createFileOutsideWorkspace")
+        : i18n.t("uiText.modifyFileOutsideWorkspace");
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start gap-2">
@@ -882,16 +884,18 @@ function OutsideDirPermissionUI({
         </code>
       )}
       {deducedDir.length > 0 && (
-        <p className="text-muted-foreground text-xs">Directory: {deducedDir}</p>
+        <p className="text-muted-foreground text-xs">
+          {i18n.t("uiText.directoryDirectory", { directory: deducedDir })}
+        </p>
       )}
       <PermActionList
         onDecide={onDecide}
         allowLabel={
           verb === "read"
-            ? "Allow read once"
+            ? i18n.t("uiText.allowReadOnce")
             : isNewFile
-              ? "Create once"
-              : `Allow ${verb} once`
+              ? i18n.t("uiText.createOnce")
+              : i18n.t("uiText.allowChangesOnce")
         }
         showAllowAlways={deducedDir.length > 0}
         // A read allowance is a full allow; a write allowance only answers "may
@@ -900,8 +904,10 @@ function OutsideDirPermissionUI({
           deducedDir.length === 0
             ? undefined
             : verb === "read"
-              ? `Always allow ${deducedDir}`
-              : `Treat ${deducedDir} as part of the workspace`
+              ? i18n.t("uiText.alwaysAllowDirectory", { directory: deducedDir })
+              : i18n.t("uiText.treatDirectoryAsPartOfTheWorkspace", {
+                  directory: deducedDir,
+                })
         }
       />
     </div>
@@ -957,7 +963,8 @@ function ExitPlanModePermissionUI({
           onClick={() => onDecide("accept")}
           className={rowBtn}
         >
-          <Check /> Yes, implement (approve each edit)
+          <Check />
+          {i18n.t("uiText.yesImplementApproveEachEdit")}
         </Button>
         <Button
           size="sm"
@@ -965,14 +972,16 @@ function ExitPlanModePermissionUI({
           onClick={() => onDecide("allowAlways")}
           className={rowBtn}
         >
-          <Check /> Yes, implement (auto-accept all edits)
+          <Check />
+          {i18n.t("uiText.yesImplementAutoAcceptAllEdits")}
         </Button>
         <Button
           size="sm"
           onClick={() => onDecide("allowYolo")}
           className={rowBtn}
         >
-          <Check /> Yes, implement (full permissions granted)
+          <Check />
+          {i18n.t("uiText.yesImplementFullPermissionsGranted")}
         </Button>
         <Button
           variant="outline"
@@ -981,7 +990,8 @@ function ExitPlanModePermissionUI({
           onClick={() => onDecide("reject")}
           className={`${rowBtn} hover:border-red-400/30 hover:text-red-400`}
         >
-          <X /> No, keep planning
+          <X />
+          {i18n.t("uiText.noKeepPlanning")}
         </Button>
       </div>
     </div>
@@ -1096,7 +1106,8 @@ function AskUserQuestionPermissionUI({
           onClick={() => submit(selected, notes)}
           className={rowBtn}
         >
-          <Check /> Continue
+          <Check />
+          {i18n.t("uiText.continue")}
         </Button>
       </div>
     );
@@ -1185,17 +1196,18 @@ function AskUserQuestionPermissionUI({
                 setNoteText("");
               }}
             >
-              Cancel
+              {i18n.t("uiText.cancel")}
             </Button>
             <Button size="xs" onClick={saveNote}>
-              Save
+              {i18n.t("uiText.save")}
             </Button>
           </div>
         </div>
       ) : (
         currentNote && (
           <p className="text-muted-foreground text-xs">
-            Note: <span className="italic">{currentNote}</span>
+            {i18n.t("uiText.note")}
+            <span className="italic">{currentNote}</span>
           </p>
         )
       )}
@@ -1212,7 +1224,7 @@ function AskUserQuestionPermissionUI({
             }}
             className={rowBtn}
           >
-            ‹ Back
+            {i18n.t("uiText.back")}
           </Button>
         )}
         <Button
@@ -1224,7 +1236,7 @@ function AskUserQuestionPermissionUI({
           }}
           className={rowBtn}
         >
-          {currentNote ? "Edit note" : "+ Note"}
+          {currentNote ? i18n.t("uiText.editNote") : i18n.t("uiText.noteLabel")}
         </Button>
         <div className="flex-1" />
         <Button
@@ -1233,7 +1245,7 @@ function AskUserQuestionPermissionUI({
           onClick={() => submit(selected, notes)}
           className={rowBtn}
         >
-          Skip
+          {i18n.t("uiText.skip")}
         </Button>
         <Button
           size="sm"
@@ -1242,7 +1254,9 @@ function AskUserQuestionPermissionUI({
           className={rowBtn}
         >
           <Check />
-          {qIdx < questions.length - 1 ? "Next ›" : "Submit"}
+          {qIdx < questions.length - 1
+            ? i18n.t("uiText.next")
+            : i18n.t("uiText.submit")}
         </Button>
       </div>
     </div>
@@ -1277,7 +1291,7 @@ function GenericPermissionUI({
       <div className="flex items-start gap-2">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
         <span className="text-foreground text-xs font-medium">
-          Allow <strong>{displayName}</strong>?
+          {i18n.t("uiText.allowName", { name: displayName })}
         </span>
       </div>
       {preview != null && (
@@ -1290,25 +1304,28 @@ function GenericPermissionUI({
   );
 }
 
-const BROWSER_ACTION_DESCRIPTIONS: Record<string, Record<string, string>> = {
+const browserActionDescriptions = (): Record<
+  string,
+  Record<string, string>
+> => ({
   browser_interact: {
-    click: "Click an element on the page",
-    fill: "Clear and type into an input field",
-    type: "Type text into an input field",
-    scroll: "Scroll the page",
-    scroll_into_view: "Scroll an element into view",
-    select: "Select a dropdown option",
-    hover: "Hover over an element",
-    focus: "Focus an element",
-    check: "Check a checkbox",
-    uncheck: "Uncheck a checkbox",
-    press: "Press a keyboard key",
-    wait: "Wait for a page condition",
+    click: i18n.t("uiText.clickAnElementOnThePage"),
+    fill: i18n.t("uiText.clearAndTypeIntoAnInputField"),
+    type: i18n.t("uiText.typeTextIntoAnInputField"),
+    scroll: i18n.t("uiText.scrollThePage"),
+    scroll_into_view: i18n.t("uiText.scrollAnElementIntoView"),
+    select: i18n.t("uiText.selectADropdownOption"),
+    hover: i18n.t("uiText.hoverOverAnElement"),
+    focus: i18n.t("uiText.focusAnElement"),
+    check: i18n.t("uiText.checkACheckbox"),
+    uncheck: i18n.t("uiText.uncheckACheckbox"),
+    press: i18n.t("uiText.pressAKeyboardKey"),
+    wait: i18n.t("uiText.waitForAPageCondition"),
   },
   browser_execute: {
-    _default: "Execute JavaScript on the page",
+    _default: i18n.t("uiText.executeJavaScriptOnThePage"),
   },
-};
+});
 
 function BrowserPermissionUI({
   tool,
@@ -1323,28 +1340,40 @@ function BrowserPermissionUI({
   const iconColor = isBrowserInteract ? "text-orange-400" : "text-emerald-400";
 
   const description = isBrowserInteract
-    ? (BROWSER_ACTION_DESCRIPTIONS.browser_interact[action] ??
-      `Browser ${action}`)
-    : BROWSER_ACTION_DESCRIPTIONS.browser_execute._default;
+    ? (browserActionDescriptions().browser_interact[action] ??
+      i18n.t("uiText.browserActionAction", { action }))
+    : browserActionDescriptions().browser_execute._default;
 
   const details: Array<[string, string, boolean?]> = [];
-  if (isBrowserInteract && action) details.push(["Action", action]);
+  if (isBrowserInteract && action)
+    details.push([i18n.t("uiText.action"), action]);
   const ref = tool.toolInput.ref as string | undefined;
-  if (ref) details.push(["Ref", ref, true]);
+  if (ref) details.push([i18n.t("uiText.ref"), ref, true]);
   if (tool.toolInput.selector)
-    details.push(["Selector", String(tool.toolInput.selector)]);
-  if (tool.toolInput.text) details.push(["Text", String(tool.toolInput.text)]);
+    details.push([i18n.t("uiText.selector"), String(tool.toolInput.selector)]);
+  if (tool.toolInput.text)
+    details.push([i18n.t("uiText.text"), String(tool.toolInput.text)]);
   if (tool.toolInput.value)
-    details.push(["Value", String(tool.toolInput.value)]);
-  if (tool.toolInput.key) details.push(["Key", String(tool.toolInput.key)]);
+    details.push([i18n.t("uiText.value"), String(tool.toolInput.value)]);
+  if (tool.toolInput.key)
+    details.push([i18n.t("uiText.key"), String(tool.toolInput.key)]);
   if (tool.toolInput.code)
-    details.push(["Code", String(tool.toolInput.code).slice(0, 200)]);
+    details.push([
+      i18n.t("uiText.code"),
+      String(tool.toolInput.code).slice(0, 200),
+    ]);
   if (tool.toolInput.direction)
-    details.push(["Direction", String(tool.toolInput.direction)]);
+    details.push([
+      i18n.t("uiText.direction"),
+      String(tool.toolInput.direction),
+    ]);
   if (tool.toolInput.amount != null)
-    details.push(["Amount", String(tool.toolInput.amount)]);
+    details.push([i18n.t("uiText.amount"), String(tool.toolInput.amount)]);
   if (tool.toolInput.url_pattern)
-    details.push(["URL Pattern", String(tool.toolInput.url_pattern)]);
+    details.push([
+      i18n.t("uiText.urlPattern"),
+      String(tool.toolInput.url_pattern),
+    ]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -1370,7 +1399,10 @@ function BrowserPermissionUI({
           ))}
         </div>
       )}
-      <PermActionList onDecide={onDecide} allowLabel="Allow once" />
+      <PermActionList
+        onDecide={onDecide}
+        allowLabel={i18n.t("uiText.allowOnce")}
+      />
     </div>
   );
 }
@@ -2325,7 +2357,7 @@ export const ChatComposer = ({
   const hasGit = branchQuery.data?.success === true;
   const branchError =
     branchQuery.data?.success === false
-      ? (branchQuery.data.error ?? "Unable to read branches.")
+      ? (branchQuery.data.error ?? i18n.t("uiText.unableToReadBranches"))
       : null;
   const compactComposerExpanded = isMultiline || attachments.length > 0;
   // Spoken words land after whatever is typed, with one space between.
