@@ -14,6 +14,11 @@ files:
 
 beforePack: scripts/before-pack.cjs
 
+# Smaller installers for a slower packaging step: the app archive inside the
+# Windows installer and the AppImage are compressed harder, and the dmg uses
+# the denser format.
+compression: maximum
+
 # Runtime resources and license notices live outside app.asar.
 extraResources:
   - from: ../../LICENSE
