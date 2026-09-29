@@ -51,7 +51,7 @@ for (const file of fs
     if (base[key] !== value || translated[key] !== value)
       failures.push(`${code}:${key}: obsolete literal exception`);
   }
-  for (const [key, value] of Object.entries(translated)) {
+  for (const key of Object.keys(translated)) {
     if (!key.endsWith("_other")) continue;
     const stem = key.slice(0, -6);
     for (const category of new Intl.PluralRules(code).resolvedOptions()

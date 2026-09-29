@@ -87,7 +87,14 @@ export default defineConfig({
               // The connector registry is TypeScript source shared with the
               // agent (a devDependency, like every workspace package); it
               // has no dist to resolve from the asar and must be inlined.
-              include: ["extract-zip", "tuf-js", "@abacus-ai/connectors"],
+              // Native menu translations use the same build-time i18next
+              // dependency as the renderer; it must ship in this bundle too.
+              include: [
+                "extract-zip",
+                "tuf-js",
+                "@abacus-ai/connectors",
+                "i18next",
+              ],
             },
           },
           options: { build: { outDir: "dist/main", sourcemap } },
