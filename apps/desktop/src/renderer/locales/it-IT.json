@@ -1728,7 +1728,7 @@
       "saveFailed": "Impossibile salvare gli allegati: {{error}}",
       "unknownError": "errore sconosciuto"
     },
-    "autoWorkspace": "Auto workspace",
+    "autoWorkspace": "Default workspace",
     "branch": {
       "create": "Create “{{branch}}”",
       "createFailed": "Impossibile creare il branch.",
@@ -2068,7 +2068,7 @@
     },
     "welcome": {
       "addWorkspace": "Aggiungi nuovo spazio di lavoro",
-      "defaultWorkspace": "Default workspace: {{path}}",
+      "defaultWorkspace": "Default workspace",
       "letsBuild": "Costruiamo",
       "noWorkspacesFound": "Nessuno spazio di lavoro trovato",
       "searchWorkspaces": "Cerca spazi di lavoro…",

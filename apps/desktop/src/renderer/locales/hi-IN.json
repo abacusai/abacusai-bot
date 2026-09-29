@@ -1728,7 +1728,7 @@
       "saveFailed": "अटैचमेंट सहेजे नहीं जा सके: {{error}}",
       "unknownError": "अज्ञात त्रुटि"
     },
-    "autoWorkspace": "Auto workspace",
+    "autoWorkspace": "Default workspace",
     "branch": {
       "create": "Create “{{branch}}”",
       "createFailed": "ब्रांच नहीं बनाई जा सकी।",
@@ -2068,7 +2068,7 @@
     },
     "welcome": {
       "addWorkspace": "नया वर्कस्पेस जोड़ें",
-      "defaultWorkspace": "Default workspace: {{path}}",
+      "defaultWorkspace": "Default workspace",
       "letsBuild": "चलिए बनाते हैं",
       "noWorkspacesFound": "कोई वर्कस्पेस नहीं मिला",
       "searchWorkspaces": "वर्कस्पेस खोजें…",
