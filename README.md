@@ -29,7 +29,7 @@
   <a href="https://bot.abacus.ai/download?platform=macos&amp;arch=x64&amp;method=os_link&amp;token=readme">macOS (Intel)</a> ·
   <a href="https://bot.abacus.ai/download?platform=windows&amp;arch=x64&amp;method=os_link&amp;token=readme">Windows</a> ·
   <a href="https://bot.abacus.ai/download?platform=linux&amp;arch=x64&amp;method=os_link&amp;token=readme">Linux</a>
-  <br><sub>Free forever. Signed installers. Windows 10+, macOS 12+, Ubuntu 20.04+.</sub>
+  <br><sub>Free forever. Signed and notarized installers.</sub>
 </p>
 
 Create a bot for a job you want to hand off. Give it a name, instructions, and a model. Each bot keeps its own chat and memory and uses the tools you enable. Message it from the desktop, WhatsApp, Telegram, or Discord. It can work in Gmail, Google Drive, Slack, GitHub, Notion, and other connected services, then check in or run again on a schedule.
