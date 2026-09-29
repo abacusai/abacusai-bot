@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://bot.abacus.ai/readme"><img src="docs/media/download-button.svg" alt="Download AbacusAI Bot for free" width="300" height="56"></a>
+  <a href="https://bot.abacus.ai/download?platform=auto&amp;method=main_button&amp;token=readme"><img src="docs/media/download-button.svg" alt="Download AbacusAI Bot for free" width="300" height="56"></a>
 </p>
 <p align="center">
   <a href="https://bot.abacus.ai/download?platform=macos&amp;arch=arm64&amp;method=os_link&amp;token=readme">macOS (Apple silicon)</a> ·
