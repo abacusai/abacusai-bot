@@ -13,6 +13,7 @@ files:
   - package.json
 
 beforePack: scripts/before-pack.cjs
+afterPack: scripts/after-pack.cjs
 
 # Smaller installers for a slower packaging step: the app archive inside the
 # Windows installer and the AppImage are compressed harder, and the dmg uses
@@ -122,6 +123,8 @@ win:
   executableName: AbacusBot
   icon: resources/icon.ico
 nsis:
+  buildUniversalInstaller: false
+  differentialPackage: true
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: AbacusAI Bot
   uninstallDisplayName: AbacusAI Bot
@@ -159,7 +162,11 @@ linux:
       StartupWMClass=AbacusAI-Bot
 appImage:
   artifactName: ${productName}-${version}-${arch}.${ext}
+# The global maximum setting does not set fpm's xz level (default: 3).
 deb:
+  compression: xz
+  fpm:
+    - "--deb-compression-level=9"
   artifactName: ${productName}-${version}-${arch}.${ext}
 
 # The updater reads this same prefix (see main/updates/UpdateService.ts). CI runs
