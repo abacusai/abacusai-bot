@@ -24,10 +24,16 @@ export type PreconditionReason =
   | "no-credentials"
   | "git-unavailable"
   /** The 50-bot limit (spec 03 §24.4). */
-  | "bot-limit";
+  | "bot-limit"
+  | "unsupported-platform";
 
 export interface RpcErrorData {
-  BAD_REQUEST: { issues?: readonly unknown[] };
+  /**
+   * `issues`: the input failed its schema. `field`/`detail`: a value the
+   * schema accepts but the service refused (a cron schedule that does not
+   * parse, spec 05 §31.5 e); `detail` is the user-facing reason.
+   */
+  BAD_REQUEST: { issues?: readonly unknown[]; field?: string; detail?: string };
   NOT_FOUND: { entity: NotFoundEntity; id: string };
   CONFLICT: { reason: string };
   PRECONDITION_FAILED: { reason: PreconditionReason; detail?: string };

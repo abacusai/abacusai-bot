@@ -23,6 +23,7 @@ import type { TableSources } from "../../rpc/tables/sources";
 import {
   composeLegacyPrefs,
   importLegacyPrefs,
+  importLegacySoundOptOut,
   installLegacyPrefsSync,
   LEGACY_ONBOARDING_STEPS,
   LEGACY_PREFS_FIELDS,
@@ -104,10 +105,59 @@ describe("mapLegacyKey", () => {
   it("reads onboarding.step as the old UI does: an unknown step is none", () => {
     expect(mapLegacyKey("onboarding.step", "models")?.values).toEqual({
       onboardingStep: "models",
+      onboardingFlow: 2,
     });
     expect(mapLegacyKey("onboarding.step", "connect-whatsapp")?.values).toEqual(
-      { onboardingStep: null }
+      { onboardingStep: null, onboardingFlow: null }
     );
+  });
+
+  // R6-T5 (main): legacy ids are written in the new vocabulary, flow 2.
+  it("canonicalises every legacy onboarding step (spec 06 F10)", () => {
+    const canonical = (raw: string) =>
+      mapLegacyKey("onboarding.step", raw)?.values;
+    expect(canonical("auth")).toEqual({
+      onboardingStep: "welcome",
+      onboardingFlow: 2,
+    });
+    expect(canonical("welcome")).toEqual({
+      onboardingStep: "connected",
+      onboardingFlow: 2,
+    });
+    expect(canonical("connectors")?.onboardingStep).toBe("connectors");
+    expect(canonical("models")?.onboardingStep).toBe("models");
+    expect(canonical("explainer")?.onboardingStep).toBe("first-bot");
+    // New-vocabulary ids are not legacy ids: outside the order, none.
+    expect(canonical("first-bot")).toEqual({
+      onboardingStep: null,
+      onboardingFlow: null,
+    });
+    expect(canonical("")).toEqual({
+      onboardingStep: null,
+      onboardingFlow: null,
+    });
+  });
+
+  it('the legacy "welcome" becomes connected; the new renderer\'s stays welcome', () => {
+    const prefs = new PrefsStore({ file: null });
+    importLegacyPrefs(prefs, reader({ "onboarding.step": "welcome" }));
+    expect(prefs.get()).toMatchObject({
+      onboardingStep: "connected",
+      onboardingFlow: 2,
+    });
+
+    // renderer-next writes its own "welcome" as a user patch; a later legacy
+    // write cannot move it.
+    prefs.update({ onboardingStep: "welcome", onboardingFlow: 2 });
+    importLegacyPrefs(prefs, reader({ "onboarding.step": "explainer" }));
+    expect(prefs.get()).toMatchObject({
+      onboardingStep: "welcome",
+      onboardingFlow: 2,
+    });
+    expect(prefs.provenance()).toMatchObject({
+      onboardingStep: "user",
+      onboardingFlow: "user",
+    });
   });
 
   it("reads browser.homepage as the old UI does", () => {
@@ -257,6 +307,7 @@ describe("composeLegacyPrefs", () => {
       "browserHomepage",
       "onboardingStep",
       "dismissals",
+      "onboardingFlow",
     ]);
   });
 });
@@ -270,16 +321,18 @@ describe("importLegacyPrefs", () => {
       reader({ theme: "dark", "onboarding.step": "welcome" })
     );
     expect(prefs.get().theme).toBe("system");
-    expect(prefs.get().onboardingStep).toBe("welcome");
-    expect(stats).toMatchObject({ keys: 2, imported: 1, keptUser: 1 });
+    expect(prefs.get().onboardingStep).toBe("connected");
+    expect(stats).toMatchObject({ keys: 2, imported: 2, keptUser: 1 });
 
-    // onboarding.step is gone: the legacy field resets; theme stays the user's.
+    // onboarding.step is gone: the legacy fields reset; theme stays the user's.
     const after = importLegacyPrefs(prefs, reader({}));
-    expect(after.reset).toBe(1);
+    expect(after.reset).toBe(2);
     expect(prefs.get().onboardingStep).toBeNull();
+    expect(prefs.get().onboardingFlow).toBeNull();
     expect(prefs.provenance()).toMatchObject({
       theme: "user",
       onboardingStep: "default",
+      onboardingFlow: "default",
     });
   });
 });
@@ -483,5 +536,48 @@ describe("C-T8 live legacy sync", () => {
     installLegacyPrefsSync(state, broken as never, log);
     expect(() => state.set("theme", "light")).not.toThrow();
     expect(log).toHaveBeenCalledTimes(2);
+  });
+});
+
+// R5-T28 (main): `notificationSoundDisabled` into `sounds.enabled`.
+describe("legacy sound opt-out (spec 05 §31.5 i)", () => {
+  it("imports an opt-out as legacy, lifts it, and never touches a user leaf", () => {
+    const prefs = new PrefsStore({ file: null });
+    expect(importLegacySoundOptOut(prefs, undefined)).toBe("none");
+    expect(importLegacySoundOptOut(prefs, true)).toBe("imported");
+    expect(prefs.get().sounds.enabled).toBe(false);
+    expect(prefs.provenance()["sounds.enabled"]).toBe("legacy");
+    expect(importLegacySoundOptOut(prefs, false)).toBe("reset");
+    expect(prefs.get().sounds.enabled).toBe(true);
+    expect(prefs.provenance()["sounds.enabled"]).toBe("default");
+
+    prefs.update({ sounds: { enabled: true } });
+    expect(importLegacySoundOptOut(prefs, true)).toBe("kept-user");
+    expect(prefs.get().sounds.enabled).toBe(true);
+    expect(prefs.provenance()["sounds.enabled"]).toBe("user");
+  });
+
+  it("the live sync follows setNotificationSettings writes", () => {
+    const prefs = new PrefsStore({ file: null });
+    let disabled: unknown = true;
+    const listeners = new Set<() => void>();
+    const legacy = {
+      get: () => undefined,
+      onSet: () => () => undefined,
+    };
+    const stop = installLegacyPrefsSync(legacy, prefs, undefined, {
+      read: () => disabled,
+      onWrite: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    });
+    // The startup import covers an opt-out made before this build.
+    expect(prefs.get().sounds.enabled).toBe(false);
+    disabled = false;
+    for (const listener of listeners) listener();
+    expect(prefs.get().sounds.enabled).toBe(true);
+    stop();
+    expect(listeners.size).toBe(0);
   });
 });

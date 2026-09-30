@@ -13,6 +13,8 @@ export const DELIVERY = {
   "browser.events": "lossless-actionable",
   "connectors.events": "lossless-actionable",
   "devices.events": "lossless-actionable",
+  // Routine starts: each one is a cue (spec 05 §31.5 j).
+  "routines.events": "lossless-actionable",
   // Its own replay ring behind the AguiSource.
   "ai.subscribe": "lossless-actionable",
   "ai.joinRun": "lossless-actionable",

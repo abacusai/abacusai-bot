@@ -328,7 +328,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (259)
+## Contract procedures (263)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -526,6 +526,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `referrals.summary` | query | `agent.getReferralSummary` |
 | `referrals.whatsappContacts` | query | `agent.listReferralWhatsappContacts` |
 | `routines.editByChat` | mutation | `agent.editRoutineByChat` |
+| `routines.events` | subscription |  |
 | `routines.run` | mutation | `agent.runRoutine` |
 | `sessions.turnState` | query | `agent.getSessionTurnState` |
 | `settings.defaultMode.get` | query | `agent.getDefaultAgentMode` |
@@ -555,6 +556,8 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `system.events` | subscription | `onNotificationClicked` |
 | `system.funnelStep` | mutation | `reportFunnelStep` |
 | `system.info` | query | `getAppVersion`, `getHomeDir`, `platform`, `versions` |
+| `system.loginItem.get` | query |  |
+| `system.loginItem.set` | mutation |  |
 | `system.logs.append` | mutation | `appendLogs` |
 | `system.logs.save` | mutation | `saveLogs` |
 | `system.notify` | mutation | `showNotification` |
@@ -584,6 +587,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `window.claimCue` | mutation |  |
 | `window.events` | subscription | `onFullScreenChange`, `onWindowChromeChange` |
 | `window.ready` | mutation | `signalRendererReady` |
+| `window.setDensity` | mutation |  |
 | `window.showAbout` | mutation | `showAboutPanel` |
 | `window.state` | query | `isFullScreen` |
 | `window.visibleThread` | mutation |  |

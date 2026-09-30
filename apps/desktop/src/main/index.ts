@@ -138,6 +138,8 @@ import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-ru
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
+import { createLoginItem } from "./services/config/login-item";
+import { notificationSilent } from "./services/config/notification-policy";
 import { PrefsStore, prefsFile } from "./services/config/prefs-store";
 import {
   registerRendererState,
@@ -145,6 +147,8 @@ import {
 } from "./services/config/renderer-state";
 import {
   readNotificationSettings,
+  readLegacySoundOptOut,
+  onNotificationSettingsWritten,
   readSettings,
 } from "./services/config/settings";
 import {
@@ -377,7 +381,7 @@ function notifyTaskRunningInBackground(): void {
     const notification = new Notification({
       title: "Task still running",
       body: "We'll notify you when it finishes.",
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => revealMainWindow());
     notification.show();
@@ -1413,7 +1417,7 @@ const appOperations: AppOperations = {
     const notification = new Notification({
       title,
       body,
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => {
       const win = revealMainWindow();
@@ -1583,6 +1587,18 @@ const appOperations: AppOperations = {
   },
 
   showAboutPanel: () => app.showAboutPanel(),
+
+  async setTitlebarDensity(value) {
+    const density = setTitlebarDensity(value);
+    if (RENDERER_GENERATION === "wco") {
+      refreshWindowChrome();
+      publishChromeState();
+      if (process.platform === "darwin") await recreateMainWindow();
+    }
+    return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
+  },
+
+  loginItem: createLoginItem(app),
 
   markRendererActivity() {
     lastRendererActivity = Date.now();
@@ -1770,7 +1786,10 @@ app
     const rendererState = registerRendererState();
     // The old renderer is the shipped UI until the cut-over: its durable
     // state keeps `prefs.json` current, by provenance (spec 00 C.4).
-    installLegacyPrefsSync(rendererState, prefsStore);
+    installLegacyPrefsSync(rendererState, prefsStore, undefined, {
+      read: readLegacySoundOptOut,
+      onWrite: onNotificationSettingsWritten,
+    });
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
@@ -1920,17 +1939,8 @@ app
     // The same state the oRPC renderer reads through `window.chrome`.
     ipcMain.handle("window:chrome", () => chromeState());
     ipcMain.handle("window:recreate", () => recreateMainWindow());
-    ipcMain.handle(
-      "settings:set-titlebar-density",
-      async (_event, value: unknown) => {
-        const density = setTitlebarDensity(value);
-        if (RENDERER_GENERATION === "wco") {
-          refreshWindowChrome();
-          publishChromeState();
-          if (process.platform === "darwin") await recreateMainWindow();
-        }
-        return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
-      }
+    ipcMain.handle("settings:set-titlebar-density", (_event, value: unknown) =>
+      appOperations.setTitlebarDensity(value)
     );
 
     // `on`, not `handle`: the renderer must never wait on main to log a line.

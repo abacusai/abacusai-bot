@@ -83,6 +83,7 @@ export type {
 } from "./ai";
 export type * from "./ai-thread";
 export type { BotsEvent } from "./bots";
+export type { RoutinesEvent } from "./routines";
 export type { BrowserEvent } from "./browser";
 export type { ConnectorsEvent } from "./connectors";
 export type { DevicesEvent } from "./devices";
@@ -108,7 +109,13 @@ export type {
 } from "./system";
 export type { TerminalEvent, TerminalOutputChunk } from "./terminal";
 export type { WhisperFile } from "./voice";
-export type { WindowChromeState, WindowEvent, WindowState } from "./window";
+export type {
+  SetDensityResult,
+  TitlebarDensity,
+  WindowChromeState,
+  WindowEvent,
+  WindowState,
+} from "./window";
 export type * from "./rows";
 export { SUPPORTED_LANGUAGES } from "./rows";
 export type * from "./agui";
