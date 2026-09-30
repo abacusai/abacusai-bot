@@ -60,10 +60,8 @@ export const connectorsRouter = impl.connectors.router({
       initial: () => [
         {
           type: "snapshot",
-          requests:
-            key == null
-              ? []
-              : context.deps.serviceHost.listConnectorRequests(key),
+          // Keyless: every pending ask, as the live filter passes them all.
+          requests: context.deps.serviceHost.listConnectorRequests(key),
         },
       ],
       coalesceKey: (event) =>

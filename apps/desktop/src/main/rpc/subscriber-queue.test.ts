@@ -14,6 +14,7 @@ import {
   type ConversationKey,
 } from "#shared/conversation-scope";
 
+import { ConnectorGate } from "../services/agent-tools/connector-gate";
 import {
   ConversationTerminalRuntimeRegistry,
   type TerminalPty,
@@ -461,6 +462,70 @@ describe("actionable streams open on what is pending (A-T9)", () => {
     await expect(events.next()).resolves.toMatchObject({
       value: { type: "snapshot", requests: pending },
     });
+    await events.return();
+  });
+
+  it("a keyless connectors.events reopened after asks were raised snapshots them all", async () => {
+    // The real gate: two conversations ask before the subscriber (re)opens.
+    const gate = new ConnectorGate(() => undefined);
+    const other = conversationKey(draftConversationRef("w2"));
+    void gate.ask({
+      connectorId: "github",
+      label: "GitHub",
+      conversationKey: key,
+    });
+    void gate.ask({
+      connectorId: "gmail",
+      label: "Gmail",
+      conversationKey: other,
+    });
+    const { client } = connect(
+      fakeDeps({
+        serviceHost: {
+          listConnectorRequests: (k?: ConversationKey) => gate.listPending(k),
+        },
+      })
+    );
+
+    const events = await client.connectors.events({});
+    const first = await events.next();
+    expect(first.value).toMatchObject({ type: "snapshot" });
+    expect(
+      (
+        first.value as { requests: Array<{ connectorId: string }> }
+      ).requests.map((request) => request.connectorId)
+    ).toEqual(["github", "gmail"]);
+    await events.return();
+  });
+
+  it("a keyless browser.events reopened after asks were raised snapshots them all", async () => {
+    const other = conversationKey(draftConversationRef("w2"));
+    const pending = [
+      {
+        requestId: "p1",
+        tool: "navigate",
+        summary: "Go",
+        conversationKey: key,
+      },
+      {
+        requestId: "p2",
+        tool: "click",
+        summary: "Click",
+        conversationKey: other,
+      },
+    ];
+    const listBrowserPermissionRequests = vi.fn((k?: ConversationKey) =>
+      pending.filter((request) => k == null || request.conversationKey === k)
+    );
+    const { client } = connect(
+      fakeDeps({ serviceHost: { listBrowserPermissionRequests } })
+    );
+
+    const events = await client.browser.events({});
+    await expect(events.next()).resolves.toMatchObject({
+      value: { type: "snapshot", permissionRequests: pending },
+    });
+    expect(listBrowserPermissionRequests).toHaveBeenCalledWith(undefined);
     await events.return();
   });
 
