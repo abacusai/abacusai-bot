@@ -2412,7 +2412,9 @@
       }
     },
     "notice": {
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "showInFolder": "Show in folder"
     },
     "part": {
       "compaction": "Earlier conversation summarised",

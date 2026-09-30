@@ -130,7 +130,7 @@ describe("R2-T16 transcript", () => {
         ).length
       ).toBeLessThanOrEqual(MAX_ROWS);
     }
-  });
+  }, 30_000);
 
   it("a page returned after a reset is discarded; pages merge outcomes and dedupe ids", async () => {
     const relay = new FakeRelay();

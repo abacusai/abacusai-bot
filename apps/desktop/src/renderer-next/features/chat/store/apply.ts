@@ -41,6 +41,7 @@ const SESSION_CUSTOM: ReadonlySet<string> = new Set([
   "permission.pending",
   "queue.updated",
   "queue.command_rejected",
+  "abacus.notice",
   "skills.loaded",
   "mcp.servers",
   "mcp.server_logs",
@@ -179,7 +180,7 @@ const applyQueueUpdated = (
 const applyNotice = (
   state: ThreadStoreState,
   seq: number,
-  name: "agent.notification" | "agent.error",
+  name: Notice["name"],
   value: Loose
 ): ThreadStoreState => {
   const key = noticeKey({ seq, value });
@@ -237,6 +238,7 @@ const applySessionCustom = (
       };
     case "agent.notification":
     case "agent.error":
+    case "abacus.notice":
       return applyNotice(state, seq, name, value);
     case "session.ready":
     case "wire.hello": {
