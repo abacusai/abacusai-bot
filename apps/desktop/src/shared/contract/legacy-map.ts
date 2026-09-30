@@ -186,7 +186,7 @@ export const LEGACY_BRIDGE_MAP: Record<keyof AgentApi, LegacyDestination> = {
   switchAgentConversation: m("agent.switchConversation"),
   respondAgentPermission: m(
     "agent.respondPermission",
-    "approval becomes an ai.send resume entry; this alias stays until the chat kit lands"
+    "old renderer only (no lineage); the new renderer answers with ai.respondPermission"
   ),
   listAgentSkills: q(
     "agent.skills",
@@ -194,13 +194,19 @@ export const LEGACY_BRIDGE_MAP: Record<keyof AgentApi, LegacyDestination> = {
   ),
   enqueueAgentMessage: m(
     "agent.queue.enqueue",
-    "queue state via CUSTOM queue.* on ai.subscribe"
+    "old renderer; the new renderer uses ai.queue.enqueue, state via CUSTOM queue.updated"
   ),
   dequeueAgentMessage: m("agent.queue.dequeue"),
   getAgentQueue: q("agent.queue.get"),
   clearAgentQueue: m("agent.queue.clear"),
-  removeAgentQueueMessage: m("agent.queue.remove"),
-  updateAgentQueueMessage: m("agent.queue.update"),
+  removeAgentQueueMessage: m(
+    "agent.queue.remove",
+    "by index, old renderer; ai.queue.remove takes incarnation + entry id"
+  ),
+  updateAgentQueueMessage: m(
+    "agent.queue.update",
+    "by index, old renderer; ai.queue.update takes incarnation + entry id"
+  ),
   renameLocalFile: m("files.rename"),
   trashLocalFile: m("files.trash"),
   saveResolvedConflict: r(NO_CALLER),
@@ -276,10 +282,10 @@ export const LEGACY_BRIDGE_MAP: Record<keyof AgentApi, LegacyDestination> = {
   clearBotMemory: m("memory.clearBot", "echoes memories deletes"),
   readTranscript: q(
     "ai.hydrate",
-    "returns ChatHydrationResult (UIMessage[]) from v2 thread files"
+    "ChatHydrationResult + abacus snapshot, from the relay over the v2 thread files"
   ),
   writeTranscript: r(
-    "main persists from the AG-UI stream (withPersistence); the legacy path dual-writes v2 until cut-over"
+    "main persists agui thread files from the AG-UI stream at each terminal; the legacy path dual-writes v2 until cut-over"
   ),
   getDeviceStatus: q("devices.status", "live via devices.events"),
   listLocalDevices: q("devices.list"),

@@ -232,6 +232,7 @@ import {
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
+import { AguiRelayService } from "./services/agui/relay-service";
 import { botChatPreview } from "./services/bots/bot-chat-preview";
 import {
   clearBotMemory,
@@ -451,6 +452,57 @@ export class ServiceHost {
   readonly mcpConfigService = new McpConfigService();
   /** The v2 thread files (spec 00 C.3); `ai.hydrate` reads them. */
   readonly threadStore = new ThreadStore();
+  /**
+   * Main's AG-UI relay (agent spec §5.2): the renderer's `ai.*` procedures,
+   * and the wire each session's agent is spawned with. Until the new
+   * renderer asks for a thread, every spawn stays `--wire ndjson`.
+   */
+  readonly aguiRelay: AguiRelayService = new AguiRelayService({
+    files: this.threadStore,
+    host: {
+      workspaceOf: (threadId) => {
+        const workspaceId =
+          this.agentSessionManagerService.get(threadId)?.workspaceId ?? null;
+        return workspaceId == null || this.isWorkspaceDeleted(workspaceId)
+          ? null
+          : workspaceId;
+      },
+      runtime: (threadId) => this.agentManagerService.getRuntimeInfo(threadId),
+      start: async (threadId) => {
+        const session = this.agentSessionManagerService.get(threadId);
+        if (session == null) return false;
+        const result = await this.startAgentSession({
+          workspaceId: session.workspaceId,
+          sessionId: threadId,
+          // The session's own model and mode, as sendAgentMessage restarts it.
+          ...(session.model != null ? { model: session.model } : {}),
+          ...(session.mode != null ? { mode: session.mode } : {}),
+        });
+        return result.success;
+      },
+      send: (threadId, command) => {
+        const runtime = this.agentManagerService.getRuntimeInfo(threadId);
+        return (
+          runtime != null &&
+          this.agentManagerService.sendCommand(
+            runtime.workspaceId,
+            threadId,
+            command
+          )
+        );
+      },
+      markSent: (threadId) => {
+        const runtime = this.agentManagerService.getRuntimeInfo(threadId);
+        if (runtime != null)
+          this.sessionTurnStateService.markSent(runtime.workspaceId, threadId);
+      },
+      markStopped: (threadId) => {
+        const runtime = this.agentManagerService.getRuntimeInfo(threadId);
+        if (runtime != null)
+          this.markTurnStopped(runtime.workspaceId, threadId);
+      },
+    },
+  });
   private readonly transcriptService = new TranscriptService({
     threads: this.threadStore,
   });
@@ -1198,6 +1250,13 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
+    resolveWire: (sessionId) => this.aguiRelay.wireFor(sessionId),
+    emitAgui: (_workspaceId, sessionId, event, origin) => {
+      this.aguiRelay.ingest(sessionId, event, origin);
+    },
+    emitAguiExit: (_workspaceId, sessionId, exit) => {
+      this.aguiRelay.runtimeExited(sessionId, exit);
+    },
     emitNdjson: (workspaceId, sessionId, payload, origin) => {
       // An agui runtime serves only the new renderer (spec 00-agent-agui
       // §2.1): its compat lines feed main's taps below, never the old
@@ -1505,6 +1564,13 @@ export class ServiceHost {
       // emitted a card for the transcript to keep.
       const doing =
         lastActivity != null ? ` while running ${lastActivity}` : "";
+      // The renderer's run ends with main's own terminal, ahead of the
+      // cancelled one the agent writes for the stop (first terminal wins).
+      this.aguiRelay.failActiveRun(
+        sessionId,
+        "inactivity_timeout",
+        `Agent timed out: nothing came back for ${INACTIVITY_TIMEOUT_MINUTES} minutes${doing}.`
+      );
       // Actually stop it, or the slow tool's events would still be forwarded
       // when it finally lands and the session would go busy again.
       this.stopAgentTurn({ workspaceId, sessionId });
@@ -1733,6 +1799,7 @@ export class ServiceHost {
       // A remote conversation bound to it would otherwise be answered by nothing.
       this.messagingGatewayService.forgetSession(sessionId);
       this.transcriptService.remove(sessionId);
+      this.aguiRelay.forgetThread(sessionId);
       this.emitEvent({
         type: "local-cli-session-removed",
         workspaceId,
@@ -2327,6 +2394,7 @@ export class ServiceHost {
       // A remote conversation bound to it would otherwise be answered by nothing.
       this.messagingGatewayService.forgetSession(sessionId);
       this.transcriptService.remove(sessionId);
+      this.aguiRelay.forgetThread(sessionId);
       this.agentManagerService.stopSession(workspaceId, sessionId);
       this.emitEvent({
         type: "local-cli-session-removed",
@@ -2704,20 +2772,22 @@ export class ServiceHost {
   }
 
   stopAgentTurn(request: AgentSessionCommandRequest): void {
+    this.markTurnStopped(request.workspaceId, request.sessionId);
+    this.agentCommunicationService.stopTurn(request);
+  }
+
+  /** Main's side of a Stop, for `stopAgentTurn` and the relay's `ai.cancel`. */
+  private markTurnStopped(workspaceId: string, sessionId: string): void {
     // Idle, and in-flight CLI events suppressed until the next send.
-    this.sessionTurnStateService.markStopped(
-      request.workspaceId,
-      request.sessionId
-    );
+    this.sessionTurnStateService.markStopped(workspaceId, sessionId);
     // A Connect card is the turn, suspended inside its tool call: stopping
     // must take it down and let the call go. This conversation's only.
-    const stopped = this.conversationKeyForSession(request.sessionId);
+    const stopped = this.conversationKeyForSession(sessionId);
     if (stopped != null)
       this.connectorGate.release(
         stopped,
         "The user stopped this turn before answering. Do not ask again unless they bring it up."
       );
-    this.agentCommunicationService.stopTurn(request);
   }
 
   getSessionTurnState(
@@ -2732,6 +2802,7 @@ export class ServiceHost {
     // Transcript writes refuse an empty segment list, so without this the
     // pre-clear transcript would rehydrate on the next restart.
     this.transcriptService.remove(request.sessionId);
+    this.aguiRelay.clearThread(request.sessionId);
   }
 
   switchAgentConversation(request: AgentSwitchConversationRequest): void {
