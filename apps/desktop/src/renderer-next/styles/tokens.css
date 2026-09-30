@@ -80,7 +80,7 @@ html {
   }
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]
     .shell-surface {
-    background-color: color-mix(in oklab, var(--sidebar) 62%, transparent);
+    background-color: color-mix(in oklab, var(--sidebar) 35%, transparent);
   }
 }
 
@@ -91,11 +91,13 @@ html {
  */
 [data-slot="pane"],
 [data-slot="side-panel"][data-mode="layout"] {
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--border) 90%, transparent);
+  /* Inside the box: the resizable panels clip anything drawn outside. */
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
 }
 .dark [data-slot="pane"],
 .dark [data-slot="side-panel"][data-mode="layout"] {
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--border) 45%, transparent);
+  outline-color: color-mix(in oklab, var(--border) 45%, transparent);
 }
 
 /* The pane/panel gutter (V3): an 8 px hit area with a 1 px line on hover. */

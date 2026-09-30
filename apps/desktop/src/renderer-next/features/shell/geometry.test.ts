@@ -61,7 +61,7 @@ describe("shell surfaces", () => {
 
   it("gives the pane and the in-layout panel a visible edge in light (V2)", () => {
     expect(tokensCss).toMatch(
-      /\[data-slot="pane"\],\s*\[data-slot="side-panel"\]\[data-mode="layout"\] \{\s*box-shadow: 0 0 0 1px/
+      /\[data-slot="pane"\],\s*\[data-slot="side-panel"\]\[data-mode="layout"\] \{\s*\/\*[^*]*\*\/\s*outline: 1px solid var\(--border\);\s*outline-offset: -1px;/
     );
   });
 
