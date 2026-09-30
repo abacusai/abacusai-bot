@@ -52,7 +52,7 @@ export interface PumpOptions {
 }
 
 /** Two waits, then the third failure sets `"error"` (§3.3, R2-T34). */
-const RETRY_DELAYS_MS = [250, 1000] as const;
+const RETRY_DELAYS_MS = [250, 1000, 4000] as const;
 
 const defaultSleep = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {

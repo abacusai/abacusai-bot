@@ -68,7 +68,7 @@ export interface AguiSourceLike {
   };
 }
 
-export interface AiRouterContext {
+interface AiRouterContext {
   deps: { ai: AguiSourceLike };
 }
 
@@ -86,7 +86,7 @@ async function* withSeqIds(
 }
 
 /** Main's `page()`: the window, its outcomes, and the older-page cursor. */
-export const pageOf = (
+const pageOf = (
   threadId: string,
   hydration: AiHydration,
   limit: number | undefined,

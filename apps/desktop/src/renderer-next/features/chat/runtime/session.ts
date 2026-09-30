@@ -129,6 +129,7 @@ export interface ThreadSessionOptions {
   newId?: (prefix: "u" | "run") => string;
   /** Test seam: wraps the constructed client (the ordering property test). */
   onClient?: (client: ChatClient, g: number) => void;
+  onConsumed?: (seq: number, g: number) => void;
   log?: (message: string, error?: unknown) => void;
 }
 
@@ -181,6 +182,13 @@ export class ThreadSession {
   #cancelTimer: ReturnType<typeof setTimeout> | null = null;
   readonly #admission: AdmissionHost;
   /** Message ids confirmed by `abacus.duplicate_echo` (§14.12). */
+  readonly #prependListeners = new Set<() => void>();
+  onPrepend(listener: () => void): () => void {
+    this.#prependListeners.add(listener);
+    return () => {
+      this.#prependListeners.delete(listener);
+    };
+  }
   readonly #echoed = new Set<string>();
 
   constructor(options: ThreadSessionOptions) {
@@ -522,6 +530,7 @@ export class ThreadSession {
       token.gen === this.#gen &&
       token.rev === this.#rev &&
       this.#live?.client === token.client;
+    for (const listener of this.#prependListeners) listener();
     this.#host({ older: "loading" });
     let page: AiHydration;
     try {
@@ -550,6 +559,7 @@ export class ThreadSession {
     const existing = token.client.getMessages();
     const ids = new Set(existing.map((message) => message.id));
     const older = page.messages.filter((message) => !ids.has(message.id));
+    for (const listener of this.#prependListeners) listener();
     live.activeStart += older.length;
     token.client.setMessagesManually([...older, ...existing]);
     this.#mergeOutcomes(live, page.abacus.runOutcomes);
@@ -566,6 +576,15 @@ export class ThreadSession {
    * messages (never the active run's) and their outcome records; paging
    * then reaches them again.
    */
+  isMessageInActiveRun(id: string): boolean {
+    const live = this.#live;
+    return (
+      live?.store?.state.runs.active != null &&
+      this.hostStore.state.messages.findIndex((message) => message.id === id) >=
+        live.activeStart
+    );
+  }
+
   retain(max = MAX_MESSAGES): void {
     const live = this.#live;
     const client = live?.client;
@@ -778,6 +797,7 @@ export class ThreadSession {
     if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
       return;
     gen.appliedSeq = seq;
+    this.#options.onConsumed?.(seq, gen.g);
     if (isTerminal(event)) {
       const messages = gen.client?.getMessages() ?? [];
       gen.store?.setState((state) =>

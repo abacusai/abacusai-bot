@@ -32,7 +32,7 @@ const MAIN_AI_ROUTER = "#main/rpc/procedures/ai";
 let mainAiRouter: Router<any, any> | null = null;
 
 /** Main's `aiRouter`, as the app mounts it under `ai`. */
-export const loadMainAiRouter = async (): Promise<Router<any, any>> => {
+const loadMainAiRouter = async (): Promise<Router<any, any>> => {
   mainAiRouter ??= (
     await loadUntyped<{ aiRouter: Router<any, any> }>(MAIN_AI_ROUTER)
   ).aiRouter;
