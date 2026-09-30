@@ -15,6 +15,9 @@ import {
   ChatView,
   deriveSessionTitle,
   SubagentDetail,
+  useSubagents,
+  updateDraft,
+  type ChatRuntime,
 } from "#next/features/chat";
 import {
   SessionIdentity,
@@ -39,11 +42,80 @@ import {
 import { AppLink } from "#next/lib/navigation/app-link";
 import { SESSION_DEFAULTS, SessionSearch } from "#next/lib/navigation/search";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
+import { Button } from "#next/ui/button";
 import type { AgentMode } from "#shared/agent-types";
 import { SessionId } from "#shared/contract/ids";
 import { sessionConversationKey } from "#shared/conversation-scope";
 
 import { sessionRuntime } from "./-runtime";
+const SessionAgents = ({
+  runtime,
+  threadId,
+  selected,
+}: {
+  runtime: ChatRuntime;
+  threadId: string;
+  selected: string | undefined;
+}) => {
+  const agents = useSubagents(runtime, threadId);
+  const { t } = useTranslation();
+  const navigate = useAppNavigate();
+  return (
+    <div className="flex size-full min-h-0 flex-col overflow-auto p-3">
+      <h2>{t("sessions.dock.agents")}</h2>
+      {agents.length === 0 ? (
+        <p>{t("sessions.agents.empty")}</p>
+      ) : (
+        agents.map((agent) => (
+          <Button
+            key={agent.id}
+            variant={selected === agent.id ? "secondary" : "ghost"}
+            onClick={() =>
+              void navigate({
+                to: ".",
+                search: (p: Record<string, unknown>) => ({
+                  ...p,
+                  agent: agent.id,
+                }),
+                replace: true,
+                transition: "none",
+              } as never)
+            }
+          >
+            {agent.name} · {agent.status}
+          </Button>
+        ))
+      )}
+      {selected ? (
+        <>
+          <SubagentDetail
+            runtime={runtime}
+            threadId={threadId}
+            subagentRunId={selected}
+          />
+          <Button
+            onClick={() => {
+              updateDraft(threadId, (d) => ({
+                ...d,
+                text: t("sessions.agents.continuePrompt", {
+                  name: agents.find((a) => a.id === selected)?.name ?? selected,
+                }),
+              }));
+              void navigate({
+                to: ".",
+                search: (p: Record<string, unknown>) => ({ ...p, tab: "chat" }),
+                replace: true,
+                transition: "none",
+              } as never);
+            }}
+          >
+            {t("sessions.agents.continue")}
+          </Button>
+        </>
+      ) : null}
+    </div>
+  );
+};
 const DockHotkeys = ({
   next,
   previous,
@@ -175,11 +247,7 @@ const SessionRoute = () => {
           <DockHotkeys next={next} previous={previous} close={close} />
         )}
         renderAgent={(id) => (
-          <SubagentDetail
-            runtime={runtime}
-            threadId={sessionId}
-            subagentRunId={id}
-          />
+          <SessionAgents runtime={runtime} threadId={sessionId} selected={id} />
         )}
         chat={
           <ChatView

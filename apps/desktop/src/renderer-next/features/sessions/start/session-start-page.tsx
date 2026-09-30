@@ -18,6 +18,7 @@ import {
 } from "./start-session";
 export interface StartComposerBinding {
   threadId: string;
+  workspaceId: string | null;
   root: string | null;
   context: ReactNode;
   submit(envelope: SubmissionEnvelope): Promise<void>;
@@ -129,6 +130,7 @@ export const SessionStartPage = ({
         ) : (
           renderComposer({
             threadId: id,
+            workspaceId: draft.workspaceId,
             root: workspace?.path ?? null,
             context,
             submit,

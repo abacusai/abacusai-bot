@@ -1963,7 +1963,9 @@
       "primary": "Use primary checkout"
     },
     "agents": {
-      "empty": "No sub-agent selected."
+      "empty": "No sub-agent selected.",
+      "continue": "Continue in chat",
+      "continuePrompt": "Continue the work from {{name}}."
     },
     "device": {
       "empty": "Choose a device to preview.",

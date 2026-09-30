@@ -1,5 +1,6 @@
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 export const FileTreeView = ({
   paths,
   onSelect,
@@ -11,6 +12,7 @@ export const FileTreeView = ({
   onOpen: (path: string) => void;
   onRename: (from: string, to: string) => void;
 }) => {
+  const { t } = useTranslation();
   const { model } = useFileTree({
     paths,
     density: "compact",
@@ -27,7 +29,7 @@ export const FileTreeView = ({
   return (
     <FileTree
       model={model}
-      aria-label="Files"
+      aria-label={t("sessions.dock.files")}
       className="min-h-0 flex-1"
       onDoubleClick={() => {
         const selected = model.getSelectedPaths()[0];

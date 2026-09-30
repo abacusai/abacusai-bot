@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 
 import { DiffView } from "#next/components/diff-view";
 import { Button } from "#next/ui/button";
@@ -41,6 +42,7 @@ const Nav = ({ fixture }: { fixture: string | undefined }) => {
 const patch =
   "--- a/src/session.ts\n+++ b/src/session.ts\n@@ -1,3 +1,4 @@\n export const openSession = () => {\n-  return null;\n+  const checkout = resolveCheckout();\n+  return checkout;\n };\n";
 const View = ({ fixture }: { fixture: string }) => {
+  const { t } = useTranslation();
   if (fixture === "sessions-sidebar")
     return (
       <div className="bg-sidebar h-[600px] w-[280px]">
@@ -50,7 +52,9 @@ const View = ({ fixture }: { fixture: string }) => {
   if (fixture === "sessions-start")
     return (
       <div className="mx-auto flex max-w-[680px] flex-col gap-4 p-8">
-        <h1 className="text-3xl font-semibold">What should we build?</h1>
+        <h1 className="text-3xl font-semibold">
+          {t("sessions.start.heading")}
+        </h1>
         <div className="bg-card rounded-2xl border p-4">
           Tell the agent what to do…
         </div>
@@ -63,8 +67,8 @@ const View = ({ fixture }: { fixture: string }) => {
         <aside className="w-64 shrink-0 border-r p-3">
           <h2 className="mb-4 font-semibold">Changes</h2>
           <Button variant="secondary">src/session.ts +2 −1</Button>
-          <Button variant="ghost">Keep all</Button>
-          <Button variant="ghost">Undo all</Button>
+          <Button variant="ghost">{t("sessions.changes.keepAll")}</Button>
+          <Button variant="ghost">{t("sessions.changes.undoAll")}</Button>
         </aside>
         <DiffView patch={patch} />
       </div>
@@ -73,7 +77,7 @@ const View = ({ fixture }: { fixture: string }) => {
     return (
       <div role="status" className="bg-muted rounded-xl p-5">
         The worktree folder is missing.
-        <Button variant="outline">Use primary checkout</Button>
+        <Button variant="outline">{t("sessions.missing.primary")}</Button>
       </div>
     );
   return (

@@ -13,6 +13,7 @@ import {
 } from "#next/features/sessions";
 import { TopBarSlot } from "#next/features/shell";
 import { NewSessionSearch } from "#next/lib/navigation/search";
+import { draftConversationKey } from "#shared/conversation-scope";
 const SessionsNewRoute = () => {
   const { t } = useTranslation();
   const { transport } = Route.useRouteContext();
@@ -44,6 +45,31 @@ const SessionsNewRoute = () => {
               availableModes: model.availableModes,
               defaultMode: prefs.defaultMode,
               blocked: binding.blocked ? "loading" : model.blocked,
+              mentions: {
+                search: async (query) =>
+                  binding.workspaceId
+                    ? (
+                        await transport.client.files.search({
+                          checkout: { workspaceId: binding.workspaceId },
+                          query,
+                        })
+                      ).items.map((item) => item.relativePath)
+                    : [],
+              },
+              history: binding.workspaceId
+                ? {
+                    list: () =>
+                      transport.client.settings.promptHistory.list({
+                        scope: draftConversationKey(binding.workspaceId!),
+                      }),
+                    add: async (prompt) => {
+                      await transport.client.settings.promptHistory.add({
+                        scope: draftConversationKey(binding.workspaceId!),
+                        prompt,
+                      });
+                    },
+                  }
+                : undefined,
               onSubmitEnvelope: binding.submit,
             }}
           />
@@ -62,9 +88,9 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/new")({
       (w) => w.status !== "deleted" && (w.kind == null || w.kind === "auto")
     );
     const prefs = context.db.collections.prefs.get("app");
-    const requested = deps.workspace ?? prefs?.lastPickedWorkspaceId;
     let workspaceId =
-      pickable.find((w) => w.id === requested)?.id ??
+      pickable.find((w) => w.id === deps.workspace)?.id ??
+      pickable.find((w) => w.id === prefs?.lastPickedWorkspaceId)?.id ??
       pickable.find((w) => w.kind === "auto")?.id ??
       null;
     if (!workspaceId && !preload) {

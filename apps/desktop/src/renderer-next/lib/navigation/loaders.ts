@@ -4,4 +4,3 @@
  * preload lets the route render.
  */
 export const ignoreLoadError = (): undefined => undefined;
-

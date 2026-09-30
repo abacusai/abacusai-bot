@@ -463,7 +463,7 @@ importers:
         specifier: ^12.29.0
         version: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       ghostty-web:
-        specifier: ^0.4.0
+        specifier: 0.4.0
         version: 0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331)
       i18next:
         specifier: ^25.8.7
@@ -496,7 +496,7 @@ importers:
         specifier: ^16.5.4
         version: 16.6.6(i18next@25.10.10(typescript@7.0.2))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       react-resizable-panels:
-        specifier: ^4.14.1
+        specifier: 4.14.1
         version: 4.14.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react-tourlight:
         specifier: ^0.3.0

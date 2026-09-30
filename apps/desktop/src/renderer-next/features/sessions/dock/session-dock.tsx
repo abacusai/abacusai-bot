@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { usePanelRef } from "react-resizable-panels";
 
 import { useDb } from "#next/data/db";
 import { createPaneWidthWriter, usePrefs } from "#next/data/db/prefs";
@@ -119,6 +120,21 @@ export const SessionDock = ({
     size.height,
     active ?? null
   );
+  const chatPanel = usePanelRef();
+  const minimumDockWidth = Math.max(360, dockMinimum(shown, "width"));
+  const restoreChatSize = useEffectEvent(() => {
+    if (split)
+      chatPanel.current?.resize(
+        clampChatWidth(
+          prefs.panes["sessions.chat"] ?? 480,
+          size.width,
+          minimumDockWidth + 8
+        )
+      );
+  });
+  useEffect(() => {
+    restoreChatSize();
+  }, [split, size.width, minimumDockWidth]);
   const chatWriter = useState(() =>
     createPaneWidthWriter(db, "sessions.chat")
   )[0];
@@ -148,6 +164,10 @@ export const SessionDock = ({
       transition: "none",
     } as never);
   const close = (ref: string) => {
+    if (!/^(terminal|browser|preview):/.test(ref)) {
+      select(undefined);
+      return;
+    }
     if (ref.startsWith("terminal:")) {
       const id = ref.slice(9);
       void getTerminalView(`${key}:${id}`)
@@ -226,8 +246,16 @@ export const SessionDock = ({
       !entries.tabs.some((tab) => tab.ref === active) &&
       !active.startsWith("terminal:")
     ) {
-      if (["files", "changes", "agents", "device"].includes(active) || active.startsWith("browser:"))
-        openTab(key, { ref: active, title: active.startsWith("browser:") ? t("sessions.dock.browser") : t(`sessions.dock.${active}`) });
+      if (
+        ["files", "changes", "agents", "device"].includes(active) ||
+        active.startsWith("browser:")
+      )
+        openTab(key, {
+          ref: active,
+          title: active.startsWith("browser:")
+            ? t("sessions.dock.browser")
+            : t(`sessions.dock.${active}`),
+        });
       else normalizeSelection(entries.last ?? undefined);
     }
   }, [active, split, key, entries.last, entries.tabs, t]);
@@ -330,26 +358,33 @@ export const SessionDock = ({
                     onKeyDown={(e) => {
                       if (e.shiftKey && e.key === "F10") {
                         e.preventDefault();
-                        move(ref, node.id, "right");
+                        (
+                          e.currentTarget.parentElement?.querySelector(
+                            "[data-tab-menu]"
+                          ) as HTMLButtonElement | null
+                        )?.click();
                       }
                     }}
                   >
                     {tab.title}
                   </TabsTrigger>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("sessions.dock.closeTab", {
-                      name: tab.title,
-                    })}
-                    onClick={() => close(ref)}
-                  >
-                    <X />
-                  </Button>
+                  {/^(terminal|browser|preview):/.test(ref) ? (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("sessions.dock.closeTab", {
+                        name: tab.title,
+                      })}
+                      onClick={() => close(ref)}
+                    >
+                      <X />
+                    </Button>
+                  ) : null}
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
                         <Button
+                          data-tab-menu
                           size="icon-sm"
                           variant="ghost"
                           aria-label={t("sessions.dock.move")}
@@ -500,6 +535,7 @@ export const SessionDock = ({
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel
             id="session-chat"
+            panelRef={chatPanel}
             minSize={showChat ? 360 : 0}
             defaultSize={
               split
@@ -512,7 +548,12 @@ export const SessionDock = ({
             }
             groupResizeBehavior="preserve-pixel-size"
             onResize={(size) => {
-              if (split) chatWriter.write(size.inPixels);
+              if (
+                split &&
+                size.inPixels <=
+                  host.current!.clientWidth - minimumDockWidth + 1
+              )
+                chatWriter.write(size.inPixels);
             }}
             style={
               !showChat

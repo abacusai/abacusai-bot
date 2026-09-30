@@ -11,12 +11,21 @@ export interface SessionsWatcherDeps {
   notifier: Pick<Notifier, "notify">;
   labels: { done: string; needsYou: string };
 }
+const delivered = new Set<string>();
 export const handleSessionRunFinished = (
   deps: SessionsWatcherDeps,
   notice: RunFinishedNotice
 ) => {
   const row = deps.sessions().find((s) => s.id === notice.threadId);
-  if (!row || !isListedSession(row) || notice.outcome === "cancelled") return;
+  if (
+    !row ||
+    !isListedSession(row) ||
+    notice.outcome === "cancelled" ||
+    delivered.has(notice.runId)
+  )
+    return;
+  delivered.add(notice.runId);
+  if (delivered.size > 2000) delivered.delete(delivered.values().next().value!);
   if (!deps.seen(row.id)) deps.mark(row.id);
   if (notice.outcome === "error")
     deps.player.play("failed", { threadId: row.id });

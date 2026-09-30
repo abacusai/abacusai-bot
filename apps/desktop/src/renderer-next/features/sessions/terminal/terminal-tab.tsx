@@ -30,7 +30,7 @@ export const TerminalTab = ({
 }) => {
   const { t } = useTranslation();
   const transport = useSessionsTransport();
-  const host = useRef<HTMLDivElement>(null);
+  const container = useRef<HTMLDivElement>(null);
   const key = sessionConversationKey(row.workspaceId, row.id);
   const [error, setError] = useState<string | null>(null);
   const focused = useRef(false);
@@ -43,7 +43,7 @@ export const TerminalTab = ({
     void getTerminalView(`${key}:${id}`)
       .then(async (view) => {
         if (abort.signal.aborted) return;
-        host.current?.append(view.element);
+        container.current?.append(view.element);
         const start = await transport.client.terminal.start({
           terminalId: id,
           conversationKey: key,
@@ -127,7 +127,7 @@ export const TerminalTab = ({
         const fit = () => {
           if (timer) clearTimeout(timer);
           timer = setTimeout(() => {
-            if (!host.current?.getBoundingClientRect().width) return;
+            if (!container.current?.getBoundingClientRect().width) return;
             const size = view.fit.proposeDimensions();
             if (size) {
               view.term.resize(size.cols, size.rows);
@@ -142,7 +142,7 @@ export const TerminalTab = ({
           }, 40);
         };
         const observer = new ResizeObserver(fit);
-        if (host.current) observer.observe(host.current);
+        if (container.current) observer.observe(container.current);
         fit();
         view.term.focus();
         cleanup = () => {
@@ -185,7 +185,7 @@ export const TerminalTab = ({
       }}
     >
       {error ? <p role="alert">{error}</p> : null}
-      <div ref={host} className="min-h-0 flex-1 p-2" />
+      <div ref={container} className="min-h-0 flex-1 p-2" />
     </div>
   );
 };
