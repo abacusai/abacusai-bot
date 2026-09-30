@@ -9,6 +9,7 @@ import type {
   SwitchWorkspaceResult,
   WorkspacePathStatus,
 } from "#shared/contracts";
+import { WORKSPACE_NOT_FOUND } from "#shared/not-found";
 
 import { workspaceStore } from "../session/workspace-store";
 
@@ -207,7 +208,7 @@ export class WorkspaceService {
   ): Promise<RelocateWorkspaceResult> {
     const workspace = this.workspaces.find((w) => w.id === workspaceId);
     if (workspace == null) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
     const normalized = normalizeWorkspacePath(newPath);
@@ -300,7 +301,7 @@ export class WorkspaceService {
   switchWorkspace(workspaceId: string): SwitchWorkspaceResult {
     const workspace = this.workspaces.find((entry) => entry.id === workspaceId);
     if (workspace == null) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
     this.setActiveWorkspace(workspaceId);
