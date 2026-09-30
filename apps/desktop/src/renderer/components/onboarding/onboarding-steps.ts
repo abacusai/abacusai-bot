@@ -6,7 +6,6 @@
 /** Every screen, in the only order they ever appear. */
 export const STEP_ORDER = [
   "auth",
-  "gmail",
   "welcome",
   "connectors",
   "models",
@@ -28,11 +27,9 @@ export interface OnboardingRoute {
    * so a returning account gets the sign-in wall back and nothing behind it.
    */
   onboarded?: boolean;
-  /** An account whose Gmail is not connected and who has not said "not now": ask once, right after sign-in. */
-  offerGmail?: boolean;
   /**
    * The account signed up on the website, which already made the pitch and
-   * started the install: nothing is owed after sign-in but the Gmail question.
+   * started the install: nothing is owed after sign-in.
    */
   webSignup?: boolean;
 }
@@ -42,15 +39,13 @@ export const stepsFor = ({
   signedIn,
   paying,
   onboarded = false,
-  offerGmail = false,
   webSignup = false,
 }: OnboardingRoute): OnboardingStep[] => {
   if (onboarded) return signedIn ? [] : ["auth"];
-  if (signedIn && webSignup) return offerGmail ? ["gmail"] : [];
+  if (signedIn && webSignup) return [];
 
   return [
     ...(signedIn ? [] : (["auth"] as const)),
-    ...(offerGmail ? (["gmail"] as const) : []),
     "welcome",
     "connectors",
     // A paying plan covers the catalog, so the screen would be a detour.
