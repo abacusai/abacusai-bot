@@ -1,4 +1,4 @@
-import { unwrapResult } from "../errors";
+import { unwrapResult, workspaceFailure } from "../errors";
 import { impl } from "./impl";
 
 export const workspacesRouter = impl.workspaces.router({
@@ -18,7 +18,8 @@ export const workspacesRouter = impl.workspaces.router({
   })),
   switch: impl.workspaces.switch.handler(async ({ input, context }) => {
     unwrapResult(
-      await context.deps.serviceHost.switchWorkspace(input.workspaceId)
+      await context.deps.serviceHost.switchWorkspace(input.workspaceId),
+      workspaceFailure(input.workspaceId)
     );
   }),
   checkPath: impl.workspaces.checkPath.handler(({ input, context }) =>
@@ -29,7 +30,8 @@ export const workspacesRouter = impl.workspaces.router({
       await context.deps.serviceHost.relocateWorkspace(
         input.workspaceId,
         input.newPath
-      )
+      ),
+      workspaceFailure(input.workspaceId)
     );
   }),
 });

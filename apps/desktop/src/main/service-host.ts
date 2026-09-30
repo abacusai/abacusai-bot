@@ -154,6 +154,7 @@ import {
   type UpdateMessagingPlatformRequest,
   type UpdateMessagingSettingsRequest,
 } from "#shared/messaging";
+import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 import { detectRememberRequest } from "#shared/remember";
 import type {
   Routine,
@@ -1682,7 +1683,7 @@ export class ServiceHost {
       .getWorkspaces()
       .find((w) => w.id === workspaceId);
     if (workspace == null) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
     if (workspace.status !== "deleted") {
@@ -1724,7 +1725,7 @@ export class ServiceHost {
   ): Promise<{ success: boolean; error?: string }> {
     const updated = this.workspaceService.updateLabel(workspaceId, label);
     if (!updated) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
     await this.workspaceRuntimeService.refreshAndEmit();
     return { success: true };
@@ -3519,7 +3520,12 @@ export class ServiceHost {
    */
   async editRoutineByChat(routineId: string, text: string): Promise<string> {
     const job = getJob(routineId);
-    if (job == null) throw new Error("This routine is gone.");
+    if (job == null)
+      throw new EntityNotFoundError(
+        "routine",
+        routineId,
+        "This routine is gone."
+      );
     const workspaces = this.workspaceService.getWorkspaces();
     const workspaceId =
       job.workspaceId != null &&
