@@ -6,13 +6,15 @@ export const AreaPage = ({
   description,
   children,
   actions,
+  testId,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
   actions?: ReactNode;
+  testId?: string;
 }) => (
-  <div className="size-full overflow-auto">
+  <div className="size-full overflow-auto" data-testid={testId}>
     <main className="mx-auto flex w-[min(680px,calc(100%-48px))] flex-col gap-4 pt-10 pb-16">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-[22px] font-semibold">{title}</h1>
@@ -25,8 +27,15 @@ export const AreaPage = ({
     </main>
   </div>
 );
-export const GroupCard = ({ children }: { children: ReactNode }) => (
+export const GroupCard = ({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title?: string;
+}) => (
   <div className="bg-card flex flex-col divide-y rounded-[14px] px-1">
+    {title && <h2 className="px-3 py-3 text-[13px] font-semibold">{title}</h2>}
     {children}
   </div>
 );
@@ -39,7 +48,7 @@ export const SettingRow = ({
   id: string;
   title: string;
   detail?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }) => (
   <div
     data-setting-id={id}

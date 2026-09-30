@@ -11,6 +11,7 @@ declare module "@tanstack/hotkeys" {
   }
 }
 /** Registers an action’s live user binding; null deliberately disables it. */
+/** @public Shared phase-5 integration API. */
 export const useAppHotkey = (
   actionId: string,
   handler: () => void,
