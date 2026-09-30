@@ -13,13 +13,15 @@ import { EntityNotFoundError } from "#shared/not-found";
 import type { RoutineRun, RoutineRunKind } from "#shared/routines";
 import { matches, nextRun, parseCron } from "#shared/routines/cron";
 
+import { isMigrationWriteBlocked } from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";
+import { HeldFiles } from "../session/held-files";
 import {
   classifyLegacyRuns,
   isAttempt,
   legacyKind,
   mintAttemptId,
-  type StoredRun,
+  isStoredRun,
 } from "./routine-attempts";
 
 // One parser for main and the new renderer (spec 05 §31.7).
@@ -63,29 +65,80 @@ export interface CronJob {
 
 const FILE = (): string => path.join(abacusBotHome(), "cronjobs.json");
 
-const read = (): CronJob[] => {
-  try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(FILE(), "utf8"));
+const writeFileAtomic = (file: string, text: string): void => {
+  const temp = `${file}.tmp`;
+  fs.writeFileSync(temp, text, "utf8");
+  fs.renameSync(temp, file);
+};
 
-    if (!Array.isArray(parsed)) return [];
-    // Older files lack the newer fields; they were all plain cron jobs.
-    return (parsed as CronJob[]).map((job) => ({
-      ...job,
-      name: job.name ?? deriveName(job.prompt),
-      schedule: job.schedule ?? null,
-      runAt: job.runAt ?? null,
-      webhookToken: job.webhookToken ?? null,
-      botId: job.botId ?? null,
-      // Entries from before ids are given theirs by migration step 5; one
-      // it has not reached (the step failed) gets the same derived id here,
-      // persisted by the next write.
-      runs: Array.isArray(job.runs)
-        ? classifyLegacyRuns(job.id, job.runs as StoredRun[]).runs
-        : [],
-    }));
+/**
+ * `cronjobs.json` is a migration destination (step 5): while an unresolved
+ * commit may cover it (spec 00 C.1), a write is journalled beside the
+ * thread store's held writes and every read sees it; it reaches the file
+ * once the block lifts (the startup replay, or the next read or write).
+ */
+const held = new HeldFiles({
+  dir: () => path.join(abacusBotHome(), "threads", ".pending"),
+  isWriteBlocked: isMigrationWriteBlocked,
+  writeFile: writeFileAtomic,
+  log: (message) => console.warn(`[cron-store] ${message}`),
+});
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value != null && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * The jobs on disk (or held), or null when the file is there but cannot be
+ * read as a job list. A missing or blank file is no jobs.
+ */
+const load = (): CronJob[] | null => {
+  const file = held.read(FILE());
+  if (file.status === "missing") return [];
+  if (file.status !== "ok") return null;
+  if (file.text.trim().length === 0) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(file.text);
   } catch {
-    return [];
+    return null;
   }
+  if (!Array.isArray(parsed)) return null;
+  if (!parsed.every((job) => isRecord(job) && typeof job.id === "string"))
+    return null;
+  // Older files lack the newer fields; they were all plain cron jobs.
+  return (parsed as CronJob[]).map((job) => ({
+    ...job,
+    name:
+      job.name ?? deriveName(typeof job.prompt === "string" ? job.prompt : ""),
+    schedule: job.schedule ?? null,
+    runAt: job.runAt ?? null,
+    webhookToken: job.webhookToken ?? null,
+    botId: job.botId ?? null,
+    // Entries from before ids are given theirs by migration step 5; one
+    // it has not reached (the step failed) gets the same derived id here,
+    // persisted by the next write (the step still fills its links later).
+    // An entry main cannot read is left out of what the app sees.
+    runs: Array.isArray(job.runs)
+      ? classifyLegacyRuns(job.id, (job.runs as unknown[]).filter(isStoredRun))
+          .runs
+      : [],
+  }));
+};
+
+/** What the app lists: an unreadable file lists as no routines. */
+const read = (): CronJob[] => load() ?? [];
+
+/**
+ * The jobs a write starts from. An unreadable file is never replaced by a
+ * list built from nothing: the write is refused and the file kept.
+ */
+const readForWrite = (): CronJob[] => {
+  const jobs = load();
+  if (jobs == null)
+    throw new Error(
+      "cronjobs.json cannot be read, so routines cannot be saved; the file was left as it is."
+    );
+  return jobs;
 };
 
 const writeListeners = new Set<() => void>();
@@ -102,12 +155,21 @@ export const onCronStoreWrite = (listener: () => void): (() => void) => {
 };
 
 const write = (jobs: CronJob[]): void => {
-  const file = FILE();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(jobs, null, 2)}\n`, "utf8");
-  fs.renameSync(temp, file);
+  // The public list omits entries it cannot interpret. Keep those bytes as
+  // JSON values when saving another edit instead of silently deleting them.
+  const source = held.read(FILE());
+  const raw: Array<{ id: string; runs?: unknown[] }> =
+    source.status === "ok" && source.text.trim() !== ""
+      ? JSON.parse(source.text)
+      : [];
+  const stored = jobs.map((job) => {
+    const old = raw.find((entry) => entry.id === job.id)?.runs;
+    if (!Array.isArray(old)) return job;
+    const malformed = old.filter((entry) => !isStoredRun(entry));
+    if (malformed.length === 0) return job;
+    return { ...job, runs: [...job.runs, ...malformed] };
+  });
+  held.write(FILE(), `${JSON.stringify(stored, null, 2)}\n`);
   for (const listener of Array.from(writeListeners)) {
     try {
       listener();
@@ -162,7 +224,7 @@ export const createJob = (
   if (input.prompt.trim().length === 0)
     throw new Error("A prompt is required.");
 
-  const existing = read();
+  const existing = readForWrite();
   if (id != null && existing.some((job) => job.id === id))
     throw new ConflictError(`A routine with id "${id}" already exists.`);
 
@@ -212,7 +274,7 @@ export const updateJob = (
     >
   > & { webhook?: boolean }
 ): CronJob => {
-  const jobs = read();
+  const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
 
   if (index < 0)
@@ -248,7 +310,7 @@ export const updateJob = (
 };
 
 export const removeJob = (id: string): void => {
-  const jobs = read();
+  const jobs = readForWrite();
   const remaining = jobs.filter((job) => job.id !== id);
 
   if (remaining.length === jobs.length)
@@ -296,7 +358,7 @@ export const recordRun = (
   trigger: CronTrigger = "schedule",
   details: RecordRunDetails = {}
 ): CronRun | null => {
-  const jobs = read();
+  const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
 
   if (index < 0) return null;
