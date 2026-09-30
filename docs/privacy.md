@@ -43,9 +43,8 @@ imports a profile. They go into the sign-in window alone and the temporary copy
 is deleted.
 
 When you start a sign-up or sign-in in the app window and your default browser
-is one of those Chromium browsers, the sign-in screen says so, and the app reads
-that browser's cookies for the Google, Microsoft, Apple and GitHub login pages
-the same way. They let those providers show the accounts you already use in
+is one of those Chromium browsers, the app reads that browser's cookies for
+the Google, Microsoft, Apple and GitHub login pages the same way. They let those providers show the accounts you already use in
 that browser. They go into the app's sign-in session alone (the one the
 sign-in window and a connector sign-in that follows it use), are copied without
 an expiry, and are gone when the app quits. With any other default browser,
