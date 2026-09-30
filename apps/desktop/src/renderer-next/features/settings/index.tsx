@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#next/components/empty-state";
 import { NavList } from "#next/components/nav-list";
-import { usePrefs, useUpdatePrefs } from "#next/data/collections/prefs";
+import { usePrefs, useUpdatePrefs } from "#next/data/db/prefs";
 import type { SettingsPageId } from "#next/lib/navigation/areas";
 import type { ThemePref } from "#next/lib/theme";
 import { ToggleGroup, ToggleGroupItem } from "#next/ui/toggle-group";
@@ -99,9 +99,7 @@ export const AppearanceTheme = () => {
           onValueChange={(value: unknown[]) => {
             const next = value[0] as ThemePref | undefined;
             if (next == null || next === prefs.theme) return;
-            void updatePrefs((draft) => {
-              draft.theme = next;
-            }).catch(() => undefined);
+            void updatePrefs({ theme: next }).catch(() => undefined);
           }}
           variant="outline"
           size="sm"

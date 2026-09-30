@@ -57,11 +57,11 @@ export interface IpcTableClient<Row, Key extends string> {
   delete?(input: never): Promise<TablePosition<Key>>;
 }
 
-export type TablePositionLike = { epoch: string; seq: number };
+type TablePositionLike = { epoch: string; seq: number };
 
-export type SyncState = "connecting" | "live" | "resyncing";
+type SyncState = "connecting" | "live" | "resyncing";
 
-export interface IpcCollectionStatus {
+interface IpcCollectionStatus {
   epoch: string | null;
   receivedSeq: number;
   appliedSeq: number;
@@ -71,7 +71,7 @@ export interface IpcCollectionStatus {
 }
 
 /** What a mutation handler's `collection` offers the echo wait. */
-export interface SyncStarter {
+interface SyncStarter {
   readonly status: string;
   startSyncImmediate(): void;
 }
@@ -115,6 +115,14 @@ export interface IpcCollectionConfig<Row extends object, Key extends string> {
   startSync?: boolean;
   /** Delay before reconnect attempt `n` (0-based) after an error or EOF. */
   retryDelayMs?: (attempt: number) => number;
+  /**
+   * Stops the sync for good once aborted (the document's transport is gone,
+   * spec 01 §8.6 step 8): the stream is closed, no reopen or retry follows,
+   * and a later subscriber or `preload()` does not start another session.
+   * Unlike `collection.cleanup()`, which TanStack restarts on the next
+   * subscription.
+   */
+  signal?: AbortSignal;
 }
 
 export type IpcCollectionOptions<
@@ -124,10 +132,10 @@ export type IpcCollectionOptions<
   utils: IpcCollectionUtils;
 };
 
-export const DEFAULT_ECHO_TIMEOUT_MS = 10_000;
+const DEFAULT_ECHO_TIMEOUT_MS = 10_000;
 
 /** 0.5 s, 1 s, 2 s, then every 5 s. */
-export const defaultRetryDelayMs = (attempt: number): number =>
+const defaultRetryDelayMs = (attempt: number): number =>
   [500, 1_000, 2_000][attempt] ?? 5_000;
 
 const abortError = (message: string): Error => {
@@ -277,9 +285,11 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       }
     });
 
+  const stopped = (): boolean => config.signal?.aborted === true;
+
   const resync = (): Promise<void> => {
     // No session: nothing would ever answer it.
-    if (requestResync == null)
+    if (requestResync == null || stopped())
       return Promise.reject(abortError("The collection is not syncing"));
     const next: SnapshotWaiter = { ...deferred(), after: passesStarted };
     snapshotWaiters.push(next);
@@ -289,7 +299,7 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
 
   /** Mutating a lazy collection nobody has read yet must still see its echo. */
   const ensureSyncing = (collection: SyncStarter | undefined): void => {
-    if (collection == null) return;
+    if (collection == null || stopped()) return;
     if (collection.status === "idle" || collection.status === "cleaned-up")
       collection.startSyncImmediate();
   };
@@ -338,6 +348,24 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
     collection,
   }) => {
     const session = new AbortController();
+    // Stopped for good: no session at all, so nothing reopens on a dead
+    // transport however often TanStack restarts the sync.
+    if (stopped()) return () => undefined;
+    const endSession = (reason: string): void => {
+      session.abort();
+      requestResync = null;
+      current = null;
+      const error = abortError(reason);
+      for (const waiter of [...receivedWaiters, ...appliedWaiters])
+        waiter.reject(error);
+      receivedWaiters = [];
+      appliedWaiters = [];
+      for (const waiter of snapshotWaiters) waiter.reject(error);
+      snapshotWaiters = [];
+    };
+    const stopSession = (): void =>
+      endSession("The collection's sync was stopped");
+    config.signal?.addEventListener("abort", stopSession, { once: true });
     let current: Connection<Row, Key> | null = null;
     let holdsSnapshot = false;
     let attempt = 0;
@@ -617,16 +645,8 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
     void run();
 
     return () => {
-      session.abort();
-      requestResync = null;
-      current = null;
-      const error = abortError("The collection's sync was cleaned up");
-      for (const waiter of [...receivedWaiters, ...appliedWaiters])
-        waiter.reject(error);
-      receivedWaiters = [];
-      appliedWaiters = [];
-      for (const waiter of snapshotWaiters) waiter.reject(error);
-      snapshotWaiters = [];
+      config.signal?.removeEventListener("abort", stopSession);
+      endSession("The collection's sync was cleaned up");
     };
   };
 

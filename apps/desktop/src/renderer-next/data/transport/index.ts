@@ -22,4 +22,4 @@ export const getTransport = (): Promise<Transport> => {
 export { createTransport } from "./create-transport";
 export type { CreateTransportOptions, TransportPort } from "./create-transport";
 export type { CloseReason } from "./close-signal";
-export type { AppClient, AppQueryUtils, Transport } from "./types";
+export type { AppQueryUtils, Transport } from "./types";

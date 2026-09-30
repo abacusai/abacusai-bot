@@ -4,7 +4,7 @@ import * as v from "valibot";
 
 import { BotIdentity, BotPage } from "#next/features/bots";
 import { TopBarSlot, useTopBarActions } from "#next/features/shell";
-import { ignoreLoadError } from "#next/lib/navigation/loaders";
+import { ignoreLoadError, isMissing } from "#next/lib/navigation/loaders";
 import { BotSearch } from "#next/lib/navigation/search";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { BotId } from "#shared/contract/ids";
@@ -40,8 +40,11 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
   params: { parse: v.parser(v.object({ botId: BotId })) },
   validateSearch: BotSearch,
   loader: async ({ context, params }) => {
-    await context.collections.bots.preload().catch(ignoreLoadError);
-    if (!context.collections.bots.has(params.botId)) throw notFound();
+    const { bots } = context.db.collections;
+    await bots.preload().catch(ignoreLoadError);
+    // Only a loaded table can say the bot is gone; a failed load is the
+    // sidebar's to show, with its Retry.
+    if (isMissing(bots, params.botId)) throw notFound();
   },
   component: BotRoute,
 });

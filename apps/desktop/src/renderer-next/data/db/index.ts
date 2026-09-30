@@ -1,12 +1,21 @@
 /**
- * The app's DB collections (spec 00 B.3): module-level singletons over the
- * document's transport. `prefs`, `workspaces` and `sessions` sync at once
- * (the shell needs them); the rest start on first use or a route's
- * `collection.preload()`.
+ * The app's DB collections (spec 00 B.3, spec 01 §8.3). Nothing is created at
+ * import: `createDb(transport)` builds one set over a lazy transport, and
+ * main.tsx calls `installDb()` once `bootstrap()` has resolved the document's
+ * transport, so no collection starts syncing before the boot timeouts and the
+ * close handler exist (§8.6 step 5). The set lives on a global symbol, so a
+ * Vite HMR re-run of this module reuses the live collections instead of
+ * opening a second set of streams. The router context and `<DbProvider>`
+ * hand the same instance to loaders and components; tests make their own.
+ *
+ * `prefs`, `workspaces` and `sessions` sync at once (the shell needs them);
+ * the rest start on first use or a route's `collection.preload()`.
  */
 import { createCollection } from "@tanstack/db";
+import { createContext, use } from "react";
 
-import { getTransport } from "../transport";
+import type { PrefsPatch } from "#shared/contract/rows";
+
 import {
   artifactsCollectionOptions,
   botsCollectionOptions,
@@ -18,45 +27,93 @@ import {
   routinesCollectionOptions,
   sessionsCollectionOptions,
   workspacesCollectionOptions,
+  type LazyTransport,
+  type TableOverrides,
 } from "./tables";
 
-export const prefsCollection = createCollection(
-  prefsCollectionOptions(getTransport)
-);
-/** Sends every leaf it names, so each becomes the user's (B.2). */
-export const updatePrefs = createUpdatePrefs(prefsCollection, getTransport);
+const buildCollections = (
+  transport: LazyTransport,
+  overrides: TableOverrides
+) => ({
+  prefs: createCollection(prefsCollectionOptions(transport, overrides)),
+  workspaces: createCollection(
+    workspacesCollectionOptions(transport, overrides)
+  ),
+  sessions: createCollection(sessionsCollectionOptions(transport, overrides)),
+  bots: createCollection(botsCollectionOptions(transport, overrides)),
+  routines: createCollection(routinesCollectionOptions(transport, overrides)),
+  routineRuns: createCollection(
+    routineRunsCollectionOptions(transport, overrides)
+  ),
+  artifacts: createCollection(artifactsCollectionOptions(transport, overrides)),
+  memories: createCollection(memoriesCollectionOptions(transport, overrides)),
+  gitState: createCollection(gitStateCollectionOptions(transport, overrides)),
+});
 
-export const workspacesCollection = createCollection(
-  workspacesCollectionOptions(getTransport)
-);
-export const sessionsCollection = createCollection(
-  sessionsCollectionOptions(getTransport)
-);
-export const botsCollection = createCollection(
-  botsCollectionOptions(getTransport)
-);
-export const routinesCollection = createCollection(
-  routinesCollectionOptions(getTransport)
-);
-export const routineRunsCollection = createCollection(
-  routineRunsCollectionOptions(getTransport)
-);
-export const artifactsCollection = createCollection(
-  artifactsCollectionOptions(getTransport)
-);
-export const memoriesCollection = createCollection(
-  memoriesCollectionOptions(getTransport)
-);
-export const gitStateCollection = createCollection(
-  gitStateCollectionOptions(getTransport)
-);
+export type Collections = ReturnType<typeof buildCollections>;
 
-export {
-  ipcCollectionOptions,
-  type IpcCollectionConfig,
-  type IpcCollectionOptions,
-  type IpcCollectionStatus,
-  type IpcCollectionUtils,
-  type IpcTableClient,
-} from "./ipc-collection-options";
+export interface Db {
+  readonly collections: Collections;
+  /**
+   * The prefs write (B.2 provenance): sends exactly the leaves in `patch`,
+   * each of which becomes the user's. ⌘B sends `{ sidebar: { pinned } }`.
+   */
+  updatePrefs(patch: PrefsPatch): Promise<void>;
+  /**
+   * Stops every sync for good (the transport is gone): no reopen, no retry,
+   * and no restart when a mounted query or loader subscribes again.
+   */
+  stop(): void;
+  readonly stopped: boolean;
+}
+
+export const createDb = (
+  transport: LazyTransport,
+  overrides: Omit<TableOverrides, "signal"> = {}
+): Db => {
+  const stopper = new AbortController();
+  const collections = buildCollections(transport, {
+    ...overrides,
+    signal: stopper.signal,
+  });
+  const write = createUpdatePrefs(collections.prefs, transport);
+  return {
+    collections,
+    updatePrefs: (patch) => write(patch),
+    stop: () => stopper.abort(),
+    get stopped() {
+      return stopper.signal.aborted;
+    },
+  };
+};
+
+const GLOBAL_KEY = Symbol.for("abacus.db");
+
+type DbGlobal = { [GLOBAL_KEY]?: Db };
+
+/**
+ * The document's collections, created on the first call over `transport`
+ * (the one `bootstrap()` resolved); later calls, an HMR re-run included,
+ * return the same set.
+ */
+export const installDb = (transport: LazyTransport): Db => {
+  const store = globalThis as DbGlobal;
+  store[GLOBAL_KEY] ??= createDb(transport);
+  return store[GLOBAL_KEY];
+};
+
+const DbContext = createContext<Db | null>(null);
+
+export const DbProvider = DbContext.Provider;
+
+/** The collections and the prefs writer (the provider's, or the document's). */
+export const useDb = (): Db => {
+  const provided = use(DbContext);
+  const db = provided ?? (globalThis as DbGlobal)[GLOBAL_KEY];
+  if (db == null) throw new Error("useDb outside <DbProvider> before boot");
+  return db;
+};
+
+export const useCollections = (): Collections => useDb().collections;
+
 export * from "./tables";

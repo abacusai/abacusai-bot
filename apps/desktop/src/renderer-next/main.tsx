@@ -1,25 +1,24 @@
 /**
  * renderer-next boot (spec 01 §8.6): styles, the stored theme before the
- * first paint, i18n, then bootstrap() (transport, system facts, prefs) before
- * the router exists. A failure renders a static screen, never the router.
+ * first paint, i18n, then bootstrap() (transport, system facts, the
+ * collections over that transport, prefs) before the router exists. Every
+ * step is guarded: a failure anywhere renders the static BootFailure screen,
+ * never a blank window, and tells main through a bounded readiness call.
  */
 import "./styles/app.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { createRoot } from "react-dom/client";
 
-import {
-  getCollections,
-  setDbSource,
-  type Collections,
-} from "#next/data/collections";
-import { DEFAULT_PREFS } from "#next/data/collections/prefs";
+import { createDb, installDb, type Db } from "#next/data/db";
+import { DEFAULT_PREFS } from "#next/data/db/prefs";
 import { createQueryClient } from "#next/data/query-client";
-import { getTransport } from "#next/data/transport";
-import { BootFailure } from "#next/features/shell";
+import { getTransport, type Transport } from "#next/data/transport";
+import { BootFailure, isToasterMounted } from "#next/features/shell";
 import {
   bootstrap,
   createTransportLostHandler,
+  reportFailedBoot,
   type BootError,
 } from "#next/lib/bootstrap";
 import {
@@ -29,6 +28,7 @@ import {
   fixedT,
   resolveLanguage,
 } from "#next/lib/i18n";
+import { guardSingleViewTransition } from "#next/lib/navigation/single-transition";
 import { installTransitionTypes } from "#next/lib/navigation/transition-types";
 import { applyTheme, DARK_QUERY, resolveTheme } from "#next/lib/theme";
 import { toast } from "#next/ui/toast";
@@ -46,6 +46,10 @@ window.addEventListener("error", (event) => {
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[renderer-next] unhandled rejection", event.reason);
 });
+// Dev and the acceptance build: a second view transition in one commit is
+// reported (and counted for R1-T11b).
+if (import.meta.env.DEV || import.meta.env.VITE_UI_GALLERY === "1")
+  guardSingleViewTransition(document);
 
 const container = document.getElementById("root");
 if (container == null) throw new Error("renderer-next: #root is missing");
@@ -54,94 +58,138 @@ const root = createRoot(container, {
     console.error("[renderer-next] render error", error),
 });
 
-const renderFailure = (error: BootError | null): void => {
+/** `t` that never throws: English copy is bundled, keys are the last resort. */
+const text = (key: string): string => {
+  try {
+    return i18n.isInitialized ? i18n.t(key) : key;
+  } catch {
+    return key;
+  }
+};
+
+const renderFailure = (error: BootError | Error | null): void => {
   root.render(
     <BootFailure
-      title={i18n.t("shell.boot.title")}
-      description={i18n.t("shell.boot.description")}
-      reloadLabel={i18n.t("shell.boot.reload")}
+      title={text("shell.boot.title")}
+      description={text("shell.boot.description")}
+      reloadLabel={text("shell.boot.reload")}
       detail={error?.message}
     />
   );
 };
 
-const stopSyncs = (collections: Collections | null): void => {
-  if (collections == null) return;
-  for (const collection of Object.values(collections))
-    void collection.cleanup().catch(() => undefined);
+/** The port died before the app mounted: no Toaster exists yet. */
+const renderConnectionLost = (): void => {
+  root.render(
+    <BootFailure
+      title={text("shell.connectionLost")}
+      description={text("shell.boot.description")}
+      reloadLabel={text("shell.boot.reload")}
+    />
+  );
 };
 
 const start = async (): Promise<void> => {
-  // 4. English is bundled; the user's language follows prefs.
-  await initI18n();
+  let transport: Transport | null = null;
+  let db: Db | null = null;
+  try {
+    // 4. English is bundled; the user's language follows prefs.
+    await initI18n();
 
-  // Until spec 00 sub-slice B lands, main's db.* answers UNAVAILABLE; the dev
-  // fixture mode serves the tables from an in-renderer memory transport.
-  if (import.meta.env.VITE_NEXT_DB_FIXTURES === "1") {
-    const { createMemoryDbSource } =
-      await import("#next/data/fixture-db/memory-source");
-    setDbSource(createMemoryDbSource().source);
-  }
+    const queryClient = createQueryClient();
+    const onTransportLost = createTransportLostHandler({
+      // Through the adapter, not collection.cleanup(): a mounted query or a
+      // loader would restart a cleaned-up sync on the dead port.
+      stopSyncs: () => db?.stop(),
+      notify: () => {
+        if (isToasterMounted())
+          toast.add({ title: i18n.t("shell.connectionLost"), type: "loading" });
+        else renderConnectionLost();
+      },
+      reload: () => window.location.reload(),
+      showError: () => renderFailure(null),
+      storage: window.sessionStorage,
+    });
 
-  let collections: Collections | null = null;
-  const queryClient = createQueryClient();
-  const onTransportLost = createTransportLostHandler({
-    stopSyncs: () => stopSyncs(collections),
-    notify: () =>
-      toast.add({ title: i18n.t("shell.connectionLost"), type: "loading" }),
-    reload: () => window.location.reload(),
-    showError: () => renderFailure(null),
-    storage: window.sessionStorage,
-  });
+    // The dev fixture tables (VITE_NEXT_DB_FIXTURES=1): the gallery and the
+    // visual screenshot run only. Every acceptance run reads main's db.*.
+    const fixtures =
+      import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
+        ? (
+            await import("#next/data/fixture-db/memory-source")
+          ).createMemoryDbTransport()
+        : null;
 
-  // 5. Transport, system facts, prefs; the close handler is registered the
-  // moment the transport exists.
-  const result = await bootstrap({
-    getTransport,
-    queryClient,
-    getCollections: () => {
-      collections = getCollections();
-      return collections;
-    },
-    onTransportLost,
-  });
-  if (!result.ok) {
-    renderFailure(result.error);
-    return;
-  }
-  const { boot } = result;
-
-  // 6. Theme and language from prefs.
-  const prefs = boot.collections.prefs.get("app") ?? DEFAULT_PREFS;
-  applyTheme(
-    document,
-    resolveTheme(prefs.theme, matchMedia(DARK_QUERY).matches)
-  );
-  await changeLanguage(resolveLanguage(prefs.language));
-
-  // 7. Mount guard: a port that died during boot already started the reload.
-  if (boot.transport.state === "closed") return;
-  const router = createAppRouter({
-    context: {
+    // 5. Transport, system facts, the collections over that transport,
+    // prefs; the close handler is registered the moment the transport exists.
+    const result = await bootstrap({
+      getTransport,
       queryClient,
-      transport: boot.transport,
-      system: boot.system,
-      collections: boot.collections,
-      t: fixedT(),
-    },
-  });
-  installTransitionTypes(router);
+      getDb: (resolved) => {
+        db =
+          fixtures === null
+            ? installDb(async () => resolved)
+            : createDb(fixtures.transport);
+        return db;
+      },
+      onTransportLost,
+    });
+    transport = result.ok ? result.boot.transport : result.transport;
+    if (!result.ok) {
+      renderFailure(result.error);
+      return;
+    }
+    const { boot } = result;
 
-  if (import.meta.env.VITE_UI_GALLERY === "1") {
-    const { installDevHooks } = await import("#next/lib/dev/dev-hooks");
-    installDevHooks(router, boot.collections);
+    // 6. Theme and language from prefs. A locale chunk that fails to load
+    // keeps the bundled English.
+    const prefs = boot.db.collections.prefs.get("app") ?? DEFAULT_PREFS;
+    applyTheme(
+      document,
+      resolveTheme(prefs.theme, matchMedia(DARK_QUERY).matches)
+    );
+    await changeLanguage(resolveLanguage(prefs.language)).catch(
+      (error: unknown) => {
+        console.error("[renderer-next] locale failed; keeping English", error);
+      }
+    );
+
+    // 7. Mount guard: a port that died during boot already started the reload.
+    if (boot.transport.state === "closed") return;
+    const router = createAppRouter({
+      context: {
+        queryClient,
+        transport: boot.transport,
+        system: boot.system,
+        db: boot.db,
+        t: fixedT(),
+      },
+    });
+    installTransitionTypes(router);
+
+    if (import.meta.env.VITE_UI_GALLERY === "1") {
+      try {
+        const { installDevHooks } = await import("#next/lib/dev/dev-hooks");
+        installDevHooks(router, boot.db);
+      } catch (error) {
+        console.error("[renderer-next] dev hooks failed", error);
+      }
+    }
+
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    );
+  } catch (error) {
+    // Anything unexpected: the failure screen, and main hears it (bounded).
+    console.error("[renderer-next] boot failed", error);
+    renderFailure(error instanceof Error ? error : new Error(String(error)));
+    void reportFailedBoot(
+      transport,
+      error instanceof Error ? error.message : String(error)
+    );
   }
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
 };
 
 void start();
