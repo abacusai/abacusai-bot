@@ -82,7 +82,7 @@ describe("ModelSwitchWaiters", () => {
     await expect(checked).resolves.toBeUndefined();
   });
 
-  it("a timed-out switch lets the next one go; sessions are independent", async () => {
+  it("a caller deadline retains the command until its late refusal; sessions are independent", async () => {
     vi.useFakeTimers();
     try {
       const waiters = new ModelSwitchWaiters();
@@ -104,9 +104,33 @@ describe("ModelSwitchWaiters", () => {
       vi.advanceTimersByTime(1_000);
       await expect(first).resolves.toBeUndefined();
       await expect(other).resolves.toBeUndefined();
+      expect(sent).toEqual(["t:c"]);
+      expect(await settledState(second)).toBe("pending");
+      waiters.feed("s", refused("A's late refusal"));
       expect(sent).toEqual(["t:c", "s:b"]);
+      expect(await settledState(second)).toBe("pending");
       waiters.feed("s", changed("prov/b"));
       await expect(second).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("process invalidation releases timed-out and queued callers without sending stale commands", async () => {
+    vi.useFakeTimers();
+    try {
+      const waiters = new ModelSwitchWaiters();
+      const sendB = vi.fn(() => true);
+      const a = waiters.wait("s", "a", () => true, 100);
+      const b = waiters.wait("s", "b", sendB, 100);
+      await vi.advanceTimersByTimeAsync(100);
+      await expect(a).resolves.toBeUndefined();
+      waiters.invalidate("s");
+      await expect(b).resolves.toBeUndefined();
+      expect(sendB).not.toHaveBeenCalled();
+      expect(waiters.pending).toBe(0);
+      const c = waiters.wait("s", "c", () => false);
+      await expect(c).resolves.toBeUndefined();
     } finally {
       vi.useRealTimers();
     }
