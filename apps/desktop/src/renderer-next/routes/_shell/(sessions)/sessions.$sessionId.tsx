@@ -304,6 +304,12 @@ const SessionRoute = () => {
               } as never)
             }
             slots={{
+              banner:
+                model.blocked === "no-model" ? (
+                  <Button onClick={model.onBlocked}>
+                    {t("sessions.model.configure")}
+                  </Button>
+                ) : undefined,
               runTail: (
                 <SessionChangesCard
                   row={row}
