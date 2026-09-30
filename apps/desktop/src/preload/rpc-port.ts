@@ -37,9 +37,10 @@ export interface HandshakeWindow {
 
 export interface RpcPortHandshakeOptions {
   /**
-   * Holds the page's half back this long (main's half goes at once). Test
-   * builds only (ABACUS_TEST_HANDSHAKE_DELAY_MS): it is how the real-Electron
-   * test makes the page time out and close a late port.
+   * Holds the page's half back this long (main's half goes at once). Only the
+   * real-Electron test's own preload entry passes it (from
+   * ABACUS_TEST_HANDSHAKE_DELAY_MS), to make the page time out and close a
+   * late port; the shipped preload (index.ts) never does.
    */
   delayMs?: number;
 }
