@@ -125,6 +125,7 @@ import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
+import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
 import { PrefsStore } from "./services/config/prefs-store";
 import {
   registerRendererState,
@@ -1689,6 +1690,9 @@ app
     });
     workspaceServiceHost.start();
     const rendererState = registerRendererState();
+    // The old renderer is the shipped UI until the cut-over: its durable
+    // state keeps `prefs.json` current, by provenance (spec 00 C.4).
+    installLegacyPrefsSync(rendererState, prefsStore);
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);

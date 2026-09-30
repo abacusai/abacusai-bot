@@ -118,6 +118,30 @@ describe("PrefsStore", () => {
     });
   });
 
+  it("resetLegacy resets legacy fields only, back to default provenance", () => {
+    const store = new PrefsStore({ file });
+    store.importLegacy({ theme: "dark", onboardingStep: "welcome" });
+    store.update({ onboardingStep: "done" });
+    const changes: string[] = [];
+    store.onChanged((row) => changes.push(row.theme));
+
+    expect(
+      store.resetLegacy(["theme", "onboardingStep", "browserHomepage"])
+    ).toEqual(["theme"]);
+    expect(store.get()).toMatchObject({
+      theme: "system",
+      onboardingStep: "done",
+    });
+    expect(store.provenance()).toMatchObject({
+      theme: "default",
+      onboardingStep: "user",
+      browserHomepage: "default",
+    });
+    expect(changes).toEqual(["system"]);
+    expect(store.resetLegacy(["theme"])).toEqual([]);
+    expect(new PrefsStore({ file }).provenance().theme).toBe("default");
+  });
+
   it("refuses unknown keys on update", () => {
     const store = new PrefsStore({ file });
     expect(() => store.update({ nope: 1 } as never)).toThrow();

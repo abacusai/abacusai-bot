@@ -9,8 +9,8 @@
  * overwrites a `"user"` field, so an explicit choice survives even when it
  * equals the default. Provenance never reaches the renderer.
  *
- * `update` and `importLegacy` are the only writers, and so the only places
- * provenance is set.
+ * `update`, `importLegacy` and `resetLegacy` (its removal half) are the only
+ * writers, and so the only places provenance is set.
  */
 import fs from "fs";
 import path from "path";
@@ -143,6 +143,25 @@ export class PrefsStore {
       (accepted as Record<string, unknown>)[field] = value;
     }
     return { row: this.#apply(accepted, () => "legacy"), invalid };
+  }
+
+  /**
+   * The old renderer dropped the keys behind these fields (spec 00 C.4): each
+   * one whose value came from it goes back to its default. A field the user
+   * set, or never set, is left alone. Returns the fields reset.
+   */
+  resetLegacy(fields: readonly PrefsField[]): PrefsField[] {
+    this.#load();
+    const reset = fields.filter(
+      (field) =>
+        PREFS_FIELDS.includes(field) && this.#provenance[field] === "legacy"
+    );
+    if (reset.length === 0) return [];
+    const patch = Object.fromEntries(
+      reset.map((field) => [field, clone(PREFS_DEFAULTS[field])])
+    ) as PrefsPatch;
+    this.#apply(patch, () => "default");
+    return reset;
   }
 
   /** Called after every write that changed the row. */
