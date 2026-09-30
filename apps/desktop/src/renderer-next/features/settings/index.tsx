@@ -1,13 +1,21 @@
+import { useLiveQuery } from "@tanstack/react-db";
+import { useQuery } from "@tanstack/react-query";
 import { useMatchRoute } from "@tanstack/react-router";
 /** Settings navigation and translated row search. */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { NavList } from "#next/components/nav-list";
+import { useCollections } from "#next/data/db";
 import type { SettingsPageId } from "#next/lib/navigation/areas";
+import { useAppContext } from "#next/lib/use-app-context";
 import { Input } from "#next/ui/input";
 
-import { searchSettings } from "./search-index";
+import {
+  searchSettings,
+  SETTINGS_INDEX,
+  type SettingEntry,
+} from "./search-index";
 
 export type SettingsPage = SettingsPageId;
 
@@ -35,7 +43,57 @@ export const SettingsSidebar = () => {
   const { t } = useTranslation();
   const matchRoute = useMatchRoute();
   const [q, setQ] = useState("");
-  const results = q.trim() ? searchSettings(q, t) : null;
+  const c = useCollections();
+  const bots = useLiveQuery(c.bots).data ?? [];
+  const memories = useLiveQuery(c.memories).data ?? [];
+  const { system, transport } = useAppContext();
+  const notes = useQuery({
+    ...transport.orpc.memory.bots.queryOptions({ input: {} }),
+    enabled: !!q.trim(),
+  });
+  const usage = useQuery({
+    ...transport.orpc.account.usage.queryOptions({ input: {} }),
+    enabled: !!q.trim(),
+  });
+  const entries: SettingEntry[] = [
+    ...SETTINGS_INDEX.filter(
+      (entry) => system.platform !== "darwin" || !entry.id.endsWith("@terminal")
+    ),
+    ...bots.flatMap((bot) => [
+      {
+        id: `sounds-bot-${bot.id}`,
+        page: "notifications" as const,
+        labelKey: "",
+        label: `${bot.name} · ${t("phase5.settings.perBot")}`,
+      },
+      ...(memories.some((row) => row.botId === bot.id) ||
+      notes.data?.some((item) => item.botId === bot.id && item.noteDays > 0)
+        ? [
+            {
+              id: `memory-bot-${bot.id}`,
+              page: "memory" as const,
+              labelKey: "",
+              label: `${bot.name} · ${t("phase5.rememberedByBots")}`,
+            },
+          ]
+        : []),
+    ]),
+    ...memories
+      .filter((row) => row.scope === "global")
+      .map((row) => ({
+        id: `memory-${row.id}`,
+        page: "memory" as const,
+        labelKey: "",
+        label: row.entry,
+      })),
+    ...(usage.data?.models ?? []).map((model) => ({
+      id: `usage-${model.id}`,
+      page: "usage" as const,
+      labelKey: "",
+      label: model.modelId,
+    })),
+  ];
+  const results = q.trim() ? searchSettings(q, t, entries) : null;
   return (
     <NavList.Root label={t("settings.sidebar.label")}>
       <NavList.Header title={t("settings.sidebar.label")} />

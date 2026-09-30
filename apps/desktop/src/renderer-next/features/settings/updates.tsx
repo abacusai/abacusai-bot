@@ -8,6 +8,7 @@ import {
   SettingRow,
 } from "#next/components/form-kit/page";
 import { followNotices } from "#next/data/queries/live";
+import { getLogDump } from "#next/lib/log-ring";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { showError, showInfo } from "#next/lib/toast";
 import { useAppContext, errorText } from "#next/lib/use-app-context";
@@ -139,7 +140,7 @@ export const AboutPage = () => {
             variant="secondary"
             onClick={() =>
               void transport.client.system.logs
-                .save({ rendererLogs: "" })
+                .save({ rendererLogs: getLogDump() })
                 .then((result) => {
                   if (result.filePath)
                     showInfo(t("phase5.logsSaved", { path: result.filePath }));

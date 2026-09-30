@@ -55,7 +55,7 @@ const groups: Partial<Record<SettingsPageId, string[]>> = {
     "forgetAccount",
   ],
   usage: ["abacusCredits", "openrouterUsage", "weekUsage"],
-  about: ["appVersion", "updates", "logs"],
+  about: ["appVersion", "updates", "logs", "changelog"],
 };
 export const SETTINGS_INDEX: readonly SettingEntry[] = [
   ...Object.entries(groups).flatMap(([page, ids]) =>
@@ -72,20 +72,48 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     label: p.label,
   })),
   { id: "localModels", page: "models", labelKey: "phase5.onThisMachine" },
+  {
+    id: "terminalShell",
+    page: "environment",
+    labelKey: "phase5.terminalShell",
+  },
+  ...["sent", "received", "needs-you", "done", "failed", "routine-fired"].map(
+    (cue) => ({
+      id: `sound-${cue}`,
+      page: "notifications" as const,
+      labelKey: `phase5.cues.${cue}`,
+    })
+  ),
+  ...["link", "gmail", "whatsapp"].map((channel) => ({
+    id: `invite-${channel}`,
+    page: "account" as const,
+    labelKey: `phase5.inviteChannels.${channel}`,
+  })),
   ...LOCAL_MODEL_CATALOG.map((m) => ({
     id: `local-${m.id}`,
     page: "models" as const,
     labelKey: "",
     label: m.label,
   })),
+  ...APP_ACTIONS.filter((a) => a.terminalDefault?.windows !== undefined).map(
+    (a) => ({
+      id: `key-${a.id}@terminal`,
+      page: "keyboard" as const,
+      labelKey: a.labelKey,
+    })
+  ),
   ...APP_ACTIONS.map((a) => ({
     id: `key-${a.id}`,
     page: "keyboard" as const,
     labelKey: a.labelKey,
   })),
 ];
-export const searchSettings = (query: string, t: (key: string) => string) =>
-  SETTINGS_INDEX.filter((row) =>
+export const searchSettings = (
+  query: string,
+  t: (key: string) => string,
+  entries: readonly SettingEntry[] = SETTINGS_INDEX
+) =>
+  entries.filter((row) =>
     foldSearch(
       `${row.label ?? t(row.labelKey)} ${t(`settings.pages.${row.page}`)}`
     ).includes(foldSearch(query))

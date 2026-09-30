@@ -19,6 +19,8 @@ import { stats, routineState, scheduleLabel, useRoutinesData } from "./data";
 import { routineOwns } from "./notify";
 export const RoutinesSidebar = () => {
   const { t, i18n } = useTranslation();
+  const connectorThreads = useStore(routineConnectorThreads, (state) => state);
+  const asks = new Set(connectorThreads);
   const { db, transport } = useAppContext();
   const { routines, runs, sessions, bots } = useRoutinesData();
   const status = useCollectionStatus(db.collections.routines);
@@ -54,8 +56,8 @@ export const RoutinesSidebar = () => {
     .filter((r) => foldSearch(r.name + " " + r.prompt).includes(foldSearch(q)))
     .toSorted(
       (a, b) =>
-        Number(routineState(b, runs, sessions) === "running") -
-          Number(routineState(a, runs, sessions) === "running") ||
+        Number(routineState(b, runs, sessions, asks) === "running") -
+          Number(routineState(a, runs, sessions, asks) === "running") ||
         a.name.localeCompare(b.name)
     );
   return (
@@ -85,7 +87,7 @@ export const RoutinesSidebar = () => {
       ) : (
         <NavList.Rows>
           {ordered.map((r) => {
-            const state = routineState(r, runs, sessions);
+            const state = routineState(r, runs, sessions, asks);
             return (
               <NavList.Item
                 key={r.id}

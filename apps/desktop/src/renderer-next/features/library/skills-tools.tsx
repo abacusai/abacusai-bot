@@ -90,23 +90,23 @@ export const SkillsPage = () => {
         }
       >
         <SettingRow id="skillsWorkspace" title={t("phase5.workspace")}>
-        <Choice
-          id="skillsWorkspace"
-          value={workspace?.id ?? ""}
-          options={[
-            { value: "", label: t("phase5.global") },
-            ...workspaces
-              .filter((w) => w.kind == null || w.kind === "auto")
-              .map((w) => ({ value: w.id, label: w.label ?? w.path })),
-          ]}
-          onChange={(workspace) =>
-            void navigate({
-              to: "/library/skills",
-              search: { workspace: workspace || undefined },
-              transition: "none",
-            })
-          }
-        />
+          <Choice
+            id="skillsWorkspace"
+            value={workspace?.id ?? ""}
+            options={[
+              { value: "", label: t("phase5.global") },
+              ...workspaces
+                .filter((w) => w.kind == null || w.kind === "auto")
+                .map((w) => ({ value: w.id, label: w.label ?? w.path })),
+            ]}
+            onChange={(workspace) =>
+              void navigate({
+                to: "/library/skills",
+                search: { workspace: workspace || undefined },
+                transition: "none",
+              })
+            }
+          />
         </SettingRow>
         <div className="flex gap-2">
           {(["folder", "file"] as const).map((kind) => (

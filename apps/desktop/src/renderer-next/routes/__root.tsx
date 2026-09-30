@@ -3,12 +3,13 @@
  * facts and prefs were resolved by bootstrap() and arrive as context.
  */
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 
 import { LibraryGlobals } from "#next/features/library";
 import { RoutinesGlobals } from "#next/features/routines";
 import { CriticalUpdateDialog } from "#next/features/settings";
 import { AppRoot, NotFound, RootError } from "#next/features/shell";
+import { installLogRing } from "#next/lib/log-ring";
 import type { RouterContext } from "#next/router";
 
 const Devtools =
@@ -22,6 +23,9 @@ const Devtools =
 
 const RootComponent = () => {
   const { transport, db, system } = Route.useRouteContext();
+  useEffect(() => {
+    if (import.meta.env.MODE !== "test") return installLogRing(transport);
+  }, [transport]);
   return (
     <AppRoot transport={transport} db={db} system={system}>
       <Outlet />
