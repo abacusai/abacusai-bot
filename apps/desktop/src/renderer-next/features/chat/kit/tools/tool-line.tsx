@@ -343,12 +343,15 @@ const Body = ({
   expander,
   tool,
   input,
+  diffKey,
 }: {
+  diffKey: string;
   expander: Expander;
   tool: NormalizedTool;
   input: Record<string, unknown>;
 }): ReactNode => {
-  const { workspaceRoot } = useChatView();
+  const { workspaceRoot, onOpenDiff } = useChatView();
+  const { t } = useTranslation();
   if (tool.error != null && tool.status === "failed" && expander !== "bash")
     return <pre className="chat-terminal text-destructive">{tool.error}</pre>;
   switch (expander) {
@@ -360,13 +363,26 @@ const Body = ({
           <pre className="chat-terminal">{tool.text}</pre>
         )
       ) : (
-        <DiffView
-          lines={linesOfDiff(tool.diff)}
-          lang={languageForPath(
-            typeof input.path === "string" ? input.path : undefined
-          )}
-          limit={linesOfDiff(tool.diff).length > 2000 ? 400 : undefined}
-        />
+        <div>
+          <DiffView
+            lines={linesOfDiff(tool.diff)}
+            lang={languageForPath(
+              typeof input.path === "string" ? input.path : undefined
+            )}
+            limit={linesOfDiff(tool.diff).length > 2000 ? 400 : undefined}
+          />
+          {onOpenDiff ? (
+            <button
+              type="button"
+              className="text-muted-foreground mt-2 text-xs underline"
+              onClick={() =>
+                onOpenDiff(String(input.path ?? input.file_path ?? ""), diffKey)
+              }
+            >
+              {t("sessions.changes.full")}
+            </button>
+          ) : null}
+        </div>
       );
     case "read":
       return <ReadBody tool={tool} input={input} />;
@@ -419,6 +435,7 @@ export interface ToolLineProps {
 export const ToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   const { t } = useTranslation();
   const { threadId } = useChatView();
+  const scope = useSubagentScope();
   const { tool, input, needsYou } = useNormalizedTool(part, result);
   const expander = fixed ?? expanderFor(part.name);
   const Icon = KIND_ICONS[kindOf(part.name)] ?? Wrench;
@@ -480,7 +497,12 @@ export const ToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
       </div>
       {expandable ? (
         <CollapsibleContent id={bodyId} className="ps-5 pt-1 pb-2">
-          <Body expander={expander} tool={tool} input={input} />
+          <Body
+            expander={expander}
+            tool={tool}
+            input={input}
+            diffKey={toolKey(scope, part.id)}
+          />
         </CollapsibleContent>
       ) : null}
     </Collapsible>

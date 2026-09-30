@@ -34,3 +34,5 @@ export type { SubmissionEnvelope } from "./runtime/admission";
 export { updateDraft, clearDraft, draftStore } from "./composer/draft-store";
 
 export { StartComposer } from "./composer/start-composer";
+export { resolveSessionToolDiff as resolveToolDiff } from "./runtime/tool-diff";
+export { SubagentDetail, useSubagents } from "./kit/subagents/detail";
