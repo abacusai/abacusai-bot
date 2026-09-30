@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-10-01",
+  "durationMs": 201,
+  "source": "NSScreen JXA on task host",
+  "probe": {
+    "ok": true,
+    "screens": [
+      {
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 1710,
+          "height": 1107
+        },
+        "top": 33,
+        "left": 763,
+        "right": 762
+      }
+    ]
+  }
+}

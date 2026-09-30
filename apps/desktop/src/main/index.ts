@@ -1,9 +1,9 @@
 import { execFile } from "child_process";
+import { existsSync, mkdirSync } from "fs";
 
 // The account-profile home MUST resolve before any import below reads a path
 // under abacusBotHome(). Stores open files at module load. Keep this first.
 import "./profile-home-init";
-import { existsSync, mkdirSync } from "fs";
 import fs from "fs/promises";
 import os from "os";
 import { join } from "path";
@@ -38,6 +38,7 @@ import type {
 } from "#shared/contracts";
 
 import { NotchController } from "./notch/controller";
+import { NotchNotificationPolicy } from "./notch/notifications";
 
 /**
  * Where Playwright's default `chrome` channel looks for Google Chrome (stable
@@ -714,6 +715,7 @@ async function createWindow(restored?: RecreatedWindowState) {
   mainWindow.on("closed", () => {
     if (mainWindowRef !== mainWindow) return;
     if (process.platform === "win32") notchController?.dispose();
+    notchNotifications.dispose();
     mainWindowRef = null;
     setMainWindow(null);
     rendererHost?.dispose();
@@ -1438,24 +1440,32 @@ const appOperations: AppOperations = {
     }
   },
 
-  showNotification(title, body, metadata) {
-    // Gated here, the one place every notification passes through.
-    const prefs = readNotificationSettings();
-    if (!prefs.enabled) return;
-    const notification = new Notification({
-      title,
-      body,
-      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
-    });
-    notification.on("click", () => {
-      const win = revealMainWindow();
-      // Consumed by the onNotificationClicked subscriber in app.tsx.
-      if (win && metadata) {
-        rendererWebContents()?.send("notification-clicked", metadata);
-        emitBusChannel("system", { type: "notification-clicked", metadata });
+  showNotification(title, body, metadata, attention) {
+    notchNotifications.notify(
+      { ...attention, botReply: metadata?.kind === "bot" },
+      () => {
+        // Gated here, the one place every notification passes through.
+        const prefs = readNotificationSettings();
+        if (!prefs.enabled) return;
+        const notification = new Notification({
+          title,
+          body,
+          silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
+        });
+        notification.on("click", () => {
+          const win = revealMainWindow();
+          // Consumed by the onNotificationClicked subscriber in app.tsx.
+          if (win && metadata) {
+            rendererWebContents()?.send("notification-clicked", metadata);
+            emitBusChannel("system", {
+              type: "notification-clicked",
+              metadata,
+            });
+          }
+        });
+        notification.show();
       }
-    });
-    notification.show();
+    );
   },
 
   // Agent-produced image as a data URL. Real paths on both sides, anything
@@ -1668,6 +1678,10 @@ function publishChromeState(): void {
 /** Null until whenReady has registered the IPC handlers. */
 let rpcTransport: MessagePortTransport | null = null;
 let notchController: NotchController | null = null;
+const notchNotifications = new NotchNotificationPolicy({
+  enabled: () => prefsStore.get().notch?.showInNotch === true,
+  presented: (key) => notchController?.hasPresented(key) ?? false,
+});
 let notchBase: RendererBase | null = null;
 
 /**
@@ -1701,6 +1715,7 @@ function installRpc(
       emitBusChannel("notch", { webContentsId, event }),
     command: (command) => emitBusChannel("notch-open", command),
   });
+  prefsStore.onChanged(() => notchController?.schedule());
   const cueArbiter = new CueArbiter({
     windows: {
       mainRendererId: () => rendererWebContents()?.id ?? null,
@@ -2281,6 +2296,7 @@ app.on("before-quit", (event) => {
   // So the window 'close' handler stops intercepting.
   markQuitting();
   notchController?.dispose();
+  notchNotifications.dispose();
   // The progress window refuses to close by itself; free it before the quit.
   disposeMigrationProgress();
   logStore().flush();
