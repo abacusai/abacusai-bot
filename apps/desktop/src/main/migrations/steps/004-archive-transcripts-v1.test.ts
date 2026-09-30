@@ -9,7 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   fingerprintV1,
@@ -261,7 +261,15 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
       progress: () => undefined,
       log: () => undefined,
     });
-    expect(plan.writes).toEqual([]);
+    // Only the archive index, listing the one v1 file archived as current.
+    expect(
+      plan.writes.map((write) => [path.relative(home, write.dest), write.kind])
+    ).toEqual([[path.join("threads", ".archive-index.json"), "create"]]);
+    expect(
+      Object.keys(
+        JSON.parse(fs.readFileSync(plan.writes[0]!.staged, "utf8")).archived
+      )
+    ).toEqual(["current"]);
     expect(
       plan.removals.map((file) => path.relative(home, file)).sort()
     ).toEqual([
@@ -312,6 +320,114 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
       (await cutOver.readCurrent("kept")).map((message) => message.id)
     ).toEqual(["u1"]);
     expect(await cutOver.readCurrent("orphan")).toEqual([]);
+  });
+
+  it("r2 #1: a later partial run never takes a twin it archived the v1 of for an orphan", async () => {
+    put(transcripts(), "current.json", v1("current"));
+    expect(await run([transcriptsV2()])).toMatchObject({ applied: [1] });
+    // Written after step 1: needs converting, so step 4 goes partial.
+    put(transcripts(), "late.json", v1("late"));
+    put(transcripts(), "later.json", v1("later"));
+    const step4 = archiveTranscriptsV1();
+    expect(await run([transcriptsV2(), step4])).toMatchObject({
+      partial: [4],
+    });
+    // Another v1 appears before the next launch: still partial.
+    put(transcripts(), "latest.json", v1("latest"));
+    await run([transcriptsV2(), step4]);
+    await run([transcriptsV2(), step4]);
+    expect(fs.readdirSync(transcripts())).toEqual([]);
+    // Both kinds of thread still hydrate, through the transition store.
+    const store = new ThreadStore({
+      home: () => home,
+      log: () => undefined,
+      isWriteBlocked: () => false,
+    });
+    for (const id of ["current", "late", "later", "latest"])
+      expect({
+        id,
+        messages: (await store.readCurrent(id)).map((message) => message.id),
+      }).toEqual({ id, messages: ["u1"] });
+  });
+
+  it("r2 #2: a transcripts folder it cannot list stops the step, and archives no twin", async () => {
+    put(threads(), "t.json", {
+      version: 2,
+      threadId: "t",
+      updatedAt: "2026-09-01T10:00:00.000Z",
+      source: {
+        kind: "transcript-v1",
+        updatedAt: "2026-09-01T10:00:00.000Z",
+        segments: 1,
+      },
+      messages: [],
+    });
+    fs.mkdirSync(transcripts(), { recursive: true });
+    const readdir = fs.readdirSync;
+    const spy = vi.spyOn(fs, "readdirSync").mockImplementation(((
+      dir: fs.PathLike,
+      ...rest: unknown[]
+    ) => {
+      if (String(dir) === transcripts())
+        throw Object.assign(new Error("EIO: i/o error"), { code: "EIO" });
+      return (readdir as (...args: unknown[]) => unknown)(dir, ...rest);
+    }) as typeof fs.readdirSync);
+    try {
+      const result = await run([archiveTranscriptsV1()]);
+      expect(result.applied).toEqual([]);
+      expect(result.failed).not.toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(fs.existsSync(path.join(threads(), "t.json"))).toBe(true);
+  });
+
+  it("r2 #2: a twin whose v1 path exists in any form is no orphan", async () => {
+    const twin = {
+      version: 2,
+      threadId: "x",
+      updatedAt: "2026-09-01T10:00:00.000Z",
+      source: {
+        kind: "transcript-v1",
+        updatedAt: "2026-09-01T10:00:00.000Z",
+        segments: 1,
+      },
+      messages: [],
+    };
+    put(threads(), "dir.json", twin);
+    fs.mkdirSync(path.join(transcripts(), "dir.json"), { recursive: true });
+    put(threads(), "link.json", twin);
+    put(root, "elsewhere.json", v1("link"));
+    fs.symlinkSync(
+      path.join(root, "elsewhere.json"),
+      path.join(transcripts(), "link.json")
+    );
+    await run([archiveTranscriptsV1()]);
+    expect(fs.existsSync(path.join(threads(), "dir.json"))).toBe(true);
+    // The symlinked v1 file is listed and handled as a transcript.
+    expect(fs.existsSync(path.join(threads(), "link.json"))).toBe(true);
+  });
+
+  it("r2 #7: a clear marker without proof keeps its v1 file cleared", async () => {
+    put(transcripts(), "c.json", v1("c"));
+    put(threads(), "c.cleared", {
+      version: 1,
+      token: "t",
+      clearedAt: "2026-09-02T00:00:00.000Z",
+    });
+    put(transcripts(), "p.json", v1("p"));
+    put(threads(), "p.cleared", {
+      version: 1,
+      token: "t2",
+      clearedAt: "2026-09-02T00:00:00.000Z",
+      savedAfterClear: fingerprintV1(JSON.stringify(v1("p"))),
+    });
+    expect(await run([transcriptsV2()])).toMatchObject({ applied: [1] });
+    expect(fs.existsSync(path.join(threads(), "c.json"))).toBe(false);
+    expect(
+      JSON.parse(fs.readFileSync(path.join(threads(), "p.json"), "utf8")).source
+        .afterClear
+    ).toBe("t2");
   });
 
   it("keeps quarantined files 90 days", async () => {

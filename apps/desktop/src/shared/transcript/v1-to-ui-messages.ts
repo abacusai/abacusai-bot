@@ -571,17 +571,43 @@ export function v1ToUiMessages(segments: readonly unknown[]): UIMessage[] {
   const claimResult = claimer();
   const claimSubagent = claimer();
 
-  // The old UI shows only the newest segment per tool call id.
+  // The old UI shows only the newest segment per tool call id within one
+  // groupable run (`derivations.ts` `deriveGroupedSuffix` →
+  // `omitSupersededToolLifecycleSegments`): consecutive tools, thinking and
+  // blank text in one scope. Anything else it renders ends the run, and so
+  // does a bracket frame (a scope change); what hydration drops (invalid or
+  // unknown values) does not. Across runs, a reused id is an independent call.
   const tools = new WeakMap<object, CanonicalTool | null>();
   const toolOf = (value: Rec): CanonicalTool | null => {
     if (!tools.has(value)) tools.set(value, canonicalTool(value));
     return tools.get(value) ?? null;
   };
   const newestByCall = new Map<string, { value: object; id: string }>();
+  const runOf = new WeakMap<object, number>();
+  let run = 0;
+  traceOrder(segments, (value) => {
+    if (!isRecord(value)) return;
+    const kind = value.type;
+    if (kind === "tool_group" && Array.isArray(value.tools)) return;
+    const groupable =
+      (kind === "tool_call" && toolOf(value) !== null) ||
+      (kind === "thinking" && typeof value.content === "string") ||
+      (kind === "text" &&
+        typeof value.content === "string" &&
+        value.content.trim() === "");
+    const dropped =
+      (kind === "tool_call" && toolOf(value) === null) ||
+      typeof kind !== "string" ||
+      !(kind in KNOWN_KEYS);
+    if (groupable) runOf.set(value, run);
+    else if (!dropped) run += 1;
+  });
+  const callKey = (value: object, callId: string) =>
+    `${runOf.get(value) ?? -1}\u0000${callId}`;
   traceOrder(segments, (value, id) => {
     if (!isRecord(value) || value.type !== "tool_call") return;
     const callId = toolOf(value)?.call.storedId;
-    if (callId != null) newestByCall.set(callId, { value, id });
+    if (callId != null) newestByCall.set(callKey(value, callId), { value, id });
   });
 
   /** Turn fields for a provenance entry. */
@@ -870,7 +896,7 @@ export function v1ToUiMessages(segments: readonly unknown[]): UIMessage[] {
         const newest =
           tool.call.storedId === null
             ? undefined
-            : newestByCall.get(tool.call.storedId);
+            : newestByCall.get(callKey(segment, tool.call.storedId));
         if (newest !== undefined && newest.value !== segment) {
           record(target, {
             ...trace,
