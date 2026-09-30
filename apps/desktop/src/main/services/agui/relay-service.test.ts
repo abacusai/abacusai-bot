@@ -64,15 +64,16 @@ class ScriptedAgent {
     });
   }
 
-  send(threadId: string, command: object): boolean {
-    if (this.runtimeState == null) return false;
+  /** Returns the process written to, as `AgentManagerService` does. */
+  send(threadId: string, command: object): object | null {
+    if (this.runtimeState == null) return null;
     const typed = command as Command;
     this.commands.push(typed);
     const replies = this.answer(typed);
     queueMicrotask(() => {
       for (const reply of replies) this.emit(threadId, reply);
     });
-    return true;
+    return this.runtime;
   }
 
   markSent(): void {
@@ -733,7 +734,7 @@ describe("ai.send admission (review r1)", () => {
   it("an unwritable runtime undoes the turn state, and a repeat awaiting the admission gets the same definitive answer", async () => {
     const { agent, relay } = setup();
     agent.boot();
-    agent.send = () => false;
+    agent.send = () => null;
     const input = {
       threadId: "s1",
       runId: "run-1",
@@ -789,6 +790,114 @@ describe("ai.send admission (review r1)", () => {
       status: "started",
     });
     expect(agent.commands.filter((c) => c.type === "run")).toHaveLength(1);
+  });
+
+  it("binds an admission to the process that received run, even when the replacement's ready precedes its wire.hello (review r2)", async () => {
+    const { agent, relay } = setup();
+    agent.boot("s1", "inc-1");
+    const old = agent.runtime;
+    // The replacement's compat `ready` is in (the host reports it running),
+    // but its `wire.hello` has not reached the relay: stdout still names
+    // the old process.
+    agent.runtime = {};
+    const replacement = agent.runtime;
+    agent.runtimeState = { wire: "agui", status: "running" };
+    let answer!: () => void;
+    agent.answer = (command) => {
+      if (command.type !== "run") return [];
+      answer = () => {
+        agent.emit("s1", {
+          type: "CUSTOM",
+          name: "wire.hello",
+          value: {
+            protocol: 1,
+            wire: "agui",
+            compat: "fd",
+            incarnation: "inc-2",
+          },
+        });
+        for (const event of started("run-1")) agent.emit("s1", event);
+      };
+      return [];
+    };
+    const pending = relay.send({
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "hi")],
+    });
+    await vi.waitFor(() => expect(agent.commands).toHaveLength(1));
+
+    // The old process dies: `run` never reached it.
+    relay.runtimeExited("s1", {
+      origin: { wire: "agui", runtime: old },
+      code: null,
+      signal: "SIGTERM",
+      requested: false,
+    });
+    answer();
+    await expect(pending).resolves.toEqual({
+      runId: "run-1",
+      status: "started",
+    });
+
+    // The replacement's own exit is what leaves an admission uncertain.
+    agent.answer = () => [];
+    const second = relay.send({
+      threadId: "s1",
+      runId: "run-2",
+      messages: [userMessage("u-2", "again")],
+    });
+    await vi.waitFor(() => expect(agent.commands).toHaveLength(2));
+    relay.runtimeExited("s1", {
+      origin: { wire: "agui", runtime: replacement },
+      code: null,
+      signal: "SIGKILL",
+      requested: false,
+    });
+    await expect(second).rejects.toMatchObject({ code: "TIMEOUT" });
+    expect(relay.admissionThreads).toBe(0);
+  });
+
+  it("keeps no empty per-thread admission maps, and forgetting a session answers its admissions (review r2)", async () => {
+    const { agent, relay } = setup();
+    agent.answer = (command) =>
+      command.type === "run"
+        ? started((command.input as { runId: string }).runId)
+        : [];
+    await relay.send({
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "hi")],
+    });
+    agent.emit("s1", finished("run-1"));
+    expect(relay.admissionThreads).toBe(0);
+
+    // Written, unanswered: forgetting the session is a definitive NOT_FOUND.
+    agent.answer = () => [];
+    const written = relay.send({
+      threadId: "s1",
+      runId: "run-2",
+      messages: [userMessage("u-2", "x")],
+    });
+    await vi.waitFor(() => expect(agent.commands).toHaveLength(2));
+    expect(relay.admissionThreads).toBe(1);
+    relay.forgetThread("s1");
+    await expect(written).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(relay.admissionThreads).toBe(0);
+
+    // Waiting for a runtime that is still starting: never written.
+    agent.runtimeState = { wire: "agui", status: "starting" };
+    const unwritten = relay.send({
+      threadId: "s1",
+      runId: "run-3",
+      messages: [userMessage("u-3", "y")],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    relay.forgetThread("s1");
+    agent.runtimeState = { wire: "agui", status: "running" };
+    await expect(unwritten).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(agent.commands).toHaveLength(2);
+    expect(relay.admissionThreads).toBe(0);
   });
 
   it("two first sends on a cold thread start the agent once", async () => {
@@ -992,6 +1101,60 @@ describe("streams, checkpoints and cancel (review r1)", () => {
     });
     expect(cleared!.id).toBeDefined();
     await stream.return?.(undefined);
+  });
+
+  it("a reset by main mid-run retires the run first: hydrate has no active run, rejoin has nothing, and its tail is dropped (review r2)", async () => {
+    const { agent, client, relay } = setup();
+    agent.boot();
+    for (const event of started("run-1")) agent.emit("s1", event);
+    agent.emit("s1", {
+      type: "TEXT_MESSAGE_START",
+      messageId: "a",
+      role: "assistant",
+    });
+    const stream = await client.ai.subscribe({ threadId: "s1" });
+    await take(stream, 5);
+
+    relay.clearThread("s1");
+    const retired = await take(stream, 3);
+    expect(retired.map((entry) => entry.event)).toMatchObject([
+      { type: "TEXT_MESSAGE_END", messageId: "a" },
+      { type: "RUN_FINISHED", runId: "run-1", outcome: { type: "cancelled" } },
+      { type: "CUSTOM", name: "session.cleared" },
+    ]);
+
+    // The kit's new generation: an empty checkpoint, no run to rejoin.
+    const hydrated = await client.ai.hydrate({ threadId: "s1" });
+    expect(hydrated.messages).toEqual([]);
+    expect(hydrated.activeRun).toBeNull();
+    expect(hydrated.abacus.activeRun).toBeNull();
+    expect(await take(await client.ai.joinRun({ runId: "run-1" }), 1)).toEqual(
+      []
+    );
+    const resumed = await client.ai.subscribe({
+      threadId: "s1",
+      lastEventId: String(hydrated.abacus.cursor),
+      epoch: hydrated.abacus.epoch,
+    });
+    expect((await take(resumed, 1))[0]!.event).toMatchObject({
+      name: "abacus.subscribed",
+    });
+
+    // The old run's tail reaches no stream; the next run does.
+    agent.emit("s1", {
+      type: "TEXT_MESSAGE_CONTENT",
+      messageId: "a",
+      delta: "late",
+    });
+    agent.emit("s1", finished("run-1"));
+    agent.emit("s1", { type: "RUN_STARTED", threadId: "s1", runId: "run-2" });
+    for (const open of [stream, resumed])
+      expect((await take(open, 1))[0]!.event).toMatchObject({
+        type: "RUN_STARTED",
+        runId: "run-2",
+      });
+    await stream.return?.(undefined);
+    await resumed.return?.(undefined);
   });
 
   it("the v1 dual-write never replaces the relay's agui file, even right after the relay wrote it", () => {
