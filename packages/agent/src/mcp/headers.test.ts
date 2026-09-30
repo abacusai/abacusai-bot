@@ -185,3 +185,30 @@ describe("the sponsored-run marker", () => {
     ).toEqual({ Authorization: "Bearer s3cret" });
   });
 });
+
+describe("the sponsored-run marker's deadline", async () => {
+  const { sponsoredRunActive, sponsoredRunHeaders } =
+    await import("../abacus-endpoint.js");
+  const env = {
+    ABACUSAI_BOT_SPONSORED_RUN: "cos-first-run",
+    ABACUSAI_BOT_SPONSORED_UNTIL: "1000",
+  };
+
+  it("rides along until the deadline, and not past it", () => {
+    expect(sponsoredRunHeaders(env, 999)).toEqual({
+      "X-Abacus-Sponsored-Run": "cos-first-run",
+    });
+    expect(sponsoredRunActive(env, 999)).toBe(true);
+    expect(sponsoredRunHeaders(env, 1000)).toEqual({});
+    expect(sponsoredRunActive(env, 1000)).toBe(false);
+  });
+
+  it("is open-ended without a deadline, and nothing without the marker", () => {
+    expect(
+      sponsoredRunHeaders({ ABACUSAI_BOT_SPONSORED_RUN: "cos-first-run" }, 5e12)
+    ).toEqual({ "X-Abacus-Sponsored-Run": "cos-first-run" });
+    expect(
+      sponsoredRunHeaders({ ABACUSAI_BOT_SPONSORED_UNTIL: "1" }, 0)
+    ).toEqual({});
+  });
+});

@@ -522,7 +522,7 @@ describe("the Gmail hop", () => {
   };
   const gmailHop = [
     "abacus-gmailuser",
-    { autostart: true, hint: "someone@gmail.com" },
+    { autostart: true, hint: "someone@gmail.com", owner: "first-run" },
   ];
 
   it("opens Google's consent for the account's address right after sign-in, unasked, and moves on", async () => {

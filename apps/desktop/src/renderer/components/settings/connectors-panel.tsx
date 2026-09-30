@@ -220,9 +220,16 @@ export const ConnectorsPanel = (): JSX.Element => {
                       name: connector.name,
                       error: result.error,
                     })
-                  : t("connectors.abacusConnectFailed", {
-                      name: connector.name,
-                    }),
+                  : "code" in result && result.code === "wrong-account"
+                    ? t(
+                        result.surface === "app"
+                          ? "connectors.wrongAccountApp"
+                          : "connectors.wrongAccountBrowser",
+                        { name: connector.name }
+                      )
+                    : t("connectors.abacusConnectFailed", {
+                        name: connector.name,
+                      }),
             });
           }
           return;

@@ -31,35 +31,13 @@
  * they sign out of.
  */
 import { randomBytes } from "crypto";
-import path from "path";
 
-import { BrowserWindow, session, shell } from "electron";
+import { BrowserWindow, shell } from "electron";
 
 import { parentWindow, presentAsDialog } from "../../bring-to-front";
 import { isSafeExternalUrl } from "../../external-links";
-import { profileBaseDir } from "../../profile-home";
 import type { CDPCookie } from "../browser/browser-profiles-service";
-
-/**
- * Install-wide, beside the profile registry: userData lives inside each
- * account's profile, so a partition there would start empty after every
- * sign-out or account switch and no provider account could be remembered.
- */
-export const signInSessionPath = (): string =>
-  path.join(profileBaseDir(), "sign-in-session");
-
-/**
- * Whether the sign-in session holds an Abacus.AI session: the account signed
- * in here, in the app window, so a connector hop can ride on it without a
- * browser that may know nothing of the account.
- */
-export const hasAbacusSession = async (): Promise<boolean> => {
-  const cookies = await session.fromPath(signInSessionPath()).cookies.get({});
-  return cookies.some(({ domain }) => {
-    const host = (domain ?? "").replace(/^\./, "").toLowerCase();
-    return host === "abacus.ai" || host.endsWith(".abacus.ai");
-  });
-};
+import { forgetAbacusSession, signInSession } from "./sign-in-session";
 
 /** Logged by the injected "Use my browser instead" pill; see HINT_JS. */
 const BROWSER_MESSAGE = "abacus:sign-in-use-browser";
@@ -156,31 +134,6 @@ export const withMicrosoftAccountPicker = (url: string): string | null => {
   } catch {
     return null;
   }
-};
-
-/** Drop Abacus.AI's cookies and storage, keeping every provider's session. */
-const forgetAbacusSession = async (
-  signInSession: Electron.Session
-): Promise<void> => {
-  const cookies = await signInSession.cookies.get({});
-  await Promise.all(
-    cookies
-      .filter(({ domain }) => {
-        const host = (domain ?? "").replace(/^\./, "").toLowerCase();
-        return host === "abacus.ai" || host.endsWith(".abacus.ai");
-      })
-      .map(({ domain, path, name, secure }) =>
-        signInSession.cookies.remove(
-          `${secure === true ? "https" : "http"}://${(domain ?? "").replace(/^\./, "")}${path ?? "/"}`,
-          name
-        )
-      )
-  );
-  const storages: Array<
-    "localstorage" | "indexdb" | "serviceworkers" | "cachestorage"
-  > = ["localstorage", "indexdb", "serviceworkers", "cachestorage"];
-  for (const origin of ["https://abacus.ai", "https://apps.abacus.ai"])
-    await signInSession.clearStorageData({ origin, storages });
 };
 
 /**
@@ -283,16 +236,16 @@ export const openSignInWindow = async ({
 }): Promise<SignInWindow | null> => {
   if (parentWindow() == null) return null;
 
-  const signInSession = session.fromPath(signInSessionPath());
-  await forgetAbacusSession(signInSession);
+  const partition = signInSession();
+  await forgetAbacusSession(partition);
   const seeded = seedCookies != null && seedCookies.length > 0;
-  if (seeded) await seedAbacusSession(signInSession, seedCookies);
+  if (seeded) await seedAbacusSession(partition, seedCookies);
   const signInOrigin = new URL(url).origin;
   // This session remembers provider logins, so Microsoft would silently reuse
   // the last account; its authorize request is rewritten to ask for the
   // picker, as Google's popup does. At the request, not the popup: a reload
   // from did-create-window loses the race with the popup's own first load.
-  signInSession.webRequest.onBeforeRequest(
+  partition.webRequest.onBeforeRequest(
     { urls: ["https://login.microsoftonline.com/*"] },
     (details, callback) => {
       const picker =
@@ -310,7 +263,7 @@ export const openSignInWindow = async ({
     title: "Sign up for Abacus.AI",
     autoHideMenuBar: true,
     webPreferences: {
-      session: signInSession,
+      session: partition,
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,

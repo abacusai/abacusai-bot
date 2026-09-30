@@ -13,7 +13,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 
@@ -393,5 +393,72 @@ describe("the routine editor's session", () => {
     expect(await call(editor, { action: "list" }, "plain-session")).toContain(
       "switched off"
     );
+  });
+});
+
+/**
+ * `list` hid other owners' routines, but every id-taking action took any id:
+ * a bot that read one off the Routines panel could pause, rewrite or fire
+ * the user's routine.
+ */
+describe("what a bot may do to routines that are not its own", () => {
+  const userJobId = async (instance: ReturnType<typeof server>) => {
+    const text = await call(
+      instance,
+      { action: "create", schedule: "*/3 * * * *", prompt: "Pickup lines" },
+      "session-1"
+    );
+    return text.match(/(job-[\w-]+)/)![1]!;
+  };
+
+  it("cannot pause, rewrite, remove or fire the user's routine", async () => {
+    const runner = { runCronJob: vi.fn(async () => undefined) };
+    const instance = server(["cronjob"], runner);
+    const id = await userJobId(instance);
+    // The user's create fired once, as every create does.
+    runner.runCronJob.mockClear();
+
+    for (const action of ["pause", "resume", "update", "remove", "run"]) {
+      const text = await call(
+        instance,
+        { action, id, ...(action === "update" ? { prompt: "hijacked" } : {}) },
+        "bot-session"
+      );
+      expect(text).toContain("not yours");
+    }
+    expect(runner.runCronJob).not.toHaveBeenCalled();
+    expect(await call(instance, { action: "list" }, "session-1")).toContain(
+      "Pickup lines"
+    );
+  });
+
+  it("may still run its own", async () => {
+    const runner = { runCronJob: vi.fn(async () => undefined) };
+    const instance = server(["cronjob"], runner);
+    const text = await call(
+      instance,
+      { action: "create", schedule: "0 9 * * 1", prompt: "Monday brief" },
+      "bot-session"
+    );
+    const id = text.match(/(job-[\w-]+)/)![1]!;
+    runner.runCronJob.mockClear();
+
+    expect(
+      await call(instance, { action: "pause", id }, "bot-session")
+    ).not.toContain("not yours");
+  });
+});
+
+describe("a first fire that could not start", () => {
+  it("is not called running: the model is told to do the pass itself", async () => {
+    const runner = { runCronJob: vi.fn(async () => "skipped" as const) };
+    const text = await call(
+      server([], runner),
+      { action: "create", schedule: "0 9 * * *", prompt: "Morning brief" },
+      "bot-session"
+    );
+
+    expect(text).not.toContain("The first one is running now");
+    expect(text).toContain("could not start right now");
   });
 });

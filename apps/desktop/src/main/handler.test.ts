@@ -14,6 +14,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
 
+vi.mock("./services/providers/sign-in-session", () => ({
+  clearSignInSession: vi.fn(async () => undefined),
+  rememberSessionAccount: vi.fn(),
+}));
 vi.mock("./login-item", () => ({ registerLoginItem: vi.fn() }));
 vi.mock("electron", () => ({
   ipcMain: {
@@ -56,6 +60,7 @@ vi.mock("./services/providers/abacus-auth-service", () => ({
   startAbacusAuth: vi.fn(async () => ({ ok: true, key: "s2_key" })),
 }));
 vi.mock("./services/providers/abacus-connector-service", () => ({
+  cancelAllConnectorConnects: vi.fn(),
   cancelConnectorConnect: vi.fn(),
   disconnectAbacusConnector: vi.fn(),
   listAbacusConnectors: vi.fn(),

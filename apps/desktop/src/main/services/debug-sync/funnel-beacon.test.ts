@@ -13,6 +13,7 @@ vi.mock("electron", () => ({
   app: { getVersion: () => "9.9.9", isPackaged: true },
 }));
 vi.mock("../../paths", () => ({ abacusBotHome: () => home.current }));
+vi.mock("../../profile-home", () => ({ profileBaseDir: () => home.current }));
 vi.mock("../config/settings", () => ({
   readSettings: () => settings.current,
 }));

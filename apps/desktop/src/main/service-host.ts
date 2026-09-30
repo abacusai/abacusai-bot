@@ -185,6 +185,7 @@ import {
   updateJob,
   type CronJob,
   type CronTrigger,
+  type RoutineRunStart,
 } from "./services/agent-tools/cron-store";
 import {
   deckSlots,
@@ -234,6 +235,7 @@ import {
   clearBotMemory,
   forgetBotMemoryEntry,
   listBotMemories,
+  readBotMemoryText,
 } from "./services/bots/bot-memory-store";
 import { BotService } from "./services/bots/bot-service";
 import {
@@ -606,7 +608,15 @@ export class ServiceHost {
     },
     workspaceId: () => this.workspaceService.getActiveWorkspace()?.id ?? null,
     runCronJob: (jobId, trigger) => this.runRoutine(jobId, trigger ?? "manual"),
-    botIdForSession: (sessionId) => this.botService.botIdForSession(sessionId),
+    // A routine's run is its bot's work too: a routine made from inside one
+    // belongs to the bot, and `list` shows the bot its own.
+    botIdForSession: (sessionId) =>
+      this.botService.botIdForSession(sessionId) ??
+      (() => {
+        const routineId =
+          this.agentSessionManagerService.get(sessionId)?.routineId ?? null;
+        return routineId != null ? (getJob(routineId)?.botId ?? null) : null;
+      })(),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
     routineEditorFor: (sessionId) =>
@@ -708,14 +718,18 @@ export class ServiceHost {
     flushPermissions: (decision, server) =>
       this.builtinToolPermissions.flushPending(decision, server),
   });
-  private readonly cronScheduler = new CronScheduler((jobId, trigger) =>
-    this.runRoutine(jobId, trigger)
-  );
+  private readonly cronScheduler = new CronScheduler(async (jobId, trigger) => {
+    await this.runRoutine(jobId, trigger);
+  });
   private readonly webhookService = new WebhookService(
-    (jobId, trigger, payload) => this.runRoutine(jobId, trigger, payload)
+    async (jobId, trigger, payload) => {
+      await this.runRoutine(jobId, trigger, payload);
+    }
   );
   private readonly webhookRelay = new WebhookRelay(
-    (jobId, trigger, payload) => this.runRoutine(jobId, trigger, payload),
+    async (jobId, trigger, payload) => {
+      await this.runRoutine(jobId, trigger, payload);
+    },
     () =>
       this.emitEvent({
         type: "cronjobs-updated",
@@ -1103,10 +1117,14 @@ export class ServiceHost {
     defaultModel: () =>
       readSettings().defaultModel ?? cachedRecommendedModelId(),
     onBotRemoved: (botId) => {
-      // Its routines stay (the user can delete those themselves); only the
-      // provenance is cleared.
+      // Its routines stay, paused: they were the bot's work, and without it
+      // they would keep firing, spending credits, in nobody's voice. The
+      // user resumes or deletes them from the Routines panel.
       for (const job of listJobs()) {
-        if (job.botId === botId) updateJob(job.id, { botId: null });
+        if (job.botId === botId) {
+          updateJob(job.id, { botId: null, enabled: false });
+          recordRun(job.id, "paused: its bot was deleted");
+        }
       }
       this.emitEvent({
         type: "cronjobs-updated",
@@ -3337,7 +3355,10 @@ export class ServiceHost {
   private readonly routineRunText = new Map<string, string[]>();
 
   /** Starts that deletion must let finish before collecting run sessions. */
-  private readonly routineRunStarts = new Map<string, Set<Promise<void>>>();
+  private readonly routineRunStarts = new Map<
+    string,
+    Set<Promise<RoutineRunStart>>
+  >();
 
   /**
    * A run's end off its event stream: an error fails it, idle completes it.
@@ -3385,7 +3406,12 @@ export class ServiceHost {
 
   /** A routine that keeps failing pauses itself rather than failing forever. */
   private pauseIfFailingRepeatedly(routineId: string): void {
-    if (!shouldPauseAfter(this.listRoutineRuns(routineId))) return;
+    // Failures before the user last resumed it are the old streak.
+    const resumedAt = getJob(routineId)?.resumedAt ?? 0;
+    const runs = this.listRoutineRuns(routineId).filter(
+      (run) => new Date(run.startedAt).getTime() > resumedAt
+    );
+    if (!shouldPauseAfter(runs)) return;
     this.pauseRoutine(
       routineId,
       `paused after ${ROUTINE_FAILURES_BEFORE_PAUSE} failed runs in a row`
@@ -3427,13 +3453,22 @@ export class ServiceHost {
     }
   }
 
-  /** Read at fire time: an edited persona applies, a deleted bot drops out. */
+  /**
+   * Read at fire time: an edited persona applies, a deleted bot drops out,
+   * and what the bot has been told to remember comes along. A run is the
+   * bot's work; without its memory it drafted for the very people the user
+   * had told it to leave alone.
+   */
   private withBotVoice(botId: string | null, prompt: string): string {
     const bot = botId == null ? null : getBot(botId);
     if (bot == null) return prompt;
+    const memory = readBotMemoryText(bot.id);
     const voice = [
       `You are ${bot.name}, running a routine you set up for the user.`,
       bot.persona.length > 0 ? `Your voice, every message: ${bot.persona}` : "",
+      memory.length > 0
+        ? `What you remember about the user and this work:\n${memory}`
+        : "",
     ]
       .filter((line) => line.length > 0)
       .join("\n");
@@ -3671,14 +3706,14 @@ export class ServiceHost {
     jobId: string,
     trigger: CronTrigger,
     payload: string | null = null
-  ): Promise<void> {
+  ): Promise<RoutineRunStart> {
     const start = this.startRoutineRun(jobId, trigger, payload);
     const pending =
-      this.routineRunStarts.get(jobId) ?? new Set<Promise<void>>();
+      this.routineRunStarts.get(jobId) ?? new Set<Promise<RoutineRunStart>>();
     pending.add(start);
     this.routineRunStarts.set(jobId, pending);
     try {
-      await start;
+      return await start;
     } finally {
       pending.delete(start);
       if (pending.size === 0) this.routineRunStarts.delete(jobId);
@@ -3689,9 +3724,23 @@ export class ServiceHost {
     jobId: string,
     trigger: CronTrigger,
     payload: string | null
-  ): Promise<void> {
+  ): Promise<RoutineRunStart> {
     const job = getJob(jobId);
-    if (job == null) return;
+    if (job == null) return "skipped";
+    // Signed out, with no other key: every run would fail and pause the
+    // routine, three at a time, in silence.
+    if (
+      !Object.values(readSettings().apiKeys ?? {}).some(
+        (key) => (key ?? "").trim().length > 0
+      )
+    ) {
+      recordRun(jobId, "skipped: signed out", trigger);
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
+      return "skipped";
+    }
 
     // One run at a time, or a five-minute routine whose runs take eight stacks.
     if (hasRunInFlight(this.listRoutineRuns(jobId))) {
@@ -3700,7 +3749,7 @@ export class ServiceHost {
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
       });
-      return;
+      return "skipped";
     }
 
     const workspaces = this.workspaceService.getWorkspaces();
@@ -3709,7 +3758,7 @@ export class ServiceHost {
     const project = this.routineProject(job);
     const target = project?.id ?? (await this.ensureRoutineWorkspace(job.id));
     // A deletion may have happened while the routine workspace was opening.
-    if (getJob(jobId) == null) return;
+    if (getJob(jobId) == null) return "skipped";
     const home = this.routineHome(job);
 
     const prompt = this.withBotVoice(
@@ -3735,7 +3784,7 @@ export class ServiceHost {
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
       });
-      return;
+      return "failed";
     }
 
     // Stamped so it lists as a run and the renderer shows it read-only.
@@ -3763,7 +3812,7 @@ export class ServiceHost {
     });
 
     // Deletion stops the session while startup is in flight.
-    if (getJob(jobId) == null) return;
+    if (getJob(jobId) == null) return "skipped";
 
     if (!started.success) {
       this.agentSessionManagerService.setRunOutcome(session.id, "failed");
@@ -3777,7 +3826,7 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
       this.pauseIfFailingRepeatedly(jobId);
-      return;
+      return "failed";
     }
 
     // Earlier runs' text is kept until now, for a failure that lands late.
@@ -3795,6 +3844,8 @@ export class ServiceHost {
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
     });
+
+    return "started";
   }
 
   approveBuiltinForSession(server: BuiltinPermissionScope): void {

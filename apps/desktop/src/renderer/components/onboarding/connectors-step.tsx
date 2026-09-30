@@ -96,7 +96,16 @@ export const ConnectorsStep = ({
         return;
       }
       if (result.cancelled !== true)
-        setError(t("connectors.abacusConnectFailed", { name: connector.name }));
+        setError(
+          result.code === "wrong-account"
+            ? t(
+                result.surface === "app"
+                  ? "connectors.wrongAccountApp"
+                  : "connectors.wrongAccountBrowser",
+                { name: connector.name }
+              )
+            : t("connectors.abacusConnectFailed", { name: connector.name })
+        );
     } finally {
       // Only stand down if this hop still owns the spinner: clicking another
       // tile cancels this one, and that cancellation resolves this promise.

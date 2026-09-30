@@ -19,12 +19,16 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { sponsoredRunActive } from "../abacus-endpoint.js";
+import { Allowances } from "../allowances.js";
 import { backendOperations } from "../backends.js";
 import { withBackgroundOption } from "../background-bash.js";
+import { notifyConversationQueueCleared } from "../background-processes.js";
 import {
   browserTaskEnabled,
   buildBrowserTaskTool,
 } from "../browser-task-tool.js";
+import { anchorCompactions } from "../compaction-anchor.js";
 import {
   agentDir,
   applyStoredApiKeys,
@@ -34,7 +38,8 @@ import {
 } from "../config.js";
 import { setCurrentMode } from "../current-mode.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
-import budgets from "../extensions/budgets.js";
+import background from "../extensions/background.js";
+import budgets, { budgetStopReason } from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
 import noPiDocs from "../extensions/no-pi-docs.js";
 import spill from "../extensions/spill.js";
@@ -55,7 +60,6 @@ import {
   MODE_NAMES,
   parseMode,
   parseModeStrict,
-  shellSegments,
 } from "../permissions.js";
 import { identityPrompt, personaPrompt, readPersona } from "../persona.js";
 import { windowsShellPrompt } from "../posix-shell.js";
@@ -70,7 +74,6 @@ import {
 } from "../protocol.js";
 import {
   createModelRuntime,
-  listModels,
   registerAbacusProvider,
   registerCustomProviders,
   registerGeminiProvider,
@@ -85,11 +88,25 @@ import {
 } from "../reply-language.js";
 import { conversationSessionManager } from "../session-file.js";
 import {
+  OPENLLM_POOL_EXHAUSTED_MESSAGE,
+  OPENLLM_POOL_SHUT_MESSAGE,
+  capRetriesWhileRouting,
+  classifyProviderFailure,
   endedOnProviderError,
+  isProviderFailure,
   mcpPrompt,
   mcpRosterFingerprint,
+  providerDetail,
   reserveContextHeadroom,
+  terminalProviderMessage,
 } from "../session.js";
+import {
+  MAX_STALL_RECOVERIES_PER_TURN,
+  STALL_CONTINUATION_PROMPT,
+  STALL_CONTINUATION_TYPE,
+  StallWatch,
+  modelStallMs,
+} from "../stall-watch.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "../tools-arrived.js";
 import { turnUsage, type TurnUsage } from "../turn-usage.js";
@@ -181,12 +198,30 @@ export class BotSession {
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
   private readonly router = new OpenLlmRouter();
+  /** Whether the Abacus provider was registered with the sponsored-run marker. */
+  private sponsoredAtRegistration = sponsoredRunActive();
   /**
    * Set at `agent_end` when the turn died on its provider and another pool
    * model takes it over; carried out by continuePastRecoverableFailures.
    */
   private pendingOpenLlmRotation: { failure: string; nextId: string } | null =
     null;
+  /** A model call gone silent; see stall-watch.ts. */
+  private readonly stallWatch = new StallWatch({
+    turnRunning: () => this.turnRunning,
+    toolsRunning: () => this.heartbeat.size,
+    onStall: () => void this.onModelStall(),
+  });
+  private pendingStall: { modelId: string } | null = null;
+  private stallRecoveriesThisTurn = 0;
+  /** The turn already ended on the stall error; pi's aborted state is not a second one. */
+  private stallFailureReported = false;
+  /**
+   * Messages that arrived while a hidden housekeeping turn ran. Steered into
+   * that turn they would be answered where no one reads; they wait and run
+   * as a turn of their own once it is over.
+   */
+  private readonly parkedSteers: string[] = [];
   private session: AgentSession | undefined;
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
   private modelRuntime: ModelRuntime | undefined;
@@ -210,8 +245,8 @@ export class BotSession {
   // Approval flow.
   private readonly pending = new Map<string, PendingPermission>();
   private permissionCounter = 0;
-  private readonly sessionAllowedCommands: string[] = [];
-  private readonly sessionAllowedTools = new Set<string>();
+  /** What the user chose to always allow, for this process's lifetime. See allowances.ts. */
+  private readonly allowances = new Allowances();
 
   // Streaming state.
   private readonly sanitizer = new BotOutputSanitizer();
@@ -284,8 +319,11 @@ export class BotSession {
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.mcp.onStatusChange = () => this.emitMcpServers();
 
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
+    // On the router a failing model is rotated away from, not retried thrice.
+    capRetriesWhileRouting(settingsManager, () => this.openLlmActive);
 
     // A fraction of the live window rather than pi's flat 16k.
     reserveContextHeadroom(
@@ -356,6 +394,12 @@ export class BotSession {
         {
           name: "abacusai-bot-budgets",
           factory: budgets as unknown as (pi: ExtensionAPI) => void,
+        },
+        // Background bash: the finish notice, fetch_background_output and
+        // kill_process the bot's bash tool promises.
+        {
+          name: "abacusai-bot-background",
+          factory: background as unknown as (pi: ExtensionAPI) => void,
         },
         // Observes compaction so the flush budget renews per cycle.
         {
@@ -440,6 +484,8 @@ export class BotSession {
     });
 
     this.session = created.session;
+    // A degenerate summary from a cheap model must not erase the history.
+    anchorCompactions(this.session.sessionManager);
     this.unsubscribe = this.session.subscribe((event) => this.onPiEvent(event));
 
     this.emitReady();
@@ -478,8 +524,23 @@ export class BotSession {
       ? this.router.pick(registry)?.id
       : requested;
 
+    // A model the router did not pick is not the router's: reporting
+    // openllm/auto over a fallback would label its failures as the pool's,
+    // upgrade card and all.
+    const fallBack = (model: ReturnType<typeof resolveModel>["model"]) => {
+      if (this.openLlmActive && model != null) {
+        this.openLlmActive = false;
+        this.emitAgentEvent({
+          type: "notification",
+          severity: "warning",
+          message: `The free pool has no model to run on right now; running on ${model.provider}/${model.id} instead.`,
+        });
+      }
+      return model;
+    };
+
     if (reference == null) {
-      const fallback = registry.getAvailable()[0];
+      const fallback = fallBack(registry.getAvailable()[0]);
 
       return fallback != null
         ? { model: fallback }
@@ -492,7 +553,7 @@ export class BotSession {
     const model =
       resolved.model != null && registry.hasConfiguredAuth(resolved.model)
         ? resolved.model
-        : registry.getAvailable()[0];
+        : fallBack(registry.getAvailable()[0]);
 
     return model != null
       ? { model }
@@ -519,6 +580,7 @@ export class BotSession {
     }
 
     await this.refreshStandingPrompt();
+    await this.startTurnOnBestPoolModel();
 
     this.interrupted = false;
     this.malformedContinuations = 0;
@@ -527,6 +589,14 @@ export class BotSession {
     // A rotation left over from a stopped turn must not fire here.
     this.pendingOpenLlmRotation = null;
     this.router.beginTurn();
+    // The sponsored window closing (or opening) changes the headers the
+    // Abacus provider was registered with; a run must not carry the marker
+    // past its deadline, nor miss it.
+    if (this.sponsoredAtRegistration !== sponsoredRunActive())
+      await this.refreshProviderRegistrations();
+    this.stallRecoveriesThisTurn = 0;
+    this.pendingStall = null;
+    this.stallFailureReported = false;
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
     this.toolsArrivedThisTurn = [];
@@ -545,13 +615,53 @@ export class BotSession {
       this.reportTurnFailure();
       await this.runMemoryMaintenance();
     } catch (error) {
+      // A thrown provider error gets the same words as a reported turn
+      // failure rather than the raw "429: {json}" envelope, and the turn ends
+      // properly: a bot left "running" here answered nobody.
+      const raw = describe(error);
       this.emitAgentEvent({
         type: "error",
         error: {
-          message: describe(error),
-          ...this.upgradeActionsFor(describe(error)),
+          message: this.failureMessage(raw),
+          code: "turn_failed",
+          ...(isProviderFailure(raw) ? providerDetail(raw) : {}),
+          ...this.errorActionsFor(raw),
         },
       });
+      if (this.turnRunning) this.finishTurn();
+    }
+  }
+
+  /**
+   * On the router every turn starts on the pool's best model, not on the one
+   * the last turn ended on: a model that failed sits out, a provider that
+   * refused the account sits out with it, and a hidden housekeeping turn's
+   * failure is honoured here without a rotation of its own.
+   */
+  private async startTurnOnBestPoolModel(): Promise<void> {
+    const session = this.session;
+    const runtime = this.modelRuntime;
+    const registry = this.registry;
+    if (
+      !this.openLlmActive ||
+      session == null ||
+      runtime == null ||
+      registry == null
+    )
+      return;
+    const best = this.router.pick(registry);
+    const current = session.model;
+    if (
+      best == null ||
+      (current != null && best.id === `${current.provider}/${current.id}`)
+    )
+      return;
+    const resolved = resolveModel(runtime, best.id, this.maxOutputTokens);
+    if (resolved.model == null) return;
+    try {
+      await session.setModel(resolved.model);
+    } catch {
+      // The turn runs on the model the session has; a failure there rotates.
     }
   }
 
@@ -573,8 +683,12 @@ export class BotSession {
         window * CHARS_PER_TOKEN * FLUSH_AT_WINDOW_SHARE;
 
     if (flushDue) {
-      this.flushedSinceCompaction = true;
-      await this.runHiddenTurn(FLUSH_CUSTOM_TYPE, flushPrompt());
+      // Only a flush that ran: a failed one is tried again next time, or
+      // the next compaction summarises away facts never written down.
+      this.flushedSinceCompaction = await this.runHiddenTurn(
+        FLUSH_CUSTOM_TYPE,
+        flushPrompt()
+      );
     }
 
     if (this.interrupted) return;
@@ -592,26 +706,39 @@ export class BotSession {
     }
   }
 
+  /** Whether the turn ran to a clean end. */
   private async runHiddenTurn(
     customType: string,
     content: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     const session = this.session;
 
-    if (session == null) return;
+    if (session == null) return false;
 
     this.hiddenTurn = true;
+    let ok = false;
 
     try {
       await session.sendCustomMessage(
         { customType, content, display: false },
         { triggerTurn: true }
       );
+      const state = session.state as { errorMessage?: unknown } | undefined;
+      ok = typeof state?.errorMessage !== "string" || state.errorMessage === "";
     } catch {
       // Housekeeping must never surface as a failed reply.
     } finally {
       this.hiddenTurn = false;
     }
+    await this.replayParkedSteers();
+    return ok;
+  }
+
+  /** Messages that waited out a hidden turn get the turn they were owed. */
+  private async replayParkedSteers(): Promise<void> {
+    if (this.parkedSteers.length === 0 || this.interrupted) return;
+    const parked = this.parkedSteers.splice(0);
+    await this.send(parked.join("\n\n"));
   }
 
   /**
@@ -647,7 +774,8 @@ export class BotSession {
       this.pendingContextCompaction != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingLanguageRepair != null ||
-      this.pendingToolArrival != null
+      this.pendingToolArrival != null ||
+      this.pendingStall != null
     ) {
       if (this.interrupted) {
         this.continuingPastMalformedToolCall = false;
@@ -655,9 +783,18 @@ export class BotSession {
         this.pendingOpenLlmRotation = null;
         this.pendingLanguageRepair = null;
         this.pendingToolArrival = null;
+        this.pendingStall = null;
         this.finishTurn();
 
         return;
+      }
+
+      if (this.pendingStall != null) {
+        const stalled = this.pendingStall.modelId;
+        this.pendingStall = null;
+        await this.recoverFromStall(stalled);
+
+        continue;
       }
 
       if (this.pendingOpenLlmRotation != null) {
@@ -810,6 +947,65 @@ export class BotSession {
     );
   }
 
+  private async onModelStall(): Promise<void> {
+    if (!this.turnRunning || this.interrupted || !this.stallWatch.take())
+      return;
+    const model = this.session?.model;
+    const modelId = model ? `${model.provider}/${model.id}` : "the model";
+    this.pendingStall = { modelId };
+    process.stderr.write(
+      `[abacusai-bot-agent] ${modelId} produced nothing for ${modelStallMs() / 1000}s; aborting the call\n`
+    );
+    // Not Stop: `interrupted` stays false so the continuation can run.
+    await this.session?.abort();
+  }
+
+  /**
+   * The call went quiet for the stall window and was aborted. On the router
+   * the model sits out and the next one takes over, as for any failure; a
+   * pinned model is asked once more, then the turn ends saying why.
+   */
+  private async recoverFromStall(modelId: string): Promise<void> {
+    const seconds = modelStallMs() / 1000;
+    const registry = this.registry;
+
+    if (this.openLlmActive && registry != null) {
+      const failure = `no reply in ${Math.round(seconds)}s`;
+      const next = this.router.failed(registry, failure, this.session?.model);
+      if (next != null) {
+        this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
+        return;
+      }
+    }
+
+    if (this.stallRecoveriesThisTurn < MAX_STALL_RECOVERIES_PER_TURN) {
+      this.stallRecoveriesThisTurn += 1;
+      process.stderr.write(
+        `[provider] ${modelId} stopped answering after ${seconds}s. Asking it again.\n`
+      );
+      await this.session?.sendCustomMessage(
+        {
+          customType: STALL_CONTINUATION_TYPE,
+          content: STALL_CONTINUATION_PROMPT,
+          display: false,
+        },
+        { triggerTurn: true }
+      );
+      return;
+    }
+
+    this.stallFailureReported = true;
+    this.emitAgentEvent({
+      type: "error",
+      error: {
+        message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
+        code: "turn_failed",
+        actions: [{ type: "switch-model" }],
+      },
+    });
+    this.finishTurn();
+  }
+
   /** Same shape as the coding loop's recovery: compact once, retry once. */
   private async compactAndRetry(): Promise<void> {
     const failure = this.pendingContextCompaction;
@@ -824,6 +1020,17 @@ export class BotSession {
     try {
       await session.compact();
     } catch {
+      // Nothing older than the recency window to summarise. Another pool
+      // model may have room for the transcript as it stands.
+      const registry = this.registry;
+      const next =
+        this.openLlmActive && registry != null
+          ? this.router.failed(registry, failure, session.model)
+          : null;
+      if (next != null) {
+        this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
+        return;
+      }
       this.emitAgentEvent({
         type: "error",
         error: {
@@ -856,7 +1063,18 @@ export class BotSession {
   }
 
   private reportTurnFailure(): void {
-    if (this.interrupted) return;
+    if (this.interrupted || this.stallFailureReported) return;
+
+    // The budget extension aborted the run; pi records that as an error with
+    // "This operation was aborted" for text, which reads as a provider fault.
+    const budgetStop = budgetStopReason();
+    if (budgetStop != null) {
+      this.emitAgentEvent({
+        type: "error",
+        error: { message: budgetStop, code: "turn_failed" },
+      });
+      return;
+    }
 
     const message = (
       this.session?.state as { errorMessage?: unknown } | undefined
@@ -864,14 +1082,61 @@ export class BotSession {
 
     if (typeof message !== "string" || message.length === 0) return;
 
+    const pooled = this.openLlmActive && !isOutOfCredits(message);
     this.emitAgentEvent({
       type: "error",
       error: {
-        message: compactFailure(message),
+        message: this.failureMessage(message),
         code: "turn_failed",
-        ...this.upgradeActionsFor(message),
+        ...(pooled || !isProviderFailure(message)
+          ? {}
+          : providerDetail(message)),
+        ...this.errorActionsFor(message),
       },
     });
+  }
+
+  /**
+   * A failure in words the contact can read: the gateway forwards these to
+   * the phone, and a raw "429: {json}" envelope once went out as the reply.
+   * Under the router the user never chose a model, so a provider's sentence
+   * about one is noise: the pool is out, and the card says what to do. Out
+   * of credits keeps its own card.
+   */
+  private failureMessage(raw: string): string {
+    const registry = this.registry;
+    if (this.openLlmActive && !isOutOfCredits(raw)) {
+      return registry != null && this.router.poolShut(registry)
+        ? OPENLLM_POOL_SHUT_MESSAGE
+        : OPENLLM_POOL_EXHAUSTED_MESSAGE;
+    }
+    return isProviderFailure(raw)
+      ? terminalProviderMessage(raw)
+      : compactFailure(raw);
+  }
+
+  /**
+   * What the app can offer about a failed turn: the upgrade card when out of
+   * credits, the free-source card when the pool is shut, a model switch when
+   * a pinned model timed out or is overloaded.
+   */
+  private errorActionsFor(
+    raw: string
+  ):
+    | { actions: Array<{ type: string; link?: string }> }
+    | Record<string, never> {
+    const actions = [...(this.upgradeActionsFor(raw).actions ?? [])];
+    if (actions.some((action) => action.type === "free-pool-out"))
+      return { actions };
+    if (
+      isProviderFailure(raw) &&
+      !isOutOfCredits(raw) &&
+      (this.openLlmActive ||
+        classifyProviderFailure(raw).remedy.includes("switch"))
+    ) {
+      actions.push({ type: "switch-model" });
+    }
+    return actions.length > 0 ? { actions } : {};
   }
 
   /**
@@ -879,6 +1144,11 @@ export class BotSession {
    * remembered so its arrival can be reported to the desktop.
    */
   async steer(text: string): Promise<void> {
+    if (this.hiddenTurn) {
+      // Steered into housekeeping it would be answered where no one reads.
+      this.parkedSteers.push(text);
+      return;
+    }
     this.pendingSteers.push(text);
     await this.requireSession().steer(text);
   }
@@ -904,8 +1174,11 @@ export class BotSession {
 
   async stop(): Promise<void> {
     this.interrupted = true;
+    this.stallWatch.clear();
     this.rejectAllPending("Interrupted.");
     this.pendingSteers.length = 0;
+    this.parkedSteers.length = 0;
+    notifyConversationQueueCleared();
     this.session?.clearQueue();
     await this.session?.abort();
     this.session?.clearQueue();
@@ -966,6 +1239,9 @@ export class BotSession {
     }
 
     this.mode = next;
+    // The sandbox reads the mode from here; without it a bot moved off YOLO
+    // kept running commands unconfined.
+    setCurrentMode(next);
     this.emitAgentEvent({ type: "mode_changed", mode: next, source: "bot" });
   }
 
@@ -1010,11 +1286,15 @@ export class BotSession {
   }
 
   private async refreshProviderRegistrations(): Promise<void> {
+    this.sponsoredAtRegistration = sponsoredRunActive();
     const registry = this.registry;
     const runtime = this.modelRuntime;
 
     if (registry == null || runtime == null) return;
 
+    // Whatever sidelined a model or a whole provider may no longer hold:
+    // the account's credits, plan or keys just changed under us.
+    this.router.clearCooldowns();
     applyStoredApiKeys();
 
     for (const [provider, envVar] of Object.entries(PROVIDER_API_KEY_ENV)) {
@@ -1064,10 +1344,19 @@ export class BotSession {
       return;
     }
 
-    // Only once the switch has resolved: set earlier, a failed switch leaves
-    // the picker reporting one model while turns run on another.
+    // Only once the switch has worked: set earlier, a failed switch leaves
+    // the picker reporting one model while turns run on another, and pi
+    // throws here for a model whose key is missing.
+    try {
+      await session.setModel(resolved.model);
+    } catch (error) {
+      this.emitAgentEvent({
+        type: "error",
+        error: { message: describe(error), code: "model_unavailable" },
+      });
+      return;
+    }
     this.openLlmActive = toRouter;
-    await session.setModel(resolved.model);
     this.emitAgentEvent({
       type: "model_changed",
       model: this.currentModelReference(),
@@ -1111,6 +1400,8 @@ export class BotSession {
       });
 
       this.session = created.session;
+      // A degenerate summary from a cheap model must not erase the history.
+      anchorCompactions(this.session.sessionManager);
       this.unsubscribe = this.session.subscribe((event) =>
         this.onPiEvent(event)
       );
@@ -1134,6 +1425,7 @@ export class BotSession {
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.mcp.onStatusChange = () => this.emitMcpServers();
     this.registerNewMcpTools();
     this.emitMcpServers();
   }
@@ -1207,6 +1499,8 @@ export class BotSession {
   // ------------------------------------------------------------- pi -> desktop
 
   private onPiEvent(event: AgentSessionEvent): void {
+    this.stallWatch.note(event.type);
+
     switch (event.type) {
       case "agent_start":
         this.emitAgentEvent({
@@ -1392,14 +1686,21 @@ export class BotSession {
         this.estimatedTranscriptChars = estimateChars(event.messages);
         this.lastTurnUsage = turnUsage(event.messages as never);
 
+        // A hidden housekeeping turn is not carried on: nobody is waiting on
+        // it, and a continuation would run more hidden work. Its provider
+        // failure still puts the model out, so the next turn starts elsewhere.
+        if (this.hiddenTurn) this.shouldRotateOpenLlm(event.messages);
         this.continuingPastMalformedToolCall =
+          !this.hiddenTurn &&
           this.shouldContinuePastMalformedToolCall(event.messages);
-        this.pendingContextCompaction = this.continuingPastMalformedToolCall
-          ? null
-          : this.shouldCompactAndRetry(event.messages);
+        this.pendingContextCompaction =
+          this.hiddenTurn || this.continuingPastMalformedToolCall
+            ? null
+            : this.shouldCompactAndRetry(event.messages);
         // A malformed call is retried on the same model, not rotated, and an
         // outgrown transcript does not fit the next model either.
         this.pendingOpenLlmRotation =
+          this.hiddenTurn ||
           this.continuingPastMalformedToolCall ||
           this.pendingContextCompaction != null
             ? null
@@ -1435,7 +1736,8 @@ export class BotSession {
           this.pendingContextCompaction == null &&
           this.pendingOpenLlmRotation == null &&
           this.pendingLanguageRepair == null &&
-          this.pendingToolArrival == null
+          this.pendingToolArrival == null &&
+          this.pendingStall == null
         ) {
           this.finishTurn();
         }
@@ -1488,6 +1790,7 @@ export class BotSession {
 
   private finishTurn(): void {
     this.turnRunning = false;
+    this.stallWatch.clear();
     this.toolInputs.clear();
     this.heartbeat.clear();
     this.emitAgentEvent({
@@ -1513,14 +1816,11 @@ export class BotSession {
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
-        allowedCommands: [
-          ...(this.config.allowedCommands ?? []),
-          ...this.sessionAllowedCommands,
-        ],
-        allowedTools: [BOT_REACTION_TOOL_NAME, ...this.sessionAllowedTools],
-        allowedReadPaths: this.config.allowedReadPaths ?? [],
-        allowedWritePaths: [],
-        allowedOrigins: [],
+        ...this.allowances.gateOptions({
+          commands: this.config.allowedCommands,
+          tools: [BOT_REACTION_TOOL_NAME],
+          readPaths: this.config.allowedReadPaths,
+        }),
       });
 
       if (gate.kind === "allow") return;
@@ -1591,7 +1891,7 @@ export class BotSession {
   private applyDecision(
     decision: PermissionDecision,
     tool: ToolRequest,
-    _request: PermissionRequest
+    request: PermissionRequest
   ): { block: true; reason: string } | undefined {
     if (typeof decision === "string") {
       switch (decision) {
@@ -1611,7 +1911,7 @@ export class BotSession {
           return undefined;
 
         case "allowAlways":
-          this.rememberAllowance(tool);
+          this.allowances.remember(tool, request);
 
           return undefined;
 
@@ -1633,12 +1933,12 @@ export class BotSession {
         };
 
       case "allow_always_with_rule":
-        this.sessionAllowedCommands.push(decision.rule);
+        this.allowances.allowCommandRules([decision.rule]);
 
         return undefined;
 
       case "allow_always_with_rules":
-        this.sessionAllowedCommands.push(...decision.rules);
+        this.allowances.allowCommandRules(decision.rules);
 
         return undefined;
 
@@ -1651,23 +1951,6 @@ export class BotSession {
 
       default:
         return { block: true, reason: "The user rejected this tool call." };
-    }
-  }
-
-  private rememberAllowance(tool: ToolRequest): void {
-    if (tool.name !== "bash") {
-      this.sessionAllowedTools.add(tool.name);
-
-      return;
-    }
-
-    for (const segment of shellSegments(String(tool.input.command ?? ""))) {
-      const head = segment
-        .split(/\s+/)
-        .find((word) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(word));
-
-      if (head != null && !this.sessionAllowedCommands.includes(head))
-        this.sessionAllowedCommands.push(head);
     }
   }
 

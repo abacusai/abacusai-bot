@@ -37,7 +37,12 @@ const ABACUS_TIMEOUT =
   "Timed out waiting for Abacus.AI sign-in. Sign in at abacus.ai, then press Connect again.";
 
 export type AbacusAuthResult =
-  | { ok: true; key: string }
+  | {
+      ok: true;
+      key: string;
+      /** Where the account signed in: the app's own window holds its session afterwards, the browser does. */
+      surface: "in_app" | "browser";
+    }
   | { ok: false; error: string; cancelled?: boolean };
 
 /**
@@ -184,7 +189,15 @@ export const startAbacusAuth = async (
       }
 
       void exchange(code, verifier, variant, abort.signal).then(
-        ({ result, reason }) => finish(result, reason)
+        ({ result, reason }) =>
+          finish(
+            // The window, when it is still ours, is where the account signed
+            // in; its session is the app's to ride on afterwards.
+            result.ok && signInWindow != null && !browserRequested
+              ? { ...result, surface: "in_app" }
+              : result,
+            reason
+          )
       );
     });
 
@@ -323,7 +336,9 @@ export const startAbacusAuth = async (
           callbackPath,
           onHandOff: openInBrowser,
           onDismissed: () => {
-            if (!browserRequested) close();
+            // Closed once the code landed: the exchange is under way and the
+            // key is moments away; only a close before that is a cancel.
+            if (!browserRequested && !accepted) close();
           },
           ...(seeded ? { seedCookies } : {}),
         })
@@ -403,7 +418,7 @@ const exchange = async (
 
     if (key.length === 0) return { result: genericFailure, reason: "no_key" };
 
-    return { result: { ok: true, key } };
+    return { result: { ok: true, key, surface: "browser" } };
   } catch (error) {
     console.warn(
       `[abacus-auth] exchange error: ${error instanceof Error ? error.message : String(error)}`

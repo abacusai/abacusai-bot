@@ -1,8 +1,13 @@
+import http from "http";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ shell: { openExternal: vi.fn() } }));
-const hasAbacusSession = vi.hoisted(() => vi.fn(async () => false));
-vi.mock("./abacus-signin-window", () => ({ hasAbacusSession }));
+const sessionHolds = vi.hoisted(() => vi.fn(async () => false));
+vi.mock("./sign-in-session", () => ({ sessionHolds }));
+vi.mock("./account-service", () => ({
+  readAccountState: () => ({ account: { email: "me@example.com" } }),
+}));
 const openConnectWindow = vi.hoisted(() =>
   vi.fn<
     (options: {
@@ -22,6 +27,7 @@ vi.mock("../config/settings", () => ({
 }));
 
 const {
+  cancelAllConnectorConnects,
   buildConnectorsSnapshot,
   cancelConnectorConnect,
   disconnectAbacusConnector,
@@ -355,13 +361,13 @@ describe("how the browser hop starts", () => {
  */
 describe("where the hop runs", () => {
   beforeEach(() => {
-    hasAbacusSession.mockResolvedValue(false);
+    sessionHolds.mockResolvedValue(false);
     openConnectWindow.mockReset();
     openConnectWindow.mockReturnValue(null);
   });
 
   it("runs in an app window on the sign-in session when the account signed in there", async () => {
-    hasAbacusSession.mockResolvedValue(true);
+    sessionHolds.mockResolvedValue(true);
     const close = vi.fn();
     openConnectWindow.mockReturnValue({ close });
     const { shell } = await import("electron");
@@ -380,7 +386,7 @@ describe("where the hop runs", () => {
   });
 
   it("is cancelled when the user closes that window", async () => {
-    hasAbacusSession.mockResolvedValue(true);
+    sessionHolds.mockResolvedValue(true);
     openConnectWindow.mockReturnValue({ close: vi.fn() });
 
     const hop = startConnectorConnect("gmailuser");
@@ -398,12 +404,113 @@ describe("where the hop runs", () => {
         mockResolvedValue: (v: unknown) => void;
       }
     ).mockResolvedValue(undefined);
-    hasAbacusSession.mockResolvedValue(true);
+    sessionHolds.mockResolvedValue(true);
     openConnectWindow.mockReturnValue(null);
 
     const hop = startConnectorConnect("slack");
     await vi.waitFor(() => expect(shell.openExternal).toHaveBeenCalledOnce());
     cancelConnectorConnect();
     await hop;
+  });
+});
+
+/**
+ * Hops are owned. A screen leaving cancels the hops it started on a click;
+ * the hop onboarding starts on the user's behalf outlives the screens, since
+ * it runs once per install and the Connectors step's cleanup once took it
+ * down for good.
+ */
+describe("who may cancel a hop", () => {
+  beforeEach(() => {
+    sessionHolds.mockResolvedValue(false);
+  });
+
+  it("a screen's cancel leaves the first-run hop alone, and takes its own down", async () => {
+    const { shell } = await import("electron");
+    (shell.openExternal as unknown as { mockClear: () => void }).mockClear();
+    (
+      shell.openExternal as unknown as {
+        mockResolvedValue: (v: unknown) => void;
+      }
+    ).mockResolvedValue(undefined);
+    const auto = startConnectorConnect("gmailuser", {
+      autostart: true,
+      owner: "first-run",
+    });
+    const clicked = startConnectorConnect("slack");
+    await vi.waitFor(() => expect(shell.openExternal).toHaveBeenCalledTimes(2));
+
+    cancelConnectorConnect();
+    expect(await clicked).toMatchObject({ cancelled: true });
+
+    let settled = false;
+    void auto.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(settled).toBe(false);
+
+    cancelConnectorConnect("first-run");
+    expect(await auto).toMatchObject({ cancelled: true });
+  });
+
+  it("the same service again supersedes; sign-out takes every hop down", async () => {
+    const { shell } = await import("electron");
+    const first = startConnectorConnect("slack");
+    const second = startConnectorConnect("slack");
+    expect(await first).toMatchObject({ cancelled: true });
+
+    const auto = startConnectorConnect("gmailuser", { owner: "first-run" });
+    await vi.waitFor(() => expect(shell.openExternal).toHaveBeenCalled());
+    cancelAllConnectorConnects();
+    expect(await second).toMatchObject({ cancelled: true });
+    expect(await auto).toMatchObject({ cancelled: true });
+  });
+});
+
+describe("the app window closed after the provider answered", () => {
+  it("is not a cancel: the hop waits for the platform's confirmation", async () => {
+    cancelAllConnectorConnects();
+    sessionHolds.mockResolvedValue(true);
+    openConnectWindow.mockReset();
+    openConnectWindow.mockReturnValue({ close: vi.fn() });
+    const hop = startConnectorConnect("gmailuser");
+    await vi.waitFor(() => expect(openConnectWindow).toHaveBeenCalledOnce());
+    const options = openConnectWindow.mock.calls[0]![0];
+
+    // The platform lists the connector as attached once asked.
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      const result = url.includes("_listActiveUserLevelConnectors")
+        ? [{ service: "GMAILUSER", applicationConnectorId: "abc" }]
+        : { GMAILUSER: { name: "Gmail" } };
+      return new Response(JSON.stringify({ success: true, result }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      // The loopback ping lands, then the user closes the window.
+      const url = new URL(options.url);
+      const port = url.searchParams.get("botPort");
+      const callbackPath = url.searchParams.get("botPath");
+      await new Promise<void>((resolve, reject) => {
+        http
+          .get(
+            `http://127.0.0.1:${port}/${callbackPath}?service=gmailuser&status=ok`,
+            (res) => {
+              res.resume();
+              res.on("end", resolve);
+            }
+          )
+          .on("error", reject);
+      });
+      options.onDismissed();
+
+      expect(await hop).toEqual({ ok: true });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });

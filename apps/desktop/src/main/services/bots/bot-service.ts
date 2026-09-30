@@ -32,6 +32,7 @@ import {
   removeSenderSessionsForBot,
   senderSessionKey,
   updateBot,
+  markBotKickstarted,
 } from "./bot-store";
 
 export interface BotServiceCallbacks {
@@ -109,13 +110,16 @@ const renderPersona = (bot: Bot): string => {
     // Nothing wakes a bot at an hour unless a routine does, and only the bot
     // can turn its own mission into one.
     "If your mission names a time or a rhythm (every day at 10 am, weekday",
-    "mornings, every hour), that is a routine, not a promise. Before anything",
-    "else on your first turn, create it with the cronjob tool: the schedule",
-    "in cron, the recurring part of your mission as the prompt. It runs once",
-    "on creation, which is your first pass; do not do the pass by hand as",
-    "well. Confirm to the user that it is set and when it fires next. Nothing",
-    "will bring you back at that hour unless the routine exists, so never say",
-    'you will "check again tomorrow" unless the routine that will is listed.',
+    "mornings, every hour), that is a routine, not a promise. Create it with",
+    "the cronjob tool on your first turn, at the point your mission puts it:",
+    "a mission that orders its steps is followed in that order. The schedule",
+    "in cron, the recurring part of your mission as the prompt. A routine",
+    "fires once on creation, which counts as its first pass, unless you pass",
+    "firstRun: false; pass that when you have just done the pass yourself in",
+    "this chat, so it is not done twice. Confirm to the user that it is set",
+    "and when it fires next. Nothing will bring you back at that hour unless",
+    'the routine exists, so never say you will "check again tomorrow" unless',
+    "the routine that will is listed.",
     "",
     // A turn with tool calls is several replies stitched together; a model
     // that reads "first turn" as "first reply" greets after every tool result.
@@ -209,7 +213,12 @@ const senderChatIntro = (senderName: string, platform: string): string =>
 /** Set while the platform serves the bot's runs on the house; every request of those runs carries it as a header. */
 const sponsoredRunEnv = (bot: Bot): Record<string, string> =>
   bot.sponsoredUntil != null && Date.now() < bot.sponsoredUntil
-    ? { ABACUSAI_BOT_SPONSORED_RUN: SPONSORED_RUN_MARKER }
+    ? {
+        ABACUSAI_BOT_SPONSORED_RUN: SPONSORED_RUN_MARKER,
+        // The deadline too: a process outlives the window, and must stop
+        // sending the marker when it passes rather than when it exits.
+        ABACUSAI_BOT_SPONSORED_UNTIL: String(bot.sponsoredUntil),
+      }
     : {};
 
 export class BotService {
@@ -327,6 +336,22 @@ export class BotService {
       bot.workspaceId === workspaceId &&
       this.callbacks.sessionExists(workspaceId, bot.sessionId)
     ) {
+      // A chat whose first start failed exists but never spoke: it is owed
+      // the kickstart, once, when it next comes up.
+      if (bot.kickstartedAt == null) {
+        const started = await this.callbacks.startSession(
+          workspaceId,
+          bot.sessionId
+        );
+        if (started.success) {
+          this.callbacks.sendMessage(
+            workspaceId,
+            bot.sessionId,
+            KICKSTART_MESSAGE
+          );
+          markBotKickstarted(botId);
+        }
+      }
       return { botId, workspaceId, sessionId: bot.sessionId };
     }
 
@@ -354,6 +379,7 @@ export class BotService {
     const started = await this.callbacks.startSession(workspaceId, session.id);
     if (started.success && bot.sessionId == null) {
       this.callbacks.sendMessage(workspaceId, session.id, KICKSTART_MESSAGE);
+      markBotKickstarted(botId);
     }
 
     return { botId, workspaceId, sessionId: session.id };

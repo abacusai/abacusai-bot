@@ -324,7 +324,10 @@ describe("compatibility with the browser sign-in flow", () => {
       const response = await loopbackFetch(`${callback}?code=test-code`);
       expect(response.ok).toBe(true);
       await response.text();
-      await expect(attempt).resolves.toEqual({ ok: true, key: "test-key" });
+      await expect(attempt).resolves.toMatchObject({
+        ok: true,
+        key: "test-key",
+      });
       const exchange = JSON.parse(apiFetch.mock.calls[1]![1].body);
       expect(exchange.authCode).toBe("test-code");
       expect(exchange.signinVariant).toBe("browser");

@@ -35,6 +35,7 @@ import {
   listJobs,
   removeJob,
   updateJob,
+  type RoutineRunStart,
 } from "../agent-tools/cron-store";
 import { exportDeckPdf } from "../agent-tools/deck-pdf";
 import {
@@ -141,7 +142,10 @@ export interface McpAgentToolsServerOptions {
   workspacePath: () => string | null;
   workspaceId?: () => string | null;
   /** `trigger` lets the run log tell "Run now" from the first fire at creation. */
-  runCronJob?: (jobId: string, trigger?: "manual" | "create") => Promise<void>;
+  runCronJob?: (
+    jobId: string,
+    trigger?: "manual" | "create"
+  ) => Promise<RoutineRunStart>;
   /**
    * The bot whose chat this UI session is, or null. A bot scheduling its own
    * routine gets the fires delivered back into its chat.
@@ -774,12 +778,11 @@ export class McpAgentToolsServer {
    * swallowed: the routine is saved, so this is a missed run, not a failed
    * create. The run log carries the reason.
    */
-  private async fireOnCreate(jobId: string): Promise<boolean> {
+  private async fireOnCreate(jobId: string): Promise<RoutineRunStart> {
     try {
-      await this.options.runCronJob?.(jobId, "create");
-      return true;
+      return (await this.options.runCronJob?.(jobId, "create")) ?? "started";
     } catch {
-      return false;
+      return "failed";
     }
   }
 
@@ -848,12 +851,14 @@ export class McpAgentToolsServer {
         // Every routine runs once the moment it is set up: waiting for the
         // first tick leaves no way to tell one that works from one that
         // quietly does not. Unless the caller has just done that pass itself.
-        const firedNow =
+        const fire =
           job.enabled &&
           job.schedule != null &&
           args.firstRun !== false &&
-          this.options.runCronJob != null &&
-          (await this.fireOnCreate(job.id));
+          this.options.runCronJob != null
+            ? await this.fireOnCreate(job.id)
+            : null;
+        const firedNow = fire === "started";
 
         const delivery =
           "It lives under Routines in the sidebar; each fire runs in a fresh session of its own, listed there with its outcome." +
@@ -862,12 +867,20 @@ export class McpAgentToolsServer {
             : "");
         // The double-send guard: the fire is the demonstration, and the
         // creating agent must not also perform the task "to confirm it works".
+        // The fire is the demonstration and the double-send guard, but only a
+        // fire that started: told "it is running now" about a run that was
+        // skipped, the model confirmed the setup and the task was never done.
         const first = firedNow
           ? " The first one is running now, without waiting for the next tick: " +
             "it performs the routine's task itself, so do NOT also do that " +
             "task (send the message, gather the summary) here: that would " +
             "reach the user twice. Just confirm the setup in a sentence."
-          : "";
+          : fire != null
+            ? " Its first run could not start right now (see the Routines " +
+              "panel for why), so nothing has been done yet: do this pass " +
+              "yourself here if the user is waiting on it, and the routine " +
+              "takes over from its next tick."
+            : "";
         const hook =
           job.webhookToken != null
             ? `\nIt can also be fired by POST to the webhook shown in the Routines panel.`
@@ -882,6 +895,22 @@ export class McpAgentToolsServer {
         return this.err(
           `"${action}" needs an id. Use action "list" to see them.`
         );
+
+      // A bot may change or fire only its own routines: `list` hides the
+      // rest, but an id read off the Routines panel or an earlier turn must
+      // not reach them either.
+      const callerBot =
+        callerSession != null
+          ? (this.options.botIdForSession?.(callerSession) ?? null)
+          : null;
+      if (callerBot != null) {
+        const job = listJobs().find((entry) => entry.id === id);
+        if (job == null) return this.err(`No job with id "${id}".`);
+        if (job.botId !== callerBot)
+          return this.err(
+            `Routine ${id} is not yours to ${action}; it belongs to the user or another bot.`
+          );
+      }
 
       if (action === "remove") {
         removeJob(id);

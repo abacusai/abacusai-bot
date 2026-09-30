@@ -415,7 +415,7 @@ describe("the persona", () => {
 
     const persona = fs.readFileSync(personaPath(bot.id), "utf8");
 
-    expect(persona).toContain("create it with the cronjob tool");
+    expect(persona).toContain("Create it with\nthe cronjob tool");
     expect(persona).toContain("not a promise");
   });
 });
@@ -491,6 +491,7 @@ describe("a sponsored first run", () => {
     );
     expect(service.sponsoredRunEnvForBot(sponsored.id)).toEqual({
       ABACUSAI_BOT_SPONSORED_RUN: "cos-first-run",
+      ABACUSAI_BOT_SPONSORED_UNTIL: String(sponsored.sponsoredUntil),
     });
     expect(service.sponsoredRunEnvForBot(plain.id)).toEqual({});
 
