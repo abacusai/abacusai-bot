@@ -54,7 +54,17 @@ describe("SessionsSidebar", () => {
       workspaces: fixtureWorkspaces(),
     });
     appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
-    await renderInRouter(<SessionsSidebar />, appDb);
+    await renderInRouter(<SessionsSidebar />, appDb, "/", {
+      transport: {
+        client: {
+          connectors: {
+            events: async function* () {
+              yield { type: "snapshot", requests: [] };
+            },
+          },
+        },
+      },
+    });
     await screen.findByText("Review my pull requests");
     expect(screen.getByText("Pinned")).toBeTruthy();
     expect(screen.getByText("Default workspace")).toBeTruthy();

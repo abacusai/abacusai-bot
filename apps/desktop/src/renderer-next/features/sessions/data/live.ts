@@ -1,0 +1,97 @@
+import type { QueryClient } from "@tanstack/react-query";
+
+import type { Collections } from "#next/data/db";
+import { followNotices } from "#next/data/queries/live";
+import type { Transport } from "#next/data/transport";
+import { checkoutKey } from "#shared/contract/checkout";
+
+import { sessionsQueries } from "./queries";
+export const followSessionsSources = (
+  transport: Transport,
+  collections: Collections,
+  qc: Pick<QueryClient, "invalidateQueries">,
+  signal: AbortSignal
+) => {
+  const options = sessionsQueries(transport.orpc);
+  const invalidate = (query: { queryKey: readonly unknown[] }) =>
+    void qc.invalidateQueries({ queryKey: query.queryKey });
+  const checkouts = (key?: string) => {
+    const refs = [
+      ...collections.workspaces.toArray.map((w) => ({
+        workspaceId: w.id,
+        sessionId: undefined,
+        worktreeId: null,
+      })),
+      ...collections.sessions.toArray.map((s) => ({
+        workspaceId: s.workspaceId,
+        sessionId: s.id,
+        worktreeId: s.worktreeId,
+      })),
+    ];
+    return refs
+      .filter(
+        (ref) => !key || checkoutKey(ref.workspaceId, ref.worktreeId) === key
+      )
+      .map(({ workspaceId, sessionId }) => ({
+        workspaceId,
+        ...(sessionId ? { sessionId } : {}),
+      }));
+  };
+  const git = collections.gitState.subscribeChanges((changes) => {
+    for (const change of changes)
+      for (const checkout of checkouts(change.value.checkoutKey)) {
+        for (const query of [
+          options.tree(checkout),
+          options.branches(checkout),
+          options.branch(checkout),
+          options.pr(checkout),
+          options.worktrees(checkout.workspaceId),
+        ])
+          invalidate(query);
+      }
+  });
+  const sessions = collections.sessions.subscribeChanges((changes) => {
+    for (const change of changes)
+      invalidate(
+        options.checkoutStatus({
+          workspaceId: change.value.workspaceId,
+          sessionId: change.value.id,
+        })
+      );
+  });
+  const workspaces = collections.workspaces.subscribeChanges((changes) => {
+    for (const change of changes) {
+      invalidate(
+        transport.orpc.workspaces.checkPath.queryOptions({
+          input: { workspaceId: change.value.id },
+        })
+      );
+      for (const checkout of checkouts())
+        if (checkout.workspaceId === change.value.id)
+          invalidate(options.checkoutStatus(checkout));
+    }
+  });
+  void followNotices(
+    transport,
+    ({ signal }) => transport.client.files.events({}, { signal }),
+    (event) => {
+      if (event.type === "tree-root-changed")
+        for (const checkout of checkouts(event.checkoutKey)) {
+          invalidate(options.tree(checkout));
+          void qc.invalidateQueries({
+            queryKey: transport.orpc.files.treeChildren.key(),
+          });
+        }
+    },
+    signal
+  );
+  signal.addEventListener(
+    "abort",
+    () => {
+      git.unsubscribe();
+      sessions.unsubscribe();
+      workspaces.unsubscribe();
+    },
+    { once: true }
+  );
+};

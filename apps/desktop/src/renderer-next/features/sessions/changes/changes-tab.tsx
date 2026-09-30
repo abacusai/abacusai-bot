@@ -160,6 +160,14 @@ export const ChangesTab = ({
         <p className="text-muted-foreground p-2 text-xs">
           {t("sessions.changes.title")}
         </p>
+        <div className="flex gap-1 px-2 py-2">
+          <Button size="sm" variant="ghost" onClick={() => rows.forEach(keep)}>
+            {t("sessions.changes.keepAll")}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setUndo(rows)}>
+            {t("sessions.changes.undoAll")}
+          </Button>
+        </div>
         {rows.map((r, i) => (
           <div key={`${r.group}:${r.change.path}`}>
             <p className="text-muted-foreground px-2 text-xs">

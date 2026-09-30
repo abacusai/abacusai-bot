@@ -1,6 +1,8 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 
 import { BotsGlobals } from "#next/features/bots";
+import { SessionsGlobals } from "#next/features/sessions";
+import { dispatchPreview } from "#next/features/shell";
 import { ShellLayout } from "#next/features/shell";
 import { ignoreLoadError } from "#next/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#next/lib/navigation/search";
@@ -22,6 +24,7 @@ const ShellRoute = () => {
         initials={initialsOf(system.homeDir)}
       />
       <BotsGlobals />
+      <SessionsGlobals preview={dispatchPreview} />
     </>
   );
 };

@@ -81,6 +81,10 @@ export const agentLifecycle = (
       suppressed = false;
       void start(row);
     },
+    unavailable() {
+      cancel();
+      lastStatus = undefined;
+    },
     stop() {
       suppressed = true;
       cancel();

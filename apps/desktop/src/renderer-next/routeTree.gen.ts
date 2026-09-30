@@ -8,556 +8,569 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as BareRouteImport } from './routes/_bare'
-import { Route as ShellRouteImport } from './routes/_shell'
-import { Route as BareChar91__uiChar93RouteImport } from './routes/_bare/[__ui]'
-import { Route as ShellIndexRouteImport } from './routes/_shell/index'
-import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
-import { Route as BareOnboardingIndexRouteImport } from './routes/_bare/onboarding.index'
-import { Route as BareOnboardingStepRouteImport } from './routes/_bare/onboarding.$step'
-import { Route as ShellartifactsArtifactsRouteImport } from './routes/_shell/(artifacts)/artifacts'
-import { Route as ShellbotsBotsRouteImport } from './routes/_shell/(bots)/bots'
-import { Route as ShelllibraryLibraryRouteImport } from './routes/_shell/(library)/library'
-import { Route as ShellroutinesRoutinesRouteImport } from './routes/_shell/(routines)/routines'
-import { Route as ShellsessionsSessionsRouteImport } from './routes/_shell/(sessions)/sessions'
-import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings.index'
-import { Route as ShellSettingsAboutRouteImport } from './routes/_shell/settings.about'
-import { Route as ShellSettingsAccountRouteImport } from './routes/_shell/settings.account'
-import { Route as ShellSettingsAppearanceRouteImport } from './routes/_shell/settings.appearance'
-import { Route as ShellSettingsEnvironmentRouteImport } from './routes/_shell/settings.environment'
-import { Route as ShellSettingsGeneralRouteImport } from './routes/_shell/settings.general'
-import { Route as ShellSettingsMemoryRouteImport } from './routes/_shell/settings.memory'
-import { Route as ShellSettingsModelsRouteImport } from './routes/_shell/settings.models'
-import { Route as ShellSettingsNotificationsRouteImport } from './routes/_shell/settings.notifications'
-import { Route as ShellSettingsUsageRouteImport } from './routes/_shell/settings.usage'
-import { Route as ShellartifactsArtifactsIndexRouteImport } from './routes/_shell/(artifacts)/artifacts.index'
-import { Route as ShellbotsBotsIndexRouteImport } from './routes/_shell/(bots)/bots.index'
-import { Route as ShellbotsBotsBotIdRouteImport } from './routes/_shell/(bots)/bots.$botId'
-import { Route as ShellbotsBotsNewRouteImport } from './routes/_shell/(bots)/bots.new'
-import { Route as ShelllibraryLibraryIndexRouteImport } from './routes/_shell/(library)/library.index'
-import { Route as ShelllibraryLibraryConnectorsRouteImport } from './routes/_shell/(library)/library.connectors'
-import { Route as ShelllibraryLibraryMcpRouteImport } from './routes/_shell/(library)/library.mcp'
-import { Route as ShelllibraryLibraryMessagingRouteImport } from './routes/_shell/(library)/library.messaging'
-import { Route as ShelllibraryLibrarySkillsRouteImport } from './routes/_shell/(library)/library.skills'
-import { Route as ShellroutinesRoutinesRoutineIdRouteImport } from './routes/_shell/(routines)/routines.$routineId'
-import { Route as ShellroutinesRoutinesListRouteImport } from './routes/_shell/(routines)/routines._list'
-import { Route as ShellsessionsSessionsIndexRouteImport } from './routes/_shell/(sessions)/sessions.index'
-import { Route as ShellsessionsSessionsSessionIdRouteImport } from './routes/_shell/(sessions)/sessions.$sessionId'
-import { Route as ShellsessionsSessionsNewRouteImport } from './routes/_shell/(sessions)/sessions.new'
-import { Route as ShellbotsBotsBotIdCheckInRouteImport } from './routes/_shell/(bots)/bots.$botId.check-in'
-import { Route as ShellbotsBotsBotIdDetailsRouteImport } from './routes/_shell/(bots)/bots.$botId.details'
-import { Route as ShellbotsBotsBotIdEditRouteImport } from './routes/_shell/(bots)/bots.$botId_.edit'
-import { Route as ShelllibraryLibraryToolsIndexRouteImport } from './routes/_shell/(library)/library.tools.index'
-import { Route as ShelllibraryLibraryToolsToolsetIdRouteImport } from './routes/_shell/(library)/library.tools.$toolsetId'
-import { Route as ShellroutinesRoutinesListIndexRouteImport } from './routes/_shell/(routines)/routines._list.index'
-import { Route as ShellroutinesRoutinesListNewRouteImport } from './routes/_shell/(routines)/routines._list.new'
-import { Route as ShellsessionsSessionsSessionIdReviewRouteImport } from './routes/_shell/(sessions)/sessions.$sessionId_.review'
-import { Route as ShellbotsBotsBotIdChatsSessionIdRouteImport } from './routes/_shell/(bots)/bots.$botId_.chats.$sessionId'
+import { Route as rootRouteImport } from "./routes/__root"
+import { Route as BareRouteImport } from "./routes/_bare"
+import { Route as ShellRouteImport } from "./routes/_shell"
+import { Route as BareChar91__uiChar93RouteImport } from "./routes/_bare/[__ui]"
+import { Route as ShellIndexRouteImport } from "./routes/_shell/index"
+import { Route as ShellSettingsRouteImport } from "./routes/_shell/settings"
+import { Route as BareOnboardingIndexRouteImport } from "./routes/_bare/onboarding.index"
+import { Route as BareOnboardingStepRouteImport } from "./routes/_bare/onboarding.$step"
+import { Route as ShellartifactsArtifactsRouteImport } from "./routes/_shell/(artifacts)/artifacts"
+import { Route as ShellbotsBotsRouteImport } from "./routes/_shell/(bots)/bots"
+import { Route as ShelllibraryLibraryRouteImport } from "./routes/_shell/(library)/library"
+import { Route as ShellroutinesRoutinesRouteImport } from "./routes/_shell/(routines)/routines"
+import { Route as ShellsessionsSessionsRouteImport } from "./routes/_shell/(sessions)/sessions"
+import { Route as ShellSettingsIndexRouteImport } from "./routes/_shell/settings.index"
+import { Route as ShellSettingsAboutRouteImport } from "./routes/_shell/settings.about"
+import { Route as ShellSettingsAccountRouteImport } from "./routes/_shell/settings.account"
+import { Route as ShellSettingsAppearanceRouteImport } from "./routes/_shell/settings.appearance"
+import { Route as ShellSettingsEnvironmentRouteImport } from "./routes/_shell/settings.environment"
+import { Route as ShellSettingsGeneralRouteImport } from "./routes/_shell/settings.general"
+import { Route as ShellSettingsMemoryRouteImport } from "./routes/_shell/settings.memory"
+import { Route as ShellSettingsModelsRouteImport } from "./routes/_shell/settings.models"
+import { Route as ShellSettingsNotificationsRouteImport } from "./routes/_shell/settings.notifications"
+import { Route as ShellSettingsUsageRouteImport } from "./routes/_shell/settings.usage"
+import { Route as ShellartifactsArtifactsIndexRouteImport } from "./routes/_shell/(artifacts)/artifacts.index"
+import { Route as ShellbotsBotsIndexRouteImport } from "./routes/_shell/(bots)/bots.index"
+import { Route as ShellbotsBotsBotIdRouteImport } from "./routes/_shell/(bots)/bots.$botId"
+import { Route as ShellbotsBotsNewRouteImport } from "./routes/_shell/(bots)/bots.new"
+import { Route as ShelllibraryLibraryIndexRouteImport } from "./routes/_shell/(library)/library.index"
+import { Route as ShelllibraryLibraryConnectorsRouteImport } from "./routes/_shell/(library)/library.connectors"
+import { Route as ShelllibraryLibraryMcpRouteImport } from "./routes/_shell/(library)/library.mcp"
+import { Route as ShelllibraryLibraryMessagingRouteImport } from "./routes/_shell/(library)/library.messaging"
+import { Route as ShelllibraryLibrarySkillsRouteImport } from "./routes/_shell/(library)/library.skills"
+import { Route as ShellroutinesRoutinesRoutineIdRouteImport } from "./routes/_shell/(routines)/routines.$routineId"
+import { Route as ShellroutinesRoutinesListRouteImport } from "./routes/_shell/(routines)/routines._list"
+import { Route as ShellsessionsSessionsIndexRouteImport } from "./routes/_shell/(sessions)/sessions.index"
+import { Route as ShellsessionsSessionsSessionIdRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId"
+import { Route as ShellsessionsSessionsNewRouteImport } from "./routes/_shell/(sessions)/sessions.new"
+import { Route as ShellbotsBotsBotIdCheckInRouteImport } from "./routes/_shell/(bots)/bots.$botId.check-in"
+import { Route as ShellbotsBotsBotIdDetailsRouteImport } from "./routes/_shell/(bots)/bots.$botId.details"
+import { Route as ShellbotsBotsBotIdEditRouteImport } from "./routes/_shell/(bots)/bots.$botId_.edit"
+import { Route as ShelllibraryLibraryToolsIndexRouteImport } from "./routes/_shell/(library)/library.tools.index"
+import { Route as ShelllibraryLibraryToolsToolsetIdRouteImport } from "./routes/_shell/(library)/library.tools.$toolsetId"
+import { Route as ShellroutinesRoutinesListIndexRouteImport } from "./routes/_shell/(routines)/routines._list.index"
+import { Route as ShellroutinesRoutinesListNewRouteImport } from "./routes/_shell/(routines)/routines._list.new"
+import { Route as ShellsessionsSessionsSessionIdDiffRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId.diff"
+import { Route as ShellsessionsSessionsSessionIdReviewRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId.review"
+import { Route as ShellbotsBotsBotIdChatsSessionIdRouteImport } from "./routes/_shell/(bots)/bots.$botId_.chats.$sessionId"
 
 const BareRoute = BareRouteImport.update({
-  id: '/_bare',
+  id: "/_bare",
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShellRoute = ShellRouteImport.update({
-  id: '/_shell',
+  id: "/_shell",
   getParentRoute: () => rootRouteImport,
 } as any)
 const BareChar91__uiChar93Route = BareChar91__uiChar93RouteImport.update({
-  id: '/__ui',
-  path: '/__ui',
+  id: "/__ui",
+  path: "/__ui",
   getParentRoute: () => BareRoute,
 } as any)
 const ShellIndexRoute = ShellIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellSettingsRoute = ShellSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+  id: "/settings",
+  path: "/settings",
   getParentRoute: () => ShellRoute,
 } as any)
 const BareOnboardingIndexRoute = BareOnboardingIndexRouteImport.update({
-  id: '/onboarding/',
-  path: '/onboarding/',
+  id: "/onboarding/",
+  path: "/onboarding/",
   getParentRoute: () => BareRoute,
 } as any)
 const BareOnboardingStepRoute = BareOnboardingStepRouteImport.update({
-  id: '/onboarding/$step',
-  path: '/onboarding/$step',
+  id: "/onboarding/$step",
+  path: "/onboarding/$step",
   getParentRoute: () => BareRoute,
 } as any)
 const ShellartifactsArtifactsRoute = ShellartifactsArtifactsRouteImport.update({
-  id: '/(artifacts)/artifacts',
-  path: '/artifacts',
+  id: "/(artifacts)/artifacts",
+  path: "/artifacts",
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellbotsBotsRoute = ShellbotsBotsRouteImport.update({
-  id: '/(bots)/bots',
-  path: '/bots',
+  id: "/(bots)/bots",
+  path: "/bots",
   getParentRoute: () => ShellRoute,
 } as any)
 const ShelllibraryLibraryRoute = ShelllibraryLibraryRouteImport.update({
-  id: '/(library)/library',
-  path: '/library',
+  id: "/(library)/library",
+  path: "/library",
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellroutinesRoutinesRoute = ShellroutinesRoutinesRouteImport.update({
-  id: '/(routines)/routines',
-  path: '/routines',
+  id: "/(routines)/routines",
+  path: "/routines",
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellsessionsSessionsRoute = ShellsessionsSessionsRouteImport.update({
-  id: '/(sessions)/sessions',
-  path: '/sessions',
+  id: "/(sessions)/sessions",
+  path: "/sessions",
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellSettingsIndexRoute = ShellSettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsAboutRoute = ShellSettingsAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+  id: "/about",
+  path: "/about",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsAccountRoute = ShellSettingsAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
+  id: "/account",
+  path: "/account",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsAppearanceRoute = ShellSettingsAppearanceRouteImport.update({
-  id: '/appearance',
-  path: '/appearance',
+  id: "/appearance",
+  path: "/appearance",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsEnvironmentRoute =
   ShellSettingsEnvironmentRouteImport.update({
-    id: '/environment',
-    path: '/environment',
+    id: "/environment",
+    path: "/environment",
     getParentRoute: () => ShellSettingsRoute,
   } as any)
 const ShellSettingsGeneralRoute = ShellSettingsGeneralRouteImport.update({
-  id: '/general',
-  path: '/general',
+  id: "/general",
+  path: "/general",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsMemoryRoute = ShellSettingsMemoryRouteImport.update({
-  id: '/memory',
-  path: '/memory',
+  id: "/memory",
+  path: "/memory",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsModelsRoute = ShellSettingsModelsRouteImport.update({
-  id: '/models',
-  path: '/models',
+  id: "/models",
+  path: "/models",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsNotificationsRoute =
   ShellSettingsNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
+    id: "/notifications",
+    path: "/notifications",
     getParentRoute: () => ShellSettingsRoute,
   } as any)
 const ShellSettingsUsageRoute = ShellSettingsUsageRouteImport.update({
-  id: '/usage',
-  path: '/usage',
+  id: "/usage",
+  path: "/usage",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellartifactsArtifactsIndexRoute =
   ShellartifactsArtifactsIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => ShellartifactsArtifactsRoute,
   } as any)
 const ShellbotsBotsIndexRoute = ShellbotsBotsIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => ShellbotsBotsRoute,
 } as any)
 const ShellbotsBotsBotIdRoute = ShellbotsBotsBotIdRouteImport.update({
-  id: '/$botId',
-  path: '/$botId',
+  id: "/$botId",
+  path: "/$botId",
   getParentRoute: () => ShellbotsBotsRoute,
 } as any)
 const ShellbotsBotsNewRoute = ShellbotsBotsNewRouteImport.update({
-  id: '/new',
-  path: '/new',
+  id: "/new",
+  path: "/new",
   getParentRoute: () => ShellbotsBotsRoute,
 } as any)
 const ShelllibraryLibraryIndexRoute =
   ShelllibraryLibraryIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
 const ShelllibraryLibraryConnectorsRoute =
   ShelllibraryLibraryConnectorsRouteImport.update({
-    id: '/connectors',
-    path: '/connectors',
+    id: "/connectors",
+    path: "/connectors",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
 const ShelllibraryLibraryMcpRoute = ShelllibraryLibraryMcpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+  id: "/mcp",
+  path: "/mcp",
   getParentRoute: () => ShelllibraryLibraryRoute,
 } as any)
 const ShelllibraryLibraryMessagingRoute =
   ShelllibraryLibraryMessagingRouteImport.update({
-    id: '/messaging',
-    path: '/messaging',
+    id: "/messaging",
+    path: "/messaging",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
 const ShelllibraryLibrarySkillsRoute =
   ShelllibraryLibrarySkillsRouteImport.update({
-    id: '/skills',
-    path: '/skills',
+    id: "/skills",
+    path: "/skills",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
 const ShellroutinesRoutinesRoutineIdRoute =
   ShellroutinesRoutinesRoutineIdRouteImport.update({
-    id: '/$routineId',
-    path: '/$routineId',
+    id: "/$routineId",
+    path: "/$routineId",
     getParentRoute: () => ShellroutinesRoutinesRoute,
   } as any)
 const ShellroutinesRoutinesListRoute =
   ShellroutinesRoutinesListRouteImport.update({
-    id: '/_list',
+    id: "/_list",
     getParentRoute: () => ShellroutinesRoutinesRoute,
   } as any)
 const ShellsessionsSessionsIndexRoute =
   ShellsessionsSessionsIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => ShellsessionsSessionsRoute,
   } as any)
 const ShellsessionsSessionsSessionIdRoute =
   ShellsessionsSessionsSessionIdRouteImport.update({
-    id: '/$sessionId',
-    path: '/$sessionId',
+    id: "/$sessionId",
+    path: "/$sessionId",
     getParentRoute: () => ShellsessionsSessionsRoute,
   } as any)
 const ShellsessionsSessionsNewRoute =
   ShellsessionsSessionsNewRouteImport.update({
-    id: '/new',
-    path: '/new',
+    id: "/new",
+    path: "/new",
     getParentRoute: () => ShellsessionsSessionsRoute,
   } as any)
 const ShellbotsBotsBotIdCheckInRoute =
   ShellbotsBotsBotIdCheckInRouteImport.update({
-    id: '/check-in',
-    path: '/check-in',
+    id: "/check-in",
+    path: "/check-in",
     getParentRoute: () => ShellbotsBotsBotIdRoute,
   } as any)
 const ShellbotsBotsBotIdDetailsRoute =
   ShellbotsBotsBotIdDetailsRouteImport.update({
-    id: '/details',
-    path: '/details',
+    id: "/details",
+    path: "/details",
     getParentRoute: () => ShellbotsBotsBotIdRoute,
   } as any)
 const ShellbotsBotsBotIdEditRoute = ShellbotsBotsBotIdEditRouteImport.update({
-  id: '/$botId_/edit',
-  path: '/$botId/edit',
+  id: "/$botId_/edit",
+  path: "/$botId/edit",
   getParentRoute: () => ShellbotsBotsRoute,
 } as any)
 const ShelllibraryLibraryToolsIndexRoute =
   ShelllibraryLibraryToolsIndexRouteImport.update({
-    id: '/tools/',
-    path: '/tools/',
+    id: "/tools/",
+    path: "/tools/",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
 const ShelllibraryLibraryToolsToolsetIdRoute =
   ShelllibraryLibraryToolsToolsetIdRouteImport.update({
-    id: '/tools/$toolsetId',
-    path: '/tools/$toolsetId',
+    id: "/tools/$toolsetId",
+    path: "/tools/$toolsetId",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
 const ShellroutinesRoutinesListIndexRoute =
   ShellroutinesRoutinesListIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => ShellroutinesRoutinesListRoute,
   } as any)
 const ShellroutinesRoutinesListNewRoute =
   ShellroutinesRoutinesListNewRouteImport.update({
-    id: '/new',
-    path: '/new',
+    id: "/new",
+    path: "/new",
     getParentRoute: () => ShellroutinesRoutinesListRoute,
+  } as any)
+const ShellsessionsSessionsSessionIdDiffRoute =
+  ShellsessionsSessionsSessionIdDiffRouteImport.update({
+    id: "/diff",
+    path: "/diff",
+    getParentRoute: () => ShellsessionsSessionsSessionIdRoute,
   } as any)
 const ShellsessionsSessionsSessionIdReviewRoute =
   ShellsessionsSessionsSessionIdReviewRouteImport.update({
-    id: '/$sessionId_/review',
-    path: '/$sessionId/review',
-    getParentRoute: () => ShellsessionsSessionsRoute,
+    id: "/review",
+    path: "/review",
+    getParentRoute: () => ShellsessionsSessionsSessionIdRoute,
   } as any)
 const ShellbotsBotsBotIdChatsSessionIdRoute =
   ShellbotsBotsBotIdChatsSessionIdRouteImport.update({
-    id: '/$botId_/chats/$sessionId',
-    path: '/$botId/chats/$sessionId',
+    id: "/$botId_/chats/$sessionId",
+    path: "/$botId/chats/$sessionId",
     getParentRoute: () => ShellbotsBotsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof ShellIndexRoute
-  '/__ui': typeof BareChar91__uiChar93Route
-  '/settings': typeof ShellSettingsRouteWithChildren
-  '/onboarding/$step': typeof BareOnboardingStepRoute
-  '/artifacts': typeof ShellartifactsArtifactsRouteWithChildren
-  '/bots': typeof ShellbotsBotsRouteWithChildren
-  '/library': typeof ShelllibraryLibraryRouteWithChildren
-  '/routines': typeof ShellroutinesRoutinesRouteWithChildren
-  '/sessions': typeof ShellsessionsSessionsRouteWithChildren
-  '/settings/about': typeof ShellSettingsAboutRoute
-  '/settings/account': typeof ShellSettingsAccountRoute
-  '/settings/appearance': typeof ShellSettingsAppearanceRoute
-  '/settings/environment': typeof ShellSettingsEnvironmentRoute
-  '/settings/general': typeof ShellSettingsGeneralRoute
-  '/settings/memory': typeof ShellSettingsMemoryRoute
-  '/settings/models': typeof ShellSettingsModelsRoute
-  '/settings/notifications': typeof ShellSettingsNotificationsRoute
-  '/settings/usage': typeof ShellSettingsUsageRoute
-  '/onboarding/': typeof BareOnboardingIndexRoute
-  '/settings/': typeof ShellSettingsIndexRoute
-  '/bots/$botId': typeof ShellbotsBotsBotIdRouteWithChildren
-  '/bots/new': typeof ShellbotsBotsNewRoute
-  '/library/connectors': typeof ShelllibraryLibraryConnectorsRoute
-  '/library/mcp': typeof ShelllibraryLibraryMcpRoute
-  '/library/messaging': typeof ShelllibraryLibraryMessagingRoute
-  '/library/skills': typeof ShelllibraryLibrarySkillsRoute
-  '/routines/$routineId': typeof ShellroutinesRoutinesRoutineIdRoute
-  '/sessions/$sessionId': typeof ShellsessionsSessionsSessionIdRoute
-  '/sessions/new': typeof ShellsessionsSessionsNewRoute
-  '/artifacts/': typeof ShellartifactsArtifactsIndexRoute
-  '/bots/': typeof ShellbotsBotsIndexRoute
-  '/library/': typeof ShelllibraryLibraryIndexRoute
-  '/sessions/': typeof ShellsessionsSessionsIndexRoute
-  '/bots/$botId/check-in': typeof ShellbotsBotsBotIdCheckInRoute
-  '/bots/$botId/details': typeof ShellbotsBotsBotIdDetailsRoute
-  '/bots/$botId/edit': typeof ShellbotsBotsBotIdEditRoute
-  '/library/tools/$toolsetId': typeof ShelllibraryLibraryToolsToolsetIdRoute
-  '/routines/new': typeof ShellroutinesRoutinesListNewRoute
-  '/sessions/$sessionId/review': typeof ShellsessionsSessionsSessionIdReviewRoute
-  '/library/tools/': typeof ShelllibraryLibraryToolsIndexRoute
-  '/routines/': typeof ShellroutinesRoutinesListIndexRoute
-  '/bots/$botId/chats/$sessionId': typeof ShellbotsBotsBotIdChatsSessionIdRoute
+  "/": typeof ShellIndexRoute
+  "/__ui": typeof BareChar91__uiChar93Route
+  "/settings": typeof ShellSettingsRouteWithChildren
+  "/onboarding/$step": typeof BareOnboardingStepRoute
+  "/artifacts": typeof ShellartifactsArtifactsRouteWithChildren
+  "/bots": typeof ShellbotsBotsRouteWithChildren
+  "/library": typeof ShelllibraryLibraryRouteWithChildren
+  "/routines": typeof ShellroutinesRoutinesRouteWithChildren
+  "/sessions": typeof ShellsessionsSessionsRouteWithChildren
+  "/settings/about": typeof ShellSettingsAboutRoute
+  "/settings/account": typeof ShellSettingsAccountRoute
+  "/settings/appearance": typeof ShellSettingsAppearanceRoute
+  "/settings/environment": typeof ShellSettingsEnvironmentRoute
+  "/settings/general": typeof ShellSettingsGeneralRoute
+  "/settings/memory": typeof ShellSettingsMemoryRoute
+  "/settings/models": typeof ShellSettingsModelsRoute
+  "/settings/notifications": typeof ShellSettingsNotificationsRoute
+  "/settings/usage": typeof ShellSettingsUsageRoute
+  "/onboarding/": typeof BareOnboardingIndexRoute
+  "/settings/": typeof ShellSettingsIndexRoute
+  "/bots/$botId": typeof ShellbotsBotsBotIdRouteWithChildren
+  "/bots/new": typeof ShellbotsBotsNewRoute
+  "/library/connectors": typeof ShelllibraryLibraryConnectorsRoute
+  "/library/mcp": typeof ShelllibraryLibraryMcpRoute
+  "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
+  "/library/skills": typeof ShelllibraryLibrarySkillsRoute
+  "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRoute
+  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
+  "/sessions/new": typeof ShellsessionsSessionsNewRoute
+  "/artifacts/": typeof ShellartifactsArtifactsIndexRoute
+  "/bots/": typeof ShellbotsBotsIndexRoute
+  "/library/": typeof ShelllibraryLibraryIndexRoute
+  "/sessions/": typeof ShellsessionsSessionsIndexRoute
+  "/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
+  "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
+  "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
+  "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
+  "/routines/new": typeof ShellroutinesRoutinesListNewRoute
+  "/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
+  "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
+  "/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
+  "/routines/": typeof ShellroutinesRoutinesListIndexRoute
+  "/bots/$botId/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof ShellIndexRoute
-  '/__ui': typeof BareChar91__uiChar93Route
-  '/onboarding/$step': typeof BareOnboardingStepRoute
-  '/routines': typeof ShellroutinesRoutinesListIndexRoute
-  '/settings/about': typeof ShellSettingsAboutRoute
-  '/settings/account': typeof ShellSettingsAccountRoute
-  '/settings/appearance': typeof ShellSettingsAppearanceRoute
-  '/settings/environment': typeof ShellSettingsEnvironmentRoute
-  '/settings/general': typeof ShellSettingsGeneralRoute
-  '/settings/memory': typeof ShellSettingsMemoryRoute
-  '/settings/models': typeof ShellSettingsModelsRoute
-  '/settings/notifications': typeof ShellSettingsNotificationsRoute
-  '/settings/usage': typeof ShellSettingsUsageRoute
-  '/onboarding': typeof BareOnboardingIndexRoute
-  '/settings': typeof ShellSettingsIndexRoute
-  '/bots/$botId': typeof ShellbotsBotsBotIdRouteWithChildren
-  '/bots/new': typeof ShellbotsBotsNewRoute
-  '/library/connectors': typeof ShelllibraryLibraryConnectorsRoute
-  '/library/mcp': typeof ShelllibraryLibraryMcpRoute
-  '/library/messaging': typeof ShelllibraryLibraryMessagingRoute
-  '/library/skills': typeof ShelllibraryLibrarySkillsRoute
-  '/routines/$routineId': typeof ShellroutinesRoutinesRoutineIdRoute
-  '/sessions/$sessionId': typeof ShellsessionsSessionsSessionIdRoute
-  '/sessions/new': typeof ShellsessionsSessionsNewRoute
-  '/artifacts': typeof ShellartifactsArtifactsIndexRoute
-  '/bots': typeof ShellbotsBotsIndexRoute
-  '/library': typeof ShelllibraryLibraryIndexRoute
-  '/sessions': typeof ShellsessionsSessionsIndexRoute
-  '/bots/$botId/check-in': typeof ShellbotsBotsBotIdCheckInRoute
-  '/bots/$botId/details': typeof ShellbotsBotsBotIdDetailsRoute
-  '/bots/$botId/edit': typeof ShellbotsBotsBotIdEditRoute
-  '/library/tools/$toolsetId': typeof ShelllibraryLibraryToolsToolsetIdRoute
-  '/routines/new': typeof ShellroutinesRoutinesListNewRoute
-  '/sessions/$sessionId/review': typeof ShellsessionsSessionsSessionIdReviewRoute
-  '/library/tools': typeof ShelllibraryLibraryToolsIndexRoute
-  '/bots/$botId/chats/$sessionId': typeof ShellbotsBotsBotIdChatsSessionIdRoute
+  "/": typeof ShellIndexRoute
+  "/__ui": typeof BareChar91__uiChar93Route
+  "/onboarding/$step": typeof BareOnboardingStepRoute
+  "/routines": typeof ShellroutinesRoutinesListIndexRoute
+  "/settings/about": typeof ShellSettingsAboutRoute
+  "/settings/account": typeof ShellSettingsAccountRoute
+  "/settings/appearance": typeof ShellSettingsAppearanceRoute
+  "/settings/environment": typeof ShellSettingsEnvironmentRoute
+  "/settings/general": typeof ShellSettingsGeneralRoute
+  "/settings/memory": typeof ShellSettingsMemoryRoute
+  "/settings/models": typeof ShellSettingsModelsRoute
+  "/settings/notifications": typeof ShellSettingsNotificationsRoute
+  "/settings/usage": typeof ShellSettingsUsageRoute
+  "/onboarding": typeof BareOnboardingIndexRoute
+  "/settings": typeof ShellSettingsIndexRoute
+  "/bots/$botId": typeof ShellbotsBotsBotIdRouteWithChildren
+  "/bots/new": typeof ShellbotsBotsNewRoute
+  "/library/connectors": typeof ShelllibraryLibraryConnectorsRoute
+  "/library/mcp": typeof ShelllibraryLibraryMcpRoute
+  "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
+  "/library/skills": typeof ShelllibraryLibrarySkillsRoute
+  "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRoute
+  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
+  "/sessions/new": typeof ShellsessionsSessionsNewRoute
+  "/artifacts": typeof ShellartifactsArtifactsIndexRoute
+  "/bots": typeof ShellbotsBotsIndexRoute
+  "/library": typeof ShelllibraryLibraryIndexRoute
+  "/sessions": typeof ShellsessionsSessionsIndexRoute
+  "/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
+  "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
+  "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
+  "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
+  "/routines/new": typeof ShellroutinesRoutinesListNewRoute
+  "/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
+  "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
+  "/library/tools": typeof ShelllibraryLibraryToolsIndexRoute
+  "/bots/$botId/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_bare': typeof BareRouteWithChildren
-  '/_shell': typeof ShellRouteWithChildren
-  '/_bare/__ui': typeof BareChar91__uiChar93Route
-  '/_shell/settings': typeof ShellSettingsRouteWithChildren
-  '/_shell/': typeof ShellIndexRoute
-  '/_bare/onboarding/$step': typeof BareOnboardingStepRoute
-  '/_shell/(artifacts)/artifacts': typeof ShellartifactsArtifactsRouteWithChildren
-  '/_shell/(bots)/bots': typeof ShellbotsBotsRouteWithChildren
-  '/_shell/(library)/library': typeof ShelllibraryLibraryRouteWithChildren
-  '/_shell/(routines)/routines': typeof ShellroutinesRoutinesRouteWithChildren
-  '/_shell/(sessions)/sessions': typeof ShellsessionsSessionsRouteWithChildren
-  '/_shell/settings/about': typeof ShellSettingsAboutRoute
-  '/_shell/settings/account': typeof ShellSettingsAccountRoute
-  '/_shell/settings/appearance': typeof ShellSettingsAppearanceRoute
-  '/_shell/settings/environment': typeof ShellSettingsEnvironmentRoute
-  '/_shell/settings/general': typeof ShellSettingsGeneralRoute
-  '/_shell/settings/memory': typeof ShellSettingsMemoryRoute
-  '/_shell/settings/models': typeof ShellSettingsModelsRoute
-  '/_shell/settings/notifications': typeof ShellSettingsNotificationsRoute
-  '/_shell/settings/usage': typeof ShellSettingsUsageRoute
-  '/_bare/onboarding/': typeof BareOnboardingIndexRoute
-  '/_shell/settings/': typeof ShellSettingsIndexRoute
-  '/_shell/(bots)/bots/$botId': typeof ShellbotsBotsBotIdRouteWithChildren
-  '/_shell/(bots)/bots/new': typeof ShellbotsBotsNewRoute
-  '/_shell/(library)/library/connectors': typeof ShelllibraryLibraryConnectorsRoute
-  '/_shell/(library)/library/mcp': typeof ShelllibraryLibraryMcpRoute
-  '/_shell/(library)/library/messaging': typeof ShelllibraryLibraryMessagingRoute
-  '/_shell/(library)/library/skills': typeof ShelllibraryLibrarySkillsRoute
-  '/_shell/(routines)/routines/$routineId': typeof ShellroutinesRoutinesRoutineIdRoute
-  '/_shell/(routines)/routines/_list': typeof ShellroutinesRoutinesListRouteWithChildren
-  '/_shell/(sessions)/sessions/$sessionId': typeof ShellsessionsSessionsSessionIdRoute
-  '/_shell/(sessions)/sessions/new': typeof ShellsessionsSessionsNewRoute
-  '/_shell/(artifacts)/artifacts/': typeof ShellartifactsArtifactsIndexRoute
-  '/_shell/(bots)/bots/': typeof ShellbotsBotsIndexRoute
-  '/_shell/(library)/library/': typeof ShelllibraryLibraryIndexRoute
-  '/_shell/(sessions)/sessions/': typeof ShellsessionsSessionsIndexRoute
-  '/_shell/(bots)/bots/$botId/check-in': typeof ShellbotsBotsBotIdCheckInRoute
-  '/_shell/(bots)/bots/$botId/details': typeof ShellbotsBotsBotIdDetailsRoute
-  '/_shell/(bots)/bots/$botId_/edit': typeof ShellbotsBotsBotIdEditRoute
-  '/_shell/(library)/library/tools/$toolsetId': typeof ShelllibraryLibraryToolsToolsetIdRoute
-  '/_shell/(routines)/routines/_list/new': typeof ShellroutinesRoutinesListNewRoute
-  '/_shell/(sessions)/sessions/$sessionId_/review': typeof ShellsessionsSessionsSessionIdReviewRoute
-  '/_shell/(library)/library/tools/': typeof ShelllibraryLibraryToolsIndexRoute
-  '/_shell/(routines)/routines/_list/': typeof ShellroutinesRoutinesListIndexRoute
-  '/_shell/(bots)/bots/$botId_/chats/$sessionId': typeof ShellbotsBotsBotIdChatsSessionIdRoute
+  "/_bare": typeof BareRouteWithChildren
+  "/_shell": typeof ShellRouteWithChildren
+  "/_bare/__ui": typeof BareChar91__uiChar93Route
+  "/_shell/settings": typeof ShellSettingsRouteWithChildren
+  "/_shell/": typeof ShellIndexRoute
+  "/_bare/onboarding/$step": typeof BareOnboardingStepRoute
+  "/_shell/(artifacts)/artifacts": typeof ShellartifactsArtifactsRouteWithChildren
+  "/_shell/(bots)/bots": typeof ShellbotsBotsRouteWithChildren
+  "/_shell/(library)/library": typeof ShelllibraryLibraryRouteWithChildren
+  "/_shell/(routines)/routines": typeof ShellroutinesRoutinesRouteWithChildren
+  "/_shell/(sessions)/sessions": typeof ShellsessionsSessionsRouteWithChildren
+  "/_shell/settings/about": typeof ShellSettingsAboutRoute
+  "/_shell/settings/account": typeof ShellSettingsAccountRoute
+  "/_shell/settings/appearance": typeof ShellSettingsAppearanceRoute
+  "/_shell/settings/environment": typeof ShellSettingsEnvironmentRoute
+  "/_shell/settings/general": typeof ShellSettingsGeneralRoute
+  "/_shell/settings/memory": typeof ShellSettingsMemoryRoute
+  "/_shell/settings/models": typeof ShellSettingsModelsRoute
+  "/_shell/settings/notifications": typeof ShellSettingsNotificationsRoute
+  "/_shell/settings/usage": typeof ShellSettingsUsageRoute
+  "/_bare/onboarding/": typeof BareOnboardingIndexRoute
+  "/_shell/settings/": typeof ShellSettingsIndexRoute
+  "/_shell/(bots)/bots/$botId": typeof ShellbotsBotsBotIdRouteWithChildren
+  "/_shell/(bots)/bots/new": typeof ShellbotsBotsNewRoute
+  "/_shell/(library)/library/connectors": typeof ShelllibraryLibraryConnectorsRoute
+  "/_shell/(library)/library/mcp": typeof ShelllibraryLibraryMcpRoute
+  "/_shell/(library)/library/messaging": typeof ShelllibraryLibraryMessagingRoute
+  "/_shell/(library)/library/skills": typeof ShelllibraryLibrarySkillsRoute
+  "/_shell/(routines)/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRoute
+  "/_shell/(routines)/routines/_list": typeof ShellroutinesRoutinesListRouteWithChildren
+  "/_shell/(sessions)/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
+  "/_shell/(sessions)/sessions/new": typeof ShellsessionsSessionsNewRoute
+  "/_shell/(artifacts)/artifacts/": typeof ShellartifactsArtifactsIndexRoute
+  "/_shell/(bots)/bots/": typeof ShellbotsBotsIndexRoute
+  "/_shell/(library)/library/": typeof ShelllibraryLibraryIndexRoute
+  "/_shell/(sessions)/sessions/": typeof ShellsessionsSessionsIndexRoute
+  "/_shell/(bots)/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
+  "/_shell/(bots)/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
+  "/_shell/(bots)/bots/$botId_/edit": typeof ShellbotsBotsBotIdEditRoute
+  "/_shell/(library)/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
+  "/_shell/(routines)/routines/_list/new": typeof ShellroutinesRoutinesListNewRoute
+  "/_shell/(sessions)/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
+  "/_shell/(sessions)/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
+  "/_shell/(library)/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
+  "/_shell/(routines)/routines/_list/": typeof ShellroutinesRoutinesListIndexRoute
+  "/_shell/(bots)/bots/$botId_/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/__ui'
-    | '/settings'
-    | '/onboarding/$step'
-    | '/artifacts'
-    | '/bots'
-    | '/library'
-    | '/routines'
-    | '/sessions'
-    | '/settings/about'
-    | '/settings/account'
-    | '/settings/appearance'
-    | '/settings/environment'
-    | '/settings/general'
-    | '/settings/memory'
-    | '/settings/models'
-    | '/settings/notifications'
-    | '/settings/usage'
-    | '/onboarding/'
-    | '/settings/'
-    | '/bots/$botId'
-    | '/bots/new'
-    | '/library/connectors'
-    | '/library/mcp'
-    | '/library/messaging'
-    | '/library/skills'
-    | '/routines/$routineId'
-    | '/sessions/$sessionId'
-    | '/sessions/new'
-    | '/artifacts/'
-    | '/bots/'
-    | '/library/'
-    | '/sessions/'
-    | '/bots/$botId/check-in'
-    | '/bots/$botId/details'
-    | '/bots/$botId/edit'
-    | '/library/tools/$toolsetId'
-    | '/routines/new'
-    | '/sessions/$sessionId/review'
-    | '/library/tools/'
-    | '/routines/'
-    | '/bots/$botId/chats/$sessionId'
+    | "/"
+    | "/__ui"
+    | "/settings"
+    | "/onboarding/$step"
+    | "/artifacts"
+    | "/bots"
+    | "/library"
+    | "/routines"
+    | "/sessions"
+    | "/settings/about"
+    | "/settings/account"
+    | "/settings/appearance"
+    | "/settings/environment"
+    | "/settings/general"
+    | "/settings/memory"
+    | "/settings/models"
+    | "/settings/notifications"
+    | "/settings/usage"
+    | "/onboarding/"
+    | "/settings/"
+    | "/bots/$botId"
+    | "/bots/new"
+    | "/library/connectors"
+    | "/library/mcp"
+    | "/library/messaging"
+    | "/library/skills"
+    | "/routines/$routineId"
+    | "/sessions/$sessionId"
+    | "/sessions/new"
+    | "/artifacts/"
+    | "/bots/"
+    | "/library/"
+    | "/sessions/"
+    | "/bots/$botId/check-in"
+    | "/bots/$botId/details"
+    | "/bots/$botId/edit"
+    | "/library/tools/$toolsetId"
+    | "/routines/new"
+    | "/sessions/$sessionId/diff"
+    | "/sessions/$sessionId/review"
+    | "/library/tools/"
+    | "/routines/"
+    | "/bots/$botId/chats/$sessionId"
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/__ui'
-    | '/onboarding/$step'
-    | '/routines'
-    | '/settings/about'
-    | '/settings/account'
-    | '/settings/appearance'
-    | '/settings/environment'
-    | '/settings/general'
-    | '/settings/memory'
-    | '/settings/models'
-    | '/settings/notifications'
-    | '/settings/usage'
-    | '/onboarding'
-    | '/settings'
-    | '/bots/$botId'
-    | '/bots/new'
-    | '/library/connectors'
-    | '/library/mcp'
-    | '/library/messaging'
-    | '/library/skills'
-    | '/routines/$routineId'
-    | '/sessions/$sessionId'
-    | '/sessions/new'
-    | '/artifacts'
-    | '/bots'
-    | '/library'
-    | '/sessions'
-    | '/bots/$botId/check-in'
-    | '/bots/$botId/details'
-    | '/bots/$botId/edit'
-    | '/library/tools/$toolsetId'
-    | '/routines/new'
-    | '/sessions/$sessionId/review'
-    | '/library/tools'
-    | '/bots/$botId/chats/$sessionId'
+    | "/"
+    | "/__ui"
+    | "/onboarding/$step"
+    | "/routines"
+    | "/settings/about"
+    | "/settings/account"
+    | "/settings/appearance"
+    | "/settings/environment"
+    | "/settings/general"
+    | "/settings/memory"
+    | "/settings/models"
+    | "/settings/notifications"
+    | "/settings/usage"
+    | "/onboarding"
+    | "/settings"
+    | "/bots/$botId"
+    | "/bots/new"
+    | "/library/connectors"
+    | "/library/mcp"
+    | "/library/messaging"
+    | "/library/skills"
+    | "/routines/$routineId"
+    | "/sessions/$sessionId"
+    | "/sessions/new"
+    | "/artifacts"
+    | "/bots"
+    | "/library"
+    | "/sessions"
+    | "/bots/$botId/check-in"
+    | "/bots/$botId/details"
+    | "/bots/$botId/edit"
+    | "/library/tools/$toolsetId"
+    | "/routines/new"
+    | "/sessions/$sessionId/diff"
+    | "/sessions/$sessionId/review"
+    | "/library/tools"
+    | "/bots/$botId/chats/$sessionId"
   id:
-    | '__root__'
-    | '/_bare'
-    | '/_shell'
-    | '/_bare/__ui'
-    | '/_shell/settings'
-    | '/_shell/'
-    | '/_bare/onboarding/$step'
-    | '/_shell/(artifacts)/artifacts'
-    | '/_shell/(bots)/bots'
-    | '/_shell/(library)/library'
-    | '/_shell/(routines)/routines'
-    | '/_shell/(sessions)/sessions'
-    | '/_shell/settings/about'
-    | '/_shell/settings/account'
-    | '/_shell/settings/appearance'
-    | '/_shell/settings/environment'
-    | '/_shell/settings/general'
-    | '/_shell/settings/memory'
-    | '/_shell/settings/models'
-    | '/_shell/settings/notifications'
-    | '/_shell/settings/usage'
-    | '/_bare/onboarding/'
-    | '/_shell/settings/'
-    | '/_shell/(bots)/bots/$botId'
-    | '/_shell/(bots)/bots/new'
-    | '/_shell/(library)/library/connectors'
-    | '/_shell/(library)/library/mcp'
-    | '/_shell/(library)/library/messaging'
-    | '/_shell/(library)/library/skills'
-    | '/_shell/(routines)/routines/$routineId'
-    | '/_shell/(routines)/routines/_list'
-    | '/_shell/(sessions)/sessions/$sessionId'
-    | '/_shell/(sessions)/sessions/new'
-    | '/_shell/(artifacts)/artifacts/'
-    | '/_shell/(bots)/bots/'
-    | '/_shell/(library)/library/'
-    | '/_shell/(sessions)/sessions/'
-    | '/_shell/(bots)/bots/$botId/check-in'
-    | '/_shell/(bots)/bots/$botId/details'
-    | '/_shell/(bots)/bots/$botId_/edit'
-    | '/_shell/(library)/library/tools/$toolsetId'
-    | '/_shell/(routines)/routines/_list/new'
-    | '/_shell/(sessions)/sessions/$sessionId_/review'
-    | '/_shell/(library)/library/tools/'
-    | '/_shell/(routines)/routines/_list/'
-    | '/_shell/(bots)/bots/$botId_/chats/$sessionId'
+    | "__root__"
+    | "/_bare"
+    | "/_shell"
+    | "/_bare/__ui"
+    | "/_shell/settings"
+    | "/_shell/"
+    | "/_bare/onboarding/$step"
+    | "/_shell/(artifacts)/artifacts"
+    | "/_shell/(bots)/bots"
+    | "/_shell/(library)/library"
+    | "/_shell/(routines)/routines"
+    | "/_shell/(sessions)/sessions"
+    | "/_shell/settings/about"
+    | "/_shell/settings/account"
+    | "/_shell/settings/appearance"
+    | "/_shell/settings/environment"
+    | "/_shell/settings/general"
+    | "/_shell/settings/memory"
+    | "/_shell/settings/models"
+    | "/_shell/settings/notifications"
+    | "/_shell/settings/usage"
+    | "/_bare/onboarding/"
+    | "/_shell/settings/"
+    | "/_shell/(bots)/bots/$botId"
+    | "/_shell/(bots)/bots/new"
+    | "/_shell/(library)/library/connectors"
+    | "/_shell/(library)/library/mcp"
+    | "/_shell/(library)/library/messaging"
+    | "/_shell/(library)/library/skills"
+    | "/_shell/(routines)/routines/$routineId"
+    | "/_shell/(routines)/routines/_list"
+    | "/_shell/(sessions)/sessions/$sessionId"
+    | "/_shell/(sessions)/sessions/new"
+    | "/_shell/(artifacts)/artifacts/"
+    | "/_shell/(bots)/bots/"
+    | "/_shell/(library)/library/"
+    | "/_shell/(sessions)/sessions/"
+    | "/_shell/(bots)/bots/$botId/check-in"
+    | "/_shell/(bots)/bots/$botId/details"
+    | "/_shell/(bots)/bots/$botId_/edit"
+    | "/_shell/(library)/library/tools/$toolsetId"
+    | "/_shell/(routines)/routines/_list/new"
+    | "/_shell/(sessions)/sessions/$sessionId/diff"
+    | "/_shell/(sessions)/sessions/$sessionId/review"
+    | "/_shell/(library)/library/tools/"
+    | "/_shell/(routines)/routines/_list/"
+    | "/_shell/(bots)/bots/$botId_/chats/$sessionId"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -565,320 +578,327 @@ export interface RootRouteChildren {
   ShellRoute: typeof ShellRouteWithChildren
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/_bare': {
-      id: '/_bare'
-      path: ''
-      fullPath: '/'
+    "/_bare": {
+      id: "/_bare"
+      path: ""
+      fullPath: "/"
       preLoaderRoute: typeof BareRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_shell': {
-      id: '/_shell'
-      path: ''
-      fullPath: '/'
+    "/_shell": {
+      id: "/_shell"
+      path: ""
+      fullPath: "/"
       preLoaderRoute: typeof ShellRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_bare/__ui': {
-      id: '/_bare/__ui'
-      path: '/__ui'
-      fullPath: '/__ui'
+    "/_bare/__ui": {
+      id: "/_bare/__ui"
+      path: "/__ui"
+      fullPath: "/__ui"
       preLoaderRoute: typeof BareChar91__uiChar93RouteImport
       parentRoute: typeof BareRoute
     }
-    '/_shell/': {
-      id: '/_shell/'
-      path: '/'
-      fullPath: '/'
+    "/_shell/": {
+      id: "/_shell/"
+      path: "/"
+      fullPath: "/"
       preLoaderRoute: typeof ShellIndexRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/settings': {
-      id: '/_shell/settings'
-      path: '/settings'
-      fullPath: '/settings'
+    "/_shell/settings": {
+      id: "/_shell/settings"
+      path: "/settings"
+      fullPath: "/settings"
       preLoaderRoute: typeof ShellSettingsRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_bare/onboarding/': {
-      id: '/_bare/onboarding/'
-      path: '/onboarding'
-      fullPath: '/onboarding/'
+    "/_bare/onboarding/": {
+      id: "/_bare/onboarding/"
+      path: "/onboarding"
+      fullPath: "/onboarding/"
       preLoaderRoute: typeof BareOnboardingIndexRouteImport
       parentRoute: typeof BareRoute
     }
-    '/_bare/onboarding/$step': {
-      id: '/_bare/onboarding/$step'
-      path: '/onboarding/$step'
-      fullPath: '/onboarding/$step'
+    "/_bare/onboarding/$step": {
+      id: "/_bare/onboarding/$step"
+      path: "/onboarding/$step"
+      fullPath: "/onboarding/$step"
       preLoaderRoute: typeof BareOnboardingStepRouteImport
       parentRoute: typeof BareRoute
     }
-    '/_shell/(artifacts)/artifacts': {
-      id: '/_shell/(artifacts)/artifacts'
-      path: '/artifacts'
-      fullPath: '/artifacts'
+    "/_shell/(artifacts)/artifacts": {
+      id: "/_shell/(artifacts)/artifacts"
+      path: "/artifacts"
+      fullPath: "/artifacts"
       preLoaderRoute: typeof ShellartifactsArtifactsRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/(bots)/bots': {
-      id: '/_shell/(bots)/bots'
-      path: '/bots'
-      fullPath: '/bots'
+    "/_shell/(bots)/bots": {
+      id: "/_shell/(bots)/bots"
+      path: "/bots"
+      fullPath: "/bots"
       preLoaderRoute: typeof ShellbotsBotsRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/(library)/library': {
-      id: '/_shell/(library)/library'
-      path: '/library'
-      fullPath: '/library'
+    "/_shell/(library)/library": {
+      id: "/_shell/(library)/library"
+      path: "/library"
+      fullPath: "/library"
       preLoaderRoute: typeof ShelllibraryLibraryRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/(routines)/routines': {
-      id: '/_shell/(routines)/routines'
-      path: '/routines'
-      fullPath: '/routines'
+    "/_shell/(routines)/routines": {
+      id: "/_shell/(routines)/routines"
+      path: "/routines"
+      fullPath: "/routines"
       preLoaderRoute: typeof ShellroutinesRoutinesRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/(sessions)/sessions': {
-      id: '/_shell/(sessions)/sessions'
-      path: '/sessions'
-      fullPath: '/sessions'
+    "/_shell/(sessions)/sessions": {
+      id: "/_shell/(sessions)/sessions"
+      path: "/sessions"
+      fullPath: "/sessions"
       preLoaderRoute: typeof ShellsessionsSessionsRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/settings/': {
-      id: '/_shell/settings/'
-      path: '/'
-      fullPath: '/settings/'
+    "/_shell/settings/": {
+      id: "/_shell/settings/"
+      path: "/"
+      fullPath: "/settings/"
       preLoaderRoute: typeof ShellSettingsIndexRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/about': {
-      id: '/_shell/settings/about'
-      path: '/about'
-      fullPath: '/settings/about'
+    "/_shell/settings/about": {
+      id: "/_shell/settings/about"
+      path: "/about"
+      fullPath: "/settings/about"
       preLoaderRoute: typeof ShellSettingsAboutRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/account': {
-      id: '/_shell/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
+    "/_shell/settings/account": {
+      id: "/_shell/settings/account"
+      path: "/account"
+      fullPath: "/settings/account"
       preLoaderRoute: typeof ShellSettingsAccountRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/appearance': {
-      id: '/_shell/settings/appearance'
-      path: '/appearance'
-      fullPath: '/settings/appearance'
+    "/_shell/settings/appearance": {
+      id: "/_shell/settings/appearance"
+      path: "/appearance"
+      fullPath: "/settings/appearance"
       preLoaderRoute: typeof ShellSettingsAppearanceRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/environment': {
-      id: '/_shell/settings/environment'
-      path: '/environment'
-      fullPath: '/settings/environment'
+    "/_shell/settings/environment": {
+      id: "/_shell/settings/environment"
+      path: "/environment"
+      fullPath: "/settings/environment"
       preLoaderRoute: typeof ShellSettingsEnvironmentRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/general': {
-      id: '/_shell/settings/general'
-      path: '/general'
-      fullPath: '/settings/general'
+    "/_shell/settings/general": {
+      id: "/_shell/settings/general"
+      path: "/general"
+      fullPath: "/settings/general"
       preLoaderRoute: typeof ShellSettingsGeneralRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/memory': {
-      id: '/_shell/settings/memory'
-      path: '/memory'
-      fullPath: '/settings/memory'
+    "/_shell/settings/memory": {
+      id: "/_shell/settings/memory"
+      path: "/memory"
+      fullPath: "/settings/memory"
       preLoaderRoute: typeof ShellSettingsMemoryRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/models': {
-      id: '/_shell/settings/models'
-      path: '/models'
-      fullPath: '/settings/models'
+    "/_shell/settings/models": {
+      id: "/_shell/settings/models"
+      path: "/models"
+      fullPath: "/settings/models"
       preLoaderRoute: typeof ShellSettingsModelsRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/notifications': {
-      id: '/_shell/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
+    "/_shell/settings/notifications": {
+      id: "/_shell/settings/notifications"
+      path: "/notifications"
+      fullPath: "/settings/notifications"
       preLoaderRoute: typeof ShellSettingsNotificationsRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/settings/usage': {
-      id: '/_shell/settings/usage'
-      path: '/usage'
-      fullPath: '/settings/usage'
+    "/_shell/settings/usage": {
+      id: "/_shell/settings/usage"
+      path: "/usage"
+      fullPath: "/settings/usage"
       preLoaderRoute: typeof ShellSettingsUsageRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/(artifacts)/artifacts/': {
-      id: '/_shell/(artifacts)/artifacts/'
-      path: '/'
-      fullPath: '/artifacts/'
+    "/_shell/(artifacts)/artifacts/": {
+      id: "/_shell/(artifacts)/artifacts/"
+      path: "/"
+      fullPath: "/artifacts/"
       preLoaderRoute: typeof ShellartifactsArtifactsIndexRouteImport
       parentRoute: typeof ShellartifactsArtifactsRoute
     }
-    '/_shell/(bots)/bots/': {
-      id: '/_shell/(bots)/bots/'
-      path: '/'
-      fullPath: '/bots/'
+    "/_shell/(bots)/bots/": {
+      id: "/_shell/(bots)/bots/"
+      path: "/"
+      fullPath: "/bots/"
       preLoaderRoute: typeof ShellbotsBotsIndexRouteImport
       parentRoute: typeof ShellbotsBotsRoute
     }
-    '/_shell/(bots)/bots/$botId': {
-      id: '/_shell/(bots)/bots/$botId'
-      path: '/$botId'
-      fullPath: '/bots/$botId'
+    "/_shell/(bots)/bots/$botId": {
+      id: "/_shell/(bots)/bots/$botId"
+      path: "/$botId"
+      fullPath: "/bots/$botId"
       preLoaderRoute: typeof ShellbotsBotsBotIdRouteImport
       parentRoute: typeof ShellbotsBotsRoute
     }
-    '/_shell/(bots)/bots/new': {
-      id: '/_shell/(bots)/bots/new'
-      path: '/new'
-      fullPath: '/bots/new'
+    "/_shell/(bots)/bots/new": {
+      id: "/_shell/(bots)/bots/new"
+      path: "/new"
+      fullPath: "/bots/new"
       preLoaderRoute: typeof ShellbotsBotsNewRouteImport
       parentRoute: typeof ShellbotsBotsRoute
     }
-    '/_shell/(library)/library/': {
-      id: '/_shell/(library)/library/'
-      path: '/'
-      fullPath: '/library/'
+    "/_shell/(library)/library/": {
+      id: "/_shell/(library)/library/"
+      path: "/"
+      fullPath: "/library/"
       preLoaderRoute: typeof ShelllibraryLibraryIndexRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
-    '/_shell/(library)/library/connectors': {
-      id: '/_shell/(library)/library/connectors'
-      path: '/connectors'
-      fullPath: '/library/connectors'
+    "/_shell/(library)/library/connectors": {
+      id: "/_shell/(library)/library/connectors"
+      path: "/connectors"
+      fullPath: "/library/connectors"
       preLoaderRoute: typeof ShelllibraryLibraryConnectorsRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
-    '/_shell/(library)/library/mcp': {
-      id: '/_shell/(library)/library/mcp'
-      path: '/mcp'
-      fullPath: '/library/mcp'
+    "/_shell/(library)/library/mcp": {
+      id: "/_shell/(library)/library/mcp"
+      path: "/mcp"
+      fullPath: "/library/mcp"
       preLoaderRoute: typeof ShelllibraryLibraryMcpRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
-    '/_shell/(library)/library/messaging': {
-      id: '/_shell/(library)/library/messaging'
-      path: '/messaging'
-      fullPath: '/library/messaging'
+    "/_shell/(library)/library/messaging": {
+      id: "/_shell/(library)/library/messaging"
+      path: "/messaging"
+      fullPath: "/library/messaging"
       preLoaderRoute: typeof ShelllibraryLibraryMessagingRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
-    '/_shell/(library)/library/skills': {
-      id: '/_shell/(library)/library/skills'
-      path: '/skills'
-      fullPath: '/library/skills'
+    "/_shell/(library)/library/skills": {
+      id: "/_shell/(library)/library/skills"
+      path: "/skills"
+      fullPath: "/library/skills"
       preLoaderRoute: typeof ShelllibraryLibrarySkillsRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
-    '/_shell/(routines)/routines/$routineId': {
-      id: '/_shell/(routines)/routines/$routineId'
-      path: '/$routineId'
-      fullPath: '/routines/$routineId'
+    "/_shell/(routines)/routines/$routineId": {
+      id: "/_shell/(routines)/routines/$routineId"
+      path: "/$routineId"
+      fullPath: "/routines/$routineId"
       preLoaderRoute: typeof ShellroutinesRoutinesRoutineIdRouteImport
       parentRoute: typeof ShellroutinesRoutinesRoute
     }
-    '/_shell/(routines)/routines/_list': {
-      id: '/_shell/(routines)/routines/_list'
-      path: ''
-      fullPath: '/routines'
+    "/_shell/(routines)/routines/_list": {
+      id: "/_shell/(routines)/routines/_list"
+      path: ""
+      fullPath: "/routines"
       preLoaderRoute: typeof ShellroutinesRoutinesListRouteImport
       parentRoute: typeof ShellroutinesRoutinesRoute
     }
-    '/_shell/(sessions)/sessions/': {
-      id: '/_shell/(sessions)/sessions/'
-      path: '/'
-      fullPath: '/sessions/'
+    "/_shell/(sessions)/sessions/": {
+      id: "/_shell/(sessions)/sessions/"
+      path: "/"
+      fullPath: "/sessions/"
       preLoaderRoute: typeof ShellsessionsSessionsIndexRouteImport
       parentRoute: typeof ShellsessionsSessionsRoute
     }
-    '/_shell/(sessions)/sessions/$sessionId': {
-      id: '/_shell/(sessions)/sessions/$sessionId'
-      path: '/$sessionId'
-      fullPath: '/sessions/$sessionId'
+    "/_shell/(sessions)/sessions/$sessionId": {
+      id: "/_shell/(sessions)/sessions/$sessionId"
+      path: "/$sessionId"
+      fullPath: "/sessions/$sessionId"
       preLoaderRoute: typeof ShellsessionsSessionsSessionIdRouteImport
       parentRoute: typeof ShellsessionsSessionsRoute
     }
-    '/_shell/(sessions)/sessions/new': {
-      id: '/_shell/(sessions)/sessions/new'
-      path: '/new'
-      fullPath: '/sessions/new'
+    "/_shell/(sessions)/sessions/new": {
+      id: "/_shell/(sessions)/sessions/new"
+      path: "/new"
+      fullPath: "/sessions/new"
       preLoaderRoute: typeof ShellsessionsSessionsNewRouteImport
       parentRoute: typeof ShellsessionsSessionsRoute
     }
-    '/_shell/(bots)/bots/$botId/check-in': {
-      id: '/_shell/(bots)/bots/$botId/check-in'
-      path: '/check-in'
-      fullPath: '/bots/$botId/check-in'
+    "/_shell/(bots)/bots/$botId/check-in": {
+      id: "/_shell/(bots)/bots/$botId/check-in"
+      path: "/check-in"
+      fullPath: "/bots/$botId/check-in"
       preLoaderRoute: typeof ShellbotsBotsBotIdCheckInRouteImport
       parentRoute: typeof ShellbotsBotsBotIdRoute
     }
-    '/_shell/(bots)/bots/$botId/details': {
-      id: '/_shell/(bots)/bots/$botId/details'
-      path: '/details'
-      fullPath: '/bots/$botId/details'
+    "/_shell/(bots)/bots/$botId/details": {
+      id: "/_shell/(bots)/bots/$botId/details"
+      path: "/details"
+      fullPath: "/bots/$botId/details"
       preLoaderRoute: typeof ShellbotsBotsBotIdDetailsRouteImport
       parentRoute: typeof ShellbotsBotsBotIdRoute
     }
-    '/_shell/(bots)/bots/$botId_/edit': {
-      id: '/_shell/(bots)/bots/$botId_/edit'
-      path: '/$botId/edit'
-      fullPath: '/bots/$botId/edit'
+    "/_shell/(bots)/bots/$botId_/edit": {
+      id: "/_shell/(bots)/bots/$botId_/edit"
+      path: "/$botId/edit"
+      fullPath: "/bots/$botId/edit"
       preLoaderRoute: typeof ShellbotsBotsBotIdEditRouteImport
       parentRoute: typeof ShellbotsBotsRoute
     }
-    '/_shell/(library)/library/tools/': {
-      id: '/_shell/(library)/library/tools/'
-      path: '/tools'
-      fullPath: '/library/tools/'
+    "/_shell/(library)/library/tools/": {
+      id: "/_shell/(library)/library/tools/"
+      path: "/tools"
+      fullPath: "/library/tools/"
       preLoaderRoute: typeof ShelllibraryLibraryToolsIndexRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
-    '/_shell/(library)/library/tools/$toolsetId': {
-      id: '/_shell/(library)/library/tools/$toolsetId'
-      path: '/tools/$toolsetId'
-      fullPath: '/library/tools/$toolsetId'
+    "/_shell/(library)/library/tools/$toolsetId": {
+      id: "/_shell/(library)/library/tools/$toolsetId"
+      path: "/tools/$toolsetId"
+      fullPath: "/library/tools/$toolsetId"
       preLoaderRoute: typeof ShelllibraryLibraryToolsToolsetIdRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
-    '/_shell/(routines)/routines/_list/': {
-      id: '/_shell/(routines)/routines/_list/'
-      path: '/'
-      fullPath: '/routines/'
+    "/_shell/(routines)/routines/_list/": {
+      id: "/_shell/(routines)/routines/_list/"
+      path: "/"
+      fullPath: "/routines/"
       preLoaderRoute: typeof ShellroutinesRoutinesListIndexRouteImport
       parentRoute: typeof ShellroutinesRoutinesListRoute
     }
-    '/_shell/(routines)/routines/_list/new': {
-      id: '/_shell/(routines)/routines/_list/new'
-      path: '/new'
-      fullPath: '/routines/new'
+    "/_shell/(routines)/routines/_list/new": {
+      id: "/_shell/(routines)/routines/_list/new"
+      path: "/new"
+      fullPath: "/routines/new"
       preLoaderRoute: typeof ShellroutinesRoutinesListNewRouteImport
       parentRoute: typeof ShellroutinesRoutinesListRoute
     }
-    '/_shell/(sessions)/sessions/$sessionId_/review': {
-      id: '/_shell/(sessions)/sessions/$sessionId_/review'
-      path: '/$sessionId/review'
-      fullPath: '/sessions/$sessionId/review'
-      preLoaderRoute: typeof ShellsessionsSessionsSessionIdReviewRouteImport
-      parentRoute: typeof ShellsessionsSessionsRoute
+    "/_shell/(sessions)/sessions/$sessionId/diff": {
+      id: "/_shell/(sessions)/sessions/$sessionId/diff"
+      path: "/diff"
+      fullPath: "/sessions/$sessionId/diff"
+      preLoaderRoute: typeof ShellsessionsSessionsSessionIdDiffRouteImport
+      parentRoute: typeof ShellsessionsSessionsSessionIdRoute
     }
-    '/_shell/(bots)/bots/$botId_/chats/$sessionId': {
-      id: '/_shell/(bots)/bots/$botId_/chats/$sessionId'
-      path: '/$botId/chats/$sessionId'
-      fullPath: '/bots/$botId/chats/$sessionId'
+    "/_shell/(sessions)/sessions/$sessionId/review": {
+      id: "/_shell/(sessions)/sessions/$sessionId/review"
+      path: "/review"
+      fullPath: "/sessions/$sessionId/review"
+      preLoaderRoute: typeof ShellsessionsSessionsSessionIdReviewRouteImport
+      parentRoute: typeof ShellsessionsSessionsSessionIdRoute
+    }
+    "/_shell/(bots)/bots/$botId_/chats/$sessionId": {
+      id: "/_shell/(bots)/bots/$botId_/chats/$sessionId"
+      path: "/$botId/chats/$sessionId"
+      fullPath: "/bots/$botId/chats/$sessionId"
       preLoaderRoute: typeof ShellbotsBotsBotIdChatsSessionIdRouteImport
       parentRoute: typeof ShellbotsBotsRoute
     }
@@ -1031,19 +1051,35 @@ const ShellroutinesRoutinesRouteWithChildren =
     ShellroutinesRoutinesRouteChildren,
   )
 
-interface ShellsessionsSessionsRouteChildren {
-  ShellsessionsSessionsSessionIdRoute: typeof ShellsessionsSessionsSessionIdRoute
-  ShellsessionsSessionsNewRoute: typeof ShellsessionsSessionsNewRoute
-  ShellsessionsSessionsIndexRoute: typeof ShellsessionsSessionsIndexRoute
+interface ShellsessionsSessionsSessionIdRouteChildren {
+  ShellsessionsSessionsSessionIdDiffRoute: typeof ShellsessionsSessionsSessionIdDiffRoute
   ShellsessionsSessionsSessionIdReviewRoute: typeof ShellsessionsSessionsSessionIdReviewRoute
 }
 
+const ShellsessionsSessionsSessionIdRouteChildren: ShellsessionsSessionsSessionIdRouteChildren =
+  {
+    ShellsessionsSessionsSessionIdDiffRoute:
+      ShellsessionsSessionsSessionIdDiffRoute,
+    ShellsessionsSessionsSessionIdReviewRoute:
+      ShellsessionsSessionsSessionIdReviewRoute,
+  }
+
+const ShellsessionsSessionsSessionIdRouteWithChildren =
+  ShellsessionsSessionsSessionIdRoute._addFileChildren(
+    ShellsessionsSessionsSessionIdRouteChildren,
+  )
+
+interface ShellsessionsSessionsRouteChildren {
+  ShellsessionsSessionsSessionIdRoute: typeof ShellsessionsSessionsSessionIdRouteWithChildren
+  ShellsessionsSessionsNewRoute: typeof ShellsessionsSessionsNewRoute
+  ShellsessionsSessionsIndexRoute: typeof ShellsessionsSessionsIndexRoute
+}
+
 const ShellsessionsSessionsRouteChildren: ShellsessionsSessionsRouteChildren = {
-  ShellsessionsSessionsSessionIdRoute: ShellsessionsSessionsSessionIdRoute,
+  ShellsessionsSessionsSessionIdRoute:
+    ShellsessionsSessionsSessionIdRouteWithChildren,
   ShellsessionsSessionsNewRoute: ShellsessionsSessionsNewRoute,
   ShellsessionsSessionsIndexRoute: ShellsessionsSessionsIndexRoute,
-  ShellsessionsSessionsSessionIdReviewRoute:
-    ShellsessionsSessionsSessionIdReviewRoute,
 }
 
 const ShellsessionsSessionsRouteWithChildren =

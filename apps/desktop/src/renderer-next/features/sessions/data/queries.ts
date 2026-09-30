@@ -3,7 +3,6 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useRouter } from "@tanstack/react-router";
 
 import { useCollections } from "#next/data/db";
-import { isListedSession } from "#next/data/db/filters";
 import type { Transport } from "#next/data/transport";
 import type { AppQueryUtils } from "#next/data/transport/types";
 import { checkoutKey, type CheckoutRef } from "#shared/contract/checkout";
@@ -34,10 +33,6 @@ export const useWorkspace = (id: string) => {
         .findOne(),
     [id]
   ).data;
-};
-export const useListedSessions = () => {
-  const c = useCollections();
-  return (useLiveQuery(c.sessions).data ?? []).filter(isListedSession);
 };
 export const usePickableWorkspaces = () => {
   const c = useCollections();

@@ -77,42 +77,52 @@ export const TerminalTab = ({
             view.term
           )
         );
-        void pumpOutput(
-          {
-            get offset() {
-              return view.offset;
-            },
-            set offset(n) {
-              view.offset = n;
-            },
-            write: (data) => view.term.write(data),
-            reset: () => view.term.reset(),
-          },
-          (offset, signal) =>
-            transport.client.terminal.output(
-              {
-                conversationKey: key,
-                terminalId: id,
-                generation: view.generation!,
-                ...(offset !== undefined ? { fromOffset: offset } : {}),
+        let outputAbort: AbortController | undefined;
+        const connectOutput = () => {
+          outputAbort?.abort();
+          outputAbort = new AbortController();
+          void pumpOutput(
+            {
+              get offset() {
+                return view.offset;
               },
-              { signal }
-            ),
-          abort.signal,
-          (chunk) => {
-            if (chunk.type === "retired") {
-              if (chunk.reason === "closed") close();
-              return;
-            }
-            view.term.write(
-              `\r\n${t("sessions.terminal.exited", { code: chunk.exitCode ?? "" })}\r\n`
-            );
-            exitTimer = setTimeout(() => {
-              if (!focused.current) close();
-            }, 2000);
-          },
-          (e) => setError(String(e))
-        );
+              set offset(n) {
+                view.offset = n;
+              },
+              write: (data) => {
+                view.received += data.length;
+                view.term.write(data);
+              },
+              reset: () => view.term.reset(),
+            },
+            (offset, signal) =>
+              transport.client.terminal.output(
+                {
+                  conversationKey: key,
+                  terminalId: id,
+                  generation: view.generation!,
+                  ...(offset !== undefined ? { fromOffset: offset } : {}),
+                },
+                { signal }
+              ),
+            outputAbort.signal,
+            (chunk) => {
+              if (chunk.type === "retired") {
+                if (chunk.reason === "closed") close();
+                return;
+              }
+              view.term.write(
+                `\r\n${t("sessions.terminal.exited", { code: chunk.exitCode ?? "" })}\r\n`
+              );
+              exitTimer = setTimeout(() => {
+                if (!focused.current) close();
+              }, 2000);
+            },
+            (e) => setError(String(e))
+          );
+        };
+        view.reconnect = connectOutput;
+        connectOutput();
         let timer: ReturnType<typeof setTimeout> | undefined;
         const fit = () => {
           if (timer) clearTimeout(timer);
@@ -136,6 +146,8 @@ export const TerminalTab = ({
         fit();
         view.term.focus();
         cleanup = () => {
+          outputAbort?.abort();
+          view.reconnect = undefined;
           observer.disconnect();
           input.dispose();
           if (timer) clearTimeout(timer);
