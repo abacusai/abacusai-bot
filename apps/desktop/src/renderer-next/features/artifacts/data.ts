@@ -185,3 +185,25 @@ export const cardWindow = (
     after: Math.ceil((length - end) / perRow) * height,
   };
 };
+
+/** Local calendar dates, including daylight-saving boundaries. */
+export const artifactDay = (date: string): string => {
+  const value = new Date(date);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+};
+export type ArtifactListEntry =
+  | { artifact: ArtifactRow }
+  | { day: string; date: string };
+export const artifactListEntries = (
+  rows: readonly ArtifactRow[],
+  grouped: boolean
+): ArtifactListEntry[] => {
+  let previous: string | undefined;
+  return rows.flatMap((artifact) => {
+    const day = artifactDay(artifact.updatedAt);
+    const heading =
+      grouped && day !== previous ? [{ day, date: artifact.updatedAt }] : [];
+    previous = day;
+    return [...heading, { artifact }];
+  });
+};
