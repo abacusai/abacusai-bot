@@ -87,3 +87,30 @@ Every fix has a test that fails without it; the test is named per row. "Electron
 - `data/db`'s `signal` option is new code inside the sub-slice B adapter (renderer-next ownership); B-T1 still passes unchanged.
 - The mutation harness's `renderer.dropPort` reaches main's transport through its public `rpc:connect` path (a reconnect from the renderer's main frame closes the active port); `src/main/rpc/**` is untouched.
 - `agent-runtime-deps.test.ts` needs `packages/agent` built after `packages/connectors` (its runtime package step); it passes once built in that order.
+
+## r2
+
+Answers `01-renderer-foundation.impl-codex-r2.md` (9 findings). Commits on `rewrite/renderer` after `cd5fbda4`:
+
+- `22cdf69d` boot: `getDb()` inside the failure handling; mount guard re-checked after the dev-hooks import (#1, #2).
+- `4f6401b7` shell: occlusion on tracked-overlay ancestors; inert-hidden self match, insertions, late children (#3, #4).
+- `1713373f` fixture db header (#9).
+- `5c647f68` legacy diff: exported check, temporary-repository tests (#8).
+- `abd565e4` R1-T22: one counted reload, first-loss notification, stopped syncs (#7).
+- `2f751dcd` screenshot gate: Linux native-frame probe and CI job; collapsed/floating waits and rects (#5, #6).
+
+| # | Status | Fix | Test |
+|---|---|---|---|
+| 1 | Fixed | `bootstrap()` creates the collections inside the prefs step's `try`: a throwing `getDb()` returns `{ ok: false, step: "prefs", transport }` and reports `failed` (bounded) through the transport that already exists, instead of escaping to `main.tsx`'s catch with no transport. | `lib/bootstrap.test.ts` "a getDb() that throws fails boot and reports failed readiness through the open transport" |
+| 2 | Fixed | `mountWhenOpen({ transport, prepare, mount })` (lib/bootstrap) checks the transport before and after the awaited `prepare` (the dev-hooks import) and mounts only if it is still open; `main.tsx` mounts through it, so a loss during the import leaves the connection-lost or error screen in place. | `lib/bootstrap.test.ts` "mountWhenOpen": loss during a held import (first loss: connection-lost screen kept), second loss within 10 s (error screen kept), already closed (no import) |
+| 3 | Fixed | An attribute mutation on an ancestor of a tracked overlay (a Base UI positioner's inline transform) re-measures, without a re-query. | `occlusion.test.tsx` "re-measures when an ancestor of a tracked overlay moves it without a resize or scroll" (fails without the fix) |
+| 4 | Fixed | A hidden element that is itself focusable becomes inert; the observer also watches `childList` (a subtree inserted already hidden, focusable content arriving in a hidden region) and `href`/`disabled`/`tabindex` (a child becoming focusable). Base UI focus guards (`data-base-ui-focus-guard`, `aria-hidden` and focusable on purpose) are never made inert. | `shell-a11y.test.tsx` "a hidden element that is itself focusable…", "covers subtrees inserted already hidden, and focusable children that arrive later" (axe `aria-hidden-focus` clean; both fail on the r1 code) |
+| 5 | Fixed | On Linux the gate launches once per width with `ABACUSBOT_NATIVE_FRAME=1`, asserts `data-titlebar="native-frame"`, `--titlebar-x`/`--titlebar-end`/bar padding 0, no visible overlay, the bar at the top at `--toolbar-h` (40) and full width, `innerWidth` and band, then captures `native-frame-bots-new@<W>-light.png`; a probe that throws fails the run. Elsewhere `probes.nativeFrame` is `"skipped: not linux"`, which fails under `--require-native-frame` / `ABACUSBOT_REQUIRE_NATIVE_FRAME=1`. New CI job `screenshots-next` (ubuntu, xvfb, setuid sandbox helper) runs the gate with the probe required. | `screenshots-gate.test.ts` `nativeFrameStatus`, `nativeFrameProblems`; macOS run records the skip |
+| 6 | Fixed | Collapsed: the mode wait's result is kept, sidebar slot and pane rects must hold still (`waitStable`, three equal reads), and `collapsedProblems` fails on a timeout, a column wider than 0, `--sidebar-occupied-w` other than `0px`, a pane not against the rail, or a pane that did not grow from pinned. Floating: its rect and the pane are read once stable; `floatingProblems` compares pane left and width, and fails when unstable. | `screenshots-gate.test.ts` collapsed and floating cases (width-only reflow fails); local run at 1280/900 green |
+| 7 | Fixed | R1-T22 enables CDP `Page` and counts top-frame `Page.frameNavigated`: exactly one after the first loss, none after the second. An in-page probe records, when the connection-lost toast appears, the document (`performance.timeOrigin`, the first one) and `__abacusDev.stopped()` (true); it is read back after the reload. Reconnection is asserted (`stopped()` false, prefs `live`). New dev hook `stopped()`. | Electron "R1-T22" |
+| 8 | Fixed | `checkLegacyDiff({ cwd, base, allow })` exported; the tests build a temporary repository with the `apps/desktop` layout: diverged `main`/branch (main's later work excluded, merge-base is not HEAD), a component edit and a changed locale value failing, the real allow-list (every entry pinned to `a79707f6`) exempting its files exactly as the sanctioned commit left them and nothing else, and a later edit (uncommitted, then committed) failing. | `legacy-diff.test.ts` (4 new) |
+| 9 | Fixed | The `memory-source.ts` header states the fixture-only purpose (gallery and visual screenshot run); acceptance reads main's real `db.*`. | — |
+
+### r2 limits
+
+- The Linux native-frame run and the new CI job have not run here (macOS); the probe's checks are unit-tested and the job is wired. Under xvfb with no window manager there is no system title bar, so the probe asserts the renderer's side (mode, reservations, bar geometry, band), not the WM decoration height (recorded as `frame`).

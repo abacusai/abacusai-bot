@@ -18,6 +18,7 @@ import { BootFailure, isToasterMounted } from "#next/features/shell";
 import {
   bootstrap,
   createTransportLostHandler,
+  mountWhenOpen,
   reportFailedBoot,
   type BootError,
 } from "#next/lib/bootstrap";
@@ -154,7 +155,8 @@ const start = async (): Promise<void> => {
       }
     );
 
-    // 7. Mount guard: a port that died during boot already started the reload.
+    // 7. Mount guard, re-checked after the awaited dev hooks import: a port
+    // that died during boot or during that import already started the reload.
     if (boot.transport.state === "closed") return;
     const router = createAppRouter({
       context: {
@@ -167,20 +169,27 @@ const start = async (): Promise<void> => {
     });
     installTransitionTypes(router);
 
-    if (import.meta.env.VITE_UI_GALLERY === "1") {
-      try {
-        const { installDevHooks } = await import("#next/lib/dev/dev-hooks");
-        installDevHooks(router, boot.db);
-      } catch (error) {
-        console.error("[renderer-next] dev hooks failed", error);
-      }
-    }
-
-    root.render(
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    );
+    await mountWhenOpen({
+      transport: boot.transport,
+      prepare:
+        import.meta.env.VITE_UI_GALLERY === "1"
+          ? async () => {
+              try {
+                const { installDevHooks } =
+                  await import("#next/lib/dev/dev-hooks");
+                installDevHooks(router, boot.db);
+              } catch (error) {
+                console.error("[renderer-next] dev hooks failed", error);
+              }
+            }
+          : undefined,
+      mount: () =>
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        ),
+    });
   } catch (error) {
     // Anything unexpected: the failure screen, and main hears it (bounded).
     console.error("[renderer-next] boot failed", error);

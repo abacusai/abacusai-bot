@@ -19,12 +19,13 @@ import { join } from "node:path";
 
 const desktop = join(import.meta.dirname, "..");
 
-const run = (...args) =>
+const git = (cwd, ...args) =>
   execFileSync("git", args, {
-    cwd: desktop,
+    cwd,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
+const run = (...args) => git(desktop, ...args);
 
 const refExists = (ref) => {
   try {
@@ -76,26 +77,27 @@ export const localeProblems = (file, before, after) => {
   return problems;
 };
 
-const main = () => {
-  const base = resolveBase(process.argv.slice(2), process.env);
-  const mergeBase = run("merge-base", "HEAD", base).trim();
-  const changed = run("diff", "--name-only", mergeBase, "--", "src/renderer")
+/**
+ * The check itself, against the merge-base of HEAD and `base` in the
+ * repository holding `cwd` (an `apps/desktop` directory). Exported so the
+ * test runs it in a temporary repository (Codex impl r2 #8).
+ */
+export const checkLegacyDiff = ({ cwd = desktop, base, allow }) => {
+  const at = (...args) => git(cwd, ...args);
+  const mergeBase = at("merge-base", "HEAD", base).trim();
+  const changed = at("diff", "--name-only", mergeBase, "--", "src/renderer")
     .split("\n")
     .filter(Boolean)
     // Paths come relative to the repository root.
     .map((path) => path.replace(/^apps\/desktop\//, ""));
 
-  const { allow } = JSON.parse(
-    readFileSync(
-      join(import.meta.dirname, "legacy-renderer-allow.json"),
-      "utf8"
-    )
-  );
+  // Listed and exactly as the pinned commit left it: any later edit, committed
+  // or not, shows in the diff against that commit and fails again.
   const sanctioned = (file) =>
     allow.some(
       (entry) =>
         entry.path === file &&
-        run("diff", "--name-only", entry.commit, "--", file).trim() === ""
+        at("diff", "--name-only", entry.commit, "--", file).trim() === ""
     );
 
   const problems = [];
@@ -107,14 +109,26 @@ const main = () => {
     }
     let before;
     try {
-      before = JSON.parse(run("show", `${mergeBase}:apps/desktop/${file}`));
+      before = JSON.parse(at("show", `${mergeBase}:apps/desktop/${file}`));
     } catch {
       problems.push(`${file}: new locale file`);
       continue;
     }
-    const after = JSON.parse(readFileSync(join(desktop, file), "utf8"));
+    const after = JSON.parse(readFileSync(join(cwd, file), "utf8"));
     problems.push(...localeProblems(file, before, after));
   }
+  return { mergeBase, changed, problems };
+};
+
+const main = () => {
+  const base = resolveBase(process.argv.slice(2), process.env);
+  const { allow } = JSON.parse(
+    readFileSync(
+      join(import.meta.dirname, "legacy-renderer-allow.json"),
+      "utf8"
+    )
+  );
+  const { mergeBase, changed, problems } = checkLegacyDiff({ base, allow });
 
   if (problems.length > 0) {
     console.error(`check-legacy-renderer-diff (base ${base} @ ${mergeBase}):`);
