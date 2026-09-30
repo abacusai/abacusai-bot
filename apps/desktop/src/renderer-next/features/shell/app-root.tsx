@@ -9,12 +9,15 @@ import { useEffect, type ReactNode } from "react";
 
 import { AppIconSprite } from "#next/components/app-icon";
 import { DbProvider, type Db } from "#next/data/db";
+import { usePrefs } from "#next/data/db/prefs";
 import { useInvalidationBridge } from "#next/data/queries/invalidation";
 import type { Transport } from "#next/data/transport";
 import { inertWhileHidden } from "#next/lib/inert-hidden";
+import { resolveKeymap } from "#next/lib/keyboard/actions";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { toHotkeyPlatform } from "#next/lib/platform";
 import { ThemeEffect } from "#next/lib/theme-effect";
+import { useAppContext } from "#next/lib/use-app-context";
 import {
   ChromeEffect,
   useChromeState,
@@ -76,6 +79,9 @@ const useShellActions = (): ShellActions => {
 
   return {
     floatingOpen,
+    newBot: () => {
+      void navigate({ to: "/bots/new" });
+    },
     openCommand: () => setCommandOpen(true),
     newInArea: () => {
       const href =
@@ -103,7 +109,16 @@ const useShellActions = (): ShellActions => {
 
 const ShortcutHandler = () => {
   const actions = useShellActions();
-  return <AppHotkeys actions={actions} />;
+  const prefs = usePrefs();
+  const { system } = useAppContext();
+  return (
+    <AppHotkeys
+      actions={actions}
+      bindings={
+        resolveKeymap(prefs.keymap, toHotkeyPlatform(system.platform)).window
+      }
+    />
+  );
 };
 
 export const AppRoot = ({

@@ -54,12 +54,16 @@ const isRichTextTarget = (target: EventTarget | null): boolean => {
 };
 
 const useAppHotkey = (
-  binding: string,
+  binding: string | null,
   handler: () => void,
-  options: { guardRichText?: boolean; enabled?: boolean } = {}
+  options: {
+    guardRichText?: boolean;
+    enabled?: boolean;
+    actionId?: string;
+  } = {}
 ): void => {
   useHotkey(
-    binding as never,
+    (binding ?? "F24") as never,
     (event) => {
       if (options.guardRichText === true && isRichTextTarget(event.target))
         return;
@@ -69,7 +73,8 @@ const useAppHotkey = (
     {
       // App shortcuts fire in inputs and textareas too (§7.9 table).
       ignoreInputs: false,
-      enabled: options.enabled ?? true,
+      enabled: binding != null && (options.enabled ?? true),
+      meta: { actionId: options.actionId },
     }
   );
 };
@@ -77,6 +82,7 @@ const useAppHotkey = (
 export interface ShellActions {
   openCommand(): void;
   newInArea(): void;
+  newBot?(): void;
   togglePinned(): void;
   togglePanel(): void;
   openSettings(): void;
@@ -84,16 +90,47 @@ export interface ShellActions {
   floatingOpen: boolean;
 }
 
-export const AppHotkeys = ({ actions }: { actions: ShellActions }): null => {
-  useAppHotkey(APP_HOTKEYS.command, actions.openCommand);
-  useAppHotkey(APP_HOTKEYS.new, actions.newInArea);
-  useAppHotkey(APP_HOTKEYS.toggleSidebar, actions.togglePinned, {
-    guardRichText: true,
+export const AppHotkeys = ({
+  actions,
+  bindings = {},
+}: {
+  actions: ShellActions;
+  bindings?: Record<string, string | null>;
+}): null => {
+  const binding = (id: string, fallback: string) =>
+    Object.hasOwn(bindings, id) ? bindings[id]! : fallback;
+  useAppHotkey(
+    binding("command-menu", APP_HOTKEYS.command),
+    actions.openCommand,
+    { actionId: "command-menu" }
+  );
+  useAppHotkey(binding("new-bot", "Mod+Shift+N"), () => actions.newBot?.(), {
+    enabled: !!actions.newBot,
+    actionId: "new-bot",
   });
-  useAppHotkey(APP_HOTKEYS.togglePanel, actions.togglePanel, {
-    guardRichText: true,
+  useAppHotkey(binding("new-in-area", APP_HOTKEYS.new), actions.newInArea, {
+    actionId: "new-in-area",
   });
-  useAppHotkey(APP_HOTKEYS.settings, actions.openSettings);
+  useAppHotkey(
+    binding("toggle-sidebar", APP_HOTKEYS.toggleSidebar),
+    actions.togglePinned,
+    {
+      guardRichText: true,
+      actionId: "toggle-sidebar",
+    }
+  );
+  useAppHotkey(
+    binding("toggle-side-panel", APP_HOTKEYS.togglePanel),
+    actions.togglePanel,
+    {
+      guardRichText: true,
+    }
+  );
+  useAppHotkey(
+    binding("open-settings", APP_HOTKEYS.settings),
+    actions.openSettings,
+    { actionId: "open-settings" }
+  );
   useAppHotkey(APP_HOTKEYS.escape, actions.closeFloating, {
     enabled: actions.floatingOpen,
   });
