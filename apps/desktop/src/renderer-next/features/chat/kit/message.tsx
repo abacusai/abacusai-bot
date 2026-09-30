@@ -350,12 +350,13 @@ const StepList = ({
             {...(result != null ? { result } : {})}
           />
         ));
-        if (block.id == null) return <div key={index}>{content}</div>;
+        if (block.id == null)
+          return <div key={block.items[0]?.part.id ?? index}>{content}</div>;
         const group = segments?.find(
           (segment) => segment.type === "tool_group" && segment.id === block.id
         );
         return (
-          <Collapsible key={index} data-slot="tool-group">
+          <Collapsible key={block.id} data-slot="tool-group">
             <CollapsibleTrigger
               hidden={
                 window != null &&
@@ -477,12 +478,22 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
         category?: string;
       }>
     | undefined;
+  const visibleUnits =
+    window == null
+      ? null
+      : new Set(window.ids.slice(window.range.start, window.range.end));
   return (
     <SessionUI.Message message={message}>
       {(parts) => {
         const blocks: Array<{ id: string | null; parts: typeof parts }> = [];
         for (const part of parts) {
           if (part.part.type === "tool-result") continue;
+          if (
+            part.part.type === "tool-call" &&
+            visibleUnits != null &&
+            !visibleUnits.has(`${scope}\0${part.part.id}`)
+          )
+            continue;
           const index = message.parts.indexOf(part.part);
           const id =
             segments?.find((segment) => segment.partIndex === index)?.groupId ??
@@ -491,11 +502,19 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
           if (id != null && previous?.id === id) previous.parts.push(part);
           else blocks.push({ id, parts: [part] });
         }
-        return blocks.map((block, index) => {
-          const content = block.parts.map((part, i) => (
-            <SessionUI.Part key={i} part={part} />
+        return blocks.map((block) => {
+          const content = block.parts.map((part) => (
+            <SessionUI.Part
+              key={message.parts.indexOf(part.part)}
+              part={part}
+            />
           ));
-          if (block.id == null) return <div key={index}>{content}</div>;
+          if (block.id == null)
+            return (
+              <div key={message.parts.indexOf(block.parts[0]!.part)}>
+                {content}
+              </div>
+            );
           const header =
             window?.ids.indexOf(
               `group\0${scope}\0${message.id}\0${block.id}`
@@ -521,7 +540,7 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
               segment.id === block.id && segment.type === "tool_group"
           );
           return (
-            <Collapsible key={index} defaultOpen data-slot="tool-group">
+            <Collapsible key={block.id} defaultOpen data-slot="tool-group">
               <CollapsibleTrigger
                 hidden={!headerVisible}
                 className="text-muted-foreground flex items-center gap-2 text-xs"
@@ -538,12 +557,11 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
   );
 };
 
-export const SessionMessage = ({ message, Parts }: MessageProps<unknown>) => {
+export const SessionMessage = ({ message }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   if (isEmptyAssistant(message)) return null;
   if (message.role === "user")
     return <UserMessage message={message} tint={false} />;
-  const PartsView = Parts as ComponentType;
   const grouped = (
     message.metadata as { abacus?: { segments?: Loose[] } } | undefined
   )?.abacus?.segments?.some((segment) => segment.type === "tool_group");
@@ -557,7 +575,7 @@ export const SessionMessage = ({ message, Parts }: MessageProps<unknown>) => {
         data-grouped={grouped ? "" : undefined}
       >
         <StepControls side="earlier" />
-        {grouped ? <GroupedParts message={message} /> : <PartsView />}
+        <GroupedParts message={message} />
         <StepControls side="more" />
         <Credits message={message} />
       </div>
