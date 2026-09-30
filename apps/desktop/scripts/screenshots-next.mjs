@@ -8,20 +8,30 @@
  *
  *   node scripts/screenshots-next.mjs [--no-build] [--widths 1280,900]
  *        [--routes /bots/new,/__ui?section=shell] [--no-overlays]
+ *        [--require-native-frame]
  *
  * Output: .build/screenshots/<git-sha>/<route-slug>@<W>-<theme>.png,
  * axe.json, shots.json (every capture's geometry, the checks that failed
  * and the run's exit status) and index.html (a contact sheet).
  *
  * The gate (Codex impl r1 #13) programs and asserts, besides the routes:
- * - collapsed (sidebar unpinned) and hover (the floating sidebar) states,
- *   their geometry asserted before capture;
+ * - collapsed (sidebar unpinned) and hover (the floating sidebar) states:
+ *   each waits for stable sidebar and pane rectangles and fails on timeout;
+ *   collapsed asserts a 0 px sidebar column with the pane against the rail,
+ *   floating asserts its place and that the pane kept its left edge and
+ *   width (Codex impl r2 #6);
  * - the side panel in layout at the 1100 minimum: pane and panel ≥ 360 px,
  *   an 8 px gutter;
  * - compact density (a second launch with the stored setting): a 32 px
  *   title bar and 24 px rows;
- * - full screen: no traffic-light reservation, the bar still whole; the
- *   native-frame probe runs on Linux only (macOS and Windows have none);
+ * - full screen: no traffic-light reservation, the bar still whole;
+ * - Linux native frame (Codex impl r2 #5): on Linux, a second launch per
+ *   width with ABACUSBOT_NATIVE_FRAME=1 asserts `data-titlebar="native-frame"`,
+ *   zero reservations, the bar at the top of the content at --toolbar-h, no
+ *   visible overlay and the band, then captures it; a probe that cannot run
+ *   fails the run. Elsewhere it is recorded as "skipped: not linux", which
+ *   fails when the probe is required (`--require-native-frame` or
+ *   ABACUSBOT_REQUIRE_NATIVE_FRAME=1, set by the Linux CI job);
  * - axe: any serious or critical violation fails the run.
  *
  * This is the visual run: the build reads the dev fixture tables
@@ -123,6 +133,8 @@ export const panelSplitProblems = (name, split) => {
 export const floatingProblems = (name, floating) => {
   const problems = [];
   if (floating?.rect == null) return [`${name}: no floating sidebar on hover`];
+  if (floating.stable === false)
+    problems.push(`${name}: the floating sidebar never held still`);
   const want = {
     left: floating.railW + 4,
     width: 280,
@@ -133,11 +145,95 @@ export const floatingProblems = (name, floating) => {
       problems.push(
         `${name}: floating ${key} ${floating.rect[key]} (want ${want[key]})`
       );
-  if (floating.paneBefore != null && floating.paneAfter != null)
-    if (!near(floating.paneBefore, floating.paneAfter))
-      problems.push(
-        `${name}: the pane reflowed (${floating.paneBefore} → ${floating.paneAfter})`
-      );
+  if (floating.paneBefore == null || floating.paneAfter == null)
+    problems.push(`${name}: no pane to compare`);
+  else
+    for (const key of ["left", "width"])
+      if (!near(floating.paneBefore[key], floating.paneAfter[key]))
+        problems.push(
+          `${name}: the pane reflowed (${key} ${floating.paneBefore[key]} → ${floating.paneAfter[key]})`
+        );
+  return problems;
+};
+
+/** Collapsed (unpinned, not hovered): no sidebar column, the pane against the rail. */
+export const collapsedProblems = (name, collapsed) => {
+  const problems = [];
+  if (!collapsed?.floating)
+    return [`${name}: the shell never reached the collapsed (floating) mode`];
+  if (!collapsed.stable)
+    problems.push(`${name}: sidebar and pane never held still`);
+  if (
+    collapsed.slot == null ||
+    collapsed.pane == null ||
+    collapsed.rail == null
+  )
+    return [...problems, `${name}: missing sidebar slot, pane or rail`];
+  if (!near(collapsed.slot.width, 0))
+    problems.push(
+      `${name}: collapsed sidebar column ${collapsed.slot.width} (want 0)`
+    );
+  if (collapsed.occupied !== "0px")
+    problems.push(
+      `${name}: --sidebar-occupied-w ${collapsed.occupied} (want 0px)`
+    );
+  if (!near(collapsed.pane.left, collapsed.rail.right))
+    problems.push(
+      `${name}: pane left ${collapsed.pane.left} (want the rail's right ${collapsed.rail.right})`
+    );
+  if (
+    collapsed.pinnedPane != null &&
+    !(collapsed.pane.width > collapsed.pinnedPane.width)
+  )
+    problems.push(
+      `${name}: pane width ${collapsed.pane.width} did not grow from pinned ${collapsed.pinnedPane.width}`
+    );
+  return problems;
+};
+
+/** Whether the native-frame probe runs here, and what a skip means. */
+export const nativeFrameStatus = (platform, required) =>
+  platform === "linux"
+    ? { run: true }
+    : {
+        run: false,
+        record: "skipped: not linux",
+        failures: required
+          ? [`native-frame: required but skipped: not linux (${platform})`]
+          : [],
+      };
+
+/** Linux native frame: the OS title bar above, the app bar whole, no reservations. */
+export const nativeFrameProblems = (name, probe) => {
+  const problems = [];
+  if (probe == null) return [`${name}: no native-frame probe`];
+  if (probe.titlebar !== "native-frame")
+    problems.push(
+      `${name}: data-titlebar ${probe.titlebar} (want native-frame)`
+    );
+  if (probe.overlayVisible === true)
+    problems.push(`${name}: the window controls overlay is visible`);
+  for (const key of ["titlebarX", "titlebarEnd", "paddingLeft"])
+    if (!near(probe[key], 0))
+      problems.push(`${name}: ${key} ${probe[key]} (want 0)`);
+  if (!near(probe.toolbar, 40))
+    problems.push(`${name}: --toolbar-h ${probe.toolbar} (want 40)`);
+  if (!near(probe.topbar?.height, probe.toolbar))
+    problems.push(
+      `${name}: title bar height ${probe.topbar?.height} (want ${probe.toolbar})`
+    );
+  if (!near(probe.topbar?.top, 0))
+    problems.push(`${name}: title bar top ${probe.topbar?.top} (want 0)`);
+  if (!near(probe.topbar?.width, probe.innerWidth))
+    problems.push(
+      `${name}: title bar width ${probe.topbar?.width} (want ${probe.innerWidth})`
+    );
+  if (probe.innerWidth !== probe.width)
+    problems.push(
+      `${name}: innerWidth ${probe.innerWidth} (want ${probe.width})`
+    );
+  if (probe.band !== bandFor(probe.width))
+    problems.push(`${name}: band ${probe.band} (want ${bandFor(probe.width)})`);
   return problems;
 };
 
@@ -230,7 +326,7 @@ const connect = async (port) => {
   return { send, evaluate, close: () => ws.close() };
 };
 
-const launch = (width, scratch, home, tag = `${width}`) => {
+const launch = (width, scratch, home, tag = `${width}`, env = {}) => {
   const electron = join(
     repo,
     "node_modules/electron/dist",
@@ -246,6 +342,7 @@ const launch = (width, scratch, home, tag = `${width}`) => {
       ABACUSBOT_RENDERER_GENERATION: "wco",
       ABACUSBOT_DEV_CONTENT_SIZE: `${width}x${HEIGHT}`,
       ABACUSBOT_DEV_HARNESS: "1",
+      ...env,
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -280,6 +377,27 @@ const waitFor = async (cdp, expression, timeoutMs = 5_000) => {
     await sleep(100);
   }
   return false;
+};
+
+/**
+ * Poll `expression` until it returns the same JSON three reads in a row, 50
+ * ms apart (springs run on frames, not the Animations API). `stable: false`
+ * on timeout.
+ */
+const waitStable = async (cdp, expression, timeoutMs = 4_000) => {
+  const deadline = Date.now() + timeoutMs;
+  let last = "";
+  let same = 0;
+  let value = null;
+  while (Date.now() < deadline) {
+    value = await cdp.evaluate(expression);
+    const now = JSON.stringify(value);
+    same = now === last ? same + 1 : 0;
+    last = now;
+    if (same >= 2) return { value, stable: true };
+    await sleep(50);
+  }
+  return { value, stable: false };
 };
 
 const rect = (selector) =>
@@ -451,15 +569,40 @@ const main = async () => {
 
         // Collapsed, then the floating sidebar on rail hover (V9).
         if (width >= 900) {
+          await cdp.evaluate("window.__abacusDev.setPinned(true)");
+          await settle(cdp, "/bots/chief-of-staff");
+          const pinnedPane = (await waitStable(cdp, rect('[data-slot="pane"]')))
+            .value;
           await cdp.evaluate("window.__abacusDev.setPinned(false)");
           await settle(cdp, "/bots/chief-of-staff");
-          await waitFor(
+          const collapsed = `collapsed@${width}-${theme}.png`;
+          const floatingMode = await waitFor(
             cdp,
             `document.querySelector('[data-slot="shell"]')?.dataset.sidebar === "floating"`
           );
-          const collapsed = `collapsed@${width}-${theme}.png`;
-          const paneBefore = await cdp.evaluate(rect('[data-slot="pane"]'));
-          await capture(cdp, collapsed, { state: "collapsed", width, theme });
+          const settled = await waitStable(
+            cdp,
+            `({
+              slot: ${rect('[data-slot="sidebar-slot"]')},
+              pane: ${rect('[data-slot="pane"]')},
+              rail: ${rect('[data-slot="rail"]')},
+              occupied: document.querySelector('[data-slot="shell"]')?.style.getPropertyValue('--sidebar-occupied-w'),
+            })`
+          );
+          const collapsedState = {
+            ...settled.value,
+            floating: floatingMode,
+            stable: settled.stable,
+            pinnedPane,
+          };
+          failures.push(...collapsedProblems(collapsed, collapsedState));
+          const paneBefore = settled.value?.pane ?? null;
+          await capture(cdp, collapsed, {
+            state: "collapsed",
+            width,
+            theme,
+            collapsed: collapsedState,
+          });
           const rail = await cdp.evaluate(rect('[data-slot="rail"]'));
           await cdp.send("Input.dispatchMouseEvent", {
             type: "mouseMoved",
@@ -470,30 +613,25 @@ const main = async () => {
             cdp,
             `document.querySelector('[data-slot="sidebar-floating"]') != null`
           );
-          // Its spring runs on frames, not the Animations API: wait until
-          // the rect holds still.
-          let last = "";
-          for (let i = 0; i < 40; i += 1) {
-            await sleep(50);
-            const now = JSON.stringify(
-              await cdp.evaluate(rect('[data-slot="sidebar-floating"]'))
-            );
-            if (now === last) break;
-            last = now;
-          }
+          const hovered = await waitStable(
+            cdp,
+            `({
+              rect: ${rect('[data-slot="sidebar-floating"]')},
+              pane: ${rect('[data-slot="pane"]')},
+            })`
+          );
           const floating = await cdp.evaluate(`({
-            rect: ${rect('[data-slot="sidebar-floating"]')},
             railW: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')),
             toolbar: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')),
           })`);
-          const paneAfter = await cdp.evaluate(rect('[data-slot="pane"]'));
+          floating.rect = opened ? (hovered.value?.rect ?? null) : null;
+          floating.stable = hovered.stable;
           const name = `floating@${width}-${theme}.png`;
           failures.push(
             ...floatingProblems(name, {
               ...floating,
-              rect: opened ? floating.rect : null,
-              paneBefore: paneBefore?.left,
-              paneAfter: paneAfter?.left,
+              paneBefore,
+              paneAfter: hovered.value?.pane ?? null,
             })
           );
           await capture(cdp, name, {
@@ -645,10 +783,79 @@ const main = async () => {
     }
   }
 
-  probes.nativeFrame =
-    process.platform === "linux"
-      ? "run with ABACUSBOT_LINUX_CHROME=native-frame (not automated here)"
-      : `n/a on ${process.platform}: no native-frame mode`;
+  // Linux native frame (spec 01 §10.2, window-chrome §3): the bands again
+  // under the fallback, the chrome geometry asserted, one capture per width.
+  const nativeFrame = nativeFrameStatus(
+    process.platform,
+    flag("--require-native-frame") ||
+      process.env.ABACUSBOT_REQUIRE_NATIVE_FRAME === "1"
+  );
+  if (!nativeFrame.run) {
+    probes.nativeFrame = nativeFrame.record;
+    failures.push(...nativeFrame.failures);
+  } else {
+    probes.nativeFrame = [];
+    for (const width of WIDTHS) {
+      const name = `native-frame-bots-new@${width}-light.png`;
+      const child = launch(width, scratch, home, `${width}-native-frame`, {
+        ABACUSBOT_NATIVE_FRAME: "1",
+      });
+      try {
+        const cdp = await connect(PORT);
+        await cdp.send("Page.enable");
+        let booted = false;
+        for (let i = 0; i < 60 && !booted; i += 1) {
+          booted = await cdp.evaluate("typeof window.__abacusDev === 'object'");
+          if (!booted) await sleep(500);
+        }
+        if (!booted) throw new Error("renderer-next never booted");
+        await cdp.evaluate(axeSource);
+        await cdp.send("Emulation.setEmulatedMedia", {
+          features: [{ name: "prefers-color-scheme", value: "light" }],
+        });
+        await settle(cdp, "/bots/new");
+        await waitFor(
+          cdp,
+          `document.documentElement.dataset.titlebar === "native-frame"`
+        );
+        const probe = await cdp.evaluate(`(() => {
+          const measure = (value) => {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:absolute;visibility:hidden;width:' + value;
+            document.body.append(el);
+            const width = el.getBoundingClientRect().width;
+            el.remove();
+            return width;
+          };
+          const bar = document.querySelector('[data-slot="topbar"]');
+          const box = bar?.getBoundingClientRect();
+          return {
+            titlebar: document.documentElement.dataset.titlebar,
+            overlayVisible: navigator.windowControlsOverlay?.visible ?? null,
+            titlebarX: measure('var(--titlebar-x)'),
+            titlebarEnd: measure('var(--titlebar-end)'),
+            paddingLeft: bar ? parseFloat(getComputedStyle(bar).paddingLeft) : null,
+            topbar: box && { top: box.top, height: box.height, width: box.width },
+            toolbar: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')),
+            frame: { outer: outerHeight, inner: innerHeight },
+            innerWidth,
+            band: document.documentElement.dataset.band,
+          };
+        })()`);
+        probe.width = width;
+        probes.nativeFrame.push({ width, file: name, probe });
+        failures.push(...nativeFrameProblems(name, probe));
+        await capture(cdp, name, { state: "native-frame", width, probe });
+        cdp.close();
+      } catch (error) {
+        probes.nativeFrame.push({ width, error: String(error) });
+        failures.push(`${name}: native-frame probe failed: ${error}`);
+      } finally {
+        child.kill("SIGKILL");
+        await sleep(800);
+      }
+    }
+  }
 
   const status = failures.length > 0 ? 1 : 0;
   writeFileSync(
