@@ -437,7 +437,15 @@ export const rollback = async (
           throw new Error(
             `backup ${String(write.backup)} of ${write.dest} is missing; not undoing`
           );
+        // Only the original goes back: a damaged backup would replace the
+        // file with garbage, and the journal and backup would then go.
+        if (sha256File(write.backup, io) !== write.originalHash)
+          throw new Error(
+            `backup ${write.backup} of ${write.dest} does not match the original; not undoing`
+          );
         copyFileAtomic(write.backup, write.dest, io);
+        if (sha256File(write.dest, io) !== write.originalHash)
+          throw new Error(`${write.dest} did not restore to the original`);
         result.restored.push(write.dest);
       } else {
         options.note?.(
