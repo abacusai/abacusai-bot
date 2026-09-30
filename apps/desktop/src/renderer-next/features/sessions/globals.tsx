@@ -83,7 +83,29 @@ export const SessionsGlobals = ({
   useEffect(() => {
     const abort = new AbortController();
     followSessionsSources(transport, db.collections, qc, abort.signal);
-    const unsub = subscribeRunFinished(transport, (notice) => finished(notice));
+    const ready = async () => {
+      while (!abort.signal.aborted) {
+        try {
+          await db.collections.sessions.preload();
+          return;
+        } catch {
+          await new Promise<void>((resolve) => {
+            const done = () => {
+              clearTimeout(timer);
+              abort.signal.removeEventListener("abort", done);
+              resolve();
+            };
+            const timer = setTimeout(done, 250);
+            abort.signal.addEventListener("abort", done, { once: true });
+          });
+        }
+      }
+    };
+    const snapshots = ready();
+    const unsub = subscribeRunFinished(transport, async (notice) => {
+      await snapshots;
+      if (!abort.signal.aborted) finished(notice);
+    });
     let first = true;
     const waiting = new Set<string>();
     void followNotices(

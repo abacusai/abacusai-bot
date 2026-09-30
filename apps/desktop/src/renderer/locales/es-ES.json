@@ -1896,7 +1896,8 @@
       "local": "On this machine",
       "free": "Free",
       "connectOpenRouter": "Conectar OpenRouter",
-      "connectGoogleAi": "Connect Google AI"
+      "connectGoogleAi": "Connect Google AI",
+      "configure": "Configure a model"
     },
     "dock": {
       "add": "Add tab",
@@ -2034,6 +2035,11 @@
       "closed": "Cerrado",
       "success": "Passed",
       "failure": "Failed"
+    },
+    "gallery": {
+      "researchAgent": "Research · completed",
+      "testAgent": "Tests · running",
+      "agentDetail": "Research found the checkout isolation issue and supplied a patch."
     }
   },
   "sidebarNav": {

@@ -9,6 +9,7 @@ import {
 } from "#next/features/sessions";
 import { TopBarSlot } from "#next/features/shell";
 import { NewSessionSearch } from "#next/lib/navigation/search";
+import { Button } from "#next/ui/button";
 import { draftConversationKey } from "#shared/conversation-scope";
 const SessionsNewRoute = () => {
   const { t } = useTranslation();
@@ -28,48 +29,55 @@ const SessionsNewRoute = () => {
         }
         prefill={(id, text) => updateDraft(id, (d) => ({ ...d, text }))}
         renderComposer={(binding) => (
-          <StartComposer
-            threadId={binding.threadId}
-            runtime={chat}
-            context={binding.context}
-            config={{
-              mode: "full",
-              placeholder: t("sessions.start.placeholder"),
-              attachmentsBase: binding.root,
-              showModeChip: true,
-              model: model.model,
-              onBlocked: model.onBlocked,
-              availableModes: model.availableModes,
-              defaultMode: prefs.defaultMode,
-              blocked: binding.blocked ? "loading" : model.blocked,
-              mentions: {
-                search: async (query) =>
-                  binding.workspaceId
-                    ? (
-                        await transport.client.files.search({
-                          checkout: { workspaceId: binding.workspaceId },
-                          query,
-                        })
-                      ).items.map((item) => item.relativePath)
-                    : [],
-              },
-              history: binding.workspaceId
-                ? {
-                    list: () =>
-                      transport.client.settings.promptHistory.list({
-                        scope: draftConversationKey(binding.workspaceId!),
-                      }),
-                    add: async (prompt) => {
-                      await transport.client.settings.promptHistory.add({
-                        scope: draftConversationKey(binding.workspaceId!),
-                        prompt,
-                      });
-                    },
-                  }
-                : undefined,
-              onSubmitEnvelope: binding.submit,
-            }}
-          />
+          <>
+            {model.blocked === "no-model" ? (
+              <Button onClick={model.onBlocked}>
+                {t("sessions.model.configure")}
+              </Button>
+            ) : null}
+            <StartComposer
+              threadId={binding.threadId}
+              runtime={chat}
+              context={binding.context}
+              config={{
+                mode: "full",
+                placeholder: t("sessions.start.placeholder"),
+                attachmentsBase: binding.root,
+                showModeChip: true,
+                model: model.model,
+                onBlocked: model.onBlocked,
+                availableModes: model.availableModes,
+                defaultMode: prefs.defaultMode,
+                blocked: binding.blocked ? "loading" : model.blocked,
+                mentions: {
+                  search: async (query) =>
+                    binding.workspaceId
+                      ? (
+                          await transport.client.files.search({
+                            checkout: { workspaceId: binding.workspaceId },
+                            query,
+                          })
+                        ).items.map((item) => item.relativePath)
+                      : [],
+                },
+                history: binding.workspaceId
+                  ? {
+                      list: () =>
+                        transport.client.settings.promptHistory.list({
+                          scope: draftConversationKey(binding.workspaceId!),
+                        }),
+                      add: async (prompt) => {
+                        await transport.client.settings.promptHistory.add({
+                          scope: draftConversationKey(binding.workspaceId!),
+                          prompt,
+                        });
+                      },
+                    }
+                  : undefined,
+                onSubmitEnvelope: binding.submit,
+              }}
+            />
+          </>
         )}
       />
     </>
