@@ -34,6 +34,8 @@ export const DELIVERY = {
   "localModels.progress": "coalescing",
   "voice.whisper.progress": "coalescing",
   "files.events": "coalescing",
+  // One "watching" yield; the rows themselves are the gitState table's.
+  "git.watch": "coalescing",
 } as const satisfies Record<string, DeliveryClass>;
 
 export type StreamPath = keyof typeof DELIVERY;

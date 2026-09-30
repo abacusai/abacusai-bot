@@ -460,7 +460,12 @@ const browserRuntimeWindow = (): BrowserRuntimeWindow | null => {
     },
   };
 };
-const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow);
+const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow, {
+  // A local file view's http(s) links (spec 04 §12.8): the system browser.
+  openExternal: (url) => {
+    if (isSafeExternalUrl(url)) void shell.openExternal(url);
+  },
+});
 workspaceServiceHost.attachBrowserRuntime(browserRuntime);
 
 let activeLinuxChromeMode: LinuxChromeMode = "native-frame";

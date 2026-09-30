@@ -57,7 +57,8 @@ export const dbRouter = impl.db.router({
         input.workspaceId,
         null,
         null,
-        input.id
+        input.id,
+        { model: input.model ?? null, mode: input.mode ?? null }
       );
       return echo(context.deps.tables.sessions, session.id);
     }),
