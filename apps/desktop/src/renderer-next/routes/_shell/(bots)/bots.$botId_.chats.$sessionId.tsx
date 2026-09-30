@@ -21,7 +21,7 @@ import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { BotId, SessionId } from "#shared/contract/ids";
 
-import { BotBrowser } from "./-browser";
+import { BotBrowser, BotBrowserRegistration } from "./-browser";
 const ReadySender = () => {
   const { botId, sessionId } = Route.useParams();
   const bot = useBot(botId);
@@ -44,6 +44,7 @@ const Sender = ({
   if (!slots.session) return <BotGone chat />;
   return (
     <div className="size-full" style={accentVars(resolveLook(bot))}>
+      <BotBrowserRegistration sessionId={sessionId} />
       <TopBarSlot>
         <BotChatIdentity
           bot={bot}

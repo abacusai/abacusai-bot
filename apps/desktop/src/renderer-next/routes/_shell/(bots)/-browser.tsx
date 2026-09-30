@@ -7,18 +7,24 @@ import {
   registerBrowserOpen,
   useBrowserOpenUrl,
   shellStore,
+  registerPreviewConsumer,
+  requestBrowserOpen,
 } from "#next/features/shell";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 
-export const BotBrowser = ({ sessionId }: { sessionId: string }) => {
-  const { transport } = useRouter().options.context;
-  const navigate = useAppNavigate();
+export const BotBrowserRegistration = ({
+  sessionId,
+}: {
+  sessionId: string;
+}) => {
   const row = useSession(sessionId);
-  const workspace = useWorkspace(row?.workspaceId ?? "");
-  const url = useBrowserOpenUrl(sessionId);
-  const tab = (useSearch({ strict: false }) as { tab?: string }).tab;
-  const open = useEffectEvent((id: string) => {
+  const navigate = useAppNavigate();
+  const key = row
+    ? JSON.stringify(["conversation", 1, row.workspaceId, "session", row.id])
+    : undefined;
+  const open = useEffectEvent((id: string, url?: string) => {
     if (id !== sessionId) return;
+    if (url) requestBrowserOpen({ sessionId, url });
     void navigate({
       search: (p: Record<string, unknown>) => ({ ...p, tab: "browser" }),
       transition: "none",
@@ -26,8 +32,26 @@ export const BotBrowser = ({ sessionId }: { sessionId: string }) => {
   });
   useEffect(() => {
     const unregister = registerBrowserOpen(({ sessionId }) => open(sessionId));
-    return () => unregister();
-  }, []);
+    const unsubscribe = registerPreviewConsumer({
+      owns: (candidate) => candidate == null || candidate === key,
+      open: (event) => {
+        if (event.url) open(sessionId, event.url);
+      },
+    });
+    return () => {
+      unregister();
+      unsubscribe();
+    };
+  }, [key, sessionId]);
+  return null;
+};
+
+export const BotBrowser = ({ sessionId }: { sessionId: string }) => {
+  const { transport } = useRouter().options.context;
+  const row = useSession(sessionId);
+  const workspace = useWorkspace(row?.workspaceId ?? "");
+  const url = useBrowserOpenUrl(sessionId);
+  const tab = (useSearch({ strict: false }) as { tab?: string }).tab;
   if (!row) return null;
   return (
     <BrowserTab
