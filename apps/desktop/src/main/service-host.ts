@@ -282,6 +282,7 @@ import {
 } from "./services/debug-sync/diagnostics-sync-service";
 import { FeedbackService } from "./services/debug-sync/feedback-service";
 import { LogSyncService } from "./services/debug-sync/log-sync-service";
+import { syncLogFor } from "./services/debug-sync/sync-log";
 import { DeviceMirrorService } from "./services/device/device-mirror-service";
 import { DeviceService } from "./services/device/device-service";
 import {
@@ -521,7 +522,12 @@ export class ServiceHost {
     threads: this.threadStore,
   });
   private readonly debugSyncService = new DebugSyncService({
-    readTranscript: (sessionId) => this.transcriptService.read(sessionId),
+    // v1 segments plus an AG-UI thread's message parts (spec 03 §24.12 a).
+    readTranscript: (sessionId) =>
+      syncLogFor(sessionId, {
+        readV1: (id) => this.transcriptService.read(id),
+        readThread: (id) => this.threadStore.readCurrentFile(id),
+      }),
     clientVersion: app.getVersion(),
   });
   private readonly feedbackService = new FeedbackService({
@@ -1654,7 +1660,7 @@ export class ServiceHost {
 
     this.startedAt = new Date().toISOString();
     // Signed-out sessions have no key and are skipped inside the service.
-    this.transcriptService.setOnPersist((sessionId) => {
+    const persisted = (sessionId: string): void => {
       this.debugSyncService.enqueue(sessionId);
       // A bot's sidebar row shows the last thing said in its chat.
       if (this.botService.botIdForSession(sessionId) != null)
@@ -1662,7 +1668,10 @@ export class ServiceHost {
           type: "bots-updated",
           emittedAt: new Date().toISOString(),
         });
-    });
+    };
+    this.transcriptService.setOnPersist(persisted);
+    // The relay's AG-UI threads have no v1 save (spec 03 §24.12 c).
+    this.threadStore.onAguiPersist(persisted);
     this.debugSyncService.sweepOnStartup();
     this.logSyncService.start();
     this.diagnosticsSyncService.start();
@@ -2291,7 +2300,11 @@ export class ServiceHost {
     const previews: Record<string, BotChatPreview> = {};
 
     for (const bot of this.botService.list()) {
-      const preview = botChatPreview(this.transcriptService, bot.sessionId);
+      const preview = botChatPreview(
+        this.transcriptService,
+        bot.sessionId,
+        this.threadStore
+      );
       if (preview != null) previews[bot.id] = preview;
     }
 

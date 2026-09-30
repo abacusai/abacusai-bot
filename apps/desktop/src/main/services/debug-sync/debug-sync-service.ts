@@ -32,8 +32,13 @@ const BASE_BACKOFF_MS = 2_000;
 const MARKER_FILE = (): string =>
   path.join(abacusBotHome(), "debug-sync-state.json");
 const TRANSCRIPTS_DIR = (): string => path.join(abacusBotHome(), "transcripts");
+const THREADS_DIR = (): string => path.join(abacusBotHome(), "threads");
 
 interface DebugSyncOptions {
+  /**
+   * The session's upload log: the v1 segments plus an AG-UI thread's live
+   * message parts (`syncLogFor`).
+   */
   readTranscript: (sessionId: string) => StoredTranscript | null;
   clientVersion: string;
 }
@@ -75,14 +80,15 @@ export class DebugSyncService {
   /** Upload anything past its marker: offline turns, crashes. Best-effort. */
   sweepOnStartup(): void {
     if (!this.enabled()) return;
-    let ids: string[];
-    try {
-      ids = fs
-        .readdirSync(TRANSCRIPTS_DIR())
-        .filter((f) => f.endsWith(".json"))
-        .map((f) => f.slice(0, -".json".length));
-    } catch {
-      return; // no transcripts dir yet
+    // v1 transcripts, and AG-UI threads that have none (spec 03 §24.12).
+    const ids = new Set<string>();
+    for (const dir of [TRANSCRIPTS_DIR(), THREADS_DIR()]) {
+      try {
+        for (const file of fs.readdirSync(dir))
+          if (file.endsWith(".json")) ids.add(file.slice(0, -".json".length));
+      } catch {
+        // No such directory yet.
+      }
     }
     for (const sessionId of ids) {
       const transcript = this.readTranscript(sessionId);
@@ -115,7 +121,10 @@ export class DebugSyncService {
     return emptySyncState();
   }
 
-  /** The sequence the server holds a segment under, once it is uploaded. */
+  /**
+   * The sequence the server holds an entry under, once it is uploaded: a v1
+   * segment id, or an AG-UI message id (its first part; spec 03 §24.12).
+   */
   sequenceOf(sessionId: string, segmentId: string): number | null {
     const sequence = this.syncState(sessionId).sequences[segmentId];
     return typeof sequence === "number" ? sequence : null;
