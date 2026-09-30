@@ -197,6 +197,7 @@ export const defaultSeed = (): FixtureSeed => ({
 
 export interface HarnessOptions {
   seed?: FixtureSeed;
+  system?: SystemInfo;
   /** Feature-owned procedures exercise the real contract and memory transport. */
   procedures?: Record<string, unknown>;
   history?: RouterHistory;
@@ -235,6 +236,7 @@ export const createHarness = async (
   resetShellStore();
   resetReadinessForTests();
   const calls: Array<[string, unknown]> = [];
+  const system = options.system ?? SYSTEM_INFO;
   const mergeProcedures = (
     base: Record<string, unknown>,
     extra: Record<string, unknown>
@@ -252,7 +254,7 @@ export const createHarness = async (
   };
   const transport = createMemoryTransport(
     mergeProcedures(
-      shellRouter(SYSTEM_INFO, options) as Record<string, unknown>,
+      shellRouter(system, options) as Record<string, unknown>,
       options.procedures ?? {}
     ) as ReturnType<typeof shellRouter>,
     { calls }
@@ -270,7 +272,7 @@ export const createHarness = async (
     context: {
       queryClient,
       transport,
-      system: SYSTEM_INFO,
+      system,
       db: appDb,
       t: i18n.getFixedT(null, "translation") as never,
     },
