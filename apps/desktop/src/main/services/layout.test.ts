@@ -82,10 +82,6 @@ const MAIN_ROOT_FILES = [
   "login-item.ts",
   "local-open-guard.test.ts",
   "local-open-guard.ts",
-  // Registers the app as a login item, which only the process level may ask
-  // Electron for.
-  "login-item.test.ts",
-  "login-item.ts",
   // The third process-level check, next to the other two: whether the app the
   // installer produces can load itself at all.
   "packaged-startup.test.ts",
