@@ -49,13 +49,14 @@ export interface IpcCollectionStatus {
   state: "connecting" | "live" | "resyncing";
 }
 
-export interface IpcCollectionUtils {
-  awaitReceived(position: { epoch: string; seq: number }): Promise<void>;
-  awaitApplied(position: { epoch: string; seq: number }): Promise<void>;
-  resync(): Promise<void>;
-  status(): IpcCollectionStatus;
-  [key: string]: unknown;
-}
+// A type alias, not an interface: TanStack DB's utils record needs every
+// member to be a function, which an alias satisfies without an index type.
+export type IpcCollectionUtils = {
+  awaitReceived: (position: { epoch: string; seq: number }) => Promise<void>;
+  awaitApplied: (position: { epoch: string; seq: number }) => Promise<void>;
+  resync: () => Promise<void>;
+  status: () => IpcCollectionStatus;
+};
 
 export interface IpcCollectionConfig<Row extends object, Key extends string> {
   id: string;
