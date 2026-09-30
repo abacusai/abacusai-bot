@@ -21,6 +21,30 @@ import {
 } from "../services/bots/bot-store";
 import { connectInProcess, fakeDeps } from "./testing";
 
+vi.mock("electron", () => {
+  // ServiceHost's module graph touches Electron at import; nothing of it is
+  // exercised here.
+  const anything: unknown = new Proxy(function () {}, {
+    get: (_target, property) => (property === "then" ? undefined : anything),
+    apply: () => anything,
+    construct: () => anything as object,
+  });
+  return new Proxy(
+    { default: anything },
+    {
+      get: (target, property) =>
+        property in target
+          ? (target as Record<PropertyKey, unknown>)[property]
+          : property === "then"
+            ? undefined
+            : anything,
+      has: () => true,
+    }
+  );
+});
+
+const { ServiceHost } = await import("../service-host");
+
 let home: string;
 const previousHome = process.env.ABACUSAI_BOT_HOME;
 
@@ -62,21 +86,21 @@ const connect = () => {
     effectiveModel: () => null,
     emitChanged: () => undefined,
   });
-  // As ServiceHost's createBot/updateBot/deleteBot/openBotChat.
-  const serviceHost = {
-    createBot: (input: never, id?: string) => service.create(input, id),
-    updateBot: (id: string, changes: never) => {
-      assertNotChannelBot(id, "edited");
-      return service.update(id, changes);
-    },
-    deleteBot: (id: string) => {
-      assertNotChannelBot(id, "deleted");
-      service.delete(id);
-    },
-    openBotChat: (botId: string) => service.openChat(botId),
-    listBots: () => service.list(),
-  };
-  return connectInProcess(fakeDeps({ serviceHost })).client;
+  // Exercise the shipping ServiceHost guard, without starting its services.
+  const serviceHost = Object.assign(Object.create(ServiceHost.prototype), {
+    botService: service,
+  });
+  return connectInProcess(
+    fakeDeps({
+      serviceHost: {
+        createBot: serviceHost.createBot.bind(serviceHost),
+        updateBot: serviceHost.updateBot.bind(serviceHost),
+        deleteBot: serviceHost.deleteBot.bind(serviceHost),
+        openBotChat: serviceHost.openBotChat.bind(serviceHost),
+        listBots: () => service.list(),
+      },
+    })
+  ).client;
 };
 
 describe("typed bot errors (spec 03 §24.4)", () => {
