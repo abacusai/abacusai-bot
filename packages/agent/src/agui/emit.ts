@@ -19,6 +19,7 @@ import type {
   PermissionRequest,
   ToolDisplayData,
 } from "../protocol.js";
+import { BoundedMap, BoundedSet, MESSAGE_IDS_KEPT } from "./bounded.js";
 import { aguiEvent, custom } from "./event.js";
 import {
   childMessageId,
@@ -102,9 +103,12 @@ export class AguiEmitter {
   private assistant: { key: string | undefined; id: string } | null = null;
   /** The last assistant message id, for tool calls announced after it closed. */
   private lastAssistantId: string | undefined;
-  /** Legacy `msg-N` → AG-UI id, from `message_open`. */
-  private readonly messageIds = new Map<string, string>();
-  private readonly usedMessageIds = new Set<string>();
+  /** Legacy `msg-N` → AG-UI id, from `message_open`. Bounded (bounded.ts). */
+  private readonly messageIds = new BoundedMap<string, string>(
+    MESSAGE_IDS_KEPT
+  );
+  /** AG-UI message ids handed out, the newest `MESSAGE_IDS_KEPT`. */
+  private readonly usedMessageIds = new BoundedSet<string>(MESSAGE_IDS_KEPT);
   private reasoning: OpenReasoning | null = null;
   private reasoningCount = 0;
   /** The open run has had a parent assistant message (see `errorAnchor`). */
