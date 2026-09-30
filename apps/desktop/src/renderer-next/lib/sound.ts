@@ -30,6 +30,7 @@ export interface SoundContext {
 
 export interface SoundPlayer {
   play(cue: Cue, options?: { threadId?: string; botId?: string | null }): void;
+  preview(cue: Cue): void;
   unlock(): void;
   dispose(): void;
 }
@@ -71,6 +72,13 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       const now = ctx.now();
       if (now - lastPlayedAt < COALESCE_MS) return;
       lastPlayedAt = now;
+      synth(cue);
+    },
+    preview(cue) {
+      if (disposed) return;
+      this.unlock();
+      const resume = (audio as AudioContext | null)?.resume;
+      if (resume != null) void resume.call(audio).catch(() => undefined);
       synth(cue);
     },
     unlock() {
