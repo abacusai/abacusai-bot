@@ -65,3 +65,8 @@ export const chatGallerySections =
           play: boolean;
         }) => null,
       };
+
+export { useThreadStore } from "./store/selectors";
+
+export { notchAcceptable } from "./kit/permissions/notch-acceptable";
+export { encodeAnswers as encodeQuestionAnswers } from "./kit/permissions/decisions";

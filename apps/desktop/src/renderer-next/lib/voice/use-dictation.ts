@@ -13,7 +13,9 @@ export const useDictation = (
   const [state, setState] = useState<VoiceState>("idle");
   const [level, setLevel] = useState(0);
   const callback = useRef(onTranscript);
-  callback.current = onTranscript;
+  useEffect(() => {
+    callback.current = onTranscript;
+  }, [onTranscript]);
   const operation = useRef<VoiceOperation | null>(null);
   useEffect(() => {
     if (!transport) return;
