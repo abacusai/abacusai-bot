@@ -96,6 +96,10 @@ import {
 } from "./handler";
 import { registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
+import {
+  disposeMigrationProgress,
+  runStartupMigrations,
+} from "./migrations/startup";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
@@ -1675,6 +1679,11 @@ app
       });
     });
 
+    // One-time, versioned migrations (spec 00 C.1): before any service or
+    // store reads the files they derive. Never throws; a failure is recorded
+    // and retried next launch, and every consumer has a fallback.
+    await runStartupMigrations(APP_DISPLAY_NAME);
+
     registerUpdateHandlers(updateService);
     workspaceServiceHost.initialize();
     // A profile relaunch lands here already signed in, so the sign-in handler
@@ -2063,6 +2072,7 @@ app
   })
   .then(() => createWindow())
   .then(() => {
+    disposeMigrationProgress();
     updateService.checkForUpdatesOnStartup();
 
     app.on("activate", function () {
