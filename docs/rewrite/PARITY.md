@@ -328,7 +328,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (251)
+## Contract procedures (255)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -394,6 +394,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `browser.runtime.close` | mutation | `agent.closeBrowserRuntime` |
 | `browser.runtime.hide` | mutation | `agent.hideBrowserRuntime` |
 | `browser.runtime.materialize` | mutation | `agent.materializeBrowserRuntime` |
+| `browser.runtime.materializeFile` | mutation |  |
 | `browser.runtime.navigate` | mutation | `agent.navigateBrowserRuntime` |
 | `browser.runtime.present` | mutation | `agent.presentBrowserRuntime` |
 | `browser.runtime.promoteScope` | mutation | `agent.promoteBrowserRuntimeScope` |
@@ -472,11 +473,14 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `files.treeChildren` | query | `agent.getFileTreeChildren` |
 | `files.treeRoot` | query | `agent.getFileTreeRoot` |
 | `git.branches` | query | `agent.getGitBranches` |
+| `git.checkoutStatus` | query |  |
 | `git.createBranch` | mutation | `agent.createGitBranch` |
 | `git.currentBranch` | query | `agent.getGitCurrentBranch` |
 | `git.diff` | query |  |
+| `git.discard` | mutation |  |
 | `git.prInfo` | query | `agent.getPrInfo` |
 | `git.switchBranch` | mutation | `agent.switchGitBranch` |
+| `git.watch` | subscription |  |
 | `git.worktrees.create` | mutation | `agent.createWorktree` |
 | `git.worktrees.list` | query | `agent.listWorktrees` |
 | `git.worktrees.materialize` | mutation | `agent.materializeSessionWorktree` |
