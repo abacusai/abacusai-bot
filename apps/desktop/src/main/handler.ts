@@ -92,6 +92,7 @@ import {
   legacyProfileKeyFor,
   profileKeyFor,
 } from "./profile-home";
+import { deviceChunkSender } from "./rpc/device-chunks";
 import { emitBusChannel, emitIpcEvent } from "./rpc/emit";
 import { ServiceHost } from "./service-host";
 import {
@@ -1486,7 +1487,12 @@ export const registerIpcHandlers = (
   ipcMain.handle(
     IpcChannels.StartDeviceStream,
     (event, request: StartDeviceStreamRequest) => {
-      return serviceHost.startDeviceStream(request, event.sender);
+      // Chunks go to this renderer's legacy channel and to the bus, the
+      // same dual delivery `devices.stream.start` uses.
+      return serviceHost.startDeviceStream(
+        request,
+        deviceChunkSender(event.sender, emitBusChannel)
+      );
     }
   );
 
