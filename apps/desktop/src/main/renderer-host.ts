@@ -28,7 +28,7 @@ export class SwapNotReady extends Error {
 
 /**
  * What a candidate must reach before the flip. `first-commit` is the legacy
- * renderer's `renderer-ready` (or READY_TIMEOUT_MS, whichever first).
+ * renderer's `renderer-ready` within READY_TIMEOUT_MS.
  * `subscriptions` is the oRPC renderer's `window.ready` barrier: transport,
  * shell tables and visible thread live (spec 00 A.4.6).
  */
@@ -59,7 +59,8 @@ export interface RendererHostOptions {
   readiness?: RendererReadinessSource;
 }
 
-const SWAP_TIMEOUT_MS = 30_000;
+/** A swap candidate's load, and a new window's first document's readiness. */
+export const SWAP_TIMEOUT_MS = 30_000;
 
 /** Closing the window can destroy an attached view's contents first. */
 const discard = (view: WebContentsView): void => {
@@ -68,7 +69,8 @@ const discard = (view: WebContentsView): void => {
 
 /**
  * Wait for the new renderer's first-commit signal, after which its IPC
- * subscriptions exist. A bundle that never signals still swaps after this.
+ * subscriptions exist. A bundle that never signals within this is not ready
+ * (`SwapNotReady("timeout")`), and the old renderer stays.
  */
 const READY_TIMEOUT_MS = 5_000;
 
@@ -109,8 +111,12 @@ export class SwapRetryBudget {
 export const SWAP_IDLE_POLL_MS = 5_000;
 
 export interface RendererSwapSchedulerOptions {
-  /** The bundle to swap to now: the active renderer URL, or none. */
-  target(): URL | null | undefined;
+  /**
+   * The bundle to swap to for `version`: its renderer URL while it is still
+   * the active experience, else null (a newer activation superseded it, and
+   * nothing is left to settle for it).
+   */
+  target(version: string): URL | null | undefined;
   host(): Pick<RendererHost, "swap"> | null;
   /** An agent turn, a live terminal or recent input: not now. */
   busy(): boolean;
@@ -121,40 +127,105 @@ export interface RendererSwapSchedulerOptions {
   pollMs?: number;
   log?: Pick<Console, "log" | "warn" | "error">;
   /**
-   * How a scheduled version ended (spec 07 review r1 #9): `swapped` (passed
-   * readiness), `skipped` (nothing to swap: development, no window, already
-   * showing it) or `gave-up` (it never became ready within the budget). The
-   * experience store commits on the first two and rolls back on the third.
+   * How a scheduled version ended (spec 07 review r1 #9): `swapped` (it
+   * passed readiness, by a swap or as a new window's first document),
+   * `skipped` (development: nothing is ever swapped) or `gave-up` (it never
+   * became ready within the budget). The experience store commits on the
+   * first two and rolls back on the third. `live` is true when the renderer
+   * that gave up is the one on screen (a new window loaded it), so the
+   * window must be reloaded once the rollback is done.
    */
-  onOutcome?: (version: string, outcome: SwapOutcome) => void;
+  onOutcome?: (
+    version: string,
+    outcome: SwapOutcome,
+    detail?: { live: boolean }
+  ) => void;
 }
 
 export type SwapOutcome = "swapped" | "skipped" | "gave-up";
 
 /**
  * Swaps to a newly activated renderer bundle at the first quiet moment, and
- * retries one that did not become ready at a later quiet moment (never in
- * the same tick), at most MAX_SWAP_READINESS_ATTEMPTS times per bundle URL:
- * the budget is keyed and checked on the URL actually swapped to, before
- * the swap, so a version whose URL changed is not charged for another's
- * failures and an exhausted one is not attempted again.
+ * retries one that did not become ready, or failed to load, at a later
+ * quiet moment (never in the same tick), at most MAX_SWAP_READINESS_ATTEMPTS
+ * times per bundle URL: the budget is keyed and checked on the URL actually
+ * swapped to, before the swap, so a version whose URL changed is not charged
+ * for another's failures and an exhausted one is not attempted again.
+ *
+ * One version is outstanding at a time: scheduling another supersedes it,
+ * and a superseded version's in-flight result is ignored. With no window
+ * the version waits (deferred) for the next window, whose first document
+ * is that bundle: `adopt` settles it on that document's readiness.
  */
 export class RendererSwapScheduler {
   readonly #options: RendererSwapSchedulerOptions;
   readonly #budget: SwapRetryBudget;
   #timer: ReturnType<typeof setInterval> | null = null;
+  /** The version waiting to settle, or null. */
+  #version: string | null = null;
+  /** Waiting for a new window (none was up, or it went away mid-swap). */
+  #deferred = false;
 
   constructor(options: RendererSwapSchedulerOptions) {
     this.#options = options;
     this.#budget = options.budget ?? new SwapRetryBudget();
   }
 
+  /** A retry is armed, or the version waits for the next window. */
   get pending(): boolean {
-    return this.#timer != null;
+    return this.#timer != null || this.#deferred;
+  }
+
+  /** The version waiting to settle, or null. */
+  get outstanding(): string | null {
+    return this.#version;
   }
 
   /** `deferred`: wait for the next idle tick before the first attempt. */
   schedule(version: string, { deferred = false } = {}): void {
+    this.#version = version;
+    this.#deferred = false;
+    this.#arm(version, deferred);
+  }
+
+  cancel(): void {
+    if (this.#timer != null) clearInterval(this.#timer);
+    this.#timer = null;
+  }
+
+  /**
+   * A new window was created and loads the active bundle as its first
+   * document: the outstanding version (if any) settles on that document's
+   * readiness instead of a swap. Call it before the window starts loading.
+   */
+  adopt(host: Pick<RendererHost, "initialReadiness">): void {
+    const version = this.#version;
+    if (version == null) return;
+    this.cancel();
+    this.#deferred = false;
+    if (this.#options.disabled?.() === true) {
+      this.#settle(version, "skipped");
+      return;
+    }
+    host.initialReadiness(this.#options.barrier).then(
+      (ready) => {
+        if (this.#version !== version) return;
+        if (ready) this.#settle(version, "swapped");
+        else {
+          (this.#options.log ?? console).warn(
+            `[experience] ${version} did not become ready in the new window`
+          );
+          this.#settle(version, "gave-up", { live: true });
+        }
+      },
+      () => {
+        if (this.#version === version)
+          this.#settle(version, "gave-up", { live: true });
+      }
+    );
+  }
+
+  #arm(version: string, deferred: boolean): void {
     this.cancel();
     if (!deferred && this.#attempt(version)) return;
     const timer = setInterval(() => {
@@ -164,14 +235,17 @@ export class RendererSwapScheduler {
     this.#timer = timer;
   }
 
-  cancel(): void {
-    if (this.#timer != null) clearInterval(this.#timer);
-    this.#timer = null;
-  }
-
-  #outcome(version: string, outcome: SwapOutcome): void {
+  #settle(
+    version: string,
+    outcome: SwapOutcome,
+    detail?: { live: boolean }
+  ): void {
+    if (this.#version !== version) return;
+    this.#version = null;
+    this.#deferred = false;
+    this.cancel();
     try {
-      this.#options.onOutcome?.(version, outcome);
+      this.#options.onOutcome?.(version, outcome, detail);
     } catch (error) {
       (this.#options.log ?? console).error(
         "[experience] the swap outcome handler failed",
@@ -180,19 +254,27 @@ export class RendererSwapScheduler {
     }
   }
 
-  /** True when there is nothing left to wait for. */
+  /** True when there is nothing left to wait for on the timer. */
   #attempt(version: string): boolean {
     const options = this.#options;
     const log = options.log ?? console;
+    // Superseded: the newer version's own schedule settles it.
+    if (this.#version !== version) return true;
     if (options.disabled?.() === true) {
-      this.#outcome(version, "skipped");
+      this.#settle(version, "skipped");
       return true;
     }
-    const url = options.target();
+    const url = options.target(version);
+    if (!url) {
+      // No longer the active experience: nothing to settle for it.
+      this.#version = null;
+      return true;
+    }
     const host = options.host();
-    if (!url || host == null) {
-      // The next window loads the active bundle itself.
-      this.#outcome(version, "skipped");
+    if (host == null) {
+      // Neither ready nor rejected: the next window's first document is
+      // this bundle, and `adopt` settles it.
+      this.#deferred = true;
       return true;
     }
     const key = url.href;
@@ -200,7 +282,7 @@ export class RendererSwapScheduler {
       log.warn(
         `[experience] ${version} never became ready; no more swaps until relaunch`
       );
-      this.#outcome(version, "gave-up");
+      this.#settle(version, "gave-up");
       return true;
     }
     if (options.busy()) return false;
@@ -212,26 +294,32 @@ export class RendererSwapScheduler {
       })
       .then(
         (swapped) => {
-          if (swapped) log.log(`[experience] renderer swapped to ${version}`);
-          this.#outcome(version, swapped ? "swapped" : "skipped");
+          if (this.#version !== version) return;
+          if (swapped) {
+            log.log(`[experience] renderer swapped to ${version}`);
+            this.#settle(version, "swapped");
+          } else {
+            // The window went away mid-swap: the next one settles it.
+            this.#deferred = true;
+          }
         },
         (error: unknown) => {
+          if (this.#version !== version) return;
           if (error instanceof SwapAborted) {
-            this.schedule(version);
+            this.#arm(version, false);
             return;
           }
-          if (error instanceof SwapNotReady) {
-            if (this.#budget.fail(key))
-              this.schedule(version, { deferred: true });
-            else {
-              log.warn(
-                `[experience] ${version} never became ready; no more swaps until relaunch`
-              );
-              this.#outcome(version, "gave-up");
-            }
-            return;
+          if (!(error instanceof SwapNotReady))
+            log.error("[experience] renderer swap failed", error);
+          // A readiness failure, a rejected load and a load timeout all
+          // count against the budget.
+          if (this.#budget.fail(key)) this.#arm(version, true);
+          else {
+            log.warn(
+              `[experience] ${version} never became ready; no more swaps until relaunch`
+            );
+            this.#settle(version, "gave-up");
           }
-          log.error("[experience] renderer swap failed", error);
         }
       );
     return true;
@@ -352,6 +440,30 @@ export class RendererHost {
   }
 
   /**
+   * Whether the live renderer's first document (a new window's) reaches
+   * `barrier` within SWAP_TIMEOUT_MS of this call: `renderer-ready` for
+   * `first-commit`, a `window.ready` report for `subscriptions`. Call it
+   * before the document starts loading.
+   */
+  async initialReadiness(barrier: SwapBarrier): Promise<boolean> {
+    const contents = this.#view.webContents;
+    if (barrier === "subscriptions") {
+      const source = this.#options.readiness;
+      if (source == null) return false;
+      return (await source.wait(contents.id, SWAP_TIMEOUT_MS)) === "ready";
+    }
+    const ready = rendererReady(contents);
+    try {
+      return await Promise.race([
+        ready.promise.then(() => true),
+        delay(SWAP_TIMEOUT_MS).then(() => false),
+      ]);
+    } finally {
+      ready.cancel();
+    }
+  }
+
+  /**
    * Replace the renderer with `url`, keeping the route. On failure the old
    * renderer keeps running. Serialized; false when the window went away.
    */
@@ -414,7 +526,13 @@ export class RendererHost {
       await Promise.race([
         next.webContents.loadURL(target.href).then(async () => {
           if (barrier === "first-commit") {
-            await Promise.race([ready.promise, delay(READY_TIMEOUT_MS)]);
+            // A candidate that never signals is not flipped in (spec 07
+            // review r1 #9): its activation must not be committed.
+            const signalled = await Promise.race([
+              ready.promise.then(() => true),
+              delay(READY_TIMEOUT_MS).then(() => false),
+            ]);
+            if (!signalled) throw new SwapNotReady("timeout");
             return;
           }
           // No flip on a guess: a candidate that never says its data is
