@@ -8,14 +8,12 @@
 import {
   Outlet,
   useLocation,
-  useMatches,
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
 import {
   useEffect,
   useState,
-  ViewTransition,
   type CSSProperties,
   type ViewTransitionClassPerType,
 } from "react";
@@ -27,7 +25,6 @@ import {
   usePrefs,
   useUpdatePrefs,
 } from "#next/data/collections/prefs";
-import { paneKey } from "#next/lib/navigation/pane-key";
 import {
   AREA_PANEL_TABS,
   type SidePanelTabId,
@@ -65,27 +62,14 @@ export const PANE_VT: ViewTransitionClassPerType = {
   default: "none",
 };
 
-/** The leaf match's pane key (search never enters it). */
-const usePaneKey = (): string =>
-  useMatches({
-    select: (matches) => {
-      const leaf = matches.at(-1);
-      return leaf == null
-        ? ""
-        : paneKey(leaf.routeId, leaf.params as Record<string, string>);
-    },
-  });
-
-const Pane = ({ keyed }: { keyed: string }) => (
+const Pane = () => (
   <main
     data-slot="pane"
     className="pane bg-background text-foreground relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
   >
-    <ViewTransition key={keyed} enter={PANE_VT} exit={PANE_VT} default="none">
-      <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-        <Outlet />
-      </div>
-    </ViewTransition>
+    <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+      <Outlet />
+    </div>
   </main>
 );
 
@@ -108,7 +92,6 @@ export const ShellLayout = ({
   const search = useSearch({ strict: false }) as { tab?: SidePanelTabId };
   const navigate = useNavigate();
   const location = useLocation();
-  const keyed = usePaneKey();
 
   const layout = shellLayout({
     width: BAND_WIDTH[band],
@@ -194,7 +177,7 @@ export const ShellLayout = ({
           {layout.sidePanel === "layout" && search.tab != null ? (
             <ResizablePanelGroup orientation="horizontal" className="gap-0">
               <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
-                <Pane keyed={keyed} />
+                <Pane />
               </ResizablePanel>
               <ResizableHandle className="mx-0 w-px bg-transparent" />
               <ResizablePanel
@@ -209,7 +192,7 @@ export const ShellLayout = ({
               </ResizablePanel>
             </ResizablePanelGroup>
           ) : (
-            <Pane keyed={keyed} />
+            <Pane />
           )}
         </div>
       </div>

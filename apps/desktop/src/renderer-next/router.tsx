@@ -85,7 +85,7 @@ export const createAppRouter = ({ context, history }: AppRouterOptions) =>
     defaultPendingMs: 150,
     defaultPendingMinMs: 200,
     scrollRestoration: true,
-    // React owns view transitions (PLAN "Motion").
+    // Set by installTransitionTypes: typed navigations only.
     defaultViewTransition: undefined,
     defaultStructuralSharing: true,
   });

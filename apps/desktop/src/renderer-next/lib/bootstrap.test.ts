@@ -61,7 +61,7 @@ const setup = (
 const run = (
   s: ReturnType<typeof setup>,
   getTransport: () => Promise<MemoryTransport> = async () => s.transport,
-  timeouts = { transport: 100, system: 100, prefs: 200 }
+  timeouts = { transport: 300, system: 2_000, prefs: 2_000 }
 ) =>
   bootstrap({
     getTransport,

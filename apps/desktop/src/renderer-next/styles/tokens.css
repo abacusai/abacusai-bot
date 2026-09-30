@@ -143,6 +143,20 @@ html {
   }
 }
 
+/*
+ * The router starts a document-level view transition for typed navigations
+ * only; these names give the pane and the sidebar their own snapshots and the
+ * classes the rules below select.
+ */
+[data-slot="pane"] {
+  view-transition-name: app-pane;
+  view-transition-class: pane;
+}
+[data-slot="sidebar-slot"] {
+  view-transition-name: app-sidebar;
+  view-transition-class: sidebar;
+}
+
 ::view-transition-group(*) {
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }

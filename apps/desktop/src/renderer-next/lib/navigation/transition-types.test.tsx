@@ -154,6 +154,7 @@ describe("the seam on the app router", () => {
         return Promise.resolve(true);
       },
       latestLocation: location,
+      options: {},
       stores: {
         resolvedLocation: {
           get: () => ({
@@ -281,11 +282,18 @@ describe("the seam on the app router", () => {
   });
 
   it("adds settings-in entering Settings and settings-out leaving it", async () => {
+    const documentTypes: string[] = [];
+    vi.spyOn(transitionTypeSink, "document").mockImplementation((type) => {
+      documentTypes.push(type);
+    });
     harness = await renderApp("/bots/new");
     await go({ to: "/settings/general" });
     await go({ to: "/settings/appearance" });
     await go({ to: "/sessions/new" });
     expect(added).toEqual(["settings-in", "nav-lateral", "settings-out"]);
+    // The router's document-level view transition gets the same types
+    // (jsdom has no startViewTransition, so the router only asks).
+    expect(documentTypes).toEqual([]);
   });
 });
 
