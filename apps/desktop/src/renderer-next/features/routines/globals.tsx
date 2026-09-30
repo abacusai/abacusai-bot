@@ -7,6 +7,7 @@ import { DEFAULT_PREFS } from "#next/data/db/prefs";
 import { followNotices } from "#next/data/queries/live";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { createNotifier, notifyAttention } from "#next/lib/notify";
+import { createReadinessQueue } from "#next/lib/readiness-queue";
 import { subscribeRunFinished } from "#next/lib/run-finished";
 import { createSoundPlayer } from "#next/lib/sound";
 import { useAppContext } from "#next/lib/use-app-context";
@@ -60,6 +61,14 @@ export const RoutinesGlobals = () => {
       seenFor(seenNotices, transport)
     );
     const abort = new AbortController();
+    const readiness = createReadinessQueue(
+      () =>
+        Promise.all([
+          db.collections.routines.preload(),
+          db.collections.sessions.preload(),
+        ]),
+      abort.signal
+    );
     const fire = createFireHandler(
       () => db.collections.routines.toArray,
       (id, botId) => player.play("routine-fired", { threadId: id, botId }),
@@ -68,25 +77,26 @@ export const RoutinesGlobals = () => {
     void followNotices(
       transport,
       ({ signal }) => transport.client.routines.events({}, { signal }),
-      fire,
+      (event) => readiness.run(() => fire(event)),
       abort.signal
     );
     void followNotices(
       transport,
       ({ signal }) => transport.client.system.events({}, { signal }),
-      (event) => {
-        const session = db.collections.sessions.get(
-          event.metadata.sessionId ?? ""
-        );
-        const routine = db.collections.routines.get(session?.routineId ?? "");
-        if (session && routineOwns(routine) && routine)
-          void navigate({
-            to: "/routines/$routineId",
-            params: { routineId: routine.id },
-            search: { run: session.id },
-            transition: "nav-forward",
-          });
-      },
+      (event) =>
+        readiness.run(() => {
+          const session = db.collections.sessions.get(
+            event.metadata.sessionId ?? ""
+          );
+          const routine = db.collections.routines.get(session?.routineId ?? "");
+          if (session && routineOwns(routine) && routine)
+            void navigate({
+              to: "/routines/$routineId",
+              params: { routineId: routine.id },
+              search: { run: session.id },
+              transition: "nav-forward",
+            });
+        }),
       abort.signal
     );
     const waiting = new Set<string>();
@@ -107,61 +117,71 @@ export const RoutinesGlobals = () => {
     void followNotices(
       transport,
       ({ signal }) => transport.client.ai.attention({}, { signal }),
-      (event) => {
-        if (event.type === "upsert") {
-          const summary = event.item;
-          const key = `${summary.threadId}:${summary.incarnation}:${summary.oldestAt}`;
-          if (!waiting.has(key)) {
-            waiting.add(key);
-            attention(summary.threadId, key);
+      (event) =>
+        readiness.run(() => {
+          if (event.type === "upsert") {
+            const summary = event.item;
+            const key = `${summary.threadId}:${summary.incarnation}:${summary.oldestAt}`;
+            if (!waiting.has(key)) {
+              waiting.add(key);
+              attention(summary.threadId, key);
+            }
           }
-        }
-      },
+        }),
       abort.signal
     );
     const requests = new Map<string, string>();
     void followNotices(
       transport,
       ({ signal }) => transport.client.connectors.events({}, { signal }),
-      (event) => {
-        const put = (r: import("#shared/contracts").ConnectorRequest) => {
-          const ref = conversationRefFromKey(r.conversationKey);
-          if (ref?.kind === "session") requests.set(r.requestId, ref.sessionId);
-        };
-        if (event.type === "snapshot") {
-          requests.clear();
-          event.requests.forEach(put);
-        }
-        if (event.type === "request") {
-          put(event.request);
-          const thread = requests.get(event.request.requestId);
-          if (thread) attention(thread, event.request.requestId);
-        }
-        if (event.type === "cleared") requests.delete(event.requestId);
-        routineConnectorThreads.setState(() => [...new Set(requests.values())]);
-      },
+      (event) =>
+        readiness.run(() => {
+          const put = (r: import("#shared/contracts").ConnectorRequest) => {
+            const ref = conversationRefFromKey(r.conversationKey);
+            if (ref?.kind === "session")
+              requests.set(r.requestId, ref.sessionId);
+          };
+          if (event.type === "snapshot") {
+            requests.clear();
+            event.requests.forEach(put);
+          }
+          if (event.type === "request") {
+            put(event.request);
+            const thread = requests.get(event.request.requestId);
+            if (thread) attention(thread, event.request.requestId);
+          }
+          if (event.type === "cleared") requests.delete(event.requestId);
+          routineConnectorThreads.setState(() => [
+            ...new Set(requests.values()),
+          ]);
+        }),
       abort.signal
     );
-    const unsubscribe = subscribeRunFinished(transport, (notice) => {
-      const target = completionNotice(notice, db.collections.routines.toArray);
-      if (!target) return;
-      player.play(target.kind, {
-        threadId: notice.threadId,
-        botId: target.routine.botId ?? null,
-      });
-      notifyAttention(notifier, {
-        kind: target.kind,
-        dedupeKey: notice.runId,
-        botId: target.routine.botId ?? null,
-        title: target.routine.name,
-        body: t(
-          target.kind === "failed"
-            ? "phase5.routineFailed"
-            : "phase5.routineDone"
-        ),
-        metadata: { sessionId: notice.threadId },
-      });
-    });
+    const unsubscribe = subscribeRunFinished(transport, (notice) =>
+      readiness.run(() => {
+        const target = completionNotice(
+          notice,
+          db.collections.routines.toArray
+        );
+        if (!target) return;
+        player.play(target.kind, {
+          threadId: notice.threadId,
+          botId: target.routine.botId ?? null,
+        });
+        notifyAttention(notifier, {
+          kind: target.kind,
+          dedupeKey: notice.runId,
+          botId: target.routine.botId ?? null,
+          title: target.routine.name,
+          body: t(
+            target.kind === "failed"
+              ? "phase5.routineFailed"
+              : "phase5.routineDone"
+          ),
+          metadata: { sessionId: notice.threadId },
+        });
+      })
+    );
     return () => {
       abort.abort();
       unsubscribe();
