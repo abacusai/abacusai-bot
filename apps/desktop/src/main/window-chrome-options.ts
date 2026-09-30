@@ -23,7 +23,8 @@ export type ChromeCapability =
 
 // Resolved --background values from renderer/assets/base.css. Keep these in
 // sync with renderer/lib/tokens.css when the new renderer introduces that file.
-const TITLEBAR_SURFACE = { light: "#ffffff", dark: "#0a0a0a" } as const;
+export const WINDOW_SURFACE = { light: "#ffffff", dark: "#0a0a0a" } as const;
+const TITLEBAR_SURFACE = WINDOW_SURFACE;
 
 export function overlayColors(dark: boolean) {
   return {

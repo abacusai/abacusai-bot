@@ -114,6 +114,7 @@ import { emitBusChannel } from "./rpc/emit";
 import { mainEventBus } from "./rpc/event-bus";
 import { rendererReadiness } from "./rpc/readiness";
 import { createRouter } from "./rpc/router";
+import { createTables } from "./rpc/tables";
 import { createEventTrackers } from "./rpc/trackers";
 import {
   installMessagePortTransport,
@@ -124,6 +125,7 @@ import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
+import { PrefsStore } from "./services/config/prefs-store";
 import {
   registerRendererState,
   type RendererStateStore,
@@ -161,6 +163,11 @@ import { registerUpdateHandlers } from "./services/updates/update-handler";
 import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
+import {
+  applyStartupTheme,
+  followPrefsTheme,
+  startupBackgroundColor,
+} from "./startup-theme";
 import {
   applyWindowChrome,
   linuxChromeMode,
@@ -500,6 +507,12 @@ const windowLifecycle = mainWindowLifecycle({
 });
 export const recreateMainWindow = windowLifecycle.recreateMainWindow;
 
+/**
+ * `~/.abacusai-bot/prefs.json`, the new renderer's prefs row (spec 00 B.2).
+ * Read before the window exists for the startup theme; served as `db.prefs`.
+ */
+const prefsStore = new PrefsStore();
+
 async function createWindow(restored?: RecreatedWindowState) {
   const Store = (await import("electron-store")).default;
   // A corrupt JSON file would otherwise brick the app on every launch.
@@ -552,6 +565,13 @@ async function createWindow(restored?: RecreatedWindowState) {
     void app.dock?.show();
   }
 
+  // The stored theme before the window exists, so the first frame is in it
+  // (spec 01 §7.7). The legacy renderer sets its own through `theme:set`.
+  const startupDark =
+    RENDERER_GENERATION === "wco"
+      ? applyStartupTheme(prefsStore, nativeTheme)
+      : null;
+
   activeLinuxChromeMode =
     RENDERER_GENERATION === "wco" &&
     process.platform === "linux" &&
@@ -567,11 +587,15 @@ async function createWindow(restored?: RecreatedWindowState) {
 
   // Matches the renderer so neither flashes through; transparent where
   // vibrancy/mica paint the backdrop.
-  const backgroundColor =
+  const chromeBackground =
     chromeOptions.backgroundColor ??
     (process.platform === "darwin" || process.platform === "win32"
       ? "#00000000"
       : "#2a2a28");
+  const backgroundColor =
+    startupDark == null
+      ? chromeBackground
+      : startupBackgroundColor(chromeBackground, startupDark);
 
   // The renderer lives in the RendererHost's view, so an update can replace it.
   const mainWindow = new BaseWindow({
@@ -1575,6 +1599,11 @@ function installRpc(
       reportReady: (id, report) => rendererReadiness.report(id, report),
     },
     bus: mainEventBus,
+    tables: createTables({
+      bus: mainEventBus,
+      sources: workspaceServiceHost,
+      prefsStore,
+    }),
     ai: new UnavailableAguiSource(),
     trackers: createEventTrackers(mainEventBus),
   };
@@ -1663,6 +1692,9 @@ app
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
+    // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
+    // does for the legacy renderer.
+    followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
     registerBrowserRuntimeIpcHandlers(
       browserRuntime,
       () => rendererWebContents()?.id ?? null

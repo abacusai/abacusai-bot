@@ -3,8 +3,9 @@
  * from a library resolves, from the package that actually exports it, and is
  * not `any`. A wrong package or a missing export fails `tsc -b` here rather
  * than silently widening a procedure to `any`.
- *
- * `@tanstack/db` is sub-slice B's and is checked there.
+ * Sub-slice B adds `@tanstack/db` and `@tanstack/react-db`. (That the real
+ * `db.*` client satisfies the collections' table client is checked where the
+ * renderer builds them: renderer-next/data/db/tables.ts takes it uncast.)
  */
 import type {
   ClientContext,
@@ -36,10 +37,20 @@ import type {
   RunAgentResumeItem,
   SubscribeConnectionAdapter,
 } from "@tanstack/ai-client";
+import type {
+  ChangeMessageOrDeleteKeyMessage,
+  Collection,
+  CollectionConfig,
+  SyncConfig,
+  UtilsRecord,
+  createCollection,
+} from "@tanstack/db";
+import type { useLiveQuery } from "@tanstack/react-db";
 import { describe, expectTypeOf, it } from "vitest";
 
 import type { ChatHydrateOptions, ChatHydrationResult } from "./agui";
 import type { Contract } from "./index";
+import type { SessionRow } from "./rows";
 
 describe("library type imports (A-T1b)", () => {
   it("resolves every AG-UI / TanStack AI type", () => {
@@ -74,5 +85,23 @@ describe("library type imports (A-T1b)", () => {
     expectTypeOf<AsyncIteratorClass<unknown>>().not.toBeAny();
     expectTypeOf<typeof createTanstackQueryUtils>().not.toBeAny();
     expectTypeOf<RouterUtils<ContractRouterClient<Contract>>>().not.toBeAny();
+  });
+
+  it("resolves every TanStack DB type the collections use", () => {
+    expectTypeOf<typeof createCollection>().not.toBeAny();
+    expectTypeOf<CollectionConfig<SessionRow, string>>().not.toBeAny();
+    expectTypeOf<SyncConfig<SessionRow, string>>().not.toBeAny();
+    expectTypeOf<
+      ChangeMessageOrDeleteKeyMessage<SessionRow, string>
+    >().not.toBeAny();
+    expectTypeOf<UtilsRecord>().not.toBeAny();
+    expectTypeOf<Collection<SessionRow, string>>().not.toBeAny();
+    expectTypeOf<typeof useLiveQuery>().not.toBeAny();
+    // `commit()` hands back a visibility receipt (spec 00 B.3).
+    expectTypeOf<
+      ReturnType<
+        Parameters<SyncConfig<SessionRow, string>["sync"]>[0]["commit"]
+      >
+    >().not.toBeAny();
   });
 });

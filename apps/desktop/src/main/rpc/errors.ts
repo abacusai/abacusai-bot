@@ -5,6 +5,7 @@
  */
 import { ORPCError } from "@orpc/server";
 
+import { ConflictError } from "#shared/conflict";
 import type {
   NotFoundEntity,
   PreconditionReason,
@@ -35,6 +36,10 @@ export const notFound = (entity: NotFoundEntity, id: string): RpcError =>
     data: { entity, id },
   });
 
+/** A combination the schema cannot express was invalid. */
+export const badRequest = (message: string): RpcError =>
+  new ORPCError("BAD_REQUEST", { status: 400, message, data: {} });
+
 export const conflict = (reason: string): RpcError =>
   new ORPCError("CONFLICT", { status: 409, message: reason, data: { reason } });
 
@@ -58,6 +63,7 @@ export const toRpcError = (error: unknown): RpcError => {
   if (error instanceof ORPCError) return error as RpcError;
   if (error instanceof EntityNotFoundError)
     return notFound(error.entity, error.id);
+  if (error instanceof ConflictError) return conflict(error.message);
 
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith(WORKSPACE_MISSING_ERROR)) {

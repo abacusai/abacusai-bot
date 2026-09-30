@@ -76,6 +76,11 @@ export class SessionTurnStateService {
     return this.makeIdle(workspaceId, sessionId);
   }
 
+  /** Every session's cached state; one never seen is idle and absent. */
+  list(): SessionTurnStateSnapshot[] {
+    return Array.from(this.states.values());
+  }
+
   /** True only while user-requested work is in flight. Idle CLI processes do not count. */
   hasBusyTurn(): boolean {
     for (const state of this.states.values()) {
