@@ -74,3 +74,16 @@ export const SidePanelContent = ({
   if (target == null || search.tab !== tab) return null;
   return createPortal(children, target);
 };
+
+const overrides = new Store(0);
+export const useSidePanelOverride = (): boolean =>
+  useStore(overrides, (n) => n > 0);
+export const SidePanelOverride = (): null => {
+  useEffect(() => {
+    overrides.setState((n) => n + 1);
+    return () => {
+      overrides.setState((n) => Math.max(0, n - 1));
+    };
+  }, []);
+  return null;
+};

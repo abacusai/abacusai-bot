@@ -155,7 +155,9 @@ describe("app hotkeys", () => {
   it("registers each app binding exactly once", () => {
     mount("darwin");
     const registrations = [...getHotkeyManager().registrations.state.values()];
-    for (const binding of Object.values(APP_HOTKEYS)) {
+    for (const binding of Object.entries(APP_HOTKEYS)
+      .filter(([id]) => !["closeTab", "nextTab", "previousTab"].includes(id))
+      .map(([, binding]) => binding)) {
       const count = registrations.filter((r) => r.hotkey === binding).length;
       expect(count, binding).toBe(1);
     }

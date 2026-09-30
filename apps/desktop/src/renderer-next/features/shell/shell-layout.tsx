@@ -50,6 +50,7 @@ import {
   SidePanelDrawer,
   SidePanelFrame,
 } from "./side-panel";
+import { useSidePanelOverride } from "./side-panel-slot";
 import { SidebarSlot } from "./sidebar-slot";
 import { TopBar } from "./top-bar";
 import { useTopBarStatus } from "./top-bar-slots";
@@ -107,6 +108,7 @@ export const ShellLayout = ({
   const db = useDb();
   const { area, sidebar } = useShellMatch();
   const panel = usePanel(area);
+  const overridden = useSidePanelOverride();
   const location = useLocation();
   const router = useRouter();
   const status = useTopBarStatus();
@@ -118,10 +120,15 @@ export const ShellLayout = ({
     area,
     pinned: prefs.sidebar.pinned,
     panelOpen: panel.tab != null,
+    view: (location.search as { view?: string }).view,
   });
   const panelTabs: readonly SidePanelTabId[] =
     area == null ? [] : AREA_PANEL_TABS[area];
-  const panelInLayout = layout.sidePanel === "layout" && panel.tab != null;
+  const panelInLayout =
+    !overridden &&
+    area !== "sessions" &&
+    layout.sidePanel === "layout" &&
+    panel.tab != null;
 
   useEffect(() => {
     document.documentElement.dataset.band = band;
@@ -239,7 +246,9 @@ export const ShellLayout = ({
           </div>
         </div>
         <SidePanelDrawer
-          open={layout.sidePanel === "drawer"}
+          open={
+            !overridden && area !== "sessions" && layout.sidePanel === "drawer"
+          }
           tab={panel.tab}
           tabs={panelTabs}
           onTabChange={panel.setTab}

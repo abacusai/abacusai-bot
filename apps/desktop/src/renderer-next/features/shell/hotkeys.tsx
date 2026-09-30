@@ -12,7 +12,7 @@ import {
   HotkeysProvider,
   useHotkey,
 } from "@tanstack/react-hotkeys";
-import type { ReactNode } from "react";
+import { useEffect, useEffectEvent, type ReactNode } from "react";
 
 import type { HotkeyPlatform } from "#next/lib/platform";
 
@@ -23,6 +23,9 @@ export const APP_HOTKEYS = {
   togglePanel: "Mod+Alt+B",
   settings: "Mod+,",
   escape: "Escape",
+  closeTab: "Mod+W",
+  nextTab: "Control+Tab",
+  previousTab: "Control+Shift+Tab",
 } as const;
 
 export const AppHotkeysProvider = ({
@@ -53,11 +56,26 @@ const isRichTextTarget = (target: EventTarget | null): boolean => {
   return element.closest('[data-hotkeys="text"]') != null;
 };
 
-const useAppHotkey = (
+const actions = new Map<string, () => void>();
+export const dispatchAppHotkey = (id: keyof typeof APP_HOTKEYS): void => {
+  actions.get(APP_HOTKEYS[id])?.();
+};
+
+export const useAppHotkey = (
   binding: string,
   handler: () => void,
   options: { guardRichText?: boolean; enabled?: boolean } = {}
 ): void => {
+  const run = useEffectEvent(handler);
+  const enabled = options.enabled ?? true;
+  useEffect(() => {
+    if (!enabled) return;
+    const action = () => run();
+    actions.set(binding, action);
+    return () => {
+      if (actions.get(binding) === action) actions.delete(binding);
+    };
+  }, [binding, enabled]);
   useHotkey(
     binding as never,
     (event) => {
