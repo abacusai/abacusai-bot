@@ -11,6 +11,7 @@ import {
   sessionConversationKey,
   sessionConversationRef,
 } from "#shared/conversation-scope";
+import { installMouseReporting } from "#shared/terminal/mouse-compat";
 
 import { useSessionsTransport } from "../data/queries";
 import { pumpOutput } from "./output-pump";
@@ -77,6 +78,7 @@ export const TerminalTab = ({
             view.term
           )
         );
+        const removeMouse = installMouseReporting(view.term, view.element);
         let outputAbort: AbortController | undefined;
         const connectOutput = () => {
           outputAbort?.abort();
@@ -150,6 +152,7 @@ export const TerminalTab = ({
           view.reconnect = undefined;
           observer.disconnect();
           input.dispose();
+          removeMouse();
           if (timer) clearTimeout(timer);
           view.element.remove();
         };
