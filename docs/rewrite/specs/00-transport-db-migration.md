@@ -1249,6 +1249,29 @@ Each PR updates `docs/rewrite/PROGRESS.md` (Spec/Impl/Review columns) and regene
 - Transcripts become `threads/<id>.json` (v2 UIMessage JSON) with full segment provenance. v1 is kept until the cut-over build. Main dual-writes and dual-removes v2 during the transition, and `ai.hydrate` repairs a missing or stale twin. Migration commits are journaled, with backups for `replace-user` writes.
 - Composer drafts are not migrated.
 
+## Implementation notes (sub-slice A)
+
+Where the implementation of A differs from the text above, and why.
+
+- **Renderer path.** The transport is `src/renderer-next/data/transport/` (spec 01 §15.1), compiled by its own `tsconfig.renderer-next.json` with no Node or Electron types, and tested in the `renderer-next` vitest project.
+- **Where the transport is installed.** `installMessagePortTransport` is called from `main/index.ts` right after `registerIpcHandlers` (which now returns the shared `HostOperations`), because its deps (`appOperations`, the renderer-state store, the browser runtime) live there. The order relative to `setEventDispatcher` is as specified.
+- **`emitIpcEvent`** lives in `main/rpc/emit.ts`; `event-bus.ts` stays Electron-free so the router loads with `electron` made to throw (A-T5). oxlint has no `no-restricted-syntax`, so the "only `emit.ts` sends on `IpcChannels.Event`" rule is a test (`main/rpc/emit.test.ts`). The browser runtime keeps its per-window legacy send and publishes to the bus beside it.
+- **Shared handler bodies.** `handler.ts` gained `createHostOperations` (sign-in/out, key storage, the local-model runtime, custom instructions, referral WhatsApp, `runRoutine`) and `main/index.ts` an `appOperations` object (dialogs, file readers, logs, notifications, account, skills import); both the `ipcMain` handlers and the procedures call these.
+- **`terminal.output`** takes `conversationKey` as well (terminal ids are per conversation), and its `snapshot` carries `from`: equal to `fromOffset` for a delta, the scrollback's start for a full replacement. `BoundedScrollback` counts every byte ever appended (`end`), and the registry keeps the last 8 exited terminals for a late reader's sticky exit.
+- **`files.events` `tree-root-changed`** has no `workspaceId`: the legacy event names none (it is the active workspace's tree).
+- **`files.savePastedTemp`** keeps `baseFolder`: the legacy handler writes under `<baseFolder>/.abacusai-bot/temp/`, so dropping it would change where files land.
+- **`devices.stream.chunks`** is declared lossless-actionable with a 16 MB pending-byte cap (a dropped H.264 delta frame corrupts every frame until the next key frame). A-T8 measured a 0.40 ms median (p95 0.48 ms) per 64 KB chunk on an M-series Mac, well under the 5 ms target, so the raw side port stays unbuilt.
+- **Swap readiness (A.4.6)** is in `RendererHost` (`barrier: "subscriptions"`, `SWAP_READY_TIMEOUT_MS`, `SwapNotReady`, `SwapRetryBudget`). `scheduleRendererSwap` asks for it only when `FOUNDATION_API >= 2`; the integrity check admits only experiences built for the shell's own value, so that is also the candidate's contract. `FOUNDATION_API` is **not** bumped in A: bumping it refuses every published experience built for 1 and needs `apps/updater` in the same release, which is a release decision, not a transport one.
+- **Spec 01 §15 amendments folded in:** `window.chrome` (query, the state `window:chrome` serves, now one `currentChromeState()` in main) and `window.events` `{ type: "chrome", chrome }` (published on capability, full-screen and density changes); `PrefsRow.language` is `"system" | SupportedLanguage` (`SUPPORTED_LANGUAGES` in `rows.ts`, checked against `renderer/locales/`).
+- **A-T12** is a `main-serial` vitest test (`main/rpc/transports/rpc-handshake.electron.test.ts`) that bundles a real main process (`rpc-handshake.e2e-main.ts`), the real preload handshake and a page using the real renderer transport, and drives loads, five reloads and a `RendererHost` swap under the `subscriptions` barrier, then the delayed-handshake run. It stands in for `scripts/e2e/rpc-handshake.mjs`.
+
+## Deferred additions (for B and C)
+
+- **Startup theme from prefs (spec 01 §7.7, §15.4).** When the renderer generation is `wco`, main reads `prefs.theme` through `PrefsStore` before `new BaseWindow`, sets `nativeTheme.themeSource`, and passes the resolved scheme to the window's initial `backgroundColor` (the window-chrome options module already takes `dark`). Needs B's `PrefsStore`; test: `createWindow` sets `themeSource` from prefs before constructing the window.
+- **Legacy language import (C.4).** `abacusai-bot-language` maps to the explicit code when present; otherwise the row keeps `"system"`, the new default.
+- **A-T1b** adds `@tanstack/db` and `@tanstack/react-db` types when B installs them.
+- **A-T11** (`renderer-next/data/queries/invalidation.ts`) lands with the renderer's query layer (spec 01 §8.4).
+
 ## Review responses (codex r1)
 
 Source: `docs/rewrite/specs/reviews/00-transport-db-migration.codex-r1.md`. Each finding was checked against the 1.15.4 oRPC package (installed in the scratchpad), the TanStack DB 0.10.0 and TanStack AI (ai 0.63.0 / ai-client 0.36.0) clones, and the current source. 23 are fixed as the review proposed. One (R7) is fixed with a different mechanism, and the reason is given.

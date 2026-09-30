@@ -23,6 +23,7 @@ import {
   ConversationTerminalRuntimeRegistry,
   type ConversationTerminalAttachment,
   type ConversationTerminalEvent,
+  type ConversationTerminalOutputState,
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
 import { resolveTerminalShell } from "./terminal-shells";
@@ -307,6 +308,28 @@ export class TerminalSessionService {
       request.cols,
       request.rows,
       request.terminalId
+    );
+  }
+
+  /** Every running terminal's state, in one conversation or in all of them. */
+  listStates(key?: ConversationKey): TerminalSessionSnapshot[] {
+    return (
+      key == null ? this.registry.listAll() : this.registry.list(key)
+    ).map(snapshot);
+  }
+
+  /** Offset-addressed output for `terminal.output`; see the registry. */
+  outputState(request: {
+    conversationKey: ConversationKey;
+    terminalId?: string;
+    generation: number;
+    fromOffset?: number;
+  }): ConversationTerminalOutputState | null {
+    return this.registry.outputState(
+      request.conversationKey,
+      request.generation,
+      request.terminalId,
+      request.fromOffset
     );
   }
 

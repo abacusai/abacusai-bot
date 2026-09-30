@@ -5,6 +5,7 @@ const { autoUpdater } = electronUpdater;
 import { app, BaseWindow, powerMonitor } from "electron";
 
 import { sendToRenderer } from "#main/renderer-host";
+import { emitBusChannel } from "#main/rpc/emit";
 import type { UpdateStatus } from "#shared/update";
 
 import { markQuitting, clearQuitting } from "../../app-quit-state";
@@ -447,5 +448,6 @@ export class UpdateService {
 
   private emitStatusUpdate(): void {
     sendToRenderer("update-status", this.status);
+    emitBusChannel("update", this.getStatus());
   }
 }

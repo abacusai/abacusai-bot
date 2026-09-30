@@ -48,6 +48,10 @@ const CONTENDS_FOR_THE_MACHINE = [
   // About renderer code, but it spawns the same Electron: the terminal grid
   // needs a canvas with a real cell size, which jsdom does not have.
   "src/main/ghostty-scrollback.browser.test.ts",
+  // A timing measurement (spec 00 A-T8): run alone, or its median is noise.
+  "src/main/rpc/serializer.bench.test.ts",
+  // Spawns Electron for the real MessagePort handshake (spec 00 A-T12).
+  "src/main/rpc/transports/rpc-handshake.electron.test.ts",
 ];
 
 export default defineConfig({
@@ -72,6 +76,17 @@ export default defineConfig({
           ...ciTimeouts,
           include: ["src/renderer/**/*.test.{ts,tsx}"],
           setupFiles: ["./src/renderer/test-support/setup.ts"],
+        },
+      },
+      {
+        // The rewrite's renderer data layer. Node, not jsdom: the transport
+        // needs MessageChannel and a window-shaped event target, no DOM.
+        resolve: { alias },
+        test: {
+          name: "renderer-next",
+          environment: "node",
+          ...ciTimeouts,
+          include: ["src/renderer-next/**/*.test.{ts,tsx}"],
         },
       },
       {
