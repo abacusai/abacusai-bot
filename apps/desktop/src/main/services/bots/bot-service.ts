@@ -15,6 +15,7 @@ import type {
   BotUpdateInput,
 } from "#shared/bots";
 import type { SessionOwner } from "#shared/contracts";
+import { EntityNotFoundError } from "#shared/not-found";
 
 import {
   botDir,
@@ -61,14 +62,29 @@ export interface BotServiceCallbacks {
     message: string
   ) => void;
   removeSession: (workspaceId: string, sessionId: string) => void;
-  /** Pin the chat to the bot's model, so restarts keep it. */
+  /**
+   * Pin the chat to a model, so restarts keep it, and apply it to the
+   * session's agent when one runs.
+   */
   updateSessionModel: (
     workspaceId: string,
     sessionId: string,
     model: string
   ) => void;
-  /** The model the app would pick for a chat of its own; see openChat. */
-  defaultModel: () => string | null;
+  /**
+   * The model a bot asking for `requested` (null: the app default) runs on:
+   * `resolveConfiguredModel` over the live catalog and the stored default
+   * (spec 03 §13.2). Null when nothing is runnable.
+   */
+  effectiveModel: (
+    requested: string | null
+  ) => string | null | Promise<string | null>;
+  /** A session's workspace, owner stamp and pinned model; null when gone. */
+  sessionInfo?: (sessionId: string) => {
+    workspaceId: string;
+    owner: SessionOwner | null;
+    model: string | null;
+  } | null;
   emitChanged: () => void;
   /**
    * Tear down what a deleted bot owned outside this service: an orphaned
@@ -253,17 +269,94 @@ export class BotService {
         bot.sessionId,
         bot.name
       );
-      // A model change lands when the chat next (re)starts.
-      if (changes.model !== undefined && bot.model != null)
-        this.callbacks.updateSessionModel(
-          bot.workspaceId,
-          bot.sessionId,
-          bot.model
-        );
     }
+    // A model change (a reset to the app default included) reaches every
+    // session the bot owns: persisted, and applied to the running ones.
+    if (changes.model !== undefined) this.#track(this.repinBot(bot.id));
     this.callbacks.emitChanged();
 
     return bot;
+  }
+
+  /** Re-pins in flight (`update`), for callers that must see them land. */
+  readonly #repins = new Set<Promise<void>>();
+
+  #track(work: Promise<void>): void {
+    this.#repins.add(work);
+    void work.finally(() => this.#repins.delete(work));
+  }
+
+  /** Resolves once every re-pin started so far has landed. */
+  async settled(): Promise<void> {
+    while (this.#repins.size > 0) await Promise.all(this.#repins);
+  }
+
+  /** The sessions a bot owns: its forever chat and its sender chats. */
+  ownedSessions(
+    botId: string
+  ): Array<{ workspaceId: string; sessionId: string }> {
+    const bot = getBot(botId);
+    const owned = new Map<string, { workspaceId: string; sessionId: string }>();
+    if (bot?.workspaceId != null && bot.sessionId != null)
+      owned.set(bot.sessionId, {
+        workspaceId: bot.workspaceId,
+        sessionId: bot.sessionId,
+      });
+    for (const chat of listSenderSessions())
+      if (chat.botId === botId)
+        owned.set(chat.sessionId, {
+          workspaceId: chat.workspaceId,
+          sessionId: chat.sessionId,
+        });
+    return [...owned.values()];
+  }
+
+  /** Every session the bot owns takes its effective model (spec 03 §24.10 d). */
+  async repinBot(botId: string): Promise<void> {
+    for (const owned of this.ownedSessions(botId)) {
+      try {
+        await this.pinSession(owned.sessionId, botId, owned.workspaceId);
+      } catch (error) {
+        console.error(
+          `[bots] re-pinning ${owned.sessionId} failed: ${String(error)}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Pins a bot session to its bot's effective model when its stored one
+   * differs (spec 03 §24.10 b, c): resolved from `bot.model` with the shared
+   * resolver at every start and admission, so an app-default change reaches
+   * a null-model bot even when no `openChat` runs. Returns the effective
+   * model, or null for a session no bot owns (check-in runs keep their
+   * routine's rules) or when nothing is runnable.
+   */
+  async pinSession(
+    sessionId: string,
+    ownerBotId?: string,
+    ownerWorkspaceId?: string
+  ): Promise<string | null> {
+    const info = this.callbacks.sessionInfo?.(sessionId) ?? null;
+    // A session main no longer has takes no pin.
+    if (this.callbacks.sessionInfo != null && info == null) return null;
+    const botId =
+      ownerBotId ??
+      (info?.owner?.kind === "bot" ? info.owner.botId : null) ??
+      botForSession(sessionId)?.id ??
+      null;
+    if (botId == null) return null;
+    const bot = getBot(botId);
+    if (bot == null) return null;
+    const workspaceId = info?.workspaceId ?? ownerWorkspaceId;
+    if (workspaceId == null) return null;
+    const model = await this.callbacks.effectiveModel(
+      bot.model != null && bot.model.length > 0 ? bot.model : null
+    );
+    if (model == null || model.length === 0) return null;
+    if (info == null || info.model !== model)
+      this.callbacks.updateSessionModel(workspaceId, sessionId, model);
+    return model;
   }
 
   /** Deleting a bot deletes its chat: the conversation *is* the bot. */
@@ -305,7 +398,8 @@ export class BotService {
 
   private async openChatNow(botId: string): Promise<BotChatHandle> {
     const bot = getBot(botId);
-    if (bot == null) throw new Error(`No bot with id "${botId}".`);
+    if (bot == null)
+      throw new EntityNotFoundError("bot", botId, `No bot with id "${botId}".`);
 
     // Every bot chat lives in the bot folder. A bot pinned elsewhere gets a
     // new chat here; the old transcript stays in that workspace's list.
@@ -320,6 +414,9 @@ export class BotService {
       bot.workspaceId === workspaceId &&
       this.callbacks.sessionExists(workspaceId, bot.sessionId)
     ) {
+      // A reused chat takes the effective model too (the app default may
+      // have moved since it was pinned).
+      await this.pinSession(bot.sessionId, botId, workspaceId);
       return { botId, workspaceId, sessionId: bot.sessionId };
     }
 
@@ -332,12 +429,7 @@ export class BotService {
     this.callbacks.updateSessionLabel(workspaceId, session.id, bot.name);
     // Pinned explicitly: an unpinned chat starts on the CLI's own fallback,
     // not the app default the session picker shows.
-    const model =
-      bot.model != null && bot.model.length > 0
-        ? bot.model
-        : this.callbacks.defaultModel();
-    if (model != null && model.length > 0)
-      this.callbacks.updateSessionModel(workspaceId, session.id, model);
+    await this.pinSession(session.id, botId, workspaceId);
     recordBotSession(botId, workspaceId, session.id);
     this.callbacks.emitChanged();
 
@@ -364,7 +456,8 @@ export class BotService {
     senderName: string
   ): Promise<BotChatHandle & { intro?: string }> {
     const bot = getBot(botId);
-    if (bot == null) throw new Error(`No bot with id "${botId}".`);
+    if (bot == null)
+      throw new EntityNotFoundError("bot", botId, `No bot with id "${botId}".`);
 
     const key = senderSessionKey(botId, platform, chatId);
     // "routine" is a route with no remote sender behind it, not a platform.
@@ -388,6 +481,8 @@ export class BotService {
         platform,
         senderName,
       });
+      // Reused: re-pinned before anything runs on it (spec 03 §24.10 b).
+      await this.pinSession(existing.sessionId, botId, existing.workspaceId);
       return {
         botId,
         workspaceId: existing.workspaceId,
@@ -412,12 +507,7 @@ export class BotService {
       session.id,
       `${bot.name} ↔ ${senderName}`
     );
-    const model =
-      bot.model != null && bot.model.length > 0
-        ? bot.model
-        : this.callbacks.defaultModel();
-    if (model != null && model.length > 0)
-      this.callbacks.updateSessionModel(workspaceId, session.id, model);
+    await this.pinSession(session.id, botId, workspaceId);
     recordSenderSession(key, {
       botId,
       workspaceId,

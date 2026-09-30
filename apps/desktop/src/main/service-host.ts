@@ -242,6 +242,7 @@ import {
 } from "./services/bots/bot-memory-store";
 import { BotService } from "./services/bots/bot-service";
 import {
+  assertNotChannelBot,
   getBot,
   listSenderSessionEntries,
   onBotStoreWrite,
@@ -249,6 +250,7 @@ import {
   recordSenderSession,
   removeSenderSession,
 } from "./services/bots/bot-store";
+import { effectiveBotModel } from "./services/bots/effective-model";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
 import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-service";
@@ -328,7 +330,7 @@ import {
   resolveBackend,
 } from "./services/providers/exec-backend-service";
 import {
-  cachedRecommendedModelId,
+  listAvailableModels,
   recommendedModelId,
 } from "./services/providers/models";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
@@ -477,6 +479,11 @@ export class ServiceHost {
       },
       runtime: (threadId) => this.agentManagerService.getRuntimeInfo(threadId),
       start: async (threadId) => {
+        // A bot session starts on its bot's effective model (spec 03
+        // §24.10 b); errors leave the stored pin.
+        await this.botService.pinSession(threadId).catch((error: unknown) => {
+          console.warn(`[bots] pinning ${threadId} failed: ${String(error)}`);
+        });
         const session = this.agentSessionManagerService.get(threadId);
         if (session == null) return false;
         const result = await this.startAgentSession({
@@ -500,6 +507,14 @@ export class ServiceHost {
         if (runtime != null)
           this.markTurnStopped(runtime.workspaceId, threadId);
       },
+      ownerOf: (threadId) => {
+        const session = this.agentSessionManagerService.get(threadId);
+        return {
+          owner: session?.owner ?? null,
+          routineId: session?.routineId ?? null,
+        };
+      },
+      beforeRun: (threadId) => this.applyEffectiveBotModel(threadId),
     },
   });
   private readonly transcriptService = new TranscriptService({
@@ -1164,11 +1179,29 @@ export class ServiceHost {
     },
     updateSessionModel: (workspaceId, sessionId, model) => {
       this.setAgentSessionModel(workspaceId, sessionId, model);
+      // A running agent takes it now; a stopped one starts on it.
+      const runtime = this.agentManagerService.getRuntimeInfo(sessionId);
+      if (runtime != null && runtime.status === "running")
+        this.setAgentModel({ workspaceId, sessionId, model });
     },
-    // A bot with no model of its own runs on the user's pick, else the tier
-    // default the last catalog read established.
-    defaultModel: () =>
-      readSettings().defaultModel ?? cachedRecommendedModelId(),
+    // One resolver for display and execution (spec 03 §13.2): the bot's
+    // own model when configured, else the stored default when configured,
+    // else the tier's recommendation, else the fallback.
+    effectiveModel: (requested) =>
+      effectiveBotModel(requested, {
+        readDefault: () => readSettings().defaultModel,
+        listCatalog: () => listAvailableModels(),
+      }),
+    sessionInfo: (sessionId) => {
+      const session = this.agentSessionManagerService.get(sessionId);
+      return session == null
+        ? null
+        : {
+            workspaceId: session.workspaceId,
+            owner: session.owner ?? null,
+            model: session.model ?? null,
+          };
+    },
     onBotRemoved: (botId) => {
       // Its routines stay (the user can delete those themselves); only the
       // provenance is cleared.
@@ -2363,22 +2396,20 @@ export class ServiceHost {
    * surface, not in BotService, which the link machinery edits through.
    */
   private assertNotChannelBot(id: string, verb: string): void {
-    const bot = this.botService.list().find((entry) => entry.id === id);
-    if (bot?.channel != null) {
-      const app =
-        bot.channel === "discord"
-          ? "Discord"
-          : bot.channel === "whatsapp"
-            ? "WhatsApp"
-            : "Telegram";
-      throw new Error(
-        `This bot mirrors your ${app} chat and can't be ${verb}.`
-      );
-    }
+    assertNotChannelBot(id, verb);
   }
 
   openBotChat(botId: string): Promise<BotChatHandle> {
     return this.botService.openChat(botId);
+  }
+
+  /**
+   * Before an admission on a running agent (the relay's `beforeRun`): a bot
+   * session whose model differs from its bot's effective one takes it now
+   * (spec 03 §24.10 c). Non-bot sessions are untouched.
+   */
+  async applyEffectiveBotModel(sessionId: string): Promise<void> {
+    await this.botService.pinSession(sessionId);
   }
 
   removeAgentSession(workspaceId: string, sessionId: string): boolean {
