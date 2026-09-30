@@ -293,7 +293,7 @@ export const RoutinePage = ({
               </Button>
             )}
           </section>
-          <EditorChat routineId={row.id} />
+          <EditorChat key={row.id} routineId={row.id} />
         </div>
       </div>
       {run && (

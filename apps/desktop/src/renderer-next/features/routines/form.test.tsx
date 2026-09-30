@@ -39,3 +39,60 @@ it("R5-T8 dirty routine cancellation uses a discard dialog and keeps the draft o
     await app.cleanup();
   }
 });
+
+it("R5-T8 successive remote values refresh untouched fields and save only the edited instruction", async () => {
+  const { act } = await import("@testing-library/react");
+  const { fixtureRoutines } = await import("#next/data/fixture-db/rows");
+  const row = fixtureRoutines()[0]!;
+  const app = await renderApp(`/routines/${row.id}/edit`);
+  try {
+    const name = await screen.findByRole("textbox", { name: /^Name/ });
+    const instruction = screen.getByRole("textbox", { name: "Instruction" });
+    fireEvent.blur(name);
+    fireEvent.change(instruction, { target: { value: "  My instruction  " } });
+    for (const remote of ["Remote one", "Remote two"]) {
+      await act(async () => {
+        app.db.routines.upsert({
+          ...row,
+          name: remote,
+          prompt: "Remote instruction",
+        });
+      });
+      await waitFor(() =>
+        expect((name as HTMLInputElement).value).toBe(remote)
+      );
+      expect((instruction as HTMLTextAreaElement).value).toBe(
+        "  My instruction  "
+      );
+      expect(name.getAttribute("aria-invalid")).not.toBe("true");
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(app.collections.routines.get(row.id)).toMatchObject({
+        name: "Remote two",
+        prompt: "My instruction",
+      })
+    );
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("R5-T4 a deleted routine exits its edit controls", async () => {
+  const { act } = await import("@testing-library/react");
+  const { fixtureRoutines } = await import("#next/data/fixture-db/rows");
+  const row = fixtureRoutines()[0]!;
+  const app = await renderApp(`/routines/${row.id}/edit`);
+  try {
+    await screen.findByRole("textbox", { name: "Instruction" });
+    await act(async () => {
+      app.db.routines.remove(row.id);
+    });
+    expect(await screen.findByText("This routine is gone.")).not.toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Instruction" })).toBeNull();
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
