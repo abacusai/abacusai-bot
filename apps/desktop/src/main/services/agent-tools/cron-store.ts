@@ -81,6 +81,7 @@ const writeFileAtomic = (file: string, text: string): void => {
  * once the block lifts (the startup replay, or the next read or write).
  */
 const held = new HeldFiles({
+  requireDurableHolding: true,
   dir: () => path.join(abacusBotHome(), "threads", ".pending"),
   isWriteBlocked: isMigrationWriteBlocked,
   writeFile: writeFileAtomic,

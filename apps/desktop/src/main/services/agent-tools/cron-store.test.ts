@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMigrationWriteBlocks } from "../../migrations/write-block";
 import {
   createJob,
+  onCronStoreWrite,
+  onRoutineRunStarted,
   retireOnceJob,
   dueJobs,
   getJob,
@@ -275,6 +277,57 @@ describe("damaged history and migration recovery", () => {
     expect(() => createJob({ prompt: "new" })).toThrow("cannot be read");
     expect(fs.readFileSync(file, "utf8")).toBe("{broken");
   });
+
+  it.each(["EACCES", "ENOSPC"])(
+    "refuses blocked edits and run history when the journal fails with %s",
+    (code) => {
+      const job = createJob({ prompt: "a" });
+      const file = path.join(home, "cronjobs.json");
+      const before = fs.readFileSync(file, "utf8");
+      setMigrationWriteBlocks({
+        unresolved: [{ attempt: "step-5", destinations: [file] }],
+      } as never);
+      updateJob(job.id, { name: "durably held" });
+      const journalDir = path.join(home, "threads", ".pending");
+      const journal = path.join(
+        journalDir,
+        fs.readdirSync(journalDir).find((name) => name.endsWith(".json"))!
+      );
+      const durable = fs.readFileSync(journal, "utf8");
+      const ioError = Object.assign(new Error(code), { code });
+      const writeFile = fs.writeFileSync;
+      const spy = vi
+        .spyOn(fs, "writeFileSync")
+        .mockImplementation((target, ...args) => {
+          if (String(target).startsWith(journalDir + path.sep)) throw ioError;
+          return writeFile(target, ...args);
+        });
+      const wrote = vi.fn();
+      const started = vi.fn();
+      const offWrite = onCronStoreWrite(wrote);
+      const offStarted = onRoutineRunStarted(started);
+      try {
+        expect(() => updateJob(job.id, { name: "undurable" })).toThrow(ioError);
+        expect(() =>
+          recordRun(job.id, "started session s", "manual", { sessionId: "s" })
+        ).toThrow(ioError);
+        expect(wrote).not.toHaveBeenCalled();
+        expect(started).not.toHaveBeenCalled();
+        expect(getJob(job.id)).toMatchObject({
+          name: "durably held",
+          runs: [],
+        });
+        expect(fs.readFileSync(file, "utf8")).toBe(before);
+        expect(fs.readFileSync(journal, "utf8")).toBe(durable);
+      } finally {
+        spy.mockRestore();
+        offWrite();
+        offStarted();
+      }
+      setMigrationWriteBlocks(null);
+      expect(getJob(job.id)).toMatchObject({ name: "durably held", runs: [] });
+    }
+  );
 
   it.each([false, true])(
     "holds runtime cron writes while migration is unresolved (unknown=%s)",
