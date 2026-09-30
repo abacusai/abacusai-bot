@@ -499,6 +499,9 @@ importers:
 
   packages/agent:
     dependencies:
+      '@ag-ui/core':
+        specifier: 1.0.0
+        version: 1.0.0(zod@4.4.3)
       '@anthropic-ai/sandbox-runtime':
         specifier: 0.0.76
         version: 0.0.76
@@ -524,6 +527,12 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: ^0.85.1
         version: 0.85.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.4.3))(supports-color@7.2.0)(ws@8.21.3)(zod@4.4.3)
+      '@tanstack/ai':
+        specifier: ~0.63.0
+        version: 0.63.0(@opentelemetry/api@1.9.0)(zod@4.4.3)
+      '@tanstack/ai-client':
+        specifier: ~0.36.0
+        version: 0.36.0(@opentelemetry/api@1.9.0)(zod@4.4.3)
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
@@ -593,6 +602,14 @@ importers:
         version: 7.0.2
 
 packages:
+
+  '@ag-ui/core@1.0.0':
+    resolution: {integrity: sha512-yCRhsQvb4+lmGMrDsi4TOJxqKpm/kb3H64wwL+Z90jNVrkhy17RErfzsNgybfbjNKLM0nenEDYDVJsZHJJSigQ==}
+    peerDependencies:
+      zod: ^3.25.18 || ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@anthropic-ai/sandbox-runtime@0.0.76':
     resolution: {integrity: sha512-wIC++TvCopRPJcX/v/PCp/SjYOWk/cAVq+VF9v6E3WwkriFP9uu2wvPJ2E+wMrNa3i3h3ew9zTpHcmyGLBKo0w==}
@@ -2135,6 +2152,24 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
+  '@tanstack/ai-client@0.36.0':
+    resolution: {integrity: sha512-fXqf2r+PeV79jZwY6ZJ3QwL5yKC56qB60nOSDbHYJfmCcW/sOkFN8/Z4SIrQdwsDpDYlAJNuXzSs4xx2M3s6VA==}
+
+  '@tanstack/ai-event-client@0.13.0':
+    resolution: {integrity: sha512-qGN7saScQHqDd06DE5CNG+wl1O9v6anwsGCCeP4N7zFbZd5k9/2C1u4cdJ2+Qxl2aA8drusLFZMhY/ljhBJqLQ==}
+
+  '@tanstack/ai-utils@0.4.1':
+    resolution: {integrity: sha512-B3PGn2WYiRtivZCt7MUN2iXeoK9fwZhgdbrPIz5hPqVR8r8sNDZMmMqtiOkp7sxzPvVlCBItFVHw7QpZ9g6e9w==}
+
+  '@tanstack/ai@0.63.0':
+    resolution: {integrity: sha512-4S4hOOc/2LvxNkMzwuBaECtchPQsxrlLNqnmi/WjcXmX8gyboy8UNPwwS/9XzFFJ4VwSEW2Md+h+OtTGmf6Y/g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.9.0'
+    peerDependenciesMeta:
+      '@opentelemetry/api':
+        optional: true
+
   '@tanstack/devtools-event-client@0.4.4':
     resolution: {integrity: sha512-6T5Yop/793YI+H+5J8Hsyj4kCih9sl4t3ElLgKioW5hk3ocn+ZdSJ94tT7vL7uabxSugWYBZlOTMPzEw2puvQw==}
     engines: {node: '>=18'}
@@ -2978,11 +3013,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
@@ -6085,6 +6115,10 @@ packages:
 
 snapshots:
 
+  '@ag-ui/core@1.0.0(zod@4.4.3)':
+    optionalDependencies:
+      zod: 4.4.3
+
   '@anthropic-ai/sandbox-runtime@0.0.76':
     dependencies:
       '@pondwader/socks5-server': 1.0.10
@@ -7113,7 +7147,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.3)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -7135,7 +7169,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.3)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -7592,6 +7626,33 @@ snapshots:
       '@tailwindcss/oxide': 4.3.3
       tailwindcss: 4.3.3
       vite: 8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
+
+  '@tanstack/ai-client@0.36.0(@opentelemetry/api@1.9.0)(zod@4.4.3)':
+    dependencies:
+      '@tanstack/ai': 0.63.0(@opentelemetry/api@1.9.0)(zod@4.4.3)
+      '@tanstack/ai-event-client': 0.13.0
+      '@tanstack/ai-utils': 0.4.1
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - zod
+
+  '@tanstack/ai-event-client@0.13.0':
+    dependencies:
+      '@tanstack/devtools-event-client': 0.4.4
+
+  '@tanstack/ai-utils@0.4.1': {}
+
+  '@tanstack/ai@0.63.0(@opentelemetry/api@1.9.0)(zod@4.4.3)':
+    dependencies:
+      '@ag-ui/core': 1.0.0(zod@4.4.3)
+      '@standard-schema/spec': 1.1.0
+      '@tanstack/ai-event-client': 0.13.0
+      '@tanstack/ai-utils': 0.4.1
+      partial-json: 0.1.7
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.0
+    transitivePeerDependencies:
+      - zod
 
   '@tanstack/devtools-event-client@0.4.4': {}
 
@@ -8277,9 +8338,7 @@ snapshots:
     optionalDependencies:
       ajv: 8.20.0
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
-      ajv: 8.20.0
+  ajv-formats@3.0.1: {}
 
   ajv@8.20.0:
     dependencies:
