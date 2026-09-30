@@ -96,6 +96,10 @@ import {
 } from "./handler";
 import { registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
+import {
+  disposeMigrationProgress,
+  runStartupMigrations,
+} from "./migrations/startup";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
@@ -125,6 +129,7 @@ import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
+import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
 import { PrefsStore } from "./services/config/prefs-store";
 import {
   registerRendererState,
@@ -1674,6 +1679,11 @@ app
       });
     });
 
+    // One-time, versioned migrations (spec 00 C.1): before any service or
+    // store reads the files they derive. Never throws; a failure is recorded
+    // and retried next launch, and every consumer has a fallback.
+    await runStartupMigrations(APP_DISPLAY_NAME);
+
     registerUpdateHandlers(updateService);
     workspaceServiceHost.initialize();
     // A profile relaunch lands here already signed in, so the sign-in handler
@@ -1689,6 +1699,9 @@ app
     });
     workspaceServiceHost.start();
     const rendererState = registerRendererState();
+    // The old renderer is the shipped UI until the cut-over: its durable
+    // state keeps `prefs.json` current, by provenance (spec 00 C.4).
+    installLegacyPrefsSync(rendererState, prefsStore);
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
@@ -2059,6 +2072,7 @@ app
   })
   .then(() => createWindow())
   .then(() => {
+    disposeMigrationProgress();
     updateService.checkForUpdatesOnStartup();
 
     app.on("activate", function () {

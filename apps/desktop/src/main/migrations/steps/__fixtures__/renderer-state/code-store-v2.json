@@ -1,0 +1,4 @@
+{
+  "theme": "light",
+  "local-code-ui-store": "{\"state\":{\"isSidebarVisible\":false,\"isRightPanelVisible\":true,\"activeRightTab\":\"files\",\"selectedModelId\":\"gpt-5\",\"favoriteModelIds\":[\"gpt-5\",\"claude-opus\"],\"globalSelectedMode\":\"DEFAULT\",\"workspaceSelectedModes\":{\"ws-1\":\"PLAN\"},\"workspaceSelectedModelIds\":{\"ws-1\":\"claude-opus\",\"ws-2\":null},\"workspaceAccordionExpanded\":{\"ws-1\":true,\"ws-2\":false},\"codeSidebarTab\":\"sessions\",\"pinnedSessionIds\":[\"s-1\"],\"pinnedBotIds\":[],\"lastPickedWorkspaceId\":\"ws-1\"},\"version\":2}"
+}

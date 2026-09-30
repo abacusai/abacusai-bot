@@ -9,7 +9,7 @@ vi.mock("electron", () => ({
   ipcMain: { on: vi.fn() },
 }));
 
-import { RendererStateStore } from "./renderer-state";
+import { readRendererStateFile, RendererStateStore } from "./renderer-state";
 
 let directory: string;
 let file: string;
@@ -79,5 +79,58 @@ describe("RendererStateStore", () => {
     store.set("big", chunk);
 
     expect(store.snapshot()).toEqual({ big: chunk });
+  });
+
+  it("tells listeners about changes only, removals as null", () => {
+    const store = new RendererStateStore(file);
+    const seen: [string, string | null][] = [];
+    const off = store.onSet((key, value) => seen.push([key, value]));
+
+    store.set("theme", "dark");
+    store.set("theme", "dark");
+    store.set("gone", null);
+    store.set("big", "x".repeat(600 * 1024));
+    store.set("lang", "fr");
+    store.set("theme", null);
+    store.clear();
+    off();
+    store.set("theme", "light");
+
+    expect(seen).toEqual([
+      ["theme", "dark"],
+      ["lang", "fr"],
+      ["theme", null],
+      ["lang", null],
+    ]);
+    expect(store.get("theme")).toBe("light");
+    expect(store.get("lang")).toBeUndefined();
+  });
+
+  it("keeps working when a listener throws", () => {
+    const store = new RendererStateStore(file);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    store.onSet(() => {
+      throw new Error("boom");
+    });
+
+    store.set("theme", "dark");
+
+    expect(store.get("theme")).toBe("dark");
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
+describe("readRendererStateFile", () => {
+  it("reads string entries only and tolerates a missing or corrupt file", () => {
+    expect(readRendererStateFile(file).size).toBe(0);
+    fs.writeFileSync(file, "{nope");
+    expect(readRendererStateFile(file).size).toBe(0);
+    fs.writeFileSync(file, "null");
+    expect(readRendererStateFile(file).size).toBe(0);
+    fs.writeFileSync(file, JSON.stringify({ theme: "dark", n: 1, o: {} }));
+    expect(Object.fromEntries(readRendererStateFile(file))).toEqual({
+      theme: "dark",
+    });
   });
 });
