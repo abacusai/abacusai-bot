@@ -1877,6 +1877,18 @@ export class ServiceHost {
     return this.terminalSessionService.hideSession(request);
   }
 
+  /** Running terminals' states, for `terminal.events`' opening snapshot. */
+  listTerminalStates(key?: ConversationKey): TerminalSessionSnapshot[] {
+    return this.terminalSessionService.listStates(key);
+  }
+
+  /** A terminal's output from an offset, and its exit once it exited. */
+  terminalOutputState(
+    request: Parameters<TerminalSessionService["outputState"]>[0]
+  ): ReturnType<TerminalSessionService["outputState"]> {
+    return this.terminalSessionService.outputState(request);
+  }
+
   promoteTerminalSessionScope(
     request: PromoteTerminalSessionScopeRequest
   ): Promise<TerminalSessionSnapshot | null> {

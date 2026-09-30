@@ -7,6 +7,7 @@ import {
   type WebContents,
 } from "electron";
 
+import { publishIpcEvent } from "#main/rpc/emit";
 import { IpcChannels } from "#shared/channels";
 import type {
   BrowserRuntimeBounds,
@@ -748,6 +749,7 @@ export class ElectronBrowserRuntime {
       emittedAt: new Date().toISOString(),
     };
     window.webContents.send(IpcChannels.Event, event);
+    publishIpcEvent(event);
   }
 
   private deleteTracked(
