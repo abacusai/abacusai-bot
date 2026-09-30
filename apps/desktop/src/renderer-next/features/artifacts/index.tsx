@@ -1,5 +1,6 @@
 import { useLiveQuery } from "@tanstack/react-db";
 import { useSearch } from "@tanstack/react-router";
+import { Ellipsis } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +13,20 @@ import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { showInfo, showError } from "#next/lib/toast";
 import { useAppContext } from "#next/lib/use-app-context";
 import { Button } from "#next/ui/button";
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+} from "#next/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+} from "#next/ui/dropdown-menu";
 import { Input } from "#next/ui/input";
 import { NativeSelect, NativeSelectOption } from "#next/ui/native-select";
 import type { ArtifactRow } from "#shared/contract/rows";
@@ -24,6 +39,7 @@ import {
   openArtifact,
   artifactTarget,
   cardWindow,
+  artifactListEntries,
 } from "./data";
 import { ArtifactThumbnail } from "./thumbnail";
 const useArtifacts = (fixtureRows?: readonly ArtifactRow[]) => {
@@ -138,7 +154,8 @@ export const ArtifactsPage = ({
   const [notice, setNotice] = useState<Record<string, string>>({});
   const list = search.view === "list" || !!search.item;
   const columns = list ? 1 : Math.max(1, Math.floor(width / 210));
-  const window = cardWindow(filtered.length, top, columns, list ? 48 : 180);
+  const entries = artifactListEntries(filtered, list && search.sort !== "name");
+  const window = cardWindow(entries.length, top, columns, list ? 48 : 190);
   useEffect(() => {
     const el = viewport.current;
     if (!el) return;
@@ -150,9 +167,11 @@ export const ArtifactsPage = ({
   }, []);
   useEffect(() => {
     if (!search.item) return;
-    const index = filtered.findIndex((a) => a.id === search.item);
+    const index = entries.findIndex(
+      (entry) => "artifact" in entry && entry.artifact.id === search.item
+    );
     if (index < 0) return;
-    const offset = Math.floor(index / columns) * (list ? 48 : 180);
+    const offset = Math.floor(index / columns) * (list ? 48 : 190);
     if (
       viewport.current &&
       (offset < top || offset > top + viewport.current.clientHeight)
@@ -160,7 +179,7 @@ export const ArtifactsPage = ({
       viewport.current.scrollTop = offset;
       setTop(offset);
     }
-  }, [search.item, filtered, columns, list, top]);
+  }, [search.item, entries, columns, list, top]);
   const set = (patch: Partial<Search>) =>
     void navigate({ search: (p) => ({ ...p, ...patch }), transition: "none" });
   const open = async (a: (typeof rows)[number]) => {
@@ -173,47 +192,50 @@ export const ArtifactsPage = ({
       showError(t("phase5.failed"));
     }
   };
-  const actions = (a: (typeof rows)[number]) => (
-    <div className="flex flex-wrap gap-1">
-      <Button size="sm" variant="ghost" onClick={() => void open(a)}>
-        {t(a.kind === "link" ? "phase5.openBrowser" : "phase5.openFile")}
-      </Button>
-      {a.kind !== "link" && (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            void transport.client.system.showItemInFolder({ path: a.location })
-          }
-        >
-          {t("phase5.reveal")}
-        </Button>
-      )}
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={() =>
+  const actionItems = (a: ArtifactRow) => {
+    const target = artifactTarget(sources.get(a.id)!, a.sessionId);
+    return [
+      {
+        label: t(a.kind === "link" ? "phase5.openBrowser" : "phase5.openFile"),
+        run: () => void open(a),
+      },
+      ...(a.kind === "link"
+        ? []
+        : [
+            {
+              label: t("phase5.reveal"),
+              run: () =>
+                void transport.client.system
+                  .showItemInFolder({ path: a.location })
+                  .catch(() => showError(t("phase5.failed"))),
+            },
+          ]),
+      {
+        label: t("phase5.copy"),
+        run: () =>
           void navigator.clipboard
             .writeText(a.location)
             .then(() => showInfo(t("phase5.copied")))
-        }
-      >
-        {t("phase5.copy")}
-      </Button>
-      {(() => {
-        const target = artifactTarget(sources.get(a.id)!, a.sessionId);
-        return target ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() =>
-              void navigate(target as Parameters<typeof navigate>[0])
-            }
-          >
-            {t("phase5.goSession")}
-          </Button>
-        ) : null;
-      })()}
+            .catch(() => showError(t("phase5.failed"))),
+      },
+      ...(target
+        ? [
+            {
+              label: t("phase5.goSession"),
+              run: () =>
+                void navigate(target as Parameters<typeof navigate>[0]),
+            },
+          ]
+        : []),
+    ];
+  };
+  const actions = (a: ArtifactRow) => (
+    <div className="flex flex-wrap gap-1">
+      {actionItems(a).map((item) => (
+        <Button key={item.label} size="sm" variant="ghost" onClick={item.run}>
+          {item.label}
+        </Button>
+      ))}
     </div>
   );
   return (
@@ -258,6 +280,17 @@ export const ArtifactsPage = ({
                 : "artifacts.page.emptyTitle"
             )}
             description={t("artifacts.page.emptyDescription")}
+            action={
+              rows.length ? (
+                <Button
+                  onClick={() =>
+                    set({ q: undefined, type: undefined, from: undefined })
+                  }
+                >
+                  {t("search.clear")}
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <div
@@ -279,49 +312,109 @@ export const ArtifactsPage = ({
                   : { gridTemplateColumns: `repeat(${columns},minmax(0,1fr))` }
               }
             >
-              {filtered.slice(window.start, window.end).map((a) => (
-                <div
-                  key={a.id}
-                  role="listitem"
-                  data-artifact-card
-                  className="bg-card flex flex-col overflow-hidden rounded-xl"
-                >
-                  <button
-                    className={
-                      list
-                        ? "flex h-12 items-center gap-3 px-3 text-left"
-                        : "flex h-[180px] flex-col text-left"
-                    }
-                    aria-current={search.item === a.id ? "true" : undefined}
-                    onClick={() => set({ item: a.id })}
-                    onDoubleClick={() => void open(a)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void open(a);
-                      }
-                      if (e.key === "Escape") set({ item: undefined });
-                    }}
-                  >
-                    {!list && <ArtifactThumbnail artifact={a} />}
-                    <div className="min-w-0 px-3 py-2">
-                      <p className="truncate text-[13px] font-medium">
-                        {a.title}
-                      </p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {t(`phase5.formats.${formatForArtifact(a)}`)} ·{" "}
-                        {sources.get(a.id)?.label}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {new Date(a.updatedAt).toLocaleDateString(
-                          i18n.language
-                        )}
-                      </p>
+              {entries.slice(window.start, window.end).map((entry) => {
+                if ("day" in entry)
+                  return (
+                    <div
+                      key={entry.day}
+                      role="listitem"
+                      className="text-muted-foreground flex h-12 items-center px-3 text-xs font-medium"
+                    >
+                      {new Date(entry.date).toLocaleDateString(i18n.language, {
+                        dateStyle: "full",
+                      })}
                     </div>
-                  </button>
-                  {notice[a.id] && <p role="status">{notice[a.id]}</p>}
-                </div>
-              ))}
+                  );
+                const a = entry.artifact;
+                return (
+                  <ContextMenu key={a.id}>
+                    <ContextMenuTrigger
+                      render={
+                        <div
+                          key={a.id}
+                          role="listitem"
+                          data-artifact-card
+                          className="bg-card relative flex flex-col overflow-hidden rounded-xl"
+                        >
+                          <button
+                            className={
+                              list
+                                ? "flex h-12 items-center gap-3 px-3 text-left"
+                                : "flex h-[180px] flex-col text-left"
+                            }
+                            aria-current={
+                              search.item === a.id ? "true" : undefined
+                            }
+                            onClick={() => set({ item: a.id })}
+                            onDoubleClick={() => void open(a)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void open(a);
+                              }
+                              if (e.key === "Escape") set({ item: undefined });
+                            }}
+                          >
+                            {!list && <ArtifactThumbnail artifact={a} />}
+                            <div className="min-w-0 px-3 py-2">
+                              <p className="truncate text-[13px] font-medium">
+                                {a.title}
+                              </p>
+                              <p className="text-muted-foreground truncate text-xs">
+                                {t(`phase5.formats.${formatForArtifact(a)}`)} ·{" "}
+                                {sources.get(a.id)?.label}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {new Date(a.updatedAt).toLocaleDateString(
+                                  i18n.language
+                                )}
+                              </p>
+                            </div>
+                          </button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  className="absolute top-1 right-1"
+                                  aria-label={
+                                    t("phase5.manage") + " " + a.title
+                                  }
+                                >
+                                  <Ellipsis />
+                                </Button>
+                              }
+                            />
+                            <DropdownMenuContent>
+                              <DropdownMenuGroup>
+                                {actionItems(a).map((item) => (
+                                  <DropdownMenuItem
+                                    key={item.label}
+                                    onClick={item.run}
+                                  >
+                                    {item.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          {notice[a.id] && <p role="status">{notice[a.id]}</p>}
+                        </div>
+                      }
+                    />
+                    <ContextMenuContent>
+                      <ContextMenuGroup>
+                        {actionItems(a).map((item) => (
+                          <ContextMenuItem key={item.label} onClick={item.run}>
+                            {item.label}
+                          </ContextMenuItem>
+                        ))}
+                      </ContextMenuGroup>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                );
+              })}
             </div>
             <div style={{ height: window.after }} />
           </div>

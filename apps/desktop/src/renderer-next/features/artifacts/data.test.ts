@@ -73,3 +73,21 @@ describe("artifact provenance and bounded cards", () => {
     }
   );
 });
+
+it("R5-T14 list headings use local calendar days and disappear for name sorting", async () => {
+  const { artifactListEntries } = await import("./data");
+  const date = new Date(2026, 9, 1, 0, 1);
+  const rows = [0, 120000].map(
+    (offset, i) =>
+      ({
+        id: String(i),
+        updatedAt: new Date(date.getTime() - offset).toISOString(),
+      }) as import("#shared/contract/rows").ArtifactRow
+  );
+  expect(
+    artifactListEntries(rows, true).filter((row) => "day" in row)
+  ).toHaveLength(2);
+  expect(artifactListEntries(rows, false)).toEqual(
+    rows.map((artifact) => ({ artifact }))
+  );
+});
