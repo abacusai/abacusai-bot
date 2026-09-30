@@ -29,6 +29,7 @@ import type {
 import type { UpdateStatus } from "#shared/update";
 
 import type { HostOperations } from "../handler";
+import type { CueArbiter } from "../notch/cue-arbiter";
 import type { ServiceHost } from "../service-host";
 import type { AguiSource, ThreadReader } from "./ai/source";
 import type { MainEventBus } from "./event-bus";
@@ -55,7 +56,8 @@ export interface AppOperations {
   botHome(): string;
   restartApp(): void;
   hasGoogleChrome(): boolean;
-  reportFunnelStep(step: unknown, detail: unknown): void;
+  /** `once`: the persisted first-time report (`reportFunnelStepOnce`). */
+  reportFunnelStep(step: unknown, detail: unknown, once?: boolean): void;
   account: {
     get(): AccountState;
     skip(): AccountState;
@@ -169,4 +171,6 @@ export interface RpcDeps {
   /** The thread store (`ServiceHost.threadStore`); optional for test deps. */
   threads?: ThreadReader;
   trackers: EventTrackers;
+  /** `window.claimCue` / `window.visibleThread` (spec 06 §14.2). */
+  cues: CueArbiter;
 }

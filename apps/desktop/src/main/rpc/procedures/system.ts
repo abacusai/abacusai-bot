@@ -52,7 +52,9 @@ export const systemRouter = impl.system.router({
     context.deps.app.restartApp();
   }),
   funnelStep: impl.system.funnelStep.handler(({ input, context }) => {
-    context.deps.app.reportFunnelStep(input.step, input.detail);
+    if (input.once === true)
+      context.deps.app.reportFunnelStep(input.step, input.detail, true);
+    else context.deps.app.reportFunnelStep(input.step, input.detail);
   }),
   logs: {
     save: impl.system.logs.save.handler(async ({ input, context }) => {
