@@ -250,6 +250,7 @@ export const BotMessageList = ({
   onOpenSubtask,
   onSwitchModel,
   onResume,
+  onRetry,
 }: {
   onRateTurn?: (
     segmentId: string,
@@ -265,6 +266,8 @@ export const BotMessageList = ({
   onSwitchModel?: () => void;
   /** Run the dead turn again on the free pool, once a source has joined it. */
   onResume?: () => void;
+  /** Ask the same thing again after a turn that failed. */
+  onRetry?: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();
   const botReactions = useMemo(() => agentReactions(chatItems), [chatItems]);
@@ -384,6 +387,17 @@ export const BotMessageList = ({
             ) : (
               <BotBubble key={part.id} tone="notice">
                 {part.message}
+                {part.severity === "error" && onRetry != null && (
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    className="ms-2 align-middle"
+                    data-id="notification-retry-btn"
+                    onClick={onRetry}
+                  >
+                    {t("workspace.retry")}
+                  </Button>
+                )}
                 {wantsModelSwitch(part.actions) && onSwitchModel != null && (
                   <Button
                     variant="secondary"
