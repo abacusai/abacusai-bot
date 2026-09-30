@@ -13,7 +13,7 @@
  * back to the newest rows with default tool ranges.
  */
 export const MAX_ROWS = 100;
-const STEP = 100;
+const STEP = 50;
 const TOOL_PAGE = 50;
 /** Placeholder height per row never measured (§10). */
 export const ROW_FALLBACK_PX = 64;

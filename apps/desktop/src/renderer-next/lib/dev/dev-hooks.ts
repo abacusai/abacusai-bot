@@ -6,6 +6,7 @@ import type { AnyRouter } from "@tanstack/react-router";
 
 import type { Db } from "#next/data/db";
 import { transitionTypeSink } from "#next/lib/navigation/transition-types";
+import type { RouterContext } from "#next/router";
 
 import { navigateAndSettle } from "./settle";
 
@@ -31,6 +32,7 @@ interface AbacusDev {
   setLoaderDelay(ms: number): void;
   /** Whether this build reads the dev fixture tables instead of main's db.*. */
   fixtures: boolean;
+  chat: RouterContext["chat"];
   /** No navigation loading and no view transition running. */
   idle(): boolean;
 }
@@ -77,6 +79,7 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
     setLoaderDelay: (ms) => {
       delay.ms = ms;
     },
+    chat: (router.options.context as RouterContext).chat,
     fixtures: import.meta.env.VITE_NEXT_DB_FIXTURES === "1",
     idle: () =>
       router.state.status === "idle" &&

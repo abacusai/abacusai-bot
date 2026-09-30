@@ -58,7 +58,7 @@ describe("R2-T16 window (pure)", () => {
       window = showEarlier(items, window);
       expect(window.end - window.start).toBeLessThanOrEqual(MAX_ROWS);
     }
-    expect(window.start).toBe(3000 - MAX_ROWS - 1000);
+    expect(window.start).toBe(3000 - MAX_ROWS - 500);
     for (let i = 0; i < 10; i += 1) window = showLater(items, window);
     expect(window).toEqual({ start: 3000 - MAX_ROWS, end: 3000, ranges: {} });
     expect(
@@ -130,7 +130,7 @@ describe("R2-T16 transcript", () => {
       window = moreSteps(items, window, "huge");
       expect(mountedRows(items, window)).toBeLessThanOrEqual(MAX_ROWS);
     }
-    expect(window.ranges.huge!.end).toBe(1050);
+    expect(window.ranges.huge!.end).toBe(550);
     expect(window.ranges.huge!.start).toBeGreaterThan(0);
   });
 

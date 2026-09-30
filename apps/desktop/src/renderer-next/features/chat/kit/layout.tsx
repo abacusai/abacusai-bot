@@ -223,7 +223,7 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
   return (
     <MessageScrollerProvider
       autoScroll
-      defaultScrollPosition="last-anchor"
+      defaultScrollPosition="end"
       scrollPreviousItemPeek={64}
     >
       <div
