@@ -12,6 +12,7 @@ import { FakeProvider } from "../../../packages/test-support/src/fake-provider.t
 const desktop = resolve(import.meta.dirname, "..");
 const repo = resolve(desktop, "../..");
 const port = 9427;
+const canvasWidth = Number(process.env.ABACUSBOT_BOTS_TEST_WIDTH ?? 1280);
 const scratch = mkdtempSync(join(tmpdir(), "bots-real-"));
 const home = join(scratch, "home");
 mkdirSync(home);
@@ -78,7 +79,7 @@ const child = spawn(electron, [".", `--remote-debugging-port=${port}`], {
     ABACUSAI_BOT_HOME: home,
     ABACUSAI_BOT_USERDATA: join(scratch, "userdata"),
     ABACUSBOT_RENDERER_GENERATION: "wco",
-    ABACUSBOT_DEV_CONTENT_SIZE: "1280x800",
+    ABACUSBOT_DEV_CONTENT_SIZE: `${canvasWidth}x800`,
     ABACUSBOT_DEV_HARNESS: "1",
   },
   stdio: ["pipe", "pipe", "pipe"],
@@ -109,10 +110,22 @@ try {
     ws.onopen = resolve;
     ws.onerror = reject;
   });
+  const frames = [];
+  let recording = null;
   let id = 0;
   const pending = new Map();
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
+    if (msg.method === "Page.screencastFrame") {
+      if (recording)
+        frames.push({
+          width: recording,
+          data: msg.params.data,
+          timestamp: msg.params.metadata.timestamp,
+        });
+      void send("Page.screencastFrameAck", { sessionId: msg.params.sessionId });
+      return;
+    }
     const waiter = pending.get(msg.id);
     if (!waiter) return;
     pending.delete(msg.id);
@@ -240,6 +253,46 @@ try {
   await wait("!document.querySelector('[data-slot=bot-model-value]')");
   assert.equal(await modelCount(), 1);
   checks.push("expanded composer moves the single model value from Details");
+  // Record the native shared-layout move in the pane and in the drawer.
+  for (const width of [canvasWidth]) {
+    await wait(`innerWidth===${width}`);
+    await evaluate(
+      "document.querySelector('[data-slot=composer] textarea').blur()"
+    );
+    await wait("!!document.querySelector('[data-slot=bot-model-value]')");
+    assert.equal(await modelCount(), 1);
+    recording = width;
+    await send("Page.startScreencast", { format: "jpeg", quality: 75 });
+    await evaluate(
+      "document.querySelector('[data-slot=composer] textarea').focus()"
+    );
+    await wait("!document.querySelector('[data-slot=bot-model-value]')");
+    assert.equal(await modelCount(), 1);
+    await sleep(400);
+    await send("Page.stopScreencast");
+    recording = null;
+  }
+  const frameDirectory = join(repo, ".build/bots-model-morph");
+  mkdirSync(frameDirectory, { recursive: true });
+  frames.forEach((frame, index) =>
+    writeFileSync(
+      join(
+        frameDirectory,
+        `${frame.width}-${String(index).padStart(3, "0")}.jpg`
+      ),
+      Buffer.from(frame.data, "base64")
+    )
+  );
+  writeFileSync(
+    join(frameDirectory, `frames-${canvasWidth}.json`),
+    JSON.stringify(
+      frames.map(({ data: _data, ...frame }) => frame),
+      null,
+      2
+    )
+  );
+  assert(frames.some((frame) => frame.width === canvasWidth));
+  checks.push(`native model morph recorded at ${canvasWidth} with one value`);
   await clickText("Integration One");
   await clickText("Integration Two");
   await wait(`window.__abacusDev.rows('bots')[0].model==='fake/fake-2'`);
@@ -353,6 +406,81 @@ try {
   checks.push(
     "agent memory is forgotten through the collection; restarted agent uses App default"
   );
+  if (canvasWidth >= 1100) {
+    await wait("window.__abacusDev.rows('sessions').every(s=>!s.turn?.isBusy)");
+    await navigate("/bots/new");
+    if (!(await evaluate("!!document.querySelector('.accent-outline')"))) {
+      await evaluate(
+        `document.querySelector('[aria-label="Options for Chief of Staff"]').click()`
+      );
+      await wait(
+        "[...document.querySelectorAll('[role=menuitem]')].some(el=>el.textContent.includes('Mark as unread'))"
+      );
+      await evaluate(
+        "[...document.querySelectorAll('[role=menuitem]')].find(el=>el.textContent.includes('Mark as unread')).click()"
+      );
+    }
+    await navigate("/bots/new?step=setup&template=chief-of-staff");
+    await wait("!!document.querySelector('[data-slot=toggle-group] button')");
+    await evaluate(
+      "document.querySelector('[data-slot=toggle-group] button').click()"
+    );
+    await wait("!!document.querySelector('.accent-outline')");
+    const boundaryProbe = `(() => {
+    const canvas = document.createElement('canvas'); canvas.width=canvas.height=1;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const rgba = color => { ctx.clearRect(0,0,1,1); ctx.fillStyle=color; ctx.fillRect(0,0,1,1); return [...ctx.getImageData(0,0,1,1).data].map((v,i)=>i===3?v/255:v); };
+    const over = (a,b) => [0,1,2].map(i=>a[i]*a[3]+b[i]*(1-a[3])).concat(1);
+    const luminance = rgb => rgb.slice(0,3).map(c=>{c/=255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4}).reduce((v,c,i)=>v+c*[.2126,.7152,.0722][i],0);
+    const contrast = (a,b) => { const x=luminance(a), y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
+    const backdrop = el => { const parents=[];for(let p=el.parentElement;p;p=p.parentElement)parents.unshift(p);return parents.reduce((bg,p)=>over(rgba(getComputedStyle(p).backgroundColor),bg),[255,255,255,1]); };
+    return [...document.querySelectorAll('.bot-accent-control,.accent-outline')].filter(el=>el.getBoundingClientRect().width>0).map(el=>{const css=getComputedStyle(el), bg=backdrop(el), border=rgba(css.borderTopColor), fill=over(rgba(css.backgroundColor),bg), dark=document.documentElement.classList.contains('dark');return {label:el.getAttribute('aria-label')??el.textContent.trim(),kind:el.classList.contains('accent-outline')?'dot':el.getAttribute('aria-pressed')==='true'?'selected':'control',width:css.borderTopWidth,ratio:contrast(dark?fill:over(border,bg),bg),borderAlpha:border[3],borderColor:css.borderTopColor,background:css.backgroundColor,backdrop:bg,dark};});
+  })()`;
+    const boundaries = [];
+    for (const theme of ["light", "dark"]) {
+      await call("db.prefs.update", { patch: { theme } });
+      await wait(
+        `document.documentElement.classList.contains('dark')===${theme === "dark"}`
+      );
+      await sleep(400);
+      const measured = await evaluate(boundaryProbe);
+      assert(
+        measured.some((row) => row.kind === "dot"),
+        "real unread dots measured"
+      );
+      assert(
+        measured.some((row) => row.kind === "selected"),
+        "selected shape measured"
+      );
+      assert(measured.length >= 12, "swatches and submit control measured");
+      for (const row of measured) {
+        assert(row.ratio >= 3, `${theme} ${row.label}: ${row.ratio}`);
+        if (theme === "light") {
+          assert.equal(row.width, "1px");
+          assert(row.borderAlpha > 0);
+        }
+      }
+      boundaries.push(...measured);
+    }
+    await call("db.prefs.update", { patch: { theme: "light" } });
+    await wait("!document.documentElement.classList.contains('dark')");
+    await evaluate(
+      "{const style=document.createElement('style');style.id='boundary-mutation';style.textContent='.bot-accent-control,.accent-outline{border:0!important}';document.head.append(style);}"
+    );
+    assert(
+      (await evaluate(boundaryProbe)).some((row) => row.width !== "1px"),
+      "removing borders fails the rendered-boundary assertion"
+    );
+    await evaluate("document.getElementById('boundary-mutation').remove()");
+    mkdirSync(join(repo, ".build"), { recursive: true });
+    writeFileSync(
+      join(repo, ".build/bots-boundaries.json"),
+      JSON.stringify(boundaries, null, 2)
+    );
+    checks.push(
+      "rendered composited swatch, selected-shape, dot and accent-control boundaries pass light/dark"
+    );
+  }
   await navigate(`/bots/${bot.id}?tab=details`);
   await clickText("Delete bot");
   await wait("!!document.querySelector('[role=alertdialog]')");
@@ -364,7 +492,7 @@ try {
   checks.push("delete leaves the check-in with cleared provenance");
   mkdirSync(join(repo, ".build"), { recursive: true });
   writeFileSync(
-    join(repo, ".build/bots-real.json"),
+    join(repo, `.build/bots-real-${canvasWidth}.json`),
     JSON.stringify({ checks, scratch }, null, 2)
   );
   console.log(`bots-real: ${checks.length} checks passed`);

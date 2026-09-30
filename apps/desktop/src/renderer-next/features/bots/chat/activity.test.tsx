@@ -56,6 +56,14 @@ it("the routed avatar follows actual reasoning/text streams and the send reactio
   await waitFor(() => expect(mood()).toBe("talking"));
   await act(async () => {
     relay.emit(b.textEnd("answer"));
+    relay.emit(b.toolStart("reading", "read", "answer"));
+  });
+  await waitFor(() =>
+    expect(document.querySelector("[data-bot-row]")?.textContent).toContain(
+      "read"
+    )
+  );
+  await act(async () => {
     relay.emit(b.runFinished("r"));
   });
   await waitFor(() => expect(mood()).not.toBe("talking"));
