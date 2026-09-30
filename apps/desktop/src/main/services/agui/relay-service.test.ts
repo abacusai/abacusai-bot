@@ -17,6 +17,7 @@ import type { AgentSessionStatus } from "#shared/contracts";
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import type { AgentWire } from "../session/cli-manager-service";
 import { ThreadStore } from "../session/thread-store";
+import { TranscriptService } from "../session/transcript-service";
 import {
   AguiRelayService,
   defaultWire,
@@ -1209,5 +1210,45 @@ describe("wire selection (review r1)", () => {
     });
     // No ai.* call has named the thread.
     expect(relay.wireFor("never-asked")).toBe("agui");
+  });
+});
+
+describe("v1-derived baseline (step-1 review r2 #11)", () => {
+  it("a same-millisecond legacy save reaches the relay's baseline through the fingerprint", async () => {
+    const previous = process.env.ABACUSAI_BOT_HOME;
+    process.env.ABACUSAI_BOT_HOME = home;
+    try {
+      const { store, client } = setup();
+      const clock = new Date("2026-09-01T10:00:00.000Z");
+      const transcripts = new TranscriptService({
+        threads: store,
+        now: () => clock,
+        isWriteBlocked: () => false,
+      });
+      const text = (id: string, source: string) => ({
+        type: "text",
+        id,
+        source,
+        content: id,
+      });
+      transcripts.write("s1", [text("u1", "user"), text("b1", "bot")]);
+      const first = await client.ai.hydrate({ threadId: "s1" });
+      expect(first.messages.map((message) => message.id)).toEqual(["u1", "b1"]);
+      // The old renderer saves again within the same millisecond.
+      transcripts.write("s1", [
+        text("u1", "user"),
+        text("b1", "bot"),
+        text("u2", "user"),
+      ]);
+      const second = await client.ai.hydrate({ threadId: "s1" });
+      expect(second.messages.map((message) => message.id)).toEqual([
+        "u1",
+        "b1",
+        "u2",
+      ]);
+    } finally {
+      if (previous === undefined) delete process.env.ABACUSAI_BOT_HOME;
+      else process.env.ABACUSAI_BOT_HOME = previous;
+    }
   });
 });

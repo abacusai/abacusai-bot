@@ -91,3 +91,78 @@ The mapper now carries the data. The kit spec must say how to use it:
 - Scoped to this work (`shared/transcript`, `main/migrations`, `main/services`, `main/rpc`): 2,292 passed across 217 files.
 - `tsc -b`: clean in the files this work touches. `vitest.config.ts:78` still reports a `compiler` option that is missing from the plugin typings in this install; that file was not touched here.
 - `oxlint .`: 0 errors. `oxfmt --check` on the touched folders: clean.
+
+## r2: fixes after `00-transport-C1.impl-codex-r2.md`
+
+Source: `00-transport-C1.impl-codex-r2.md` (items 1–13). Two items from the cut-over review, `07-cut-over.codex-r1.md`, are fixed here too:
+- #2, the same fault as r2 #2;
+- #7, blocked writes lost at quit.
+
+Every item started with a test that failed against the code before its fix. The failing assertion is named in the table.
+
+Commits (on top of `bc74e973`, which merges `rewrite/renderer`):
+
+1. `b763fe9c` Mapper: run-scoped lifecycle dedup, foreign before shape, native id reservation
+2. `ee9af7a4` Thread store: ownership before every write, fail-closed clears, durable held writes
+3. `92edf996` Relay: compare the v1 fingerprint when refreshing a v1-derived baseline
+4. `272868f3` Step 4: archive index, listing errors, fail-closed clears
+5. (docs) this section
+
+| # | Fix | Failing-first test |
+|---|---|---|
+| 1 (blocker) | Step 4 now records what it archives. The coordinator suggested "record archived ids in the step's partial record", but that record belongs to the runner (`record.ts`), which this work does not touch. The same guarantee comes from inside the step's own plan instead:<br>• Step 4 writes `threads/.archive-index.json`, which maps each v1 file it archived as current to `{ fingerprint, updatedAt }`.<br>• The index is a planned write (`create`, or `replace-user` so a rollback restores the old index) in the **same commit** as the removals, so it is durable exactly when they are.<br>• A later run never treats a twin listed there as an orphan.<br>• `ThreadStore` serves a v1-derived twin whose v1 file is gone when the index lists that v1 file with the twin's own fingerprint. That is also the per-thread archive provenance the cut-over review's #1 asks the rollback floor N to ship. | C-T9 "r2 #1: a later partial run never takes a twin it archived the v1 of for an orphan". It runs three partial runs and then hydrates all four threads through the transition store. It failed on the hydrate of `current`, whose twin the second run had archived. |
+| 2 (= cut-over #2) | Listing a folder fails the step on any error except ENOENT: the plan throws, the runner records `lastFailure`, and nothing is removed or recorded. A twin counts as an orphan only when `lstat` of its v1 path is ENOENT. A folder, a link or a path that can't be stat'ed counts as present. Symlinked v1 files are now listed; reading follows the link. | C-T9 "r2 #2: a transcripts folder it cannot list stops the step, and archives no twin" (an injected EIO), and "r2 #2: a twin whose v1 path exists in any form is no orphan" (a folder and a symlink). |
+| 3 | Lifecycle segments are deduplicated only within one groupable run: consecutive tools, thinking and blank text. Any other segment the old UI renders ends the run, and so does a bracket frame. Segments hydration drops (invalid or unknown) do not end it. This is `deriveGroupedSuffix`, which calls `omitSupersededToolLifecycleSegments` per run. Across runs, a reused id is an independent call and gets its own `#n` id.<br>**Golden diff (`duplicate-tool-ids`), deliberate:**<br>• `marker` (executing) and `done` (success) share `call-1`, but the bot text `b1` between them ends the run. So the old UI shows both, and so does the mapper now: `call-1` stopped, and `call-1#2` done with `callId: "call-1"`.<br>• In-run supersession is covered by the new unit test.<br>• C-T2 now also checks that a superseded entry sits in the same message as the entry that replaced it, and that the replacement has a part. | C-T2 "deduplicates a call's lifecycle only within its run and scope (r2 #3)": two turns, a second run in one message, and a child scope, all reusing `call-1`. It failed because the first assistant message had no parts. |
+| 4 | The dual-write's fast path now requires the file head to start `{"version":2,` **and** name `transcript-v1`. Any other head takes the full parse, where a version above 2 is `foreign`. | C-T7 "#4: never takes the fast path over a newer version that says transcript-v1". |
+| 5 | `readCurrentFile` checks for a foreign or unreadable twin before any clear-marker repair. When v1 is proven history, it is converted **in memory**; otherwise the result is `null`. | C-T7 "#5: a clear marker never lets a repair replace a protected twin". |
+| 6 | `parseThreadTwin` classifies a version-2 file with an unknown string `source.kind` as `foreign` before it checks `messages`. | `thread-file.test.ts` "classifies an unknown source kind as foreign before checking messages". |
+| 7 | Clears now fail closed. A marker gains `savedAfterClear`. `TranscriptService.write` calls `ThreadStore.noteSave`, which records the saved v1 file's fingerprint while a marker exists. A v1 file counts as new history only if it matches that fingerprint. This covers a marker with no `v1Fingerprint` (v1 unreadable at clear time), a damaged marker, and a rollback that restores old bytes: all stay cleared until a save. A save made under a damaged marker gets a fresh token. Step 1's and step 4's `isClearedV1` use the same rule. | C-T7 "#7: a clear with no v1 fingerprint stays cleared until a save proves new history": unreadable v1 at the clear, a restored original, then a damaged marker, then a save. C-T9 "r2 #7: a clear marker without proof keeps its v1 file cleared". |
+| 8 | `writeAgui` throws `ThreadFileProtectedError` for a foreign or unreadable twin and leaves the file alone. The relay already catches a persist error: it logs "persisting the transcript failed" and keeps the history in memory. | C-T7 "#8: writeAgui refuses a foreign or unreadable twin and leaves it". |
+| 9 | Ownership is checked by one routine for the dual-write and `writeAgui`. A held (journalled) change to the twin is authoritative: its content decides the kind, so a held relay write is never replaced by a legacy save. | C-T7 "#9: a held relay write is never replaced by a legacy dual-write". |
+| 10 | v1 and v2 now go through the same held-file journal (below). The thread store reads v1 as this launch sees it, held save included. So the twin it writes and the v1 it compares against are the same bytes, and there is no backward repair. | C-T7 "#10: a memory-only v1 save is what the thread store converts" (only v1 held). |
+| 11 | `ThreadHistory.v1Fingerprint` is set from `source.fingerprint` in `relay-service.ts` `toHistory`. `thread-relay.ts` `#refreshBaseline` now skips a reload only when both `updatedAt` **and** the fingerprint are unchanged. | `relay-service.test.ts` "a same-millisecond legacy save reaches the relay's baseline through the fingerprint", through the real relay, `ThreadStore` and `TranscriptService` with a fixed clock. It failed because the second hydrate returned `["u1","b1"]`. |
+| 12 | The deferred dual-write skips a v1 text over `maxTranscriptBytes` (64 MB) before mapping it. | C-T7 "#12: the deferred dual-write keeps the 64 MB cap". |
+| 13 (partial) | `shared/transcript/native-ids.ts` reserves `#`:<br>• `toNativeId` leaves an id without `#` or `%` unchanged, which covers every id the agent and the kit produce today, and percent-encodes anything else into a namespace disjoint from the mapper's;<br>• `fromNativeId` restores the original on egress.<br>**Handed over:** the calls belong at the real ingress points, which are outside this work's files:<br>• the agent's AG-UI ids (`packages/agent/src/agui/emit.ts:870`, the id helpers in `agui/ids.ts`);<br>• `ai.send` message ids (`rpc/**`, the `AiSendInput` schema).<br>The coordinator allowed relay edits for #11 only. | `native-ids.test.ts`: round trip and disjointness; every derived id of a migrated thread (`u#2`, `sub#0`, `t#result`, …) against a live id spelled the same after `toNativeId`. |
+| cut-over #7 | Writes are journalled durably instead of being rejected. `HeldFiles` (`services/session/held-files.ts`) handles every write and removal made by the thread store and `TranscriptService`: twin, v1, clear marker, repair, dual-write, `writeAgui`, reset and deletion.<br>• While a destination is held, the change goes to `threads/.pending/<hash>.json` (the whole new content, or a removal). That is outside every held destination.<br>• Every read sees the journalled change, across restarts too.<br>• The first use of the destination after the block lifts replays the change onto the file and drops the entry.<br>• `HeldFiles.replayAll()` replays everything at once.<br>• If the journal itself is held (an attempt with unknown destinations holds every file), the change stays in memory for the launch, and that is logged. Nothing may be written under the home then. | C-T7 "cut-over #7: send, reset and quit while recovery is unresolved lose nothing": a relay terminal (`writeAgui`) and a reset while held; a relaunch still held (both still visible, files untouched); a relaunch settled (replayed onto the files). |
+
+**Also changed, for #7:** the r1 C-T7 "write blocks" test assumed a relaunch would forget held changes. It now relaunches with recovery still unresolved; the unblocked relaunch replays the journal, as intended.
+
+**Handed over (r2):**
+- **#13 wiring:** at the agent emit and `ai.send` ingress (above).
+- **`threadStore.held.replayAll()`:** call it once after `setMigrationWriteBlocks` in `startup.ts`/`index.ts`, so journalled changes to threads nobody opens are applied too. Every other path replays on first use.
+- **Cut-over #1:** the rollback floor N must read `threads/.archive-index.json`, which this commit's `ThreadStore` already does, and ship it before N+1 performs removals.
+
+**r2 tests:**
+- `vitest --project main --project shared`: 2,545 passed, 2 failed, 7 todo, across 244 files (1 skipped). The 2 failures are the known `agent-runtime-deps.test.ts` environment issue.
+- `tsc -b`: clean apart from the untouched `vitest.config.ts:78`.
+- `oxlint`: 0 errors on the touched folders.
+
+## r3: oversized history (cut-over r2 #8, #9) and Codex r3
+
+Sources:
+- `07-cut-over.codex-r2.md` #8 (an oversized v1 file with no twin shows no history) and #9 (the fallback must not bring cleared history back);
+- `00-transport-C1.impl-codex-r3.md` items 1–3.
+
+Every item started with a test that failed first.
+
+Commits (on top of `1365c472`, which merges `rewrite/renderer` at `8dc67139` or later):
+
+1. `ef56754d` Thread store: bounded streaming read of oversized v1 history, clear rules first
+2. `8bee9588` Thread store and step 4: strict archive index, one `HeldFiles`, strict writer header
+3. (docs) this section
+
+| Item | Fix | Failing-first test |
+|---|---|---|
+| cut-over #8 | `services/session/stream-v1.ts` `streamTranscriptV1` reads a v1 file in 1 MB chunks and hashes it along the way. The digest equals `fingerprintV1` of the whole text. It parses the `segments` array one element at a time, so no string is ever larger than one segment. Multi-byte characters split across chunks are handled with a `StringDecoder`. It checks the result: `version: 1` and a closed `segments` array, otherwise `invalid`.<br>`ThreadStore.readV1` then picks a path by size:<br>• up to 64 MB: whole-file read, as before;<br>• 64 MB–512 MB (`MAX_STREAMED_TRANSCRIPT_BYTES`): streamed, then converted **in memory only**. The repair never persists a twin for it, and the dual-write already skips it.<br>• above 512 MB: `readCurrentWithNotice(id)` returns `{ file: null, notice: { kind: "too-large", size, limit } }` when no clear marker applies and there is no twin. `readCurrentFile`/`readCurrent` are unchanged wrappers.<br>`TranscriptService.read` (the old renderer's path) is unchanged: it reads the whole file, as the old renderer always has. | `stream-v1.test.ts`: the same segments and fingerprint as a whole-file parse with 1-, 2-, 3-, 7-, 64-byte and 1 MB chunks, on JSON with brackets inside strings, escapes, emoji, primitive segments and nested extra fields; plus the invalid shapes. C-T7 r3 "serves an oversized v1 file with no twin, read-only" (no twin written; the fingerprint is the file's). C-T7 r3 "past the streaming bound, answers with a typed too-large notice". |
+| cut-over #9 | The streamed read happens inside `readV1`, before any decision, so the clear-marker rules apply unchanged. A v1 file under `<id>.cleared` counts only when a later save proved it (`savedAfterClear`), compared against the streamed fingerprint. Otherwise the result is `null`, with no notice. | C-T7 r3 "an oversized cleared thread whose v1 removal failed stays cleared across a restart": an oversized save, a clear with the v1 file left in place, two relaunches (still empty), then a save after the clear (served). |
+| Codex r3 #1 | `readArchiveIndexStrict` returns empty only when the file is absent. If the file can't be read, isn't JSON, or doesn't validate (version 1, every entry with string `fingerprint` and `updatedAt`), it throws. Step 4 uses it, so the plan fails, `lastFailure` is recorded, and nothing is removed. Reads (`ThreadStore`) use the lenient form: a damaged index serves nothing from it and removes nothing. | C-T9 "r3 #1: an archive index it cannot read or validate stops the step" (a damaged file, and a wrong version). |
+| Codex r3 #2 | `TranscriptService` now uses the thread store's `HeldFiles` instance, including its memory fallback, when it has one. `HeldFiles.write` takes a per-call writer, so each service keeps its own write seam. | C-T7 r3 "#2: a v1 save held in memory is what the thread store converts": v1 and the journal are held, the twin is writable. |
+| Codex r3 #3 | The fast path now matches the exact header this build's v1-derived writer produces, anchored at the start: `{"version":2,"threadId":<string>,"updatedAt":<string>,"source":{"kind":"transcript-v1","updatedAt":<string>,"segments":<n>`. Anything else takes the full ownership parse. | C-T7 r3 "#3: the fast path never trusts a nested source before / inside the top-level one"; plus a positive check that `v1ToThreadFile` output, with and without a fingerprint, still takes the fast path. |
+
+**Handed over (r3):**
+- The relay should read through `readCurrentWithNotice` and show the `too-large` notice (for example as a hydrate notice). I can edit `relay-service.ts` only for r2 #11.
+
+**Tests (r3):**
+- `vitest --project main --project shared`: 2,560 passed, 2 failed, 7 todo, across 245 files (1 skipped). The 2 failures are the known `agent-runtime-deps.test.ts` pnpm environment issue.
+- `tsc -b`: clean apart from the untouched `vitest.config.ts:78`.
+- `oxlint`: 0 errors on the touched folders.

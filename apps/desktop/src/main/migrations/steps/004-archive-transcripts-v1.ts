@@ -39,7 +39,12 @@ import {
   v1ToThreadFile,
 } from "#shared/transcript/thread-file";
 
-import { isSafeSessionId } from "../../services/session/thread-store";
+import {
+  ARCHIVE_INDEX_NAME,
+  isSafeSessionId,
+  readArchiveIndexStrict,
+  type ArchiveIndex,
+} from "../../services/session/thread-store";
 import { quarantineRoot } from "../backup";
 import type { MigrationStep, PlannedWrite } from "../types";
 import {
@@ -49,6 +54,7 @@ import {
   listTranscriptFiles,
   readTwinSummary,
   threadsDir,
+  v1PathIsAbsent,
   YIELD_EVERY,
   yieldToEventLoop,
 } from "./transcript-files";
@@ -81,6 +87,12 @@ export const archiveTranscriptsV1 = (
     const stagedQuarantine = path.join(ctx.staging, "quarantine");
     fs.mkdirSync(stagedThreads, { recursive: true });
     fs.mkdirSync(stagedQuarantine, { recursive: true });
+    // What earlier commits of this step archived, and what this one adds:
+    // committed with the removals, so a later run (or the transition thread
+    // store) tells a twin whose v1 this step archived from an orphan.
+    // Throws (the plan fails, nothing is removed) unless absent or valid.
+    const index = readArchiveIndexStrict(threadsDir(ctx.home));
+    const added: ArchiveIndex["archived"] = {};
     const total = names.length + threadNames.length;
     const label = "Archiving old chat history";
     let done = 0;
@@ -153,6 +165,10 @@ export const archiveTranscriptsV1 = (
           if (decision.reason === "up-to-date") {
             stats.archived += 1;
             removals.push(found.file);
+            added[found.sessionId] = {
+              fingerprint: found.fingerprint,
+              updatedAt: found.updatedAt,
+            };
           } else {
             stats.kept += 1;
             ctx.log(`kept ${name}: its thread file is ${decision.reason}`);
@@ -186,7 +202,15 @@ export const archiveTranscriptsV1 = (
       await tick();
       try {
         const sessionId = name.slice(0, -".json".length);
-        if (withV1.has(name) || !isSafeSessionId(sessionId)) continue;
+        if (
+          withV1.has(name) ||
+          !isSafeSessionId(sessionId) ||
+          index.archived[sessionId] !== undefined ||
+          added[sessionId] !== undefined
+        )
+          continue;
+        // Nothing at all at the v1 path, not even a folder or a link.
+        if (!v1PathIsAbsent(ctx.home, sessionId)) continue;
         const twinFile = path.join(threadsDir(ctx.home), name);
         const twin = readTwinSummary(twinFile);
         if (twin.status === "ok" && twin.source.kind === "transcript-v1") {
@@ -198,6 +222,21 @@ export const archiveTranscriptsV1 = (
         stats.failed += 1;
         ctx.log(`failed ${name}: ${String(error)}`);
       }
+    }
+
+    if (Object.keys(added).length > 0) {
+      const dest = path.join(threadsDir(ctx.home), ARCHIVE_INDEX_NAME);
+      const staged = path.join(ctx.staging, ARCHIVE_INDEX_NAME);
+      const next: ArchiveIndex = {
+        version: 1,
+        archived: { ...index.archived, ...added },
+      };
+      fs.writeFileSync(staged, JSON.stringify(next));
+      writes.push({
+        dest,
+        staged,
+        kind: fs.existsSync(dest) ? "replace-user" : "create",
+      });
     }
 
     ctx.progress(total, total, label);

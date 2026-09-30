@@ -5,19 +5,23 @@
  * writes are atomic because a half-written file would poison the session.
  *
  * A transcript an unresolved migration commit may cover
- * (`isMigrationWriteBlocked`, spec 00 C.1) is not written or removed this
- * launch: the change is kept in memory and `read` returns it, so the session
- * keeps working, and the next launch's rollback can neither overwrite it nor
- * be defeated by it.
+ * (`isMigrationWriteBlocked`, spec 00 C.1) is not written or removed: the
+ * change is journalled (`HeldFiles`, `threads/.pending/`), `read` and the
+ * thread store see it, and it is replayed onto the file once the block
+ * lifts, so a save made while recovery is unresolved survives a quit.
  */
-import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 
 import { isMigrationWriteBlocked } from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";
-import { isSafeSessionId, type ThreadStore } from "./thread-store";
+import { HeldFiles } from "./held-files";
+import {
+  isSafeSessionId,
+  THREADS_DIR_NAME,
+  type ThreadStore,
+} from "./thread-store";
 
 const TRANSCRIPTS_DIR = (): string => path.join(abacusBotHome(), "transcripts");
 
@@ -51,17 +55,26 @@ export class TranscriptService {
   // Fires after the atomic rename; optional so persistence never depends on it.
   private onPersist?: (sessionId: string) => void;
   private readonly threads?: ThreadStore;
-  private readonly isWriteBlocked: (file: string) => boolean;
   private readonly now: () => Date;
+  /**
+   * The thread store's instance when there is one, memory fallback included,
+   * so the store converts exactly the v1 save this service holds.
+   */
+  private readonly held: HeldFiles;
   private readonly writeFile: (file: string, text: string) => void;
-  /** Held in memory while the file is write-blocked (null: removed). */
-  private readonly overlay = new Map<string, StoredTranscript | null>();
 
   constructor(options: TranscriptServiceOptions = {}) {
     this.threads = options.threads;
-    this.isWriteBlocked = options.isWriteBlocked ?? isMigrationWriteBlocked;
     this.now = options.now ?? (() => new Date());
     this.writeFile = options.writeFile ?? writeFileAtomicSync;
+    this.held =
+      options.threads?.held ??
+      new HeldFiles({
+        dir: () => path.join(abacusBotHome(), THREADS_DIR_NAME, ".pending"),
+        isWriteBlocked: options.isWriteBlocked ?? isMigrationWriteBlocked,
+        writeFile: options.writeFile ?? writeFileAtomicSync,
+        log: (message) => console.error(`[transcripts] ${message}`),
+      });
   }
 
   setOnPersist(callback: (sessionId: string) => void): void {
@@ -71,17 +84,15 @@ export class TranscriptService {
   read(sessionId: string): StoredTranscript | null {
     const filePath = transcriptPath(sessionId);
     if (filePath == null) return null;
-    if (this.overlay.has(sessionId)) return this.overlay.get(sessionId) ?? null;
+    const read = this.held.read(filePath);
+    // Missing is normal before the first save; corrupt degrades to empty.
+    if (read.status !== "ok") return null;
     try {
-      const parsed = JSON.parse(
-        fs.readFileSync(filePath, "utf-8")
-      ) as StoredTranscript;
+      const parsed = JSON.parse(read.text) as StoredTranscript;
       if (parsed?.version !== 1 || !Array.isArray(parsed?.segments))
         return null;
-
       return parsed;
     } catch {
-      // Missing is normal before the first save; corrupt degrades to empty.
       return null;
     }
   }
@@ -99,19 +110,17 @@ export class TranscriptService {
       segments,
     };
     const text = JSON.stringify(payload);
-    if (this.isWriteBlocked(filePath)) {
-      if (!this.overlay.has(sessionId))
-        console.error(
-          `[transcripts] ${sessionId} is held by an unresolved migration; saves stay in memory this launch`
-        );
-      this.overlay.set(sessionId, payload);
-    } else {
-      try {
-        this.writeFile(filePath, text);
-      } catch (error) {
-        console.error("[transcripts] failed to write transcript", error);
-        return;
-      }
+    try {
+      this.held.write(filePath, text, this.writeFile);
+    } catch (error) {
+      console.error("[transcripts] failed to write transcript", error);
+      return;
+    }
+    // A save after a clear is what proves the v1 file is new history.
+    try {
+      this.threads?.noteSave(sessionId, text);
+    } catch (error) {
+      console.error("[transcripts] failed to note the save", error);
     }
     // Isolated: a failed v2 write is repaired by the next `readCurrent`, and
     // must not stop `onPersist`. The fingerprint is of the exact v1 text.
@@ -141,15 +150,10 @@ export class TranscriptService {
     } catch (error) {
       console.error("[transcripts] failed to mark the thread cleared", error);
     }
-    if (this.isWriteBlocked(filePath)) {
-      this.overlay.set(sessionId, null);
-    } else {
-      try {
-        fs.rmSync(filePath, { force: true });
-        this.overlay.delete(sessionId);
-      } catch (error) {
-        console.error("[transcripts] failed to remove transcript", error);
-      }
+    try {
+      this.held.remove(filePath);
+    } catch (error) {
+      console.error("[transcripts] failed to remove transcript", error);
     }
     try {
       this.threads?.remove(sessionId);
