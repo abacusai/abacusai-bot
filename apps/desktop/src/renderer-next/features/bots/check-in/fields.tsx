@@ -1,7 +1,9 @@
 import { useTranslation } from "react-i18next";
+import * as v from "valibot";
 
 import {
   CHECK_IN_PRESETS,
+  CheckInDraftSchema,
   withMinute,
   type CheckInDraft,
 } from "#next/lib/bots/check-in";
@@ -23,6 +25,7 @@ export const CheckInFields = ({
   onBlur?(): void;
 }) => {
   const { t, i18n } = useTranslation();
+  const invalidTime = !v.safeParse(CheckInDraftSchema, value).success;
   return (
     <Field onBlur={onBlur}>
       <FieldLabel id="check-in-label">{t("bots.checkIn.label")}</FieldLabel>
@@ -58,12 +61,23 @@ export const CheckInFields = ({
           </FieldLabel>
           <Input
             id="check-in-time"
+            aria-invalid={invalidTime}
+            aria-describedby={invalidTime ? "check-in-time-error" : undefined}
             type="time"
             value={value.time}
             onChange={(e) => onChange({ ...value, time: e.target.value })}
             className="w-32"
           />
         </Field>
+      )}
+      {invalidTime && (
+        <p
+          id="check-in-time-error"
+          role="alert"
+          className="text-destructive text-xs"
+        >
+          {t("bots.form.validation.required")}
+        </p>
       )}
       {value.preset === "hourly" && (
         <Field>
