@@ -188,7 +188,10 @@ export const ShellLayout = ({
             statusText={status ?? undefined}
             badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
           />
-          <TopBar.Actions folded={layout.titleBar.actionsFolded} />
+          <TopBar.Actions
+            folded={layout.titleBar.actionsFolded}
+            tabs={panelInLayout ? panelTabs : []}
+          />
           {panelInLayout && panel.tab != null && (
             <TopBar.PanelTabs
               tabs={panelTabs}
