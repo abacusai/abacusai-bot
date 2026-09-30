@@ -1250,7 +1250,10 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "Lanjutkan dengan {{browser}} · {{profile}}",
-    "signInAnotherWay": "Masuk dengan cara lain"
+    "signInAnotherWay": "Masuk dengan cara lain",
+    "haveAccountContinueWith": "Saya sudah punya akun · Lanjutkan dengan {{browser}}",
+    "signInOptions": "Cara lain untuk masuk",
+    "usesBrowserSessions": "Masuk dengan Google, Microsoft, dan Apple memakai akun Anda di {{browser}}."
   },
   "openFile": {
     "failed": "Tidak dapat membuka berkas itu.",

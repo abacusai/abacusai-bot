@@ -1,4 +1,12 @@
-import { Gift, Brain, Globe, Puzzle, Sparkles, UserRound } from "lucide-react";
+import {
+  Brain,
+  ChevronDown,
+  Gift,
+  Globe,
+  Puzzle,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -41,8 +49,8 @@ export const SignInStep = ({
   /** `signin` is the returning user's button; it always uses the browser. */
   onConnect: (intent: AbacusAuthIntent) => void;
   /**
-   * Chromium profiles that may already be signed in to Abacus.AI, offered
-   * behind "I already have an account".
+   * The default browser's profile, then others that may already be signed in
+   * to Abacus.AI, offered behind "I already have an account".
    */
   browserProfiles?: BrowserSignInProfile[];
   /** Sign in with a picked profile's session. */
@@ -53,6 +61,56 @@ export const SignInStep = ({
   dots: ReactNode;
 }): JSX.Element => {
   const { t } = useTranslation();
+  const defaultProfile = browserProfiles.find((p) => p.isDefault === true);
+  // Unflagged entries are the ones main found an Abacus.AI cookie for.
+  const sessionProfiles = browserProfiles.filter(
+    (p) => p.hasAbacusSession !== false
+  );
+  // The default browser is already signed in: the returning user's link
+  // finishes with it in one click, and the menu keeps every other way.
+  const quickProfile =
+    defaultProfile?.hasAbacusSession === true && onContinueWith != null
+      ? defaultProfile
+      : undefined;
+
+  const profileMenu = (
+    profiles: BrowserSignInProfile[],
+    trigger: JSX.Element,
+    label: ReactNode
+  ): JSX.Element => (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger}>{label}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="center"
+        className="w-auto min-w-72"
+        data-id="onboarding-browser-profiles"
+      >
+        {profiles.map((profile) => (
+          <DropdownMenuItem
+            key={profile.id}
+            data-id="onboarding-continue-with-browser"
+            onClick={() => onContinueWith?.(profile.id)}
+            className="text-sm"
+          >
+            <Globe aria-hidden="true" />
+            {t("onboarding.continueWithBrowser", {
+              browser: profile.browserName,
+              profile: profile.profileName,
+            })}
+          </DropdownMenuItem>
+        ))}
+        {profiles.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuItem
+          data-id="onboarding-signin-another-way"
+          onClick={() => onConnect("signin")}
+          className="text-sm"
+        >
+          <UserRound aria-hidden="true" />
+          {t("onboarding.signInAnotherWay")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div
@@ -129,52 +187,56 @@ export const SignInStep = ({
           {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
         </Button>
         {!busy &&
-          (browserProfiles.length > 0 && onContinueWith != null ? (
+          defaultProfile != null && (
+            // Said before the click: the provider popup will already know them.
+            <p
+              className="text-muted-foreground -mt-1 text-xs text-balance"
+              data-id="onboarding-browser-sessions"
+            >
+              {t("onboarding.usesBrowserSessions", {
+                browser: defaultProfile.browserName,
+              })}
+            </p>
+          )}
+        {!busy &&
+          (quickProfile != null ? (
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="link"
+                size="sm"
+                data-id="onboarding-have-account"
+                onClick={() => onContinueWith?.(quickProfile.id)}
+                className="text-muted-foreground hover:text-secondary-foreground text-sm"
+              >
+                {t("onboarding.haveAccountContinueWith", {
+                  browser: quickProfile.browserName,
+                })}
+              </Button>
+              {profileMenu(
+                sessionProfiles.filter((p) => p.id !== quickProfile.id),
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  data-id="onboarding-signin-options"
+                  aria-label={t("onboarding.signInOptions")}
+                  className="text-muted-foreground"
+                />,
+                <ChevronDown aria-hidden="true" />
+              )}
+            </div>
+          ) : sessionProfiles.length > 0 && onContinueWith != null ? (
             // A browser already signed in to Abacus.AI: the returning user's
             // link offers its profiles, so the screen keeps two choices.
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="link"
-                    size="sm"
-                    data-id="onboarding-have-account"
-                    className="text-muted-foreground hover:text-secondary-foreground text-sm"
-                  />
-                }
-              >
-                {t("onboarding.haveAccountCta")}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="center"
-                className="w-auto min-w-72"
-                data-id="onboarding-browser-profiles"
-              >
-                {browserProfiles.map((profile) => (
-                  <DropdownMenuItem
-                    key={profile.id}
-                    data-id="onboarding-continue-with-browser"
-                    onClick={() => onContinueWith(profile.id)}
-                    className="text-sm"
-                  >
-                    <Globe aria-hidden="true" />
-                    {t("onboarding.continueWithBrowser", {
-                      browser: profile.browserName,
-                      profile: profile.profileName,
-                    })}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  data-id="onboarding-signin-another-way"
-                  onClick={() => onConnect("signin")}
-                  className="text-sm"
-                >
-                  <UserRound aria-hidden="true" />
-                  {t("onboarding.signInAnotherWay")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            profileMenu(
+              sessionProfiles,
+              <Button
+                variant="link"
+                size="sm"
+                data-id="onboarding-have-account"
+                className="text-muted-foreground hover:text-secondary-foreground text-sm"
+              />,
+              t("onboarding.haveAccountCta")
+            )
           ) : (
             <Button
               variant="link"

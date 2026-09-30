@@ -20,7 +20,15 @@
  * accepts it, and rejects a window claiming to be Chrome ("This browser or
  * app may not be secure").
  *
- * Provider sessions are this window's own. When the user picks a Chromium
+ * Provider sessions come from the user's default browser when it can hand
+ * them over: its provider login cookies are copied in while the page loads,
+ * and a provider page waits for that copy, so the provider's account chooser
+ * already knows the user. They are session cookies, gone when the window
+ * closes. A default browser that cannot hand them over (Safari, Firefox, a
+ * failed read) sends a provider sign-in to the browser, where the user is
+ * already signed in to that provider.
+ *
+ * When the user picks a Chromium
  * profile on the sign-in screen, that profile's Abacus.AI cookies are copied
  * in first (the in-app browser's import, filtered to Abacus.AI) and the
  * window goes straight to the connect page, which finishes on the session
@@ -170,31 +178,56 @@ const forgetAbacusSession = async (
     await signInSession.clearStorageData({ origin, storages });
 };
 
+const cookieUrl = (cookie: CDPCookie): string =>
+  `https://${cookie.domain.replace(/^\./, "")}${cookie.path || "/"}`;
+
 /**
- * Copy a picked browser profile's Abacus.AI cookies into the sign-in session,
- * as the in-app browser's import does. A cookie stored without a leading dot
- * is host-only and stays so: naming a domain would widen it to subdomains.
+ * Copy browser cookies into the sign-in session, as the in-app browser's
+ * import does. A cookie stored without a leading dot is host-only and stays
+ * so: naming a domain would widen it to subdomains. `persist: false` drops the
+ * expiry, so the copy never reaches disk.
  */
-const seedAbacusSession = async (
+const seedSession = async (
   signInSession: Electron.Session,
-  cookies: CDPCookie[]
+  cookies: CDPCookie[],
+  { persist }: { persist: boolean }
 ): Promise<void> => {
   await Promise.allSettled(
     cookies.map((cookie) =>
       signInSession.cookies.set({
-        url: `https://${cookie.domain.replace(/^\./, "")}${cookie.path || "/"}`,
+        url: cookieUrl(cookie),
         name: cookie.name,
         value: cookie.value,
         ...(cookie.domain.startsWith(".") ? { domain: cookie.domain } : {}),
         path: cookie.path,
         secure: cookie.secure,
         httpOnly: cookie.httpOnly,
-        expirationDate: cookie.session ? undefined : cookie.expires,
+        expirationDate: persist && !cookie.session ? cookie.expires : undefined,
         sameSite: seedSameSite(cookie.sameSite),
       })
     )
   );
 };
+
+/** The provider login pages that wait for the default browser's cookies. */
+const PROVIDER_LOGIN_PATTERNS = [
+  "https://accounts.google.com/*",
+  "https://login.microsoftonline.com/*",
+  "https://login.live.com/*",
+  "https://appleid.apple.com/*",
+  "https://idmsa.apple.com/*",
+  "https://github.com/login*",
+];
+
+// A provider page waits this long for the browser's cookies, then loads
+// without them: a slow browser costs a password, never a stuck popup.
+const PROVIDER_SEED_WAIT_MS = 10_000;
+
+/**
+ * `seeded` covers an empty copy too; `unavailable` sends provider sign-ins to
+ * the browser; `skipped` leaves them in this window with no copy at all.
+ */
+type ProviderSeed = "seeded" | "unavailable" | "skipped";
 
 const seedSameSite = (
   value?: string
@@ -257,12 +290,18 @@ export const openSignInWindow = async ({
   onHandOff,
   onDismissed,
   seedCookies,
+  providerCookies,
 }: {
   url: string;
   port: number;
   callbackPath: string;
   /** A picked browser profile's Abacus.AI cookies: sign in with its session. */
   seedCookies?: CDPCookie[];
+  /**
+   * The default browser's provider login cookies, arriving while the page
+   * loads; null when that browser would not hand them over.
+   */
+  providerCookies?: Promise<CDPCookie[] | null>;
   /** The flow needs the browser (asked for, or the page failed); the window is already closing. */
   onHandOff: () => void;
   /** The user closed the window before the flow settled. */
@@ -273,22 +312,8 @@ export const openSignInWindow = async ({
   const signInSession = session.fromPath(signInSessionPath());
   await forgetAbacusSession(signInSession);
   const seeded = seedCookies != null && seedCookies.length > 0;
-  if (seeded) await seedAbacusSession(signInSession, seedCookies);
+  if (seeded) await seedSession(signInSession, seedCookies, { persist: true });
   const signInOrigin = new URL(url).origin;
-  // This session remembers provider logins, so Microsoft would silently reuse
-  // the last account; its authorize request is rewritten to ask for the
-  // picker, as Google's popup does. At the request, not the popup: a reload
-  // from did-create-window loses the race with the popup's own first load.
-  signInSession.webRequest.onBeforeRequest(
-    { urls: ["https://login.microsoftonline.com/*"] },
-    (details, callback) => {
-      const picker =
-        details.resourceType === "mainFrame"
-          ? withMicrosoftAccountPicker(details.url)
-          : null;
-      callback(picker != null ? { redirectURL: picker } : {});
-    }
-  );
 
   const win = new BrowserWindow({
     show: false,
@@ -327,6 +352,59 @@ export const openSignInWindow = async ({
     release();
     onHandOff();
   };
+
+  // Provider cookies copied in for this attempt, removed when it closes.
+  const imported: CDPCookie[] = [];
+  const forgetImported = (): void => {
+    for (const cookie of imported.splice(0))
+      void signInSession.cookies
+        .remove(cookieUrl(cookie), cookie.name)
+        .catch(() => {});
+  };
+  const providerSeed: Promise<ProviderSeed> =
+    providerCookies == null
+      ? Promise.resolve("skipped")
+      : Promise.race([
+          providerCookies.then(async (cookies): Promise<ProviderSeed> => {
+            if (cookies == null) return "unavailable";
+            if (released) return "seeded";
+            await seedSession(signInSession, cookies, { persist: false });
+            imported.push(...cookies);
+            if (released) forgetImported();
+            console.log(
+              `[abacus-auth] provider sessions from the default browser: ${cookies.length} cookies`
+            );
+            return "seeded";
+          }),
+          new Promise<ProviderSeed>((resolve) =>
+            setTimeout(() => resolve("seeded"), PROVIDER_SEED_WAIT_MS)
+          ),
+        ]).catch((): ProviderSeed => "unavailable");
+
+  // A provider login page waits for the copy above, or goes to the browser
+  // when there is none to be had. At the request, not the popup: a reload from
+  // did-create-window loses the race with the popup's own first load. This
+  // session remembers provider logins, so Microsoft would silently reuse the
+  // last account; its authorize request is rewritten to ask for the picker,
+  // as Google's popup does.
+  signInSession.webRequest.onBeforeRequest(
+    { urls: PROVIDER_LOGIN_PATTERNS },
+    (details, callback) => {
+      if (details.resourceType !== "mainFrame") {
+        callback({});
+        return;
+      }
+      void providerSeed.then((seed) => {
+        if (seed === "unavailable" && !released) {
+          callback({ cancel: true });
+          handOff();
+          return;
+        }
+        const picker = withMicrosoftAccountPicker(details.url);
+        callback(picker != null ? { redirectURL: picker } : {});
+      });
+    }
+  );
 
   // The page may move between Abacus.AI origins and through a SAML IdP;
   // nothing but https (and this attempt's own loopback callback) loads here.
@@ -386,6 +464,10 @@ export const openSignInWindow = async ({
       return;
     googleInFlight = true;
     try {
+      if ((await providerSeed) === "unavailable") {
+        handOff();
+        return;
+      }
       const ids = (await win.webContents.executeJavaScript(
         callPageApi(signInOrigin, "_getSSOClientIds", {})
       )) as { result?: { google?: unknown } } | null;
@@ -523,6 +605,7 @@ export const openSignInWindow = async ({
   });
 
   win.on("close", closePopups);
+  win.on("closed", forgetImported);
   win.on("closed", () => {
     if (released) return;
     released = true;
