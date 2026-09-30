@@ -137,6 +137,8 @@ export const MemoryDeleteInputSchema = v.object({
   /** The row the user clicked, so a stale click cannot delete its successor. */
   index: v.pipe(v.number(), v.integer(), v.minValue(0)),
   entry: v.string(),
+  /** The row's `occurrences`: with duplicates, what tells a stale click. */
+  occurrences: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 });
 
 export const db = {

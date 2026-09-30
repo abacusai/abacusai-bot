@@ -92,7 +92,12 @@ export class TableFeed<Row, Key extends string = string> {
     this.#scheduled = true;
     setImmediate(() => {
       this.#scheduled = false;
-      this.#diff();
+      try {
+        this.#diff();
+      } catch (error) {
+        // The baseline stays; the next notify or snapshot reads again.
+        console.error(`[db] ${this.name} read failed`, error);
+      }
     });
   }
 
@@ -169,8 +174,9 @@ export class TableFeed<Row, Key extends string = string> {
 
   #diff(): void {
     if (this.#rows == null) {
-      // Nothing was ever read, so nobody holds a copy to update.
-      this.#rows = this.#readRows();
+      // Nothing was ever read, so nobody holds a copy to update; the first
+      // snapshot reads it fresh.
+      if (this.#subscribers.size > 0) this.#rows = this.#readRows();
       return;
     }
     const previous = this.#rows;
@@ -181,6 +187,9 @@ export class TableFeed<Row, Key extends string = string> {
       if (before === undefined) changes.push({ type: "insert", key, value });
       else if (!this.#equals(before, value))
         changes.push({ type: "update", key, value });
+      // Equal but not identical (a read-time stamp): keep what subscribers
+      // hold, so a snapshot never differs from the batches before it.
+      else next.set(key, before);
     }
     for (const key of previous.keys())
       if (!next.has(key)) changes.push({ type: "delete", key });

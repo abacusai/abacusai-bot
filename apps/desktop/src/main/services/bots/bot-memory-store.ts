@@ -7,7 +7,8 @@
 import fs from "fs";
 import path from "path";
 
-import { ConflictError } from "../conflict";
+import { ConflictError } from "#shared/conflict";
+
 import { botDir, listBots } from "./bot-store";
 
 export interface BotMemoryView {
@@ -73,11 +74,19 @@ export const listBotMemories = (): BotMemoryView[] =>
 export const forgetBotMemoryEntry = (
   botId: string,
   index: number,
-  expected: string
+  expected: string,
+  /** Copies of `expected` when clicked; see memory-store forgetEntryAt. */
+  occurrences?: number
 ): void => {
   const entries = readEntries(botId);
 
-  if (index < 0 || index >= entries.length || entries[index] !== expected)
+  if (
+    index < 0 ||
+    index >= entries.length ||
+    entries[index] !== expected ||
+    (occurrences != null &&
+      entries.filter((entry) => entry === expected).length !== occurrences)
+  )
     throw new ConflictError(
       "That entry changed on disk; the list has been refreshed."
     );

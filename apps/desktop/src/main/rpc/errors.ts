@@ -5,14 +5,13 @@
  */
 import { ORPCError } from "@orpc/server";
 
+import { ConflictError } from "#shared/conflict";
 import type {
   NotFoundEntity,
   PreconditionReason,
 } from "#shared/contract/errors";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
-
-import { ConflictError } from "../services/conflict";
 
 export type RpcError = ORPCError<string, unknown>;
 
@@ -36,6 +35,10 @@ export const notFound = (entity: NotFoundEntity, id: string): RpcError =>
     message: `No ${entity} ${id}`,
     data: { entity, id },
   });
+
+/** A combination the schema cannot express was invalid. */
+export const badRequest = (message: string): RpcError =>
+  new ORPCError("BAD_REQUEST", { status: 400, message, data: {} });
 
 export const conflict = (reason: string): RpcError =>
   new ORPCError("CONFLICT", { status: 409, message: reason, data: { reason } });

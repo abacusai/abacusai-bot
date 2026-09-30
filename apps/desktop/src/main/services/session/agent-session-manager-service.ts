@@ -1,4 +1,5 @@
 import { AgentStatus } from "#shared/agent-types";
+import { ConflictError } from "#shared/conflict";
 import type {
   AgentSessionListItem,
   AgentSessionSnapshot,
@@ -6,7 +7,6 @@ import type {
   SessionOwner,
 } from "#shared/contracts";
 
-import { ConflictError } from "../conflict";
 import {
   clearSessionStash,
   readSessionStash,

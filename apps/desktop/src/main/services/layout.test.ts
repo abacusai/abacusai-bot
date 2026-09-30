@@ -106,6 +106,8 @@ const MAIN_ROOT_FILES = [
   "resources.ts",
   "service-host.ts",
   "spellcheck-dictionary.ts",
+  "startup-theme.test.ts",
+  "startup-theme.ts",
   "window-chrome-options.test.ts",
   "window-chrome-options.ts",
   "window-chrome-probe.test.ts",

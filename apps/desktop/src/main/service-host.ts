@@ -18,6 +18,7 @@ import type {
   BotCreateInput,
   BotUpdateInput,
 } from "#shared/bots";
+import { ConflictError } from "#shared/conflict";
 import type {
   TranscriptSegment,
   TurnFeedbackInput,
@@ -268,7 +269,6 @@ import {
   readSettings,
   storedKeyProviders,
 } from "./services/config/settings";
-import { ConflictError } from "./services/conflict";
 import { ConnectorFlowService } from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
@@ -2431,9 +2431,17 @@ export class ServiceHost {
   }
 
   /** A running session keeps the snapshot in its prompt until it restarts. */
-  async forgetMemory(request: ForgetMemoryRequest): Promise<MemorySnapshot> {
+  async forgetMemory(
+    request: ForgetMemoryRequest,
+    occurrences?: number
+  ): Promise<MemorySnapshot> {
     this.failIfNotDone(
-      await forgetEntryAt(request.target, request.index, request.entry)
+      await forgetEntryAt(
+        request.target,
+        request.index,
+        request.entry,
+        occurrences
+      )
     );
     return listMemories();
   }
@@ -2442,12 +2450,20 @@ export class ServiceHost {
     return listBotMemories();
   }
 
-  forgetBotMemory(request: {
-    botId: string;
-    index: number;
-    entry: string;
-  }): ReturnType<typeof listBotMemories> {
-    forgetBotMemoryEntry(request.botId, request.index, request.entry);
+  forgetBotMemory(
+    request: {
+      botId: string;
+      index: number;
+      entry: string;
+    },
+    occurrences?: number
+  ): ReturnType<typeof listBotMemories> {
+    forgetBotMemoryEntry(
+      request.botId,
+      request.index,
+      request.entry,
+      occurrences
+    );
     return listBotMemories();
   }
 
