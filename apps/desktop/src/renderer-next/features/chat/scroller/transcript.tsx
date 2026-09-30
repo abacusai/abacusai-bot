@@ -290,6 +290,7 @@ const TranscriptMessage = ({
   fresh: boolean;
 }) => (
   <MessageScrollerItem
+    className="[content-visibility:visible]"
     messageId={message.id}
     scrollAnchor={message.role === "user"}
     data-fresh={fresh ? "" : undefined}
@@ -345,15 +346,24 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
   useEffect(() => {
     if (!away) session.retain();
   }, [away, messages, session]);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const opened = useRef(false);
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (viewport == null || opened.current) return;
+    // Force the opening geometry in the commit, before a route transition
+    // snapshots it. A second read resolves content-visibility estimates.
+    viewport.scrollTop = viewport.scrollHeight;
+    viewport.scrollTop = viewport.scrollHeight;
+    opened.current = true;
+  });
   const anchor = useRef<{
     el: Element;
     top: number;
     viewport: HTMLElement;
   } | null>(null);
   const preserve = (change: () => void) => {
-    const viewport = document.querySelector<HTMLElement>(
-      '[data-slot="message-scroller-viewport"]'
-    );
+    const viewport = viewportRef.current;
     if (viewport != null) {
       const box = viewport.getBoundingClientRect();
       const candidate = [
@@ -540,6 +550,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           and the screenshot run's settle step waits for every finite
           animation (change request on `lib/dev/settle.ts`). */}
       <MessageScrollerViewport
+        ref={viewportRef}
         preserveScrollOnPrepend
         style={{ overflowAnchor: "none" }}
         aria-label={t("chat.transcript.label")}
