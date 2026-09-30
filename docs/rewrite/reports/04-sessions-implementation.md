@@ -1,0 +1,255 @@
+# Phase 4 sessions implementation
+
+**Phase 4 is not acceptance complete.** The route/start/checkout/dock/resource paths work in the native smoke run, but several parity details and the full R4 matrix remain unfinished. Do not mark this slice done or use it as a cut-over gate.
+
+Base `33301dc9`, branch `codex-sessions`. Main/shared/agent source was not modified. Legacy renderer changes are additive locale keys. Chat, bots and shell amendments have separate commits; the final sessions composition commit includes route wiring.
+
+## Implemented behavior
+
+- Awaited collection loaders; workspace resolution; new-session kit composer with starters, worktree/exec tray, checkout-scoped mentions and history.
+- Persisted stage machine and caller message/run IDs; model/mode insert; idempotent materialization reconciliation; scope promotion; kit envelope handoff and Continue/Discard.
+- Session chat kit composition, connector card/controller, agent lifecycle backoff and incarnation restoration, missing checkout/read-only handling, tab-reference search validation and scoped masked full diff.
+- Own bounded dock reducer, recursive minima/folding, pixel preference writes, Chat-first compact strip, action-based hotkeys and singleton tab protection.
+- Ghostty terminal module views and offset pump, hidden live output, repaint adapter; shared document native browser presenter with captures and stale-candidate guards; guarded materializeFile previews.
+- Checkout files/search/rename/trash, fingerprint/scope Changes/Staged/Merged lists, Keep/Undo, git/tool full diff, public-kit Agents list/detail/Continue, initial H.264/MJPEG device player and Simulator-window fallback.
+- Shared run-finished feed/sound player, unread/attention, background previews, additive locale keys and gallery inventory.
+
+## Validation
+
+The first full direct-binary run with `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1` covered renderer-next/main/shared/main-serial: 4,013 passed, 9 failed, 7 todo; 365 passed files, 4 failed files, 1 skipped file. Eight renderer failures were corrected in targeted checks. Remaining main B-T4 failure expects `ws-1` while the checkout-aware collection correctly keys `ws-1:primary`. No main source was edited.
+
+TypeScript, lint (legacy warnings only), formatting, registry, legacy-diff, knip, JSX i18n and locales checks were run. Final rerun counts are appended below. Connectors, agent (including runtime package writer) and updater dist prerequisites were built. Electron was installed through its install script.
+
+`apps/desktop/e2e/sessions-real.mjs` uses real main and PTY, an isolated canonical-path profile and a loopback fake provider. Eight smoke checks passed; these only partially cover R4-T13/T29/T30/T34. The macOS `/var` scratch alias initially caused main materialization to report Worktree not found; canonicalizing the scratch path resolved it.
+
+## Change requests and unfinished work
+
+1. Main test owner: update B-T4's gitState expected key in `src/main/rpc/tables/collections.e2e.test.ts` to checkout identity. This is a stale test expectation, not a missing procedure.
+2. Main/agent owner: §26.3 joined concurrent agent.start readiness still needs its main-side implementation/proof. Renderer uses the existing contract.
+3. Main settings owner: settings.events has credentials changes, no exec-backend event. Picker applies returned state immediately; cross-window invalidation requires an event.
+4. Ownership conflict: §26.9 requests shared terminal encoders and legacy compatibility wrappers, while this task prohibits shared/old renderer source edits. Local renderer handling exists; shared DEC mouse parity/extraction remains open.
+5. Renderer: full sidebar/context menus, title rename, collapsed recent list, no-model CTA, workspace relocate/delete pane, PR hover/checks, tasks, last-run ChangesCard, sandbox/network attach and routine navigation remain incomplete.
+6. Dock/terminal: complete pointer drop/reorder zones, shell picker, links, DEC mouse parity, superseded-generation reattach and retained-tail/repaint-control proof remain incomplete.
+7. Browser: bots presenter migration; profile/zoom/devtools/site-data controls; materialization Retry; capture deadlines; all native rect/pixel/occlusion/local-file proofs remain incomplete.
+8. Files/device: folder Trash confirmation, full menus/drag/git decoration and actual PPTX deck viewer; full device controls, 5-second watchdog, overflow reopen, 10-second hidden grace, crop/retries/permission latch and snapshot fallback remain incomplete.
+9. Preview/attention: full keyless bot/start routing, visible duplicate identity, merged needs-you group and notification-click navigation remain incomplete.
+10. Acceptance: the dedicated cases below, complete gallery states (some resource sections are placeholders), i18n migration keymap, computed contrast and real-layout axe remain incomplete. New locale copy currently has English fallback; existing starter names/details retain translations.
+
+## R4 status
+
+Partial evidence does not mean the entire acceptance row passed. Browser placeholder geometry is not native geometry; screenshots showing terminal output are not a checksum control. Windows/ConPTY was not available.
+
+| ID | Status and evidence |
+|---|---|
+| R4-T1 | Partial / not fully covered: Route snapshot and native masked dock mounting; reload/back/scroll/draft matrix pending. |
+| R4-T2 | Partial / not fully covered: Existing nav-type suite runs; dedicated session matrix pending. |
+| R4-T3 | Partial / not fully covered: Loaders await tables and avoid hydrate on preload; delayed-snapshot/error Retry tests pending. |
+| R4-T4 | Partial / not fully covered: Native live deletion; delayed unknown/editor/owned redirect tests pending. |
+| R4-T5 | Partial / not fully covered: Source invalidation implemented; per-source tests pending; exec event missing from contract. |
+| R4-T6 | Partial / not fully covered: Checkout selectors implemented; three-checkout chip/decoration test pending. |
+| R4-T7 | Partial / not fully covered: Real creation exercised; complete actions/prefs rollback matrix pending. |
+| R4-T8 | Partial / not fully covered: Three lifecycle tests; readiness-joined start proof outside renderer scope. |
+| R4-T9 | Partial / not fully covered: Attention precedence test; unread/run integration matrix pending. |
+| R4-T10 | Partial / not fully covered: Two sidebar tests; complete states/menu/search matrix pending. |
+| R4-T11 | Partial / not fully covered: Structure and traversal guards; full AST forbidden-error-pattern checks pending. |
+| R4-T12 | Partial / not fully covered: Stage reconciliation unit test and native new worktree; picker/reload/detach cases pending. |
+| R4-T13 | Partial / not fully covered: Caller IDs and one native first admission; acceptance-before-clear reload not exercised. |
+| R4-T14 | Partial / not fully covered: Tray uses main APIs; Docker/local actual first-command test not run. |
+| R4-T15 | Partial / not fully covered: Reducer/bands tests; pixel restore/back-forward matrix pending. |
+| R4-T16 | Partial / not fully covered: Tab persistence exists; promotion/existence/eviction dedicated tests pending. |
+| R4-T17 | Partial / not fully covered: Output append/replacement test; resync/retired/exit UI matrix pending. |
+| R4-T18 | Partial / not fully covered: Basic native presenter recovery; delayed stale candidate/profile/overlay tests pending. |
+| R4-T19 | Partial / not fully covered: Checkout-aware operations; complete files UI/mutation/viewer tests pending. |
+| R4-T20 | Partial / not fully covered: Native terminal pixels visible; checksum control and computed contrast missing. |
+| R4-T21 | Partial / not fully covered: Reducer limits; real pointer drag and menu equivalence pending. |
+| R4-T22 | Partial / not fully covered: Literal keys and starter byte identity; migration keymap missing. |
+| R4-T23 | Partial / not fully covered: Four gallery axe cases; all sections/overlays and real contrast missing. |
+| R4-T24 | Partial / not fully covered: Code/markdown/image previews exist; actual PPTX deck viewer missing. |
+| R4-T25 | Partial / not fully covered: Diff-kind/review fingerprint tests and native Keep; full scopes/Undo/ChangesCard test missing. |
+| R4-T26 | Partial / not fully covered: session-view implementation; exact Electron transition counts not measured. |
+| R4-T27 | Partial / not fully covered: Reduced-motion global rules; dedicated motion tests absent. |
+| R4-T28 | Partial / not fully covered: Import structure scan passes; stronger complete AST checks pending. |
+| R4-T29 | Partial / not fully covered: macOS real hidden 5 MB and same-document reconnect pass; retained-tail reload/multiple PTYs/promotion/resize/Windows pending. |
+| R4-T30 | Partial / not fully covered: Real native materialization and placeholder geometry; actual native rect/zoom/occlusion/two-owner/local-file proof missing. |
+| R4-T31 | Pass inventory: Inventory test: all 111 rows with targets and explicit statuses. Does not claim green parity. |
+| R4-T32 | Partial / not fully covered: SPS/keyframe test; full decoder/fallback/crop/permission/hidden cases pending. |
+| R4-T33 | Partial / not fully covered: Existing main checkout suites run and native worktree Keep; renderer mutation isolation matrix pending. Main B-T4 key expectation stale. |
+| R4-T34 | Partial / not fully covered: Native smoke: repo/new worktree/one first message/PTY/browser/Keep/masked diff/delete; Supervised permission/ChangesCard/localhost/legacy comparison pending. |
+| R4-T35 | Partial / not fully covered: Shared refresh-before-respond connector sequence reused; session suspended-turn case missing. |
+| R4-T36 | Partial / not fully covered: Registry/background preview paths exist; full bot/start keyless and duplicate matrix incomplete. |
+| R4-T37 | Partial / not fully covered: Bounded historical resolver exists; migrated/paging/reload dedicated tests missing. |
+| R4-T38 | Partial / not fully covered: Authoritative main outcome suites run; sessions-specific complete scenario test absent. |
+| R4-T39 | Partial / not fully covered: Platform handling unit case; Electron PTY key bytes and shared compatibility extraction missing. |
+
+## Per-item inventory
+
+All §2 rows are mirrored in `features/sessions/parity.ts`, each naming an existing destination. Partial means implementation exists but its full parity claim has not been demonstrated. S101 is retired and S102 explicitly deferred. No all-green claim is made.
+
+| Item | Status | Required destination/behavior |
+|---|---|---|
+| S1 | Partial | `/sessions/new` → `SessionStartPage` (§8); the workspace comes from `?workspace=` or `prefs.lastPickedWorkspaceId` (§8.3) |
+| S2 | Partial | loader: awaits `sessions`/`workspaces` readiness, row or `notFound()`; on enter (not preload) unread cleared, `session.load()` (§5.3); every file/git call carries the session's checkout (F5) |
+| S3 | Partial | route `pendingComponent`: transcript skeleton (foundation `defaultPendingMs` 150) |
+| S4 | Partial | `notFoundComponent` "This session was deleted" + New session (§5.5) |
+| S5 | Partial | `/` → `/bots/new` (foundation); side panel state is `?tab=` only |
+| S6 | Partial | `<AppLink to="/sessions/$sessionId">` |
+| S7 | Partial | `useParams({ strict: false }).sessionId` |
+| S8 | Partial | `/sessions/$sessionId/review` → `?tab=changes` redirect (F3); `/sessions/$sessionId/diff` masked full-diff dialog (§5.4) |
+| S9 | Partial | one sidebar for the Sessions rail item, header "Sessions" + Search + New (canvas `SessionsSidebar`) |
+| S10 | Partial | same filter; grouped by workspace (foundation §7.3; canvas) (§7.2) |
+| S11 | Partial | inside a workspace group rows are ordered by `updatedAt` desc with no bucket headers; the search results and the collapsed-sidebar history show a relative stamp (`chatStamp`, 03 P17) |
+| S12 | Partial | "Pinned" group above the workspaces (`prefs.pinned.sessionIds`) |
+| S13 | Partial | 32 px row (34 in the tree board): status dot, label, trailing chip (running / needs you / diff / unread); pin shown by group (§7.3) |
+| S14 | Partial | running dot + "running", "needs you" chip, error (§6.6) |
+| S15 | Partial | same (`scrollIntoView({ block: "nearest" })`) |
+| S16 | Partial | link to `/sessions/$sessionId`, `transition: "nav-lateral"` |
+| S17 | Partial | one item list for both menus: Rename, Pin/Unpin, Mark as unread, Open beside this chat, New worktree from here, Copy session ID, Delete session (§7.4) |
+| S18 | Partial | registry `AlertDialog`, same copy; `agent.stop` then `sessionsCollection.delete` (§6.4); inline error |
+| S19 | Partial | canvas: "No sessions yet" / "Start one with ⌘N, or drop a folder here." + drop zone (§7.6) |
+| S20 | Partial | Search field with highlighted matches and "workspace · branch" sub-line (canvas) (§7.1) |
+| S21 | Partial | Workspace group: collapsible (`prefs.workspaceExpanded`), count, branch, missing state, row menu (§7.5) |
+| S22 | Partial | inline rename from the row menu and the title bar (§7.4, §9.1); automatic title stays in the kit (02 §8.3) |
+| S23 | Partial | `prefs.pinned.sessionIds` (spec 00 C.4 imports it) |
+| S24 | Partial | `sessionsUnreadStore` over `ai.runFinished` (`success`/`error`; a Stop marks nothing) (§6.7) |
+| S25 | Partial | same rule on `browser.events runtime-materialized` (§6.7, §12.6) |
+| S26 | Partial | foundation `Mod+B` |
+| S27 | Partial | canvas `Main`: "What should we build?", 120 px two-row box ("Describe the work. Type @ for files, / for skills"), context tray under it (§8.1) |
+| S28 | Partial | tray workspace button → `WorkspacePicker` popover: same rows, search, Default workspace, Add a folder (§8.3) |
+| S29 | Partial | `system.dialog.openFolder()` → `workspaces.add({ path })`; typed errors (§6.5); picks it |
+| S30 | Partial | same order in the start page's loader (§8.3); `prefs.lastPickedWorkspaceId` |
+| S31 | Partial | canvas starter cards (3 × 2, "Try one of these", Shuffle); same fill-and-focus (§8.4) |
+| S32 | Partial | sidebar collapsed: "Pick up where you left off in {workspace}" list of 4 recent sessions beside starters (canvas `MainCollapsed`) (§8.5) |
+| S33 | Partial | tray worktree button (canvas "New worktree" / "No worktree") with the same options (§8.3) |
+| S34 | Partial | kit `ModeChip` (02 §8.2); Auto hidden without sandbox support; default from `prefs.defaultMode`, written on change (§9.3) |
+| S35 | Partial | kit `ModelChip` with the groups of 03 §13.1 (shared builder); same resolution; "Compact UI" retired (§9.3) |
+| S36 | Partial | composer `blocked` reason "no-model" + the same CTA (§26.2 kit amendment) |
+| S37 | Partial | `startSession()` (§8.6): client id, insert, worktree, `promoteScope` for terminal and browser, navigate, first message submitted by the thread |
+| S38 | Partial | kit attachments with `attachmentsBase` = workspace or worktree path (02 §8.6) |
+| S39 | Partial | start page resolves a workspace before enabling Send; missing folder → the workspace-missing state (§17.2) |
+| S40 | Partial | `TopBarSlot identity`: "{workspace} /" (muted) + label (500), click to rename (§9.1) |
+| S41 | Partial | New session (`Mod+N`, foundation), panel toggle (foundation), tab strip when open (§10.1); terminal toggle retired (F16) |
+| S42 | Partial | `ensureAgentStarted(row)` on enter, same schedule; failure → thread banner with Retry (not a toast, R4-T8) (§9.2) |
+| S43 | Partial | after a successful start, once (§9.2) |
+| S44 | Partial | `sessionsCollection.update({model})` + `agent.setModel` when running + `settings.setDefaultModel` (§9.3); same toast |
+| S45 | Partial | kit `ModeChip` (02 §8.2) + `prefs.defaultMode` write |
+| S46 | Partial | kit `ChatView skin="session"` (02 §5, §10); pending first message = outbox (02 §3.7) |
+| S47 | Partial | kit queue slot (02 §8.5) |
+| S48 | Partial | kit Stop = `ai.cancel` (02 §4.5) |
+| S49 | Partial | kit admission outcomes (02 §3.7, §4.6) |
+| S50 | Partial | kit `deriveSessionTitle` (02 §8.3) |
+| S51 | Partial | kit `Notice`, `ErrorCard` (02 §5.6) |
+| S52 | Partial | the feedback popover of 03 §11.3, enabled for `skin="session"` too (§26.2) |
+| S53 | Partial | kit (03 P65) |
+| S54 | Partial | kit composer: ArrowUp walks history when the queue is empty, from a route-supplied `history` source over `settings.promptHistory.*` (§26.2) |
+| S55 | Partial | kit `mentions` from this route: `files.search` (§9.3) |
+| S56 | Partial | tray "Tasks {done} of {n}" opening the plan popover (§9.4) |
+| S57 | Partial | tray branch button → `BranchPicker` popover, same rules and copy (§14.2) |
+| S58 | Partial | tray PR item + hover card, `git.prInfo` with `refetchInterval: 60_000` and focus refetch (§14.3) |
+| S59 | Partial | kit permission tray (02 §6); auto-resolve on a more permissive mode is main/agent behaviour (00-agent-agui §3.5) |
+| S60 | Partial | `features/sessions/notify.ts` via `system.notify` + `system.events notification-clicked` (§19.2) |
+| S61 | Partial | `BrowserAskHost` mounted by the shell, `browser.events` + `browser.permissions.respond` (§12.7) |
+| S62 | Partial | read-only composer banner (canvas `ReadOnlyStates` "A session whose folder is gone") (§17.3) |
+| S63 | Partial | canvas `SessionWorkspaceMissing` pane state with Choose folder / Delete workspace, and the send-blocked composer line (§17.2); dismissal retired (the state is inline, not a dialog) |
+| S64 | Partial | read-only session skin with the routines banner and "Talk to the routine" (phase 5 route) (§17.3) |
+| S65 | Partial | the shared `components/connector-request-card/` of 03 r3 §11.4 in the session's `slots.banner`, fed by `connectors.events({ conversationKey })` (snapshot of pending asks first), field flows via `connectors.submitFields`, decline, `connectors.respond` releasing the suspended turn (§9.3) |
+| S66 | Partial | kit composer drop (02 §8.6) over the whole thread pane (the route forwards `onDrop`) |
+| S67 | Partial | kit `DiffExpander` (02 §5.4); "Open full diff" → `/sessions/$id/diff` (§5.4) |
+| S68 | Partial | kit `SubagentCard` + Agents tab detail (§15) |
+| S69 | Partial | `ChangesCard` in `RunTail`: "{n} files changed +a −d", Review changes (canvas `SessionRunning`, `SessionReview`) (§9.5) |
+| S70 | Partial | `panelTabsStore` per conversation key (open tabs) + `?tab=` (active) (§10.2); same neighbour rule |
+| S71 | Partial | "Add a tab" menu, same items and rules; Changes added when there are changes (§10.1) |
+| S72 | Partial | no empty panel: the strip exists only while a tab is open (user decision); the toggle opens the last tab or the menu (§10.1) |
+| S73 | Partial | same: `<Activity mode>` per tab, browser presented only when visible (§10.5) |
+| S74 | Partial | same (§10.1) |
+| S75 | Partial | chat pane default 480 (canvas), min 360; panel min 360; persisted in `prefs.panes` (§10.3) |
+| S76 | Partial | below 1100 the pane folds into one tab strip with Chat first (F4) |
+| S77 | Partial | `preview:<key>` tabs, same cap and eviction (§13.3) |
+| S78 | Partial | `@tanstack/highlight` viewer + "Open in editor" (§13.3) |
+| S79 | Partial | same viewers (`components/file-preview/`) (§13.3) |
+| S80 | Partial | a guarded **local-file runtime** tab on the native surface (F8, §12.8, main amendment §26.4 f) |
+| S81 | Partial | same engine and options; theme from tokens for both schemes (§11.2) |
+| S82 | Partial | open a Browser tab (§11.2) |
+| S83 | Partial | ported verbatim with its tests (§11.4) |
+| S84 | Partial | ported verbatim (§11.4) |
+| S85 | Partial | one side-panel tab per terminal, same id scheme and labels (§11.1) |
+| S86 | Partial | "New terminal" split button with the shell menu (§11.1) |
+| S87 | Partial | tab close = kill, no confirmation (parity); switching away = `hide`; exit → the tab shows "Process exited with code {n}" for 2 s, then closes (§11.1) |
+| S88 | Partial | same (`terminal-registry.ts`) (§11.3) |
+| S89 | Partial | `terminal.output` with `fromOffset`; `snapshot` append vs replace by `from` (§11.3) |
+| S90 | Partial | same, pacer-debounced 40 ms (§11.3) |
+| S91 | Partial | same (§11.3) |
+| S92 | Partial | `terminal.promoteScope` + re-key; `retired {superseded}` ends the old iterator (§11.1) |
+| S93 | Partial | same (§11.1) |
+| S94 | Partial | same contract (§12.2–§12.4) |
+| S95 | Partial | same (`normalizeAddress` ported with tests) (§12.5) |
+| S96 | Partial | same items (§12.5) |
+| S97 | Partial | same (§12.5) |
+| S98 | Partial | foundation occlusion watcher + intersect test (§12.4) |
+| S99 | Partial | same on `browser.events` (§12.1, §12.6) |
+| S100 | Partial | `browser.runtime.close(lease)` (§12.3) |
+| S101 | Retired | — |
+| S102 | Deferred | "The agent is browsing. Take over / I'm done" bar (canvas `SessionBrowser`) |
+| S103 | Partial | same library and behaviour; canvas "Filter files" field and "M" marks (§13.1) |
+| S104 | Partial | same (§13.2) |
+| S105 | Partial | same + Open in editor (§13.2) |
+| S106 | Partial | same; `files.events tree-root-changed` + `gitState` (§13.1) |
+| S107 | Partial | Changes tab: changed files, per-file diff, Keep, Undo (with §26.4), change navigation (canvas `SessionReview`) (§14) |
+| S108 | Partial | Agents tab list + detail (canvas `SubAgents`) (§15) |
+| S109 | Partial | Device tab, same controls (§16) |
+| S110 | Partial | ported (F9) (§16.2), fallback chain included |
+| S111 | Partial | `SessionPreviewBridge` mounted once by the shell (§13.4) |
+
+## Screenshots
+
+16 real-route PNGs: sidebar/session, start, Changes split view and terminal; 1280×800 and 900×800; light/dark. Reproduce with `e2e/sessions-real.mjs` after `VITE_UI_GALLERY=1 vite build` without DB fixtures. Files and manifest are beside this report in `04-sessions-screenshots/`. Representative Changes/start/terminal images were visually inspected. They show the current implementation, not approved canvas parity.
+
+## Commits
+
+`git log --oneline 33301dc9..HEAD` lists Chat public API amendments, bots shared service extraction, shell override/hotkeys/presenter/folding, sessions data/runtime/composition, validation and report commits. Hooks reported `Can't find lefthook in PATH`; checks were called directly.
+
+## Concluding gate results
+
+| Gate | Result |
+|---|---|
+| TypeScript `tsc -b` | Pass |
+| Root oxlint | Pass; seven existing legacy React-hook warnings |
+| Root oxfmt / format check | Pass |
+| check:ui-registry | Pass, 41 files match |
+| check:legacy-diff | Pass, legacy changes additions only |
+| check:knip-next | Pass; configuration hints only |
+| check:i18n / check:locales | Pass |
+| Native sessions smoke | 8 checks passed; 16 screenshots |
+| Concluding full Vitest | **Not green:** 4,014 passed, 2 failed, 7 skipped, 7 todo; 367 passed files, 3 failed files, 1 skipped file; 311.58 seconds |
+| Follow-up structure/parity checks | 2 tests passed after the guard fix |
+
+The concluding run began before the final structure guard correction, so its renderer failure is stale relative to commit `64f6cdce`; the follow-up passes. The main B-T4 key assertion still fails. The third failed file is the existing main-serial browser-snapshot suite: its tools/page-script beforeAll stalled beyond the harness's 120-second timeout; this run's Electron child was killed after more than two minutes so Vitest could complete. Seven cases were skipped by the failed hook. The first full run had completed this native suite. The native sessions driver uses a separate isolated profile and passed independently; it does not replace the failed existing harness or the missing R4 matrix.
+
+No full-green claim is made. Build outputs in the untracked `.build/` are local scratch products; delivered screenshots/results are committed under this report's directory.
+
+Implementation commits before this report:
+
+```text
+c5ae9883 Chat: admit durable session submission envelopes with caller identities
+5ed24a38 Shell: add session dock override, action dispatch and single native presenter
+264e0e7c Bots: share the document run-finished subscription with other areas
+d57917f2 Chat: expose draft composer, mode availability and prompt history bindings
+fdff47f6 Bots: extract shared connector request flow and model groups
+aacebe9d Sessions: persist checkout-aware creation stages and bounded dock state
+084df60a Chat: expose subagent detail and historical tool diffs for sessions
+f04d2262 Bots: share the document sound player with sessions
+6012fdbc Shell: fold sessions sidebar for resource tab references
+15362fcb Shell: expose action bindings to session dock routes
+dec09a01 Shell: dispatch terminal close by action and accept keyless previews
+0508f1f6 Sessions: add Ghostty terminal views and resumable output pumps
+4851426b Sessions: add checkout files, scoped changes and runtime surfaces
+6275ca8f Shell: track native browser ownership and hide stale presentations
+bd051758 Chat: accept the route default mode and disable blocked sends
+7167c319 fix(bots): keep shared notifier preferences current
+a9d18cf8 refactor(shell): expose only used presenter contracts
+ed1c3371 feat(sessions): compose start, dock and checkout-aware resource views
+2dee3d31 fix(chat): apply first-send callbacks to durable admissions
+39d342de test(shell): separate session dock from generic panel expectations
+236ea88a fix(sessions): restore dock pixels and finish composer and agents bindings
+64f6cdce test(sessions): scan forbidden dependency imports without matching parity prose
+e4634221 test(sessions): record native worktree and hidden PTY smoke with screenshots
+```
