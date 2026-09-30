@@ -7,7 +7,7 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | Phase | Slice | Spec | Impl | Review | Status |
 |---|---|---|---|---|---|
 | 0 | agent AG-UI host + emitter | r1 → Codex review running | | | spec |
-| 0 | main oRPC contract + MessagePort transport | r1 → revising (Codex r1) | | | spec |
+| 0 | main oRPC contract + MessagePort transport | r2 (Codex r1 applied); implementation notes and deferred additions in the spec | f11e5d25..f8e7fbb8 (sub-slice A; FOUNDATION_API bump held back, see spec) | | review |
 | 0 | DB tables (snapshot + change events) | same spec as transport | | | spec |
 | 0 | migration runner | same spec as transport | | | spec |
 | 0 | Window Controls Overlay + Electron 44 | r2 (Codex r1 applied) | a059a113 (Codex, legacy mode default) | Claude review + smoke run in progress | reviewing |
