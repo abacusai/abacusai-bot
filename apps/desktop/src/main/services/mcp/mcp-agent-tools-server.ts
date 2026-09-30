@@ -847,10 +847,11 @@ export class McpAgentToolsServer {
 
         // Every routine runs once the moment it is set up: waiting for the
         // first tick leaves no way to tell one that works from one that
-        // quietly does not.
+        // quietly does not. Unless the caller has just done that pass itself.
         const firedNow =
           job.enabled &&
           job.schedule != null &&
+          args.firstRun !== false &&
           this.options.runCronJob != null &&
           (await this.fireOnCreate(job.id));
 
