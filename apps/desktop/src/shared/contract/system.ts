@@ -20,6 +20,9 @@ export interface SystemInfo {
 }
 
 export interface NotificationMetadata {
+  kind?: "session" | "bot" | "routine";
+  botId?: string;
+  routineId?: string;
   workspaceId?: string;
   sessionId?: string;
 }
@@ -106,6 +109,9 @@ export const system = {
         body: v.string(),
         metadata: v.optional(
           v.object({
+            kind: v.optional(v.picklist(["session", "bot", "routine"])),
+            botId: v.optional(v.string()),
+            routineId: v.optional(v.string()),
             workspaceId: v.optional(v.string()),
             sessionId: v.optional(v.string()),
           })

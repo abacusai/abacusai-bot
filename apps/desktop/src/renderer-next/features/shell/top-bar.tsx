@@ -14,7 +14,7 @@ import {
   PanelLeft,
   PanelRight,
 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { Fragment, type ComponentProps, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
@@ -194,18 +194,22 @@ const Actions = ({
     );
   return (
     <div data-slot="topbar-actions" className="flex items-center gap-0.5">
-      {actions.map((action) => (
-        <Button
-          key={action.id}
-          variant="ghost"
-          size="sm"
-          className="titlebar-nodrag"
-          onClick={action.onSelect}
-        >
-          {action.icon}
-          {action.label}
-        </Button>
-      ))}
+      {actions.map((action) =>
+        action.render != null ? (
+          <Fragment key={action.id}>{action.render}</Fragment>
+        ) : (
+          <Button
+            key={action.id}
+            variant="ghost"
+            size="sm"
+            className="titlebar-nodrag"
+            onClick={action.onSelect}
+          >
+            {action.icon}
+            {action.label}
+          </Button>
+        )
+      )}
     </div>
   );
 };

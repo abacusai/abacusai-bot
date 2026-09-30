@@ -25,6 +25,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { registryContent } from "./registry-content.mjs";
 import {
   addFromSnapshot,
   INITIAL_ITEMS,
@@ -77,7 +78,11 @@ const check = async () => {
     });
     execFileSync(
       join(repo, "node_modules/.bin/oxfmt"),
-      [join(temp, "src/renderer-next/ui")],
+      [
+        "--config",
+        join(repo, "oxfmt.config.ts"),
+        join(temp, "src/renderer-next/ui"),
+      ],
       {
         cwd: repo,
         stdio: "inherit",
@@ -90,11 +95,14 @@ const check = async () => {
       ...readdirSync(committed),
       ...readdirSync(replayed),
     ]);
+    const { rsc } = JSON.parse(
+      readFileSync(join(desktop, "components.json"), "utf8")
+    );
     const diffs = [...names].filter((name) => {
       try {
         return (
-          readFileSync(join(committed, name), "utf8") !==
-          readFileSync(join(replayed, name), "utf8")
+          registryContent(readFileSync(join(committed, name), "utf8"), rsc) !==
+          registryContent(readFileSync(join(replayed, name), "utf8"), rsc)
         );
       } catch {
         return true;
