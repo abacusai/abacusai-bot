@@ -1,3 +1,4 @@
+import type { PermissionDescriptor, PermissionRequest } from "@abacus-ai/agent";
 /**
  * AG-UI event builders for scenarios the agent goldens do not cover
  * (spec 02 §11.1): the same shapes the agent's emitter writes
@@ -5,8 +6,6 @@
  * emitted vocabulary. Also used by tests.
  */
 import type { StreamChunk } from "@tanstack/ai";
-
-import type { PermissionDescriptor, PermissionRequest } from "@abacus-ai/agent";
 
 type Loose = Record<string, unknown>;
 
@@ -35,18 +34,30 @@ export const text = (
   chunk({ type: "TEXT_MESSAGE_START", messageId, role, ...extra }),
   ...(content === ""
     ? []
-    : [chunk({ type: "TEXT_MESSAGE_CONTENT", messageId, delta: content, ...extra })]),
+    : [
+        chunk({
+          type: "TEXT_MESSAGE_CONTENT",
+          messageId,
+          delta: content,
+          ...extra,
+        }),
+      ]),
   chunk({ type: "TEXT_MESSAGE_END", messageId, ...extra }),
 ];
 
-export const textStart = (messageId: string, role: "user" | "assistant" = "assistant"): StreamChunk =>
-  chunk({ type: "TEXT_MESSAGE_START", messageId, role });
+export const textStart = (
+  messageId: string,
+  role: "user" | "assistant" = "assistant"
+): StreamChunk => chunk({ type: "TEXT_MESSAGE_START", messageId, role });
 export const textDelta = (messageId: string, delta: string): StreamChunk =>
   chunk({ type: "TEXT_MESSAGE_CONTENT", messageId, delta });
 export const textEnd = (messageId: string): StreamChunk =>
   chunk({ type: "TEXT_MESSAGE_END", messageId });
 
-export const reasoning = (messageId: string, content: string): StreamChunk[] => [
+export const reasoning = (
+  messageId: string,
+  content: string
+): StreamChunk[] => [
   chunk({ type: "REASONING_START", messageId }),
   chunk({ type: "REASONING_MESSAGE_START", messageId, role: "reasoning" }),
   chunk({ type: "REASONING_MESSAGE_CONTENT", messageId, delta: content }),
@@ -69,11 +80,24 @@ export const toolStart = (
     ...extra,
   });
 
-export const toolArgs = (toolCallId: string, delta: string, extra: Loose = {}): StreamChunk =>
+export const toolArgs = (
+  toolCallId: string,
+  delta: string,
+  extra: Loose = {}
+): StreamChunk =>
   chunk({ type: "TOOL_CALL_ARGS", toolCallId, delta, ...extra });
 
-export const toolEnd = (toolCallId: string, input: Loose, extra: Loose = {}): StreamChunk =>
-  chunk({ type: "TOOL_CALL_END", toolCallId, metadata: { tanstack: { input } }, ...extra });
+export const toolEnd = (
+  toolCallId: string,
+  input: Loose,
+  extra: Loose = {}
+): StreamChunk =>
+  chunk({
+    type: "TOOL_CALL_END",
+    toolCallId,
+    metadata: { tanstack: { input } },
+    ...extra,
+  });
 
 /** START + one ARGS + END for a call with this input. */
 export const toolCall = (
@@ -114,16 +138,23 @@ export const toolResult = (
           metadata: {
             tanstack: {
               state: "output-error",
-              ...(options.outcome != null ? { toolResultOutcome: options.outcome } : {}),
+              ...(options.outcome != null
+                ? { toolResultOutcome: options.outcome }
+                : {}),
             },
           },
         }
       : {}),
-    ...(options.subagentRunId != null ? { subagentRunId: options.subagentRunId } : {}),
+    ...(options.subagentRunId != null
+      ? { subagentRunId: options.subagentRunId }
+      : {}),
   });
 
-export const custom = (name: string, value: unknown, extra: Loose = {}): StreamChunk =>
-  chunk({ type: "CUSTOM", name, value, ...extra });
+export const custom = (
+  name: string,
+  value: unknown,
+  extra: Loose = {}
+): StreamChunk => chunk({ type: "CUSTOM", name, value, ...extra });
 
 export const runFinished = (
   runId: string,
@@ -181,15 +212,34 @@ export const subagentStarted = (
     parentMessageId,
   });
 
-export const subagentFinished = (subagentRunId: string, result: string): StreamChunk =>
-  chunk({ type: "SUBAGENT_FINISHED", subagentRunId, result, outcome: { type: "success" } });
+export const subagentFinished = (
+  subagentRunId: string,
+  result: string
+): StreamChunk =>
+  chunk({
+    type: "SUBAGENT_FINISHED",
+    subagentRunId,
+    result,
+    outcome: { type: "success" },
+  });
 
-export const subagentError = (subagentRunId: string, message: string): StreamChunk =>
+export const subagentError = (
+  subagentRunId: string,
+  message: string
+): StreamChunk =>
   chunk({ type: "SUBAGENT_ERROR", subagentRunId, code: "limit", message });
 
-export const sessionReady = (incarnation = "inc-1", mode = "DEFAULT"): StreamChunk[] => [
+export const sessionReady = (
+  incarnation = "inc-1",
+  mode = "DEFAULT"
+): StreamChunk[] => [
   custom("session.ready", { model: "fake/fake-1", mode, incarnation }),
-  stateSnapshot({ mode, modeSource: "startup", model: "fake/fake-1", incarnation }),
+  stateSnapshot({
+    mode,
+    modeSource: "startup",
+    model: "fake/fake-1",
+    incarnation,
+  }),
 ];
 
 let permissionCounter = 0;
@@ -210,10 +260,15 @@ export const descriptor = (
   const id = options.id ?? `perm-${++permissionCounter}`;
   return {
     id,
-    reason: request.type === "ask_user_question" ? "abacus:question" : "abacus:permission",
+    reason:
+      request.type === "ask_user_question"
+        ? "abacus:question"
+        : "abacus:permission",
     message: (request as { displayName?: string }).displayName ?? request.type,
     ...(options.toolCallId != null ? { toolCallId: options.toolCallId } : {}),
-    ...(options.subagentRunId != null ? { subagentRunId: options.subagentRunId } : {}),
+    ...(options.subagentRunId != null
+      ? { subagentRunId: options.subagentRunId }
+      : {}),
     metadata: {
       abacus: {
         lineage: {

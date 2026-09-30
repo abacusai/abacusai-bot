@@ -14,4 +14,5 @@ const MessageScopeContext = createContext<MessageScopeValue>({
 });
 
 export const MessageScope = MessageScopeContext.Provider;
-export const useMessageScope = (): MessageScopeValue => use(MessageScopeContext);
+export const useMessageScope = (): MessageScopeValue =>
+  use(MessageScopeContext);

@@ -11,11 +11,19 @@
 import { parseAst } from "rolldown/parseAst";
 import { describe, expect, it } from "vitest";
 
-const sources = import.meta.glob<string>(["../../**/*.{ts,tsx}", "!../../**/*.d.ts", "!../../routeTree.gen.ts", "!../../**/*.test.{ts,tsx}"], {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
+const sources = import.meta.glob<string>(
+  [
+    "../../**/*.{ts,tsx}",
+    "!../../**/*.d.ts",
+    "!../../routeTree.gen.ts",
+    "!../../**/*.test.{ts,tsx}",
+  ],
+  {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }
+);
 
 type Node = { type: string; [key: string]: unknown };
 
@@ -31,7 +39,9 @@ const walk = (node: unknown, visit: (node: Node) => void): void => {
 };
 
 const files = Object.entries(sources).map(([path, source]) => ({
-  path: path.startsWith("./") ? `features/chat/${path.slice(2)}` : path.replace(/^(\.\.\/)+/, ""),
+  path: path.startsWith("./")
+    ? `features/chat/${path.slice(2)}`
+    : path.replace(/^(\.\.\/)+/, ""),
   ast: parseAst(source, { lang: path.endsWith(".tsx") ? "tsx" : "ts" }, path),
 }));
 
@@ -63,7 +73,8 @@ const calls = () => {
     walk(file.ast, (node) => {
       if (node.type !== "CallExpression") return;
       const callee = node.callee as Node;
-      if (callee.type === "MemberExpression") found.push({ file: file.path, path: memberPath(callee) });
+      if (callee.type === "MemberExpression")
+        found.push({ file: file.path, path: memberPath(callee) });
     });
   return found;
 };
@@ -72,22 +83,35 @@ const importsOf = (ast: unknown) => {
   const found: Array<{ source: string; named: string[] }> = [];
   walk(ast, (node) => {
     if (node.type !== "ImportDeclaration") return;
-    const specifiers = (node.specifiers as Node[]).filter((s) => s.type === "ImportSpecifier").map((s) => String((s.imported as Node).name));
-    found.push({ source: String((node.source as { value: string }).value), named: specifiers });
+    const specifiers = (node.specifiers as Node[])
+      .filter((s) => s.type === "ImportSpecifier")
+      .map((s) => String((s.imported as Node).name));
+    found.push({
+      source: String((node.source as { value: string }).value),
+      named: specifiers,
+    });
   });
   return found;
 };
 
 describe("R2-T30 chat guards", () => {
   it("scans the tree", () => {
-    expect(files.some((file) => file.path.startsWith("features/chat/runtime/session.ts"))).toBe(true);
+    expect(
+      files.some((file) =>
+        file.path.startsWith("features/chat/runtime/session.ts")
+      )
+    ).toBe(true);
   });
 
   it("never calls the legacy agent permission or queue commands", () => {
     const hits = calls()
       .filter(({ path }) => {
         const index = path.indexOf("agent");
-        return index !== -1 && (path[index + 1] === "respondPermission" || path[index + 1] === "queue");
+        return (
+          index !== -1 &&
+          (path[index + 1] === "respondPermission" ||
+            path[index + 1] === "queue")
+        );
       })
       .map(({ file, path }) => `${file}: ${path.join(".")}`);
     expect(hits).toEqual([]);
@@ -96,16 +120,36 @@ describe("R2-T30 chat guards", () => {
   it("never calls a ChatClient request method, or stop on a handle", () => {
     const hits = calls()
       // Receivers that can be a ChatClient, a UseChatReturn or a SubagentHandle.
-      .filter(({ path }) => path.slice(0, -1).some((part) => /client|chat|host|handle|subagent/i.test(part)))
-      .filter(({ path }) => REQUEST_METHODS.has(path.at(-1)!) || path.at(-1) === "stop")
+      .filter(({ path }) =>
+        path
+          .slice(0, -1)
+          .some((part) => /client|chat|host|handle|subagent/i.test(part))
+      )
+      .filter(
+        ({ path }) =>
+          REQUEST_METHODS.has(path.at(-1)!) || path.at(-1) === "stop"
+      )
       .map(({ file, path }) => `${file}: ${path.join(".")}`);
     expect(hits).toEqual([]);
   });
 
   it("inside runtime/, the client is only subscribed, read, re-paged and disposed", () => {
-    const allowed = new Set(["subscribe", "unsubscribe", "dispose", "getMessages", "getSubagents", "setMessagesManually"]);
+    const allowed = new Set([
+      "subscribe",
+      "unsubscribe",
+      "dispose",
+      "getMessages",
+      "getSubagents",
+      "setMessagesManually",
+    ]);
     const hits = calls()
-      .filter(({ file, path }) => file.startsWith("features/chat/runtime/") && path.includes("client") && !allowed.has(path.at(-1)!) && path.at(-2) === "client")
+      .filter(
+        ({ file, path }) =>
+          file.startsWith("features/chat/runtime/") &&
+          path.includes("client") &&
+          !allowed.has(path.at(-1)!) &&
+          path.at(-2) === "client"
+      )
       .map(({ file, path }) => `${file}: ${path.join(".")}`);
     expect(hits).toEqual([]);
   });
@@ -115,8 +159,12 @@ describe("R2-T30 chat guards", () => {
     for (const file of files)
       for (const { source, named } of importsOf(file.ast)) {
         if (named.includes("useChat")) hits.push(`${file.path}: useChat`);
-        if (source === "temml" && named.length > 0) hits.push(`${file.path}: named temml import`);
-        if (file.path.startsWith("features/chat/") && /^#next\/features\/(?!chat)/.test(source))
+        if (source === "temml" && named.length > 0)
+          hits.push(`${file.path}: named temml import`);
+        if (
+          file.path.startsWith("features/chat/") &&
+          /^#next\/features\/(?!chat)/.test(source)
+        )
           hits.push(`${file.path}: ${source}`);
       }
     expect(hits).toEqual([]);

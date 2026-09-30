@@ -27,7 +27,9 @@ export const highlightCode = (code: string, lang: string): string =>
   markdownHighlight(code, lang);
 
 export const highlight: CodeHighlighter = (code, lang, options) =>
-  lang === "math" ? renderMath(code, true) : markdownHighlight(code, lang, options);
+  lang === "math"
+    ? renderMath(code, true)
+    : markdownHighlight(code, lang, options);
 
 export const CODE_THEME_CSS = createThemeCss({
   light: githubLight,

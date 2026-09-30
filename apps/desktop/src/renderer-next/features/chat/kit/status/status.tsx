@@ -7,13 +7,24 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { ABACUS_BUY_CREDITS_URL, ABACUS_PLAN_URL } from "#next/lib/abacus-links";
+import {
+  ABACUS_BUY_CREDITS_URL,
+  ABACUS_PLAN_URL,
+} from "#next/lib/abacus-links";
 import { cn } from "#next/lib/cn";
 import { Button } from "#next/ui/button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "#next/ui/hover-card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "#next/ui/hover-card";
 import { Marker, MarkerContent, MarkerIcon } from "#next/ui/marker";
 
-import type { Notice, RunOutcomeRecord, ThreadStoreState } from "../../store/thread-store";
+import type {
+  Notice,
+  RunOutcomeRecord,
+  ThreadStoreState,
+} from "../../store/thread-store";
 import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
 import { toolTitle } from "../tools/tool-line";
@@ -31,11 +42,22 @@ export const runningTools = (messages: readonly UIMessage[]): string[] => {
   const last = messages.findLast((message) => message.role === "assistant");
   if (last == null) return titles;
   const results = new Set(
-    last.parts.filter((part) => part.type === "tool-result").map((part) => part.toolCallId)
+    last.parts
+      .filter((part) => part.type === "tool-result")
+      .map((part) => part.toolCallId)
   );
   for (const part of last.parts)
-    if (part.type === "tool-call" && !results.has(part.id) && part.output == null)
-      titles.push(toolTitle(part.name, (part.input as Record<string, unknown> | undefined) ?? {}));
+    if (
+      part.type === "tool-call" &&
+      !results.has(part.id) &&
+      part.output == null
+    )
+      titles.push(
+        toolTitle(
+          part.name,
+          (part.input as Record<string, unknown> | undefined) ?? {}
+        )
+      );
   return titles;
 };
 
@@ -50,21 +72,40 @@ export const busyLabel = (
   const { state, running, agents } = input;
   if (state.permissions.items.length > 0) return t("chat.busy.needsYou");
   if (state.activity.retry != null)
-    return t("chat.busy.retrying", { attempt: state.activity.retry.attempt, max: state.activity.retry.maxAttempts });
+    return t("chat.busy.retrying", {
+      attempt: state.activity.retry.attempt,
+      max: state.activity.retry.maxAttempts,
+    });
   if (agents > 0) return t("chat.busy.agents", { count: agents });
   if (running.length === 1) return running[0]!;
-  if (running.length > 1) return t("chat.busy.tools", { count: running.length });
-  if (state.activity.runningTools > 1) return t("chat.busy.tools", { count: state.activity.runningTools });
+  if (running.length > 1)
+    return t("chat.busy.tools", { count: running.length });
+  if (state.activity.runningTools > 1)
+    return t("chat.busy.tools", { count: state.activity.runningTools });
   return t("chat.busy.working");
 };
 
-export const BusyLine = ({ label, startedAt }: { label: string; startedAt: number }) => {
+export const BusyLine = ({
+  label,
+  startedAt,
+}: {
+  label: string;
+  startedAt: number;
+}) => {
   const now = useSeconds(true);
   return (
-    <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground" data-slot="busy-line">
-      <span aria-hidden className="size-1.5 rounded-full bg-[var(--chat-status-running)]" />
+    <div
+      className="text-muted-foreground flex items-center gap-2 text-[13px] font-medium"
+      data-slot="busy-line"
+    >
+      <span
+        aria-hidden
+        className="size-1.5 rounded-full bg-[var(--chat-status-running)]"
+      />
       <span className="min-w-0 truncate">{label}</span>
-      <span className="chat-mono font-normal">{formatElapsed(now - startedAt)}</span>
+      <span className="chat-mono font-normal">
+        {formatElapsed(now - startedAt)}
+      </span>
     </div>
   );
 };
@@ -76,28 +117,41 @@ export const Typing = ({ caption }: { caption?: string | null }) => {
       <div
         role="img"
         aria-label={t("chat.busy.typing")}
-        className="flex h-9 items-center gap-1 rounded-[20px] rounded-bl-md bg-[var(--chat-surface)] px-3.5 text-muted-foreground"
+        className="text-muted-foreground flex h-9 items-center gap-1 rounded-[20px] rounded-bl-md bg-[var(--chat-surface)] px-3.5"
       >
         <span className="chat-typing-dot" />
         <span className="chat-typing-dot" />
         <span className="chat-typing-dot" />
       </div>
       {caption != null && caption !== "" ? (
-        <span className="truncate text-xs text-muted-foreground">{caption}</span>
+        <span className="text-muted-foreground truncate text-xs">
+          {caption}
+        </span>
       ) : null}
     </div>
   );
 };
 
 const formatTokens = (value: number | undefined): string =>
-  value == null ? "0" : value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value);
+  value == null
+    ? "0"
+    : value >= 1000
+      ? `${(value / 1000).toFixed(1)}k`
+      : String(value);
 
 export const RunMarker = ({ outcome }: { outcome: RunOutcomeRecord }) => {
   const { t } = useTranslation();
   if (outcome.kind === "cancelled")
     return (
-      <div className="flex items-center gap-2 text-[13px] text-muted-foreground" data-slot="run-marker" data-kind="cancelled">
-        <span aria-hidden className="size-1.5 rounded-full bg-[var(--chat-status-muted)]" />
+      <div
+        className="text-muted-foreground flex items-center gap-2 text-[13px]"
+        data-slot="run-marker"
+        data-kind="cancelled"
+      >
+        <span
+          aria-hidden
+          className="size-1.5 rounded-full bg-[var(--chat-status-muted)]"
+        />
         {t("chat.run.stopped")}
       </div>
     );
@@ -106,8 +160,15 @@ export const RunMarker = ({ outcome }: { outcome: RunOutcomeRecord }) => {
     count: outcome.steps,
   });
   const marker = (
-    <div className="flex items-center gap-2 text-[13px] text-muted-foreground" data-slot="run-marker" data-kind="success">
-      <span aria-hidden className="size-1.5 rounded-full bg-[var(--chat-status-done)]" />
+    <div
+      className="text-muted-foreground flex items-center gap-2 text-[13px]"
+      data-slot="run-marker"
+      data-kind="success"
+    >
+      <span
+        aria-hidden
+        className="size-1.5 rounded-full bg-[var(--chat-status-done)]"
+      />
       {label}
     </div>
   );
@@ -115,7 +176,14 @@ export const RunMarker = ({ outcome }: { outcome: RunOutcomeRecord }) => {
   const usage = outcome.usage;
   return (
     <HoverCard>
-      <HoverCardTrigger render={<div tabIndex={0} className="w-fit rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring" />}>
+      <HoverCardTrigger
+        render={
+          <div
+            tabIndex={0}
+            className="focus-visible:ring-ring w-fit rounded-md outline-none focus-visible:ring-2"
+          />
+        }
+      >
         {marker}
       </HoverCardTrigger>
       <HoverCardContent className="w-auto text-xs">
@@ -130,12 +198,19 @@ export const RunMarker = ({ outcome }: { outcome: RunOutcomeRecord }) => {
 };
 
 export const wantsUpgradeCard = (actions?: ErrorAction[]): boolean =>
-  actions?.some((action) => action.type === "upgrade-abacus" || action.type === "free-pool-out") === true;
+  actions?.some(
+    (action) =>
+      action.type === "upgrade-abacus" || action.type === "free-pool-out"
+  ) === true;
 
 export const exhaustedScope = (actions?: ErrorAction[]): "abacus" | "pool" =>
-  actions?.some((action) => action.type === "upgrade-abacus") === true ? "abacus" : "pool";
+  actions?.some((action) => action.type === "upgrade-abacus") === true
+    ? "abacus"
+    : "pool";
 
-export const freeModelSwitches = (actions?: ErrorAction[]): Array<{ model: string; label: string }> =>
+export const freeModelSwitches = (
+  actions?: ErrorAction[]
+): Array<{ model: string; label: string }> =>
   (actions ?? []).flatMap((action) =>
     action.type === "switch-model" && action.model != null
       ? [{ model: action.model, label: action.label ?? action.model }]
@@ -149,18 +224,29 @@ export interface ErrorCardProps {
   tier?: "free" | "basic" | "paid" | "unknown";
 }
 
-export const ErrorCard = ({ outcome, latest, tier = "unknown" }: ErrorCardProps) => {
+export const ErrorCard = ({
+  outcome,
+  latest,
+  tier = "unknown",
+}: ErrorCardProps) => {
   const { t } = useTranslation();
   const { session, composer, runtime } = useChatView();
   const error = outcome.error ?? { message: "" };
-  const actions = ((error as { actions?: ErrorAction[] }).actions ?? []) as ErrorAction[];
+  const actions = ((error as { actions?: ErrorAction[] }).actions ??
+    []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
   const crashed = error.code === "agent_exit" || error.code === "agent_crashed";
   const retry = () => void session.retry();
   if (wantsUpgradeCard(actions)) {
     const scope = exhaustedScope(actions);
     return (
-      <div role="group" aria-label={t("chat.error.label")} className="flex flex-col gap-3 rounded-2xl bg-[var(--chat-surface)] p-4 text-sm" data-slot="error-card" data-variant="upgrade">
+      <div
+        role="group"
+        aria-label={t("chat.error.label")}
+        className="flex flex-col gap-3 rounded-2xl bg-[var(--chat-surface)] p-4 text-sm"
+        data-slot="error-card"
+        data-variant="upgrade"
+      >
         <div className="font-medium">
           {tier === "paid"
             ? t("creditsCard.paidTitle")
@@ -169,15 +255,29 @@ export const ErrorCard = ({ outcome, latest, tier = "unknown" }: ErrorCardProps)
               : t("workspace.premiumUpgrade.exhaustedTitle")}
         </div>
         <p className="text-muted-foreground">
-          {tier === "paid" ? t("creditsCard.paidBody") : t("workspace.premiumUpgrade.switchNote")}
+          {tier === "paid"
+            ? t("creditsCard.paidBody")
+            : t("workspace.premiumUpgrade.switchNote")}
         </p>
         <div className="flex flex-wrap gap-2">
           {freeModelSwitches(actions).map((choice) => (
-            <Button key={choice.model} variant="secondary" onClick={() => composer.model?.onChange(choice.model)}>
-              {t("workspace.premiumUpgrade.continueOn", { model: choice.label })}
+            <Button
+              key={choice.model}
+              variant="secondary"
+              onClick={() => composer.model?.onChange(choice.model)}
+            >
+              {t("workspace.premiumUpgrade.continueOn", {
+                model: choice.label,
+              })}
             </Button>
           ))}
-          <Button onClick={() => void runtime.host.openExternal(tier === "paid" ? ABACUS_BUY_CREDITS_URL : ABACUS_PLAN_URL)}>
+          <Button
+            onClick={() =>
+              void runtime.host.openExternal(
+                tier === "paid" ? ABACUS_BUY_CREDITS_URL : ABACUS_PLAN_URL
+              )
+            }
+          >
             {t("creditsCard.topUpCta")}
           </Button>
         </div>
@@ -187,21 +287,45 @@ export const ErrorCard = ({ outcome, latest, tier = "unknown" }: ErrorCardProps)
   const buttons = actions.flatMap((action, index) => {
     switch (action.type) {
       case "retry":
-        return latest ? [<Button key={index} variant="secondary" onClick={retry}>{t("chat.error.retry")}</Button>] : [];
+        return latest
+          ? [
+              <Button key={index} variant="secondary" onClick={retry}>
+                {t("chat.error.retry")}
+              </Button>,
+            ]
+          : [];
       case "switch-model":
         return action.model != null
           ? [
-              <Button key={index} variant="secondary" onClick={() => composer.model?.onChange(action.model!)}>
-                {t("workspace.premiumUpgrade.continueOn", { model: action.label ?? action.model })}
+              <Button
+                key={index}
+                variant="secondary"
+                onClick={() => composer.model?.onChange(action.model!)}
+              >
+                {t("workspace.premiumUpgrade.continueOn", {
+                  model: action.label ?? action.model,
+                })}
               </Button>,
             ]
           : composer.model != null
-            ? [<Button key={index} variant="secondary" data-action="switch-model">{t("chat.error.switchModel")}</Button>]
+            ? [
+                <Button
+                  key={index}
+                  variant="secondary"
+                  data-action="switch-model"
+                >
+                  {t("chat.error.switchModel")}
+                </Button>,
+              ]
             : [];
       default:
         return action.link != null
           ? [
-              <Button key={index} variant="secondary" onClick={() => void runtime.host.openExternal(action.link!)}>
+              <Button
+                key={index}
+                variant="secondary"
+                onClick={() => void runtime.host.openExternal(action.link!)}
+              >
                 {action.label ?? t("chat.error.open")}
               </Button>,
             ]
@@ -209,22 +333,35 @@ export const ErrorCard = ({ outcome, latest, tier = "unknown" }: ErrorCardProps)
     }
   });
   if (crashed && latest && !actions.some((action) => action.type === "retry"))
-    buttons.push(<Button key="retry" variant="secondary" onClick={retry}>{t("chat.error.retry")}</Button>);
+    buttons.push(
+      <Button key="retry" variant="secondary" onClick={retry}>
+        {t("chat.error.retry")}
+      </Button>
+    );
   return (
     <div
       role="group"
       aria-label={t("chat.error.label")}
-      className="flex flex-col gap-2 rounded-2xl bg-destructive/10 p-4 text-sm dark:bg-destructive/15"
+      className="bg-destructive/10 dark:bg-destructive/15 flex flex-col gap-2 rounded-2xl p-4 text-sm"
       data-slot="error-card"
     >
       <div className="flex items-start gap-2">
-        <XCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-destructive" />
+        <XCircle
+          aria-hidden
+          className="text-destructive mt-0.5 size-4 shrink-0"
+        />
         <div className="flex min-w-0 flex-col gap-1">
-          <div className="font-medium">{crashed ? t("chat.error.crashed") : error.message}</div>
-          {detail != null && detail !== "" ? <div className="text-xs text-muted-foreground">{detail}</div> : null}
+          <div className="font-medium">
+            {crashed ? t("chat.error.crashed") : error.message}
+          </div>
+          {detail != null && detail !== "" ? (
+            <div className="text-muted-foreground text-xs">{detail}</div>
+          ) : null}
         </div>
       </div>
-      {buttons.length > 0 ? <div className="flex flex-wrap gap-2 ps-6">{buttons}</div> : null}
+      {buttons.length > 0 ? (
+        <div className="flex flex-wrap gap-2 ps-6">{buttons}</div>
+      ) : null}
     </div>
   );
 };
@@ -236,26 +373,59 @@ const SEVERITY_ICON = {
   error: XCircle,
 } as const;
 
-export const NoticeRow = ({ notice, onDismiss }: { notice: Notice; onDismiss(): void }) => {
+export const NoticeRow = ({
+  notice,
+  onDismiss,
+}: {
+  notice: Notice;
+  onDismiss(): void;
+}) => {
   const { t } = useTranslation();
   const { runtime } = useChatView();
-  const severity = (notice.name === "agent.error" ? "error" : String(notice.value.severity ?? "info")) as keyof typeof SEVERITY_ICON;
+  const severity = (
+    notice.name === "agent.error"
+      ? "error"
+      : String(notice.value.severity ?? "info")
+  ) as keyof typeof SEVERITY_ICON;
   const Icon = SEVERITY_ICON[severity] ?? Info;
   const actions = (notice.value.actions as ErrorAction[] | undefined) ?? [];
   return (
-    <Marker variant="border" className="items-start" data-slot="notice" data-severity={severity}>
+    <Marker
+      variant="border"
+      className="items-start"
+      data-slot="notice"
+      data-severity={severity}
+    >
       <MarkerIcon>
-        <Icon aria-hidden className={cn(severity === "error" && "text-destructive", severity === "warning" && "text-[var(--chat-status-attention)]")} />
+        <Icon
+          aria-hidden
+          className={cn(
+            severity === "error" && "text-destructive",
+            severity === "warning" && "text-[var(--chat-status-attention)]"
+          )}
+        />
       </MarkerIcon>
-      <MarkerContent className="flex-1">{String(notice.value.message ?? "")}</MarkerContent>
+      <MarkerContent className="flex-1">
+        {String(notice.value.message ?? "")}
+      </MarkerContent>
       {actions
         .filter((action) => action.link != null)
         .map((action, index) => (
-          <Button key={index} variant="ghost" size="sm" onClick={() => void runtime.host.openExternal(action.link!)}>
+          <Button
+            key={index}
+            variant="ghost"
+            size="sm"
+            onClick={() => void runtime.host.openExternal(action.link!)}
+          >
             {action.label ?? t("chat.error.open")}
           </Button>
         ))}
-      <Button variant="ghost" size="icon-sm" aria-label={t("chat.notice.dismiss")} onClick={onDismiss}>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("chat.notice.dismiss")}
+        onClick={onDismiss}
+      >
         <X aria-hidden />
       </Button>
     </Marker>

@@ -5,7 +5,7 @@
  * also when a replay exceeds the client's processing budget.
  */
 import type { StreamChunk } from "@tanstack/ai";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { golden } from "../fixtures/goldens";
 import { FakeRelay } from "../fixtures/relay";
@@ -82,22 +82,57 @@ describe("R2-T5 dispatcher", () => {
     const events: DispatchItem[] = base.slice(0, start);
     let seq = events.length;
     const push = (event: StreamChunk) => events.push({ seq: ++seq, event });
-    const userEnd = run.findIndex((item) => item.event.type === "TEXT_MESSAGE_END");
+    const userEnd = run.findIndex(
+      (item) => item.event.type === "TEXT_MESSAGE_END"
+    );
     for (const item of run.slice(0, userEnd + 1)) push(item.event);
-    push({ type: "TEXT_MESSAGE_START", messageId: "a-1", role: "assistant" } as StreamChunk);
+    push({
+      type: "TEXT_MESSAGE_START",
+      messageId: "a-1",
+      role: "assistant",
+    } as StreamChunk);
     for (let index = 0; index < 400; index += 1) {
-      push({ type: "TOOL_CALL_START", toolCallId: `c-${index}`, toolCallName: "bash", parentMessageId: "a-1" } as StreamChunk);
-      push({ type: "TOOL_CALL_ARGS", toolCallId: `c-${index}`, delta: JSON.stringify({ command: `echo ${index}` }) } as StreamChunk);
-      push({ type: "TOOL_CALL_END", toolCallId: `c-${index}`, metadata: { tanstack: { input: { command: `echo ${index}` } } } } as unknown as StreamChunk);
-      push({ type: "TOOL_CALL_RESULT", messageId: `c-${index}:result`, toolCallId: `c-${index}`, role: "tool", content: JSON.stringify({ text: `${index}\n`, rejected: false }) } as unknown as StreamChunk);
+      push({
+        type: "TOOL_CALL_START",
+        toolCallId: `c-${index}`,
+        toolCallName: "bash",
+        parentMessageId: "a-1",
+      } as StreamChunk);
+      push({
+        type: "TOOL_CALL_ARGS",
+        toolCallId: `c-${index}`,
+        delta: JSON.stringify({ command: `echo ${index}` }),
+      } as StreamChunk);
+      push({
+        type: "TOOL_CALL_END",
+        toolCallId: `c-${index}`,
+        metadata: { tanstack: { input: { command: `echo ${index}` } } },
+      } as unknown as StreamChunk);
+      push({
+        type: "TOOL_CALL_RESULT",
+        messageId: `c-${index}:result`,
+        toolCallId: `c-${index}`,
+        role: "tool",
+        content: JSON.stringify({ text: `${index}\n`, rejected: false }),
+      } as unknown as StreamChunk);
     }
     push({ type: "TEXT_MESSAGE_END", messageId: "a-1" } as StreamChunk);
     const relay = new FakeRelay({ events });
-    const session = new ThreadSession({ ai: relay.ai, threadId: relay.threadId });
+    const session = new ThreadSession({
+      ai: relay.ai,
+      threadId: relay.threadId,
+    });
     try {
       await session.load();
-      relay.emit({ type: "RUN_FINISHED", threadId: "t-1", runId: "srv-<1>", outcome: { type: "success" } } as unknown as StreamChunk);
-      await vi.waitFor(() => expect(session.store.state.runs.outcomes).toHaveLength(1));
+      relay.emit({
+        type: "RUN_FINISHED",
+        threadId: "t-1",
+        runId: "srv-<1>",
+        outcome: { type: "success" },
+      } as unknown as StreamChunk);
+      await vi.waitFor(() =>
+        expect(session.store.state.runs.outcomes).toHaveLength(1)
+      );
       const [outcome] = session.store.state.runs.outcomes;
       expect(outcome!.steps).toBe(400);
       expect(outcome!.afterMessageId).toBe("a-1");

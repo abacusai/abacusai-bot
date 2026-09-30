@@ -22,7 +22,8 @@ export const isAllowed = (
 export const allowedActions = (
   descriptor: PermissionDescriptor,
   actions: readonly CardAction[]
-): CardAction[] => actions.filter((action) => isAllowed(descriptor, action.decision));
+): CardAction[] =>
+  actions.filter((action) => isAllowed(descriptor, action.decision));
 
 /** With a note: allow → `accept_with_message`, deny → `reject_with_message`. */
 export const withNote = (
@@ -31,8 +32,10 @@ export const withNote = (
 ): PermissionDecision => {
   const text = note.trim();
   if (text === "") return decision;
-  if (decision === "accept") return { type: "accept_with_message", message: text };
-  if (decision === "reject") return { type: "reject_with_message", message: text };
+  if (decision === "accept")
+    return { type: "accept_with_message", message: text };
+  if (decision === "reject")
+    return { type: "reject_with_message", message: text };
   return decision;
 };
 

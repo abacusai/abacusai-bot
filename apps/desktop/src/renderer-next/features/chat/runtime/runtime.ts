@@ -7,7 +7,6 @@
  */
 import type { AiClient } from "#next/data/ai";
 import type { Transport } from "#next/data/transport";
-
 import type { PermissionDecision } from "#shared/agent-types";
 
 import type { PermissionDescriptor } from "../store/thread-store";

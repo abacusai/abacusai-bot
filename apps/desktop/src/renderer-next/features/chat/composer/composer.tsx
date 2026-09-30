@@ -21,6 +21,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { isNotFound, rpcCode } from "#next/data/ai";
 import { cn } from "#next/lib/cn";
 import { useMotionPreference } from "#next/lib/motion";
 import {
@@ -33,21 +34,39 @@ import {
   AttachmentTitle,
 } from "#next/ui/attachment";
 import { Button } from "#next/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "#next/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#next/ui/dropdown-menu";
 import { Spinner } from "#next/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#next/ui/tooltip";
-
-import { isNotFound, rpcCode } from "#next/data/ai";
-
 import type { AgentMode } from "#shared/agent-types";
 
 import { useChatView } from "../kit/context";
 import { composerChildren, composerSurface } from "../motion";
 import { routeSubmit } from "../runtime/send";
-import { questionPending, useBusy, useHost, useThreadStore } from "../store/selectors";
-import { addFiles, addPaths, formatSize, removeAttachment } from "./attachments";
+import {
+  questionPending,
+  useBusy,
+  useHost,
+  useThreadStore,
+} from "../store/selectors";
+import {
+  addFiles,
+  addPaths,
+  formatSize,
+  removeAttachment,
+} from "./attachments";
 import { ModeChip, ModelChip } from "./chips";
-import { clearDraft, draftStore, EMPTY_DRAFT, updateDraft, type Draft } from "./draft-store";
+import {
+  clearDraft,
+  draftStore,
+  EMPTY_DRAFT,
+  updateDraft,
+  type Draft,
+} from "./draft-store";
 import { setQueueEditing } from "./queue-editing";
 import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 
@@ -71,7 +90,8 @@ interface ComposerContextValue {
 const ComposerContext = createContext<ComposerContextValue | null>(null);
 const useComposer = (): ComposerContextValue => {
   const value = use(ComposerContext);
-  if (value == null) throw new Error("chat: a composer part rendered outside Composer.Root");
+  if (value == null)
+    throw new Error("chat: a composer part rendered outside Composer.Root");
   return value;
 };
 
@@ -89,25 +109,43 @@ const Attachments = () => {
   return (
     <AttachmentGroup className="scroll-fade-x">
       {draft.attachments.map((attachment) => (
-        <Attachment key={attachment.id} className="w-56" data-state={attachment.state}>
+        <Attachment
+          key={attachment.id}
+          className="w-56"
+          data-state={attachment.state}
+        >
           <AttachmentMedia>
             {attachment.state === "uploading" ? (
               <Spinner aria-hidden />
             ) : attachment.preview != null ? (
-              <img src={attachment.preview} alt="" className="size-full object-cover" />
+              <img
+                src={attachment.preview}
+                alt=""
+                className="size-full object-cover"
+              />
             ) : (
               <FileText aria-hidden />
             )}
           </AttachmentMedia>
           <AttachmentContent>
             <AttachmentTitle>{attachment.name}</AttachmentTitle>
-            <AttachmentDescription className={cn(attachment.state === "error" && "text-destructive")}>
+            <AttachmentDescription
+              className={cn(attachment.state === "error" && "text-destructive")}
+            >
               {attachment.state === "error"
                 ? (attachment.error ?? t("chat.composer.attachFailed"))
-                : [attachment.name.split(".").at(-1)?.toUpperCase(), formatSize(attachment.size)].filter(Boolean).join(", ")}
+                : [
+                    attachment.name.split(".").at(-1)?.toUpperCase(),
+                    formatSize(attachment.size),
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
             </AttachmentDescription>
           </AttachmentContent>
-          <AttachmentAction aria-label={t("chat.composer.removeAttachment")} onClick={() => removeAttachment(threadId, attachment.id)}>
+          <AttachmentAction
+            aria-label={t("chat.composer.removeAttachment")}
+            onClick={() => removeAttachment(threadId, attachment.id)}
+          >
             <X aria-hidden />
           </AttachmentAction>
         </Attachment>
@@ -123,7 +161,14 @@ const Attach = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="secondary" size="icon-lg" aria-label={t("chat.composer.attach")} className="size-9 shrink-0 rounded-full" />}
+        render={
+          <Button
+            variant="secondary"
+            size="icon-lg"
+            aria-label={t("chat.composer.attach")}
+            className="size-9 shrink-0 rounded-full"
+          />
+        }
       >
         <Plus aria-hidden />
       </DropdownMenuTrigger>
@@ -155,7 +200,16 @@ const Dictate = () => {
   const { t } = useTranslation();
   return (
     <Tooltip>
-      <TooltipTrigger render={<Button variant="ghost" size="icon-lg" aria-label={t("chat.composer.dictate")} className="size-9 rounded-full" />}>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            aria-label={t("chat.composer.dictate")}
+            className="size-9 rounded-full"
+          />
+        }
+      >
         <Mic aria-hidden />
       </TooltipTrigger>
       <TooltipContent>{t("chat.composer.dictateSoon")}</TooltipContent>
@@ -173,11 +227,15 @@ const SendOrStop = () => {
       <Button
         size="icon-lg"
         aria-label={t("chat.composer.stop")}
-        className="size-9 rounded-full bg-foreground text-background hover:bg-foreground/90"
+        className="bg-foreground text-background hover:bg-foreground/90 size-9 rounded-full"
         onClick={stop}
         disabled={cancelling}
       >
-        {cancelling ? <Spinner aria-hidden /> : <span aria-hidden className="size-2.5 rounded-[2px] bg-current" />}
+        {cancelling ? (
+          <Spinner aria-hidden />
+        ) : (
+          <span aria-hidden className="size-2.5 rounded-[2px] bg-current" />
+        )}
       </Button>
     );
   return (
@@ -187,7 +245,9 @@ const SendOrStop = () => {
       disabled={!hasText}
       className={cn(
         "size-9 rounded-full",
-        skin === "bot" && hasText && "bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]",
+        skin === "bot" &&
+          hasText &&
+          "bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]",
         !hasText && "bg-secondary text-muted-foreground"
       )}
       onClick={submit}
@@ -202,13 +262,19 @@ export const ThreadComposer = () => {
   const { t } = useTranslation();
   const view = useChatView();
   const { session, threadId, skin, composer: config, runtime } = view;
-  const draft = useSelector(draftStore, (state) => state[threadId] ?? EMPTY_DRAFT);
+  const draft = useSelector(
+    draftStore,
+    (state) => state[threadId] ?? EMPTY_DRAFT
+  );
   const busy = useBusy(session, config.turnBusy === true);
   const hydrated = useHost(session, (state) => state.ready);
   const gone = useHost(session, (state) => state.notFound);
   const cancelling = useHost(session, (state) => state.cancelling);
   const question = useThreadStore(session, questionPending);
-  const liveMode = useThreadStore(session, (state) => state.agent?.mode ?? null);
+  const liveMode = useThreadStore(
+    session,
+    (state) => state.agent?.mode ?? null
+  );
   const incarnation = useThreadStore(session, (state) => state.incarnation);
   const queue = useThreadStore(session, (state) => state.queue);
   const skills = useThreadStore(session, (state) => state.skills);
@@ -222,8 +288,19 @@ export const ThreadComposer = () => {
 
   const hasDraft = draft.text !== "" || draft.attachments.length > 0;
   const expanded =
-    config.mode === "full" && skin === "session" ? !menuOpen : focused || hasDraft;
-  const state: ComposerState = config.readOnly != null ? "blocked" : busy ? "busy" : draft.text !== "" ? "typing" : focused ? "focused" : "resting";
+    config.mode === "full" && skin === "session"
+      ? !menuOpen
+      : focused || hasDraft;
+  const state: ComposerState =
+    config.readOnly != null
+      ? "blocked"
+      : busy
+        ? "busy"
+        : draft.text !== ""
+          ? "typing"
+          : focused
+            ? "focused"
+            : "resting";
 
   const submit = (): void => {
     const route = routeSubmit({
@@ -243,7 +320,8 @@ export const ThreadComposer = () => {
       case "noop":
         return;
       case "blocked":
-        if (route.reason === "uploading") setError(t("chat.composer.uploading"));
+        if (route.reason === "uploading")
+          setError(t("chat.composer.uploading"));
         return;
       case "enqueue": {
         const saved = draft;
@@ -264,8 +342,10 @@ export const ThreadComposer = () => {
         session
           .submit(route.text, route.forwardedProps)
           .then((result) => {
-            if (result.kind === "rejected") restore(t("chat.composer.rejected"));
-            else if (result.kind === "stale") updateDraft(threadId, () => saved);
+            if (result.kind === "rejected")
+              restore(t("chat.composer.rejected"));
+            else if (result.kind === "stale")
+              updateDraft(threadId, () => saved);
             else config.onFirstSend?.(route.text);
           })
           .catch((thrown: unknown) => {
@@ -296,13 +376,23 @@ export const ThreadComposer = () => {
 
   const setText = (text: string, caret: number | null) => {
     updateDraft(threadId, (current) => ({ ...current, text }));
-    setTrigger(caret == null ? null : triggerAt(text, caret, { mentions: config.mentions != null, skills: skills.length > 0 }));
+    setTrigger(
+      caret == null
+        ? null
+        : triggerAt(text, caret, {
+            mentions: config.mentions != null,
+            skills: skills.length > 0,
+          })
+    );
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
     const mod = event.metaKey || event.ctrlKey;
-    if (event.key === "Enter" && (mod || (!event.shiftKey && trigger == null))) {
+    if (
+      event.key === "Enter" &&
+      (mod || (!event.shiftKey && trigger == null))
+    ) {
       event.preventDefault();
       submit();
       return;
@@ -337,8 +427,14 @@ export const ThreadComposer = () => {
 
   if (config.readOnly != null || gone)
     return (
-      <div className="flex min-h-13 items-center gap-3 rounded-[20px] bg-[var(--chat-surface-2)] px-4 py-3 text-sm text-muted-foreground" data-slot="composer-readonly" role="status">
-        <span className="flex-1">{config.readOnly?.reason ?? t("chat.composer.gone")}</span>
+      <div
+        className="text-muted-foreground flex min-h-13 items-center gap-3 rounded-[20px] bg-[var(--chat-surface-2)] px-4 py-3 text-sm"
+        data-slot="composer-readonly"
+        role="status"
+      >
+        <span className="flex-1">
+          {config.readOnly?.reason ?? t("chat.composer.gone")}
+        </span>
         {config.readOnly?.action}
       </div>
     );
@@ -354,30 +450,51 @@ export const ThreadComposer = () => {
   const surfaceTransition = composerSurface(pref);
   const childFade = composerChildren(pref);
 
-  const value: ComposerContextValue = { threadId, draft, expanded, busy, state, submit, stop, cancelling, error };
+  const value: ComposerContextValue = {
+    threadId,
+    draft,
+    expanded,
+    busy,
+    state,
+    submit,
+    stop,
+    cancelling,
+    error,
+  };
   const mode = config.showModeChip ? (
     <ModeChip
       value={liveMode}
       draft={draft.mode}
       live={incarnation != null}
-      onDraft={(next: AgentMode) => updateDraft(threadId, (current) => ({ ...current, mode: next }))}
+      onDraft={(next: AgentMode) =>
+        updateDraft(threadId, (current) => ({ ...current, mode: next }))
+      }
       {...(config.setMode != null ? { setMode: config.setMode } : {})}
       onOpenChange={setMenuOpen}
       onRevert={() => setError(t("chat.composer.modeFailed"))}
     />
   ) : null;
-  const model = config.model != null ? <ModelChip binding={config.model} /> : null;
+  const model =
+    config.model != null ? <ModelChip binding={config.model} /> : null;
 
   return (
     <ComposerContext value={value}>
-      <div className="flex flex-col" data-slot="composer" data-state={state} data-expanded={expanded ? "" : undefined}>
+      <div
+        className="flex flex-col"
+        data-slot="composer"
+        data-state={state}
+        data-expanded={expanded ? "" : undefined}
+      >
         {trigger != null ? (
           <TriggerMenu
             trigger={trigger}
             skills={skills}
             mentions={config.mentions}
             onPick={(insert) => {
-              const next = draft.text.slice(0, trigger.start) + insert + draft.text.slice(trigger.end);
+              const next =
+                draft.text.slice(0, trigger.start) +
+                insert +
+                draft.text.slice(trigger.end);
               setText(next, null);
               field.current?.focus();
             }}
@@ -388,12 +505,18 @@ export const ThreadComposer = () => {
           layout={pref === "full"}
           layoutId={`composer:${threadId}`}
           transition={surfaceTransition}
-          onDragOver={(event: DragEvent<HTMLDivElement>) => event.preventDefault()}
+          onDragOver={(event: DragEvent<HTMLDivElement>) =>
+            event.preventDefault()
+          }
           onDrop={onDrop}
           className={cn(
             "relative z-10 flex flex-col bg-[var(--chat-surface)]",
-            expanded ? "gap-2.5 rounded-[22px] pt-3 pb-2 ps-3 pe-2" : "min-h-13 flex-row items-center gap-2 rounded-full px-2",
-            skin === "session" && expanded && "min-h-[100px] rounded-[20px] ps-4"
+            expanded
+              ? "gap-2.5 rounded-[22px] ps-3 pe-2 pt-3 pb-2"
+              : "min-h-13 flex-row items-center gap-2 rounded-full px-2",
+            skin === "session" &&
+              expanded &&
+              "min-h-[100px] rounded-[20px] ps-4"
           )}
         >
           {expanded ? <Attachments /> : null}
@@ -410,12 +533,19 @@ export const ThreadComposer = () => {
             rows={1}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            onChange={(event) => setText(event.target.value, event.target.selectionStart)}
+            onChange={(event) =>
+              setText(event.target.value, event.target.selectionStart)
+            }
             onKeyDown={onKeyDown}
             onPaste={onPaste}
-            style={{ maxHeight: COMPOSER_MAX_HEIGHT, fieldSizing: "content" } as React.CSSProperties}
+            style={
+              {
+                maxHeight: COMPOSER_MAX_HEIGHT,
+                fieldSizing: "content",
+              } as React.CSSProperties
+            }
             className={cn(
-              "min-w-0 resize-none bg-transparent text-sm leading-5 outline-none placeholder:text-muted-foreground",
+              "placeholder:text-muted-foreground min-w-0 resize-none bg-transparent text-sm leading-5 outline-none",
               expanded ? "w-full px-1" : "flex-1 py-2"
             )}
           />
@@ -441,12 +571,15 @@ export const ThreadComposer = () => {
           )}
         </motion.div>
         {error != null ? (
-          <p role="alert" className="px-4 pt-1.5 text-xs text-destructive">
+          <p role="alert" className="text-destructive px-4 pt-1.5 text-xs">
             {error}
           </p>
         ) : null}
         {view.slots.composerContext != null ? (
-          <div className="-mt-3 mx-3 rounded-b-xl bg-[var(--chat-surface-2)] px-2 pt-4 pb-1 text-[13px]" data-slot="composer-context">
+          <div
+            className="mx-3 -mt-3 rounded-b-xl bg-[var(--chat-surface-2)] px-2 pt-4 pb-1 text-[13px]"
+            data-slot="composer-context"
+          >
             {view.slots.composerContext}
           </div>
         ) : null}

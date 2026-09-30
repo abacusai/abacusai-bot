@@ -4,7 +4,6 @@
  * (never an empty log, §3.2), then the skin's kit over `useThreadHost`.
  */
 import "../chat.css";
-
 import type { UIMessage } from "@tanstack/ai-client";
 import { useEffect, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,7 +44,11 @@ export interface ChatViewProps {
 }
 
 const LoadingRows = () => (
-  <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4 px-4 pt-8" data-slot="chat-loading" aria-busy>
+  <div
+    className="mx-auto flex w-full max-w-[720px] flex-col gap-4 px-4 pt-8"
+    data-slot="chat-loading"
+    aria-busy
+  >
     <Skeleton className="h-9 w-2/5 self-end rounded-2xl" />
     <Skeleton className="h-16 w-3/4 rounded-2xl" />
     <Skeleton className="h-9 w-1/3 self-end rounded-2xl" />
@@ -53,7 +56,15 @@ const LoadingRows = () => (
   </div>
 );
 
-const Failed = ({ onRetry, notFound, skin }: { onRetry(): void; notFound: boolean; skin: "bot" | "session" }) => {
+const Failed = ({
+  onRetry,
+  notFound,
+  skin,
+}: {
+  onRetry(): void;
+  notFound: boolean;
+  skin: "bot" | "session";
+}) => {
   const { t } = useTranslation();
   return (
     <div className="flex flex-1 items-center justify-center" role="status">
@@ -116,24 +127,37 @@ export const ChatView = (props: ChatViewProps) => {
     slots: props.slots ?? {},
     workspaceRoot: props.workspaceRoot,
     ...(props.onOpenFile != null ? { onOpenFile: props.onOpenFile } : {}),
-    ...(props.onOpenSubagent != null ? { onOpenSubagent: props.onOpenSubagent } : {}),
+    ...(props.onOpenSubagent != null
+      ? { onOpenSubagent: props.onOpenSubagent }
+      : {}),
     focused: props.focused ?? true,
     notchEnabled: props.notchEnabled ?? false,
     inline,
   };
   const links = {
     openFile: (path: string) =>
-      props.onOpenFile != null ? props.onOpenFile(path) : void runtime.host.showItemInFolder(path),
+      props.onOpenFile != null
+        ? props.onOpenFile(path)
+        : void runtime.host.showItemInFolder(path),
     openExternal: (url: string) => void runtime.host.openExternal(url),
   };
   return (
     <ChatViewProvider value={value}>
       <MarkdownLinksProvider value={links}>
-        <div className="flex size-full min-h-0 flex-col" data-slot="chat-view" data-skin={skin} data-thread={threadId}>
+        <div
+          className="flex size-full min-h-0 flex-col"
+          data-slot="chat-view"
+          data-skin={skin}
+          data-thread={threadId}
+        >
           {ready ? (
             <Kit skin={skin} />
           ) : phase === "error" ? (
-            <Failed skin={skin} notFound={notFound} onRetry={() => void session.reconnect().catch(() => {})} />
+            <Failed
+              skin={skin}
+              notFound={notFound}
+              onRetry={() => void session.reconnect().catch(() => {})}
+            />
           ) : (
             <LoadingRows />
           )}

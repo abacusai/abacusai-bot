@@ -147,4 +147,5 @@ export const useChatView = (): ChatViewContextValue => {
 /** The sub-agent a nested tool row belongs to (§5.5). */
 const SubagentScopeContext = createContext<string | undefined>(undefined);
 export const SubagentScope = SubagentScopeContext.Provider;
-export const useSubagentScope = (): string | undefined => use(SubagentScopeContext);
+export const useSubagentScope = (): string | undefined =>
+  use(SubagentScopeContext);

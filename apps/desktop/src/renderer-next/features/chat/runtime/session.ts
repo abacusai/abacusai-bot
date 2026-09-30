@@ -16,9 +16,8 @@ import {
 import { Store } from "@tanstack/react-store";
 
 import { isNotFound, type AiClient } from "#next/data/ai";
-
-import type { AiHydration } from "#shared/contract/ai";
 import type { PermissionDecision } from "#shared/agent-types";
+import type { AiHydration } from "#shared/contract/ai";
 
 import {
   applyEvent,
@@ -308,7 +307,8 @@ export class ThreadSession {
       ],
     });
     if (gen !== this.#gen || rev !== this.#rev) return { kind: "stale" };
-    const kind = ack.status === "duplicate" ? (ack.original ?? "started") : ack.status;
+    const kind =
+      ack.status === "duplicate" ? (ack.original ?? "started") : ack.status;
     return { kind, ...(ack.reason != null ? { reason: ack.reason } : {}) };
   }
 
@@ -345,7 +345,8 @@ export class ThreadSession {
   ): Promise<void> {
     const store = this.store;
     const id = descriptor.id;
-    const decisionName = typeof decision === "string" ? decision : decision.type;
+    const decisionName =
+      typeof decision === "string" ? decision : decision.type;
     store.setState((state) => ({
       ...state,
       permissions: {
@@ -366,7 +367,11 @@ export class ThreadSession {
             ...state.permissions,
             answering: {
               ...state.permissions.answering,
-              [id]: { state: "error", message: "noResponse", since: Date.now() },
+              [id]: {
+                state: "error",
+                message: "noResponse",
+                since: Date.now(),
+              },
             },
           },
         };
@@ -490,7 +495,11 @@ export class ThreadSession {
       if (!unchanged()) return;
       if (isNotFound(error)) {
         // The cursor is gone (a clear): stop paging, rebuild (§14.12).
-        this.#host({ older: "idle", hasOlderMessages: false, olderCursor: null });
+        this.#host({
+          older: "idle",
+          hasOlderMessages: false,
+          olderCursor: null,
+        });
         this.#start();
         return;
       }
@@ -557,7 +566,12 @@ export class ThreadSession {
       client: null,
       store: null,
       dispatcher: null,
-      staged: { messages: [], subagents: [], status: "ready", sessionGenerating: false },
+      staged: {
+        messages: [],
+        subagents: [],
+        status: "ready",
+        sessionGenerating: false,
+      },
       paging: { hasOlderMessages: false, olderCursor: null },
       swapped: false,
       failed: false,
@@ -620,7 +634,8 @@ export class ThreadSession {
       post: (item) => this.#post(gen, item.seq, item.event),
     });
     gen.dispatcher = dispatcher;
-    const guard = <A extends unknown[]>(fn: (...args: A) => void) =>
+    const guard =
+      <A extends unknown[]>(fn: (...args: A) => void) =>
       (...args: A): void => {
         if (gen.g !== this.#gen) return;
         fn(...args);
@@ -687,9 +702,12 @@ export class ThreadSession {
 
     this.#checkReady(gen);
     if (!gen.swapped)
-      gen.capTimer = this.#after(this.#options.readyCapMs ?? READY_CAP_MS, () => {
-        if (gen.g === this.#gen && !gen.swapped) this.#swap(gen, true);
-      });
+      gen.capTimer = this.#after(
+        this.#options.readyCapMs ?? READY_CAP_MS,
+        () => {
+          if (gen.g === this.#gen && !gen.swapped) this.#swap(gen, true);
+        }
+      );
   }
 
   #post(gen: Generation, seq: number, event: StreamChunk): void {
@@ -790,9 +808,10 @@ export class ThreadSession {
     }
     this.#host({ connection: "reconnecting" });
     if (delay === 0) this.#start();
-    else this.#after(delay, () => {
-      if (!this.#retired) this.#start();
-    });
+    else
+      this.#after(delay, () => {
+        if (!this.#retired) this.#start();
+      });
   }
 
   #teardown(gen: Generation): void {
@@ -824,7 +843,9 @@ export class ThreadSession {
 
   #mergeOutcomes(gen: Generation, outcomes: readonly RunOutcomeRecord[]): void {
     gen.store?.setState((state) => {
-      const known = new Set(state.runs.outcomes.map((outcome) => outcome.runId));
+      const known = new Set(
+        state.runs.outcomes.map((outcome) => outcome.runId)
+      );
       const added = outcomes.filter((outcome) => !known.has(outcome.runId));
       if (added.length === 0) return state;
       return {
@@ -853,24 +874,23 @@ export class ThreadSession {
 
   #createAdmission(): AdmissionHost {
     return {
-    ai: this.#ai,
-    threadId: this.threadId,
-    token: () => ({ gen: this.#gen, rev: this.#rev }),
-    outbox: () => this.hostStore.state.outbox,
-    setOutbox: (update) =>
-      this.hostStore.setState((state) => ({
-        ...state,
-        outbox: update(state.outbox),
-      })),
-    echoed: (messageId) =>
-      this.#echoed.has(messageId) ||
-      (this.#live?.client?.getMessages() ?? []).some(
-        (message) => message.id === messageId
-      ),
-    reconcileDelaysMs: this.#options.reconcileDelaysMs ?? RECONCILE_DELAYS_MS,
-    schedule: (ms, run) => void this.#after(ms, run),
-    newId: (prefix) =>
-      `${prefix}-${this.#options.newId?.(prefix) ?? uuid()}`,
-  };
+      ai: this.#ai,
+      threadId: this.threadId,
+      token: () => ({ gen: this.#gen, rev: this.#rev }),
+      outbox: () => this.hostStore.state.outbox,
+      setOutbox: (update) =>
+        this.hostStore.setState((state) => ({
+          ...state,
+          outbox: update(state.outbox),
+        })),
+      echoed: (messageId) =>
+        this.#echoed.has(messageId) ||
+        (this.#live?.client?.getMessages() ?? []).some(
+          (message) => message.id === messageId
+        ),
+      reconcileDelaysMs: this.#options.reconcileDelaysMs ?? RECONCILE_DELAYS_MS,
+      schedule: (ms, run) => void this.#after(ms, run),
+      newId: (prefix) => `${prefix}-${this.#options.newId?.(prefix) ?? uuid()}`,
+    };
   }
 }

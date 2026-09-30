@@ -8,13 +8,17 @@ import type { ReactNode } from "react";
 
 import { createDb, DbProvider } from "#next/data/db";
 import { FixtureDb, fixtureTransport } from "#next/data/fixture-db/fixture-db";
-import { defaultSeed } from "#next/test-support/app-harness";
 import { i18n, initI18n } from "#next/lib/i18n";
+import { defaultSeed } from "#next/test-support/app-harness";
 
+import {
+  fixtureRuntime,
+  type FixtureRuntime,
+  type PlayOptions,
+} from "./fixtures/player";
+import type { FakeRelay } from "./fixtures/relay";
 import type { ComposerConfig } from "./kit/context";
 import { ChatView } from "./kit/view";
-import { fixtureRuntime, type FixtureRuntime, type PlayOptions } from "./fixtures/player";
-import type { FakeRelay } from "./fixtures/relay";
 import { inertHostActions } from "./runtime/host-actions";
 import { createChatRuntime, type ChatRuntime } from "./runtime/runtime";
 
@@ -26,7 +30,9 @@ export interface Rendered {
 export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
   await initI18n();
   await i18n.changeLanguage("en-US");
-  const db = createDb(fixtureTransport(new FixtureDb(defaultSeed())), { retryDelayMs: () => 5 });
+  const db = createDb(fixtureTransport(new FixtureDb(defaultSeed())), {
+    retryDelayMs: () => 5,
+  });
   await db.collections.prefs.preload();
   let view!: RenderResult;
   await act(async () => {
@@ -41,9 +47,15 @@ export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
   };
 };
 
-export const baseComposer = (skin: "bot" | "session", extra: Partial<ComposerConfig> = {}): ComposerConfig => ({
+export const baseComposer = (
+  skin: "bot" | "session",
+  extra: Partial<ComposerConfig> = {}
+): ComposerConfig => ({
   mode: "full",
-  placeholder: skin === "bot" ? "Message Chief of Staff" : "Steer the run, or queue the next step",
+  placeholder:
+    skin === "bot"
+      ? "Message Chief of Staff"
+      : "Steer the run, or queue the next step",
   attachmentsBase: skin === "session" ? "/repo" : null,
   showModeChip: skin === "session",
   model: null,
@@ -52,7 +64,11 @@ export const baseComposer = (skin: "bot" | "session", extra: Partial<ComposerCon
 
 export const renderScenario = async (
   scenarioId: string,
-  options: PlayOptions & { composer?: Partial<ComposerConfig>; onOpenFile?: (path: string) => void; onOpenSubagent?: (id: string) => void } = {}
+  options: PlayOptions & {
+    composer?: Partial<ComposerConfig>;
+    onOpenFile?: (path: string) => void;
+    onOpenSubagent?: (id: string) => void;
+  } = {}
 ): Promise<Rendered & { fixture: FixtureRuntime }> => {
   const fixture = fixtureRuntime(scenarioId, options)!;
   const skin = fixture.scenario.skin;
@@ -65,8 +81,12 @@ export const renderScenario = async (
         runtime={fixture.runtime}
         workspaceRoot={skin === "session" ? "/repo" : null}
         composer={baseComposer(skin, options.composer)}
-        {...(options.onOpenFile != null ? { onOpenFile: options.onOpenFile } : {})}
-        {...(options.onOpenSubagent != null ? { onOpenSubagent: options.onOpenSubagent } : {})}
+        {...(options.onOpenFile != null
+          ? { onOpenFile: options.onOpenFile }
+          : {})}
+        {...(options.onOpenSubagent != null
+          ? { onOpenSubagent: options.onOpenSubagent }
+          : {})}
       />
     </div>
   );

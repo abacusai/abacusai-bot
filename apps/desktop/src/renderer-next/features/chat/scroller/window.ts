@@ -17,12 +17,21 @@ export const newestWindow = (total: number, max = MAX_ROWS): RowWindow => ({
   end: total,
 });
 
-export const showEarlier = (window: RowWindow, max = MAX_ROWS, step = STEP): RowWindow => {
+export const showEarlier = (
+  window: RowWindow,
+  max = MAX_ROWS,
+  step = STEP
+): RowWindow => {
   const start = Math.max(0, window.start - step);
   return { start, end: Math.min(window.end, start + max) };
 };
 
-export const showLater = (window: RowWindow, total: number, max = MAX_ROWS, step = STEP): RowWindow => {
+export const showLater = (
+  window: RowWindow,
+  total: number,
+  max = MAX_ROWS,
+  step = STEP
+): RowWindow => {
   const end = Math.min(total, window.end + step);
   return { start: Math.max(window.start, end - max), end };
 };
@@ -52,7 +61,9 @@ export const placeholderHeight = (rows: number, measured?: number): number =>
 
 /** Local day key for separators; null without a time (§10). */
 export const dayKey = (date: Date | null): string | null =>
-  date == null ? null : `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  date == null
+    ? null
+    : `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
 export const messageTime = (message: {
   createdAt?: Date | string;
@@ -62,7 +73,9 @@ export const messageTime = (message: {
     const date = new Date(message.createdAt);
     if (!Number.isNaN(date.getTime())) return date;
   }
-  const iso = (message.metadata as { tanstack?: { createdAt?: string } } | undefined)?.tanstack?.createdAt;
+  const iso = (
+    message.metadata as { tanstack?: { createdAt?: string } } | undefined
+  )?.tanstack?.createdAt;
   if (typeof iso === "string") {
     const date = new Date(iso);
     if (!Number.isNaN(date.getTime())) return date;

@@ -7,7 +7,14 @@ import { createChatUI } from "@tanstack/ai-react/ui";
 
 import { ChatLayout, ComposerSlot } from "./layout";
 import { BotMessage, SessionMessage } from "./message";
-import { DocumentView, ImageView, TextPartDispatch, ThinkingView, UnknownPart, VideoView } from "./parts";
+import {
+  DocumentView,
+  ImageView,
+  TextPartDispatch,
+  ThinkingView,
+  UnknownPart,
+  VideoView,
+} from "./parts";
 import { subagentWidgets } from "./subagents/subagent-card";
 import { botToolWidgets, sessionToolWidgets } from "./tools/tool-widgets";
 
@@ -23,7 +30,11 @@ const partsComponents = {
 };
 
 export const SessionUI = createChatUI(options, {
-  components: { layout: ChatLayout, message: SessionMessage, input: ComposerSlot },
+  components: {
+    layout: ChatLayout,
+    message: SessionMessage,
+    input: ComposerSlot,
+  },
   partsComponents,
   toolsComponents: sessionToolWidgets,
   subagentsComponents: subagentWidgets,

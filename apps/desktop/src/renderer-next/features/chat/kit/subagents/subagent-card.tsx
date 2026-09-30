@@ -12,7 +12,11 @@ import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
 import { Button } from "#next/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "#next/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "#next/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#next/ui/tooltip";
 
 import { formatElapsed, useSeconds } from "../clock";
@@ -24,7 +28,8 @@ const finishedAt = new Map<string, number>();
 
 const stepsOf = (messages: readonly UIMessage[]): number =>
   messages.reduce(
-    (count, message) => count + message.parts.filter((part) => part.type === "tool-call").length,
+    (count, message) =>
+      count + message.parts.filter((part) => part.type === "tool-call").length,
     0
   );
 
@@ -34,7 +39,10 @@ const latestTool = (messages: readonly UIMessage[]): string | null => {
     for (let p = parts.length - 1; p >= 0; p -= 1) {
       const part = parts[p]!;
       if (part.type === "tool-call")
-        return toolTitle(part.name, (part.input as Record<string, unknown> | undefined) ?? {});
+        return toolTitle(
+          part.name,
+          (part.input as Record<string, unknown> | undefined) ?? {}
+        );
     }
   }
   return null;
@@ -49,21 +57,31 @@ const KIND_KEYS: Record<string, string> = {
 export const SubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
   const { t } = useTranslation();
   const { runtime, threadId, onOpenSubagent } = useChatView();
-  const running = subagent.status === "running" || subagent.status === "suspended";
+  const running =
+    subagent.status === "running" || subagent.status === "suspended";
   const now = useSeconds(running);
   const started = firstSeen.get(subagent.id) ?? now;
   if (!firstSeen.has(subagent.id)) firstSeen.set(subagent.id, started);
-  if (!running && !finishedAt.has(subagent.id)) finishedAt.set(subagent.id, now);
+  if (!running && !finishedAt.has(subagent.id))
+    finishedAt.set(subagent.id, now);
   const steps = stepsOf(subagent.messages);
   const description = (subagent as { description?: string }).description;
-  const name = description ?? t(KIND_KEYS[subagent.name] ?? "chat.subagent.kind.generic");
+  const name =
+    description ?? t(KIND_KEYS[subagent.name] ?? "chat.subagent.kind.generic");
   const sub = running
-    ? [latestTool(subagent.messages), t("chat.subagent.steps", { count: steps })].filter(Boolean).join(" · ")
+    ? [
+        latestTool(subagent.messages),
+        t("chat.subagent.steps", { count: steps }),
+      ]
+        .filter(Boolean)
+        .join(" · ")
     : subagent.status === "error"
       ? (subagent.error?.message ?? t("chat.subagent.failed"))
       : t("chat.subagent.done", {
           count: steps,
-          duration: formatElapsed((finishedAt.get(subagent.id) ?? now) - started),
+          duration: formatElapsed(
+            (finishedAt.get(subagent.id) ?? now) - started
+          ),
         });
   const PartsView = Parts as ComponentType;
   return (
@@ -84,19 +102,24 @@ export const SubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
                 : "bg-[var(--chat-status-done)]"
           )}
         />
-        <CollapsibleTrigger className="group/sub flex min-w-0 flex-1 items-center gap-2 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <CollapsibleTrigger className="group/sub focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-2 text-start outline-none focus-visible:ring-2">
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-medium">{name}</span>
             <span
               className={cn(
                 "truncate text-xs",
-                subagent.status === "error" ? "text-destructive" : "text-muted-foreground"
+                subagent.status === "error"
+                  ? "text-destructive"
+                  : "text-muted-foreground"
               )}
             >
               {sub}
             </span>
           </span>
-          <ChevronRight aria-hidden className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]/sub:rotate-90" />
+          <ChevronRight
+            aria-hidden
+            className="text-muted-foreground size-3.5 shrink-0 transition-transform group-data-[panel-open]/sub:rotate-90"
+          />
         </CollapsibleTrigger>
         {onOpenSubagent != null ? (
           <Button
@@ -135,6 +158,10 @@ export const SubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
   );
 };
 
-export const subagentWidgets = new Proxy({} as Record<string, typeof SubagentCard>, {
-  get: (_target, name) => (typeof name === "string" ? SubagentCard : undefined),
-}) as Record<string, typeof SubagentCard>;
+export const subagentWidgets = new Proxy(
+  {} as Record<string, typeof SubagentCard>,
+  {
+    get: (_target, name) =>
+      typeof name === "string" ? SubagentCard : undefined,
+  }
+) as Record<string, typeof SubagentCard>;

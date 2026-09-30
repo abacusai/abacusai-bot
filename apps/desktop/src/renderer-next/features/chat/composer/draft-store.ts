@@ -61,10 +61,20 @@ draftStore.subscribe((state) => {
 
 export const EMPTY_DRAFT: Draft = { text: "", attachments: [] };
 
-export const draftOf = (threadId: string): Draft => draftStore.state[threadId] ?? EMPTY_DRAFT;
+export const draftOf = (threadId: string): Draft =>
+  draftStore.state[threadId] ?? EMPTY_DRAFT;
 
-export const updateDraft = (threadId: string, update: (draft: Draft) => Draft): void =>
-  draftStore.setState((state) => ({ ...state, [threadId]: update(state[threadId] ?? EMPTY_DRAFT) }));
+export const updateDraft = (
+  threadId: string,
+  update: (draft: Draft) => Draft
+): void =>
+  draftStore.setState((state) => ({
+    ...state,
+    [threadId]: update(state[threadId] ?? EMPTY_DRAFT),
+  }));
 
 export const clearDraft = (threadId: string, keep: Partial<Draft> = {}): void =>
-  draftStore.setState((state) => ({ ...state, [threadId]: { ...EMPTY_DRAFT, ...keep } }));
+  draftStore.setState((state) => ({
+    ...state,
+    [threadId]: { ...EMPTY_DRAFT, ...keep },
+  }));

@@ -48,7 +48,9 @@ export const withAttachmentRefs = (
   attachments: readonly SubmitAttachment[]
 ): string => {
   const refs = attachments
-    .filter((attachment) => attachment.state === "done" && attachment.path != null)
+    .filter(
+      (attachment) => attachment.state === "done" && attachment.path != null
+    )
     .map((attachment) => `@${attachment.path}`);
   if (refs.length === 0) return text;
   const body = text.trim();

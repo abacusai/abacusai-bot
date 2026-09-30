@@ -31,7 +31,11 @@ export const useThreadStore = <T>(
   compare?: (a: T, b: T) => boolean
 ): T => {
   const store = useSelector(session.hostStore, (state) => state.store);
-  return useSelector(store, selector, compare != null ? { compare } : undefined);
+  return useSelector(
+    store,
+    selector,
+    compare != null ? { compare } : undefined
+  );
 };
 
 export const useBusy = (session: ThreadSession, turnBusy = false): boolean => {
@@ -49,7 +53,8 @@ export const descriptorFor = (
   const key = toolKey(subagentRunId, toolCallId);
   return state.permissions.items.find(
     (item) =>
-      item.toolCallId != null && toolKey(item.subagentRunId, item.toolCallId) === key
+      item.toolCallId != null &&
+      toolKey(item.subagentRunId, item.toolCallId) === key
   );
 };
 

@@ -15,7 +15,13 @@ export type ToolMeta =
   | { kind: "exit"; code: number }
   | null;
 
-const EDIT_TOOLS = new Set(["edit", "write", "ast_edit", "batch_edit", "notebook_edit"]);
+const EDIT_TOOLS = new Set([
+  "edit",
+  "write",
+  "ast_edit",
+  "batch_edit",
+  "notebook_edit",
+]);
 
 export const kindOf = (name: string): ToolKind => {
   try {
@@ -40,7 +46,11 @@ export const toolMeta = (
   }
   if (name === "read" && tool.read != null) {
     const from = typeof input.offset === "number" ? input.offset : 1;
-    return { kind: "lines", from, to: from + Math.max(0, tool.read.lineCount - 1) };
+    return {
+      kind: "lines",
+      from,
+      to: from + Math.max(0, tool.read.lineCount - 1),
+    };
   }
   if (name === "grep" && tool.status === "done") {
     const match = /^(?:Found )?(\d+) match(?:es)?/m.exec(tool.text);

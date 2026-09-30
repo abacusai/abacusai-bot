@@ -5,7 +5,11 @@
  * (resync): the final generation's client ends equal to a fresh
  * `StreamProcessor` fed every event once, in order.
  */
-import { StreamProcessor, type StreamChunk, type UIMessage } from "@tanstack/ai";
+import {
+  StreamProcessor,
+  type StreamChunk,
+  type UIMessage,
+} from "@tanstack/ai";
 import { restoreInboundChunk } from "@tanstack/ai/client";
 import { describe, expect, it, vi } from "vitest";
 
@@ -89,21 +93,23 @@ describe("R2-T3 ordering", () => {
           index += size;
           if (random() < 0.5) await Promise.resolve();
         }
-        await vi.waitFor(
-          () => {
-            const positions = session.positions();
-            expect(session.ready).toBe(true);
-            expect(positions?.appliedSeq).toBe(relay.lastSeq);
-          },
-          { timeout: 2000, interval: 1 }
-        ).catch((error: unknown) => {
-          throw new Error(
-            `seed ${seed} ${name} cut ${cut} joinFailAt ${joinFailAt} gen ${session.gen} ` +
-              JSON.stringify(session.positions()) +
-              ` host ${JSON.stringify({ phase: session.hostStore.state.phase, connection: session.hostStore.state.connection })} ` +
-              String(error)
-          );
-        });
+        await vi
+          .waitFor(
+            () => {
+              const positions = session.positions();
+              expect(session.ready).toBe(true);
+              expect(positions?.appliedSeq).toBe(relay.lastSeq);
+            },
+            { timeout: 2000, interval: 1 }
+          )
+          .catch((error: unknown) => {
+            throw new Error(
+              `seed ${seed} ${name} cut ${cut} joinFailAt ${joinFailAt} gen ${session.gen} ` +
+                JSON.stringify(session.positions()) +
+                ` host ${JSON.stringify({ phase: session.hostStore.state.phase, connection: session.hostStore.state.connection })} ` +
+                String(error)
+            );
+          });
         const messages = session.hostStore.state.client!.getMessages();
         expect(
           { seed, name, cut, messages: timeless(messages) },

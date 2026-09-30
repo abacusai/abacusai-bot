@@ -40,7 +40,12 @@ export interface NormalizedTool {
     timedOut?: boolean;
     background?: boolean;
   };
-  read?: { content: string; startLine?: number; lineCount: number; filePath?: string };
+  read?: {
+    content: string;
+    startLine?: number;
+    lineCount: number;
+    filePath?: string;
+  };
   source: "live" | "migrated";
 }
 
@@ -69,15 +74,18 @@ const num = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined;
 
 export const isMigrated = (call: ToolCallPart): boolean =>
-  typeof asRecord(
-    asRecord((call as { metadata?: unknown }).metadata)?.abacus
-  )?.segmentId === "string";
+  typeof asRecord(asRecord((call as { metadata?: unknown }).metadata)?.abacus)
+    ?.segmentId === "string";
 
 const resultText = (result: ToolResultPart | undefined): string => {
   if (result == null) return "";
   if (typeof result.content === "string") return result.content;
   return result.content
-    .map((part) => ((part as { type: string }).type === "text" ? ((part as { content?: string }).content ?? "") : ""))
+    .map((part) =>
+      (part as { type: string }).type === "text"
+        ? ((part as { content?: string }).content ?? "")
+        : ""
+    )
     .join("");
 };
 
@@ -123,14 +131,18 @@ const statusOf = (
   return "done";
 };
 
-const liveDiff = (display: ToolDisplayData | undefined): NormalizedTool["diff"] =>
+const liveDiff = (
+  display: ToolDisplayData | undefined
+): NormalizedTool["diff"] =>
   display == null ||
   (display.originalContent == null &&
     display.newContent == null &&
     display.finalContent == null)
     ? undefined
     : {
-        ...(display.originalContent != null ? { original: display.originalContent } : {}),
+        ...(display.originalContent != null
+          ? { original: display.originalContent }
+          : {}),
         ...((display.newContent ?? display.finalContent) != null
           ? { final: display.newContent ?? display.finalContent }
           : {}),
@@ -147,7 +159,8 @@ const normalizeLive = (
   context: NormalizeContext
 ): NormalizedTool => {
   const output =
-    asRecord(call.output) ?? (result != null ? parseJson(resultText(result)) : undefined);
+    asRecord(call.output) ??
+    (result != null ? parseJson(resultText(result)) : undefined);
   const display = {
     ...live.display,
     ...(asRecord(output?.display) as ToolDisplayData | undefined),
@@ -156,24 +169,39 @@ const normalizeLive = (
   const terminalOutput =
     str(asRecord(output?.terminal)?.output) ?? live.output ?? undefined;
   const command = str(input.command);
-  const text = str(output?.text) ?? (result != null && output == null ? resultText(result) : "");
+  const text =
+    str(output?.text) ??
+    (result != null && output == null ? resultText(result) : "");
   const diff = liveDiff(Object.keys(display).length > 0 ? display : undefined);
   const lineCount = num(display.lineCount);
   return {
     status,
     text,
-    ...(str(output?.error) != null ? { error: str(output?.error)! } : result?.error != null ? { error: result.error } : {}),
-    ...(str(output?.formatted) != null ? { formatted: str(output?.formatted)! } : {}),
+    ...(str(output?.error) != null
+      ? { error: str(output?.error)! }
+      : result?.error != null
+        ? { error: result.error }
+        : {}),
+    ...(str(output?.formatted) != null
+      ? { formatted: str(output?.formatted)! }
+      : {}),
     ...(diff != null ? { diff } : {}),
     ...(terminalOutput != null || command != null
-      ? { terminal: { ...(command != null ? { command } : {}), output: terminalOutput ?? "" } }
+      ? {
+          terminal: {
+            ...(command != null ? { command } : {}),
+            output: terminalOutput ?? "",
+          },
+        }
       : {}),
     ...(lineCount != null
       ? {
           read: {
             content: text,
             lineCount,
-            ...(num(input.offset) != null ? { startLine: num(input.offset)! } : {}),
+            ...(num(input.offset) != null
+              ? { startLine: num(input.offset)! }
+              : {}),
             ...(str(input.path ?? input.file_path) != null
               ? { filePath: str(input.path ?? input.file_path)! }
               : {}),
@@ -192,9 +220,13 @@ const normalizeMigrated = (
 ): NormalizedTool => {
   // C.3 r1 fixes: migrated calls carry no `input`/`output`; the legacy
   // `ToolResultData` is read through `expandToolResultData`.
-  const text = typeof call.output === "string" ? call.output : resultText(result);
+  const text =
+    typeof call.output === "string" ? call.output : resultText(result);
   const data = result == null ? undefined : expandToolResultData(result);
-  const status = statusOf(call, result, undefined, { ...context, runActive: false });
+  const status = statusOf(call, result, undefined, {
+    ...context,
+    runActive: false,
+  });
   const base: NormalizedTool = {
     status: result == null ? "stopped" : status,
     text,
@@ -207,21 +239,37 @@ const normalizeMigrated = (
         ...base,
         read: {
           content: str(data.content) ?? text,
-          lineCount: num(data.lineCount) ?? (str(data.content) ?? text).split("\n").length,
-          ...(num(data.startLine) != null ? { startLine: num(data.startLine)! } : {}),
-          ...(str(data.filePath ?? input.path) != null ? { filePath: str(data.filePath ?? input.path)! } : {}),
+          lineCount:
+            num(data.lineCount) ??
+            (str(data.content) ?? text).split("\n").length,
+          ...(num(data.startLine) != null
+            ? { startLine: num(data.startLine)! }
+            : {}),
+          ...(str(data.filePath ?? input.path) != null
+            ? { filePath: str(data.filePath ?? input.path)! }
+            : {}),
         },
       };
     case "file_mutation":
       return {
         ...base,
         diff: {
-          ...(str(data.originalContent) != null ? { original: str(data.originalContent)! } : {}),
-          ...(str(data.finalContent) != null ? { final: str(data.finalContent)! } : {}),
+          ...(str(data.originalContent) != null
+            ? { original: str(data.originalContent)! }
+            : {}),
+          ...(str(data.finalContent) != null
+            ? { final: str(data.finalContent)! }
+            : {}),
           ...(str(data.diff) != null ? { unified: str(data.diff)! } : {}),
-          ...(num(data.additions) != null ? { additions: num(data.additions)! } : {}),
-          ...(num(data.deletions) != null ? { deletions: num(data.deletions)! } : {}),
-          ...(typeof data.isNewFile === "boolean" ? { isNewFile: data.isNewFile } : {}),
+          ...(num(data.additions) != null
+            ? { additions: num(data.additions)! }
+            : {}),
+          ...(num(data.deletions) != null
+            ? { deletions: num(data.deletions)! }
+            : {}),
+          ...(typeof data.isNewFile === "boolean"
+            ? { isNewFile: data.isNewFile }
+            : {}),
         },
       };
     case "bash":
@@ -229,10 +277,18 @@ const normalizeMigrated = (
         ...base,
         terminal: {
           output: str(data.output) ?? text,
-          ...(str(data.command ?? input.command) != null ? { command: str(data.command ?? input.command)! } : {}),
-          ...(num(data.exitCode) != null ? { exitCode: num(data.exitCode)! } : {}),
-          ...(typeof data.timedOut === "boolean" ? { timedOut: data.timedOut } : {}),
-          ...(typeof data.background === "boolean" ? { background: data.background } : {}),
+          ...(str(data.command ?? input.command) != null
+            ? { command: str(data.command ?? input.command)! }
+            : {}),
+          ...(num(data.exitCode) != null
+            ? { exitCode: num(data.exitCode)! }
+            : {}),
+          ...(typeof data.timedOut === "boolean"
+            ? { timedOut: data.timedOut }
+            : {}),
+          ...(typeof data.background === "boolean"
+            ? { background: data.background }
+            : {}),
         },
       };
     default:
@@ -273,7 +329,10 @@ export interface DiffLine {
 }
 
 /** A line diff by longest common subsequence, bounded for huge inputs. */
-export const diffLines = (a: readonly string[], b: readonly string[]): DiffLine[] => {
+export const diffLines = (
+  a: readonly string[],
+  b: readonly string[]
+): DiffLine[] => {
   if (a.length * b.length > 4_000_000)
     return [
       ...a.map((text): DiffLine => ({ kind: "del", text })),

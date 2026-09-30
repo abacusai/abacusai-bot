@@ -30,16 +30,22 @@ describe("R2-T34 connection", () => {
     });
     sessions.push(session);
     await session.load();
-    await vi.waitFor(() => expect(session.hostStore.state.connection).toBe("connected"));
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.connection).toBe("connected")
+    );
     const host = renderHook(() => useThreadHost(session));
     expect(host.result.current.connectionStatus).toBe("connected");
 
     relay.faults.subscribe = () => new Error("down");
     relay.dropSubscriptions();
-    await vi.waitFor(() => expect(session.hostStore.state.connection).toBe("reconnecting"));
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.connection).toBe("reconnecting")
+    );
     host.rerender();
     expect(host.result.current.connectionStatus).toBe("connecting");
-    await vi.waitFor(() => expect(session.hostStore.state.connection).toBe("error"));
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.connection).toBe("error")
+    );
     host.rerender();
     expect(host.result.current.connectionStatus).toBe("error");
     expect(host.result.current.isSubscribed).toBe(false);
@@ -50,7 +56,9 @@ describe("R2-T34 connection", () => {
 describe("R2-T7 unmounted", () => {
   it("a run finishing while unmounted shows at remount, from the LRU and after eviction", async () => {
     const events = golden("plain-text");
-    const cut = events.findIndex((item) => item.event.type === "TEXT_MESSAGE_CONTENT") + 1;
+    const cut =
+      events.findIndex((item) => item.event.type === "TEXT_MESSAGE_CONTENT") +
+      1;
     const relay = new FakeRelay({ events: events.slice(0, cut) });
     const runtime = createChatRuntime(relay.ai, { capacity: 1 });
     const session = runtime.session("t-1");

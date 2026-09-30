@@ -9,7 +9,15 @@ import type { UIMessage } from "@tanstack/ai-client";
 import type { LayoutProps } from "@tanstack/ai-react/ui";
 import { useSelector } from "@tanstack/react-store";
 import { AnimatePresence, motion } from "motion/react";
-import { createContext, use, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import {
+  createContext,
+  use,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { useMotionPreference } from "#next/lib/motion";
@@ -27,16 +35,22 @@ import { QueueSlot } from "./queue-slot";
 import { NoticeRow } from "./status/status";
 
 /** The skin's message widget, for the transcript's rows. */
-const MessageComponentContext = createContext<ComponentType<{ message: UIMessage }> | null>(null);
+const MessageComponentContext = createContext<ComponentType<{
+  message: UIMessage;
+}> | null>(null);
 export const MessageComponentProvider = MessageComponentContext.Provider;
 
-type MessagesSlot = ComponentType<{ children?: (messages: UIMessage[]) => ReactNode }>;
+type MessagesSlot = ComponentType<{
+  children?: (messages: UIMessage[]) => ReactNode;
+}>;
 
 const Notices = () => {
   const { session } = useChatView();
   const notices = useThreadStore(session, (state) => state.notices);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
-  const shown = notices.filter((notice) => !dismissed.has(`${notice.key}:${notice.seq}`));
+  const shown = notices.filter(
+    (notice) => !dismissed.has(`${notice.key}:${notice.seq}`)
+  );
   if (shown.length === 0) return null;
   return (
     <div className="flex flex-col gap-1.5 px-4" data-slot="notices">
@@ -44,7 +58,11 @@ const Notices = () => {
         <NoticeRow
           key={notice.key}
           notice={notice}
-          onDismiss={() => setDismissed((set) => new Set([...set, `${notice.key}:${notice.seq}`]))}
+          onDismiss={() =>
+            setDismissed(
+              (set) => new Set([...set, `${notice.key}:${notice.seq}`])
+            )
+          }
         />
       ))}
     </div>
@@ -58,7 +76,10 @@ const Announcer = () => {
   const outcomes = useThreadStore(session, (state) => state.runs.outcomes);
   const items = useThreadStore(session, (state) => state.permissions.items);
   const [text, setText] = useState("");
-  const seen = useRef<{ outcomes: Set<string>; permissions: Set<string> } | null>(null);
+  const seen = useRef<{
+    outcomes: Set<string>;
+    permissions: Set<string>;
+  } | null>(null);
   const queue = useRef<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -77,7 +98,9 @@ const Announcer = () => {
           ? t("chat.announce.finished")
           : outcome.kind === "cancelled"
             ? t("chat.announce.stopped")
-            : t("chat.announce.error", { message: outcome.error?.message ?? "" })
+            : t("chat.announce.error", {
+                message: outcome.error?.message ?? "",
+              })
       );
     }
     for (const item of items) {
@@ -85,7 +108,9 @@ const Announcer = () => {
       seen.current.permissions.add(item.id);
       const model = present(item.metadata.abacus.request as PermissionRequest);
       queue.current.push(
-        t("chat.announce.approval", { title: t(`chat.permission.title.${model.title}`, model.titleValues) })
+        t("chat.announce.approval", {
+          title: t(`chat.permission.title.${model.title}`, model.titleValues),
+        })
       );
     }
     const flush = () => {
@@ -99,11 +124,19 @@ const Announcer = () => {
     };
     if (timer.current == null) flush();
   }, [outcomes, items, t]);
-  useEffect(() => () => {
-    if (timer.current != null) clearTimeout(timer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timer.current != null) clearTimeout(timer.current);
+    },
+    []
+  );
   return (
-    <div role="status" aria-live="polite" className="sr-only" data-slot="chat-announcer">
+    <div
+      role="status"
+      aria-live="polite"
+      className="sr-only"
+      data-slot="chat-announcer"
+    >
       {text}
     </div>
   );
@@ -116,34 +149,47 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
   const InputView = Input as ComponentType;
   const editing = useSelector(queueEditing, (state) => state[threadId] ?? null);
   return (
-    <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor" scrollPreviousItemPeek={64}>
-    <div className="flex size-full min-h-0 flex-col" data-slot="chat-layout" data-skin={skin}>
-      {slots.banner}
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <MessagesView>
-          {(messages) =>
-            messages.length === 0 && slots.empty != null ? (
-              <div className="flex flex-1 items-center justify-center">{slots.empty}</div>
-            ) : Message == null ? null : (
-              <Transcript messages={messages} Message={Message} />
-            )
-          }
-        </MessagesView>
-      </div>
-      <div className="mx-auto flex w-full max-w-[720px] flex-col gap-1.5 pb-4">
-        <Notices />
-        {skin === "bot" ? (
-          <div className="px-4">
-            <PermissionList />
-          </div>
-        ) : null}
-        <QueueSlot editingId={editing} onEditingChange={(id) => setQueueEditing(threadId, id)} />
-        <div className="px-4">
-          <InputView />
+    <MessageScrollerProvider
+      autoScroll
+      defaultScrollPosition="last-anchor"
+      scrollPreviousItemPeek={64}
+    >
+      <div
+        className="flex size-full min-h-0 flex-col"
+        data-slot="chat-layout"
+        data-skin={skin}
+      >
+        {slots.banner}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <MessagesView>
+            {(messages) =>
+              messages.length === 0 && slots.empty != null ? (
+                <div className="flex flex-1 items-center justify-center">
+                  {slots.empty}
+                </div>
+              ) : Message == null ? null : (
+                <Transcript messages={messages} Message={Message} />
+              )
+            }
+          </MessagesView>
         </div>
+        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-1.5 pb-4">
+          <Notices />
+          {skin === "bot" ? (
+            <div className="px-4">
+              <PermissionList />
+            </div>
+          ) : null}
+          <QueueSlot
+            editingId={editing}
+            onEditingChange={(id) => setQueueEditing(threadId, id)}
+          />
+          <div className="px-4">
+            <InputView />
+          </div>
+        </div>
+        <Announcer />
       </div>
-      <Announcer />
-    </div>
     </MessageScrollerProvider>
   );
 };
@@ -151,14 +197,19 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
 /** The input slot: the composer, or (sessions) the tray that takes it over. */
 export const ComposerSlot = () => {
   const { skin, session } = useChatView();
-  const pending = useThreadStore(session, (state) => state.permissions.items.length > 0);
+  const pending = useThreadStore(
+    session,
+    (state) => state.permissions.items.length > 0
+  );
   const pref = useMotionPreference();
-  const composerFocused = useRef(false);
+  const [composerFocused, setComposerFocused] = useState(false);
   const tray = skin === "session" && pending;
   return (
     <div
       onFocusCapture={(event) => {
-        composerFocused.current = (event.target as HTMLElement).tagName === "TEXTAREA";
+        setComposerFocused(
+          (event.target as HTMLElement).tagName === "TEXTAREA"
+        );
       }}
     >
       <AnimatePresence mode="popLayout" initial={false}>
@@ -171,7 +222,7 @@ export const ComposerSlot = () => {
             exit={{ opacity: 0 }}
             transition={cardEnter(pref)}
           >
-            <PermissionTray autoFocus={composerFocused.current} />
+            <PermissionTray autoFocus={composerFocused} />
           </motion.div>
         ) : (
           <motion.div

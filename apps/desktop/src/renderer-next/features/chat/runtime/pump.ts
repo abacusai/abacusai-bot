@@ -102,8 +102,7 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
     return "continue";
   };
 
-  const caughtUp = (): boolean =>
-    positions.receivedSeq >= positions.checkpoint;
+  const caughtUp = (): boolean => positions.receivedSeq >= positions.checkpoint;
 
   if (activeRunId != null) {
     let terminal = false;
