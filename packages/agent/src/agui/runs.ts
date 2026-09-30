@@ -38,6 +38,12 @@ export interface RunControllerDeps {
   write: (event: AguiEvent) => void;
   /** The open parts to close before a terminal, in §3.1.5 order. */
   closeOpenParts: (cancelled: boolean) => AguiEvent[];
+  /**
+   * Right before a `RUN_ERROR`: an empty assistant message when the run has
+   * none (`AguiEmitter.errorAnchor`), so no receive-only StreamProcessor is
+   * left holding a pending message the next run's user echo would rename.
+   */
+  errorAnchor?: (runId: string) => AguiEvent[];
   /** The model reference the run's terminal names. */
   model: () => string;
   /** Right after RUN_STARTED is written. */
@@ -222,6 +228,15 @@ export class RunController {
     if (run == null) return;
     this.run = null;
     this.outcomes.set(run.runId, "error");
+    // The same closing sequence as `close()`: a tool left streaming, or no
+    // assistant message at all, would otherwise outlive the run in every
+    // transcript built from this stream.
+    for (const event of [
+      ...this.deps.closeOpenParts(true),
+      ...(this.deps.errorAnchor?.(run.runId) ?? []),
+    ]) {
+      writeSync(event);
+    }
     writeSync(
       aguiEvent(EventType.RUN_ERROR, {
         message:
@@ -251,6 +266,9 @@ export class RunController {
     const usage = run.usage != null ? { usage: toTokenUsage(run.usage) } : {};
 
     if (run.failure != null) {
+      for (const event of this.deps.errorAnchor?.(run.runId) ?? []) {
+        this.deps.write(event);
+      }
       this.outcomes.set(run.runId, "error");
       const meta: RunErrorMeta = {
         tanstack: {

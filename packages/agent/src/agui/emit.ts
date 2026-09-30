@@ -107,6 +107,8 @@ export class AguiEmitter {
   private readonly usedMessageIds = new Set<string>();
   private reasoning: OpenReasoning | null = null;
   private reasoningCount = 0;
+  /** The open run has had a parent assistant message (see `errorAnchor`). */
+  private runHadAssistant = false;
   private fallbackCount = 0;
   private steerCount = 0;
 
@@ -168,6 +170,29 @@ export class AguiEmitter {
   runOpened(): void {
     this.hiddenDepth = 0;
     this.hiddenTypes.length = 0;
+    this.runHadAssistant = false;
+  }
+
+  /**
+   * Before a `RUN_ERROR`: an empty assistant message for a run that opened
+   * none. A receive-only `StreamProcessor` (main's transcript, the chat kit's
+   * client) meets a `RUN_ERROR` with no assistant message by creating one and
+   * marking it pending, and then renames it to the next `TEXT_MESSAGE_START`
+   * it sees: the next run's user echo, which becomes an assistant message.
+   * With an assistant message of the run's own, nothing is pending.
+   */
+  errorAnchor(runId: string): AguiEvent[] {
+    if (this.runHadAssistant) return [];
+    this.runHadAssistant = true;
+    const id = this.uniqueMessageId(`${runId}:error`);
+
+    return [
+      aguiEvent(EventType.TEXT_MESSAGE_START, {
+        messageId: id,
+        role: "assistant",
+      }),
+      aguiEvent(EventType.TEXT_MESSAGE_END, { messageId: id }),
+    ];
   }
 
   /** Set by the host before `session.stop()` / `resetConversation()`. */
@@ -735,6 +760,7 @@ export class AguiEmitter {
     this.assistant = { key, id };
     this.lastAssistantId = id;
     this.reasoningCount = 0;
+    this.runHadAssistant = true;
 
     return [
       aguiEvent(EventType.TEXT_MESSAGE_START, {
