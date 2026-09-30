@@ -50,7 +50,28 @@
     "refresh": "Muat ulang",
     "revealInFolder": "Reveal in folder",
     "searchPlaceholder": "Cari artefak dan sesi…",
-    "unknownSession": "Sesi terhapus"
+    "unknownSession": "Sesi terhapus",
+    "page": {
+      "emptyTitle": "Nothing made yet",
+      "emptyDescription": "Documents, decks, images and code the agent makes collect here."
+    },
+    "sidebar": {
+      "label": "Artefak",
+      "type": "Type",
+      "source": "Source",
+      "all": "All",
+      "types": {
+        "document": "Documents",
+        "deck": "Decks",
+        "image": "Images",
+        "code": "Code",
+        "other": "Other"
+      },
+      "sources": {
+        "bots": "From bots",
+        "sessions": "From sessions"
+      }
+    }
   },
   "bots": {
     "avatarColor": "Color",
@@ -315,7 +336,22 @@
     "viewBots": "Bot",
     "viewSessions": "Sesi",
     "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
+    "page": {
+      "newTitle": "Make a bot",
+      "newDescription": "Give it a name and a mission, and it keeps one chat that remembers.",
+      "chatTitle": "Chat arrives soon",
+      "chatDescription": "This bot's conversation opens here in a coming update.",
+      "editTitle": "Edit bot",
+      "editDescription": "Mission, persona and model settings arrive here soon.",
+      "detailsTitle": "Details",
+      "detailsDescription": "Mission, persona, model and memory."
+    },
+    "sidebar": {
+      "label": "Bot",
+      "new": "Bot baru",
+      "empty": "Belum ada bot"
+    }
   },
   "browserPermission": {
     "allow": "Izinkan",
@@ -1465,7 +1501,21 @@
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
     "workspaceLabel": "Folder",
     "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
-    "workspaceOwnFolder": "Its own folder"
+    "workspaceOwnFolder": "Its own folder",
+    "page": {
+      "emptyTitle": "No routines yet",
+      "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
+      "routineTitle": "Routine",
+      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "createTitle": "Rutinitas baru",
+      "createDescription": "Say what it should do and when."
+    },
+    "sidebar": {
+      "label": "Rutinitas",
+      "new": "Rutinitas baru",
+      "paused": "Paused",
+      "empty": "No routines yet"
+    }
   },
   "sessions": {
     "delete": "Delete session",
@@ -1482,7 +1532,21 @@
     "unpin": "Unpin",
     "today": "Today",
     "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "page": {
+      "newTitle": "New session",
+      "newDescription": "Pick a folder and tell the agent what to do.",
+      "sessionTitle": "Session",
+      "sessionDescription": "The conversation opens here in a coming update.",
+      "reviewTitle": "Review changes",
+      "reviewDescription": "Keep or undo what the agent changed."
+    },
+    "sidebar": {
+      "label": "Sessions",
+      "new": "New session",
+      "pinned": "Pinned",
+      "empty": "Belum ada sesi"
+    }
   },
   "sidebarNav": {
     "app": "App",
@@ -2132,5 +2196,126 @@
   "reactions": {
     "feedback": "Beri reaksi pada balasan ini",
     "agent": "Agen bereaksi dengan {{emoji}}"
+  },
+  "shell": {
+    "appName": "AbacusAI Bot",
+    "rail": {
+      "label": "Areas",
+      "bots": "Bot",
+      "sessions": "Sessions",
+      "routines": "Rutinitas",
+      "artifacts": "Artefak",
+      "library": "Library",
+      "settings": "Settings",
+      "account": "Account"
+    },
+    "topBar": {
+      "back": "Back",
+      "forward": "Forward",
+      "toggleSidebar": "Toggle sidebar",
+      "openPanel": "Open side panel",
+      "closePanel": "Close side panel",
+      "more": "More actions",
+      "panelTabs": "Side panel tabs",
+      "geometryMissing": "Title bar geometry missing"
+    },
+    "panel": {
+      "label": "Side panel",
+      "emptyDescription": "This panel fills in with a later update.",
+      "tabs": {
+        "changes": "Changes",
+        "terminal": "Terminal",
+        "files": "Files",
+        "browser": "Browser",
+        "memory": "Memory",
+        "details": "Details",
+        "agent": "Agent"
+      }
+    },
+    "sidebar": {
+      "loadError": "Couldn't load",
+      "retry": "Retry"
+    },
+    "status": {
+      "ready": "Ready"
+    },
+    "command": {
+      "title": "Command menu",
+      "placeholder": "Search areas, pages, bots and sessions",
+      "empty": "No results",
+      "toggleTheme": "Toggle theme",
+      "groups": {
+        "areas": "Areas",
+        "settings": "Settings",
+        "bots": "Bot",
+        "sessions": "Sessions",
+        "actions": "Actions"
+      }
+    },
+    "connectionLost": "Connection to the app was lost. Reloading…",
+    "boot": {
+      "title": "Couldn't start",
+      "description": "The app couldn't reach its background process.",
+      "reload": "Reload"
+    }
+  },
+  "errors": {
+    "genericTitle": "Something went wrong",
+    "genericDescription": "This screen hit an error it couldn't recover from.",
+    "reload": "Reload",
+    "notFoundTitle": "Not found",
+    "notFoundDescription": "This page doesn't exist.",
+    "goHome": "Go to Bots"
+  },
+  "library": {
+    "sidebar": {
+      "label": "Library"
+    },
+    "pages": {
+      "connectors": "Konektor",
+      "messaging": "Messaging",
+      "mcp": "MCP servers",
+      "skills": "Skills",
+      "tools": "Tools"
+    },
+    "emptyDescription": "This page arrives in a coming update.",
+    "connectorDescription": "Connection details arrive in a coming update."
+  },
+  "settings": {
+    "sidebar": {
+      "label": "Settings",
+      "personal": "Personal",
+      "app": "App",
+      "capabilities": "Capabilities",
+      "openLibrary": "Open the Library"
+    },
+    "pages": {
+      "general": "General",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "memory": "Memory",
+      "usage": "Penggunaan",
+      "account": "Account",
+      "models": "Models",
+      "environment": "Environment",
+      "about": "About"
+    },
+    "emptyDescription": "These settings arrive in a coming update.",
+    "theme": {
+      "label": "Theme",
+      "description": "Follow the system, or always light or dark."
+    }
+  },
+  "onboardingFlow": {
+    "description": "Onboarding arrives in a coming update.",
+    "steps": {
+      "welcome": "Welcome",
+      "connect": "Connect",
+      "connected": "Connected",
+      "models": "Models",
+      "connectors": "Connectors",
+      "first-bot": "Your first bot",
+      "done": "Done"
+    }
   }
 }
