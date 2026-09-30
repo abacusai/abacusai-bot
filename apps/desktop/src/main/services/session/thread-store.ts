@@ -79,12 +79,13 @@ export class ThreadStore {
   private readonly home: () => string;
   private readonly log: (message: string) => void;
   /**
-   * What this store last wrote per thread (size and mtime), so the dual-write
-   * does not re-read a large file it wrote itself just to learn its kind.
+   * What this store last wrote per thread (size, mtime and source kind), so
+   * the dual-write does not re-read a large file it wrote itself just to
+   * learn its kind.
    */
   private readonly written = new Map<
     string,
-    { size: number; mtimeMs: number }
+    { size: number; mtimeMs: number; kind: "agui" | "v1" }
   >();
 
   constructor(options: ThreadStoreOptions = {}) {
@@ -151,7 +152,10 @@ export class ThreadStore {
   ): void {
     const threadFile = this.threadPath(sessionId);
     if (threadFile == null) return;
-    if (!this.isOwnWrite(sessionId, threadFile)) {
+    const own = this.ownWriteKind(sessionId, threadFile);
+    // The relay's own `agui` write is never replaced by v1-derived history.
+    if (own === "agui") return;
+    if (own == null) {
       const twin = readThreadTwin(threadFile);
       if (twin.status === "ok" && twin.source.kind === "agui") return;
     }
@@ -202,14 +206,17 @@ export class ThreadStore {
     fs.rmSync(threadFile, { force: true });
   }
 
-  private isOwnWrite(sessionId: string, file: string): boolean {
+  /** The kind of this store's own last write, if the file is still it. */
+  private ownWriteKind(sessionId: string, file: string): "agui" | "v1" | null {
     const known = this.written.get(sessionId);
-    if (known === undefined) return false;
+    if (known === undefined) return null;
     try {
       const stat = fs.statSync(file);
-      return stat.size === known.size && stat.mtimeMs === known.mtimeMs;
+      return stat.size === known.size && stat.mtimeMs === known.mtimeMs
+        ? known.kind
+        : null;
     } catch {
-      return false;
+      return null;
     }
   }
 
@@ -223,7 +230,11 @@ export class ThreadStore {
     try {
       writeFileAtomicSync(file, JSON.stringify(thread));
       const stat = fs.statSync(file);
-      this.written.set(sessionId, { size: stat.size, mtimeMs: stat.mtimeMs });
+      this.written.set(sessionId, {
+        size: stat.size,
+        mtimeMs: stat.mtimeMs,
+        kind: reason === "agui" ? "agui" : "v1",
+      });
     } catch (error) {
       this.written.delete(sessionId);
       if (rethrow) throw error;
