@@ -2317,5 +2317,266 @@
       "first-bot": "Your first bot",
       "done": "Done"
     }
+  },
+  "chat": {
+    "announce": {
+      "approval": "Needs your approval: {{title}}",
+      "error": "Error: {{message}}",
+      "finished": "Reply finished",
+      "stopped": "Stopped"
+    },
+    "busy": {
+      "agents_one": "Waiting on {{count}} agent",
+      "agents_other": "Waiting on {{count}} agents",
+      "needsYou": "Needs you",
+      "retrying": "Retrying, {{attempt}} of {{max}}",
+      "tools_one": "Running {{count}} tool",
+      "tools_other": "Running {{count}} tools",
+      "typing": "Typing",
+      "working": "Working"
+    },
+    "code": {
+      "copied": "Copied",
+      "copy": "Copy code",
+      "showLess": "Show less",
+      "showMore_one": "Show {{count}} more line",
+      "showMore_other": "Show {{count}} more lines"
+    },
+    "composer": {
+      "attach": "Attach",
+      "attachFailed": "Couldn't attach this file",
+      "attachFiles": "Files or images",
+      "attachFolder": "Folder",
+      "busyBot": "Add to the queue, or stop",
+      "busySession": "Steer the run, or queue the next step",
+      "dictate": "Dictate",
+      "dictateSoon": "Dictation arrives soon",
+      "files": "Files",
+      "gone": "This conversation no longer exists.",
+      "mini": "Reply, or steer the run",
+      "modeFailed": "Couldn't change the mode",
+      "model": "Model: {{name}}",
+      "models": "Models",
+      "notReady": "The agent isn't ready. Try again.",
+      "queue": "Add to the queue",
+      "queueFailed": "Couldn't add that to the queue",
+      "rejected": "The agent didn't accept that message.",
+      "removeAttachment": "Remove attachment",
+      "searchModels": "Search models",
+      "send": "Send",
+      "skills": "Skills",
+      "stop": "Stop",
+      "uploading": "Wait for the attachments to finish saving"
+    },
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "error": {
+      "crashed": "The agent stopped unexpectedly",
+      "label": "Error",
+      "open": "Open",
+      "retry": "Retry",
+      "switchModel": "Switch model"
+    },
+    "message": {
+      "credits_one": "Used {{count}} credit",
+      "credits_other": "Used {{count}} credits",
+      "discard": "Discard",
+      "notSent": "Not sent",
+      "retry": "Retry",
+      "sending": "Sending",
+      "workedThrough_one": "Worked through {{count}} step",
+      "workedThrough_other": "Worked through {{count}} steps"
+    },
+    "mode": {
+      "ACCEPTEDITS": "Auto-accept edits",
+      "AUTO": "Auto",
+      "DEFAULT": "Supervised",
+      "PLAN": "Plan",
+      "YOLO": "Full access",
+      "description": {
+        "ACCEPTEDITS": "Change files, ask before commands",
+        "AUTO": "Sandboxed, no prompts",
+        "DEFAULT": "Approve edits and commands one by one",
+        "PLAN": "Read and propose, change nothing",
+        "YOLO": "No approvals"
+      }
+    },
+    "notice": {
+      "dismiss": "Dismiss"
+    },
+    "part": {
+      "compaction": "Earlier conversation summarised",
+      "details": "Details",
+      "featureLimit": "{{feature}} limit reached",
+      "summary": "Summary",
+      "thinking": "Thinking",
+      "thoughts": "Thoughts"
+    },
+    "permission": {
+      "action": {
+        "allow": "Allow",
+        "allowOnce": "Allow once",
+        "alwaysAcceptEdits": "Always accept edits this session",
+        "alwaysAllow": "Always allow",
+        "alwaysAllowFolder": "Always allow {{folder}}",
+        "alwaysAllowHost": "Always allow this host, this session",
+        "alwaysAllowRule": "Always allow {{rule}}",
+        "alwaysAllowSite": "Always allow this site, this session",
+        "alwaysAllowThese": "Always allow these this session",
+        "deny": "Deny",
+        "planAcceptAll": "Yes, and accept all edits",
+        "planApproveEach": "Yes, and approve each edit",
+        "planFullAccess": "Yes, with full access",
+        "planKeepPlanning": "No, keep planning",
+        "runInBackground": "Run in background",
+        "skipAll": "Skip all"
+      },
+      "addNote": "Add a note",
+      "alsoInNotch": "Also in the notch",
+      "chip": {
+        "browser": "Use the browser",
+        "connect": "Connect {{host}}",
+        "createFile": "Create {{name}}",
+        "deleteFile": "Delete {{name}}",
+        "editFile": "Edit {{name}}",
+        "generic": "Use {{tool}}",
+        "outside": "Outside the folder",
+        "plan": "Approve the plan",
+        "question": "Answer a question",
+        "runCommand": "Run command"
+      },
+      "notePlaceholder": "Tell the agent what to do instead",
+      "pending_one": "{{count}} request waiting",
+      "pending_other": "{{count}} requests waiting",
+      "problem": {
+        "earlierTurn": "This request belongs to an earlier turn.",
+        "incarnation": "The agent restarted. This request is gone.",
+        "invalid": "Couldn't send that answer",
+        "noResponse": "No response from the agent. Try again.",
+        "notPending": "Already answered"
+      },
+      "sandboxRunsAgain": "If you allow it, the command runs again with that access.",
+      "showAll": "Show all",
+      "title": {
+        "browserAction": "{{description}}",
+        "createFile": "Create {{name}}?",
+        "credentials": "This command reads saved credentials",
+        "deleteFile": "Delete {{name}}?",
+        "editFile": "Edit {{name}}?",
+        "editOutside": "Edit outside the folder?",
+        "exitPlan": "Ready to build this plan?",
+        "fetchUrl": "Open {{origin}}?",
+        "generic": "Use {{tool}}?",
+        "networkHost": "Connect to {{host}}?",
+        "networkHostDescription": "The sandbox blocked this host. Allowing it lets the command download packages.",
+        "notebook": {
+          "delete": "Delete a {{cell}} in {{name}}?",
+          "insert": "Insert a {{cell}} in {{name}}?",
+          "replace": "Replace a {{cell}} in {{name}}?"
+        },
+        "notebookOutside": "Edit a notebook outside the folder?",
+        "overwriteFile": "Overwrite {{name}}?",
+        "question": "The agent asks you a question",
+        "readOutside": "Read outside the folder?",
+        "runCommand": "Run this command?",
+        "sandboxDenied": "The sandbox refused something this command tried",
+        "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
+        "writeOutside": "Write outside the folder?"
+      },
+      "verb": {
+        "reach": "reach",
+        "read": "read",
+        "write": "write"
+      }
+    },
+    "question": {
+      "next": "Next",
+      "previous": "Back",
+      "progress": "{{current}} of {{total}}",
+      "submit": "Submit"
+    },
+    "queue": {
+      "edit": "Edit",
+      "editLabel": "Edit queued message",
+      "fewer": "Show fewer",
+      "label": "Queued messages",
+      "more_one": "{{count}} more waiting",
+      "more_other": "{{count}} more waiting",
+      "problem": {
+        "noAnswer": "Couldn't reach the agent",
+        "restarted": "The agent restarted, so the queue changed",
+        "wentOut": "That message already went out"
+      },
+      "remove": "Remove queued message",
+      "waiting": {
+        "permission": "Waits for your answer",
+        "step": "Sends at the next step",
+        "turn": "Sends after this reply"
+      }
+    },
+    "run": {
+      "done_one": "Done in {{duration}}, {{count}} step",
+      "done_other": "Done in {{duration}}, {{count}} steps",
+      "stopped": "Stopped",
+      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
+    },
+    "subagent": {
+      "done_one": "Done, {{count}} step, {{duration}}",
+      "done_other": "Done, {{count}} steps, {{duration}}",
+      "failed": "Failed",
+      "kind": {
+        "browser": "Browser task",
+        "component": "Component",
+        "delegate": "Sub-agent",
+        "generic": "Agent"
+      },
+      "open": "Open agent",
+      "steps_one": "{{count}} step",
+      "steps_other": "{{count}} steps",
+      "stop": "Stop",
+      "stopHint": "Stops the whole reply"
+    },
+    "tool": {
+      "diff": "Changes",
+      "meta": {
+        "exit": "exit {{code}}",
+        "lines": "lines {{from}} to {{to}}",
+        "matches_one": "{{count}} match",
+        "matches_other": "{{count}} matches"
+      },
+      "moreSteps_one": "{{count}} more step",
+      "moreSteps_other": "{{count}} more steps",
+      "openFile": "Open file",
+      "show": "Show",
+      "showAll_one": "Show all {{count}} line",
+      "showAll_other": "Show all {{count}} lines",
+      "status": {
+        "done": "done",
+        "failed": "failed",
+        "needsYou": "needs you",
+        "refused": "refused",
+        "running": "runs",
+        "stopped": "stopped"
+      }
+    },
+    "transcript": {
+      "jump": "Jump to the end",
+      "jumpNew_one": "{{count}} new message",
+      "jumpNew_other": "{{count}} new messages",
+      "label": "Conversation",
+      "new_one": "{{count}} new",
+      "new_other": "{{count}} new",
+      "olderFailed": "Couldn't load earlier messages",
+      "retry": "Retry",
+      "showEarlier": "Show earlier",
+      "showLater": "Show later"
+    },
+    "view": {
+      "gone": "This conversation no longer exists.",
+      "retry": "Retry",
+      "unavailable": "The agent isn't available yet"
+    }
   }
 }

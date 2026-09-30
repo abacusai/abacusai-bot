@@ -89,6 +89,8 @@ export interface ChatViewContextValue {
   workspaceRoot: string | null;
   onOpenFile?: (absPath: string) => void;
   onOpenSubagent?: (subagentRunId: string) => void;
+  /** This view is the focused thread (Mod+. stops only here). */
+  focused: boolean;
   /** Bots: the canvas's "Also in the notch" note on approval cards (phase 6). */
   notchEnabled: boolean;
   /** Registry of tool parts rendering their own permission card (§6.2). */
@@ -99,15 +101,16 @@ export interface InlineRegistry {
   register(key: string): () => void;
   has(key: string): boolean;
   subscribe(listener: () => void): () => void;
-  version(): number;
+  /** The registered keys; a new set after every change (a snapshot). */
+  keys(): ReadonlySet<string>;
 }
 
 export const createInlineRegistry = (): InlineRegistry => {
   const counts = new Map<string, number>();
   const listeners = new Set<() => void>();
-  let version = 0;
+  let snapshot: ReadonlySet<string> = new Set();
   const notify = () => {
-    version += 1;
+    snapshot = new Set(counts.keys());
     for (const listener of listeners) listener();
   };
   return {
@@ -126,7 +129,7 @@ export const createInlineRegistry = (): InlineRegistry => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    version: () => version,
+    keys: () => snapshot,
   };
 };
 

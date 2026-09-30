@@ -1,0 +1,78 @@
+/**
+ * Test helpers for the chat kit (tests only): render a node inside the
+ * fixture DB (prefs drive the motion preference) with English copy, and
+ * mount a scenario's `ChatView` over the fixture relay.
+ */
+import { act, render, type RenderResult } from "@testing-library/react";
+import type { ReactNode } from "react";
+
+import { createDb, DbProvider } from "#next/data/db";
+import { FixtureDb, fixtureTransport } from "#next/data/fixture-db/fixture-db";
+import { defaultSeed } from "#next/test-support/app-harness";
+import { i18n, initI18n } from "#next/lib/i18n";
+
+import type { ComposerConfig } from "./kit/context";
+import { ChatView } from "./kit/view";
+import { fixtureRuntime, type FixtureRuntime, type PlayOptions } from "./fixtures/player";
+
+export interface Rendered {
+  view: RenderResult;
+  cleanup(): Promise<void>;
+}
+
+export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
+  await initI18n();
+  await i18n.changeLanguage("en-US");
+  const db = createDb(fixtureTransport(new FixtureDb(defaultSeed())), { retryDelayMs: () => 5 });
+  await db.collections.prefs.preload();
+  let view!: RenderResult;
+  await act(async () => {
+    view = render(<DbProvider value={db}>{node}</DbProvider>);
+  });
+  return {
+    view,
+    cleanup: async () => {
+      view.unmount();
+      db.stop();
+    },
+  };
+};
+
+export const baseComposer = (skin: "bot" | "session", extra: Partial<ComposerConfig> = {}): ComposerConfig => ({
+  mode: "full",
+  placeholder: skin === "bot" ? "Message Chief of Staff" : "Steer the run, or queue the next step",
+  attachmentsBase: skin === "session" ? "/repo" : null,
+  showModeChip: skin === "session",
+  model: null,
+  ...extra,
+});
+
+export const renderScenario = async (
+  scenarioId: string,
+  options: PlayOptions & { composer?: Partial<ComposerConfig>; onOpenFile?: (path: string) => void; onOpenSubagent?: (id: string) => void } = {}
+): Promise<Rendered & { fixture: FixtureRuntime }> => {
+  const fixture = fixtureRuntime(scenarioId, options)!;
+  const skin = fixture.scenario.skin;
+  await fixture.runtime.session(fixture.threadId).load();
+  const rendered = await renderWithDb(
+    <div style={{ height: 800 }}>
+      <ChatView
+        threadId={fixture.threadId}
+        skin={skin}
+        runtime={fixture.runtime}
+        workspaceRoot={skin === "session" ? "/repo" : null}
+        composer={baseComposer(skin, options.composer)}
+        {...(options.onOpenFile != null ? { onOpenFile: options.onOpenFile } : {})}
+        {...(options.onOpenSubagent != null ? { onOpenSubagent: options.onOpenSubagent } : {})}
+      />
+    </div>
+  );
+  return {
+    ...rendered,
+    fixture,
+    cleanup: async () => {
+      await rendered.cleanup();
+      fixture.runtime.forget(fixture.threadId);
+    },
+  };
+};

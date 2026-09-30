@@ -9,11 +9,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { durations, motionFor, reducedTransition, useMotionPreference } from "#next/lib/motion";
+import { useMotionPreference } from "#next/lib/motion";
 import { Button } from "#next/ui/button";
 import { Input } from "#next/ui/input";
 import { Spinner } from "#next/ui/spinner";
 
+import { queueRow } from "../motion";
 import { useThreadStore } from "../store/selectors";
 import type { QueueCommandState, QueueEntry } from "../store/thread-store";
 import { useChatView } from "./context";
@@ -132,7 +133,7 @@ export const QueueSlot = ({
   const rows = [...queue, ...ghostRows(queue, commands)];
   if (rows.length === 0) return null;
   const shown = expanded || rows.length <= 3 ? rows : rows.slice(0, 3);
-  const transition = motionFor(pref, { duration: 0.16 }, reducedTransition);
+  const transition = queueRow(pref);
   return (
     <div className="flex flex-col gap-1.5 px-4" data-slot="queue-slot" aria-label={t("chat.queue.label")} role="list">
       <AnimatePresence initial={false}>
@@ -164,4 +165,3 @@ export const QueueSlot = ({
   );
 };
 
-export const QUEUE_MOTION_MS = durations.childFade;

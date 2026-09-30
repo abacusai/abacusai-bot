@@ -12,6 +12,7 @@ import {
   useEffect,
   useState,
   ViewTransition,
+  type ComponentType,
   type CSSProperties,
   type ReactNode,
   type ViewTransitionClassPerType,
@@ -470,7 +471,23 @@ const renderSection = (section: GallerySection): ReactNode => {
   );
 };
 
-export const Gallery = ({ search }: { search: GallerySearchValue }) => {
+/**
+ * Sections another feature contributes (spec 02 §14.8): its nav entries and,
+ * when its `fixture` search param is set, the view shown in place of the
+ * sections. The route composes them; the gallery imports no feature.
+ */
+export interface GalleryExtension {
+  Nav: ComponentType<{ fixture: string | undefined }>;
+  View: ComponentType<{ fixture: string; step: number | undefined; play: boolean }>;
+}
+
+export const Gallery = ({
+  search,
+  extension,
+}: {
+  search: GallerySearchValue;
+  extension?: GalleryExtension;
+}) => {
   const navigate = useNavigate();
   const setSearch = (patch: Partial<GallerySearchValue>): void =>
     void navigate({
@@ -543,17 +560,29 @@ export const Gallery = ({ search }: { search: GallerySearchValue }) => {
                 </li>
               ))}
             </ul>
+            {extension != null ? <extension.Nav fixture={search.fixture} /> : null}
           </nav>
           <main
             className="min-w-0 flex-1 overflow-y-auto px-8"
             data-testid="gallery"
           >
-            <h1 className="pt-6 text-lg font-semibold">UI gallery</h1>
-            {sections.map((section) => (
-              <Section key={section} id={section} title={section}>
-                {renderSection(section)}
-              </Section>
-            ))}
+            {extension != null && search.fixture != null ? (
+              <extension.View
+                key={`${search.fixture}:${search.step ?? ""}:${search.play ?? ""}`}
+                fixture={search.fixture}
+                step={search.step}
+                play={search.play != null}
+              />
+            ) : (
+              <>
+                <h1 className="pt-6 text-lg font-semibold">UI gallery</h1>
+                {sections.map((section) => (
+                  <Section key={section} id={section} title={section}>
+                    {renderSection(section)}
+                  </Section>
+                ))}
+              </>
+            )}
           </main>
         </div>
       </div>
