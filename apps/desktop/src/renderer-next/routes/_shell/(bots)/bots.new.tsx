@@ -10,19 +10,16 @@ import {
   selectTemplate,
   getDraft,
 } from "#next/features/bots";
-import { chatRuntimeFor } from "#next/features/chat";
 import { TopBarSlot } from "#next/features/shell";
 const NewRoute = () => {
   const { t } = useTranslation();
   const search = Route.useSearch();
-  const { transport } = Route.useRouteContext();
+  const { chat } = Route.useRouteContext();
   return (
     <>
       <TopBarSlot>{t("bots.page.newTitle")}</TopBarSlot>
       {search.step === "setup" ? (
-        <BotSetupForm
-          load={(id) => chatRuntimeFor(transport).session(id).load()}
-        />
+        <BotSetupForm load={(id) => chat.session(id).load()} />
       ) : (
         <BotStartPage category={search.category} />
       )}

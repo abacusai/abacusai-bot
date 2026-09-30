@@ -116,7 +116,8 @@ const statusOf = (
 ): ToolStatus => {
   if (context.needsYou === true && result == null) return "needs-you";
   if (result == null) {
-    const settled = call.state === "complete" || call.state === "error";
+    if (call.state === "error") return "failed";
+    const settled = call.state === "complete";
     if (!settled && context.runActive) return "running";
     if (call.state === "complete" && outputRecord != null)
       return outputRecord.rejected === true ? "failed" : "done";

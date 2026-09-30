@@ -1,21 +1,24 @@
 /**
  * Message widgets (spec 02 §5.1, §5.3, §8.6): `BotMessage` (bubbles, bot
- * tint for the user, "Worked through {n} steps" for tool calls) and
+ * tint for the user, spoken parts and inline permissions) and
  * `SessionMessage` (prose rows, muted user bubble). User messages render
  * trailing `@/abs/path` lines as attachment chips; pending outbox messages
  * show "Not sent" with Retry/Discard when they failed. An assistant message
  * with no parts renders nothing (F12).
  */
-import type {
-  ToolCallPart,
-  ToolResultPart,
-  UIMessage,
-} from "@tanstack/ai-client";
+import type { UIMessage } from "@tanstack/ai-client";
 import type { MessageProps } from "@tanstack/ai-react/ui";
-import { ChevronRight, FileText, ListChecks } from "lucide-react";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { ChevronRight, FileText } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
+import { botVisibleMessage } from "#next/lib/bot-turns/turns";
 import { cn } from "#next/lib/cn";
 import {
   Attachment,
@@ -24,6 +27,7 @@ import {
   AttachmentGroup,
   AttachmentMedia,
   AttachmentTitle,
+  AttachmentTrigger,
 } from "#next/ui/attachment";
 import { Button } from "#next/ui/button";
 import {
@@ -31,7 +35,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "#next/ui/collapsible";
-import { Marker, MarkerContent, MarkerIcon } from "#next/ui/marker";
 import {
   isRoutineFire,
   stripAttachmentRefs,
@@ -40,11 +43,14 @@ import {
 } from "#shared/transcript/user-text";
 
 import { Markdown } from "../markdown/markdown";
+import { useToolWindow } from "../scroller/row-context";
 import { useHost, useThreadStore } from "../store/selectors";
-import { useChatView, type MessageDecoration } from "./context";
-import { MessageScope } from "./message-scope";
-import { markLiveThinking } from "./parts";
-import { ToolLine } from "./tools/tool-line";
+import {
+  useChatView,
+  useSubagentScope,
+  type MessageDecoration,
+} from "./context";
+import { useKitParts, MessageScope } from "./message-scope";
 
 type Loose = Record<string, unknown>;
 
@@ -83,30 +89,58 @@ const AttachmentChip = ({ path }: { path: string }) => {
   const name = path.split(/[\\/]/).at(-1) ?? path;
   const ext = name.includes(".") ? name.split(".").at(-1)!.toUpperCase() : "";
   const [thumb, setThumb] = useState<string | null>(null);
-  const image = IMAGE.test(name) && workspaceRoot != null;
+  const image = IMAGE.test(name);
+  const chip = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(
+    () => typeof IntersectionObserver === "undefined"
+  );
   useEffect(() => {
-    if (!image || workspaceRoot == null) return;
+    if (chip.current == null) return;
+    if (typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setInView(true);
+        observer.disconnect();
+      }
+    });
+    observer.observe(chip.current);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!image || !inView) return;
     let live = true;
     runtime.host
-      .readImage(path, workspaceRoot)
+      .readImage(
+        path,
+        workspaceRoot ??
+          path.slice(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")))
+      )
       .then((url) => live && url !== "" && setThumb(url))
       .catch(() => {});
     return () => {
       live = false;
     };
-  }, [image, path, runtime, workspaceRoot]);
+  }, [image, inView, path, runtime, workspaceRoot]);
   return (
-    <Attachment
-      className="w-64 cursor-pointer"
-      onClick={() =>
-        onOpenFile != null
-          ? onOpenFile(path)
-          : void runtime.host.showItemInFolder(path)
-      }
-    >
+    <Attachment className="w-64 cursor-pointer" ref={chip}>
+      <AttachmentTrigger
+        aria-label={name}
+        onClick={() =>
+          onOpenFile != null
+            ? onOpenFile(path)
+            : void runtime.host.showItemInFolder(path)
+        }
+      />
       <AttachmentMedia>
         {thumb != null ? (
-          <img src={thumb} alt="" className="size-full object-cover" />
+          <img
+            src={thumb}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+          />
         ) : (
           <FileText aria-hidden />
         )}
@@ -169,7 +203,7 @@ interface UserTextMeta {
  * chips (migrated messages carry them as `userText.attachments`; live ones
  * as trailing `@/abs/path` lines).
  */
-const userView = (
+export const userView = (
   message: UIMessage
 ): { hidden: boolean; body: string; paths: string[] } => {
   const raw = textOf(message);
@@ -251,82 +285,6 @@ const useStreaming = (message: UIMessage): boolean => {
   return active && message.role === "assistant" && message.id === lastId;
 };
 
-const pairs = (
-  message: UIMessage
-): Array<{ part: ToolCallPart; result?: ToolResultPart }> => {
-  const results = new Map<string, ToolResultPart>();
-  for (const part of message.parts)
-    if (part.type === "tool-result")
-      results.set(part.toolCallId, part as ToolResultPart);
-  return message.parts
-    .filter((part): part is ToolCallPart => part.type === "tool-call")
-    .map((part) => {
-      const result = results.get(part.id);
-      return result != null ? { part, result } : { part };
-    });
-};
-
-const MAX_TOOL_ROWS = 50;
-
-/** Tool rows past the first 50 collapse to "{n} more steps" (§10). */
-const StepList = ({
-  items,
-}: {
-  items: Array<{ part: ToolCallPart; result?: ToolResultPart }>;
-}) => {
-  const { t } = useTranslation();
-  const [limit, setLimit] = useState(MAX_TOOL_ROWS);
-  return (
-    <div className="flex flex-col">
-      {items.slice(0, limit).map(({ part, result }) => (
-        <ToolLine
-          key={part.id}
-          part={part}
-          {...(result != null ? { result } : {})}
-        />
-      ))}
-      {items.length > limit ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="self-start"
-          onClick={() => setLimit((value) => value + 100)}
-        >
-          {t("chat.tool.moreSteps", { count: items.length - limit })}
-        </Button>
-      ) : null}
-    </div>
-  );
-};
-
-const WorkedThrough = ({ message }: { message: UIMessage }) => {
-  const { t } = useTranslation();
-  const items = pairs(message);
-  if (items.length === 0) return null;
-  return (
-    <Collapsible>
-      <Marker
-        render={<CollapsibleTrigger />}
-        className="group/w hover:text-foreground w-fit cursor-pointer"
-      >
-        <MarkerIcon>
-          <ListChecks aria-hidden />
-        </MarkerIcon>
-        <MarkerContent>
-          {t("chat.message.workedThrough", { count: items.length })}
-        </MarkerContent>
-        <ChevronRight
-          aria-hidden
-          className="size-3 transition-transform group-data-[panel-open]/w:rotate-90"
-        />
-      </Marker>
-      <CollapsibleContent className="pt-1">
-        <StepList items={items} />
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
-
 const isEmptyAssistant = (message: UIMessage): boolean =>
   message.role === "assistant" && message.parts.length === 0;
 
@@ -345,9 +303,23 @@ const useDecoration = (message: UIMessage): MessageDecoration | null => {
 };
 
 export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
+  const BotUI = useKitParts();
   const streaming = useStreaming(message);
   const decoration = useDecoration(message);
-  if (isEmptyAssistant(message) || decoration?.hidden === true) return null;
+  const { session } = useChatView();
+  const messages = useHost(session, (state) => state.messages);
+  const runActive = useThreadStore(
+    session,
+    (state) => state.runs.active != null
+  );
+  const visible = botVisibleMessage(message, messages, runActive);
+  if (visible !== message) return <BotUI.Message message={visible} />;
+  if (
+    isEmptyAssistant(message) ||
+    (decoration?.hidden === true &&
+      !message.parts.some((part) => part.type === "tool-call"))
+  )
+    return null;
   if (message.role === "user")
     return (
       <>
@@ -356,14 +328,20 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
         {decoration?.after}
       </>
     );
-  markLiveThinking(message);
   const PartsView = Parts as ComponentType;
   return (
-    <MessageScope value={{ id: message.id, role: "assistant", streaming }}>
-      {decoration?.before}
+    <MessageScope
+      value={{ id: message.id, role: "assistant", streaming, message }}
+    >
       <div className="flex flex-col items-start gap-1.5" data-role="assistant">
+        {decoration?.before}
+        {message.parts.some((part) => part.type === "subagent") ? (
+          <StepControls side="earlier" />
+        ) : null}
         <PartsView />
-        <WorkedThrough message={message} />
+        {message.parts.some((part) => part.type === "subagent") ? (
+          <StepControls side="more" />
+        ) : null}
         <Credits message={message} />
         {decoration?.after}
       </div>
@@ -371,24 +349,143 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
   );
 };
 
-export const SessionMessage = ({ message, Parts }: MessageProps<unknown>) => {
+const StepControls = ({ side }: { side: "earlier" | "more" }) => {
+  const window = useToolWindow();
+  const { t } = useTranslation();
+  if (window == null) return null;
+  const count =
+    side === "earlier"
+      ? window.range.start
+      : window.ids.length - window.range.end;
+  if (count === 0) return null;
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      data-slot="steps-more"
+      onClick={side === "earlier" ? window.earlier : window.more}
+    >
+      {side === "earlier"
+        ? t("chat.tool.earlierSteps", { count })
+        : t("chat.tool.moreSteps", { count })}
+    </Button>
+  );
+};
+
+const GroupedParts = ({ message }: { message: UIMessage }) => {
+  const SessionUI = useKitParts();
+  const window = useToolWindow();
+  const scope = useSubagentScope() ?? "";
+  const segments = message.metadata?.abacus?.segments as
+    | Array<{
+        id: string;
+        groupId?: string;
+        partIndex: number | null;
+        type: string;
+        summary?: string;
+        category?: string;
+      }>
+    | undefined;
+  const visibleUnits =
+    window == null
+      ? null
+      : new Set(window.ids.slice(window.range.start, window.range.end));
+  return (
+    <SessionUI.Message message={message}>
+      {(parts) => {
+        const blocks: Array<{ id: string | null; parts: typeof parts }> = [];
+        for (const part of parts) {
+          if (part.part.type === "tool-result") continue;
+          if (
+            part.part.type === "tool-call" &&
+            visibleUnits != null &&
+            !visibleUnits.has(`${scope}\0${part.part.id}`)
+          )
+            continue;
+          const index = message.parts.indexOf(part.part);
+          const id =
+            segments?.find((segment) => segment.partIndex === index)?.groupId ??
+            null;
+          const previous = blocks.at(-1);
+          if (id != null && previous?.id === id) previous.parts.push(part);
+          else blocks.push({ id, parts: [part] });
+        }
+        return blocks.map((block) => {
+          const content = block.parts.map((part) => (
+            <SessionUI.Part
+              key={message.parts.indexOf(part.part)}
+              part={part}
+            />
+          ));
+          if (block.id == null)
+            return (
+              <div key={message.parts.indexOf(block.parts[0]!.part)}>
+                {content}
+              </div>
+            );
+          const header =
+            window?.ids.indexOf(
+              `group\0${scope}\0${message.id}\0${block.id}`
+            ) ?? -1;
+          const headerVisible =
+            window == null ||
+            (header >= window.range.start && header < window.range.end);
+          const childVisible =
+            window == null ||
+            block.parts.some(
+              (p) =>
+                p.part.type === "tool-call" &&
+                (() => {
+                  const index = window.ids.indexOf(`${scope}\0${p.part.id}`);
+                  return (
+                    index >= window.range.start && index < window.range.end
+                  );
+                })()
+            );
+          if (!headerVisible && !childVisible) return null;
+          if (!headerVisible) return <div key={block.id}>{content}</div>;
+          const group = segments?.find(
+            (segment) =>
+              segment.id === block.id && segment.type === "tool_group"
+          );
+          return (
+            <Collapsible key={block.id} defaultOpen data-slot="tool-group">
+              <CollapsibleTrigger
+                hidden={!headerVisible}
+                className="text-muted-foreground flex items-center gap-2 text-xs"
+              >
+                <ChevronRight aria-hidden className="size-3" />
+                {group?.summary ?? group?.category ?? block.id}
+              </CollapsibleTrigger>
+              <CollapsibleContent>{content}</CollapsibleContent>
+            </Collapsible>
+          );
+        });
+      }}
+    </SessionUI.Message>
+  );
+};
+
+export const SessionMessage = ({ message }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   if (isEmptyAssistant(message)) return null;
   if (message.role === "user")
     return <UserMessage message={message} tint={false} />;
-  markLiveThinking(message);
-  const PartsView = Parts as ComponentType;
   const grouped = (
     message.metadata as { abacus?: { segments?: Loose[] } } | undefined
   )?.abacus?.segments?.some((segment) => segment.type === "tool_group");
   return (
-    <MessageScope value={{ id: message.id, role: "assistant", streaming }}>
+    <MessageScope
+      value={{ id: message.id, role: "assistant", streaming, message }}
+    >
       <div
         className="flex flex-col gap-2"
         data-role="assistant"
         data-grouped={grouped ? "" : undefined}
       >
-        <PartsView />
+        <StepControls side="earlier" />
+        <GroupedParts message={message} />
+        <StepControls side="more" />
         <Credits message={message} />
       </div>
     </MessageScope>

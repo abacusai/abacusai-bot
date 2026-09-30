@@ -4,11 +4,12 @@
  * (`?fixture=<id>&step=<n>&play=1`). Dev-only, English-only.
  */
 import { useNavigate } from "@tanstack/react-router";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import { botAccentStyle } from "#next/lib/theme";
 import { BOT_AVATAR_COLORS } from "#shared/bots";
 
+import { clearDraft } from "../composer/draft-store";
 import { fixtureRuntime } from "../fixtures/player";
 import { SCENARIOS, type Scenario } from "../fixtures/scenarios";
 import type { ComposerConfig } from "../kit/context";
@@ -24,6 +25,10 @@ const GALLERY_GROUPS: Array<{
       s.id.startsWith("bot-") ||
       s.id === "session-review" ||
       s.id === "session-migrated",
+  },
+  {
+    id: "chat-markdown",
+    match: (s) => s.id === "session-review" || s.id === "session-migrated",
   },
   {
     id: "chat-tools",
@@ -128,6 +133,7 @@ const composerFor = (
   scenario: Scenario,
   model: { value: string | null; set(id: string | null): void }
 ): ComposerConfig => ({
+  dictating: scenario.view?.dictating === true,
   mode: scenario.id.startsWith("session-mini") ? "mini" : "full",
   placeholder:
     scenario.view?.placeholder ??
@@ -174,6 +180,39 @@ const View = ({
   const [runtime] = useState(() =>
     fixtureRuntime(fixture, { ...(step != null ? { step } : {}), play })
   );
+  useEffect(
+    () => () => {
+      if (runtime != null) {
+        runtime.runtime.forget(runtime.threadId);
+        clearDraft(runtime.threadId);
+      }
+    },
+    [runtime]
+  );
+  useEffect(() => {
+    if (runtime == null) return;
+    const picker = runtime.scenario.view?.openPicker;
+    if (picker == null) return;
+    const observer = new MutationObserver(() => {
+      const view = document.querySelector(
+        `[data-scenario="${runtime.scenario.id}"]`
+      );
+      const button =
+        picker === "model"
+          ? view?.querySelector<HTMLButtonElement>(
+              '[data-slot="chat-model-picker"]'
+            )
+          : [
+              ...(view?.querySelectorAll<HTMLButtonElement>("button") ?? []),
+            ].find((button) => button.textContent?.includes("Supervised"));
+      if (button != null) {
+        observer.disconnect();
+        button.click();
+      }
+    });
+    observer.observe(document.body, { subtree: true, childList: true });
+    return () => observer.disconnect();
+  }, [runtime]);
   const [model, setModel] = useState<string | null>("route-llm");
   if (runtime == null)
     return <p className="py-6 text-sm">{`No scenario ${fixture}`}</p>;

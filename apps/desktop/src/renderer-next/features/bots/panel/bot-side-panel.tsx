@@ -30,6 +30,7 @@ import {
   ContextMenuItem,
 } from "#next/ui/context-menu";
 import type { BotRow } from "#shared/contract/rows";
+import { sessionConversationKey } from "#shared/conversation-scope";
 
 import { BotFace } from "../avatar";
 import { clearMemory, forgetMemory, setPinned } from "../data/bot-actions";
@@ -324,12 +325,14 @@ export const MemoryTab = ({ bot }: { bot: BotRow }) => {
 };
 export const FilesTab = ({
   bot,
+  sessionId,
   preview,
   workspaceRoot,
   onClosePreview,
 }: {
   bot: BotRow;
   preview?: string;
+  sessionId?: string;
   workspaceRoot: string | null;
   onClosePreview(): void;
 }) => {
@@ -352,6 +355,25 @@ export const FilesTab = ({
           path={preview}
           hostRoot={containmentRootFor(preview, workspaceRoot)}
           read={{
+            localUrl: async (filePath, hostRoot) => {
+              const viewed = sessions.find(
+                (row) => row.id === (sessionId ?? bot.sessionId)
+              );
+              if (!viewed?.workspaceId)
+                throw new Error("Session workspace unavailable");
+              const state =
+                await transport.client.browser.runtime.materializeFile({
+                  filePath,
+                  hostRoot,
+                  conversationKey: sessionConversationKey(
+                    viewed.workspaceId,
+                    viewed.id
+                  ),
+                  resourceId: `bot-preview:${filePath}`,
+                });
+              await transport.client.browser.runtime.close(state.lease);
+              return state.url;
+            },
             text: (path, hostRoot) =>
               transport.client.files.readText({ filePath: path, hostRoot }),
             image: async (path, hostRoot) =>

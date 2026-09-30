@@ -1,9 +1,3 @@
-/**
- * The whole app over test doubles: a memory transport answering the handful
- * of procedures the shell calls (system.info, window.chrome, window.ready,
- * the notice streams), collections over a FixtureDb, and a router on memory
- * history. `renderApp("/bots/new")` mounts it; the returned handles drive it.
- */
 import { implement, type Router } from "@orpc/server";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -13,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
 
+import type { AiClient } from "#next/data/ai";
 import { createDb, type Collections, type Db } from "#next/data/db";
 import {
   FixtureDb,
@@ -31,7 +26,7 @@ import {
   createMemoryTransport,
   type MemoryTransport,
 } from "#next/data/transport/memory";
-import { fixtureRuntime } from "#next/features/chat";
+import { fixtureRuntime } from "#next/features/chat/fixtures/player";
 import { resetReadinessForTests } from "#next/features/shell/readiness";
 import { resetShellStore } from "#next/features/shell/shell-store";
 import { i18n, initI18n } from "#next/lib/i18n";
@@ -42,6 +37,16 @@ import {
   type SystemInfo,
   type WindowChromeState,
 } from "#shared/contract";
+import type { RunFinishedNotice } from "#shared/contract/ai";
+import type { MaterializeBrowserRuntimeFileRequest } from "#shared/contract/browser";
+import type { FilesEvent } from "#shared/contract/files";
+/**
+ * The whole app over test doubles: a memory transport answering the handful
+ * of procedures the shell calls (system.info, window.chrome, window.ready,
+ * the notice streams), collections over a FixtureDb, and a router on memory
+ * history. `renderApp("/bots/new")` mounts it; the returned handles drive it.
+ */
+import type { DefaultAgentMode, BrowserRuntimeState } from "#shared/contracts";
 
 export const SYSTEM_INFO: SystemInfo = {
   appVersion: "1.0.0",
@@ -72,10 +77,16 @@ const quiet = async function* ({ signal }: { signal?: AbortSignal }) {
   yield* [];
 };
 
-const relay = fixtureRuntime("bot-golden-plain", {}, "bot-test")!.relay;
-const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
-  ({
+const shellRouter = (
+  system: SystemInfo = SYSTEM_INFO,
+  options: HarnessOptions = {}
+) => {
+  const relay = fixtureRuntime("bot-golden-plain", {}, "bot-test")!.relay;
+  return {
     system: {
+      openExternal: os.system.openExternal.handler(({ input }) => {
+        options.openExternal?.(input.url);
+      }),
       info: os.system.info.handler(({ context }) => {
         context.calls.push(["system.info", null]);
         return system;
@@ -106,7 +117,9 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       events: os.settings.events.handler(quiet as never),
       get: os.settings.get.handler(() => ({ defaultModel: null }) as never),
       defaultMode: {
-        get: os.settings.defaultMode.get.handler(() => "YOLO" as never),
+        get: os.settings.defaultMode.get.handler(
+          options.defaultMode ?? (() => "YOLO" as never)
+        ),
       },
       notifications: {
         get: os.settings.notifications.get.handler(
@@ -118,14 +131,28 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       chatPreviews: os.bots.chatPreviews.handler(() => ({})),
       senderChats: os.bots.senderChats.handler(() => []),
       events: os.bots.events.handler(quiet as never),
-      openChat: os.bots.openChat.handler(({ input, context }) => {
+      openChat: os.bots.openChat.handler(async ({ input, context }) => {
         context.calls.push(["bots.openChat", input]);
+        await options.beforeOpenChat?.();
         return {
           botId: input.botId,
           sessionId: "bot-test",
           workspaceId: "default",
         };
       }),
+    },
+    browser: {
+      events: os.browser.events.handler(quiet as never),
+      runtime: {
+        materializeFile: os.browser.runtime.materializeFile.handler(
+          ({ input }) => {
+            if (!options.materializeFile)
+              throw new Error("Missing local file fixture");
+            return options.materializeFile(input);
+          }
+        ),
+        close: os.browser.runtime.close.handler(() => {}),
+      },
     },
     models: { list: os.models.list.handler(() => []) },
     connectors: {
@@ -189,7 +216,6 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       list: os.devices.list.handler(() => []),
     },
     terminal: { events: os.terminal.events.handler(quiet as never) },
-    browser: { events: os.browser.events.handler(quiet as never) },
     agent: {
       start: os.agent.start.handler(({ context, input }) => {
         context.calls.push(["agent.start", input]);
@@ -198,7 +224,7 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       switchConversation: os.agent.switchConversation.handler(() => {}),
     },
     files: {
-      events: os.files.events.handler(quiet as never),
+      events: os.files.events.handler(options.filesEvents ?? (quiet as never)),
       treeRoot: os.files.treeRoot.handler(() => ({
         fileTree: [],
         lastUpdatedAt: "now",
@@ -206,14 +232,25 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       search: os.files.search.handler(() => ({ items: [] })),
     },
     ai: {
-      hydrate: os.ai.hydrate.handler(({ input }) => relay.ai.hydrate(input)),
+      send: os.ai.send.handler(({ input, context }) => {
+        context.calls.push(["ai.send", input]);
+        return (options.ai ?? relay.ai).send(input);
+      }),
+      hydrate: os.ai.hydrate.handler(async ({ input }) => {
+        await options.beforeHydrate?.();
+        return (options.ai ?? relay.ai).hydrate(input);
+      }),
       subscribe: os.ai.subscribe.handler(
-        ({ input, signal }) => relay.ai.subscribe(input, { signal }) as never
+        ({ input, signal }) =>
+          (options.ai ?? relay.ai).subscribe(input, { signal }) as never
       ),
-      runFinished: os.ai.runFinished.handler(quiet as never),
+      runFinished: os.ai.runFinished.handler(
+        options.runFinished ?? (quiet as never)
+      ),
       attention: os.ai.attention.handler(quiet as never),
     },
-  }) as unknown as Router<any, { calls: Array<[string, unknown]> }>;
+  } as unknown as Router<any, { calls: Array<[string, unknown]> }>;
+};
 
 export const defaultSeed = (): FixtureSeed => ({
   prefs: fixturePrefs(),
@@ -228,6 +265,16 @@ export interface HarnessOptions {
   history?: RouterHistory;
   /** Runs on the FixtureDb before any collection syncs. */
   beforeRender?: (db: FixtureDb) => void;
+  defaultMode?: () => Promise<DefaultAgentMode>;
+  materializeFile?: (
+    input: MaterializeBrowserRuntimeFileRequest
+  ) => Promise<BrowserRuntimeState>;
+  beforeOpenChat?: () => Promise<void>;
+  beforeHydrate?: () => Promise<void>;
+  ai?: AiClient;
+  runFinished?: () => AsyncGenerator<RunFinishedNotice>;
+  filesEvents?: () => AsyncGenerator<FilesEvent>;
+  openExternal?: (url: string) => void;
 }
 
 export interface AppHarness {
@@ -251,7 +298,9 @@ export const createHarness = async (
   resetShellStore();
   resetReadinessForTests();
   const calls: Array<[string, unknown]> = [];
-  const transport = createMemoryTransport(shellRouter(), { calls });
+  const transport = createMemoryTransport(shellRouter(SYSTEM_INFO, options), {
+    calls,
+  });
   const db = new FixtureDb(options.seed ?? defaultSeed());
   options.beforeRender?.(db);
   const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });

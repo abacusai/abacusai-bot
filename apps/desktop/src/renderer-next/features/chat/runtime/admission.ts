@@ -29,6 +29,7 @@ export interface OutboxEntry {
   state: OutboxState;
   attempts: number;
   forwardedProps?: Record<string, unknown>;
+  retry?: boolean;
 }
 
 type AdmissionKind =
@@ -49,11 +50,13 @@ export interface AdmissionHost {
   readonly ai: AiClient;
   readonly threadId: string;
   /** The generation and reset revision, to detect a stale outcome. */
-  token(): { gen: number; rev: number };
+  token(): { gen: number; rev: number; retired?: boolean };
   outbox(): readonly OutboxEntry[];
   setOutbox(update: (outbox: OutboxEntry[]) => OutboxEntry[]): void;
   /** The echo of this message id was processed. */
-  echoed(messageId: string): boolean;
+  echoed(messageId: string, runId?: string): boolean;
+  /** Definitive failures from any admission path, after lineage checks. */
+  onDefinitiveError?(error: unknown): void;
   /** Re-send delays for an uncertain admission. */
   readonly reconcileDelaysMs: readonly number[];
   schedule(ms: number, run: () => void): void;
@@ -94,7 +97,8 @@ const admit = async (
 ): Promise<AdmissionResult> => {
   const entry = find(host, entryId);
   if (entry == null) return { kind: "stale" };
-  const { gen, rev } = host.token();
+  const { rev, retired } = host.token();
+  if (retired) return { kind: "stale" };
   const attempts = entry.attempts + 1;
   patch(host, entryId, {
     attempts,
@@ -102,7 +106,7 @@ const admit = async (
   });
   const stale = (): boolean => {
     const now = host.token();
-    return now.gen !== gen || now.rev !== rev;
+    return now.retired === true || now.rev !== rev;
   };
   let ack: AiSendAck;
   try {
@@ -117,24 +121,21 @@ const admit = async (
         : {}),
     });
   } catch (error) {
-    if (host.echoed(entryId)) return { kind: "started" };
-    if (stale()) {
-      remove(host, entryId);
-      return { kind: "stale" };
-    }
+    if (stale()) return { kind: "stale" };
+    if (host.echoed(entryId, entry.retry ? entry.runId : undefined))
+      return { kind: "started" };
     if (isDefinitive(error)) {
       remove(host, entryId);
+      host.onDefinitiveError?.(error);
       throw error;
     }
     patch(host, entryId, { state: "unconfirmed" });
     scheduleReconcile(host, entryId, attempts);
     return { kind: "unconfirmed" };
   }
-  if (host.echoed(entryId)) return { kind: "started" };
-  if (stale()) {
-    remove(host, entryId);
-    return { kind: "stale" };
-  }
+  if (stale()) return { kind: "stale" };
+  if (host.echoed(entryId, entry.retry ? entry.runId : undefined))
+    return { kind: "started" };
   const status = statusOf(ack);
   if (status === "queued" || status === "rejected") remove(host, entryId);
   else patch(host, entryId, { state: "accepted" });
@@ -153,6 +154,8 @@ const scheduleReconcile = (
   entryId: string,
   attempts: number
 ): void => {
+  const token = host.token();
+  if (token.retired) return;
   const resend = attempts - 1;
   const delay = host.reconcileDelaysMs[resend];
   if (delay == null) {
@@ -160,8 +163,14 @@ const scheduleReconcile = (
     return;
   }
   host.schedule(delay, () => {
+    const now = host.token();
+    if (now.retired || now.rev !== token.rev) return;
     const entry = find(host, entryId);
-    if (entry == null || host.echoed(entryId)) return;
+    if (
+      entry == null ||
+      host.echoed(entryId, entry.retry ? entry.runId : undefined)
+    )
+      return;
     void admit(host, entryId).catch(() => {
       // Definitive on a re-send: the entry is already gone.
     });
@@ -171,17 +180,21 @@ const scheduleReconcile = (
 export const submit = (
   host: AdmissionHost,
   text: string,
-  forwardedProps?: Record<string, unknown>
+  forwardedProps?: Record<string, unknown>,
+  messageId?: string
 ): { entry: OutboxEntry; result: Promise<AdmissionResult> } => {
   const entry: OutboxEntry = {
-    id: host.newId("u"),
+    id: messageId ?? host.newId("u"),
     runId: host.newId("run"),
     text,
     createdAt: Date.now(),
     state: "sending",
     attempts: 0,
+    ...(messageId != null ? { retry: true } : {}),
     ...(forwardedProps != null ? { forwardedProps } : {}),
   };
+  if (host.token().retired)
+    return { entry, result: Promise.resolve({ kind: "stale" }) };
   host.setOutbox((outbox) => [...outbox, entry]);
   return { entry, result: admit(host, entry.id) };
 };

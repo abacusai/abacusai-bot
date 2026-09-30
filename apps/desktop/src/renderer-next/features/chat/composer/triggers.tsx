@@ -3,7 +3,7 @@
  * start of the field) menus (spec 02 §8.4). The menu owns the keyboard
  * while open: arrows move, Enter/Tab pick, Escape closes.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
@@ -49,12 +49,14 @@ export const TriggerMenu = ({
   mentions,
   onPick,
   onClose,
+  field,
 }: {
   trigger: TriggerState;
   skills: readonly SkillMetadata[];
   mentions: MentionSource | undefined;
   onPick(insert: string): void;
   onClose(): void;
+  field: RefObject<HTMLTextAreaElement | null>;
 }) => {
   const { t } = useTranslation();
   const [files, setFiles] = useState<string[]>([]);
@@ -91,7 +93,12 @@ export const TriggerMenu = ({
         }));
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (options.length === 0) return;
+      if (
+        event.isComposing ||
+        event.target !== field.current ||
+        options.length === 0
+      )
+        return;
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         setActive(
@@ -110,9 +117,10 @@ export const TriggerMenu = ({
         onClose();
       }
     };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [options, active, onPick, onClose]);
+    const element = field.current;
+    element?.addEventListener("keydown", onKey, true);
+    return () => element?.removeEventListener("keydown", onKey, true);
+  }, [options, active, onPick, onClose, field]);
   if (options.length === 0) return null;
   return (
     <div

@@ -13,7 +13,7 @@ import type { FileRoutesById } from "#next/routeTree.gen";
 export const PANE_BOUNDARIES = {
   "/_shell/(sessions)/sessions/$sessionId": "session:$sessionId",
   "/_shell/(sessions)/sessions/$sessionId/diff": "session:$sessionId",
-  "/_shell/(sessions)/sessions/$sessionId/review": "session:$sessionId",
+  "/_shell/(sessions)/sessions/$sessionId_/review": "session:$sessionId",
   "/_shell/(routines)/routines/_list/": "routines-list",
   "/_shell/(routines)/routines/_list/new": "routines-list",
   "/_shell/(bots)/bots/$botId": "bot:$botId",

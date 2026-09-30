@@ -8,6 +8,7 @@ import type { StreamChunk, UIMessage } from "@tanstack/ai";
 
 import { v1ToUiMessages } from "#shared/transcript/v1-to-ui-messages";
 
+import type { Draft } from "../composer/draft-store";
 import * as b from "./builders";
 import { golden } from "./goldens";
 import type { RelayEvent } from "./relay";
@@ -28,6 +29,9 @@ export interface Scenario {
     model?: string;
     preStart?: boolean;
     banner?: string;
+    draft?: Draft;
+    dictating?: boolean;
+    openPicker?: "mode" | "model";
   };
   /** Canned answer to a send in the gallery (echo + reply). */
   reply?: string;
@@ -697,18 +701,59 @@ export const SCENARIOS: Scenario[] = [
     events: botQueue,
   },
   {
+    id: "composer-attachments",
+    canvas: ["ComposerStates"],
+    skin: "session",
+    events: idleSession(),
+    view: {
+      draft: {
+        text: "Use these files",
+        attachments: [
+          {
+            id: "done",
+            name: "report.pdf",
+            path: "/repo/report.pdf",
+            state: "done",
+          },
+          { id: "loading", name: "photo.png", path: null, state: "uploading" },
+          {
+            id: "failed",
+            name: "archive.zip",
+            path: null,
+            state: "error",
+            error: "Couldn't save this file",
+          },
+        ],
+      },
+    },
+  },
+  {
+    id: "composer-mention",
+    canvas: ["ComposerStates", "Pickers"],
+    skin: "session",
+    events: idleSession(),
+    view: { draft: { text: "@workspace", attachments: [] } },
+  },
+  {
+    id: "composer-dictating",
+    canvas: ["ComposerStates", "dictation"],
+    skin: "session",
+    events: idleSession(),
+    view: { dictating: true, placeholder: "Listening… (dictation preview)" },
+  },
+  {
     id: "composer-mode-open",
     canvas: ["ComposerStates"],
     skin: "session",
     events: idleSession(),
-    view: { model: "RouteLLM" },
+    view: { model: "RouteLLM", openPicker: "mode" },
   },
   {
     id: "composer-model-open",
     canvas: ["ComposerStates", "Pickers"],
     skin: "session",
     events: idleSession(),
-    view: { model: "RouteLLM" },
+    view: { model: "RouteLLM", openPicker: "model" },
   },
   {
     id: "perm-run-command",

@@ -8,6 +8,7 @@
  */
 import type { StreamChunk } from "@tanstack/ai";
 
+import { updateDraft } from "../composer/draft-store";
 import { inertHostActions } from "../runtime/host-actions";
 import { createChatRuntime, type ChatRuntime } from "../runtime/runtime";
 import * as b from "./builders";
@@ -55,6 +56,8 @@ export const fixtureRuntime = (
 ): FixtureRuntime | null => {
   const scenario = scenarioById(scenarioId);
   if (scenario == null) return null;
+  if (scenario.view?.draft != null)
+    updateDraft(threadId, () => structuredClone(scenario.view!.draft!));
   const all = scenario.events();
   const cut =
     options.step == null

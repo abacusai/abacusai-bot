@@ -51,6 +51,8 @@ export interface ComposerConfig {
   onBlocked?: () => void;
   history?: { list(): Promise<string[]>; add(text: string): Promise<void> };
   onSubmitEnvelope?: (envelope: SubmissionEnvelope) => Promise<void>;
+  /** Host-owned dictation preview; recording is a later slice. */
+  dictating?: boolean;
   readOnly?: { reason: ReactNode; action?: ReactNode };
   placeholder: string;
   /** Folder for pasted files; null disables paste-to-file. */
@@ -98,6 +100,11 @@ export interface MessageDecoration {
 }
 
 export interface ChatViewSlots {
+  /** Bot skin only: pure visibility predicate, before transcript windowing. */
+  isMessageHidden?: (
+    message: UIMessage,
+    context: MessageDecorationContext
+  ) => boolean;
   /** Bot skin only: called for every message while it renders. */
   decorateMessage?: (
     message: UIMessage,
@@ -171,6 +178,10 @@ export const createInlineRegistry = (): InlineRegistry => {
 const ChatViewContext = createContext<ChatViewContextValue | null>(null);
 
 export const ChatViewProvider = ChatViewContext.Provider;
+
+/** The enclosing view, or null outside one (the notch's `PermissionList`). */
+export const useOptionalChatView = (): ChatViewContextValue | null =>
+  use(ChatViewContext);
 
 export const useChatView = (): ChatViewContextValue => {
   const value = use(ChatViewContext);
