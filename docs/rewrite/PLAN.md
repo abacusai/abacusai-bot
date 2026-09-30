@@ -34,7 +34,7 @@ A from-scratch front end and a protocol change underneath it: `packages/agent` e
 
 - **Math** — `temml` (LaTeX → MathML Core, MIT, 351★) replaces KaTeX; math renders only once an expression is closed while streaming.
 
-- **Notch** — macOS window hugging the notch (openbot.run’s window recipe; `node-mac-notch` optional); Windows capsule by the clock; Linux out for now.
+- **Notch** — macOS companion window around the notch (window options derived in spec 06 §10.1 from Electron's documented `BaseWindow`/`WebContentsView` behaviour, each tied to a requirement); Windows capsule by the clock; Linux out for now.
 
 - **Editing / sound** — No in-app editor: “Open in editor” only. Sound cues synthesised in WebAudio to start.
 
@@ -142,7 +142,7 @@ Today `session.ts` translates pi’s `AgentSessionEvent` into a bespoke NDJSON `
 | Composer draft, floating sidebar, drag, avatar mood, spotlight step | TanStack Store | Ephemeral, high-frequency. |
 | Messages of the open thread | TanStack AI chat client (hydrate on mount, joinRun for a live run) | Owned by the client; persisted by main’s `withPersistence`. |
 
-**Rule:** no state in two places. Today `?panel=` is mirrored into zustand and the active workspace is pushed from route effects; the new routes carry `workspaceId` and read the URL only. Avatar mood and sidebar badge derive from one pure function (openbot.run’s `waiting > routine > working > unread`) so they never disagree.
+**Rule:** no state in two places. Today `?panel=` is mirrored into zustand and the active workspace is pushed from route effects; the new routes carry `workspaceId` and read the URL only. Avatar mood and sidebar badge derive from one pure function (priority `waiting > routine > working > unread`, our own rule) so they never disagree.
 
 ## Route tree (file-based)
 
@@ -231,17 +231,17 @@ The `/__ui` gallery replays scripted conversations through `@shadcn/helpers/tans
 | Avatar lifecycle/reactions, typing dots, shimmer | CSS keyframes, registry `shimmer` | Reactions 600ms on top of the lifecycle face |
 | Streamed text | Markdown streaming profile | No per-token motion; last block fades 80ms |
 | Spotlight (tour) | own molecule: one mask + `<ViewTransition>` | Mask morphs, card follows 40ms later |
-| Notch wings/body | CSS size transitions + `motion` reactions | exit 160 / expand 420 / contract 450ms, blur 4px, `cubic-bezier(.22,1,.36,1)`; reduced-motion 120ms (openbot.run’s tuned values) |
+| Notch wings/body | CSS size transitions + `motion` reactions | values from the canvas NotchRules board (350 / 120 ms) and spec 06 §16; reduced-motion per the foundation |
 | Counters, label swaps | digit-roll and swap-label molecules |  |
 
 `lib/motion.ts` exports durations, easings and springs once; `prefers-reduced-motion` collapses every entry to a fade and every layout animation to a cut. Emil Kowalski’s `animate`/`review-animations`/`improve-animations` and Vercel’s `vercel-react-view-transitions` skills run per feature PR.
 
 ## Sound
 
-- **Cues:** sent, received (bot reply arrived while not looking), needs-you (approval/question), done (session finished), failed, routine fired. Slack/WhatsApp-style: short, distinct, same family. Start synthesised in WebAudio (openbot.run proves a 220ms swept sine reads as “done”), replace with a licensed set if design wants.
-- **Rules:** never while the thread that caused it is visible and the window is focused; coalesce a burst into one cue; per-event switches, per-bot level (all / needs-me / nothing, like openbot.run’s `notificationLevel`), quiet hours shared with the notch; volume follows the system.
+- **Cues:** sent, received (bot reply arrived while not looking), needs-you (approval/question), done (session finished), failed, routine fired. Slack/WhatsApp-style: short, distinct, same family. Start synthesised in WebAudio as our own cue set (spec 06 §14.1: each cue described by intent, duration bounds and synthesis method, tuned by listening tests), replace with a licensed set if design wants.
+- **Rules:** never while the thread that caused it is visible and the window is focused; coalesce a burst into one cue; per-event switches, per-bot level (all / needs-me / nothing), quiet hours shared with the notch; volume follows the system.
 - **Where:** `lib/sound.ts` in the renderer (one `AudioContext`, unlocked on first interaction); the notch window plays needs-you and done when the main window is not focused; OS notifications carry no sound of their own.
-- **Haptics (macOS):** optional alignment tick when the notch expands, via a long-lived `osascript -l JavaScript` calling `NSHapticFeedbackManager` (openbot.run’s trick, no native module).
+- **Haptics (macOS):** optional alignment tick when the notch expands, via one short `osascript -l JavaScript` call to `NSHapticFeedbackManager` per attention (spec 06 §10.7; no native module).
 
 ## Shell
 
@@ -274,15 +274,15 @@ The `/__ui` gallery replays scripted conversations through `@shadcn/helpers/tans
 
 ## Notch window
 
-- **Window (from openbot.run’s recipe):** `BrowserWindow({ type: "panel", transparent, frame: false, alwaysOnTop, focusable: false, hiddenInMissionControl, skipTaskbar, hasShadow: false, enableLargerThanScreen })`, then `setAlwaysOnTop(true, "status")`, `setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })`, `setIgnoreMouseEvents(true, { forward: true })`; interactive only while hovered/focused. One per display on macOS, re-laid-out on display and power events.
-- **Geometry:** centred at the top; compact height = notch + 18; a 700ms settle before shrinking so the collapse animation isn’t clipped. Notch size from `node-mac-notch` (`safeAreaInsets`, auxiliary areas) with openbot.run’s aspect-ratio inference (1512×982 → 185×32) as the fallback. Wings beside the cut-out, body below; nothing under it.
+- **Window:** a transparent, frameless, non-activating, always-on-top `BaseWindow` + `WebContentsView` per display, click-through outside its shape and interactive only while the pointer is on it or the user types into it; hidden on other apps' full-screen Spaces. Each option is derived from a requirement in spec 06 §10.1 and verified on hardware (R6-T30/T31).
+- **Geometry:** centred at the top; notch size read from AppKit's `NSScreen.safeAreaInsets` and auxiliary top areas through a JXA probe (spec 06 §10.2; no inference fallback); the window is resized to an envelope before an animation and to its final rect after it. Wings beside the cut-out, body below; nothing under it.
 - **Content:** the same `features/chat` client against the same AG-UI stream; states `idle | working | message | question | approval | takeover | failed` with priority question > approval > takeover > failed > working > message > idle and a “remaining” count; while the pointer is over an attention state, updates queue instead of replacing content; reacts to the main window (send → wink, done → bounce).
 - **Windows:** capsule by the taskbar clock, same states, grows upward. Linux: not now.
 - **Prefs:** enabled, haptics, idle visible, extra displays, per-bot level; off switch in General.
 
 ## One-time migration
 
-- Versioned migration runner in main (numbered steps, one transaction per step, recorded in a `migrations.json`), modelled on openbot.run’s numbered schema migrations; runs once on first launch of the new build, before the renderer loads, with a visible progress screen.
+- Versioned migration runner in main (numbered steps, one transaction per step, recorded in a `migrations.json`), numbered steps with a journal (spec 00 C); runs once on first launch of the new build, before the renderer loads, with a visible progress screen.
 - **Transcripts:** `transcripts/<id>.json` (version 1 segments) → UIMessage parts; pi’s `agent/sessions/desktop/<id>.jsonl` stays the model-context source and is re-attached via `session/load`.
 - **Sessions/workspaces:** `local-code.json` records → collection tables (same fields; `runOutcome: running` → `failed` on restore as today).
 - **Bots:** `bots.json` + `bots/<id>/` unchanged on disk; avatar shape/colour map to the new 24-shape set; check-in routines stay routines.
@@ -310,9 +310,9 @@ The `/__ui` gallery replays scripted conversations through `@shadcn/helpers/tans
 | `@shadcn/react` message-scroller, questionnaire + registry chat parts | Transcript skin, HITL forms | [use] React ≥19 |
 | `@shadcn/helpers/tanstack-ai` | Scripted fixtures | [verify] pins ai-client 0.20 vs 0.36 |
 | `temml` (351★) | Math | [use] MIT, active |
-| `node-mac-notch` | Exact notch metrics | [verify] Electron 43 ABI; aspect-ratio inference as fallback |
-| `@tanstack/react-hotkeys` | Typed shortcuts (⌘K, ⌘N, ⌘., ⌘⇧Space) | [use] (OpenBot uses it) |
-| `prompt-area` (OpenBot’s composer chips/triggers) | @-mentions, / commands in the composer | [evaluate] vs registry `input-group` + `combobox` |
+| ~~`node-mac-notch`~~ | Exact notch metrics | [dropped] does not exist on npm; notch metrics come from a one-shot JXA probe of `NSScreen.safeAreaInsets` (spec 06 §10.2), no inference fallback |
+| `@tanstack/react-hotkeys` | Typed shortcuts (⌘K, ⌘N, ⌘., ⌘⇧Space) | [use] |
+| `prompt-area` | @-mentions, / commands in the composer | [not used] registry `input-group` + `combobox` (spec 02 §8) |
 | `streamdown`, `boring-avatars` | — | [skip] TanStack Markdown and BotAvatar cover them |
 | `@pierre/trees`, `ghostty-web`, `valibot`, `@tanstack/react-pacer` | File tree, terminal, schemas, pacing | [use] |
 | openbot.run code | — | [no copying] PolyForm Noncommercial; ideas only |
@@ -325,7 +325,7 @@ The `/__ui` gallery replays scripted conversations through `@shadcn/helpers/tans
 | TanStack/db (0.10.0) · TanStack/router (1.170.40) | MIT | Custom sync contract, live queries with includes; file-route conventions, route masking, view-transition ownership, search middlewares |
 | shadcn-ui/ui | MIT | base-mira tokens and density, chat registry parts, message-scroller API, data-slot names, CLI presets |
 | CopilotKit/openbot (v0.0.15) · CopilotKit/openmuse (v0.1.0) | MIT | Approvals as suspending tools, hash-bound proposals, firing frame for routines, stall watchdog, history repair, roster patches, ToolLine |
-| nightly-labs/openbot (openbot.run) | PolyForm NC | Island window recipe and motion values, attention priority and locking, badge/mood single source, queue UI, sound gating, ACP as a provider seam (ideas only) |
+| nightly-labs/openbot (openbot.run) | PolyForm NC | Looked at for product ideas only (a notch companion exists; attention has a priority). No recipe, constant or code is taken from it; specs 03 §17 and 06 derive their own (see 06 review r2 #1/#2). |
 | earendil-works/pi (0.99.1) · victor-software-house/pi-acp (0.17.1) | MIT | Extension API (`agent_before_settle`, `registerMcpServer`, virtual models), AgentSessionEvent shapes, why not ACP; tool title/kind/content helpers to vendor |
 | Grok Bot design write-ups; Temml; ACP docs; oRPC docs | — | Lifecycle states and accessories; math; protocol shape; transport |
 

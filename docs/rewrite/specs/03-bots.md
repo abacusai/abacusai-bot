@@ -958,7 +958,7 @@ The foundation fixed the API and gating (§7.8 there: never while the causing th
 | `sent` | the user's admission acked `started`/`queued` in a bot thread | 90 ms sine 660 → 880 Hz, gain 0.08, exp release |
 | `received` | `ai.runFinished` with `outcome: "success"` and `hasVisibleAssistantText: true` for a bot's session that is not visible; covers never-opened bots (review r2 #7/#8) | two 70 ms sines 880 then 1175 Hz, 40 ms apart, gain 0.07 |
 | `needs-you` | a bot session enters `waiting_permission` | three 60 ms triangle pulses at 740 Hz, 80 ms apart, gain 0.09 |
-| `done` | `ai.runFinished` (`outcome: "success"`) for a session whose `routineId` is the bot's check-in routine | 220 ms swept sine 520 → 1040 Hz (PLAN: openbot.run's "done") |
+| `done` | `ai.runFinished` (`outcome: "success"`) for a session whose `routineId` is the bot's check-in routine | our own design, specified in 06 §14.1 (intent: "finished, all good"; a short two-tone rise; synthesis and bounds there; tuned by listening tests) |
 | `failed` | `ai.runFinished` with `outcome: "error"` for a bot's session (never `cancelled`; command errors such as a refused `ai.send` are not run terminals and play nothing) | 180 ms sine 440 → 294 Hz, gain 0.08 |
 
 - `received`, `done` and `failed` come only from `ai.runFinished` (every bot, cached or not); `needs-you` from the sessions table's `waiting_permission` transitions (a level, not an event, so coalescing is harmless) and pending connector asks; `sent` from the admission ack. One module, the same one as §6.7.
