@@ -77,8 +77,18 @@ export type TerminalOutputChunk =
    */
   | { type: "snapshot"; data: string; from: number; offset: number }
   | { type: "data"; data: string; offset: number }
-  /** Exactly once, then the iterator returns. Sticky for a late subscriber. */
-  | { type: "exit"; exitCode: number | null; signal: number | null };
+  /**
+   * Exactly one of `exit` or `retired`, then the iterator returns. Both are
+   * sticky for a late subscriber.
+   */
+  | { type: "exit"; exitCode: number | null; signal: number | null }
+  /**
+   * This generation ended without an exit of its own: `closed` (the terminal
+   * was closed, or its scope or workspace disposed), or `superseded` (a
+   * scope promotion moved the shell to a new key and generation; the
+   * terminal state events name the new one).
+   */
+  | { type: "retired"; reason: "closed" | "superseded" };
 
 export type TerminalEvent =
   /** First yield on (re)open: every terminal's state in scope. */

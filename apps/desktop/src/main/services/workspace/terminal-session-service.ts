@@ -24,6 +24,7 @@ import {
   type ConversationTerminalAttachment,
   type ConversationTerminalEvent,
   type ConversationTerminalOutputState,
+  type TerminalRetireReason,
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
 import { resolveTerminalShell } from "./terminal-shells";
@@ -98,6 +99,17 @@ type TerminalSessionServiceOptions = {
     signal: number | null;
   }) => void;
   emitTerminalState: (state: TerminalSessionSnapshot) => void;
+  /**
+   * A generation closed or superseded without an exit of its own (see the
+   * registry's `onRetire`). Not a legacy event: the old renderer never
+   * listened for one; `terminal.output` readers end on it.
+   */
+  emitTerminalRetired?: (event: {
+    terminalId: string;
+    conversationKey: ConversationKey;
+    generation: number;
+    reason: TerminalRetireReason;
+  }) => void;
 };
 
 const assertIdentity = (
@@ -178,6 +190,13 @@ export class TerminalSessionService {
           conversation: conversationFromEvent(event),
           generation: event.generation,
           data: event.data,
+        }),
+      onRetire: (event) =>
+        options.emitTerminalRetired?.({
+          terminalId: event.terminalId,
+          conversationKey: event.key,
+          generation: event.generation,
+          reason: event.reason,
         }),
       onExit: (event) => {
         const conversation = conversationFromEvent(event);
