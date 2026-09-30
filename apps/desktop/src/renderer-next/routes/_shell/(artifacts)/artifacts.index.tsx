@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ArtifactsPage } from "#next/features/artifacts";
@@ -21,6 +21,9 @@ const ArtifactsRoute = () => {
 };
 
 export const Route = createFileRoute("/_shell/(artifacts)/artifacts/")({
+  search: {
+    middlewares: [stripSearchParams({ view: "grid", sort: "newest" })],
+  },
   validateSearch: ArtifactsSearch,
   loaderDeps: ({ search }) => ({
     type: search.type,
