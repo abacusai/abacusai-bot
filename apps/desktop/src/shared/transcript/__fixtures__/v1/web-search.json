@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "sessionId": "sess-web-search",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Find news about tides",
+      "at": 1788256800000
+    },
+    {
+      "type": "web_search_results",
+      "id": "w1",
+      "query": "tides news",
+      "resultType": "web",
+      "results": [
+        {
+          "title": "Tides explained",
+          "url": "https://example.com/tides",
+          "snippet": "How tides work."
+        },
+        {
+          "title": "Moon",
+          "url": "https://example.org/moon"
+        }
+      ],
+      "at": 1788256801000
+    },
+    {
+      "type": "web_search_results",
+      "id": "w2",
+      "query": "tide pictures",
+      "resultType": "image",
+      "results": [
+        {
+          "title": "Beach",
+          "url": "https://example.com/beach.jpg",
+          "thumbnailUrl": "https://example.com/beach-thumb.jpg"
+        }
+      ],
+      "at": 1788256802000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Here is what I found.",
+      "at": 1788256803000
+    }
+  ]
+}

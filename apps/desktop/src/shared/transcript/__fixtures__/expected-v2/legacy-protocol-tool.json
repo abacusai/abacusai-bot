@@ -1,0 +1,186 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Old agent shape",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "lp1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "lp1",
+              "partIndex": 0,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256802000,
+              "id": "lp2",
+              "partIndex": 2,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256803000,
+              "id": "lp3",
+              "partIndex": 4,
+              "type": "tool_call"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "arguments": "{\"command\":\"ls\"}",
+          "id": "lp-call-1",
+          "input": {
+            "command": "ls"
+          },
+          "metadata": {
+            "abacus": {
+              "legacy": {
+                "toolPhase": "complete",
+                "toolUseResult": {
+                  "content": "a\nb",
+                  "id": "lp-call-1"
+                }
+              },
+              "segmentId": "lp1",
+              "status": "success"
+            }
+          },
+          "name": "bash",
+          "output": "a\nb",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "a\nb",
+          "id": "lp1:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "complete",
+          "toolCallId": "lp-call-1",
+          "type": "tool-result"
+        },
+        {
+          "approval": {
+            "approved": false,
+            "id": "lp-call-2:approval",
+            "needsApproval": true
+          },
+          "arguments": "{\"path\":\"x\"}",
+          "id": "lp-call-2",
+          "input": {
+            "path": "x"
+          },
+          "metadata": {
+            "abacus": {
+              "legacy": {
+                "toolDisplayData": {
+                  "isNewFile": true
+                },
+                "toolPhase": "rejected",
+                "toolUseResult": {
+                  "content": "denied",
+                  "rejected": true
+                }
+              },
+              "segmentId": "lp2",
+              "status": "rejected"
+            }
+          },
+          "name": "write",
+          "output": "denied",
+          "state": "approval-responded",
+          "type": "tool-call"
+        },
+        {
+          "content": "denied",
+          "id": "lp2:result",
+          "metadata": {
+            "abacus": {
+              "rejection": {
+                "reason": "rejected"
+              }
+            }
+          },
+          "outcome": "denied",
+          "state": "error",
+          "toolCallId": "lp-call-2",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"path\":\"y\"}",
+          "id": "lp-call-3",
+          "input": {
+            "path": "y"
+          },
+          "metadata": {
+            "abacus": {
+              "legacy": {
+                "toolPhase": "executing"
+              },
+              "segmentId": "lp3",
+              "status": "interrupted"
+            }
+          },
+          "name": "read",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "lp3:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "lp-call-3",
+          "type": "tool-result"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 4,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-legacy-protocol-tool",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

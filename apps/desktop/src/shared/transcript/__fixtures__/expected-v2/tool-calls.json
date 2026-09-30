@@ -1,0 +1,346 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Fix the failing test in src/sum.ts",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "s-bash",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "s-bash",
+              "partIndex": 0,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256802000,
+              "id": "s-read",
+              "partIndex": 2,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256803000,
+              "id": "s-edit",
+              "partIndex": 4,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256804000,
+              "id": "s-write",
+              "partIndex": 6,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256805000,
+              "id": "s-mcp",
+              "partIndex": 8,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256806000,
+              "id": "s-unknown",
+              "partIndex": 10,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256807000,
+              "id": "s-noresult",
+              "partIndex": 12,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256808000,
+              "id": "b1",
+              "partIndex": 13,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "arguments": "{\"command\":\"npm test\",\"timeout\":60000}",
+          "id": "call_bash",
+          "input": {
+            "command": "npm test",
+            "timeout": 60000
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "s-bash",
+              "status": "success"
+            }
+          },
+          "name": "bash",
+          "output": "1 failing",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "1 failing",
+          "id": "s-bash:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "command": "npm test",
+                "duration": 2300,
+                "exitCode": 1,
+                "output": "1 failing",
+                "type": "bash"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "call_bash",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"file_path\":\"src/sum.ts\",\"limit\":40}",
+          "id": "call_read",
+          "input": {
+            "file_path": "src/sum.ts",
+            "limit": 40
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "s-read",
+              "status": "success"
+            }
+          },
+          "name": "read",
+          "output": "export const sum = (a, b) => a - b;",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "export const sum = (a, b) => a - b;",
+          "id": "s-read:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "content": "export const sum = (a, b) => a - b;",
+                "filePath": "src/sum.ts",
+                "lineCount": 1,
+                "startLine": 1,
+                "type": "read"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "call_read",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"file_path\":\"src/sum.ts\",\"old_str\":\"a - b\",\"new_str\":\"a + b\"}",
+          "id": "call_edit",
+          "input": {
+            "file_path": "src/sum.ts",
+            "new_str": "a + b",
+            "old_str": "a - b"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "s-edit",
+              "status": "success"
+            }
+          },
+          "name": "edit",
+          "output": "Edited src/sum.ts",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "Edited src/sum.ts",
+          "id": "s-edit:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "additions": 1,
+                "deletions": 1,
+                "diff": "-export const sum = (a, b) => a - b;\n+export const sum = (a, b) => a + b;",
+                "finalContent": "export const sum = (a, b) => a + b;\n",
+                "originalContent": "export const sum = (a, b) => a - b;\n",
+                "type": "file_mutation"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "call_edit",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"file_path\":\"src/sum.test.ts\",\"content\":\"test('sum', () => {});\\n\"}",
+          "id": "call_write",
+          "input": {
+            "content": "test('sum', () => {});\n",
+            "file_path": "src/sum.test.ts"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "s-write",
+              "status": "success"
+            }
+          },
+          "name": "write",
+          "output": "Created src/sum.test.ts",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "Created src/sum.test.ts",
+          "id": "s-write:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "additions": 1,
+                "deletions": 0,
+                "finalContent": "test('sum', () => {});\n",
+                "isNewFile": true,
+                "type": "file_mutation"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "call_write",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"server_id\":\"linear\",\"tool_name\":\"create_issue\",\"arguments\":{\"title\":\"Sum is wrong\"}}",
+          "id": "call_mcp",
+          "input": {
+            "arguments": {
+              "title": "Sum is wrong"
+            },
+            "server_id": "linear",
+            "tool_name": "create_issue"
+          },
+          "metadata": {
+            "abacus": {
+              "endpoint": "mcp_call",
+              "segmentId": "s-mcp",
+              "status": "success"
+            }
+          },
+          "name": "mcp__linear__create_issue",
+          "output": "Created ISSUE-1",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "Created ISSUE-1",
+          "id": "s-mcp:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "content": "Created ISSUE-1",
+                "isError": false,
+                "type": "mcp"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "call_mcp",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"anything\":[1,2,3]}",
+          "id": "call_unknown",
+          "input": {
+            "anything": [1, 2, 3]
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "s-unknown",
+              "status": "success"
+            }
+          },
+          "name": "some_future_tool",
+          "output": "ok",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "ok",
+          "id": "s-unknown:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "output": "ok",
+                "type": "generic"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "call_unknown",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"pattern\":\"sum\"}",
+          "id": "call_grep",
+          "input": {
+            "pattern": "sum"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "s-noresult",
+              "status": "success"
+            }
+          },
+          "name": "grep",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "Fixed: `sum` now adds.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 9,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-tool-calls",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

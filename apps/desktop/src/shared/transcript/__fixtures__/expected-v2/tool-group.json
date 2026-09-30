@@ -1,0 +1,199 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Look around the repo",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "g1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "category": "explore",
+              "id": "g1",
+              "partIndex": null,
+              "summary": "Read 2 files, searched 1 pattern",
+              "type": "tool_group"
+            },
+            {
+              "at": 1788256801000,
+              "groupId": "g1",
+              "id": "g1-a",
+              "partIndex": 0,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256802000,
+              "groupId": "g1",
+              "id": "g1-b",
+              "partIndex": 2,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256803000,
+              "groupId": "g1",
+              "id": "g1-c",
+              "partIndex": 4,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256804000,
+              "id": "b1",
+              "partIndex": 6,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "arguments": "{\"file_path\":\"README.md\"}",
+          "id": "ga",
+          "input": {
+            "file_path": "README.md"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "g1-a",
+              "status": "success"
+            }
+          },
+          "name": "read",
+          "output": "# Readme",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "# Readme",
+          "id": "g1-a:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "content": "# Readme",
+                "lineCount": 1,
+                "type": "read"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "ga",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"file_path\":\"package.json\"}",
+          "id": "gb",
+          "input": {
+            "file_path": "package.json"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "g1-b",
+              "status": "success"
+            }
+          },
+          "name": "read",
+          "output": "{}",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "{}",
+          "id": "g1-b:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "content": "{}",
+                "lineCount": 1,
+                "type": "read"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "gb",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"pattern\":\"TODO\"}",
+          "id": "gc",
+          "input": {
+            "pattern": "TODO"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "g1-c",
+              "status": "success"
+            }
+          },
+          "name": "grep",
+          "output": "3 matches",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "3 matches",
+          "id": "g1-c:result",
+          "metadata": {
+            "abacus": {
+              "data": {
+                "output": "3 matches",
+                "type": "generic"
+              }
+            }
+          },
+          "state": "complete",
+          "toolCallId": "gc",
+          "type": "tool-result"
+        },
+        {
+          "content": "The repo is a small TypeScript library.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 3,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-tool-group",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

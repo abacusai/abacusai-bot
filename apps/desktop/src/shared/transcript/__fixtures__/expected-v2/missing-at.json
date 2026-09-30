@@ -1,0 +1,82 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        }
+      },
+      "parts": [
+        {
+          "content": "Old transcript without times",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "b1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "id": "b1",
+              "partIndex": 0,
+              "type": "text"
+            },
+            {
+              "at": 1788256803000,
+              "id": "b2",
+              "partIndex": 1,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:03.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Also without a time.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "This one has one.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b2"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 3,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-missing-at",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}
