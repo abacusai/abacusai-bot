@@ -54,13 +54,51 @@ import { WorkspaceService } from "../../services/workspace/workspace-service";
 import { followPrefsTheme } from "../../startup-theme";
 import { MainEventBus } from "../event-bus";
 import { connectInProcess, fakeDeps } from "../testing";
-import { MemoryWatchers } from "./memories";
+import { MemoryWatchers, type WatchFactory } from "./memories";
 import type { TableSources } from "./sources";
 import type { TableFeed } from "./table-feed";
 
 let home: string;
 let tables: Tables | null = null;
 let routines: RoutineListItem[] = [];
+
+/**
+ * A synchronous stand-in for `fs.watch`: the test emits events by hand, so the
+ * reconcile logic is asserted without filesystem-event latency (FSEvents on
+ * macOS starts late and coalesces). `failing` directories throw on arming.
+ */
+const fakeWatch = () => {
+  type Armed = {
+    dir: string;
+    listener: (event: string, name: string | null) => void;
+    closed: boolean;
+  };
+  const all: Armed[] = [];
+  const failing = new Map<string, string>();
+  const factory: WatchFactory = (dir, listener) => {
+    const code = failing.get(dir);
+    if (code != null) throw Object.assign(new Error(code), { code });
+    const armed: Armed = { dir, listener, closed: false };
+    all.push(armed);
+    return {
+      close: () => {
+        armed.closed = true;
+      },
+    };
+  };
+  return {
+    factory,
+    failing,
+    emit: (dir: string, event: string, name: string | null) => {
+      for (const armed of all)
+        if (armed.dir === dir && !armed.closed) armed.listener(event, name);
+    },
+    live: (dir: string) =>
+      all.filter((armed) => armed.dir === dir && !armed.closed).length,
+    armedCount: (dir: string) =>
+      all.filter((armed) => armed.dir === dir).length,
+  };
+};
 
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), "db-tables-"));
@@ -70,6 +108,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   tables?.dispose();
   tables = null;
   delete process.env.ABACUSAI_BOT_HOME;
@@ -110,6 +149,7 @@ const sourcesFor = (
 const setup = (
   options: {
     watchMemories?: boolean;
+    watch?: WatchFactory;
     prefsStore?: PrefsStore;
     sources?: Partial<TableSources>;
     routinesClockMs?: number | null;
@@ -128,6 +168,7 @@ const setup = (
     sources,
     prefsStore,
     watchMemories: options.watchMemories ?? false,
+    watch: options.watch,
     routinesClockMs: options.routinesClockMs ?? null,
     artifactsPollMs: options.artifactsPollMs ?? null,
   });
@@ -281,23 +322,29 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
   });
 
   it("memories: an external write to memories/ arrives within 500 ms", async () => {
-    const { tables, bus } = setup({ watchMemories: true });
+    const watch = fakeWatch();
+    const { tables, bus } = setup({
+      watchMemories: true,
+      watch: watch.factory,
+    });
     const feed = await reader(tables.memories);
     let notices = 0;
     bus.listenChannel("memory", () => {
       notices += 1;
     });
 
-    fs.mkdirSync(path.join(home, "memories"));
-    // Let the watchers re-arm on the new directory.
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(0), {
-      timeout: 8_000,
-    });
+    const memories = path.join(home, "memories");
+    fs.mkdirSync(memories);
+    watch.emit(home, "rename", "memories");
+    // The watchers re-arm on the new directory.
+    await vi.waitFor(() => expect(watch.live(memories)).toBe(1));
+    await vi.waitFor(() => expect(notices).toBeGreaterThan(0));
     const started = Date.now();
     fs.writeFileSync(
-      path.join(home, "memories", "MEMORY.md"),
+      path.join(memories, "MEMORY.md"),
       "likes tea\n§\nlives in Oslo"
     );
+    watch.emit(memories, "change", "MEMORY.md");
     const batch = await feed.next(500);
     expect(Date.now() - started).toBeLessThan(500);
     expect(batch).toMatchObject({
@@ -318,7 +365,11 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
   });
 
   it("memories: a bot's memory directory and daily notes fire memory.events", async () => {
-    const { tables, bus } = setup({ watchMemories: true });
+    const watch = fakeWatch();
+    const { tables, bus } = setup({
+      watchMemories: true,
+      watch: watch.factory,
+    });
     tables.memories.snapshot();
     const bot = createBot({ name: "Ada", description: "Counts" }, "bot-ada");
     let notices = 0;
@@ -327,49 +378,134 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     });
 
     fs.mkdirSync(botDir(bot.id), { recursive: true });
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(0), {
-      timeout: 8_000,
-    });
+    watch.emit(home, "rename", "bots");
+    await vi.waitFor(() => expect(notices).toBeGreaterThan(0));
+    await vi.waitFor(() => expect(watch.live(botDir(bot.id))).toBe(1));
     const before = notices;
     fs.mkdirSync(path.join(botDir(bot.id), "memory"));
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(before), {
-      timeout: 8_000,
-    });
+    watch.emit(botDir(bot.id), "rename", "memory");
+    await vi.waitFor(() => expect(notices).toBeGreaterThan(before));
     const afterDir = notices;
     fs.writeFileSync(
       path.join(botDir(bot.id), "memory", "2026-09-30.md"),
       "notes"
     );
-    await vi.waitFor(() => expect(notices).toBeGreaterThan(afterDir), {
-      timeout: 8_000,
-    });
+    watch.emit(path.join(botDir(bot.id), "memory"), "rename", "2026-09-30.md");
+    await vi.waitFor(() => expect(notices).toBeGreaterThan(afterDir));
     expect(listBotMemories()).toMatchObject([{ botId: bot.id, noteDays: 1 }]);
   });
 
   it("memory watchers follow bot directories in and out", async () => {
+    const watch = fakeWatch();
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({ home, onChange: changes });
+    const watchers = new MemoryWatchers({
+      home,
+      onChange: changes,
+      debounceMs: 1,
+      watch: watch.factory,
+    });
     try {
       const bots = path.join(home, "bots");
       const dir = path.join(bots, "bot-x");
       fs.mkdirSync(path.join(dir, "memory"), { recursive: true });
-      await vi.waitFor(
-        () =>
-          expect(watchers.watchedPaths()).toEqual(
-            [home, bots, dir, path.join(dir, "memory")].sort()
-          ),
-        { timeout: 8_000 }
+      watch.emit(home, "rename", "bots");
+      await vi.waitFor(() =>
+        expect(watchers.watchedPaths()).toEqual(
+          [home, bots, dir, path.join(dir, "memory")].sort()
+        )
       );
       fs.rmSync(dir, { recursive: true, force: true });
-      await vi.waitFor(
-        () => expect(watchers.watchedPaths()).toEqual([home, bots].sort()),
-        { timeout: 8_000 }
+      watch.emit(bots, "rename", "bot-x");
+      await vi.waitFor(() =>
+        expect(watchers.watchedPaths()).toEqual([home, bots].sort())
       );
+      expect(watch.live(dir)).toBe(0);
       expect(changes).toHaveBeenCalled();
     } finally {
       watchers.close();
     }
     expect(watchers.watchedPaths()).toEqual([]);
+    expect(watch.live(home)).toBe(0);
+  });
+
+  it("memory watchers notify after arming, for writes that beat the watcher", async () => {
+    const watch = fakeWatch();
+    const changes = vi.fn();
+    const watchers = new MemoryWatchers({
+      home,
+      onChange: changes,
+      debounceMs: 1,
+      watch: watch.factory,
+    });
+    try {
+      // Created and written before its watcher exists: no event will come.
+      fs.mkdirSync(path.join(home, "memories"));
+      fs.writeFileSync(path.join(home, "memories", "MEMORY.md"), "early");
+      watch.emit(home, "rename", "memories");
+      await vi.waitFor(() =>
+        expect(watchers.watchedPaths()).toContain(path.join(home, "memories"))
+      );
+      // The arming pass and its settle pass both notify.
+      await vi.waitFor(() => expect(changes).toHaveBeenCalledTimes(2));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(changes).toHaveBeenCalledTimes(2);
+    } finally {
+      watchers.close();
+    }
+  });
+
+  it("memory watchers retry a directory that cannot be watched yet", async () => {
+    vi.useFakeTimers();
+    const watch = fakeWatch();
+    const memories = path.join(home, "memories");
+    fs.mkdirSync(memories);
+    watch.failing.set(memories, "EPERM");
+    const changes = vi.fn();
+    const watchers = new MemoryWatchers({
+      home,
+      onChange: changes,
+      debounceMs: 10,
+      watch: watch.factory,
+    });
+    try {
+      expect(watchers.watchedPaths()).toEqual([home]);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(watchers.watchedPaths()).toEqual([home]);
+      watch.failing.delete(memories);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(watchers.watchedPaths()).toEqual([home, memories].sort());
+      expect(changes).toHaveBeenCalled();
+    } finally {
+      watchers.close();
+    }
+  });
+
+  it("memory watchers smoke: a real fs.watch sees a write in a new directory", async () => {
+    const changes = vi.fn();
+    const watchers = new MemoryWatchers({ home, onChange: changes });
+    try {
+      const memories = path.join(home, "memories");
+      fs.mkdirSync(memories);
+      await vi.waitFor(
+        () => expect(watchers.watchedPaths()).toContain(memories),
+        {
+          timeout: 15_000,
+          interval: 50,
+        }
+      );
+      changes.mockClear();
+      // FSEvents starts late: keep writing until one lands, bounded by the timeout.
+      let n = 0;
+      await vi.waitFor(
+        () => {
+          fs.writeFileSync(path.join(memories, "MEMORY.md"), `note ${n++}`);
+          expect(changes).toHaveBeenCalled();
+        },
+        { timeout: 15_000, interval: 250 }
+      );
+    } finally {
+      watchers.close();
+    }
   });
 
   it("memories: a duplicate-entry delete race gives the second click CONFLICT", async () => {
@@ -644,48 +780,59 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
   });
 
   it("memory watchers re-arm a directory replaced within one debounce", async () => {
+    const watch = fakeWatch();
     const memories = path.join(home, "memories");
     fs.mkdirSync(memories);
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({ home, onChange: changes });
+    const watchers = new MemoryWatchers({
+      home,
+      onChange: changes,
+      debounceMs: 1,
+      watch: watch.factory,
+    });
     try {
       expect(watchers.watchedPaths()).toContain(memories);
-      // Removed and recreated faster than the debounce.
+      expect(watch.armedCount(memories)).toBe(1);
+      // Removed and recreated faster than the debounce; the parent reports
+      // the rename even when the inode is reused.
       fs.rmSync(memories, { recursive: true });
       fs.mkdirSync(memories);
-      await vi.waitFor(() => expect(changes).toHaveBeenCalled(), {
-        timeout: 8_000,
-      });
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      watch.emit(home, "rename", "memories");
+      await vi.waitFor(() => expect(watch.armedCount(memories)).toBe(2));
+      expect(watch.live(memories)).toBe(1);
+      await vi.waitFor(() => expect(changes).toHaveBeenCalled());
       changes.mockClear();
       fs.writeFileSync(path.join(memories, "MEMORY.md"), "a later write");
-      await vi.waitFor(() => expect(changes).toHaveBeenCalled(), {
-        timeout: 8_000,
-      });
+      watch.emit(memories, "change", "MEMORY.md");
+      await vi.waitFor(() => expect(changes).toHaveBeenCalled());
     } finally {
       watchers.close();
     }
   });
 
   it("memory watchers wait for a home that does not exist yet", async () => {
+    const watch = fakeWatch();
     const later = path.join(home, "profile");
     const changes = vi.fn();
-    const watchers = new MemoryWatchers({ home: later, onChange: changes });
+    const watchers = new MemoryWatchers({
+      home: later,
+      onChange: changes,
+      debounceMs: 1,
+      watch: watch.factory,
+    });
     try {
       expect(watchers.watchedPaths()).toEqual([home]);
       fs.mkdirSync(path.join(later, "memories"), { recursive: true });
-      await vi.waitFor(
-        () =>
-          expect(watchers.watchedPaths()).toEqual(
-            [later, path.join(later, "memories")].sort()
-          ),
-        { timeout: 8_000 }
+      watch.emit(home, "rename", "profile");
+      await vi.waitFor(() =>
+        expect(watchers.watchedPaths()).toEqual(
+          [later, path.join(later, "memories")].sort()
+        )
       );
       changes.mockClear();
       fs.writeFileSync(path.join(later, "memories", "MEMORY.md"), "tea");
-      await vi.waitFor(() => expect(changes).toHaveBeenCalled(), {
-        timeout: 8_000,
-      });
+      watch.emit(path.join(later, "memories"), "change", "MEMORY.md");
+      await vi.waitFor(() => expect(changes).toHaveBeenCalled());
     } finally {
       watchers.close();
     }
