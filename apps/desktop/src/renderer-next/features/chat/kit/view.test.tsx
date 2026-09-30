@@ -8,9 +8,9 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { renderScenario, type Rendered } from "../testing";
+import { renderScenario } from "../testing";
 
-let current: Rendered | null = null;
+let current: Awaited<ReturnType<typeof renderScenario>> | null = null;
 afterEach(async () => {
   await current?.cleanup();
   current = null;

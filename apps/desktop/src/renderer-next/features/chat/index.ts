@@ -9,6 +9,7 @@ export {
 } from "./runtime/runtime";
 export { ChatView, type ChatViewProps } from "./kit/view";
 export { useThreadHost } from "./runtime/host";
+export { deriveSessionTitle } from "./runtime/send";
 export { PermissionList } from "./kit/permissions/permission-list";
 export { Composer, useComposerExpanded } from "./composer/composer";
 export { chatGallerySections } from "./gallery/sections";

@@ -9,6 +9,7 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { useEffect, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
+import { EmptyState } from "#next/components/empty-state";
 import { Button } from "#next/ui/button";
 import { Skeleton } from "#next/ui/skeleton";
 
@@ -52,16 +53,21 @@ const LoadingRows = () => (
   </div>
 );
 
-const Failed = ({ onRetry, notFound }: { onRetry(): void; notFound: boolean }) => {
+const Failed = ({ onRetry, notFound, skin }: { onRetry(): void; notFound: boolean; skin: "bot" | "session" }) => {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="status">
-      {notFound ? t("chat.view.gone") : t("chat.view.unavailable")}
-      {notFound ? null : (
-        <Button variant="secondary" onClick={onRetry}>
-          {t("chat.view.retry")}
-        </Button>
-      )}
+    <div className="flex flex-1 items-center justify-center" role="status">
+      <EmptyState
+        icon={skin === "bot" ? "bots" : "sessions"}
+        title={notFound ? t("chat.view.gone") : t("chat.view.unavailable")}
+        action={
+          notFound ? undefined : (
+            <Button variant="secondary" onClick={onRetry}>
+              {t("chat.view.retry")}
+            </Button>
+          )
+        }
+      />
     </div>
   );
 };
@@ -127,7 +133,7 @@ export const ChatView = (props: ChatViewProps) => {
           {ready ? (
             <Kit skin={skin} />
           ) : phase === "error" ? (
-            <Failed notFound={notFound} onRetry={() => void session.reconnect().catch(() => {})} />
+            <Failed skin={skin} notFound={notFound} onRetry={() => void session.reconnect().catch(() => {})} />
           ) : (
             <LoadingRows />
           )}
