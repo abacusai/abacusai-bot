@@ -47,6 +47,7 @@ export const APP_ACTIONS: readonly AppAction[] = [
   },
 ];
 export type ActionId = string;
+/** @public Shared phase-5 integration API. */
 export type BindingId = ActionId | `${ActionId}@terminal`;
 export const resolveKeymap = (
   overrides: Record<string, string | null> | undefined,
