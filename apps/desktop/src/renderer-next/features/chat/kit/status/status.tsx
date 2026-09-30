@@ -366,6 +366,11 @@ export const ErrorCard = ({
   );
 };
 
+const formatBytes = (bytes: number): string =>
+  bytes >= 1024 ** 3
+    ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
+    : `${Math.round(bytes / 1024 ** 2)} MB`;
+
 const SEVERITY_ICON = {
   info: Info,
   success: CheckCircle2,
@@ -385,10 +390,23 @@ export const NoticeRow = ({
   const severity = (
     notice.name === "agent.error"
       ? "error"
-      : String(notice.value.severity ?? "info")
+      : notice.name === "abacus.notice"
+        ? "warning"
+        : String(notice.value.severity ?? "info")
   ) as keyof typeof SEVERITY_ICON;
   const Icon = SEVERITY_ICON[severity] ?? Info;
   const actions = (notice.value.actions as ErrorAction[] | undefined) ?? [];
+  // Main's own notice about the thread (a v1 history too large to read).
+  const tooLarge =
+    notice.name === "abacus.notice" && notice.value.kind === "too-large";
+  const historyPath =
+    typeof notice.value.path === "string" ? notice.value.path : null;
+  const message = tooLarge
+    ? t("chat.notice.historyTooLarge", {
+        size: formatBytes(Number(notice.value.size ?? 0)),
+        limit: formatBytes(Number(notice.value.limit ?? 0)),
+      })
+    : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"
@@ -405,9 +423,16 @@ export const NoticeRow = ({
           )}
         />
       </MarkerIcon>
-      <MarkerContent className="flex-1">
-        {String(notice.value.message ?? "")}
-      </MarkerContent>
+      <MarkerContent className="flex-1">{message}</MarkerContent>
+      {tooLarge && historyPath != null ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void runtime.host.showItemInFolder(historyPath)}
+        >
+          {t("chat.notice.showInFolder")}
+        </Button>
+      ) : null}
       {actions
         .filter((action) => action.link != null)
         .map((action, index) => (

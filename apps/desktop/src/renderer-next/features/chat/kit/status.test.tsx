@@ -138,6 +138,34 @@ describe("R2-T15 status", () => {
   });
 });
 
+describe("abacus.notice (main's own history notice)", () => {
+  it("renders the too-large history notice from the snapshot, with Show in folder when a path is given", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.custom("abacus.notice", {
+        kind: "too-large",
+        size: 600 * 1024 ** 2,
+        limit: 512 * 1024 ** 2,
+        notificationKey: "abacus.history",
+        path: "/home/.abacusai-bot/transcripts/t-1.json",
+      }),
+    ]);
+    const rendered = await renderRelay(relay, "session");
+    current = rendered;
+    const show = vi.spyOn(rendered.runtime.host, "showItemInFolder");
+    expect(
+      await screen.findByText(
+        "Earlier history is too large to show here (600 MB, the limit is 512 MB)."
+      )
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show in folder" }));
+    expect(show).toHaveBeenCalledWith(
+      "/home/.abacusai-bot/transcripts/t-1.json"
+    );
+  });
+});
+
 describe("R2-T14 sub-agents", () => {
   it("Stop cancels the parent run; Open opens the agent", async () => {
     const onOpenSubagent = vi.fn();

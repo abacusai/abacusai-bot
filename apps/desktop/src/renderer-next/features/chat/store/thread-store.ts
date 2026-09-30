@@ -58,7 +58,7 @@ export interface Notice {
   /** `notificationKey`, or `seq:<n>` when the agent sent none. */
   key: string;
   seq: number;
-  name: "agent.notification" | "agent.error";
+  name: "agent.notification" | "agent.error" | "abacus.notice";
   value: Record<string, unknown>;
 }
 

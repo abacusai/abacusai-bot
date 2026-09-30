@@ -212,7 +212,11 @@ export class FakeRelay {
       }
       const name =
         event.type === "CUSTOM" ? (event as { name: string }).name : null;
-      if (name === "agent.notification" || name === "agent.error") {
+      if (
+        name === "agent.notification" ||
+        name === "agent.error" ||
+        name === "abacus.notice"
+      ) {
         const value = (event as { value: Record<string, unknown> }).value;
         const key =
           typeof value.notificationKey === "string"

@@ -77,6 +77,7 @@ const CUSTOM = new Set([
   "mcp.servers",
   "mcp.server_logs",
   "abacus.duplicate_echo",
+  "abacus.notice",
 ]);
 
 const BOARDS = [
