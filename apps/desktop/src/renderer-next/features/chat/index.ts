@@ -19,8 +19,11 @@ export { Composer, useComposerExpanded } from "./composer/composer";
  * the recorded goldens never reach the shipped bundle (a call behind
  * `import.meta.env.VITE_NEXT_DB_FIXTURES === "1"` is dropped with its chunk).
  */
-export const loadFixtureRuntime = async () =>
-  (await import("./fixtures/player")).fixtureRuntime;
+export const loadFixtureRuntime = async () => {
+  if (import.meta.env.VITE_NEXT_DB_FIXTURES === "1")
+    return (await import("./fixtures/player")).fixtureRuntime;
+  throw new Error("Chat fixtures require VITE_NEXT_DB_FIXTURES=1");
+};
 export type {
   ComposerConfig,
   ModelChipBinding,
@@ -40,13 +43,23 @@ export type {
  * gallery replays recorded scenarios, and a static import would put every
  * golden into the chunk the router loads at start-up.
  */
-export const chatGallerySections = {
-  Nav: lazy(async () => ({
-    default: (await import("./gallery/sections")).chatGallerySections.Nav,
-  })),
-  // Scenarios, plus the Electron gates' `bench-*` fixtures (R2-T16, R2-T31).
-  View: lazy(async () => ({
-    default: (await import("./fixtures/perf/extension")).chatGalleryWithBench
-      .View,
-  })),
-};
+export const chatGallerySections =
+  import.meta.env.DEV || import.meta.env.VITE_UI_GALLERY === "1"
+    ? {
+        Nav: lazy(async () => ({
+          default: (await import("./gallery/sections")).chatGallerySections.Nav,
+        })),
+        // Scenarios, plus the Electron gates' `bench-*` fixtures (R2-T16, R2-T31).
+        View: lazy(async () => ({
+          default: (await import("./fixtures/perf/extension"))
+            .chatGalleryWithBench.View,
+        })),
+      }
+    : {
+        Nav: (_props: { fixture: string | undefined }) => null,
+        View: (_props: {
+          fixture: string;
+          step: number | undefined;
+          play: boolean;
+        }) => null,
+      };
