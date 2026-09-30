@@ -1254,7 +1254,10 @@
     "welcomeFreeBadge": "Free to start",
     "welcomeCapabilityModels": "Access",
     "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors"
+    "welcomeCapabilityConnectors": "100+ Connectors",
+    "haveAccountContinueWith": "Saya sudah punya akun · Lanjutkan dengan {{browser}}",
+    "signInOptions": "Cara lain untuk masuk",
+    "usesBrowserSessions": "Masuk dengan Google, Microsoft, dan Apple memakai akun Anda di {{browser}}."
   },
   "openFile": {
     "failed": "Tidak dapat membuka berkas itu.",

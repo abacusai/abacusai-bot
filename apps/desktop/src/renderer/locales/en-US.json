@@ -1254,7 +1254,10 @@
     "welcomeFreeBadge": "Free forever",
     "welcomeCapabilityModels": "100+ AI Models",
     "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors"
+    "welcomeCapabilityConnectors": "100+ Connectors",
+    "haveAccountContinueWith": "I already have an account · Continue with {{browser}}",
+    "signInOptions": "Other ways to sign in",
+    "usesBrowserSessions": "Google, Microsoft and Apple sign-in use your {{browser}} accounts."
   },
   "openFile": {
     "failed": "Could not open that file.",

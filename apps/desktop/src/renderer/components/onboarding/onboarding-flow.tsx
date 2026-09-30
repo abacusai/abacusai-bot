@@ -270,8 +270,9 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     }
   };
 
-  // Chromium profiles holding an Abacus.AI session, offered on the wall. Main
-  // answers empty outside the in-app arm; a slow answer only adds buttons.
+  // The default browser's profile and others holding an Abacus.AI session,
+  // offered on the wall. Main answers empty outside the in-app arm; a slow
+  // answer only adds buttons.
   const browserProfiles = useQuery({
     queryKey: ["onboarding", "browser-sign-in-profiles"],
     queryFn: () => window.api.agent.listBrowserSignInProfiles(),

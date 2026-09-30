@@ -9,7 +9,11 @@ import type { AbacusAuthIntent } from "#shared/contracts";
 import { bringToFront } from "../../bring-to-front";
 import { readSettings } from "../config/settings";
 import { reportFunnelStep } from "../debug-sync/funnel-beacon";
-import { browserSignInCookies } from "./abacus-browser-profiles";
+import {
+  browserSignInCookies,
+  defaultSignInProfile,
+  providerSignInCookies,
+} from "./abacus-browser-profiles";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
 import {
   resolveSignInVariant,
@@ -85,10 +89,12 @@ export const openAbacusAuthInBrowser = (): void => {
 };
 
 /**
- * `signin` is the "I already have an account" path: always the browser, where
- * an existing abacus.ai session finishes it in one step. The install's arm is
- * still resolved, so the account is stamped the same way whichever button
- * was pressed.
+ * In the in-app arm, sign-up opens the app window with the default browser's
+ * provider sessions, and so does `signin` ("I already have an account") when
+ * that browser can hand them over; otherwise `signin` uses the browser, where
+ * an existing abacus.ai session finishes it in one step. The browser arm is
+ * always the browser. The arm is resolved either way, so the account is
+ * stamped the same whichever button was pressed.
  */
 export const startAbacusAuth = async (
   intent: AbacusAuthIntent = "signup",
@@ -294,11 +300,29 @@ export const startAbacusAuth = async (
       browserProfileId != null
         ? browserSignInCookies(browserProfileId)
         : Promise.resolve([]),
-    ]).then(([resolvedVariant, seedCookies]) => {
+    ]).then(async ([resolvedVariant, seedCookies]) => {
       if (settled) return;
       variant = resolvedVariant;
       // An unreadable profile falls back to the plain flow for the intent.
       const seeded = seedCookies.length > 0;
+      const defaultProfile =
+        !seeded && variant === "in_app"
+          ? await defaultSignInProfile().catch(() => null)
+          : null;
+      if (settled) return;
+      const inWindow =
+        !browserRequested &&
+        (seeded ||
+          (variant === "in_app" &&
+            (intent === "signup" || defaultProfile != null)));
+      // Started now so the browser's read overlaps the page load. A picked
+      // profile's flow keeps provider sign-ins as they were.
+      const providerCookies =
+        inWindow && !seeded
+          ? defaultProfile != null
+            ? providerSignInCookies(defaultProfile)
+            : Promise.resolve(null)
+          : undefined;
 
       // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
       server.listen(0, "127.0.0.1", () => {
@@ -321,12 +345,9 @@ export const startAbacusAuth = async (
         reportFunnelStep("signup_clicked");
 
         console.log(
-          `[abacus-auth] sign-in surface: ${variant} intent: ${intent}${seeded ? " seeded" : ""}`
+          `[abacus-auth] sign-in surface: ${variant} intent: ${intent}${seeded ? " seeded" : ""}${defaultProfile != null ? ` default: ${defaultProfile.browserName}` : ""}`
         );
-        if (
-          browserRequested ||
-          (!seeded && (intent === "signin" || variant !== "in_app"))
-        ) {
+        if (browserRequested || !inWindow) {
           openInBrowser();
           return;
         }
@@ -341,6 +362,7 @@ export const startAbacusAuth = async (
             if (!browserRequested && !accepted) close();
           },
           ...(seeded ? { seedCookies } : {}),
+          ...(providerCookies != null ? { providerCookies } : {}),
         })
           .then((win) => {
             if (win == null) {

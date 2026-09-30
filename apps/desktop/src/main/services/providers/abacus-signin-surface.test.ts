@@ -21,6 +21,7 @@ type WindowOptions = {
   onHandOff: () => void;
   onDismissed: () => void;
   seedCookies?: unknown[];
+  providerCookies?: Promise<unknown[] | null>;
 };
 let lastWindow: WindowOptions | null = null;
 let windowAvailable = true;
@@ -36,8 +37,15 @@ vi.mock("./abacus-signin-window", () => ({
 
 // The cookies a picked browser profile hands over; empty when unreadable.
 let profileCookies: unknown[] = [];
+// The OS default browser's profile, when it is one the app can read.
+let defaultProfile: { id: string; browserName: string } | null = null;
+const providerSignInCookies = vi.fn(async (..._args: unknown[]) => [
+  { name: "SID", value: "v", domain: ".google.com" },
+]);
 vi.mock("./abacus-browser-profiles", () => ({
   browserSignInCookies: async () => profileCookies,
+  defaultSignInProfile: async () => defaultProfile,
+  providerSignInCookies: (...args: unknown[]) => providerSignInCookies(...args),
 }));
 
 const { reportFunnelStep } = vi.hoisted(() => ({ reportFunnelStep: vi.fn() }));
@@ -71,6 +79,8 @@ beforeEach(() => {
   windowAvailable = true;
   windowReady = null;
   profileCookies = [];
+  defaultProfile = null;
+  providerSignInCookies.mockClear();
 });
 
 afterEach(() => {
@@ -160,6 +170,42 @@ describe("an in-app sign-in", () => {
 
     expect(closeWindow).toHaveBeenCalled();
     expect(openExternal).toHaveBeenCalledWith(lastWindow?.url);
+  });
+
+  it("brings the default browser's provider sessions to a sign-up", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    void startAbacusAuth();
+    await settle();
+
+    expect(providerSignInCookies).toHaveBeenCalledWith(defaultProfile);
+    expect(await lastWindow?.providerCookies).toHaveLength(1);
+  });
+
+  it("marks provider sessions unavailable when the default browser is unreadable", async () => {
+    void startAbacusAuth();
+    await settle();
+
+    expect(providerSignInCookies).not.toHaveBeenCalled();
+    expect(await lastWindow?.providerCookies).toBeNull();
+  });
+
+  it("keeps a returning user in the window when the default browser is readable", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    void startAbacusAuth("signin");
+    await settle();
+
+    expect(openExternal).not.toHaveBeenCalled();
+    expect(new URL(lastWindow!.url).searchParams.has("isSignUp")).toBe(false);
+  });
+
+  it("reads no provider session for a picked profile's sign-in", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    profileCookies = [{ name: "auth", value: "v", domain: ".abacus.ai" }];
+    void startAbacusAuth("signin", "chrome::Default");
+    await settle();
+
+    expect(lastWindow?.providerCookies).toBeUndefined();
+    expect(providerSignInCookies).not.toHaveBeenCalled();
   });
 
   it("sends a returning user to the browser's sign-in, not the window", async () => {

@@ -1254,7 +1254,10 @@
     "welcomeFreeBadge": "Free to start",
     "welcomeCapabilityModels": "Access",
     "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors"
+    "welcomeCapabilityConnectors": "100+ Connectors",
+    "haveAccountContinueWith": "이미 계정이 있습니다 · {{browser}}(으)로 계속",
+    "signInOptions": "다른 로그인 방법",
+    "usesBrowserSessions": "Google, Microsoft, Apple 로그인은 {{browser}}의 계정을 사용합니다."
   },
   "openFile": {
     "failed": "해당 파일을 열지 못했습니다.",
