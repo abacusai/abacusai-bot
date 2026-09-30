@@ -131,7 +131,9 @@ const rewriteProse = (text: string, options: PrepassOptions): string => {
       const closeValid =
         close !== -1 && text[close + run.length] !== "`";
       if (closeValid) {
-        plain += text.slice(index, close + run.length);
+        // Code is never rewritten (neither math nor links).
+        flushPlain();
+        out += text.slice(index, close + run.length);
         index = close + run.length;
         continue;
       }

@@ -14,6 +14,9 @@ import { i18n, initI18n } from "#next/lib/i18n";
 import type { ComposerConfig } from "./kit/context";
 import { ChatView } from "./kit/view";
 import { fixtureRuntime, type FixtureRuntime, type PlayOptions } from "./fixtures/player";
+import type { FakeRelay } from "./fixtures/relay";
+import { inertHostActions } from "./runtime/host-actions";
+import { createChatRuntime, type ChatRuntime } from "./runtime/runtime";
 
 export interface Rendered {
   view: RenderResult;
@@ -73,6 +76,35 @@ export const renderScenario = async (
     cleanup: async () => {
       await rendered.cleanup();
       fixture.runtime.forget(fixture.threadId);
+    },
+  };
+};
+
+/** A `ChatView` over any relay (tests that build their own log or history). */
+export const renderRelay = async (
+  relay: FakeRelay,
+  skin: "bot" | "session",
+  composer: Partial<ComposerConfig> = {}
+): Promise<Rendered & { runtime: ChatRuntime }> => {
+  const runtime = createChatRuntime(relay.ai, { host: inertHostActions });
+  await runtime.session(relay.threadId).load();
+  const rendered = await renderWithDb(
+    <div style={{ height: 800 }}>
+      <ChatView
+        threadId={relay.threadId}
+        skin={skin}
+        runtime={runtime}
+        workspaceRoot={skin === "session" ? "/repo" : null}
+        composer={baseComposer(skin, composer)}
+      />
+    </div>
+  );
+  return {
+    ...rendered,
+    runtime,
+    cleanup: async () => {
+      await rendered.cleanup();
+      runtime.forget(relay.threadId);
     },
   };
 };
