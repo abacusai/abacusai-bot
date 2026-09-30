@@ -34,6 +34,10 @@
       "id": "b1",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b2"
+          },
           "segments": [
             {
               "at": 1788256801000,
@@ -104,7 +108,7 @@
             "id": "sub-a",
             "messages": [
               {
-                "id": "sub-a:0",
+                "id": "sub-a#0",
                 "metadata": {
                   "abacus": {
                     "segments": [
@@ -130,9 +134,6 @@
                   {
                     "arguments": "{\"query\":\"solar output 2025\"}",
                     "id": "sa-call",
-                    "input": {
-                      "query": "solar output 2025"
-                    },
                     "metadata": {
                       "abacus": {
                         "segmentId": "sa-1",
@@ -140,13 +141,12 @@
                       }
                     },
                     "name": "web_search_text_only",
-                    "output": "3 results",
                     "state": "complete",
                     "type": "tool-call"
                   },
                   {
                     "content": "3 results",
-                    "id": "sa-1:result",
+                    "id": "sa-1#result",
                     "metadata": {
                       "abacus": {}
                     },
@@ -194,7 +194,7 @@
             "id": "sub-b",
             "messages": [
               {
-                "id": "sub-b:0",
+                "id": "sub-b#0",
                 "metadata": {
                   "abacus": {
                     "segments": [
@@ -251,7 +251,7 @@
             "id": "sub-c",
             "messages": [
               {
-                "id": "sub-c:0",
+                "id": "sub-c#0",
                 "metadata": {
                   "abacus": {
                     "segments": [
@@ -308,7 +308,7 @@
             "id": "sub-d",
             "messages": [
               {
-                "id": "sub-d:0",
+                "id": "sub-d#0",
                 "metadata": {
                   "abacus": {
                     "segments": [
@@ -352,7 +352,7 @@
             "id": "sub-e",
             "messages": [
               {
-                "id": "sub-e:0",
+                "id": "sub-e#0",
                 "metadata": {
                   "abacus": {
                     "credits": [

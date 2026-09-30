@@ -11,7 +11,16 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { backupsRoot, pruneBackups, quarantineRoot } from "../backup";
+import {
+  fingerprintV1,
+  ThreadStore,
+} from "../../services/session/thread-store";
+import {
+  backupsRoot,
+  migratingRoot,
+  pruneBackups,
+  quarantineRoot,
+} from "../backup";
 import { readRecord } from "../record";
 import { runMigrations } from "../runner";
 import type { MigrationStep } from "../types";
@@ -166,6 +175,7 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
       kind: "transcript-v1",
       updatedAt: "2026-09-01T10:00:00.000Z",
       segments: 1,
+      fingerprint: expect.any(String),
     });
     expect(
       JSON.parse(fs.readFileSync(path.join(threads(), "stale.json"), "utf8"))
@@ -195,6 +205,113 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
       applied: [],
       partial: [],
     });
+  });
+
+  it("archives orphaned and cleared history, and keeps what proves nothing", async () => {
+    const derivedTwin = (id: string, fingerprint?: string) => ({
+      version: 2,
+      threadId: id,
+      updatedAt: "2026-09-01T10:00:00.000Z",
+      source: {
+        kind: "transcript-v1",
+        updatedAt: "2026-09-01T10:00:00.000Z",
+        segments: 1,
+        ...(fingerprint === undefined ? {} : { fingerprint }),
+      },
+      messages: [],
+    });
+    // Orphans: a v1-derived twin with no v1 file is archived; AG-UI's is not.
+    put(threads(), "gone.json", derivedTwin("gone"));
+    put(threads(), "gone-agui.json", agui());
+    // Cleared, but the v1 and v2 removals failed.
+    put(transcripts(), "cleared.json", v1("cleared"));
+    put(threads(), "cleared.json", derivedTwin("cleared"));
+    put(threads(), "cleared.cleared", {
+      version: 1,
+      token: "t",
+      clearedAt: "2026-09-02T00:00:00.000Z",
+      v1Fingerprint: fingerprintV1(JSON.stringify(v1("cleared"))),
+    });
+    // Kept in place: too large, a newer build's twin, an unreadable twin.
+    put(transcripts(), "big.json", {
+      ...v1("big"),
+      segments: [
+        { type: "text", id: "b", source: "bot", content: "x".repeat(3000) },
+      ],
+    });
+    put(transcripts(), "foreign.json", v1("foreign"));
+    put(threads(), "foreign.json", { ...agui(), version: 3 });
+    put(transcripts(), "twin-dir.json", v1("twin-dir"));
+    fs.mkdirSync(path.join(threads(), "twin-dir.json"));
+    // Current by fingerprint: archived.
+    put(transcripts(), "current.json", v1("current"));
+    put(
+      threads(),
+      "current.json",
+      derivedTwin("current", fingerprintV1(JSON.stringify(v1("current"))))
+    );
+
+    const staging = path.join(migratingRoot(home), "4-archive-transcripts-v1");
+    fs.mkdirSync(staging, { recursive: true });
+    const plan = await archiveTranscriptsV1({ maxBytes: 2000 }).plan({
+      home,
+      userData,
+      appVersion: "0.0.0-test",
+      staging,
+      progress: () => undefined,
+      log: () => undefined,
+    });
+    expect(plan.writes).toEqual([]);
+    expect(
+      plan.removals.map((file) => path.relative(home, file)).sort()
+    ).toEqual([
+      path.join("threads", "cleared.json"),
+      path.join("threads", "gone.json"),
+      path.join("transcripts", "cleared.json"),
+      path.join("transcripts", "current.json"),
+    ]);
+    expect(plan.stats).toMatchObject({
+      archived: 2,
+      cleared: 1,
+      orphanTwins: 1,
+      kept: 2,
+      tooLarge: 1,
+      quarantined: 0,
+      failed: 0,
+    });
+    expect(plan.pending).toBe(0);
+  });
+
+  it("after step 4, the cut-over thread store serves an archived thread and never an orphan", async () => {
+    put(transcripts(), "kept.json", v1("kept"));
+    expect(await run([transcriptsV2()])).toMatchObject({ applied: [1] });
+    // An orphan the transition store hid only because its v1 was gone.
+    put(threads(), "orphan.json", {
+      version: 2,
+      threadId: "orphan",
+      updatedAt: "2026-09-01T10:00:00.000Z",
+      source: {
+        kind: "transcript-v1",
+        updatedAt: "2026-09-01T10:00:00.000Z",
+        segments: 1,
+      },
+      messages: [{ id: "old", role: "user", parts: [] }],
+    });
+    const step4 = archiveTranscriptsV1();
+    expect(await run([transcriptsV2(), step4])).toMatchObject({
+      applied: [4],
+    });
+    expect(fs.existsSync(path.join(transcripts(), "kept.json"))).toBe(false);
+    const cutOver = new ThreadStore({
+      home: () => home,
+      log: () => undefined,
+      isWriteBlocked: () => false,
+      v1Archived: true,
+    });
+    expect(
+      (await cutOver.readCurrent("kept")).map((message) => message.id)
+    ).toEqual(["u1"]);
+    expect(await cutOver.readCurrent("orphan")).toEqual([]);
   });
 
   it("keeps quarantined files 90 days", async () => {
