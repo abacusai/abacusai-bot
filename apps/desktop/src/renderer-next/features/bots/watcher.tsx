@@ -134,7 +134,7 @@ export const BotsGlobals = () => {
         if (!abort.signal.aborted && deps.current != null)
           handleRunFinished(deps.current, notice);
       });
-      void delivery.catch(() => undefined);
+      return delivery;
     });
     abort.signal.addEventListener("abort", unsubscribeFinished, { once: true });
     const unlock = (): void => soundPlayer().unlock();
