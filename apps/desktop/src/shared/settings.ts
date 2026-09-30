@@ -107,7 +107,7 @@ export const PROVIDER_ENV_VARS: Record<string, string> = {
 export const canSignOutOfAbacus = (
   settings: { apiKeys?: Record<string, string> } | null
 ): boolean =>
-  (settings?.apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? "").trim().length > 0;
+  (settings?.apiKeys?.[PROVIDER_ENV_VARS.abacus!] ?? "").trim().length > 0;
 
 /**
  * Whether a pasted string could be an API key at all. A shape check only: the

@@ -1,19 +1,7 @@
-import { resolve } from "node:path";
-
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 
-/** See the note on `resolve.alias` in vite.config.ts. */
-const alias = {
-  "#main": resolve(import.meta.dirname, "src/main"),
-  "#preload": resolve(import.meta.dirname, "src/preload"),
-  "#renderer": resolve(import.meta.dirname, "src/renderer"),
-  "#shared": resolve(import.meta.dirname, "src/shared"),
-  "ort-dist": resolve(
-    import.meta.dirname,
-    "../../node_modules/onnxruntime-web/dist"
-  ),
-};
+import { alias, NEXT_MODULES } from "./vite.shared.ts";
 
 /**
  * Three surfaces, three environments. The renderer is browser code and needs a
@@ -64,6 +52,8 @@ export default defineConfig({
         "**/dist/**",
         "**/*.config.ts",
         "src/renderer/locales/**",
+        "src/renderer-next/routeTree.gen.ts",
+        "src/renderer-next/ui/**",
       ],
     },
     projects: [
@@ -79,14 +69,15 @@ export default defineConfig({
         },
       },
       {
-        // The rewrite's renderer data layer. Node, not jsdom: the transport
-        // needs MessageChannel and a window-shaped event target, no DOM.
+        // The rewrite's renderer (spec 01 §3.7): compiled as it ships.
+        plugins: [react({ include: NEXT_MODULES, compiler: true })],
         resolve: { alias },
         test: {
           name: "renderer-next",
-          environment: "node",
+          environment: "jsdom",
           ...ciTimeouts,
           include: ["src/renderer-next/**/*.test.{ts,tsx}"],
+          setupFiles: ["./src/renderer-next/test-support/setup.ts"],
         },
       },
       {
