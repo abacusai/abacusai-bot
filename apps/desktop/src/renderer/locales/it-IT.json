@@ -2326,10 +2326,12 @@
       "stopped": "Stopped"
     },
     "busy": {
+      "agents": "Waiting on {{count}} agents",
       "agents_one": "Waiting on {{count}} agent",
       "agents_other": "Waiting on {{count}} agents",
       "needsYou": "Needs you",
       "retrying": "Retrying, {{attempt}} of {{max}}",
+      "tools": "Running {{count}} tools",
       "tools_one": "Running {{count}} tool",
       "tools_other": "Running {{count}} tools",
       "typing": "Typing",
@@ -2339,6 +2341,7 @@
       "copied": "Copied",
       "copy": "Copy code",
       "showLess": "Show less",
+      "showMore": "Show {{count}} more lines",
       "showMore_one": "Show {{count}} more line",
       "showMore_other": "Show {{count}} more lines"
     },
@@ -2347,8 +2350,10 @@
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
       "attachFolder": "Folder",
+      "botPlaceholder": "Message {{name}}",
       "busyBot": "Add to the queue, or stop",
       "busySession": "Steer the run, or queue the next step",
+      "channelBot": "This chat lives in your messaging app. Reply there.",
       "dictate": "Dictate",
       "dictateSoon": "Dictation arrives soon",
       "files": "Files",
@@ -2362,6 +2367,7 @@
       "queueFailed": "Couldn't add that to the queue",
       "rejected": "The agent didn't accept that message.",
       "removeAttachment": "Remove attachment",
+      "routineRun": "A routine run. Open the routine to change it.",
       "searchModels": "Search models",
       "send": "Send",
       "skills": "Skills",
@@ -2380,12 +2386,14 @@
       "switchModel": "Switch model"
     },
     "message": {
+      "credits": "Used {{count}} credits",
       "credits_one": "Used {{count}} credit",
       "credits_other": "Used {{count}} credits",
       "discard": "Discard",
       "notSent": "Not sent",
       "retry": "Retry",
       "sending": "Sending",
+      "workedThrough": "Worked through {{count}} steps",
       "workedThrough_one": "Worked through {{count}} step",
       "workedThrough_other": "Worked through {{count}} steps"
     },
@@ -2448,6 +2456,7 @@
         "runCommand": "Run command"
       },
       "notePlaceholder": "Tell the agent what to do instead",
+      "pending": "{{count}} requests waiting",
       "pending_one": "{{count}} request waiting",
       "pending_other": "{{count}} requests waiting",
       "problem": {
@@ -2502,6 +2511,7 @@
       "editLabel": "Edit queued message",
       "fewer": "Show fewer",
       "label": "Queued messages",
+      "more": "{{count}} more waiting",
       "more_one": "{{count}} more waiting",
       "more_other": "{{count}} more waiting",
       "problem": {
@@ -2517,12 +2527,14 @@
       }
     },
     "run": {
+      "done": "Done in {{duration}}, {{count}} steps",
       "done_one": "Done in {{duration}}, {{count}} step",
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
     },
     "subagent": {
+      "done": "Done, {{count}} steps, {{duration}}",
       "done_one": "Done, {{count}} step, {{duration}}",
       "done_other": "Done, {{count}} steps, {{duration}}",
       "failed": "Failed",
@@ -2533,6 +2545,7 @@
         "generic": "Agent"
       },
       "open": "Open agent",
+      "steps": "{{count}} steps",
       "steps_one": "{{count}} step",
       "steps_other": "{{count}} steps",
       "stop": "Stop",
@@ -2543,13 +2556,16 @@
       "meta": {
         "exit": "exit {{code}}",
         "lines": "lines {{from}} to {{to}}",
+        "matches": "{{count}} matches",
         "matches_one": "{{count}} match",
         "matches_other": "{{count}} matches"
       },
+      "moreSteps": "{{count}} more steps",
       "moreSteps_one": "{{count}} more step",
       "moreSteps_other": "{{count}} more steps",
       "openFile": "Open file",
       "show": "Show",
+      "showAll": "Show all {{count}} lines",
       "showAll_one": "Show all {{count}} line",
       "showAll_other": "Show all {{count}} lines",
       "status": {
@@ -2563,9 +2579,11 @@
     },
     "transcript": {
       "jump": "Jump to the end",
+      "jumpNew": "{{count}} new messages",
       "jumpNew_one": "{{count}} new message",
       "jumpNew_other": "{{count}} new messages",
       "label": "Conversation",
+      "new": "{{count}} new",
       "new_one": "{{count}} new",
       "new_other": "{{count}} new",
       "olderFailed": "Couldn't load earlier messages",
