@@ -287,6 +287,13 @@ describe("damaged history and migration recovery", () => {
           { attempt: "step-5", destinations: unknown ? null : [file] },
         ],
       } as never);
+      if (unknown) {
+        expect(() => recordRun(a.id, "no workspace to run in")).toThrow(
+          "migration recovery"
+        );
+        expect(fs.readFileSync(file, "utf8")).toBe(before);
+        return;
+      }
       recordRun(a.id, "no workspace to run in");
       updateJob(a.id, { name: "held" });
       expect(fs.readFileSync(file, "utf8")).toBe(before);

@@ -13,7 +13,10 @@ import { EntityNotFoundError } from "#shared/not-found";
 import type { RoutineRun, RoutineRunKind } from "#shared/routines";
 import { matches, nextRun, parseCron } from "#shared/routines/cron";
 
-import { isMigrationWriteBlocked } from "../../migrations/write-block";
+import {
+  isMigrationWriteBlocked,
+  isMigrationWriteBlockedTree,
+} from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";
 import { HeldFiles } from "../session/held-files";
 import {
@@ -155,6 +158,15 @@ export const onCronStoreWrite = (listener: () => void): (() => void) => {
 };
 
 const write = (jobs: CronJob[]): void => {
+  if (
+    isMigrationWriteBlocked(FILE()) &&
+    isMigrationWriteBlockedTree(
+      path.join(abacusBotHome(), "threads", ".pending")
+    )
+  )
+    throw new Error(
+      "Routines cannot be saved while migration recovery holds their write journal."
+    );
   // The public list omits entries it cannot interpret. Keep those bytes as
   // JSON values when saving another edit instead of silently deleting them.
   const source = held.read(FILE());
@@ -167,7 +179,19 @@ const write = (jobs: CronJob[]): void => {
     if (!Array.isArray(old)) return job;
     const malformed = old.filter((entry) => !isStoredRun(entry));
     if (malformed.length === 0) return job;
-    return { ...job, runs: [...job.runs, ...malformed] };
+    const previous = classifyLegacyRuns(job.id, old.filter(isStoredRun)).runs;
+    const existing = new Set(previous.map((run) => run.id));
+    const current = new Map(job.runs.map((run) => [run.id, run]));
+    let ordinal = 0;
+    const preserved = old.flatMap((entry) => {
+      if (!isStoredRun(entry)) return [entry];
+      const updated = current.get(previous[ordinal++]!.id);
+      return updated == null ? [] : [updated];
+    });
+    return {
+      ...job,
+      runs: [...job.runs.filter((run) => !existing.has(run.id)), ...preserved],
+    };
   });
   held.write(FILE(), `${JSON.stringify(stored, null, 2)}\n`);
   for (const listener of Array.from(writeListeners)) {
