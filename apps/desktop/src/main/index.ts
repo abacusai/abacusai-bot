@@ -1610,6 +1610,7 @@ function installRpc(
       prefsStore,
     }),
     ai: new UnavailableAguiSource(),
+    threads: workspaceServiceHost.threadStore,
     trackers: createEventTrackers(mainEventBus),
   };
   rpcTransport = installMessagePortTransport({
