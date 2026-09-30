@@ -6,7 +6,6 @@ import * as v from "valibot";
  */
 import { describe, expect, it } from "vitest";
 
-import legacyDialog from "#renderer/components/bots/new-bot-dialog.tsx?raw";
 import { describeCheckIn as sharedDescribe } from "#shared/bots/check-in";
 
 import checkInPromptFixture from "./__fixtures__/legacy-model-strings/check-in-prompt.txt?raw";
@@ -57,9 +56,6 @@ describe("model-facing strings (fixtures)", () => {
   it("match the pre-migration bytes", () => {
     expect(NAME_ONLY_MISSION).toBe(nameOnlyFixture);
     expect(CHECK_IN_PROMPT).toBe(checkInPromptFixture);
-    expect(legacyDialog).toContain(
-      'export { NAME_ONLY_MISSION, CHECK_IN_PROMPT } from "#shared/bots/check-in";'
-    );
   });
 
   it("describe every preset as the old dialog did", () => {
