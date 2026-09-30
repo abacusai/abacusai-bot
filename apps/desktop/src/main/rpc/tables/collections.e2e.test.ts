@@ -194,6 +194,9 @@ const world = () => {
       ...state.git,
       lastUpdatedAt: new Date().toISOString(),
     }),
+    // Always current here; tables.test covers a lagging refresh.
+    gitStateWorkspacePath: () =>
+      state.workspaces.find((entry) => entry.id === state.active)?.path ?? null,
     botHome: () => "/nowhere",
     // Mutations: the store normalises, then its hook fires.
     updateAgentSessionLabel: (_ws: string, id: string, label: string) => {

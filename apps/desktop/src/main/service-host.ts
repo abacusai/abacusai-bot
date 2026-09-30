@@ -3926,6 +3926,11 @@ export class ServiceHost {
     return this.workspaceRuntimeService.getGitState();
   }
 
+  /** The local path `getGitState` was computed for (the gitState table). */
+  gitStateWorkspacePath(): string | null {
+    return this.workspaceRuntimeService.getSnapshot().workspacePath;
+  }
+
   getFileTreeRoot(): FileTreeRootSnapshot {
     return this.workspaceRuntimeService.getFileTreeRoot();
   }
