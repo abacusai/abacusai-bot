@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { isNotFound, rpcCode } from "#next/data/ai";
 import { cn } from "#next/lib/cn";
 import { useMotionPreference } from "#next/lib/motion";
+import { useConnectedDictation } from "#next/lib/voice/use-dictation";
 import {
   Attachment,
   AttachmentAction,
@@ -229,6 +230,13 @@ const Attach = () => {
 
 const Dictate = () => {
   const { t } = useTranslation();
+  const { threadId } = useComposer();
+  const voice = useConnectedDictation(threadId, (text) => {
+    updateDraft(threadId, (draft) => ({
+      ...draft,
+      text: `${draft.text}${draft.text ? " " : ""}${text}`,
+    }));
+  });
   return (
     <Tooltip>
       <TooltipTrigger
@@ -236,14 +244,32 @@ const Dictate = () => {
           <Button
             variant="ghost"
             size="icon-lg"
-            aria-label={t("chat.composer.dictate")}
+            aria-label={t(
+              voice.state === "recording"
+                ? "notch.listening.end"
+                : "chat.composer.dictate"
+            )}
+            aria-pressed={voice.state === "recording"}
+            disabled={
+              voice.state === "starting" || voice.state === "transcribing"
+            }
+            onClick={() => {
+              if (voice.state === "recording") void voice.end();
+              else void voice.start();
+            }}
             className="size-9 rounded-full"
           />
         }
       >
         <Mic aria-hidden />
       </TooltipTrigger>
-      <TooltipContent>{t("chat.composer.dictateSoon")}</TooltipContent>
+      <TooltipContent>
+        {t(
+          voice.state === "error"
+            ? "notch.listening.error"
+            : "chat.composer.dictate"
+        )}
+      </TooltipContent>
     </Tooltip>
   );
 };
@@ -529,6 +555,7 @@ export const ThreadComposer = () => {
       <div
         className="flex flex-col"
         data-slot="composer"
+        data-tour="composer"
         data-state={state}
         data-expanded={expanded ? "" : undefined}
         onFocusCapture={() => setFocused(true)}
