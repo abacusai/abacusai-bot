@@ -321,7 +321,8 @@ export const MemoryPage = () => {
   const { transport } = useAppContext();
   const cache = useQueryClient();
   const c = useCollections();
-  const memories = useLiveQuery(c.memories).data ?? [];
+  const memoryQuery = useLiveQuery(c.memories);
+  const memories = memoryQuery.data ?? [];
   const bots = useLiveQuery(c.bots).data ?? [];
   const botNotes = useQuery(
     transport.orpc.memory.bots.queryOptions({ input: {} })
@@ -394,6 +395,26 @@ export const MemoryPage = () => {
       title={t("settings.pages.memory")}
       description={t("phase5.settings.memoryDetail")}
     >
+      {memoryQuery.isLoading && <p role="status">{t("memory.loading")}</p>}
+      {(memoryQuery.isError || botNotes.isError || query.isError) && (
+        <div role="alert">
+          <p>{t("memory.readFailed")}</p>
+          <Button
+            onClick={() => {
+              void botNotes.refetch();
+              void query.refetch();
+            }}
+          >
+            {t("phase5.retry")}
+          </Button>
+        </div>
+      )}
+      {!memoryQuery.isLoading &&
+        !memoryQuery.isError &&
+        memories.length === 0 &&
+        !botNotes.data?.some((bot) => bot.noteDays > 0) && (
+          <p>{t("memory.empty")}</p>
+        )}
       <GroupCard>
         <SettingRow
           id="customInstructions"
@@ -412,6 +433,7 @@ export const MemoryPage = () => {
               <Textarea
                 aria-label={t("phase5.settings.customInstructions")}
                 rows={5}
+                disabled={query.isPending || query.isError}
                 value={f.state.value}
                 onChange={(e) => f.handleChange(e.target.value)}
                 onBlur={f.handleBlur}
