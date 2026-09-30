@@ -111,7 +111,19 @@ export default defineConfig({
               // The connector registry is TypeScript source shared with the
               // agent (a devDependency, like every workspace package); it
               // has no dist to resolve from the asar and must be inlined.
-              include: ["extract-zip", "tuf-js", "@abacus-ai/connectors"],
+              // Main's AG-UI relay runs TanStack's StreamProcessor and
+              // uiMessagesToWire (a devDependency the renderer shares), so it
+              // is inlined with the packages it imports at run time.
+              include: [
+                "extract-zip",
+                "tuf-js",
+                "@abacus-ai/connectors",
+                "@tanstack/ai",
+                "@tanstack/ai-event-client",
+                "@tanstack/ai-utils",
+                "@ag-ui/core",
+                "partial-json",
+              ],
             },
           },
           options: { build: { outDir: "dist/main", sourcemap } },
