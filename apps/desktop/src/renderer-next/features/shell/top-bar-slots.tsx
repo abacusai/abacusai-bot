@@ -17,11 +17,14 @@ export interface TopBarAction {
 interface SlotState {
   identity: HTMLElement | null;
   actions: TopBarAction[];
+  /** Status beside the identity; only an entity route sets one (V4). */
+  status: string | null;
 }
 
 const topBarSlots = new Store<SlotState>({
   identity: null,
   actions: [],
+  status: null,
 });
 
 export const setIdentityTarget = (element: HTMLElement | null): void =>
@@ -50,3 +53,20 @@ export const useTopBarActions = (actions: TopBarAction[]): void => {
 
 export const useTopBarActionList = (): TopBarAction[] =>
   useStore(topBarSlots, (state) => state.actions);
+
+/**
+ * Show `status` beside the identity while the route is mounted (a running
+ * session, a bot's state). Nothing is shown when no route sets one.
+ */
+export const useTopBarStatusText = (status: string | null): void => {
+  useEffect(() => {
+    topBarSlots.setState((state) => ({ ...state, status }));
+    return () =>
+      topBarSlots.setState((state) =>
+        state.status === status ? { ...state, status: null } : state
+      );
+  }, [status]);
+};
+
+export const useTopBarStatus = (): string | null =>
+  useStore(topBarSlots, (state) => state.status);

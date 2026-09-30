@@ -4,27 +4,23 @@
  * `prefs.sidebar.pinned` and `search.tab`. Mirrors the band to
  * `html[data-band]` and the sidebar's in-layout width to
  * `--sidebar-occupied-w` (the title bar aligns the identity with the pane).
+ *
+ * The pane always sits at the same place in the tree, the first panel of one
+ * resizable group, whether the side panel is in layout, a drawer or closed
+ * (Codex/Claude impl r1 #3/#1): opening the panel, closing it or crossing
+ * 1100 px adds or removes a sibling, never re-parents the route subtree, so
+ * its state and scroll survive.
  */
 import {
   Outlet,
   useLocation,
-  useNavigate,
-  useSearch,
+  useRouter,
+  type AnyRouter,
 } from "@tanstack/react-router";
-import {
-  useEffect,
-  useState,
-  type CSSProperties,
-  type ViewTransitionClassPerType,
-} from "react";
-import { useTranslation } from "react-i18next";
+import { useEffect, useState, type CSSProperties } from "react";
 
-import { useCollections } from "#next/data/collections";
-import {
-  createPaneWidthWriter,
-  usePrefs,
-  useUpdatePrefs,
-} from "#next/data/collections/prefs";
+import { useDb } from "#next/data/db";
+import { createPaneWidthWriter, usePrefs } from "#next/data/db/prefs";
 import {
   AREA_PANEL_TABS,
   type SidePanelTabId,
@@ -36,9 +32,15 @@ import {
 } from "#next/ui/resizable";
 
 import { BAND_WIDTH, useShellBand } from "./breakpoints";
+import { FloatingIntentContext } from "./floating-intent";
 import { shellLayout, type ShellArea } from "./layout";
 import { Rail } from "./rail";
-import { closeFloating, rememberLocation } from "./shell-store";
+import {
+  closeFloating,
+  createFloatingIntent,
+  rememberLocation,
+  rememberTab,
+} from "./shell-store";
 import {
   PANE_MIN_PX,
   PANEL_DEFAULT_PX,
@@ -50,28 +52,45 @@ import {
 } from "./side-panel";
 import { SidebarSlot } from "./sidebar-slot";
 import { TopBar } from "./top-bar";
+import { useTopBarStatus } from "./top-bar-slots";
+import { usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
-
-/** Animated only for typed navigations; "none" otherwise (§6.7). */
-export const PANE_VT: ViewTransitionClassPerType = {
-  "nav-lateral": "pane",
-  "nav-forward": "pane",
-  "nav-back": "pane",
-  "settings-in": "pane",
-  "settings-out": "pane",
-  default: "none",
-};
+import { useSidebarToggle } from "./use-sidebar-toggle";
 
 const Pane = () => (
   <main
     data-slot="pane"
     className="pane bg-background text-foreground relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
   >
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+    <div
+      data-slot="pane-scroll"
+      className="flex min-h-0 flex-1 flex-col overflow-auto"
+    >
       <Outlet />
     </div>
   </main>
 );
+
+/**
+ * The area a location belongs to, from the location itself: the location and
+ * the matches reach components through separate subscriptions, so pairing
+ * `useLocation()` with the current area could file a location under the
+ * area being left.
+ */
+const areaOf = (router: AnyRouter, pathname: string): ShellArea | undefined => {
+  const [matched] = router.getMatchedRoutes(pathname);
+  let area: ShellArea | undefined;
+  for (const route of matched)
+    area =
+      (route.options.staticData as { area?: ShellArea } | undefined)?.area ??
+      area;
+  return area;
+};
+
+const FLOATING_SELECTOR = '[data-slot="sidebar-floating"]';
+
+const focusInsideFloating = (): boolean =>
+  document.activeElement?.closest(FLOATING_SELECTOR) != null;
 
 export interface ShellLayoutProps {
   /** Dev only: the chrome reported overlay-unavailable. */
@@ -83,126 +102,150 @@ export const ShellLayout = ({
   geometryMissing = false,
   initials = "",
 }: ShellLayoutProps) => {
-  const { t } = useTranslation();
   const band = useShellBand();
   const prefs = usePrefs();
-  const updatePrefs = useUpdatePrefs();
-  const collections = useCollections();
+  const db = useDb();
   const { area, sidebar } = useShellMatch();
-  const search = useSearch({ strict: false }) as { tab?: SidePanelTabId };
-  const navigate = useNavigate();
+  const panel = usePanel(area);
   const location = useLocation();
+  const router = useRouter();
+  const status = useTopBarStatus();
+  const sidebarToggle = useSidebarToggle();
+  const [intent] = useState(() => createFloatingIntent(focusInsideFloating));
 
   const layout = shellLayout({
     width: BAND_WIDTH[band],
     area,
     pinned: prefs.sidebar.pinned,
-    panelOpen: search.tab != null,
+    panelOpen: panel.tab != null,
   });
   const panelTabs: readonly SidePanelTabId[] =
     area == null ? [] : AREA_PANEL_TABS[area];
+  const panelInLayout = layout.sidePanel === "layout" && panel.tab != null;
 
   useEffect(() => {
     document.documentElement.dataset.band = band;
   }, [band]);
 
-  // Navigation closes the floating sidebar; the rail remembers the area's
-  // last location.
-  const href = location.href;
+  // Navigation closes the floating sidebar and drops any pending pointer
+  // timer (a hover before a click must not reopen it on the next page); the
+  // rail remembers the area's location as a route location, the background
+  // for a masked pop-up.
+  const shown = location.maskedLocation ?? location;
+  const pathname = shown.pathname;
+  const searchKey = JSON.stringify(shown.search);
   useEffect(() => {
+    intent.cancel();
     closeFloating();
-    if (area != null) rememberLocation(area as ShellArea, href);
-  }, [href, area]);
+    const owner = areaOf(router, pathname);
+    if (owner != null)
+      rememberLocation(owner, {
+        pathname,
+        search: JSON.parse(searchKey) as Record<string, unknown>,
+      });
+  }, [pathname, searchKey, router, intent]);
 
-  const setTab = (tab: SidePanelTabId | undefined): void => {
-    void navigate({
-      to: ".",
-      search: (previous: Record<string, unknown>) => ({ ...previous, tab }),
-      replace: true,
-    } as never);
-  };
-  const togglePanel = (): void =>
-    setTab(search.tab == null ? (panelTabs[0] ?? "details") : undefined);
-  const togglePinned = (): void =>
-    void updatePrefs((draft) => {
-      draft.sidebar = { ...draft.sidebar, pinned: !draft.sidebar.pinned };
-    }).catch(() => undefined);
+  useEffect(() => {
+    if (area != null && panel.tab != null) rememberTab(area, panel.tab);
+  }, [area, panel.tab]);
 
-  const [paneWidth] = useState(() =>
-    createPaneWidthWriter(collections, PANEL_PREF_KEY)
-  );
+  // Floating no longer applies (pinned, strip): nothing may open it later.
+  const floatingEnabled = layout.sidebar === "floating";
+  useEffect(() => {
+    if (floatingEnabled) return;
+    intent.cancel();
+    closeFloating();
+  }, [floatingEnabled, intent]);
+  useEffect(() => intent.cancel, [intent]);
+
+  const [paneWidth] = useState(() => createPaneWidthWriter(db, PANEL_PREF_KEY));
   const storedPanel = prefs.panes[PANEL_PREF_KEY] ?? PANEL_DEFAULT_PX;
 
   return (
-    <div
-      data-slot="shell"
-      data-band={band}
-      data-sidebar={layout.sidebar}
-      className="bg-sidebar text-sidebar-foreground grid h-dvh grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden"
-      style={
-        {
-          "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
-        } as CSSProperties
-      }
-    >
-      <TopBar.Root>
-        <TopBar.Leading
-          sidebarInLayout={layout.sidebar !== "floating"}
-          showAppName={layout.titleBar.appName}
-          onToggleSidebar={togglePinned}
-        />
-        <TopBar.Identity
-          status={layout.titleBar.status}
-          statusText={t("shell.status.ready")}
-          badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
-        />
-        <TopBar.Actions folded={layout.titleBar.actionsFolded} />
-        {layout.sidePanel === "layout" && search.tab != null && (
-          <TopBar.PanelTabs
-            tabs={panelTabs}
-            value={search.tab}
-            onChange={setTab}
+    <FloatingIntentContext value={intent}>
+      <div
+        data-slot="shell"
+        data-band={band}
+        data-sidebar={layout.sidebar}
+        className="shell-surface text-sidebar-foreground grid h-dvh grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden"
+        style={
+          {
+            "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
+          } as CSSProperties
+        }
+      >
+        <TopBar.Root>
+          <TopBar.Leading
+            sidebarInLayout={layout.sidebar !== "floating"}
+            showAppName={layout.titleBar.appName}
+            sidebarExpanded={
+              floatingEnabled ? sidebarToggle.floatingOpen : undefined
+            }
+            onToggleSidebar={sidebarToggle.toggle}
           />
-        )}
-        <TopBar.PanelToggle open={search.tab != null} onToggle={togglePanel} />
-      </TopBar.Root>
-      <div className="relative flex min-h-0">
-        <Rail
-          area={area}
-          floatingEnabled={layout.sidebar === "floating"}
-          initials={initials}
-        />
-        <SidebarSlot mode={layout.sidebar} sidebarId={sidebar} />
-        <div className="flex min-h-0 min-w-0 flex-1 pr-(--pane-inset) pb-(--pane-inset)">
-          {layout.sidePanel === "layout" && search.tab != null ? (
+          <TopBar.Identity
+            status={layout.titleBar.status}
+            statusText={status ?? undefined}
+            badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
+          />
+          <TopBar.Actions folded={layout.titleBar.actionsFolded} />
+          {panelInLayout && panel.tab != null && (
+            <TopBar.PanelTabs
+              tabs={panelTabs}
+              value={panel.tab}
+              onChange={panel.setTab}
+            />
+          )}
+          <TopBar.PanelToggle
+            open={panel.tab != null}
+            onToggle={panel.toggle}
+          />
+        </TopBar.Root>
+        <div className="relative flex min-h-0">
+          <Rail
+            area={area}
+            floatingEnabled={floatingEnabled}
+            initials={initials}
+          />
+          <SidebarSlot
+            mode={layout.sidebar}
+            sidebarId={sidebar}
+            onEscape={() => closeFloating()}
+          />
+          <div className="flex min-h-0 min-w-0 flex-1 pr-(--pane-inset) pb-(--pane-inset)">
             <ResizablePanelGroup orientation="horizontal" className="gap-0">
               <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
                 <Pane />
               </ResizablePanel>
-              <ResizableHandle className="mx-0 w-px bg-transparent" />
-              <ResizablePanel
-                id="side-panel"
-                minSize={PANEL_MIN_PX}
-                defaultSize={storedPanel}
-                onResize={(size) => paneWidth.write(size.inPixels)}
-              >
-                <SidePanelFrame>
-                  <SidePanelBody tab={search.tab} />
-                </SidePanelFrame>
-              </ResizablePanel>
+              {panelInLayout && panel.tab != null && (
+                <>
+                  <ResizableHandle
+                    data-pane-gutter=""
+                    className="w-(--pane-inset) bg-transparent"
+                  />
+                  <ResizablePanel
+                    id="side-panel"
+                    minSize={PANEL_MIN_PX}
+                    defaultSize={storedPanel}
+                    onResize={(size) => paneWidth.write(size.inPixels)}
+                  >
+                    <SidePanelFrame>
+                      <SidePanelBody tab={panel.tab} />
+                    </SidePanelFrame>
+                  </ResizablePanel>
+                </>
+              )}
             </ResizablePanelGroup>
-          ) : (
-            <Pane />
-          )}
+          </div>
         </div>
+        <SidePanelDrawer
+          open={layout.sidePanel === "drawer"}
+          tab={panel.tab}
+          tabs={panelTabs}
+          onTabChange={panel.setTab}
+          onClose={() => panel.setTab(undefined)}
+        />
       </div>
-      <SidePanelDrawer
-        open={layout.sidePanel === "drawer"}
-        tab={search.tab}
-        tabs={panelTabs}
-        onTabChange={setTab}
-        onClose={() => setTab(undefined)}
-      />
-    </div>
+    </FloatingIntentContext>
   );
 };

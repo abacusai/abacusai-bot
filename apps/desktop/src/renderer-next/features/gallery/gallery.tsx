@@ -14,13 +14,13 @@ import {
   ViewTransition,
   type CSSProperties,
   type ReactNode,
+  type ViewTransitionClassPerType,
 } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#next/components/empty-state";
 import { NavList } from "#next/components/nav-list";
 import {
-  PANE_VT,
   Rail,
   shellStore,
   SidePanelBody,
@@ -30,6 +30,7 @@ import {
 import { cn } from "#next/lib/cn";
 import { NAV_TYPES, durations, type NavType } from "#next/lib/motion";
 import { AREA_HOME, RAIL_AREAS } from "#next/lib/navigation/areas";
+import { useSharedElementName } from "#next/lib/navigation/shared-element";
 import {
   accentForeground,
   contrastRatio,
@@ -348,10 +349,33 @@ const OcclusionSection = () => {
   );
 };
 
+/**
+ * An in-route state change React commits itself (spec 01 §6.7 amendment):
+ * the one place a React `<ViewTransition>` plays in phase 1. Route changes
+ * are the router's document transition, never this.
+ */
+const MOTION_VT: ViewTransitionClassPerType = {
+  "nav-lateral": "pane",
+  "nav-forward": "pane",
+  "nav-back": "pane",
+  "settings-in": "pane",
+  "settings-out": "pane",
+  default: "none",
+};
+
 const MotionSection = () => {
   const [pane, setPane] = useState(0);
+  // A cross-route shared element takes a CSS name (spec 01 §6.7).
+  const shared = useSharedElementName("gallery-shared-dot");
   return (
     <>
+      <Atoms.Row label="shared element (CSS view-transition-name)">
+        <span
+          data-testid="gallery-shared-dot"
+          className="bg-primary size-4 rounded-full"
+          style={shared}
+        />
+      </Atoms.Row>
       <Atoms.Row label={`view-transition types (${durations.crossFade} ms)`}>
         {NAV_TYPES.map((type: NavType) => (
           <Button
@@ -372,8 +396,8 @@ const MotionSection = () => {
       <div className="relative h-32 w-80 overflow-hidden rounded-md border">
         <ViewTransition
           key={pane}
-          enter={PANE_VT}
-          exit={PANE_VT}
+          enter={MOTION_VT}
+          exit={MOTION_VT}
           default="none"
         >
           <div

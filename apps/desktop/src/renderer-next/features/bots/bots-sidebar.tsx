@@ -9,9 +9,9 @@ import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { NavList } from "#next/components/nav-list";
-import { useCollections } from "#next/data/collections";
-import { usePrefs } from "#next/data/collections/prefs";
-import { useCollectionStatus } from "#next/data/collections/status";
+import { useCollections } from "#next/data/db";
+import { usePrefs } from "#next/data/db/prefs";
+import { useCollectionStatus } from "#next/data/db/status";
 import { formatWhen } from "#next/lib/format-time";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { useNow } from "#next/lib/use-now";
@@ -89,7 +89,7 @@ export const BotsSidebar = () => {
           {t("bots.sidebar.empty")}
         </p>
       ) : (
-        <div role="list" className="flex flex-col gap-0.5 pt-1">
+        <NavList.Rows>
           {bots.map((bot) => (
             <NavList.Item
               key={bot.id}
@@ -102,7 +102,7 @@ export const BotsSidebar = () => {
               hint={bot.title || undefined}
             />
           ))}
-        </div>
+        </NavList.Rows>
       )}
     </NavList.Root>
   );
@@ -118,7 +118,7 @@ export const BotsStrip = () => {
     <nav
       aria-label={t("bots.sidebar.label")}
       data-slot="bots-strip"
-      className="flex flex-col items-center gap-1 px-4 pt-1"
+      className="flex flex-col items-center gap-2 px-4 pt-2"
     >
       <AppLink
         to="/bots/new"

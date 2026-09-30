@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#next/components/empty-state";
 import { RouteSheet } from "#next/components/route-sheet";
-import { useCollections } from "#next/data/collections";
+import { useCollections } from "#next/data/db";
 import { botAccentStyle } from "#next/lib/theme";
 
 import { BotDot } from "./bots-sidebar";

@@ -31,7 +31,7 @@ const Root = ({
   <nav
     aria-label={label}
     data-slot="nav-list"
-    className={cn("flex min-h-0 flex-1 flex-col gap-0.5 px-2 pb-2", className)}
+    className={cn("flex min-h-0 flex-1 flex-col px-2 pb-2", className)}
   >
     {children}
   </nav>
@@ -44,7 +44,7 @@ const Header = ({
   title: string;
   children?: ReactNode;
 }) => (
-  <div className="flex h-9 shrink-0 items-center gap-1 pr-1 pl-2">
+  <div className="flex h-(--sidebar-header-h) shrink-0 items-center gap-1 pr-1 pl-2">
     <h2 className="text-sidebar-foreground flex-1 truncate text-[15px] font-semibold">
       {title}
     </h2>
@@ -76,19 +76,19 @@ const Group = ({
     </>
   );
   const headingClass =
-    "flex h-7 w-full items-center gap-1.5 px-2 text-xs text-muted-foreground";
+    "flex h-(--row-h) w-full items-center gap-1.5 px-2 text-xs text-muted-foreground";
   if (open === undefined)
     return (
-      <div role="group" aria-label={label} className="mt-3 first:mt-1">
+      <div role="group" aria-label={label} className="mt-2 first:mt-0">
         <div className={headingClass}>{heading}</div>
-        <div className="flex flex-col gap-0.5">{children}</div>
+        <div className="flex flex-col">{children}</div>
       </div>
     );
   return (
     <Collapsible
       open={open}
       onOpenChange={onOpenChange}
-      className="mt-3 first:mt-1"
+      className="mt-2 first:mt-0"
     >
       <CollapsibleTrigger
         className={cn(
@@ -99,7 +99,7 @@ const Group = ({
         <ChevronRight className="size-3 transition-transform group-data-[panel-open]/trigger:rotate-90" />
         {heading}
       </CollapsibleTrigger>
-      <CollapsibleContent className="flex flex-col gap-0.5">
+      <CollapsibleContent className="flex flex-col">
         {children}
       </CollapsibleContent>
     </Collapsible>
@@ -195,11 +195,22 @@ const Skeleton = ({ rows = 6 }: { rows?: number }) => (
   <div
     data-testid="nav-list-skeleton"
     aria-busy="true"
-    className="flex flex-col gap-1 px-2 pt-2"
+    className="flex flex-col pt-2"
   >
     {Array.from({ length: rows }, (_, index) => (
       <RegistrySkeleton key={index} className="h-(--row-h) rounded-lg" />
     ))}
+  </div>
+);
+
+/**
+ * The rows of a flat list, on the row pitch (32 px, no gap; V5). Links in a
+ * `<nav>` need no list role: `role="list"` over bare links is an ARIA error
+ * (`aria-required-children`, Claude impl r1 #9).
+ */
+const Rows = ({ children }: { children: ReactNode }) => (
+  <div data-slot="nav-list-rows" className="flex flex-col pt-2">
+    {children}
   </div>
 );
 
@@ -228,6 +239,7 @@ export const NavList = {
   Header,
   Group,
   Item: NavItem,
+  Rows,
   Action,
   Badge,
   Skeleton,

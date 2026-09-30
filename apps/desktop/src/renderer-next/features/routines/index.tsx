@@ -11,8 +11,8 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "#next/components/empty-state";
 import { NavList } from "#next/components/nav-list";
 import { RouteSheet } from "#next/components/route-sheet";
-import { useCollections } from "#next/data/collections";
-import { useCollectionStatus } from "#next/data/collections/status";
+import { useCollections } from "#next/data/db";
+import { useCollectionStatus } from "#next/data/db/status";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { Button } from "#next/ui/button";
 
@@ -49,7 +49,7 @@ export const RoutinesSidebar = () => {
           {t("routines.sidebar.empty")}
         </p>
       ) : (
-        <div role="list" className="flex flex-col gap-0.5 pt-1">
+        <NavList.Rows>
           {(data ?? []).map((routine) => (
             <NavList.Item
               key={routine.id}
@@ -60,7 +60,7 @@ export const RoutinesSidebar = () => {
               meta={routine.enabled ? undefined : t("routines.sidebar.paused")}
             />
           ))}
-        </div>
+        </NavList.Rows>
       )}
     </NavList.Root>
   );

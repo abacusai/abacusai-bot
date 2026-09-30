@@ -4,7 +4,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#next/components/empty-state";
-import { useCollections } from "#next/data/collections";
+import { useCollections } from "#next/data/db";
 
 const useSession = (sessionId: string) => {
   const collections = useCollections();

@@ -8,23 +8,24 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createCollections, type Collections } from "#next/data/collections";
-import { directDbSource, FixtureDb } from "#next/data/fixture-db/fixture-db";
+import { createDb, type Db } from "#next/data/db";
+import { fixtureTransport, FixtureDb } from "#next/data/fixture-db/fixture-db";
 import { fixtureBots, fixturePrefs } from "#next/data/fixture-db/rows";
 import { renderInRouter } from "#next/test-support/render-in-router";
 
 import { BotsSidebar, orderBots } from "./bots-sidebar";
 
-let collections: Collections | null = null;
+let appDb: Db | null = null;
 afterEach(async () => {
-  for (const collection of Object.values(collections ?? {}))
+  appDb?.stop();
+  for (const collection of Object.values(appDb?.collections ?? {}))
     await collection.cleanup().catch(() => undefined);
-  collections = null;
+  appDb = null;
 });
 
-const setup = (db: FixtureDb) => {
-  collections = createCollections(directDbSource(db), { backoffMs: [5] });
-  return collections;
+const setup = (db: FixtureDb): Db => {
+  appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
+  return appDb;
 };
 
 const rowTexts = () =>

@@ -1,49 +1,74 @@
 /**
  * The rail (spec 01 §7.2, canvas `Rail`): 56 px; Bots, Sessions, Routines,
- * Artifacts, Library on top, Settings and Account at the bottom. Each item
- * goes to the area's last visited location. Hovering the rail while the
- * sidebar is not pinned opens the floating sidebar after 120 ms of intent.
+ * Artifacts, Library on top, Settings and Account at the bottom. Items stack
+ * on a 48 px pitch (V5). Each item goes to the area's last visited route
+ * location (pathname + search; for a masked pop-up, the background it
+ * showed). Hovering the rail while the sidebar floats opens it after 120 ms
+ * of intent; the shell cancels that timer on navigation and unmount.
  */
 import { useStore } from "@tanstack/react-store";
-import { useRef } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type AppIconName } from "#next/components/app-icon";
 import { cn } from "#next/lib/cn";
+import type { NavType } from "#next/lib/motion";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { AREA_HOME, RAIL_AREAS } from "#next/lib/navigation/areas";
 import { Avatar, AvatarFallback } from "#next/ui/avatar";
 
+import { useFloatingIntent } from "./floating-intent";
 import type { ShellArea } from "./layout";
-import {
-  cancelCloseFloating,
-  openFloating,
-  scheduleCloseFloating,
-  shellStore,
-} from "./shell-store";
+import { shellStore, type AreaLocation } from "./shell-store";
 
-const HOVER_INTENT_MS = 120;
+/** Where the rail sends an area: its last location, else its home. */
+const railTarget = (
+  area: ShellArea,
+  last: Partial<Record<ShellArea, AreaLocation>>
+): AreaLocation => last[area] ?? { pathname: AREA_HOME[area], search: {} };
+
+const RailLink = ({
+  target,
+  transition,
+  ...props
+}: {
+  target: AreaLocation;
+  transition: NavType;
+  className?: string;
+  children?: ReactNode;
+  "aria-current"?: "page";
+  "aria-label"?: string;
+  title?: string;
+  "data-area"?: string;
+}) => (
+  <AppLink
+    {...(props as object)}
+    to={target.pathname as never}
+    search={target.search as never}
+    transition={transition}
+  />
+);
 
 const RailItem = ({
   area,
   active,
   icon,
   label,
-  href,
+  target,
 }: {
   area: ShellArea;
   active: boolean;
   icon: AppIconName;
   label: string;
-  href: string;
+  target: AreaLocation;
 }) => (
-  <AppLink
-    to={href}
+  <RailLink
+    target={target}
     transition={area === "settings" ? "settings-in" : "nav-lateral"}
     aria-current={active ? "page" : undefined}
     data-area={area}
     className={cn(
-      "titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-12 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2",
+      "titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2",
       active
         ? "text-sidebar-foreground"
         : "text-muted-foreground hover:text-sidebar-foreground"
@@ -58,7 +83,7 @@ const RailItem = ({
       <AppIcon name={icon} size={20} />
     </span>
     <span>{label}</span>
-  </AppLink>
+  </RailLink>
 );
 
 export const Rail = ({
@@ -76,31 +101,20 @@ export const Rail = ({
 }) => {
   const { t } = useTranslation();
   const last = useStore(shellStore, (state) => state.lastLocationByArea);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clear = (): void => {
-    if (timer.current != null) clearTimeout(timer.current);
-    timer.current = null;
-  };
+  const intent = useFloatingIntent();
 
   return (
     <nav
       aria-label={label ?? t("shell.rail.label")}
       data-slot="rail"
-      className="flex w-(--rail-w) shrink-0 flex-col items-center gap-1 pt-1 pb-3"
+      className="flex w-(--rail-w) shrink-0 flex-col items-center pt-1 pb-3"
       onPointerEnter={() => {
-        if (!floatingEnabled) return;
-        clear();
-        cancelCloseFloating();
-        timer.current = setTimeout(
-          () => openFloating("hover"),
-          HOVER_INTENT_MS
-        );
+        if (floatingEnabled) intent.hover();
       }}
       onPointerLeave={() => {
-        clear();
-        // Moving onto the floating sidebar cancels this.
-        if (floatingEnabled) scheduleCloseFloating();
+        // Moving onto the floating sidebar holds it open.
+        if (floatingEnabled) intent.leave();
+        else intent.cancel();
       }}
     >
       {RAIL_AREAS.map((item) => (
@@ -110,12 +124,12 @@ export const Rail = ({
           active={area === item}
           icon={item}
           label={t(`shell.rail.${item}`)}
-          href={last[item] ?? AREA_HOME[item]}
+          target={railTarget(item, last)}
         />
       ))}
       <div className="flex-1" />
-      <AppLink
-        to={last.settings ?? AREA_HOME.settings}
+      <RailLink
+        target={railTarget("settings", last)}
         transition="settings-in"
         aria-label={t("shell.rail.settings")}
         title={t("shell.rail.settings")}
@@ -128,13 +142,13 @@ export const Rail = ({
         )}
       >
         <AppIcon name="settings" size={18} />
-      </AppLink>
+      </RailLink>
       <AppLink
         to="/settings/account"
         transition="settings-in"
         aria-label={t("shell.rail.account")}
         title={t("shell.rail.account")}
-        className="titlebar-nodrag focus-visible:ring-ring/50 mt-1.5 rounded-full outline-none focus-visible:ring-2"
+        className="titlebar-nodrag focus-visible:ring-ring/50 mt-2 rounded-full outline-none focus-visible:ring-2"
       >
         <Avatar size="sm">
           <AvatarFallback className="text-foreground text-[11px] font-semibold">

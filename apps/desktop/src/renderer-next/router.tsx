@@ -12,7 +12,7 @@ import {
 } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 
-import type { Collections } from "#next/data/collections";
+import type { Db } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
 import type { NavType } from "#next/lib/motion";
 import { Spinner } from "#next/ui/spinner";
@@ -44,7 +44,8 @@ export interface RouterContext {
   queryClient: QueryClient;
   transport: Transport;
   system: SystemInfo;
-  collections: Collections;
+  /** The document's collections and prefs writer (spec 01 §8.3). */
+  db: Db;
   /** `i18n.getFixedT(null)`, for loaders and not-found copy. */
   t: TFunction;
 }

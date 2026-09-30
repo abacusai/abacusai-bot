@@ -36,7 +36,7 @@ type Db = Transport["client"]["db"];
 /** Extra knobs a caller (a test) may set on any table. */
 export type TableOverrides = Pick<
   IpcCollectionConfig<object, string>,
-  "echoTimeoutMs" | "retryDelayMs" | "startSync"
+  "echoTimeoutMs" | "retryDelayMs" | "startSync" | "signal"
 >;
 
 const tableOf =
