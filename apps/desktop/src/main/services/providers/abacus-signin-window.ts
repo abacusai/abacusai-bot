@@ -257,12 +257,15 @@ export const openSignInWindow = async ({
   onHandOff,
   onDismissed,
   seedCookies,
+  google = false,
 }: {
   url: string;
   port: number;
   callbackPath: string;
   /** A picked browser profile's Abacus.AI cookies: sign in with its session. */
   seedCookies?: CDPCookie[];
+  /** Open Google's picker as soon as the page is up, as if its button were pressed. */
+  google?: boolean;
   /** The flow needs the browser (asked for, or the page failed); the window is already closing. */
   onHandOff: () => void;
   /** The user closed the window before the flow settled. */
@@ -377,6 +380,7 @@ export const openSignInWindow = async ({
    * where the page's own Google button works.
    */
   let googleInFlight = false;
+  let googleStarted = false;
   const signInWithGoogle = async (): Promise<void> => {
     if (
       googleInFlight ||
@@ -510,6 +514,12 @@ export const openSignInWindow = async ({
         true
       )
       .catch(() => {});
+    // Once: the page reloads after the code exchange, and a second picker
+    // over a finished sign-in would be a puzzle.
+    if (google && !googleStarted) {
+      googleStarted = true;
+      void signInWithGoogle();
+    }
   });
   win.webContents.on("console-message", (event) => {
     if (

@@ -1,11 +1,12 @@
-import { Gift, Brain, Globe, Puzzle, Sparkles, UserRound } from "lucide-react";
-import type { JSX, ReactNode } from "react";
+import { Globe, Play, UserRound } from "lucide-react";
+import { useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { AbacusAuthIntent, BrowserSignInProfile } from "#shared/contracts";
 
-import logo from "../../assets/icon2.png";
+import tour from "../../assets/demo-product.mp4";
 import { Button, Spinner } from "../ui";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,16 +15,32 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-/** The pitch, as three headlines: one per thing worth knowing before signing up. */
-const CAPABILITIES = [
-  { key: "Memory", icon: Brain },
-  { key: "Connectors", icon: Puzzle },
-  { key: "Models", icon: Sparkles },
-] as const;
+/** Google's mark, in its own colours: the button is theirs to recognise. */
+const GoogleMark = (): JSX.Element => (
+  <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M23.5 12.3c0-.9-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.7-2.4 3.6v3h3.8c2.3-2.1 3.6-5.2 3.6-8.8z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.8-3c-1.1.7-2.4 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.4v3.1C3.4 21.3 7.4 24 12 24z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.3 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3V6.6H1.4C.5 8.2 0 10 0 12s.5 3.8 1.4 5.4l3.9-3.1z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4C17.9 1.2 15.2 0 12 0 7.4 0 3.4 2.7 1.4 6.6l3.9 3.1c.9-2.9 3.6-4.9 6.7-4.9z"
+    />
+  </svg>
+);
 
 /**
  * The sign-in wall. The app requires an account, so this is the one screen
- * with no way past it but the button.
+ * with no way past it but the button: Google, for almost everyone, in one
+ * click; every other way to sign in sits behind a small link underneath.
  */
 export const SignInStep = ({
   busy,
@@ -38,11 +55,11 @@ export const SignInStep = ({
   /** The browser hop is out; it can take minutes while an account is created. */
   busy: boolean;
   error: string | null;
-  /** `signin` is the returning user's button; it always uses the browser. */
+  /** `google` is the main button; `signin` is every other way, in the browser. */
   onConnect: (intent: AbacusAuthIntent) => void;
   /**
    * Chromium profiles that may already be signed in to Abacus.AI, offered
-   * behind "I already have an account".
+   * behind "Sign in another way".
    */
   browserProfiles?: BrowserSignInProfile[];
   /** Sign in with a picked profile's session. */
@@ -53,56 +70,44 @@ export const SignInStep = ({
   dots: ReactNode;
 }): JSX.Element => {
   const { t } = useTranslation();
+  const [tourOpen, setTourOpen] = useState(false);
 
   return (
     <div
       className="relative flex flex-col items-center text-center"
       data-id="onboarding-welcome"
     >
-      {/* The price is the first question anyone has; answered up here, the
-          pitch below does not have to spend a line on it. */}
-      <span
-        className="absolute top-0 right-0 flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400"
-        data-id="onboarding-free-badge"
-      >
-        <Gift className="size-3.5" aria-hidden="true" />
-        {t("onboarding.welcomeFreeBadge")}
-      </span>
-
-      <img src={logo} alt="" className="size-20 rounded-2xl shadow-sm" />
-
-      <h1 className="text-foreground mt-7 text-5xl font-bold tracking-tight text-balance">
+      <h1 className="text-foreground text-5xl font-bold tracking-tight text-balance">
         {t("onboarding.welcomeTitle")}
       </h1>
       <p className="text-secondary-foreground mt-3 text-xl font-medium tracking-tight text-balance">
         {t("onboarding.welcomeTagline")}
       </p>
 
-      {/* Divided rather than boxed: cards around each headline would read as
-          a settings page. */}
-      <div
-        className="divide-border/70 mt-9 grid w-full grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x"
-        data-id="onboarding-capabilities"
+      {/* The product, shown rather than described: the pitch is the tour. */}
+      <button
+        type="button"
+        data-id="onboarding-play-tour"
+        aria-label={t("onboarding.playTourCta")}
+        onClick={() => setTourOpen(true)}
+        className="bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 mt-12 flex size-24 items-center justify-center rounded-full transition-colors"
       >
-        {CAPABILITIES.map(({ key, icon: Icon }) => (
-          <div
-            key={key}
-            className="flex flex-col items-center gap-3 px-3"
-            data-id={`onboarding-capability-${key.toLowerCase()}`}
-          >
-            <span className="bg-primary/10 dark:bg-primary/20 flex size-12 items-center justify-center rounded-full">
-              <Icon
-                className="text-primary size-5"
-                aria-hidden="true"
-                strokeWidth={1.75}
-              />
-            </span>
-            <span className="text-foreground text-sm font-semibold">
-              {t(`onboarding.welcomeCapability${key}`)}
-            </span>
-          </div>
-        ))}
-      </div>
+        <Play
+          className="text-primary ml-1 size-10"
+          fill="currentColor"
+          aria-hidden="true"
+        />
+      </button>
+      <Dialog open={tourOpen} onOpenChange={setTourOpen}>
+        <DialogContent className="max-w-4xl p-2" data-id="onboarding-tour">
+          <DialogTitle className="sr-only">
+            {t("onboarding.playTourCta")}
+          </DialogTitle>
+          {tourOpen && (
+            <video src={tour} controls autoPlay className="w-full rounded-lg" />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {error != null && (
         <div
@@ -113,37 +118,37 @@ export const SignInStep = ({
         </div>
       )}
 
-      <div className="mt-9 flex w-full flex-col items-center gap-4">
+      <div className="mt-12 flex w-full flex-col items-center gap-4">
         <Button
           size="lg"
           data-id="onboarding-connect"
           disabled={busy}
-          onClick={() => onConnect("signup")}
-          className="from-primary h-14 w-full bg-gradient-to-b to-violet-700 text-base font-semibold shadow-lg"
+          onClick={() => onConnect("google")}
+          className="bg-background text-foreground hover:bg-muted border-border h-14 w-full max-w-sm rounded-full border text-base font-semibold shadow-lg"
         >
           {busy ? (
             <Spinner fontSize={16} className="text-current" />
           ) : (
-            <UserRound className="size-5" aria-hidden="true" />
+            <GoogleMark />
           )}
           {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
         </Button>
         {!busy &&
           (browserProfiles.length > 0 && onContinueWith != null ? (
-            // A browser already signed in to Abacus.AI: the returning user's
-            // link offers its profiles, so the screen keeps two choices.
+            // A browser already signed in to Abacus.AI: the link offers its
+            // profiles, so the screen keeps one button.
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <Button
-                    variant="outline"
-                    size="lg"
+                    variant="link"
+                    size="sm"
                     data-id="onboarding-have-account"
-                    className="h-12 w-full text-base"
+                    className="text-muted-foreground hover:text-secondary-foreground text-xs"
                   />
                 }
               >
-                {t("onboarding.haveAccountCta")}
+                {t("onboarding.signInAnotherWay")}
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="center"
@@ -176,16 +181,14 @@ export const SignInStep = ({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            // A button, not a link: an account made on the website before
-            // the download has to find this one.
             <Button
-              variant="outline"
-              size="lg"
+              variant="link"
+              size="sm"
               data-id="onboarding-have-account"
               onClick={() => onConnect("signin")}
-              className="h-12 w-full text-base"
+              className="text-muted-foreground hover:text-secondary-foreground text-xs"
             >
-              {t("onboarding.haveAccountCta")}
+              {t("onboarding.signInAnotherWay")}
             </Button>
           ))}
         {busy && (
@@ -213,8 +216,7 @@ export const SignInStep = ({
           </div>
         )}
       </div>
-
-      <div className="mt-9">{dots}</div>
+      <div className="mt-8">{dots}</div>
     </div>
   );
 };

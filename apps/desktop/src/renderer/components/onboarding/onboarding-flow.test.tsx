@@ -93,6 +93,7 @@ const getAbacusAccount = vi.fn(
     }
 );
 const listModels = vi.fn(async () => [] as unknown[]);
+const shouldAutoSignIn = vi.fn(async () => false);
 const connectConnector = vi.fn(async () => ({ ok: true }) as { ok: boolean });
 const addWorkspace = vi.fn(async () => ({
   success: true,
@@ -165,6 +166,8 @@ beforeEach(() => {
   startAbacusAuth.mockResolvedValue({ ok: true });
   listConnectorStatuses.mockResolvedValue({});
   durableStorage.removeItem("onboarding.gmailHop");
+  durableStorage.removeItem("onboarding.autoSignIn");
+  shouldAutoSignIn.mockResolvedValue(false);
   connectConnector.mockResolvedValue({ ok: true });
   browserProfiles = [];
 
@@ -182,6 +185,7 @@ beforeEach(() => {
       switchWorkspace,
       listConnectorStatuses,
       connectConnector,
+      shouldAutoSignIn,
     },
   };
 });
@@ -223,11 +227,11 @@ describe("the sign-in wall", () => {
     );
   });
 
-  it("starts a sign-up from the main button", async () => {
+  it("starts with Google from the main button", async () => {
     mount();
     fireEvent.click(byId("onboarding-connect"));
     await waitFor(() =>
-      expect(startAbacusAuth).toHaveBeenLastCalledWith("signup")
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("google")
     );
   });
 });
@@ -463,28 +467,51 @@ describe("a renderer restarted mid-flow", () => {
 });
 
 describe("the sign-in screen", () => {
-  it("shows what the account is for, not just what it is called", () => {
+  it("shows the product and one button: Google", () => {
     mount();
 
     const overlay = byId("onboarding-overlay");
 
+    expect(overlay.textContent).toContain("onboarding.welcomeTitle");
     expect(overlay.textContent).toContain("onboarding.welcomeTagline");
-    for (const capability of ["Memory", "Connectors", "Models"]) {
-      expect(overlay.textContent).toContain(
-        `onboarding.welcomeCapability${capability}`
-      );
-    }
+    expect(byId("onboarding-play-tour")).toBeTruthy();
+    expect(byId("onboarding-connect").textContent).toContain(
+      "onboarding.connectCta"
+    );
     expect(
-      overlay.querySelectorAll('[data-id^="onboarding-capability-"]')
-    ).toHaveLength(3);
+      overlay.querySelectorAll(
+        "button:not([data-id^='onboarding-have-account'])"
+      )
+    ).toHaveLength(2);
   });
 
-  it("answers what it costs before asking for anything", () => {
+  it("plays the tour in place, without leaving the wall", async () => {
     mount();
+    fireEvent.click(byId("onboarding-play-tour"));
 
-    expect(byId("onboarding-free-badge").textContent).toContain(
-      "onboarding.welcomeFreeBadge"
+    await waitFor(() => byId("onboarding-tour"));
+    expect(byId("onboarding-tour").querySelector("video")).not.toBeNull();
+    expect(byId("onboarding-connect")).toBeTruthy();
+  });
+});
+
+describe("an account made on the website", () => {
+  it("is signed in without a click, once per install: a sign-out is not undone", async () => {
+    shouldAutoSignIn.mockResolvedValue(true);
+    mount();
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
     );
+    expect(durableStorage.getItem("onboarding.autoSignIn")).toBe("started");
+    cleanup();
+
+    // The wall again, on the same install: the answer is still cached as
+    // "yes", and it must not start the sign-in a second time.
+    startAbacusAuth.mockClear();
+    mount();
+    await waitFor(() => byId("onboarding-connect"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(startAbacusAuth).not.toHaveBeenCalled();
   });
 });
 

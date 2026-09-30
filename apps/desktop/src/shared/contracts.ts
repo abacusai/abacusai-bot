@@ -728,7 +728,8 @@ export type OpenRouterAuthOutcome =
   | { ok: false; error: string; cancelled?: boolean };
 /** Same contract: the key never leaves main. */
 /** Which first-screen button started an Abacus.AI sign-in. */
-export type AbacusAuthIntent = "signup" | "signin";
+/** `google` goes straight to Google's account picker, in the app window; `signin` is every other way, in the browser. */
+export type AbacusAuthIntent = "signup" | "signin" | "google";
 /** A Chromium profile that may hold an Abacus.AI session, offered at sign-in. */
 export interface BrowserSignInProfile {
   id: string;

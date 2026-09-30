@@ -73,8 +73,8 @@ const GMAIL_CONNECTOR_ID = "abacus-gmailuser";
 const GMAIL_HOP_KEY = "onboarding.gmailHop";
 
 const CARD_WIDTH: Record<Exclude<OnboardingStep, "explainer">, string> = {
-  auth: "max-w-2xl",
-  welcome: "max-w-xl",
+  auth: "max-w-lg",
+  welcome: "max-w-2xl",
   connectors: "max-w-3xl",
   models: "max-w-2xl",
 };
@@ -287,16 +287,19 @@ export const OnboardingFlow = (): React.ReactElement | null => {
       durableStorage.getItem(AUTO_SIGN_IN_KEY) == null,
     staleTime: Infinity,
   });
-  const autoSignInStarted = useRef(false);
+  // The stored key is the one guard. The answer stays cached across the
+  // flow's remounts (a sign-out brings the wall back), so a ref would reset
+  // and sign the user straight back in.
   useEffect(() => {
-    if (autoSignIn.data !== true || autoSignInStarted.current) return;
-    autoSignInStarted.current = true;
+    if (autoSignIn.data !== true) return;
+    if (step !== "auth" || signedIn !== false || onboarded) return;
+    if (durableStorage.getItem(AUTO_SIGN_IN_KEY) != null) return;
     durableStorage.setItem(AUTO_SIGN_IN_KEY, "started");
     window.api.reportFunnelStep("auto_signin");
     void connect("signin");
     // `connect` is rebuilt every render; the effect is about the answer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSignIn.data]);
+  }, [autoSignIn.data, step, signedIn, onboarded]);
 
   if (step === "explainer") return <WelcomeTour onFinish={advance} />;
 
@@ -308,12 +311,9 @@ export const OnboardingFlow = (): React.ReactElement | null => {
       data-id="onboarding-overlay"
     >
       <WindowDragRegion />
-      <div
-        className={cn(
-          "bg-card/85 border-border m-auto w-full rounded-2xl border p-8 shadow-2xl backdrop-blur-xl",
-          CARD_WIDTH[step]
-        )}
-      >
+      {/* Each screen is the window, not a card in it: content sits on the
+          app's own backdrop, centred, at a width that reads well. */}
+      <div className={cn("m-auto w-full", CARD_WIDTH[step])}>
         {step === "auth" && (
           <SignInStep
             busy={busy || factsPending}
