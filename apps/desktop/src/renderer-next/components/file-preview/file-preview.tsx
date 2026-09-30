@@ -12,6 +12,7 @@ import { ExternalLink, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { highlightFile, toFileUrl } from "#next/lib/file-highlight";
 import { Button } from "#next/ui/button";
 import { Skeleton } from "#next/ui/skeleton";
 
@@ -45,7 +46,8 @@ type Loaded =
 
 /** Every text run of a slide, in reading order (a cheap outline view). */
 const slideTexts = (deck: unknown): string[][] => {
-  const slides = (deck as { slides?: unknown[] } | null)?.slides ?? [];
+  const parsed = (deck as { deck?: unknown } | null)?.deck ?? deck;
+  const slides = (parsed as { slides?: unknown[] } | null)?.slides ?? [];
   return slides.map((slide) => {
     const lines: string[] = [];
     const walk = (node: unknown): void => {
@@ -94,7 +96,7 @@ export const FilePreview = ({
     result.key === key ? result.loaded : { state: "loading" };
 
   useEffect(() => {
-    if (kind === "external") return;
+    if (kind === "external" || kind === "pdf" || kind === "html") return;
     let live = true;
     const load = async (): Promise<Loaded> => {
       if (kind === "image")
@@ -154,7 +156,12 @@ export const FilePreview = ({
         {actions}
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 text-sm">
-        {kind === "external" ? (
+        {kind === "pdf" || kind === "html" ? (
+          <webview
+            src={toFileUrl(path)}
+            className="h-[600px] w-full bg-white"
+          />
+        ) : kind === "external" ? (
           <div className="flex flex-col items-start gap-2" role="status">
             <p className="text-muted-foreground">
               {t("bots.chat.preview.noViewer")}
@@ -207,12 +214,13 @@ export const FilePreview = ({
             {kind === "markdown" ? (
               <TextPart content={loaded.content} role="assistant" />
             ) : (
-              <pre
-                className="font-mono text-xs leading-relaxed whitespace-pre-wrap"
+              <div
                 data-slot="file-preview-text"
-              >
-                {loaded.content}
-              </pre>
+                className="font-mono text-xs leading-relaxed whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: highlightFile(loaded.content, path),
+                }}
+              />
             )}
           </>
         )}

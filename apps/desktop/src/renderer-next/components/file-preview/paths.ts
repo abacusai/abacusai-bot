@@ -124,9 +124,12 @@ export type PreviewKind =
   | "code"
   | "text"
   | "pptx"
+  | "pdf"
+  | "html"
   | "external";
 
 export const previewKind = (filePath: string): PreviewKind => {
+  if (fileExtension(filePath) === "pdf") return "pdf";
   switch (categorizeFile(filePath)) {
     case "image":
       return "image";
@@ -139,6 +142,8 @@ export const previewKind = (filePath: string): PreviewKind => {
       return "text";
     case "presentation":
       return "pptx";
+    case "html":
+      return "html";
     default:
       return "external";
   }

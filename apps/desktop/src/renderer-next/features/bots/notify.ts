@@ -13,6 +13,7 @@ import type { Cue } from "#next/lib/sound";
 import type { RunFinishedNotice } from "#shared/contract/ai";
 import type { BotRow, RoutineRow, SessionRow } from "#shared/contract/rows";
 
+import { react } from "./avatar";
 import type { UnreadStore } from "./data/unread-store";
 
 export interface BotsWatcherDeps {
@@ -57,8 +58,9 @@ export const handleRunFinished = (
   else if (target.checkIn) deps.play("done", cueOptions);
   else if (spoke) deps.play("received", cueOptions);
 
-  if ((spoke || notice.outcome === "error") && !deps.seen(notice.threadId))
-    deps.unread.mark(bot.id);
+  if (deps.seen(notice.threadId))
+    react(bot.id, notice.outcome === "error" ? "sad" : "happy");
+  if (!deps.seen(notice.threadId)) deps.unread.mark(bot.id);
 
   if (notice.outcome === "success" && (spoke || target.checkIn)) {
     const copy = deps.labels.done(bot.name);
@@ -100,6 +102,7 @@ export const handleWaiting = (
   if (target == null || session.turn == null) return;
   const bot = deps.bots().find((row) => row.id === target.botId);
   if (bot == null) return;
+  if (deps.seen(session.id)) react(bot.id, "surprised");
   deps.play("needs-you", { threadId: session.id, botId: bot.id });
   const copy = deps.labels.needsYou(bot.name);
   deps.notifier.notify({

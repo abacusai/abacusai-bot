@@ -199,7 +199,10 @@ describe("useConnectorRequests", () => {
 describe("connectRequest", () => {
   it("success: false (no agent running) proceeds to answer", async () => {
     const fake = makeFake();
-    fake.refresh = () => ({ success: false, error: "not running" });
+    fake.refresh = () => ({
+      success: false,
+      error: "CLI session is not running.",
+    });
     const t = setup(fake);
     await expect(connectRequest(t.client, ask("a"))).resolves.toEqual({
       kind: "connected",
@@ -207,6 +210,16 @@ describe("connectRequest", () => {
     expect(fake.calls.at(-1)).toBe("respond:a:connected");
   });
 
+  it("a reported refresh failure stays actionable", async () => {
+    const fake = makeFake();
+    fake.refresh = () => ({ success: false, error: "config write failed" });
+    const t = setup(fake);
+    await expect(connectRequest(t.client, ask("a"))).resolves.toEqual({
+      kind: "error",
+      message: "config write failed",
+    });
+    expect(fake.calls.some((call) => call.startsWith("respond"))).toBe(false);
+  });
   it("a field flow uses submitFields", async () => {
     const fake = makeFake();
     const t = setup(fake);

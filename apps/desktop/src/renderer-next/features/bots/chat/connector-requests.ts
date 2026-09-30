@@ -112,10 +112,16 @@ export const connectRequest = async (
     try {
       // `success: false`: no agent process is running; the next start reads
       // the connector from disk.
-      await client.mcp.refresh({
+      const refreshed = await client.mcp.refresh({
         workspaceId: ref.workspaceId,
         sessionId: ref.sessionId,
       });
+      if (
+        !refreshed.success &&
+        refreshed.error &&
+        refreshed.error !== "CLI session is not running."
+      )
+        return { kind: "error", message: refreshed.error };
     } catch (error) {
       return { kind: "error", message: messageOf(error) };
     }
