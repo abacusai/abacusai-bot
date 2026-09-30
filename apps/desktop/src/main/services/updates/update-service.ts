@@ -8,6 +8,7 @@ import { sendToRenderer } from "#main/renderer-host";
 import type { UpdateStatus } from "#shared/update";
 
 import { markQuitting, clearQuitting } from "../../app-quit-state";
+import { isTestBuild } from "../providers/abacus-host";
 import { markRelaunchHidden, clearRelaunchHidden } from "./relaunch-hidden";
 
 // Static CDN feed: one YAML naming immutable per-version artifacts. The feed
@@ -315,6 +316,14 @@ export class UpdateService {
   }
 
   async checkForUpdates(): Promise<{ success: boolean; error?: string }> {
+    // A test build stays the build the tester was given. On the stable feed
+    // the release of the same number sorts above it (a prerelease is older),
+    // so the check would download that release and Squirrel would install it
+    // over the test build, password prompt and all.
+    if (isTestBuild()) {
+      console.log("[UpdateService] test build, not checking for updates");
+      return { success: false, error: "Test builds do not update." };
+    }
     try {
       this.status.error = null;
       this.status.installStalled = false;
@@ -418,6 +427,10 @@ export class UpdateService {
   async checkForUpdatesOnStartup(): Promise<void> {
     if (!app.isPackaged) {
       console.log("[UpdateService] dev build, not checking for updates");
+      return;
+    }
+    if (isTestBuild()) {
+      console.log("[UpdateService] test build, not checking for updates");
       return;
     }
     this.checkForUpdates();
