@@ -10,7 +10,7 @@ export { SidePanelBody, SidePanelFrame } from "./side-panel";
 export { SidePanelContent } from "./side-panel-slot";
 
 export { SidePanelOverride } from "./side-panel-slot";
-export { useAppHotkey, dispatchAppHotkey } from "./hotkeys";
+export { useAppHotkey, dispatchAppHotkey, APP_HOTKEYS } from "./hotkeys";
 export {
   nativePresenterFor,
   createNativePresenter,
