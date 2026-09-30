@@ -16,7 +16,7 @@
 import { StreamProcessor } from "@tanstack/ai";
 import { describe, expect, it } from "vitest";
 
-import type { PermissionRequest } from "../protocol.js";
+import type { PermissionDecision, PermissionRequest } from "../protocol.js";
 import { violations } from "./__tests__/invariants.js";
 import { Relay } from "./__tests__/relay.js";
 import {
@@ -27,6 +27,7 @@ import {
 } from "./__tests__/scripted-session.js";
 import { isRunScoped } from "./event.js";
 import { newestUserMessage } from "./host.js";
+import { allowedDecisions } from "./permissions.js";
 import type { AguiEvent, PermissionDescriptor, RunInput } from "./wire.js";
 
 const run = (runId: string, text: string) => ({
@@ -645,4 +646,102 @@ describe("the run's user text (Claude r1 #11)", () => {
       )
     ).toEqual({ id: "e", text: "" });
   });
+});
+
+describe("the decision envelope (§3.5.2, §7.5)", () => {
+  const sample: Record<string, PermissionDecision> = {
+    accept: "accept",
+    reject: "reject",
+    background: "background",
+    allowAlways: "allowAlways",
+    allowYolo: "allowYolo",
+    accept_with_message: { type: "accept_with_message", message: "go" },
+    reject_with_message: { type: "reject_with_message", message: "no" },
+    question_answers: { type: "question_answers", answers: { q: "a" } },
+    allow_always_with_rule: { type: "allow_always_with_rule", rule: "ls *" },
+    allow_always_with_rules: {
+      type: "allow_always_with_rules",
+      rules: ["ls *", "cat *"],
+    },
+  };
+  const requests: PermissionRequest[] = [
+    {
+      type: "write_file",
+      tool: toolRequest("call-1", "write", { path: "a" }),
+      displayName: "Create file",
+      filePath: "a",
+      originalContent: "",
+      content: "x",
+      isNewFile: true,
+    },
+    {
+      type: "run_terminal",
+      tool: toolRequest("call-1", "bash", { command: "ls" }),
+      displayName: "Run",
+      command: "ls",
+      cwd: "/",
+      background: false,
+    },
+    {
+      type: "exit_plan_mode",
+      tool: toolRequest("call-1", "exit_plan_mode", {}),
+      displayName: "Plan",
+      planFilePath: "plan.md",
+      planContent: "p",
+    },
+    {
+      type: "ask_user_question",
+      tool: toolRequest("call-1", "ask_user_question", {}),
+      displayName: "Question",
+      questions: [],
+    },
+    sandboxDenied("call-1", "touch /x"),
+  ];
+
+  // The session receives the decision through the same respondPermission
+  // call either way, so identical compat bytes plus an identical decision
+  // at the session mean identical effects (mode change, allowances, rules,
+  // question steer, sandbox once/session: applyDecision* are unchanged).
+  for (const request of requests) {
+    for (const kind of allowedDecisions(request.type)) {
+      it(`${request.type} / ${kind}: permission.respond is permission_response`, async () => {
+        const answered = async (legacy: boolean) => {
+          const s = await scripted(async (api) => {
+            await api.ask("perm-1", request);
+          });
+
+          s.send({ type: "send", message: "go" });
+          await s.waitFor(() => pending(s).length === 1, "card");
+          s.send(
+            legacy
+              ? {
+                  type: "permission_response",
+                  permissionId: "perm-1",
+                  decision: sample[kind],
+                }
+              : {
+                  type: "permission.respond",
+                  lineage: lineage(s, "perm-1"),
+                  decision: sample[kind],
+                }
+          );
+          await s.waitFor(
+            (events) => events.some((event) => event.type === "RUN_FINISHED"),
+            "done"
+          );
+          await s.close();
+
+          return { compat: s.compat(), answers: s.session.answers };
+        };
+        const viaRespond = await answered(false);
+        const viaLegacy = await answered(true);
+
+        expect(viaRespond.compat).toBe(viaLegacy.compat);
+        expect(viaRespond.answers).toEqual(viaLegacy.answers);
+        expect(viaRespond.answers).toEqual([
+          { permissionId: "perm-1", decision: sample[kind] },
+        ]);
+      });
+    }
+  }
 });
