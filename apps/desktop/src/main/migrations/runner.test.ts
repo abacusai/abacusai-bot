@@ -563,6 +563,38 @@ describe("C-T3 runner", () => {
       expect(read(user)).toBe("USER-NEW");
     });
 
+    it("never restores a damaged backup: the attempt stays unresolved and every file is kept", async () => {
+      const { user, step } = setupThree();
+      await run([step], { hooks: { beforeRecord: () => "crash" } });
+      const [dir] = fs.readdirSync(backupsRoot(home));
+      const backup = path.join(
+        backupsRoot(home),
+        dir ?? "",
+        "home",
+        "prefs.json"
+      );
+      fs.writeFileSync(backup, "CORRUPT");
+      const before = tree(root);
+
+      const result = await run([]);
+      expect(result.unresolved[0]?.error).toMatch(
+        /does not match the original/
+      );
+      expect(read(user)).toBe("USER-NEW");
+      expect(read(backup)).toBe("CORRUPT");
+      expect(fs.existsSync(path.join(staging(), JOURNAL_NAME))).toBe(true);
+      expect(isWriteBlocked(result, user)).toBe(true);
+      // Only the log (its `undone` lines for earlier operations) and the
+      // record's lastFailure changed.
+      const after = tree(root);
+      for (const rel of Object.keys({ ...before, ...after }))
+        if (!rel.endsWith(LOG_NAME) && !rel.endsWith("migrations.json"))
+          expect({ rel, content: after[rel] }).toEqual({
+            rel,
+            content: before[rel],
+          });
+    });
+
     it("keeps a user file changed after the commit rather than restoring over it", async () => {
       const { user, step } = setupThree();
       await run([step], { hooks: { beforeRecord: () => "crash" } });
