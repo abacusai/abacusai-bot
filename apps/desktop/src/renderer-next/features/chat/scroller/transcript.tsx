@@ -314,10 +314,10 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
 
   return (
     <MessageScroller>
-      <MessageScrollerViewport
-        aria-label={t("chat.transcript.label")}
-        className="scroll-fade-t"
-      >
+      {/* No `scroll-fade-t` yet: its scroll-driven animation never finishes,
+          and the screenshot run's settle step waits for every finite one
+          (change request on `lib/dev/settle.ts`). */}
+      <MessageScrollerViewport aria-label={t("chat.transcript.label")}>
         <MessageScrollerContent
           aria-busy={active}
           className="mx-auto w-full max-w-[720px] gap-3 px-4 pt-6 pb-4"
