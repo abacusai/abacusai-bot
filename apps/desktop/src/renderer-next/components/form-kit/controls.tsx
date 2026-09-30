@@ -1,0 +1,68 @@
+import type { ComponentProps } from "react";
+
+import { NativeSelect, NativeSelectOption } from "#next/ui/native-select";
+import { Switch } from "#next/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "#next/ui/toggle-group";
+export const Choice = ({
+  id,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  options: readonly { value: string; label: string }[];
+  onChange(value: string): void;
+  disabled?: boolean;
+}) => (
+  <NativeSelect
+    aria-labelledby={`${id}-label`}
+    aria-describedby={`${id}-detail`}
+    value={value}
+    disabled={disabled}
+    onChange={(e) => onChange(e.target.value)}
+  >
+    {options.map((o) => (
+      <NativeSelectOption key={o.value} value={o.value}>
+        {o.label}
+      </NativeSelectOption>
+    ))}
+  </NativeSelect>
+);
+export const Segments = ({
+  label,
+  value,
+  values,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  values: readonly { value: string; label: string }[];
+  onChange(value: string): void;
+}) => (
+  <ToggleGroup
+    aria-label={label}
+    value={[value]}
+    onValueChange={(v) => {
+      if (v[0] != null) onChange(String(v[0]));
+    }}
+    variant="outline"
+  >
+    {values.map((v) => (
+      <ToggleGroupItem key={v.value} value={v.value}>
+        {v.label}
+      </ToggleGroupItem>
+    ))}
+  </ToggleGroup>
+);
+export const SettingSwitch = ({
+  id,
+  ...props
+}: { id: string } & ComponentProps<typeof Switch>) => (
+  <Switch
+    aria-labelledby={`${id}-label`}
+    aria-describedby={`${id}-detail`}
+    {...props}
+  />
+);

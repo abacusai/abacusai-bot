@@ -36,5 +36,14 @@ export const ThemeEffect = (): null => {
     document.documentElement.dataset.reduceMotion = reduce;
   }, [reduce]);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--chat-font-size",
+      `${prefs.appearance?.textSize ?? 14}px`
+    );
+    document.documentElement.dataset.bubbleTint =
+      prefs.appearance?.bubbleTint === false ? "off" : "on";
+  }, [prefs.appearance]);
+
   return null;
 };
