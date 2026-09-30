@@ -151,6 +151,8 @@ export interface ThreadHistory {
    * thread's first AG-UI run and at each checkpoint until then.
    */
   v1Derived?: boolean;
+  /** The v1 file's fingerprint, for a v1-derived baseline (spec 00 C.3). */
+  v1Fingerprint?: string;
 }
 
 export interface ThreadRelayOptions {
@@ -251,6 +253,7 @@ export class ThreadRelay {
   #runs: RunOutcomeRecord[];
   #migratedFrom: { updatedAt: string } | undefined;
   #v1Derived: boolean;
+  #v1Fingerprint: string | undefined;
   /** Bumped by every clear; a run from before a clear persists nothing. */
   #historyEpoch = 0;
 
@@ -297,6 +300,7 @@ export class ThreadRelay {
     this.#runs = [...options.history.runs];
     this.#migratedFrom = options.history.migratedFrom;
     this.#v1Derived = options.history.v1Derived === true;
+    this.#v1Fingerprint = options.history.v1Fingerprint;
     this.#processor = new StreamProcessor({
       initialMessages: structuredClone(options.history.messages),
     });
@@ -639,7 +643,8 @@ export class ThreadRelay {
     if (next == null) return;
     if (
       next.v1Derived === true &&
-      next.migratedFrom?.updatedAt === this.#migratedFrom?.updatedAt
+      next.migratedFrom?.updatedAt === this.#migratedFrom?.updatedAt &&
+      next.v1Fingerprint === this.#v1Fingerprint
     )
       return;
     this.#transcript = structuredClone(next.messages);
@@ -648,6 +653,7 @@ export class ThreadRelay {
     });
     this.#migratedFrom = next.migratedFrom;
     this.#v1Derived = next.v1Derived === true;
+    this.#v1Fingerprint = next.v1Fingerprint;
     if (!this.#v1Derived) this.#runs = [...next.runs];
   }
 
@@ -1031,6 +1037,7 @@ export class ThreadRelay {
     this.#notices = [];
     this.#migratedFrom = undefined;
     this.#v1Derived = false;
+    this.#v1Fingerprint = undefined;
     for (const runId of this.#finished.keys()) this.#forgetFinished(runId);
   }
 
