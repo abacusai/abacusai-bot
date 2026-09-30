@@ -10,7 +10,7 @@ import {
   loadSenderChat,
   FilesTab,
 } from "#next/features/bots";
-import { chatRuntimeFor, ChatView } from "#next/features/chat";
+import { ChatView } from "#next/features/chat";
 import { TopBarSlot, SidePanelContent } from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
@@ -27,7 +27,7 @@ const Sender = ({
   bot: NonNullable<ReturnType<typeof useBot>>;
   sessionId: string;
 }) => {
-  const { transport } = Route.useRouteContext();
+  const { chat } = Route.useRouteContext();
   const slots = useBotChatSlots(bot, sessionId, false, true);
   const search = Route.useSearch();
   if (!slots.session) return <BotGone chat />;
@@ -43,7 +43,7 @@ const Sender = ({
       <ChatView
         threadId={sessionId}
         skin="bot"
-        runtime={chatRuntimeFor(transport)}
+        runtime={chat}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}
         slots={slots.chat}
@@ -71,7 +71,7 @@ export const Route = createFileRoute(
       loadSenderChat(
         {
           db: context.db,
-          load: (id) => chatRuntimeFor(context.transport).session(id).load(),
+          load: (id) => context.chat.session(id).load(),
         },
         params.botId,
         params.sessionId,

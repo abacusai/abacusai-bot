@@ -45,6 +45,8 @@ const CONTENDS_FOR_THE_MACHINE = [
   "src/main/rpc/tables/memories.fs.test.ts",
   // Drives the built renderer-next in Electron (spec 01 R1-T11b).
   "src/main/dev/renderer-next.electron.test.ts",
+  "src/main/dev/chat-kit.electron.test.ts",
+  "src/main/dev/chat-real-session.electron.test.ts",
   // The migration kill-injection harness enumerates thousands of kill points
   // (spec 00 C); under the parallel project's load one matrix exceeds ten
   // minutes, so it runs alone with the 60 s per-test budget of this project.

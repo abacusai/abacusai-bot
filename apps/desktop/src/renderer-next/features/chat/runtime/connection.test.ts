@@ -74,6 +74,8 @@ describe("R2-T7 unmounted", () => {
 
     // Another thread evicts it: retired, iterators closed.
     runtime.session("t-2");
+    expect(session.retired).toBe(false); // lookup must not retire during render
+    await Promise.resolve(); // deferred LRU eviction
     expect(session.retired).toBe(true);
     await vi.waitFor(() => expect(relay.stats.openIterators).toBe(0));
     const again = runtime.session("t-1");
