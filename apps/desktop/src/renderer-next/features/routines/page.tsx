@@ -7,7 +7,7 @@ import { ConfirmAction } from "#next/components/form-kit/confirm";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { showInfo, showError } from "#next/lib/toast";
-import { useAppContext, rpcError } from "#next/lib/use-app-context";
+import { useAppContext, rpcError, errorText } from "#next/lib/use-app-context";
 import { Button } from "#next/ui/button";
 import { Input } from "#next/ui/input";
 import { Switch } from "#next/ui/switch";
@@ -39,7 +39,7 @@ export const RoutinesListBody = () => {
     </div>
   );
 };
-export const RoutinesHome = RoutinesListBody;
+
 export const RoutineGone = () => {
   const { t } = useTranslation();
   return (
@@ -63,7 +63,7 @@ export const RunReportFrame = ({
   return (
     <section
       aria-label={t("phase5.runReport")}
-      className="flex h-full flex-col"
+      className="[&_.min-h-13>span]:text-foreground flex h-full flex-col"
     >
       <header className="flex h-11 items-center justify-between gap-2 border-b px-4">
         <span>{t("phase5.runReport")}</span>
@@ -326,6 +326,7 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState(() => readLog(routineId));
+  const [gone, setGone] = useState(false);
   const send = async () => {
     const user = text.trim();
     if (!user || busy) return;
@@ -343,22 +344,21 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
       );
       setText("");
     } catch (e) {
-      setLog(
-        [
-          ...log,
-          {
-            user,
-            reply:
-              rpcError(e)?.code === "TIMEOUT"
-                ? t("phase5.editTimeout")
-                : t("phase5.editFailed"),
-          },
-        ].slice(-10)
+      if (rpcError(e)?.code === "NOT_FOUND") setGone(true);
+      const reply =
+        rpcError(e)?.code === "TIMEOUT"
+          ? t("phase5.editTimeout")
+          : `${t("phase5.editFailed")} ${errorText(e)}`;
+      const next = [...log, { user, reply }].slice(-10);
+      setLog(next);
+      sessionStorage.setItem(
+        `routine-editor:${routineId}`,
+        JSON.stringify(next)
       );
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   };
+  if (gone) return <RoutineGone />;
   return (
     <section className="bg-card flex flex-col gap-3 rounded-xl p-4">
       <h2 className="text-sm font-medium">{t("phase5.editByChat")}</h2>

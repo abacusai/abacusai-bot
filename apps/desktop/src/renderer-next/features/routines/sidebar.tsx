@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
+import { useStore } from "@tanstack/react-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,7 +14,9 @@ import { useNow } from "#next/lib/use-now";
 import { Button } from "#next/ui/button";
 import { Input } from "#next/ui/input";
 
+import { routineConnectorThreads } from "./attention";
 import { stats, routineState, scheduleLabel, useRoutinesData } from "./data";
+import { routineOwns } from "./notify";
 export const RoutinesSidebar = () => {
   const { t, i18n } = useTranslation();
   const { db, transport } = useAppContext();
@@ -182,27 +185,31 @@ export const RoutinesSidebar = () => {
   );
 };
 export const RoutinesNeedsYou = () => {
+  const connectors = useStore(routineConnectorThreads, (s) => s);
   const { t } = useTranslation();
   const { routines, sessions } = useRoutinesData();
+  const waiting = sessions.filter(
+    (s) =>
+      s.routineId != null &&
+      routineOwns(routines.find((r) => r.id === s.routineId)) &&
+      (s.turn?.phase === "waiting_permission" || connectors.includes(s.id))
+  );
+  if (!waiting.length) return null;
   return (
     <NavList.Group label={t("phase5.needsYou")}>
-      {sessions
-        .filter(
-          (s) => s.routineId != null && s.turn?.phase === "waiting_permission"
-        )
-        .map((s) => {
-          const r = routines.find((r) => r.id === s.routineId);
-          if (!r) return null;
-          return (
-            <NavList.Item
-              key={s.id}
-              to="/routines/$routineId"
-              params={{ routineId: r.id }}
-              search={{ run: s.id }}
-              title={t("phase5.routineNeedsYou", { name: r.name })}
-            />
-          );
-        })}
+      {waiting.map((s) => {
+        const r = routines.find((r) => r.id === s.routineId);
+        if (!r) return null;
+        return (
+          <NavList.Item
+            key={s.id}
+            to="/routines/$routineId"
+            params={{ routineId: r.id }}
+            search={{ run: s.id }}
+            title={t("phase5.routineNeedsYou", { name: r.name })}
+          />
+        );
+      })}
     </NavList.Group>
   );
 };

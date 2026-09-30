@@ -158,6 +158,7 @@ export const MessagingPage = () => {
           </SettingRow>
         </GroupCard>
       )}
+      <PlatformSheet />
     </AreaPage>
   );
 };

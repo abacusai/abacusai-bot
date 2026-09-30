@@ -7,12 +7,14 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { ChatView, chatRuntimeFor } from "#next/features/chat";
-import { RoutinePage, RoutineGone } from "#next/features/routines";
+import { useConnectFlow, ConnectorFieldsDialog } from "#next/features/library";
+import { RoutinePage, RoutineGone, RunRequests } from "#next/features/routines";
 import { TopBarSlot } from "#next/features/shell";
 import { RoutineSearch } from "#next/lib/navigation/search";
 const RoutineRoute = () => {
   const { t } = useTranslation();
   const { transport, db } = Route.useRouteContext();
+  const flow = useConnectFlow();
   return (
     <>
       <TopBarSlot>{t("shell.rail.routines")}</TopBarSlot>
@@ -30,6 +32,28 @@ const RoutineRoute = () => {
               model: null,
               readOnly: { reason: t("phase5.readOnlyRun") },
             }}
+            slots={{
+              decorateMessage: (message, ctx) => ({
+                hidden: message.role === "user" && ctx.index === 0,
+              }),
+              banner: (
+                <RunRequests
+                  sessionId={runId}
+                  workspaceId={
+                    db.collections.sessions.get(runId)?.workspaceId ?? ""
+                  }
+                  connect={(id, values) =>
+                    values
+                      ? transport.client.connectors.submitFields({
+                          connectorId: id,
+                          values,
+                        })
+                      : flow.start(id)
+                  }
+                  cancel={flow.cancel}
+                />
+              ),
+            }}
             workspaceRoot={
               db.collections.workspaces.get(
                 db.collections.sessions.get(runId)?.workspaceId ?? ""
@@ -38,6 +62,7 @@ const RoutineRoute = () => {
           />
         )}
       />
+      <ConnectorFieldsDialog />
       <Outlet />
     </>
   );

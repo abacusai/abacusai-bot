@@ -3432,6 +3432,11 @@
     "discardTitle": "Discard your changes?",
     "keepEditing": "Keep editing",
     "discardAction": "Discard changes",
-    "openrouterBrand": "OpenRouter"
+    "openrouterBrand": "OpenRouter",
+    "validation": {
+      "instruction-required": "Enter an instruction",
+      "too-long": "This is too long",
+      "schedule-invalid": "Choose a valid schedule"
+    }
   }
 }

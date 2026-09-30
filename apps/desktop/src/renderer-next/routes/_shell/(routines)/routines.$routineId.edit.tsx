@@ -4,8 +4,10 @@ import { RoutineEditDialog } from "#next/features/routines";
 export const Route = createFileRoute(
   "/_shell/(routines)/routines/$routineId/edit"
 )({
-  component: () => {
-    const { routineId } = Route.useParams();
-    return <RoutineEditDialog routineId={routineId} />;
-  },
+  component: EditRoutineRoute,
 });
+
+function EditRoutineRoute() {
+  const { routineId } = Route.useParams();
+  return <RoutineEditDialog routineId={routineId} />;
+}
