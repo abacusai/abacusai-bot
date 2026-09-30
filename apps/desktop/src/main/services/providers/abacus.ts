@@ -414,6 +414,7 @@ export const fetchAbacusAccount = async (
       subscription_tier: body.subscription_tier ?? null,
       credits_used: body.credits_used ?? null,
       credits_granted: body.credits_granted ?? null,
+      web_signup: body.web_signup === true,
     };
     accountCache = { value, at: Date.now() };
 

@@ -30,6 +30,11 @@ export interface OnboardingRoute {
   onboarded?: boolean;
   /** A Google-hosted account whose Gmail is not connected and who has not said "not now": ask once, right after sign-in. */
   offerGmail?: boolean;
+  /**
+   * The account signed up on the website, which already made the pitch and
+   * started the install: nothing is owed after sign-in but the Gmail question.
+   */
+  webSignup?: boolean;
 }
 
 /** The screens a given user is owed. */
@@ -38,8 +43,10 @@ export const stepsFor = ({
   paying,
   onboarded = false,
   offerGmail = false,
+  webSignup = false,
 }: OnboardingRoute): OnboardingStep[] => {
   if (onboarded) return signedIn ? [] : ["auth"];
+  if (signedIn && webSignup) return offerGmail ? ["gmail"] : [];
 
   return [
     ...(signedIn ? [] : (["auth"] as const)),

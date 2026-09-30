@@ -480,6 +480,8 @@ export const createBridge = (ipcRenderer: IpcRenderer): AgentApi => {
       ipcRenderer.invoke(IpcChannels.ListBrowserSignInProfiles) as Promise<
         BrowserSignInProfile[]
       >,
+    shouldAutoSignIn: () =>
+      ipcRenderer.invoke(IpcChannels.ShouldAutoSignIn) as Promise<boolean>,
     cancelAbacusAuth: () =>
       ipcRenderer.invoke(IpcChannels.CancelAbacusAuth) as Promise<void>,
     openAbacusAuthInBrowser: () =>

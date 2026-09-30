@@ -69,6 +69,8 @@ const writeStoredStep = (step: OnboardingStep | null): void => {
 };
 
 /** Card width per step; the model list needs room or it grows a scrollbar. */
+/** Once per install: a sign-in the user closed is not started on them again. */
+const AUTO_SIGN_IN_KEY = "onboarding.autoSignIn";
 const GMAIL_CONNECTOR_ID = "abacus-gmailuser";
 const GMAIL_OFFER_KEY = "onboarding.gmailOffer";
 /** Google-hosted consumer addresses; a Workspace domain cannot be told from the address alone. */
@@ -135,6 +137,8 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     connectorStatuses.loaded &&
     !isConnected(connectorStatuses.statuses, GMAIL_CONNECTOR_ID);
 
+  const webSignup = abacusAccount?.web_signup === true;
+
   const [step, setStepState] = useState<OnboardingStep>(
     () => readStoredStep() ?? "auth"
   );
@@ -160,6 +164,7 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     paying: isPayingAbacusTier(abacusAccount?.subscription_tier),
     onboarded,
     offerGmail,
+    webSignup,
   });
 
   // Onboarding owns the tour; a replay still up from before would fight it.
@@ -189,7 +194,12 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   }, [activateWorkspaceSession, activeWorkspaceId, apply, queryClient]);
 
   // The route changed under the current screen: keep it, move on, or leave.
-  const settled = signedIn == null ? step : settleStep(steps, step);
+  // A web signup's route is the Gmail question or nothing, which only the
+  // connector statuses can tell apart: hold the screen until they are in.
+  const routePending =
+    signedIn == null ||
+    (signedIn && webSignup && !onboarded && !connectorStatuses.loaded);
+  const settled = routePending ? step : settleStep(steps, step);
   useEffect(() => {
     if (settled == null) void finish();
     else if (settled !== step) setStep(settled);
@@ -226,19 +236,20 @@ export const OnboardingFlow = (): React.ReactElement | null => {
         if (result.cancelled !== true) setError(result.error);
         return;
       }
+      // The account first: it decides the route, and a credential flipped
+      // ahead of it would draw a screen the account then takes away.
+      queryClient.setQueryData(
+        workspaceQueryKeys.abacusAccount,
+        await window.api.agent.getAbacusAccount(true)
+      );
       // The hop stored the key, so a credential read still in flight would
       // answer for a moment before it existed; drop that read.
       await queryClient.cancelQueries({
         queryKey: settingsQueryKeys.models.abacusCredential,
       });
       queryClient.setQueryData(settingsQueryKeys.models.abacusCredential, true);
-      // The catalog changes with the credential, and the tier decides whether
-      // the models screen is in the route at all.
+      // The catalog changes with the credential.
       await window.api.agent.listModels(true);
-      queryClient.setQueryData(
-        workspaceQueryKeys.abacusAccount,
-        await window.api.agent.getAbacusAccount(true)
-      );
     } finally {
       setBusy(false);
     }
@@ -252,6 +263,29 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     enabled: step === "auth",
     staleTime: Infinity,
   });
+
+  // An account made on the website minutes ago has its session waiting in
+  // the browser: go there unasked, and the wall is only ever seen in passing.
+  const autoSignIn = useQuery({
+    queryKey: ["onboarding", "auto-sign-in"],
+    queryFn: () => window.api.agent.shouldAutoSignIn(),
+    enabled:
+      step === "auth" &&
+      signedIn === false &&
+      !onboarded &&
+      durableStorage.getItem(AUTO_SIGN_IN_KEY) == null,
+    staleTime: Infinity,
+  });
+  const autoSignInStarted = useRef(false);
+  useEffect(() => {
+    if (autoSignIn.data !== true || autoSignInStarted.current) return;
+    autoSignInStarted.current = true;
+    durableStorage.setItem(AUTO_SIGN_IN_KEY, "started");
+    window.api.reportFunnelStep("auto_signin");
+    void connect("signin");
+    // `connect` is rebuilt every render; the effect is about the answer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSignIn.data]);
 
   if (step === "explainer") return <WelcomeTour onFinish={advance} />;
 
