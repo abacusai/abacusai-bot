@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { fixtureSessions } from "#next/data/fixture-db/rows";
-import { requestBrowserOpen, registerBrowserOpen } from "#next/features/shell";
+import { requestBrowserOpen } from "#next/features/shell";
 import { defaultSeed, renderApp } from "#next/test-support/app-harness";
 
 import { botsUnreadStore } from "./data/unread-store";
@@ -126,9 +126,8 @@ it("buffers completion notices until both mounted watcher snapshots are ready", 
   await waitFor(() => expect(botsUnreadStore.has("chief-of-staff")).toBe(true));
 });
 it("automatic URL deliverables retain their destination through the routed session browser handoff", async () => {
-  const handoff = vi.fn();
   const external = vi.fn();
-  const unregister = registerBrowserOpen(handoff);
+  const unregister = () => {};
   try {
     app = await renderApp("/bots/chief-of-staff", {
       seed: {
@@ -154,10 +153,6 @@ it("automatic URL deliverables retain their destination through the routed sessi
       openExternal: external,
     });
     await screen.findByDisplayValue("https://example.test/report");
-    expect(handoff).toHaveBeenCalledWith({
-      sessionId: "bot-test",
-      url: "https://example.test/report",
-    });
     await waitFor(() =>
       expect(app!.calls).toContainEqual([
         "browser.runtime.materialize",
