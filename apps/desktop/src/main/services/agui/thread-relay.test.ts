@@ -400,11 +400,20 @@ describe("a thread's relay", () => {
     );
 
     relay.clearByMain();
-    // Every open window hears it (the kit bumps `rev`), and the file goes.
-    expect(seen).toMatchObject([{ type: "CUSTOM", name: "session.cleared" }]);
+    // The open run is retired first (cancelled), then every open window
+    // hears the clear (the kit bumps `rev`), and the file goes.
+    expect(seen).toMatchObject([
+      { type: "RUN_FINISHED", runId: "run-1", outcome: { type: "cancelled" } },
+      { type: "CUSTOM", name: "session.cleared" },
+    ]);
     expect(harness.removed).toBe(1);
     expect(relay.checkpoint().messages).toEqual([]);
-    feed(relay, [...first.reply("a", "reply"), first.finished]);
+    expect(relay.checkpoint().activeRun).toBeNull();
+    // The old run's late stream is dropped, not relayed.
+    expect(feed(relay, [...first.reply("a", "reply"), first.finished])).toEqual(
+      [null, null, null, null]
+    );
+    expect(seen).toHaveLength(2);
     expect(persisted).toEqual([]);
     expect(relay.checkpoint().messages).toEqual([]);
 
@@ -416,6 +425,85 @@ describe("a thread's relay", () => {
       "fresh",
       "ok",
     ]);
+  });
+
+  it("a clear by main mid-run: hydrate and rejoin see no run, and a kit-style client recovers once and follows the next run (review r2)", () => {
+    const { relay, persisted } = make();
+    const first = run("run-1", "hi");
+    feed(relay, [
+      hello("inc-1"),
+      ...first.start,
+      { type: "TEXT_MESSAGE_START", messageId: "a", role: "assistant" },
+      { type: "TEXT_MESSAGE_CONTENT", messageId: "a", delta: "partial" },
+    ]);
+
+    // A client as the chat kit builds one (spec 02 §3.3): a generation is a
+    // checkpoint, the active run's replay, then live events after the
+    // cursor; `session.cleared` starts a new generation.
+    const client = {
+      generations: 0,
+      processor: new StreamProcessor(),
+      unsubscribe: () => undefined as void,
+    };
+    const generation = (): void => {
+      client.generations += 1;
+      client.unsubscribe();
+      const { messages, activeRun, snapshot } = relay.checkpoint();
+      const processor = new StreamProcessor({ initialMessages: messages });
+      if (activeRun != null) {
+        const joined = relay.joinRun(activeRun.runId, () => undefined);
+        joined?.unsubscribe();
+        for (const chunk of joined?.replay ?? [])
+          processor.processChunk(
+            restoreInboundChunk({ ...chunk.event } as StreamChunk)
+          );
+      }
+      client.processor = processor;
+      client.unsubscribe = relay.subscribe(snapshot.cursor, (chunk) => {
+        const event = chunk.event as unknown as RelayEvent;
+        if (event.type === "CUSTOM" && event.name === "session.cleared")
+          return generation();
+        processor.processChunk(
+          restoreInboundChunk({ ...chunk.event } as StreamChunk)
+        );
+      }).unsubscribe;
+    };
+    generation();
+    expect(textOf(client.processor.getMessages())).toMatchObject([
+      { role: "user", text: "hi" },
+      { role: "assistant", text: "partial" },
+    ]);
+
+    relay.clearByMain();
+    // One new generation, from an empty checkpoint with no run to rejoin.
+    expect(client.generations).toBe(2);
+    const checkpoint = relay.checkpoint();
+    expect(checkpoint.activeRun).toBeNull();
+    expect(checkpoint.snapshot.activeRun).toBeNull();
+    expect(checkpoint.messages).toEqual([]);
+    expect(relay.joinRun("run-1", () => undefined)).toBeNull();
+    expect(client.processor.getMessages()).toEqual([]);
+
+    // The old run's tail reaches nobody.
+    feed(relay, [
+      { type: "TEXT_MESSAGE_CONTENT", messageId: "a", delta: " more" },
+      { type: "TEXT_MESSAGE_END", messageId: "a" },
+      first.finished,
+    ]);
+    expect(client.processor.getMessages()).toEqual([]);
+    expect(persisted).toEqual([]);
+
+    const second = run("run-2", "fresh");
+    feed(relay, [...second.start, ...second.reply("b", "ok"), second.finished]);
+    expect(client.generations).toBe(2);
+    expect(textOf(client.processor.getMessages())).toEqual([
+      { id: "run-2:user", role: "user", text: "fresh" },
+      { id: "b", role: "assistant", text: "ok" },
+    ]);
+    expect(timeless(client.processor.getMessages())).toEqual(
+      timeless(persisted.at(-1)!.messages)
+    );
+    client.unsubscribe();
   });
 
   it("session.cleared from the agent clears and removes the thread file", () => {

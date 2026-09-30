@@ -1103,6 +1103,60 @@ describe("streams, checkpoints and cancel (review r1)", () => {
     await stream.return?.(undefined);
   });
 
+  it("a reset by main mid-run retires the run first: hydrate has no active run, rejoin has nothing, and its tail is dropped (review r2)", async () => {
+    const { agent, client, relay } = setup();
+    agent.boot();
+    for (const event of started("run-1")) agent.emit("s1", event);
+    agent.emit("s1", {
+      type: "TEXT_MESSAGE_START",
+      messageId: "a",
+      role: "assistant",
+    });
+    const stream = await client.ai.subscribe({ threadId: "s1" });
+    await take(stream, 5);
+
+    relay.clearThread("s1");
+    const retired = await take(stream, 3);
+    expect(retired.map((entry) => entry.event)).toMatchObject([
+      { type: "TEXT_MESSAGE_END", messageId: "a" },
+      { type: "RUN_FINISHED", runId: "run-1", outcome: { type: "cancelled" } },
+      { type: "CUSTOM", name: "session.cleared" },
+    ]);
+
+    // The kit's new generation: an empty checkpoint, no run to rejoin.
+    const hydrated = await client.ai.hydrate({ threadId: "s1" });
+    expect(hydrated.messages).toEqual([]);
+    expect(hydrated.activeRun).toBeNull();
+    expect(hydrated.abacus.activeRun).toBeNull();
+    expect(await take(await client.ai.joinRun({ runId: "run-1" }), 1)).toEqual(
+      []
+    );
+    const resumed = await client.ai.subscribe({
+      threadId: "s1",
+      lastEventId: String(hydrated.abacus.cursor),
+      epoch: hydrated.abacus.epoch,
+    });
+    expect((await take(resumed, 1))[0]!.event).toMatchObject({
+      name: "abacus.subscribed",
+    });
+
+    // The old run's tail reaches no stream; the next run does.
+    agent.emit("s1", {
+      type: "TEXT_MESSAGE_CONTENT",
+      messageId: "a",
+      delta: "late",
+    });
+    agent.emit("s1", finished("run-1"));
+    agent.emit("s1", { type: "RUN_STARTED", threadId: "s1", runId: "run-2" });
+    for (const open of [stream, resumed])
+      expect((await take(open, 1))[0]!.event).toMatchObject({
+        type: "RUN_STARTED",
+        runId: "run-2",
+      });
+    await stream.return?.(undefined);
+    await resumed.return?.(undefined);
+  });
+
   it("the v1 dual-write never replaces the relay's agui file, even right after the relay wrote it", () => {
     const { agent, store } = setup();
     agent.boot();
