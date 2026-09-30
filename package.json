@@ -29,6 +29,7 @@
   "devDependencies": {
     "@abacus-ai/config": "workspace:*",
     "@types/node": "catalog:",
+    "knip": "6.38.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "turbo": "catalog:",
