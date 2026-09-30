@@ -11,7 +11,7 @@ import type { CardAction } from "./presenters";
 export const decisionKind = (decision: PermissionDecision): string =>
   typeof decision === "string" ? decision : decision.type;
 
-export const isAllowed = (
+const isAllowed = (
   descriptor: PermissionDescriptor,
   decision: PermissionDecision
 ): boolean =>

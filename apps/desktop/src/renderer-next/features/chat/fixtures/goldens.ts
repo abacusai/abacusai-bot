@@ -13,7 +13,7 @@ const RAW = import.meta.glob<string>("./scenarios/*.agui.jsonl", {
   eager: true,
 });
 
-export const parseScenarioLines = (text: string): RelayEvent[] =>
+const parseScenarioLines = (text: string): RelayEvent[] =>
   text
     .split("\n")
     .filter((line) => line.trim() !== "")
@@ -25,8 +25,6 @@ export const parseScenarioLines = (text: string): RelayEvent[] =>
 export const GOLDEN_NAMES = Object.keys(RAW)
   .map((path) => /\/([^/]+)\.agui\.jsonl$/.exec(path)![1]!)
   .sort();
-
-export type GoldenName = (typeof GOLDEN_NAMES)[number];
 
 export const golden = (name: string): RelayEvent[] => {
   const text = RAW[`./scenarios/${name}.agui.jsonl`];

@@ -14,9 +14,7 @@ import type { HostState, ThreadSession } from "./session";
 
 type ConnectionStatus = UseChatReturn["connectionStatus"];
 
-export const toConnectionStatus = (
-  connection: ConnectionState
-): ConnectionStatus =>
+const toConnectionStatus = (connection: ConnectionState): ConnectionStatus =>
   connection === "connected"
     ? "connected"
     : connection === "error"
@@ -27,7 +25,7 @@ const unsupported = (name: string) => (): never => {
   throw new Error(`chat: ${name} is not supported by the chat kit`);
 };
 
-export const toText = (content: string | MultimodalContent): string =>
+const toText = (content: string | MultimodalContent): string =>
   typeof content === "string"
     ? content
     : typeof content.content === "string"

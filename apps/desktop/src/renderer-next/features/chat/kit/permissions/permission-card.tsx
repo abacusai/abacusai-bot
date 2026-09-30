@@ -359,7 +359,7 @@ export const PermissionCard = ({
 };
 
 /** `ask_user_question` (§6.5): the registry questionnaire, today's encoding. */
-export const QuestionCard = ({
+const QuestionCard = ({
   descriptor,
   onAnswered,
 }: {

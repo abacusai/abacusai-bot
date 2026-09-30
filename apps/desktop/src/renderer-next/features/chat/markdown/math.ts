@@ -16,7 +16,7 @@ const listeners = new Set<() => void>();
 const cache = new Map<string, string>();
 const CACHE_SIZE = 500;
 
-export const escapeHtml = (value: string): string =>
+const escapeHtml = (value: string): string =>
   value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -42,8 +42,6 @@ export const useMathVersion = (): number =>
     },
     () => version
   );
-
-export const mathReady = (): boolean => temml != null;
 
 export const renderMath = (tex: string, displayMode: boolean): string => {
   if (temml == null) {

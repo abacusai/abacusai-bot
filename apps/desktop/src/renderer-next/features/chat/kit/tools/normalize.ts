@@ -73,7 +73,7 @@ const str = (value: unknown): string | undefined =>
 const num = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined;
 
-export const isMigrated = (call: ToolCallPart): boolean =>
+const isMigrated = (call: ToolCallPart): boolean =>
   typeof asRecord(asRecord((call as { metadata?: unknown }).metadata)?.abacus)
     ?.segmentId === "string";
 

@@ -11,7 +11,7 @@ import type { AgentMode } from "#shared/agent-types";
 import type { ChatRuntime } from "../runtime/runtime";
 import type { ThreadSession } from "../runtime/session";
 
-export interface ModelGroupItem {
+interface ModelGroupItem {
   id: string;
   label: string;
   description?: string;
@@ -62,7 +62,7 @@ export interface ComposerConfig {
   onFirstSend?: (text: string) => void;
 }
 
-export interface Activity {
+interface Activity {
   status: string | null;
   runningToolTitle: string | null;
   runningTools: number;

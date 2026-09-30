@@ -35,7 +35,7 @@ export interface RelayEvent {
   event: StreamChunk;
 }
 
-export type SendHandler = (
+type SendHandler = (
   input: AiSendInput,
   relay: FakeRelay
 ) => AiSendAck | Promise<AiSendAck>;

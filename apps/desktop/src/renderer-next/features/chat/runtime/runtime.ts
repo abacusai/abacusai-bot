@@ -17,7 +17,7 @@ import {
 } from "./host-actions";
 import { ThreadSession, type ThreadSessionOptions } from "./session";
 
-export const MAX_CACHED_THREADS = 8;
+const MAX_CACHED_THREADS = 8;
 
 export interface ChatRuntime {
   session(threadId: string): ThreadSession;

@@ -5,7 +5,7 @@
  */
 import type { Transport } from "#next/data/transport";
 
-export interface PickedPath {
+interface PickedPath {
   path: string;
   name: string;
   size?: number;

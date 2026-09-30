@@ -29,7 +29,7 @@ import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
 import { toolTitle } from "../tools/tool-line";
 
-export interface ErrorAction {
+interface ErrorAction {
   type: string;
   model?: string;
   label?: string;
@@ -197,18 +197,18 @@ export const RunMarker = ({ outcome }: { outcome: RunOutcomeRecord }) => {
   );
 };
 
-export const wantsUpgradeCard = (actions?: ErrorAction[]): boolean =>
+const wantsUpgradeCard = (actions?: ErrorAction[]): boolean =>
   actions?.some(
     (action) =>
       action.type === "upgrade-abacus" || action.type === "free-pool-out"
   ) === true;
 
-export const exhaustedScope = (actions?: ErrorAction[]): "abacus" | "pool" =>
+const exhaustedScope = (actions?: ErrorAction[]): "abacus" | "pool" =>
   actions?.some((action) => action.type === "upgrade-abacus") === true
     ? "abacus"
     : "pool";
 
-export const freeModelSwitches = (
+const freeModelSwitches = (
   actions?: ErrorAction[]
 ): Array<{ model: string; label: string }> =>
   (actions ?? []).flatMap((action) =>

@@ -11,7 +11,7 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { isDefinitive, type AiClient } from "#next/data/ai";
 import type { AiSendAck } from "#shared/contract/ai";
 
-export type OutboxState = "sending" | "accepted" | "unconfirmed" | "failed";
+type OutboxState = "sending" | "accepted" | "unconfirmed" | "failed";
 
 export interface OutboxEntry {
   id: string;
@@ -23,7 +23,7 @@ export interface OutboxEntry {
   forwardedProps?: Record<string, unknown>;
 }
 
-export type AdmissionKind =
+type AdmissionKind =
   | "started"
   | "queued"
   | "rejected"
@@ -80,7 +80,7 @@ const statusOf = (
 ): Exclude<AdmissionKind, "unconfirmed" | "stale" | "duplicate"> =>
   ack.status === "duplicate" ? (ack.original ?? "started") : ack.status;
 
-export const admit = async (
+const admit = async (
   host: AdmissionHost,
   entryId: string
 ): Promise<AdmissionResult> => {

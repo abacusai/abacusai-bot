@@ -51,9 +51,7 @@ type Loose = Record<string, unknown>;
 const ATTACHMENT_LINE = /^@((?:[A-Za-z]:[\\/]|\/)\S.*)$/;
 
 /** The text and the trailing `@/abs/path` lines of a user message (§8.6). */
-export const splitAttachments = (
-  text: string
-): { body: string; paths: string[] } => {
+const splitAttachments = (text: string): { body: string; paths: string[] } => {
   const lines = text.split("\n");
   const paths: string[] = [];
   while (lines.length > 0) {
@@ -171,7 +169,7 @@ interface UserTextMeta {
  * chips (migrated messages carry them as `userText.attachments`; live ones
  * as trailing `@/abs/path` lines).
  */
-export const userView = (
+const userView = (
   message: UIMessage
 ): { hidden: boolean; body: string; paths: string[] } => {
   const raw = textOf(message);
@@ -268,7 +266,7 @@ const pairs = (
 const MAX_TOOL_ROWS = 50;
 
 /** Tool rows past the first 50 collapse to "{n} more steps" (§10). */
-export const StepList = ({
+const StepList = ({
   items,
 }: {
   items: Array<{ part: ToolCallPart; result?: ToolResultPart }>;

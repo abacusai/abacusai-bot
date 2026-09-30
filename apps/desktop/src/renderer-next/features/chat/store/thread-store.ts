@@ -16,20 +16,16 @@ import type {
 } from "#shared/agent-types";
 import type { AiThreadSnapshot } from "#shared/contract/ai-thread";
 import type {
-  AgentErrorPayload,
   AgentState,
   PermissionDescriptor,
   RunOutcomeRecord,
-  RunTokenUsage,
 } from "#shared/contract/ai-thread";
 
 export type {
-  AgentErrorPayload,
   AgentState,
   PermissionDescriptor,
   QueueEntry,
   RunOutcomeRecord,
-  RunTokenUsage,
   SkillMetadata,
   ToolDisplayData,
 };
@@ -44,14 +40,14 @@ export const toolKey = (
   toolCallId: string
 ): ToolKey => `${subagentRunId ?? ""}\u0000${toolCallId}`;
 
-export interface ActiveRun {
+interface ActiveRun {
   runId: string;
   /** Epoch ms. */
   startedAt: number;
   serverInitiated: boolean;
 }
 
-export interface RetryInfo {
+interface RetryInfo {
   attempt: number;
   maxAttempts: number;
   delayMs: number;
@@ -71,7 +67,7 @@ export type AnsweringState =
   | { state: "error"; message: ResponseProblem; since: number };
 
 /** Why an answer did not land (§6.3), as an i18n key suffix. */
-export type ResponseProblem =
+type ResponseProblem =
   | "notPending"
   | "incarnation"
   | "earlierTurn"

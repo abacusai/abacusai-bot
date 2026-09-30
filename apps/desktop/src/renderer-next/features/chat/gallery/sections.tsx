@@ -14,7 +14,7 @@ import { SCENARIOS, type Scenario } from "../fixtures/scenarios";
 import type { ComposerConfig } from "../kit/context";
 import { ChatView } from "../kit/view";
 
-export const GALLERY_GROUPS: Array<{
+const GALLERY_GROUPS: Array<{
   id: string;
   match: (scenario: Scenario) => boolean;
 }> = [

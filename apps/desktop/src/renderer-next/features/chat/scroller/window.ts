@@ -5,7 +5,7 @@
  * Returning to the end snaps back to the newest rows.
  */
 export const MAX_ROWS = 400;
-export const STEP = 100;
+const STEP = 100;
 
 export interface RowWindow {
   start: number;
@@ -54,10 +54,6 @@ export const followWindow = (
   const end = Math.min(total, window.end + prepended);
   return { start, end: Math.min(end, start + max) };
 };
-
-/** Placeholder height: measured when known, 64 px per row otherwise. */
-export const placeholderHeight = (rows: number, measured?: number): number =>
-  measured ?? rows * 64;
 
 /** Local day key for separators; null without a time (§10). */
 export const dayKey = (date: Date | null): string | null =>

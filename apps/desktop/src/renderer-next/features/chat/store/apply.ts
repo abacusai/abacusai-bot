@@ -57,7 +57,7 @@ export const customName = (event: StreamChunk): string | null =>
   event.type === "CUSTOM" ? ((event as { name?: string }).name ?? null) : null;
 
 /** Whether the store treats this event as session-scoped (§4.2). */
-export const isSessionScoped = (event: StreamChunk): boolean => {
+const isSessionScoped = (event: StreamChunk): boolean => {
   if (event.type === "STATE_SNAPSHOT" || event.type === "STATE_DELTA")
     return true;
   const name = customName(event);

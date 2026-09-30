@@ -7,7 +7,7 @@
  */
 import type { AgentMode } from "#shared/agent-types";
 
-export interface SubmitAttachment {
+interface SubmitAttachment {
   path: string | null;
   state: "uploading" | "done" | "error";
 }
@@ -43,7 +43,7 @@ export interface SubmitInput {
 }
 
 /** Attachments reach the agent as `@<absolute path>` lines (§8.6). */
-export const withAttachmentRefs = (
+const withAttachmentRefs = (
   text: string,
   attachments: readonly SubmitAttachment[]
 ): string => {
@@ -107,7 +107,3 @@ export const deriveSessionTitle = (text: string): string => {
 
   return `${(lastSpace > 20 ? clipped.slice(0, lastSpace) : clipped).trimEnd()}…`;
 };
-
-/** Titles that mean "not named yet" (§8.3). */
-export const isUntitled = (label: string | null | undefined): boolean =>
-  label == null || label.trim() === "" || label.trim() === "Untitled";

@@ -71,7 +71,7 @@ import { setQueueEditing } from "./queue-editing";
 import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 
 /** The composer's max height before it scrolls (today's `COMPOSER_MAX_HEIGHT`). */
-export const COMPOSER_MAX_HEIGHT = 200;
+const COMPOSER_MAX_HEIGHT = 200;
 
 type ComposerState = "resting" | "focused" | "typing" | "busy" | "blocked";
 

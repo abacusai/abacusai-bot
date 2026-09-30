@@ -10,7 +10,7 @@
  *   which survives `sanitizeUrl` (it keeps `#…` and strips whitespace).
  */
 export const MATH_SENTINEL = "\u2062";
-export const FILE_HASH = "#abacus-file=";
+const FILE_HASH = "#abacus-file=";
 
 export interface PrepassOptions {
   /** Resolves relative file links; null leaves them unchanged. */
@@ -92,7 +92,7 @@ export const fileTarget = (
   return joinPath(workspaceRoot, safeDecode(target));
 };
 
-export const fileHref = (absPath: string): string =>
+const fileHref = (absPath: string): string =>
   FILE_HASH + encodeURIComponent(absPath);
 
 export const pathFromHref = (href: string | undefined): string | null =>
