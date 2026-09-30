@@ -200,4 +200,98 @@ describe("dist/main.js", () => {
       restore();
     }
   });
+
+  it("on fd-3 loss under stdout backpressure, exits 75 only after its last lines are out", async () => {
+    // ~400 KB of reply text: far past a pipe's buffer, so while the parent
+    // is not reading stdout the child holds most of it in-process.
+    const big = "backpressure ".repeat(32_000);
+    const { context, restore } = await prepare({
+      name: "spawn-loss",
+      reply: () => ({ stall: { say: big } }),
+      steps: [],
+    });
+
+    try {
+      const child = spawn(
+        process.execPath,
+        [AGENT, "--wire", "agui", "--thread-id", "t-1", "--compat-fd", "3"],
+        {
+          cwd: context.cwd,
+          env: process.env,
+          stdio: ["pipe", "pipe", "pipe", "pipe"],
+        }
+      );
+      const fd3Stream = child.stdio[3] as Readable;
+      let fd3 = "";
+      let stdout = "";
+      const exited = new Promise<number | null>((resolve) =>
+        child.on("exit", resolve)
+      );
+      const waitUntil = async (check: () => boolean, label: string) => {
+        const deadline = Date.now() + 20_000;
+
+        while (!check()) {
+          if (Date.now() > deadline) throw new Error(`timed out: ${label}`);
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      };
+
+      child.stderr!.on("data", () => undefined);
+      fd3Stream.on("data", (chunk: Buffer) => {
+        fd3 += chunk.toString();
+      });
+      child.stdout!.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString();
+      });
+
+      await waitUntil(() => fd3.includes('"type":"mcp_servers"'), "startup");
+      // Stop reading stdout: from here the child's AG-UI lines pile up.
+      child.stdout!.pause();
+      child.stdin!.write(
+        `${JSON.stringify({
+          type: "run",
+          input: {
+            threadId: "t-1",
+            runId: "r-big",
+            messages: [{ id: "u-1", role: "user", content: "talk a lot" }],
+            tools: [],
+            context: [],
+            state: {},
+          },
+        })}\n`
+      );
+      // The big delta reached compat (so it also went to stdout, unread).
+      await waitUntil(() => fd3.length > big.length, "big text on fd 3");
+
+      // Main's taps go away while the run is open.
+      fd3Stream.destroy();
+      // Any compat write now fails asynchronously: the loss path.
+      child.stdin!.write(`${JSON.stringify({ type: "get_queue" })}\n`);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Nothing may have been lost while nobody read: drain it all now.
+      child.stdout!.resume();
+      const code = await exited;
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(code).toBe(75);
+
+      const out = lines(stdout).map((line) => JSON.parse(line) as AguiEvent);
+      const tail = out
+        .slice(-2)
+        .map((event) => (event.type === "CUSTOM" ? event.name : event.type));
+
+      expect(tail).toEqual(["wire.compat_lost", "RUN_ERROR"]);
+      expect((out.at(-1) as { code?: string }).code).toBe("compat_lost");
+      // The unread reply text is intact before them.
+      expect(
+        out
+          .filter((event) => event.type === "TEXT_MESSAGE_CONTENT")
+          .map((event) => (event as { delta: string }).delta)
+          .join("")
+      ).toContain(big);
+    } finally {
+      restore();
+    }
+  });
 });

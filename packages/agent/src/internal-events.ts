@@ -12,8 +12,12 @@
  * `tool_call_start`, which is why these must never reach the compat stream.
  */
 export type InternalAgentEvent =
-  /** An assistant message began; `key` is the legacy `msg-N`, `messageId` the AG-UI id. */
-  | { type: "message_open"; key: string; messageId: string }
+  /**
+   * An assistant message began; `key` is the legacy `msg-N`, `messageId` the
+   * AG-UI id when pi gave the message a timestamp. Without one the emitter
+   * builds an incarnation-scoped id, since `msg-N` restarts per process.
+   */
+  | { type: "message_open"; key: string; messageId?: string }
   /** The assistant message `key` ended, with pi's stop reason. */
   | { type: "message_close"; key: string; stopReason?: string }
   /** A tool call is known: streamed from the provider, or at gate entry. */

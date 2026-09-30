@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -21,6 +22,9 @@ import type { AguiEvent } from "./wire.js";
 const errno = (code: string): NodeJS.ErrnoException =>
   Object.assign(new Error(code), { code });
 
+/** What fstat reports for the pipe main passes as fd 3. */
+const pipeStat = () => ({ isFIFO: () => true, isSocket: () => false });
+
 describe("compat preflight", () => {
   it("is none without --compat-fd", () => {
     expect(preflightCompat(undefined, "inc")).toBe("none");
@@ -29,7 +33,7 @@ describe("compat preflight", () => {
   it("chooses fd when the channel takes a synchronous write, and sends the preamble", () => {
     const writes: string[] = [];
     const fake: PreflightFs = {
-      fstatSync: () => ({}),
+      fstatSync: pipeStat,
       writeSync: (_fd, data) => {
         const text =
           typeof data === "string" ? data : Buffer.from(data).toString();
@@ -50,7 +54,7 @@ describe("compat preflight", () => {
     "chooses inline when the probe throws %s",
     (code) => {
       const fake: PreflightFs = {
-        fstatSync: () => ({}),
+        fstatSync: pipeStat,
         writeSync: () => {
           throw errno(code);
         },
@@ -74,7 +78,7 @@ describe("compat preflight", () => {
   it("retries EAGAIN, then succeeds", () => {
     let attempts = 0;
     const fake: PreflightFs = {
-      fstatSync: () => ({}),
+      fstatSync: pipeStat,
       writeSync: (_fd, data) => {
         attempts += 1;
         if (attempts === 2) throw errno("EAGAIN");
@@ -87,19 +91,49 @@ describe("compat preflight", () => {
     expect(attempts).toBe(3);
   });
 
-  it("works against a real descriptor, and a closed one falls back", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agui-compat-"));
-    const file = path.join(dir, "fd3");
-    const fd = fs.openSync(file, "w");
+  it.skipIf(process.platform === "win32")(
+    "works against a real pipe, and a closed one falls back",
+    () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agui-compat-"));
+      const fifo = path.join(dir, "fd3");
 
-    expect(preflightCompat(fd, "inc-real")).toBe("fd");
-    fs.closeSync(fd);
-    expect(fs.readFileSync(file, "utf8")).toBe(
-      '{"type":"compat.hello","incarnation":"inc-real"}\n'
-    );
-    expect(preflightCompat(fd, "inc-real")).toBe("inline");
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
+      execFileSync("mkfifo", [fifo]);
+      // The read end first, non-blocking, so opening the write end does not wait.
+      const reader = fs.openSync(
+        fifo,
+        fs.constants.O_RDONLY | fs.constants.O_NONBLOCK
+      );
+      const fd = fs.openSync(fifo, "w");
+
+      expect(preflightCompat(fd, "inc-real")).toBe("fd");
+      fs.closeSync(fd);
+      const buffer = Buffer.alloc(256);
+      const read = fs.readSync(reader, buffer, 0, buffer.length, null);
+
+      expect(buffer.subarray(0, read).toString("utf8")).toBe(
+        '{"type":"compat.hello","incarnation":"inc-real"}\n'
+      );
+      expect(preflightCompat(fd, "inc-real")).toBe("inline");
+      fs.closeSync(reader);
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "falls back to inline for a writable descriptor that is not a pipe or socket, writing nothing to it",
+    () => {
+      // What fd 3 can be when main passed none: something the runtime or the
+      // parent had open. A successful write there would lose compat silently.
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agui-compat-"));
+      const file = path.join(dir, "not-a-pipe");
+      const fd = fs.openSync(file, "w");
+
+      expect(preflightCompat(fd, "inc-file")).toBe("inline");
+      fs.closeSync(fd);
+      expect(fs.readFileSync(file, "utf8")).toBe("");
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  );
 });
 
 describe("compat writers", () => {

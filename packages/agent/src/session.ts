@@ -1991,11 +1991,14 @@ export class AbacusBotSession {
     this.clearStallTimer();
     this.awaitingModel = false;
     for (const subtaskId of this.componentSubtasks.values()) {
-      this.emitAgentEvent({
-        type: "subtask_end",
-        id: subtaskId,
-        status: "failed",
-      });
+      this.emitAgentEvent(
+        {
+          type: "subtask_end",
+          id: subtaskId,
+          status: "failed",
+        },
+        { unfinished: true }
+      );
     }
 
     this.componentSubtasks.clear();
@@ -2424,10 +2427,12 @@ export class AbacusBotSession {
           this.streamedText = "";
           this.currentMessageId = `msg-${++this.messageCounter}`;
           this.toolCallStream.reset();
+          const messageId = this.aguiMessageId(event.message);
+
           this.emitInternal({
             type: "message_open",
             key: this.currentMessageId,
-            messageId: this.aguiMessageId(event.message),
+            ...(messageId != null ? { messageId } : {}),
           });
         }
 
@@ -3329,15 +3334,15 @@ export class AbacusBotSession {
 
   /**
    * An assistant message's AG-UI id: the pi session id plus the message's own
-   * timestamp, which pi persists, so it is stable across a reload.
+   * timestamp, which pi persists, so it is stable across a reload. Without a
+   * timestamp there is nothing stable here (`msg-N` restarts per process), so
+   * the emitter builds an incarnation-scoped id instead.
    */
-  private aguiMessageId(message: unknown): string {
+  private aguiMessageId(message: unknown): string | undefined {
     const timestamp = (message as { timestamp?: unknown }).timestamp;
     const base = this.session?.sessionId ?? "session";
 
-    return typeof timestamp === "number"
-      ? `${base}:${timestamp}`
-      : `${base}:${this.currentMessageId ?? "msg"}`;
+    return typeof timestamp === "number" ? `${base}:${timestamp}` : undefined;
   }
 
   /** The streaming message's id, assigned lazily for a delta with no start. */

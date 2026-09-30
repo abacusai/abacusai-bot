@@ -8,9 +8,12 @@
  *
  * The queue and turn logic lives in agui/queue.ts, shared with the AG-UI host;
  * this host is that logic with stdout as its only writer (`--wire ndjson`).
+ * `ABACUSAI_BOT_WIRE_RECORD=<path>` additionally records stdin and the
+ * pre-strip events beside stdout (agui/record.ts); stdout is unchanged.
  */
 import { noCompat, type CompatWriter } from "./agui/channel.js";
 import { HostCore } from "./agui/queue.js";
+import { openWireRecorder, WIRE_RECORD_ENV } from "./agui/record.js";
 import { HostSink } from "./agui/sink.js";
 import { isBotSession } from "./bot/bot-config.js";
 import { BotSession } from "./bot/bot-session.js";
@@ -25,6 +28,7 @@ export interface HostOptions {
 
 export class NdjsonHost {
   private readonly core: HostCore;
+  private readonly recordLine: ((line: string) => void) | undefined;
 
   constructor(options: HostOptions) {
     // Looked up per write: the stream is process.stdout, as it always was.
@@ -35,11 +39,16 @@ export class NdjsonHost {
       },
     };
     const sink = new HostSink(stdout);
+    const recorder = openWireRecorder(process.env[WIRE_RECORD_ENV]);
     const init = {
       cwd: options.cwd,
       ...(options.model ? { model: options.model } : {}),
       ...(options.mode ? { mode: options.mode } : {}),
       emit: (event: DesktopEvent) => this.core.onSessionEvent(event),
+      // Internal facts only exist to be recorded here; they never reach stdout.
+      ...(recorder != null
+        ? { emitInternal: recorder.internal.bind(recorder) }
+        : {}),
     };
 
     // A bot's chat runs the bot loop; everything else the coding session.
@@ -48,13 +57,24 @@ export class NdjsonHost {
       ? new BotSession(init)
       : new AbacusBotSession(init);
 
-    this.core = new HostCore(session, (event) => sink.emit(event));
+    this.recordLine = recorder?.input.bind(recorder);
+    this.core = new HostCore(
+      session,
+      recorder != null
+        ? (event) => {
+            recorder.output(event);
+            sink.emit(event);
+          }
+        : (event) => sink.emit(event)
+    );
   }
 
   async run(): Promise<void> {
     await this.core.start();
-    await this.core.readCommands(process.stdin, (command) =>
-      this.core.handle(command)
+    await this.core.readCommands(
+      process.stdin,
+      (command) => this.core.handle(command),
+      this.recordLine
     );
     await this.core.shutdown();
   }
