@@ -417,7 +417,11 @@ const isToolCallPart = (part: UIMessage["parts"][number]): boolean =>
  * The run's parent tool calls: tool-call parts of the assistant messages
  * after the run's user echo (children count inside their own card, §4.2).
  */
-const stepsOf = (messages: readonly UIMessage[], runId: string): number => {
+const stepsOf = (
+  messages: readonly UIMessage[],
+  runId: string,
+  runStart?: number
+): number => {
   let start = messages.findLastIndex(
     (message) =>
       message.role === "user" &&
@@ -427,7 +431,7 @@ const stepsOf = (messages: readonly UIMessage[], runId: string): number => {
   );
   if (start === -1) start = messages.findLastIndex((m) => m.role === "user");
   return messages
-    .slice(start + 1)
+    .slice(runStart ?? start + 1)
     .filter((message) => message.role === "assistant")
     .reduce(
       (count, message) => count + message.parts.filter(isToolCallPart).length,
@@ -448,7 +452,8 @@ export const recordTerminal = (
   state: ThreadStoreState,
   event: StreamChunk,
   messages: readonly UIMessage[],
-  now = Date.now()
+  now = Date.now(),
+  runStart?: number
 ): ThreadStoreState => {
   const runId = terminalRunId(event) ?? state.runs.active?.runId ?? "";
   if (state.runs.outcomes.some((outcome) => outcome.runId === runId))
@@ -471,7 +476,7 @@ export const recordTerminal = (
     kind,
     startedAt: state.runs.active?.startedAt ?? now,
     endedAt: eventTime(event, now),
-    steps: stepsOf(messages, runId),
+    steps: stepsOf(messages, runId, runStart),
     afterMessageId: lastMessageId(messages),
     ...(Array.isArray(typed.usage) && typed.usage[0] != null
       ? { usage: typed.usage[0] }

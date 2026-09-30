@@ -44,6 +44,8 @@ export interface PumpOptions {
   onRecover(reason: "resync" | "join-failed"): void;
   /** The thread is gone (`NOT_FOUND` from the subscription). */
   onNotFound(): void;
+  /** First sequenced live event after subscribe; excludes subscribed/resync. */
+  onLive?(): void;
   /** Reconnect delays (§3.3); the last failure sets `"error"`. */
   retryDelaysMs?: readonly number[];
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
@@ -54,15 +56,14 @@ const RETRY_DELAYS_MS = [250, 1000] as const;
 
 const defaultSleep = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true }
-    );
+    const finish = (): void => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    signal.addEventListener("abort", finish, { once: true });
+    if (signal.aborted) finish();
   });
 
 type Handled = "continue" | "stop";
@@ -147,7 +148,10 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
         { signal }
       );
       for await (const event of iterator) {
-        if (controlOf(event)?.kind === "subscribed") failures = 0;
+        if (controlOf(event) == null && eventSeq(event) != null) {
+          failures = 0;
+          options.onLive?.();
+        }
         if (accept(event) === "stop") return;
       }
       throw new Error("chat: the subscription ended");
