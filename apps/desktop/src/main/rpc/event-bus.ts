@@ -6,6 +6,11 @@ import type { UpdateStatus } from "#shared/update";
 /** Pushes that never went through the `IpcEvent` catch-all. */
 export interface BusChannels {
   update: UpdateStatus;
+  notch: {
+    webContentsId: number;
+    event: import("#shared/contract/notch").NotchEvent;
+  };
+  "notch-open": import("#shared/contract/notch").OpenCommand;
   system: SystemEvent;
   /** Scoped to one window by its webContents id. */
   window: { webContentsId: number; event: WindowEvent };
