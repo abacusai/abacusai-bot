@@ -7,7 +7,7 @@
  * (First-paint `data-pending-scroll` and pixel anchoring are the Electron
  * half, not run here.)
  */
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import * as b from "../fixtures/builders";
@@ -224,4 +224,96 @@ describe("group rows share the tool budget", () => {
       expect(mountedRows(items, window)).toBeLessThanOrEqual(MAX_ROWS);
     }
   });
+});
+
+describe("r2 pageable message units", () => {
+  it("a closed bot tool group remains accessible after its header is evicted", async () => {
+    const parts = Array.from({ length: 250 }, (_, i) => ({
+      type: "tool-call" as const,
+      id: `tool-${i}`,
+      name: "bash",
+      arguments: JSON.stringify({ command: `step-${i}` }),
+      state: "complete" as const,
+    }));
+    const message = {
+      id: "large-group",
+      role: "assistant" as const,
+      parts,
+      metadata: {
+        abacus: {
+          segments: [
+            {
+              id: "large",
+              type: "tool_group",
+              summary: "Migrated tools",
+              partIndex: null,
+            },
+            ...parts.map((_, i) => ({
+              id: `s-${i}`,
+              type: "tool_call",
+              partIndex: i,
+              groupId: "large",
+            })),
+          ],
+        },
+      },
+    };
+    current = await renderRelay(new FakeRelay({ history: [message] }), "bot");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Worked through/ })
+    );
+    const header = await screen.findByRole("button", {
+      name: "Migrated tools",
+    });
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
+    await waitFor(() =>
+      expect(document.querySelectorAll("[data-tool]").length).toBeGreaterThan(0)
+    );
+    for (let i = 0; i < 4; i++) {
+      const more = screen.queryByRole("button", { name: /more steps/i });
+      if (more) fireEvent.click(more);
+      expect(
+        document.querySelectorAll(
+          '[data-tool], [data-slot="tool-group"] > button:not([hidden]), [data-slot="message-scroller-item"]'
+        ).length
+      ).toBeLessThanOrEqual(MAX_ROWS);
+    }
+    expect(screen.queryByRole("button", { name: /more steps/i })).toBeNull();
+    expect(document.querySelectorAll("[data-tool]").length).toBeGreaterThan(0);
+  });
+
+  it.each(["session", "bot"] as const)(
+    "%s pages 150 top-level subagents inside one message",
+    async (skin) => {
+      const parts = Array.from({ length: 150 }, (_, i) => ({
+        type: "subagent" as const,
+        subagent: {
+          id: `child-${i}`,
+          name: "general",
+          description: `Child ${i}`,
+          status: "finished" as const,
+          messages: [],
+        },
+      }));
+      current = await renderRelay(
+        new FakeRelay({ history: [{ id: "cards", role: "assistant", parts }] }),
+        skin
+      );
+      await screen.findByText("Child 0");
+      const count = () =>
+        document.querySelectorAll(
+          '[data-slot="subagent-row"], [data-slot="message-scroller-item"]'
+        ).length;
+      expect(count()).toBeLessThanOrEqual(MAX_ROWS);
+      fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
+      expect(count()).toBeLessThanOrEqual(MAX_ROWS);
+      fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
+      await screen.findByText("Child 149");
+      expect(count()).toBeLessThanOrEqual(MAX_ROWS);
+      expect(screen.queryByText("Child 0")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: /earlier steps/i }));
+      expect(count()).toBeLessThanOrEqual(MAX_ROWS);
+    }
+  );
 });

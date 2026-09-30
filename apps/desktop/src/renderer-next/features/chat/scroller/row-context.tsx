@@ -31,7 +31,7 @@ export const toolRows = (message: UIMessage, scope = ""): string[] => {
     if (part.type !== "subagent") return header;
     return [
       ...header,
-      ...(scope === "" ? [] : [`card\0${part.subagent.id}`]),
+      `card\0${part.subagent.id}`,
       ...part.subagent.messages.flatMap((child) =>
         toolRows(child, part.subagent.id)
       ),

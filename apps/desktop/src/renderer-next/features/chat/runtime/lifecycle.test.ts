@@ -1,10 +1,12 @@
 import { ORPCError } from "@orpc/client";
+import { withEventMeta } from "@orpc/server";
 import { describe, expect, it, vi } from "vitest";
 
 import * as b from "../fixtures/builders";
 import { golden } from "../fixtures/goldens";
 import { FakeRelay } from "../fixtures/relay";
 import { createDispatcher } from "./dispatcher";
+import { runPump } from "./pump";
 import { ThreadSession } from "./session";
 
 const deferred = <T>() => {
@@ -133,4 +135,194 @@ describe("admission lifecycle regressions", () => {
     await stream.next();
     expect(dispatcher.pending).toBe(0);
   });
+});
+
+describe("r2 generation regressions", () => {
+  it("keeps RUN_ERROR and following events in the installed client's stream", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const consumed: number[] = [];
+    const session = new ThreadSession({
+      ai: relay.ai,
+      threadId: relay.threadId,
+      onConsumed: (seq) => consumed.push(seq),
+    });
+    try {
+      await session.load();
+      relay.emitAll([
+        b.runStarted("failed"),
+        ...b.text("answer", "assistant", "partial"),
+      ]);
+      await vi.waitFor(() =>
+        expect(session.store.state.runs.active?.runId).toBe("failed")
+      );
+      await session.cancel();
+      relay.emitAll([
+        b.runError("failed", { message: "ordinary failure" }),
+        b.custom("agent.status", { status: "idle" }),
+      ]);
+      await vi.waitFor(() => expect(consumed.at(-1)).toBe(relay.lastSeq));
+      expect(session.gen).toBe(1);
+      expect(session.store.state.runs.outcomes).toHaveLength(1);
+      expect(session.store.state.runs.outcomes[0]).toMatchObject({
+        runId: "failed",
+        live: true,
+      });
+      expect(session.hostStore.state.cancelling).toBe(false);
+    } finally {
+      session.retire();
+    }
+  });
+
+  it.each(["success", "failure"])(
+    "late hydration %s cannot revive a capped generation",
+    async (settlement) => {
+      const relay = new FakeRelay();
+      const gate = deferred<void>();
+      relay.faults.hydrate = () => gate.promise;
+      const session = new ThreadSession({
+        ai: relay.ai,
+        threadId: relay.threadId,
+        readyCapMs: 5,
+      });
+      try {
+        await expect(session.load()).rejects.toThrow("hydration timed out");
+        if (settlement === "success") gate.resolve();
+        else gate.reject(new Error("late"));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(session.ready).toBe(false);
+        expect(session.hostStore.state.phase).toBe("error");
+        expect(session.hostStore.state.error).toMatchObject({
+          message: "chat: hydration timed out",
+        });
+        expect(relay.stats.subscribe).toBe(0);
+      } finally {
+        session.retire();
+      }
+    }
+  );
+});
+
+describe("r2 progress and recovery", () => {
+  it("duplicate then disconnect exhausts the pump budget without live progress", async () => {
+    const relay = new FakeRelay();
+    const live = vi.fn();
+    const states: string[] = [];
+    let calls = 0;
+    const ai = {
+      ...relay.ai,
+      hydrate: relay.ai.hydrate,
+      subscribe: async function* () {
+        calls++;
+        if (calls > 6) return;
+        yield withEventMeta(b.runStarted("duplicate"), { id: "1" });
+        throw new Error("disconnect");
+      },
+    };
+    await runPump({
+      ai: ai as unknown as typeof relay.ai,
+      threadId: relay.threadId,
+      activeRunId: null,
+      positions: { checkpoint: 1, receivedSeq: 1, epoch: null },
+      signal: new AbortController().signal,
+      push: vi.fn(),
+      onLive: live,
+      onConnection: (state) => states.push(state),
+      onRecover: vi.fn(),
+      onNotFound: vi.fn(),
+      retryDelaysMs: [0, 0],
+      sleep: async () => {},
+    });
+    expect(calls).toBe(3);
+    expect(live).not.toHaveBeenCalled();
+    expect(states.at(-1)).toBe("error");
+  });
+
+  it("duplicate then resync exhausts generation recovery", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    let calls = 0;
+    const ai = {
+      ...relay.ai,
+      hydrate: relay.ai.hydrate,
+      subscribe: async function* () {
+        calls++;
+        if (calls > 6) return;
+        yield withEventMeta(b.custom("agent.status", { status: "idle" }), {
+          id: "1",
+        });
+        yield b.custom("abacus.resync", {});
+      },
+    };
+    const session = new ThreadSession({
+      ai: ai as unknown as typeof relay.ai,
+      threadId: relay.threadId,
+      recoveryDelaysMs: [0, 0],
+    });
+    try {
+      await session.load();
+      await vi.waitFor(() =>
+        expect(session.hostStore.state.connection).toBe("error")
+      );
+      expect(calls).toBe(3);
+      expect(session.gen).toBe(3);
+    } finally {
+      session.retire();
+    }
+  });
+
+  it("recovery clears an unanswered cancellation and permits another Stop", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([...b.sessionReady(), b.runStarted("running")]);
+    const session = new ThreadSession({
+      ai: relay.ai,
+      threadId: relay.threadId,
+    });
+    try {
+      await session.load();
+      await session.cancel();
+      expect(session.hostStore.state.cancelling).toBe(true);
+      relay.setEpoch("replacement");
+      relay.dropSubscriptions();
+      await vi.waitFor(() => expect(session.gen).toBe(2));
+      await session.load();
+      expect(session.hostStore.state.cancelling).toBe(false);
+      await session.cancel();
+      expect(relay.stats.cancel).toHaveLength(2);
+    } finally {
+      session.retire();
+    }
+  });
+
+  it.each(["run retry", "outbox retry", "reconciliation"])(
+    "%s marks a deleted thread gone",
+    async (path) => {
+      const relay = new FakeRelay({ events: golden("plain-text") });
+      const session = new ThreadSession({
+        ai: relay.ai,
+        threadId: relay.threadId,
+        reconcileDelaysMs: path === "reconciliation" ? [20] : [],
+      });
+      try {
+        await session.load();
+        if (path !== "run retry") {
+          relay.faults.send = () => new ORPCError("TIMEOUT");
+          await session.submit("pending");
+        }
+        relay.faults.send = () => new ORPCError("NOT_FOUND");
+        if (path === "run retry")
+          await expect(session.retry()).rejects.toThrow();
+        if (path === "outbox retry")
+          await expect(
+            session.retryOutbox(session.hostStore.state.outbox[0]!.id)
+          ).rejects.toThrow();
+        await vi.waitFor(() =>
+          expect(session.hostStore.state.notFound).toBe(true)
+        );
+        expect(session.hostStore.state.outbox).toHaveLength(0);
+      } finally {
+        session.retire();
+      }
+    }
+  );
 });
