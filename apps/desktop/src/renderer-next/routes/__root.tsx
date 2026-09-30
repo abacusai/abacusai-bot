@@ -5,6 +5,9 @@
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 
+import { LibraryGlobals } from "#next/features/library";
+import { RoutinesGlobals } from "#next/features/routines";
+import { CriticalUpdateDialog } from "#next/features/settings";
 import { AppRoot, NotFound, RootError } from "#next/features/shell";
 import type { RouterContext } from "#next/router";
 
@@ -22,6 +25,9 @@ const RootComponent = () => {
   return (
     <AppRoot transport={transport} db={db} system={system}>
       <Outlet />
+      <RoutinesGlobals />
+      <LibraryGlobals />
+      <CriticalUpdateDialog />
       {Devtools != null && (
         <Suspense fallback={null}>
           <Devtools />

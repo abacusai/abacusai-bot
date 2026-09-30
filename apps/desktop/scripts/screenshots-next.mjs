@@ -78,6 +78,8 @@ export const ROUTES = option(
     "/artifacts",
     "/library/connectors",
     "/settings/general",
+    "/settings/models",
+    "/__ui?section=nav&fixture=routine-report",
     "/settings/appearance",
     "/onboarding/welcome",
     "/__ui?section=shell",
@@ -613,6 +615,15 @@ const main = async () => {
             cdp,
             `document.querySelector('[data-slot="sidebar-floating"]') != null`
           );
+          if (opened)
+            await waitFor(
+              cdp,
+              `(() => {
+            const floating = document.querySelector('[data-slot="sidebar-floating"]');
+            const expected = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')) + 4;
+            return floating && Math.abs(floating.getBoundingClientRect().left - expected) < 0.5;
+          })()`
+            );
           const hovered = await waitStable(
             cdp,
             `({

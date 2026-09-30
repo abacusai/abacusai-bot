@@ -10,9 +10,7 @@ it("R5-T8 routine form does not accept whitespace-only instructions", async () =
       name: "Instruction",
     });
     fireEvent.change(instruction, { target: { value: "   " } });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Create" })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
       expect(app.router.state.location.pathname).toBe("/routines/new")
     );
@@ -29,9 +27,7 @@ it("R5-T8 dirty routine cancellation uses a discard dialog and keeps the draft o
       name: "Instruction",
     });
     fireEvent.change(instruction, { target: { value: "Draft instruction" } });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Cancel" })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(await screen.findByRole("alertdialog")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
     expect((instruction as HTMLTextAreaElement).value).toBe(
