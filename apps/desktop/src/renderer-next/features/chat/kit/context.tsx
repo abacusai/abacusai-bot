@@ -46,6 +46,7 @@ export interface MentionSource {
 export interface ComposerConfig {
   mode: "full" | "mini";
   availableModes?: AgentMode[];
+  defaultMode?: AgentMode;
   blocked?: "no-model" | "loading";
   onBlocked?: () => void;
   history?: { list(): Promise<string[]>; add(text: string): Promise<void> };
