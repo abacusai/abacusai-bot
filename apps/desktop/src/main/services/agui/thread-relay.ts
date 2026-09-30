@@ -475,11 +475,31 @@ export class ThreadRelay {
   /**
    * The conversation was cleared by main (legacy reset, session deletion):
    * a `session.cleared` of main's own, so every window drops its transcript
-   * (spec 02 §3.1 `rev`) as it does for the agent's. A run still open
-   * finishes without persisting; the agent's own `session.cleared`, if it
-   * comes, clears again.
+   * (spec 02 §3.1 `rev`) as it does for the agent's. The agent's own
+   * `session.cleared`, if it comes, clears again.
+   *
+   * A run still open is retired first, as the agent's reset does (its
+   * cancelled terminal precedes the clear): its open parts close, it
+   * finishes `cancelled` without persisting, and the rest of its stream is
+   * dropped. So nothing after the clear belongs to it: `hydrate` answers
+   * `activeRun: null`, `joinRun` has no log for it, and a client's new
+   * generation (spec 02 §3.3) never replays the clear it is recovering from.
    */
   clearByMain(): void {
+    const active = this.#active;
+    if (active != null) {
+      // It belongs to the history being cleared: its terminal persists nothing.
+      this.#historyEpoch += 1;
+      this.#closeOpenParts(active, { anchor: false });
+      this.#apply({
+        type: "RUN_FINISHED",
+        threadId: this.threadId,
+        runId: active.runId,
+        outcome: { type: "cancelled" },
+        timestamp: Date.now(),
+      });
+      this.#orphanRunId = active.runId;
+    }
     this.#apply(this.#custom("session.cleared", {}));
   }
 
@@ -706,9 +726,10 @@ export class ThreadRelay {
   /**
    * Before a `RUN_ERROR`: the run's open parts closed in the agent's order
    * (agent spec §3.1.5, `closeOpenParts`), then an empty assistant message
-   * when the run has none. Nothing when the agent already did both.
+   * when the run has none (`anchor`; a cancelled terminal needs none).
+   * Nothing when the agent already did both.
    */
-  #closeOpenParts(active: ActiveRun): void {
+  #closeOpenParts(active: ActiveRun, options = { anchor: true }): void {
     const { texts, reasoning, tools, children, hadAssistant } = active.open;
     const out: RelayEvent[] = [];
     const tag = (event: RelayEvent, child: string | undefined): RelayEvent =>
@@ -748,7 +769,7 @@ export class ThreadRelay {
     closeTexts((child) => child != null && !children.has(child));
     closeTools((child) => child != null && !children.has(child));
     closeTools((child) => child == null);
-    if (!hadAssistant) {
+    if (!hadAssistant && options.anchor) {
       let messageId = `${active.runId}:error`;
       const taken = new Set(
         this.#processor.getMessages().map((message) => message.id)

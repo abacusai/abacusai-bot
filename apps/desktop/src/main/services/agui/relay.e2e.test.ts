@@ -174,7 +174,8 @@ const build = (options: { aguiForEverySpawn?: boolean } = {}): Stack => {
             startupTimeoutMs: 45_000,
           })
         ).success,
-      send: (threadId, command) => manager.sendCommand("w1", threadId, command),
+      send: (threadId, command) =>
+        manager.sendCommandToSession(threadId, command),
       markSent: () => marks.push("sent"),
       markStopped: () => marks.push("stopped"),
     },

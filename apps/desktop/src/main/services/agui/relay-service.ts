@@ -74,8 +74,14 @@ export interface AguiRelayHost {
   ): { wire: AgentWire; status: AgentSessionStatus } | null;
   /** Start the thread's agent (its wire comes from `wireFor`). */
   start(threadId: string): Promise<boolean>;
-  /** One command on the runtime's stdin; false when it cannot be written. */
-  send(threadId: string, command: object): boolean;
+  /**
+   * One command on the live runtime's stdin. Returns the process it was
+   * written to (the identity `ingest`'s origin carries), or null when it
+   * could not be written. That process, not the one stdout last named, is
+   * the one whose exit leaves the command unanswered: a replacement can be
+   * running (its compat `ready` seen) before its `wire.hello` arrives.
+   */
+  send(threadId: string, command: object): object | null;
   /** Main's turn state: a turn was sent (legacy `sendAgentMessage` does this). */
   markSent(threadId: string): void;
   /** Main's turn state: the user stopped the turn (legacy `stopAgentTurn`). */
@@ -148,10 +154,12 @@ interface Waiter {
   reject: (error: unknown) => void;
   promise: Promise<AckRecord>;
   /**
-   * The runtime `run` was written to; undefined until written. Only that
-   * process's exit makes the admission uncertain.
+   * The process `run` was written to, as the host reports it; undefined
+   * until written. Only that process's exit makes the admission uncertain.
    */
-  runtime?: object | null;
+  runtime?: object;
+  /** Why the admission was abandoned before it was written (the session went). */
+  abandoned?: unknown;
 }
 
 const waiter = (): Waiter => {
@@ -285,7 +293,9 @@ export class AguiRelayService implements AguiSource {
       this.#runOwners.set(relayEvent.runId, threadId);
       this.#startedRuns.add(runKey(threadId, relayEvent.runId));
       trim(this.#startedRuns, STARTED_RUNS_KEPT);
-      this.#awaitingStart.get(threadId)?.delete(relayEvent.runId);
+      const awaiting = this.#awaitingStart.get(threadId);
+      awaiting?.delete(relayEvent.runId);
+      if (awaiting?.size === 0) this.#awaitingStart.delete(threadId);
     }
     if (relayEvent.type === "CUSTOM" && relayEvent.name === "run.ack")
       this.#settleAck(threadId, relayEvent.value);
@@ -320,13 +330,11 @@ export class AguiRelayService implements AguiSource {
     // waiting. Uncertain for the client: it re-sends the same run id.
     const waiting = this.#waiting.get(threadId);
     for (const [runId, pending] of waiting ?? []) {
-      if (pending.runtime === undefined) continue;
-      if (pending.runtime !== null && pending.runtime !== exit.origin.runtime)
-        continue;
+      if (pending.runtime !== exit.origin.runtime) continue;
       pending.reject(
         timeoutError(0, `The agent exited before it answered run ${runId}.`)
       );
-      waiting!.delete(runId);
+      this.#release(threadId, runId, pending);
     }
   }
 
@@ -343,6 +351,12 @@ export class AguiRelayService implements AguiSource {
     this.#threads.get(threadId)?.clearByMain();
   }
 
+  /** Threads with per-thread admission bookkeeping (leak checks, diagnostics). */
+  get admissionThreads(): number {
+    return new Set([...this.#waiting.keys(), ...this.#awaitingStart.keys()])
+      .size;
+  }
+
   /** Open `subscribe`/`joinRun` streams on a thread (leak checks, diagnostics). */
   listenerCount(threadId: string): number {
     return this.#threads.get(threadId)?.listenerCount ?? 0;
@@ -350,6 +364,15 @@ export class AguiRelayService implements AguiSource {
 
   /** The session is gone: forget everything about the thread. */
   forgetThread(threadId: string): void {
+    // Admissions still in flight get a definitive answer now: nothing will
+    // ack them, and one not yet written must not start the agent again.
+    const waiting = this.#waiting.get(threadId);
+    this.#waiting.delete(threadId);
+    for (const pending of waiting?.values() ?? []) {
+      const gone = notFound("session", threadId);
+      pending.abandoned = gone;
+      pending.reject(gone);
+    }
     const thread = this.#threads.get(threadId);
     thread?.clearByMain();
     if (thread != null && thread.listenerCount === 0) this.#evict(threadId);
@@ -497,15 +520,19 @@ export class AguiRelayService implements AguiSource {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await this.#ensureAguiRuntime(threadId);
+      // The session was forgotten while the runtime started.
+      if (pending.abandoned !== undefined) throw pending.abandoned;
 
       const thread = this.#thread(threadId);
       const echo = newestUserId(input.messages);
       if (echo != null) thread.expectEcho(runId, echo);
       this.#host.markSent(threadId);
       marked = true;
-      pending.runtime = thread.runtime;
-      if (!this.#host.send(threadId, command))
+      // The process the host wrote to, which may not have said hello yet.
+      const target = this.#host.send(threadId, command);
+      if (target == null)
         throw unavailable("The agent is not accepting input", 1_000);
+      pending.runtime = target;
       written = true;
 
       // A timeout rejects the admission itself, so a repeat waiting on it
@@ -535,8 +562,7 @@ export class AguiRelayService implements AguiSource {
       throw error;
     } finally {
       clearTimeout(timer);
-      if (this.#waiting.get(threadId)?.get(runId) === pending)
-        this.#waiting.get(threadId)?.delete(runId);
+      this.#release(threadId, runId, pending);
     }
   }
 
@@ -681,6 +707,14 @@ export class AguiRelayService implements AguiSource {
     this.#threads.delete(threadId);
     for (const [runId, owner] of this.#runOwners)
       if (owner === threadId) this.#runOwners.delete(runId);
+  }
+
+  /** Removes `pending`'s reservation, and the thread's map once it is empty. */
+  #release(threadId: string, runId: string, pending: Waiter): void {
+    const waiting = this.#waiting.get(threadId);
+    if (waiting?.get(runId) !== pending) return;
+    waiting.delete(runId);
+    if (waiting.size === 0) this.#waiting.delete(threadId);
   }
 
   #waitingFor(threadId: string): Map<string, Waiter> {
@@ -858,7 +892,7 @@ export class AguiRelayService implements AguiSource {
   }
 
   #write(threadId: string, command: object): void {
-    if (!this.#host.send(threadId, command))
+    if (this.#host.send(threadId, command) == null)
       throw unavailable("The agent is not accepting input", 1_000);
   }
 
