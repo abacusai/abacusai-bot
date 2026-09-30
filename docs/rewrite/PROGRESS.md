@@ -18,5 +18,5 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 4 | sessions | r3 (b8997551, Codex r1–r2 applied; final) | waits on phases 2–3 | | spec done |
 | 5 | routines, artifacts, library, settings | r3 (Codex r1–r2 applied; final) | waits on phases 2–4 | | spec done |
 | 6 | onboarding, tour, notch | r4 (Codex r1–r3 applied; final) | waits on phases 2–5 + relay `ai.attention` | | spec done |
-| — | main requirements from specs 3–6 (+ cut-over defects #9/#10/#11, step-1 handovers) | specs 03 §24, 04 §26, 05 §31, 06 §23 + notes | merged 0ab59029 | Codex r1 (~20, blocker: git.discard rename collision) + Claude r1 (32) → Codex fix task in worktree | fixing |
+| — | main requirements from specs 3–6 (+ cut-over defects #9/#10/#11, step-1 handovers) | specs 03 §24, 04 §26, 05 §31, 06 §23 + notes | merged 0ab59029; fixes merged 8eaec2b1 (Codex, 12 commits; git.discard, activation barrier, model switch, cron, relay, cue, keep-awake) | Codex r1 + Claude r1 fixed; low-effort Codex r2 running | done pending r2 |
 | 7 | cut-over | r3 (Codex r1–r2 applied; final); prerequisites P1–P6 routed to implementers | waits on phases 2–6 | | spec done |
