@@ -102,6 +102,7 @@ import {
   prefsFileAfterMigrations,
   runStartupMigrations,
 } from "./migrations/startup";
+import { CueArbiter, mainOnlyCueWindows } from "./notch/cue-arbiter";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
@@ -146,7 +147,10 @@ import {
   readNotificationSettings,
   readSettings,
 } from "./services/config/settings";
-import { reportFunnelStep } from "./services/debug-sync/funnel-beacon";
+import {
+  reportFunnelStep,
+  reportFunnelStepOnce,
+} from "./services/debug-sync/funnel-beacon";
 import {
   buildLogDump,
   collectEnvironmentInfo,
@@ -1279,8 +1283,11 @@ const appOperations: AppOperations = {
   hasGoogleChrome: () => hasGoogleChrome(),
 
   // First-run milestones; see services/debug-sync/funnel-beacon.ts.
-  reportFunnelStep(step, detail) {
-    if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+  reportFunnelStep(step, detail, once) {
+    if (!isFunnelStep(step)) return;
+    // `once`: the persisted first-time report (spec 06 §6.5).
+    if (once === true) reportFunnelStepOnce(step, funnelDetail(detail));
+    else reportFunnelStep(step, funnelDetail(detail));
   },
 
   // The local account; see shared/account.ts for why it is optional.
@@ -1608,6 +1615,14 @@ function installRpc(
   host: HostOperations,
   rendererState: RendererStateStore
 ): void {
+  // Before the notch exists, the main renderer is the only audible document.
+  const cueArbiter = new CueArbiter({
+    windows: mainOnlyCueWindows({
+      mainRendererId: () => rendererWebContents()?.id ?? null,
+      state: (id) =>
+        rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+    }),
+  });
   const deps: RpcDeps = {
     serviceHost: workspaceServiceHost,
     host,
@@ -1638,6 +1653,7 @@ function installRpc(
     ai: workspaceServiceHost.aguiRelay,
     threads: workspaceServiceHost.threadStore,
     trackers: createEventTrackers(mainEventBus),
+    cues: cueArbiter,
   };
   rpcTransport = installMessagePortTransport({
     ipcMain,

@@ -33,6 +33,28 @@ export const window = {
   events: subscription
     .input(NoInput)
     .output(eventIterator(type<WindowEvent>())),
+  /**
+   * The thread the main renderer shows (null: none), on every route commit
+   * and on focus/blur (spec 06 §14.2). Main window only (`FORBIDDEN`
+   * otherwise). A cue for it is suppressed while the main window is focused.
+   */
+  visibleThread: mutation
+    .input(v.object({ threadId: v.nullable(v.string()) }))
+    .output(type<void>()),
+  /**
+   * Central cue arbitration (spec 06 §14.2): `play: true` for exactly one
+   * caller per `cueId` (`${kind}:${dedupeKey}`). The audible document's
+   * first claim wins at once; any other eligible claimant waits up to 1 s
+   * for it and is granted, in arrival order, only if still eligible then.
+   */
+  claimCue: mutation
+    .input(
+      v.object({
+        cueId: v.pipe(v.string(), v.nonEmpty(), v.maxLength(512)),
+        threadId: v.nullable(v.string()),
+      })
+    )
+    .output(type<{ play: boolean }>()),
   /** User-input beacon, fire-and-forget; a renderer swap defers while it is recent. */
   activity: mutation.input(NoInput).output(type<void>()),
   /**

@@ -71,6 +71,11 @@ export const system = {
       v.object({
         step: v.picklist(FUNNEL_STEPS),
         detail: v.optional(v.string()),
+        /**
+         * Report only the first time this install reaches the step (main's
+         * persisted `reportFunnelStepOnce`; spec 06 §6.5).
+         */
+        once: v.optional(v.literal(true)),
       })
     )
     .output(type<void>()),

@@ -18,6 +18,7 @@ import {
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 import type { UpdateStatus } from "#shared/update";
 
+import { CueArbiter, mainOnlyCueWindows } from "../notch/cue-arbiter";
 import { PrefsStore } from "../services/config/prefs-store";
 import { UnavailableAguiSource } from "./ai/source";
 import type { RpcContext } from "./context";
@@ -70,6 +71,7 @@ export interface FakeDepsOverrides {
   bus?: MainEventBus;
   tables?: Tables;
   prefsStore?: PrefsStore;
+  cues?: CueArbiter;
 }
 
 const noHook = (): (() => void) => () => undefined;
@@ -97,6 +99,14 @@ export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
       watchMemories: false,
       routinesClockMs: null,
     });
+  const windows = stub<RpcDeps["windows"]>("windows", {
+    mainRendererId: () => null,
+    contents: () => null,
+    state: () => null,
+    chrome: () => null,
+    reportReady: () => undefined,
+    ...overrides.windows,
+  });
   return {
     serviceHost,
     host: stub("host", overrides.host),
@@ -107,19 +117,15 @@ export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
       ...overrides.update,
     }),
     rendererState: stub("rendererState", overrides.rendererState),
-    windows: stub("windows", {
-      mainRendererId: () => null,
-      contents: () => null,
-      state: () => null,
-      chrome: () => null,
-      reportReady: () => undefined,
-      ...overrides.windows,
-    }),
+    windows,
     bus,
     ai: overrides.ai ?? new UnavailableAguiSource(),
     tables,
     ...(overrides.threads == null ? {} : { threads: overrides.threads }),
     trackers: createEventTrackers(bus),
+    cues:
+      overrides.cues ??
+      new CueArbiter({ windows: mainOnlyCueWindows(windows) }),
   };
 };
 

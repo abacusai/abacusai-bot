@@ -40,6 +40,22 @@ export const windowRouter = impl.window.router({
       coalesceKey: (event) => event.type,
     });
   }),
+  visibleThread: impl.window.visibleThread.handler(({ input, context }) => {
+    const id = requireWindow(context);
+    if (
+      context.windowKind !== "main" ||
+      context.deps.windows.mainRendererId() !== id
+    )
+      throw forbidden("not-main", "Only the main window reports its thread");
+    context.deps.cues.setVisibleThread(id, input.threadId);
+  }),
+  claimCue: impl.window.claimCue.handler(async ({ input, context }) => ({
+    play: await context.deps.cues.claim(
+      requireWindow(context),
+      input.cueId,
+      input.threadId
+    ),
+  })),
   activity: impl.window.activity.handler(({ context }) => {
     requireWindow(context);
     context.deps.app.markRendererActivity();

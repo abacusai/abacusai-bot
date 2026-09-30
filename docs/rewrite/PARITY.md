@@ -328,7 +328,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (253)
+## Contract procedures (255)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -577,10 +577,12 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `voice.whisper.progress` | subscription |  |
 | `window.activity` | mutation | `reportUiActivity` |
 | `window.chrome` | query | `getWindowChrome` |
+| `window.claimCue` | mutation |  |
 | `window.events` | subscription | `onFullScreenChange`, `onWindowChromeChange` |
 | `window.ready` | mutation | `signalRendererReady` |
 | `window.showAbout` | mutation | `showAboutPanel` |
 | `window.state` | query | `isFullScreen` |
+| `window.visibleThread` | mutation |  |
 | `workspaces.add` | mutation | `agent.addWorkspace` |
 | `workspaces.checkPath` | query | `agent.checkWorkspacePath` |
 | `workspaces.ensureSessionHome` | mutation | `agent.ensureSessionHomeWorkspace` |
