@@ -59,6 +59,17 @@ describe("bots interactions", () => {
       items
     );
   });
+  it.each([{ key: "ContextMenu" }, { key: "F10", shiftKey: true }])(
+    "keyboard row menu opens with $key",
+    async (key) => {
+      app = await renderApp("/bots/new");
+      const row = await screen.findByRole("link", { name: /Chief of Staff,/ });
+      row.focus();
+      fireEvent.keyDown(row, key);
+      await screen.findByRole("menu");
+      expect(screen.getByRole("menuitem", { name: "Pin" })).toBeTruthy();
+    }
+  );
   it("the four model locations have at most one value", async () => {
     app = await renderApp("/bots/chief-of-staff?tab=details");
     await screen.findByTestId("bot-chat");

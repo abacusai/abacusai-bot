@@ -154,6 +154,24 @@ export const BotRowView = ({
           <AppLink
             to="/bots/$botId"
             params={{ botId: bot.id }}
+            onKeyDown={(event) => {
+              if (
+                event.key !== "ContextMenu" &&
+                !(event.key === "F10" && event.shiftKey)
+              )
+                return;
+              event.preventDefault();
+              const rect = event.currentTarget.getBoundingClientRect();
+              event.currentTarget.dispatchEvent(
+                new MouseEvent("contextmenu", {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: rect.left + rect.width / 2,
+                  clientY: rect.top + rect.height / 2,
+                  button: 2,
+                })
+              );
+            }}
             aria-current={active ? "page" : undefined}
             aria-label={label}
             data-slot="item"
