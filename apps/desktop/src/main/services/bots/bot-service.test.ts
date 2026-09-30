@@ -474,3 +474,28 @@ describe("where a bot's chat goes", () => {
     await expect(service.openChat(bot.id)).rejects.toThrow(/No workspace/);
   });
 });
+
+describe("accessory persistence through the service", () => {
+  it("passes accessories to the store and keeps legacy edits working", () => {
+    const service = new BotService(makeCallbacks());
+    const old = service.create({ name: "Old", description: "Counts" });
+    expect(old.avatarAccessory).toBe("none");
+    expect(service.update(old.id, { title: "Counter" }).avatarAccessory).toBe(
+      "none"
+    );
+    const bot = service.create({
+      name: "Ada",
+      description: "Counts",
+      avatarAccessory: "monocle",
+    });
+    expect(
+      service.list().find((row) => row.id === bot.id)?.avatarAccessory
+    ).toBe("monocle");
+    service.update(bot.id, { avatarAccessory: "cap" });
+    expect(getBot(bot.id)?.avatarAccessory).toBe("cap");
+    service.update(bot.id, { title: "Counter" });
+    expect(getBot(bot.id)?.avatarAccessory).toBe("cap");
+    service.update(bot.id, { avatarAccessory: null });
+    expect(getBot(bot.id)?.avatarAccessory).toBe("none");
+  });
+});

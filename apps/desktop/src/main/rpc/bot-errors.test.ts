@@ -189,3 +189,65 @@ describe("typed bot errors (spec 03 §24.4)", () => {
     });
   });
 });
+
+describe("bot accessory table mutations", () => {
+  it("carries the accessory from wire inputs into snapshots and change batches", async () => {
+    const client = connect();
+    await client.db.bots.snapshot({});
+    const stream = await client.db.bots.changes({});
+    await stream.next();
+    await client.db.bots.insert({
+      id: "bot-look",
+      name: "Ada",
+      description: "Counts",
+      avatarAccessory: "antenna",
+    });
+    await expect(stream.next()).resolves.toMatchObject({
+      value: {
+        changes: [{ type: "insert", value: { avatarAccessory: "antenna" } }],
+      },
+    });
+    await client.db.bots.update({
+      id: "bot-look",
+      patch: { avatarAccessory: "headphones" },
+    });
+    await expect(stream.next()).resolves.toMatchObject({
+      value: {
+        changes: [{ type: "update", value: { avatarAccessory: "headphones" } }],
+      },
+    });
+    await client.db.bots.update({
+      id: "bot-look",
+      patch: { title: "Counter" },
+    });
+    await expect(stream.next()).resolves.toMatchObject({
+      value: {
+        changes: [
+          { value: { title: "Counter", avatarAccessory: "headphones" } },
+        ],
+      },
+    });
+    await client.db.bots.update({
+      id: "bot-look",
+      patch: { avatarAccessory: null },
+    });
+    await expect(stream.next()).resolves.toMatchObject({
+      value: { changes: [{ value: { avatarAccessory: "none" } }] },
+    });
+    await client.db.bots.insert({
+      id: "bot-old",
+      name: "Old",
+      description: "Counts",
+    });
+    await expect(stream.next()).resolves.toMatchObject({
+      value: { changes: [{ value: { avatarAccessory: "none" } }] },
+    });
+    await expect(client.db.bots.snapshot({})).resolves.toMatchObject({
+      rows: expect.arrayContaining([
+        expect.objectContaining({ id: "bot-look", avatarAccessory: "none" }),
+        expect.objectContaining({ id: "bot-old", avatarAccessory: "none" }),
+      ]),
+    });
+    await stream.return?.();
+  });
+});
