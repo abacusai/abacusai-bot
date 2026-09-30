@@ -45,6 +45,10 @@ const read = (): Bot[] => {
         model: rest.model ?? null,
         persona: rest.persona ?? "",
         sponsoredUntil: rest.sponsoredUntil ?? null,
+        // Bots from before the flag: a chat that exists was kicked off.
+        kickstartedAt:
+          rest.kickstartedAt ??
+          (rest.sessionId != null ? (rest.createdAt ?? Date.now()) : null),
         avatarShape: rest.avatarShape ?? defaultAvatarShape(rest.name),
       };
     });
@@ -124,6 +128,15 @@ export const updateBot = (id: string, changes: BotUpdateInput): Bot => {
 };
 
 /** Record where the bot's forever chat lives (or that it no longer does). */
+/** The bot has been told to speak first in its chat. */
+export const markBotKickstarted = (id: string): void => {
+  const bots = read();
+  const index = bots.findIndex((bot) => bot.id === id);
+  if (index < 0) return;
+  bots[index] = { ...bots[index], kickstartedAt: Date.now() };
+  write(bots);
+};
+
 export const recordBotSession = (
   id: string,
   workspaceId: string | null,

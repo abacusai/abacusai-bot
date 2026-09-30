@@ -24,6 +24,11 @@ export interface Bot {
   /** The forever chat. Null until first opened, or after its session died. */
   sessionId: string | null;
   /**
+   * When the bot was told to speak first in that chat. Null until it was:
+   * a chat whose start failed is opened again with the kickstart it is owed.
+   */
+  kickstartedAt?: number | null;
+  /**
    * Set on the self-lane bots minted when a chat channel links: the app the
    * conversation happens in. Such a bot's chat is a window, not a composer.
    */

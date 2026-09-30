@@ -23,7 +23,10 @@ vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 const bots = vi.hoisted(() => ({ current: [] as Bot[] }));
 const createBot = vi.hoisted(() => vi.fn());
 vi.mock("../../hooks/use-bots", () => ({
-  useBotsQuery: () => ({ data: bots.current }),
+  useBotsQuery: () => ({
+    data: bots.current,
+    refetch: async () => ({ data: bots.current }),
+  }),
   useCreateBotMutation: () => ({ mutateAsync: createBot }),
 }));
 

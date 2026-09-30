@@ -13,6 +13,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { sponsoredRunActive } from "./abacus-endpoint.js";
 import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
 import { backendOperations } from "./backends.js";
@@ -683,6 +684,8 @@ export class AbacusBotSession {
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
   private readonly router = new OpenLlmRouter();
+  /** Whether the Abacus provider was registered with the sponsored-run marker. */
+  private sponsoredAtRegistration = sponsoredRunActive();
   /**
    * Set at `agent_end` when the reply came back in the wrong script and the
    * turn continues with a repair. Once per turn; a second miss ends the turn.
@@ -1200,6 +1203,11 @@ export class AbacusBotSession {
     this.contextCompactions = 0;
     this.pendingContextCompaction = null;
     this.router.beginTurn();
+    // The sponsored window closing (or opening) changes the headers the
+    // Abacus provider was registered with; a run must not carry the marker
+    // past its deadline, nor miss it.
+    if (this.sponsoredAtRegistration !== sponsoredRunActive())
+      await this.refreshProviderRegistrations();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
     this.toolsArrivedThisTurn = [];
@@ -2157,6 +2165,7 @@ export class AbacusBotSession {
    * edit must not widen mid-session as a side effect of picking a model.
    */
   private async refreshProviderRegistrations(): Promise<void> {
+    this.sponsoredAtRegistration = sponsoredRunActive();
     const registry = this.registry;
 
     if (!registry) {

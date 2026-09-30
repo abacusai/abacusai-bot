@@ -19,6 +19,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { sponsoredRunActive } from "../abacus-endpoint.js";
 import { Allowances } from "../allowances.js";
 import { backendOperations } from "../backends.js";
 import { withBackgroundOption } from "../background-bash.js";
@@ -197,6 +198,8 @@ export class BotSession {
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
   private readonly router = new OpenLlmRouter();
+  /** Whether the Abacus provider was registered with the sponsored-run marker. */
+  private sponsoredAtRegistration = sponsoredRunActive();
   /**
    * Set at `agent_end` when the turn died on its provider and another pool
    * model takes it over; carried out by continuePastRecoverableFailures.
@@ -586,6 +589,11 @@ export class BotSession {
     // A rotation left over from a stopped turn must not fire here.
     this.pendingOpenLlmRotation = null;
     this.router.beginTurn();
+    // The sponsored window closing (or opening) changes the headers the
+    // Abacus provider was registered with; a run must not carry the marker
+    // past its deadline, nor miss it.
+    if (this.sponsoredAtRegistration !== sponsoredRunActive())
+      await this.refreshProviderRegistrations();
     this.stallRecoveriesThisTurn = 0;
     this.pendingStall = null;
     this.stallFailureReported = false;
@@ -1278,6 +1286,7 @@ export class BotSession {
   }
 
   private async refreshProviderRegistrations(): Promise<void> {
+    this.sponsoredAtRegistration = sponsoredRunActive();
     const registry = this.registry;
     const runtime = this.modelRuntime;
 

@@ -15,7 +15,7 @@ import { app } from "electron";
 
 import { funnelDetail, type FunnelStep } from "#shared/funnel";
 
-import { abacusBotHome } from "../../paths";
+import { profileBaseDir } from "../../profile-home";
 import { readSettings } from "../config/settings";
 import { abacusAppHost, abacusUserAgent } from "../providers/abacus-host";
 import { deviceId } from "./device-id";
@@ -24,7 +24,8 @@ const BEACON_PATH = "/api/v1/_abacusaibotFunnelStep";
 const TIMEOUT_MS = 10_000;
 
 /** Steps that count once per install, recorded beside the device id. */
-const onceFile = (): string => path.join(abacusBotHome(), "funnel-once.json");
+// Per install, like the device id: "once" meant once per profile before.
+const onceFile = (): string => path.join(profileBaseDir(), "funnel-once.json");
 
 const enabled = (): boolean => {
   try {

@@ -448,3 +448,17 @@ describe("what a bot may do to routines that are not its own", () => {
     ).not.toContain("not yours");
   });
 });
+
+describe("a first fire that could not start", () => {
+  it("is not called running: the model is told to do the pass itself", async () => {
+    const runner = { runCronJob: vi.fn(async () => "skipped" as const) };
+    const text = await call(
+      server([], runner),
+      { action: "create", schedule: "0 9 * * *", prompt: "Morning brief" },
+      "bot-session"
+    );
+
+    expect(text).not.toContain("The first one is running now");
+    expect(text).toContain("could not start right now");
+  });
+});
