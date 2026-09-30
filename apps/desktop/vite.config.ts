@@ -113,13 +113,17 @@ export default defineConfig({
               // has no dist to resolve from the asar and must be inlined.
               // Main's AG-UI relay runs TanStack's StreamProcessor and
               // uiMessagesToWire (a devDependency the renderer shares), so it
-              // is inlined with the packages it imports at run time.
+              // is inlined with the packages it imports at run time, closed
+              // transitively: `@tanstack/ai-event-client` imports
+              // `@tanstack/devtools-event-client` at its top level, which
+              // only tree-shaking (`sideEffects: false`) drops today.
               include: [
                 "extract-zip",
                 "tuf-js",
                 "@abacus-ai/connectors",
                 "@tanstack/ai",
                 "@tanstack/ai-event-client",
+                "@tanstack/devtools-event-client",
                 "@tanstack/ai-utils",
                 "@ag-ui/core",
                 "partial-json",

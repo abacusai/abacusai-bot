@@ -109,12 +109,18 @@ export const ai = {
   /**
    * Replay after `lastEventId` (events with a greater seq), then live. The
    * first yield is always `CUSTOM abacus.subscribed`; a resume point the ring
-   * no longer holds starts with `CUSTOM abacus.resync`. Neither carries an
-   * event id. Never returns by itself.
+   * no longer holds, or one from another relay `epoch` (the checkpoint's
+   * `abacus.epoch`, which a resume should carry), starts with
+   * `CUSTOM abacus.resync`. Neither carries an event id. Never returns by
+   * itself. `NOT_FOUND` for an unknown thread.
    */
   subscribe: subscription
     .input(
-      v.object({ threadId: SessionId, lastEventId: v.optional(v.string()) })
+      v.object({
+        threadId: SessionId,
+        lastEventId: v.optional(v.string()),
+        epoch: v.optional(v.string()),
+      })
     )
     .output(eventIterator(type<StreamChunk>())),
   /**
@@ -125,7 +131,9 @@ export const ai = {
   send: mutation.input(AiSendInputSchema).output(type<AiSendAck>()),
   /**
    * The completed transcript (excluding the active run's messages), the
-   * active run, and the session-scoped state at one relay seq (`abacus.cursor`).
+   * active run, and the session-scoped state at one relay seq (`abacus.cursor`,
+   * the thread's own last seq). `NOT_FOUND` for an unknown thread, and for a
+   * `before` cursor the transcript does not hold.
    */
   hydrate: query
     .input(
@@ -167,8 +175,9 @@ export const ai = {
   /**
    * The agent's host queue, which is authoritative (agent spec §3.1.6). Entry
    * ids are per agent process, so an edit or removal names the incarnation
-   * it was read from; a mismatch or a gone entry is answered on the stream
-   * with `CUSTOM queue.command_rejected` and changes nothing.
+   * it was read from; the agent checks both and finds the entry by id in one
+   * step (spec 02 §14.6). A mismatch or a gone entry is answered on the
+   * stream with `CUSTOM queue.command_rejected` and changes nothing.
    */
   queue: {
     enqueue: mutation

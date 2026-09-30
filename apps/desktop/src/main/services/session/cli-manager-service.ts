@@ -792,6 +792,10 @@ export class AgentManagerService {
 
     child.on("close", (code, signal) => {
       resolveStartup();
+      // A last stdout line without its newline (a process that exits right
+      // after writing it) is still a whole line: deliver it before the exit.
+      if (wire === "agui" && ownsSession() && runtime.stdoutBuffer.length > 0)
+        this.handleAguiStdout(request.sessionId, "\n", resolveStartup);
       if (wire === "agui") {
         // Before the ownership check: the relay tells runtimes apart itself.
         this.options.emitAguiExit?.(request.workspaceId, request.sessionId, {
@@ -1026,6 +1030,13 @@ export class AgentManagerService {
 
     const drained = drainLines(runtime.stdoutBuffer + chunk);
     runtime.stdoutBuffer = trimBuffer(drained.rest);
+    if (runtime.stdoutBuffer.length < drained.rest.length) {
+      // As on the ndjson path: the in-flight line exceeded the cap and will
+      // fail to parse, a lost AG-UI event.
+      console.error(
+        `[CLI] ${sessionId}: AG-UI line exceeded ${MAX_BUFFER_SIZE} bytes and was head-truncated; the event will be dropped.`
+      );
+    }
 
     for (const line of drained.lines) {
       if (line.startsWith(INLINE_COMPAT_PREFIX)) {
