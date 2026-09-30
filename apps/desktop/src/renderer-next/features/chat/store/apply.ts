@@ -167,10 +167,10 @@ const applyQueueUpdated = (
     Object.entries(state.queueCommands).filter(([id, command]) => {
       if (command.state !== "pending") return true;
       const entry = byId.get(id);
-      // The effect is visible: the entry is gone after a remove, or its
-      // text changed after an update.
+      // Kept until the effect is visible: the entry gone after a remove, or
+      // its text changed after an update (or gone: nothing left to show).
       if (command.command === "remove") return entry != null;
-      return entry != null && entry.message === command.text;
+      return entry != null && entry.message !== command.text;
     })
   );
   return { ...state, queue, queueCommands };
