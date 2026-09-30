@@ -81,6 +81,15 @@ export interface GitChangeItem {
   unstagedStatus?: string | null;
   additions?: number | null;
   deletions?: number | null;
+  /** A rename's or copy's source (porcelain `R`/`C`). */
+  origPath?: string;
+  /**
+   * Change fingerprints (spec 04 §26.4 b), computed for the new renderer's
+   * `gitState` rows: `staged` = hash(HEAD commit, index blob), `unstaged` =
+   * hash(index or HEAD blob, worktree bytes). A side without a change has
+   * none.
+   */
+  fingerprints?: { staged?: string; unstaged?: string };
 }
 
 /** A checkout reported by `git worktree list`, scoped to one workspace repo. */
@@ -136,6 +145,12 @@ export interface SetSessionWorktreeResult {
 /** Creates and attaches a worktree as one operation before the first send. */
 export interface MaterializeSessionWorktreeRequest extends CreateWorktreeRequest {
   sessionId: string;
+  /**
+   * The caller's id for this attempt: a repeat with the same one returns the
+   * recorded result and creates nothing (spec 04 §26.4 g). The legacy
+   * renderer sends none, and every call creates a worktree as before.
+   */
+  operationId?: string;
 }
 
 export interface MaterializeSessionWorktreeResult {
@@ -352,6 +367,11 @@ export interface AgentSessionListItem {
   worktreeId: string | null;
   worktreePath: string | null;
   worktreeBranch: string | null;
+  /**
+   * The `operationId` of the materialize that attached the worktree; present
+   * only on sessions the new renderer materialized (spec 04 §26.4 g).
+   */
+  worktreeOperationId?: string;
   /** Set when a routine fire minted this session; such sessions are read-only. */
   routineId: string | null;
   /** Routine runs only: "running" until the turn ends. */

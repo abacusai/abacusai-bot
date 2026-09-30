@@ -20,7 +20,7 @@ export class PreconditionError extends Error {
 export class ForbiddenError extends Error {
   constructor(
     readonly reason: string,
-    message: string
+    message: string = reason
   ) {
     super(message);
   }

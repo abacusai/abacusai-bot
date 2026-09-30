@@ -87,6 +87,15 @@ export type { BrowserEvent } from "./browser";
 export type { ConnectorsEvent } from "./connectors";
 export type { DevicesEvent } from "./devices";
 export type { FileSearchResult, FilesEvent } from "./files";
+export type {
+  CheckoutKey,
+  CheckoutRef,
+  CheckoutStatus,
+  GitDiffResult,
+  GitDiscardEntry,
+  GitDiscardResult,
+} from "./checkout";
+export { checkoutKey, PRIMARY_CHECKOUT } from "./checkout";
 export type { McpRuntimeEvent } from "./mcp";
 export type { MemoryEvent } from "./memory";
 export type { MessagingEvent } from "./messaging";

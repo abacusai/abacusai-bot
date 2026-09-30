@@ -21,6 +21,7 @@ import type {
   BrowserRuntimeState,
   BrowserRuntimeCapture,
 } from "#shared/contracts";
+import type { ConversationKey } from "#shared/conversation-scope";
 import type { PptxReadResult } from "#shared/pptx";
 import type {
   ImportLocalSkillsRequest,
@@ -110,6 +111,13 @@ export interface BrowserRuntimeOperations {
   materialize(
     request: MaterializeBrowserRuntimeRequest
   ): Promise<BrowserRuntimeState> | BrowserRuntimeState;
+  /** A checked local file (real paths; spec 04 §12.8). */
+  materializeFile(request: {
+    conversationKey: ConversationKey;
+    resourceId: string;
+    file: string;
+    root: string;
+  }): Promise<BrowserRuntimeState> | BrowserRuntimeState;
   present(
     request: PresentBrowserRuntimeRequest
   ): Promise<BrowserRuntimeState> | BrowserRuntimeState;

@@ -5,11 +5,17 @@ import type { FileTreeNode, FileTreeRootSnapshot } from "../contracts";
 import type { ConversationKey } from "../conversation-scope";
 import type { PptxDeck } from "../pptx";
 import { mutation, query, subscription } from "./base";
+import { CheckoutRefSchema, type CheckoutKey } from "./checkout";
 import { NoInput } from "./ids";
 
 export type FilesEvent =
-  /** The active workspace's tree root changed: re-read `treeRoot`/`treeChildren`. */
-  | { type: "tree-root-changed" }
+  /**
+   * A checkout's tree root changed: re-read `treeRoot`/`treeChildren` for it.
+   * `checkoutKey` names the checkout (spec 04 §26.4 a): the active
+   * workspace's primary checkout for the legacy event, or a checkout with a
+   * live `git.watch`. Absent only when no workspace is active.
+   */
+  | { type: "tree-root-changed"; checkoutKey?: CheckoutKey }
   /** Show a path in the pane of the conversation that presented it. */
   | { type: "preview-open"; path: string; conversationKey?: ConversationKey };
 
@@ -26,13 +32,30 @@ const HostFileInput = v.object({
   hostRoot: v.pipe(v.string(), v.nonEmpty()),
 });
 
+/**
+ * The tree, search, rename and trash procedures act on the legacy active
+ * workspace without `checkout` (the old renderer's behaviour), and on the
+ * named checkout with it (spec 04 §26.4 a): the session's worktree when it
+ * has one, else the workspace's primary checkout. Every path is resolved,
+ * symlinks included, and must stay inside it (`FORBIDDEN {reason:
+ * "outside"}`).
+ */
 export const files = {
-  treeRoot: query.input(NoInput).output(type<FileTreeRootSnapshot>()),
+  treeRoot: query
+    .input(v.optional(v.object({ checkout: v.optional(CheckoutRefSchema) })))
+    .output(type<FileTreeRootSnapshot>()),
   treeChildren: query
-    .input(v.object({ directoryPath: v.string() }))
+    .input(
+      v.object({
+        directoryPath: v.string(),
+        checkout: v.optional(CheckoutRefSchema),
+      })
+    )
     .output(type<FileTreeNode[]>()),
   search: query
-    .input(v.object({ query: v.string() }))
+    .input(
+      v.object({ query: v.string(), checkout: v.optional(CheckoutRefSchema) })
+    )
     .output(type<FileSearchResult>()),
   /** `RenameLocalFileResult` unwrapped. */
   rename: mutation
@@ -40,12 +63,18 @@ export const files = {
       v.object({
         fromPath: v.pipe(v.string(), v.nonEmpty()),
         toPath: v.pipe(v.string(), v.nonEmpty()),
+        checkout: v.optional(CheckoutRefSchema),
       })
     )
     .output(type<void>()),
   /** `TrashLocalFileResult` unwrapped. */
   trash: mutation
-    .input(v.object({ filePath: v.pipe(v.string(), v.nonEmpty()) }))
+    .input(
+      v.object({
+        filePath: v.pipe(v.string(), v.nonEmpty()),
+        checkout: v.optional(CheckoutRefSchema),
+      })
+    )
     .output(type<void>()),
   /**
    * Pasted or dropped attachments, written under

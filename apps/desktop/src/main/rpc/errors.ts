@@ -45,8 +45,8 @@ export const notFound = (entity: NotFoundEntity, id: string): RpcError =>
 export const badRequest = (message: string): RpcError =>
   new ORPCError("BAD_REQUEST", { status: 400, message, data: {} });
 
-export const conflict = (reason: string): RpcError =>
-  new ORPCError("CONFLICT", { status: 409, message: reason, data: { reason } });
+export const conflict = (reason: string, message: string = reason): RpcError =>
+  new ORPCError("CONFLICT", { status: 409, message, data: { reason } });
 
 export const preconditionFailed = (
   reason: PreconditionReason,
