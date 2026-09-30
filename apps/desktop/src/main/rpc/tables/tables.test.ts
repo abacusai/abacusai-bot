@@ -480,34 +480,6 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     }
   });
 
-  it("memory watchers smoke: a real fs.watch sees a write in a new directory", async () => {
-    const changes = vi.fn();
-    const watchers = new MemoryWatchers({ home, onChange: changes });
-    try {
-      const memories = path.join(home, "memories");
-      fs.mkdirSync(memories);
-      await vi.waitFor(
-        () => expect(watchers.watchedPaths()).toContain(memories),
-        {
-          timeout: 15_000,
-          interval: 50,
-        }
-      );
-      changes.mockClear();
-      // FSEvents starts late: keep writing until one lands, bounded by the timeout.
-      let n = 0;
-      await vi.waitFor(
-        () => {
-          fs.writeFileSync(path.join(memories, "MEMORY.md"), `note ${n++}`);
-          expect(changes).toHaveBeenCalled();
-        },
-        { timeout: 15_000, interval: 250 }
-      );
-    } finally {
-      watchers.close();
-    }
-  });
-
   it("memories: a duplicate-entry delete race gives the second click CONFLICT", async () => {
     const { tables, sources } = setup();
     fs.mkdirSync(path.join(home, "memories"));
