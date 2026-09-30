@@ -10,13 +10,15 @@
  *    buffered until this connection has applied a snapshot.
  * 2. On `hello`: a new epoch (first connect, or main restarted) resets both
  *    positions. Then load a snapshot.
- * 3. Snapshot: discarded if its epoch is not the stream's or its connection
- *    was replaced. Otherwise `begin`, `truncate` when a copy is already held,
- *    one write per row, `commit`, then flush the buffer (epoch first, then
- *    drop `seq <= received`, then apply in order), then `markReady` while
- *    loading or errored.
- * 4. A batch: another epoch reopens; `reset` or a gap resyncs (single
- *    flight); an old seq is dropped; the next one is applied.
+ * 3. Snapshot loop (single flight per connection, one `finally`): each pass
+ *    is discarded if its epoch is not the stream's or its connection was
+ *    replaced. Otherwise `begin`, `truncate` when a copy is already held, one
+ *    write per row, `commit`, then flush the buffer (epoch first, then drop
+ *    `seq <= received`, then apply in order), then `markReady` while loading
+ *    or errored. A reset or gap met in the flush, or a resync asked for
+ *    during the pass, runs another pass in the same loop.
+ * 4. A batch: another epoch reopens; an old seq (a `reset` included) is
+ *    dropped; a newer `reset` or a gap resyncs; the next one is applied.
  * 5. A stream error or an end we did not ask for reopens, with backoff.
  *
  * Positions: `received` is the highest seq committed to the collection's
@@ -68,13 +70,28 @@ export interface IpcCollectionStatus {
   state: SyncState;
 }
 
+/** What a mutation handler's `collection` offers the echo wait. */
+export interface SyncStarter {
+  readonly status: string;
+  startSyncImmediate(): void;
+}
+
 export interface IpcCollectionUtils extends UtilsRecord {
   /** Main's batch at `pos` is in the sync queue (mutation echo). */
   awaitReceived(pos: TablePositionLike): Promise<void>;
   /** Main's batch at `pos` is visible in the collection (loaders, tests). */
   awaitApplied(pos: TablePositionLike): Promise<void>;
-  /** Re-snapshot now; resolves once the snapshot is received. */
+  /**
+   * Re-snapshot now; resolves once a snapshot requested after this call is
+   * received. Rejects (`AbortError`) when the collection is not syncing.
+   */
   resync(): Promise<void>;
+  /**
+   * A write's echo, for writes made outside the collection handlers (such
+   * as `updatePrefs`): `pos` received, or after `echoTimeoutMs` a covering
+   * resync, bounded the same way. Starts a lazy collection's sync.
+   */
+  awaitEcho(pos: TablePositionLike, collection?: SyncStarter): Promise<void>;
   status(): IpcCollectionStatus;
 }
 
@@ -85,7 +102,12 @@ export interface IpcCollectionConfig<Row extends object, Key extends string> {
   table: () => Promise<IpcTableClient<Row, Key>>;
   getKey: (row: Row) => Key;
   toInsertInput?: (row: Row) => unknown;
-  toUpdateInput?: (key: Key, changes: Partial<Row>, modified: Row) => unknown;
+  toUpdateInput?: (
+    key: Key,
+    changes: Partial<Row>,
+    modified: Row,
+    original: Row
+  ) => unknown;
   toDeleteInput?: (key: Key, original: Row) => unknown;
   /** How long a handler waits for its echo before it resyncs. */
   echoTimeoutMs?: number;
@@ -108,13 +130,11 @@ export const DEFAULT_ECHO_TIMEOUT_MS = 10_000;
 export const defaultRetryDelayMs = (attempt: number): number =>
   [500, 1_000, 2_000][attempt] ?? 5_000;
 
-const abortError = (): Error => {
-  const error = new Error("The collection's sync was cleaned up");
+const abortError = (message: string): Error => {
+  const error = new Error(message);
   error.name = "AbortError";
   return error;
 };
-
-class EchoTimeout extends Error {}
 
 interface Waiter {
   epoch: string;
@@ -141,6 +161,30 @@ const deferred = (): Deferred => {
   return { promise, resolve, reject };
 };
 
+/** A `resync()` caller: settled by the first snapshot pass started after it. */
+interface SnapshotWaiter extends Deferred {
+  /** Passes already started when it asked; none of those can answer it. */
+  after: number;
+}
+
+/** True if `promise` settles within `ms`; its rejection is rethrown. */
+const settlesWithin = async (
+  promise: Promise<void>,
+  ms: number
+): Promise<boolean> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.then(() => true),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 type Batch<Row, Key> = ChangeBatch<Row, Key>;
 type Applied = "ok" | "resync" | "reopen";
 
@@ -150,8 +194,13 @@ interface Connection<Row, Key> {
   /** Batches held while no snapshot has been applied (or a resync runs). */
   buffering: boolean;
   buffer: Batch<Row, Key>[];
-  /** The in-flight snapshot load: single flight per connection. */
+  /**
+   * The snapshot loop in flight: single flight per connection. It runs
+   * passes while `again` is set and clears itself in one `finally`.
+   */
   loading: Promise<void> | null;
+  /** Another pass is wanted (a reset, a gap, a resync call). */
+  again: boolean;
   /** Hello seen on this connection: a snapshot may be loaded. */
   helloed: boolean;
   /** Closed by us to reopen at once (epoch mismatch), not by a failure. */
@@ -178,7 +227,9 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
   let snapshotAppliedEpoch: string | null = null;
   let receivedWaiters: Waiter[] = [];
   let appliedWaiters: Waiter[] = [];
-  let snapshotWaiters: Deferred[] = [];
+  let snapshotWaiters: SnapshotWaiter[] = [];
+  /** Snapshot passes started, across connections and sessions. */
+  let passesStarted = 0;
   /** The live session's resync, or null between sessions. */
   let requestResync: (() => void) | null = null;
 
@@ -226,20 +277,48 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       }
     });
 
-  const nextSnapshot = (): Promise<void> => {
-    const next = deferred();
+  const resync = (): Promise<void> => {
+    // No session: nothing would ever answer it.
+    if (requestResync == null)
+      return Promise.reject(abortError("The collection is not syncing"));
+    const next: SnapshotWaiter = { ...deferred(), after: passesStarted };
     snapshotWaiters.push(next);
+    requestResync();
     return next.promise;
+  };
+
+  /** Mutating a lazy collection nobody has read yet must still see its echo. */
+  const ensureSyncing = (collection: SyncStarter | undefined): void => {
+    if (collection == null) return;
+    if (collection.status === "idle" || collection.status === "cleaned-up")
+      collection.startSyncImmediate();
+  };
+
+  /**
+   * Main's batch at `pos` is in the sync queue. After `echoTimeoutMs` the
+   * write happened but its batch is late or lost: ask for a snapshot started
+   * after now, which therefore covers `pos`, and wait (bounded again) for
+   * `pos` to be received. Past that, resolve anyway; the next snapshot
+   * reconciles.
+   */
+  const awaitEcho = async (
+    pos: TablePositionLike,
+    collection?: SyncStarter
+  ): Promise<void> => {
+    ensureSyncing(collection);
+    // Through `utils`, so a caller that wraps it (a test) sees the wait.
+    const received = utils.awaitReceived(pos);
+    if (await settlesWithin(received, echoTimeoutMs)) return;
+    ensureSyncing(collection);
+    utils.resync().catch(() => undefined);
+    await settlesWithin(received, echoTimeoutMs);
   };
 
   const utils: IpcCollectionUtils = {
     awaitReceived: (pos) => wait("received", pos),
     awaitApplied: (pos) => wait("applied", pos),
-    resync: () => {
-      const next = nextSnapshot();
-      requestResync?.();
-      return next;
-    },
+    resync,
+    awaitEcho,
     status: () => ({
       epoch,
       receivedSeq,
@@ -247,25 +326,6 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       connection: connectionCount,
       state,
     }),
-  };
-
-  /** The echo is in the queue, or after `echoTimeoutMs` a resync is. */
-  const awaitEcho = async (pos: TablePositionLike): Promise<void> => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      await Promise.race([
-        utils.awaitReceived(pos),
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new EchoTimeout()), echoTimeoutMs);
-        }),
-      ]);
-    } catch (error) {
-      if (!(error instanceof EchoTimeout)) throw error;
-      // The write happened; the snapshot replaces the optimistic state.
-      await utils.resync();
-    } finally {
-      clearTimeout(timer);
-    }
   };
 
   const sync: SyncConfig<Row, Key>["sync"] = ({
@@ -308,6 +368,28 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       else receipt.then(mark, () => undefined);
     };
 
+    /**
+     * One sync transaction. A throw between `begin` and `commit` (a server
+     * bug such as a duplicate key) cancels it, so no half-written
+     * transaction stays pending; null tells the caller to resync.
+     */
+    const transaction = (
+      writes: () => void
+    ): ReturnType<typeof commit> | null => {
+      begin();
+      try {
+        writes();
+      } catch (error) {
+        const cancelled = new AbortController();
+        cancelled.abort();
+        const receipt = commit(cancelled.signal);
+        if (receipt !== true) receipt.catch(() => undefined);
+        console.error(`[db] ${config.id}: a sync write failed`, error);
+        return null;
+      }
+      return commit();
+    };
+
     const reopen = (connection: Connection<Row, Key>): void => {
       if (!isCurrent(connection)) return;
       connection.deliberate = true;
@@ -318,46 +400,41 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       if (collection.status === "loading") markError(error);
     };
 
-    const applyBatch = (
-      connection: Connection<Row, Key>,
-      batch: Batch<Row, Key>
-    ): Applied => {
+    const applyBatch = (batch: Batch<Row, Key>): Applied => {
       if (batch.epoch !== epoch) return "reopen";
-      if (batch.kind === "reset") return "resync";
       if (batch.kind === "hello") return "reopen";
+      // Already covered, a `reset` included: the snapshot that brought us
+      // here was read after it. An overflow reset carries the feed's current
+      // seq, above anything its stream lost, so it is still honoured.
       if (batch.seq <= receivedSeq) return "ok";
+      if (batch.kind === "reset") return "resync";
       if (batch.seq !== receivedSeq + 1) return "resync";
-      begin();
-      for (const change of batch.changes) {
-        const message: ChangeMessageOrDeleteKeyMessage<Row, Key> =
-          change.type === "delete"
-            ? { type: "delete", key: change.key }
-            : // Full rows (rowUpdateMode "full"), so an update is an upsert.
-              // An insert is written as one too: TanStack checks inserts
-              // against its *applied* rows, which lag a delete still queued
-              // behind a persisting transaction, and would call a re-created
-              // row a duplicate.
-              { type: "update", value: change.value };
-        write(message);
-      }
-      const receipt = commit();
+      const receipt = transaction(() => {
+        for (const change of batch.changes) {
+          const message: ChangeMessageOrDeleteKeyMessage<Row, Key> =
+            change.type === "delete"
+              ? { type: "delete", key: change.key }
+              : // Full rows (rowUpdateMode "full"), so an update is an
+                // upsert. An insert is written as one too: TanStack checks
+                // inserts against its *applied* rows, which lag a delete
+                // still queued behind a persisting transaction, and would
+                // call a re-created row a duplicate.
+                { type: "update", value: change.value };
+          write(message);
+        }
+      });
+      if (receipt == null) return "resync";
       receivedSeq = batch.seq;
       trackApplied(receipt, batch.epoch, batch.seq, false);
       settleReceived();
       return "ok";
     };
 
-    const handle = (
-      connection: Connection<Row, Key>,
-      result: Applied
-    ): void => {
-      if (result === "resync") void resync(connection);
-      else if (result === "reopen") reopen(connection);
-    };
-
-    const loadSnapshot = async (
+    /** One snapshot pass: fetch, replace, flush the buffer. */
+    const snapshotPass = async (
       connection: Connection<Row, Key>
     ): Promise<void> => {
+      const pass = ++passesStarted;
       connection.buffering = true;
       state = holdsSnapshot ? "resyncing" : "connecting";
       let snapshot: TableSnapshot<Row>;
@@ -381,10 +458,16 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
         return;
       }
 
-      begin();
-      if (holdsSnapshot) truncate();
-      for (const row of snapshot.rows) write({ type: "insert", value: row });
-      const receipt = commit();
+      const replace = holdsSnapshot;
+      const receipt = transaction(() => {
+        if (replace) truncate();
+        for (const row of snapshot.rows) write({ type: "insert", value: row });
+      });
+      if (receipt == null) {
+        failWhileLoading(new Error(`${config.id}: the snapshot did not apply`));
+        connection.abort.abort();
+        return;
+      }
       holdsSnapshot = true;
       receivedSeq = snapshot.seq;
       snapshotReceivedEpoch = snapshot.epoch;
@@ -395,7 +478,7 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       let next: Applied = "ok";
       while (connection.buffer.length > 0 && next === "ok") {
         const batch = connection.buffer.shift()!;
-        next = applyBatch(connection, batch);
+        next = applyBatch(batch);
       }
       if (!isCurrent(connection)) return;
       if (next === "reopen") {
@@ -403,31 +486,48 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
         return;
       }
       if (next === "resync") {
-        connection.loading = loadSnapshot(connection);
+        connection.again = true;
         return;
       }
       connection.buffering = false;
       state = "live";
+      // Back off from zero again only once a snapshot has applied.
+      attempt = 0;
       if (collection.status === "loading" || collection.status === "error")
         markReady();
-      const waiters = snapshotWaiters;
-      snapshotWaiters = [];
-      for (const waiter of waiters) waiter.resolve();
+      snapshotWaiters = snapshotWaiters.filter((waiter) => {
+        if (waiter.after >= pass) return true;
+        waiter.resolve();
+        return false;
+      });
     };
 
-    const resync = (connection: Connection<Row, Key>): Promise<void> => {
+    const load = (connection: Connection<Row, Key>): Promise<void> => {
       if (!isCurrent(connection) || !connection.helloed)
         return Promise.resolve();
+      connection.again = true;
       if (connection.loading != null) return connection.loading;
-      const loading = loadSnapshot(connection).finally(() => {
-        if (connection.loading === loading) connection.loading = null;
-      });
+      const loading = (async () => {
+        // Let the assignment below happen before any pass can finish.
+        await Promise.resolve();
+        try {
+          while (connection.again && isCurrent(connection)) {
+            connection.again = false;
+            await snapshotPass(connection);
+          }
+        } catch (error) {
+          console.error(`[db] ${config.id}: the snapshot failed`, error);
+          if (isCurrent(connection)) connection.abort.abort();
+        } finally {
+          connection.loading = null;
+        }
+      })();
       connection.loading = loading;
       return loading;
     };
 
     requestResync = () => {
-      if (current != null && current.helloed) void resync(current);
+      if (current != null && current.helloed) void load(current);
     };
 
     const onBatch = (
@@ -437,21 +537,22 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       if (!isCurrent(connection)) return;
       if (batch.kind === "hello" && !connection.helloed) {
         connection.helloed = true;
-        attempt = 0;
         if (batch.epoch !== epoch) {
           epoch = batch.epoch;
           seenEpochs.add(batch.epoch);
           receivedSeq = -1;
           appliedSeq = -1;
         }
-        void resync(connection);
+        void load(connection);
         return;
       }
       if (connection.buffering) {
         connection.buffer.push(batch);
         return;
       }
-      handle(connection, applyBatch(connection, batch));
+      const result = applyBatch(batch);
+      if (result === "resync") void load(connection);
+      else if (result === "reopen") reopen(connection);
     };
 
     const sleep = (ms: number): Promise<void> =>
@@ -474,6 +575,7 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
           buffering: true,
           buffer: [],
           loading: null,
+          again: false,
           helloed: false,
           deliberate: false,
         };
@@ -502,6 +604,8 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
         } finally {
           session.signal.removeEventListener("abort", onSessionAbort);
           connection.abort.abort();
+          // A dead connection is never current, not even while we sleep.
+          if (current === connection) current = null;
         }
         if (session.signal.aborted) return;
         if (connection.deliberate) continue;
@@ -516,7 +620,7 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       session.abort();
       requestResync = null;
       current = null;
-      const error = abortError();
+      const error = abortError("The collection's sync was cleaned up");
       for (const waiter of [...receivedWaiters, ...appliedWaiters])
         waiter.reject(error);
       receivedWaiters = [];
@@ -538,40 +642,48 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
 
   if (config.toInsertInput != null) {
     const toInput = config.toInsertInput;
-    options.onInsert = async ({ transaction }) => {
+    options.onInsert = async ({ transaction, collection }) => {
+      ensureSyncing(collection);
       for (const mutation of transaction.mutations) {
         const { insert } = await table();
         if (insert == null) throw new Error(`${config.id} has no insert`);
-        await awaitEcho(await insert(toInput(mutation.modified) as never));
+        await awaitEcho(
+          await insert(toInput(mutation.modified) as never),
+          collection
+        );
       }
     };
   }
   if (config.toUpdateInput != null) {
     const toInput = config.toUpdateInput;
-    options.onUpdate = async ({ transaction }) => {
+    options.onUpdate = async ({ transaction, collection }) => {
+      ensureSyncing(collection);
       for (const mutation of transaction.mutations) {
+        // Built before the table resolves, so a refused field throws first.
+        const input = toInput(
+          mutation.key as Key,
+          mutation.changes as Partial<Row>,
+          mutation.modified,
+          mutation.original as Row
+        );
         const { update } = await table();
         if (update == null) throw new Error(`${config.id} has no update`);
-        await awaitEcho(
-          await update(
-            toInput(
-              mutation.key as Key,
-              mutation.changes as Partial<Row>,
-              mutation.modified
-            ) as never
-          )
-        );
+        await awaitEcho(await update(input as never), collection);
       }
     };
   }
   if (config.toDeleteInput != null) {
     const toInput = config.toDeleteInput;
-    options.onDelete = async ({ transaction }) => {
+    options.onDelete = async ({ transaction, collection }) => {
+      ensureSyncing(collection);
       for (const mutation of transaction.mutations) {
         const { delete: remove } = await table();
         if (remove == null) throw new Error(`${config.id} has no delete`);
         await awaitEcho(
-          await remove(toInput(mutation.key as Key, mutation.original) as never)
+          await remove(
+            toInput(mutation.key as Key, mutation.original) as never
+          ),
+          collection
         );
       }
     };
