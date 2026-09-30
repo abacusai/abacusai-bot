@@ -52,7 +52,8 @@ const runRecord = (
   dir: string,
   sessionId: string,
   startedAt: number,
-  endedAt: number
+  endedAt: number,
+  outcome = "completed"
 ) => {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
@@ -60,7 +61,7 @@ const runRecord = (
     [
       `# Run at ${iso(startedAt)}`,
       "",
-      "- Outcome: completed",
+      `- Outcome: ${outcome}`,
       `- Ended: ${iso(endedAt)}`,
       `- Session: ${sessionId}`,
       "",
@@ -109,7 +110,8 @@ const legacyHome = () => {
     path.join(home, "routines", "job-a", "runs"),
     "s-stuck",
     T0 + 100_000,
-    T0 + 1_900_000 + 500
+    T0 + 1_900_000 + 500,
+    "failed"
   );
   // job-b's records live inside its project.
   runRecord(

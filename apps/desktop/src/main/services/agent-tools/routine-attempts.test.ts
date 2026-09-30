@@ -193,8 +193,8 @@ describe("classifyLegacyRuns", () => {
       ]
     );
     // Oldest first: the first timeout takes the failed record even though
-    // the completed one ended closer to it; the second takes what is left.
-    expect(runs.map((run) => run.sessionId)).toEqual(["s-done", "s-hung"]);
+    // the completed one ended closer to it; the second stays unlinked.
+    expect(runs.map((run) => run.sessionId)).toEqual([null, "s-hung"]);
   });
 
   it("links a legacy start failure to the session it stored just before", () => {

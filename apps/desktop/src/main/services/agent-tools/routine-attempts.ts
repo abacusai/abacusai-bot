@@ -163,7 +163,7 @@ const timedOutSession = (
     claimed
   ) ??
   closest(
-    records.filter((record) => record.outcome !== "failed"),
+    records.filter((record) => record.outcome == null),
     at,
     (record) => record.endedAt,
     claimed
