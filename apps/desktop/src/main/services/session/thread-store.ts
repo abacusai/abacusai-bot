@@ -190,7 +190,7 @@ export const isProvenAfterClear = (
  */
 export interface ArchiveIndex {
   version: 1;
-  archived: Record<string, { fingerprint: string }>;
+  archived: Record<string, { fingerprint: string; updatedAt: string }>;
 }
 
 export const readArchiveIndex = (threadsDir: string): ArchiveIndex => {
@@ -576,11 +576,11 @@ export class ThreadStore {
     if (this.v1Archived) return true;
     const entry = readArchiveIndex(path.join(this.home(), THREADS_DIR_NAME))
       .archived[sessionId];
-    return (
-      entry !== undefined &&
-      twin.source.fingerprint !== undefined &&
-      entry.fingerprint === twin.source.fingerprint
-    );
+    if (entry === undefined) return false;
+    // The twin holds the archived bytes (by time for a pre-fingerprint twin).
+    return twin.source.fingerprint !== undefined
+      ? entry.fingerprint === twin.source.fingerprint
+      : entry.updatedAt === twin.source.updatedAt;
   }
 
   private convert(
