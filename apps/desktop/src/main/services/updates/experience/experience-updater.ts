@@ -72,6 +72,21 @@ const exists = async (file: string): Promise<boolean> => {
   }
 };
 
+/**
+ * Whether activating a release with `rendererVersion` must wait on the
+ * swap's readiness before it is committed. Compared with the committed
+ * renderer, not a pending candidate's: a release that carries a pending
+ * (never seen ready) renderer must pass readiness itself. And while an
+ * activation is pending, the next one waits too, so it never commits the
+ * pending renderer.
+ */
+export const rendererChangeNeedsReadiness = (
+  store: Pick<ExperienceStore, "committedRendererVersion" | "pendingVersion">,
+  rendererVersion: string
+): boolean =>
+  rendererVersion !== store.committedRendererVersion ||
+  store.pendingVersion !== null;
+
 export class ExperienceUpdater {
   #checking: Promise<void> | undefined;
   #target: string | undefined;
@@ -254,8 +269,10 @@ export class ExperienceUpdater {
         await fs.rename(temporary, installed);
       }
 
-      const rendererChanged =
-        manifest.rendererVersion !== store.rendererVersion;
+      const rendererChanged = rendererChangeNeedsReadiness(
+        store,
+        manifest.rendererVersion
+      );
       const candidate = store.install(manifest, manifestSha256);
 
       // A new renderer is committed only once its swap passed readiness
