@@ -39,9 +39,14 @@ export class BuiltinToolPermissions {
   constructor(private readonly deps: BuiltinToolPermissionsDeps) {}
 
   /** For a pane that just mounted. */
-  listPending(conversationKey: ConversationKey): BrowserPermissionRequest[] {
+  listPending(conversationKey?: ConversationKey): BrowserPermissionRequest[] {
+    // No key: every conversation's (a subscriber that watches them all).
     return [...this.pendingBrowserPermissions.values()]
-      .filter((entry) => entry.request.conversationKey === conversationKey)
+      .filter(
+        (entry) =>
+          conversationKey == null ||
+          entry.request.conversationKey === conversationKey
+      )
       .map((entry) => entry.request);
   }
 

@@ -7,6 +7,12 @@ const DEFAULT_TERMINAL_ID = "terminal-1";
 
 const utf8Length = (data: string): number => Buffer.byteLength(data, "utf8");
 
+/** A chunk's pending size against the 8 MB cap: UTF-8 bytes, as offsets are. */
+export const terminalChunkSize = (chunk: TerminalOutputChunk): number =>
+  chunk.type === "data" || chunk.type === "snapshot"
+    ? utf8Length(chunk.data)
+    : 0;
+
 export const terminalRouter = impl.terminal.router({
   start: impl.terminal.start.handler(({ input, context }) =>
     context.deps.serviceHost.startTerminalSession(input)
@@ -33,8 +39,9 @@ export const terminalRouter = impl.terminal.router({
   },
   /**
    * Lossless and offset-addressed: `snapshot` first, then `data` chunks whose
-   * `offset` is the cumulative byte count, then exactly one `exit`. The
-   * listener is attached before the snapshot is read, in the same tick, so
+   * `offset` is the cumulative byte count, then exactly one `exit` or
+   * `retired` (closed, disposed, or superseded by a scope promotion). The
+   * listeners are attached before the snapshot is read, in the same tick, so
    * every chunk after the snapshot's offset is in the queue.
    */
   output: impl.terminal.output.handler(({ input, context, signal }) => {
@@ -49,7 +56,20 @@ export const terminalRouter = impl.terminal.router({
       signal,
       attach: (push, end) => {
         endStream = end;
-        return context.deps.bus.listen(
+        const stopRetired = context.deps.bus.listenChannel(
+          "terminal-retired",
+          (event) => {
+            if (
+              event.conversationKey !== input.conversationKey ||
+              event.terminalId !== terminalId ||
+              event.generation !== input.generation
+            )
+              return;
+            push({ type: "retired", reason: event.reason });
+            end();
+          }
+        );
+        const stopEvents = context.deps.bus.listen(
           (event) =>
             (event.type === "terminal-output" ||
               event.type === "terminal-exited") &&
@@ -70,6 +90,10 @@ export const terminalRouter = impl.terminal.router({
             }
           }
         );
+        return () => {
+          stopRetired();
+          stopEvents();
+        };
       },
       initial: () => {
         const state = serviceHost.terminalOutputState({
@@ -86,13 +110,17 @@ export const terminalRouter = impl.terminal.router({
           from: state.from,
           offset: state.offset,
         };
+        // Exit and retirement are sticky: a reader arriving after either
+        // gets it straight away, and the stream then returns.
+        if (state.retired != null) {
+          endStream();
+          return [snapshot, { type: "retired", reason: state.retired }];
+        }
         if (state.exit == null) return [snapshot];
-        // Exit is sticky: a reader arriving after it gets it straight away,
-        // and the stream then returns.
         endStream();
         return [snapshot, { type: "exit", ...state.exit }];
       },
-      sizeOf: (chunk) => (chunk.type === "exit" ? 0 : chunk.data.length),
+      sizeOf: terminalChunkSize,
     });
   }),
   events: impl.terminal.events.handler(({ input, context, signal }) => {

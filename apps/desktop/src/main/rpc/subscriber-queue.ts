@@ -86,6 +86,11 @@ export class SubscriberQueue<T> {
     return this.#ended;
   }
 
+  /** Ended by `fail` (an overflow): nothing more will be delivered. */
+  get failed(): boolean {
+    return this.#failure != null;
+  }
+
   push(event: T): void {
     if (this.#ended) return;
 

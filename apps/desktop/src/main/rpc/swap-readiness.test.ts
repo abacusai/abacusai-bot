@@ -113,6 +113,7 @@ import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 import {
   MAX_SWAP_READINESS_ATTEMPTS,
   RendererHost,
+  RendererSwapScheduler,
   SWAP_READY_TIMEOUT_MS,
   SwapNotReady,
   SwapRetryBudget,
@@ -126,6 +127,7 @@ import {
   RPC_CONNECT_CHANNEL,
   type MessagePortTransport,
 } from "./transports/message-port";
+import { publishToWindowViews } from "./window-events";
 
 type FakeContents = InstanceType<typeof mocks.FakeWebContents>;
 
@@ -286,6 +288,56 @@ describe("swap readiness (A-T10)", () => {
     await vi.waitFor(() => expect(bus.listenerCount()).toBe(baseline));
   });
 
+  it("gives a candidate the window changes made between its subscription and the flip", async () => {
+    const { host } = makeHost();
+    const swapping = host.swap(new URL("app://bundle.new/"), {
+      barrier: "subscriptions",
+    });
+    const next = await candidate();
+    const client = await connectAndSubscribe(next);
+    const events = await client.window.events();
+
+    // Full screen entered while the candidate is still hidden: main publishes
+    // to every view in the window, as index.ts does.
+    const state = {
+      isFullScreen: true,
+      isMaximized: false,
+      isFocused: true,
+    };
+    publishToWindowViews(
+      (channel, payload) => bus.dispatchChannel(channel, payload),
+      transport.registeredIds(),
+      host.webContents.id,
+      { type: "state", state: state as never }
+    );
+    await expect(events.next()).resolves.toMatchObject({
+      value: { type: "state", state: { isFullScreen: true } },
+    });
+
+    readiness.report(next.id, { barrier: "subscriptions" });
+    await expect(swapping).resolves.toBe(true);
+    await events.return();
+  });
+
+  it("fails at once, not at the timeout, when the candidate is destroyed", async () => {
+    vi.useFakeTimers();
+    const { host } = makeHost();
+    const first = host.webContents;
+    const swapping = host.swap(new URL("app://bundle.new/"), {
+      barrier: "subscriptions",
+    });
+    const rejected = expect(swapping).rejects.toMatchObject({
+      name: "SwapNotReady",
+      outcome: "failed",
+    });
+    const next = await candidate();
+    next.close();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await rejected;
+    expect(host.webContents).toBe(first);
+  });
+
   it("keeps the legacy first-commit barrier unless asked", async () => {
     const { host } = makeHost();
     const first = host.webContents;
@@ -297,6 +349,83 @@ describe("swap readiness (A-T10)", () => {
 
     await expect(swapping).resolves.toBe(true);
     expect(host.webContents).not.toBe(first);
+  });
+
+  describe("the swap scheduler's retries (impl-r1)", () => {
+    const setupScheduler = () => {
+      let target = new URL("app://bundle.v2/");
+      const swap = vi.fn(
+        async (_url: URL, _options?: unknown): Promise<boolean> => {
+          throw new SwapNotReady("timeout");
+        }
+      );
+      const log = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const scheduler = new RendererSwapScheduler({
+        target: () => target,
+        host: () => ({ swap }),
+        busy: () => false,
+        barrier: "subscriptions",
+        pollMs: 1_000,
+        log,
+      });
+      return {
+        scheduler,
+        swap,
+        log,
+        retarget: (url: string) => {
+          target = new URL(url);
+        },
+      };
+    };
+
+    it("retries at the next idle tick, never in the same one", async () => {
+      vi.useFakeTimers();
+      const { scheduler, swap } = setupScheduler();
+
+      scheduler.schedule("2.0.0");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(swap).toHaveBeenCalledTimes(1);
+      expect(scheduler.pending).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(999);
+      expect(swap).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(swap).toHaveBeenCalledTimes(2);
+      scheduler.cancel();
+    });
+
+    it("stops after three failures of the URL it swapped to, checking before the swap", async () => {
+      vi.useFakeTimers();
+      const { scheduler, swap, log } = setupScheduler();
+
+      scheduler.schedule("2.0.0");
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(swap).toHaveBeenCalledTimes(MAX_SWAP_READINESS_ATTEMPTS);
+      expect(scheduler.pending).toBe(false);
+
+      // Scheduled again for the same bundle: refused before any swap.
+      scheduler.schedule("2.0.0");
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(swap).toHaveBeenCalledTimes(MAX_SWAP_READINESS_ATTEMPTS);
+      expect(log.warn).toHaveBeenCalled();
+    });
+
+    it("keys the budget on the bundle URL, not the version label", async () => {
+      vi.useFakeTimers();
+      const { scheduler, swap, retarget } = setupScheduler();
+
+      scheduler.schedule("2.0.0");
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(swap).toHaveBeenCalledTimes(3);
+
+      // The same label, now served from another bundle: its own budget.
+      retarget("app://bundle.v2b/");
+      scheduler.schedule("2.0.0");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(swap).toHaveBeenCalledTimes(4);
+      expect(String(swap.mock.calls.at(-1)?.[0])).toBe("app://bundle.v2b/");
+      scheduler.cancel();
+    });
   });
 
   it("retries a version that never became ready at most three times", () => {

@@ -95,8 +95,116 @@ export class SwapRetryBudget {
     return failures < this.max;
   }
 
+  /** Whether another attempt is allowed, before making it. */
+  allows(version: string): boolean {
+    return this.failures(version) < this.max;
+  }
+
   failures(version: string): number {
     return this.#failures.get(version) ?? 0;
+  }
+}
+
+/** How often a pending swap looks for a quiet moment. */
+export const SWAP_IDLE_POLL_MS = 5_000;
+
+export interface RendererSwapSchedulerOptions {
+  /** The bundle to swap to now: the active renderer URL, or none. */
+  target(): URL | null | undefined;
+  host(): Pick<RendererHost, "swap"> | null;
+  /** An agent turn, a live terminal or recent input: not now. */
+  busy(): boolean;
+  barrier: SwapBarrier;
+  /** Development stays on its dev server. */
+  disabled?: () => boolean;
+  budget?: SwapRetryBudget;
+  pollMs?: number;
+  log?: Pick<Console, "log" | "warn" | "error">;
+}
+
+/**
+ * Swaps to a newly activated renderer bundle at the first quiet moment, and
+ * retries one that did not become ready at a later quiet moment (never in
+ * the same tick), at most MAX_SWAP_READINESS_ATTEMPTS times per bundle URL:
+ * the budget is keyed and checked on the URL actually swapped to, before
+ * the swap, so a version whose URL changed is not charged for another's
+ * failures and an exhausted one is not attempted again.
+ */
+export class RendererSwapScheduler {
+  readonly #options: RendererSwapSchedulerOptions;
+  readonly #budget: SwapRetryBudget;
+  #timer: ReturnType<typeof setInterval> | null = null;
+
+  constructor(options: RendererSwapSchedulerOptions) {
+    this.#options = options;
+    this.#budget = options.budget ?? new SwapRetryBudget();
+  }
+
+  get pending(): boolean {
+    return this.#timer != null;
+  }
+
+  /** `deferred`: wait for the next idle tick before the first attempt. */
+  schedule(version: string, { deferred = false } = {}): void {
+    this.cancel();
+    if (!deferred && this.#attempt(version)) return;
+    const timer = setInterval(() => {
+      if (this.#attempt(version) && this.#timer === timer) this.cancel();
+    }, this.#options.pollMs ?? SWAP_IDLE_POLL_MS);
+    timer.unref?.();
+    this.#timer = timer;
+  }
+
+  cancel(): void {
+    if (this.#timer != null) clearInterval(this.#timer);
+    this.#timer = null;
+  }
+
+  /** True when there is nothing left to wait for. */
+  #attempt(version: string): boolean {
+    const options = this.#options;
+    const log = options.log ?? console;
+    if (options.disabled?.() === true) return true;
+    const url = options.target();
+    if (!url) return true;
+    const host = options.host();
+    if (host == null) return true;
+    const key = url.href;
+    if (!this.#budget.allows(key)) {
+      log.warn(
+        `[experience] ${version} never became ready; no more swaps until relaunch`
+      );
+      return true;
+    }
+    if (options.busy()) return false;
+
+    host
+      .swap(url, {
+        shouldAbort: () => options.busy(),
+        barrier: options.barrier,
+      })
+      .then(
+        (swapped) => {
+          if (swapped) log.log(`[experience] renderer swapped to ${version}`);
+        },
+        (error: unknown) => {
+          if (error instanceof SwapAborted) {
+            this.schedule(version);
+            return;
+          }
+          if (error instanceof SwapNotReady) {
+            if (this.#budget.fail(key))
+              this.schedule(version, { deferred: true });
+            else
+              log.warn(
+                `[experience] ${version} never became ready; no more swaps until relaunch`
+              );
+            return;
+          }
+          log.error("[experience] renderer swap failed", error);
+        }
+      );
+    return true;
   }
 }
 

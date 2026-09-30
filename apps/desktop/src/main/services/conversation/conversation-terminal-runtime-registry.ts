@@ -46,6 +46,17 @@ export type ConversationTerminalExitEvent = ConversationTerminalEvent & {
   signal: number | null;
 };
 
+/**
+ * Why a generation ended without its own exit: closed (explicitly, or with
+ * its scope or workspace), or superseded by a scope promotion that moved the
+ * shell to a new key and generation.
+ */
+export type TerminalRetireReason = "closed" | "superseded";
+
+export type ConversationTerminalRetireEvent = ConversationTerminalEvent & {
+  reason: TerminalRetireReason;
+};
+
 export type ConversationTerminalAttachment = ConversationTerminalEvent & {
   cols: number;
   rows: number;
@@ -72,6 +83,12 @@ export type ConversationTerminalRuntimeRegistryOptions = {
   maxScrollbackBytes?: number;
   onOutput?: (event: ConversationTerminalOutputEvent) => void;
   onExit?: (event: ConversationTerminalExitEvent) => void;
+  /**
+   * A generation that ends without `onExit`: `close` and the disposals
+   * invalidate it before killing the PTY (so its exit is suppressed), and a
+   * promotion re-keys it. Readers of that generation end on this.
+   */
+  onRetire?: (event: ConversationTerminalRetireEvent) => void;
 };
 
 type Runtime = {
@@ -103,6 +120,8 @@ export type ConversationTerminalOutputState = {
   offset: number;
   /** Set once the shell exited; sticky for a reader that arrives late. */
   exit: { exitCode: number | null; signal: number | null } | null;
+  /** Set once the generation was closed or superseded; sticky likewise. */
+  retired: TerminalRetireReason | null;
 };
 
 type ExitedRuntime = {
@@ -110,6 +129,7 @@ type ExitedRuntime = {
   scrollback: BoundedScrollback;
   exitCode: number | null;
   signal: number | null;
+  retired: TerminalRetireReason | null;
 };
 
 const DEFAULT_SCROLLBACK_BYTES = 2 * 1024 * 1024;
@@ -187,6 +207,15 @@ export class BoundedScrollback {
 
   read(): string {
     return Buffer.concat(this.chunks, this.byteLength).toString("utf8");
+  }
+
+  /** A frozen copy with the same offsets. */
+  clone(): BoundedScrollback {
+    const copy = new BoundedScrollback(this.maximumBytes);
+    copy.chunks = [...this.chunks];
+    copy.byteLength = this.byteLength;
+    copy.endOffset = this.endOffset;
+    return copy;
   }
 }
 
@@ -308,14 +337,16 @@ export class ConversationTerminalRuntimeRegistry {
 
     const { scrollback } = record;
     const delta = fromOffset == null ? null : scrollback.readFrom(fromOffset);
+    const ended = runtime == null ? exited : null;
     return {
       data: delta ?? scrollback.read(),
       from: delta == null ? scrollback.start : fromOffset!,
       offset: scrollback.end,
       exit:
-        runtime != null || exited == null
+        ended == null || ended.retired != null
           ? null
-          : { exitCode: exited.exitCode, signal: exited.signal },
+          : { exitCode: ended.exitCode, signal: ended.signal },
+      retired: ended?.retired ?? null,
     };
   }
 
@@ -377,6 +408,9 @@ export class ConversationTerminalRuntimeRegistry {
     this.invalidate(id);
     if (runtime != null) {
       this.runtimes.delete(id);
+      // Its exit is suppressed from here on (it is no longer current), so
+      // readers of this generation are told now.
+      this.retire(runtime, "closed");
       runtime.pty.kill();
     }
     return true;
@@ -431,6 +465,9 @@ export class ConversationTerminalRuntimeRegistry {
       const sourceId = runtimeKey(draftKey, source.terminalId);
       const targetId = runtimeKey(sessionKey, source.terminalId);
       this.runtimes.delete(sourceId);
+      // The draft's generation ends here; the shell carries on under the
+      // session's key and a new generation.
+      this.retire(source, "superseded");
       source.key = sessionKey;
       source.scope = session;
       source.generation = Math.max(
@@ -566,19 +603,13 @@ export class ConversationTerminalRuntimeRegistry {
       if (!this.isCurrent(runtime)) return;
       const id = runtimeKey(runtime.key, runtime.terminalId);
       this.runtimes.delete(id);
-      // Kept briefly, so a reader that arrives after the exit still gets the
-      // output and the exit rather than nothing.
-      this.exited.delete(id);
-      this.exited.set(id, {
+      this.remember(id, {
         generation: runtime.generation,
         scrollback: runtime.scrollback,
         exitCode: event.exitCode ?? null,
         signal: event.signal ?? null,
+        retired: null,
       });
-      if (this.exited.size > MAX_EXITED_RUNTIMES) {
-        const oldest = this.exited.keys().next().value;
-        if (oldest != null) this.exited.delete(oldest);
-      }
       this.options.onExit?.({
         terminalId: runtime.terminalId,
         key: runtime.key,
@@ -629,6 +660,38 @@ export class ConversationTerminalRuntimeRegistry {
       this.generations.get(runtimeKey(runtime.key, runtime.terminalId)) ===
         runtime.generation
     );
+  }
+
+  /**
+   * Kept briefly, so a reader that arrives after the end still gets the
+   * output and how it ended rather than nothing.
+   */
+  private remember(id: string, record: ExitedRuntime): void {
+    this.exited.delete(id);
+    this.exited.set(id, record);
+    if (this.exited.size > MAX_EXITED_RUNTIMES) {
+      const oldest = this.exited.keys().next().value;
+      if (oldest != null) this.exited.delete(oldest);
+    }
+  }
+
+  /** Call before `runtime`'s key or generation changes. */
+  private retire(runtime: Runtime, reason: TerminalRetireReason): void {
+    this.remember(runtimeKey(runtime.key, runtime.terminalId), {
+      generation: runtime.generation,
+      // A copy: a promoted shell keeps appending to the original.
+      scrollback: runtime.scrollback.clone(),
+      exitCode: null,
+      signal: null,
+      retired: reason,
+    });
+    this.options.onRetire?.({
+      terminalId: runtime.terminalId,
+      key: runtime.key,
+      scope: runtime.scope,
+      generation: runtime.generation,
+      reason,
+    });
   }
 
   private nextGeneration(key: string): number {

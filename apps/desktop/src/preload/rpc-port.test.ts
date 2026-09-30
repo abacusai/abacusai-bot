@@ -2,6 +2,9 @@
  * A-T4, preload half: the port handshake answers once per document, only its
  * own window's requests, and never hands out a second port.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -141,6 +144,16 @@ describe("the preload's port handshake (A-T4)", () => {
       expect(win.posted).toHaveLength(1);
       ports.push(...(win.posted[0]!.transfer as MessagePort[]));
     });
+  });
+
+  it("is never delayed by the shipped preload", () => {
+    // Only the real-Electron test's own preload entry passes a delay; the
+    // production preload must not read the test variable at all.
+    const source = readFileSync(join(import.meta.dirname, "index.ts"), "utf8");
+    expect(source).not.toMatch(/handshakeDelayFromEnv|delayMs/);
+    expect(
+      source.replace(/\/\/.*$/gm, "").includes("ABACUS_TEST_HANDSHAKE_DELAY_MS")
+    ).toBe(false);
   });
 
   it("reads the delay from the environment, and nothing else", () => {

@@ -154,6 +154,7 @@ import {
   type UpdateMessagingPlatformRequest,
   type UpdateMessagingSettingsRequest,
 } from "#shared/messaging";
+import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 import { detectRememberRequest } from "#shared/remember";
 import type {
   Routine,
@@ -172,6 +173,7 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
+import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
 import {
@@ -355,6 +357,12 @@ import { WorkspaceService } from "./services/workspace/workspace-service";
 
 type EventDispatcher = (event: IpcEvent) => void;
 
+/** The oRPC bus's own channels: pushes the legacy renderer never had. */
+type BusDispatcher = <C extends BusChannel>(
+  channel: C,
+  payload: BusChannels[C]
+) => void;
+
 /** Assistant prose, as opposed to tool cards, status and errors. */
 const isAgentText = (payload: DesktopEvent): boolean =>
   payload.type === "event" &&
@@ -434,6 +442,7 @@ export class ServiceHost {
   private initializedAt: string | null = null;
   private startedAt: string | null = null;
   private eventDispatcher: EventDispatcher | null = null;
+  private busDispatcher: BusDispatcher | null = null;
 
   readonly mcpConfigService = new McpConfigService();
   private readonly transcriptService = new TranscriptService();
@@ -944,6 +953,9 @@ export class ServiceHost {
         workspaceId: event.conversation.workspaceId,
         emittedAt: new Date().toISOString(),
       });
+    },
+    emitTerminalRetired: (event) => {
+      this.busDispatcher?.("terminal-retired", event);
     },
     emitTerminalState: (state) => {
       this.emitEvent({
@@ -1597,6 +1609,10 @@ export class ServiceHost {
     this.eventDispatcher = dispatcher;
   }
 
+  setBusDispatcher(dispatcher: BusDispatcher): void {
+    this.busDispatcher = dispatcher;
+  }
+
   async addWorkspace(
     workspacePath: string,
     isRemote = false
@@ -1687,7 +1703,7 @@ export class ServiceHost {
       .getWorkspaces()
       .find((w) => w.id === workspaceId);
     if (workspace == null) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
     if (workspace.status !== "deleted") {
@@ -1729,7 +1745,7 @@ export class ServiceHost {
   ): Promise<{ success: boolean; error?: string }> {
     const updated = this.workspaceService.updateLabel(workspaceId, label);
     if (!updated) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
     await this.workspaceRuntimeService.refreshAndEmit();
     return { success: true };
@@ -3331,12 +3347,14 @@ export class ServiceHost {
     );
   }
 
-  listConnectorRequests(conversationKey: ConversationKey): ConnectorRequest[] {
+  /** One conversation's pending asks, or every conversation's with no key. */
+  listConnectorRequests(conversationKey?: ConversationKey): ConnectorRequest[] {
     return this.connectorGate.listPending(conversationKey);
   }
 
+  /** One conversation's pending asks, or every conversation's with no key. */
   listBrowserPermissionRequests(
-    conversationKey: ConversationKey
+    conversationKey?: ConversationKey
   ): BrowserPermissionRequest[] {
     return this.builtinToolPermissions.listPending(conversationKey);
   }
@@ -3522,7 +3540,12 @@ export class ServiceHost {
    */
   async editRoutineByChat(routineId: string, text: string): Promise<string> {
     const job = getJob(routineId);
-    if (job == null) throw new Error("This routine is gone.");
+    if (job == null)
+      throw new EntityNotFoundError(
+        "routine",
+        routineId,
+        "This routine is gone."
+      );
     const workspaces = this.workspaceService.getWorkspaces();
     const workspaceId =
       job.workspaceId != null &&

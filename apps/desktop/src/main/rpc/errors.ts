@@ -10,6 +10,7 @@ import type {
   PreconditionReason,
 } from "#shared/contract/errors";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
+import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 
 export type RpcError = ORPCError<string, unknown>;
 
@@ -55,6 +56,8 @@ export const preconditionFailed = (
  */
 export const toRpcError = (error: unknown): RpcError => {
   if (error instanceof ORPCError) return error as RpcError;
+  if (error instanceof EntityNotFoundError)
+    return notFound(error.entity, error.id);
 
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith(WORKSPACE_MISSING_ERROR)) {
@@ -71,6 +74,14 @@ export const toRpcError = (error: unknown): RpcError => {
 };
 
 type LegacyResult = { success: boolean; error?: string };
+
+/** A workspace result's failure: NOT_FOUND for an id main does not know. */
+export const workspaceFailure =
+  (workspaceId: string) =>
+  (reason: string): RpcError =>
+    reason === WORKSPACE_NOT_FOUND
+      ? notFound("workspace", workspaceId)
+      : conflict(reason);
 
 /**
  * A legacy `{ success, error }` result as its success payload, or the mapped

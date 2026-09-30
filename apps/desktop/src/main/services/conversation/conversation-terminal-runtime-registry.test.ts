@@ -300,12 +300,18 @@ describe("terminal output by offset", () => {
 
     expect(
       registry.outputState(started.key, started.generation, undefined, 1)
-    ).toEqual({ data: "bc", from: 1, offset: 3, exit: null });
+    ).toEqual({ data: "bc", from: 1, offset: 3, exit: null, retired: null });
 
     ptys[0]!.emitData("defghijk");
     expect(
       registry.outputState(started.key, started.generation, undefined, 1)
-    ).toEqual({ data: "defghijk", from: 3, offset: 11, exit: null });
+    ).toEqual({
+      data: "defghijk",
+      from: 3,
+      offset: 11,
+      exit: null,
+      retired: null,
+    });
     expect(
       registry.outputState(started.key, started.generation + 1)
     ).toBeNull();
@@ -327,6 +333,7 @@ describe("terminal output by offset", () => {
       from: 0,
       offset: 3,
       exit: { exitCode: 7, signal: 15 },
+      retired: null,
     });
   });
 
