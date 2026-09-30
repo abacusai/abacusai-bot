@@ -144,6 +144,8 @@ import {
 } from "./services/config/renderer-state";
 import {
   readNotificationSettings,
+  readLegacySoundOptOut,
+  onNotificationSettingsWritten,
   readSettings,
 } from "./services/config/settings";
 import { reportFunnelStep } from "./services/debug-sync/funnel-beacon";
@@ -1734,7 +1736,10 @@ app
     const rendererState = registerRendererState();
     // The old renderer is the shipped UI until the cut-over: its durable
     // state keeps `prefs.json` current, by provenance (spec 00 C.4).
-    installLegacyPrefsSync(rendererState, prefsStore);
+    installLegacyPrefsSync(rendererState, prefsStore, undefined, {
+      read: readLegacySoundOptOut,
+      onWrite: onNotificationSettingsWritten,
+    });
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);

@@ -221,6 +221,25 @@ export const readNotificationSettings = (): NotificationSettings => {
   };
 };
 
+const notificationWriteListeners = new Set<() => void>();
+
+/**
+ * Called after every `setNotificationSettings` write: the live legacy sync
+ * carries the old renderer's sound opt-out into prefs (spec 05 §31.5 i).
+ */
+export const onNotificationSettingsWritten = (
+  listener: () => void
+): (() => void) => {
+  notificationWriteListeners.add(listener);
+  return () => {
+    notificationWriteListeners.delete(listener);
+  };
+};
+
+/** The old renderer's sound opt-out as stored (`true` = no sound). */
+export const readLegacySoundOptOut = (): unknown =>
+  readSettings().notificationSoundDisabled;
+
 export const setNotificationSettings = (
   next: NotificationSettings
 ): NotificationSettings => {
@@ -229,6 +248,13 @@ export const setNotificationSettings = (
     notificationsDisabled: !next.enabled,
     notificationSoundDisabled: !next.sound,
   });
+  for (const listener of Array.from(notificationWriteListeners)) {
+    try {
+      listener();
+    } catch (error) {
+      console.error("[settings] notification write listener threw", error);
+    }
+  }
 
   return readNotificationSettings();
 };

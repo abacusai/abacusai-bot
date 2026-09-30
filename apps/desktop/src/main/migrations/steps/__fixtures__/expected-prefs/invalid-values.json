@@ -1,17 +1,28 @@
 {
   "prefs": {
     "provenance": {
+      "appearance.bubbleTint": "default",
+      "appearance.textSize": "default",
       "browserHomepage": "legacy",
       "creditsExhaustedAt": "default",
       "defaultMode": "default",
       "dismissals.referralCardUntil": "default",
       "dismissals.upsell": "default",
+      "keymap": "default",
       "language": "legacy",
       "lastPickedWorkspaceId": "legacy",
       "models.favoriteModelIds": "default",
       "models.perWorkspace": "default",
       "models.selectedModelId": "default",
       "motion.reduce": "default",
+      "notch.enabled": "default",
+      "notch.extraDisplays": "default",
+      "notch.haptics": "default",
+      "notch.idleVisible": "default",
+      "notch.showInNotch": "default",
+      "onboardingExit": "default",
+      "onboardingFlow": "legacy",
+      "onboardingPairing": "default",
       "onboardingStep": "legacy",
       "panes": "default",
       "pinned.botIds": "default",
@@ -20,11 +31,19 @@
       "sidebar.openSection": "default",
       "sidebar.pinned": "default",
       "sounds.enabled": "default",
+      "sounds.perBot": "default",
       "sounds.perEvent": "default",
+      "sounds.quietHours": "default",
       "theme": "default",
+      "tour.at": "default",
+      "tour.status": "default",
       "workspaceExpanded": "default"
     },
     "row": {
+      "appearance": {
+        "bubbleTint": true,
+        "textSize": 14
+      },
       "browserHomepage": null,
       "creditsExhaustedAt": null,
       "defaultMode": "YOLO",
@@ -33,6 +52,7 @@
         "upsell": false
       },
       "id": "app",
+      "keymap": {},
       "language": "system",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
@@ -43,7 +63,17 @@
       "motion": {
         "reduce": "system"
       },
-      "onboardingStep": "welcome",
+      "notch": {
+        "enabled": true,
+        "extraDisplays": false,
+        "haptics": true,
+        "idleVisible": true,
+        "showInNotch": true
+      },
+      "onboardingExit": null,
+      "onboardingFlow": 2,
+      "onboardingPairing": [],
+      "onboardingStep": "connected",
       "panes": {},
       "pinned": {
         "botIds": [],
@@ -56,15 +86,25 @@
       },
       "sounds": {
         "enabled": true,
-        "perEvent": {}
+        "perBot": {},
+        "perEvent": {},
+        "quietHours": {
+          "enabled": false,
+          "end": "08:00",
+          "start": "22:00"
+        }
       },
       "theme": "system",
+      "tour": {
+        "at": null,
+        "status": "unseen"
+      },
       "updatedAt": "2026-09-30T12:00:00.000Z",
       "workspaceExpanded": {}
     }
   },
   "stats": {
-    "imported": 4,
+    "imported": 5,
     "invalid": 9,
     "keptUser": 0,
     "keys": 8,

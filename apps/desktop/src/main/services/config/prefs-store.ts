@@ -44,7 +44,10 @@ export type PrefsProvenance = "default" | "legacy" | "user";
 /** Per leaf (`"theme"`, `"sidebar.pinned"`, …). */
 export type PrefsProvenanceMap = Record<PrefsLeaf, PrefsProvenance>;
 
-type PrefsValues = Omit<PrefsRow, "id" | "updatedAt">;
+/** Every field present: main's rows always carry the whole shape. */
+type PrefsValues = Required<Omit<PrefsRow, "id" | "updatedAt">> & {
+  sounds: Required<PrefsRow["sounds"]>;
+};
 
 const DEFAULTS: PrefsValues = {
   theme: "system",
@@ -64,7 +67,27 @@ const DEFAULTS: PrefsValues = {
   dismissals: { referralCardUntil: null, upsell: false },
   panes: {},
   motion: { reduce: "system" },
-  sounds: { enabled: true, perEvent: {} },
+  sounds: {
+    enabled: true,
+    perEvent: {},
+    perBot: {},
+    quietHours: { enabled: false, start: "22:00", end: "08:00" },
+  },
+  // Spec 05 §31.5 a: none of these exist in the old renderer (no legacy map).
+  keymap: {},
+  appearance: { textSize: 14, bubbleTint: true },
+  // Spec 06 §23.5 b (`haptics` is revisited by R6-T31).
+  notch: {
+    enabled: true,
+    haptics: true,
+    idleVisible: true,
+    extraDisplays: false,
+    showInNotch: true,
+  },
+  tour: { status: "unseen", at: null },
+  onboardingFlow: null,
+  onboardingExit: null,
+  onboardingPairing: [],
 };
 
 /** What a field is before anyone sets it. Mirrors the old renderer's defaults. */
