@@ -9,13 +9,21 @@
  * order, and a `prefers-reduced-motion: reduce` block applies only when the
  * OS setting is simulated on.
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { afterEach, describe, expect, it } from "vitest";
 
-// Read from disk: the project's CSS pipeline only passes tokens.css through.
-const css = readFileSync(join(import.meta.dirname, "chat.css"), "utf8");
+// Read from disk: the project's CSS pipeline passes only tokens.css through
+// (`?raw` of chat.css is empty), and renderer-next has no Node types.
+const nodeFs = (
+  globalThis as unknown as {
+    process: { getBuiltinModule(id: "node:fs"): unknown };
+  }
+).process.getBuiltinModule("node:fs") as {
+  readFileSync(path: string, encoding: "utf8"): string;
+};
+const css = nodeFs.readFileSync(
+  `${(import.meta as ImportMeta & { dirname: string }).dirname}/chat.css`,
+  "utf8"
+);
 
 type Pref = "on" | "off" | "system";
 
