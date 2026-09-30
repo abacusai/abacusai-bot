@@ -119,7 +119,10 @@ export const ShellLayout = ({
     width: BAND_WIDTH[band],
     area,
     pinned: prefs.sidebar.pinned,
-    panelOpen: panel.tab != null,
+    panelOpen:
+      area === "sessions"
+        ? (location.search as { tab?: string }).tab != null
+        : panel.tab != null,
     view: (location.search as { view?: string }).view,
   });
   const panelTabs: readonly SidePanelTabId[] =
