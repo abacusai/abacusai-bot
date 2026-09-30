@@ -112,10 +112,14 @@ export const git = {
     )
     .output(type<GitDiffResult>()),
   /**
-   * Puts each entry back as it is in HEAD, in the checkout (§26.4 c). A path
-   * absent from HEAD (a staged addition, a rename's destination) goes to the
-   * OS Trash before its index entry is removed; a rename also restores its
-   * `origPath`. A failed entry changes nothing of its own.
+   * Puts each entry back as it is in HEAD, in the checkout (§26.4 c). Only
+   * a change git reports at exactly that checkout-relative path is touched,
+   * and git's status decides the action. A path absent from HEAD (untracked,
+   * a staged addition, a rename's destination) goes to the OS Trash before
+   * its index entry is removed; a rename also restores its `origPath`
+   * (refused as `occupied` when new content sits there). A failed entry
+   * changes nothing of its own, except `partial` (see
+   * `GitDiscardFailureReason`).
    */
   discard: mutation
     .input(
