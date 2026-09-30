@@ -86,7 +86,14 @@ export interface AppOperations {
   showNotification(
     title: string,
     body: string,
-    metadata?: { workspaceId?: string; sessionId?: string }
+    metadata?: {
+      workspaceId?: string;
+      sessionId?: string;
+      kind?: "bot" | "session" | "routine-run";
+      botId?: string;
+      routineId?: string;
+    },
+    attention?: { kind?: "needs-you" | "done" | "failed"; dedupeKey?: string }
   ): void;
   readImageAsDataUrl(args: HostFileArgs): Promise<{
     success: boolean;

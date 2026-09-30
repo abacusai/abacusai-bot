@@ -140,6 +140,8 @@ export class NotchController {
     if (!this.#started || this.#disposed) return;
     if (!this.#o.prefs().notch?.enabled) {
       this.#clear();
+      this.#failures.length = 0;
+      this.#metrics.clear();
       return;
     }
     const displays = screen.getAllDisplays();
@@ -520,13 +522,26 @@ export class NotchController {
     return { id: command.id };
   }
   ack(id: string): void {
-    this.#pending.delete(id);
+    const command = this.#pending.get(id);
+    if (!command) return;
+    for (const [key, pending] of this.#pending)
+      if (pending.at <= command.at) this.#pending.delete(key);
   }
   presented(id: number, key: string, visible: boolean): void {
     this.#entry(id);
     if (visible && this.seen(id)) this.#presentations.set(key, Date.now());
     for (const [k, at] of this.#presentations)
       if (Date.now() - at > 1500) this.#presentations.delete(k);
+  }
+  hasSeen(): boolean {
+    return [...this.#entries.values()].some((entry) =>
+      this.seen(entry.active.webContents.id)
+    );
+  }
+  hasPresented(key: string): boolean {
+    return (
+      this.hasSeen() && Date.now() - (this.#presentations.get(key) ?? 0) <= 1500
+    );
   }
   status(): NotchStatus {
     const reason =

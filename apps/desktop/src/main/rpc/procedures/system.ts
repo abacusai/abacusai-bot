@@ -77,7 +77,10 @@ export const systemRouter = impl.system.router({
     }),
   },
   notify: impl.system.notify.handler(({ input, context }) => {
-    context.deps.app.showNotification(input.title, input.body, input.metadata);
+    context.deps.app.showNotification(input.title, input.body, input.metadata, {
+      kind: input.kind,
+      dedupeKey: input.dedupeKey,
+    });
   }),
   events: impl.system.events.handler(({ context, signal }) =>
     stream<SystemEvent>({
