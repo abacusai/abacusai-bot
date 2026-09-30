@@ -39,11 +39,15 @@ import { BotId } from "#shared/contract/ids";
 type Fixture = ReturnType<
   Awaited<ReturnType<typeof loadFixtureRuntime>>
 > | null;
-let fixture: Fixture = null;
+const fixtureState = { current: null as Fixture };
 const fixtureReady: Promise<void> | null =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
     ? loadFixtureRuntime().then((fixtureRuntime) => {
-        fixture = fixtureRuntime("bot-golden-plain", {}, "fixture-bot");
+        fixtureState.current = fixtureRuntime(
+          "bot-golden-plain",
+          {},
+          "fixture-bot"
+        );
       })
     : null;
 
@@ -109,7 +113,10 @@ const ComposedChat = ({
   useTopBarActions([
     { id: "details", label: t("bots.panel.detailsTitle"), onSelect: toggle },
   ]);
-  const runtime = fixture && bot.sessionId == null ? fixture.runtime : chat;
+  const runtime =
+    fixtureState.current && bot.sessionId == null
+      ? fixtureState.current.runtime
+      : chat;
   return (
     <div
       data-testid="bot-chat"
@@ -213,14 +220,14 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
     staleReloadMode: "blocking",
     handler: async ({ context, params, preload }) => {
       if (fixtureReady != null) await fixtureReady;
-      if (fixture) {
+      if (fixtureState.current) {
         await context.db.collections.bots.preload();
         return {
           ready: true as const,
           botId: params.botId,
           sessionId:
             context.db.collections.bots.get(params.botId)?.sessionId ??
-            fixture.threadId,
+            fixtureState.current.threadId,
         };
       }
       return loadBotChat(
