@@ -594,6 +594,10 @@ export const LEGACY_EVENT_MAP: Record<
     destination: "ai.subscribe CUSTOM abacus.messaging.sent",
     note: "retired as a separate event once the emitter lands",
   },
+  "exec-backend": {
+    destination: 'settings.events { type: "exec-backend", backend }',
+    note: "backend or terminal shell changed; invalidates execBackend and sandboxSupport in every window",
+  },
   "credentials-changed": {
     destination:
       'settings.events { type: "credentials-changed", provider, configured? }',
