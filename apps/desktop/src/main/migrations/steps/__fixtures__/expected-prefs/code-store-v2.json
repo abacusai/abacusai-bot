@@ -36,10 +36,7 @@
       "language": "system",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
-        "favoriteModelIds": [
-          "gpt-5",
-          "claude-opus"
-        ],
+        "favoriteModelIds": ["gpt-5", "claude-opus"],
         "perWorkspace": {
           "ws-1": "claude-opus",
           "ws-2": null
@@ -53,9 +50,7 @@
       "panes": {},
       "pinned": {
         "botIds": [],
-        "sessionIds": [
-          "s-1"
-        ]
+        "sessionIds": ["s-1"]
       },
       "recentFolders": [],
       "sidebar": {

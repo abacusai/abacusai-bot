@@ -24,8 +24,10 @@ import {
   composeLegacyPrefs,
   importLegacyPrefs,
   installLegacyPrefsSync,
+  LEGACY_ONBOARDING_STEPS,
   LEGACY_PREFS_FIELDS,
   mapLegacyKey,
+  normalizeBrowserHomepage,
 } from "./legacy-prefs";
 import { PREFS_DEFAULTS, PrefsStore } from "./prefs-store";
 import { RendererStateStore } from "./renderer-state";
@@ -90,6 +92,34 @@ describe("mapLegacyKey", () => {
     ).toBeNull();
   });
 
+  it("drops a zustand value with no version, as zustand does", () => {
+    expect(
+      mapLegacyKey(
+        "sidebar-accordion",
+        JSON.stringify({ state: { openSection: "bots" } })
+      )
+    ).toBeNull();
+  });
+
+  it("reads onboarding.step as the old UI does: an unknown step is none", () => {
+    expect(mapLegacyKey("onboarding.step", "models")?.values).toEqual({
+      onboardingStep: "models",
+    });
+    expect(mapLegacyKey("onboarding.step", "connect-whatsapp")?.values).toEqual(
+      { onboardingStep: null }
+    );
+  });
+
+  it("reads browser.homepage as the old UI does", () => {
+    const home = (raw: string) =>
+      mapLegacyKey("browser.homepage", raw)?.values.browserHomepage;
+    expect(home("  ")).toBeNull();
+    expect(home("example.com")).toBe("https://example.com/");
+    expect(home("http://x.test/a")).toBe("http://x.test/a");
+    expect(home("javascript:alert(1)")).toBeNull();
+    expect(home("file:///etc/passwd")).toBeNull();
+  });
+
   it("reads dismissals", () => {
     expect(
       mapLegacyKey("referral-card.dismissed-until", "1790000000000")?.values
@@ -146,6 +176,70 @@ describe("composeLegacyPrefs", () => {
     );
     expect(legacy.invalid).toEqual(["models", "defaultMode", "recentFolders"]);
     expect(legacy.patch.pinned).toEqual({ sessionIds: ["s-1"], botIds: [] });
+  });
+
+  it("keeps a member field's usable keys when another key for it is unusable", () => {
+    const legacy = composeLegacyPrefs(
+      reader({
+        "referral-card.dismissed-until": "abc",
+        "local-code:upsell-dismissed": "1",
+        "local-code-ui-store": "{corrupt",
+        "sidebar-accordion": zustand({ openSection: "sessions" }),
+      })
+    );
+    // The old UI: NaN shows the card (null), the upsell stays dismissed.
+    expect(legacy.patch.dismissals).toEqual({
+      referralCardUntil: null,
+      upsell: true,
+    });
+    // A corrupt code store reads as its defaults there; the accordion holds.
+    expect(legacy.patch.sidebar).toEqual({
+      pinned: true,
+      openSection: "sessions",
+    });
+    expect(legacy.invalidMembers).toEqual(["sidebar", "dismissals"]);
+    // Fields only the corrupt store feeds stay invalid (left as they are).
+    expect(legacy.invalid).toEqual(
+      expect.arrayContaining(["models", "pinned", "defaultMode"])
+    );
+    expect(legacy.patch.models).toBeUndefined();
+  });
+
+  it("keeps a member field invalid when every key for it is unusable", () => {
+    const legacy = composeLegacyPrefs(
+      reader({ "referral-card.dismissed-until": "abc" })
+    );
+    expect(legacy.invalid).toEqual(["dismissals"]);
+    expect(legacy.patch.dismissals).toBeUndefined();
+  });
+
+  it("matches the old renderer's onboarding steps and homepage rule", () => {
+    // Read as text: main's project does not compile renderer files.
+    const steps = fs.readFileSync(
+      path.join(
+        __dirname,
+        "../../../renderer/components/onboarding/onboarding-steps.ts"
+      ),
+      "utf8"
+    );
+    const order = /STEP_ORDER = \[([^\]]*)\]/.exec(steps)?.[1] ?? "";
+    expect(LEGACY_ONBOARDING_STEPS).toEqual(
+      [...order.matchAll(/"([^"]+)"/g)].map((match) => match[1])
+    );
+    const source = fs.readFileSync(
+      path.join(__dirname, "../../../renderer/lib/browser-homepage.ts"),
+      "utf8"
+    );
+    // The same parse: a scheme-less value gains https://, only http(s) pass.
+    expect(source).toContain(
+      "/^[a-z][a-z\\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`"
+    );
+    expect(source).toContain(
+      'if (url.protocol !== "http:" && url.protocol !== "https:") return null;'
+    );
+    expect(normalizeBrowserHomepage("example.com")).toBe(
+      "https://example.com/"
+    );
   });
 
   it("covers every field some key feeds", () => {
@@ -321,14 +415,55 @@ describe("C-T8 live legacy sync", () => {
     expect(prefs.get()).toMatchObject({ theme: "light", language: "fr-FR" });
   });
 
-  it("ignores unmapped keys and never writes renderer-state.json", () => {
+  it("ignores unmapped keys", () => {
     const { prefs, state } = setup();
     state.set("composer.draft:ws-1", "half a thought");
     state.set("durable-storage.migrated", "1");
     expect(fs.existsSync(prefsFile)).toBe(false);
     expect(prefs.provenance().theme).toBe("default");
-    // The store's own debounced write is the only writer of its file.
-    expect(fs.existsSync(stateFile)).toBe(false);
+  });
+
+  it("never writes renderer-state.json: only the store's own debounced flush does", () => {
+    // Structurally, the sync sees `LegacyStateSource` (get/onSet), which has
+    // no write path. Behaviourally: a mapped-key set, with the store's
+    // 500 ms debounce run out, writes the state file exactly once (the
+    // store's flush) and nothing else writes it.
+    vi.useFakeTimers();
+    try {
+      const writes: string[] = [];
+      const write = fs.writeFileSync;
+      const rename = fs.renameSync;
+      const spyWrite = vi
+        .spyOn(fs, "writeFileSync")
+        .mockImplementation((file, ...rest) => {
+          writes.push(String(file));
+          return write(file, ...rest);
+        });
+      const spyRename = vi
+        .spyOn(fs, "renameSync")
+        .mockImplementation((from, to) => {
+          writes.push(String(to));
+          return rename(from, to);
+        });
+      const { prefs, state } = setup();
+      state.set("theme", "dark");
+      state.set("sidebar-accordion", zustand({ openSection: "sessions" }));
+      expect(prefs.get().theme).toBe("dark");
+      const beforeFlush = writes.filter((file) => file.startsWith(stateFile));
+      vi.advanceTimersByTime(1_000);
+      const stateWrites = writes.filter((file) => file.startsWith(stateFile));
+      spyWrite.mockRestore();
+      spyRename.mockRestore();
+      expect(beforeFlush).toEqual([]);
+      expect(stateWrites.length).toBeGreaterThan(0);
+      expect(
+        writes.filter(
+          (file) => !file.startsWith(stateFile) && !file.startsWith(prefsFile)
+        )
+      ).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("stops after unsubscribe and survives a throwing prefs store", () => {
