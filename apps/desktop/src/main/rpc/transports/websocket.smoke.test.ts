@@ -81,6 +81,34 @@ describe("the router over a WebSocket (A-T5)", () => {
     await updates.return();
   });
 
+  it("streams db.bots.changes: hello, then a batch for a fake change", async () => {
+    const bus = new MainEventBus();
+    let bots = [{ id: "b1", name: "One" }];
+    server = await startWebSocketTransport({
+      router: createRouter(),
+      deps: fakeDeps({ bus, serviceHost: { listBots: () => bots } }),
+    });
+    const client = clientFor(server.url);
+
+    const changes = await client.db.bots.changes();
+    const hello = await changes.next();
+    expect(hello.value).toMatchObject({ kind: "hello", seq: 0 });
+    await expect(client.db.bots.snapshot()).resolves.toMatchObject({
+      seq: 0,
+      rows: bots,
+    });
+    bots = [...bots, { id: "b2", name: "Two" }];
+    bus.dispatch({ type: "bots-updated", emittedAt: "" });
+    await expect(changes.next()).resolves.toMatchObject({
+      value: {
+        kind: "changes",
+        seq: 1,
+        changes: [{ type: "insert", key: "b2" }],
+      },
+    });
+    await changes.return();
+  });
+
   it("refuses window procedures: a socket has no window", async () => {
     server = await startWebSocketTransport({
       router: createRouter(),

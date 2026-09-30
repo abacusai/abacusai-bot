@@ -71,6 +71,12 @@ export interface MemoryRow {
   botName: string | null;
   index: number;
   entry: string;
+  /**
+   * Copies of `entry` in the same list. A delete sends it back, so a stale
+   * click on one of two identical entries is `CONFLICT`, not the other's
+   * removal.
+   */
+  occurrences: number;
 }
 
 export type WorkspaceRow = WorkspaceListItem & { isActive: boolean };

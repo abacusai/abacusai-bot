@@ -20,10 +20,10 @@ import {
   type BotCreateInput,
   type BotUpdateInput,
 } from "#shared/bots";
+import { ConflictError } from "#shared/conflict";
 import { EntityNotFoundError } from "#shared/not-found";
 
 import { abacusBotHome } from "../../paths";
-import { ConflictError } from "../conflict";
 
 const FILE = (): string => path.join(abacusBotHome(), "bots.json");
 
