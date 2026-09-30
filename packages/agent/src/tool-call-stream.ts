@@ -9,7 +9,7 @@
  * The call is read from `partial.content[contentIndex]`; a start whose id is
  * not known yet is deferred to the first delta (or the end) that has one.
  */
-import type { InternalAgentEvent } from "./protocol.js";
+import type { InternalAgentEvent } from "./internal-events.js";
 
 interface ToolCallBlock {
   type?: unknown;

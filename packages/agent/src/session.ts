@@ -65,6 +65,7 @@ import toolTimeouts from "./extensions/tool-timeouts.js";
 import verifyLoop from "./extensions/verify-loop.js";
 import { githubPrompt } from "./github-prompt.js";
 import { HostServiceClient } from "./host-services.js";
+import type { InternalAgentEvent } from "./internal-events.js";
 import {
   connectMcpServers,
   type ConnectedMcp,
@@ -99,7 +100,6 @@ import {
   AgentStatus,
   type AgentEvent,
   type DesktopEvent,
-  type InternalAgentEvent,
   type NotificationAction,
   type PermissionDecision,
   type PermissionRequest,

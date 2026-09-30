@@ -6,11 +6,11 @@ import { StreamProcessor } from "@tanstack/ai";
 import { describe, expect, it } from "vitest";
 
 import { tagEvent } from "../event-meta.js";
+import type { InternalAgentEvent } from "../internal-events.js";
 import {
   AgentStatus,
   type AgentEvent,
   type DesktopEvent,
-  type InternalAgentEvent,
   type PermissionRequest,
 } from "../protocol.js";
 import { noCompat } from "./channel.js";
