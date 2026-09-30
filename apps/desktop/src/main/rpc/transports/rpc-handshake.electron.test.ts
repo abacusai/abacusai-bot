@@ -128,7 +128,7 @@ describe.skipIf(!availability.usable)(
       writeFileSync(
         join(dir, "page-entry.ts"),
         [
-          `import { getTransport } from ${JSON.stringify(join(SRC, "renderer-next/data/transport/index.ts"))};`,
+          `import { createTransport, getTransport } from ${JSON.stringify(join(SRC, "renderer-next/data/transport/index.ts"))};`,
           "const report = (value: unknown) => { (window as any).__rpc = value; };",
           "(async () => {",
           "  try {",
@@ -137,7 +137,15 @@ describe.skipIf(!availability.usable)(
           "    const events = await transport.client.bots.events();",
           "    void (async () => { try { for await (const _ of events) {} } catch {} })();",
           '    await transport.client.window.ready({ barrier: "subscriptions" });',
-          "    report({ ok: true, appVersion: info.appVersion, contractVersion: info.contractVersion });",
+          // Chromium fires `close` only at the other end of a channel: a
+          // transport closed locally must still settle its pending calls.
+          "    const local = new MessageChannel();",
+          '    const orphan = createTransport(local.port1, { kind: "memory", flowControl: false });',
+          '    const pending = orphan.client.system.info().then(() => "resolved", () => "rejected");',
+          "    await new Promise((r) => setTimeout(r, 20));",
+          "    orphan.close();",
+          '    const closeOutcome = await Promise.race([pending, new Promise((r) => setTimeout(() => r("hung"), 1000))]);',
+          "    report({ ok: true, appVersion: info.appVersion, contractVersion: info.contractVersion, closeOutcome });",
           "  } catch (error: any) {",
           "    report({ ok: false, name: error?.name, reason: error?.reason, message: String(error?.message ?? error) });",
           "  }",
@@ -196,7 +204,12 @@ describe.skipIf(!availability.usable)(
       };
 
       expect(result.firstLoad).toMatchObject({
-        page: { ok: true, appVersion: "e2e", contractVersion: 1 },
+        page: {
+          ok: true,
+          appVersion: "e2e",
+          contractVersion: 1,
+          closeOutcome: "rejected",
+        },
         ports: 1,
         iterators: 1,
       });

@@ -3,6 +3,7 @@
  * serializer and one interceptor that maps thrown errors onto the contract's
  * error map, logs them, and flags slow calls.
  */
+import { flowControlHandlerInterceptor } from "#shared/contract/flow-control";
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 
 import type { RpcContext } from "./context";
@@ -38,6 +39,9 @@ export const rpcClientInterceptor = async ({
 
 export const rpcHandlerOptions = () => ({
   customJsonSerializers: CUSTOM_JSON_SERIALIZERS,
+  // Pulls iterators only as far ahead as the renderer has consumed, on a
+  // connection that carries a flow registry (the MessagePort transport).
+  interceptors: [flowControlHandlerInterceptor],
   clientInterceptors: [rpcClientInterceptor],
 });
 

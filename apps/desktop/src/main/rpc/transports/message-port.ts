@@ -22,6 +22,12 @@ import type {
   WebContents,
 } from "electron";
 
+import {
+  FLOW_CONTEXT_KEY,
+  FlowRegistry,
+  withFlowAcks,
+} from "#shared/contract/flow-control";
+
 import type { RpcContext, RpcWindowKind } from "../context";
 import type { RpcDeps } from "../deps";
 import { rpcHandlerOptions } from "../handler-options";
@@ -142,12 +148,15 @@ export const installMessagePortTransport = ({
     tracked.peer.on("close", () => {
       if (entry.port === tracked) entry.port = null;
     });
-    handler.upgrade(tracked.peer, {
+    // The renderer's acknowledgements gate this port's iterators.
+    const flows = new FlowRegistry();
+    handler.upgrade(withFlowAcks(tracked.peer, flows), {
       context: {
         transport: "message-port",
         webContentsId: sender.id,
         windowKind: entry.kind,
         deps,
+        [FLOW_CONTEXT_KEY]: flows,
       },
     });
     port.start();
