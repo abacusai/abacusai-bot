@@ -51,7 +51,7 @@ const OcclusionEffect = (): null => {
 };
 
 /** What the app shortcuts do, from wherever the user is. */
-export const useShellActions = (): ShellActions => {
+const useShellActions = (): ShellActions => {
   const navigate = useAppNavigate();
   const plainNavigate = useNavigate();
   const updatePrefs = useUpdatePrefs();

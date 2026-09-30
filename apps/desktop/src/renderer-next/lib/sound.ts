@@ -5,7 +5,7 @@
  */
 import type { PrefsRow } from "#shared/contract";
 
-export type Cue =
+type Cue =
   | "sent"
   | "received"
   | "needs-you"

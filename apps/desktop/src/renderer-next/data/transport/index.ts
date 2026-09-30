@@ -17,19 +17,5 @@ export const getTransport = (): Promise<Transport> => {
   return store[GLOBAL_KEY];
 };
 
-export { createTransport, type TransportPort } from "./create-transport";
-export {
-  connectMessagePortTransport,
-  requestRpcPort,
-  TransportUnavailableError,
-  DEFAULT_CONNECT_TIMEOUT_MS,
-} from "./message-port";
-export { createWebSocketTransport } from "./websocket";
-export type { CloseReason, TransportState } from "./close-signal";
-export type {
-  AppClient,
-  AppQueryUtils,
-  Transport,
-  TransportHost,
-  TransportKind,
-} from "./types";
+export type { CloseReason } from "./close-signal";
+export type { AppClient, AppQueryUtils, Transport } from "./types";

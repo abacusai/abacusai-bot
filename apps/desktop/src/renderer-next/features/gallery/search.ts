@@ -6,7 +6,7 @@ import * as v from "valibot";
 
 import { optionalField } from "#next/lib/navigation/search";
 
-export const ATOM_SECTIONS = [
+const ATOM_SECTIONS = [
   "button",
   "dialog",
   "alert-dialog",

@@ -54,7 +54,7 @@ export const SYSTEM_INFO: SystemInfo = {
   foundationApi: 2,
 };
 
-export const CHROME: WindowChromeState = {
+const CHROME: WindowChromeState = {
   mode: "overlay",
   fullScreen: false,
   density: "comfortable",
@@ -71,7 +71,7 @@ const quiet = async function* ({ signal }: { signal?: AbortSignal }) {
   yield* [];
 };
 
-export const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
+const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
   ({
     system: {
       info: os.system.info.handler(({ context }) => {

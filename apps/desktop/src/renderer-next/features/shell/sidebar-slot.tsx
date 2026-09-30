@@ -5,10 +5,11 @@
  * pointer leave after a 300 ms grace, Escape or navigation.
  */
 import { useStore } from "@tanstack/react-store";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, type Transition } from "motion/react";
 import { ViewTransition, type ViewTransitionClassPerType } from "react";
 
 import {
+  motionFor,
   reducedTransition,
   springs,
   useMotionPreference,
@@ -24,7 +25,7 @@ import {
 import { BotsStrip, SIDEBARS } from "./sidebars";
 
 /** Animated only for typed navigations (spec 01 §6.7); "none" otherwise. */
-export const SIDEBAR_VT: ViewTransitionClassPerType = {
+const SIDEBAR_VT: ViewTransitionClassPerType = {
   "nav-lateral": "sidebar",
   "settings-in": "sidebar",
   "settings-out": "sidebar",
@@ -61,8 +62,9 @@ export const SidebarSlot = ({
   const floatingOpen = useStore(shellStore, (state) => state.floating.open);
   const motionPref = useMotionPreference();
   const width = mode === "pinned" ? 280 : mode === "strip" ? 88 : 0;
-  const layoutTransition =
-    motionPref === "reduced" ? { duration: 0 } : springs.sidebar;
+  const layoutTransition = motionFor<Transition>(motionPref, springs.sidebar, {
+    duration: 0,
+  });
 
   return (
     <>

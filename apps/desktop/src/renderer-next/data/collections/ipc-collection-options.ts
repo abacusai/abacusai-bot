@@ -41,7 +41,7 @@ export interface IpcTableClient<Row, Key extends string> {
   delete?(input: never): Promise<TablePosition<Key>>;
 }
 
-export interface IpcCollectionStatus {
+interface IpcCollectionStatus {
   epoch: string | null;
   receivedSeq: number;
   appliedSeq: number;

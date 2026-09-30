@@ -20,7 +20,7 @@ export interface ShellState {
   occlusion: { any: boolean; rects: OcclusionRect[] };
 }
 
-export const initialShellState = (): ShellState => ({
+const initialShellState = (): ShellState => ({
   floating: { open: false, reason: null },
   commandOpen: false,
   lastLocationByArea: {},
@@ -43,7 +43,7 @@ export const closeFloating = (): void =>
   );
 
 /** Pointer left the rail or the floating sidebar: close after a grace. */
-export const FLOATING_GRACE_MS = 300;
+const FLOATING_GRACE_MS = 300;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const cancelCloseFloating = (): void => {

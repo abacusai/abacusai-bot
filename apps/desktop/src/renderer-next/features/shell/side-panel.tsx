@@ -13,6 +13,7 @@ import { EmptyState } from "#next/components/empty-state";
 import { cn } from "#next/lib/cn";
 import {
   durations,
+  easings,
   reducedTransition,
   useMotionPreference,
 } from "#next/lib/motion";
@@ -59,7 +60,7 @@ export const SidePanelFrame = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const SidePanelScrim = ({
+const SidePanelScrim = ({
   open,
   onClose,
 }: {
@@ -81,7 +82,7 @@ export const SidePanelScrim = ({
           transition={
             motionPref === "reduced"
               ? reducedTransition
-              : { duration: durations.crossFade / 1000 }
+              : { duration: durations.crossFade / 1000, ease: easings.standard }
           }
           onClick={onClose}
         />

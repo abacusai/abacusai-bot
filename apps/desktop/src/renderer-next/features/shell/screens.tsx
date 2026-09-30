@@ -10,7 +10,7 @@ import { AppLink } from "#next/lib/navigation/app-link";
 import { Button } from "#next/ui/button";
 
 /** A title-bar-high strip that drags the window (`_bare` routes). */
-export const WindowDragRegion = () => (
+const WindowDragRegion = () => (
   <div
     data-slot="window-drag-region"
     aria-hidden="true"

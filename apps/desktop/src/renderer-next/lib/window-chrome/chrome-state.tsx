@@ -11,7 +11,7 @@ import { windowChromeQuery } from "#next/data/queries/window";
 import type { Transport } from "#next/data/transport";
 import type { WindowChromeState } from "#shared/contract";
 
-export const DEFAULT_CHROME: WindowChromeState = {
+const DEFAULT_CHROME: WindowChromeState = {
   mode: "overlay-pending",
   fullScreen: false,
   density: "comfortable",
@@ -27,10 +27,7 @@ export const useChromeState = (transport: Transport): WindowChromeState => {
   return data ?? DEFAULT_CHROME;
 };
 
-export const applyChromeState = (
-  doc: Document,
-  chrome: WindowChromeState
-): void => {
+const applyChromeState = (doc: Document, chrome: WindowChromeState): void => {
   const root = doc.documentElement;
   root.dataset.titlebar = chrome.mode;
   root.dataset.density = chrome.density;

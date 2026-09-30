@@ -121,7 +121,7 @@ const useOverlay = (id: GalleryOverlayId) => {
 
 const FRUITS = ["Apple", "Banana", "Cherry", "Grape", "Mango"];
 
-export const DialogExample = () => {
+const DialogExample = () => {
   const state = useOverlay("dialog");
   return (
     <Dialog {...state}>
@@ -146,7 +146,7 @@ export const DialogExample = () => {
   );
 };
 
-export const AlertDialogExample = () => {
+const AlertDialogExample = () => {
   const state = useOverlay("alert-dialog");
   return (
     <AlertDialog {...state}>
@@ -169,7 +169,7 @@ export const AlertDialogExample = () => {
   );
 };
 
-export const SheetExample = () => {
+const SheetExample = () => {
   const state = useOverlay("sheet");
   return (
     <Sheet {...state}>
@@ -186,7 +186,7 @@ export const SheetExample = () => {
   );
 };
 
-export const DrawerExample = () => {
+const DrawerExample = () => {
   const state = useOverlay("drawer");
   return (
     <Drawer {...state} swipeDirection="right" modal={false}>
@@ -205,7 +205,7 @@ export const DrawerExample = () => {
   );
 };
 
-export const DropdownMenuExample = () => {
+const DropdownMenuExample = () => {
   const state = useOverlay("dropdown-menu");
   return (
     <DropdownMenu {...state}>
@@ -225,7 +225,7 @@ export const DropdownMenuExample = () => {
   );
 };
 
-export const ContextMenuExample = () => {
+const ContextMenuExample = () => {
   const state = useOverlay("context-menu");
   return (
     <ContextMenu {...state}>
@@ -240,7 +240,7 @@ export const ContextMenuExample = () => {
   );
 };
 
-export const PopoverExample = () => {
+const PopoverExample = () => {
   const state = useOverlay("popover");
   return (
     <Popover {...state}>
@@ -257,7 +257,7 @@ export const PopoverExample = () => {
   );
 };
 
-export const TooltipExample = () => {
+const TooltipExample = () => {
   const state = useOverlay("tooltip");
   return (
     <Tooltip {...state}>
@@ -269,7 +269,7 @@ export const TooltipExample = () => {
   );
 };
 
-export const HoverCardExample = () => {
+const HoverCardExample = () => {
   const state = useOverlay("hover-card");
   return (
     <HoverCard {...state}>
@@ -283,7 +283,7 @@ export const HoverCardExample = () => {
   );
 };
 
-export const ComboboxExample = () => {
+const ComboboxExample = () => {
   const state = useOverlay("combobox");
   return (
     <Combobox items={FRUITS} {...state}>
@@ -311,7 +311,7 @@ export const ComboboxExample = () => {
   );
 };
 
-export const CommandExample = () => {
+const CommandExample = () => {
   const state = useOverlay("command");
   return (
     <>
@@ -336,7 +336,7 @@ export const CommandExample = () => {
   );
 };
 
-export const SelectExample = () => {
+const SelectExample = () => {
   const state = useOverlay("select");
   return (
     <Select

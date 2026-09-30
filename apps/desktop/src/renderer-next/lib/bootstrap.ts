@@ -16,7 +16,7 @@ import { systemInfoQuery } from "#next/data/queries/system";
 import type { CloseReason, Transport } from "#next/data/transport";
 import type { SystemInfo } from "#shared/contract";
 
-export class BootTimeoutError extends Error {
+class BootTimeoutError extends Error {
   constructor(readonly step: BootStep) {
     super(`Boot step ${step} timed out`);
     this.name = "BootTimeoutError";
@@ -43,9 +43,9 @@ export class BootError extends Error {
   }
 }
 
-export const BOOT_TIMEOUTS = { transport: 5_000, system: 3_000, prefs: 5_000 };
+const BOOT_TIMEOUTS = { transport: 5_000, system: 3_000, prefs: 5_000 };
 
-export interface Boot {
+interface Boot {
   transport: Transport;
   system: SystemInfo;
   queryClient: QueryClient;

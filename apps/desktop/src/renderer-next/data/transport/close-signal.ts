@@ -14,7 +14,7 @@ export type TransportState = "open" | "closed";
 /** `port-closed`: the other end went away. `explicit`: our own `close()`. */
 export type CloseReason = "port-closed" | "explicit";
 
-export type CloseListener = (reason: CloseReason) => void;
+type CloseListener = (reason: CloseReason) => void;
 
 export interface CloseSignal {
   readonly state: TransportState;

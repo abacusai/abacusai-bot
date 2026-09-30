@@ -70,8 +70,4 @@ export const changeLanguage = async (
 export const fixedT = (): TFunction =>
   i18n.getFixedT(null, "translation") as unknown as TFunction;
 
-export {
-  FALLBACK_LANGUAGE,
-  matchSupportedLanguage,
-  resolveLanguage,
-} from "./languages";
+export { resolveLanguage } from "./languages";

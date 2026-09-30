@@ -2,7 +2,7 @@
  * The app's areas and their fixed pages, shared by routes, the shell, the
  * command menu and the features without any of them importing another.
  */
-export const SHELL_AREAS = [
+const SHELL_AREAS = [
   "bots",
   "sessions",
   "routines",

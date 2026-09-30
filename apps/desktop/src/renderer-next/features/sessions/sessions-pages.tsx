@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "#next/components/empty-state";
 import { useCollections } from "#next/data/collections";
 
-export const useSession = (sessionId: string) => {
+const useSession = (sessionId: string) => {
   const collections = useCollections();
   const { data } = useLiveQuery({
     query: (q) =>

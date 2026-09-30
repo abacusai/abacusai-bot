@@ -30,7 +30,7 @@ const PendingPane = () => (
   </div>
 );
 
-export type Area =
+type Area =
   | "bots"
   | "sessions"
   | "routines"
@@ -38,7 +38,7 @@ export type Area =
   | "library"
   | "settings";
 /** One sidebar per area in phase 1; the strip is a variant, not an id. */
-export type SidebarId = Area;
+type SidebarId = Area;
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -66,8 +66,6 @@ export const routeMasks = [
     search: ({ connector: _connector, ...rest }) => rest,
   }),
 ];
-
-export { PANE_BOUNDARIES } from "#next/lib/navigation/pane-key";
 
 export interface AppRouterOptions {
   context: RouterContext;

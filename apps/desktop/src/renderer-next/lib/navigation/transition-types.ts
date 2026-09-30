@@ -41,7 +41,7 @@ type NavState = {
   navIntent?: { id: string; type: NavType | "none" };
 };
 
-export const paneLocationOf = (
+const paneLocationOf = (
   router: AnyRouter,
   location: Pick<ParsedLocation, "pathname">
 ): PaneLocation | null => {
@@ -58,7 +58,7 @@ export const paneLocationOf = (
  * The types for committing `next` after `from`, with `seenKeys` the history
  * entries committed before (a forward traversal lands on one of those).
  */
-export const navTypesFor = (
+const navTypesFor = (
   router: AnyRouter,
   from: ParsedLocation | undefined,
   next: ParsedLocation,

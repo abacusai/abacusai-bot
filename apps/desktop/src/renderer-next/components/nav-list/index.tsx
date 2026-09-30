@@ -106,7 +106,7 @@ const Group = ({
   );
 };
 
-export interface NavListItemProps {
+interface NavListItemProps {
   to: string;
   params?: Record<string, string>;
   search?: Record<string, unknown>;
@@ -161,7 +161,9 @@ const NavItem = ({
       </ItemTitle>
     </ItemContent>
     {meta != null && (
-      <span className="text-muted-foreground shrink-0 text-[11px]">{meta}</span>
+      <span className="text-sidebar-foreground/70 shrink-0 text-[11px]">
+        {meta}
+      </span>
     )}
     {trailing}
   </Item>

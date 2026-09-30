@@ -18,7 +18,7 @@ const subscribe = (onChange: () => void): (() => void) => {
   };
 };
 
-export const currentBand = (): Band => {
+const currentBand = (): Band => {
   const [md, lg, xl] = QUERIES.map((query) => window.matchMedia(query).matches);
   return xl ? "xl" : lg ? "lg" : md ? "md" : "sm";
 };

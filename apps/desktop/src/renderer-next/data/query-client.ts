@@ -7,7 +7,7 @@ import { isDefinedError } from "@orpc/client";
 import { QueryClient } from "@tanstack/react-query";
 
 /** Only a transient UNAVAILABLE is worth retrying (spec 00 A.5). */
-export const shouldRetry = (failureCount: number, error: unknown): boolean =>
+const shouldRetry = (failureCount: number, error: unknown): boolean =>
   isDefinedError(error) &&
   (error as { code?: unknown }).code === "UNAVAILABLE" &&
   failureCount < 3;

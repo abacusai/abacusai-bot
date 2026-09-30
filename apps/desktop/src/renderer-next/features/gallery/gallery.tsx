@@ -426,7 +426,7 @@ const ATOM_RENDERERS: Partial<Record<GallerySection, () => ReactNode>> = {
   motion: MotionSection,
 };
 
-export const renderSection = (section: GallerySection): ReactNode => {
+const renderSection = (section: GallerySection): ReactNode => {
   const overlays = GALLERY_OVERLAY_IDS.filter(
     (id) => OVERLAY_SECTION[id] === section
   );

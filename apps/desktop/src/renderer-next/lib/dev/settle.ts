@@ -54,7 +54,7 @@ const collectionsSettled = (
   ).then(() => undefined);
 
 /** Wait for finite animations; freeze infinite ones at their start. */
-export const settleAnimations = async (doc: Document): Promise<void> => {
+const settleAnimations = async (doc: Document): Promise<void> => {
   for (let round = 0; round < 5; round += 1) {
     const finite = doc
       .getAnimations()
@@ -74,6 +74,27 @@ export const settleAnimations = async (doc: Document): Promise<void> => {
   }
 };
 
+/**
+ * Whether a resolved location is the one `href` asked for: same path, and
+ * every search param given (defaults the route adds may be extra).
+ */
+const isLocationFor = (
+  href: string,
+  location: {
+    pathname?: string;
+    href: string;
+    search?: Record<string, unknown>;
+  }
+): boolean => {
+  const target = new URL(href, "http://x");
+  const pathname =
+    location.pathname ?? new URL(location.href, "http://x").pathname;
+  if (pathname !== target.pathname) return false;
+  for (const [key, value] of target.searchParams)
+    if (String(location.search?.[key]) !== value) return false;
+  return true;
+};
+
 export const navigateAndSettle = async (
   href: string,
   deps: SettleDeps
@@ -89,12 +110,15 @@ export const navigateAndSettle = async (
       deps.timeoutMs ?? 15_000
     );
     const off = router.subscribe("onResolved", (event) => {
-      if (event.toLocation.href !== href) return;
+      if (!isLocationFor(href, event.toLocation)) return;
       clearTimeout(timer);
       off();
       resolve();
     });
-    if (router.state.location.href === href && router.state.status === "idle") {
+    if (
+      isLocationFor(href, router.state.location) &&
+      router.state.status === "idle"
+    ) {
       clearTimeout(timer);
       off();
       resolve();

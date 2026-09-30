@@ -16,10 +16,10 @@ type ReadyGlobal = { [REPORTED]?: boolean };
 
 type Watched = Pick<Collections, "prefs" | "sessions" | "workspaces">;
 
-export const READINESS_TABLES = ["prefs", "sessions", "workspaces"] as const;
+const READINESS_TABLES = ["prefs", "sessions", "workspaces"] as const;
 
 /** Resolves the barrier to report; exported for tests. */
-export const watchReadiness = (
+const watchReadiness = (
   collections: Watched,
   report: (
     barrier:

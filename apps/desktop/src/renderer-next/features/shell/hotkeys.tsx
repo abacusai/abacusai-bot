@@ -42,7 +42,7 @@ export const AppHotkeysProvider = ({
 );
 
 /** A contenteditable target, or one inside `[data-hotkeys="text"]`. */
-export const isRichTextTarget = (target: EventTarget | null): boolean => {
+const isRichTextTarget = (target: EventTarget | null): boolean => {
   const element = target as HTMLElement | null;
   if (element == null || typeof element.closest !== "function") return false;
   if (element.isContentEditable) return true;
@@ -53,7 +53,7 @@ export const isRichTextTarget = (target: EventTarget | null): boolean => {
   return element.closest('[data-hotkeys="text"]') != null;
 };
 
-export const useAppHotkey = (
+const useAppHotkey = (
   binding: string,
   handler: () => void,
   options: { guardRichText?: boolean; enabled?: boolean } = {}

@@ -152,5 +152,3 @@ export const createCollections = (
 };
 
 export type Collections = ReturnType<typeof createCollections>;
-
-export type CollectionName = keyof Collections;

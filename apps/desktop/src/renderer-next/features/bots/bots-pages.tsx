@@ -14,7 +14,7 @@ import { botAccentStyle } from "#next/lib/theme";
 
 import { BotDot } from "./bots-sidebar";
 
-export const useBot = (botId: string) => {
+const useBot = (botId: string) => {
   const collections = useCollections();
   const { data } = useLiveQuery({
     query: (q) =>

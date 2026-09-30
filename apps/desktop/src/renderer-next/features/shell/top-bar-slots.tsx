@@ -19,7 +19,7 @@ interface SlotState {
   actions: TopBarAction[];
 }
 
-export const topBarSlots = new Store<SlotState>({
+const topBarSlots = new Store<SlotState>({
   identity: null,
   actions: [],
 });
