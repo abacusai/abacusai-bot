@@ -283,6 +283,9 @@ export class AguiRelayService implements AguiSource {
   readonly #pendingSince = new Map<string, Map<string, number>>();
   #attentionRevision = 0;
   readonly #attentionListeners = new Set<(event: AttentionEvent) => void>();
+  /** The last `busy` reported to `onBusyChange` listeners. */
+  #busy = false;
+  readonly #busyListeners = new Set<(busy: boolean) => void>();
 
   constructor(options: AguiRelayOptions) {
     this.#host = options.host;
@@ -329,6 +332,7 @@ export class AguiRelayService implements AguiSource {
     }
     if (relayEvent.type === "CUSTOM" && relayEvent.name === "run.ack")
       this.#settleAck(threadId, relayEvent.value);
+    this.#busyCheck();
   }
 
   /** `AgentManagerService.emitAguiExit`: an agui runtime's process closed. */
@@ -366,6 +370,7 @@ export class AguiRelayService implements AguiSource {
       );
       this.#release(threadId, runId, pending);
     }
+    this.#busyCheck();
   }
 
   /**
@@ -374,11 +379,45 @@ export class AguiRelayService implements AguiSource {
    */
   failActiveRun(threadId: string, code: string, message: string): void {
     this.#threads.get(threadId)?.failActiveRun(code, message);
+    this.#busyCheck();
   }
 
   /** The conversation was reset by main (not via the agent). */
   clearThread(threadId: string): void {
     this.#threads.get(threadId)?.clearByMain();
+    this.#busyCheck();
+  }
+
+  /**
+   * Whether any agui thread has a run open or an admission in flight: the
+   * authoritative busy aggregate (spec 07 review r1 #10), from the relay's
+   * own run state and never from compat turn state, whose pipe (fd 3) is
+   * ordered independently of stdout.
+   */
+  get busy(): boolean {
+    if (this.#waiting.size > 0 || this.#awaitingStart.size > 0) return true;
+    for (const thread of this.#threads.values())
+      if (thread.activeRunId != null) return true;
+    return false;
+  }
+
+  /** Called with the new value whenever `busy` changes. Returns the removal. */
+  onBusyChange(listener: (busy: boolean) => void): () => void {
+    this.#busyListeners.add(listener);
+    return () => this.#busyListeners.delete(listener);
+  }
+
+  #busyCheck(): void {
+    const busy = this.busy;
+    if (busy === this.#busy) return;
+    this.#busy = busy;
+    for (const listener of Array.from(this.#busyListeners)) {
+      try {
+        listener(busy);
+      } catch (error) {
+        this.#log(`a busy listener threw: ${String(error)}`);
+      }
+    }
   }
 
   /** Threads with per-thread admission bookkeeping (leak checks, diagnostics). */
@@ -415,6 +454,7 @@ export class AguiRelayService implements AguiSource {
     this.#awaitingStart.delete(threadId);
     // Session deletion: nothing of it waits on the user any more.
     this.#setAttention(threadId, { incarnation: null, items: [] });
+    this.#busyCheck();
   }
 
   // ─── run-finished notices and attention ───────────────────────────────
@@ -713,6 +753,7 @@ export class AguiRelayService implements AguiSource {
     if (repeat != null) return repeat;
     const pending = waiter();
     this.#waitingFor(threadId).set(runId, pending);
+    this.#busyCheck();
 
     let marked = false;
     let written = false;
@@ -774,6 +815,7 @@ export class AguiRelayService implements AguiSource {
     } finally {
       clearTimeout(timer);
       this.#release(threadId, runId, pending);
+      this.#busyCheck();
     }
   }
 
