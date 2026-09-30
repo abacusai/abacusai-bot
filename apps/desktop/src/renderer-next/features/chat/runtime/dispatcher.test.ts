@@ -69,7 +69,7 @@ describe("R2-T5 dispatcher", () => {
     closed.close();
     const items: unknown[] = [];
     for await (const event of closed.stream()) items.push(event);
-    expect(items).toHaveLength(1);
+    expect(items).toHaveLength(0);
     closed.push({ seq: 2, event: chunk(2) });
     expect(closed.pending).toBe(0);
   });

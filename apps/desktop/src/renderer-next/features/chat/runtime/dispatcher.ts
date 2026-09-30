@@ -23,6 +23,7 @@ export interface DispatcherHooks {
   pre(item: DispatchItem): void;
   /** After the client processed it: terminal records, `appliedSeq`, readiness. */
   post(item: DispatchItem): void;
+  error?(error: unknown): void;
 }
 
 export interface Dispatcher {
@@ -47,13 +48,21 @@ export const createDispatcher = (hooks: DispatcherHooks): Dispatcher => {
       for (;;) {
         // Resumed: the client processed `previous`.
         if (previous != null) {
-          hooks.post(previous);
+          try {
+            hooks.post(previous);
+          } catch (error) {
+            hooks.error?.(error);
+          }
           previous = null;
         }
         if (signal?.aborted === true) return;
         const item = queue.shift();
         if (item != null) {
-          hooks.pre(item);
+          try {
+            hooks.pre(item);
+          } catch (error) {
+            hooks.error?.(error);
+          }
           previous = item;
           yield item.event;
           continue;
@@ -65,6 +74,8 @@ export const createDispatcher = (hooks: DispatcherHooks): Dispatcher => {
       }
     } finally {
       signal?.removeEventListener("abort", onAbort);
+      closed = true;
+      queue.length = 0;
     }
   }
 
@@ -76,6 +87,7 @@ export const createDispatcher = (hooks: DispatcherHooks): Dispatcher => {
     },
     close: () => {
       closed = true;
+      queue.length = 0;
       poke();
     },
     stream,

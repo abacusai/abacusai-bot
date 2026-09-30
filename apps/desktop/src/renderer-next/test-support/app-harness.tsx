@@ -26,7 +26,7 @@ import {
   createMemoryTransport,
   type MemoryTransport,
 } from "#next/data/transport/memory";
-import { fixtureRuntime } from "#next/features/chat";
+import { fixtureRuntime } from "#next/features/chat/fixtures/player";
 import { resetReadinessForTests } from "#next/features/shell/readiness";
 import { resetShellStore } from "#next/features/shell/shell-store";
 import { i18n, initI18n } from "#next/lib/i18n";

@@ -1,3 +1,4 @@
+import type { AguiEvent } from "@abacus-ai/agent";
 /**
  * R2-T29 (spec 02 §11): the copied agent goldens equal their sources; every
  * builder scenario uses only the event types and custom names the agent
@@ -29,7 +30,7 @@ const withSeqs = (text: string): string =>
     .join("\n")}\n`;
 
 /** The emitted vocabulary (agent spec §2.3, main relay notes). */
-const TYPES = new Set([
+const TYPES = new Set<string>([
   "RUN_STARTED",
   "RUN_FINISHED",
   "RUN_ERROR",
@@ -51,7 +52,7 @@ const TYPES = new Set([
   "SUBAGENT_STARTED",
   "SUBAGENT_FINISHED",
   "SUBAGENT_ERROR",
-]);
+] satisfies readonly `${AguiEvent["type"]}`[]);
 const CUSTOM = new Set([
   "session.ready",
   "session.cleared",

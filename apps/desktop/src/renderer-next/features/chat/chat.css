@@ -120,8 +120,9 @@
   border-top: 1px solid var(--border);
 }
 .chat-code-more:hover { color: var(--foreground); }
-.chat-code[data-lang="diff"] .token.inserted { color: var(--chat-diff-add-fg); }
-.chat-code[data-lang="diff"] .token.deleted { color: var(--chat-diff-del-fg); }
+/* @tanstack/highlight's diff grammar emits `th-inserted` / `th-deleted`. */
+.chat-code:is([data-lang="diff"], [data-lang="patch"]) .th-inserted { color: var(--chat-diff-add-fg); }
+.chat-code:is([data-lang="diff"], [data-lang="patch"]) .th-deleted { color: var(--chat-diff-del-fg); }
 
 /* ─── math (§7.3) ────────────────────────────────────────────────── */
 
@@ -188,9 +189,20 @@
   }
 }
 
+/*
+ * Reduced motion (§9.1), resolved as the foundation does (tokens.css):
+ * `prefs.motion.reduce` is `data-reduce-motion` on <html>; "on" reduces
+ * everywhere, "off" keeps full motion even with the OS setting on, and
+ * "system" follows the OS. Dots stop, fresh rows and the last streamed
+ * block only fade, and the shimmer becomes plain text (`shimmer-none`).
+ */
 @media (prefers-reduced-motion: reduce) {
-  .chat-typing-dot { animation: none; opacity: 0.7; }
-  .chat-prose-streaming > :last-child { animation: none; }
-  [data-slot="message-scroller-item"][data-fresh] { transition: opacity 120ms linear; translate: none; }
+  html:not([data-reduce-motion="off"]) .chat-typing-dot { animation: none; opacity: 0.7; }
+  html:not([data-reduce-motion="off"]) .chat-prose-streaming > :last-child { animation: none; }
+  html:not([data-reduce-motion="off"]) [data-slot="message-scroller-item"][data-fresh] { transition: opacity 120ms linear; translate: none; }
+  html:not([data-reduce-motion="off"]) .shimmer { --shimmer-image: none; --shimmer-text-fill: currentColor; animation: none; }
 }
-:root[data-motion="reduced"] .chat-typing-dot { animation: none; opacity: 0.7; }
+html[data-reduce-motion="on"] .chat-typing-dot { animation: none; opacity: 0.7; }
+html[data-reduce-motion="on"] .chat-prose-streaming > :last-child { animation: none; }
+html[data-reduce-motion="on"] [data-slot="message-scroller-item"][data-fresh] { transition: opacity 120ms linear; translate: none; }
+html[data-reduce-motion="on"] .shimmer { --shimmer-image: none; --shimmer-text-fill: currentColor; animation: none; }

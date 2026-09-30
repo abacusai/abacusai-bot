@@ -5,14 +5,16 @@
 import { ORPCError } from "@orpc/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { memoryRelay, closeMemoryRelays } from "#next/test-support/chat-relay";
 import type { AiSendInput } from "#shared/contract/ai";
 
 import * as b from "../fixtures/builders";
-import { FakeRelay } from "../fixtures/relay";
+import type { FakeRelay } from "../fixtures/relay";
 import { ThreadSession } from "./session";
 
 const sessions: ThreadSession[] = [];
 afterEach(() => {
+  closeMemoryRelays();
   for (const session of sessions.splice(0)) session.retire();
 });
 
@@ -44,9 +46,12 @@ const timeout = () => new ORPCError("TIMEOUT", { data: { ms: 30_000 } });
 
 describe("R2-T35 uncertain admission", () => {
   it("(a) the echo before the RPC rejection confirms it; the rejection is ignored", async () => {
-    const relay = new FakeRelay({
-      onSend: (input, r) => {
+    const relay = await memoryRelay({
+      onSend: async (input, r) => {
         echo(r, input);
+        await vi.waitFor(() =>
+          expect(session.hostStore.state.outbox).toEqual([])
+        );
         return { runId: input.runId, status: "started" };
       },
     });
@@ -55,11 +60,11 @@ describe("R2-T35 uncertain admission", () => {
     // The echo is on the stream; let the client process it before the RPC settles.
     const result = session.submit("hello");
     await expect(result).resolves.toMatchObject({
-      kind: expect.stringMatching(/started|unconfirmed/),
+      kind: "started",
     });
     await vi.waitFor(() => expect(session.hostStore.state.outbox).toEqual([]));
     await new Promise((resolve) => setTimeout(resolve, 80));
-    expect(relay.stats.send.length).toBeLessThanOrEqual(2);
+    expect(relay.stats.send).toHaveLength(1);
     expect(
       session.hostStore.state.messages.filter((m) => m.role === "user")
     ).toHaveLength(1);
@@ -67,7 +72,7 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(b) an echo after the failure: pending until it arrives", async () => {
     let pending: AiSendInput | null = null;
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input) => {
         pending = input;
         return { runId: input.runId, status: "started" };
@@ -85,7 +90,7 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(c) a lost ack: the re-send is a duplicate of started, no second run", async () => {
     let runs = 0;
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input) => {
         runs += 1;
         return { runId: input.runId, status: "started" };
@@ -109,23 +114,14 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(d) a prompt that never reached the agent is admitted once by the re-send", async () => {
     let runs = 0;
-    let reached = false;
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input) => {
         runs += 1;
         return { runId: input.runId, status: "started" };
       },
     });
-    // The first attempt dies before main records anything.
-    const original = relay.ai.send;
-    (relay.ai as { send: unknown }).send = async (input: AiSendInput) => {
-      if (!reached) {
-        reached = true;
-        relay.stats.send.push(input);
-        throw timeout();
-      }
-      return original(input);
-    };
+    // The first attempt dies before the server records an ack.
+    relay.faults.sendLost = (call) => (call === 1 ? timeout() : null);
     const session = await open(relay);
     await expect(session.submit("hello")).resolves.toEqual({
       kind: "unconfirmed",
@@ -137,7 +133,7 @@ describe("R2-T35 uncertain admission", () => {
   });
 
   it("(e) two failed re-sends: Not sent, and Discard gives the text back", async () => {
-    const relay = new FakeRelay();
+    const relay = await memoryRelay();
     relay.faults.send = () => timeout();
     const session = await open(relay);
     await session.submit("hello");
@@ -150,8 +146,37 @@ describe("R2-T35 uncertain admission", () => {
     expect(session.hostStore.state.outbox).toEqual([]);
   });
 
+  it("(e) manual Retry keeps the reservation and cannot admit an already accepted run twice", async () => {
+    let runs = 0;
+    const relay = await memoryRelay({
+      onSend: (input) => {
+        runs += 1;
+        return { runId: input.runId, status: "started" };
+      },
+    });
+    relay.faults.send = (call) => (call <= 3 ? timeout() : null);
+    const session = await open(relay);
+    await session.submit("hello");
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.outbox[0]?.state).toBe("failed")
+    );
+    const entry = session.hostStore.state.outbox[0]!;
+    await expect(session.retryOutbox(entry.id)).resolves.toEqual({
+      kind: "started",
+    });
+    expect(relay.stats.send).toHaveLength(4);
+    expect(new Set(relay.stats.send.map((input) => input.runId))).toEqual(
+      new Set([entry.runId])
+    );
+    expect(
+      new Set(relay.stats.send.map((input) => input.messages[0]!.id))
+    ).toEqual(new Set([entry.id]));
+    expect(runs).toBe(1);
+    expect(session.hostStore.state.outbox[0]?.state).toBe("accepted");
+  });
+
   it("(f) UNAVAILABLE is definitive: the entry leaves at once", async () => {
-    const relay = new FakeRelay();
+    const relay = await memoryRelay();
     relay.faults.send = () => new ORPCError("UNAVAILABLE", { data: {} });
     const session = await open(relay);
     await expect(session.submit("hello")).rejects.toBeInstanceOf(ORPCError);

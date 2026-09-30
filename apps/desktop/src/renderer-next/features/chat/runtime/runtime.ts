@@ -82,7 +82,7 @@ export const createChatRuntime = (
         ((message, error) => console.warn(`[chat] ${message}`, error)),
     });
     sessions.set(threadId, created);
-    evict();
+    queueMicrotask(evict);
     return created;
   };
 

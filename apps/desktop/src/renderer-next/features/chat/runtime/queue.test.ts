@@ -7,15 +7,17 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { memoryRelay, closeMemoryRelays } from "#next/test-support/chat-relay";
 import type { QueueEntry } from "#shared/agent-types";
 
 import * as b from "../fixtures/builders";
-import { FakeRelay } from "../fixtures/relay";
+import type { FakeRelay } from "../fixtures/relay";
 import { isBusy } from "../store/selectors";
 import { ThreadSession } from "./session";
 
 const sessions: ThreadSession[] = [];
 afterEach(() => {
+  closeMemoryRelays();
   vi.useRealTimers();
   for (const session of sessions.splice(0)) session.retire();
 });
@@ -88,7 +90,7 @@ const agentQueue = () => {
 
 const open = async () => {
   const queue = agentQueue();
-  const relay = new FakeRelay({ onQueue: queue.handler });
+  const relay = await memoryRelay({ onQueue: queue.handler });
   relay.emitAll([
     ...b.sessionReady(),
     b.runStarted("r1"),
@@ -163,7 +165,7 @@ describe("R2-T21 queue (runtime)", () => {
   });
 
   it("a rejection from a previous incarnation is ignored; a silent command times out", async () => {
-    const relay = new FakeRelay();
+    const relay = await memoryRelay();
     relay.emitAll([...b.sessionReady("inc-2")]);
     const session = new ThreadSession({ ai: relay.ai, threadId: "t-1" });
     sessions.push(session);
@@ -206,7 +208,7 @@ describe("R2-T10 busy", () => {
 
   it("busy from submit to terminal: outbox before RUN_STARTED, then the active run", async () => {
     let started: (() => void) | null = null;
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input, r) => {
         started = () =>
           r.emitAll([
