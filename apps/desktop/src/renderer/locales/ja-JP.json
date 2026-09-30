@@ -2343,11 +2343,11 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
-      "attach": "Attach",
+      "attach": "添付",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
       "attachFolder": "Folder",
-      "botPlaceholder": "Message {{name}}",
+      "botPlaceholder": "{{name}}にメッセージ",
       "busyBot": "Add to the queue, or stop",
       "busySession": "Steer the run, or queue the next step",
       "channelBot": "This chat lives in your messaging app. Reply there.",
@@ -2367,8 +2367,8 @@
       "routineRun": "A routine run. Open the routine to change it.",
       "searchModels": "Search models",
       "send": "Send",
-      "skills": "Skills",
-      "stop": "Stop",
+      "skills": "スキル",
+      "stop": "停止",
       "uploading": "Wait for the attachments to finish saving"
     },
     "day": {
@@ -2377,9 +2377,9 @@
     },
     "error": {
       "crashed": "The agent stopped unexpectedly",
-      "label": "Error",
+      "label": "エラー",
       "open": "Open",
-      "retry": "Retry",
+      "retry": "再試行",
       "switchModel": "Switch model"
     },
     "message": {
@@ -2387,7 +2387,7 @@
       "credits_other": "Used {{count}} credits",
       "discard": "Discard",
       "notSent": "Not sent",
-      "retry": "Retry",
+      "retry": "再試行",
       "sending": "Sending",
       "workedThrough_one": "Worked through {{count}} step",
       "workedThrough_other": "Worked through {{count}} steps"
@@ -2421,7 +2421,7 @@
     },
     "permission": {
       "action": {
-        "allow": "Allow",
+        "allow": "許可",
         "allowOnce": "Allow once",
         "alwaysAcceptEdits": "Always accept edits this session",
         "alwaysAllow": "Always allow",
@@ -2430,7 +2430,7 @@
         "alwaysAllowRule": "Always allow {{rule}}",
         "alwaysAllowSite": "Always allow this site, this session",
         "alwaysAllowThese": "Always allow these this session",
-        "deny": "Deny",
+        "deny": "拒否",
         "planAcceptAll": "Yes, and accept all edits",
         "planApproveEach": "Yes, and approve each edit",
         "planFullAccess": "Yes, with full access",
@@ -2497,7 +2497,7 @@
       }
     },
     "question": {
-      "next": "Next",
+      "next": "次へ",
       "previous": "Back",
       "progress": "{{current}} of {{total}}",
       "submit": "Submit"
@@ -2540,7 +2540,7 @@
       "open": "Open agent",
       "steps_one": "{{count}} step",
       "steps_other": "{{count}} steps",
-      "stop": "Stop",
+      "stop": "停止",
       "stopHint": "Stops the whole reply"
     },
     "tool": {
@@ -2574,13 +2574,13 @@
       "new_one": "{{count}} new",
       "new_other": "{{count}} new",
       "olderFailed": "Couldn't load earlier messages",
-      "retry": "Retry",
+      "retry": "再試行",
       "showEarlier": "Show earlier",
       "showLater": "Show later"
     },
     "view": {
       "gone": "This conversation no longer exists.",
-      "retry": "Retry",
+      "retry": "再試行",
       "unavailable": "The agent isn't available yet"
     }
   }

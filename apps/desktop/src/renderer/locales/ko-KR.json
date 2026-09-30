@@ -2343,11 +2343,11 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
-      "attach": "Attach",
+      "attach": "첨부",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
       "attachFolder": "Folder",
-      "botPlaceholder": "Message {{name}}",
+      "botPlaceholder": "{{name}}에게 메시지",
       "busyBot": "Add to the queue, or stop",
       "busySession": "Steer the run, or queue the next step",
       "channelBot": "This chat lives in your messaging app. Reply there.",
@@ -2367,8 +2367,8 @@
       "routineRun": "A routine run. Open the routine to change it.",
       "searchModels": "Search models",
       "send": "Send",
-      "skills": "Skills",
-      "stop": "Stop",
+      "skills": "스킬",
+      "stop": "중지",
       "uploading": "Wait for the attachments to finish saving"
     },
     "day": {
@@ -2377,9 +2377,9 @@
     },
     "error": {
       "crashed": "The agent stopped unexpectedly",
-      "label": "Error",
+      "label": "오류",
       "open": "Open",
-      "retry": "Retry",
+      "retry": "재시도",
       "switchModel": "Switch model"
     },
     "message": {
@@ -2387,7 +2387,7 @@
       "credits_other": "Used {{count}} credits",
       "discard": "Discard",
       "notSent": "Not sent",
-      "retry": "Retry",
+      "retry": "재시도",
       "sending": "Sending",
       "workedThrough_one": "Worked through {{count}} step",
       "workedThrough_other": "Worked through {{count}} steps"
@@ -2421,7 +2421,7 @@
     },
     "permission": {
       "action": {
-        "allow": "Allow",
+        "allow": "허용",
         "allowOnce": "Allow once",
         "alwaysAcceptEdits": "Always accept edits this session",
         "alwaysAllow": "Always allow",
@@ -2430,7 +2430,7 @@
         "alwaysAllowRule": "Always allow {{rule}}",
         "alwaysAllowSite": "Always allow this site, this session",
         "alwaysAllowThese": "Always allow these this session",
-        "deny": "Deny",
+        "deny": "거부",
         "planAcceptAll": "Yes, and accept all edits",
         "planApproveEach": "Yes, and approve each edit",
         "planFullAccess": "Yes, with full access",
@@ -2497,7 +2497,7 @@
       }
     },
     "question": {
-      "next": "Next",
+      "next": "다음",
       "previous": "Back",
       "progress": "{{current}} of {{total}}",
       "submit": "Submit"
@@ -2540,7 +2540,7 @@
       "open": "Open agent",
       "steps_one": "{{count}} step",
       "steps_other": "{{count}} steps",
-      "stop": "Stop",
+      "stop": "중지",
       "stopHint": "Stops the whole reply"
     },
     "tool": {
@@ -2574,13 +2574,13 @@
       "new_one": "{{count}} new",
       "new_other": "{{count}} new",
       "olderFailed": "Couldn't load earlier messages",
-      "retry": "Retry",
+      "retry": "재시도",
       "showEarlier": "Show earlier",
       "showLater": "Show later"
     },
     "view": {
       "gone": "This conversation no longer exists.",
-      "retry": "Retry",
+      "retry": "재시도",
       "unavailable": "The agent isn't available yet"
     }
   }
