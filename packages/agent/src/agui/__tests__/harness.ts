@@ -308,6 +308,98 @@ export function ndjsonDriver(
   };
 }
 
+/** An AguiHost with injected stdio; compat captured as its own byte stream. */
+export function aguiDriver(
+  start: (io: {
+    stdin: PassThrough;
+    writeStdout: (text: string) => void;
+    compatWrite: (line: string) => void;
+  }) => { run(): Promise<void> }
+): HostDriver & { bytes(): string; stdout(): string } {
+  const stdin = new PassThrough();
+  let compat = "";
+  let stdout = "";
+  const host = start({
+    stdin,
+    writeStdout: (text) => {
+      stdout += text;
+    },
+    compatWrite: (line) => {
+      compat += line;
+    },
+  });
+  const done = host.run();
+
+  return {
+    write: (line) => stdin.write(`${line}\n`),
+    end: () => stdin.end(),
+    done,
+    legacy: () => parseLegacy(compat.slice(0, compat.lastIndexOf("\n") + 1)),
+    bytes: () => compat,
+    stdout: () => stdout,
+  };
+}
+
+/**
+ * An AG-UI stream with its volatile values made stable for a fixture:
+ * timestamps dropped, server run ids and pi session ids numbered in order.
+ */
+export function normalizeAgui(stdout: string, port: number): string {
+  const ids = new Map<string, string>();
+  let masked = stdout;
+  let n = 0;
+
+  for (const line of lines(stdout)) {
+    const event = JSON.parse(line) as {
+      name?: string;
+      value?: { agentSessionId?: string; agentSessionFile?: string };
+    };
+
+    if (event.name !== "session.ready") continue;
+    n += 1;
+    if (event.value?.agentSessionFile != null)
+      masked = masked
+        .split(event.value.agentSessionFile)
+        .join(`<SESSION_FILE_${n}>`);
+    if (event.value?.agentSessionId != null)
+      masked = masked
+        .split(event.value.agentSessionId)
+        .join(`<SESSION_ID_${n}>`);
+  }
+
+  masked = masked
+    .split(GOLDEN_ROOT)
+    .join("<ROOT>")
+    .split(`127.0.0.1:${port}`)
+    .join("127.0.0.1:<PORT>")
+    .replace(/(delegate|document|deck|design|browser)-\d{13}-/g, "$1-<T>-")
+    .replace(/srv-[0-9a-f-]{36}|<SESSION_ID_\d+>:\d{13}/g, (id) => {
+      if (!ids.has(id)) {
+        ids.set(
+          id,
+          id.startsWith("srv-")
+            ? `srv-<${ids.size + 1}>`
+            : `<MSG_${ids.size + 1}>`
+        );
+      }
+
+      return ids.get(id)!;
+    });
+
+  return lines(masked)
+    .map((line) => {
+      const event = JSON.parse(line) as Record<string, unknown>;
+
+      delete event.timestamp;
+
+      return JSON.stringify(event, (key, value: unknown) =>
+        key === "expiresAt" || key === "incarnation" ? `<${key}>` : value
+      );
+    })
+    .join("\n")
+    .concat("\n");
+}
+
 /** Streams for a host that takes injected stdio. */
 export function injectedStreams(): {
   stdin: PassThrough;
@@ -354,4 +446,9 @@ export function golden(name: string, actual: string): string | null {
   }
 
   return fs.readFileSync(file, "utf8");
+}
+
+/** A checked-in fixture, never rewritten (the NDJSON baseline is read-only here). */
+export function readGolden(name: string): string {
+  return fs.readFileSync(fixturePath(name), "utf8");
 }

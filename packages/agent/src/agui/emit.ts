@@ -117,6 +117,8 @@ export class AguiEmitter {
 
   // ------------------------------------------------------------ session state
   private hiddenDepth = 0;
+  /** No STATE_DELTA before the first snapshot: pre-ready changes fold into it. */
+  private snapshotted = false;
   private readonly state: AgentState;
   private readonly pending = new Map<string, PendingPermission>();
   /** Why the next `permission_cleared` happens; set by the host around stop/reset. */
@@ -190,9 +192,7 @@ export class AguiEmitter {
               : {}),
             incarnation: this.ctx.incarnation,
           }),
-          aguiEvent(EventType.STATE_SNAPSHOT, {
-            snapshot: structuredClone(this.state),
-          }),
+          this.snapshot(),
         ];
       }
 
@@ -254,11 +254,7 @@ export class AguiEmitter {
 
       this.state.plan = plan;
 
-      return [
-        aguiEvent(EventType.STATE_DELTA, {
-          delta: [{ op: "add", path: "/plan", value: plan }],
-        }),
-      ];
+      return this.delta([{ op: "add", path: "/plan", value: plan }]);
     }
 
     if (!this.runActive()) return [];
@@ -415,6 +411,22 @@ export class AguiEmitter {
 
   // --------------------------------------------------------------- internals
 
+  private snapshot(): AguiEvent {
+    this.snapshotted = true;
+
+    return aguiEvent(EventType.STATE_SNAPSHOT, {
+      snapshot: structuredClone(this.state),
+    });
+  }
+
+  private delta(
+    ops: Array<{ op: "add" | "replace"; path: string; value: unknown }>
+  ): AguiEvent[] {
+    return this.snapshotted
+      ? [aguiEvent(EventType.STATE_DELTA, { delta: ops })]
+      : [];
+  }
+
   private runActive(): boolean {
     return this.ctx.runs.isOpen() && this.hiddenDepth === 0;
   }
@@ -454,23 +466,17 @@ export class AguiEmitter {
         this.state.mode = event.mode;
         this.state.modeSource = event.source;
 
-        return [
-          aguiEvent(EventType.STATE_DELTA, {
-            delta: [
-              { op: "replace", path: "/mode", value: event.mode },
-              { op: "replace", path: "/modeSource", value: event.source },
-            ],
-          }),
-        ];
+        return this.delta([
+          { op: "replace", path: "/mode", value: event.mode },
+          { op: "replace", path: "/modeSource", value: event.source },
+        ]);
 
       case "model_changed":
         this.state.model = event.model;
 
-        return [
-          aguiEvent(EventType.STATE_DELTA, {
-            delta: [{ op: "replace", path: "/model", value: event.model }],
-          }),
-        ];
+        return this.delta([
+          { op: "replace", path: "/model", value: event.model },
+        ]);
 
       case "turn_complete":
         if (event.usage == null) return [];
