@@ -28,6 +28,8 @@ export interface PumpPositions {
   readonly checkpoint: number;
   /** The last seq accepted from the server. */
   receivedSeq: number;
+  /** The relay's lifetime at the checkpoint; a resume from another answers resync. */
+  readonly epoch: string | null;
 }
 
 export interface PumpOptions {
@@ -47,6 +49,7 @@ export interface PumpOptions {
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
 
+/** Two waits, then the third failure sets `"error"` (§3.3, R2-T34). */
 export const RETRY_DELAYS_MS = [250, 1000] as const;
 
 const defaultSleep = (ms: number, signal: AbortSignal): Promise<void> =>
@@ -137,7 +140,11 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
   while (!signal.aborted && !stopped) {
     try {
       const iterator = await ai.subscribe(
-        { threadId, lastEventId: resumePoint(positions.receivedSeq) },
+        {
+          threadId,
+          lastEventId: resumePoint(positions.receivedSeq),
+          ...(positions.epoch != null ? { epoch: positions.epoch } : {}),
+        },
         { signal }
       );
       for await (const event of iterator) {

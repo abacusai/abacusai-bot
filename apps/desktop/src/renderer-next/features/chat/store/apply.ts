@@ -432,16 +432,13 @@ const stepsOf = (messages: readonly UIMessage[], runId: string): number => {
     );
 };
 
-const lastMessageId = (messages: readonly UIMessage[]): string | null => {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index]!;
-    // The processor's empty assistant message for a message-free failure
-    // (F12) is not an anchor: it never renders.
-    if (message.role === "assistant" && message.parts.length === 0) continue;
-    return message.id;
-  }
-  return null;
-};
+/**
+ * The last transcript message. An empty assistant message (main's
+ * `<runId>:error` for a message-free failure, §14.12) is the anchor as main
+ * records it; it renders nothing.
+ */
+const lastMessageId = (messages: readonly UIMessage[]): string | null =>
+  messages.at(-1)?.id ?? null;
 
 /** Post-apply: the terminal's durable outcome (§14.7), `active = null`. */
 export const recordTerminal = (
