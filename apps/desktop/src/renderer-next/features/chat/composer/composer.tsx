@@ -72,7 +72,13 @@ import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 /** The composer's max height before it scrolls (today's `COMPOSER_MAX_HEIGHT`). */
 const COMPOSER_MAX_HEIGHT = 200;
 
-type ComposerState = "resting" | "focused" | "typing" | "busy" | "blocked";
+type ComposerState =
+  | "resting"
+  | "focused"
+  | "typing"
+  | "busy"
+  | "blocked"
+  | "dictating";
 
 interface ComposerContextValue {
   threadId: string;
@@ -280,7 +286,12 @@ export const ThreadComposer = () => {
   const [focused, setFocused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trigger, setTrigger] = useState<TriggerState | null>(null);
+  const [trigger, setTrigger] = useState<TriggerState | null>(() =>
+    triggerAt(draft.text, draft.text.length, {
+      mentions: config.mentions != null,
+      skills: skills.length > 0,
+    })
+  );
   const field = useRef<HTMLTextAreaElement>(null);
   const pref = useMotionPreference();
   const fieldId = useId();
@@ -289,17 +300,19 @@ export const ThreadComposer = () => {
   const expanded =
     config.mode === "full" && skin === "session"
       ? !menuOpen
-      : focused || hasDraft;
+      : focused || hasDraft || config.dictating === true;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"
-      : busy
-        ? "busy"
-        : draft.text !== ""
-          ? "typing"
-          : focused
-            ? "focused"
-            : "resting";
+      : config.dictating === true
+        ? "dictating"
+        : busy
+          ? "busy"
+          : draft.text !== ""
+            ? "typing"
+            : focused
+              ? "focused"
+              : "resting";
 
   const submit = (): void => {
     const route = routeSubmit({
@@ -533,6 +546,11 @@ export const ThreadComposer = () => {
             ref={field}
             id={fieldId}
             aria-label={config.placeholder}
+            title={
+              config.attachmentsBase == null
+                ? t("chat.composer.pasteUnavailable")
+                : undefined
+            }
             value={draft.text}
             placeholder={placeholder}
             rows={1}

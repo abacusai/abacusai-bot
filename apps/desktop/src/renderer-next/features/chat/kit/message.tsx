@@ -43,7 +43,7 @@ import {
 import { Markdown } from "../markdown/markdown";
 import { useToolWindow } from "../scroller/row-context";
 import { useHost, useThreadStore } from "../store/selectors";
-import { useChatView } from "./context";
+import { useChatView, useSubagentScope } from "./context";
 import { useKitParts, useMessageScope, MessageScope } from "./message-scope";
 import { ToolLine } from "./tools/tool-line";
 
@@ -304,6 +304,7 @@ const StepList = ({
   const [limit, setLimit] = useState(MAX_TOOL_ROWS);
   const window = useToolWindow();
   const message = useMessageScope().message;
+  const scope = useSubagentScope() ?? "";
   const segments = message?.metadata?.abacus?.segments as
     | Array<{
         id: string;
@@ -317,7 +318,20 @@ const StepList = ({
   const blocks: Array<{ id: string | null; items: typeof items }> = [];
   const start = window?.range.start ?? 0;
   const end = window?.range.end ?? limit;
-  for (const item of items.slice(start, end)) {
+  const visibleItems =
+    window == null
+      ? items.slice(start, end)
+      : items.filter((item) => {
+          const index = window.ids.indexOf(`${scope}\0${item.part.id}`);
+          return index >= start && index < end;
+        });
+  const remaining =
+    window == null
+      ? Math.max(0, items.length - end)
+      : items.filter(
+          (item) => window.ids.indexOf(`${scope}\0${item.part.id}`) >= end
+        ).length;
+  for (const item of visibleItems) {
     const index = message?.parts.indexOf(item.part);
     const id =
       segments?.find((segment) => segment.partIndex === index)?.groupId ?? null;
@@ -342,14 +356,24 @@ const StepList = ({
         );
         return (
           <Collapsible key={index} data-slot="tool-group">
-            <CollapsibleTrigger>
+            <CollapsibleTrigger
+              hidden={
+                window != null &&
+                (() => {
+                  const index = window.ids.indexOf(
+                    `group\0${scope}\0${message?.id}\0${block.id}`
+                  );
+                  return index < start || index >= end;
+                })()
+              }
+            >
               {group?.summary ?? group?.category ?? block.id}
             </CollapsibleTrigger>
             <CollapsibleContent>{content}</CollapsibleContent>
           </Collapsible>
         );
       })}
-      {items.length > end ? (
+      {remaining > 0 ? (
         <Button
           variant="ghost"
           size="sm"
@@ -360,7 +384,7 @@ const StepList = ({
               : setLimit((value) => Math.min(399, value + 100))
           }
         >
-          {t("chat.tool.moreSteps", { count: items.length - end })}
+          {t("chat.tool.moreSteps", { count: remaining })}
         </Button>
       ) : null}
     </div>
@@ -433,7 +457,7 @@ const StepControls = ({ side }: { side: "earlier" | "more" }) => {
       onClick={side === "earlier" ? window.earlier : window.more}
     >
       {side === "earlier"
-        ? `${count} earlier steps`
+        ? t("chat.tool.earlierSteps", { count })
         : t("chat.tool.moreSteps", { count })}
     </Button>
   );
@@ -441,6 +465,8 @@ const StepControls = ({ side }: { side: "earlier" | "more" }) => {
 
 const GroupedParts = ({ message }: { message: UIMessage }) => {
   const SessionUI = useKitParts();
+  const window = useToolWindow();
+  const scope = useSubagentScope() ?? "";
   const segments = message.metadata?.abacus?.segments as
     | Array<{
         id: string;
@@ -470,13 +496,36 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             <SessionUI.Part key={i} part={part} />
           ));
           if (block.id == null) return <div key={index}>{content}</div>;
+          const header =
+            window?.ids.indexOf(
+              `group\0${scope}\0${message.id}\0${block.id}`
+            ) ?? -1;
+          const headerVisible =
+            window == null ||
+            (header >= window.range.start && header < window.range.end);
+          const childVisible =
+            window == null ||
+            block.parts.some(
+              (p) =>
+                p.part.type === "tool-call" &&
+                (() => {
+                  const index = window.ids.indexOf(`${scope}\0${p.part.id}`);
+                  return (
+                    index >= window.range.start && index < window.range.end
+                  );
+                })()
+            );
+          if (!headerVisible && !childVisible) return null;
           const group = segments?.find(
             (segment) =>
               segment.id === block.id && segment.type === "tool_group"
           );
           return (
             <Collapsible key={index} defaultOpen data-slot="tool-group">
-              <CollapsibleTrigger className="text-muted-foreground flex items-center gap-2 text-xs">
+              <CollapsibleTrigger
+                hidden={!headerVisible}
+                className="text-muted-foreground flex items-center gap-2 text-xs"
+              >
                 <ChevronRight aria-hidden className="size-3" />
                 {group?.summary ?? group?.category ?? block.id}
               </CollapsibleTrigger>

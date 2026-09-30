@@ -12,6 +12,7 @@ import { FixtureDb, fixtureTransport } from "#next/data/fixture-db/fixture-db";
 import { i18n, initI18n } from "#next/lib/i18n";
 import { defaultSeed } from "#next/test-support/app-harness";
 
+import { clearDraft } from "./composer/draft-store";
 import {
   fixtureRuntime,
   type FixtureRuntime,
@@ -93,7 +94,10 @@ export const renderScenario = async (
         skin={skin}
         runtime={fixture.runtime}
         workspaceRoot={skin === "session" ? "/repo" : null}
-        composer={baseComposer(skin, options.composer)}
+        composer={baseComposer(skin, {
+          dictating: fixture.scenario.view?.dictating === true,
+          ...options.composer,
+        })}
         {...(options.onOpenFile != null
           ? { onOpenFile: options.onOpenFile }
           : {})}
@@ -109,6 +113,7 @@ export const renderScenario = async (
     cleanup: async () => {
       await rendered.cleanup();
       fixture.runtime.forget(fixture.threadId);
+      clearDraft(fixture.threadId);
     },
   };
 };

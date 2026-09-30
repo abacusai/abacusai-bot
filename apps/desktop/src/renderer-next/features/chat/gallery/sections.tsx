@@ -9,6 +9,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { botAccentStyle } from "#next/lib/theme";
 import { BOT_AVATAR_COLORS } from "#shared/bots";
 
+import { clearDraft } from "../composer/draft-store";
 import { fixtureRuntime } from "../fixtures/player";
 import { SCENARIOS, type Scenario } from "../fixtures/scenarios";
 import type { ComposerConfig } from "../kit/context";
@@ -132,6 +133,7 @@ const composerFor = (
   scenario: Scenario,
   model: { value: string | null; set(id: string | null): void }
 ): ComposerConfig => ({
+  dictating: scenario.view?.dictating === true,
   mode: scenario.id.startsWith("session-mini") ? "mini" : "full",
   placeholder:
     scenario.view?.placeholder ??
@@ -180,10 +182,37 @@ const View = ({
   );
   useEffect(
     () => () => {
-      if (runtime != null) runtime.runtime.forget(runtime.threadId);
+      if (runtime != null) {
+        runtime.runtime.forget(runtime.threadId);
+        clearDraft(runtime.threadId);
+      }
     },
     [runtime]
   );
+  useEffect(() => {
+    if (runtime == null) return;
+    const picker = runtime.scenario.view?.openPicker;
+    if (picker == null) return;
+    const observer = new MutationObserver(() => {
+      const view = document.querySelector(
+        `[data-scenario="${runtime.scenario.id}"]`
+      );
+      const button =
+        picker === "model"
+          ? view?.querySelector<HTMLButtonElement>(
+              '[data-slot="chat-model-picker"]'
+            )
+          : [
+              ...(view?.querySelectorAll<HTMLButtonElement>("button") ?? []),
+            ].find((button) => button.textContent?.includes("Supervised"));
+      if (button != null) {
+        observer.disconnect();
+        button.click();
+      }
+    });
+    observer.observe(document.body, { subtree: true, childList: true });
+    return () => observer.disconnect();
+  }, [runtime]);
   const [model, setModel] = useState<string | null>("route-llm");
   if (runtime == null)
     return <p className="py-6 text-sm">{`No scenario ${fixture}`}</p>;

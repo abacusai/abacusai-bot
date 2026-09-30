@@ -2323,7 +2323,9 @@
       "approval": "Needs your approval: {{title}}",
       "error": "Error: {{message}}",
       "finished": "Reply finished",
-      "stopped": "Stopped"
+      "stopped": "Stopped",
+      "newMessages_one": "{{count}} new message",
+      "newMessages_other": "{{count}} new messages"
     },
     "busy": {
       "agents_one": "Waiting on {{count}} agent",
@@ -2369,7 +2371,8 @@
       "send": "Send",
       "skills": "Skills",
       "stop": "Stop",
-      "uploading": "Wait for the attachments to finish saving"
+      "uploading": "Wait for the attachments to finish saving",
+      "pasteUnavailable": "Pasting files isn't available here"
     },
     "day": {
       "today": "Today",
@@ -2564,7 +2567,9 @@
         "refused": "refused",
         "running": "runs",
         "stopped": "stopped"
-      }
+      },
+      "earlierSteps_one": "{{count}} earlier step",
+      "earlierSteps_other": "{{count}} earlier steps"
     },
     "transcript": {
       "jump": "Jump to the end",

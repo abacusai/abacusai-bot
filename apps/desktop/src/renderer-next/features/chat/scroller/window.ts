@@ -12,7 +12,7 @@
  * (possibly earlier rows of the same message). Returning to the end snaps
  * back to the newest rows with default tool ranges.
  */
-export const MAX_ROWS = 200;
+export const MAX_ROWS = 100;
 const STEP = 100;
 const TOOL_PAGE = 50;
 /** Placeholder height per row never measured (§10). */
@@ -208,7 +208,10 @@ export const followWindow = (
 ): WindowState => {
   if (follow) return newestWindow(items, state.ranges);
   const start = Math.min(items.length, state.start + prepended);
-  const end = Math.min(items.length, state.end + prepended);
+  const end =
+    state.end >= previousTotal
+      ? items.length
+      : Math.min(items.length, state.end + prepended);
   return fit(items, { ...state, start, end }, "bottom");
 };
 
