@@ -1,4 +1,4 @@
-import { ArrowUpRight, Sparkles } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useEffect, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,9 +21,13 @@ import { useLocalModelDialogStore } from "../../stores/local-model-dialog-store"
 import { Button } from "../ui";
 import { ProviderMark } from "./provider-mark";
 
-const CONNECT_LABEL: Record<FreeSource, string> = {
-  openrouter: "workspace.modelPicker.connectOpenRouter",
-  gemini: "workspace.modelPicker.connectGoogleAi",
+const SOURCE_NAME: Record<FreeSource, string> = {
+  openrouter: "workspace.premiumUpgrade.sourceOpenrouter",
+  gemini: "workspace.premiumUpgrade.sourceGemini",
+};
+const SOURCE_META: Record<FreeSource, string> = {
+  openrouter: "workspace.premiumUpgrade.sourceOpenrouterMeta",
+  gemini: "workspace.premiumUpgrade.sourceGeminiMeta",
 };
 
 /**
@@ -85,96 +89,139 @@ export const PremiumUpgradeCard = ({
         ? t("workspace.premiumUpgrade.localNote")
         : t("workspace.premiumUpgrade.switchNote");
 
-  return (
-    <div
-      data-id={dataId}
-      className="border-primary/35 from-primary/15 flex flex-wrap items-center gap-3 rounded-lg border bg-gradient-to-br to-violet-700/10 px-3.5 py-3"
-    >
-      <span className="from-primary shadow-primary/40 flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b to-violet-700 shadow-[0_2px_8px]">
-        <Sparkles className="text-primary-foreground size-4" />
-      </span>
-      <span className="flex min-w-0 flex-1 basis-40 flex-col">
-        <span className="text-[13px] font-semibold">{title}</span>
-        <span className="text-muted-foreground text-xs">{note}</span>
-      </span>
-      {onPickModel != null &&
-        freeModels.map((choice) => (
-          <Button
-            key={choice.model}
-            variant="secondary"
-            size="sm"
-            data-id={`${dataId}-free-model`}
-            className="shrink-0"
-            onClick={() => onPickModel(choice.model)}
-          >
-            {t("workspace.premiumUpgrade.continueOn", { model: choice.label })}
-          </Button>
-        ))}
-      {paying ? (
-        <Button
-          size="sm"
-          data-id={`${dataId}-cta`}
-          className="from-primary shrink-0 bg-gradient-to-b to-violet-700 font-semibold"
-          onClick={() => {
+  // A header and one row per way forward, each with its own button: the
+  // decision is "which source?", and a list of them reads as a choice where
+  // buttons inline with the text read as an error with too many exits.
+  const rows: SourceRow[] = paying
+    ? [
+        {
+          key: "cta",
+          mark: "abacus",
+          name: t("creditsCard.topUpCta"),
+          meta: t("workspace.premiumUpgrade.topUpMeta"),
+          cta: t("creditsCard.topUpCta"),
+          onClick: () => {
             void window.api.openExternal(
               tier === "paid" ? ABACUS_BUY_CREDITS_URL : ABACUS_PLAN_URL
             );
-          }}
+          },
+        },
+      ]
+    : [
+        ...(onPickModel != null
+          ? freeModels.map((choice) => ({
+              key: "free-model",
+              mark: "abacus",
+              name: choice.label,
+              meta: t("workspace.premiumUpgrade.continueOn", {
+                model: choice.label,
+              }),
+              cta: t("workspace.premiumUpgrade.continueCta"),
+              onClick: () => onPickModel(choice.model),
+            }))
+          : []),
+        ...missing.map((source) => ({
+          key: `connect-${source}`,
+          mark: source,
+          name: t(SOURCE_NAME[source]),
+          meta: t(SOURCE_META[source]),
+          cta: t("workspace.premiumUpgrade.connectCta"),
+          disabled: connecting != null,
+          onClick: () => {
+            void connect(source).then((connected) => {
+              if (connected) onResume?.();
+            });
+          },
+        })),
+        ...(canGoLocal
+          ? [
+              {
+                key: "local",
+                mark: "local",
+                name: t("workspace.premiumUpgrade.localName"),
+                meta: t("workspace.premiumUpgrade.localMeta"),
+                cta: t("workspace.premiumUpgrade.setUpCta"),
+                quiet: true,
+                // Once the model is ready the dead turn runs again on it.
+                onClick: () =>
+                  showLocalModelDialog((model) => {
+                    onPickModel?.(model);
+                    onResume?.();
+                  }),
+              },
+            ]
+          : []),
+        ...(missing.length === 0 && !canGoLocal && onSwitchModel != null
+          ? [
+              {
+                key: "switch",
+                mark: "abacus",
+                name: t("workspace.switchModel"),
+                meta: t("workspace.premiumUpgrade.switchNote"),
+                cta: t("workspace.switchModel"),
+                quiet: true,
+                onClick: onSwitchModel,
+              },
+            ]
+          : []),
+      ];
+
+  return (
+    <div
+      data-id={dataId}
+      className="bg-card border-border overflow-hidden rounded-xl border"
+    >
+      <div className="px-4 pt-3.5 pb-3">
+        <div className="text-sm font-semibold">{title}</div>
+        <div className="text-muted-foreground mt-0.5 text-xs">{note}</div>
+      </div>
+      {rows.map((row) => (
+        <div
+          key={row.key}
+          className="border-border flex items-center gap-3 border-t px-4 py-2.5"
+          data-id={`${dataId}-row-${row.key}`}
         >
-          {t("creditsCard.topUpCta")}
-          <ArrowUpRight />
-        </Button>
-      ) : missing.length > 0 ? (
-        missing.map((source) => (
-          <Button
-            key={source}
-            size="sm"
-            data-id={`${dataId}-connect-${source}`}
-            className="from-primary shrink-0 bg-gradient-to-b to-violet-700 font-semibold"
-            disabled={connecting != null}
-            onClick={() => {
-              void connect(source).then((connected) => {
-                if (connected) onResume?.();
-              });
-            }}
-          >
-            <ProviderMark provider={source} className="size-3.5" />
-            {t(CONNECT_LABEL[source])}
-          </Button>
-        ))
-      ) : canGoLocal ? (
-        <Button
-          size="sm"
-          data-id={`${dataId}-local`}
-          className="from-primary shrink-0 bg-gradient-to-b to-violet-700 font-semibold"
-          onClick={() =>
-            // Once the model is ready the dead turn runs again on it.
-            showLocalModelDialog((model) => {
-              onPickModel?.(model);
-              onResume?.();
-            })
-          }
-        >
-          <ProviderMark provider="local" className="size-3.5" />
-          {t("localModels.useLocal")}
-        </Button>
-      ) : (
-        onSwitchModel != null && (
+          <ProviderMark provider={row.mark} className="size-4 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-semibold">{row.name}</div>
+            <div className="text-muted-foreground truncate text-[11px]">
+              {row.meta}
+            </div>
+          </div>
           <Button
             size="sm"
-            variant="secondary"
-            data-id={`${dataId}-switch`}
-            className="shrink-0"
-            onClick={onSwitchModel}
+            variant={row.quiet ? "secondary" : "default"}
+            data-id={`${dataId}-${row.key}`}
+            className={
+              row.quiet
+                ? "shrink-0"
+                : "from-primary shrink-0 bg-gradient-to-b to-violet-700 font-semibold"
+            }
+            disabled={row.disabled}
+            onClick={row.onClick}
           >
-            {t("workspace.switchModel")}
+            {row.cta}
+            {paying && <ArrowUpRight />}
           </Button>
-        )
-      )}
+        </div>
+      ))}
       {keyDialog}
     </div>
   );
 };
+
+/** One way forward, as a row of the card. */
+interface SourceRow {
+  key: string;
+  mark: string;
+  name: string;
+  meta: string;
+  cta: string;
+  /** A secondary button: the option after the free sources. */
+  quiet?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}
 
 /** A `switch-model` action naming its target: what the card can offer. */
 export interface FreeModelSwitch {
