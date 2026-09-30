@@ -1331,23 +1331,26 @@ The main slice of §5.2 (Codex impl r1 #9): production wiring of `resolveWire`/`
 - `services/session/thread-store.ts`: `writeAgui`.
 - `service-host.ts`: the relay's host adapter; `resolveWire`, `emitAgui` and `emitAguiExit`; the inactivity watchdog's terminal; `markTurnStopped`, extracted from `stopAgentTurn` so `ai.cancel` shares it. The relay is told about resets and session deletion.
 
-**Wire selection.** One protocol per runtime (§2.1). `wireFor(threadId)` is `agui` once any `ai.*` procedure has named the thread (only the new renderer calls them), or for every spawn when `ABACUSAI_BOT_AGENT_WIRE=agui` is set. Otherwise it is `ndjson`. The shipped app (old renderer, `RENDERER_GENERATION = "legacy"`) therefore spawns exactly as before. A claimed thread whose agent is already running `--wire ndjson` (started earlier by the old renderer or a routine) is not restarted: `ai.send` and the other commands answer `UNAVAILABLE` until that process ends. When no agent runs, `ai.send` starts one itself (with the session's own model and mode, as `sendAgentMessage` restarts one) and waits for `running`.
+**Wire selection.** One protocol per runtime (§2.1). In the new-renderer build (`RENDERER_GENERATION = "wco"`) every spawn is `agui`: a routine, a bot reply or a restored session spawned before the renderer's first `ai.*` call must be drivable from it (review r1, Claude 3). In the legacy build `wireFor(threadId)` is `agui` once an `ai.*` procedure has named the thread, or for every spawn when `ABACUSAI_BOT_AGENT_WIRE=agui` is set **in an unpackaged app** (a packaged legacy app ignores it, with a log line: its renderer could not show the turn; review r1, Claude 9). Otherwise it is `ndjson`, so the shipped app (old renderer, `RENDERER_GENERATION = "legacy"`) spawns exactly as before (`defaultWire` in `relay-service.ts`). A claimed thread whose agent is already running `--wire ndjson` (started earlier by the old renderer or a routine) is not restarted: `ai.send` and the other commands answer `UNAVAILABLE` until that process ends. When no agent runs, `ai.send` starts one itself (with the session's own model and mode, as `sendAgentMessage` restarts one) and waits for `running`.
 
-**Event ids.** Seqs come from one counter per main process. It is shared by every thread and never reused, so a resume point is never ambiguous across threads or relay evictions. The event id is `String(seq)` (spec 02 §14.3-§14.4). The `{epoch, seq}` pair is the relay's `epoch` plus that seq. The epoch is a UUID per main process, returned in `hydrate`'s `abacus.epoch` and in the `abacus.subscribed` / `abacus.resync` values. These `lastEventId`s yield `abacus.resync`:
+**Event ids.** Seqs come from one counter per main process. It is shared by every thread and never reused, so a resume point is never ambiguous across threads or relay evictions. The event id is `String(seq)` (spec 02 §14.3-§14.4). The `{epoch, seq}` pair is the relay's `epoch` plus that seq. The epoch is a UUID per main process, returned in `hydrate`'s `abacus.epoch` and in the `abacus.subscribed` / `abacus.resync` values, and `ai.subscribe` takes it back as `epoch` beside `lastEventId` (spec 02 §14.12). These resume points yield `abacus.resync`:
 
+- one carrying another `epoch` (a seq from another main process, even one inside this ring);
 - one beyond the head (from another main process);
 - one below the thread's floor (evicted from the ring, or the thread was reloaded);
 - anything that is not a non-negative integer.
+
+`hydrate`'s `abacus.cursor` is the **thread's own** last seq, not the global clock: every event up to it is in the snapshot or in the active run's `joinRun` replay, so the kit's reconstruction (`appliedSeq ≥ N`) completes however much other threads said meanwhile.
 
 The two control yields carry no event id, so the retry plugin's `last-event-id` never moves past what the client saw.
 
 **Delivery.**
 
-- `ai.subscribe` and `ai.joinRun` queue per subscriber as lossless-actionable: 10,000 events, then `RESYNC_REQUIRED`.
+- `ai.subscribe` and `ai.joinRun` queue per subscriber as lossless-actionable: 10,000 events, then `RESYNC_REQUIRED`. A queue that overflows detaches its listener at once, whether or not the consumer reads again.
 - The listener is registered and the replay computed in the same turn. The listener is released on abort, even when the stream was never read.
 - The ring holds 4,000 events per thread.
-- The active run's log is complete up to 200,000 events. Past that, only `tool.output` coalesces, to the latest per call.
-- The last 4 finished runs stay joinable. `joinRun` of any other run returns at once, and the kit then starts a new generation.
+- The active run's log is complete up to 200,000 events. Once it reached that, every later `tool.output` replaces all earlier ones of its call (an index per call; the log stays in seq order).
+- Finished runs stay joinable for 2 minutes, at most the last 4, and within 20,000 events across them (the newest whatever its size). `joinRun` of any other run returns at once, and the kit then starts a new generation. The run-to-thread index for `joinRun` is pruned with the logs.
 
 **`ai.hydrate`.** `AguiSource.hydrate(threadId)` replaces transport A.3's composition of `liveState` and `ThreadReader`: the checkpoint must be one relay turn (§5.3 item 3), which two independent owners cannot give. It returns:
 
@@ -1356,33 +1359,39 @@ The two control yields carry no event id, so the retry plugin's `last-event-id` 
 - `interrupts: null`;
 - `abacus`: spec 02's `ThreadSnapshot`, plus `epoch`.
 
-The procedure pages `messages`, and keeps the `runOutcomes` whose `afterMessageId` is in the returned window. Outcomes with a null one go with the newest page. A thread's history is loaded once from `ThreadStore.readCurrentFile`: an `agui` file as it is, or the v1-derived repair. So migrated history is both served and continued.
+The procedure pages `messages`, and keeps the `runOutcomes` whose `afterMessageId` is in the returned window. Outcomes with a null one go with the newest page. A `before` the transcript does not hold is `NOT_FOUND`, and so are `hydrate` and `subscribe` for a session main does not know (claimed and loaded only after that check). A thread's history is loaded from `ThreadStore.readCurrentFile`: an `agui` file as it is, or the v1-derived repair. A v1-derived baseline is re-read at each checkpoint and before each `RUN_STARTED` until the thread's first AG-UI terminal has persisted, so turns the legacy renderer adds meanwhile are not overwritten. So migrated history is both served and continued.
 
 **Persistence.**
 
 - At each terminal, the relay writes the processor's messages and the run outcomes as a `source.kind: "agui"` thread file (`ThreadStore.writeAgui`). The write is atomic, and synchronous so that a later removal cannot be overtaken by it. `migratedFrom` is set when the history began from a v1 transcript.
 - `RunOutcomeRecord` is spec 02 §14.7's, and the last 1,000 are kept. `steps` counts the run's parent `TOOL_CALL_START`s, `usage` is `RUN_FINISHED.usage[0]`, and `error` is `metadata.abacus.error` plus the event's `code` and `message`.
 - `session.cleared` clears the relay and removes the file.
-- The legacy reset (`resetAgentConversation`, which also removes both files) clears the relay at once. A run that was open across the clear persists nothing.
+- The legacy reset (`resetAgentConversation`, which also removes both files) puts a main-synthesized `CUSTOM session.cleared` on the stream, which clears the relay at once and tells every window (spec 02 §3.1 `rev`). A run that was open across the clear persists nothing.
+- The v1 dual-write never replaces an `agui` file, including one the store has just written itself (its own-write cache records the kind).
 - Session and workspace deletion forget the thread.
 
 **Cross-incarnation duties** (PLAN amendment; §3.1.4, §3.8, §5.2).
 
 - **`ai.send` is idempotent by run id across respawns.**
-  - The first ack of every run id is recorded per thread (the last 2,000). A repeat answers `{status: "duplicate", original}` without writing `run`.
+  - The messages are converted first: a conversion failure is `BAD_REQUEST` and reserves nothing.
+  - The duplicate check and the reservation of the run id are one synchronous step; everything after (starting the runtime, one start at a time per thread, and the write) is covered by cleanup: an admission that never reached the agent rejects any waiting repeat with the same definitive error and undoes `markSent`.
+  - The first ack of every run id is recorded (the last 10,000 over all threads). A repeat answers `{status: "duplicate", original}` without writing `run`.
   - A repeat that arrives during the first attempt waits for its ack.
-  - A run id main saw start, without seeing its ack, is a `duplicate` of `started`.
+  - A run id main saw start, without seeing its ack, is a `duplicate` of `started` (a bounded set of such run ids, separate from the replay index).
+  - An agent `duplicate` for a run main has no record of answers `{status: "duplicate"}` with no `original`, rather than a guessed `started`.
   - `thread_mismatch` is not recorded, since it means main built a bad envelope.
   - No ack within 30 s is `TIMEOUT`, which is uncertain for the kit. The admission itself is rejected, so a waiting repeat gets the same answer, and a late ack is still recorded.
-  - A runtime that exits while an admission waits rejects it the same way, and the retry writes `run` to the new process.
-- **Echo dedupe.** A user `TEXT_MESSAGE_*` whose id the transcript already holds is dropped from the processor and the ring. That is a retry reusing its message id after a respawn; without the drop, `StreamProcessor` appends its content, in main and in every client.
+  - A runtime that exits while an admission it was written to waits rejects it the same way, and the retry writes `run` to the new process. An obsolete process's exit leaves admissions waiting for a runtime, or written to its replacement, alone.
+- **Echo dedupe.** A user `TEXT_MESSAGE_*` whose id the transcript already holds is dropped from the processor and the ring. That is a retry reusing its message id after a respawn; without the drop, `StreamProcessor` appends its content, in main and in every client. In its place main puts `CUSTOM abacus.duplicate_echo {runId, messageId}` on the stream, and it does the same right after a `RUN_STARTED` whose `ai.send` carried a user message the transcript already holds (a retry in the same process, which the agent does not echo again), so the kit's outbox entry is released (spec 02 §14.12).
+- **Before every `RUN_ERROR` it applies** (the agent's or its own), main closes the run's open parts in the agent's `closeOpenParts` order (reasoning, text, children with their tools and `SUBAGENT_ERROR`, then tools with `TOOL_CALL_END` and an unfinished `TOOL_CALL_RESULT`), and gives a run with no parent assistant message an empty one (`TEXT_MESSAGE_START/END {messageId: "<runId>:error", role: "assistant"}`). A receive-only `StreamProcessor` does neither on `RUN_ERROR`: it leaves tool calls streaming, and without an assistant message it creates a pending one that the next `TEXT_MESSAGE_START`, the next run's user echo, is renamed into. The agent's own close paths (`close()` with a failure, `emergencyClose`) now write the same anchor, so main adds nothing to a current agent's terminal. The run's outcome then has `afterMessageId: "<runId>:error"`.
+- **Parity with `ChatClient`.** Each chunk reaches main's processor through `restoreInboundChunk` (on a shallow copy; the ring keeps the agent's event), as `ChatClient.processIncomingChunk` does. A terminal's run id is read as `getChunkRunId` reads it (top-level `runId` first).
 - **Main writes the open run's terminal itself**, and the first terminal wins: the rest of that run's stream, its own terminal included, is dropped until the next `RUN_STARTED`. Main writes it:
   - on the runtime's exit: `agent_crashed` for a signal or a non-zero exit main did not ask for, otherwise `agent_exit` (so SIGTERM from Stop session is `agent_exit`);
   - on the inactivity watchdog: `inactivity_timeout`, before the watchdog's `stop`;
   - on a `wire.hello` from a new runtime while a run is open;
   - on a `RUN_STARTED` while a run is open.
 
-  An exit also puts `permission.pending {items: []}`, `queue.updated {messages: []}` and `agent.status idle` on the stream, since the process's cards and queue died with it.
+  An exit also puts `permission.pending {items: []}`, `queue.updated {messages: []}`, `agent.status idle` and `agent.heartbeat {runningTools: 0}` on the stream, since the process's cards, queue and running tools died with it. A final stdout line without its newline is still delivered before the exit, and an over-long line is logged when truncated.
 - **Incarnation** is tracked from `wire.hello`, `session.ready` and `STATE_SNAPSHOT`. Descriptors and queue ids of another incarnation are dropped.
 
 **`ai.send` and the other commands.**
@@ -1391,12 +1400,11 @@ The procedure pages `messages`, and keeps the `runOutcomes` whose `afterMessageI
 - **Conversion.** UIMessages become AG-UI wire messages through `uiMessagesToWire`, which keeps the client's ids. `forwardedProps.whenBusy` is dropped. `resume` is passed through for the agent to reject. `clientTools` is ignored (`tools: []`).
 - **Turn state.** As the legacy `sendAgentMessage` does, `ai.send` marks the turn sent in main's turn state before writing `run`, so a Stop's post-stop suppression cannot hide the new turn from the taps. A `rejected` ack with no run open marks it stopped again.
 - **Not applied.** The legacy path's environment notice and "remember" hook are not applied to `ai.send`. They rewrite or inspect the user's text, and that is left for the chat-kit slice to decide.
-- **`ai.cancel`** writes `cancel {runId}`. It marks main's turn stopped (with the connector-gate release, as `stopAgentTurn` does) only when the id is the open run or an admission main is still waiting on. A stale id is forwarded, and the agent ignores it, without suppressing the running turn's compat events.
+- **`ai.cancel`** writes `cancel {runId}`. It marks main's turn stopped (with the connector-gate release, as `stopAgentTurn` does) only when the id is the open run, an admission main is still waiting on, or one acked `started` whose `RUN_STARTED` has not come yet (tracked explicitly, and dropped at that `RUN_STARTED` or the runtime's exit). A stale id is forwarded, and the agent ignores it, without suppressing the running turn's compat events.
 - **`ai.respondPermission`** validates the decision strictly in the contract (a boolean is `BAD_REQUEST`, never a rejection) and checks the lineage's thread, then writes `permission.respond`.
-- **`ai.queue.update` / `ai.queue.remove`.** The agent has no `queue.update` / `queue.remove` commands yet (spec 02 §14.6 "agent slice requirement", not in `packages/agent`), so main does the identity check:
-  - the incarnation must be the live one, and the entry id must be in the latest `queue.updated`;
-  - otherwise main puts `queue.command_rejected {incarnation, entryId, command, reason}` and the authoritative `queue.updated` on the stream, and writes nothing;
-  - when both hold, the legacy `update_queue_item` / `remove_from_queue` goes out with that entry's index (hidden entries count).
+- **`ai.queue.update` / `ai.queue.remove`** go to the agent as `queue.update {incarnation, entryId, message}` / `queue.remove {incarnation, entryId}` (spec 02 §14.6, review r1). `AguiHost` checks the incarnation and finds the entry **by id** in the same synchronous step as the legacy handler's mutation, so a drain in between can never shift the target; the accepted path is today's `update_queue_item` / `remove_from_queue` for that entry's index (same compat lines), and a refusal is `queue.command_rejected {incarnation, entryId, command, reason}` plus the authoritative `queue.updated`, on AG-UI only. Main refuses only an incarnation that is not the live one (a process that is gone), on the stream in the same shape, and sends nothing then; it no longer checks entry ids or translates them to indexes.
+
+**Packaging.** Transport A.3.1 says `@tanstack/ai` moves to `dependencies` once used at run time. Main inlines it instead (`vite.config.ts` `bundleDeps.include`, with `@tanstack/ai-event-client`, `@tanstack/devtools-event-client`, `@tanstack/ai-utils`, `@ag-ui/core` and `partial-json`, closed transitively), so it stays a `devDependency` and the asar gains no `node_modules` tree for it. `packaged-startup.test.ts` checks every bare import of the built bundles against the packaged dependency tree, and rebuilds when `dist` is older than the main, preload or shared sources, so the check always reads bundles built from the code under test.
 
   The window between main's last `queue.updated` and the agent reading the command (a drain in between) can still shift the index. The atomic agent commands close it.
 - **`ai.queue.enqueue`, `.clear` and `.dequeue`** are the legacy `enqueue {hidden: false}`, `clear_queue` and `dequeue`.
