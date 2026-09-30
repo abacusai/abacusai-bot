@@ -20,7 +20,7 @@ const echo = (relay: FakeRelay, input: AiSendInput) => {
   const message = input.messages[0]!;
   relay.emitAll([
     b.runStarted(input.runId),
-    ...b.text(message.id, "user", (message.parts[0] as { content: string }).content),
+    ...b.text(message.id, "user", (message.parts[0] as unknown as { content: string }).content),
   ]);
 };
 

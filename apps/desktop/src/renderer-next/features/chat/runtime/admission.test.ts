@@ -145,7 +145,7 @@ describe("R2-T20 admission isolation", () => {
     const relay = new FakeRelay({
       onSend: (input, r) => {
         const id = input.messages[0]!.id;
-        const text = (input.messages[0]!.parts[0] as { content: string }).content;
+        const text = (input.messages[0]!.parts[0] as unknown as { content: string }).content;
         setTimeout(() => {
           r.emitAll([b.runStarted(input.runId), ...b.text(id, "user", text)]);
         }, 10);

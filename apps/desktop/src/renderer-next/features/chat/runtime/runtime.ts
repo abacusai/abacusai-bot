@@ -11,12 +11,19 @@ import type { Transport } from "#next/data/transport";
 import type { PermissionDecision } from "#shared/agent-types";
 
 import type { PermissionDescriptor } from "../store/thread-store";
+import {
+  hostActionsFor,
+  inertHostActions,
+  type ChatHostActions,
+} from "./host-actions";
 import { ThreadSession, type ThreadSessionOptions } from "./session";
 
 export const MAX_CACHED_THREADS = 8;
 
 export interface ChatRuntime {
   session(threadId: string): ThreadSession;
+  /** Links, pickers, pasted files (§7.5, §8.6). */
+  readonly host: ChatHostActions;
   respondPermission(
     threadId: string,
     descriptor: PermissionDescriptor,
@@ -36,6 +43,7 @@ export interface ChatRuntime {
 export interface ChatRuntimeOptions {
   sessionOptions?: Omit<ThreadSessionOptions, "ai" | "threadId">;
   capacity?: number;
+  host?: ChatHostActions;
 }
 
 export const createChatRuntime = (
@@ -81,6 +89,7 @@ export const createChatRuntime = (
 
   return {
     session,
+    host: options.host ?? inertHostActions,
     respondPermission: (threadId, descriptor, decision) =>
       session(threadId).respondPermission(descriptor, decision),
     queue: {
@@ -107,7 +116,9 @@ export const chatRuntimeFor = (transport: Transport): ChatRuntime => {
   const registry = (holder[KEY] ??= new WeakMap());
   let runtime = registry.get(transport.client);
   if (runtime == null) {
-    runtime = createChatRuntime(transport.client.ai);
+    runtime = createChatRuntime(transport.client.ai, {
+      host: hostActionsFor(transport),
+    });
     registry.set(transport.client, runtime);
   }
   return runtime;
