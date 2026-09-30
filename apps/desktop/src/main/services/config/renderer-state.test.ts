@@ -133,4 +133,11 @@ describe("readRendererStateFile", () => {
       theme: "dark",
     });
   });
+
+  it("throws for a file that exists but cannot be read; the store still starts empty", () => {
+    // A directory in its place: EISDIR, as EACCES or EBUSY would be.
+    fs.mkdirSync(file);
+    expect(() => readRendererStateFile(file)).toThrow();
+    expect(new RendererStateStore(file).snapshot()).toEqual({});
+  });
 });

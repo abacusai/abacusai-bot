@@ -88,6 +88,7 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { readClipboardImage } from "./clipboard-image";
 import { installCrashGuard } from "./crash-guard";
+import { installMutationHarness } from "./dev/mutation-harness";
 import { isSafeExternalUrl } from "./external-links";
 import {
   disposeLocalModels,
@@ -98,12 +99,19 @@ import { registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
+  prefsFileAfterMigrations,
   runStartupMigrations,
 } from "./migrations/startup";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
+import {
+  devContentSize,
+  experienceEntryUrl,
+  rendererEntry,
+  type RendererBase,
+} from "./renderer-entry";
 import { RENDERER_GENERATION } from "./renderer-generation";
 import {
   RendererHost,
@@ -129,7 +137,7 @@ import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-ru
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
-import { PrefsStore } from "./services/config/prefs-store";
+import { PrefsStore, prefsFile } from "./services/config/prefs-store";
 import {
   registerRendererState,
   type RendererStateStore,
@@ -168,16 +176,15 @@ import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 import {
-  applyStartupTheme,
+  applyThemedBackground,
   followPrefsTheme,
-  startupBackgroundColor,
+  mainWindowOptions,
 } from "./startup-theme";
 import {
   applyWindowChrome,
   linuxChromeMode,
   subscribeWindowChromeTheme,
   toolbarHeight,
-  windowChromeOptions,
   windowChromeState,
   type ChromeCapability,
   type LinuxChromeMode,
@@ -403,7 +410,11 @@ ipcMain.on("renderer-activity", () => {
 const rendererSwaps = new RendererSwapScheduler({
   // Development stays on the Vite server.
   disabled: () => Boolean(process.env.VITE_DEV_SERVER_URL),
-  target: () => experienceRuntime?.activeRendererUrl(),
+  target: () =>
+    experienceEntryUrl(
+      experienceRuntime?.activeRendererUrl(),
+      RENDERER_GENERATION
+    ),
   host: () => rendererHost,
   busy: () =>
     workspaceServiceHost.hasActiveAgentTurn() ||
@@ -454,8 +465,11 @@ function currentChromeInput() {
 
 function refreshWindowChrome(): void {
   const window = aliveMainWindow();
-  if (window !== null)
-    applyWindowChrome(window, currentChromeInput(), rendererHost ?? undefined);
+  if (window === null) return;
+  const input = currentChromeInput();
+  applyWindowChrome(window, input, rendererHost ?? undefined);
+  // wco: the window and the view follow the resolved scheme.
+  applyThemedBackground(window, input, rendererHost ?? undefined);
 }
 
 interface RecreatedWindowState {
@@ -514,8 +528,10 @@ export const recreateMainWindow = windowLifecycle.recreateMainWindow;
 /**
  * `~/.abacusai-bot/prefs.json`, the new renderer's prefs row (spec 00 B.2).
  * Read before the window exists for the startup theme; served as `db.prefs`.
+ * Nothing reads it before the migrations; if they leave `prefs.json` held by
+ * an unresolved commit, it is replaced by one over a session-only copy.
  */
-const prefsStore = new PrefsStore();
+let prefsStore = new PrefsStore();
 
 async function createWindow(restored?: RecreatedWindowState) {
   const Store = (await import("electron-store")).default;
@@ -569,54 +585,44 @@ async function createWindow(restored?: RecreatedWindowState) {
     void app.dock?.show();
   }
 
-  // The stored theme before the window exists, so the first frame is in it
-  // (spec 01 §7.7). The legacy renderer sets its own through `theme:set`.
-  const startupDark =
-    RENDERER_GENERATION === "wco"
-      ? applyStartupTheme(prefsStore, nativeTheme)
-      : null;
-
   activeLinuxChromeMode =
     RENDERER_GENERATION === "wco" &&
     process.platform === "linux" &&
     useLinuxNativeFrame()
       ? "native-frame"
       : linuxChromeMode(process.env);
-  const chromeOptions = windowChromeOptions(currentChromeInput());
   chromeCapability =
     RENDERER_GENERATION === "legacy" ||
     (process.platform === "linux" && activeLinuxChromeMode === "native-frame")
       ? "native-frame"
       : "overlay-pending";
 
-  // Matches the renderer so neither flashes through; transparent where
-  // vibrancy/mica paint the backdrop.
-  const chromeBackground =
-    chromeOptions.backgroundColor ??
-    (process.platform === "darwin" || process.platform === "win32"
-      ? "#00000000"
-      : "#2a2a28");
-  const backgroundColor =
-    startupDark == null
-      ? chromeBackground
-      : startupBackgroundColor(chromeBackground, startupDark);
+  // wco: the stored theme is applied before the window exists, so the first
+  // frame is in it (spec 01 §7.7), and the background is the resolved
+  // scheme's (transparent only under vibrancy/mica). The legacy renderer
+  // sets its own theme through `theme:set`; its options are unchanged.
+  const windowOptions = mainWindowOptions({
+    generation: RENDERER_GENERATION,
+    prefs: prefsStore,
+    nativeTheme,
+    chromeInput: currentChromeInput,
+    base: {
+      width,
+      height,
+      x,
+      y,
+      minWidth: 800,
+      minHeight: 600,
+      icon: appIcon,
+      title: APP_DISPLAY_NAME,
+      show: false,
+      autoHideMenuBar: true,
+    },
+  });
+  const { backgroundColor } = windowOptions;
 
   // The renderer lives in the RendererHost's view, so an update can replace it.
-  const mainWindow = new BaseWindow({
-    width,
-    height,
-    x,
-    y,
-    minWidth: 800,
-    minHeight: 600,
-
-    backgroundColor,
-    icon: appIcon,
-    title: APP_DISPLAY_NAME,
-    show: false,
-    autoHideMenuBar: true,
-    ...chromeOptions,
-  });
+  const mainWindow = new BaseWindow(windowOptions);
   mainWindowRef = mainWindow;
   if (RENDERER_GENERATION === "wco") {
     const unsubscribeChromeTheme = subscribeWindowChromeTheme(
@@ -627,6 +633,10 @@ async function createWindow(restored?: RecreatedWindowState) {
   }
   if (restored?.maximized) mainWindow.maximize();
   if (restored?.fullScreen) mainWindow.setFullScreen(true);
+  // Screenshot runs only (spec 01 §10.2): an exact content size, zoom 1.
+  const devSize = devContentSize(process.env, app.isPackaged);
+  if (devSize !== null)
+    mainWindow.setContentSize(devSize.width, devSize.height);
   // Connector login windows hang off this so they share its Space.
   setMainWindow(mainWindow);
   const publishFullScreenState = (): void => {
@@ -756,18 +766,32 @@ async function createWindow(restored?: RecreatedWindowState) {
     const contents = host.webContents;
     const experienceUrl = experienceRuntime?.activeRendererUrl() ?? null;
 
+    // The document is the generation's (spec 01 §3.6); legacy URLs are
+    // exactly what they always were.
+    const base: RendererBase | null =
+      restored !== undefined
+        ? null
+        : rendererUrl
+          ? { kind: "dev", url: rendererUrl }
+          : experienceUrl !== null
+            ? { kind: "experience", url: experienceUrl }
+            : {
+                kind: "file",
+                directory: join(import.meta.dirname, "../renderer"),
+              };
+
     if (restored !== undefined) {
       void contents.loadURL(restored.url).catch(() => undefined);
-    } else if (rendererUrl) {
-      void contents.loadURL(rendererUrl).catch(() => undefined);
-    } else if (experienceUrl !== null) {
-      // A verified installed experience supersedes the asar baseline.
-      console.log(`[experience] serving renderer from ${experienceUrl.href}`);
-      void contents.loadURL(experienceUrl.href).catch(() => undefined);
-    } else {
-      void contents
-        .loadFile(join(import.meta.dirname, "../renderer/index.html"))
-        .catch(() => undefined);
+    } else if (base !== null) {
+      if (base.kind === "experience")
+        // A verified installed experience supersedes the asar baseline.
+        console.log(`[experience] serving renderer from ${base.url.href}`);
+      const entry = rendererEntry(base, RENDERER_GENERATION);
+      void (
+        entry.kind === "url"
+          ? contents.loadURL(entry.url)
+          : contents.loadFile(entry.path)
+      ).catch(() => undefined);
     }
   };
 
@@ -806,6 +830,9 @@ async function createWindow(restored?: RecreatedWindowState) {
     if (process.argv.includes("--devtools")) {
       contents.openDevTools({ mode: "right" });
     }
+
+    if (devSize !== null)
+      contents.on("did-finish-load", () => contents.setZoomFactor(1));
 
     // BaseWindow has no 'ready-to-show'; any view's first load reveals it.
     contents.once("did-finish-load", () => {
@@ -1683,6 +1710,12 @@ app
     // store reads the files they derive. Never throws; a failure is recorded
     // and retried next launch, and every consumer has a fallback.
     await runStartupMigrations(APP_DISPLAY_NAME);
+    // An unresolved commit that may cover prefs.json: this session writes a
+    // copy, so the next launch's rollback neither overwrites nor is defeated
+    // by what the user changes now.
+    const sessionPrefs = prefsFileAfterMigrations(prefsFile());
+    if (sessionPrefs !== prefsFile())
+      prefsStore = new PrefsStore({ file: sessionPrefs });
 
     registerUpdateHandlers(updateService);
     workspaceServiceHost.initialize();
@@ -1708,6 +1741,11 @@ app
     // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
     // does for the legacy renderer.
     followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
+    // Development acceptance runs only (spec 01 §12); inert when packaged.
+    installMutationHarness(workspaceServiceHost, {
+      env: process.env,
+      isPackaged: app.isPackaged,
+    });
     registerBrowserRuntimeIpcHandlers(
       browserRuntime,
       () => rendererWebContents()?.id ?? null
@@ -2072,7 +2110,6 @@ app
   })
   .then(() => createWindow())
   .then(() => {
-    disposeMigrationProgress();
     updateService.checkForUpdatesOnStartup();
 
     app.on("activate", function () {
@@ -2096,7 +2133,10 @@ app
       // exit, not quit: the shutdown path can hold a probe process open.
       app.exit(0);
     }
-  });
+  })
+  // Once the main window exists, or when the chain failed before it did (the
+  // hidden progress window would otherwise keep the process alive).
+  .finally(disposeMigrationProgress);
 
 // On macOS the app stays in the dock.
 app.on("window-all-closed", windowLifecycle.onWindowAllClosed);
@@ -2113,6 +2153,8 @@ let quitGracefulInProgress = false;
 app.on("before-quit", (event) => {
   // So the window 'close' handler stops intercepting.
   markQuitting();
+  // The progress window refuses to close by itself; free it before the quit.
+  disposeMigrationProgress();
   logStore().flush();
   try {
     browserRuntime.disposeAll();

@@ -47,9 +47,20 @@ export const createMemoryTransport = <TContext extends Context>(
     kind: "memory",
     host: options.host ?? {},
   });
+  // Not a spread: `state` is a getter and must stay live. Closing either end
+  // closes the transport: the client's own `close()` reports "explicit";
+  // `serverPort.close()` (main going away) reaches the client end as
+  // "port-closed".
   return {
-    ...transport,
+    kind: transport.kind,
+    client: transport.client,
+    orpc: transport.orpc,
+    host: transport.host,
     serverPort,
+    get state() {
+      return transport.state;
+    },
+    onClose: (listener) => transport.onClose(listener),
     close: () => {
       transport.close();
       serverPort.close();

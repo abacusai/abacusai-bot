@@ -480,3 +480,311 @@ describe("ipcCollectionOptions (B-T1)", () => {
     expect(() => collection.insert({ id: "x", label: "X" })).toThrow();
   });
 });
+
+const tick = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
+
+describe("ipcCollectionOptions: snapshot loop and echo (impl review r1)", () => {
+  it("(1b) resets buffered during a snapshot load, then a later reset and a change, all apply", async () => {
+    const context = setup([{ id: "a", label: "A" }]);
+    const held = context.table.holdSnapshot();
+    const ready = context.collection.preload();
+    await held.requested;
+    // Two resets while the first snapshot is in flight (sessions-reloaded
+    // twice, say), both newer than what the snapshot read.
+    context.table.rows.set("b", { id: "b", label: "B" });
+    context.table.seq += 1;
+    context.table.broadcast({
+      kind: "reset",
+      epoch: context.table.epoch,
+      seq: context.table.seq,
+    });
+    context.table.seq += 1;
+    context.table.broadcast({
+      kind: "reset",
+      epoch: context.table.epoch,
+      seq: context.table.seq,
+    });
+    held.release();
+    await ready;
+    await vi.waitFor(() => expect(context.utils.status().state).toBe("live"));
+    await vi.waitFor(() => expect(context.view()).toEqual(context.server()));
+    const calls = context.table.snapshotCalls;
+
+    // The connection is not wedged: a later reset re-snapshots…
+    context.table.rows.set("c", { id: "c", label: "C" });
+    context.table.seq += 1;
+    context.table.broadcast({
+      kind: "reset",
+      epoch: context.table.epoch,
+      seq: context.table.seq,
+    });
+    await vi.waitFor(() => expect(context.table.snapshotCalls).toBe(calls + 1));
+    await vi.waitFor(() => expect(context.view()).toEqual(context.server()));
+    // …a change after it applies…
+    context.table.upsert({ id: "a", label: "A2" });
+    await vi.waitFor(() =>
+      expect(context.utils.status().receivedSeq).toBe(context.table.seq)
+    );
+    expect(context.view()).toEqual(context.server());
+    // …and a resync still settles.
+    await expect(
+      Promise.race([
+        context.utils.resync().then(() => "settled"),
+        tick(300).then(() => "hung"),
+      ])
+    ).resolves.toBe("settled");
+  });
+
+  it("(1c) a gap buffered during a snapshot load, then another reset, keeps syncing", async () => {
+    const context = setup([{ id: "a", label: "A" }]);
+    const held = context.table.holdSnapshot();
+    void context.collection.preload();
+    await held.requested;
+    // seq 1 is lost; seq 2 lands in the buffer: a gap after the snapshot.
+    context.table.rows.set("lost", { id: "lost", label: "?" });
+    context.table.seq += 1;
+    context.table.upsert({ id: "b", label: "B" });
+    held.release();
+    await vi.waitFor(() => expect(context.utils.status().state).toBe("live"));
+    await vi.waitFor(() => expect(context.view()).toEqual(context.server()));
+    const calls = context.table.snapshotCalls;
+    expect(calls).toBe(2);
+
+    context.table.seq += 1;
+    context.table.rows.delete("lost");
+    context.table.broadcast({
+      kind: "reset",
+      epoch: context.table.epoch,
+      seq: context.table.seq,
+    });
+    await vi.waitFor(() => expect(context.table.snapshotCalls).toBe(calls + 1));
+    await vi.waitFor(() => expect(context.view()).toEqual(context.server()));
+  });
+
+  it("(1d) resync right after preload loads a new snapshot and settles", async () => {
+    const context = setup([{ id: "a", label: "A" }]);
+    await context.collection.preload();
+    const outcome = await Promise.race([
+      context.utils.resync().then(() => "settled"),
+      tick(300).then(() => "hung"),
+    ]);
+    expect(outcome).toBe("settled");
+    expect(context.table.snapshotCalls).toBe(2);
+  });
+
+  it("(1e) a reset the snapshot already covers is dropped", async () => {
+    const context = setup([{ id: "a", label: "A" }]);
+    const held = context.table.holdSnapshot();
+    void context.collection.preload();
+    await held.requested;
+    context.table.live.push({
+      kind: "reset",
+      epoch: context.table.epoch,
+      seq: 1,
+    });
+    // The snapshot was read after that reset.
+    held.release({ seq: 1 });
+    await vi.waitFor(() => expect(context.utils.status().state).toBe("live"));
+    await tick();
+    expect(context.table.snapshotCalls).toBe(1);
+  });
+
+  it("(8d) a delete then a re-create of one key behind a persisting transaction applies", async () => {
+    const context = setup([
+      { id: "a", label: "A" },
+      { id: "k", label: "old" },
+    ]);
+    await live(context);
+    let release!: () => void;
+    context.table.updateHandler = (input) =>
+      new Promise((resolve) => {
+        release = () => {
+          const { id, patch } = input as { id: string; patch: Partial<Row> };
+          context.table.upsert({ ...context.table.rows.get(id)!, ...patch });
+          resolve(context.table.position(id));
+        };
+      });
+    const tx = context.collection.update("a", (draft) => {
+      draft.label = "mine";
+    });
+    await vi.waitFor(() => expect(release).toBeDefined());
+    // While "a" persists, main deletes k and creates it again.
+    context.table.remove("k");
+    context.table.change([
+      { type: "insert", key: "k", value: { id: "k", label: "new" } },
+    ]);
+    await vi.waitFor(() =>
+      expect(context.utils.status().receivedSeq).toBe(context.table.seq)
+    );
+    release();
+    await tx.isPersisted.promise;
+    await vi.waitFor(() =>
+      expect(context.view()).toEqual([
+        { id: "a", label: "mine" },
+        { id: "k", label: "new" },
+      ])
+    );
+    expect(context.collection.status).toBe("ready");
+  });
+
+  it("(9b) a batch that fails to write leaves no pending transaction and resyncs", async () => {
+    const context = setup([{ id: "a", label: "A" }]);
+    await live(context);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    // A server bug: a row the key function cannot read.
+    context.table.seq += 1;
+    context.table.live.push({
+      kind: "changes",
+      epoch: context.table.epoch,
+      seq: context.table.seq,
+      changes: [{ type: "update", key: "x", value: null as never }],
+    });
+    await vi.waitFor(() => expect(context.table.snapshotCalls).toBe(2));
+    context.table.upsert({ id: "b", label: "B" });
+    await vi.waitFor(() =>
+      expect(context.view()).toEqual([
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+      ])
+    );
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it("(10b) an echo timeout during an older in-flight snapshot waits for one that covers the write", async () => {
+    const context = setup([], { echoTimeoutMs: 30 });
+    await live(context);
+    // A resync is in flight, its snapshot read at seq 0.
+    const older = context.table.holdSnapshot();
+    const earlier = context.utils.resync();
+    await older.requested;
+    context.table.insertHandler = async (input) => {
+      const row = input as Row;
+      // Main writes at seq 1; the batch is lost.
+      context.table.rows.set(row.id, { ...row, label: "stored" });
+      context.table.seq += 1;
+      return context.table.position(row.id);
+    };
+    const tx = context.collection.insert({ id: "t", label: "T" });
+    await tick(60);
+    older.release();
+    await earlier;
+    await tx.isPersisted.promise;
+    // Settled by a snapshot at or after the write, not the older one.
+    expect(context.utils.status().receivedSeq).toBeGreaterThanOrEqual(1);
+    expect(context.table.snapshotCalls).toBe(3);
+    await vi.waitFor(() =>
+      expect(context.view()).toEqual([{ id: "t", label: "stored" }])
+    );
+  });
+
+  it("(10c) a mutation on a lazy collection never read starts its sync and echoes", async () => {
+    const context = setup([], { echoTimeoutMs: 5_000 });
+    expect(context.collection.status).toBe("idle");
+    context.table.insertHandler = async (input) => {
+      context.table.upsert(input as Row);
+      return context.table.position((input as Row).id);
+    };
+    const started = Date.now();
+    await context.collection.insert({ id: "n", label: "N" }).isPersisted
+      .promise;
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(context.collection.status).toBe("ready");
+    expect(context.view()).toEqual([{ id: "n", label: "N" }]);
+  });
+
+  it("(10d) an echo that never comes resolves after a bounded wait", async () => {
+    const context = setup([], { echoTimeoutMs: 20 });
+    await live(context);
+    // Every later snapshot hangs: nothing will cover the write.
+    context.table.holdSnapshot();
+    context.table.insertHandler = async (input) => {
+      context.table.seq += 1;
+      return context.table.position((input as Row).id);
+    };
+    await expect(
+      Promise.race([
+        context.collection
+          .insert({ id: "z", label: "Z" })
+          .isPersisted.promise.then(() => "resolved"),
+        tick(500).then(() => "hung"),
+      ])
+    ).resolves.toBe("resolved");
+  });
+
+  it("(10e) resync with no sync session rejects instead of hanging", async () => {
+    const context = setup();
+    await expect(context.utils.resync()).rejects.toMatchObject({
+      name: "AbortError",
+    });
+  });
+
+  it("(12b) overflow as the feed sends it: reset, then RESYNC_REQUIRED", async () => {
+    const context = setup([{ id: "a", label: "A" }]);
+    await live(context);
+    const first = context.table.live;
+    context.table.rows.set("b", { id: "b", label: "B" });
+    context.table.seq += 5;
+    first.push({
+      kind: "reset",
+      epoch: context.table.epoch,
+      seq: context.table.seq,
+    });
+    first.fail(
+      Object.assign(new Error("resync required"), {
+        code: "RESYNC_REQUIRED",
+        defined: true,
+        data: { stream: "db.rows.changes" },
+      })
+    );
+    await vi.waitFor(() => expect(context.table.connections).toHaveLength(2));
+    await vi.waitFor(() => expect(context.utils.status().state).toBe("live"));
+    expect(context.view()).toEqual(context.server());
+    expect(context.collection.status).toBe("ready");
+    context.table.insertHandler = async (input) => {
+      context.table.upsert(input as Row);
+      return context.table.position((input as Row).id);
+    };
+    await context.collection.insert({ id: "c", label: "C" }).isPersisted
+      .promise;
+    expect(context.view().map((row) => row.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("(14) backs off across failing snapshots; hello alone does not reset it", async () => {
+    const attempts: number[] = [];
+    const context = setup([{ id: "a", label: "A" }], {
+      retryDelayMs: (attempt) => {
+        attempts.push(attempt);
+        return 0;
+      },
+    });
+    const failures = [1, 2, 3].map(() => context.table.holdSnapshot());
+    void context.collection.preload().catch(() => undefined);
+    for (const failure of failures) {
+      await failure.requested;
+      failure.fail(new Error("read failed"));
+    }
+    await vi.waitFor(() => expect(context.utils.status().state).toBe("live"));
+    expect(attempts.slice(0, 3)).toEqual([0, 1, 2]);
+    // A good snapshot resets it.
+    context.table.live.end();
+    await vi.waitFor(() => expect(attempts.length).toBe(4));
+    expect(attempts[3]).toBe(0);
+  });
+
+  it("(15) a dead connection is not current while the reopen waits", async () => {
+    const context = setup([{ id: "a", label: "A" }], {
+      retryDelayMs: () => 50,
+    });
+    await live(context);
+    context.table.live.end();
+    await tick();
+    const pending = context.utils.resync();
+    await tick();
+    // Nothing asked the dead connection for a snapshot.
+    expect(context.table.snapshotCalls).toBe(1);
+    await pending;
+    expect(context.table.connections).toHaveLength(2);
+    expect(context.table.snapshotCalls).toBe(2);
+  });
+});

@@ -5,6 +5,11 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { createFlowControlLinkInterceptor } from "#shared/contract/flow-control";
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 
+import {
+  createCloseSignal,
+  type CloseReason,
+  type CloseSignal,
+} from "./close-signal";
 import type {
   AppClient,
   Transport,
@@ -28,16 +33,19 @@ type Listener = (event: Event) => void;
  * listeners run exactly once, whichever end closed.
  */
 const trackClose = (
-  port: TransportPort
+  port: TransportPort,
+  signal: CloseSignal
 ): { port: TransportPort; close(): void } => {
   const listeners: Listener[] = [];
   let closed = false;
-  const notify = (event: Event): void => {
+  const notify = (event: Event, reason: CloseReason): void => {
     if (closed) return;
     closed = true;
+    // The transport's state flips before oRPC's peer (or anyone) hears it.
+    signal.fire(reason);
     for (const listener of listeners) listener(event);
   };
-  port.addEventListener("close", notify);
+  port.addEventListener("close", (event) => notify(event, "port-closed"));
 
   const tracked: TransportPort = {
     addEventListener: ((
@@ -54,8 +62,9 @@ const trackClose = (
     }) as TransportPort["postMessage"],
     start: () => port.start(),
     close: () => {
+      if (closed) return;
       port.close();
-      notify(new Event("close"));
+      notify(new Event("close"), "explicit");
     },
   };
   return { port: tracked, close: tracked.close };
@@ -81,7 +90,8 @@ export const createTransport = (
   rawPort: TransportPort,
   options: CreateTransportOptions = {}
 ): Transport => {
-  const { port, close } = trackClose(rawPort);
+  const signal = createCloseSignal();
+  const { port, close } = trackClose(rawPort, signal);
   const link = new RPCLink({
     port,
     customJsonSerializers: CUSTOM_JSON_SERIALIZERS,
@@ -98,6 +108,10 @@ export const createTransport = (
     client,
     orpc: createTanstackQueryUtils(client),
     host: options.host ?? {},
+    get state() {
+      return signal.state;
+    },
+    onClose: signal.onClose,
     close,
   };
 };

@@ -140,4 +140,28 @@ export interface PrefsRow {
 
 export type PrefsField = Exclude<keyof PrefsRow, "id" | "updatedAt">;
 
-export type PrefsPatch = Partial<Pick<PrefsRow, PrefsField>>;
+/** The fields that group several leaves; provenance is kept per leaf. */
+export type PrefsGroup =
+  | "sidebar"
+  | "pinned"
+  | "models"
+  | "dismissals"
+  | "motion"
+  | "sounds";
+
+/**
+ * One provenance-tracked value (spec 00 B.2, C.4): a scalar field
+ * (`"theme"`), or one leaf of a group (`"sidebar.pinned"`). Records
+ * (`workspaceExpanded`, `panes`, `models.perWorkspace`, `sounds.perEvent`)
+ * are whole leaves.
+ */
+export type PrefsLeaf =
+  | Exclude<PrefsField, PrefsGroup>
+  | {
+      [G in PrefsGroup]: `${G}.${Extract<keyof PrefsRow[G], string>}`;
+    }[PrefsGroup];
+
+/** Every field optional; a group carries only the leaves it sets. */
+export type PrefsPatch = {
+  [F in PrefsField]?: F extends PrefsGroup ? Partial<PrefsRow[F]> : PrefsRow[F];
+};

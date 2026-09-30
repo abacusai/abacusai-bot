@@ -151,6 +151,14 @@ export const openProgressWindow = (options: {
     height: 140,
     frame: false,
     resizable: false,
+    // Closing it would quit the app mid-migration on Windows and Linux
+    // (`window-all-closed`): it cannot be closed, minimised or maximised,
+    // and stays off the taskbar. `dispose` destroys it.
+    closable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
     show: false,
     backgroundColor: options.backgroundColor,
     title: options.appName,
@@ -163,6 +171,10 @@ export const openProgressWindow = (options: {
   let ready = false;
   let closed = false;
   let pending: [number, number, string] | null = null;
+  // Alt+F4 and the like still ask; only `dispose` ends it.
+  window.on("close", (event) => {
+    event.preventDefault();
+  });
   const send = ([done, total, label]: [number, number, string]) => {
     if (window.isDestroyed()) return;
     void window.webContents
