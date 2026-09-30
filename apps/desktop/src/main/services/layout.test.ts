@@ -93,6 +93,9 @@ const MAIN_ROOT_FILES = [
   "profile-home-init.ts",
   "profile-home.test.ts",
   "profile-home.ts",
+  // Recreation owns the process-level window-all-closed quit guard.
+  "recreate-main-window.test.ts",
+  "recreate-main-window.ts",
   "renderer-generation.ts",
   "renderer-csp.test.ts",
   "renderer-csp.ts",

@@ -25,7 +25,7 @@ export async function readClipboardImage({
       const blob = (await item.getType(type)) as Blob;
       const bytes = Buffer.from(await blob.arrayBuffer());
       const data = type === "image/png" ? bytes : toPNG(bytes);
-      if (data.length === 0) return null;
+      if (data.length === 0) continue;
       return {
         name: `clipboard-${Date.now()}.png`,
         data,

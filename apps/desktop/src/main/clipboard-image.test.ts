@@ -58,6 +58,24 @@ describe("read-clipboard-image attachment contract", () => {
     expect(deps.toPNG).toHaveBeenCalledWith(Buffer.from("JPEG bytes"));
   });
 
+  it.each(["image/png", "image/tiff"])(
+    "continues past empty %s data to a later image",
+    async (type) => {
+      const deps = dependencies();
+      deps.toPNG.mockReturnValue(Buffer.alloc(0));
+      deps.read.mockResolvedValue([
+        { types: [type], getType: vi.fn().mockResolvedValue(new Blob()) },
+        {
+          types: ["image/png"],
+          getType: vi.fn().mockResolvedValue(new Blob(["valid PNG"])),
+        },
+      ]);
+      expect(await readClipboardImage(deps)).toEqual(
+        expect.objectContaining({ data: Buffer.from("valid PNG") })
+      );
+    }
+  );
+
   it("returns null for empty image data", async () => {
     const deps = dependencies();
     deps.read.mockResolvedValue([

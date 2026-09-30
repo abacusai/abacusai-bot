@@ -112,7 +112,8 @@ export function windowChromeOptions({
       color,
       height: clampOverlayHeight(overlayHeight),
     },
-    backgroundColor: color,
+    // Linux has no vibrancy/material; retain the opaque window backdrop.
+    backgroundColor: "#2a2a28",
   };
 }
 
@@ -134,7 +135,8 @@ export interface ChromeWindow {
 
 export function applyWindowChrome(
   window: ChromeWindow,
-  input: WindowChromeInput
+  input: WindowChromeInput,
+  host?: { setBackgroundColor(value: string): void }
 ): void {
   if (window.isDestroyed()) return;
   const options = windowChromeOptions(input);
@@ -150,6 +152,7 @@ export function applyWindowChrome(
     window.setBackgroundMaterial(input.reducedTransparency ? "none" : "mica");
   } else if (options.backgroundColor !== undefined) {
     window.setBackgroundColor(options.backgroundColor);
+    host?.setBackgroundColor(options.backgroundColor);
   }
 }
 
@@ -175,5 +178,31 @@ export function subscribeWindowChromeTheme(
   return () => {
     theme.off("updated", updated);
     if (pending !== undefined) clearImmediate(pending);
+  };
+}
+
+export function windowChromeState(
+  input: WindowChromeInput,
+  capability: ChromeCapability,
+  fullScreen: boolean
+) {
+  return {
+    mode:
+      input.mode === "legacy"
+        ? input.platform === "darwin" || input.platform === "win32"
+          ? "overlay"
+          : "native-frame"
+        : capability,
+    fullScreen,
+    density:
+      input.mode === "legacy"
+        ? ("comfortable" as const)
+        : input.overlayHeight === 32
+          ? ("compact" as const)
+          : ("comfortable" as const),
+    toolbarHeight:
+      input.mode === "legacy"
+        ? windowChromeMetrics(input.platform).titlebarHeight
+        : input.overlayHeight,
   };
 }

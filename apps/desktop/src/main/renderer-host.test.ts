@@ -76,7 +76,7 @@ const mocks = vi.hoisted(() => {
       return this.bounds;
     }
 
-    setBackgroundColor(): void {}
+    readonly setBackgroundColor = vi.fn<(color: string) => void>();
 
     setBounds(bounds: {
       height: number;
@@ -177,6 +177,18 @@ describe("RendererHost", () => {
       x: 0,
       y: 0,
     });
+  });
+
+  it("updates the current view background and retains it across swaps", async () => {
+    const { host, window } = makeHost();
+    host.setBackgroundColor("#2a2a28");
+    expect(window.children[0].setBackgroundColor).toHaveBeenLastCalledWith(
+      "#2a2a28"
+    );
+    await host.swap(new URL("app://bundle.new/"));
+    expect(window.children[0].setBackgroundColor).toHaveBeenLastCalledWith(
+      "#2a2a28"
+    );
   });
 
   it("wires every webContents it creates", async () => {

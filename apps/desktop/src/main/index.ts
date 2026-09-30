@@ -91,6 +91,7 @@ import { registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
+import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
 import { RENDERER_GENERATION } from "./renderer-generation";
 import {
@@ -144,6 +145,7 @@ import {
   subscribeWindowChromeTheme,
   toolbarHeight,
   windowChromeOptions,
+  windowChromeState,
   type ChromeCapability,
   type LinuxChromeMode,
 } from "./window-chrome-options";
@@ -457,14 +459,17 @@ function currentChromeInput() {
     platform: process.platform,
     dark: nativeTheme.shouldUseDarkColors,
     reducedTransparency: nativeTheme.prefersReducedTransparency,
-    overlayHeight: toolbarHeight(getTitlebarDensity()),
+    overlayHeight: toolbarHeight(
+      RENDERER_GENERATION === "wco" ? getTitlebarDensity() : "comfortable"
+    ),
     linuxMode: activeLinuxChromeMode,
   };
 }
 
 function refreshWindowChrome(): void {
   const window = aliveMainWindow();
-  if (window !== null) applyWindowChrome(window, currentChromeInput());
+  if (window !== null)
+    applyWindowChrome(window, currentChromeInput(), rendererHost ?? undefined);
 }
 
 interface RecreatedWindowState {
@@ -473,6 +478,52 @@ interface RecreatedWindowState {
   maximized: boolean;
   fullScreen: boolean;
 }
+
+function chromeState() {
+  return windowChromeState(
+    currentChromeInput(),
+    chromeCapability,
+    aliveMainWindow()?.isFullScreen() ?? false
+  );
+}
+
+function publishChromeCapability(capability: ChromeCapability): void {
+  chromeCapability = capability;
+  const state = chromeState();
+  rendererWebContents()?.send("window:chrome-changed", state);
+  logStore().append(
+    "main",
+    `[window-chrome] ${JSON.stringify({
+      ...state,
+      sessionType: process.env.XDG_SESSION_TYPE,
+      desktop: process.env.XDG_CURRENT_DESKTOP,
+      electron: process.versions.electron,
+    })}`
+  );
+}
+
+const windowLifecycle = mainWindowLifecycle({
+  platform: process.platform,
+  quit: () => app.quit(),
+  capture: (): RecreatedWindowState | null => {
+    const window = aliveMainWindow();
+    if (window === null || rendererHost === null) return null;
+    const bounds = window.getNormalBounds();
+    store.set("windowWidth", bounds.width);
+    store.set("windowHeight", bounds.height);
+    store.set("windowX", bounds.x);
+    store.set("windowY", bounds.y);
+    return {
+      url: rendererHost.webContents.getURL(),
+      visible: window.isVisible(),
+      maximized: window.isMaximized(),
+      fullScreen: window.isFullScreen(),
+    };
+  },
+  destroy: () => aliveMainWindow()?.destroy(),
+  create: createWindow,
+});
+export const recreateMainWindow = windowLifecycle.recreateMainWindow;
 
 async function createWindow(restored?: RecreatedWindowState) {
   const Store = (await import("electron-store")).default;
@@ -526,9 +577,12 @@ async function createWindow(restored?: RecreatedWindowState) {
     void app.dock?.show();
   }
 
-  activeLinuxChromeMode = useLinuxNativeFrame()
-    ? "native-frame"
-    : linuxChromeMode(process.env);
+  activeLinuxChromeMode =
+    RENDERER_GENERATION === "wco" &&
+    process.platform === "linux" &&
+    useLinuxNativeFrame()
+      ? "native-frame"
+      : linuxChromeMode(process.env);
   const chromeOptions = windowChromeOptions(currentChromeInput());
   chromeCapability =
     RENDERER_GENERATION === "legacy" ||
@@ -561,11 +615,13 @@ async function createWindow(restored?: RecreatedWindowState) {
     ...chromeOptions,
   });
   mainWindowRef = mainWindow;
-  const unsubscribeChromeTheme = subscribeWindowChromeTheme(
-    nativeTheme,
-    refreshWindowChrome
-  );
-  mainWindow.once("closed", unsubscribeChromeTheme);
+  if (RENDERER_GENERATION === "wco") {
+    const unsubscribeChromeTheme = subscribeWindowChromeTheme(
+      nativeTheme,
+      refreshWindowChrome
+    );
+    mainWindow.once("closed", unsubscribeChromeTheme);
+  }
   if (restored?.maximized) mainWindow.maximize();
   if (restored?.fullScreen) mainWindow.setFullScreen(true);
   // Connector login windows hang off this so they share its Space.
@@ -576,6 +632,8 @@ async function createWindow(restored?: RecreatedWindowState) {
       "window:full-screen-changed",
       mainWindow.isFullScreen()
     );
+    if (RENDERER_GENERATION === "wco")
+      rendererWebContents()?.send("window:chrome-changed", chromeState());
   };
   mainWindow.on("enter-full-screen", publishFullScreenState);
   mainWindow.on("leave-full-screen", publishFullScreenState);
@@ -746,55 +804,61 @@ async function createWindow(restored?: RecreatedWindowState) {
       if (!isVisible) {
         mainWindow.center();
       }
+      if (RENDERER_GENERATION === "wco")
+        publishChromeCapability(chromeCapability);
       // A silent update restart of a hidden window comes back hidden.
       if (!startHiddenAfterUpdate) mainWindow.show();
       if (
         RENDERER_GENERATION === "wco" &&
         chromeCapability === "overlay-pending"
       ) {
+        let retryTimer: ReturnType<typeof setTimeout> | undefined;
+        mainWindow.once("closed", () => clearTimeout(retryTimer));
         const probeAfterShow = (): void => {
-          if (mainWindow.isDestroyed()) return;
+          if (mainWindow.isDestroyed() || mainWindowRef !== mainWindow) return;
           if (mainWindow.isFullScreen()) {
             mainWindow.once("leave-full-screen", probeAfterShow);
             return;
           }
+          if (mainWindow.isMinimized()) {
+            mainWindow.once("restore", probeAfterShow);
+            return;
+          }
           void probeWindowChrome(
-            () =>
-              contents.executeJavaScript(
+            async () => {
+              const current = host.webContents;
+              const geometry = (await current.executeJavaScript(
                 OVERLAY_PROBE_SCRIPT
-              ) as Promise<OverlayGeometry | null>
+              )) as OverlayGeometry | null;
+              if (current !== host.webContents)
+                throw new Error("Renderer swapped during chrome probe");
+              return geometry;
+            },
+            () =>
+              mainWindow.isDestroyed() ||
+              mainWindow.isMinimized() ||
+              mainWindow.isFullScreen() ||
+              !mainWindow.isVisible()
           )
-            .then(async (available) => {
+            .then(async (result) => {
               if (mainWindow.isDestroyed() || mainWindowRef !== mainWindow)
                 return;
-              if (mainWindow.isFullScreen()) {
-                mainWindow.once("leave-full-screen", probeAfterShow);
+              if (
+                result === "retry-later" ||
+                mainWindow.isMinimized() ||
+                mainWindow.isFullScreen() ||
+                !mainWindow.isVisible()
+              ) {
+                retryTimer = setTimeout(probeAfterShow, 250);
                 return;
               }
-              chromeCapability = available ? "overlay" : "overlay-unavailable";
-              if (available) return;
-              console.warn("[window-chrome] overlay-unavailable", {
-                sessionType: process.env.XDG_SESSION_TYPE,
-                desktop: process.env.XDG_CURRENT_DESKTOP,
-                electron: process.versions.electron,
-              });
-              if (process.platform !== "linux") return;
+              publishChromeCapability(
+                result === "available" ? "overlay" : "overlay-unavailable"
+              );
+              if (result === "available" || process.platform !== "linux")
+                return;
               persistLinuxNativeFrame();
-              const bounds = mainWindow.getNormalBounds();
-              store.set("windowWidth", bounds.width);
-              store.set("windowHeight", bounds.height);
-              store.set("windowX", bounds.x);
-              store.set("windowY", bounds.y);
-              const state: RecreatedWindowState = {
-                url: host.webContents.getURL(),
-                visible: mainWindow.isVisible(),
-                maximized: mainWindow.isMaximized(),
-                fullScreen: mainWindow.isFullScreen(),
-              };
-              // destroy bypasses the normal close-to-background guard. The closed
-              // handler disposes the host/browser views before the replacement loads.
-              mainWindow.destroy();
-              await createWindow(state);
+              await recreateMainWindow();
             })
             .catch((error) => {
               console.error("[window-chrome] recreation failed", error);
@@ -1218,19 +1282,18 @@ app
     );
 
     // Main-only plumbing until the new renderer adds its typed procedures.
-    ipcMain.handle("window:chrome", () => ({
-      mode: chromeCapability,
-      fullScreen: aliveMainWindow()?.isFullScreen() ?? false,
-      density: getTitlebarDensity(),
-      toolbarHeight: toolbarHeight(getTitlebarDensity()),
-    }));
+    ipcMain.handle("window:chrome", chromeState);
+    ipcMain.handle("window:recreate", () => recreateMainWindow());
     ipcMain.handle(
       "settings:set-titlebar-density",
-      (_event, value: unknown) => {
+      async (_event, value: unknown) => {
         const density = setTitlebarDensity(value);
-        // Legacy geometry stays fixed. macOS applies native height at recreation.
-        if (RENDERER_GENERATION === "wco") refreshWindowChrome();
-        return { density, appliesOnRestart: process.platform === "darwin" };
+        if (RENDERER_GENERATION === "wco") {
+          refreshWindowChrome();
+          rendererWebContents()?.send("window:chrome-changed", chromeState());
+          if (process.platform === "darwin") await recreateMainWindow();
+        }
+        return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
       }
     );
 
@@ -1852,11 +1915,7 @@ app
   });
 
 // On macOS the app stays in the dock.
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
+app.on("window-all-closed", windowLifecycle.onWindowAllClosed);
 
 // Squirrel.Mac's quitAndInstall closes all windows before app.quit(), so
 // before-quit has not fired and the darwin 'close' handler would hide the
