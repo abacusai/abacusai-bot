@@ -12,7 +12,7 @@ These were checked against source, not assumed. Each is carried into the section
 
 | # | Brief / plan says | Verified fact | Consequence in this spec |
 |---|---|---|---|
-| F1 | "babel-plugin-react-compiler with `@vitejs/plugin-react`" | `@vitejs/plugin-react` 6.x (installed 6.0.5, latest 6.1.1) has **no `babel` option**; its `Options` are `include/exclude/jsxImportSource/jsxRuntime/reactRefreshHost` only. React Compiler is `reactCompilerPreset()` (exported by plugin-react) run through `@rolldown/plugin-babel` (`node_modules/@vitejs/plugin-react/README.md:80-130`). | §3.3 uses `babel({ presets: [reactCompilerPreset()] })` with the preset's `rolldown.filter` narrowed to `src/renderer-next/**`, so the old renderer is never compiled by the compiler. |
+| F1 | "babel-plugin-react-compiler with `@vitejs/plugin-react`" | No Babel is needed. `@vitejs/plugin-react` **6.1.1** (npm latest; installed 6.0.5) has a native `compiler?: boolean | ReactCompilerPluginOptions` option backed by `oxc-transform-react`, a Rust port of the compiler, declared as an **optional** peer `^0.145.0` (vitejs/vite-plugin-react#1419; `@vitejs/plugin-react@6.1.1 dist/index.d.ts` `Options.compiler`, README "Rust React Compiler", marked experimental). The option takes compiler options (`compilationMode`, `target`, …, plus `logDiagnostics`) but **no include/exclude of its own**: the compiler plugin filters with the React plugin's own `include`/`exclude` (`dist/index.js:194`, `createReactCompilerPlugin(…, include, exclude, …)`). With `compiler` on, that instance also turns off oxc's Fast Refresh transform and does refresh itself, only for its `include` (`dist/index.js:76`). Verified in a scratch Vite 8.2.1 project (below). | §3.3: **two `react()` instances, compiler instance first**: `react({ include: NEXT_SRC, compiler: true })` then `react({ exclude: [node_modules, NEXT_SRC] })`. Measured: renderer-next files compiled + Fast Refresh; old renderer files not compiled + Fast Refresh kept, in dev and in build. The reverse order, or a single scoped instance, drops Fast Refresh for the old renderer. |
 | F2 | `@tanstack/db` 0.10.0 / `@tanstack/react-db` 0.4.2 (PLAN L58, spec 00 B) | Those versions exist only in the clone (`refs/db/packages/db/CHANGELOG.md:3`). npm `latest` is **0.9.2 / 0.4.1** (published 14 Sep 2026). 0.9.2 already has the receipt-returning `commit()`, `truncate`, `markReady`, `markError`, `rowUpdateMode` that spec 00 B.3 relies on (`@tanstack/db@0.9.2 dist/esm/types.d.ts:318-340`). | Pin 0.9.2 / 0.4.1 exact; bump to 0.10.0 / 0.4.2 in a one-line PR when published. Spec 00 B.5 needs the same correction (§15). |
 | F3 | "one components.json per project — decide subfolder + `tailwind.css`, or `--cwd`" | The CLI reads `package.json` **exactly at `cwd`** (`packages/shadcn/src/utils/get-package-info.ts:5-13`), resolves `#` aliases from that file's `imports` (`utils/package-imports.ts:19-31`), and writes `components.json` at `cwd` (`commands/init.ts:732`). A subfolder `--cwd src/renderer-next` has no `package.json`, so alias resolution and dependency install both fail. Config lookup is `cosmiconfig.search(cwd)` upward (`utils/get-config.ts:26-28,198`). | **Decision: the single `apps/desktop/components.json` is re-pointed at renderer-next.** The old renderer's `components/ui` is frozen from now on (it is deleted at cut-over and never regenerated again). §5.1. |
 | F4 | shadcn init "`--base base --preset mira` with lucide" | The `mira` preset is `iconLibrary: "hugeicons"`, `menuColor: "default"`, `rtl: false` (`packages/shadcn/src/preset/defaults.ts:64-78`). With `--force` and a preset, init backs up `components.json` and re-infers aliases from the project; only `registries` survive from the old file (`commands/init.ts:540-560,737-752`). It does honour the existing `tailwind.css` path if that file exists (`preflights/preflight-init.ts:63-68`, `utils/get-project-info.ts:254-261`). | §5.1: hand-write `components.json` first (so the CSS target is renderer-next's), run init, then restore aliases, `iconLibrary: "lucide"`, `menuColor: "default-translucent"` before any `add`, and verify with `shadcn info --json`. |
@@ -95,11 +95,8 @@ All versions queried on npm on 30 Sep 2026. The desktop app keeps bundled render
 | `@shadcn/react` | ^0.3.1 | bump | Registry chat parts depend on it (message-scroller, questionnaire). |
 | `@base-ui/react` | ^1.8.0 | bump from ^1.7.0 (registry decides) | `shadcn add` sets the floor; old renderer's `ui/` tests must stay green on 1.8. |
 | `lucide-react` | ^1.49.0 | bump from ^1.33.0 | Icon library the registry emits. |
-| `@vitejs/plugin-react` | ^6.1.1 (catalog) | bump | Exports `reactCompilerPreset`; peer `@rolldown/plugin-babel ^0.1.7 || ^0.2.0`, `babel-plugin-react-compiler ^1.0.0`. |
-| `@rolldown/plugin-babel` | 0.2.4 | add | Runs the compiler preset under Vite 8 / rolldown. Peer `@babel/core ^7.29 || ^8`. Published 7 Sep 2026. |
-| `babel-plugin-react-compiler` | 1.0.0 | add | Depends on `@babel/types ^7.26`, hence Babel 7 below. |
-| `@babel/core` | **7.29.7** | add | Babel 7, not 8.0.6: the compiler plugin is built against Babel 7 types. |
-| `@types/babel__core` | 7.20.5 | add | Typing `vite.config.ts`. |
+| `@vitejs/plugin-react` | **6.1.1** exact (catalog `6.1.1`) | bump from 6.0.5 | Native `compiler` option (F1). Exact because the option is marked experimental and §3.3 depends on its config-merge behaviour. Optional peers `@rolldown/plugin-babel` and `babel-plugin-react-compiler` are **not** installed. |
+| `oxc-transform-react` | **0.145.0** exact | add | The Rust React Compiler the `compiler` option loads (`import("oxc-transform-react")`). The peer range `^0.145.0` on a 0.x version means `>=0.145.0 <0.146.0`, so npm latest 0.152.0 is **outside** it; install 0.145.0 and bump both packages together when plugin-react widens the range. |
 | `axe-core` | 4.13.0 | add | a11y smoke in jsdom and in the screenshot run. |
 | `knip` | 6.38.0 | add (root) | Unused files/exports for renderer-next (§3.5). |
 
@@ -130,13 +127,11 @@ build: {
 **Plugins, in order** (order matters: the router plugin must run before the React transform):
 
 ```ts
-import babel from "@rolldown/plugin-babel";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react";
 
 const NEXT_SRC = /[\\/]src[\\/]renderer-next[\\/]/;
-const compiler = reactCompilerPreset();            // target defaults to React 19 (react/compiler-runtime)
-compiler.rolldown.filter.id = { include: [NEXT_SRC] };   // never the old renderer
+const NODE_MODULES = /[\\/]node_modules[\\/]/;
 
 plugins: [
   devServerHandle,
@@ -149,11 +144,23 @@ plugins: [
     quoteStyle: "double",
   }),
   tailwindcss(),
-  react(),
-  babel({ presets: [compiler] }),
+  // Order matters: the compiler instance first, the plain instance second.
+  react({ include: NEXT_SRC, compiler: { logDiagnostics: true } }),   // renderer-next: React Compiler (oxc) + its own Fast Refresh
+  react({ exclude: [NODE_MODULES, NEXT_SRC] }),                        // old renderer: unchanged transform + Fast Refresh
   ...electron(/* unchanged */),
 ]
 ```
+
+**Why two instances, in this order** (verified 30 Sep 2026 in a scratch project: `vite@8.2.1`, `@vitejs/plugin-react@6.1.1`, `oxc-transform-react@0.145.0`, `react@19.3.0`, one file under `src/next/` and one under `src/old/`, checked with `server.transformRequest` for `react/compiler-runtime` and `$RefreshReg$`, and with `build()` for memo cache code):
+
+| Configuration | old: compiled | old: Fast Refresh | next: compiled | next: Fast Refresh |
+|---|---|---|---|---|
+| `react()` only | no | yes | no | yes |
+| **`react({ include: NEXT, compiler: true })`, then `react({ exclude: [node_modules, NEXT] })`** | **no** | **yes** | **yes** | **yes** |
+| same two, reversed order | no | **no** | yes | yes |
+| single `react({ include: NEXT, compiler: true })` | no | **no** | yes | yes |
+
+Each instance's `config` hook sets `oxc.jsx.refresh` (`!opts.compiler`) and `jsxRefreshInclude/Exclude`; Vite merges plugin configs in order, so the plain instance must come last for `refresh: true` to win, and its `exclude` keeps renderer-next files out of oxc's refresh pass (the compiler instance's transform, `enforce: "pre"`, already emitted JSX-free code with refresh registration for them). Both instances inject the refresh preamble into HTML (the preamble appears twice, measured); it is idempotent, and the acceptance list checks that an edit hot-reloads in both renderers.
 
 - `autoCodeSplitting: true` splits each route's `component`/`pendingComponent`/`errorComponent`/`notFoundComponent` into lazy chunks; loaders and `beforeLoad` stay in the main chunk. Chunks load from `file://` and `app://` like today's locale chunks (`i18n.ts:15-26`).
 - `routeTree.gen.ts` is committed (TanStack's recommendation; it is also what the type-checker and the route-tree snapshot test read) and ignored by oxfmt/oxlint (§3.4).
@@ -165,7 +172,7 @@ plugins: [
 ```
 
   `#locales/*` is the only sanctioned path from renderer-next into the old tree (§9). The shadcn CLI resolves `#next/ui` etc. from these `imports` entries (F3).
-- **React Compiler config:** default `compilationMode` (`"infer"`), `panicThreshold` default (compiler bails out per function, never fails the build); a component the compiler skips is reported by the oxlint compiler rules (§3.4), not silently accepted.
+- **React Compiler config:** `compiler: { logDiagnostics: true }`, otherwise defaults (`compilationMode: "infer"`, target React 19 → `react/compiler-runtime`, which the plugin pre-bundles via `optimizeDeps.include`). Recoverable compiler diagnostics are printed as Vite warnings; fatal ones fail the transform (`dist/index.js`, `result.fatal` → `this.error`). Components the compiler skips are also caught by the oxlint compiler rules (§3.4). The compiler only runs for client environments (`consumer !== "server"`), which is every renderer module here.
 - **Dev entry:** `vite` serves `/index-next.html` at the dev server root; main builds the URL (§3.6). New script `"dev:next": "ABACUSBOT_RENDERER_GENERATION=wco vite"` (the env override is dev-only, §3.6).
 
 ### 3.4 Keeping the two renderers apart (types, lint, knip)
@@ -240,7 +247,7 @@ Added to `vitest.config.ts` `projects`:
 
 ```ts
 {
-  plugins: [react(), babel({ presets: [compiler] })],   // test what ships: compiled components
+  plugins: [react({ include: NEXT_SRC, compiler: true })],   // test what ships: compiled components (NEXT_SRC exported from a shared vite/next-src.ts)
   resolve: { alias },                                   // alias gains #next and #locales
   test: {
     name: "renderer-next",
@@ -959,6 +966,7 @@ The old `renderer` project must stay green on React 19.3 and Base UI 1.8 (accept
 - [ ] `pnpm --filter @abacus-ai/desktop typecheck` builds five projects (main, preload, renderer, renderer-next, vite); renderer-next has no `electron` types.
 - [ ] `pnpm lint`, `pnpm format:check`, `check:knip-next`, `check:i18n`, `check:locales` green; `pnpm test:unit` green including `renderer` (old) and `renderer-next`.
 - [ ] `vite build` emits `dist/renderer/index.html` and `dist/renderer/index-next.html`; the experience bundle contains both.
+- [ ] React Compiler scope: the built renderer-next chunks import `react/compiler-runtime`, the old renderer's chunks do not; in `pnpm dev`, editing a component in each renderer hot-reloads it without a full page reload (Fast Refresh kept in both, §3.3).
 - [ ] With `RENDERER_GENERATION = "legacy"` the app behaves exactly as before (manual smoke + old suites); the PR's `git diff --stat apps/desktop/src/renderer` is empty.
 - [ ] `shadcn info --json` resolves `ui` → `src/renderer-next/ui`, icon library lucide; `check:ui-registry` shows no diff.
 
@@ -992,6 +1000,7 @@ The old `renderer` project must stay green on React 19.3 and Base UI 1.8 (accept
 
 ## 13. Risks
 
+- **Native React Compiler is experimental** (plugin-react README; oxc blog 2026-08-18). Mitigation: exact pins of `@vitejs/plugin-react` 6.1.1 and `oxc-transform-react` 0.145.0; `logDiagnostics: true`; the acceptance check above. The two-instance ordering relies on how Vite merges the instances' `config` results, so a plugin-react bump re-runs that check. Fallback, if the Rust compiler miscompiles something: drop `compiler` (the app stays correct without it; only memoisation is lost), not a switch back to Babel.
 - **Router seam (F7).** `installTransitionTypes` relies on `router.startTransition` being an instance property that `Transitioner` reassigns. Mitigation: exact router pin; R1-T11 asserts the setter is exercised; on a router bump the test fails loudly. Fallback if upstream changes: drive types from `router.subscribe("onBeforeNavigate")` into a `useLayoutEffect`-scheduled `startTransition` around the commit, accepting a one-frame delay.
 - **Phase 0 not landed.** Phase 1 cannot render sidebars before spec 00 A + B (contract, tables, `ipcCollectionOptions`) and the `window.chrome` addition (§15) land. Mitigation: build shell and gallery against `createMemoryTransport` + fake tables first (tests already require them), switch to the MessagePort transport when 00b merges.
 - **React 19.3 / Base UI 1.8 for the old renderer.** Minor bumps, but they land in the shared package. Mitigation: old suites in the gate; revert path is the catalog line.
@@ -1010,11 +1019,11 @@ The old `renderer` project must stay green on React 19.3 and Base UI 1.8 (accept
 
 Run from the repo root unless noted; each numbered step is a commit on a `rewrite/01-foundation` branch stacked on `rewrite/00b-db-tables`.
 
-1. Bump the catalog in `pnpm-workspace.yaml`: `react: ^19.3.0`, `react-dom: ^19.3.0`, `@types/react: ^19.3.0`, `@types/react-dom: ^19.3.0`, `@vitejs/plugin-react: ^6.1.1`.
-2. `pnpm --filter @abacus-ai/desktop add -D @tanstack/react-router@1.170.40 @tanstack/router-plugin@1.168.41 @tanstack/react-router-devtools@1.167.2 @tanstack/db@0.9.2 @tanstack/react-db@0.4.1 @tanstack/react-query@^5.104.0 @tanstack/react-query-devtools@5.104.0 @tanstack/react-store@^0.11.2 @tanstack/react-devtools@0.10.13 @tanstack/react-hotkeys@0.12.1 @tanstack/react-hotkeys-devtools@0.9.1 @tanstack/react-pacer@0.24.0 @tanstack/react-pacer-devtools@0.9.0 motion@^13.4.6 shadcn@4.21.0 @shadcn/react@^0.3.1 lucide-react@^1.49.0 @rolldown/plugin-babel@0.2.4 babel-plugin-react-compiler@1.0.0 @babel/core@7.29.7 @types/babel__core@7.20.5 axe-core@4.13.0` (the `@orpc/*` and `valibot` entries come from 00a) and `pnpm add -Dw knip@6.38.0`; `pnpm install`; `pnpm --filter @abacus-ai/desktop test -- --project renderer` (old renderer green on React 19.3).
+1. Bump the catalog in `pnpm-workspace.yaml`: `react: ^19.3.0`, `react-dom: ^19.3.0`, `@types/react: ^19.3.0`, `@types/react-dom: ^19.3.0`, `@vitejs/plugin-react: 6.1.1`.
+2. `pnpm --filter @abacus-ai/desktop add -D @tanstack/react-router@1.170.40 @tanstack/router-plugin@1.168.41 @tanstack/react-router-devtools@1.167.2 @tanstack/db@0.9.2 @tanstack/react-db@0.4.1 @tanstack/react-query@^5.104.0 @tanstack/react-query-devtools@5.104.0 @tanstack/react-store@^0.11.2 @tanstack/react-devtools@0.10.13 @tanstack/react-hotkeys@0.12.1 @tanstack/react-hotkeys-devtools@0.9.1 @tanstack/react-pacer@0.24.0 @tanstack/react-pacer-devtools@0.9.0 motion@^13.4.6 shadcn@4.21.0 @shadcn/react@^0.3.1 lucide-react@^1.49.0 oxc-transform-react@0.145.0 axe-core@4.13.0` (the `@orpc/*` and `valibot` entries come from 00a) and `pnpm add -Dw knip@6.38.0`; `pnpm install`; `pnpm --filter @abacus-ai/desktop test -- --project renderer` (old renderer green on React 19.3).
 3. Add `#next/*` and `#locales/*` to `apps/desktop/package.json` `imports`; aliases in `vite.config.ts` and `vitest.config.ts`.
 4. Create `apps/desktop/tsconfig.renderer-next.json`, reference it from `apps/desktop/tsconfig.json`; create `src/renderer-next/env.d.ts`, `main.tsx` (renders "hello"), `index-next.html`.
-5. `vite.config.ts`: `rolldownOptions.input`, `tanstackRouter(...)`, `babel({ presets: [compiler] })`; create `src/renderer-next/routes/__root.tsx` with an `<Outlet/>`; `pnpm --filter @abacus-ai/desktop exec vite build` (generates `routeTree.gen.ts`; commit it).
+5. `vite.config.ts`: `rolldownOptions.input`, `tanstackRouter(...)`, the two `react()` instances (§3.3); create `src/renderer-next/routes/__root.tsx` with an `<Outlet/>`; `pnpm --filter @abacus-ai/desktop exec vite build` (generates `routeTree.gen.ts`; commit it).
 6. `src/main/renderer-generation.ts` (`resolveRendererGeneration`), `rendererEntry()` in `index.ts` and `renderer-host.ts`, `ABACUSBOT_DEV_WINDOW_BOUNDS`; tests R1-T17; add `"dev:next"` script. `pnpm --filter @abacus-ai/desktop dev:next` shows "hello" inside the WCO window.
 7. `oxlint.config.ts` overrides, `packages/config/build-output-ignores.ts` (`**/routeTree.gen.ts`), `knip.json`, `check:knip-next`; `vitest.config.ts` project `renderer-next` + `test-support/setup.ts`; `test:unit` includes it.
 8. shadcn (from `apps/desktop`): write the canonical `components.json` (§5.1 step 1) and `src/renderer-next/styles/app.css` (`@import "tailwindcss";`), then
@@ -1037,5 +1046,5 @@ Run from the repo root unless noted; each numbered step is a commit on a `rewrit
 1. **Spec 00 transport (A.7, A.9, A-T7, A.11, A.12, L382, L428):** `src/renderer/data/**` → `src/renderer-next/data/**` (F12). The old renderer does not import the transport in phase 0–6.
 2. **Spec 00 B.3, B.5:** `renderer/data/collections/**` → `renderer-next/data/collections/**`; `@tanstack/db` **0.9.2** / `@tanstack/react-db` **0.4.1** until 0.10.0/0.4.2 are on npm (F2); cited source lines are from the 0.10.0 clone and hold for 0.9.2's `commit()` receipt API.
 3. **Spec 00 A.2 `window.*` rows:** add `window.chrome` (Q, `{ mode: ChromeCapability, fullScreen, density, toolbarHeight }`, served by the same `chromeState` main uses for `ipcMain.handle("window:chrome")`, `index.ts:1221`) and `window.events` variant `{ type: "chrome", chrome }` (emitted on capability, fullscreen and density changes).
-4. **PLAN.md:** remove `tw-animate-css` from "Nuked" (F5); `motion` 13.x (F8); Rail's fifth item is Library with the Connectors glyph (F11); DB versions (F2); React Compiler via `@rolldown/plugin-babel` (F1); toast is registry `toast`, not sonner (F6).
+4. **PLAN.md:** remove `tw-animate-css` from "Nuked" (F5); `motion` 13.x (F8); Rail's fifth item is Library with the Connectors glyph (F11); DB versions (F2); React Compiler via plugin-react's native `compiler` option + `oxc-transform-react`, no Babel (F1); toast is registry `toast`, not sonner (F6).
 5. **Spec 00 window chrome §6/§10:** `src/renderer/lib/tokens.css` and the renderer tests are realised in renderer-next (`styles/tokens.css`, `lib/window-chrome/*`); the old renderer keeps its constants until cut-over, which is consistent with its §11 (the switch is `RENDERER_GENERATION`).
