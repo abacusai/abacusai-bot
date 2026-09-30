@@ -148,6 +148,7 @@ const View = ({ fixture }: { fixture: string }) => {
         <FilePreview
           key={selected}
           path={selected}
+          hostRoot="/gallery"
           read={{
             image: async () => "",
             text: async () =>
