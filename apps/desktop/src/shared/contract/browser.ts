@@ -35,6 +35,23 @@ export const MaterializeBrowserRuntimeRequestSchema = v.object({
   url: v.optional(v.string()),
 });
 
+/**
+ * A local PDF or HTML file on the native surface (spec 04 §12.8): checked
+ * with `files.readText`'s containment guard (`filePath` inside `hostRoot`,
+ * symlinks resolved), `pdf`/`html`/`htm`, a regular file. The view is locked
+ * to that file; `navigate {url}` on it is `FORBIDDEN {reason: "local-file"}`.
+ */
+export const MaterializeBrowserRuntimeFileRequestSchema = v.object({
+  conversationKey: ConversationKeySchema,
+  resourceId: v.pipe(v.string(), v.nonEmpty()),
+  filePath: v.pipe(v.string(), v.nonEmpty()),
+  hostRoot: v.pipe(v.string(), v.nonEmpty()),
+});
+
+export type MaterializeBrowserRuntimeFileRequest = v.InferOutput<
+  typeof MaterializeBrowserRuntimeFileRequestSchema
+>;
+
 export const PresentBrowserRuntimeRequestSchema = v.object({
   lease: BrowserRuntimeLeaseSchema,
   presentationId: v.pipe(v.string(), v.nonEmpty()),
@@ -121,6 +138,9 @@ export const browser = {
   runtime: {
     materialize: mutation
       .input(MaterializeBrowserRuntimeRequestSchema)
+      .output(type<BrowserRuntimeState>()),
+    materializeFile: mutation
+      .input(MaterializeBrowserRuntimeFileRequestSchema)
       .output(type<BrowserRuntimeState>()),
     present: mutation
       .input(PresentBrowserRuntimeRequestSchema)

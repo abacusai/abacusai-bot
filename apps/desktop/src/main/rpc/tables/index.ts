@@ -169,7 +169,7 @@ export const createTables = (options: CreateTablesOptions): Tables => {
     gitState: new TableFeed({
       name: "gitState",
       read: () => readGitStateRows(sources),
-      getKey: (row) => row.workspaceId,
+      getKey: (row) => row.checkoutKey,
       equals: sameGitState,
     }),
     prefs: new TableFeed<PrefsRow, "app">({
@@ -248,12 +248,23 @@ export const createTables = (options: CreateTablesOptions): Tables => {
       botsView = next;
       bus.dispatchChannel("memory", { type: "changed" });
     }),
-    sources.onRoutinesWritten(() => tables.routines.notify()),
+    // A result recorded after the session notification (a timeout, a
+    // start failure) changes run rows too (spec 05 §31.5 f).
+    sources.onRoutinesWritten(() => {
+      tables.routines.notify();
+      tables.routineRuns.notify();
+    }),
     sources.onWorkspacesChanged(() => {
       tables.workspaces.notify();
       tables.gitState.notify();
     }),
     prefsStore.onChanged(() => tables.prefs.notify()),
+    sources.onCheckoutRowsChanged?.(() => tables.gitState.notify()) ??
+      (() => undefined),
+    // Fingerprints cost git calls per refresh: only while someone reads.
+    tables.gitState.whileSubscribed(
+      () => sources.wantGitFingerprints?.() ?? (() => undefined)
+    ),
     tables.memories.whileSubscribed(wantMemory),
     bus.whileListened("memory", wantMemory),
   ];

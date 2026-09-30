@@ -3,6 +3,7 @@
  * of it; tests pass fakes. Every `on*` returns its removal.
  */
 import type { Bot } from "#shared/bots";
+import type { GitStateRow } from "#shared/contract/rows";
 import type {
   AgentSessionListItem,
   BotMemoryView,
@@ -39,6 +40,14 @@ export interface TableSources {
    * pathless). It lags the active workspace while a refresh is in flight.
    */
   gitStateWorkspacePath(): string | null;
+  /**
+   * While held, the active workspace's changes carry fingerprints (spec 04
+   * §26.4 b). Optional: fakes without it publish none.
+   */
+  wantGitFingerprints?(): Unhook;
+  /** The rows of checkouts with a live `git.watch` (spec 04 §26.4 b). */
+  checkoutRows?(): GitStateRow[];
+  onCheckoutRowsChanged?(listener: () => void): Unhook;
   /** `~/.abacusai-bot` (or `ABACUSAI_BOT_HOME`): the memory watchers' root. */
   botHome(): string;
 }

@@ -1,5 +1,7 @@
+import type { GitWatchEvent } from "#shared/contract/git";
+
 import { unwrapResult } from "../errors";
-import { impl } from "./impl";
+import { impl, stream } from "./impl";
 
 export const gitRouter = impl.git.router({
   worktrees: {
@@ -43,7 +45,50 @@ export const gitRouter = impl.git.router({
     );
     return { currentBranch };
   }),
-  diff: impl.git.diff.handler(({ input, context }) =>
-    context.deps.serviceHost.getGitDiffForPath(input.filePath, input.scope)
+  // Without `checkout`: the legacy active workspace, with the kind derived
+  // by the same checkout-aware reader (the legacy IPC keeps its string).
+  diff: impl.git.diff.handler(({ input, context }) => {
+    const { serviceHost } = context.deps;
+    return input.checkout == null
+      ? serviceHost.getActiveGitDiff(input.filePath, input.scope)
+      : serviceHost.checkouts.diff(input.checkout, input.filePath, input.scope);
+  }),
+  discard: impl.git.discard.handler(async ({ input, context }) => {
+    const result = await context.deps.serviceHost.checkouts.discard(
+      input.checkout,
+      input.entries
+    );
+    // The primary checkout's row is the runtime's: re-read it now.
+    await context.deps.serviceHost.refreshGitState();
+    context.deps.tables.gitState.notifyNow();
+    return result;
+  }),
+  checkoutStatus: impl.git.checkoutStatus.handler(({ input, context }) =>
+    context.deps.serviceHost.checkouts.status(input.checkout)
   ),
+  watch: impl.git.watch.handler(({ input, context, signal }) => {
+    // Resolved before the stream opens: an unknown checkout is NOT_FOUND.
+    const watched = context.deps.serviceHost.checkouts.watch(input.checkout);
+    let released = false;
+    const release = (): void => {
+      if (released) return;
+      released = true;
+      watched.release();
+    };
+    signal?.addEventListener("abort", release, { once: true });
+    const events = stream<GitWatchEvent>({
+      path: "git.watch",
+      context,
+      signal,
+      attach: () => release,
+      initial: () => [{ type: "watching", checkoutKey: watched.key }],
+    });
+    return (async function* () {
+      try {
+        yield* events;
+      } finally {
+        release();
+      }
+    })();
+  }),
 });

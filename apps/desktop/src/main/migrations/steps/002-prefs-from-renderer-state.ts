@@ -14,7 +14,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { importLegacyPrefs } from "../../services/config/legacy-prefs";
+import {
+  importLegacyPrefs,
+  importLegacySoundOptOut,
+} from "../../services/config/legacy-prefs";
 import { PrefsStore } from "../../services/config/prefs-store";
 import { readRendererStateFile } from "../../services/config/renderer-state";
 import { exists } from "../backup";
@@ -22,6 +25,20 @@ import type { MigrationStep } from "../types";
 
 export const RENDERER_STATE_FILE_NAME = "renderer-state.json";
 export const PREFS_FILE_NAME = "prefs.json";
+/** `settings.ts`'s file, for the old renderer's sound opt-out (spec 05 §31.5 i). */
+export const CONFIG_FILE_NAME = "config.json";
+
+/** `config.json`'s `notificationSoundDisabled`, or undefined. */
+const readSoundOptOut = (file: string): unknown => {
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+    return parsed != null && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>).notificationSoundDisabled
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 const readOrNull = (file: string): Buffer | null => {
   try {
@@ -56,6 +73,11 @@ export const prefsFromRendererState = (
       ...(options.now == null ? {} : { now: options.now }),
     });
     const stats = importLegacyPrefs(prefs, (key) => legacy.get(key));
+    const sound = importLegacySoundOptOut(
+      prefs,
+      readSoundOptOut(path.join(ctx.home, CONFIG_FILE_NAME))
+    );
+    ctx.log(`sound opt-out: ${sound}`);
     ctx.log(
       `${legacy.size} legacy keys, ${stats.keys} mapped: ${JSON.stringify(stats)}`
     );

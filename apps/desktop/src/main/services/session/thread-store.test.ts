@@ -634,6 +634,32 @@ describe("C-T7 r2: ownership, clears, held writes", () => {
     expect(fs.existsSync(v2File("s2"))).toBe(false);
     errors.mockRestore();
   });
+
+  it("a held write for a thread nobody opens reaches its file at the next startup's replay", async () => {
+    make().transcripts.write("s9", SEGMENTS);
+    const v2Bytes = fs.readFileSync(v2File("s9"), "utf8");
+    const errors = quiet();
+    const blocked = held(v1File("s9"), v2File("s9"));
+    make(
+      { isWriteBlocked: blocked },
+      { isWriteBlocked: blocked }
+    ).threads.writeAgui("s9", {
+      messages: [{ id: "late", role: "assistant", parts: [] }],
+      runs: [],
+    });
+    expect(fs.readFileSync(v2File("s9"), "utf8")).toBe(v2Bytes);
+
+    // The next launch, recovery settled: startup replays before anyone reads.
+    const settled = make();
+    expect(settled.threads.replayHeld()).toBe(1);
+    // On disk, without the thread ever being opened through the store.
+    expect(readJson(v2File("s9")).source.kind).toBe("agui");
+    expect(
+      readJson(v2File("s9")).messages.map((m: { id: string }) => m.id)
+    ).toEqual(["late"]);
+    expect(settled.threads.replayHeld()).toBe(0);
+    errors.mockRestore();
+  });
 });
 
 describe("C-T7 r3: Codex r3 findings", () => {

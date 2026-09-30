@@ -10,7 +10,11 @@ import path from "path";
 import { connectorById } from "@abacus-ai/connectors/registry";
 import { app } from "electron";
 
-import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
+import {
+  AgentStatus,
+  type AgentMode,
+  type DesktopEvent,
+} from "#shared/agent-types";
 import type {
   BotChangeNotice,
   Bot,
@@ -19,6 +23,8 @@ import type {
   BotUpdateInput,
 } from "#shared/bots";
 import { ConflictError } from "#shared/conflict";
+import { checkoutKey, type GitDiffResult } from "#shared/contract/checkout";
+import type { GitStateRow } from "#shared/contract/rows";
 import type {
   TranscriptSegment,
   TurnFeedbackInput,
@@ -167,6 +173,7 @@ import type {
   TerminalShellId,
   TerminalShellState,
 } from "#shared/terminal-shells";
+import { TimeoutError } from "#shared/timeout-error";
 import { isToolsetEnabled, TOOLSETS, TOOLSETS_BY_ID } from "#shared/toolsets";
 
 import {
@@ -184,7 +191,10 @@ import {
   listJobs,
   nextRun,
   onCronStoreWrite,
+  attemptOfSession,
+  onRoutineRunStarted,
   recordRun,
+  type RoutineRunStarted,
   removeJob,
   updateJob,
   type CronJob,
@@ -215,6 +225,10 @@ import {
   type RenderDocumentRequest,
 } from "./services/agent-tools/pdf-agent";
 import {
+  ROUTINE_RESULTS,
+  started as startedResult,
+} from "./services/agent-tools/routine-attempts";
+import {
   hasRunInFlight,
   ranOutOfAbacusCredits,
   ROUTINE_FAILURES_BEFORE_PAUSE,
@@ -242,6 +256,7 @@ import {
 } from "./services/bots/bot-memory-store";
 import { BotService } from "./services/bots/bot-service";
 import {
+  assertNotChannelBot,
   getBot,
   listSenderSessionEntries,
   onBotStoreWrite,
@@ -249,6 +264,7 @@ import {
   recordSenderSession,
   removeSenderSession,
 } from "./services/bots/bot-store";
+import { effectiveBotModel } from "./services/bots/effective-model";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
 import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-service";
@@ -280,6 +296,7 @@ import {
 } from "./services/debug-sync/diagnostics-sync-service";
 import { FeedbackService } from "./services/debug-sync/feedback-service";
 import { LogSyncService } from "./services/debug-sync/log-sync-service";
+import { syncLogFor } from "./services/debug-sync/sync-log";
 import { DeviceMirrorService } from "./services/device/device-mirror-service";
 import { DeviceService } from "./services/device/device-service";
 import {
@@ -328,15 +345,17 @@ import {
   resolveBackend,
 } from "./services/providers/exec-backend-service";
 import {
-  cachedRecommendedModelId,
+  listAvailableModels,
   recommendedModelId,
 } from "./services/providers/models";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
+import { agentTurnBusy } from "./services/session/agent-busy";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
 import { AgentManagerService } from "./services/session/cli-manager-service";
 import { deliverMessage } from "./services/session/message-delivery";
+import { ModelSwitchWaiters } from "./services/session/model-switch";
 import { SessionArtifactsService } from "./services/session/session-artifacts-service";
 import {
   INACTIVITY_TIMEOUT_MINUTES,
@@ -345,6 +364,7 @@ import {
 import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
+import { CheckoutService } from "./services/workspace/checkout-service";
 import {
   FileSearchService,
   type FileSearchResult,
@@ -360,6 +380,7 @@ import {
 } from "./services/workspace/terminal-shells";
 import { WorkspaceRuntimeService } from "./services/workspace/workspace-runtime-service";
 import { WorkspaceService } from "./services/workspace/workspace-service";
+import { WorktreeMaterializer } from "./services/workspace/worktree-materialize";
 
 type EventDispatcher = (event: IpcEvent) => void;
 
@@ -477,6 +498,11 @@ export class ServiceHost {
       },
       runtime: (threadId) => this.agentManagerService.getRuntimeInfo(threadId),
       start: async (threadId) => {
+        // A bot session starts on its bot's effective model (spec 03
+        // §24.10 b); errors leave the stored pin.
+        await this.botService.pinSession(threadId).catch((error: unknown) => {
+          console.warn(`[bots] pinning ${threadId} failed: ${String(error)}`);
+        });
         const session = this.agentSessionManagerService.get(threadId);
         if (session == null) return false;
         const result = await this.startAgentSession({
@@ -500,13 +526,26 @@ export class ServiceHost {
         if (runtime != null)
           this.markTurnStopped(runtime.workspaceId, threadId);
       },
+      ownerOf: (threadId) => {
+        const session = this.agentSessionManagerService.get(threadId);
+        return {
+          owner: session?.owner ?? null,
+          routineId: session?.routineId ?? null,
+        };
+      },
+      beforeRun: (threadId) => this.applyEffectiveBotModel(threadId),
     },
   });
   private readonly transcriptService = new TranscriptService({
     threads: this.threadStore,
   });
   private readonly debugSyncService = new DebugSyncService({
-    readTranscript: (sessionId) => this.transcriptService.read(sessionId),
+    // v1 segments plus an AG-UI thread's message parts (spec 03 §24.12 a).
+    readTranscript: (sessionId) =>
+      syncLogFor(sessionId, {
+        readV1: (id) => this.transcriptService.read(id),
+        readThread: (id) => this.threadStore.readCurrentFile(id),
+      }),
     clientVersion: app.getVersion(),
   });
   private readonly feedbackService = new FeedbackService({
@@ -988,6 +1027,70 @@ export class ServiceHost {
   private readonly fileSearchService = new FileSearchService();
   private readonly gitService = new GitService();
 
+  /**
+   * Checkout-aware file and git operations (spec 04 §26.4): the procedures
+   * with a `checkout` call these; the ones without keep the legacy active
+   * workspace methods below.
+   */
+  readonly checkouts = new CheckoutService({
+    workspace: (workspaceId) =>
+      this.workspaceService
+        .getWorkspaces()
+        .find((entry) => entry.id === workspaceId) ?? null,
+    session: (sessionId) => this.agentSessionManagerService.get(sessionId),
+    git: this.gitService,
+    files: new FileTreeService(),
+    search: (root, query) => this.fileSearchService.search(root, query),
+    trash: async (absolutePath) => {
+      const { shell } = await import("electron");
+      await shell.trashItem(absolutePath);
+    },
+  });
+
+  /** The active workspace's primary checkout key (legacy tree events). */
+  activeCheckoutKey(): string | null {
+    const active = this.workspaceService.getActiveWorkspaceId();
+    return active == null ? null : checkoutKey(active, null);
+  }
+
+  /** `git.diff` without a checkout: the legacy active workspace, typed. */
+  async getActiveGitDiff(
+    filePath: string,
+    scope: GitDiffScope = "unstaged"
+  ): Promise<GitDiffResult> {
+    const workspace = this.workspaceService.getActiveWorkspace();
+    if (workspace?.path == null || workspace.isRemote) return { kind: "none" };
+    return this.checkouts.diff({ workspaceId: workspace.id }, filePath, scope);
+  }
+
+  /** Re-reads the active workspace's state (a `gitState` echo). */
+  refreshGitState(): Promise<void> {
+    return this.workspaceRuntimeService.refreshAndEmit();
+  }
+
+  #fingerprintReaders = 0;
+  /** The gitState table's readers want fingerprints (spec 04 §26.4 b). */
+  wantGitFingerprints(): () => void {
+    this.#fingerprintReaders += 1;
+    this.workspaceRuntimeService.setFingerprints(true);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.#fingerprintReaders -= 1;
+      if (this.#fingerprintReaders === 0)
+        this.workspaceRuntimeService.setFingerprints(false);
+    };
+  }
+
+  checkoutRows(): GitStateRow[] {
+    return this.checkouts.rows();
+  }
+
+  onCheckoutRowsChanged(listener: () => void): () => void {
+    return this.checkouts.onRowsChanged(listener);
+  }
+
   private managedWorktreeRoot(workspaceId: string): string {
     return path.join(abacusBotHome(), "worktrees", workspaceId);
   }
@@ -1164,11 +1267,29 @@ export class ServiceHost {
     },
     updateSessionModel: (workspaceId, sessionId, model) => {
       this.setAgentSessionModel(workspaceId, sessionId, model);
+      // A running agent takes it now; a stopped one starts on it.
+      const runtime = this.agentManagerService.getRuntimeInfo(sessionId);
+      if (runtime != null && runtime.status === "running")
+        this.setAgentModel({ workspaceId, sessionId, model });
     },
-    // A bot with no model of its own runs on the user's pick, else the tier
-    // default the last catalog read established.
-    defaultModel: () =>
-      readSettings().defaultModel ?? cachedRecommendedModelId(),
+    // One resolver for display and execution (spec 03 §13.2): the bot's
+    // own model when configured, else the stored default when configured,
+    // else the tier's recommendation, else the fallback.
+    effectiveModel: (requested) =>
+      effectiveBotModel(requested, {
+        readDefault: () => readSettings().defaultModel,
+        listCatalog: () => listAvailableModels(),
+      }),
+    sessionInfo: (sessionId) => {
+      const session = this.agentSessionManagerService.get(sessionId);
+      return session == null
+        ? null
+        : {
+            workspaceId: session.workspaceId,
+            owner: session.owner ?? null,
+            model: session.model ?? null,
+          };
+    },
     onBotRemoved: (botId) => {
       // Its routines stay (the user can delete those themselves); only the
       // provenance is cleared.
@@ -1270,6 +1391,8 @@ export class ServiceHost {
           payload.agentSessionFile ?? null
         );
       }
+      // `agent.setModel`'s answer, whatever the turn filter decides below.
+      this.modelSwitches.feed(sessionId, payload);
       // Post-Stop sessions drop everything but terminal events, so a stale
       // tail cannot leak into the renderer.
       const passedFilter = this.sessionTurnStateService.filterDesktopEvent(
@@ -1516,9 +1639,18 @@ export class ServiceHost {
     this.logSyncService.syncNow();
   }
 
-  /** True while a user-requested agent turn is still in flight. */
+  /**
+   * True while an agent turn is in flight: an agui runtime's from the
+   * relay's run state (authoritative, never raced by compat; spec 07 review
+   * r1 #10), an ndjson runtime's from main's turn state.
+   */
   hasActiveAgentTurn(): boolean {
-    return this.sessionTurnStateService.hasBusyTurn();
+    return agentTurnBusy({
+      relay: this.aguiRelay,
+      turnState: this.sessionTurnStateService,
+      wireOf: (sessionId) =>
+        this.agentManagerService.getRuntimeInfo(sessionId)?.wire ?? null,
+    });
   }
 
   /** True while any terminal PTY (user shell or preview server) is alive. */
@@ -1621,7 +1753,7 @@ export class ServiceHost {
 
     this.startedAt = new Date().toISOString();
     // Signed-out sessions have no key and are skipped inside the service.
-    this.transcriptService.setOnPersist((sessionId) => {
+    const persisted = (sessionId: string): void => {
       this.debugSyncService.enqueue(sessionId);
       // A bot's sidebar row shows the last thing said in its chat.
       if (this.botService.botIdForSession(sessionId) != null)
@@ -1629,7 +1761,10 @@ export class ServiceHost {
           type: "bots-updated",
           emittedAt: new Date().toISOString(),
         });
-    });
+    };
+    this.transcriptService.setOnPersist(persisted);
+    // The relay's AG-UI threads have no v1 save (spec 03 §24.12 c).
+    this.threadStore.onAguiPersist(persisted);
     this.debugSyncService.sweepOnStartup();
     this.logSyncService.start();
     this.diagnosticsSyncService.start();
@@ -1709,11 +1844,14 @@ export class ServiceHost {
 
   async relocateWorkspace(
     workspaceId: string,
-    newPath: string
+    newPath: string,
+    /** `restore` clears a tombstone (the RPC procedure; spec 04 §26.4 d). */
+    options: { restore?: boolean } = {}
   ): Promise<RelocateWorkspaceResult> {
     const result = await this.workspaceService.relocateWorkspace(
       workspaceId,
-      newPath
+      newPath,
+      options
     );
     if (!result.success) {
       return result;
@@ -2065,7 +2203,9 @@ export class ServiceHost {
     routineId: string | null = null,
     owner: SessionOwner | null = null,
     /** The caller's own id (an optimistic insert); a taken one is `ConflictError`. */
-    id?: string
+    id?: string,
+    /** `db.sessions.insert`'s model and mode, persisted at creation. */
+    initial: { model?: string | null; mode?: AgentMode | null } = {}
   ): AgentSessionListItem {
     if (this.isWorkspaceDeleted(workspaceId)) {
       throw new Error(
@@ -2077,7 +2217,8 @@ export class ServiceHost {
       routineId,
       owner,
       null,
-      id
+      id,
+      initial
     );
     this.emitEvent({
       type: "local-cli-session-created",
@@ -2113,6 +2254,13 @@ export class ServiceHost {
 
   onBotsWritten(listener: () => void): () => void {
     return onBotStoreWrite(listener);
+  }
+
+  /** A `started` attempt was recorded (`routines.events`, spec 05 §31.5 j). */
+  onRoutineRunStarted(
+    listener: (event: RoutineRunStarted) => void
+  ): () => void {
+    return onRoutineRunStarted(listener);
   }
 
   onRoutinesWritten(listener: () => void): () => void {
@@ -2258,7 +2406,11 @@ export class ServiceHost {
     const previews: Record<string, BotChatPreview> = {};
 
     for (const bot of this.botService.list()) {
-      const preview = botChatPreview(this.transcriptService, bot.sessionId);
+      const preview = botChatPreview(
+        this.transcriptService,
+        bot.sessionId,
+        this.threadStore
+      );
       if (preview != null) previews[bot.id] = preview;
     }
 
@@ -2363,22 +2515,20 @@ export class ServiceHost {
    * surface, not in BotService, which the link machinery edits through.
    */
   private assertNotChannelBot(id: string, verb: string): void {
-    const bot = this.botService.list().find((entry) => entry.id === id);
-    if (bot?.channel != null) {
-      const app =
-        bot.channel === "discord"
-          ? "Discord"
-          : bot.channel === "whatsapp"
-            ? "WhatsApp"
-            : "Telegram";
-      throw new Error(
-        `This bot mirrors your ${app} chat and can't be ${verb}.`
-      );
-    }
+    assertNotChannelBot(id, verb);
   }
 
   openBotChat(botId: string): Promise<BotChatHandle> {
     return this.botService.openChat(botId);
+  }
+
+  /**
+   * Before an admission on a running agent (the relay's `beforeRun`): a bot
+   * session whose model differs from its bot's effective one takes it now
+   * (spec 03 §24.10 c). Non-bot sessions are untouched.
+   */
+  async applyEffectiveBotModel(sessionId: string): Promise<void> {
+    await this.botService.pinSession(sessionId);
   }
 
   removeAgentSession(workspaceId: string, sessionId: string): boolean {
@@ -2770,6 +2920,19 @@ export class ServiceHost {
     this.agentCommunicationService.setModel(request);
   }
 
+  private readonly modelSwitches = new ModelSwitchWaiters();
+
+  /**
+   * `agent.setModel` (spec 04 §26.4 d): the same command, then the agent's
+   * answer. Rejects with `ModelUnavailableError` when the agent refuses; no
+   * running agent, or no answer in time, resolves.
+   */
+  setAgentModelChecked(request: AgentSetModelRequest): Promise<void> {
+    return this.modelSwitches.wait(request.sessionId, () =>
+      this.agentCommunicationService.setModel(request)
+    );
+  }
+
   stopAgentTurn(request: AgentSessionCommandRequest): void {
     this.markTurnStopped(request.workspaceId, request.sessionId);
     this.agentCommunicationService.stopTurn(request);
@@ -2912,7 +3075,10 @@ export class ServiceHost {
   }
 
   async setSessionWorktree(
-    request: SetSessionWorktreeRequest
+    request: SetSessionWorktreeRequest & {
+      /** A materialize's id, recorded with the attach (spec 04 §26.4 g). */
+      operationId?: string;
+    }
   ): Promise<SetSessionWorktreeResult> {
     const session = this.agentSessionManagerService.get(request.sessionId);
     if (session == null || session.workspaceId !== request.workspaceId) {
@@ -2957,7 +3123,10 @@ export class ServiceHost {
             id: worktree.id,
             path: worktree.path,
             branch: worktree.branch,
-          }
+          },
+      request.operationId == null
+        ? undefined
+        : { operationId: request.operationId, worktree }
     );
     return attached
       ? {
@@ -2967,37 +3136,29 @@ export class ServiceHost {
       : { success: false, error: "Unable to attach worktree to session." };
   }
 
-  async materializeSessionWorktree(
+  /** Idempotent per `(sessionId, operationId)` when given one (§26.4 g). */
+  materializeSessionWorktree(
     request: MaterializeSessionWorktreeRequest
   ): Promise<MaterializeSessionWorktreeResult> {
-    const created = await this.createWorktree(request);
-    if (!created.success || created.worktree == null) return created;
-
-    const attached = await this.setSessionWorktree({
-      workspaceId: request.workspaceId,
-      sessionId: request.sessionId,
-      worktreeId: created.worktree.id,
-    });
-    if (!attached.success || attached.session == null) {
-      const workspacePath = this.localWorkspacePath(request.workspaceId);
-      if (workspacePath != null) {
-        await this.gitService.removeManagedWorktree(
-          workspacePath,
-          this.managedWorktreeRoot(request.workspaceId),
-          created.worktree.path
-        );
-      }
-      return {
-        success: false,
-        error: attached.error ?? "Unable to attach the new worktree.",
-      };
-    }
-    return {
-      success: true,
-      worktree: created.worktree,
-      session: attached.session,
-    };
+    return this.worktreeMaterializer.materialize(request);
   }
+
+  private readonly worktreeMaterializer = new WorktreeMaterializer({
+    session: (sessionId) => this.agentSessionManagerService.get(sessionId),
+    recorded: (sessionId) =>
+      this.agentSessionManagerService.worktreeOperation(sessionId),
+    create: (request) => this.createWorktree(request),
+    attach: (request) => this.setSessionWorktree(request),
+    remove: async (workspaceId, worktreePath) => {
+      const workspacePath = this.localWorkspacePath(workspaceId);
+      if (workspacePath == null) return;
+      await this.gitService.removeManagedWorktree(
+        workspacePath,
+        this.managedWorktreeRoot(workspaceId),
+        worktreePath
+      );
+    },
+  });
 
   async getGitCurrentBranch(
     context?: WorkspaceGitContext
@@ -3567,7 +3728,8 @@ export class ServiceHost {
     const job = getJob(routineId);
     if (job == null || !job.enabled) return;
     updateJob(routineId, { enabled: false });
-    recordRun(routineId, reason);
+    // Administrative history (spec 05 §31.5 f): no session, no attempt.
+    recordRun(routineId, reason, "schedule", { kind: "paused" });
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -3592,7 +3754,12 @@ export class ServiceHost {
           outcome: "failed",
           reply: text.join("").trim(),
         });
-        recordRun(job.id, "failed: the run was stopped after 30 minutes");
+        // A follow-up of the attempt that started this session.
+        recordRun(job.id, ROUTINE_RESULTS.timedOut, "schedule", {
+          kind: "timed-out",
+          sessionId: run.sessionId,
+          attemptId: attemptOfSession(job.id, run.sessionId)?.id ?? null,
+        });
         this.pauseIfFailingRepeatedly(job.id);
       }
     }
@@ -3643,7 +3810,9 @@ export class ServiceHost {
     return new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.turnWaiters.delete(sessionId);
-        reject(new Error("The routine did not answer in time."));
+        reject(
+          new TimeoutError("The routine did not answer in time.", timeoutMs)
+        );
       }, timeoutMs);
       this.turnWaiters.set(sessionId, {
         text: [],
@@ -3871,7 +4040,7 @@ export class ServiceHost {
 
     // One run at a time, or a five-minute routine whose runs take eight stacks.
     if (hasRunInFlight(this.listRoutineRuns(jobId))) {
-      recordRun(jobId, "skipped: the previous run is still going", trigger);
+      recordRun(jobId, ROUTINE_RESULTS.skipped, trigger, { kind: "skipped" });
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
@@ -3906,7 +4075,9 @@ export class ServiceHost {
     );
 
     if (target == null) {
-      recordRun(jobId, "no workspace to run in", trigger);
+      recordRun(jobId, ROUTINE_RESULTS.noWorkspace, trigger, {
+        kind: "no-workspace",
+      });
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
@@ -3945,8 +4116,9 @@ export class ServiceHost {
       this.agentSessionManagerService.setRunOutcome(session.id, "failed");
       recordRun(
         jobId,
-        `session failed to start: ${started.error ?? "unknown"}`,
-        trigger
+        `${ROUTINE_RESULTS.startFailedPrefix}${started.error ?? "unknown"}`,
+        trigger,
+        { kind: "start-failed", sessionId: session.id }
       );
       this.emitEvent({
         type: "cronjobs-updated",
@@ -3966,7 +4138,10 @@ export class ServiceHost {
       sessionId: session.id,
       message: prompt,
     });
-    recordRun(jobId, `started session ${session.id}`, trigger);
+    recordRun(jobId, startedResult(session.id), trigger, {
+      kind: "started",
+      sessionId: session.id,
+    });
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),

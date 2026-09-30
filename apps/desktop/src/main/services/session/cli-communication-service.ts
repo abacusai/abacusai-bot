@@ -66,8 +66,9 @@ export class AgentCommunicationService {
     });
   }
 
-  setModel(request: AgentSetModelRequest): void {
-    this.dispatch(request.workspaceId, request.sessionId, {
+  /** False when there is no agent to tell. */
+  setModel(request: AgentSetModelRequest): boolean {
+    return this.dispatch(request.workspaceId, request.sessionId, {
       type: "set_model",
       model: request.model,
     });

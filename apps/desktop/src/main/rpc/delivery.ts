@@ -13,9 +13,14 @@ export const DELIVERY = {
   "browser.events": "lossless-actionable",
   "connectors.events": "lossless-actionable",
   "devices.events": "lossless-actionable",
+  // Routine starts: each one is a cue (spec 05 §31.5 j).
+  "routines.events": "lossless-actionable",
   // Its own replay ring behind the AguiSource.
   "ai.subscribe": "lossless-actionable",
   "ai.joinRun": "lossless-actionable",
+  // Run ends feed unread and cues; attention is a snapshot plus changes.
+  "ai.runFinished": "lossless-actionable",
+  "ai.attention": "lossless-actionable",
   // Video frames: a dropped delta frame corrupts every frame until the next
   // key frame, so nothing is dropped; overflow ends the stream and the
   // player restarts it, which begins on a key frame.
@@ -31,6 +36,8 @@ export const DELIVERY = {
   "localModels.progress": "coalescing",
   "voice.whisper.progress": "coalescing",
   "files.events": "coalescing",
+  // One "watching" yield; the rows themselves are the gitState table's.
+  "git.watch": "coalescing",
 } as const satisfies Record<string, DeliveryClass>;
 
 export type StreamPath = keyof typeof DELIVERY;

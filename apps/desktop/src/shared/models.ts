@@ -400,3 +400,33 @@ export const isAbacusSubscriber = (
   models?.some(
     (model) => model.id === ABACUS_CODE_ROUTER_ID && model.configured
   ) === true;
+
+/**
+ * The one model resolver (spec 03 §13.2), for the renderer's display and
+ * main's start and admission alike: `requested` when the catalog offers it
+ * configured; else the stored `defaultModel` if configured; else the
+ * catalog's configured recommendation; else `DEFAULT_MODEL_ID` if
+ * configured; else the first configured model; else null (nothing runs).
+ * An id the catalog lacks, or one whose credential is gone, is never
+ * returned (the old panel's order, `chat-panel.tsx:886-930`).
+ */
+export const resolveConfiguredModel = (input: {
+  requested: string | null | undefined;
+  defaultModel: string | null | undefined;
+  catalog: readonly ModelAvailability[];
+}): string | null => {
+  const runnable = input.catalog.filter((model) => model.configured);
+  const pick = (id: string | null | undefined) =>
+    id == null || id === ""
+      ? undefined
+      : runnable.find((model) => model.id === id);
+  return (
+    (
+      pick(input.requested) ??
+      pick(input.defaultModel) ??
+      runnable.find((model) => model.recommended === true) ??
+      pick(DEFAULT_MODEL_ID) ??
+      runnable[0]
+    )?.id ?? null
+  );
+};

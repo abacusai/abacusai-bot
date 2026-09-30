@@ -18,6 +18,7 @@ import {
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 import type { UpdateStatus } from "#shared/update";
 
+import { CueArbiter, mainOnlyCueWindows } from "../notch/cue-arbiter";
 import { PrefsStore } from "../services/config/prefs-store";
 import { UnavailableAguiSource } from "./ai/source";
 import type { RpcContext } from "./context";
@@ -55,6 +56,7 @@ export const IDLE_UPDATE_STATUS: UpdateStatus = {
   updateInfo: null,
   installStalled: false,
   criticalUpdate: false,
+  failedPhase: null,
 };
 
 export interface FakeDepsOverrides {
@@ -70,6 +72,7 @@ export interface FakeDepsOverrides {
   bus?: MainEventBus;
   tables?: Tables;
   prefsStore?: PrefsStore;
+  cues?: CueArbiter;
 }
 
 const noHook = (): (() => void) => () => undefined;
@@ -80,6 +83,12 @@ const TABLE_HOOKS = {
   onBotsWritten: noHook,
   onRoutinesWritten: noHook,
   onWorkspacesChanged: noHook,
+  // Checkouts (spec 04 §26.4): none watched, no fingerprints.
+  onCheckoutRowsChanged: noHook,
+  checkoutRows: () => [],
+  wantGitFingerprints: noHook,
+  activeCheckoutKey: () => null,
+  checkouts: stub("serviceHost.checkouts", { onTreeChanged: noHook }),
 };
 
 export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
@@ -97,6 +106,14 @@ export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
       watchMemories: false,
       routinesClockMs: null,
     });
+  const windows = stub<RpcDeps["windows"]>("windows", {
+    mainRendererId: () => null,
+    contents: () => null,
+    state: () => null,
+    chrome: () => null,
+    reportReady: () => undefined,
+    ...overrides.windows,
+  });
   return {
     serviceHost,
     host: stub("host", overrides.host),
@@ -107,19 +124,15 @@ export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
       ...overrides.update,
     }),
     rendererState: stub("rendererState", overrides.rendererState),
-    windows: stub("windows", {
-      mainRendererId: () => null,
-      contents: () => null,
-      state: () => null,
-      chrome: () => null,
-      reportReady: () => undefined,
-      ...overrides.windows,
-    }),
+    windows,
     bus,
     ai: overrides.ai ?? new UnavailableAguiSource(),
     tables,
     ...(overrides.threads == null ? {} : { threads: overrides.threads }),
     trackers: createEventTrackers(bus),
+    cues:
+      overrides.cues ??
+      new CueArbiter({ windows: mainOnlyCueWindows(windows) }),
   };
 };
 

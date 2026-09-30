@@ -2,6 +2,9 @@ import type { BrowserEvent } from "#shared/contract";
 import type { IpcEvent } from "#shared/contracts";
 import type { ConversationKey } from "#shared/conversation-scope";
 
+import { checkLocalPreviewFile } from "../../services/browser/local-preview-file";
+import { forbidden } from "../errors";
+import { hostFileError } from "./files";
 import { impl, isType, onIpcEvents, requireMainRenderer, stream } from "./impl";
 
 const BROWSER_EVENT_TYPES = [
@@ -97,6 +100,27 @@ export const browserRouter = impl.browser.router({
       ({ input, context }) => {
         requireMainRenderer(context);
         return context.deps.browserRuntime.materialize(input);
+      }
+    ),
+    materializeFile: impl.browser.runtime.materializeFile.handler(
+      async ({ input, context }) => {
+        requireMainRenderer(context);
+        const checked = await checkLocalPreviewFile(
+          input.filePath,
+          input.hostRoot
+        );
+        // Outside the root: FORBIDDEN {outside-root}, as `files.readText`;
+        // a type the view does not show: FORBIDDEN {unsupported-type}.
+        if (checked.ok === false)
+          throw checked.error === "unsupported-type"
+            ? forbidden(checked.error)
+            : hostFileError(input.filePath)(checked.error);
+        return context.deps.browserRuntime.materializeFile({
+          conversationKey: input.conversationKey,
+          resourceId: input.resourceId,
+          file: checked.file,
+          root: checked.root,
+        });
       }
     ),
     present: impl.browser.runtime.present.handler(({ input, context }) => {

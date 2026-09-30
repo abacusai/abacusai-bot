@@ -46,7 +46,7 @@ export const LEGACY_PREFS_KEYS: ReadonlyMap<string, readonly PrefsField[]> =
     ["abacus-credits", ["creditsExhaustedAt"]],
     ["abacusai-bot-code-folder", ["recentFolders"]],
     ["browser.homepage", ["browserHomepage"]],
-    ["onboarding.step", ["onboardingStep"]],
+    ["onboarding.step", ["onboardingStep", "onboardingFlow"]],
     ["referral-card.dismissed-until", ["dismissals"]],
     ["local-code:upsell-dismissed", ["dismissals"]],
   ]);
@@ -94,8 +94,27 @@ export const LEGACY_ONBOARDING_STEPS: readonly string[] = [
   "explainer",
 ];
 
-const isOnboardingStep = (value: string): boolean =>
-  LEGACY_ONBOARDING_STEPS.includes(value);
+/**
+ * A legacy step id in the new renderer's vocabulary (spec 06 F10, §23.6).
+ * Both vocabularies contain `"welcome"` with different meanings, so the
+ * import translates before it writes, and marks the row `onboardingFlow = 2`
+ * alongside; a step outside the legacy order reads as none.
+ */
+export const CANONICAL_ONBOARDING_STEPS: Readonly<Record<string, string>> = {
+  auth: "welcome",
+  welcome: "connected",
+  connectors: "connectors",
+  models: "models",
+  explainer: "first-bot",
+};
+
+/** The onboarding vocabulary `onboardingFlow = 2` marks. */
+export const ONBOARDING_FLOW = 2;
+
+export const canonicalOnboardingStep = (legacy: string): string | null =>
+  LEGACY_ONBOARDING_STEPS.includes(legacy)
+    ? (CANONICAL_ONBOARDING_STEPS[legacy] ?? null)
+    : null;
 
 /**
  * `browser-homepage.ts`'s `normalizeBrowserHomepage` for a non-blank value
@@ -250,12 +269,18 @@ export const mapLegacyKey = (
         raw.trim() === "" ? null : normalizeBrowserHomepage(raw);
       return { values: { browserHomepage: normalized }, invalid: [] };
     }
-    case "onboarding.step":
-      // As onboarding-flow.tsx: a step it does not know reads as none.
+    case "onboarding.step": {
+      // As onboarding-flow.tsx: a step it does not know reads as none. A
+      // known one is written in the new vocabulary, with its flow marker.
+      const step = canonicalOnboardingStep(raw);
       return {
-        values: { onboardingStep: isOnboardingStep(raw) ? raw : null },
+        values: {
+          onboardingStep: step,
+          onboardingFlow: step == null ? null : ONBOARDING_FLOW,
+        },
         invalid: [],
       };
+    }
     case "referral-card.dismissed-until": {
       const until = Number(raw);
       return Number.isFinite(until)
@@ -410,6 +435,37 @@ export const importLegacyPrefs = (
   };
 };
 
+/**
+ * The old renderer's sound opt-out lives in `config.json`
+ * (`notificationSoundDisabled`, `settings.ts` `readNotificationSettings`),
+ * not in its durable state (spec 05 §31.5 i). An opt-out is imported into
+ * `sounds.enabled = false` as `"legacy"`; once it is lifted, a legacy-sourced
+ * `false` goes back to the default. A `"user"` leaf is never touched.
+ * Returns what happened.
+ */
+export const importLegacySoundOptOut = (
+  prefs: Pick<PrefsStore, "importLegacy" | "resetLegacy" | "provenance">,
+  soundDisabled: unknown
+): "imported" | "kept-user" | "reset" | "none" => {
+  const mark = prefs.provenance()["sounds.enabled"];
+  if (mark === "user") return soundDisabled === true ? "kept-user" : "none";
+  if (soundDisabled === true) {
+    prefs.importLegacy({ sounds: { enabled: false } });
+    return "imported";
+  }
+  if (mark !== "legacy") return "none";
+  // Only `sounds.enabled` is ever legacy-sourced, so resetting the group's
+  // legacy leaves resets exactly it.
+  prefs.resetLegacy(["sounds"]);
+  return "reset";
+};
+
+/** `config.json`'s sound opt-out and its writes (`setNotificationSettings`). */
+export interface LegacySoundSource {
+  read(): unknown;
+  onWrite(listener: () => void): () => void;
+}
+
 /** The legacy side of the live sync: `RendererStateStore`'s read face. */
 export interface LegacyStateSource {
   get(key: string): string | undefined;
@@ -428,15 +484,25 @@ export const installLegacyPrefsSync = (
   legacy: LegacyStateSource,
   prefs: Pick<PrefsStore, "importLegacy" | "resetLegacy" | "provenance">,
   log: (message: string, error: unknown) => void = (message, error) =>
-    console.error(message, error)
+    console.error(message, error),
+  sound?: LegacySoundSource
 ): (() => void) => {
   const read = (key: string): string | undefined => legacy.get(key);
+  const syncSound = (): void => {
+    if (sound == null) return;
+    try {
+      importLegacySoundOptOut(prefs, sound.read());
+    } catch (error) {
+      log("[legacy-prefs] sound opt-out sync failed", error);
+    }
+  };
   try {
     importLegacyPrefs(prefs, read);
   } catch (error) {
     log("[legacy-prefs] startup import failed", error);
   }
-  return legacy.onSet((key) => {
+  syncSound();
+  const offState = legacy.onSet((key) => {
     const fields = LEGACY_PREFS_KEYS.get(key);
     if (fields === undefined) return;
     try {
@@ -445,4 +511,9 @@ export const installLegacyPrefsSync = (
       log(`[legacy-prefs] sync of ${key} failed`, error);
     }
   });
+  const offSound = sound?.onWrite(syncSound) ?? (() => undefined);
+  return () => {
+    offState();
+    offSound();
+  };
 };
