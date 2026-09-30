@@ -12,6 +12,7 @@ import {
 
 import type {
   AguiEvent,
+  CompatMode,
   CustomName,
   CustomValues,
   EmittedType,
@@ -83,4 +84,14 @@ export function isRunScoped(event: AguiEvent): boolean {
 /** One stdout line. */
 export function serialize(event: AguiEvent): string {
   return `${JSON.stringify(event)}\n`;
+}
+
+/** stdout line 1 of every agui runtime (§2.4). */
+export function helloEvent(compat: CompatMode, incarnation: string): AguiEvent {
+  return custom("wire.hello", {
+    protocol: 1,
+    wire: "agui",
+    compat,
+    incarnation,
+  });
 }
