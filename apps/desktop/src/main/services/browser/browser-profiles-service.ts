@@ -47,6 +47,8 @@ interface BrowserDefinition {
   name: string;
   paths: Partial<Record<"darwin" | "win32" | "linux", string>>;
   executables: Partial<Record<"darwin" | "win32" | "linux", string[]>>;
+  /** Other names the OS gives the browser as the https handler. */
+  handlerNames?: string[];
 }
 
 export interface CDPCookie {
@@ -113,6 +115,7 @@ const BROWSERS: BrowserDefinition[] = [
       ],
       linux: ["brave-browser", "brave"],
     },
+    handlerNames: ["Brave Browser"],
   },
   {
     key: "edge",
@@ -177,6 +180,7 @@ const BROWSERS: BrowserDefinition[] = [
       ],
       linux: ["opera"],
     },
+    handlerNames: ["Opera Stable", "Opera Internet Browser"],
   },
   {
     key: "arc",
@@ -195,6 +199,7 @@ const BROWSERS: BrowserDefinition[] = [
       darwin: ["/Applications/Opera GX.app/Contents/MacOS/Opera GX"],
       win32: ["%LOCALAPPDATA%/Programs/Opera GX/opera.exe"],
     },
+    handlerNames: ["Opera GX Stable", "Opera GX Internet Browser"],
   },
 ];
 
@@ -675,6 +680,109 @@ export function discoverBrowserProfiles(): BrowserProfileInfo[] {
   }
 
   return results;
+}
+
+// ── The default browser ─────────────────────────────────────────────────────
+
+const normalizeHandlerName = (name: string): string =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/\.(desktop|app|exe)$/, "");
+
+/**
+ * The browser the OS names as the https handler. Electron gives a display
+ * name on macOS and Windows and a .desktop id on Linux, whose basename is the
+ * browser's launcher, so Linux also matches on the executable names.
+ */
+export function matchDefaultBrowser(
+  handlerName: string,
+  platform: NodeJS.Platform = process.platform
+): string | null {
+  const wanted = normalizeHandlerName(handlerName);
+  if (wanted.length === 0) return null;
+  for (const browser of BROWSERS) {
+    const names = [browser.name, ...(browser.handlerNames ?? [])];
+    if (platform === "linux") names.push(...(browser.executables.linux ?? []));
+    if (names.some((name) => normalizeHandlerName(name) === wanted))
+      return browser.key;
+  }
+  return null;
+}
+
+/**
+ * The profile a browser opens by default: Local State's last-used profile,
+ * else the most recently active one, else Default.
+ */
+export function pickDefaultProfileDir(
+  localState: unknown,
+  profileDirs: string[]
+): string | null {
+  if (profileDirs.length === 0) return null;
+  const profile = (localState as { profile?: Record<string, unknown> } | null)
+    ?.profile;
+  const lastUsed = profile?.last_used;
+  if (typeof lastUsed === "string" && profileDirs.includes(lastUsed))
+    return lastUsed;
+  const info = (profile?.info_cache ?? {}) as Record<
+    string,
+    LocalStateProfileEntry
+  >;
+  const byActivity = [...profileDirs].sort(
+    (a, b) => (info[b]?.active_time ?? 0) - (info[a]?.active_time ?? 0)
+  );
+  if ((info[byActivity[0] ?? ""]?.active_time ?? 0) > 0)
+    return byActivity[0] ?? null;
+  return profileDirs.includes("Default") ? "Default" : (profileDirs[0] ?? null);
+}
+
+export interface DefaultBrowser {
+  /** As the OS names it, for a browser this module cannot read too. */
+  handlerName: string;
+  /** Its default profile, when it is a Chromium browser installed here. */
+  profile: BrowserProfileInfo | null;
+}
+
+/** The OS default browser and, when readable, the profile it opens with. */
+export async function findDefaultBrowser(
+  profiles: BrowserProfileInfo[] = discoverBrowserProfiles()
+): Promise<DefaultBrowser | null> {
+  let handlerName = "";
+  try {
+    handlerName = app.getApplicationNameForProtocol("https://abacus.ai");
+  } catch {
+    return null;
+  }
+  if (handlerName.trim().length === 0) return null;
+
+  const key = matchDefaultBrowser(handlerName);
+  const browser = BROWSERS.find((b) => b.key === key);
+  const root = browser == null ? null : getBrowserDataRoot(browser);
+  if (
+    browser == null ||
+    root == null ||
+    (await findBrowserExecutable(browser)) == null
+  )
+    return { handlerName, profile: null };
+
+  let localState: unknown = null;
+  try {
+    localState = JSON.parse(
+      await fsp.readFile(path.join(root, "Local State"), "utf-8")
+    );
+  } catch {
+    // No Local State: the profile directories still say which exist.
+  }
+  const own = profiles.filter((p) => p.browserKey === browser.key);
+  const dir = pickDefaultProfileDir(
+    localState,
+    own.map((p) => p.profileDir)
+  );
+
+  return {
+    handlerName,
+    profile: own.find((p) => p.profileDir === dir) ?? null,
+  };
 }
 
 /** Where a profile keeps its cookie database: Network/ since Chrome 96. */

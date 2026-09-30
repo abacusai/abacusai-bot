@@ -4,7 +4,11 @@ import vm from "node:vm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  cookies: { get: vi.fn(async () => []), remove: vi.fn() },
+  cookies: {
+    get: vi.fn(async () => []),
+    set: vi.fn(async (_cookie: Record<string, unknown>) => {}),
+    remove: vi.fn(async (_url: string, _name: string) => {}),
+  },
   clearStorageData: vi.fn(async () => {}),
   onBeforeRequest: vi.fn(),
 }));
@@ -110,6 +114,7 @@ describe("sign-in window trust and lifecycle", () => {
       message: "abacus:sign-in-google",
       frame: win.webContents.mainFrame,
     });
+    await flush();
     const script = win.webContents.executeJavaScript.mock.calls[0]![0];
     const fetch = vi.fn();
     vm.runInNewContext(script, {
@@ -195,5 +200,100 @@ describe("sign-in window trust and lifecycle", () => {
     const event = { url: "file:///tmp/private", preventDefault: vi.fn() };
     popup.webContents.emit("will-navigate", event);
     expect(event.preventDefault).toHaveBeenCalled();
+  });
+});
+
+describe("provider sessions from the default browser", () => {
+  type Callback = (response: Record<string, unknown>) => void;
+  const providerRequest = (url: string, resourceType = "mainFrame") => {
+    const handler = mocks.onBeforeRequest.mock.calls.at(-1)![1] as (
+      details: { url: string; resourceType: string },
+      callback: Callback
+    ) => void;
+    const callback = vi.fn<Callback>();
+    handler({ url, resourceType }, callback);
+    return callback;
+  };
+  const google = "https://accounts.google.com/o/oauth2/v2/auth?client_id=x";
+  const sid = {
+    name: "SID",
+    value: "v",
+    domain: ".google.com",
+    path: "/",
+    expires: 2_000_000_000,
+    size: 1,
+    httpOnly: true,
+    secure: true,
+    session: false,
+  };
+
+  it("hold a provider page until the copy lands, as session cookies", async () => {
+    let deliver!: (cookies: (typeof sid)[]) => void;
+    await openSignInWindow({
+      ...options(),
+      providerCookies: new Promise((done) => {
+        deliver = done;
+      }),
+    });
+
+    const callback = providerRequest(google);
+    await flush();
+    expect(callback).not.toHaveBeenCalled();
+
+    deliver([sid]);
+    await flush();
+    expect(mocks.cookies.set).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "SID", expirationDate: undefined })
+    );
+    expect(callback).toHaveBeenCalledWith({});
+  });
+
+  it("send a provider sign-in to the browser when there is no copy to be had", async () => {
+    const opts = { ...options(), providerCookies: Promise.resolve(null) };
+    await openSignInWindow(opts);
+
+    const callback = providerRequest(google);
+    await flush();
+
+    expect(callback).toHaveBeenCalledWith({ cancel: true });
+    expect(opts.onHandOff).toHaveBeenCalledTimes(1);
+  });
+
+  it("leave provider sign-ins in the window when none was asked for", async () => {
+    const opts = options();
+    await openSignInWindow(opts);
+
+    const callback = providerRequest(
+      "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x"
+    );
+    await flush();
+
+    expect(opts.onHandOff).not.toHaveBeenCalled();
+    expect(String(callback.mock.calls[0]![0].redirectURL)).toContain(
+      "prompt=select_account"
+    );
+  });
+
+  it("never hold a provider's scripts or images", async () => {
+    await openSignInWindow({
+      ...options(),
+      providerCookies: new Promise(() => {}),
+    });
+
+    expect(providerRequest(google, "script")).toHaveBeenCalledWith({});
+  });
+
+  it("are removed when the window closes", async () => {
+    const opts = { ...options(), providerCookies: Promise.resolve([sid]) };
+    const handle = await openSignInWindow(opts);
+    providerRequest(google);
+    await flush();
+
+    handle!.close();
+
+    expect(mocks.cookies.remove).toHaveBeenCalledWith(
+      "https://google.com/",
+      "SID"
+    );
   });
 });

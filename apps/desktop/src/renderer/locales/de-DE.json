@@ -1250,7 +1250,10 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "Weiter mit {{browser}} · {{profile}}",
-    "signInAnotherWay": "Auf andere Weise anmelden"
+    "signInAnotherWay": "Auf andere Weise anmelden",
+    "haveAccountContinueWith": "Ich habe bereits ein Konto · Weiter mit {{browser}}",
+    "signInOptions": "Andere Anmeldeoptionen",
+    "usesBrowserSessions": "Die Anmeldung mit Google, Microsoft und Apple nutzt deine Konten aus {{browser}}."
   },
   "openFile": {
     "failed": "Diese Datei konnte nicht geöffnet werden.",

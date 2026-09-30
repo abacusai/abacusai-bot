@@ -1250,7 +1250,10 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "{{browser}} · {{profile}} で続行",
-    "signInAnotherWay": "別の方法でサインイン"
+    "signInAnotherWay": "別の方法でサインイン",
+    "haveAccountContinueWith": "アカウントをお持ちの方 · {{browser}} で続行",
+    "signInOptions": "その他のサインイン方法",
+    "usesBrowserSessions": "Google・Microsoft・Apple でのサインインには {{browser}} のアカウントを使います。"
   },
   "openFile": {
     "failed": "そのファイルを開けませんでした。",

@@ -76,6 +76,8 @@ let browserProfiles: Array<{
   id: string;
   browserName: string;
   profileName: string;
+  isDefault?: boolean;
+  hasAbacusSession?: boolean;
 }> = [];
 const listBrowserSignInProfiles = vi.fn(async () => browserProfiles);
 const cancelAbacusAuth = vi.fn(async () => undefined);
@@ -268,6 +270,50 @@ describe("a browser already signed in to Abacus.AI", () => {
     await waitFor(() =>
       expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
     );
+  });
+});
+
+describe("the default browser", () => {
+  const chrome = {
+    id: "chrome::Default",
+    browserName: "Chrome",
+    profileName: "Work",
+    isDefault: true,
+  };
+
+  it("is named before sign-up, since its provider sessions come along", async () => {
+    browserProfiles = [{ ...chrome, hasAbacusSession: false }];
+    mount();
+
+    await waitFor(() => byId("onboarding-browser-sessions"));
+  });
+
+  it("signs a returning user in with one click when it holds the session", async () => {
+    browserProfiles = [{ ...chrome, hasAbacusSession: true }];
+    mount();
+
+    await waitFor(() => byId("onboarding-signin-options"));
+    fireEvent.click(byId("onboarding-have-account"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith(
+        "signin",
+        "chrome::Default"
+      )
+    );
+  });
+
+  it("is not offered as a session it does not hold", async () => {
+    browserProfiles = [{ ...chrome, hasAbacusSession: false }];
+    mount();
+    await waitFor(() => byId("onboarding-browser-sessions"));
+
+    fireEvent.click(byId("onboarding-have-account"));
+
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
+    );
+    expect(missing("onboarding-signin-options")).toBe(true);
   });
 });
 

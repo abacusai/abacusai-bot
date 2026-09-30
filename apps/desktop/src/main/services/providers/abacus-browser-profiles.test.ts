@@ -1,7 +1,7 @@
 /**
  * Which Chromium profiles the sign-in screen offers: only in the in-app arm,
- * only profiles whose cookie store names Abacus.AI, and only a few. Listing
- * never reads a cookie; that waits for the user to pick one.
+ * the default browser's profile first, then a few whose cookie store names
+ * Abacus.AI. Listing never reads a cookie; that waits for the user to pick one.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,18 +25,28 @@ let profiles = [profile("Default", true), profile("Profile 1", false)];
 const readProfileCookies = vi.fn(async (..._args: unknown[]) => [
   { name: "auth", value: "v", domain: ".abacus.ai" },
 ]);
+let defaultId: string | null = null;
 vi.mock("../browser/browser-profiles-service", () => ({
   discoverBrowserProfiles: () => profiles,
+  findDefaultBrowser: async () => ({
+    handlerName: "Google Chrome",
+    profile: profiles.find((p) => p.id === defaultId) ?? null,
+  }),
   profileMentionsHost: async (p: { hasAbacus: boolean }) => p.hasAbacus,
   readProfileCookies: (...args: unknown[]) => readProfileCookies(...args),
 }));
 
-const { listBrowserSignInProfiles, browserSignInCookies } =
-  await import("./abacus-browser-profiles");
+const {
+  listBrowserSignInProfiles,
+  browserSignInCookies,
+  providerSignInCookies,
+  PROVIDER_LOGIN_URLS,
+} = await import("./abacus-browser-profiles");
 
 beforeEach(() => {
   variant = "in_app";
   profiles = [profile("Default", true), profile("Profile 1", false)];
+  defaultId = null;
   readProfileCookies.mockClear();
 });
 
@@ -46,6 +56,32 @@ describe("the profiles offered at sign-in", () => {
 
     expect(offered.map((p) => p.id)).toEqual(["Default"]);
     expect(readProfileCookies).not.toHaveBeenCalled();
+  });
+
+  it("start with the default browser's profile, signed in to Abacus.AI or not", async () => {
+    defaultId = "Profile 1";
+
+    expect(await listBrowserSignInProfiles()).toEqual([
+      expect.objectContaining({
+        id: "Profile 1",
+        isDefault: true,
+        hasAbacusSession: false,
+      }),
+      expect.objectContaining({ id: "Default", hasAbacusSession: true }),
+    ]);
+    expect(readProfileCookies).not.toHaveBeenCalled();
+  });
+
+  it("list the default profile once when it holds the session", async () => {
+    defaultId = "Default";
+
+    const offered = await listBrowserSignInProfiles();
+
+    expect(offered.map((p) => p.id)).toEqual(["Default"]);
+    expect(offered[0]).toMatchObject({
+      isDefault: true,
+      hasAbacusSession: true,
+    });
   });
 
   it("are none outside the in-app arm", async () => {
@@ -71,5 +107,22 @@ describe("a picked profile", () => {
 
     readProfileCookies.mockRejectedValueOnce(new Error("locked"));
     expect(await browserSignInCookies("Default")).toEqual([]);
+  });
+});
+
+describe("the default profile's provider sessions", () => {
+  it("are read for the provider login pages only", async () => {
+    await providerSignInCookies(profiles[0]!);
+
+    expect(readProfileCookies).toHaveBeenCalledWith(
+      profiles[0],
+      PROVIDER_LOGIN_URLS
+    );
+  });
+
+  it("are null, not empty, when the browser will not hand them over", async () => {
+    readProfileCookies.mockRejectedValueOnce(new Error("locked"));
+
+    expect(await providerSignInCookies(profiles[0]!)).toBeNull();
   });
 });
