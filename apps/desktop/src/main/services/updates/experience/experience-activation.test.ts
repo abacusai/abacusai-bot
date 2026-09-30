@@ -361,6 +361,44 @@ describe("experience activation is transactional with renderer readiness", () =>
     expect(store.version).toBe(VERSION(1));
   });
 
+  it("closing an adopted window defers activation and its old deadline cannot reject a replacement", async () => {
+    vi.useFakeTimers();
+    const store = await restart();
+    await store.activate(installTree(store, 1));
+    await store.activate(installTree(store, 2), { commit: false });
+    let host: InstanceType<typeof RendererHost> | null = null;
+    const { scheduler, outcomes, settle } = wire(store, () => host);
+    scheduler.schedule(VERSION(2));
+    fakes.behaviour.silent = [rendererUrl(VERSION(2)).href];
+    host = makeHost();
+    scheduler.adopt(host);
+    await host.webContents.loadURL(rendererUrl(VERSION(2)).href);
+    await vi.advanceTimersByTimeAsync(1_000);
+    const closed = host.webContents as unknown as InstanceType<
+      typeof fakes.FakeWebContentsView
+    >["webContents"];
+    closed.close();
+    closed.emit("destroyed");
+    host = null;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(outcomes).toEqual([]);
+    expect(scheduler.pending).toBe(true);
+    host = makeHost();
+    scheduler.adopt(host);
+    await host.webContents.loadURL(rendererUrl(VERSION(2)).href);
+    // The first window's deadline expires before the replacement's.
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(outcomes).toEqual([]);
+    const replacement = host.webContents as unknown as InstanceType<
+      typeof fakes.FakeWebContentsView
+    >["webContents"];
+    replacement.emit("ipc-message", {}, "renderer-ready");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(outcomes).toEqual([{ version: VERSION(2), outcome: "swapped" }]);
+    await settle();
+    expect((await restart()).version).toBe(VERSION(2));
+  });
+
   it("a window that goes away mid-swap leaves the activation pending, not committed", async () => {
     const store = await restart();
     await store.activate(installTree(store, 1));
@@ -434,6 +472,30 @@ describe("a second release while an activation is pending", () => {
     expect(rendererChangeNeedsReadiness(store, "renderer-A")).toBe(true);
     await store.abandonActivation(VERSION(2));
     expect(rendererChangeNeedsReadiness(store, "renderer-A")).toBe(false);
+  });
+
+  it("a ready superseded candidate cannot flip before the newer candidate fails", async () => {
+    vi.useFakeTimers();
+    const store = await restart();
+    await store.activate(installTree(store, 1));
+    const host = makeHost();
+    await host.webContents.loadURL(rendererUrl(VERSION(1)).href);
+    const first = host.webContents;
+    await store.activate(installTree(store, 2), { commit: false });
+    const { scheduler, outcomes, settle } = wire(store, () => host);
+    scheduler.schedule(VERSION(2));
+    // v2 has loaded and passed readiness, but is still hidden during settle.
+    await vi.advanceTimersByTimeAsync(0);
+    await store.activate(installTree(store, 3), { commit: false });
+    fakes.behaviour.failing = [rendererUrl(VERSION(3)).href];
+    scheduler.schedule(VERSION(3));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(outcomes).toEqual([{ version: VERSION(3), outcome: "gave-up" }]);
+    await settle();
+    expect(store.version).toBe(VERSION(1));
+    expect(host.webContents).toBe(first);
+    expect(host.webContents.getURL()).toBe(rendererUrl(VERSION(1)).href);
+    expect((await restart()).version).toBe(VERSION(1));
   });
 
   it("a superseded version's in-flight result is ignored, and the newer one settles on its own swap", async () => {

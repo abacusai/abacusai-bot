@@ -165,6 +165,7 @@ export class RendererSwapScheduler {
   #version: string | null = null;
   /** Waiting for a new window (none was up, or it went away mid-swap). */
   #deferred = false;
+  #adoption: symbol | null = null;
 
   constructor(options: RendererSwapSchedulerOptions) {
     this.#options = options;
@@ -184,6 +185,7 @@ export class RendererSwapScheduler {
   /** `deferred`: wait for the next idle tick before the first attempt. */
   schedule(version: string, { deferred = false } = {}): void {
     this.#version = version;
+    this.#adoption = null;
     this.#deferred = false;
     this.#arm(version, deferred);
   }
@@ -202,14 +204,17 @@ export class RendererSwapScheduler {
     const version = this.#version;
     if (version == null) return;
     this.cancel();
-    this.#deferred = false;
+    const adoption = Symbol();
+    this.#adoption = adoption;
+    this.#deferred = true;
     if (this.#options.disabled?.() === true) {
       this.#settle(version, "skipped");
       return;
     }
     host.initialReadiness(this.#options.barrier).then(
       (ready) => {
-        if (this.#version !== version) return;
+        if (this.#version !== version || this.#adoption !== adoption) return;
+        if (ready == null) return; // Closed: wait for another window.
         if (ready) this.#settle(version, "swapped");
         else {
           (this.#options.log ?? console).warn(
@@ -219,7 +224,7 @@ export class RendererSwapScheduler {
         }
       },
       () => {
-        if (this.#version === version)
+        if (this.#version === version && this.#adoption === adoption)
           this.#settle(version, "gave-up", { live: true });
       }
     );
@@ -242,6 +247,7 @@ export class RendererSwapScheduler {
   ): void {
     if (this.#version !== version) return;
     this.#version = null;
+    this.#adoption = null;
     this.#deferred = false;
     this.cancel();
     try {
@@ -289,7 +295,10 @@ export class RendererSwapScheduler {
 
     host
       .swap(url, {
-        shouldAbort: () => options.busy(),
+        shouldAbort: () =>
+          options.busy() ||
+          this.#version !== version ||
+          options.target(version)?.href !== key,
         barrier: options.barrier,
       })
       .then(
@@ -443,23 +452,40 @@ export class RendererHost {
    * Whether the live renderer's first document (a new window's) reaches
    * `barrier` within SWAP_TIMEOUT_MS of this call: `renderer-ready` for
    * `first-commit`, a `window.ready` report for `subscriptions`. Call it
-   * before the document starts loading.
+   * before the document starts loading. Null means the window closed,
+   * so activation can wait for its replacement.
    */
-  async initialReadiness(barrier: SwapBarrier): Promise<boolean> {
+  async initialReadiness(barrier: SwapBarrier): Promise<boolean | null> {
     const contents = this.#view.webContents;
-    if (barrier === "subscriptions") {
-      const source = this.#options.readiness;
-      if (source == null) return false;
-      return (await source.wait(contents.id, SWAP_TIMEOUT_MS)) === "ready";
-    }
-    const ready = rendererReady(contents);
+    const destroyed = () =>
+      contents.isDestroyed() || this.#options.window.isDestroyed();
+    if (destroyed()) return null;
+    let onDestroyed: () => void = () => undefined;
+    const closed = new Promise<null>((resolve) => {
+      onDestroyed = () => resolve(null);
+      contents.on("destroyed", onDestroyed);
+    });
+    const ready = barrier === "first-commit" ? rendererReady(contents) : null;
     try {
-      return await Promise.race([
-        ready.promise.then(() => true),
-        delay(SWAP_TIMEOUT_MS).then(() => false),
-      ]);
+      const readiness =
+        ready != null
+          ? Promise.race([
+              ready.promise.then(() => true),
+              delay(SWAP_TIMEOUT_MS).then(() => false),
+            ])
+          : this.#options.readiness == null
+            ? Promise.resolve(false)
+            : this.#options.readiness
+                .wait(contents.id, SWAP_TIMEOUT_MS)
+                .then((outcome) => outcome === "ready");
+      const outcome = await Promise.race([readiness, closed]);
+      return destroyed() ? null : outcome;
+    } catch (error) {
+      if (destroyed()) return null;
+      throw error;
     } finally {
-      ready.cancel();
+      ready?.cancel();
+      contents.off("destroyed", onDestroyed);
     }
   }
 
