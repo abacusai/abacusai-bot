@@ -1,3 +1,4 @@
+import { cueForNotice } from "#next/lib/attention/cues";
 import { isCheckInRoutine } from "#next/lib/bots/check-in";
 /**
  * The bots watcher (spec 03 §6.7, §17; spec 05 §23.3 "03's watcher"): what
@@ -54,9 +55,15 @@ export const handleRunFinished = (
   if (bot == null) return;
   const cueOptions = { threadId: notice.threadId, botId: bot.id };
   const spoke = notice.hasVisibleAssistantText;
-  if (notice.outcome === "error") deps.play("failed", cueOptions);
-  else if (target.checkIn) deps.play("done", cueOptions);
-  else if (spoke) deps.play("received", cueOptions);
+  const cue = cueForNotice(notice, {
+    checkInRoutineIds: new Set(
+      deps
+        .routines()
+        .filter((row) => row.botId != null && isCheckInRoutine(row, row.botId))
+        .map((row) => row.id)
+    ),
+  });
+  if (cue) deps.play(cue.kind, cueOptions);
 
   if (deps.seen(notice.threadId))
     react(bot.id, notice.outcome === "error" ? "sad" : "happy");

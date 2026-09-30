@@ -1,11 +1,3 @@
-/**
- * `BotsGlobals`: the bots area's document-wide subscriptions, mounted once
- * by the shell route (the sidebar is not always mounted, but unread, cues
- * and needs-you must follow every bot): the notice streams of `data/live`,
- * `ai.runFinished` for unread/cues/notifications, and the `waiting_permission`
- * level for needs-you.
- */
-import { getEventMeta } from "@orpc/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +7,14 @@ import { usePrefs } from "#next/data/db/prefs";
 import { followNotices } from "#next/data/queries/live";
 import { isThreadSeen } from "#next/lib/navigation/visible-thread";
 import { createNotifier } from "#next/lib/notify";
+/**
+ * `BotsGlobals`: the bots area's document-wide subscriptions, mounted once
+ * by the shell route (the sidebar is not always mounted, but unread, cues
+ * and needs-you must follow every bot): the notice streams of `data/live`,
+ * `ai.runFinished` for unread/cues/notifications, and the `waiting_permission`
+ * level for needs-you.
+ */
+import { runFinishedFeed } from "#next/lib/run-finished";
 import { createSoundPlayer, type SoundPlayer } from "#next/lib/sound";
 import type { PrefsRow } from "#shared/contract/rows";
 
@@ -111,26 +111,15 @@ export const BotsGlobals = () => {
       },
       abort.signal
     );
-    let lastEventId: string | undefined;
-    void followNotices(
-      transport,
-      ({ signal }) =>
-        transport.client.ai.runFinished(
-          lastEventId == null ? {} : { lastEventId },
-          { signal }
-        ),
-      (notice) => {
-        // A reopened stream resumes after the last notice seen (§24.11).
-        lastEventId = getEventMeta(notice as object)?.id ?? lastEventId;
-        if (deps.current != null) handleRunFinished(deps.current, notice);
-      },
-      abort.signal
-    );
+    const stopFinished = runFinishedFeed(transport).subscribe((notice) => {
+      if (deps.current != null) handleRunFinished(deps.current, notice);
+    });
     void db.collections.routines.preload().catch(() => undefined);
     const unlock = (): void => soundPlayer().unlock();
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => {
       abort.abort();
+      stopFinished();
       window.removeEventListener("pointerdown", unlock);
     };
   }, [transport, queryClient, db]);
