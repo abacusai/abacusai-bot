@@ -11,10 +11,5 @@ export { SidePanelContent } from "./side-panel-slot";
 
 export { SidePanelOverride } from "./side-panel-slot";
 export { useAppHotkey, dispatchAppHotkey, APP_HOTKEYS } from "./hotkeys";
-export {
-  nativePresenterFor,
-} from "./native-presenter";
-export {
-  registerPreviewConsumer,
-  dispatchPreview,
-} from "./preview-consumers";
+export { nativePresenterFor } from "./native-presenter";
+export { registerPreviewConsumer, dispatchPreview } from "./preview-consumers";

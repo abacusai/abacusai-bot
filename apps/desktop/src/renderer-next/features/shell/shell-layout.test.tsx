@@ -80,7 +80,7 @@ describe("ShellLayout", () => {
   it("puts the side panel in layout at xl with pixel sizes, persisted after the debounce", async () => {
     const seed = defaultSeed();
     seed.prefs = fixturePrefs({ panes: { "side-panel": 420 } });
-    await at(1280, "/sessions/review-prs?tab=terminal", seed);
+    await at(1280, "/library/connectors?tab=details", seed);
     const panel = document.querySelector(
       '[data-slot="side-panel"][data-mode="layout"]'
     );
@@ -121,7 +121,7 @@ describe("ShellLayout", () => {
   });
 
   it("uses a non-modal drawer with data-side-panel below xl, and a scrim only there", async () => {
-    await at(1000, "/sessions/review-prs?tab=terminal");
+    await at(1000, "/library/connectors?tab=details");
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="drawer-popup"]')
@@ -147,7 +147,7 @@ describe("ShellLayout", () => {
   });
 
   it("has no scrim at xl", async () => {
-    await at(1280, "/sessions/review-prs?tab=terminal");
+    await at(1280, "/library/connectors?tab=details");
     expect(document.querySelector('[data-slot="side-panel-scrim"]')).toBeNull();
   });
 
@@ -245,7 +245,7 @@ const railLink = (area: string) =>
 
 describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
   it("across panel open/close at xl and crossing 1100 with a tab open", async () => {
-    await at(1280, "/sessions/review-prs");
+    await at(1280, "/library/connectors");
     const node = paneScroll();
     const content = node.firstElementChild;
     node.scrollTop = 120;
@@ -254,7 +254,7 @@ describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
       expect(paneScroll().firstElementChild).toBe(content);
       expect(paneScroll().scrollTop).toBe(120);
     };
-    await navigate({ to: ".", search: { tab: "terminal" } });
+    await navigate({ to: ".", search: { tab: "details" } });
     expect(
       document.querySelector('[data-slot="side-panel"][data-mode="layout"]')
     ).not.toBeNull();
@@ -346,14 +346,16 @@ describe("the floating sidebar", () => {
 
 describe("the rail's last location (Claude #6)", () => {
   it("is a route location: pathname + search, never an href in `to`", async () => {
-    await at(1280, "/sessions/review-prs?tab=terminal");
+    await at(1280, "/sessions/review-prs?tab=terminal:test");
     await navigate({ to: "/bots/new" });
     const link = railLink("sessions");
-    expect(link.getAttribute("href")).toBe("/sessions/review-prs?tab=terminal");
+    expect(link.getAttribute("href")).toBe(
+      "/sessions/review-prs?tab=terminal%3Atest"
+    );
     const stored = shellStore.state.lastLocationByArea.sessions!;
     expect(stored).toEqual({
       pathname: "/sessions/review-prs",
-      search: { tab: "terminal" },
+      search: { tab: "terminal:test" },
     });
     const built = harness!.router.buildLocation({
       to: stored.pathname,
@@ -369,7 +371,9 @@ describe("the rail's last location (Claude #6)", () => {
         "/sessions/review-prs"
       )
     );
-    expect(harness!.router.state.location.search).toEqual({ tab: "terminal" });
+    expect(harness!.router.state.location.search).toEqual({
+      tab: "terminal:test",
+    });
   });
 
   it("remembers the background of a masked pop-up, not the pop-up", async () => {
@@ -416,7 +420,7 @@ describe("the title bar", () => {
   });
 
   it("panel tabs are borderless chips at the bar's control height (V7)", async () => {
-    await at(1280, "/sessions/review-prs?tab=terminal");
+    await at(1280, "/library/connectors?tab=details");
     const tabs = within(
       document.querySelector<HTMLElement>('[data-slot="topbar"]')!
     ).getAllByRole("tab");
