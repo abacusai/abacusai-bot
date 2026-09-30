@@ -126,6 +126,7 @@ import {
   RPC_CONNECT_CHANNEL,
   type MessagePortTransport,
 } from "./transports/message-port";
+import { publishToWindowViews } from "./window-events";
 
 type FakeContents = InstanceType<typeof mocks.FakeWebContents>;
 
@@ -284,6 +285,37 @@ describe("swap readiness (A-T10)", () => {
 
     expect(transport.livePorts()).toBe(0);
     await vi.waitFor(() => expect(bus.listenerCount()).toBe(baseline));
+  });
+
+  it("gives a candidate the window changes made between its subscription and the flip", async () => {
+    const { host } = makeHost();
+    const swapping = host.swap(new URL("app://bundle.new/"), {
+      barrier: "subscriptions",
+    });
+    const next = await candidate();
+    const client = await connectAndSubscribe(next);
+    const events = await client.window.events();
+
+    // Full screen entered while the candidate is still hidden: main publishes
+    // to every view in the window, as index.ts does.
+    const state = {
+      isFullScreen: true,
+      isMaximized: false,
+      isFocused: true,
+    };
+    publishToWindowViews(
+      (channel, payload) => bus.dispatchChannel(channel, payload),
+      transport.registeredIds(),
+      host.webContents.id,
+      { type: "state", state: state as never }
+    );
+    await expect(events.next()).resolves.toMatchObject({
+      value: { type: "state", state: { isFullScreen: true } },
+    });
+
+    readiness.report(next.id, { barrier: "subscriptions" });
+    await expect(swapping).resolves.toBe(true);
+    await events.return();
   });
 
   it("keeps the legacy first-commit barrier unless asked", async () => {

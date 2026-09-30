@@ -121,6 +121,7 @@ import {
   installMessagePortTransport,
   type MessagePortTransport,
 } from "./rpc/transports/message-port";
+import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
@@ -674,15 +675,17 @@ async function createWindow(restored?: RecreatedWindowState) {
     publishWindowState();
     publishChromeState();
   };
-  // `window.events` for the oRPC renderer: the whole state, to the live view.
+  // `window.events` for the oRPC renderer: the whole state, to every view
+  // in the window (a swap candidate too, so it flips in current).
   const publishWindowState = (): void => {
-    const contents = rendererWebContents();
     const state = mainWindowState();
-    if (contents == null || state == null) return;
-    emitBusChannel("window", {
-      webContentsId: contents.id,
-      event: { type: "state", state },
-    });
+    if (state == null) return;
+    publishToWindowViews(
+      emitBusChannel,
+      rpcTransport?.registeredIds() ?? [],
+      rendererWebContents()?.id ?? null,
+      { type: "state", state }
+    );
   };
   mainWindow.on("enter-full-screen", publishFullScreenState);
   mainWindow.on("leave-full-screen", publishFullScreenState);
@@ -1592,12 +1595,16 @@ function publishChromeState(): void {
   const contents = rendererWebContents();
   if (contents == null) return;
   const chrome: WindowChromeState = chromeState();
+  // The legacy renderer: the live view only, as before.
   if (RENDERER_GENERATION === "wco")
     contents.send("window:chrome-changed", chrome);
-  emitBusChannel("window", {
-    webContentsId: contents.id,
-    event: { type: "chrome", chrome },
-  });
+  // Every view in the window, a swap candidate included.
+  publishToWindowViews(
+    emitBusChannel,
+    rpcTransport?.registeredIds() ?? [],
+    contents.id,
+    { type: "chrome", chrome }
+  );
 }
 
 /** Null until whenReady has registered the IPC handlers. */
