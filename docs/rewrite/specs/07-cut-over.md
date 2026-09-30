@@ -1,11 +1,17 @@
 # 07 — Cut-over (phase 7)
 
-Status: spec **r2** (no code). r1 was reviewed by Codex round 1 (`reviews/07-cut-over.codex-r1.md`, 25 items, 3 blockers) against `HEAD c46e77d9`; r2 answers it with the coordinator's decisions, and the responses are at the end. Branch `rewrite/renderer`, `HEAD 5a3a4242`, whose code is `c46e77d9`. It implements the "Cut-over" phase of `docs/rewrite/PLAN.md` (§Phases and PR stack, phase 7: "Delete the old renderer, conversation layer, NDJSON host, `window.api`, zustand stores, unused patches; knip clean; size-limit set; PARITY.md all green; migration runs on real data from a backup. Gate: `pnpm check` green; release build smoke on macOS and Windows"). This is where the new renderer becomes the shipped one and the old tree is deleted. It builds on:
+Status: spec **r3**, final (no code). r2 answered Codex round 1 (`reviews/07-cut-over.codex-r1.md`, 25 items). r3 answers round 2 (`…codex-r2.md`, 16 items, 3 blockers), with the coordinator's decisions. Responses are at the end. Branch `rewrite/renderer`, `HEAD 1365c472`, whose code is `8dc67139`. It implements the "Cut-over" phase of `docs/rewrite/PLAN.md` (§Phases and PR stack, phase 7: "Delete the old renderer, conversation layer, NDJSON host, `window.api`, zustand stores, unused patches; knip clean; size-limit set; PARITY.md all green; migration runs on real data from a backup. Gate: `pnpm check` green; release build smoke on macOS and Windows"). This is where the new renderer becomes the shipped one and the old tree is deleted. It builds on:
 
 - `00-transport-db-migration.md` **r2** and its implementation notes, plus the 1 Oct C.3 amendment (the step-1 id grammar). Relevant parts: A (contract, both paths mounted, `emitIpcEvent`), B (tables, per-leaf provenance), C (runner, journal v2, steps 1–2, the reserved C.5 steps 3–4, the live legacy sync, downgrade safety).
 - The migration fix logs:
   - `reviews/00-transport-C.impl-fixes-r1.md` (runner);
-  - `reviews/00-transport-C1.impl-fixes-r1.md` (step 1, thread store and step 4; commits `c78b0285`, `cf83b4cd`, merged `41e0dd92`). That log brought source fingerprints, `threads/<id>.cleared` markers with tokens, the 64 MB `MAX_TRANSCRIPT_BYTES` cap, `tooLarge`/`unreadable`/`foreign` statuses, the write-block overlay, the deferred dual-write, step 4's orphan and cleared-history archiving, and `ThreadStore`'s `v1Archived` option.
+  - `reviews/00-transport-C1.impl-fixes-r1.md`, r1 (merged `41e0dd92`): source fingerprints, `threads/<id>.cleared` markers with tokens, the 64 MB `MAX_TRANSCRIPT_BYTES` cap, `tooLarge`/`unreadable`/`foreign`, step 4's orphan and cleared-history archiving, and `ThreadStore`'s `v1Archived` option;
+  - the same log, r2 (merged `8dc67139`):
+    - step 4 writes `threads/.archive-index.json` in the same commit as its removals, and a later run never takes a listed twin for an orphan;
+    - `ThreadStore` serves those twins;
+    - listing errors stop step 4;
+    - clears are fail-closed (`savedAfterClear`);
+    - held writes are durable under `threads/.pending/` (`HeldFiles`).
 - `00-window-chrome.md` **r2**, with the two low items due before the wco switch, §7 (deletion list) and §12 (acceptance).
 - `00-agent-agui.md` **r3**, with the impl r1 amendments and the main-relay notes, plus `reviews/00-main-relay.impl-fixes-r1.md` (r1 fixes `5d5dc433`, r2 fixes `c07479f7`). Among them:
   - `defaultWire`: agui for every spawn in the wco build;
@@ -16,7 +22,7 @@ Status: spec **r2** (no code). r1 was reviewed by Codex round 1 (`reviews/07-cut
 - `01-renderer-foundation.md` **r4** with `reviews/01-renderer-foundation.impl-fixes-r1.md` (r1 fixes `8acc0ebb`, r2 fixes `e14f845d`, which added the Linux `screenshots-next` CI job). Also `02-chat-kit.md` **r4**, `03-bots.md` **r3**, `04-sessions.md` **r3**, `05-routines-artifacts-library-settings.md` **r3**, cited by section, and `06-onboarding-tour-notch.md` **r4** (final: one-shot haptics, no notch inference).
 - Every review and fix log under `specs/reviews/`. §3 lists every item in them that is "deferred to cut-over" or held "until cut-over", with its source and its state at `c46e77d9`.
 
-Paths are relative to `apps/desktop/` unless noted. Line numbers are at `c46e77d9`.
+Paths are relative to `apps/desktop/` unless noted. Line numbers are at `c46e77d9`, except where a row says `8dc67139` (the migration and thread-store files).
 
 **Sources read for this spec (30 Sep 2026; rebased 1 Oct 2026)**
 
@@ -36,7 +42,7 @@ Paths are relative to `apps/desktop/` unless noted. Line numbers are at `c46e77d
 
 ## 0. Findings that change the brief (read first)
 
-Rebased to `c46e77d9`. Rows marked *(r2)* are new or changed since r1.
+Rebased to `c46e77d9` in r2, and to `8dc67139` in r3 for the migration and thread-store rows. Rows marked *(r2)* or *(r3)* are new or changed in that round.
 
 | # | Brief / earlier specs say | The repo says | Consequence here |
 |---|---|---|---|
@@ -47,7 +53,7 @@ Rebased to `c46e77d9`. Rows marked *(r2)* are new or changed since r1.
 | F5 | `experience` release units are renderer and agent source | `apps/updater/src/classify.ts:11-15` lists `apps/desktop/index.html`, `apps/desktop/src/renderer/` and `packages/agent/src/`. It does not list `src/renderer-next/`, `index-next.html` or `notch.html`. | C5 adds them; C7 restores the single prefix. |
 | F6 *(r2)* | Keep-awake follows agent runs | `power:set-agent-busy` is still renderer IPC (`keep-awake.ts:43`). `hasActiveAgentTurn()` reads the compat-fed turn state (`service-host.ts:1520-1522`). Re-evaluating it on AG-UI terminals races fd 3 against stdout (review #10). | Prerequisite **P4** (routed to implementation; §2). R7-T27 verifies it. |
 | F7 | The health check proves an agent bundle | `health-check.ts:52-80` spawns the candidate with **no flags** and waits for the NDJSON `{"type":"ready"}`. Under agui, stdout line 1 is `CUSTOM wire.hello` and readiness is `CUSTOM session.ready`. | C2 adds an agui mode; C10 makes it the only one. |
-| F8 *(r2)* | Step 4 and the rule removal ship "in the cut-over build" (spec 00 C.5) | **Rebased.** Step 4 (`cf83b4cd`) archives v1 files proven by fingerprint, orphaned v1-derived twins, and history held by a clear marker. It keeps `tooLarge` (> 64 MB), `unreadable`, `foreign` and `failed` sources, and never quarantines them. `ThreadStore({ v1Archived })` replaces "no v1 means cleared" with "the twin stands on its own" (`thread-store.ts:276-280`). Four gaps remain: (a) step 4 can commit **partially**, and nothing on disk tells N whether a thread's missing v1 was archived or cleared (review #1); (b) kept sources have no accessible replacement once runtime v1 reads go (#3); (c) each partial commit backs up into its own directory, and `migrations.json` keeps one partial entry per step, replaced each time (`record.ts:55-59`), so there is no index of committed removals (#6); (d) a directory-listing error reads as an empty directory (`transcript-files.ts:45-51`, #2). | D2 (revised): N ships per-thread archive provenance, the removal index and the fallback reader before N+1 removes anything. (d) is prerequisite P1. |
+| F8 *(r3)* | Step 4 and the rule removal ship "in the cut-over build" (spec 00 C.5) | **Rebased to `8dc67139`.** Step 4:<br>• archives v1 files proven by fingerprint, orphaned v1-derived twins, and history held by a clear marker;<br>• writes `threads/.archive-index.json` (`{ archived: { <id>: { fingerprint, updatedAt } } }`) as a planned write of the **same commit** (`004-archive-transcripts-v1.ts:227-228`), so a later partial run never takes a listed twin for an orphan;<br>• fails the whole step on any listing error except `ENOENT`.<br>`ThreadStore.archived()` serves a v1-derived twin whose v1 is gone when the index lists it with the twin's fingerprint (`thread-store.ts:571-584`). But the same function returns true for **every** twin when `v1Archived` is set (`:576`), which review r2 #2 rejects. Clears are fail-closed (`savedAfterClear`). Kept sources (`tooLarge` > 64 MB, `unreadable`, `foreign`, `failed`) have no reader in N once no twin exists (r2 #8). | D2 (revised in r3): per-thread index evidence decides in N **and** N+1; `v1Archived` never decides alone. The bounded fallback reader ships in N as prerequisite P6. |
 | F9 | `window.api` removal is one deletion | `registerIpcHandlers` (`handler.ts:471-490`) both builds the operations object oRPC uses (`index.ts:1738-1740`) **and** registers the handlers. It also installs `serviceHost.setEventDispatcher(emitIpcEvent)`. | C8 splits it: `createHostOperations` and the dispatcher wiring stay, and the `ipcMain.handle` block goes. |
 | F10 | The experience verifier accepts the new renderer | `integrity.ts:196-200` refuses a tree without `renderer/index.html`. | C6 renames `index-next.html` to `index.html` in the same commit that deletes the legacy one. |
 | F11 | Tests that read the old tree | `legacy-prefs.test.ts:215-235` reads two old-renderer files as oracles. R3-T9's legacy half runs through old shims (03:1036). `ToolResultData` lives in `renderer/conversation/agent-types.ts:273-322`. The C1 fix log moved the migrated normalisation to `expandToolResultData` (§14 request, item 5). | C6 freezes the oracles and moves any remaining type into `shared/` first. |
@@ -58,11 +64,16 @@ Rebased to `c46e77d9`. Rows marked *(r2)* are new or changed since r1.
 | F16 *(r2)* | Gallery and fixture builds cannot ship | They are gated by `import.meta.env.DEV \|\| VITE_UI_GALLERY === "1"` (`main.tsx:52-53,175`; `features/gallery/search.ts:106`) and `VITE_NEXT_DB_FIXTURES=1` (`main.tsx:115-118`). The screenshot and acceptance runs build into the same `dist/renderer` as a release. | C4 adds a release-build guard. |
 | F17 | Window-chrome §7 grep "returns nothing" | The bare `isFullScreen` matches Electron's `BaseWindow.isFullScreen()` in main, so that grep is never empty. | §5.3 corrects the pattern. |
 | F18 | Multiple homes | `profile-home.ts` keeps one home per account (`profiles.json`, `profiles/<key>/`). Each is migrated when it is first active, and its `userData` is `<home>/electron` (`index.ts:210-216`). | R7-T12, and restore per profile (§12.4). |
-| F19 *(r2)* | A write the migration holds is deferred | `ThreadStore` keeps a held change in a process-local overlay (`thread-store.ts:20-23`), which is gone at quit (review #7). | Prerequisite **P2**. |
+| F19 *(r3)* | A write the migration holds is deferred | **Fixed at `8dc67139`.** `HeldFiles` journals every held write or removal of the thread store and `TranscriptService` to `threads/.pending/<hash>.json`, reads see it, and it is replayed when the block lifts. Only when the journal itself is held does a change stay in memory, and that is logged. | P2 is done. The call to `held.replayAll()` after `setMigrationWriteBlocks` is handed over (C1 fix log r2), so row 61 covers it. |
 | F20 *(r2)* | A failed candidate is discarded | `experience-updater.ts:255` persists activation before the swap is asked for. `SwapNotReady` discards the view but not the pointer, so a relaunch boots the rejected bundle (review #9). | Prerequisite **P3**. |
 | F21 *(r2)* | Byte-identical compat means identical tap input | Each stdout and fd-3 chunk is decoded on its own (`cli-manager-service.ts:731,754`), so a UTF-8 character split across chunks is corrupted. fd 3 has no final-line drain, and overflow is handled differently from stdout (review #11). | Prerequisite **P5**. §8.2 states what byte identity covers. |
 | F22 *(r2)* | Restore from `…/userData/…` | `backupPathFor` checks `home` first (`backup.ts:83-87`), and `userData` is inside the home, so a step-3 backup is `<backup>/home/electron/renderer-state.json`. Secondary profiles have their own home and backups (review #5). | §12.4 derives restore paths from the recorded roots, per profile. |
 | F23 *(r2)* | Freezing `stagingPercentage` halts a rollout | electron-updater admits every client whose persisted staging id falls below the percentage (`AppUpdater.isStagingMatch`), so clients that had not checked yet keep entering. A downloaded build installs on quit (`update-service.ts:233-236`). A shipped client (≥ `v1.0.85`) already drops a downloaded build the feed stops offering on two consecutive checks (`update-service.ts:153-175`, `notOfferedStrikes`), 10 minutes apart (`:46`). | §12.2: halting means percentage 0 or withdrawal. |
+| F24 *(r3)* | `ts.preProcessFile` extracts module specifiers | The installed TypeScript is 7.0.2, whose package root exports only version information: `ts.preProcessFile is not a function` (review r2 #11). `oxc-parser` 0.150.0 is installed (`pnpm-lock.yaml`), and its `parseSync(...).module` exposes `staticImports`, `staticExports` (with `moduleRequest`) and `dynamicImports`. `rolldown/parseAst` exports `parseAst`. | §5.1 and §5.6 use `oxc-parser`, declared as a root devDependency at the installed version. `require()` is found by an AST visit. |
+| F25 *(r3)* | Build provenance stamps a commit | `turbo.json` caches `build` outputs (`dist/**`) by task inputs, with no commit input (review r2 #10). | C4 puts the pinned provenance commit (`ABACUS_BUILD_COMMIT`) into both builds' cache keys. |
+| F26 *(r3)* | CI waits for renderer and notch markers | Under `ABACUSAI_BOT_SMOKE_TEST=1`, main prints its marker and calls `app.exit(0)` at once (`index.ts:2131-2135`). A macOS runner has no notched display, so spec 06 r4 gives it no companion (06:651-655). | C4 delays the exit until the readiness outcomes settle, and accepts an asserted "companion disabled" outcome. |
+| F27 *(r3)* | A halt drops downloaded builds within two checks | While `downloading`, periodic checks are skipped (`update-service.ts:434`). `update-downloaded` resets `notOfferedStrikes` (`:203`) and starts the 60 s auto-restart poll (`:50,:210,:240-247`), which can install before any re-check. A slow transfer can therefore install long after a halt (review r2 #16). | §12.2 documents the limitation for shipped clients. Clients that can still be changed get an install-time feed re-check (C2, in the dormant release). |
+| F28 *(r3)* | N reads homes N+1 migrated with no restore | N's startup import calls `resetLegacy` for mapped keys that are absent (`legacy-prefs.ts:403`). After step 3 drops those keys, N would reset every `legacy`-provenance leaf to its default and persist it (review r2 #3). | Step 3 writes a retirement record, and N's importer skips retired keys (C1, C11). |
 
 ## 1. Scope and decisions
 
@@ -73,14 +84,15 @@ Rebased to `c46e77d9`. Rows marked *(r2)* are new or changed since r1.
 **Decisions**
 
 - **D1. One behaviour flip.** Exactly one PR (C5) changes what a packaged user runs: the generation default, and with it every spawn on agui (F1), plus `FOUNDATION_API`. Every earlier PR leaves the legacy build's user-visible behaviour as it is (`check:legacy-diff` and the goldens still hold); C2's refused-target memo and C4's build guards are housekeeping no user sees. Every later PR deletes code the flipped build no longer reaches, and must leave the R7 gate as it was.
-- **D2. Two releases, with N carrying what N+1 relies on (r2).** Release **N** ships the flip and the deletions. It never mutates a file an older build reads: `transcripts/`, `renderer-state.json`, and the stores' existing fields. It also ships the machinery N+1 depends on, so N is a safe floor after any N+1 commit, partial ones included:
-  - (a) **durable per-thread archive provenance**: `threads/<id>.archived`, written by step 4 in the same journaled commit as the removal and read by N's `ThreadStore` (review #1);
-  - (b) an **index of every committed removal** in each home (`backups/migrations/removals.jsonl`, review #6);
-  - (c) the **read-only, provenance-aware startup import** of `renderer-state.json` (review #8);
-  - (d) HEAD's clear-marker and token protocol, unchanged (review #4).
+- **D2. Two releases, with N carrying what N+1 relies on (r3).** Release **N** ships the flip and the deletions. It never mutates a file an older build reads: `transcripts/`, `renderer-state.json`, and the stores' existing fields. It also ships everything N+1 depends on, so N is a safe floor after any N+1 commit, partial ones included:
+  - (a) **per-thread archive evidence**: HEAD's `threads/.archive-index.json`, written by step 4 in the same commit as its removals. In N and in N+1 alike, a v1-derived twin whose v1 is gone is served **only** with matching index evidence. `v1Archived` never decides on its own, and C15 deletes the option (review r2 #1, #2).
+  - (b) a **restore index derived from retained attempt records** (review r2 #4, #5): every committed attempt keeps a validated manifest and a completion record inside its backup directory, covering removals and `replace-user` backups with operation type and original digest. `backups/migrations/restore-index.jsonl` is rebuilt from them whenever it is missing or inconsistent.
+  - (c) the **read-only, provenance-aware startup import** of `renderer-state.json` (review r1 #8). It honours step 3's **retirement record**, so N reading an N+1 home never resets migrated preferences (review r2 #3).
+  - (d) HEAD's clear-marker and token protocol, fail-closed with `savedAfterClear` (review r1 #4).
+  - (e) the **bounded streaming fallback reader** for kept v1 sources, behind the same clear-marker rules. It is prerequisite P6, routed to the thread-store owner (review r2 #8, #9).
 
-  Release **N+1**, once N is at 100 % with no trigger hit, registers steps 3–4 and sets `v1Archived`. It keeps a **fallback v1 reader** until every retained source has an accessible replacement (review #3). This amends spec 00 C.5.
-- **D3. `FOUNDATION_API = 2`** in `src/shared/experience.ts` and `apps/updater/src/manifest.ts` in one commit, guarded by a test that imports both. From API 2 the verifier also requires `renderer/notch.html` and **build provenance** in the tree: `renderer/build.json` and `agent/build.json`, written by the build, not by the packager (review #14).
+  Release **N+1**, once N is at 100 % with no trigger hit, registers steps 3–4 and ships `--restore-legacy-files`. This amends spec 00 C.5.
+- **D3. `FOUNDATION_API = 2`** in `src/shared/experience.ts` and `apps/updater/src/manifest.ts` in one commit, guarded by a test that imports both. From API 2 the verifier also requires `renderer/notch.html` and **build provenance** in the tree: `renderer/build.json` and `agent/build.json`, written by the build, not by the packager (review r1 #14). The provenance commit is part of both builds' Turbo cache keys (review r2 #10).
 - **D4. `--wire` stays as a flag for skew safety.** Main keeps passing `--wire agui --thread-id <id> --compat-fd 3`. After C10 the agent treats an absent `--wire` as `agui` and rejects `--wire ndjson` with a typed error.
 - **D5. PARITY.md is frozen as the sign-off record.** At C5 it gains a "renderer consumer" column, validated against the **exact** expected row set with every `file#symbol` resolved (review #25). Its generator is deleted in C8.
 - **D6. Locales stay at `src/renderer/locales/`.** After C7 they sit inside the new `src/renderer`, and `#locales/*` keeps resolving.
@@ -91,7 +103,7 @@ Rebased to `c46e77d9`. Rows marked *(r2)* are new or changed since r1.
 - **D8. Linux is in the packaged smoke.** The notch and capsule are macOS and Windows only.
 - **D9. Staged rollout with a real halt (r2).** Stages are set with `stagingPercentage` in `latest*.yml`. To halt, the percentage is set to **0**, or the release is withdrawn by republishing N−1's feed files. Freezing the percentage is not a halt (F23, review #15). From the RC cut, experiences are published for N only (§6.4).
 - **D10. Two Vite inputs after C6 (r2).** `main: index.html` and `notch: notch.html` (review #12).
-- **D11. Two-stage swap barrier (r2).** Stage 1 is readiness: `window.ready({ barrier: "subscriptions" })`. Stage 2 is restoration: main calls `__restoreUiContinuity`, which resolves once the restored state is committed, bounded by `RESTORE_TIMEOUT_MS`. The flip comes only after both. The candidate never makes readiness wait on restoration (review #13).
+- **D11. Two-stage swap barrier (r2).** Stage 1 is readiness: `window.ready({ barrier: "subscriptions" })`. Stage 2 is restoration: main calls `__restoreUiContinuity`, which resolves once the restored state is committed, bounded by `RESTORE_TIMEOUT_MS`. The flip comes only after both. The candidate never makes readiness wait on restoration (review r1 #13). The snapshot carries the **complete typed draft state**: every `sessionStorage`-persisted store the specs define, because a new experience origin cannot read the old origin's storage (review r2 #13).
 
 ## 2. Entry criteria (before C1 opens)
 
@@ -101,20 +113,22 @@ Rebased to `c46e77d9`. Rows marked *(r2)* are new or changed since r1.
    - the step-1, thread-store and step-4 fixes are merged (`41e0dd92`), with Codex r2 running;
    - phase 2 is implementing, and phases 3–6 are final specs;
    - "main requirements from specs 3–6" is implementing (PROGRESS.md).
-2. **Prerequisite defects on HEAD** are fixed and merged. The coordinator routed them to implementation agents on 1 Oct 2026. They are not cut-over PR work, but the cut-over gates re-verify them:
+2. **Prerequisites** are fixed and merged. The coordinator routed them to implementation agents on 1 Oct 2026. They are not cut-over PR work, but the cut-over gates re-verify them. State at `8dc67139`:
 
-   | Id | Defect (review item) | Where on `c46e77d9` | Owner | Verified by |
-   |---|---|---|---|---|
-   | P1 | A directory-listing error reads as empty, so step 4 can take every twin for an orphan (#2). Only absence may read as empty; an unlistable `transcripts/` or `threads/` stops orphan removal and completion. | `transcript-files.ts:45-51` | Implementation agent (migration) | Injected `EACCES`/`EIO` C-T9 cases; R7-T14 |
-   | P2 | Held writes live in a process-local overlay and are lost at quit (#7). History-changing operations on a held thread are either refused or journaled durably outside the held destinations. | `thread-store.ts:20-23` | Implementation agent (thread store) | Send, reset and quit while a commit is unresolved; R7-T14 |
-   | P3 | Activation is persisted before the swap; a rejected candidate boots after relaunch (#9). Activation becomes transactional with readiness, or the previous pointer is restored on `SwapNotReady`. | `experience-updater.ts:255`; `renderer-host.ts:392-393` | Implementation agent (updater) | R7-T3, including a full restart after a failed swap |
-   | P4 | Keep-awake's busy source races compat against stdout (#10). It follows authoritative turn-state transitions, or an AG-UI busy aggregate. | `keep-awake.ts:43`; `service-host.ts:1520-1522` | Implementation agent (main requirements) | R7-T27, both pipe orderings |
-   | P5 | Compat and stdout chunks are decoded one at a time; fd 3 lacks the final-line drain and matching overflow handling (#11). Incremental UTF-8 decoding and a specified overflow and EOF policy on both pipes. | `cli-manager-service.ts:731,754` and `handleCompatFd` | Implementation agent (relay) | R7-T7's fragmented-Unicode, long-line and unterminated-tail cases through the manager |
+   | Id | Defect (review item) | Where | Owner | State | Verified by |
+   |---|---|---|---|---|---|
+   | P1 | A directory-listing error reads as empty, so step 4 can take every twin for an orphan (#2). Only absence may read as empty; an unlistable `transcripts/` or `threads/` stops orphan removal and completion. | `transcript-files.ts` | Migration | **Done** (`272868f3`: the listing fails the step except on `ENOENT`, and an orphan requires `lstat` `ENOENT`) | Injected `EACCES`/`EIO` C-T9 cases; R7-T14 |
+   | P2 | Held writes live in a process-local overlay and are lost at quit (#7). History-changing operations on a held thread are either refused or journaled durably outside the held destinations. | `thread-store.ts`, `held-files.ts` | Thread store | **Done** (`ee9af7a4`: `threads/.pending/`) | Send, reset and quit while a commit is unresolved; R7-T14 |
+   | P3 | Activation is persisted before the swap; a rejected candidate boots after relaunch (#9). Activation becomes transactional with readiness, or the previous pointer is restored on `SwapNotReady`. | `experience-updater.ts:255`; `renderer-host.ts:392-393` | Updater | Open | R7-T3, including a full restart after a failed swap |
+   | P4 | Keep-awake's busy source races compat against stdout (#10). It follows authoritative turn-state transitions, or an AG-UI busy aggregate. | `keep-awake.ts:43`; `service-host.ts:1520-1522` | Main requirements | Open | R7-T27, both pipe orderings |
+   | P5 | Compat and stdout chunks are decoded one at a time; fd 3 lacks the final-line drain and matching overflow handling (#11). Incremental UTF-8 decoding and a specified overflow and EOF policy on both pipes. | `cli-manager-service.ts:731,754` and `handleCompatFd` | Relay | Open | R7-T7's fragmented-Unicode, long-line and unterminated-tail cases through the manager |
+   | P6 | Kept v1 sources (`tooLarge`, `unreadable`, `foreign`-twinned, `failed`) have no reader when no usable twin exists (review r2 #8), and a fallback must never resurrect a cleared source (#9). A **bounded streaming fallback** in `ThreadStore.readCurrentFile`, shipped in **N**. It applies the existing clear rules first: marker token, `v1Fingerprint`, `savedAfterClear`, with the fingerprint computed by streaming. It converts in memory and read-only, streaming above 64 MB up to 512 MB; beyond that a notice with Show in folder. | `thread-store.ts` (the `tooLarge`/`unreadable` branch returns the twin or null) | Thread store (routed by the coordinator for r3) | Open | R7-T10's over-64 MB thread on N; R7-T14's cleared-retained-source cases |
 
    Also still open, from the fix logs:
    - the runner's "stop after a deferred step (`break`)", which C1 takes (C1 fix log, "Handed over");
-   - `threadStore.flush()` on `before-quit` (same log);
-   - any finding of the step-1 Codex r2 review.
+   - `threadStore.flush()` on `before-quit`, and `held.replayAll()` after `setMigrationWriteBlocks` (C1 fix log r1 and r2, "Handed over");
+   - `native-ids` wiring at the agent emit and `ai.send` ingress (C1 fix log r2 #13);
+   - any finding of the running low-effort Codex r3 on the migration slice.
 3. **Earlier phases' deferred parity rows are green:**
    - P46 (phase 6), the P53 URL row (phase 4), P61 Revoke (phase 5) and ST22 (phase 6);
    - the 06 blocker `sessions.events { run-finished }`;
@@ -128,7 +142,7 @@ Rebased to `c46e77d9`. Rows marked *(r2)* are new or changed since r1.
 
 ## 3. Register of items deferred to the cut-over
 
-Every "until cut-over", "at cut-over", "phase 7" and "before the wco switch" item in the specs, reviews and code, with its state at `c46e77d9`. The last column names the PR that handles it (§4). **Done** means it is fixed on HEAD and only re-verified here. **P1–P5** are the routed prerequisites of §2.
+Every "until cut-over", "at cut-over", "phase 7" and "before the wco switch" item in the specs, reviews and code, with its state at `c46e77d9` (migration and thread-store rows at `8dc67139`). The last column names the PR that handles it (§4). **Done** means it is fixed on HEAD and only re-verified here. **P1–P5** are the routed prerequisites of §2.
 
 | # | Item | Source | Disposition |
 |---|---|---|---|
@@ -141,7 +155,7 @@ Every "until cut-over", "at cut-over", "phase 7" and "before the wco switch" ite
 | 7 | `window.api` and every `ipcMain.handle` stay until the Phase 7 cut-over; `emitIpcEvent` feeds both paths | 00-transport:15, :562, :720, :1242; `rpc/emit.ts:14-18` | C8 |
 | 8 | Kind **R** rows: "its legacy handler stays until the cut-over" (19 rows in code, 18 in spec 00; `recreateMainWindow` added by window chrome) | PARITY.md:9; 00-transport:83, :343; `legacy-map.ts:372-374` | C8 |
 | 9 | `writeTranscript` dual-write of v2 "until cut-over" | 00-transport:252, :1128, :1131, :1224; PARITY.md:178; `transcript-service.ts`; `thread-store.ts:10-13` (now deferred and coalesced, C1 fix log L5) | C11 (no writer after C8) |
-| 10 | The repair in `readCurrent` and "a v1-derived twin without v1 is cleared" go with step 4 | 00-transport:1127, :1249, :1388; C1 fix log L2 (`v1Archived`, `thread-store.ts:276-280`) | N: the rule consults archive provenance (C1, D2 a). N+1: `v1Archived` set with step 4 registered (C15); the fallback reader stays (D2). |
+| 10 | The repair in `readCurrent` and "a v1-derived twin without v1 is cleared" go with step 4 | 00-transport:1127, :1249, :1388; C1 fix log r1 L2 and r2 #1 (`threads/.archive-index.json`, `thread-store.ts:571-584`) | Per-thread index evidence decides in N and N+1 (D2 a). C15 deletes `v1Archived` and the repair; the fallback reader stays (P6). |
 | 11 | The live legacy prefs sync is "transition only … Removed with the old renderer" | 00-transport:1146, :1248; `index.ts:1734-1737`; `legacy-prefs.ts:420-449` | C11 removes the `onSet` listener. The read-only, provenance-aware startup import stays through N (D2 c, review #8). N+1 step 3. |
 | 12 | Step 3 `final-legacy-prefs-import-and-drop` at cut-over | 00-transport:955, :1147, :1174 (no code) | C1 (written and tested, not registered); C15 (registered) |
 | 13 | C.5 steps are registered only in the cut-over build | 00-transport:1170, C-T9 :1208; `steps/index.ts:1-8`; `004-…ts:1-5` | C15, D2 |
@@ -150,7 +164,7 @@ Every "until cut-over", "at cut-over", "phase 7" and "before the wco switch" ite
 | 16 | A large transcript is read as corrupt, quarantined and pruned | C1 Claude #7 | **Done** (the 64 MB cap; `tooLarge` and `unreadable` kept and never quarantined). An accessible replacement for kept sources: the fallback reader (D2, C15). |
 | 17 | The dual-write cost: "or drop it until the cut-over and rely on the repair" | C1 Claude #5 (:55-65) | Moot at C11 |
 | 18 | EXDEV window on `renderer-state.json`: "Medium (High once step 3 lands)" | reviews/00-transport-C.impl-claude-r1.md:40-50 | Fixed (`impl-fixes-r1.md:25`); re-proved by R7-T14 kill points for step 3 |
-| 19 | `ThreadStore`/`TranscriptService` ignore the migration write-block | Codex C r2 #1 | **Done** (`c78b0285`), but held changes are not durable: **P2** |
+| 19 | `ThreadStore`/`TranscriptService` ignore the migration write-block | Codex C r2 #1 | **Done** (`c78b0285`); held writes durable since `ee9af7a4` (P2 done) |
 | 20 | Stop after a deferred step, or document that no later step depends on step 4 | C1 Claude #15; C1 fix log "Handed over" | Open. C1 (runner `break` after `pending`) |
 | 21 | Cleared-history protection excludes AG-UI twins | C1 Codex #3 | **Done** as `threads/<id>.cleared` with tokens and `afterClear` (`thread-file.ts:45-80`). C1 adds step 4's marker-retirement rule (review #4). |
 | 22 | Any v1 read error is taken as "cleared" | C1 Claude #14 | **Done** (`readTextChecked`: only `ENOENT`/`ENOTDIR` mean missing) |
@@ -187,13 +201,16 @@ Every "until cut-over", "at cut-over", "phase 7" and "before the wco switch" ite
 | 53 | `PARITY.md` rows must name their renderer-next consumer | 06:1089; 03:1090 | C5 (sign-off column, D5) |
 | 54 | Stale comment: "main's db.* answers UNAVAILABLE" | `renderer-next/env.d.ts:30-33` | C7 |
 | 55 | `i18next`/`react-i18next` majors "in a separate PR that tests both renderers" | 01:23 (F9) | After the cut-over (one renderer) |
-| 56 | Directory-listing errors read as empty | review #2; `transcript-files.ts:45-51` | **P1** |
-| 57 | Held writes lost at quit | review #7; `thread-store.ts:20-23` | **P2** |
+| 56 | Directory-listing errors read as empty | review r1 #2 | **Done** (P1, `272868f3`) |
+| 57 | Held writes lost at quit | review r1 #7 | **Done** (P2, `ee9af7a4`) |
 | 58 | Non-transactional experience activation | review #9; `experience-updater.ts:255` | **P3** |
 | 59 | Keep-awake busy source | review #10 | **P4** |
 | 60 | Incremental decoding, overflow and EOF on the compat and stdout pipes | review #11 | **P5** |
-| 61 | `threadStore.flush()` on `before-quit` | C1 fix log "Handed over" | Before C5 (owner: main requirements agent) |
+| 61 | `threadStore.flush()` on `before-quit`; `held.replayAll()` after `setMigrationWriteBlocks` | C1 fix log r1 and r2, "Handed over" | Before C5 (owner: main requirements agent) |
 | 62 | `ai.hydrate` with an unknown `before` cursor | C1 fix log "Handed over" | **Done** (relay decision e: `NOT_FOUND`) |
+| 63 | Bounded streaming fallback reader with clear-marker checks, in N | review r2 #8, #9 | **P6** |
+| 64 | Step 3 must leave N able to read its home (retirement record) | review r2 #3 | C1 (step 3 writes it), C11 (N's importer reads it) |
+| 65 | The runner keeps a manifest and a completion record per attempt; the restore index is derived from them | review r2 #5 | C1 (runner requirement) |
 
 ## 4. The cut-over sequence (stacked PRs)
 
@@ -219,50 +236,68 @@ C15 retire legacy files ────────── release N+1 (after soak)
 
 ### C1 — Migration completion for N (main; legacy unchanged)
 
-HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, orphans, and clear markers with tokens. What N still needs, so it stays a safe floor for any N+1 commit, is below. P1 and P2 are prerequisites, not part of this PR.
+HEAD (`8dc67139`) already has:
+- the write block, with held writes journalled under `threads/.pending/`;
+- read-error classes, and `tooLarge` at 64 MB;
+- orphan and cleared archiving;
+- fail-closed clear markers (`savedAfterClear`);
+- `threads/.archive-index.json`, written in the same commit as the removals, which a later run consults before calling a twin an orphan.
 
-- **Per-thread archive provenance** (D2 a, review #1).
-  - For every v1 file step 4 removes, whether archived, orphan-archived or cleared, its plan adds a `create` of `threads/<id>.archived`:
+What N still needs, so it stays a safe floor for any N+1 commit, is below. P6, the fallback reader, is a prerequisite and not part of this PR.
+
+- **Index evidence is the only rule** (D2 a; review r2 #1, #2).
+  - `ThreadStore.archived()` drops its `if (this.v1Archived) return true` short-circuit (`thread-store.ts:576`).
+  - A v1-derived twin with no v1 file is served only when `.archive-index.json` lists the thread with the twin's fingerprint (by `updatedAt` for a pre-fingerprint twin). Otherwise it is cleared.
+  - This holds in N and in N+1. `v1Archived` is deleted in C15.
+  - An unreadable or unparseable index is not evidence (`readArchiveIndex` treats it as empty). Such a thread reads as cleared until a later run rewrites the index, and it is logged. Nothing is ever served without evidence.
+  - Step 4 builds the index by **merging** with the index on disk, never by replacing it. The merge is a `replace-user` write, so a rollback restores the previous index.
+  - The orphan sweep skips every listed thread, as on HEAD.
+  - The test runs two successive commits, each containing both archived and newly converted threads, and hydrates every thread in N after each (R7-T14).
+- **Per-attempt manifest and completion record** (runner requirement; review r2 #5).
+  - Before its first move, a commit writes `<backup dir>/attempt.json`:
 
     ```ts
-    interface ArchiveRecord {
+    interface AttemptManifest {
       version: 1;
-      kind: "archived" | "orphan" | "cleared";
-      v1Fingerprint?: string;   // the removed v1 bytes, if a v1 file was removed
-      twinFingerprint?: string; // the twin's source.fingerprint at the removal
-      attempt: string;          // the commit attempt id (journal)
-      backup: string;           // backup path, relative to the home
-      at: string;
+      attempt: string;
+      step: number;
+      name: string;
+      stamp: string;
+      roots: { home: string; userData: string };
+      ops: Array<{
+        op: "remove" | "replace" | "create";
+        root: "home" | "userData";
+        source: string;          // relative to root
+        backup?: string;         // relative to the backup dir; absent for create
+        originalSha256?: string; // the file before the commit
+        resultSha256?: string;   // the file the commit left
+      }>;
     }
     ```
 
-  - The record is a planned write of the same commit, so the journal's rollback removes it together with the move-back. A partial commit leaves exactly the records of what it removed.
-  - `ThreadStore.readCurrentFile`, in N, when v1 is `missing`:
-    - an `archived` or `orphan` record whose `twinFingerprint` equals the twin's `source.fingerprint` serves the twin as it is. Pre-fingerprint twins match on the record alone.
-    - A `cleared` record, or no record, keeps today's rule: no v1 means cleared.
-  - This replaces r1's "switch the rule off once step 4 is applied", which was wrong after a partial commit.
-- **Removal index** (D2 b, review #6).
-  - At commit, the runner appends one line per removal to `<home>/backups/migrations/removals.jsonl`:
-
-    ```
-    { step, attempt, stamp, root: "home" | "userData", source (relative to root), backup (relative to home), sha256 }
-    ```
-
-  - The lines are written after the moves and before the record. Recovery rebuilds or trims them from `commit.log`, so a torn tail never names a file that was not moved.
-  - Pruning never removes a backup directory the index still references inside the rollback window: 30 days after the step is **applied**, not after each partial commit.
-- **Clear markers under step 4** (review #4). Step 4 keeps HEAD's `threads/<id>.cleared` and token protocol. It retires a marker, by moving it into the backup, only when both are proven:
-  - no v1 file remains whose fingerprint equals `marker.v1Fingerprint`;
-  - no twin remains without `source.afterClear === marker.token`.
-
-  A failed AG-UI deletion leaves the marker in place. The cleared thread therefore stays cleared across N+1, a downgrade to N and a re-upgrade.
-- **Runner `break`** after a step returns `pending`, with a log line (C1 Claude #15, still open).
+  - After the record is written, the commit writes `<backup dir>/completed.json`, as `{ attempt, recordedAt, partial: boolean }`. Both files are written atomically, with a sha256 of the manifest inside `completed.json`.
+  - Recovery deletes both files together with the backup directory when it rolls an attempt back. They are never pruned while the attempt is inside the rollback window.
+  - `backups/migrations/restore-index.jsonl` is **derived**: one line per op of every attempt that has a valid `completed.json` whose manifest hash matches. It is rebuilt at startup when it is missing, fails to parse, or disagrees with the attempt directories. An attempt without a completion record never enters it.
+  - It covers removals **and** `replace-user` backups (review r2 #4), which step 3's `renderer-state.json` and `prefs.json` are.
+  - Tests:
+    - damage the derived index after staging cleanup, and after three partial commits, then rebuild;
+    - a manifest whose hash disagrees is excluded and logged.
+- **Clear markers under step 4.** HEAD's protocol is unchanged. Step 4 retires a marker only when no v1 file remains that the marker would still count (fingerprint, `savedAfterClear`), and no twin remains without `source.afterClear === marker.token`. A failed AG-UI deletion keeps the marker.
+- **Runner `break`** after a step returns `pending`, with a log line (C1 Claude #15).
 - **Step 3** `final-legacy-prefs-import-and-drop` is written and tested but **not registered**:
-  - the whole-file provenance-aware import, then the drop of every `LEGACY_PREFS_KEYS` key from `renderer-state.json`;
-  - both are `replace-user` writes, with backups;
-  - `invalid` keys are dropped too; their raw values stay in the backup and are counted.
+  1. the whole-file provenance-aware import;
+  2. the drop of every `LEGACY_PREFS_KEYS` key from `renderer-state.json`;
+  3. in the same commit, a `create` or `replace-user` of the **retirement record** `<userData>/renderer-state.retired.json`: `{ version: 1, attempt, at, keys: { <key>: <sha256 of the dropped raw value> } }` (review r2 #3).
+
+  `renderer-state.json` and `prefs.json` are `replace-user` writes with backups. `invalid` keys are dropped too, and their values stay in the backup.
+- **N's importer honours retirement** (lives in C11's `importLegacyPrefsAtStartup`, tested here):
+  - A mapped key that is **absent** and **listed** in the retirement record is skipped: no `resetLegacy`, and the prefs stay as step 3 imported them.
+  - An absent key that is **not** listed keeps today's behaviour: the user or the old UI deleted it.
+  - A key that is **present** is imported by the provenance rule, whether restored or re-added by N−1.
+  - The test runs N+1 → N with unchanged `legacy`-provenance leaves (theme, pins, models): N's `prefs.json` stays byte-identical.
 - **Gate:**
   - C-T1…C-T9, and the crash suite with step 3 and 4 kill points in the test registry;
-  - `legacy-home.test.ts` still expects `[1, 2]` (plus 5 once phase 5 registers it);
+  - `legacy-home.test.ts` still expects `[1, 2]`, plus 5 once phase 5 registers it;
   - R7-T14;
   - R7-T15's "N after every partial commit" leg;
   - legacy unchanged.
@@ -276,6 +311,10 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
   - It resolves on the first stdout line that parses as `{ type: "CUSTOM", name: "session.ready" }`, and fails on `RUN_ERROR` or on exit before that.
   - The caller passes `"agui"` whenever `defaultWire(…)` is true.
 - **Refused-target memo.** `ExperienceUpdater` records a target hash whose verification failed on foundation, API, protocol or provenance grounds, and skips it until relaunch (§6.4).
+- **Withdrawal-aware install** (review r2 #16). Before any install, whether auto-restart, "Relaunch to update" or install-on-quit, `UpdateService` runs a fresh feed check, and installs only if the feed still offers the downloaded version to this client (staging included).
+  - Otherwise it drops the build (`dropDownloadedBuild`) and turns install-on-quit off.
+  - Periodic checks keep running during a download as metadata-only checks. A halt seen mid-download cancels the transfer (`CancellationToken`) and drops the partial file.
+  - It is legacy-safe, so it is taken ahead of the stack into the dormant release (§2 item 4) if one ships. Only clients that can still be changed benefit.
 - **Window-chrome Electron integration test.** The 7 todos in `src/main/window-chrome.electron.test.ts` are implemented.
 - **Coupling test.** `src/main/services/updates/experience/foundation-api.test.ts` asserts that the desktop and updater `FOUNDATION_API` and protocol are equal.
 - **Not here:** keep-awake (P4) and activation (P3) are prerequisites; the wire default is done (F1).
@@ -290,7 +329,18 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
   - listens to `pointerdown`, `keydown` and `wheel` in the capture phase, and calls `transport.client.window.activity()` at most once per 5 s (the old `THROTTLE_MS`, `renderer/lib/activity-beacon.ts:6`);
   - is installed after `bootstrap()`, never in the notch entry.
 - **UI continuity.** `lib/continuity.ts` defines `window.__captureUiContinuity()` and `window.__restoreUiContinuity(snapshot)`, the globals `renderer-host.ts:252-281` calls.
-  - The snapshot: the focused `data-continuity-id`, the composer caret or selection and its text, and each `data-continuity-scroll` viewport's anchored message id and offset. The old caps apply (`ui-continuity.ts:31-33`: 20 scrollers, 20 fields, 4,096 characters).
+  - **DOM part:** the focused `data-continuity-id`, the caret or selection, and each `data-continuity-scroll` viewport's anchored message id and offset (20 scrollers, as `ui-continuity.ts:31`).
+  - **Draft part** (review r2 #13). Every `sessionStorage`-persisted store registers with `lib/continuity/registry.ts` under a versioned key, with a valibot schema:
+    - `chat.drafts`: 02 §8.7 `{ text, attachments, mode?, model? }` per thread;
+    - `bots.drafts`: 03 §8.3 `{ id, name, look, templateId, values? }` for `"new"` and edited bots;
+    - `sessions.startDraft`: 04's start-page state machine;
+    - `sessions.panelTabs` and `sessions.review`: 04;
+    - `routines.editorLog`: 05.
+
+    A later spec that adds a `sessionStorage` store must register it; `guards.test.ts` fails on an unregistered `sessionStorage` key.
+  - Capture serializes every registered store. Attachments travel **by reference** (staged ids and paths), never as bytes.
+  - If the snapshot exceeds 4 MB, capture answers `{ tooLarge: true }`. The host treats that as `busy` and retries at the next quiet moment, so it never swaps and loses a draft.
+  - Restore validates each key against its schema, hydrates the stores, then applies the DOM part, all before the stage-2 promise resolves. A key that fails validation is dropped and logged.
   - The route travels in the hash (`renderer-host.ts:362-368`).
 - **Two-stage barrier** (D11, review #13). The host order stays as it is:
   1. load the candidate;
@@ -321,6 +371,11 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
   - `apps/updater` `buildManifest` reads both files and refuses when either is missing, when they disagree on `commit`, `foundationApi` or `protocol`, or when their `foundationApi` differs from the builder's own. The manifest records the renderer's `commit`.
   - `integrity.ts` checks the same agreement at install.
   - An old tree packaged by a new builder therefore fails at build time, and again at install.
+  - **The commit is pinned and part of the cache key** (review r2 #10). `commit` comes from `ABACUS_BUILD_COMMIT`, which the release pipeline sets to the pinned commit. It is required when `CI` or `ABACUS_RELEASE=1` is set; otherwise it falls back to `git rev-parse HEAD`, plus `dirty`.
+    - `turbo.json` lists `ABACUS_BUILD_COMMIT` in the `env` of `@abacus-ai/desktop#build` and `@abacus-ai/agent#build`, so a change of commit is a cache miss for both.
+    - An agent-only hotfix at a new pinned commit therefore rebuilds the renderer too, and the stamps agree.
+    - Two builds at one commit hit the cache together.
+    - Test: an agent-only change with a new `ABACUS_BUILD_COMMIT` gives agreeing stamps, and a renderer cache hit with a stale stamp is impossible.
 - **CI** gains `check:knip-next` and `check:ui-registry` in the `check` job (F12).
 - **`size-limit`.** `size-limit` and `@size-limit/file` go into root devDependencies, with `.size-limit.json` entries measured against `dist/renderer/assets`:
   - the initial JS and CSS of `index-next.html`;
@@ -329,10 +384,12 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
   - `temml`'s lazy chunk.
 
   This PR records a baseline with no limits enforced. C12 sets them (§14.4).
-- **Smoke markers.**
-  - Under `ABACUSAI_BOT_SMOKE_TEST=1`, main logs `[smoke] renderer ready` when `rendererReadiness` reports `ready` for the main window.
-  - It logs `[smoke] notch ready` for the notch/capsule window on darwin and win32.
-  - The CI step waits for all the markers the platform should print. In legacy, `renderer-ready` stands in for the first.
+- **Smoke markers and exit** (review r2 #14).
+  - Under `ABACUSAI_BOT_SMOKE_TEST=1`, main no longer calls `app.exit(0)` right after `[smoke] main process ready` (`index.ts:2131-2135`). It waits, for at most 90 s, for these outcomes:
+    - the **renderer**: `rendererReadiness` for the main window gives `[smoke] renderer ready`, `[smoke] renderer failed: <reason>` or `[smoke] renderer timeout`. In legacy, `renderer-ready` stands in.
+    - the **companion**, on darwin and win32 in the wco build: `[smoke] notch ready`, or `[smoke] notch disabled: <reason>`. The reason is one of spec 06 r4's outcomes: probe failed, no internal display, no cut-out, off by pref. `[smoke] notch failed` covers anything else. Linux prints `[smoke] notch n/a`.
+  - Then it exits: 0 when the renderer is ready and the companion is ready or disabled with a reason, 1 otherwise, including on the 90 s bound.
+  - The CI step checks the exit status and greps the markers. A macOS runner, which has no notched display, is expected to print `notch disabled: no internal display` or `probe failed`.
 - **Gate:** CI green; `check-release-build` fails on a `VITE_UI_GALLERY=1` build and passes on `pnpm run build` (R7-T31).
 
 ### C5 — The flip (the one behaviour change)
@@ -382,7 +439,10 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
 - `knip.json` (review #24):
   - **`project`** becomes `["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,cjs}", "*.config.ts", "vite.shared.ts"]`;
   - **`ignore`** is only `src/renderer/routeTree.gen.ts`, the notch route tree and `src/renderer/ui/**`;
-  - **entries** are `src/renderer/{main,notch}.tsx`, `src/renderer/routes/**`, the notch routes, `src/main/index.ts`, `src/preload/index.ts`, `scripts/*.{js,mjs}` and every test file.
+  - **entries** are `src/renderer/{main,notch}.tsx`, `src/renderer/routes/**`, the notch routes, `src/main/index.ts`, `src/preload/index.ts`, every test file, and **each executable script by name** (review r2 #15).
+    - The script list is enumerated from what actually runs a script: `package.json` `scripts`, `electron-builder.yml` `beforePack`, `.github/workflows/*.yml` `node scripts/…` lines, and the turbo tasks.
+    - `scripts/check-knip-entries.mjs` fails when one of those references a script missing from the list, or the list names a script nothing runs.
+    - Helper modules under `scripts/` stay in `project` scope, not entries, so an unused helper is reported.
   - R7-T22's canaries prove each area is covered. Dependencies follow in C12.
 - The oxlint renderer-next override moves to `src/renderer/**`. `RENDERER_NEXT_BANNED_PACKAGES` → `RENDERER_BANNED_PACKAGES`, and the ban stays so none of them comes back.
 - Scripts:
@@ -391,6 +451,7 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
   - `sync-locales.js` scan dirs;
   - `guards.test.ts` paths.
 - `classify.ts` prefixes return to `apps/desktop/src/renderer/`, `apps/desktop/index.html` and `apps/desktop/notch.html`. Stale comments go, e.g. `env.d.ts:30-33`.
+- **Parity consumers are rewritten** (review r2 #12). Every `consumer: "src/renderer-next/…#symbol"` in `legacy-map.ts` and in the `features/*/parity.ts` files becomes `src/renderer/…#symbol`. The consumers are re-resolved (R7-T25), and `PARITY.md` is regenerated. C8 then freezes it.
 - **Gate:**
   - no behaviour change: the screenshot gate shows 0 changed pixels against C6, and every suite passes;
   - `rg -n "renderer-next|#next/" apps packages .github knip.json oxlint.config.ts` returns nothing (`docs/` keeps its history).
@@ -462,11 +523,13 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
   - `legacy` provenance never overrides a `user` leaf, so choices made in N win.
   - The import is renamed `importLegacyPrefsAtStartup` and keeps only `readRendererStateFile`. Step 3 in N+1 is its last run.
 - Delete the dual-write: `TranscriptService.write` (no caller after C8), `ThreadStore.writeFromV1`, and the `dual-write` own-write cache kind.
+- **Retirement-aware import** (review r2 #3). `importLegacyPrefsAtStartup` reads `<userData>/renderer-state.retired.json` when it exists. A mapped key that is absent and listed there is skipped: it never reaches `resetLegacy` (`legacy-prefs.ts:403`). Unlisted absent keys and present keys behave as on HEAD. Tests are in C1.
 - **Kept until N+1 (D2):**
   - the repair in `readCurrentFile`, still needed while step 1 may be pending or blocked;
-  - the cleared-history rule;
-  - `TranscriptService.remove`'s v1 removal (the dual-remove), so a thread cleared in N stays cleared if the old build is reinstalled and N is then reinstalled.
-- **Forward compatibility with N+1** comes from C1's archive provenance, not from a step-4-applied switch (review #1). A home N+1 migrated only partly still reads correctly in N.
+  - the per-thread rule: a v1-derived twin with no v1 file is served only with `.archive-index.json` evidence (C1);
+  - `TranscriptService.remove`'s v1 removal (the dual-remove), so a thread cleared in N stays cleared if the old build is reinstalled and N is then reinstalled;
+  - P6's fallback reader, which is permanent (C15).
+- **Forward compatibility with N+1** comes from the archive index, the retirement record and the fallback reader, never from a step-4-applied switch. A home N+1 migrated only partly still reads correctly in N.
 - **Gate:**
   - C-T* green;
   - R7-T13 (downgrade) passes against a home N has run on, including the dormant → pre-rewrite → N leg (R7-T11b);
@@ -503,7 +566,7 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
 - R6-T31's recorded probe JSON is committed to `metrics.fixtures.json`, and the haptics default follows 06 §10.7's 150 ms rule. There are no inference constants (06 r4).
 - `CHANGELOG.md` `## Unreleased` gets the user-facing notes (§12.1). The version bump is a foundation release.
 - `docs/rewrite/PLAN.md` phase 7 is amended as in §16, and `PROGRESS.md` is updated.
-- Support article: "Going back to the previous version", with the text of §12.3 (from N) and §12.4 (from N+1: `--restore-legacy-files` and its manual appendix).
+- Support article: "Going back to the previous version", with the text of §12.3 (from N) and §12.4 (from N+1: the `--restore-legacy-files` command only, with no manual file-moving procedure).
 - **Gate:** R7-T16 and R7-T18 on the final tree; R7-T17 on the signed RC in the private pipeline; R7-T24 re-run on the signed RC; the release manager's go.
 
 ### C15 — Retire the legacy files (release N+1)
@@ -512,14 +575,15 @@ HEAD already covers the r1 C1 list: the write block, read errors, `tooLarge`, or
   - N at 100 % for ≥ 14 days;
   - no rollback trigger (§12.2) hit;
   - no open P0 or P1 against migrated data.
-- Register steps 3 and 4 in `MIGRATION_STEPS` (`[1, 2, 3, 4, 5]`; step 5 `routine-attempt-ids` is registered by phase 5, 05 §31.5 f). In the same commit, construct `ThreadStore({ v1Archived: true })` (C1 fix log, "Handed over"), and remove the repair, the dual-remove and the startup prefs import.
-- **`--restore-legacy-files`** (§12.4) is implemented in main: it reads the removal index for each profile, restores with collision handling, and writes a report.
-- **The fallback v1 reader stays** (D2, review #3). When a thread has no usable twin and `transcripts/<id>.json` still exists, `ai.hydrate` converts the file in memory, read-only. Step 4 kept such a file because it was `tooLarge`, `unreadable`, `failed`, `foreign`-twinned or "Keep"-agui.
-  - Above `MAX_TRANSCRIPT_BYTES` the fallback parses the file as a stream (no string cap), up to 512 MB. Beyond that the thread shows "This conversation is too large to show here" with **Show in folder**, so the bytes stay reachable.
-  - An `unreadable` file is retried on each hydrate.
-  - The fallback is removed only in a later release, and only after field logs show no home with retained sources: step 4 records `kept`, `tooLarge`, `unreadable` and `failed` in `migrations.json` stats. Its removal is out of scope here.
+- Register steps 3 and 4 in `MIGRATION_STEPS` (`[1, 2, 3, 4, 5]`; step 5 `routine-attempt-ids` is registered by phase 5, 05 §31.5 f).
+- In the same commit:
+  - **delete the `v1Archived` option** (review r2 #2). Per-thread index evidence stays the rule, exactly as in N.
+  - remove the repair (converting a v1 file into a **written** twin), the dual-remove and the startup prefs import.
+- A thread with no v1 file and no evidence reads as cleared in N+1 too. That covers a failed step-4 plan, an unresolved recovery, and a twin step 4 could not inspect. R7-T14 tests all three.
+- **`--restore-legacy-files`** (§12.4) is implemented in main. It reads each profile's derived restore index, rebuilds the index first if needed, selects per destination by restoration generation, restores with digest checks and collision handling, updates the metadata, and writes a report.
+- **The fallback reader stays** (P6, already in N). It is removed only in a later release, after field logs show no home with retained sources. Step 4 records `kept`, `tooLarge`, `unreadable` and `failed` in `migrations.json` stats.
 - **Gate:**
-  - R7-T14 on the real registry, including the fallback reader for an oversized, a temporarily unreadable and a `failed` file;
+  - R7-T14 on the real registry;
   - R7-T15;
   - R7-T10 and R7-T11 re-run with N+1 as the target.
 
@@ -544,7 +608,7 @@ Each row has a proof: a grep or a test that must come back empty or green after 
 - **Inventory.** C5 commits `scripts/cutover/legacy-renderer-inventory.json`: every path under `src/renderer/` except `locales/`, with its git blob sha, at the C5 commit. The legacy entry `index.html` is included.
 - **R7-T21, part 1.** No inventory path exists with its legacy blob. A path may exist again only if its file came from renderer-next (C7), which `git log --follow --diff-filter=R` shows. For example, `src/renderer/main.tsx` exists in both trees.
 - **R7-T21, part 2.**
-  - Every module specifier under `apps/desktop/src` is parsed (`ts.preProcessFile`: static, side-effect, dynamic `import()`, `require`, `export … from`; CSS `@import` from a CSS tokenizer) and resolved through the package `imports` and Vite aliases.
+  - Every module specifier under `apps/desktop/src` is parsed with **`oxc-parser`** (F24): `parseSync(file, source).module`'s `staticImports`, `staticExports[].entries[].moduleRequest` and `dynamicImports`, plus a `Visitor` pass for `require(…)` calls. CSS `@import`/`@plugin`/`@source` strings come from a CSS tokenizer. Each specifier is resolved through the package `imports` and the Vite aliases.
   - No specifier may resolve to an inventory path whose current blob is the legacy one, or to a path that no longer exists.
 - **Negative control.** A fixture importing `#renderer/components/bot-avatar` (a migrated molecule) passes, and a fixture importing a deleted legacy module fails.
 
@@ -636,7 +700,7 @@ It must return nothing, and `src/shared/window-chrome.ts` must be gone (00-windo
 |---|---|---|
 | Transition (today) | Written by the old renderer, read-only for new code (01:1137). | Live legacy sync plus provenance (`installLegacyPrefsSync`, `index.ts:1737`). |
 | N (C11) | Nobody in N writes it. The IPC is gone (C8), and the file is what the last legacy build left, which is what a downgraded build reads (§12.3). Step 2 reads it for a user upgrading from a pre-rewrite build. The **read-only startup import** reads it on every launch (review #8). | Authoritative. The startup import merges `legacy` leaves only, and never overrides `user`. |
-| N+1 (C15) | Step 3 runs the final whole-file import, then drops the mapped keys. Both files are backed up. The startup import is deleted in the same commit. | Authoritative. |
+| N+1 (C15) | Step 3 runs the final whole-file import, drops the mapped keys and writes `renderer-state.retired.json`. Both files are backed up. The startup import is deleted in N+1, but N's copy honours the retirement record if the user goes back to N (review r2 #3). | Authoritative. |
 
 The `renderer-state:*` IPC, `durableState` and the `onSet` listener (`renderer-state.ts:90-176`) go in C8 and C11. `RendererStateStore` shrinks to the file reader that step 2, step 3, the startup import and `progressWindowDark` use.
 
@@ -669,7 +733,7 @@ Importer counts at r1 (`24b02486`). The old tree and `package.json` are unchange
 **Proof (R7-T22, r2, review #17).** r1's regular expression missed scoped names (`@tsparticles/engine`) and side-effect imports (`import "sonner"`). It is replaced by `scripts/cutover/check-removed-deps.mjs`:
 
 1. It walks `apps/**` and `packages/**` (not `node_modules`, not `docs`).
-2. It extracts every module specifier with `ts.preProcessFile` (`import … from`, `import "x"`, `import()`, `require()`, `export … from`, triple-slash types) and every CSS `@import`/`@plugin`/`@source` string.
+2. It extracts every module specifier with **`oxc-parser`** (F24; `import … from`, `import "x"`, `import()` with a string literal, `export … from`, `require()` through a `Visitor`, and `import type`) and every CSS `@import`/`@plugin`/`@source` string. `oxc-parser` becomes a root devDependency pinned at the installed 0.150.0. If it is ever removed, `rolldown/parseAst` (the ESTree parser the build already ships) is the stated fallback. `ts.preProcessFile` is not used: TypeScript 7.0.2 does not export it.
 3. It reduces each specifier to its package name: `@scope/name` for scoped, the first segment otherwise; relative and `#` specifiers are skipped.
 4. It fails on any removed name (the table above, scoped names spelled out).
 5. It also fails when a removed name is a key of `dependencies`, `devDependencies`, `optionalDependencies` or `peerDependencies` in any workspace `package.json`, or appears in `pnpm-workspace.yaml` `patchedDependencies`/`allowBuilds`. The one listed exception is `minimumReleaseAgeExclude`'s `framer-motion@13.4.6` (F14).
@@ -686,11 +750,13 @@ These are split across releases (D2); §9 has the full plan.
 |---|---|---|
 | `TranscriptService.write` + `ThreadStore.writeFromV1` (dual-write) | Deleted (C11). There is no v1 writer after C8. | — |
 | `readCurrentFile` repair | Kept | Deleted (C15) |
-| The "no v1 means cleared" rule | Kept, but an `archived`/`orphan` record with a matching fingerprint serves the twin (C1) | Replaced by `v1Archived: true` (C15) |
+| The "no v1 means cleared" rule | Per thread: served only with `.archive-index.json` evidence (C1) | The same; `v1Archived` deleted (C15) |
 | `TranscriptService.remove` removing v1 (dual-remove) | Kept | Deleted (C15) |
-| Clear markers (`threads/<id>.cleared`, tokens) | Kept (HEAD) | Kept; step 4 retires a marker only when proven (C1) |
-| Fallback v1 reader (`ai.hydrate` converts a retained v1 file in memory) | Is the repair path | Kept, read-only (C15, review #3) |
-| `threads/<id>.archived`, `removals.jsonl` | Reader (N) and runner index (C1) | Written by step 4 (C15) |
+| Clear markers (`threads/<id>.cleared`, tokens, `savedAfterClear`) | Kept (HEAD) | Kept; step 4 retires a marker only when proven (C1) |
+| Bounded streaming fallback reader (clear rules first) | Shipped (P6) | Kept (C15) |
+| `threads/.archive-index.json` | Read by N (HEAD, C1) | Written by step 4, merged per commit (C15) |
+| Attempt manifests, completion records, `restore-index.jsonl` | Runner (C1) | Written for steps 3 and 4 (C15) |
+| `renderer-state.retired.json` | Read by N's importer (C11) | Written by step 3 (C15) |
 | Startup prefs import (read-only) | Kept (C11) | Deleted with step 3 registered (C15) |
 | Step 3 | Code and tests only (C1) | Registered (C15) |
 | Step 4 | Code and tests only (HEAD + C1) | Registered (C15) |
@@ -860,34 +926,39 @@ Ids are never reused or renumbered (`steps/index.ts:2-3`). The runner orders by 
 - An unresolved attempt does not block launch (`startup.ts:84-92`, `write-block.ts`). `ThreadStore` and `TranscriptService` honour the write block on HEAD. Durability of a held change is P2.
 - After the runner, the read-only startup prefs import runs (C11, review #8).
 
-### 9.3 The cleared-history rule, per thread (r2)
+### 9.3 The cleared-history rule, per thread (r3)
 
-On HEAD, a v1-derived twin whose v1 file is missing reads as cleared (`thread-store.ts:276-280`), unless the store was built with `v1Archived`. Step 4 archives v1 files thread by thread, and it can commit **partially**: some threads archived, others converted first and left for the next launch. A global "step 4 applied" switch (r1) is therefore wrong in between. A thread archived by a partial commit would read as cleared in N (review #1).
+A v1-derived twin whose v1 file is missing is either archived history or cleared history. Step 4 archives thread by thread and can commit **partially**. A global switch (r1's "step 4 applied", or HEAD's `v1Archived`) is therefore wrong in between, and also after a failed plan or an unresolved recovery (reviews r1 #1, r2 #2).
 
-So the rule is decided **per thread**, from durable evidence. It applies to v1-derived twins. An `agui` twin is served as it is unless a clear marker hides it (HEAD).
+The rule is decided **per thread**, from HEAD's `threads/.archive-index.json`, in **N and N+1 alike**. It applies to v1-derived twins. An `agui` twin is served as it is, unless a clear marker hides it.
 
-| On disk for thread *id* | N (and N+1 before `v1Archived`) | N+1 (`v1Archived`) |
-|---|---|---|
-| v1 present | the repair, or the twin by fingerprint | the twin; the fallback reader if the twin is unusable |
-| v1 missing, `threads/<id>.archived` of kind `archived`/`orphan` whose `twinFingerprint` matches | the twin, as is | the twin |
-| v1 missing, a `cleared` record, or a `threads/<id>.cleared` marker whose token the twin lacks | cleared | cleared |
-| v1 missing, no record, no marker | cleared (the transition rule) | the twin (step 4 always writes a record, so this is a v1 file removed outside step 4) |
+| On disk for thread *id* | N and N+1 |
+|---|---|
+| v1 present, not cleared (marker rules) | the twin by fingerprint, or the repair (N only) or fallback conversion (P6) |
+| v1 present, held by a clear marker (token, `v1Fingerprint`, `savedAfterClear`) | cleared; P6 applies the same test before any fallback conversion |
+| v1 missing; the index lists *id* with the twin's fingerprint (with `updatedAt` for a pre-fingerprint twin) | the twin, as is |
+| v1 missing; not listed, or listed with another fingerprint, or the index unreadable | cleared (logged) |
+| v1 missing; a marker whose token the twin lacks | cleared |
 
-- The record is committed in the same journaled commit as the move. A rollback of that commit removes both, and the journal's recovery covers every kill point (R7-T14).
-- The marker protocol is HEAD's, unchanged (review #4). Step 4 retires a marker only under C1's proof. A failed AG-UI deletion keeps both the marker and the cleared state.
+- The index is a planned write of the same commit as the removals (`004-archive-transcripts-v1.ts:227-228`), and C1 makes it a merge. A rollback of a commit restores the previous index together with the moved-back files.
+- A later run never takes a listed twin for an orphan (HEAD, C1 fix log r2 #1).
+- The marker protocol is HEAD's, and fail-closed. Step 4 retires a marker only under C1's proof. A failed AG-UI deletion keeps both the marker and the cleared state.
 
-C15's tests (R7-T14):
-- after **every** partial commit, N serves each archived thread and hides each cleared one;
-- after the final commit, N+1 does the same;
+R7-T14:
+- after **every** partial commit and kill point, N serves each archived thread and hides each cleared one;
+- two successive commits, each with archived and newly converted threads, leave every archived twin in place;
+- N+1 gives the same results with a failed step-4 plan, an unresolved recovery, and a temporarily unreadable orphan twin (none served without evidence);
 - a thread cleared before step 4 stays cleared, whether it had an orphan twin or a marker with a leftover AG-UI twin;
-- an `agui` twin whose `migratedFrom.updatedAt` is older than its v1 file keeps that v1 file (step 4 "Keep"), and the fallback reader shows it if the twin becomes unusable.
+- an `agui` twin whose `migratedFrom.updatedAt` is older than its v1 file keeps that v1 file (step 4 "Keep");
+- clearing a retained oversized source whose deletion fails, then restarting, shows nothing, in N and N+1 (P6, review r2 #9).
 
-### 9.4 Backups, the removal index and retention
+### 9.4 Backups, attempt records, the restore index and retention
 
-- Step 3 backs up `renderer-state.json` and `prefs.json` (`replace-user`, hash-checked). Because `userData` is `<home>/electron`, `backupPathFor` files them under `home/electron/…`, not `userData/…` (F22).
-- Each step-4 commit moves its v1 files, and the twins and markers it retires, into **its own** `backups/migrations/<stamp>_<attempt>-4-archive-transcripts-v1/home/…`. Quarantine copies go to `backups/quarantine/transcripts/` (90 days).
-- `backups/migrations/removals.jsonl` (C1) lists every removal of every committed attempt, partial ones included, with its root, source and backup path. It is the only input restore needs (§12.4).
-- Pruning keeps what the index references for 30 days after the step is **applied**. Other backups follow the existing rule: the newest 3 per step, 30 days (`backup.ts:252-323`). N+1's rollback window is therefore 30 days from the last attempt.
+- Step 3 backs up `renderer-state.json` and `prefs.json` (`replace-user`, hash-checked). Because `userData` is `<home>/electron`, `backupPathFor` files them under `home/electron/…` (F22). It also writes `renderer-state.retired.json` (C1).
+- Each step-4 commit moves its v1 files, and the twins and markers it retires, into **its own** backup directory. It replaces `threads/.archive-index.json` by merge, and backs the old one up. Quarantine copies go to `backups/quarantine/transcripts/` (90 days).
+- **Every committed attempt keeps `attempt.json` and `completed.json` in its backup directory** (C1). They list each op (`remove`, `replace`, `create`) with root, source, backup path and digests. They are the durable evidence, and they survive the deletion of the journal, the log and staging (review r2 #5).
+- `backups/migrations/restore-index.jsonl` is **derived** from those records, and rebuilt whenever it is missing or inconsistent. It is the only input restore needs (§12.4).
+- Pruning keeps every attempt directory with a completion record for 30 days after its step is **applied**. Other backups follow the existing rule: the newest 3 per step, 30 days (`backup.ts:252-323`).
 
 ## 10. Notch and capsule packaging
 
@@ -922,7 +993,10 @@ r1's "long-lived stdin haptics process" and "aspect-ratio fallback" are withdraw
   - `scripts/cutover/parity-ids.json` lists every id each spec's table defines: P1–P73, S1–S111, RT1–RT26, AR1–AR15, LB1–LB21, ST1–ST27, OB1–OB17, FB1–FB7, TR1–TR9 and NT1–NT7.
   - For `PARITY.md`, the set is every `window.api` member enumerated from `preload/bridge.ts` and `preload/index.ts` (249), every `IpcEvent` type (46) and the 5 other push channels. It is computed before C8 deletes the bridge.
   - A missing id, an extra id or a duplicate fails R7-T25.
-- **Consumers resolve.** Every `consumer: "file#symbol"` must name an existing file under `src/renderer` (or `src/main` for main-only rows) that exports or declares that symbol, checked with the TypeScript program. A `retired: <reason>` needs a reason of at least one sentence.
+- **Consumers resolve** (review r2 #12). Every `consumer: "file#symbol"` must name an existing file that exports or declares that symbol, checked by parsing that file with `oxc-parser` (its export and declaration records).
+  - Through C6, the file must be under **`src/renderer-next/`**, or `src/main/` for main-only rows. A consumer under the legacy `src/renderer/` fails.
+  - C7 rewrites every consumer to `src/renderer/`, and from then on only that tree (plus `src/main/`) resolves.
+  - A `retired: <reason>` needs a reason of at least one sentence.
 - Each row whose kind is "Parity" is demonstrated once in the **packaged** RC, not in dev, with the check id linked in the C5 PR.
 - R7-T25 enforces the static part.
 
@@ -998,7 +1072,15 @@ The final list of changed and removed items is generated from the `retired` and 
   - A client that quits within that window, or on macOS where Squirrel already staged the update ("best-effort", `:230-231`), may still install N.
   - Those users are the downgrade population of §12.3.
 
-  R7-T33 covers a newly checking client at 0 %, a withdrawn feed, and a downloaded client that drops the build after two checks.
+  - **In-progress downloads** (review r2 #16, F27). A shipped client (N−1 without the C2 change) that is mid-download when the halt lands skips its periodic checks until the transfer ends. It then resets its strikes and can auto-restart at the next idle 60 s poll, installing N with no re-check. The halt cannot stop it.
+    - This is a documented limitation. The release manager treats every client that started a download before the halt as part of the downgrade population.
+    - Clients that can still be changed (the dormant release on, C2) re-check the feed before any install, and cancel a transfer when a mid-download check sees the halt.
+
+  R7-T33 covers:
+  - a newly checking client at 0 %;
+  - a withdrawn feed;
+  - a downloaded client that drops the build after two checks;
+  - a halt **during** a download, both for a shipped-behaviour client (it installs: the limitation, asserted) and for a changed client (cancelled, nothing installed).
 - **Levers, fastest first:**
   1. **Halt** (above). electron-updater does not downgrade (`allowDowngrade` is not set), so users on N stay on N.
   2. **Experience hotfix** for N: TUF, no relaunch, swapped at idle behind the two-stage barrier (§6.2, D11).
@@ -1030,26 +1112,44 @@ The final list of changed and removed items is generated from the `retired` and 
 
    N−1's store writers may drop fields N added. N treats every such field as optional with a default (R7-T13, re-upgrade leg).
 
-### 12.4 Rollback after N+1 (r2, reviews #5, #6)
+### 12.4 Rollback after N+1 (r3; reviews r1 #5/#6, r2 #4/#6/#7)
 
 N+1 runs steps 3 and 4, which change what N−1 reads.
 
-**Back to N needs no restore.** N reads `threads/` and `prefs.json`, and it decides each thread from its archive record (§9.3), whether step 4 finished or stopped partway.
+**Back to N needs no restore.** N reads `threads/` by per-thread index evidence (§9.3), reads kept sources through P6, and honours step 3's retirement record (C1, C11). This holds whether step 4 finished or stopped partway.
 
-**Back to a legacy build (N−1) needs the legacy files restored,** from every committed attempt, in every profile. The support article (C14) gives one command, not hand-typed paths:
+**Back to a legacy build (N−1) needs the legacy files restored,** and there is **one** supported way: the `--restore-legacy-files` command (review r2 #7). The support article (C14) gives the command and nothing else. It does not publish a manual file-moving procedure, because moving files by hand bypasses the digest checks, collision handling, step filtering and metadata updates below.
+
+The command can also be run on its own: it runs in main before the runner and before any window, so it works even when the UI cannot start. A home where main cannot start at all is a support escalation. The backups stay intact for 30 days (§9.4).
 
 1. Quit the app.
-2. Run the installed N+1 once with `--restore-legacy-files`. This is a packaged-allowed flag, handled in main before the runner and before any window; it prints a report and exits. For each profile home listed in `profiles.json` (the base home included), it reads `<home>/backups/migrations/removals.jsonl`, and for each removal of steps 3 and 4, oldest attempt first:
-   - The destination is `<recorded root>/<source>`: `root` is `home` or `userData`, resolved for **that** profile (`userData` = `<home>/electron`, F18, F22). The backup path comes from the index, never recomputed.
-   - If the destination does not exist, the backup file is moved back.
-   - If it exists with the same sha256, the backup is left in place.
-   - If it exists with different content, the restored file is written beside it as `<name>.restored-<stamp><ext>`, and the report lists it. For `renderer-state.json` the backup wins, and the current file is kept as `.before-restore`.
-   - `threads/<id>.archived` records whose removals were restored are deleted, and `migrations.json` marks steps 3 and 4 `restoredAt`. A later launch of N+1 (or newer) treats a restored step as not applied and runs it again, as a new attempt with new backups.
+2. Run the installed N+1 (or newer) once with `--restore-legacy-files`. It prints a report and exits. For each profile home listed in `profiles.json` (the base home included):
+   1. **Load the evidence.** Rebuild `restore-index.jsonl` from the attempt records if it is missing or inconsistent (§9.4). Load `backups/migrations/restorations.jsonl`, the restoration generations.
+   2. **Select, per destination** (review r2 #6). Take every op of steps 3 and 4 whose attempt is **newer than the latest restoration generation** that already consumed that destination. For each destination, choose the op from the **latest** completed attempt:
+      - a `remove` op restores the v1 file (or twin or marker) it moved;
+      - a `replace` op on `renderer-state.json` restores its original (review r2 #4).
+
+      `prefs.json` is **never** restored. It is N's authoritative file, and step 3's backup of it is kept but not applied.
+   3. **Restore with digest checks.** The destination is `<recorded root>/<source>`: `root` is `home` or `userData`, resolved for **that** profile (`userData` = `<home>/electron`, F18, F22). The backup's sha256 must equal the op's `originalSha256`, or the op is skipped and reported.
+      - Destination absent: the backup is moved back.
+      - Destination equal to the backup: nothing to do.
+      - Destination equal to the op's `resultSha256`, the file step 3 left: it is replaced, because it is unchanged since the migration.
+      - Anything else: the restored file is written beside it as `<name>.restored-<stamp><ext>`, and the report lists it for support.
+   4. **Update the metadata.**
+      - Drop the restored threads from `threads/.archive-index.json`.
+      - Delete `renderer-state.retired.json` if `renderer-state.json` was restored.
+      - Append a generation `{ generation, at, consumed: [attempt ids], destinations: [...] }` to `restorations.jsonl`.
+      - Mark steps 3 and 4 `restoredAt` in `migrations.json`. A later launch of N+1 or newer treats them as not applied and runs them again, as a new attempt with new backups.
 3. Install N−1.
 
-The article also carries a manual appendix for when the app cannot start. It is generated from the index format, not from assumed paths: for each profile, for each line of `removals.jsonl`, move `<home>/<backup>` to `<root>/<source>`.
+**Two cycles.** Restore, then legacy edits, then N+1 again, then restore again: the second restore picks the second cycle's backups for every destination the second migration touched, because the first generation already consumed the first cycle's. It never places a stale first-cycle file at the canonical path.
 
-R7-T15 runs the published command and the published appendix **verbatim**, against a two-profile home migrated by N+1 through two partial commits and a final one, with one interrupted recovery. N−1 then shows every conversation and the preferences.
+R7-T15 runs the command **verbatim** against a two-profile home that N+1 migrated through two partial commits and a final one, with one interrupted recovery. It also runs:
+- a conflicting destination case;
+- a damaged derived index;
+- the complete two-cycle sequence.
+
+N−1 then shows every conversation and the preferences in both profiles, and the conflicting file is preserved beside the restored one.
 
 ## 13. Upgrade tests: real layouts, synthetic data (r2)
 
@@ -1101,7 +1201,7 @@ R7-T15 runs the published command and the published appendix **verbatim**, again
     - onboarding resuming at `models` (the legacy step id, 06 R6-T5);
     - once onboarding is completed in-test: 12 bots (3 pinned, in order), 40 sessions grouped by workspace, 6 routines;
     - 5 sampled histories matching `v1-to-ui-messages`;
-    - an over-64 MB thread shown through the fallback path.
+    - an over-64 MB thread shown **in N** through P6's streaming fallback (review r2 #8).
   - Every legacy file's sha256 is unchanged.
 - **Dormant layouts.** No step re-runs, and prefs are right. With the drift fixture, the drift reaches `prefs.json` through the startup import, and `user` leaves win.
 - **Downgrade.**
@@ -1112,7 +1212,7 @@ R7-T15 runs the published command and the published appendix **verbatim**, again
 - **N+1.**
   - Steps 3 and 4 run over two partial commits and a final one, with a kill point in each.
   - After each commit, N reads the home correctly (§9.3).
-  - The §12.4 command and appendix, run verbatim, bring back N−1's view in both profiles.
+  - The §12.4 command, run verbatim, brings back N−1's view in both profiles, including after two restore cycles.
 
 ## 14. Performance budgets
 
@@ -1169,8 +1269,8 @@ The new budgets do not replace them.
 | Id | File | Kind | Proves |
 |---|---|---|---|
 | R7-T1 | `src/main/renderer-generation.test.ts` (C5) → `renderer-entry.test.ts` (C6, C9) | main | At C5: the default is `wco`, a packaged build ignores the env var, and `legacy` is honoured only unpackaged. From C6: one entry, `index.html`, for the dev, experience and file bases, with `NOTCH_ENTRY` beside it. At C9: the generation module is gone. |
-| R7-T2 | `services/updates/experience/foundation-api.test.ts`, `integrity.test.ts`, `apps/updater/src/manifest.test.ts` | main + unit | The desktop and updater `FOUNDATION_API` and protocol are equal. A tree built at API 1 is refused by a 2 shell, and vice versa. A tree without `renderer/notch.html` is refused at 2. **Provenance** (review #14): an old tree (its `build.json` at API 1, `generation: "legacy"`) given to the new builder is refused by `buildManifest`; the same tree signed by hand is refused by the verifier; renderer and agent `build.json` with different commits are refused. |
-| R7-T3 | `src/main/dev/experience-swap.electron.test.ts` | Electron | Two renderer builds served as installed experiences at API 2:<br>- stage 1 waits for `window.ready`;<br>- stage 2 awaits the candidate's restore promise, and the observed order is ready → capture → restore → flip, with a candidate that delays each stage (D11, review #13);<br>- a restore timeout still flips;<br>- `window.activity` defers the swap by 15 s;<br>- continuity restores focus, caret, composer text and scroll;<br>- a candidate reporting `failed` is discarded, and **after a full restart the previous experience boots** (P3, review #9);<br>- 3 failures stop swaps until relaunch;<br>- on an N−1 shell the N target is refused once and then memoised. |
+| R7-T2 | `services/updates/experience/foundation-api.test.ts`, `integrity.test.ts`, `apps/updater/src/manifest.test.ts` | main + unit | The desktop and updater `FOUNDATION_API` and protocol are equal. A tree built at API 1 is refused by a 2 shell, and vice versa. A tree without `renderer/notch.html` is refused at 2. **Provenance** (review #14): an old tree (its `build.json` at API 1, `generation: "legacy"`) given to the new builder is refused by `buildManifest`; the same tree signed by hand is refused by the verifier; renderer and agent `build.json` with different commits are refused. **Cache** (review r2 #10): an agent-only change with a new `ABACUS_BUILD_COMMIT` rebuilds both and stamps agree; the same commit hits both caches. |
+| R7-T3 | `src/main/dev/experience-swap.electron.test.ts` | Electron | Two renderer builds served as installed experiences at API 2:<br>- stage 1 waits for `window.ready`;<br>- stage 2 awaits the candidate's restore promise, and the observed order is ready → capture → restore → flip, with a candidate that delays each stage (D11, review #13);<br>- a restore timeout still flips;<br>- `window.activity` defers the swap by 15 s;<br>- continuity restores focus, caret, composer text and scroll;<br>- a candidate reporting `failed` is discarded, and **after a full restart the previous experience boots** (P3, review #9);<br>- 3 failures stop swaps until relaunch;<br>- on an N−1 shell the N target is refused once and then memoised. **Drafts** (review r2 #13): a chat draft with two staged attachments, a non-default mode and model, a half-filled bot creation form, and 04's start draft all survive the swap into a new origin. An unregistered `sessionStorage` key fails `guards.test.ts`. A snapshot over 4 MB defers the swap. |
 | R7-T4 | `apps/updater/src/classify.test.ts` | unit | C5: `src/renderer-next/**`, `index-next.html` and `notch.html` are `experience`. C7: `src/renderer/**`, `index.html` and `notch.html` are `experience`, and `src/shared/**`, `src/preload/**`, `package.json` and `pnpm-lock.yaml` are `foundation`. |
 | R7-T5 | `cli-manager-wire.test.ts`, `relay-service.test.ts` | main | Every spawn's argv has `--wire agui --thread-id <sessionId> --compat-fd 3` and 4 stdio pipes. No code path yields `ndjson` (C5 through `defaultWire`; C10 by construction). The env flag is ignored when packaged (on HEAD, relay fix log Claude 9). |
 | R7-T6 | `packages/agent/src/agui/agui-golden.integration.test.ts`, `agui-spawn.e2e.test.ts` | agent, 3 OSes | All 24 scenarios: compat bytes equal the `.ndjson` baselines. Spawned `plain-text`, `permission-accept` and `tool-bash` in fd and inline modes match (§8.2 masks). The report lists derived baselines separately. |
@@ -1183,18 +1283,18 @@ The new budgets do not replace them.
 | R7-T11b | same | packaged | The dormant-then-pre-rewrite fixture: the drift reaches `prefs.json` through the read-only startup import, `user` leaves win, and `renderer-state.json` is byte-unchanged (review #8). |
 | R7-T12 | same | packaged | Two profiles: each migrates on its first activation, and the inactive one is untouched until then. |
 | R7-T13 | `downgrade.packaged.test.ts` | packaged, macOS + Windows + Linux | §13.4 "Downgrade" and "Re-upgrade": N−1 opens a home N ran on; N tolerates records N−1 rewrote (fields dropped). |
-| R7-T14 | `steps/003-final-legacy-prefs.test.ts`, `004-archive-transcripts-v1.test.ts`, `runner.crash.test.ts`, `thread-store.cutover.test.ts` | main | Step 3: import, drop, backups (under `home/electron/…`, F22), invalid keys counted. Step 4: `threads/<id>.archived` in the same commit as each removal; `removals.jsonl` lines per commit, rebuilt after a torn tail; a marker retired only under C1's proof, kept after a failed AG-UI deletion (review #4). The runner `break`s after `pending`. **After every partial commit and every kill point, N's `ThreadStore` serves archived threads and hides cleared ones** (review #1). N+1: `v1Archived` plus the fallback reader for an oversized, a temporarily unreadable and a `failed` source (review #3). P1's injected `EACCES`/`EIO` on either directory stops removal and completion. P2's held send, reset and quit. |
-| R7-T15 | `rollback.packaged.test.ts` | packaged | The published `--restore-legacy-files` command and its manual appendix, run verbatim, on a two-profile home that N+1 migrated through two partial commits and a final one, with one interrupted recovery. Destinations are derived from the recorded roots (F22). Collisions give `.restored-<stamp>` files. N−1 then shows every conversation and the preferences in both profiles. N started without any restore shows every archived conversation. (Reviews #5, #6.) |
-| R7-T16 | `ci.yml` "The packaged app actually starts" (extended) | packaged, 3 OSes | `[smoke] main process ready`, `[smoke] renderer ready` (readiness `ready` against real tables on an empty home), and on darwin and win32 `[smoke] notch ready`. No fatal pattern. On Linux there is no notch window. Global shortcut unregistered at quit. |
+| R7-T14 | `steps/003-final-legacy-prefs.test.ts`, `004-archive-transcripts-v1.test.ts`, `runner.crash.test.ts`, `runner.records.test.ts`, `thread-store.cutover.test.ts`, `legacy-prefs.retired.test.ts` | main | Step 3: import, drop, backups under `home/electron/…` (F22), `renderer-state.retired.json` in the same commit, invalid keys counted; N+1 → N leaves `prefs.json` byte-identical (review r2 #3). Step 4: `.archive-index.json` merged in each commit; two successive commits with archived and newly converted threads keep every archived twin (review r2 #1); markers retired only under C1's proof. Attempt records: `attempt.json`/`completed.json` kept after staging cleanup; the derived index is rebuilt after damage and after three partial commits; a mismatched manifest is excluded (review r2 #5). **After every partial commit and every kill point, N serves archived threads and hides cleared ones.** N+1 with a failed plan, an unresolved recovery and a temporarily unreadable orphan serves nothing without evidence (review r2 #2). P6: an oversized, a temporarily unreadable and a `failed` source are shown, and a cleared retained oversized source with a failed deletion stays hidden across a restart (review r2 #8, #9). P1's injected `EACCES`/`EIO` and P2's held send, reset and quit, both done on HEAD, are re-run. |
+| R7-T15 | `rollback.packaged.test.ts` | packaged | The published `--restore-legacy-files` command, run verbatim, on a two-profile home that N+1 migrated through two partial commits and a final one, with one interrupted recovery: destinations from the recorded roots (F22); `renderer-state.json` restored from step 3's `replace` backup while `prefs.json` is untouched (review r2 #4); a conflicting destination kept, with `.restored-<stamp>`; a damaged derived index rebuilt; the complete two-cycle sequence restores the latest cycle's files (review r2 #6). N−1 then shows every conversation and the preferences in both profiles. N started without any restore shows every archived conversation. |
+| R7-T16 | `ci.yml` "The packaged app actually starts" (extended) | packaged, 3 OSes | The smoke exit waits for the outcomes (C4, review r2 #14), bounded at 90 s: `[smoke] main process ready`; `[smoke] renderer ready` against real tables on an empty home; on darwin and win32 `[smoke] notch ready` **or** `[smoke] notch disabled: <reason>` (the macOS runner expects `disabled`); on Linux `[smoke] notch n/a`. Exit status 0 only on those outcomes. No fatal pattern. Global shortcut unregistered at quit. |
 | R7-T17 | Private pipeline checklist (signed RC) | manual + scripted, hardware | macOS: `spctl -a -vv` accepts the notarized app; launch; notch on a notched MacBook (R6-T31), external display (R6-T32); haptics; no TCC or Automation prompt from the JXA probe; mic prompt text once. Windows 11: signed installer installs over N−1; capsule at 100/125/150/200 % scaling with the taskbar on each edge (R6-T33); uninstall. Linux: AppImage and `.deb` start. |
 | R7-T18 | `scripts/check-packaged-resources.js` (extended) + `packaged-asar.test.ts` | packaged | The asar holds `dist/renderer/{index,notch}.html` and `build.json`, and no `index-next.html` after C6 (review #12). The three CSP `<meta>` strings equal `RENDERER_CSP`. No `__abacusDev`, fixture DB, devtools, `monaco`, `katex` or `sonner` asset. The experience tree built from the same dist passes `verifyExperience`. |
 | R7-T19 | `src/preload/preload-exposure.test.ts` | preload | For the main and notch windows: exposed globals = `{ abacusHost }`; the port handshake is installed before any page script; no `sendSync`. |
 | R7-T20 | `src/main/ipc-surface.test.ts` | main (static) | `ipcMain.handle`/`ipcMain.on` appear only in the allow-listed files (the transport). No `webContents.send` outside `rpc/`. `IpcChannels` does not exist. |
-| R7-T21 | `src/main/dev/cutover-greps.test.ts` | repo | The §5.1 inventory and resolved-specifier checks, with the negative control (review #16). The other §5 checks: `window.api`, IPC names, the window-chrome pattern of F17, `renderer-next`/`#next`, `RENDERER_GENERATION`, `NdjsonHost`/`wireFor`/`resolveWire`. |
-| R7-T22 | `pnpm check:knip`, `scripts/cutover/check-removed-deps.test.mjs` | repo | knip is clean: files, exports, types, duplicates, dependencies, unlisted. A temporary unused file in each of `src/main`, `src/shared`, `src/preload`, `src/renderer` and `scripts` **is reported**, which proves the project scope (review #24). The removed-dependency check detects every import form for every scoped and unscoped name, and every manifest key (review #17). |
+| R7-T21 | `src/main/dev/cutover-greps.test.ts` | repo | The §5.1 inventory and resolved-specifier checks through `oxc-parser` (F24), with the negative control. The other §5 checks: `window.api`, IPC names, the window-chrome pattern of F17, `renderer-next`/`#next`, `RENDERER_GENERATION`, `NdjsonHost`/`wireFor`/`resolveWire`, `v1Archived`. |
+| R7-T22 | `pnpm check:knip`, `scripts/check-knip-entries.mjs`, `scripts/cutover/check-removed-deps.test.mjs` | repo | knip is clean: files, exports, types, duplicates, dependencies, unlisted. A temporary unused file **outside every entry pattern** in each of `src/main`, `src/shared`, `src/preload`, `src/renderer` and `scripts/` (`scripts/lib/__knip-canary.mjs`, a non-entry helper path) is reported (review r2 #15). The entry list equals the set of scripts something runs. The removed-dependency check, through `oxc-parser`, detects every import form for every scoped and unscoped name, and every manifest key. |
 | R7-T23 | `size-limit` | build | §14.4. |
 | R7-T24 | `scripts/cutover/perf-compare.mjs` | packaged, reference machines | §14.1 M1–M6 against the last shipped build; numbers in the C5 and C14 PRs. |
-| R7-T25 | `src/renderer/features/parity.test.ts` (aggregate) + `preload/parity.test.ts` before C8 | renderer, preload | The ids equal `parity-ids.json` exactly (no missing, extra or duplicate id). Every consumer `file#symbol` resolves in the TypeScript program. No `todo`. Every `deferred` row names an owner and a PLAN anchor. Every `visible` retired or deferred row is in the release-note list. `PARITY.md` rows equal the enumerated bridge, event and channel sets (review #25). |
+| R7-T25 | `features/parity.test.ts` (aggregate) + `preload/parity.test.ts` before C8 | renderer, preload | The ids equal `parity-ids.json` exactly. Every consumer `file#symbol` resolves through `oxc-parser`: under `src/renderer-next/` (or `src/main/`) through C6, and under `src/renderer/` from C7 (review r2 #12). A legacy-tree consumer fails. No `todo`. Every `deferred` row names an owner and a PLAN anchor. Every `visible` retired or deferred row is in the release-note list. The `PARITY.md` rows equal the enumerated sets. |
 | R7-T26 | `check:i18n`, `check:locales`, `src/shared/contract/languages.test.ts`, `scripts/i18n-dynamic-keys.test.mjs` | repo | After C13: every `en-US` leaf is in the final consumer set; every template key's prefix is declared or covered; no leaf that was a keymap source or retired remains; all 11 locales have the same key set (review #18). |
 | R7-T27 | `src/main/keep-awake.test.ts` | main | P4's source: the blocker follows authoritative turn-state transitions, held while any turn is busy and released on the last finish, runtime exit or crash. Both orders of AG-UI terminal vs compat `turn_complete` give the same result, with no renderer call (review #10). |
 | R7-T28 | `src/main/window-chrome-probe.lifecycle.test.ts` | main | (A) No timer is armed while hidden; the probe runs once on `show`. (B) `window:recreate` is not registered in legacy (C2) and not at all (C8). |
@@ -1202,7 +1302,7 @@ The new budgets do not replace them.
 | R7-T30 | The phase Electron suites | Electron against the packaged RC | R1-T11b, R1-T22, R2-T16, R2-T32, R3-T31, R4-T29, R4-T30, R4-T34, R5-T36, R6-T30, R6-T36: green on the RC, not only in dev. |
 | R7-T31 | `scripts/check-release-build.test.mjs` | build | A `VITE_UI_GALLERY=1` or `VITE_NEXT_DB_FIXTURES=1` dist is refused by `package` and `experience`. A release dist passes. The harness is absent from `dist/main`. Each unpackaged-only env override is ignored in a packaged launch. |
 | R7-T32 | `src/main/migrations/first-launch.perf.test.ts` | packaged, macOS reference | §14.3. |
-| R7-T33 | `src/main/services/updates/update-e2e.packaged.test.ts` | packaged, Windows + Linux CI; macOS in the private pipeline (Squirrel needs a signature) | N−1 updates to N through a local generic feed with `stagingPercentage`, and the relaunch runs the migration. **Halt** (review #15): at 0 % a newly checking client is offered nothing; with the feed withdrawn to N−1 likewise; a client that had downloaded N drops it after two consecutive checks and does not install on quit. The capsule does not hold the installer's lock. |
+| R7-T33 | `src/main/services/updates/update-e2e.packaged.test.ts` | packaged, Windows + Linux CI; macOS in the private pipeline (Squirrel needs a signature) | N−1 updates to N through a local generic feed with `stagingPercentage`, and the relaunch runs the migration. **Halt** (review #15): at 0 % a newly checking client is offered nothing; with the feed withdrawn to N−1 likewise; a client that had downloaded N drops it after two consecutive checks and does not install on quit. The capsule does not hold the installer's lock. **During a download** (review r2 #16): a shipped-behaviour client installs after the halt (the limitation, asserted and reported); a client with C2's re-check cancels the transfer and installs nothing; a downloaded C2 client re-checks before install and drops the build. |
 
 ## 16. Amendments this spec requires elsewhere
 
@@ -1214,22 +1314,24 @@ The new budgets do not replace them.
 
    PLAN "Libraries" row `node-mac-notch` → "does not exist; JXA probe" (also 06:1113).
 2. **Spec 00 C.5.** Steps 3 and 4 are registered in N+1, not in "the cut-over build" (D2).
-   - Step 4 also writes `threads/<id>.archived` in the same commit as each removal.
-   - The runner keeps `backups/migrations/removals.jsonl`, and pruning honours it within the rollback window.
-   - C.1's "manual procedure documented in `PARITY.md`" → this spec §12.4 (`--restore-legacy-files`).
-   - C.3: "a v1-derived twin whose v1 is gone is cleared" is decided per thread from archive records and clear markers (§9.3).
+   - Step 4 merges `threads/.archive-index.json` in the same commit as its removals (on HEAD; C1 makes it a merge). Per-thread index evidence decides "archived or cleared" in every release, and `v1Archived` goes (§9.3).
+   - Step 3 writes `renderer-state.retired.json` in its commit.
+   - The runner keeps `attempt.json` and `completed.json` per committed attempt, and derives `restore-index.jsonl` from them. Pruning honours them within the rollback window (C1, §9.4).
+   - C.1's "manual procedure documented in `PARITY.md`" → this spec §12.4 (`--restore-legacy-files`, the only supported procedure).
    - C.9: the 64 MB cap, as the C1 fix log asks.
 3. **Spec 00-agent-agui §6.4.** "The `--wire` flag goes" → the flag stays, accepting `agui` and refusing `ndjson` (D4). The spawned-process check compares against baselines after C10 (§8.2).
 4. **Spec 00-window-chrome §7.** The completion grep drops the bare `isFullScreen` (F17).
 5. **Spec 01 §13 risk "Old boot services not yet ported".** Resolved by C3.
 6. **Spec 06 r4.** R6-T33 is extended by R7-T17's scaling matrix. `integrity.ts` requires `notch.html` from API 2 (D3). At C7, `notch.html`'s script path and the notch router plugin move with the tree. Nothing in this spec reintroduces inference or a long-lived haptics process (review #22).
-7. **Updater (`apps/updater`).** `buildManifest` requires and cross-checks `renderer/build.json` and `agent/build.json` (D3, C4).
+7. **Updater (`apps/updater`).** `buildManifest` requires and cross-checks `renderer/build.json` and `agent/build.json`; `turbo.json` adds `ABACUS_BUILD_COMMIT` to both build tasks' `env` (D3, C4).
+8. **Specs 02–05.** Every `sessionStorage`-persisted store registers with the continuity registry (C3).
+9. **C1 fix log, "Handed over" (cut-over build).** The r1 note "construct `ThreadStore` with `v1Archived: true`" is superseded: the option is deleted (C15), and index evidence is the rule.
 
 ## 17. Acceptance
 
 **Release N (after C14):**
 
-- [ ] §2 entry criteria met, including P1–P5 merged and re-verified; every §3 row closed or carried to N+1 by name.
+- [ ] §2 entry criteria met, including P1–P6 merged and re-verified; every §3 row closed or carried to N+1 by name.
 - [ ] Legacy behaviour was unchanged through C4. C5 is the only behaviour change (D1), and its PR carries the full release-candidate evidence.
 - [ ] `DEFAULT_RENDERER_GENERATION` is gone, and the app has one renderer at `src/renderer` loaded from `index.html`, plus `notch.html`.
 - [ ] `FOUNDATION_API = 2` in both places; an API-1 experience and a stale tree with a new stamp are both refused (provenance); swaps use the two-stage barrier; a failed candidate never boots after a restart (P3); the activity beacon and continuity work (R7-T2, R7-T3).
@@ -1238,7 +1340,7 @@ The new budgets do not replace them.
 - [ ] Preload exposes `{ abacusHost }` only; the IPC surface is the transport (R7-T19, R7-T20).
 - [ ] The window-chrome acceptance (00-window-chrome §12) passes on the packaged RC, including items (A) and (B) (R7-T28, R7-T29).
 - [ ] Parity sign-off (§11): every row green, retired or deferred with an owner; each "Parity" row demonstrated on the packaged RC (R7-T25, R7-T30).
-- [ ] Upgrade from every retained source-layout fixture, drift, multi-profile, downgrade and re-upgrade all pass (R7-T10 … R7-T13, R7-T11b). First-launch migration is within budget (R7-T32). N reads a home after any partial N+1 commit (R7-T14).
+- [ ] Upgrade from every retained source-layout fixture, drift, multi-profile, downgrade and re-upgrade all pass (R7-T10 … R7-T13, R7-T11b), with oversized history shown **in N**. First-launch migration is within budget (R7-T32). N reads a home after any partial N+1 commit, preferences included (R7-T14).
 - [ ] Performance: M1–M6 within budget on both reference machines; the phase budgets hold (R7-T24, §14.2).
 - [ ] Packaged smoke on 3 OSes with renderer and notch markers (R7-T16). Asar contents are right (R7-T18). No gallery, fixture or harness in the release (R7-T31). The update path N−1 → N works (R7-T33).
 - [ ] The signed RC checklist is done on macOS, Windows and Linux hardware (R7-T17). R6-T31's probe records are committed, and the haptics default follows 06 §10.7.
@@ -1248,7 +1350,7 @@ The new budgets do not replace them.
 **Release N+1 (after C15):**
 
 - [ ] N at 100 % for ≥ 14 days, with no trigger hit.
-- [ ] Steps 3 and 4 registered together with `v1Archived: true`. The repair, the dual-remove and the startup import deleted in the same commit. The fallback reader kept. `--restore-legacy-files` shipped. R7-T14 and R7-T15 green. R7-T10/T11 re-run with N+1.
+- [ ] Steps 3 and 4 registered, and `v1Archived` deleted in the same commit, with index evidence still the rule. The repair, the dual-remove and the startup import deleted. The fallback reader kept. `--restore-legacy-files` shipped as the only restore procedure. R7-T14 and R7-T15 green. R7-T10/T11 re-run with N+1.
 
 ## 18. Risks
 
@@ -1263,11 +1365,13 @@ The new budgets do not replace them.
 | R7 | Turns added under N−1 to a thread N already owned are not shown after re-upgrading. The model context has them. | Documented (§12.3). A later relay change can append v1-newer segments to an `agui` thread on hydrate if support sees it. |
 | R8 | Cleared or archived history is misread across partial commits, downgrades and failed AG-UI deletions. | Orphans and markers are on HEAD. C1 adds per-thread archive records and marker-retirement proof. N decides each thread from them. R7-T14 checks after every partial commit and kill point (§9.3). |
 | R9 | A gallery or fixture dist reaches a release because the screenshot and acceptance runs share `dist/renderer`. | C4's guard in `beforePack` and `build-experience.js` (R7-T31). |
-| R10 | A prerequisite (P1–P5) slips, and the flip ships with it open. | §2 item 2 makes each an entry criterion with an owner. The C5 gate re-runs their tests (R7-T3, R7-T7, R7-T14, R7-T27). The relay findings are fixed on HEAD (relay fix log r1 and r2). |
+| R10 | A prerequisite (P3–P6; P1 and P2 are done) slips, and the flip ships with it open. | §2 item 2 makes each an entry criterion with an owner. The C5 gate re-runs their tests (R7-T3, R7-T7, R7-T14, R7-T27). The relay findings are fixed on HEAD (relay fix log r1 and r2). |
 | R11 | A user on a slow link is mid-download of the N−1 experience when N arrives. | Experiences are version-pinned; the N−1 bundle is refused on N and the N target replaces it. Nothing to do. |
 | R12 | Removing `'unsafe-eval'` breaks transformers.js (dictation) in some path. | C12 narrows it only if R7-T16/T30 pass with `'wasm-unsafe-eval'`, including a dictation run; otherwise it is kept. |
 | R13 | A `framer-motion` removal attempt also drops `motion`'s own copy. | F14: only the direct dependency is removed; `pnpm-workspace.yaml:69` stays; knip keeps `motion`. |
 | R15 | The perf fixture cannot reach the shell offline on the source build (§13.3 step 3). | The generator fails loudly, and C5's gate names the blocker. M1–M5 are never measured on the onboarding fixture (review #20). |
+| R17 | A shipped client mid-download installs N after a halt (F27). | Documented; counted in the downgrade population; C2's re-check ships from the dormant release so later rollouts are not exposed. |
+| R18 | `.archive-index.json` becomes unreadable after N+1, and archived threads read as cleared. | Fail closed and log it. Nothing is lost: the v1 files are in the backups, and `--restore-legacy-files` or a later step-4 run rewrites the index. The support article covers it. |
 | R16 | A user misses the 30-day window after N+1 and then needs N−1. | Backups the index references are kept 30 days after the step is applied. Beyond that, N (no restore needed) is the floor. The support article says so. |
 | R14 | Windows `--compat-fd 3` behaves differently on some machines (AV hooks on pipes). | Inline mode exists (agent spec :373-377); R7-T6 runs both modes on Windows; `compat_lost` is a rollout trigger. |
 
@@ -1277,9 +1381,11 @@ The new budgets do not replace them.
 2. §14 budgets are relative to the last shipped build, because the repo records no absolute cold-start or memory numbers. Should absolute caps be set after the first C5 measurement?
 3. The 150 MB notch renderer RSS cap is a proposal pending R6-T27's measurement.
 4. The rollout stages and the N+1 soak (≥ 14 days at 100 %) are proposals for the release manager.
-5. The fallback reader's 512 MB streaming ceiling and its "too large" notice (C15) need a design owner for the copy.
+5. The fallback reader's 512 MB streaming ceiling and its "too large" notice (P6) need a design owner for the copy.
 
 ## Review responses (r1)
+
+*Kept as written for r2. r3 supersedes the `threads/<id>.archived` record (HEAD's `.archive-index.json`), `removals.jsonl` (derived `restore-index.jsonl`) and the manual appendix (withdrawn); see the r2 responses below.*
 
 Source: `docs/rewrite/specs/reviews/07-cut-over.codex-r1.md` (25 items: 3 blockers, 18 major, 4 minor), reviewed against `c46e77d9`. The coordinator's decisions:
 - #1: durable per-thread archive provenance in N;
@@ -1328,3 +1434,46 @@ Items #2, #7, #9, #10 and #11 are code defects on HEAD, routed to implementation
 | 23 | Minor | **Accepted** | Rebased to `c46e77d9`: F1, F3, F6, F8, F12, F13, F15, F16 and new F19–F23; §2 lists the merged fixes; register rows 5, 6, 9–11, 15, 16, 19–22, 26 and 52 marked **Done** or re-pointed, with rows 56–62 added; C1 and C2 no longer prescribe work HEAD has done; the relay and C1 fix logs are cited in the header. |
 | 24 | Minor | **Accepted** | C7 replaces `project` and `ignore`, not only entries; R7-T22 plants an unused file in each of main, shared, preload, renderer and scripts and requires knip to report it. |
 | 25 | Minor | **Accepted** | D5 and §11: `parity-ids.json` gives the exact expected set; the `PARITY.md` set is enumerated from the bridge before C8; every `file#symbol` resolves through the TypeScript program; R7-T25. |
+
+## Review responses (r2)
+
+Source: `docs/rewrite/specs/reviews/07-cut-over.codex-r2.md` (16 items: 3 blockers, 13 major), reviewed against r2. r3 is rebased to `8dc67139`, where step 4 writes `threads/.archive-index.json` in the same commit as its removals and never takes a listed twin for an orphan, `ThreadStore` serves listed twins, clears fail closed (`savedAfterClear`), and held writes are durable under `threads/.pending/`. Coordinator decisions:
+- #1, #2: per-thread index evidence in N and N+1, and `v1Archived` never decides alone;
+- #3: an N reader for step 3's retirement record;
+- #4: index `replace-user` backups with op and digest;
+- #5: retained per-attempt manifest and completion record, with the index derived from them;
+- #6: restoration generations, latest applicable backup per destination;
+- #7: no manual procedure, only the command;
+- #8, #9: the bounded streaming fallback with clear checks in N, routed to the thread-store owner;
+- #10: the pinned commit in Turbo cache keys;
+- #11: `oxc-parser`;
+- #12: `src/renderer-next` consumers through C6;
+- #13: full typed draft state;
+- #14: delayed smoke exit, accepting a disabled companion;
+- #15: enumerated scripts and a canary outside the entries;
+- #16: the limitation documented, plus withdrawal-aware suspension.
+
+| # | Sev. | Verdict | What changed |
+|---|---|---|---|
+| 1 | Blocker | **Accepted (rebased)** | HEAD's `threads/.archive-index.json` (same commit as the removals; a later run never orphans a listed twin) replaces r2's `threads/<id>.archived`. C1 makes step 4 merge the index. §9.3 decides every thread from it. R7-T14 runs two successive commits with archived and newly converted threads, and hydrates in N after each. |
+| 2 | Blocker | **Accepted** | D2 (a), C1, C15: `ThreadStore.archived()` loses the `v1Archived` short-circuit (`thread-store.ts:576`), and C15 deletes the option. In N+1, as in N, nothing is served without index evidence. R7-T14 covers a failed plan, an unresolved recovery and an unreadable orphan twin. |
+| 3 | Blocker | **Accepted** | F28. Step 3 writes `renderer-state.retired.json` in its commit (C1). N's `importLegacyPrefsAtStartup` skips absent keys listed there, never calling `resetLegacy` (C11). R7-T14: N+1 → N leaves `prefs.json` byte-identical. |
+| 4 | Major | **Accepted** | The attempt manifest indexes `remove`, `replace` and `create` ops with root, source, backup, `originalSha256` and `resultSha256` (C1). §12.4 restores `renderer-state.json` from step 3's `replace` backup and never restores `prefs.json`. |
+| 5 | Major | **Accepted** | A runner requirement (C1, register row 65): `attempt.json` plus `completed.json` kept in each backup directory. `restore-index.jsonl` is derived and rebuilt from them. R7-T14 damages the index after staging cleanup and after three partial commits. |
+| 6 | Major | **Accepted** | §12.4 step 2.2: `restorations.jsonl` generations; per destination, the latest completed attempt the last generation has not consumed. R7-T15 runs the full two-cycle sequence. |
+| 7 | Major | **Accepted** | The manual appendix is withdrawn. The command is the only supported procedure, and it runs before the runner and any window (§12.4, C14). |
+| 8 | Major | **Accepted, routed** | Prerequisite **P6** ships the bounded streaming fallback in **N** (thread-store owner). §13.4 and R7-T10 assert the over-64 MB thread on N. C15 only keeps it. |
+| 9 | Major | **Accepted, routed** | P6 applies the marker token, `v1Fingerprint` and `savedAfterClear` rules, with a streamed fingerprint, before any fallback conversion (§9.3). R7-T14 clears a retained oversized source whose deletion fails, then restarts. |
+| 10 | Major | **Accepted** | F25, C4: `ABACUS_BUILD_COMMIT` is pinned, required in CI and release, and in both builds' Turbo `env`. R7-T2 tests an agent-only hotfix. |
+| 11 | Major | **Accepted** | F24; §5.1 and §5.6 use `oxc-parser` 0.150.0 (installed; pinned as a root devDependency), with `rolldown/parseAst` as the stated fallback. `ts.preProcessFile` is removed. |
+| 12 | Major | **Accepted** | §11: consumers resolve under `src/renderer-next/` through C6. C7 rewrites them and regenerates `PARITY.md` before C8 freezes it. R7-T25. |
+| 13 | Major | **Accepted** | C3's draft part: every `sessionStorage` store (02 §8.7, 03 §8.3, 04, 05) registers with a schema and travels with the snapshot. Attachments go by reference, and a snapshot over 4 MB defers the swap. `guards.test.ts` rejects unregistered keys. R7-T3. |
+| 14 | Major | **Accepted** | F26, C4: the smoke exit waits (≤ 90 s) for the renderer outcome and the companion outcome. `notch disabled: <reason>` is accepted, and expected on the macOS runner. R7-T16. |
+| 15 | Major | **Accepted** | C7: executable scripts are enumerated from their callers (`check-knip-entries.mjs`), and helpers stay in project scope. R7-T22 plants `scripts/lib/__knip-canary.mjs` outside every entry. |
+| 16 | Major | **Accepted** | F27, §12.2: the in-progress download limitation is documented for shipped clients. C2 adds the install-time feed re-check and mid-download cancellation, taken into the dormant release. R7-T33 halts during a download for both kinds of client. |
+
+**Consistency pass (r3).**
+- Every `threads/<id>.archived`, `removals.jsonl` and "manual appendix" reference is replaced.
+- P1 and P2 are marked done, and P6 is added.
+- `v1Archived` appears only as the option C15 deletes.
+- R7-T1 … R7-T33 (with T9a/T9b and T11b) are each cited by a gate.
