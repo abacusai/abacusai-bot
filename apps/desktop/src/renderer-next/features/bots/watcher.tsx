@@ -53,35 +53,41 @@ export const BotsGlobals = () => {
   const notifications = useQuery(
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
-  soundPrefs = prefs.sounds;
+  useEffect(() => {
+    soundPrefs = prefs.sounds;
+  }, [prefs.sounds]);
   const notificationsOn = useRef(true);
-  notificationsOn.current = notifications.data?.enabled ?? true;
+  useEffect(() => {
+    notificationsOn.current = notifications.data?.enabled ?? true;
+  }, [notifications.data?.enabled]);
 
   const deps = useRef<BotsWatcherDeps | null>(null);
-  deps.current ??= {
-    bots: () => db.collections.bots.toArray,
-    routines: () => db.collections.routines.toArray,
-    seen: (threadId) => isThreadSeen(threadId),
-    unread: botsUnreadStore,
-    play: (cue, options) => soundPlayer().play(cue, options),
-    notifier: createNotifier({
-      isWindowFocused: () => document.hasFocus(),
-      notificationsEnabled: () => notificationsOn.current,
-      sounds: () => soundPrefs,
-      now: () => new Date(),
-      send: (input) => transport.client.system.notify(input),
-    }),
-    labels: {
-      done: (bot) => ({
-        title: bot,
-        body: t("bots.notify.doneBody"),
+  useEffect(() => {
+    deps.current = {
+      bots: () => db.collections.bots.toArray,
+      routines: () => db.collections.routines.toArray,
+      seen: (threadId) => isThreadSeen(threadId),
+      unread: botsUnreadStore,
+      play: (cue, options) => soundPlayer().play(cue, options),
+      notifier: createNotifier({
+        isWindowFocused: () => document.hasFocus(),
+        notificationsEnabled: () => notificationsOn.current,
+        sounds: () => soundPrefs,
+        now: () => new Date(),
+        send: (input) => transport.client.system.notify(input),
       }),
-      needsYou: (bot) => ({
-        title: t("bots.notify.needsYouTitle", { name: bot }),
-        body: t("bots.notify.needsYouBody"),
-      }),
-    },
-  };
+      labels: {
+        done: (bot) => ({
+          title: bot,
+          body: t("bots.notify.doneBody"),
+        }),
+        needsYou: (bot) => ({
+          title: t("bots.notify.needsYouTitle", { name: bot }),
+          body: t("bots.notify.needsYouBody"),
+        }),
+      },
+    };
+  }, [db, transport, t]);
 
   useEffect(() => {
     const abort = new AbortController();

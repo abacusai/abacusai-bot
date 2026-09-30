@@ -237,3 +237,9 @@ export const resolveLook = (bot: LookSource): Look => {
       : "none";
   return { shape, color, accessory };
 };
+
+export const accentVars = (look: Look): import("react").CSSProperties =>
+  ({
+    "--bot-accent": look.color,
+    "--bot-accent-foreground": accentForeground(look.color),
+  }) as import("react").CSSProperties;

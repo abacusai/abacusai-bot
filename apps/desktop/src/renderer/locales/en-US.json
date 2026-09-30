@@ -393,7 +393,7 @@
         "flower": "Flower",
         "heart": "Heart",
         "cloud": "Cloud",
-        "hex": "Hexagon",
+        "hex": "Hex",
         "gem": "Gem",
         "clover": "Clover",
         "burst": "Burst",
@@ -434,7 +434,12 @@
       "connectOpenRouter": "Connect OpenRouter",
       "connectGoogleAi": "Connect Google AI Studio",
       "tierFree": "Free",
-      "tierLocal": "Local"
+      "tierLocal": "Local",
+      "default": "Default",
+      "local": "On this machine",
+      "free": "Free",
+      "search": "Search models",
+      "favorite": "Favourite {{name}}"
     },
     "checkIn": {
       "label": "Checks in",
@@ -451,7 +456,17 @@
         "weekly": "Every {{day}}, {{time}}",
         "custom": "Custom",
         "paused": "Paused"
-      }
+      },
+      "time": "At",
+      "day": "On",
+      "minute": "At minute",
+      "paused": "Paused",
+      "custom": "Custom schedule: {{schedule}}",
+      "customLabel": "Custom",
+      "editInRoutines": "Edit in Routines",
+      "routineName": "{{name}} check-in",
+      "error": "Couldn't change the check-in",
+      "createFailed": "The bot was made, but its check-in wasn't saved"
     },
     "start": {
       "categories": {
@@ -463,7 +478,14 @@
         "recruiting": "Recruiting",
         "research": "Research",
         "social-media": "Social Media"
-      }
+      },
+      "emptyTitle": "Who do you need?",
+      "emptyBody": "A bot is a standing agent with its own instructions, schedule, memory and chats. Start from a template, or name one and describe the job.",
+      "setup": "Set up {{name}}",
+      "namePlaceholder": "Name your bot",
+      "templates": "Templates",
+      "more": "More",
+      "uses": "Uses"
     },
     "chat": {
       "deliverables": {
@@ -502,7 +524,16 @@
         "failed": "Could not connect {{provider}}.",
         "stop": "Stop connecting",
         "refreshFailed": "Connected, but the agent couldn't load it: {{error}}"
-      }
+      },
+      "placeholder": "Message {{name}}",
+      "openApp": "Open {{app}}",
+      "pause": "Pause auto-reply",
+      "resume": "Resume",
+      "paused": "Check-ins paused.",
+      "channelReadOnly": "This bot replies on {{app}}.",
+      "channelReadOnlyWhatsapp": "This bot replies on WhatsApp.",
+      "senderReadOnly": "{{bot}} replies to {{sender}} here.",
+      "openError": "Couldn't open this bot"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -520,7 +551,11 @@
       "workingOn": "Working · {{caption}}",
       "error": "Stopped with an error",
       "paused": "Check-ins paused",
-      "on": "on {{app}}"
+      "on": "on {{app}}",
+      "idle": "Idle",
+      "needs-you": "Needs you",
+      "routine": "Checking in",
+      "unread": "Unread"
     },
     "notify": {
       "doneBody": "Has a reply for you",
@@ -530,7 +565,67 @@
     "errors": {
       "pin": "Couldn't pin",
       "duplicate": "Couldn't duplicate the bot",
-      "checkIn": "Couldn't change the check-in"
+      "checkIn": "Couldn't change the check-in",
+      "limit": "You have 50 bots, the most there can be. Delete one to make another.",
+      "retry": "Try again",
+      "memory": "Couldn't change memory",
+      "memoryConflict": "That changed while you were looking. The list is up to date."
+    },
+    "form": {
+      "name": "Name",
+      "persona": "Persona",
+      "instructions": "Instructions",
+      "description": "Description",
+      "model": "Model",
+      "modelDefault": "App default",
+      "create": "Create bot",
+      "save": "Save changes",
+      "saveError": "Couldn't save the bot",
+      "cancel": "Cancel",
+      "shape": "Shape",
+      "colour": "Colour",
+      "accessory": "Accessory",
+      "moreShapes": "More shapes",
+      "remoteChange": "Changed in another window",
+      "discardTitle": "Discard changes?",
+      "discardBody": "Your changes have not been saved.",
+      "keepEditing": "Keep editing",
+      "discard": "Discard",
+      "validation": {
+        "required": "Enter a name",
+        "too-long": "This is too long",
+        "color": "Choose a valid colour"
+      }
+    },
+    "panel": {
+      "detailsTitle": "Details",
+      "detailsFor": "Details for {{name}}",
+      "modelValue": "Model: {{model}}",
+      "memoryTitle": "Memory",
+      "memoryCount": "{{count}} things",
+      "filesTitle": "Files",
+      "checkIns": "Check-ins",
+      "senderChats": "Chats on your behalf",
+      "on": "On",
+      "reachable": "Also reachable on",
+      "connected": "Connected",
+      "memoryIntro": "What {{name}} remembers. It writes here on its own.",
+      "forgetEntry": "Forget {{entry}}",
+      "filesIntro": "Files this bot made or was given. Also in Artifacts.",
+      "filesEmpty": "Nothing here yet",
+      "backFiles": "Back to files",
+      "memory": {
+        "empty": "Nothing remembered yet",
+        "forget": "Forget",
+        "notes": "Also keeps {{count}} days of notes",
+        "clear": "Forget everything",
+        "clearConfirm": "Forget everything here?"
+      }
+    },
+    "gone": {
+      "chat": "This chat is gone",
+      "bot": "This bot was deleted",
+      "make": "Make a bot"
     }
   },
   "browserPermission": {
