@@ -8,10 +8,12 @@
  *   never turned into two replacement characters.
  * - **Line ends.** `\n` ends a line; one `\r` before it is dropped (as the
  *   old `\r\n → \n` normalisation did, across chunk boundaries too).
- * - **Overflow.** An unterminated line longer than `maxLineChars` cannot be
- *   a record anyone will parse: it is discarded whole, along with the rest of
- *   it up to the next newline, and reported once through `onOverflow`. (The
- *   old tail-keeping truncation could hand a parser the end of a line.)
+ * - **Overflow.** A line longer than `maxLineChars` (counted before its
+ *   `\n`, a `\r` included) cannot be a record anyone will parse: it is
+ *   discarded whole and reported once through `onOverflow`, whether it
+ *   arrived in one chunk or many. An unterminated one is dropped as soon as
+ *   it passes the limit, along with the rest of it up to the next newline.
+ *   (The old tail-keeping truncation could hand a parser the end of a line.)
  * - **End of stream.** `end()` flushes the decoder and delivers a final line
  *   written without its newline (unless it was being discarded).
  */
@@ -80,7 +82,13 @@ export class LineSplitter {
       this.#onOverflow(this.#rest.length);
       this.#rest = "";
     }
-    return parts.map(stripCr);
+    const lines: string[] = [];
+    for (const part of parts) {
+      // The same limit as for a line still arriving, whatever the chunking.
+      if (part.length > this.#maxLineChars) this.#onOverflow(part.length);
+      else lines.push(stripCr(part));
+    }
+    return lines;
   }
 }
 
