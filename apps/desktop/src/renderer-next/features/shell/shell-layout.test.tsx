@@ -415,3 +415,23 @@ describe("the title bar", () => {
     }
   });
 });
+
+describe("loading", () => {
+  it("a bot route whose table failed to load shows the sidebar's Retry, not Not found (Claude #20)", async () => {
+    setViewportWidth(1280);
+    harness = await renderApp("/bots/chief-of-staff", {
+      beforeRender: (db) => {
+        db.bots.failSnapshot = new Error("UNAVAILABLE");
+      },
+    });
+    await screen.findByRole("button", { name: "Retry" });
+    expect(screen.queryByText("Not found")).toBeNull();
+    expect(harness.router.state.location.pathname).toBe("/bots/chief-of-staff");
+  });
+
+  it("the closed command menu never starts the lazy bots table (Claude #21)", async () => {
+    await at(1280, "/sessions/new");
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(harness!.collections.bots.status).toBe("idle");
+  });
+});
