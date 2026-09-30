@@ -38,10 +38,16 @@ export interface SoundPlayer {
 /** A burst of cues inside this window plays once. */
 export const COALESCE_MS = 400;
 
+// All document players, including previews, share the native engine.
+let documentAudio: AudioContext | null = null;
+let audioUsers = 0;
+let documentLastPlayed = Number.NEGATIVE_INFINITY;
 export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
   let lastPlayedAt = Number.NEGATIVE_INFINITY;
   let audio: unknown = null;
   let disposed = false;
+  const shared =
+    ctx.createAudioContext === undefined && ctx.synth === undefined;
 
   const synth =
     ctx.synth ??
@@ -70,8 +76,10 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       )
         return;
       const now = ctx.now();
-      if (now - lastPlayedAt < COALESCE_MS) return;
+      if (now - (shared ? documentLastPlayed : lastPlayedAt) < COALESCE_MS)
+        return;
       lastPlayedAt = now;
+      if (shared) documentLastPlayed = now;
       synth(cue);
     },
     preview(cue) {
@@ -87,10 +95,25 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
         ctx.createAudioContext ??
         (() =>
           typeof AudioContext === "undefined" ? null : new AudioContext());
-      audio = create();
+      if (shared) {
+        documentAudio ??=
+          typeof AudioContext === "undefined" ? null : new AudioContext();
+        audio = documentAudio;
+        if (audio) audioUsers++;
+      } else audio = create();
     },
     dispose() {
+      if (disposed) return;
       disposed = true;
+      if (shared && audio) {
+        audioUsers--;
+        if (audioUsers > 0) {
+          audio = null;
+          return;
+        }
+        documentAudio = null;
+        documentLastPlayed = Number.NEGATIVE_INFINITY;
+      }
       const close = (audio as { close?: () => Promise<void> } | null)?.close;
       if (close != null) void close.call(audio).catch(() => undefined);
       audio = null;
