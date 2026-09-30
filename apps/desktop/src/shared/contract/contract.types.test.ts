@@ -9,6 +9,7 @@
  *     an async iterator of its events.
  * (c) `isDefinedError` narrows a defined error's data.
  */
+import type { MessagingPlatform } from "@abacus-ai/connectors/registry";
 import { isDefinedError } from "@orpc/client";
 import type { ContractRouterClient, ErrorFromErrorMap } from "@orpc/contract";
 import type { AsyncIteratorClass } from "@orpc/shared";
@@ -110,6 +111,9 @@ import type { RespondConnectorRequestSchema } from "./connectors";
 import type {
   BotCreateInputSchema,
   BotUpdateInputSchema,
+  PREFS_GROUP_ENTRIES,
+  PREFS_MESSAGING_PLATFORMS,
+  PREFS_SCALAR_ENTRIES,
   PrefsPatchSchema,
   RoutineCreateInputSchema,
   RoutineUpdateInputSchema,
@@ -151,7 +155,12 @@ import type {
   UpdateMessagingPlatformRequestSchema,
   UpdateMessagingSettingsRequestSchema,
 } from "./messaging";
-import type { PrefsPatch } from "./rows";
+import type {
+  OnboardingExit,
+  PrefsMessagingPlatform,
+  PrefsPatch,
+  QuietHours,
+} from "./rows";
 import type { NotificationSettingsSchema } from "./settings";
 import type {
   ImportLocalSkillsRequestSchema,
@@ -494,4 +503,17 @@ describe("contract types (A-T1)", () => {
     };
     expectTypeOf(narrow).toBeFunction();
   });
+});
+
+it("(d) prefs vocabularies match their sources (spec 05 §31.5 a, 06 §23.5 b)", () => {
+  expectTypeOf<
+    (typeof PREFS_MESSAGING_PLATFORMS)[number]
+  >().toEqualTypeOf<MessagingPlatform>();
+  expectTypeOf<PrefsMessagingPlatform>().toEqualTypeOf<MessagingPlatform>();
+  expectTypeOf<
+    v.InferOutput<typeof PREFS_SCALAR_ENTRIES.onboardingExit>
+  >().toEqualTypeOf<OnboardingExit | null>();
+  expectTypeOf<
+    v.InferOutput<typeof PREFS_GROUP_ENTRIES.sounds.quietHours>
+  >().toEqualTypeOf<QuietHours>();
 });
