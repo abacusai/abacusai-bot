@@ -174,6 +174,7 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
+import { RENDERER_GENERATION } from "./renderer-generation";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
@@ -232,7 +233,7 @@ import {
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
-import { AguiRelayService } from "./services/agui/relay-service";
+import { AguiRelayService, defaultWire } from "./services/agui/relay-service";
 import { botChatPreview } from "./services/bots/bot-chat-preview";
 import {
   clearBotMemory,
@@ -454,10 +455,17 @@ export class ServiceHost {
   readonly threadStore = new ThreadStore();
   /**
    * Main's AG-UI relay (agent spec §5.2): the renderer's `ai.*` procedures,
-   * and the wire each session's agent is spawned with. Until the new
-   * renderer asks for a thread, every spawn stays `--wire ndjson`.
+   * and the wire each session's agent is spawned with: `--wire agui` for
+   * every spawn in the new-renderer build, `--wire ndjson` in the legacy
+   * build until the new renderer asks for a thread (`defaultWire`).
    */
   readonly aguiRelay: AguiRelayService = new AguiRelayService({
+    aguiForEverySpawn: defaultWire({
+      generation: RENDERER_GENERATION,
+      isPackaged: app.isPackaged,
+      env: process.env,
+      log: (message) => console.warn(`[agui] ${message}`),
+    }),
     files: this.threadStore,
     host: {
       workspaceOf: (threadId) => {
