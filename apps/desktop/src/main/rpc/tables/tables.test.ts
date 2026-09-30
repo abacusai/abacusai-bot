@@ -210,17 +210,28 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     const { tables } = setup();
     const bots = await reader(tables.bots);
 
-    const bot = createBot({ name: "Ada", description: "Counts" }, "bot-ada");
+    const bot = createBot(
+      { name: "Ada", description: "Counts", avatarAccessory: "glasses" },
+      "bot-ada"
+    );
     expect(bot.id).toBe("bot-ada");
     await expect(bots.next()).resolves.toMatchObject({
       seq: 1,
-      changes: [{ type: "insert", key: "bot-ada" }],
+      changes: [
+        {
+          type: "insert",
+          key: "bot-ada",
+          value: { avatarAccessory: "glasses" },
+        },
+      ],
     });
 
-    updateBot(bot.id, { name: "Ada L." });
+    updateBot(bot.id, { name: "Ada L.", avatarAccessory: "crown" });
     await expect(bots.next()).resolves.toMatchObject({
       seq: 2,
-      changes: [{ type: "update", value: { name: "Ada L." } }],
+      changes: [
+        { type: "update", value: { name: "Ada L.", avatarAccessory: "crown" } },
+      ],
     });
 
     removeBot(bot.id);
