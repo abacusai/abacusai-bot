@@ -6,12 +6,26 @@ import { useTranslation } from "react-i18next";
 import { FilePreview, previewKind } from "#next/components/file-preview";
 import { FileTreeView } from "#next/components/file-tree";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "#next/ui/alert-dialog";
 import { Button } from "#next/ui/button";
 import { Input } from "#next/ui/input";
 import type { SessionRow } from "#shared/contract/rows";
 import type { FileTreeNode } from "#shared/contracts";
 
-import { useSessionsTransport, sessionsQueries } from "../data/queries";
+import {
+  useSessionsTransport,
+  useGitState,
+  sessionsQueries,
+} from "../data/queries";
 import { isRelativePath } from "../data/search";
 export const flattenFiles = (nodes: FileTreeNode[]): string[] =>
   nodes.flatMap((n) => [
@@ -78,6 +92,9 @@ export const FilesTab = ({
   const checkout = { workspaceId: row.workspaceId, sessionId: row.id };
   const options = sessionsQueries(transport.orpc);
   const tree = useQuery(options.tree(checkout));
+  const git = useGitState(checkout);
+  const [trash, setTrash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [children, setChildren] = useState<FileTreeNode[]>([]);
@@ -92,6 +109,11 @@ export const FilesTab = ({
   }, [query]);
   const select = async (path: string) => {
     if (path.endsWith("/")) {
+      void navigate({
+        search: (p: Record<string, unknown>) => ({ ...p, file: path }),
+        replace: true,
+        transition: "none",
+      } as never);
       const nodes = await transport.client.files.treeChildren({
         checkout,
         directoryPath: path.slice(0, -1),
@@ -105,6 +127,23 @@ export const FilesTab = ({
       replace: true,
       transition: "none",
     } as never);
+  };
+  const doTrash = async (path: string) => {
+    await transport.client.files.trash({
+      checkout,
+      filePath: path.replace(/\/$/, ""),
+    });
+    setTrash(null);
+    await tree.refetch();
+    void navigate({
+      search: (p: Record<string, unknown>) => ({ ...p, file: undefined }),
+      replace: true,
+      transition: "none",
+    } as never);
+  };
+  const requestTrash = (path: string) => {
+    if (path.endsWith("/")) setTrash(path);
+    else void doTrash(path).catch((e) => setError(String(e)));
   };
   const paths = flattenFiles([...(tree.data?.fileTree ?? []), ...children]);
   return (
@@ -134,12 +173,75 @@ export const FilesTab = ({
         ) : (
           <FileTreeView
             paths={paths}
+            gitStatus={git?.gitChanges.map((c) => ({
+              path: c.path,
+              status:
+                c.status === "?" || c.status === "??"
+                  ? "untracked"
+                  : c.status.includes("D")
+                    ? "deleted"
+                    : c.status.includes("A")
+                      ? "added"
+                      : "modified",
+            }))}
+            renderMenu={(item, context) => (
+              <div
+                role="menu"
+                className="bg-popover flex flex-col rounded-lg border p-1 shadow-md"
+              >
+                {[
+                  {
+                    label: t("sessions.files.preview"),
+                    run: () => onPreview(item.path),
+                  },
+                  {
+                    label: t("sessions.files.openEditor"),
+                    run: () =>
+                      void transport.client.system.openPath({
+                        path: `${root}/${item.path}`,
+                      }),
+                  },
+                  {
+                    label: t("sessions.files.copyPath"),
+                    run: () => void navigator.clipboard.writeText(item.path),
+                  },
+                  {
+                    label: t("sessions.files.trash"),
+                    run: () =>
+                      requestTrash(
+                        item.path +
+                          (item.kind === "directory" && !item.path.endsWith("/")
+                            ? "/"
+                            : "")
+                      ),
+                  },
+                ].map((action) => (
+                  <Button
+                    key={action.label}
+                    role="menuitem"
+                    size="sm"
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      context.close();
+                      action.run();
+                    }}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            )}
             onSelect={(path) => void select(path)}
             onOpen={onPreview}
             onRename={(fromPath, toPath) =>
               void transport.client.files
                 .rename({ checkout, fromPath, toPath })
                 .then(() => tree.refetch())
+                .catch((e) => {
+                  setError(String(e));
+                  void tree.refetch();
+                })
             }
           />
         )}
@@ -161,21 +263,21 @@ export const FilesTab = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() =>
-                  void transport.client.files
-                    .trash({ checkout, filePath: selected })
-                    .then(() => tree.refetch())
-                }
+                onClick={() => requestTrash(selected)}
               >
                 {t("sessions.files.trash")}
               </Button>
             </div>
-            <SessionFilePreview
-              row={row}
-              root={root}
-              path={selected}
-              renderLocal={renderLocal}
-            />
+            {!selected.endsWith("/") ? (
+              <SessionFilePreview
+                row={row}
+                root={root}
+                path={selected}
+                renderLocal={renderLocal}
+              />
+            ) : (
+              <p className="text-muted-foreground p-4 text-sm">{selected}</p>
+            )}
           </>
         ) : (
           <p className="text-muted-foreground p-4 text-sm">
@@ -183,6 +285,34 @@ export const FilesTab = ({
           </p>
         )}
       </section>
+      {error ? <p role="alert">{error}</p> : null}
+      <AlertDialog
+        open={trash !== null}
+        onOpenChange={(open) => {
+          if (!open) setTrash(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("sessions.files.trashFolder")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("sessions.files.trashFolderBody", { path: trash })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("sessions.common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                trash && void doTrash(trash).catch((e) => setError(String(e)))
+              }
+            >
+              {t("sessions.files.trash")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

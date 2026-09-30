@@ -1,4 +1,6 @@
+import type { GitStatusEntry } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
+import type { FileTreeProps } from "@pierre/trees/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 export const FileTreeView = ({
@@ -6,16 +8,35 @@ export const FileTreeView = ({
   onSelect,
   onOpen,
   onRename,
+  gitStatus,
+  renderMenu,
 }: {
   paths: string[];
   onSelect: (path: string) => void;
   onOpen: (path: string) => void;
   onRename: (from: string, to: string) => void;
+  gitStatus?: readonly GitStatusEntry[];
+  renderMenu?: FileTreeProps["renderContextMenu"];
 }) => {
   const { t } = useTranslation();
   const { model } = useFileTree({
     paths,
     density: "compact",
+    gitStatus,
+    dragAndDrop: {
+      onDropComplete: (event) => {
+        for (const from of event.draggedPaths) {
+          const to = [
+            event.target.directoryPath?.replace(/\/$/, ""),
+            from.replace(/\/$/, "").split("/").at(-1),
+          ]
+            .filter(Boolean)
+            .join("/");
+          if (to !== from.replace(/\/$/, ""))
+            onRename(from.replace(/\/$/, ""), to);
+        }
+      },
+    },
     onSelectionChange: (selected) => {
       if (selected[0]) onSelect(selected[0]);
     },
@@ -29,6 +50,7 @@ export const FileTreeView = ({
   return (
     <FileTree
       model={model}
+      renderContextMenu={renderMenu}
       aria-label={t("sessions.dock.files")}
       className="min-h-0 flex-1"
       onDoubleClick={() => {
