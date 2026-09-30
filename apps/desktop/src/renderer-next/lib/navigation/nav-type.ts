@@ -69,10 +69,10 @@ export const ROUTE_RANK: Readonly<
   "/__ui": { area: "gallery", rank: 0 },
 };
 
-export const normalizeFullPath = (fullPath: string): string =>
+const normalizeFullPath = (fullPath: string): string =>
   fullPath.replace(/\/+$/, "");
 
-export const rankOf = (fullPath: string): { area: RouteArea; rank: number } =>
+const rankOf = (fullPath: string): { area: RouteArea; rank: number } =>
   ROUTE_RANK[normalizeFullPath(fullPath)] ?? { area: "root", rank: 0 };
 
 export interface PaneLocation {

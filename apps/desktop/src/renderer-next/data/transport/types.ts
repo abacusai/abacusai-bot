@@ -5,8 +5,6 @@ import type { Contract } from "#shared/contract";
 
 import type { CloseReason, TransportState } from "./close-signal";
 
-export type { CloseReason, TransportState };
-
 /** The typed oRPC client for the whole contract. */
 export type AppClient = ContractRouterClient<Contract>;
 

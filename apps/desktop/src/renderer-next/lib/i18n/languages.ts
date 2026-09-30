@@ -7,7 +7,7 @@ import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "#shared/contract";
 
 export const FALLBACK_LANGUAGE: SupportedLanguage = "en-US";
 
-export { SUPPORTED_LANGUAGES, type SupportedLanguage };
+export { type SupportedLanguage };
 
 /**
  * Spain gets `es-ES`; every other Spanish region, and bare `es`, gets the

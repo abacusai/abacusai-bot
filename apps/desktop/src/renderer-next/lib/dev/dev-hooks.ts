@@ -9,7 +9,7 @@ import { updatePrefs } from "#next/data/collections/prefs";
 
 import { navigateAndSettle } from "./settle";
 
-export interface AbacusDev {
+interface AbacusDev {
   navigateAndSettle(href: string): Promise<void>;
   setPinned(pinned: boolean): Promise<void>;
   setTheme(theme: "system" | "light" | "dark"): Promise<void>;

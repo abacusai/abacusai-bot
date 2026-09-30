@@ -13,12 +13,12 @@ import { followNotices } from "./live";
 import { settingsKeys } from "./settings";
 import { windowChromeQuery } from "./window";
 
-export type Notice =
+type Notice =
   | { source: "window"; event: WindowEvent }
   | { source: "settings"; event: SettingsEvent };
 
 /** The keys a notice invalidates. Pure; tested as a table. */
-export const keysFor = (orpc: AppQueryUtils, notice: Notice): QueryKey[] => {
+const keysFor = (orpc: AppQueryUtils, notice: Notice): QueryKey[] => {
   if (notice.source === "window")
     return notice.event.type === "chrome"
       ? [windowChromeQuery(orpc).queryKey]

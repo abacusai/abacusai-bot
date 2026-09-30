@@ -22,7 +22,7 @@ import {
   shellStore,
 } from "./shell-store";
 
-export const HOVER_INTENT_MS = 120;
+const HOVER_INTENT_MS = 120;
 
 const RailItem = ({
   area,

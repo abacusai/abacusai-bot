@@ -57,7 +57,7 @@ const subscribeReduced = (onChange: () => void): (() => void) => {
 const systemReduced = (): boolean => window.matchMedia(REDUCED_QUERY).matches;
 
 /** `prefs.motion.reduce` ("on"/"off" win) over `prefers-reduced-motion`. */
-export const resolveMotionPreference = (
+const resolveMotionPreference = (
   pref: "system" | "on" | "off",
   systemReduce: boolean
 ): MotionPreference =>

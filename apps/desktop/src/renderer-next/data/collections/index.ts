@@ -50,5 +50,4 @@ export const useCollections = (): Collections => {
 };
 
 export { createCollections, type Collections } from "./tables";
-export type { CollectionName } from "./tables";
 export type { DbSource } from "./table-source";

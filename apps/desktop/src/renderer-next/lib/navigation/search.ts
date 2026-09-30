@@ -14,7 +14,7 @@ export const optionalField = <
   schema: TSchema
 ) => v.fallback(v.optional(schema), undefined);
 
-export const SIDE_PANEL_TABS = [
+const SIDE_PANEL_TABS = [
   "changes",
   "terminal",
   "files",
@@ -23,7 +23,7 @@ export const SIDE_PANEL_TABS = [
   "details",
   "agent",
 ] as const;
-export const SidePanelTab = v.picklist(SIDE_PANEL_TABS);
+const SidePanelTab = v.picklist(SIDE_PANEL_TABS);
 export type SidePanelTabId = v.InferOutput<typeof SidePanelTab>;
 
 export const ShellSearch = v.object({
@@ -32,7 +32,7 @@ export const ShellSearch = v.object({
 });
 export const SHELL_DEFAULTS = {} as const;
 
-export const BOT_TABS = ["memory", "files", "browser", "details"] as const;
+const BOT_TABS = ["memory", "files", "browser", "details"] as const;
 export const BotSearch = v.object({
   tab: optionalField(v.picklist(BOT_TABS)),
 });
@@ -41,12 +41,7 @@ export const NewSessionSearch = v.object({
   workspace: optionalField(WorkspaceId),
 });
 
-export const SESSION_TABS = [
-  "changes",
-  "terminal",
-  "files",
-  "browser",
-] as const;
+const SESSION_TABS = ["changes", "terminal", "files", "browser"] as const;
 export const SESSION_DEFAULTS = { view: "split" } as const;
 export const SessionSearch = v.object({
   view: v.optional(v.fallback(v.picklist(["split", "full"]), "split"), "split"),

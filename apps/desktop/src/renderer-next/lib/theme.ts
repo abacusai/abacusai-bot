@@ -53,8 +53,8 @@ export const contrastRatio = (a: string, b: string): number => {
   return (light + 0.05) / (dark + 0.05);
 };
 
-export const ACCENT_DARK_FOREGROUND = "#171717";
-export const ACCENT_LIGHT_FOREGROUND = "#fafafa";
+const ACCENT_DARK_FOREGROUND = "#171717";
+const ACCENT_LIGHT_FOREGROUND = "#fafafa";
 
 /**
  * The text colour for a bot's accent swatch: whichever of near-black and

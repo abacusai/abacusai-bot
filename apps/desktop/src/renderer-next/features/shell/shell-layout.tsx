@@ -66,7 +66,7 @@ export const PANE_VT: ViewTransitionClassPerType = {
 };
 
 /** The leaf match's pane key (search never enters it). */
-export const usePaneKey = (): string =>
+const usePaneKey = (): string =>
   useMatches({
     select: (matches) => {
       const leaf = matches.at(-1);

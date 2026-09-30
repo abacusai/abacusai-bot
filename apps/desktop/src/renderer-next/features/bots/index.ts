@@ -1,4 +1,4 @@
-export { BotsSidebar, BotsStrip, BotDot, orderBots } from "./bots-sidebar";
+export { BotsSidebar, BotsStrip } from "./bots-sidebar";
 export {
   BotDetailsSheet,
   BotEditPage,

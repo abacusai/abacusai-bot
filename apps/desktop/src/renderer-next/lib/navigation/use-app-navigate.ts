@@ -44,5 +44,3 @@ export const useAppNavigate = (): ((
       withIntent(options as NavigateOptions<RegisteredRouter>, transition)
     );
 };
-
-export { withIntent };

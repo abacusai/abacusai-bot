@@ -18,7 +18,7 @@ const subscribeDark = (onChange: () => void): (() => void) => {
 
 const systemDark = (): boolean => window.matchMedia(DARK_QUERY).matches;
 
-export const useSystemDark = (): boolean =>
+const useSystemDark = (): boolean =>
   useSyncExternalStore(subscribeDark, systemDark);
 
 export const ThemeEffect = (): null => {

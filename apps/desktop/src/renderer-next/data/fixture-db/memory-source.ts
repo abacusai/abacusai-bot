@@ -58,7 +58,7 @@ const buildRouter = (db: FixtureDb): Router<any, Record<string, never>> => {
   return { db: tables } as unknown as Router<any, Record<string, never>>;
 };
 
-export const defaultFixtureSeed = (): FixtureSeed => ({
+const defaultFixtureSeed = (): FixtureSeed => ({
   prefs: fixturePrefs(),
   bots: fixtureBots(),
   sessions: fixtureSessions(),

@@ -21,7 +21,7 @@ interface Glyph {
   circles?: Array<{ cx: number; cy: number; r: number }>;
 }
 
-export const APP_ICONS: Record<AppIconName, Glyph> = {
+const APP_ICONS: Record<AppIconName, Glyph> = {
   bots: {
     fill: "M6 8h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3z",
     paths: [
