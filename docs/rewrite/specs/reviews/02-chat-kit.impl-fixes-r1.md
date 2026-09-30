@@ -348,3 +348,41 @@ chat.transcript.showLater
 chat.view.gone
 chat.view.unavailable
 ```
+
+## Chat kit fix pass, r2
+
+2026-10-01, against spec 02 r4 and `02-chat-kit.impl-codex-r2.md`. Merged `rewrite/renderer` first, fast-forwarding `3f2cecc2` to `bc32ca68`. All nine major findings are fixed. Source changes stay in chat; main changes are Electron harness tests. No changes were made to bots, sessions, main services or agent source.
+
+### Per-item status and regression evidence
+
+| Item | Status | Fix and regression |
+|---|---|---|
+| 1 | Fixed | Track the chunk being consumed so ai-client 0.36's ordinary `RUN_ERROR` callback leaves the stream open. Processing errors still abort and recover. `runtime/lifecycle.test.ts` sends a live `RUN_ERROR` followed by another event through the installed client and checks consumption, one live outcome, unchanged generation and cancellation cleanup. Before the fix, consumption stopped before both events. |
+| 2 | Fixed | Both hydration settlement paths reject failed or aborted generations. Two lifecycle cases settle delayed hydration with success and failure after the cap; readiness stays rejected and no subscription starts. Both failed before the fix. |
+| 3 | Fixed | A monotonically increasing per-thread revision advances on every draft update and clear. Queue, rejected, stale and exception restoration use the revision captured after clearing, without advancing it when restoration is skipped. Five composer cases verify monotonicity and all four restore paths, including an update retaining draft identity. All four restore cases failed with the previous composer. Existing typing-and-erasing coverage also passes. |
+| 4 | Fixed | The pump resets reconnect failures only for accepted events. Generation recovery resets in the dispatcher's post-hook after consuming live progress beyond the checkpoint. Duplicate/disconnect and duplicate/resync lifecycle cases exhaust their respective budgets; both failed with the old pump/session. |
+| 5 | Fixed | Starting a replacement invalidates the old cancellation attempt, clears its timeout and clears `cancelling`. The lifecycle test changes the relay epoch and disconnects during an unanswered cancellation, then verifies a second Stop can be issued. The original replacement-generation regression failed before the fix. |
+| 6 | Fixed | Definitive admission failures notify the session in the shared admission path after stale/echo checks. `NOT_FOUND` marks the host gone for initial submit, run Retry, outbox Retry and scheduled reconciliation. Three deleted-thread lifecycle cases cover the latter paths; all failed before the fix. |
+| 7 | Fixed | When a migrated group's header leaves the range, its continuation rows render directly. A rendered bot regression leaves the inner group closed, pages through 250 tools and checks accessible rows and the shared budget. Before the fix, the first activation left zero accessible tools. |
+| 8 | Fixed | Top-level subagent cards are pageable units alongside tools, group headers and nested cards. They use the shared range; bot views expose paging controls for cards too. Both skins page 150 cards in a single message within `MAX_ROWS`. Before the fix, both mounted 151 rows. |
+| 9 | Fixed | The real-session Electron gate selects an actual file through the rendered attachment menu and CDP file chooser, asserts the textarea is empty, then clicks Send. Approval clicks Allow once; busy text enters through the textarea and Add to the queue; Stop clicks its rendered button. `main/dev/chat-controls.test.ts` rejects direct session-action shortcuts in that gate and failed on all six old bypasses. The real gate passes all three tests. |
+
+Eighteen regression tests were added. The three existing real-session Electron tests now exercise rendered controls. Red runs were performed against the previous implementations before accepting the green results.
+
+### r2 validation
+
+- Dependency setup: `pnpm install --pm-on-fail=ignore`, already up to date with installed pnpm 12.8.1.
+- Built connectors, agent plus its runtime package, and updater with the direct tsdown binaries before desktop validation.
+- Full desktop renderer-next/main run: **3,371 passed, seven existing todo tests; 331 passed files and one skipped file**. No failures.
+- Desktop `tsc -b`, root oxlint, root oxfmt, renderer-next knip, JSX i18n guard, legacy diff, locale synchronization and UI registry snapshot checks passed. Oxlint retains seven legacy renderer warnings; knip emits two configuration hints.
+- Required chat Electron suites with `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1`: **12 passed / two files**, covering R2-T16/T28/T31/T32. All performance thresholds and shared row-budget assertions passed.
+
+### r2 commits
+
+- `f286d01b`: keep run errors in the stream and reject late hydration settlements.
+- `31ab0ee3`: bound recovery, clear cancellation on replacement and centralize admission failures.
+- `d10b8cb2`: guard all composer restoration paths with per-thread revisions.
+- `00807c08`: page migrated continuations and top-level subagent cards.
+- `079e3058`: exercise cancellation through epoch recovery and correct regression test types.
+- `5000a88c`: drive real-session gates through rendered controls and guard against action bypasses.
+- The final documentation commit records these r2 results.

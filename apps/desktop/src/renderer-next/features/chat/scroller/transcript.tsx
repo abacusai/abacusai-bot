@@ -334,7 +334,6 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     id: message.id,
     fixed:
       1 +
-      message.parts.filter((p) => p.type === "subagent").length +
       outcomes.filter((outcome) => outcome.afterMessageId === message.id)
         .length,
     units: toolRows(message).length,

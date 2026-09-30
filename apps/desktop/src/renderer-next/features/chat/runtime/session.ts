@@ -295,12 +295,7 @@ export class ThreadSession {
     text: string,
     forwardedProps?: Record<string, unknown>
   ): Promise<AdmissionResult> {
-    return submitAdmission(this.#admission, text, forwardedProps).result.catch(
-      (error: unknown) => {
-        if (isNotFound(error)) this.#host({ notFound: true });
-        throw error;
-      }
-    );
+    return submitAdmission(this.#admission, text, forwardedProps).result;
   }
 
   retryOutbox(entryId: string): Promise<AdmissionResult> {
@@ -624,6 +619,14 @@ export class ThreadSession {
   // ─── generations (§3.3) ────────────────────────────────────────────
 
   #start(): Generation {
+    // A cancellation belongs to the generation that issued it.
+    this.#cancelAttempt += 1;
+    if (this.#cancelTimer != null) {
+      clearTimeout(this.#cancelTimer);
+      this.#timers.delete(this.#cancelTimer);
+      this.#cancelTimer = null;
+    }
+    this.#host({ cancelling: false });
     const g = ++this.#gen;
     const gen: Generation = {
       g,
@@ -675,12 +678,24 @@ export class ThreadSession {
         limit: PAGE_SIZE,
       });
     } catch (error) {
-      if (gen.g !== this.#gen || this.#retired) return;
+      if (
+        gen.g !== this.#gen ||
+        gen.failed ||
+        gen.abort.signal.aborted ||
+        this.#retired
+      )
+        return;
       if (this.hostStore.state.ready && !isNotFound(error)) this.#recover();
       else this.#fail(gen, error);
       return;
     }
-    if (gen.g !== this.#gen || this.#retired) return;
+    if (
+      gen.g !== this.#gen ||
+      gen.failed ||
+      gen.abort.signal.aborted ||
+      this.#retired
+    )
+      return;
     const abacus = snapshot.abacus;
     const active = abacus.activeRun;
     gen.activeStart = snapshot.messages.length;
@@ -703,10 +718,12 @@ export class ThreadSession {
         ? { hasOlderMessages: true, olderCursor: snapshot.page.cursor }
         : { hasOlderMessages: false, olderCursor: null };
 
+    let processingRunError = false;
     const dispatcher = createDispatcher({
       pre: (item) => {
         if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
           return;
+        processingRunError = item.event.type === "RUN_ERROR";
         if (item.event.type === "RUN_STARTED")
           gen.activeStart =
             gen.client?.getMessages().length ?? snapshot.messages.length;
@@ -717,7 +734,10 @@ export class ThreadSession {
         );
       },
       error: (error) => this.#options.log?.("chat: event hook failed", error),
-      post: (item) => this.#post(gen, item.seq, item.event),
+      post: (item) => {
+        processingRunError = false;
+        this.#post(gen, item.seq, item.event);
+      },
     });
     gen.dispatcher = dispatcher;
     const guard =
@@ -753,6 +773,9 @@ export class ThreadSession {
         })
       ),
       onError: guard((error: Error) => {
+        // ai-client 0.36 reports RUN_ERROR synchronously while consuming it.
+        // Its terminal post-hook must still run, and the stream stays open.
+        if (processingRunError) return;
         this.#options.log?.("chat: client error", error);
         dispatcher.close();
         gen.abort.abort();
@@ -774,10 +797,6 @@ export class ThreadSession {
         if (gen.g !== this.#gen) return;
         this.#host({ connection });
       },
-      onLive: () => {
-        if (gen.g === this.#gen && gen.appliedSeq >= gen.positions.checkpoint)
-          this.#recoveries = 0;
-      },
       onRecover: () => {
         if (gen.g !== this.#gen) return;
         this.#recover();
@@ -798,6 +817,8 @@ export class ThreadSession {
     if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
       return;
     gen.appliedSeq = seq;
+    // Reset only after accepted live progress has actually been consumed.
+    if (seq > gen.positions.checkpoint) this.#recoveries = 0;
     this.#options.onConsumed?.(seq, gen.g);
     if (isTerminal(event)) {
       const messages = gen.client?.getMessages() ?? [];
@@ -890,7 +911,7 @@ export class ThreadSession {
       error: null,
       notFound: false,
       older: "idle",
-      cancelling: gen.store!.state.runs.active != null && state.cancelling,
+      cancelling: false,
     }));
     gen.ready.resolve();
     if (old != null && old !== gen) this.#teardown(old);
@@ -993,6 +1014,9 @@ export class ThreadSession {
     return {
       ai: this.#ai,
       threadId: this.threadId,
+      onDefinitiveError: (error) => {
+        if (isNotFound(error)) this.#host({ notFound: true });
+      },
       token: () => ({ gen: this.#gen, rev: this.#rev, retired: this.#retired }),
       outbox: () => this.hostStore.state.outbox,
       setOutbox: (update) =>

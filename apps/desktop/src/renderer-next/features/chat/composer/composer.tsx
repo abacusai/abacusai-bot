@@ -63,6 +63,8 @@ import { ModeChip, ModelChip } from "./chips";
 import {
   clearDraft,
   draftStore,
+  draftRevision,
+  restoreDraft,
   EMPTY_DRAFT,
   updateDraft,
   type Draft,
@@ -371,12 +373,9 @@ export const ThreadComposer = () => {
       case "enqueue": {
         const saved = draft;
         clearDraft(threadId);
-        // Draft identity is its revision: typing and erasing still replaces it.
-        const cleared = draftStore.state[threadId];
+        const clearedRevision = draftRevision(threadId);
         runtime.queue.enqueue(threadId, route.text).catch(() => {
-          updateDraft(threadId, (current) =>
-            current === cleared ? saved : current
-          );
+          restoreDraft(threadId, clearedRevision, saved);
           setError(t("chat.composer.queueFailed"));
         });
         return;
@@ -384,12 +383,9 @@ export const ThreadComposer = () => {
       case "send": {
         const saved = draft;
         clearDraft(threadId);
-        // Draft identity is its revision: typing and erasing still replaces it.
-        const cleared = draftStore.state[threadId];
+        const clearedRevision = draftRevision(threadId);
         const restore = (message: string) => {
-          updateDraft(threadId, (current) =>
-            current === cleared ? saved : current
-          );
+          restoreDraft(threadId, clearedRevision, saved);
           setError(message);
         };
         session
@@ -398,9 +394,7 @@ export const ThreadComposer = () => {
             if (result.kind === "rejected")
               restore(t("chat.composer.rejected"));
             else if (result.kind === "stale")
-              updateDraft(threadId, (current) =>
-                current === cleared ? saved : current
-              );
+              restoreDraft(threadId, clearedRevision, saved);
             else config.onFirstSend?.(route.text);
           })
           .catch((thrown: unknown) => {

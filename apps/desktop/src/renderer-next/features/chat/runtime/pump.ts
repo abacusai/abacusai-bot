@@ -66,7 +66,7 @@ const defaultSleep = (ms: number, signal: AbortSignal): Promise<void> =>
     if (signal.aborted) finish();
   });
 
-type Handled = "continue" | "stop";
+type Handled = "continue" | "accepted" | "stop";
 
 export const runPump = async (options: PumpOptions): Promise<void> => {
   const {
@@ -100,7 +100,7 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
     if (seq == null || seq <= positions.receivedSeq) return "continue";
     positions.receivedSeq = seq;
     push(seq, event);
-    return "continue";
+    return "accepted";
   };
 
   const caughtUp = (): boolean => positions.receivedSeq >= positions.checkpoint;
@@ -148,11 +148,12 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
         { signal }
       );
       for await (const event of iterator) {
-        if (controlOf(event) == null && eventSeq(event) != null) {
+        const handled = accept(event);
+        if (handled === "stop") return;
+        if (handled === "accepted") {
           failures = 0;
           options.onLive?.();
         }
-        if (accept(event) === "stop") return;
       }
       throw new Error("chat: the subscription ended");
     } catch (error) {

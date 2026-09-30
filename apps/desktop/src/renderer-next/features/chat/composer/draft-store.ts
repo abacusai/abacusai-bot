@@ -61,17 +61,40 @@ draftStore.subscribe((state) => {
 
 export const EMPTY_DRAFT: Draft = { text: "", attachments: [] };
 
+// Kept independently of draft identity and content, including across clears.
+const revisions = new Map<string, number>();
+export const draftRevision = (threadId: string): number =>
+  revisions.get(threadId) ?? 0;
+const advance = (threadId: string): void => {
+  revisions.set(threadId, draftRevision(threadId) + 1);
+};
+
 export const updateDraft = (
   threadId: string,
   update: (draft: Draft) => Draft
-): void =>
+): void => {
+  advance(threadId);
   draftStore.setState((state) => ({
     ...state,
     [threadId]: update(state[threadId] ?? EMPTY_DRAFT),
   }));
+};
 
-export const clearDraft = (threadId: string, keep: Partial<Draft> = {}): void =>
+export const clearDraft = (
+  threadId: string,
+  keep: Partial<Draft> = {}
+): void => {
+  advance(threadId);
   draftStore.setState((state) => ({
     ...state,
     [threadId]: { ...EMPTY_DRAFT, ...keep },
   }));
+};
+
+export const restoreDraft = (
+  threadId: string,
+  revision: number,
+  saved: Draft
+): void => {
+  if (draftRevision(threadId) === revision) updateDraft(threadId, () => saved);
+};

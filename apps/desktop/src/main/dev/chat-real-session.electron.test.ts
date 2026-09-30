@@ -17,6 +17,43 @@ let stopRun = false;
 const THREAD = "chat-real-gate";
 let workspace = "";
 const session = `window.__abacusDev.chat.session(${JSON.stringify(THREAD)})`;
+// All mutations below enter through rendered controls. Session reads assert
+// the real host state without using its actions as a shortcut around the UI.
+const clickButton = async (
+  name: string,
+  scope = '[data-slot="composer"]'
+): Promise<void> => {
+  const expression = `(() => {
+    const button = [...document.querySelectorAll(${JSON.stringify(scope + " button")})]
+      .find(b => (b.getAttribute("aria-label") || b.textContent.trim()) === ${JSON.stringify(name)} && b.getBoundingClientRect().height > 0);
+    return button != null && !button.disabled;
+  })()`;
+  await app.until(expression, 15000, `enabled ${name} control`);
+  await app.evaluate(`(() => {
+    const button = [...document.querySelectorAll(${JSON.stringify(scope + " button")})]
+      .find(b => (b.getAttribute("aria-label") || b.textContent.trim()) === ${JSON.stringify(name)} && b.getBoundingClientRect().height > 0);
+    button.click();
+  })()`);
+};
+
+const submitText = async (text: string, action = "Send"): Promise<void> => {
+  await app.evaluate(
+    `document.querySelector('[data-slot="composer"] textarea').focus()`
+  );
+  await app.send("Input.insertText", { text });
+  expect(
+    await app.evaluate<string>(
+      `document.querySelector('[data-slot="composer"] textarea').value`
+    )
+  ).toBe(text);
+  await clickButton(action);
+  await app.until(
+    `document.querySelector('[data-slot="composer"] textarea').value === ""`,
+    15000,
+    "draft cleared by rendered submission"
+  );
+};
+
 beforeAll(async () => {
   if (!ready.runnable) return;
   ready.prepare();
@@ -181,10 +218,36 @@ describe.skipIf(!ready.runnable)("R2-T32 real session in Electron", () => {
     );
     await app.evaluate("window.__chatTransitionStarts = 0");
   }, 60000);
-  it("attachment-only admission, live bash output, approval, reload, busy steer and terminal", async () => {
-    await app.evaluate(
-      `${session}.submit(${JSON.stringify(`@${workspace}/a.txt`)})`
+  it("attachment-only admission, live bash output, approval, reload, busy submission and terminal", async () => {
+    await app.send("Page.setInterceptFileChooserDialog", { enabled: true });
+    await clickButton("Attach");
+    await app.until(
+      `[...document.querySelectorAll('[role="menuitem"]')].some(b => b.textContent.trim() === "Files or images")`
     );
+    await app.evaluate(
+      `[...document.querySelectorAll('[role="menuitem"]')].find(b => b.textContent.trim() === "Files or images").click()`
+    );
+    await app.until(`document.querySelector('input[type="file"]') != null`);
+    const { root } = await app.send("DOM.getDocument");
+    const { nodeId } = await app.send("DOM.querySelector", {
+      nodeId: root.nodeId,
+      selector: 'input[type="file"]',
+    });
+    await app.send("DOM.setFileInputFiles", {
+      nodeId,
+      files: [join(workspace, "a.txt")],
+    });
+    await app.until(
+      `document.querySelector('[data-slot="composer"]').textContent.includes("a.txt")`,
+      15000,
+      "selected attachment chip"
+    );
+    expect(
+      await app.evaluate<string>(
+        `document.querySelector('[data-slot="composer"] textarea').value`
+      )
+    ).toBe("");
+    await clickButton("Send");
     await app.until(
       `${session}.store.state.permissions.items.length === 1`,
       45000,
@@ -194,9 +257,7 @@ describe.skipIf(!ready.runnable)("R2-T32 real session in Electron", () => {
       `${session}.store.state.permissions.items[0].metadata.abacus.request.type`
     );
     if (type === "run_terminal") {
-      await app.evaluate(
-        `${session}.respondPermission(${session}.store.state.permissions.items[0], "accept")`
-      );
+      await clickButton("Allow once", '[data-slot="permission-card"]');
       await app.until(
         `${session}.store.state.permissions.items.some(p => p.metadata.abacus.request.type === "edit_file")`,
         30000,
@@ -213,9 +274,7 @@ describe.skipIf(!ready.runnable)("R2-T32 real session in Electron", () => {
     expect(await app.evaluate<string>("document.body.textContent")).toContain(
       "live output"
     );
-    await app.evaluate(
-      `${session}.respondPermission(${session}.store.state.permissions.items[0], "accept")`
-    );
+    await clickButton("Allow once", '[data-slot="permission-card"]');
     await app.until(
       `${session}.store.state.permissions.items.length === 0`,
       15000,
@@ -231,7 +290,12 @@ describe.skipIf(!ready.runnable)("R2-T32 real session in Electron", () => {
       30000,
       "reload resumed active run"
     );
-    await app.evaluate(`${session}.enqueue("Please check the final result.")`);
+    await submitText("Please check the final result.", "Add to the queue");
+    await app.until(
+      `${session}.store.state.queue.some(entry => entry.message === "Please check the final result.")`,
+      15000,
+      "busy draft routed to the host queue"
+    );
     expect(release).toBeTypeOf("function");
     release!();
     await app.until(
@@ -249,12 +313,12 @@ describe.skipIf(!ready.runnable)("R2-T32 real session in Electron", () => {
   }, 90000);
   it("Stop ends a real streaming run with Stopped", async () => {
     stopRun = true;
-    await app.evaluate(`${session}.submit("Wait until I stop you.")`);
+    await submitText("Wait until I stop you.");
     await app.until(
       "document.body.textContent.includes('Waiting for Stop.')",
       30000
     );
-    await app.evaluate(`${session}.cancel()`);
+    await clickButton("Stop");
     await app.until(`${session}.store.state.runs.active == null`, 30000);
     expect(await app.evaluate<string>("document.body.textContent")).toContain(
       "Stopped"
