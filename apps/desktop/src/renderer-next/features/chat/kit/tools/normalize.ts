@@ -8,6 +8,8 @@
  */
 import type { ToolCallPart, ToolResultPart } from "@tanstack/ai-client";
 
+import { expandToolResultData } from "#shared/transcript/v1-to-ui-messages";
+
 import type { ToolDisplayData } from "../../store/thread-store";
 
 export type ToolStatus =
@@ -188,8 +190,10 @@ const normalizeMigrated = (
   input: Loose,
   context: NormalizeContext
 ): NormalizedTool => {
+  // C.3 r1 fixes: migrated calls carry no `input`/`output`; the legacy
+  // `ToolResultData` is read through `expandToolResultData`.
   const text = typeof call.output === "string" ? call.output : resultText(result);
-  const data = asRecord(asRecord(asRecord(result?.metadata)?.abacus)?.data);
+  const data = result == null ? undefined : expandToolResultData(result);
   const status = statusOf(call, result, undefined, { ...context, runActive: false });
   const base: NormalizedTool = {
     status: result == null ? "stopped" : status,

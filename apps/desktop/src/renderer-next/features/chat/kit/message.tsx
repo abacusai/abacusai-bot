@@ -18,6 +18,13 @@ import { Button } from "#next/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "#next/ui/collapsible";
 import { Marker, MarkerContent, MarkerIcon } from "#next/ui/marker";
 
+import {
+  isRoutineFire,
+  stripAttachmentRefs,
+  visibleUserText,
+  type AttachmentRef,
+} from "#shared/transcript/user-text";
+
 import { Markdown } from "../markdown/markdown";
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
@@ -110,9 +117,32 @@ const PendingState = ({ message }: { message: UIMessage }) => {
   );
 };
 
+interface UserTextMeta {
+  routineFire?: true;
+  attachments?: AttachmentRef[];
+}
+
+/**
+ * What the bubble shows (C.3 r1 fixes, `shared/transcript/user-text.ts`):
+ * system reminders stripped, a routine-fire envelope hidden, attachments as
+ * chips (migrated messages carry them as `userText.attachments`; live ones
+ * as trailing `@/abs/path` lines).
+ */
+export const userView = (message: UIMessage): { hidden: boolean; body: string; paths: string[] } => {
+  const raw = textOf(message);
+  const tags = (message.metadata as { abacus?: { userText?: UserTextMeta } } | undefined)?.abacus?.userText;
+  if (tags?.routineFire === true || isRoutineFire(raw)) return { hidden: true, body: "", paths: [] };
+  const visible = visibleUserText(raw);
+  if (tags?.attachments != null)
+    return { hidden: false, body: stripAttachmentRefs(visible), paths: tags.attachments.map((ref) => ref.path) };
+  const { body, paths } = splitAttachments(visible);
+  return { hidden: false, body, paths };
+};
+
 const UserMessage = ({ message, tint }: { message: UIMessage; tint: boolean }) => {
   const { workspaceRoot } = useChatView();
-  const { body, paths } = splitAttachments(textOf(message));
+  const { hidden, body, paths } = userView(message);
+  if (hidden) return null;
   return (
     <div className="flex flex-col items-end gap-1.5" data-role="user">
       {body !== "" ? (
