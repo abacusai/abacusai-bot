@@ -54,6 +54,26 @@ export const resolveNeedsOnboarding = ({
   return !onboarded || !hasAbacusCredential;
 };
 
+/**
+ * Whether the flow on screen is first-run onboarding, and when it ends. The
+ * wall alone is not onboarding: an account already through first-run signing
+ * back in has no screens left, and must not be handed another Chief of Staff.
+ * The flag only sets while the flow shows, never clears on a store change:
+ * the flow marks the account onboarded on its last step, before the flow
+ * itself comes down.
+ */
+export const trackFirstRun = (
+  sawFirstRun: boolean,
+  needsOnboarding: boolean | null,
+  onboarded: boolean
+): { sawFirstRun: boolean; ended: boolean } => {
+  if (needsOnboarding === true)
+    return { sawFirstRun: sawFirstRun || !onboarded, ended: false };
+  if (needsOnboarding === false && sawFirstRun)
+    return { sawFirstRun: false, ended: true };
+  return { sawFirstRun, ended: false };
+};
+
 /** Root shell for route content and app-lifetime Electron event bridges. */
 function App(): React.JSX.Element {
   const { theme } = useTheme();
@@ -99,12 +119,13 @@ function App(): React.JSX.Element {
   const [firstBotArmed, setFirstBotArmed] = useState(false);
   const disarmFirstBot = useCallback(() => setFirstBotArmed(false), []);
   useEffect(() => {
-    // The wall alone is not onboarding: an account already through first-run
-    // signing back in has no screens left, and was handed a new Chief of
-    // Staff on every sign-in.
-    if (needsOnboarding === true) wasOnboarding.current = !onboarded;
-    else if (needsOnboarding === false && wasOnboarding.current) {
-      wasOnboarding.current = false;
+    const next = trackFirstRun(
+      wasOnboarding.current,
+      needsOnboarding,
+      onboarded
+    );
+    wasOnboarding.current = next.sawFirstRun;
+    if (next.ended) {
       setFirstBotArmed(true);
       void navigate({ to: "/", search: defaultWorkspaceSearch });
     }
