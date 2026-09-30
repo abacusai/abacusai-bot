@@ -58,6 +58,8 @@ const withSessions = () => {
       initial: object
     ) => sessions.create(workspaceId, routineId, owner, null, id, initial),
     startAgentSession: start,
+    // Not a bot session: nothing to re-pin.
+    applyEffectiveBotModel: async () => undefined,
   });
   return { sessions, start, client };
 };
@@ -110,7 +112,7 @@ describe("sessions insert, start and model (R4-T33)", () => {
     let answer: "changed" | "refused" = "refused";
     const client = connect({
       setAgentModelChecked: (request: { sessionId: string; model: string }) =>
-        waiters.wait(request.sessionId, () => {
+        waiters.wait(request.sessionId, request.model, () => {
           sent.push(request.model);
           // The agent answers on its stream, after the command.
           queueMicrotask(() =>
@@ -151,8 +153,10 @@ describe("sessions insert, start and model (R4-T33)", () => {
     vi.useFakeTimers();
     try {
       const waiters = new ModelSwitchWaiters();
-      await expect(waiters.wait("s", () => false)).resolves.toBeUndefined();
-      const silent = waiters.wait("s", () => true, 1_000);
+      await expect(
+        waiters.wait("s", "a/a", () => false)
+      ).resolves.toBeUndefined();
+      const silent = waiters.wait("s", "a/a", () => true, 1_000);
       vi.advanceTimersByTime(1_000);
       await expect(silent).resolves.toBeUndefined();
       expect(waiters.pending).toBe(0);

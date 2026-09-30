@@ -7,9 +7,20 @@ export const agentRouter = impl.agent.router({
     context.deps.serviceHost.submitTurnFeedback(input)
   ),
   // Without overrides, the row's model and mode (spec 04 §26.4 d): the
-  // legacy IPC start keeps its own defaults.
-  start: impl.agent.start.handler(({ input, context }) => {
+  // legacy IPC start keeps its own defaults. A bot session's row first takes
+  // its bot's effective model (spec 03 §24.10 b), as the relay's start does:
+  // a remembered pin can name an obsolete default or a model whose
+  // credential is gone. A failed resolution leaves the stored pin.
+  start: impl.agent.start.handler(async ({ input, context }) => {
     const { serviceHost } = context.deps;
+    if (input.model == null)
+      await serviceHost
+        .applyEffectiveBotModel(input.sessionId)
+        .catch((error: unknown) => {
+          console.warn(
+            `[bots] pinning ${input.sessionId} failed: ${String(error)}`
+          );
+        });
     const session = serviceHost
       .listAllAgentSessions()
       .find((entry) => entry.id === input.sessionId);
