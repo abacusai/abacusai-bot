@@ -2,7 +2,7 @@
 
 Sources: `00-agent-agui.impl-codex-r1.md` (Codex, 15 items) and `00-agent-agui.impl-claude-r1.md` (Claude, 21 items), against spec `00-agent-agui.md` rev 3. The lists overlap; each defect is fixed once. Every finding is fixed except three: Codex #9 is out of this slice's scope (main slice), Claude #13 and #14 are main-side by nature and are specified for the main slice, and the cast half of Codex #15 / Claude #21 is answered with a verified assertion instead of a removal. Where a fix differs from the review's proposal, the Fix log says why.
 
-Commits (on `rewrite/renderer`):
+Commits (on top of `rewrite/renderer` at `ac3ab1ea`):
 
 | Commit | What |
 |---|---|
@@ -63,6 +63,6 @@ Commits (on `rewrite/renderer`):
 ## Verification
 
 - `cd packages/agent && tsc -b && tsc -p tsconfig.test.json`: clean.
-- `env -u ABACUS_API_KEY -u ROUTELLM_API_KEY vitest run` (after `tsdown`, with `packages/connectors` built): 122 files, 2001 tests: 1995 pass, 5 skipped, and `symbols.invariants.test.ts` "finds every exported declaration" timed out once under the full run's load (8.3 s against its 5 s default; it indexes the whole repository) and passes alone in 2.5 s. The AG-UI suites alone: `src/agui` 17 files pass.
+- `env -u ABACUS_API_KEY -u ROUTELLM_API_KEY vitest run` (after `tsdown`, with `packages/connectors` built): 122 files, 2001 tests: 1995 pass, 5 skipped, and `symbols.invariants.test.ts` "finds every exported declaration" timed out once under the full run's load (8.3 s against its 5 s default; it indexes the whole repository) and passes alone in 2.5 s. The AG-UI suites alone: `src/agui` 13 files, 171 tests pass.
 - `tsdown && node scripts/write-runtime-package.js`, then `apps/desktop`: `vitest run --project shared --project main src/shared/protocol-mirror.test.ts src/main/agent-runtime-deps.test.ts src/main/services/session`: 10 files, 109 tests pass.
 - `oxlint .` (no errors; the warnings are pre-existing in `apps/desktop`), `oxfmt --check .`: clean.
