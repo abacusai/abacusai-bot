@@ -17,5 +17,9 @@ export const getTransport = (): Promise<Transport> => {
   return store[GLOBAL_KEY];
 };
 
+// The factory itself, for tests that build a transport over their own port
+// (the Electron handshake test, spec 00 A-T12).
+export { createTransport } from "./create-transport";
+export type { CreateTransportOptions, TransportPort } from "./create-transport";
 export type { CloseReason } from "./close-signal";
 export type { AppClient, AppQueryUtils, Transport } from "./types";
