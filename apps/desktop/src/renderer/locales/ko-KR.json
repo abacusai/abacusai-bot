@@ -2508,7 +2508,8 @@
         "memory": "Memory",
         "details": "Details",
         "agent": "Agent"
-      }
+      },
+      "openExternalBrowser": "Open in external browser"
     },
     "sidebar": {
       "loadError": "Couldn't load",
