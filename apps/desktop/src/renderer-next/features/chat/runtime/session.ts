@@ -105,7 +105,7 @@ interface Generation {
   readonly g: number;
   readonly abort: AbortController;
   readonly ready: Deferred<void>;
-  readonly positions: { checkpoint: number; receivedSeq: number };
+  positions: { checkpoint: number; receivedSeq: number; epoch: string | null };
   appliedSeq: number;
   client: ChatClient | null;
   store: Store<ThreadStoreState> | null;
@@ -173,6 +173,8 @@ export class ThreadSession {
   #timers = new Set<ReturnType<typeof setTimeout>>();
   #pins = 0;
   readonly #admission: AdmissionHost;
+  /** Message ids confirmed by `abacus.duplicate_echo` (§14.12). */
+  readonly #echoed = new Set<string>();
 
   constructor(options: ThreadSessionOptions) {
     this.threadId = options.threadId;
@@ -202,6 +204,25 @@ export class ThreadSession {
   /** The store of the generation on screen. */
   get store(): Store<ThreadStoreState> {
     return this.hostStore.state.store;
+  }
+
+  /** The generation in construction or on screen, for tests and devtools. */
+  positions(): {
+    gen: number;
+    checkpoint: number;
+    receivedSeq: number;
+    appliedSeq: number;
+    reconstructed: boolean;
+  } | null {
+    const gen = this.#pending ?? this.#live;
+    if (gen == null) return null;
+    return {
+      gen: gen.g,
+      checkpoint: gen.positions.checkpoint,
+      receivedSeq: gen.positions.receivedSeq,
+      appliedSeq: gen.appliedSeq,
+      reconstructed: gen.appliedSeq >= gen.positions.checkpoint,
+    };
   }
 
   get pinned(): boolean {
@@ -465,8 +486,15 @@ export class ThreadSession {
         limit: PAGE_SIZE,
         before: cursor,
       });
-    } catch {
-      if (unchanged()) this.#host({ older: "error" });
+    } catch (error) {
+      if (!unchanged()) return;
+      if (isNotFound(error)) {
+        // The cursor is gone (a clear): stop paging, rebuild (§14.12).
+        this.#host({ older: "idle", hasOlderMessages: false, olderCursor: null });
+        this.#start();
+        return;
+      }
+      this.#host({ older: "error" });
       return;
     }
     // A recovery or a reset happened meanwhile: discard (review r2-7).
@@ -524,7 +552,7 @@ export class ThreadSession {
       g,
       abort: new AbortController(),
       ready: deferred<void>(),
-      positions: { checkpoint: 0, receivedSeq: 0 },
+      positions: { checkpoint: 0, receivedSeq: 0, epoch: null },
       appliedSeq: 0,
       client: null,
       store: null,
@@ -565,8 +593,11 @@ export class ThreadSession {
     if (gen.g !== this.#gen || this.#retired) return;
     const abacus = snapshot.abacus;
     const active = abacus.activeRun;
-    gen.positions.checkpoint = abacus.cursor;
-    gen.positions.receivedSeq = active != null ? active.startSeq - 1 : abacus.cursor;
+    gen.positions = {
+      checkpoint: abacus.cursor,
+      receivedSeq: active != null ? active.startSeq - 1 : abacus.cursor,
+      epoch: abacus.epoch ?? null,
+    };
     gen.appliedSeq = gen.positions.receivedSeq;
     const store = createThreadStore(stateFromSnapshot(abacus));
     gen.store = store;
@@ -604,20 +635,24 @@ export class ThreadSession {
           throw new Error("chat: send is not used");
         },
       },
-      onMessagesChange: guard((messages) =>
+      onMessagesChange: guard((messages: UIMessage[]) =>
         this.#fields(gen, {
           messages,
           subagents: gen.client?.getSubagents() ?? [],
         })
       ),
-      onStatusChange: guard((status) => this.#fields(gen, { status })),
-      onSessionGeneratingChange: guard((sessionGenerating) =>
+      onStatusChange: guard((status: ChatClientState) =>
+        this.#fields(gen, { status })
+      ),
+      onSessionGeneratingChange: guard((sessionGenerating: boolean) =>
         this.#fields(gen, {
           sessionGenerating:
             sessionGenerating || gen.store?.state.runs.active != null,
         })
       ),
-      onError: guard((error) => this.#options.log?.("chat: client error", error)),
+      onError: guard((error: Error) =>
+        this.#options.log?.("chat: client error", error)
+      ),
     });
     gen.client = client;
     this.#options.onClient?.(client, gen.g);
@@ -664,6 +699,19 @@ export class ThreadSession {
       this.#fields(gen, { sessionGenerating: false });
     } else if (event.type === "RUN_STARTED") {
       this.#fields(gen, { sessionGenerating: true });
+    }
+    if (customName(event) === "abacus.duplicate_echo") {
+      // A retry's echo main dropped (§14.12): the entry stops waiting.
+      const messageId = (event as { value?: { messageId?: unknown } }).value
+        ?.messageId;
+      if (typeof messageId === "string") {
+        this.#echoed.add(messageId);
+        this.#host({
+          outbox: this.hostStore.state.outbox.filter(
+            (entry) => entry.id !== messageId
+          ),
+        });
+      }
     }
     if (
       customName(event) === "session.cleared" &&
@@ -813,6 +861,7 @@ export class ThreadSession {
         outbox: update(state.outbox),
       })),
     echoed: (messageId) =>
+      this.#echoed.has(messageId) ||
       (this.#live?.client?.getMessages() ?? []).some(
         (message) => message.id === messageId
       ),
