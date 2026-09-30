@@ -120,7 +120,6 @@ import {
   setActiveRendererHost,
 } from "./renderer-host";
 import { agentEntry, resourcePath, resourcesRoot } from "./resources";
-import { UnavailableAguiSource } from "./rpc/ai/source";
 import type { AppOperations, RpcDeps } from "./rpc/deps";
 import { emitBusChannel } from "./rpc/emit";
 import { mainEventBus } from "./rpc/event-bus";
@@ -1636,7 +1635,7 @@ function installRpc(
       sources: workspaceServiceHost,
       prefsStore,
     }),
-    ai: new UnavailableAguiSource(),
+    ai: workspaceServiceHost.aguiRelay,
     threads: workspaceServiceHost.threadStore,
     trackers: createEventTrackers(mainEventBus),
   };

@@ -40,7 +40,6 @@ vi.mock("electron", () => {
 
 import { v1ToThreadFile } from "#shared/transcript/thread-file";
 
-import type { AguiSource } from "../../rpc/ai/source";
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import { ThreadStore } from "./thread-store";
 import { TranscriptService } from "./transcript-service";
@@ -188,10 +187,6 @@ describe("C-T7 thread store", () => {
 });
 
 describe("C-T7 through ServiceHost", () => {
-  const liveAi = {
-    liveState: () => ({ activeRun: null, interrupts: [] }),
-  } as unknown as AguiSource;
-
   /** The real ServiceHost, with the collaborators the paths call faked. */
   const makeHost = async () => {
     const { ServiceHost } = await import("../../service-host");
@@ -243,7 +238,8 @@ describe("C-T7 through ServiceHost", () => {
           resetAgentConversation: (request: never) =>
             host.resetAgentConversation(request),
         },
-        ai: liveAi,
+        // The real relay: hydrate reads the thread store through it.
+        ai: host.aguiRelay,
         threads: host.threadStore,
       })
     );

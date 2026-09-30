@@ -131,7 +131,24 @@ type AgentManagerServiceOptions = {
   emitAgui?: (
     workspaceId: string,
     sessionId: string,
-    event: Record<string, unknown>
+    event: Record<string, unknown>,
+    origin: NdjsonOrigin
+  ) => void;
+  /**
+   * An agui runtime's process closed, after its last stdout line was
+   * delivered. The relay synthesizes the open run's terminal when the agent
+   * wrote none (a signal exit writes no last words, agent spec §3.8).
+   */
+  emitAguiExit?: (
+    workspaceId: string,
+    sessionId: string,
+    exit: {
+      origin: NdjsonOrigin;
+      code: number | null;
+      signal: NodeJS.Signals | null;
+      /** Main asked it to stop (Stop session, app quit). */
+      requested: boolean;
+    }
   ) => void;
   emitSystemReady: (workspaceId: string, sessionId: string) => void;
   emitSessionClosed: (workspaceId: string, sessionId: string) => void;
@@ -428,6 +445,22 @@ export class AgentManagerService {
    */
   getSessionMode(sessionId: string): AgentMode | null {
     return this.runtimes.get(sessionId)?.state.mode ?? null;
+  }
+
+  /** The live runtime behind a session: its workspace, wire and status. */
+  getRuntimeInfo(sessionId: string): {
+    workspaceId: string;
+    wire: AgentWire;
+    status: AgentSessionStatus;
+  } | null {
+    const runtime = this.runtimes.get(sessionId);
+    return runtime == null
+      ? null
+      : {
+          workspaceId: runtime.workspaceId,
+          wire: runtime.wire,
+          status: runtime.state.status,
+        };
   }
 
   getSessionState(
@@ -759,6 +792,15 @@ export class AgentManagerService {
 
     child.on("close", (code, signal) => {
       resolveStartup();
+      if (wire === "agui") {
+        // Before the ownership check: the relay tells runtimes apart itself.
+        this.options.emitAguiExit?.(request.workspaceId, request.sessionId, {
+          origin: { wire, runtime: child },
+          code,
+          signal,
+          requested: runtime.state.status === "stopping",
+        });
+      }
       const current = this.runtimes.get(request.sessionId);
       // A replacement session's entry belongs to its own close handler.
       if (current == null || current.process !== child) {
@@ -1021,7 +1063,10 @@ export class AgentManagerService {
             ? compat
             : "none";
       }
-      this.options.emitAgui?.(runtime.workspaceId, runtime.sessionId, event);
+      this.options.emitAgui?.(runtime.workspaceId, runtime.sessionId, event, {
+        wire: runtime.wire,
+        runtime: runtime.process,
+      });
     }
   }
 

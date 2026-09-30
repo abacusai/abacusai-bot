@@ -99,14 +99,14 @@ handler stays until the cut-over).
 | 85 | `stopAgentTurn` | preload/bridge.ts:552 | `ai.cancel` | M | ends the run with RUN_FINISHED{outcome:cancelled} |
 | 86 | `resetAgentConversation` | preload/bridge.ts:554 | `agent.reset` | M |  |
 | 87 | `switchAgentConversation` | preload/bridge.ts:559 | `agent.switchConversation` | M |  |
-| 88 | `respondAgentPermission` | preload/bridge.ts:564 | `agent.respondPermission` | M | approval becomes an ai.send resume entry; this alias stays until the chat kit lands |
+| 88 | `respondAgentPermission` | preload/bridge.ts:564 | `agent.respondPermission` | M | old renderer only (no lineage); the new renderer answers with ai.respondPermission |
 | 89 | `listAgentSkills` | preload/bridge.ts:569 | `agent.skills` | Q | skills-loaded arrives as CUSTOM skills.loaded |
-| 90 | `enqueueAgentMessage` | preload/bridge.ts:571 | `agent.queue.enqueue` | M | queue state via CUSTOM queue.* on ai.subscribe |
+| 90 | `enqueueAgentMessage` | preload/bridge.ts:571 | `agent.queue.enqueue` | M | old renderer; the new renderer uses ai.queue.enqueue, state via CUSTOM queue.updated |
 | 91 | `dequeueAgentMessage` | preload/bridge.ts:576 | `agent.queue.dequeue` | M |  |
 | 92 | `getAgentQueue` | preload/bridge.ts:581 | `agent.queue.get` | Q |  |
 | 93 | `clearAgentQueue` | preload/bridge.ts:583 | `agent.queue.clear` | M |  |
-| 94 | `removeAgentQueueMessage` | preload/bridge.ts:585 | `agent.queue.remove` | M |  |
-| 95 | `updateAgentQueueMessage` | preload/bridge.ts:590 | `agent.queue.update` | M |  |
+| 94 | `removeAgentQueueMessage` | preload/bridge.ts:585 | `agent.queue.remove` | M | by index, old renderer; ai.queue.remove takes incarnation + entry id |
+| 95 | `updateAgentQueueMessage` | preload/bridge.ts:590 | `agent.queue.update` | M | by index, old renderer; ai.queue.update takes incarnation + entry id |
 | 96 | `renameLocalFile` | preload/bridge.ts:595 | `files.rename` | M |  |
 | 97 | `trashLocalFile` | preload/bridge.ts:601 | `files.trash` | M |  |
 | 98 | `saveResolvedConflict` | preload/bridge.ts:606 | — | R | no renderer caller |
@@ -174,8 +174,8 @@ handler stays until the cut-over).
 | 160 | `listBotMemories` | preload/bridge.ts:915 | `db.memories.snapshot` | T | scope bot; memory.bots keeps BotMemoryView (noteDays, empty bots) |
 | 161 | `forgetBotMemory` | preload/bridge.ts:919 | `db.memories.delete` | T |  |
 | 162 | `clearBotMemory` | preload/bridge.ts:923 | `memory.clearBot` | M | echoes memories deletes |
-| 163 | `readTranscript` | preload/bridge.ts:927 | `ai.hydrate` | Q | returns ChatHydrationResult (UIMessage[]) from v2 thread files |
-| 164 | `writeTranscript` | preload/bridge.ts:931 | — | R | main persists from the AG-UI stream (withPersistence); the legacy path dual-writes v2 until cut-over |
+| 163 | `readTranscript` | preload/bridge.ts:927 | `ai.hydrate` | Q | ChatHydrationResult + abacus snapshot, from the relay over the v2 thread files |
+| 164 | `writeTranscript` | preload/bridge.ts:931 | — | R | main persists agui thread files from the AG-UI stream at each terminal; the legacy path dual-writes v2 until cut-over |
 | 165 | `getDeviceStatus` | preload/bridge.ts:937 | `devices.status` | Q | live via devices.events |
 | 166 | `listLocalDevices` | preload/bridge.ts:939 | `devices.list` | Q |  |
 | 167 | `captureDeviceScreenshot` | preload/bridge.ts:943 | `devices.screenshot` | M |  |
@@ -328,7 +328,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (245)
+## Contract procedures (251)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -359,6 +359,12 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `ai.cancel` | mutation | `agent.stopAgentTurn` |
 | `ai.hydrate` | query | `agent.readTranscript` |
 | `ai.joinRun` | subscription |  |
+| `ai.queue.clear` | mutation |  |
+| `ai.queue.dequeue` | mutation |  |
+| `ai.queue.enqueue` | mutation |  |
+| `ai.queue.remove` | mutation |  |
+| `ai.queue.update` | mutation |  |
+| `ai.respondPermission` | mutation |  |
 | `ai.send` | mutation | `agent.sendAgentMessage` |
 | `ai.subscribe` | subscription |  |
 | `auth.abacus.browserProfiles` | query | `agent.listBrowserSignInProfiles` |
