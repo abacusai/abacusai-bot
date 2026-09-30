@@ -29,10 +29,20 @@ describe("renderer.dropPort", () => {
       runHarnessOp(
         fakeHost(),
         { op: "renderer.dropPort", input: {} },
-        { dropRendererPort }
+        { dropRendererPort, setFullScreen: vi.fn() }
       )
     ).resolves.toEqual({ webContentsId: 3 });
     expect(dropRendererPort).toHaveBeenCalledOnce();
+  });
+
+  it("window.fullScreen toggles the main window's full screen", async () => {
+    const setFullScreen = vi.fn(async (on: boolean) => ({ fullScreen: on }));
+    await runHarnessOp(
+      fakeHost(),
+      { op: "window.fullScreen", input: { on: true } },
+      { dropRendererPort: vi.fn(), setFullScreen }
+    );
+    expect(setFullScreen).toHaveBeenCalledWith(true);
   });
 });
 

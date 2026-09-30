@@ -44,13 +44,40 @@ export type HarnessOp =
       op: "sessions.remove";
       input: { workspaceId: string; sessionId: string };
     }
-  | { op: "renderer.dropPort"; input: Record<string, never> };
+  | { op: "renderer.dropPort"; input: Record<string, never> }
+  | { op: "window.fullScreen"; input: { on: boolean } }
+  | { op: "window.focus"; input: Record<string, never> };
 
 /** What the harness does outside the ServiceHost. */
 export interface HarnessExtras {
   /** Main closes renderer-next's active port; resolves with its id. */
   dropRendererPort(): Promise<unknown>;
+  /** The main window enters or leaves full screen (the screenshot probe). */
+  setFullScreen(on: boolean): Promise<unknown>;
+  /** Bring the app and its window to the front (the OS-level capture). */
+  focusWindow?(): Promise<unknown>;
 }
+
+const focusMainWindow = async (): Promise<unknown> => {
+  const electron = await import("electron");
+  electron.app.focus({ steal: true });
+  electron.BaseWindow.getAllWindows()[0]?.focus();
+  return { focused: true };
+};
+
+const setMainWindowFullScreen = async (on: boolean): Promise<unknown> => {
+  const electron = await import("electron");
+  const window = electron.BaseWindow.getAllWindows()[0];
+  if (window == null) throw new Error("no window");
+  window.setFullScreen(on);
+  return { fullScreen: on };
+};
+
+const DEFAULT_EXTRAS: HarnessExtras = {
+  dropRendererPort: () => dropRendererPortViaReconnect(),
+  setFullScreen: setMainWindowFullScreen,
+  focusWindow: focusMainWindow,
+};
 
 /**
  * The main side of a renderer reconnect (rpc/transports/message-port.ts):
@@ -90,7 +117,7 @@ const str = (record: Record<string, unknown>, key: string): string => {
 export const runHarnessOp = async (
   host: HarnessHost,
   line: unknown,
-  extras: HarnessExtras = { dropRendererPort: dropRendererPortViaReconnect }
+  extras: HarnessExtras = DEFAULT_EXTRAS
 ): Promise<unknown> => {
   if (!isRecord(line) || typeof line.op !== "string" || !isRecord(line.input))
     throw new Error("expected { op: string, input: object }");
@@ -120,6 +147,10 @@ export const runHarnessOp = async (
       );
     case "renderer.dropPort":
       return extras.dropRendererPort();
+    case "window.fullScreen":
+      return extras.setFullScreen(input.on === true);
+    case "window.focus":
+      return (extras.focusWindow ?? focusMainWindow)();
     default:
       throw new Error(`unknown op ${line.op}`);
   }
