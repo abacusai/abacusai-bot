@@ -129,6 +129,7 @@ describe("migrating a legacy home", () => {
       kind: "transcript-v1",
       updatedAt: "2026-09-01T10:00:00.000Z",
       segments: 2,
+      fingerprint: expect.any(String),
     });
     expect(
       thread?.messages.map((message) => [
