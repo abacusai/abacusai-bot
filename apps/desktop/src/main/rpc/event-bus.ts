@@ -1,4 +1,4 @@
-import type { SystemEvent, WindowState } from "#shared/contract";
+import type { SystemEvent, WindowEvent } from "#shared/contract";
 import type { DeviceStreamChunk, IpcEvent } from "#shared/contracts";
 import type { UpdateStatus } from "#shared/update";
 
@@ -7,7 +7,7 @@ export interface BusChannels {
   update: UpdateStatus;
   system: SystemEvent;
   /** Scoped to one window by its webContents id. */
-  window: { webContentsId: number; state: WindowState };
+  window: { webContentsId: number; event: WindowEvent };
   "device-chunk": DeviceStreamChunk;
   /** A memory file changed (published by sub-slice B's watchers). */
   memory: { type: "changed" };

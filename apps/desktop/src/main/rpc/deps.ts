@@ -7,7 +7,7 @@
  * named operation the legacy IPC handler calls, map the result.
  */
 import type { AccountState } from "#shared/account";
-import type { WindowState } from "#shared/contract";
+import type { WindowChromeState, WindowState } from "#shared/contract";
 import type {
   BrowserRuntimeLease,
   DeviceBuildPhase,
@@ -129,6 +129,8 @@ export interface RpcWindows {
   /** The webContents behind an id, for pushes that go to one window. */
   contents(webContentsId: number): Electron.WebContents | null;
   state(webContentsId: number): WindowState | null;
+  /** The native chrome state `window:chrome` serves the legacy renderer. */
+  chrome(webContentsId: number): WindowChromeState | null;
   reportReady(webContentsId: number, report: ReadinessReport): void;
 }
 

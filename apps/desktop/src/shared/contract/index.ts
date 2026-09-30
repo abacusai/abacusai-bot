@@ -91,6 +91,7 @@ export type {
 } from "./system";
 export type { TerminalEvent, TerminalOutputChunk } from "./terminal";
 export type { WhisperFile } from "./voice";
-export type { WindowEvent, WindowState } from "./window";
+export type { WindowChromeState, WindowEvent, WindowState } from "./window";
 export type * from "./rows";
+export { SUPPORTED_LANGUAGES } from "./rows";
 export type * from "./agui";

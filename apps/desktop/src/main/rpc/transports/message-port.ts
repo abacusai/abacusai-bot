@@ -62,8 +62,11 @@ const trackPort = (port: MessagePortMain): TrackedPort => {
   return {
     port,
     peer: {
+      // Electron refuses an explicit `undefined` transfer list.
       postMessage: (message: unknown, transfer?: MessagePortMain[]) =>
-        port.postMessage(message, transfer),
+        transfer == null
+          ? port.postMessage(message)
+          : port.postMessage(message, transfer),
       on: (event, listener) => {
         if (event === "close") closeListeners.push(() => listener());
         else port.on("message", listener);

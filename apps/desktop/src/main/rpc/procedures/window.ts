@@ -14,6 +14,11 @@ export const windowRouter = impl.window.router({
     if (state == null) throw forbidden("The calling window is gone");
     return state;
   }),
+  chrome: impl.window.chrome.handler(({ context }) => {
+    const chrome = context.deps.windows.chrome(requireWindow(context));
+    if (chrome == null) throw forbidden("The calling window is gone");
+    return chrome;
+  }),
   events: impl.window.events.handler(({ context, signal }) => {
     const webContentsId = requireWindow(context);
     return stream<WindowEvent>({
@@ -21,14 +26,17 @@ export const windowRouter = impl.window.router({
       context,
       signal,
       attach: onChannel(context, "window", (payload) =>
-        payload.webContentsId === webContentsId
-          ? { type: "state" as const, state: payload.state }
-          : null
+        payload.webContentsId === webContentsId ? payload.event : null
       ),
       initial: () => {
         const state = context.deps.windows.state(webContentsId);
-        return state == null ? [] : [{ type: "state" as const, state }];
+        const chrome = context.deps.windows.chrome(webContentsId);
+        return [
+          ...(state == null ? [] : [{ type: "state" as const, state }]),
+          ...(chrome == null ? [] : [{ type: "chrome" as const, chrome }]),
+        ];
       },
+      // Each is a full state: the latest of each kind is all that matters.
       coalesceKey: (event) => event.type,
     });
   }),

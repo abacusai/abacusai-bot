@@ -324,7 +324,7 @@ handler stays until the cut-over).
 | `window:full-screen-changed` | window.events { type: "state", state } | only the window the port belongs to |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (244)
+## Contract procedures (245)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -564,6 +564,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `voice.whisper.fetch` | mutation | `agent.fetchWhisperFile` |
 | `voice.whisper.progress` | subscription |  |
 | `window.activity` | mutation | `reportUiActivity` |
+| `window.chrome` | query |  |
 | `window.events` | subscription | `onFullScreenChange` |
 | `window.ready` | mutation | `signalRendererReady` |
 | `window.showAbout` | mutation | `showAboutPanel` |
