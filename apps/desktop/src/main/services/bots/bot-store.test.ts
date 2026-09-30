@@ -2,7 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   botDir,
@@ -134,5 +134,27 @@ describe("removing a bot", () => {
     expect(listBots()).toEqual([]);
     expect(fs.existsSync(botDir(bot.id))).toBe(false);
     expect(() => removeBot(bot.id)).toThrow();
+  });
+});
+
+describe("minted ids", () => {
+  it("never reuse a caller's id that looks minted, with a frozen clock", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-30T12:00:00.000Z"));
+    try {
+      const first = createBot({ name: "One", description: "x" });
+      const [, now, count] = /^bot-(\d+)-(\d+)$/.exec(first.id)!;
+      // A caller (an optimistic insert) takes the next minted id.
+      createBot(
+        { name: "Two", description: "y" },
+        `bot-${now}-${Number(count) + 1}`
+      );
+      const third = createBot({ name: "Three", description: "z" });
+      const ids = listBots().map((bot) => bot.id);
+      expect(new Set(ids).size).toBe(3);
+      expect(ids).toContain(third.id);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

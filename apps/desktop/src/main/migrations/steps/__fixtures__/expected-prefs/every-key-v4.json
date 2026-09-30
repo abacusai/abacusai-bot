@@ -4,17 +4,23 @@
       "browserHomepage": "legacy",
       "creditsExhaustedAt": "legacy",
       "defaultMode": "legacy",
-      "dismissals": "legacy",
+      "dismissals.referralCardUntil": "legacy",
+      "dismissals.upsell": "legacy",
       "language": "legacy",
       "lastPickedWorkspaceId": "legacy",
-      "models": "legacy",
-      "motion": "default",
+      "models.favoriteModelIds": "legacy",
+      "models.perWorkspace": "legacy",
+      "models.selectedModelId": "legacy",
+      "motion.reduce": "default",
       "onboardingStep": "legacy",
       "panes": "default",
-      "pinned": "legacy",
+      "pinned.botIds": "legacy",
+      "pinned.sessionIds": "legacy",
       "recentFolders": "legacy",
-      "sidebar": "legacy",
-      "sounds": "default",
+      "sidebar.openSection": "legacy",
+      "sidebar.pinned": "legacy",
+      "sounds.enabled": "default",
+      "sounds.perEvent": "default",
       "theme": "legacy",
       "workspaceExpanded": "legacy"
     },
@@ -30,7 +36,10 @@
       "language": "de-DE",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
-        "favoriteModelIds": ["abacus/route-llm-code", "gpt-5"],
+        "favoriteModelIds": [
+          "abacus/route-llm-code",
+          "gpt-5"
+        ],
         "perWorkspace": {
           "ws-1": "gpt-5"
         },
@@ -42,10 +51,18 @@
       "onboardingStep": "connect-whatsapp",
       "panes": {},
       "pinned": {
-        "botIds": ["bot-a"],
-        "sessionIds": ["s-1", "s-2"]
+        "botIds": [
+          "bot-a"
+        ],
+        "sessionIds": [
+          "s-1",
+          "s-2"
+        ]
       },
-      "recentFolders": ["/Users/fixture/project", "/Users/fixture/other"],
+      "recentFolders": [
+        "/Users/fixture/project",
+        "/Users/fixture/other"
+      ],
       "sidebar": {
         "openSection": "routines",
         "pinned": false

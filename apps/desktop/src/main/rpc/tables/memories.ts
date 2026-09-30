@@ -87,14 +87,22 @@ export const MEMORY_DEBOUNCE_MS = 150;
  * `bots/` appearing), `memories/`, `bots/`, each `bots/<id>/` (its
  * `MEMORY.md`) and each `bots/<id>/memory/` (daily notes). Every event
  * re-reconciles the set, so a bot directory created or removed adds or drops
- * its watchers, and an editor's rename-replace re-arms. Changes are debounced
- * into one `onChange`.
+ * its watchers, and an editor's rename-replace re-arms.
+ *
+ * A watcher follows an inode, not a path, so each is kept with the identity
+ * (`dev:ino`) of the directory it was armed on: a directory replaced at the
+ * same path (removed and recreated inside one debounce) is re-armed. A home
+ * that does not exist yet is waited for from its parent. Changes are
+ * debounced into one `onChange`.
  */
 export class MemoryWatchers {
   readonly #home: string;
   readonly #onChange: () => void;
   readonly #debounceMs: number;
-  readonly #watchers = new Map<string, fs.FSWatcher>();
+  readonly #watchers = new Map<
+    string,
+    { watcher: fs.FSWatcher; identity: string }
+  >();
   #timer: ReturnType<typeof setTimeout> | null = null;
   #closed = false;
 
@@ -118,24 +126,32 @@ export class MemoryWatchers {
     this.#closed = true;
     if (this.#timer != null) clearTimeout(this.#timer);
     this.#timer = null;
-    for (const watcher of this.#watchers.values()) watcher.close();
+    for (const { watcher } of this.#watchers.values()) watcher.close();
     this.#watchers.clear();
   }
 
-  #desired(): Map<string, (name: string | null) => boolean> {
+  /** Each wanted directory that exists: its event filter and identity. */
+  #desired(): Map<string, { relevant: Relevant; identity: string }> {
     const any = (): boolean => true;
-    const memories = path.join(this.#home, "memories");
-    const bots = path.join(this.#home, "bots");
-    const wanted = new Map<string, (name: string | null) => boolean>([
-      // Only the two directories matter here, not every store in the home.
-      [
-        this.#home,
-        (name) => name == null || name === "memories" || name === "bots",
-      ],
-      [memories, any],
-      [bots, any],
-    ]);
-    for (const id of this.#subdirectories(bots)) {
+    const home = this.#home;
+    const bots = path.join(home, "bots");
+    const wanted = new Map<string, Relevant>();
+    if (identityOf(home) == null) {
+      // Not created yet (a fresh profile): wait for it from its parent.
+      const name = path.basename(home);
+      wanted.set(
+        path.dirname(home),
+        (event) => event == null || event === name
+      );
+    }
+    // Only the two directories matter here, not every store in the home.
+    wanted.set(
+      home,
+      (name) => name == null || name === "memories" || name === "bots"
+    );
+    wanted.set(path.join(home, "memories"), any);
+    wanted.set(bots, any);
+    for (const id of subdirectories(bots)) {
       const dir = path.join(bots, id);
       wanted.set(
         dir,
@@ -143,31 +159,25 @@ export class MemoryWatchers {
       );
       wanted.set(path.join(dir, "memory"), any);
     }
-    for (const dir of Array.from(wanted.keys()))
-      if (!isDirectory(dir)) wanted.delete(dir);
-    return wanted;
-  }
-
-  #subdirectories(dir: string): string[] {
-    try {
-      return fs
-        .readdirSync(dir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name);
-    } catch {
-      return [];
+    const present = new Map<string, { relevant: Relevant; identity: string }>();
+    for (const [dir, relevant] of wanted) {
+      const identity = identityOf(dir);
+      if (identity != null) present.set(dir, { relevant, identity });
     }
+    return present;
   }
 
   #reconcile(): void {
     if (this.#closed) return;
     const wanted = this.#desired();
-    for (const [dir, watcher] of this.#watchers)
-      if (!wanted.has(dir)) {
-        watcher.close();
+    for (const [dir, armed] of this.#watchers) {
+      // Gone, or another directory now at the same path.
+      if (wanted.get(dir)?.identity !== armed.identity) {
+        armed.watcher.close();
         this.#watchers.delete(dir);
       }
-    for (const [dir, relevant] of wanted) {
+    }
+    for (const [dir, { relevant, identity }] of wanted) {
       if (this.#watchers.has(dir)) continue;
       try {
         const watcher = fs.watch(dir, { persistent: false }, (_event, name) => {
@@ -175,10 +185,11 @@ export class MemoryWatchers {
         });
         watcher.on("error", () => {
           watcher.close();
-          if (this.#watchers.get(dir) === watcher) this.#watchers.delete(dir);
+          if (this.#watchers.get(dir)?.watcher === watcher)
+            this.#watchers.delete(dir);
           this.#changed();
         });
-        this.#watchers.set(dir, watcher);
+        this.#watchers.set(dir, { watcher, identity });
       } catch {
         // Gone between the check and the watch; the next event re-arms.
       }
@@ -195,10 +206,25 @@ export class MemoryWatchers {
   }
 }
 
-const isDirectory = (dir: string): boolean => {
+type Relevant = (name: string | null) => boolean;
+
+const subdirectories = (dir: string): string[] => {
   try {
-    return fs.statSync(dir).isDirectory();
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
   } catch {
-    return false;
+    return [];
+  }
+};
+
+/** `dev:ino` of a directory; null when it is missing or not a directory. */
+const identityOf = (dir: string): string | null => {
+  try {
+    const stat = fs.statSync(dir);
+    return stat.isDirectory() ? `${stat.dev}:${stat.ino}` : null;
+  } catch {
+    return null;
   }
 };

@@ -304,7 +304,8 @@ describe("C-T8 live legacy sync", () => {
     expect(prefs.provenance()).toMatchObject({
       theme: "user",
       defaultMode: "default",
-      sidebar: "default",
+      "sidebar.pinned": "default",
+      "sidebar.openSection": "default",
     });
   });
 
