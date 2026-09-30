@@ -229,8 +229,17 @@ describe("the router over a MessagePort (A-T2)", () => {
     await expect(client.ai.subscribe({ threadId: "s1" })).rejects.toMatchObject(
       { code: "UNAVAILABLE" }
     );
-    await expect(client.db.bots.snapshot()).rejects.toMatchObject({
-      code: "UNAVAILABLE",
+  });
+
+  it("serves the DB tables (sub-slice B)", async () => {
+    const bot = { id: "b1", name: "Bot" };
+    const { client } = connect(
+      fakeDeps({ serviceHost: { listBots: () => [bot] } })
+    );
+
+    await expect(client.db.bots.snapshot()).resolves.toMatchObject({
+      seq: 0,
+      rows: [bot],
     });
   });
 

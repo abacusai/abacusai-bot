@@ -33,6 +33,7 @@ import type { ServiceHost } from "../service-host";
 import type { AguiSource, ThreadReader } from "./ai/source";
 import type { MainEventBus } from "./event-bus";
 import type { ReadinessReport } from "./readiness";
+import type { Tables } from "./tables";
 
 type HostFileArgs = { filePath?: string; hostRoot?: string };
 
@@ -163,6 +164,8 @@ export interface RpcDeps {
   windows: RpcWindows;
   bus: MainEventBus;
   ai: AguiSource;
+  /** The DB tables' feeds and the prefs store (spec 00 B). */
+  tables: Tables;
   /** Absent until the thread store (sub-slice C) lands. */
   threads?: ThreadReader;
   trackers: EventTrackers;

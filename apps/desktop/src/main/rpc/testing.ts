@@ -18,12 +18,14 @@ import {
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 import type { UpdateStatus } from "#shared/update";
 
+import { PrefsStore } from "../services/config/prefs-store";
 import { UnavailableAguiSource } from "./ai/source";
 import type { RpcContext } from "./context";
 import type { RpcDeps } from "./deps";
 import { MainEventBus } from "./event-bus";
 import { rpcHandlerOptions } from "./handler-options";
 import { createRouter } from "./router";
+import { createTables, type Tables } from "./tables";
 import { createEventTrackers } from "./trackers";
 
 /**
@@ -66,12 +68,37 @@ export interface FakeDepsOverrides {
   ai?: RpcDeps["ai"];
   threads?: RpcDeps["threads"];
   bus?: MainEventBus;
+  tables?: Tables;
+  prefsStore?: PrefsStore;
 }
+
+const noHook = (): (() => void) => () => undefined;
+
+/** The table hooks a fake service host does not care about. */
+const TABLE_HOOKS = {
+  onSessionsChanged: noHook,
+  onBotsWritten: noHook,
+  onRoutinesWritten: noHook,
+  onWorkspacesChanged: noHook,
+};
 
 export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
   const bus = overrides.bus ?? new MainEventBus();
+  const serviceHost = stub<RpcDeps["serviceHost"]>("serviceHost", {
+    ...TABLE_HOOKS,
+    ...overrides.serviceHost,
+  });
+  const tables =
+    overrides.tables ??
+    createTables({
+      bus,
+      sources: serviceHost,
+      prefsStore: overrides.prefsStore ?? new PrefsStore({ file: null }),
+      watchMemories: false,
+      routinesClockMs: null,
+    });
   return {
-    serviceHost: stub("serviceHost", overrides.serviceHost),
+    serviceHost,
     host: stub("host", overrides.host),
     app: stub("app", overrides.app),
     browserRuntime: stub("browserRuntime", overrides.browserRuntime),
@@ -90,6 +117,7 @@ export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
     }),
     bus,
     ai: overrides.ai ?? new UnavailableAguiSource(),
+    tables,
     ...(overrides.threads == null ? {} : { threads: overrides.threads }),
     trackers: createEventTrackers(bus),
   };
