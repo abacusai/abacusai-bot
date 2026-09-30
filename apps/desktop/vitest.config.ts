@@ -75,6 +75,17 @@ export default defineConfig({
         },
       },
       {
+        // The rewrite's renderer data layer. Node, not jsdom: the transport
+        // needs MessageChannel and a window-shaped event target, no DOM.
+        resolve: { alias },
+        test: {
+          name: "renderer-next",
+          environment: "node",
+          ...ciTimeouts,
+          include: ["src/renderer-next/**/*.test.{ts,tsx}"],
+        },
+      },
+      {
         resolve: { alias },
         test: {
           name: "main",
