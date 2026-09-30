@@ -374,7 +374,7 @@ describe("r2 draft revisions", () => {
     updateDraft("t-1", (draft) => ({ ...draft, text: "" }));
     updateDraft("t-1", (draft) => ({
       ...draft,
-      mode: "PLAN",
+      mode: "PLAN" as never,
       model: "chosen",
     }));
     clearDraft("t-1");

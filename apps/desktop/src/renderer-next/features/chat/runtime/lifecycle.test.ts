@@ -220,7 +220,7 @@ describe("r2 progress and recovery", () => {
       },
     };
     await runPump({
-      ai,
+      ai: ai as unknown as typeof relay.ai,
       threadId: relay.threadId,
       activeRunId: null,
       positions: { checkpoint: 1, receivedSeq: 1, epoch: null },
@@ -255,7 +255,7 @@ describe("r2 progress and recovery", () => {
       },
     };
     const session = new ThreadSession({
-      ai,
+      ai: ai as unknown as typeof relay.ai,
       threadId: relay.threadId,
       recoveryDelaysMs: [0, 0],
     });
@@ -282,7 +282,10 @@ describe("r2 progress and recovery", () => {
       await session.load();
       await session.cancel();
       expect(session.hostStore.state.cancelling).toBe(true);
-      await session.reconnect();
+      relay.setEpoch("replacement");
+      relay.dropSubscriptions();
+      await vi.waitFor(() => expect(session.gen).toBe(2));
+      await session.load();
       expect(session.hostStore.state.cancelling).toBe(false);
       await session.cancel();
       expect(relay.stats.cancel).toHaveLength(2);
