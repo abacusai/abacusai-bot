@@ -427,6 +427,18 @@ const rendererSwaps = new RendererSwapScheduler({
   // The integrity check admits only experiences built for this shell's
   // FOUNDATION_API, so this is also the candidate's contract.
   barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
+  // Activation is transactional with readiness (spec 07 review r1 #9).
+  onOutcome: (version, outcome) => {
+    const store = experienceRuntime?.store;
+    if (store == null) return;
+    const settle =
+      outcome === "gave-up"
+        ? store.abandonActivation(version)
+        : store.commitActivation(version);
+    settle.catch((error: unknown) => {
+      console.error(`[experience] settling ${version} failed`, error);
+    });
+  },
 });
 
 function scheduleRendererSwap(version: string): void {
