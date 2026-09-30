@@ -49,16 +49,24 @@ export interface ThreadFileV2 {
  * `threads/<sessionId>.cleared`: written before a conversation's files are
  * removed (reset, session or workspace deletion) and dropped once both are
  * gone. While it exists, a twin counts only if it was written after it
- * (`source.afterClear === token`), and a v1 file only if its bytes changed
- * since (`v1Fingerprint`), so a failed or interrupted removal can never
+ * (`source.afterClear === token`), and a v1 file only if a save after the
+ * clear wrote these bytes (`savedAfterClear`), so a failed or interrupted
+ * removal, or a rollback that restores old files, can never
  * bring cleared history back, across restarts too.
  */
 export interface ClearMarker {
   version: 1;
   token: string;
   clearedAt: string;
-  /** The v1 file's fingerprint when it was cleared, if it still existed. */
+  /** The v1 file's fingerprint when it was cleared, if it could be read. */
   v1Fingerprint?: string;
+  /**
+   * The fingerprint of the v1 file the old renderer saved after the clear:
+   * the only proof that a v1 file holds new history. Without it every v1
+   * file counts as cleared (fail closed: an unreadable v1 at clear time, or
+   * a rollback that restores old bytes, can never bring history back).
+   */
+  savedAfterClear?: string;
 }
 
 export const parseClearMarker = (text: string): ClearMarker | null => {
@@ -71,6 +79,9 @@ export const parseClearMarker = (text: string): ClearMarker | null => {
       clearedAt: typeof parsed.clearedAt === "string" ? parsed.clearedAt : "",
       ...(typeof parsed.v1Fingerprint === "string" && {
         v1Fingerprint: parsed.v1Fingerprint,
+      }),
+      ...(typeof parsed.savedAfterClear === "string" && {
+        savedAfterClear: parsed.savedAfterClear,
       }),
     };
   } catch {
