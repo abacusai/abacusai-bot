@@ -11,6 +11,7 @@ import type { AgentMode } from "#shared/agent-types";
 
 import type { ChatRuntime } from "../runtime/runtime";
 import type { ThreadSession } from "../runtime/session";
+import type { SkillMetadata } from "../store/thread-store";
 
 interface ModelGroupItem {
   id: string;
@@ -53,6 +54,10 @@ export interface ComposerConfig {
   showModeChip: boolean;
   model: ModelChipBinding | null;
   mentions?: MentionSource;
+  /** Query-backed disk skills, used until a nonempty live list arrives. */
+  skillsBaseline?: readonly SkillMetadata[];
+  /** The route supplies the session or start-draft adoption target. */
+  onUseLocalModel?(): void;
   /** 03-bots §24.2: sent as `forwardedProps.mode` on every admission. */
   fixedMode?: AgentMode;
   /** Sessions: `agent.setMode` for a live runtime (the route knows the workspace). */
