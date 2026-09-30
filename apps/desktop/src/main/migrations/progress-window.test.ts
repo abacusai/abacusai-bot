@@ -31,6 +31,20 @@ const { windows, FakeWindow } = vi.hoisted(() => {
     once(event: string, listener: () => void) {
       this.listeners.set(event, listener);
     }
+    handlers = new Map<string, (event: { preventDefault(): void }) => void>();
+    on(event: string, listener: (event: { preventDefault(): void }) => void) {
+      this.handlers.set(event, listener);
+    }
+    /** What a user's close (Alt+F4) does: true when it went through. */
+    tryClose() {
+      let prevented = false;
+      this.handlers.get("close")?.({
+        preventDefault: () => {
+          prevented = true;
+        },
+      });
+      return !prevented;
+    }
     loadURL = vi.fn(async (url: string) => {
       this.url = url;
     });
@@ -125,6 +139,10 @@ describe("C-T6 progress window", () => {
         height: 140,
         frame: false,
         resizable: false,
+        closable: false,
+        minimizable: false,
+        maximizable: false,
+        skipTaskbar: true,
         show: false,
         backgroundColor: "#0a0a0a",
         webPreferences: {
@@ -183,6 +201,15 @@ describe("C-T6 progress window", () => {
       expect(window.destroyed).toBe(true);
     });
 
+    it("refuses a user's close (it would quit the app mid-migration); dispose still frees it", () => {
+      const [window] = windows;
+      if (window == null) throw new Error("no window");
+      expect(window.tryClose()).toBe(false);
+      progress.dispose();
+      expect(window.destroyed).toBe(true);
+      progress.dispose();
+    });
+
     it("never shows when ready-to-show comes after the close", () => {
       const [window] = windows;
       if (window == null) throw new Error("no window");
@@ -190,6 +217,63 @@ describe("C-T6 progress window", () => {
       window.emit("ready-to-show");
       expect(window.visible).toBe(false);
     });
+  });
+
+  it("opens and updates during a long commit, which yields to the event loop", async () => {
+    vi.useRealTimers();
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "progress-"));
+    const progress = createMigrationProgress({
+      open,
+      delayMs: 1,
+      throttleMs: 0,
+    });
+    try {
+      let window: InstanceType<typeof FakeWindow> | undefined;
+      const result = await runMigrations({
+        home,
+        userData: home,
+        appVersion: "1",
+        yieldEvery: 5,
+        steps: [
+          {
+            id: 1,
+            name: "many",
+            // A plan that does all its work synchronously: only the
+            // commit's yields let the window open and update.
+            plan: async (ctx) => ({
+              writes: Array.from({ length: 400 }, (_, index) => {
+                const staged = path.join(ctx.staging, `${index}`);
+                fs.writeFileSync(staged, "x");
+                return {
+                  dest: path.join(home, "threads", `${index}.json`),
+                  staged,
+                  kind: "create" as const,
+                };
+              }),
+              removals: [],
+              stats: {},
+            }),
+          },
+        ],
+        hooks: {
+          afterMove: () => {
+            window ??= windows[0];
+            window?.emit("ready-to-show");
+          },
+        },
+        onProgress: (done, total, label) => progress.report(done, total, label),
+        log: () => undefined,
+      });
+      progress.finish();
+      expect(result.applied).toEqual([1]);
+      expect(windows).toHaveLength(1);
+      const during = (windows[0]?.scripts ?? []).map((script) =>
+        Number(/setProgress\((\d+),/.exec(script)?.[1])
+      );
+      expect(during.some((done) => done > 800 && done < 1000)).toBe(true);
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   });
 
   it("escapes the app name into the page", () => {

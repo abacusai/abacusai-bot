@@ -36,10 +36,7 @@
       "language": "de-DE",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
-        "favoriteModelIds": [
-          "abacus/route-llm-code",
-          "gpt-5"
-        ],
+        "favoriteModelIds": ["abacus/route-llm-code", "gpt-5"],
         "perWorkspace": {
           "ws-1": "gpt-5"
         },
@@ -48,21 +45,13 @@
       "motion": {
         "reduce": "system"
       },
-      "onboardingStep": "connect-whatsapp",
+      "onboardingStep": null,
       "panes": {},
       "pinned": {
-        "botIds": [
-          "bot-a"
-        ],
-        "sessionIds": [
-          "s-1",
-          "s-2"
-        ]
+        "botIds": ["bot-a"],
+        "sessionIds": ["s-1", "s-2"]
       },
-      "recentFolders": [
-        "/Users/fixture/project",
-        "/Users/fixture/other"
-      ],
+      "recentFolders": ["/Users/fixture/project", "/Users/fixture/other"],
       "sidebar": {
         "openSection": "routines",
         "pinned": false
