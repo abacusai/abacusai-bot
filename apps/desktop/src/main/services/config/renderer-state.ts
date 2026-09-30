@@ -16,34 +16,67 @@ const WRITE_DELAY_MS = 500;
 
 const byteLength = (value: string): number => Buffer.byteLength(value, "utf8");
 
+/**
+ * The file's string entries; anything else in it is ignored. A missing or
+ * corrupt file reads as empty. Shared by the store and the prefs migration
+ * (spec 00 C.4), which must read exactly what the old renderer would.
+ */
+export const readRendererStateFile = (file: string): Map<string, string> => {
+  const state = new Map<string, string>();
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as unknown;
+
+    if (typeof raw === "object" && raw !== null) {
+      for (const [key, value] of Object.entries(raw)) {
+        if (typeof value === "string") state.set(key, value);
+      }
+    }
+  } catch {
+    // Missing or corrupt: start empty.
+  }
+
+  return state;
+};
+
+/**
+ * Told after a key changes; `null` means removed (`set(key, null)` or
+ * `clear()`). The transition-only legacy prefs sync (spec 00 C.4) listens.
+ */
+export type RendererStateListener = (key: string, value: string | null) => void;
+
 export class RendererStateStore {
   #dirty = false;
-  #state = new Map<string, string>();
+  #state: Map<string, string>;
   #timer: NodeJS.Timeout | undefined;
   #totalBytes = 0;
   readonly #file: string;
+  readonly #listeners = new Set<RendererStateListener>();
 
   constructor(file: string) {
     this.#file = file;
+    this.#state = readRendererStateFile(file);
 
-    try {
-      const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as unknown;
-
-      if (typeof raw === "object" && raw !== null) {
-        for (const [key, value] of Object.entries(raw)) {
-          if (typeof value === "string") {
-            this.#state.set(key, value);
-            this.#totalBytes += byteLength(key) + byteLength(value);
-          }
-        }
-      }
-    } catch {
-      // Missing or corrupt: start empty.
+    for (const [key, value] of this.#state) {
+      this.#totalBytes += byteLength(key) + byteLength(value);
     }
   }
 
   snapshot(): Record<string, string> {
     return Object.fromEntries(this.#state);
+  }
+
+  get(key: string): string | undefined {
+    return this.#state.get(key);
+  }
+
+  /** Called after each change that took effect, never for a no-op write. */
+  onSet(listener: RendererStateListener): () => void {
+    this.#listeners.add(listener);
+
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
   set(key: string, value: string | null): void {
@@ -57,6 +90,7 @@ export class RendererStateStore {
       this.#state.delete(key);
       this.#totalBytes -= previousBytes;
       this.#scheduleWrite();
+      this.#notify(key, null);
 
       return;
     }
@@ -74,19 +108,23 @@ export class RendererStateStore {
       return;
     }
 
+    const changed = previous !== value;
     this.#state.set(key, value);
     this.#totalBytes += nextBytes - previousBytes;
     this.#scheduleWrite();
+    if (changed) this.#notify(key, value);
   }
 
   clear(): void {
     if (this.#state.size === 0) return;
 
+    const removed = Array.from(this.#state.keys());
     this.#state.clear();
     this.#totalBytes = 0;
     // Not debounced: a clear is rare and callers expect it on disk at once.
     this.#dirty = true;
     this.flushSync();
+    for (const key of removed) this.#notify(key, null);
   }
 
   /** Write pending state now; called on quit, when the debounce cannot. */
@@ -109,6 +147,16 @@ export class RendererStateStore {
       this.#dirty = false;
     } catch (error) {
       console.error("[renderer-state] write failed", error);
+    }
+  }
+
+  #notify(key: string, value: string | null): void {
+    for (const listener of Array.from(this.#listeners)) {
+      try {
+        listener(key, value);
+      } catch (error) {
+        console.error("[renderer-state] listener threw", error);
+      }
     }
   }
 
