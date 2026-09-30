@@ -54,7 +54,13 @@ export type Step =
   /** Open a gate a responder is holding a request on. */
   | { release: string }
   /** Wait until the provider has had exactly this many requests. */
-  | { calls: number };
+  | { calls: number }
+  /**
+   * `--wire agui` only: wait on the AG-UI stream (a no-op under ndjson). For
+   * pi-internal moments the legacy stream cannot see, such as an assistant
+   * message having started before a Stop lands.
+   */
+  | { aguiUntil: (stdout: string) => boolean; label: string };
 
 export interface Scenario {
   name: string;
@@ -74,6 +80,8 @@ export interface HostDriver {
   done: Promise<void>;
   /** Legacy events seen so far (from stdout under ndjson, compat under agui). */
   legacy(): DesktopEvent[];
+  /** AG-UI stdout so far (agui hosts only). */
+  stdout?(): string;
 }
 
 export interface RunContext {
@@ -247,6 +255,15 @@ export async function drive(
             )
             .join(", ")}`
       );
+    } else if ("aguiUntil" in step) {
+      const stdout = host.stdout;
+
+      if (stdout != null) {
+        await until(
+          () => step.aguiUntil(stdout()),
+          () => `${scenario.name}: ${step.label}`
+        );
+      }
     } else if ("release" in step) {
       gates.open(step.release);
     } else {

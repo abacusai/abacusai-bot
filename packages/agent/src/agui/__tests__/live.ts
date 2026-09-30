@@ -37,6 +37,10 @@ export async function live(options: {
   incarnation?: string;
   /** Wraps the real session (e.g. to delay setModel). */
   wrap?: (session: AbacusBotSession) => AbacusBotSession;
+  /** Runs after the fixed directories exist, before the host is built. */
+  setup?: () => void;
+  /** Let the host pick the session from the env (a bot when BOT_DIR is set). */
+  realSessionChoice?: boolean;
 }): Promise<Live> {
   const { PassThrough } = await import("node:stream");
   const { context, provider, gates, restore } = await prepare({
@@ -46,6 +50,7 @@ export async function live(options: {
     reply: options.reply,
     steps: [],
   });
+  options.setup?.();
   const stdin = new PassThrough();
   let stdout = "";
   let compat = "";
@@ -72,11 +77,15 @@ export async function live(options: {
     },
     exit: () => undefined,
     log: () => undefined,
-    session: (init: SessionInit) => {
-      const session = new AbacusBotSession(init);
+    ...(options.realSessionChoice === true
+      ? {}
+      : {
+          session: (init: SessionInit) => {
+            const session = new AbacusBotSession(init);
 
-      return options.wrap?.(session) ?? session;
-    },
+            return options.wrap?.(session) ?? session;
+          },
+        }),
   });
   const done = host.run();
   const events = (): AguiEvent[] =>

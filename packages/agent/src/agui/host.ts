@@ -322,6 +322,12 @@ export class AguiHost {
 
     this.ack(runId, "started");
     this.runs.open(token, runId, { serverInitiated: false, input });
+    for (const event of this.emitter.userInput(runId, text, {
+      dequeued: false,
+      ...(newest?.id != null ? { messageId: newest.id } : {}),
+    })) {
+      this.write(event);
+    }
     if (newest?.id != null) this.lastPrompt = { messageId: newest.id, runId };
 
     const stillAdmitted = (): boolean =>
