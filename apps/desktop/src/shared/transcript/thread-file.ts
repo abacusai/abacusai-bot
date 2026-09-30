@@ -184,6 +184,17 @@ export const parseThreadTwin = (text: string): ThreadTwin => {
   if (typeof file.version === "number" && file.version > 2)
     return { status: "foreign" };
   const source = file.source as Record<string, unknown> | null | undefined;
+  // Ownership before shape: a kind this build does not know belongs to a
+  // newer writer, whatever its messages look like.
+  if (
+    file.version === 2 &&
+    typeof source === "object" &&
+    source !== null &&
+    typeof source.kind === "string" &&
+    source.kind !== "agui" &&
+    source.kind !== "transcript-v1"
+  )
+    return { status: "foreign" };
   if (
     file.version !== 2 ||
     !Array.isArray(file.messages) ||
