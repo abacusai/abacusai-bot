@@ -134,3 +134,69 @@ describe("admission lifecycle regressions", () => {
     expect(dispatcher.pending).toBe(0);
   });
 });
+
+describe("r2 generation regressions", () => {
+  it("keeps RUN_ERROR and following events in the installed client's stream", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const consumed: number[] = [];
+    const session = new ThreadSession({
+      ai: relay.ai,
+      threadId: relay.threadId,
+      onConsumed: (seq) => consumed.push(seq),
+    });
+    try {
+      await session.load();
+      relay.emitAll([
+        b.runStarted("failed"),
+        ...b.text("answer", "assistant", "partial"),
+      ]);
+      await vi.waitFor(() =>
+        expect(session.store.state.runs.active?.runId).toBe("failed")
+      );
+      await session.cancel();
+      relay.emitAll([
+        b.runError("failed", { message: "ordinary failure" }),
+        b.custom("agent.status", { status: "idle" }),
+      ]);
+      await vi.waitFor(() => expect(consumed.at(-1)).toBe(relay.lastSeq));
+      expect(session.gen).toBe(1);
+      expect(session.store.state.runs.outcomes).toHaveLength(1);
+      expect(session.store.state.runs.outcomes[0]).toMatchObject({
+        runId: "failed",
+        live: true,
+      });
+      expect(session.hostStore.state.cancelling).toBe(false);
+    } finally {
+      session.retire();
+    }
+  });
+
+  it.each(["success", "failure"])(
+    "late hydration %s cannot revive a capped generation",
+    async (settlement) => {
+      const relay = new FakeRelay();
+      const gate = deferred<void>();
+      relay.faults.hydrate = () => gate.promise;
+      const session = new ThreadSession({
+        ai: relay.ai,
+        threadId: relay.threadId,
+        readyCapMs: 5,
+      });
+      try {
+        await expect(session.load()).rejects.toThrow("hydration timed out");
+        if (settlement === "success") gate.resolve();
+        else gate.reject(new Error("late"));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(session.ready).toBe(false);
+        expect(session.hostStore.state.phase).toBe("error");
+        expect(session.hostStore.state.error).toMatchObject({
+          message: "chat: hydration timed out",
+        });
+        expect(relay.stats.subscribe).toBe(0);
+      } finally {
+        session.retire();
+      }
+    }
+  );
+});
