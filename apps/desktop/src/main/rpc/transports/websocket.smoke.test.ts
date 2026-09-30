@@ -5,6 +5,9 @@
  * procedure (a socket has no window), and refuses a connection without the
  * token.
  */
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
+
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/websocket";
 import type { ContractRouterClient } from "@orpc/contract";
@@ -105,4 +108,19 @@ describe("the router over a WebSocket (A-T5)", () => {
     });
     expect(closed).toBe(1008);
   });
+});
+
+describe("scripts/rpc-ws-smoke.mjs (A.8)", () => {
+  it("bundles the router without Electron and passes its checks", () => {
+    const script = join(
+      import.meta.dirname,
+      "../../../../scripts/rpc-ws-smoke.mjs"
+    );
+    const output = execFileSync(process.execPath, [script], {
+      encoding: "utf8",
+      timeout: 60_000,
+    });
+    expect(output).not.toContain("FAIL");
+    expect(output.match(/^ok /gm)).toHaveLength(5);
+  }, 60_000);
 });
