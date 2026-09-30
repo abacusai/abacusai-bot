@@ -138,7 +138,7 @@ export const ThinkingView = ({ part }: PartProps<unknown, "thinking">) => {
   const title = typeof abacusOf(part).title === "string" ? String(abacusOf(part).title) : null;
   return (
     <Collapsible>
-      <Marker role="status" render={<CollapsibleTrigger />} className="cursor-pointer hover:text-foreground">
+      <Marker render={<CollapsibleTrigger />} className="cursor-pointer hover:text-foreground">
         <MarkerIcon>
           <Brain aria-hidden />
         </MarkerIcon>
