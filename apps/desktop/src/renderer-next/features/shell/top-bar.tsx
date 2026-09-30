@@ -222,6 +222,7 @@ const PanelTabs = ({
       className="titlebar-nodrag mr-2"
     >
       <TabsList
+        data-tour="topbar-panel-tabs"
         aria-label={t("shell.topBar.panelTabs")}
         data-topbar-tabs=""
         className="gap-1 bg-transparent p-0 group-data-horizontal/tabs:h-7"
