@@ -2,12 +2,14 @@
  * The emitter and run controller, fed legacy + internal events directly
  * (the transport-bridge ports of spec §7.3 and the conformance of §7.6).
  */
+import { EventSchemas } from "@ag-ui/core/schemas";
 import { StreamProcessor } from "@tanstack/ai";
 import { describe, expect, it } from "vitest";
 
 import { tagEvent } from "../event-meta.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import {
+  AgentMode,
   AgentStatus,
   type AgentEvent,
   type DesktopEvent,
@@ -555,7 +557,7 @@ describe("state", () => {
       mode: "DEFAULT",
       agentSessionId: "s",
     });
-    r.agent({ type: "mode_changed", mode: "YOLO" as never, source: "user" });
+    r.agent({ type: "mode_changed", mode: AgentMode.Yolo, source: "user" });
     r.internal({
       type: "plan_changed",
       todos: [{ content: "a", status: "pending" }],
@@ -813,6 +815,83 @@ describe("implementation review r1", () => {
         .filter((event) => event.type === "TEXT_MESSAGE_CONTENT")
         .map((event) => (event as { delta: string }).delta)
     ).toEqual(["visible", " still"]);
+  });
+
+  it("builds every emitted type as a schema-valid @ag-ui/core event", () => {
+    const r = rig();
+    const emitted = new Set<string>();
+    const check = (events: AguiEvent[]): void => {
+      for (const event of events) {
+        const parsed = EventSchemas.safeParse(event);
+
+        expect(parsed.success, JSON.stringify(event)).toBe(true);
+        emitted.add(event.type);
+      }
+    };
+
+    r.desktop({ type: "ready", model: "m", mode: "DEFAULT" });
+    r.agent({ type: "mode_changed", mode: AgentMode.Yolo, source: "user" });
+    r.open("run-a");
+    r.internal({ type: "message_open", key: "msg-1", messageId: "s:1" });
+    r.agent({ type: "thinking_delta", content: "hm" });
+    r.agent({ type: "text_delta", content: "hi", messageId: "msg-1" });
+    r.agent({
+      type: "tool_execution_start",
+      tool: tool("c1", "bash", { command: "ls" }),
+    });
+    r.agent({
+      type: "tool_execution_complete",
+      tool: tool("c1", "bash", { command: "ls" }),
+      result: { id: "c1", content: "ok", rejected: true },
+    });
+    r.agent({ type: "subtask_start", id: "d-1", kind: "delegate" });
+    r.agent(
+      tagEvent(
+        { type: "text_delta", content: "child" },
+        { subagentRunId: "d-1" }
+      )
+    );
+    r.agent({ type: "subtask_end", id: "d-1", status: "completed" });
+    r.agent({ type: "subtask_start", id: "d-2", kind: "delegate" });
+    r.agent({ type: "subtask_end", id: "d-2", status: "failed" });
+    r.agent(
+      tagEvent(
+        { type: "error", error: { message: "x", code: "turn_failed" } },
+        { origin: "turn" }
+      )
+    );
+    r.runs.settleOpen();
+    r.open("run-b");
+    r.runs.settleOpen();
+    r.open("run-c");
+    r.runs.emergencyClose("agent_exit", (event) => r.out.push(event));
+    check(r.out);
+
+    expect([...emitted].sort()).toEqual(
+      [
+        "CUSTOM",
+        "REASONING_END",
+        "REASONING_MESSAGE_CONTENT",
+        "REASONING_MESSAGE_END",
+        "REASONING_MESSAGE_START",
+        "REASONING_START",
+        "RUN_ERROR",
+        "RUN_FINISHED",
+        "RUN_STARTED",
+        "STATE_DELTA",
+        "STATE_SNAPSHOT",
+        "SUBAGENT_ERROR",
+        "SUBAGENT_FINISHED",
+        "SUBAGENT_STARTED",
+        "TEXT_MESSAGE_CONTENT",
+        "TEXT_MESSAGE_END",
+        "TEXT_MESSAGE_START",
+        "TOOL_CALL_ARGS",
+        "TOOL_CALL_END",
+        "TOOL_CALL_RESULT",
+        "TOOL_CALL_START",
+      ].sort()
+    );
   });
 
   it("adds nothing for an error its own run already reported as its terminal", () => {

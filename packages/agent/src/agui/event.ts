@@ -1,7 +1,15 @@
 /**
- * The single checked constructor for AG-UI events (spec §2.3). Built on
- * `@ag-ui/core`'s `EventType` enum, so every event is assignable to the
- * canonical `Event` union (and TanStack's `StreamChunk`) with no casts.
+ * The single constructor for AG-UI events (spec §2.3). Built on
+ * `@ag-ui/core`'s `EventType` enum; every call site is typed by the payload
+ * `EventPayloadOf<T>` and needs no cast, and the result is assignable to the
+ * canonical `Event` union and TanStack's `StreamChunk`.
+ *
+ * The one type assertion in this package's output path is inside
+ * `aguiEvent`: TypeScript cannot prove that `{type, ...payload, timestamp}`
+ * is `Extract<Event, {type: T}>` for a generic `T`. It is not trusted: every
+ * event of every golden scenario is validated against `@ag-ui/core`'s own
+ * zod `EventSchemas` (agui-golden.integration.test.ts), and emit.test.ts
+ * validates the constructions the goldens do not reach.
  */
 import {
   EventType,
