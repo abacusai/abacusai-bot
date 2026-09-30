@@ -249,6 +249,7 @@ export const BotMessageList = ({
   isWorking = false,
   onOpenSubtask,
   onSwitchModel,
+  onResume,
 }: {
   onRateTurn?: (
     segmentId: string,
@@ -262,6 +263,8 @@ export const BotMessageList = ({
   onOpenSubtask?: (subtaskId: string) => void;
   /** Point the user at the model picker when a pinned model that keeps failing. */
   onSwitchModel?: () => void;
+  /** Run the dead turn again on the free pool, once a source has joined it. */
+  onResume?: () => void;
 }): JSX.Element => {
   const { t } = useTranslation();
   const botReactions = useMemo(() => agentReactions(chatItems), [chatItems]);
@@ -375,7 +378,7 @@ export const BotMessageList = ({
                 <PremiumUpgradeCard
                   dataId="chat-upgrade-card"
                   scope={exhaustedScope(part.actions)}
-                  onSwitchModel={onSwitchModel}
+                  onResume={onResume}
                 />
               </div>
             ) : (

@@ -2185,6 +2185,9 @@ export const ChatPanel = (): JSX.Element => {
                           isWorking={isScopeBusy}
                           onOpenSubtask={setSubtaskScope}
                           onSwitchModel={handleSwitchModel}
+                          onResume={
+                            isAgentBusy ? undefined : handleResumeOnPool
+                          }
                         />
                       ) : (
                         <ChatMessageList
@@ -2194,9 +2197,6 @@ export const ChatPanel = (): JSX.Element => {
                           agentStatus={agentStatus}
                           onRetry={isAgentBusy ? undefined : handleRetry}
                           onSwitchModel={handleSwitchModel}
-                          onPickModel={(modelId) =>
-                            handlePickModel(activeWorkspaceId, modelId)
-                          }
                           onResume={
                             isAgentBusy ? undefined : handleResumeOnPool
                           }
