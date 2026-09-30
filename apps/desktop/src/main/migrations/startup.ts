@@ -5,7 +5,8 @@
  *
  * When a commit attempt is left unresolved (`RunMigrationsResult.unresolved`)
  * the app still starts, but writers must stay off the files it may cover
- * until a later launch settles it: `migrationWriteBlocked(file)` says which.
+ * until a later launch settles it: `isMigrationWriteBlocked(file)`
+ * (`write-block.ts`) says which.
  * `prefs.json` is the one such file main writes today; it is served from a
  * session-only copy instead (`prefsFileAfterMigrations`).
  */
@@ -22,12 +23,12 @@ import {
   openProgressWindow,
   type MigrationProgress,
 } from "./progress-window";
-import {
-  isWriteBlocked,
-  runMigrations,
-  type RunMigrationsResult,
-} from "./runner";
+import { runMigrations, type RunMigrationsResult } from "./runner";
 import { MIGRATION_STEPS } from "./steps";
+import {
+  isMigrationWriteBlocked,
+  setMigrationWriteBlocks,
+} from "./write-block";
 
 /** `--rerun-migration=<id>`, repeatable. */
 export const parseRerunArgs = (argv: readonly string[]): number[] =>
@@ -37,7 +38,6 @@ export const parseRerunArgs = (argv: readonly string[]): number[] =>
   });
 
 let progress: MigrationProgress | null = null;
-let lastResult: RunMigrationsResult | null = null;
 
 /**
  * The progress window follows the theme the user chose in the old UI (its
@@ -71,7 +71,7 @@ export const runStartupMigrations = async (
       }),
   });
   try {
-    lastResult = await runMigrations({
+    const result = await runMigrations({
       home: abacusBotHome(),
       userData,
       appVersion: app.getVersion(),
@@ -81,7 +81,8 @@ export const runStartupMigrations = async (
       onProgress: (done, total, label) => progress?.report(done, total, label),
       log: (message) => console.log(`[migrations] ${message}`),
     });
-    for (const attempt of lastResult.unresolved)
+    setMigrationWriteBlocks(result);
+    for (const attempt of result.unresolved)
       console.error(
         `[migrations] unresolved commit in ${attempt.staging}; writes to ${
           attempt.destinations == null
@@ -89,7 +90,7 @@ export const runStartupMigrations = async (
             : attempt.destinations.join(", ")
         } are held for this launch: ${attempt.error}`
       );
-    return lastResult;
+    return result;
   } catch (error) {
     console.error("[migrations] runner failed", error);
     return null;
@@ -98,15 +99,6 @@ export const runStartupMigrations = async (
     progress.finish();
   }
 };
-
-/**
- * Whether `file` may be covered by a commit this launch could not settle.
- * A writer that finds it blocked must not write it this launch. For a
- * future step's writer (the transcript dual-write of step 1, say): check
- * this before writing a file the step migrates.
- */
-export const migrationWriteBlocked = (file: string): boolean =>
-  isWriteBlocked(lastResult, file);
 
 /**
  * The file the prefs store should use this launch: `prefsFile` itself, or,
@@ -119,7 +111,7 @@ export const prefsFileAfterMigrations = (
   prefsFile: string,
   tempDir: string = app.getPath("temp")
 ): string | null => {
-  if (!migrationWriteBlocked(prefsFile)) return prefsFile;
+  if (!isMigrationWriteBlocked(prefsFile)) return prefsFile;
   const overlay = path.join(
     tempDir,
     `abacusai-bot-prefs.${process.pid}.session.json`
@@ -160,6 +152,6 @@ export const disposeMigrationProgress = (): void => {
 export const resetStartupMigrationsForTest = (
   result: RunMigrationsResult | null = null
 ): void => {
-  lastResult = result;
+  setMigrationWriteBlocks(result);
   progress = null;
 };

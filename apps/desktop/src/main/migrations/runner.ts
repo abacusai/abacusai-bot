@@ -66,6 +66,7 @@ import {
 } from "./journal";
 import {
   backupOf,
+  recordsAttempt,
   readRecordState,
   setAsideCorruptRecord,
   writeRecord,
@@ -164,6 +165,12 @@ class SimulatedCrash extends Error {}
 
 /** Share of a step's progress given to `plan()`; the commit gets the rest. */
 const PLAN_SHARE = 0.8;
+
+/**
+ * Partial commits in a row whose `pending` did not go down before the step
+ * is recorded as applied as it stands (so a step never reruns forever).
+ */
+export const MAX_STALLED_PARTIALS = 2;
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -313,11 +320,7 @@ export const runMigrations = async (
     const { journal } = read;
     const finished =
       read.log.recorded ||
-      (record?.applied.some(
-        (applied) =>
-          applied.id === journal.id && applied.attempt === journal.attempt
-      ) ??
-        false);
+      (record != null && recordsAttempt(record, journal.id, journal.attempt));
     if (finished) {
       // Only the staging's deletion was cut short.
       try {
@@ -457,6 +460,7 @@ export const runMigrations = async (
       removals: [],
     };
     let journaled = false;
+    let partial = false;
     try {
       // 1. Back up what may hold data found nowhere else.
       const roots = { home, userData };
@@ -539,37 +543,57 @@ export const runMigrations = async (
       if (options.hooks?.beforeRecord?.() === "crash")
         throw new SimulatedCrash();
       // 4. The record, then its mark in the log. A plan that left work for
-      // the next launch (`pending`) is final here but not recorded, so the
-      // step runs again; its `recorded` line alone marks it final.
-      if ((plan.pending ?? 0) > 0) {
-        appendLog(staging, attempt, { op: "recorded" }, io);
-        try {
-          removeStaging(staging);
-        } catch (error) {
-          log(`cannot delete ${staging}: ${errorMessage(error)}`);
-        }
-        fraction(1);
-        result.partial.push(step.id);
-        log(
-          `committed ${step.id} ${step.name} with ${plan.pending} left for the next launch ${JSON.stringify(plan.stats)}`
-        );
-        continue;
+      // the next launch (`pending`) is recorded as a partial commit: final
+      // (never rolled back), but the step is not applied, so it runs again.
+      // A step whose pending work stops going down is applied as it stands
+      // after `MAX_STALLED_PARTIALS` such commits, so it never reruns
+      // forever (what it could not do stays where it was, untouched).
+      const pending = plan.pending ?? 0;
+      const others = (current.partial ?? []).filter(
+        (entry) => entry.id !== step.id
+      );
+      const previous = current.partial?.find((entry) => entry.id === step.id);
+      const stalled =
+        pending > 0 && previous != null && pending >= previous.pending
+          ? previous.stalled + 1
+          : 0;
+      partial = pending > 0 && stalled < MAX_STALLED_PARTIALS;
+      const next: MigrationRecord = { ...current };
+      if (partial) {
+        next.partial = [
+          ...others,
+          {
+            id: step.id,
+            name: step.name,
+            at: now().toISOString(),
+            commit,
+            attempt,
+            backup: backupName,
+            pending,
+            stalled,
+          },
+        ];
+      } else {
+        if (pending > 0)
+          log(
+            `${step.id} ${step.name}: ${pending} left after ${stalled + 1} commits without progress; recording it as applied`
+          );
+        const entry: AppliedMigration = {
+          id: step.id,
+          name: step.name,
+          appliedAt: now().toISOString(),
+          appVersion: options.appVersion,
+          durationMs: Date.now() - started,
+          stats:
+            pending > 0 ? { ...plan.stats, pendingLeft: pending } : plan.stats,
+          commit,
+          attempt,
+          backup: backupName,
+        };
+        next.applied = [...current.applied, entry];
+        if (others.length > 0) next.partial = others;
+        else delete next.partial;
       }
-      const entry: AppliedMigration = {
-        id: step.id,
-        name: step.name,
-        appliedAt: now().toISOString(),
-        appVersion: options.appVersion,
-        durationMs: Date.now() - started,
-        stats: plan.stats,
-        commit,
-        attempt,
-        backup: backupName,
-      };
-      const next: MigrationRecord = {
-        ...current,
-        applied: [...current.applied, entry],
-      };
       if (next.lastFailure?.id === step.id) delete next.lastFailure;
       writeRecord(home, next, io);
       current = next;
@@ -625,9 +649,9 @@ export const runMigrations = async (
       log(`cannot delete ${staging}: ${errorMessage(error)}`);
     }
     fraction(1);
-    result.applied.push(step.id);
+    (partial ? result.partial : result.applied).push(step.id);
     log(
-      `applied ${step.id} ${step.name} in ${Date.now() - started} ms ${JSON.stringify(plan.stats)}`
+      `${partial ? `committed with ${plan.pending} left for the next launch:` : "applied"} ${step.id} ${step.name} in ${Date.now() - started} ms ${JSON.stringify(plan.stats)}`
     );
   }
 
@@ -640,7 +664,10 @@ export const runMigrations = async (
   try {
     const pruned = pruneBackups(home, {
       now: now(),
-      referenced: new Set(current.applied.map(backupOf)),
+      referenced: new Set([
+        ...current.applied.map(backupOf),
+        ...(current.partial ?? []).map((entry) => entry.backup),
+      ]),
       io,
     });
     if (pruned.length > 0) log(`pruned ${pruned.length} old backups`);

@@ -51,11 +51,32 @@ export interface MigrationFailure {
   error: string;
 }
 
+/**
+ * The last commit of a step whose plan left work for the next launch
+ * (`plan.pending`): final, but the step is not applied, so it runs again.
+ * One entry per step id, replaced by each partial commit and removed once
+ * the step is applied.
+ */
+export interface PartialMigration {
+  id: number;
+  name: string;
+  at: string;
+  commit: string;
+  attempt: string;
+  backup: string;
+  /** `plan.pending` of this commit. */
+  pending: number;
+  /** Consecutive partial commits whose `pending` did not go down. */
+  stalled: number;
+}
+
 export const RECORD_VERSION = 1;
 
 export interface MigrationRecord {
   version: typeof RECORD_VERSION;
   applied: AppliedMigration[];
+  /** Absent when no step is part way. */
+  partial?: PartialMigration[];
   lastFailure?: MigrationFailure;
 }
 
@@ -85,6 +106,18 @@ const isApplied = (value: unknown): value is AppliedMigration => {
     (value.backup === undefined || typeof value.backup === "string")
   );
 };
+
+const isPartial = (value: unknown): value is PartialMigration =>
+  isRecordObject(value) &&
+  typeof value.id === "number" &&
+  Number.isInteger(value.id) &&
+  typeof value.name === "string" &&
+  typeof value.at === "string" &&
+  typeof value.commit === "string" &&
+  typeof value.attempt === "string" &&
+  typeof value.backup === "string" &&
+  typeof value.pending === "number" &&
+  typeof value.stalled === "number";
 
 const isFailure = (value: unknown): value is MigrationFailure =>
   isRecordObject(value) &&
@@ -131,12 +164,19 @@ export const readRecordState = (
     };
   if (!Array.isArray(parsed.applied) || !parsed.applied.every(isApplied))
     return { status: "corrupt", error: "bad applied entries" };
+  if (
+    parsed.partial !== undefined &&
+    (!Array.isArray(parsed.partial) || !parsed.partial.every(isPartial))
+  )
+    return { status: "corrupt", error: "bad partial entries" };
   if (parsed.lastFailure !== undefined && !isFailure(parsed.lastFailure))
     return { status: "corrupt", error: "bad lastFailure" };
   const record: MigrationRecord = {
     version: RECORD_VERSION,
     applied: parsed.applied,
   };
+  if (Array.isArray(parsed.partial) && parsed.partial.length > 0)
+    record.partial = parsed.partial as PartialMigration[];
   if (isFailure(parsed.lastFailure)) record.lastFailure = parsed.lastFailure;
   return { status: "ok", record };
 };
@@ -173,6 +213,19 @@ export const setAsideCorruptRecord = (
   io.renameSync(recordFile(home), aside);
   return aside;
 };
+
+/** Whether the record holds this step's commit attempt (applied or partial). */
+export const recordsAttempt = (
+  record: MigrationRecord,
+  id: number,
+  attempt: string
+): boolean =>
+  record.applied.some(
+    (entry) => entry.id === id && entry.attempt === attempt
+  ) ||
+  (record.partial ?? []).some(
+    (entry) => entry.id === id && entry.attempt === attempt
+  );
 
 /** The backup directory name an applied entry points at. */
 export const backupOf = (entry: AppliedMigration): string =>

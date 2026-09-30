@@ -1068,4 +1068,114 @@ describe("C-T3 runner: pending work", () => {
     expect(next).toMatchObject({ partial: [7], failed: null });
     expect(read(out)).toBe("x");
   });
+
+  const pendingStep = (pending: () => number, calls: string[] = []) => {
+    let run = 0;
+    return {
+      id: 7,
+      name: "two-phase",
+      plan: async (ctx: MigrationContext) => {
+        run += 1;
+        calls.push(`run ${run}`);
+        const staged = path.join(ctx.staging, "out");
+        fs.writeFileSync(staged, `run ${run}`);
+        return {
+          writes: [
+            {
+              dest: path.join(home, `out-${run}.json`),
+              staged,
+              kind: "create" as const,
+            },
+          ],
+          removals: [],
+          stats: {},
+          pending: pending(),
+        };
+      },
+    } satisfies MigrationStep;
+  };
+
+  it("records a partial commit durably, so a failed staging delete never rolls it back", async () => {
+    const step = pendingStep(() => 1);
+    const crashed = await run([step], {
+      hooks: { afterRecord: () => "crash" },
+    });
+    expect(crashed.crashed).toBe(true);
+    const record = readRecord(home);
+    expect(record.partial).toMatchObject([{ id: 7, pending: 1, stalled: 0 }]);
+    // Even without the log's `recorded` line, the record proves it final.
+    const log = path.join(migratingRoot(home), "7-two-phase", LOG_NAME);
+    fs.writeFileSync(
+      log,
+      fs
+        .readFileSync(log, "utf8")
+        .split("\n")
+        .filter((line) => !line.includes('"recorded"'))
+        .join("\n")
+    );
+    const next = await run([]);
+    expect(next.recovered[0]?.action).toBe("finished");
+    expect(read(path.join(home, "out-1.json"))).toBe("run 1");
+  });
+
+  it("stops rerunning a step whose pending work never goes down", async () => {
+    const calls: string[] = [];
+    const step = pendingStep(() => 3, calls);
+    const results = [];
+    for (let launch = 0; launch < 5; launch++) results.push(await run([step]));
+    expect(results.map((result) => [result.applied, result.partial])).toEqual([
+      [[], [7]],
+      [[], [7]],
+      [[7], []],
+      [[], []],
+      [[], []],
+    ]);
+    expect(calls).toHaveLength(3);
+    const record = readRecord(home);
+    expect(record.partial).toBeUndefined();
+    expect(record.applied[0]?.stats).toMatchObject({ pendingLeft: 3 });
+  });
+
+  it("keeps rerunning while pending work goes down", async () => {
+    let pending = 5;
+    const step = pendingStep(() => (pending -= 1));
+    const results = [];
+    for (let launch = 0; launch < 5; launch++) results.push(await run([step]));
+    expect(results.map((result) => result.partial)).toEqual([
+      [7],
+      [7],
+      [7],
+      [7],
+      [],
+    ]);
+    expect(results[4]?.applied).toEqual([7]);
+  });
+});
+
+describe("write-block", () => {
+  it("blocks nothing until set, then an unresolved commit's destinations", async () => {
+    const { isMigrationWriteBlocked, setMigrationWriteBlocks } =
+      await import("./write-block");
+    const prefs = path.join(home, "prefs.json");
+    setMigrationWriteBlocks(null);
+    expect(isMigrationWriteBlocked(prefs)).toBe(false);
+    setMigrationWriteBlocks({
+      unresolved: [
+        { staging: "s", id: 2, name: "x", destinations: [prefs], error: "" },
+      ],
+    });
+    expect(isMigrationWriteBlocked(prefs)).toBe(true);
+    expect(isMigrationWriteBlocked(path.join(home, "threads", "a.json"))).toBe(
+      false
+    );
+    setMigrationWriteBlocks({
+      unresolved: [
+        { staging: "s", id: null, name: null, destinations: null, error: "" },
+      ],
+    });
+    expect(isMigrationWriteBlocked(path.join(home, "threads", "a.json"))).toBe(
+      true
+    );
+    setMigrationWriteBlocks(null);
+  });
 });
