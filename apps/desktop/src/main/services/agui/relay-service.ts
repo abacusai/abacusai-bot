@@ -41,6 +41,10 @@ import type {
   RunOutcomeRecord,
 } from "#shared/contract";
 import type { AgentSessionStatus, SessionOwner } from "#shared/contracts";
+import {
+  isPlainNativeId,
+  RESERVED_ID_DELIMITER,
+} from "#shared/transcript/native-ids";
 import type { ThreadFileV2 } from "#shared/transcript/thread-file";
 
 import type {
@@ -739,6 +743,15 @@ export class AguiRelayService implements AguiSource {
     const conversationId = input.forwardedProps?.conversationId;
     if (conversationId != null && conversationId !== threadId)
       throw badRequest("forwardedProps.conversationId is not this thread");
+
+    // The `#` reservation (spec 00 C.3): the run id (main derives message
+    // ids from it) and the message that enters the thread keep to native
+    // ids, which the v1 mapper's derived ids can never equal.
+    const echoId = newestUserId(input.messages);
+    if (!isPlainNativeId(runId) || (echoId != null && !isPlainNativeId(echoId)))
+      throw badRequest(
+        `Ids containing "${RESERVED_ID_DELIMITER}" or "%" are reserved; use another run or message id`
+      );
 
     // Converted before anything is reserved: a message main cannot convert
     // is a definitive BAD_REQUEST, and nothing is left waiting.
