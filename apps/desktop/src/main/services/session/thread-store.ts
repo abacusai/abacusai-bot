@@ -6,7 +6,7 @@
  * - `readCurrent` (for `ai.hydrate`) returns the v2 thread, converting v1 and
  *   writing the repaired twin when the v2 file is missing, unparseable, or
  *   derived from other v1 bytes (by fingerprint). An `agui` file is returned
- *   as is; a newer build's file or an unreadable one is never replaced.
+ *   as is.
  * - `writeFromV1` is the dual-write `TranscriptService.write` calls after the
  *   v1 rename. It is deferred and coalesced per thread (`dualWriteDelayMs`),
  *   because the old renderer saves every 750 ms while a chat streams; a read
@@ -15,16 +15,23 @@
  * - `markCleared`/`remove` clear a conversation: a clear marker
  *   (`<id>.cleared`, `ClearMarker`) is written first and dropped only once
  *   both files are gone, so no failed or interrupted removal can bring
- *   cleared history back, across restarts too.
+ *   cleared history back, across restarts too. A v1 file counts as new
+ *   history after a clear only when a save proved it (`noteSave`).
  *
- * Every write and removal first asks the migration write block
- * (`isMigrationWriteBlocked`, spec 00 C.1): a file an unresolved migration
- * commit may cover is not touched this launch. The change is kept in memory
- * instead (`overlay`), and reads return it until the app quits.
+ * Ownership comes before every write: a newer build's file (`foreign`) or
+ * one that cannot be read is never replaced, by the dual-write, the repair
+ * or `writeAgui` (which throws, so the relay keeps its history in memory and
+ * logs the refusal). Hydration then serves v1 converted in memory.
+ *
+ * Every write and removal goes through `HeldFiles`: a file an unresolved
+ * migration commit may cover (`isMigrationWriteBlocked`, spec 00 C.1) is not
+ * touched; the change is journalled under `threads/.pending/` and replayed
+ * once the block lifts, and reads see it meanwhile.
  *
  * The dual-write and the repair go at the cut-over, when main persists v2
  * from the AG-UI stream. So does the rule that a v1-derived twin whose v1
- * file is gone counts as cleared: step 4 archives such orphans first.
+ * file is gone counts as cleared: step 4 records the files it archives
+ * (`threads/.archive-index.json`), and those twins are served.
  */
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -47,9 +54,12 @@ import {
 
 import { isMigrationWriteBlocked } from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";
+import { HeldFiles } from "./held-files";
 
 export const THREADS_DIR_NAME = "threads";
 export const TRANSCRIPTS_DIR_NAME = "transcripts";
+/** Step 4's durable list of the v1 files it archived (see `ArchiveIndex`). */
+export const ARCHIVE_INDEX_NAME = ".archive-index.json";
 
 /**
  * The largest v1 transcript converted. Past it, the text, its parse, the v2
@@ -102,32 +112,36 @@ export const readTextChecked = (
 export const fingerprintV1 = (text: string): string =>
   createHash("sha256").update(text).digest("base64url");
 
-/** The twin at `file`, as the conversion rules see it. */
-export const readThreadTwin = (file: string): ThreadTwin => {
-  const read = readTextChecked(file);
+const twinOf = (read: ReadResult): ThreadTwin => {
   if (read.status === "ok") return parseThreadTwin(read.text);
   return read.status === "missing"
     ? { status: "missing" }
     : { status: "unreadable" };
 };
 
+/** The twin at `file`, as the conversion rules see it. */
+export const readThreadTwin = (file: string): ThreadTwin =>
+  twinOf(readTextChecked(file));
+
 /**
- * The source kind in a thread file's first 4 KB, where both writers put it
- * (`JSON.stringify` keeps `source` before `messages`), so the dual-write
- * learns it without parsing a large file. Null when it is not there.
+ * True when a thread file's first 4 KB say it is a version-2 v1-derived
+ * file, as this build writes it (`JSON.stringify` keeps `version` first and
+ * `source` before `messages`), so the dual-write can replace it without
+ * parsing a large file. Anything else takes the full parse.
  */
-export const peekSourceKind = (file: string): string | null => {
+export const peeksAsDerivedV2 = (file: string): boolean => {
   let fd: number | undefined;
   try {
     fd = fs.openSync(file, "r");
     const head = Buffer.alloc(4096);
     const bytes = fs.readSync(fd, head, 0, head.length, 0);
-    const match = /"source":\{"kind":"([^"]+)"/.exec(
-      head.subarray(0, bytes).toString("utf8")
+    const text = head.subarray(0, bytes).toString("utf8");
+    return (
+      text.startsWith('{"version":2,') &&
+      /"source":\{"kind":"transcript-v1"/.test(text)
     );
-    return match?.[1] ?? null;
   } catch {
-    return null;
+    return false;
   } finally {
     if (fd !== undefined) fs.closeSync(fd);
   }
@@ -148,6 +162,62 @@ export const v1UpdatedAt = (
 
 export const clearMarkerPath = (threadsDir: string, sessionId: string) =>
   path.join(threadsDir, `${sessionId}.cleared`);
+
+/** A marker that cannot be read or parsed still means cleared. */
+const DAMAGED_MARKER: ClearMarker = { version: 1, token: "", clearedAt: "" };
+
+export const parseMarkerRead = (read: ReadResult): ClearMarker | null => {
+  if (read.status === "missing") return null;
+  return (
+    (read.status === "ok" ? parseClearMarker(read.text) : null) ??
+    DAMAGED_MARKER
+  );
+};
+
+/**
+ * Whether a v1 file holds history saved after its thread was cleared: only
+ * a save proves it (`savedAfterClear`). Fails closed.
+ */
+export const isProvenAfterClear = (
+  marker: ClearMarker,
+  fingerprint: string
+): boolean => marker.savedAfterClear === fingerprint;
+
+/**
+ * `threads/.archive-index.json`: every v1 file step 4 archived, with the
+ * fingerprint it had, written in the same commit as the removals. A
+ * v1-derived twin whose v1 file is listed here was archived, not cleared.
+ */
+export interface ArchiveIndex {
+  version: 1;
+  archived: Record<string, { fingerprint: string }>;
+}
+
+export const readArchiveIndex = (threadsDir: string): ArchiveIndex => {
+  const read = readTextChecked(path.join(threadsDir, ARCHIVE_INDEX_NAME));
+  if (read.status === "ok")
+    try {
+      const parsed = JSON.parse(read.text) as ArchiveIndex;
+      if (parsed?.version === 1 && typeof parsed.archived === "object")
+        return parsed;
+    } catch {
+      // Unparseable: treated as empty, so nothing is served from it.
+    }
+  return { version: 1, archived: {} };
+};
+
+/** Thrown by `writeAgui` for a thread file it must not replace. */
+export class ThreadFileProtectedError extends Error {
+  constructor(
+    readonly threadId: string,
+    readonly reason: "foreign" | "unreadable"
+  ) {
+    super(
+      `${threadId}: the thread file is ${reason}; not replaced (the history stays in memory)`
+    );
+    this.name = "ThreadFileProtectedError";
+  }
+}
 
 export interface ThreadStoreOptions {
   /** Defaults to `abacusBotHome()`, read on every call (tests set the env). */
@@ -177,14 +247,22 @@ interface PendingDualWrite {
   v1: { updatedAt: string; segments: readonly unknown[]; text?: string };
 }
 
+type Ownership =
+  | "missing"
+  | "corrupt"
+  | "derived"
+  | "agui"
+  | "foreign"
+  | "unreadable";
+
 export class ThreadStore {
   private readonly home: () => string;
   private readonly log: (message: string) => void;
-  private readonly isWriteBlocked: (file: string) => boolean;
   private readonly dualWriteDelayMs: number;
-  private readonly writeFile: (file: string, text: string) => void;
   private readonly maxTranscriptBytes: number;
   private readonly v1Archived: boolean;
+  /** Writes and removals, journalled while a migration holds the file. */
+  readonly held: HeldFiles;
   /**
    * What this store last wrote per thread (size, mtime and source kind), so
    * the dual-write does not re-read a large file it wrote itself just to
@@ -194,21 +272,22 @@ export class ThreadStore {
     string,
     { size: number; mtimeMs: number; kind: "agui" | "v1" }
   >();
-  /** Changes held in memory because the file is write-blocked (null: cleared). */
-  private readonly overlay = new Map<string, ThreadFileV2 | null>();
   private readonly pending = new Map<string, PendingDualWrite>();
-  private readonly blockedLogged = new Set<string>();
 
   constructor(options: ThreadStoreOptions = {}) {
     this.home = options.home ?? abacusBotHome;
     this.log =
       options.log ?? ((message) => console.error(`[threads] ${message}`));
-    this.isWriteBlocked = options.isWriteBlocked ?? isMigrationWriteBlocked;
     this.dualWriteDelayMs = options.dualWriteDelayMs ?? DUAL_WRITE_DELAY_MS;
-    this.writeFile = options.writeFile ?? writeFileAtomicSync;
     this.maxTranscriptBytes =
       options.maxTranscriptBytes ?? MAX_TRANSCRIPT_BYTES;
     this.v1Archived = options.v1Archived ?? false;
+    this.held = new HeldFiles({
+      dir: () => path.join(this.home(), THREADS_DIR_NAME, ".pending"),
+      isWriteBlocked: options.isWriteBlocked ?? isMigrationWriteBlocked,
+      writeFile: options.writeFile ?? writeFileAtomicSync,
+      log: this.log,
+    });
   }
 
   threadPath(sessionId: string): string | null {
@@ -236,48 +315,49 @@ export class ThreadStore {
    * The current v2 thread, repaired from v1 when stale. Null when neither
    * file holds a thread, when the conversation was cleared (a clear marker
    * no later write superseded), and for a v1-derived file whose v1 file is
-   * gone.
+   * gone (unless step 4 archived it).
    */
   readCurrentFile(sessionId: string): ThreadFileV2 | null {
     const threadFile = this.threadPath(sessionId);
     const transcriptFile = this.transcriptPath(sessionId);
     if (threadFile == null || transcriptFile == null) return null;
     this.flush(sessionId);
-    if (this.overlay.has(sessionId)) return this.overlay.get(sessionId) ?? null;
 
     const marker = this.readMarker(sessionId);
-    const twin = readThreadTwin(threadFile);
+    const twin = twinOf(this.held.read(threadFile));
     const v1 = this.readV1(transcriptFile);
+    const proven =
+      marker !== null &&
+      v1.status === "ok" &&
+      isProvenAfterClear(marker, v1.meta.fingerprint);
+
+    if (twin.status === "foreign" || twin.status === "unreadable") {
+      // Never replaced, not even by a repair after a clear: served from v1
+      // in memory, when v1 is history.
+      this.log(`${sessionId}: thread file is ${twin.status}; left as is`);
+      if (v1.status !== "ok" || (marker !== null && !proven)) return null;
+      return this.convert(sessionId, v1, marker?.token);
+    }
 
     if (marker !== null) {
       const postClear =
-        twin.status === "ok" && twin.source.afterClear === marker.token;
-      if (!postClear) {
-        // Only a v1 file whose bytes changed since the clear is new history.
-        if (v1.status === "ok" && v1.meta.fingerprint !== marker.v1Fingerprint)
-          return this.repair(sessionId, threadFile, v1, marker.token);
-        return null;
-      }
+        marker.token !== "" &&
+        twin.status === "ok" &&
+        twin.source.afterClear === marker.token;
+      if (!postClear)
+        return proven
+          ? this.repair(sessionId, threadFile, v1, marker.token)
+          : null;
     }
 
     if (twin.status === "ok" && twin.source.kind === "agui") return twin.file;
-    if (twin.status === "foreign" || twin.status === "unreadable") {
-      // Never replaced: served from v1 in memory when possible.
-      this.log(`${sessionId}: thread file is ${twin.status}; left as is`);
-      return v1.status === "ok"
-        ? v1ToThreadFile({
-            threadId: sessionId,
-            ...v1.meta,
-            segments: v1.segments,
-          })
-        : null;
-    }
     switch (v1.status) {
       case "missing":
         // Transition: v1 is the source of truth, so a derived twin without
-        // it was cleared. At the cut-over (after step 4 archived v1 files
-        // and orphaned twins), the twin stands on its own.
-        return this.v1Archived && twin.status === "ok" ? twin.file : null;
+        // it was cleared, unless step 4 archived that v1 file (cut-over).
+        return twin.status === "ok" && this.archived(sessionId, twin)
+          ? twin.file
+          : null;
       case "invalid":
         return null;
       case "unreadable":
@@ -296,9 +376,10 @@ export class ThreadStore {
 
   /**
    * The transition dual-write, after the v1 rename. Never over an `agui`
-   * file, a newer build's file or one that cannot be read. Deferred and
-   * coalesced; with no delay it runs at once and throws on a failed write
-   * (the caller isolates it).
+   * file (on disk or held), a newer build's file or one that cannot be read,
+   * and never for a v1 file over the size cap. Deferred and coalesced; with
+   * no delay it runs at once and throws on a failed write (the caller
+   * isolates it).
    */
   writeFromV1(
     sessionId: string,
@@ -338,22 +419,45 @@ export class ThreadStore {
     }
   }
 
+  /**
+   * Records that the old renderer saved `text` as the v1 file: while the
+   * thread has a clear marker, that save is the proof that the v1 file is
+   * new history (`savedAfterClear`).
+   */
+  noteSave(sessionId: string, text: string): void {
+    if (!isSafeSessionId(sessionId)) return;
+    const marker = this.readMarker(sessionId);
+    if (marker === null) return;
+    const next: ClearMarker = {
+      ...marker,
+      token: marker.token === "" ? randomUUID() : marker.token,
+      savedAfterClear: fingerprintV1(text),
+    };
+    try {
+      this.held.write(this.markerPath(sessionId), JSON.stringify(next));
+    } catch (error) {
+      this.log(`clear marker of ${sessionId}: ${String(error)}`);
+    }
+  }
+
   private dualWrite(
     sessionId: string,
     v1: { updatedAt: string; segments: readonly unknown[]; text?: string }
   ): void {
     const threadFile = this.threadPath(sessionId);
     if (threadFile == null) return;
-    const own = this.ownWriteKind(sessionId, threadFile);
-    // The relay's own `agui` write is never replaced by v1-derived history.
-    if (own === "agui") return;
-    if (own == null && peekSourceKind(threadFile) !== "transcript-v1") {
-      const twin = readThreadTwin(threadFile);
-      if (twin.status === "ok" && twin.source.kind === "agui") return;
-      if (twin.status === "foreign" || twin.status === "unreadable") {
-        this.log(`${sessionId}: thread file is ${twin.status}; not replaced`);
-        return;
-      }
+    if (
+      v1.text !== undefined &&
+      Buffer.byteLength(v1.text) > this.maxTranscriptBytes
+    ) {
+      this.log(`${sessionId}: transcript over the size cap; not converted`);
+      return;
+    }
+    const owner = this.ownership(sessionId, threadFile);
+    if (owner === "agui") return;
+    if (owner === "foreign" || owner === "unreadable") {
+      this.log(`${sessionId}: thread file is ${owner}; not replaced`);
+      return;
     }
     const thread = v1ToThreadFile({
       threadId: sessionId,
@@ -369,7 +473,9 @@ export class ThreadStore {
    * Main's AG-UI persistence (spec 02 §14.7): the relay's transcript and run
    * outcomes at a terminal, as a `source.kind: "agui"` file, which the
    * dual-write and the repair never overwrite. `migratedFrom` records the v1
-   * file the history started from, if any. Throws on a failed write.
+   * file the history started from, if any. Throws on a failed write, and
+   * `ThreadFileProtectedError` for a newer build's file or one that cannot
+   * be read.
    */
   writeAgui(
     sessionId: string,
@@ -381,6 +487,9 @@ export class ThreadStore {
   ): void {
     const threadFile = this.threadPath(sessionId);
     if (threadFile == null) return;
+    const owner = this.ownership(sessionId, threadFile);
+    if (owner === "foreign" || owner === "unreadable")
+      throw new ThreadFileProtectedError(sessionId, owner);
     const pending = this.pending.get(sessionId);
     if (pending?.timer != null) clearTimeout(pending.timer);
     this.pending.delete(sessionId);
@@ -402,8 +511,8 @@ export class ThreadStore {
   }
 
   /**
-   * Writes the clear marker, holding the v1 file's fingerprint if it still
-   * exists. `TranscriptService.remove` calls it before removing anything.
+   * Writes the clear marker, holding the v1 file's fingerprint if it can be
+   * read. `TranscriptService.remove` calls it before removing anything.
    */
   markCleared(sessionId: string): void {
     const transcriptFile = this.transcriptPath(sessionId);
@@ -411,31 +520,23 @@ export class ThreadStore {
     const pending = this.pending.get(sessionId);
     if (pending?.timer != null) clearTimeout(pending.timer);
     this.pending.delete(sessionId);
-    const v1 = readTextChecked(transcriptFile, this.maxTranscriptBytes);
+    const v1 = this.held.read(transcriptFile, this.maxTranscriptBytes);
     const marker: ClearMarker = {
       version: 1,
       token: randomUUID(),
       clearedAt: new Date().toISOString(),
       ...(v1.status === "ok" && { v1Fingerprint: fingerprintV1(v1.text) }),
     };
-    const file = this.markerPath(sessionId);
-    if (this.blocked(sessionId, file)) {
-      this.overlay.set(sessionId, null);
-      return;
-    }
     try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      this.writeFile(file, JSON.stringify(marker));
+      this.held.write(this.markerPath(sessionId), JSON.stringify(marker));
     } catch (error) {
-      // Still cleared for this launch.
-      this.overlay.set(sessionId, null);
       this.log(`clear marker for ${sessionId} failed: ${String(error)}`);
     }
   }
 
   /**
    * Clears the thread: marker, then the v2 file, then the marker again once
-   * neither file is left. A blocked or failed removal leaves the marker, so
+   * neither file is left. A held or failed removal leaves the marker, so
    * the thread stays cleared.
    */
   remove(sessionId: string): void {
@@ -444,16 +545,55 @@ export class ThreadStore {
     if (threadFile == null || transcriptFile == null) return;
     this.markCleared(sessionId);
     this.written.delete(sessionId);
-    if (this.blocked(sessionId, threadFile)) {
-      this.overlay.set(sessionId, null);
+    this.held.remove(threadFile);
+    if (this.held.exists(transcriptFile) || this.held.exists(threadFile))
       return;
+    this.held.remove(this.markerPath(sessionId));
+  }
+
+  /** Who owns the thread file, as the writers must respect it. */
+  private ownership(sessionId: string, threadFile: string): Ownership {
+    const pending = this.held.pending(threadFile);
+    if (pending === null) {
+      const own = this.ownWriteKind(sessionId, threadFile);
+      if (own === "agui") return "agui";
+      if (own === "v1" || peeksAsDerivedV2(threadFile)) return "derived";
     }
-    fs.rmSync(threadFile, { force: true });
-    if (fs.existsSync(transcriptFile) || fs.existsSync(threadFile)) return;
-    const marker = this.markerPath(sessionId);
-    if (this.blocked(sessionId, marker)) return;
-    fs.rmSync(marker, { force: true });
-    if (this.overlay.get(sessionId) === null) this.overlay.delete(sessionId);
+    const twin = twinOf(this.held.read(threadFile));
+    switch (twin.status) {
+      case "ok":
+        return twin.source.kind === "agui" ? "agui" : "derived";
+      default:
+        return twin.status;
+    }
+  }
+
+  private archived(
+    sessionId: string,
+    twin: Extract<ThreadTwin, { status: "ok" }>
+  ): boolean {
+    if (twin.source.kind !== "transcript-v1") return false;
+    if (this.v1Archived) return true;
+    const entry = readArchiveIndex(path.join(this.home(), THREADS_DIR_NAME))
+      .archived[sessionId];
+    return (
+      entry !== undefined &&
+      twin.source.fingerprint !== undefined &&
+      entry.fingerprint === twin.source.fingerprint
+    );
+  }
+
+  private convert(
+    sessionId: string,
+    v1: Extract<V1Read, { status: "ok" }>,
+    afterClear: string | undefined
+  ): ThreadFileV2 {
+    return v1ToThreadFile({
+      threadId: sessionId,
+      ...v1.meta,
+      segments: v1.segments,
+      ...(afterClear !== undefined && afterClear !== "" && { afterClear }),
+    });
   }
 
   private repair(
@@ -462,31 +602,17 @@ export class ThreadStore {
     v1: Extract<V1Read, { status: "ok" }>,
     afterClear: string | undefined
   ): ThreadFileV2 {
-    const thread = v1ToThreadFile({
-      threadId: sessionId,
-      ...v1.meta,
-      segments: v1.segments,
-      ...(afterClear !== undefined && { afterClear }),
-    });
+    const thread = this.convert(sessionId, v1, afterClear);
     this.persist(sessionId, threadFile, thread, "repair");
     return thread;
   }
 
   private readMarker(sessionId: string): ClearMarker | null {
-    const read = readTextChecked(this.markerPath(sessionId));
-    if (read.status === "missing") return null;
-    // An unreadable or damaged marker still means cleared; no token matches.
-    return (
-      (read.status === "ok" ? parseClearMarker(read.text) : null) ?? {
-        version: 1,
-        token: "",
-        clearedAt: "",
-      }
-    );
+    return parseMarkerRead(this.held.read(this.markerPath(sessionId)));
   }
 
   private readV1(file: string): V1Read {
-    const read = readTextChecked(file, this.maxTranscriptBytes);
+    const read = this.held.read(file, this.maxTranscriptBytes);
     if (read.status !== "ok") return { status: read.status };
     const parsed = parseTranscriptV1(read.text);
     if (parsed.status !== "ok") return { status: "invalid" };
@@ -506,17 +632,6 @@ export class ThreadStore {
     return marker === null || marker.token === ""
       ? {}
       : { afterClear: marker.token };
-  }
-
-  private blocked(sessionId: string, file: string): boolean {
-    if (!this.isWriteBlocked(file)) return false;
-    if (!this.blockedLogged.has(file)) {
-      this.blockedLogged.add(file);
-      this.log(
-        `${sessionId}: ${path.basename(file)} is held by an unresolved migration; changes stay in memory this launch`
-      );
-    }
-    return true;
   }
 
   /** The kind of this store's own last write, if the file is still it. */
@@ -540,19 +655,15 @@ export class ThreadStore {
     reason: "repair" | "dual-write" | "agui",
     rethrow = false
   ): void {
-    if (this.blocked(sessionId, file)) {
-      this.overlay.set(sessionId, thread);
-      return;
-    }
     try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      this.writeFile(file, JSON.stringify(thread));
-      const stat = fs.statSync(file);
-      this.written.set(sessionId, {
-        size: stat.size,
-        mtimeMs: stat.mtimeMs,
-        kind: reason === "agui" ? "agui" : "v1",
-      });
+      if (this.held.write(file, JSON.stringify(thread)) === "written") {
+        const stat = fs.statSync(file);
+        this.written.set(sessionId, {
+          size: stat.size,
+          mtimeMs: stat.mtimeMs,
+          kind: reason === "agui" ? "agui" : "v1",
+        });
+      } else this.written.delete(sessionId);
     } catch (error) {
       this.written.delete(sessionId);
       if (rethrow) throw error;
@@ -561,14 +672,11 @@ export class ThreadStore {
       return;
     }
     // Written after the clear, and carrying its token: the marker is done.
-    if (thread.source.afterClear !== undefined) {
-      const marker = this.markerPath(sessionId);
-      if (!this.blocked(sessionId, marker))
-        try {
-          fs.rmSync(marker, { force: true });
-        } catch (error) {
-          this.log(`clear marker of ${sessionId}: ${String(error)}`);
-        }
-    }
+    if (thread.source.afterClear !== undefined)
+      try {
+        this.held.remove(this.markerPath(sessionId));
+      } catch (error) {
+        this.log(`clear marker of ${sessionId}: ${String(error)}`);
+      }
   }
 }
