@@ -35,7 +35,8 @@ export const useBotChatSlots = (
   bot: BotRow,
   sessionId: string,
   expanded: boolean,
-  sender = false
+  sender = false,
+  onBrowser?: (url: string) => void
 ) => {
   const { t } = useTranslation();
   const collections = useCollections();
@@ -75,7 +76,7 @@ export const useBotChatSlots = (
   }, [bot.id, sessionId]);
   const setTab = (tab: "details" | "memory" | "files") =>
     void navigate({
-      search: (previous) => ({ ...previous, tab }),
+      search: (previous) => ({ ...previous, tab, preview: undefined }),
       transition: "none",
     });
   const openTarget = (target: BotOpenTarget): void => {
@@ -90,11 +91,13 @@ export const useBotChatSlots = (
         }),
         transition: "none",
       });
-    else
+    else {
+      onBrowser?.(target.url);
       void navigate({
         search: (previous) => ({ ...previous, tab: "browser" }),
         transition: "none",
       });
+    }
   };
   const openFile = (path: string) =>
     openTarget(openBotFile(path, workspaceRoot));
@@ -241,14 +244,18 @@ export const useBotChatSlots = (
       attachmentsBase: workspaceRoot,
       showModeChip: false,
       model: expanded && !readOnly ? binding : null,
-      fixedMode: mode.data ?? AgentMode.Yolo,
+      fixedMode: mode.data ?? AgentMode.Normal,
       onFirstSend: (text: string) => {
         if (detectRememberRequest(text) != null)
           showInfo(t("memory.rememberedToast"));
-        react(bot.id, "happy");
+        react(bot.id, "wink");
         playBotCue("sent", sessionId, bot.id);
       },
-      ...(readOnly ? { readOnly } : {}),
+      ...(readOnly
+        ? { readOnly }
+        : mode.data == null
+          ? { readOnly: { reason: t("common.loading") } }
+          : {}),
     },
   };
 };
