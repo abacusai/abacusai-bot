@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "sessionId": "sess-versions-regenerate",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Write a haiku",
+      "at": 1788256800000,
+      "messageIndex": 0,
+      "regenerateAttempt": 0
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Autumn moonlight—",
+      "at": 1788256801000,
+      "messageIndex": 1,
+      "regenerateAttempt": 0
+    },
+    {
+      "type": "credits",
+      "id": "cr-v1",
+      "creditsUsed": 1,
+      "at": 1788256802000
+    },
+    {
+      "type": "text",
+      "id": "b2",
+      "source": "bot",
+      "content": "A second, regenerated haiku.",
+      "at": 1788256803000,
+      "messageIndex": 3,
+      "regenerateAttempt": 1,
+      "versions": {
+        "current": 2,
+        "total": 2,
+        "siblings": [
+          {
+            "messageIndex": 1,
+            "regenerateAttempt": 0
+          },
+          {
+            "messageIndex": 3,
+            "regenerateAttempt": 1
+          }
+        ]
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "v-tool",
+      "toolCall": {
+        "id": "v-call",
+        "name": "read",
+        "args": {
+          "file_path": "poems.md"
+        },
+        "status": "success"
+      },
+      "at": 1788256804000,
+      "toolResult": {
+        "toolCallId": "v-call",
+        "output": "..."
+      }
+    },
+    {
+      "type": "text",
+      "id": "b3",
+      "source": "bot",
+      "content": "Same turn, no index.",
+      "at": 1788256805000
+    }
+  ]
+}

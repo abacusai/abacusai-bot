@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "sessionId": "sess-missing-at",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Old transcript without times"
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Also without a time."
+    },
+    {
+      "type": "text",
+      "id": "b2",
+      "source": "bot",
+      "content": "This one has one.",
+      "at": 1788256803000
+    }
+  ]
+}

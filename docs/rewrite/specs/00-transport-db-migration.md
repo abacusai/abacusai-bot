@@ -1340,6 +1340,48 @@ Sub-slice C was built in two parts. This part covers the runner (C.1), step 2 an
 
   Id 1 is reserved in `steps/index.ts`. Registering it later is safe: pending steps run in ascending id, and step 2 does not depend on it. The manual C.8 checks (a real `~/.abacusai-bot` copy, `SIGKILL` mid-commit, 2k synthetic transcripts) were not run.
 
+### Second part: step 1, the thread store, step 4
+
+This part adds step 1 (C.3), the thread store with the dual-write and dual-remove, and step 4's rules (C.5), with C-T1, C-T2, C-T4, C-T7 and C-T9. Where it differs from the text above, and why:
+
+- **Files.**
+  - `shared/transcript/`: `v1-to-ui-messages.ts` (the mapper), `thread-file.ts` (`ThreadFileV2`, its valibot schema, `parseTranscriptV1`, `parseThreadTwin`, `decideConversion`), `v1-types.ts` (the v1 shapes, vendored type-only from `renderer/conversation/agent-types.ts`, which `shared/` cannot import) and `test-support.ts`.
+  - `main/services/session/thread-store.ts`: `ThreadStore`, which also owns `isSafeSessionId` now.
+  - `main/migrations/steps/`: `001-transcripts-v2.ts`, `004-archive-transcripts-v1.ts` and `transcript-files.ts` (the per-file walk both steps share).
+- **Mapper choices the text leaves open.**
+  - Message ids are unique within a thread. The assistant message opened by an unmatched close frame would otherwise take the id of its bracket's `created` frame, and corrupt files repeat ids. A taken id gets `:1`, `:2`, …. `segments[]` still carries the original segment ids.
+  - A segment with no string `id` is traced as `segment-<i>`, or as `<groupId>:<j>` inside a `tool_group`. A non-object segment becomes an `unknown` part with `raw` set to the value.
+  - A known type whose required field is missing or has the wrong type is mapped as `unknown` with `raw`, not coerced. Examples: `text` with non-string content, `tool_call` with no call, `media` of another kind, `credits` without a number.
+  - `segments[]` entries also carry `status` and `outcome` for subtask frames. The close frame is listed in `subagent.metadata.abacus.segments`, next to `startTime` and `endTime`. A close by hand-back, by a user text or at end of file has no frame, so it has no entry.
+  - `at` is kept in `segments[]` as stored. `createdAt` uses the first `at` that `Date` can represent.
+  - User messages also take `messageIndex`, `regenerateAttempt` and `versions` when their segment carries them, because they are edit targets. `credits` is left out when the message has none.
+  - Tool results: `content` is the legacy `output`, and `metadata.abacus` holds `data` (the legacy `ToolResultData`) and `rejection` when present. A stored result keeps its own `error`. Only a synthesised one gets `error: "failed"` (row 2). The call part's `metadata.abacus.status` keeps the raw v1 status. A missing or unrecognised status with no error and no rejection counts as success, as `hydration.ts` treats it.
+  - The agent protocol's older `tool_call` shape (`toolUseRequest`, `toolUseResult`, `toolPhase`, `protocol.ts`) has no producer today, but it is mapped: a stored result counts as success, or as rejected when `rejected` is set, and a missing result counts as interrupted. The legacy fields are kept in `metadata.abacus.legacy`.
+  - `ThreadFileV2.updatedAt` is the v1 file's `updatedAt`, so the same v1 file always converts to the same bytes. When a v1 file has no `updatedAt`, its mtime stands in.
+  - Migrated files have no `runs` (spec 02 §14.7).
+- **Conversion rules** (`decideConversion`, shared by step 1, `readCurrent` and step 4).
+  - An unparseable twin is replaced as `replace-user`, not `replace-derived`: it is most likely garbage, but nothing proves it was derived, so the runner backs it up.
+  - Twins are classified from `version`, `source` and a `messages` array only, never the full schema. A field a future `agui` writer adds can never make its file look corrupt and get overwritten.
+- **Step 1.** Stats: `files, converted, created, replaced, upToDate, agui, skipped, unsafe, corrupt, notV1`, where `skipped = unsafe + corrupt + notV1`.
+  - Only `*.json` regular files count. Temp files, `.DS_Store` and folders are left alone.
+  - One v1 file (and its twin) is in memory at a time, read whole with `readFileSync`; there is no 1 MB streaming reader. The step yields and reports progress every 20 files.
+  - It does not quarantine: C.5 gives that to step 4.
+- **Thread store.**
+  - `readCurrent` returns `[]` for a v1-derived twin whose v1 file is gone, so a v2 removal that failed after a reset cannot bring cleared history back. It does not delete that twin. At the cut-over, step 4 archives v1 files, so this rule must go with the repair, as C.3 already plans.
+  - The dual-write skips re-reading a twin whose size and mtime match its own last write. That saves a full parse of a large file every 750 ms while a chat streams.
+  - `ServiceHost.threadStore` is passed to `TranscriptService` and to the RPC deps (`threads`), so `ai.hydrate` now serves migrated history.
+- **Step 4 and `pending`.** C.5's "convert first, archive on the next run" could not finish, because the runner records a step as applied after its first commit. A plan now has `pending?: number`. While it is above zero, the plan is committed but not recorded, and `RunMigrationsResult.partial` lists the step. The next launch runs the step again. A crash before the record point is undone from the journal, as for any unrecorded commit.
+  - Step 4 sets `pending` to the number of files it converted, so it finishes over at most two launches.
+  - A v1 file whose `agui` twin was migrated from an older v1 is kept (`stats.kept`), because AG-UI wins, and archiving would drop what the v1 file has beyond it.
+  - Quarantine is a `create` of a copy under `backups/quarantine/transcripts/` plus a removal of the source into the step's backup directory. An unreadable source is left in place and counted.
+- **Tests.**
+  - C-T1: `shared/transcript/v1-to-ui-messages.golden.test.ts`. There are 18 synthetic fixtures in `__fixtures__/v1/`, which cover every C.7 case plus display-only segments, the protocol tool shape and a user text inside a bracket. The goldens are in `__fixtures__/expected-v2/`, rewritten with `UPDATE_GOLDEN=1`.
+  - C-T2: `v1-to-ui-messages.property.test.ts`. It runs over the fixtures and 200 seeded transcripts. "Every input segment id appears exactly once" is checked as a multiset, because a bracket's `created` and `completed` frames share one id. It also checks that message ids are unique.
+  - C-T4: `steps/001-transcripts-v2.test.ts`. It also runs every C-T1 fixture through the real runner against its golden, and a 45-file directory for yielding and progress. `legacy-home.test.ts` now expects `threads/` and steps `[1, 2]`.
+  - C-T7: `services/session/thread-store.test.ts`. The reset, session-delete and workspace-delete cases run the real `ServiceHost` methods (Electron proxied, their collaborators faked), and `agent.reset` and `ai.hydrate` go through the real router.
+  - C-T9: `steps/004-archive-transcripts-v1.test.ts`. `runner.test.ts` covers `pending`.
+- **Not done.** The manual C.8 checks were not run: a copy of a real home, 2k synthetic transcripts, and a `SIGKILL` mid-commit. `packaged-startup.test.ts` and `agent-runtime-deps.test.ts` fail in this environment, because `pnpm exec vite build` refuses the installed pnpm version. That failure is unrelated to this part.
+
 ## Review responses (codex r1)
 
 Source: `docs/rewrite/specs/reviews/00-transport-db-migration.codex-r1.md`. Each finding was checked against the 1.15.4 oRPC package (installed in the scratchpad), the TanStack DB 0.10.0 and TanStack AI (ai 0.63.0 / ai-client 0.36.0) clones, and the current source. 23 are fixed as the review proposed. One (R7) is fixed with a different mechanism, and the reason is given.
