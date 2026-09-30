@@ -16,7 +16,15 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { FakeProvider } from "@abacus-ai/test-support/fake-provider";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 
 import { type DesktopEvent } from "../protocol.js";
 import { BotSession } from "./bot-session.js";
@@ -301,5 +309,70 @@ describe("a bot that started without a key", () => {
         .filter((event) => event.type === "status_changed")
         .at(-1)
     ).toMatchObject({ status: "idle" });
+  });
+});
+
+/**
+ * The turn that made the router shared: a bot whose model failed ended the
+ * turn there, and nothing recorded the failure, so the next turn asked the
+ * same model again. The chat loop had carried on with the next model since
+ * the pool existed.
+ */
+describe("a bot whose model fails mid-turn", () => {
+  // scriptSequence indexes by the provider's call count.
+  beforeEach(() => {
+    provider.calls.length = 0;
+  });
+  const agentEvents = (events: DesktopEvent[]) =>
+    events
+      .filter(
+        (event): event is Extract<DesktopEvent, { type: "event" }> =>
+          event.type === "event"
+      )
+      .map((event) => event.event);
+  const said = (events: DesktopEvent[]): string =>
+    agentEvents(events)
+      .map((event) => (event.type === "text_delta" ? event.content : ""))
+      .join("");
+
+  it("carries the turn on with the next model, and says nothing of it", async () => {
+    provider.scriptSequence([
+      { fail: { status: 429, message: "rate limited upstream" } },
+      { say: "recovered on the second model" },
+    ]);
+    const { session, events } = botSession();
+    await session.start();
+    await session.send("hi");
+
+    expect(said(events)).toContain("recovered on the second model");
+    expect(
+      agentEvents(events).filter((event) => event.type === "error")
+    ).toEqual([]);
+    // The picker keeps the router: the model of the day is its business.
+    expect(
+      agentEvents(events)
+        .filter((event) => event.type === "model_changed")
+        .at(-1)
+    ).toMatchObject({ model: "openllm/auto" });
+    provider.script(() => ({ say: "ok" }));
+  });
+
+  it("ends the turn saying why once every model has failed", async () => {
+    provider.scriptSequence([
+      { fail: { status: 429, message: "rate limited upstream" } },
+      { fail: { status: 429, message: "rate limited upstream" } },
+    ]);
+    const { session, events } = botSession();
+    await session.start();
+    await session.send("hi");
+
+    const failures = agentEvents(events).filter(
+      (event) => event.type === "error" && event.error?.code === "turn_failed"
+    );
+    expect(failures).toHaveLength(1);
+    expect(
+      agentEvents(events).filter((event) => event.type === "turn_complete")
+    ).toHaveLength(1);
+    provider.script(() => ({ say: "ok" }));
   });
 });

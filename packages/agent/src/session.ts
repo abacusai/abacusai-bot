@@ -74,15 +74,12 @@ import {
   memorySnapshot as readMemorySnapshot,
   rememberSnapshot,
 } from "./memory-store.js";
-import { fileCooldownStore } from "./openllm-cooldowns.js";
 import {
-  OPENLLM_ID,
-  OpenLlmRotation,
-  accountWideFailure,
-  isOutOfCredits,
-  openLlmCandidates,
-  isOpenLlmReference,
-} from "./openllm.js";
+  OPENLLM_CONTINUATION_PROMPT,
+  OPENLLM_CONTINUATION_TYPE,
+  OpenLlmRouter,
+} from "./openllm-router.js";
+import { OPENLLM_ID, isOutOfCredits, isOpenLlmReference } from "./openllm.js";
 import { refreshOpenRouterLive } from "./openrouter-live.js";
 import {
   gateToolCall,
@@ -678,20 +675,8 @@ export class AbacusBotSession {
   private toolArrivalsThisTurn = 0;
   /** True while the session runs OpenLLM; see openllm.ts. */
   private openLlmActive = false;
-  /**
-   * Which free models failed recently. File-backed so cooldowns outlive this
-   * process; every chat is its own process.
-   */
-  private readonly openLlmRotation = new OpenLlmRotation(
-    Date.now,
-    fileCooldownStore()
-  );
-  /**
-   * Models that failed this turn. A rotation never returns to one, so a turn
-   * ends once the whole pool has been asked: that, not a count, is the
-   * budget: a pool of six is walked to the end, a pool of two is not spun on.
-   */
-  private readonly openLlmFailedThisTurn = new Set<string>();
+  /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
+  private readonly router = new OpenLlmRouter();
   /**
    * Set at `agent_end` when the reply came back in the wrong script and the
    * turn continues with a repair. Once per turn; a second miss ends the turn.
@@ -929,7 +914,7 @@ export class AbacusBotSession {
     // OpenLLM's id is virtual and pi's fuzzy-matching resolver must never see
     // it; an empty pool falls through to the unavailable path with that reason.
     const routerChoice = isOpenLlmReference(requested)
-      ? this.openLlmRotation.pick(openLlmCandidates(listModels(registry)))
+      ? this.router.pick(registry)
       : undefined;
     const resolved =
       routerChoice != null
@@ -1208,7 +1193,7 @@ export class AbacusBotSession {
     this.malformedContinuations = 0;
     this.contextCompactions = 0;
     this.pendingContextCompaction = null;
-    this.openLlmFailedThisTurn.clear();
+    this.router.beginTurn();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
     this.toolsArrivedThisTurn = [];
@@ -1385,10 +1370,7 @@ export class AbacusBotSession {
   private isPoolShut(): boolean {
     const registry = this.registry;
 
-    return (
-      registry != null &&
-      this.openLlmRotation.poolShut(openLlmCandidates(listModels(registry)))
-    );
+    return registry != null && this.router.poolShut(registry);
   }
 
   /**
@@ -1514,18 +1496,12 @@ export class AbacusBotSession {
     const registry = this.registry;
 
     if (this.openLlmActive && registry != null) {
-      this.openLlmRotation.markFailed(modelId);
-      const next = this.openLlmRotation.pick(
-        openLlmCandidates(listModels(registry)),
-        new Set([modelId])
-      );
+      // No "." in this: the routing log line keeps the first sentence only.
+      const failure = `no reply in ${Math.round(seconds)}s`;
+      const next = this.router.failed(registry, failure, this.session?.model);
 
       if (next != null) {
-        this.pendingOpenLlmRotation = {
-          // No "." in this: the routing log line keeps the first sentence only.
-          failure: `no reply in ${Math.round(seconds)}s`,
-          nextId: next.id,
-        };
+        this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
 
         return;
       }
@@ -1713,13 +1689,9 @@ export class AbacusBotSession {
 
     if (rotation == null || runtime == null || session == null) return;
 
+    // The router already put the failed model out when it named the next.
     const failed = session.model;
     const failedId = failed ? `${failed.provider}/${failed.id}` : undefined;
-
-    if (failedId != null) {
-      this.openLlmRotation.markFailed(failedId);
-      this.openLlmFailedThisTurn.add(failedId);
-    }
 
     const resolved = resolveModel(
       runtime,
@@ -1797,22 +1769,8 @@ export class AbacusBotSession {
     const registry = this.registry;
     const current = this.session?.model;
     const currentId = current ? `${current.provider}/${current.id}` : undefined;
-    // Before picking: an account-wide failure is not this model's, and a
-    // sibling sharing the allowance would fail the same way.
-    const scope = accountWideFailure(failure, current?.provider);
-
-    if (scope != null) this.openLlmRotation.markScopeFailed(scope);
-
     const next =
-      registry != null
-        ? this.openLlmRotation.pick(
-            openLlmCandidates(listModels(registry)),
-            new Set([
-              ...this.openLlmFailedThisTurn,
-              ...(currentId != null ? [currentId] : []),
-            ])
-          )
-        : undefined;
+      registry != null ? this.router.failed(registry, failure, current) : null;
 
     if (next == null) {
       process.stderr.write(
@@ -1820,7 +1778,7 @@ export class AbacusBotSession {
       );
     }
 
-    return next != null ? { failure, nextId: next.id } : null;
+    return next != null ? { failure, nextId: next.nextId } : null;
   }
 
   /**
@@ -1869,7 +1827,7 @@ export class AbacusBotSession {
     const target = this.openLlmRoutingTarget;
 
     // Proof this model works; otherwise its failure count only ever climbs.
-    if (target != null) this.openLlmRotation.markSucceeded(target);
+    if (target != null) this.router.succeeded(target);
     this.emitRoutingLine(
       target == null ? "Routed." : `Routed to ${target}.`,
       "info"
@@ -2198,9 +2156,7 @@ export class AbacusBotSession {
 
     if (runtime == null || registry == null) return;
 
-    const choice = this.openLlmRotation.pick(
-      openLlmCandidates(listModels(registry))
-    );
+    const choice = this.router.pick(registry);
     const resolved =
       choice != null
         ? resolveModel(runtime, choice.id, this.maxOutputTokens)
@@ -2264,7 +2220,7 @@ export class AbacusBotSession {
     ]);
     // Whatever sidelined a model or a whole provider may no longer hold: the
     // account's credits, plan or keys just changed under us.
-    this.openLlmRotation.clearCooldowns();
+    this.router.clearCooldowns();
   }
 
   /** Stored keys into the live runtime, for the providers pi owns. */
@@ -3392,15 +3348,6 @@ const MAX_STALL_RECOVERIES_PER_TURN = 1;
 const STALL_CONTINUATION_TYPE = "abacusai-bot:stall-recovery";
 const STALL_CONTINUATION_PROMPT =
   "The previous provider call produced no output and was abandoned. Continue the task from the transcript above. Do not restart it or repeat work that already completed.";
-
-const OPENLLM_CONTINUATION_TYPE = "abacusai-bot:openllm-rotation";
-
-/**
- * What the replacement model is told when it takes over a failed turn; a
- * bare "continue" invites a restart.
- */
-const OPENLLM_CONTINUATION_PROMPT =
-  "The previous model's provider call failed, and you have taken over this conversation on a different model. Continue the task from the transcript above. Do not restart it or repeat work that already completed.";
 
 /**
  * Whether a finished turn's last word from the model was a mangled tool call.
