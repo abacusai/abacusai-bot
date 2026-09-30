@@ -6,7 +6,7 @@
 import "../chat.css";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useSelector } from "@tanstack/react-store";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useEffectEvent, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#next/components/empty-state";
@@ -116,6 +116,9 @@ export const ChatView = (props: ChatViewProps) => {
     draftStore,
     (state) => state[threadId]?.pendingSubmit
   );
+  const acceptedFirstSend = useEffectEvent((text: string) =>
+    props.composer.onFirstSend?.(text)
+  );
   const admitting = useState(() => new Set<string>())[0];
   const ready = useHost(session, (state) => state.ready);
   const phase = useHost(session, (state) => state.phase);
@@ -132,6 +135,13 @@ export const ChatView = (props: ChatViewProps) => {
     void session
       .admitEnvelope(pending)
       .then((result) => {
+        if (["started", "duplicate"].includes(result.kind))
+          acceptedFirstSend(
+            pending.parts
+              .filter((p) => p.type === "text")
+              .map((p) => p.content)
+              .join("\n")
+          );
         if (
           ["started", "queued", "rejected", "duplicate"].includes(result.kind)
         )
