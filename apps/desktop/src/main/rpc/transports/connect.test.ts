@@ -35,7 +35,8 @@ class FakeContents extends EventEmitter {
     return this.destroyed;
   }
 
-  navigate(isMainFrame = true, isSameDocument = false): void {
+  /** Starts a navigation; `commit` then commits it, as Electron reports. */
+  startNavigation(isMainFrame = true, isSameDocument = false): void {
     this.emit(
       "did-start-navigation",
       {},
@@ -43,6 +44,16 @@ class FakeContents extends EventEmitter {
       isSameDocument,
       isMainFrame
     );
+  }
+
+  /** `did-navigate`: main frame, cross-document, committed. */
+  commit(): void {
+    this.emit("did-navigate", {}, "app://x/", 200, "OK");
+  }
+
+  navigate(isMainFrame = true, isSameDocument = false): void {
+    this.startNavigation(isMainFrame, isSameDocument);
+    if (isMainFrame && !isSameDocument) this.commit();
   }
 
   destroy(): void {
@@ -73,16 +84,21 @@ const connect = (
 };
 
 const forget = vi.fn();
+const discard = vi.fn();
+
+const install = (): MessagePortTransport =>
+  installMessagePortTransport({
+    ipcMain: ipcMain as never,
+    router: createRouter(),
+    deps: fakeDeps(),
+    readiness: { forget, discard },
+  });
 
 beforeEach(() => {
   connectListener = null;
   forget.mockClear();
-  transport = installMessagePortTransport({
-    ipcMain: ipcMain as never,
-    router: createRouter(),
-    deps: fakeDeps(),
-    readiness: { forget },
-  });
+  discard.mockClear();
+  transport = install();
 });
 
 describe("connecting a renderer (A-T3)", () => {
@@ -141,6 +157,70 @@ describe("connecting a renderer (A-T3)", () => {
     expect(forget).toHaveBeenCalledWith(contents.id);
   });
 
+  it("keeps the port through a navigation that never commits", () => {
+    // A download, a 204, an aborted navigation: the document stays.
+    const contents = new FakeContents();
+    transport.registerRendererContents(contents as never, "main");
+    const port = connect(contents);
+
+    contents.startNavigation();
+
+    expect(port.close).not.toHaveBeenCalled();
+    expect(transport.livePorts()).toBe(1);
+    expect(forget).not.toHaveBeenCalled();
+  });
+
+  it("keeps the new document's port when it connected before the commit was reported", () => {
+    const contents = new FakeContents();
+    transport.registerRendererContents(contents as never, "main");
+    const old = connect(contents);
+
+    contents.startNavigation();
+    const fresh = connect(contents);
+    contents.commit();
+
+    expect(old.close).toHaveBeenCalledTimes(1);
+    expect(fresh.close).not.toHaveBeenCalled();
+    expect(transport.livePorts()).toBe(1);
+  });
+
+  it("fails a destroyed contents' readiness waiters at once", () => {
+    const contents = new FakeContents();
+    transport.registerRendererContents(contents as never, "main");
+
+    contents.destroy();
+
+    expect(discard).toHaveBeenCalledWith(contents.id);
+  });
+
+  it("removes every listener on dispose, so reinstalling adds none", () => {
+    const contents = new FakeContents();
+    transport.registerRendererContents(contents as never, "main");
+    const port = connect(contents);
+
+    transport.dispose();
+    expect(port.close).toHaveBeenCalledTimes(1);
+    expect(contents.listenerCount("did-start-navigation")).toBe(0);
+    expect(contents.listenerCount("did-navigate")).toBe(0);
+    expect(contents.listenerCount("destroyed")).toBe(0);
+
+    for (let round = 0; round < 5; round += 1) {
+      const next = install();
+      next.registerRendererContents(contents as never, "main");
+      next.dispose();
+    }
+    transport = install();
+    transport.registerRendererContents(contents as never, "main");
+    expect(contents.listenerCount("did-start-navigation")).toBe(1);
+    expect(contents.listenerCount("did-navigate")).toBe(1);
+    expect(contents.listenerCount("destroyed")).toBe(1);
+
+    // A navigation reaches only the live transport's readiness.
+    forget.mockClear();
+    contents.navigate();
+    expect(forget).toHaveBeenCalledTimes(1);
+  });
+
   it("clears a port the renderer closed", () => {
     const contents = new FakeContents();
     transport.registerRendererContents(contents as never, "main");
@@ -165,10 +245,12 @@ describe("connecting a renderer (A-T3)", () => {
     }
 
     expect(contents.listenerCount("did-start-navigation")).toBe(1);
+    expect(contents.listenerCount("did-navigate")).toBe(1);
     expect(contents.listenerCount("destroyed")).toBe(1);
 
     contents.destroy();
     expect(contents.listenerCount("did-start-navigation")).toBe(0);
+    expect(contents.listenerCount("did-navigate")).toBe(0);
     expect(transport.isRegistered(contents.id)).toBe(false);
     expect(transport.livePorts()).toBe(0);
   });
