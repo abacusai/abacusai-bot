@@ -236,7 +236,9 @@ export type RunAckStatus = "started" | "queued" | "duplicate" | "rejected";
 export type RunAckReason =
   | "regenerate_unsupported"
   | "empty"
-  | "resume_unsupported";
+  | "resume_unsupported"
+  /** `input.threadId` or `forwardedProps.conversationId` is not this process's thread. */
+  | "thread_mismatch";
 
 export type ResponseRejectedReason =
   | "incarnation"

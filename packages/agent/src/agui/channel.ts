@@ -20,7 +20,7 @@ export const INLINE_COMPAT_PREFIX = "\u001e";
 
 /** The minimal fs surface the preflight needs; injectable for tests. */
 export interface PreflightFs {
-  fstatSync(fd: number): unknown;
+  fstatSync(fd: number): { isFIFO(): boolean; isSocket(): boolean };
   writeSync(fd: number, data: string | Uint8Array): number;
 }
 
@@ -63,6 +63,11 @@ function writeAllSync(fs: PreflightFs, fd: number, data: string): void {
 /**
  * Probe fd `compatFd` synchronously: fstat, a zero-byte write, then the
  * one-line `compat.hello` preamble main discards. Any throw means inline.
+ *
+ * On POSIX the descriptor must be a pipe or a socket, as main passes. When
+ * main did not pass one, the number can still be open for the runtime's own
+ * use (libuv's kqueue or a signal pipe, an inherited file): a write there
+ * would succeed, and compat would go into it instead of to main.
  */
 export function preflightCompat(
   compatFd: number | undefined,
@@ -72,7 +77,13 @@ export function preflightCompat(
   if (compatFd == null) return "none";
 
   try {
-    fs.fstatSync(compatFd);
+    const stat = fs.fstatSync(compatFd);
+
+    // POSIX only: there libuv and inherited descriptors share the numbering.
+    // On Windows a CRT descriptor the runtime did not open is not open.
+    if (process.platform !== "win32" && !stat.isFIFO() && !stat.isSocket()) {
+      throw new Error(`fd ${compatFd} is not a pipe or a socket`);
+    }
     writeAllSync(fs, compatFd, "");
     writeAllSync(
       fs,
