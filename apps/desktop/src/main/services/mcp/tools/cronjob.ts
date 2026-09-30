@@ -37,9 +37,10 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       "webhook: true makes the routine firable by an outside POST; the user copies its URL",
       "from the Routines panel. The request body arrives as data in the fire prompt.",
       "",
-      "In a bot's own chat, routines you create belong to the bot and their fires are",
-      "delivered back into this conversation. Everywhere else a fire starts a fresh session",
-      "with no memory of this conversation, so write the prompt to stand alone.",
+      "Every fire runs in a fresh session of its own, listed under Routines, and nothing",
+      "from it reaches this conversation: write the prompt to stand alone, and never",
+      "promise to report back here. In a bot's own chat the routine belongs to the bot",
+      "and runs in its voice, with what the bot remembers.",
     ].join("\n"),
     inputSchema: {
       type: "object",

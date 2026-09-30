@@ -463,7 +463,13 @@ export class AgentSessionManagerService {
     const existing = readSessionStash(accountKey) as SessionRecord[];
     const byId = new Map(existing.map((record) => [record.id, record]));
     for (const record of records)
-      byId.set(record.id, { ...record, status: "stopped" });
+      byId.set(record.id, {
+        ...record,
+        status: "stopped",
+        // A routine run stopped by the sign-out is over; left "running" it
+        // would block that routine's next fire until the reaper.
+        ...(record.runOutcome === "running" ? { runOutcome: "failed" } : {}),
+      });
     writeSessionStash(accountKey, [...byId.values()]);
 
     this.sessions.clear();

@@ -16,7 +16,8 @@ import { bringToFront } from "../../bring-to-front";
 import { credentialFor } from "../config/settings";
 import { openConnectWindow, type ConnectWindow } from "./abacus-connect-window";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
-import { hasAbacusSession } from "./abacus-signin-window";
+import { readAccountState } from "./account-service";
+import { sessionHolds } from "./sign-in-session";
 
 /**
  * Abacus.AI first-party connectors (Gmail, Slack, Drive, ...). The platform
@@ -261,12 +262,35 @@ export const confirmConnected = async (
   return sawListing ? "absent" : "unavailable";
 };
 
-/** One in-flight connect at a time, same rationale as abacus-auth-service. */
-let inFlight: { close: () => void } | null = null;
+/**
+ * Hops in flight, one per service: a second hop for the same service
+ * supersedes the first, and hops for different services run side by side.
+ * Each remembers who started it (see ConnectorConnectOptions.owner).
+ */
+const inFlight = new Map<
+  string,
+  { close: () => void; owner: string | undefined }
+>();
 
-export const cancelConnectorConnect = (): void => {
-  inFlight?.close();
-  inFlight = null;
+/**
+ * Cancel the hops a caller owns: with no owner, the ones screens start on a
+ * click, which is what a screen leaving should take down; with one, only
+ * that owner's. Onboarding's automatic Gmail hop was once cancelled by the
+ * Connectors step's cleanup, and, being once per install, never ran again.
+ */
+export const cancelConnectorConnect = (owner?: string): void => {
+  const doomed = [...inFlight].filter(([, hop]) => hop.owner === owner);
+  for (const [service, hop] of doomed) {
+    inFlight.delete(service);
+    hop.close();
+  }
+};
+
+/** Every hop, whoever started it: sign-out, quit. */
+export const cancelAllConnectorConnects = (): void => {
+  const doomed = [...inFlight.values()];
+  inFlight.clear();
+  for (const hop of doomed) hop.close();
 };
 
 /**
@@ -281,9 +305,11 @@ export const startConnectorConnect = (
   service: string,
   options: ConnectorConnectOptions = {}
 ): Promise<AbacusConnectorOutcome> => {
-  cancelConnectorConnect();
-
   const serviceKey = service.toLowerCase();
+  // The same service again supersedes: one loopback per connector.
+  inFlight.get(serviceKey)?.close();
+  inFlight.delete(serviceKey);
+
   if (!SERVICE_RE.test(serviceKey)) {
     return Promise.resolve({ ok: false, error: "Unknown connector." });
   }
@@ -298,6 +324,8 @@ export const startConnectorConnect = (
     let accepted = false;
     let timer: NodeJS.Timeout | null = null;
     let window: ConnectWindow | null = null;
+    /** Where the hop ran, for the wording of a wrong-account outcome. */
+    let surface: "app" | "browser" = "browser";
 
     const server = http.createServer((req, res) => {
       const host = (req.headers.host ?? "").toLowerCase();
@@ -333,18 +361,29 @@ export const startConnectorConnect = (
       // stands in when the platform never answers.
       void confirmConnected(serviceKey).then((confirmed) => {
         if (confirmed === "absent") {
-          // Browser said done, platform says nothing attached: almost always
-          // the browser is signed into a different Abacus account, so the
-          // connector attached over there. Say so; "try again" fails the same.
+          // The provider said done, the platform lists nothing: the session
+          // the hop ran on belongs to a different Abacus account, and the
+          // connector attached over there. "Try again" fails the same way;
+          // the UI words the way out for the surface the hop ran on.
           finish({
             ok: false,
+            code: "wrong-account",
+            surface,
             error:
-              "The sign-in finished, but the connector did not appear on " +
-              "this app's Abacus account. Your browser is likely signed " +
-              "into a different Abacus account. The connector attached " +
-              "there instead. In the browser, sign into the same account " +
-              "this app uses, then connect again.",
+              surface === "browser"
+                ? "The sign-in finished, but the connector did not appear on " +
+                  "this app's Abacus account. Your browser is signed into a " +
+                  "different Abacus account, and the connector attached " +
+                  "there instead. In the browser, sign into the same account " +
+                  "this app uses, then connect again."
+                : "The sign-in finished, but the connector did not appear on " +
+                  "this app's Abacus account: the app's sign-in window held a " +
+                  "different account. Sign out and back in, then connect again.",
           });
+        } else if (confirmed === "unavailable" && abacusApiKey().length === 0) {
+          // The account signed out while the hop was out: whatever attached
+          // is not this app's, and "connected" would be a lie.
+          finish({ ok: false, error: "not-signed-in" });
         } else {
           finish({ ok: true });
         }
@@ -366,7 +405,8 @@ export const startConnectorConnect = (
       if (timer != null) clearTimeout(timer);
       server.closeAllConnections?.();
       server.close();
-      if (inFlight?.close === close) inFlight = null;
+      if (inFlight.get(serviceKey)?.close === close)
+        inFlight.delete(serviceKey);
       window?.close();
       window = null;
       if (reveal) bringToFront();
@@ -385,7 +425,7 @@ export const startConnectorConnect = (
       finish({ ok: false, error: error.message });
     });
 
-    inFlight = { close };
+    inFlight.set(serviceKey, { close, owner: options.owner });
 
     server.listen(0, "127.0.0.1", () => {
       const { port } = server.address() as AddressInfo;
@@ -435,11 +475,12 @@ export const startConnectorConnect = (
           });
       };
 
-      // The account that signed in inside the app has its session here, not
-      // in the browser: the hop runs in an app window on that session, and
-      // the connect page can go straight to the provider. Otherwise the
-      // browser, where the account signed in, as before.
-      void hasAbacusSession()
+      // The account that signed in inside the app has its session in the
+      // app's own partition, not in the browser: the hop runs in an app
+      // window on that session, and the connect page can go straight to the
+      // provider. Only when the partition holds this very account; a stale
+      // session of another account would attach the connector over there.
+      void sessionHolds(readAccountState().account?.email)
         .catch(() => false)
         .then((inApp) => {
           if (settled) return;
@@ -452,9 +493,15 @@ export const startConnectorConnect = (
               port,
               callbackPath,
               onHandOff: openInBrowser,
-              onDismissed: close,
+              // Closed after the provider's ping landed is done, not cancelled.
+              onDismissed: () => {
+                if (!accepted) close();
+              },
             });
-            if (window != null) return;
+            if (window != null) {
+              surface = "app";
+              return;
+            }
           }
           openInBrowser();
         });

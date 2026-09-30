@@ -223,3 +223,34 @@ describe("a job that runs once", () => {
     expect(repeating.schedule).toBe("0 9 * * *");
   });
 });
+
+describe("resuming a paused routine", () => {
+  it("refuses a one-time routine that already ran, unless given a new time", () => {
+    const job = createJob({
+      schedule: null,
+      webhook: false,
+      prompt: "Once",
+      runAt: Date.now() - 60_000,
+    } as never);
+    updateJob(job.id, { enabled: false });
+
+    expect(() => updateJob(job.id, { enabled: true })).toThrow(/already ran/);
+    expect(
+      updateJob(job.id, { enabled: true, runAt: Date.now() + 60_000 }).enabled
+    ).toBe(true);
+  });
+
+  it("marks when it was resumed, so earlier failures do not count", () => {
+    const job = createJob({
+      schedule: "0 9 * * *",
+      webhook: false,
+      prompt: "Daily",
+    } as never);
+    updateJob(job.id, { enabled: false });
+    const before = Date.now();
+
+    expect(
+      updateJob(job.id, { enabled: true }).resumedAt ?? 0
+    ).toBeGreaterThanOrEqual(before);
+  });
+});

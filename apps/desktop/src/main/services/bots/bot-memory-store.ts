@@ -46,6 +46,12 @@ const writeEntries = (id: string, entries: string[]): void => {
   fs.renameSync(temp, file);
 };
 
+/** The bot's core memory as prompt text: one line per entry, empty when none. */
+export const readBotMemoryText = (id: string): string =>
+  readEntries(id)
+    .map((entry) => `- ${entry}`)
+    .join("\n");
+
 const noteDays = (id: string): number => {
   try {
     return fs

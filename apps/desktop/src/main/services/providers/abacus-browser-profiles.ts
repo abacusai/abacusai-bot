@@ -17,7 +17,7 @@ import {
   readProfileCookies,
   type CDPCookie,
 } from "../browser/browser-profiles-service";
-import { abacusAppHost } from "./abacus-host";
+import { abacusAppHost, isHostOverridden } from "./abacus-host";
 import { resolveSignInVariant } from "./abacus-signin-config";
 
 const ABACUS_DOMAIN = "abacus.ai";
@@ -55,10 +55,13 @@ export const browserSignInCookies = async (
   const profile = discoverBrowserProfiles().find((p) => p.id === profileId);
   if (profile == null) return [];
   try {
-    return await readProfileCookies(profile, [
-      `https://${ABACUS_DOMAIN}/`,
-      new URL(abacusAppHost()).origin,
-    ]);
+    // Pointed at another host (a test build on preprod), only that host's
+    // cookies: a production session seeded beside them would be sent to it.
+    const origin = new URL(abacusAppHost()).origin;
+    return await readProfileCookies(
+      profile,
+      isHostOverridden() ? [origin] : [`https://${ABACUS_DOMAIN}/`, origin]
+    );
   } catch (error) {
     console.warn(
       `[abacus-auth] could not read ${profile.browserName} cookies: ${error instanceof Error ? error.message : "unknown"}`

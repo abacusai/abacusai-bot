@@ -99,13 +99,16 @@ function App(): React.JSX.Element {
   const [firstBotArmed, setFirstBotArmed] = useState(false);
   const disarmFirstBot = useCallback(() => setFirstBotArmed(false), []);
   useEffect(() => {
-    if (needsOnboarding === true) wasOnboarding.current = true;
+    // The wall alone is not onboarding: an account already through first-run
+    // signing back in has no screens left, and was handed a new Chief of
+    // Staff on every sign-in.
+    if (needsOnboarding === true) wasOnboarding.current = !onboarded;
     else if (needsOnboarding === false && wasOnboarding.current) {
       wasOnboarding.current = false;
       setFirstBotArmed(true);
       void navigate({ to: "/", search: defaultWorkspaceSearch });
     }
-  }, [navigate, needsOnboarding]);
+  }, [navigate, needsOnboarding, onboarded]);
 
   // Home directory backs the workspace picker's path shortening.
   useEffect(() => {

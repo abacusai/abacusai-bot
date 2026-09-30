@@ -63,6 +63,9 @@ export const abacusRoutellmOrigin = (): string =>
   abacusRoutellmV1().replace(/\/v1$/, "");
 
 /** Origin of the sign-in / connect pages (apps.abacus.ai in production). */
+/** Whether the app is pointed away from production (see the override above). */
+export const isHostOverridden = (): boolean => overrideHost() != null;
+
 export const abacusAppHost = (): string => {
   const url = overrideHost();
 

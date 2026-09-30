@@ -208,7 +208,11 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     gmailStarted.current = true;
     durableStorage.setItem(GMAIL_HOP_KEY, "started");
     void window.api.agent
-      .connectConnector(GMAIL_CONNECTOR_ID, { autostart: true, hint: email })
+      .connectConnector(GMAIL_CONNECTOR_ID, {
+        autostart: true,
+        hint: email,
+        owner: "first-run",
+      })
       .then((outcome) => {
         window.api.reportFunnelStep(
           outcome.ok ? "gmail_allowed" : "gmail_declined"
@@ -293,13 +297,16 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   useEffect(() => {
     if (autoSignIn.data !== true) return;
     if (step !== "auth" || signedIn !== false || onboarded) return;
+    // A sign-in the user already started is theirs; starting another would
+    // close their window and open the browser on them.
+    if (busy) return;
     if (durableStorage.getItem(AUTO_SIGN_IN_KEY) != null) return;
     durableStorage.setItem(AUTO_SIGN_IN_KEY, "started");
     window.api.reportFunnelStep("auto_signin");
     void connect("signin");
     // `connect` is rebuilt every render; the effect is about the answer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSignIn.data, step, signedIn, onboarded]);
+  }, [autoSignIn.data, step, signedIn, onboarded, busy]);
 
   if (step === "explainer") return <WelcomeTour onFinish={advance} />;
 

@@ -115,7 +115,10 @@ import {
   startAbacusAuth,
 } from "./services/providers/abacus-auth-service";
 import { listBrowserSignInProfiles } from "./services/providers/abacus-browser-profiles";
-import { cancelConnectorConnect } from "./services/providers/abacus-connector-service";
+import {
+  cancelAllConnectorConnects,
+  cancelConnectorConnect,
+} from "./services/providers/abacus-connector-service";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import {
   fetchReferralSummary,
@@ -131,6 +134,10 @@ import {
   cancelOpenRouterAuth,
   startOpenRouterAuth,
 } from "./services/providers/openrouter-auth-service";
+import {
+  clearSignInSession,
+  rememberSessionAccount,
+} from "./services/providers/sign-in-session";
 import { getUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
 import { requestMicrophoneAccess } from "./services/voice/microphone";
@@ -222,7 +229,9 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
    * it. This is the only path that may create an authenticated session.
    */
   const adoptAbacusCredential = async (
-    rawKey: string
+    rawKey: string,
+    /** Where the key was minted; the app's own window keeps that account's session. */
+    surface?: "in_app" | "browser"
   ): Promise<{ ok: true } | { ok: false; error: "unidentified-account" }> => {
     const key = rawKey.trim();
     const previousKey =
@@ -240,6 +249,12 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
       credentialsChanged("abacus", previousKey);
       return { ok: false, error: "unidentified-account" };
     }
+
+    // The sign-in partition is this account's only when it signed in there;
+    // a browser sign-in or a pasted key leaves whatever it held nobody's.
+    if (surface === "in_app" && account.email != null)
+      rememberSessionAccount(account.email);
+    else await clearSignInSession();
 
     const legacyKey = legacyProfileKeyFor(account);
     const aliases =
@@ -287,6 +302,12 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
             accountStashKey(account?.email, departingKey)
           )
         : 0;
+
+    // A hop or sign-in still out would attach to, or mint a key for, an
+    // account that is leaving; the partition is nobody's from here.
+    cancelAllConnectorConnects();
+    cancelAbacusAuth();
+    await clearSignInSession();
 
     const settings = saveApiKey("abacus", "");
     clearLocalAccount();
@@ -712,7 +733,7 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
         };
       }
 
-      const adopted = await adoptAbacusCredential(result.key);
+      const adopted = await adoptAbacusCredential(result.key, result.surface);
       if (!adopted.ok) return adopted;
 
       // Warm the catalog for same-profile sign-ins. A profile switch relaunches,

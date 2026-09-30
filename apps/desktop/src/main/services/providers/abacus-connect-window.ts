@@ -7,11 +7,12 @@
  * only, provider popups on the same session, the app's loopback callback let
  * through, and the browser as the fallback when the page cannot load here.
  */
-import { BrowserWindow, session, shell } from "electron";
+import { BrowserWindow, shell } from "electron";
 
 import { parentWindow, presentAsDialog } from "../../bring-to-front";
 import { isSafeExternalUrl } from "../../external-links";
-import { isOwnCallback, signInSessionPath } from "./abacus-signin-window";
+import { isOwnCallback } from "./abacus-signin-window";
+import { signInSession } from "./sign-in-session";
 
 export interface ConnectWindow {
   /** The hop settled elsewhere; take the window down. */
@@ -42,7 +43,7 @@ export const openConnectWindow = ({
     title: "Connect to Abacus.AI",
     autoHideMenuBar: true,
     webPreferences: {
-      session: session.fromPath(signInSessionPath()),
+      session: signInSession(),
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
@@ -89,6 +90,16 @@ export const openConnectWindow = ({
     }
     if (isSafeExternalUrl(target)) void shell.openExternal(target);
     return { action: "deny" };
+  });
+
+  // A provider popup's own links open in the browser, as the sign-in window's do.
+  win.webContents.on("did-create-window", (popup) => {
+    popup.webContents.on("will-navigate", (event) => guard(event, event.url));
+    popup.webContents.on("will-redirect", (event) => guard(event, event.url));
+    popup.webContents.setWindowOpenHandler(({ url: target }) => {
+      if (isSafeExternalUrl(target)) void shell.openExternal(target);
+      return { action: "deny" };
+    });
   });
 
   win.on("closed", () => {

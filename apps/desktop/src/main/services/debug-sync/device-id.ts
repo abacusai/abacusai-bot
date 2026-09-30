@@ -8,19 +8,39 @@ import fs from "fs";
 import path from "path";
 
 import { abacusBotHome } from "../../paths";
+import { profileBaseDir } from "../../profile-home";
 
-const deviceIdFile = (): string => path.join(abacusBotHome(), "device-id");
+/**
+ * Install-wide, beside the profile registry: kept in the profile home, a
+ * second account got a new id at its relaunch and every funnel broke at
+ * sign-in. An id minted before profiles existed is adopted from there.
+ */
+const deviceIdFile = (): string => path.join(profileBaseDir(), "device-id");
+const legacyDeviceIdFile = (): string =>
+  path.join(abacusBotHome(), "device-id");
 
 let cached: string | null = null;
 
 export function deviceId(): string {
   if (cached != null) return cached;
   const file = deviceIdFile();
-  try {
-    const existing = fs.readFileSync(file, "utf-8").trim();
-    if (existing.length > 0) return (cached = existing);
-  } catch {
-    // Not created yet; mint one.
+  for (const candidate of [file, legacyDeviceIdFile()]) {
+    try {
+      const existing = fs.readFileSync(candidate, "utf-8").trim();
+      if (existing.length > 0) {
+        if (candidate !== file) {
+          try {
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, existing, "utf-8");
+          } catch {
+            // Adopted for this launch either way.
+          }
+        }
+        return (cached = existing);
+      }
+    } catch {
+      // Not there; try the next, then mint one.
+    }
   }
   const id = crypto.randomUUID();
   try {

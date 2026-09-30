@@ -30,9 +30,26 @@ export const abacusV1BaseUrl = (
 export const SPONSORED_RUN_HEADER = "X-Abacus-Sponsored-Run";
 const SPONSORED_RUN_RE = /^[a-z0-9-]{1,40}$/;
 
-export const sponsoredRunHeaders = (
-  env: NodeJS.ProcessEnv = process.env
-): Record<string, string> => {
+/**
+ * Whether the run is still on the house: the marker is set, and the deadline
+ * the desktop set beside it (ms since the epoch) has not passed. A process
+ * can outlive the window by days; without the deadline it kept sending the
+ * marker for as long as it lived.
+ */
+export const sponsoredRunActive = (
+  env: NodeJS.ProcessEnv = process.env,
+  now: number = Date.now()
+): boolean => {
   const value = (env.ABACUSAI_BOT_SPONSORED_RUN ?? "").trim();
-  return SPONSORED_RUN_RE.test(value) ? { [SPONSORED_RUN_HEADER]: value } : {};
+  if (!SPONSORED_RUN_RE.test(value)) return false;
+  const until = Number(env.ABACUSAI_BOT_SPONSORED_UNTIL ?? "");
+  return !Number.isFinite(until) || until <= 0 || now < until;
 };
+
+export const sponsoredRunHeaders = (
+  env: NodeJS.ProcessEnv = process.env,
+  now: number = Date.now()
+): Record<string, string> =>
+  sponsoredRunActive(env, now)
+    ? { [SPONSORED_RUN_HEADER]: (env.ABACUSAI_BOT_SPONSORED_RUN ?? "").trim() }
+    : {};

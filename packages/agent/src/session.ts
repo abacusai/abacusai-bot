@@ -13,6 +13,8 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { sponsoredRunActive } from "./abacus-endpoint.js";
+import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
 import { backendOperations } from "./backends.js";
 import { notifyConversationQueueCleared } from "./background-processes.js";
@@ -86,7 +88,6 @@ import {
   MODE_NAMES,
   parseMode,
   parseModeStrict,
-  shellSegments,
 } from "./permissions.js";
 import { identityPrompt, personaPrompt, readPersona } from "./persona.js";
 import { windowsShellPrompt } from "./posix-shell.js";
@@ -132,6 +133,13 @@ import {
 } from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { conversationSessionManager } from "./session-file.js";
+import {
+  MAX_STALL_RECOVERIES_PER_TURN,
+  STALL_CONTINUATION_PROMPT,
+  STALL_CONTINUATION_TYPE,
+  StallWatch,
+  modelStallMs,
+} from "./stall-watch.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
@@ -569,21 +577,17 @@ export class AbacusBotSession {
     this.config.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
   private mode: AgentMode;
   private readonly pending = new Map<string, PendingPermission>();
-  /** Commands the user chose to always allow, for this process's lifetime. */
-  private readonly sessionAllowedCommands: string[] = [];
-  /** Non-bash tools the user chose to always allow, for this process's lifetime. */
-  private readonly sessionAllowedTools = new Set<string>();
-  /** Origins the user chose to always allow web_fetch for, this session. */
-  private readonly sessionAllowedOrigins: string[] = [];
+  /**
+   * What the user chose to always allow, for this process's lifetime. Reads
+   * and writes outside the workspace are seeded with what the host
+   * pre-allowed (a routine's own folder). See allowances.ts.
+   */
+  private readonly allowances = new Allowances({
+    readPaths: allowedPathsFromEnv(),
+    writePaths: allowedPathsFromEnv(),
+  });
   /** What the user let commands do beyond the sandbox, once or for the session. */
   private readonly sandboxApprovals = new SandboxApprovals();
-  /** Directories outside the workspace the user allowed reads from, this session. */
-  private readonly sessionAllowedReadPaths: string[] = allowedPathsFromEnv();
-  /**
-   * Directories outside the workspace the user allowed writes to, this
-   * session. Seeded with what the host pre-allowed (a routine's own folder).
-   */
-  private readonly sessionAllowedWritePaths: string[] = allowedPathsFromEnv();
   private permissionCounter = 0;
   /**
    * Extension handle for audit lines. Undefined until the permission gate is
@@ -662,8 +666,11 @@ export class AbacusBotSession {
    * reported as a hang. Armed while a model call is expected to be producing
    * output, never while a tool runs (tools have their own limits).
    */
-  private stallTimer: NodeJS.Timeout | null = null;
-  private awaitingModel = false;
+  private readonly stallWatch = new StallWatch({
+    turnRunning: () => this.turnRunning,
+    toolsRunning: () => this.heartbeat.size,
+    onStall: () => void this.onModelStall(),
+  });
   private pendingStall: { modelId: string } | null = null;
   private stallRecoveriesThisTurn = 0;
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
@@ -677,6 +684,8 @@ export class AbacusBotSession {
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
   private readonly router = new OpenLlmRouter();
+  /** Whether the Abacus provider was registered with the sponsored-run marker. */
+  private sponsoredAtRegistration = sponsoredRunActive();
   /**
    * Set at `agent_end` when the reply came back in the wrong script and the
    * turn continues with a repair. Once per turn; a second miss ends the turn.
@@ -1194,6 +1203,11 @@ export class AbacusBotSession {
     this.contextCompactions = 0;
     this.pendingContextCompaction = null;
     this.router.beginTurn();
+    // The sponsored window closing (or opening) changes the headers the
+    // Abacus provider was registered with; a run must not carry the marker
+    // past its deadline, nor miss it.
+    if (this.sponsoredAtRegistration !== sponsoredRunActive())
+      await this.refreshProviderRegistrations();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
     this.toolsArrivedThisTurn = [];
@@ -1538,60 +1552,13 @@ export class AbacusBotSession {
   }
 
   /** Which pi events mean a model call is (still) being waited on. */
-  private noteModelActivity(type: string): void {
-    switch (type) {
-      case "tool_execution_end":
-        // Parallel tool calls: the model is asked again only once the last one
-        // ends. Arming here while a sibling still runs (a browser sub-agent,
-        // minutes long) reads its silence as the model's and aborts it. The
-        // heartbeat still holds the call that is ending.
-        if (this.heartbeat.size > 1) return;
-        this.awaitingModel = true;
-        this.armStallTimer();
-
-        return;
-      case "agent_start":
-      case "message_start":
-        this.awaitingModel = true;
-        this.armStallTimer();
-
-        return;
-      case "message_end":
-      case "tool_execution_start":
-      case "agent_end":
-        this.awaitingModel = false;
-        this.clearStallTimer();
-
-        return;
-      default:
-        // A delta of any kind is proof of life.
-        if (this.awaitingModel) this.armStallTimer();
-    }
-  }
-
-  private armStallTimer(): void {
-    this.clearStallTimer();
-
-    if (!this.turnRunning) return;
-
-    this.stallTimer = setTimeout(() => {
-      this.stallTimer = null;
-      void this.onModelStall();
-    }, modelStallMs());
-  }
-
-  private clearStallTimer(): void {
-    if (this.stallTimer != null) clearTimeout(this.stallTimer);
-    this.stallTimer = null;
-  }
-
   private async onModelStall(): Promise<void> {
-    if (!this.turnRunning || this.interrupted || !this.awaitingModel) return;
+    if (!this.turnRunning || this.interrupted || !this.stallWatch.take())
+      return;
 
     const model = this.session?.model;
     const modelId = model ? `${model.provider}/${model.id}` : "the model";
 
-    this.awaitingModel = false;
     this.pendingStall = { modelId };
     process.stderr.write(
       `[abacusai-bot-agent] ${modelId} produced nothing for ${modelStallMs() / 1000}s; aborting the call\n`
@@ -1904,8 +1871,7 @@ export class AbacusBotSession {
    */
   private finishTurn(): void {
     this.turnRunning = false;
-    this.clearStallTimer();
-    this.awaitingModel = false;
+    this.stallWatch.clear();
     for (const subtaskId of this.componentSubtasks.values()) {
       this.emitAgentEvent({
         type: "subtask_end",
@@ -2199,6 +2165,7 @@ export class AbacusBotSession {
    * edit must not widen mid-session as a side effect of picking a model.
    */
   private async refreshProviderRegistrations(): Promise<void> {
+    this.sponsoredAtRegistration = sponsoredRunActive();
     const registry = this.registry;
 
     if (!registry) {
@@ -2316,7 +2283,7 @@ export class AbacusBotSession {
       process.stderr.write(`[pi] ${event.type}\n`);
     }
 
-    this.noteModelActivity(event.type);
+    this.stallWatch.note(event.type);
 
     switch (event.type) {
       case "agent_start":
@@ -2613,17 +2580,10 @@ export class AbacusBotSession {
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
-        allowedCommands: [
-          ...(this.config.allowedCommands ?? []),
-          ...this.sessionAllowedCommands,
-        ],
-        allowedTools: [...this.sessionAllowedTools],
-        allowedReadPaths: [
-          ...(this.config.allowedReadPaths ?? []),
-          ...this.sessionAllowedReadPaths,
-        ],
-        allowedWritePaths: [...this.sessionAllowedWritePaths],
-        allowedOrigins: [...this.sessionAllowedOrigins],
+        ...this.allowances.gateOptions({
+          commands: this.config.allowedCommands,
+          readPaths: this.config.allowedReadPaths,
+        }),
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
         allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
       });
@@ -3028,7 +2988,7 @@ export class AbacusBotSession {
           return undefined;
 
         case "allowAlways":
-          this.rememberAllowance(tool, request);
+          this.allowances.remember(tool, request);
 
           return undefined;
 
@@ -3051,12 +3011,12 @@ export class AbacusBotSession {
         };
 
       case "allow_always_with_rule":
-        this.sessionAllowedCommands.push(decision.rule);
+        this.allowances.allowCommandRules([decision.rule]);
 
         return undefined;
 
       case "allow_always_with_rules":
-        this.sessionAllowedCommands.push(...decision.rules);
+        this.allowances.allowCommandRules(decision.rules);
 
         return undefined;
 
@@ -3080,65 +3040,6 @@ export class AbacusBotSession {
     if (sandboxEnforcement() === "off" || backendName() === null) return [];
 
     return resolveSecretPaths({ workspaceRoot: cwd }).promptable;
-  }
-
-  /**
-   * "Always allow" is scoped to what was actually approved: the command's
-   * first word for a shell call (`npm test` must not approve `npm publish`),
-   * the origin for a fetch, the tool as a whole for file tools.
-   */
-  private rememberAllowance(
-    tool: ToolRequest,
-    request: PermissionRequest
-  ): void {
-    // Scoped to the directory the card named; the tool-level fallback below
-    // would grant `write` everywhere.
-    switch (request.type) {
-      case "read_outside_directory":
-        addPath(this.sessionAllowedReadPaths, request.deducedDirectory);
-
-        return;
-
-      case "write_outside_directory":
-      case "edit_outside_directory":
-      case "notebook_edit_outside_directory":
-        addPath(this.sessionAllowedWritePaths, request.deducedDirectory);
-
-        return;
-
-      default:
-        break;
-    }
-
-    if (tool.name === "web_fetch") {
-      try {
-        const origin = new URL(String(tool.input.url ?? "")).origin;
-        if (!this.sessionAllowedOrigins.includes(origin))
-          this.sessionAllowedOrigins.push(origin);
-      } catch {
-        // Unparseable never reached the network; nothing to remember.
-      }
-
-      return;
-    }
-
-    if (tool.name !== "bash") {
-      this.sessionAllowedTools.add(tool.name);
-
-      return;
-    }
-
-    // Every segment of `cd repo && git pull`, or the `git` half asks again.
-    for (const segment of shellSegments(String(tool.input.command ?? ""))) {
-      // Skip leading VAR=val tokens so `FOO=1 npm test` remembers `npm`.
-      const head = segment
-        .split(/\s+/)
-        .find((word) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(word));
-
-      if (head != null && !this.sessionAllowedCommands.includes(head)) {
-        this.sessionAllowedCommands.push(head);
-      }
-    }
   }
 
   private rejectAllPending(reason: string): void {
@@ -3339,15 +3240,8 @@ const COMPACTION_CONTINUATION_PROMPT =
  * server's own first-token limit is well under this, so silence this long is
  * a connection that will never finish, not a slow model.
  */
-const MODEL_STALL_MS = 120_000;
 
 /** Read per arming, so a test can shorten the window after the import. */
-const modelStallMs = (): number =>
-  Number(process.env.ABACUSAI_BOT_MODEL_STALL_MS) || MODEL_STALL_MS;
-const MAX_STALL_RECOVERIES_PER_TURN = 1;
-const STALL_CONTINUATION_TYPE = "abacusai-bot:stall-recovery";
-const STALL_CONTINUATION_PROMPT =
-  "The previous provider call produced no output and was abandoned. Continue the task from the transcript above. Do not restart it or repeat work that already completed.";
 
 /**
  * Whether a finished turn's last word from the model was a mangled tool call.
@@ -3665,10 +3559,6 @@ function componentSubtaskDescription(
 }
 
 /** Remember a directory once, ignoring an empty one. */
-function addPath(store: string[], directory: string): void {
-  if (directory.length > 0 && !store.includes(directory)) store.push(directory);
-}
-
 function isAssistantMessage(message: unknown): boolean {
   return (message as { role?: unknown } | undefined)?.role === "assistant";
 }

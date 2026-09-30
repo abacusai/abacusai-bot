@@ -13,6 +13,9 @@ import { abacusBotHome } from "../../paths";
 
 export type CronTrigger = "schedule" | "webhook" | "manual" | "create";
 
+/** How an attempt to fire a routine ended before any run began. */
+export type RoutineRunStart = "started" | "skipped" | "failed";
+
 export interface CronRun {
   at: number;
   trigger: CronTrigger;
@@ -40,6 +43,8 @@ export interface CronJob {
   /** Bot that made this routine. Provenance, not ownership: it outlives the bot. */
   botId: string | null;
   enabled: boolean;
+  /** When the user last resumed it; failures before that do not count toward a pause. */
+  resumedAt?: number | null;
   createdAt: number;
   lastRunAt: number | null;
   lastResult: string | null;
@@ -317,6 +322,21 @@ export const updateJob = (
 
   const { webhook, ...rest } = changes;
   const updated: CronJob = { ...jobs[index], ...rest };
+  // A one-time routine that already fired stays done: resumed as it stands
+  // it would fire again on the next tick. A new time re-arms it.
+  if (
+    rest.enabled === true &&
+    !jobs[index].enabled &&
+    rest.runAt == null &&
+    updated.runAt != null &&
+    updated.runAt <= Date.now()
+  )
+    throw new Error(
+      "This one-time routine already ran; give it a new time to run it again."
+    );
+  // Resumed: the failures that led to the pause are history.
+  if (rest.enabled === true && !jobs[index].enabled)
+    updated.resumedAt = Date.now();
 
   if (rest.schedule != null && rest.schedule.trim().length === 0)
     updated.schedule = null;
