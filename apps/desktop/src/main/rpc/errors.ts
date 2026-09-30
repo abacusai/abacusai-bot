@@ -13,6 +13,8 @@ import type {
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 
+import { UnsupportedPlatformError } from "../services/system/login-item";
+
 export type RpcError = ORPCError<string, unknown>;
 
 export const unavailable = (message: string, retryAfterMs?: number): RpcError =>
@@ -64,6 +66,8 @@ export const toRpcError = (error: unknown): RpcError => {
   if (error instanceof EntityNotFoundError)
     return notFound(error.entity, error.id);
   if (error instanceof ConflictError) return conflict(error.message);
+  if (error instanceof UnsupportedPlatformError)
+    return preconditionFailed("unsupported-platform", error.message);
 
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith(WORKSPACE_MISSING_ERROR)) {
