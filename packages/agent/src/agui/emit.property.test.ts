@@ -1,7 +1,12 @@
 /**
- * Stream properties (spec §7.4) over 10,000 seeded random sequences of
- * legacy + internal events, starts, stops and stale settles, fed through the
- * real sink, emitter and run controller.
+ * Stream properties (spec §7.4 items 1, 4-7) over 10,000 seeded random
+ * sequences of legacy + internal events, starts, stops and stale settles, fed
+ * through the real sink, emitter and run controller.
+ *
+ * Translator only: runs are opened here directly, so this proves the
+ * emitter's output is well formed for any input, not admission, hidden-turn
+ * or failure attribution. Those, and preservation of what the session
+ * emitted, are host.property.test.ts, over the real AguiHost.
  */
 import { describe, expect, it } from "vitest";
 

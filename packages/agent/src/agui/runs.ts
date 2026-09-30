@@ -40,6 +40,8 @@ export interface RunControllerDeps {
   closeOpenParts: (cancelled: boolean) => AguiEvent[];
   /** The model reference the run's terminal names. */
   model: () => string;
+  /** Right after RUN_STARTED is written. */
+  onOpen?: () => void;
 }
 
 /** `TurnUsage` as @ag-ui/core accounts it: input includes the cache (§3.3.8). */
@@ -152,6 +154,7 @@ export class RunController {
           : {}),
       })
     );
+    this.deps.onOpen?.();
   }
 
   /** Synchronously, before any abort is awaited (§3.1.2). */

@@ -159,6 +159,17 @@ export class AguiEmitter {
     return this.hiddenDepth > 0;
   }
 
+  /**
+   * A run opened. No hidden turn can be in progress now: housekeeping runs
+   * inside `send()` with admission held, so a run opens only after it ended
+   * or was aborted. An aborted one's closing bracket can land after the new
+   * RUN_STARTED; forgetting the depth here keeps it from hiding that run.
+   */
+  runOpened(): void {
+    this.hiddenDepth = 0;
+    this.hiddenTypes.length = 0;
+  }
+
   /** Set by the host before `session.stop()` / `resetConversation()`. */
   setClearReason(reason: "expired" | "stopped" | "reset"): void {
     this.clearReason = reason;
