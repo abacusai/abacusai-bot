@@ -120,7 +120,16 @@ export interface RendererSwapSchedulerOptions {
   budget?: SwapRetryBudget;
   pollMs?: number;
   log?: Pick<Console, "log" | "warn" | "error">;
+  /**
+   * How a scheduled version ended (spec 07 review r1 #9): `swapped` (passed
+   * readiness), `skipped` (nothing to swap: development, no window, already
+   * showing it) or `gave-up` (it never became ready within the budget). The
+   * experience store commits on the first two and rolls back on the third.
+   */
+  onOutcome?: (version: string, outcome: SwapOutcome) => void;
 }
+
+export type SwapOutcome = "swapped" | "skipped" | "gave-up";
 
 /**
  * Swaps to a newly activated renderer bundle at the first quiet moment, and
@@ -160,20 +169,38 @@ export class RendererSwapScheduler {
     this.#timer = null;
   }
 
+  #outcome(version: string, outcome: SwapOutcome): void {
+    try {
+      this.#options.onOutcome?.(version, outcome);
+    } catch (error) {
+      (this.#options.log ?? console).error(
+        "[experience] the swap outcome handler failed",
+        error
+      );
+    }
+  }
+
   /** True when there is nothing left to wait for. */
   #attempt(version: string): boolean {
     const options = this.#options;
     const log = options.log ?? console;
-    if (options.disabled?.() === true) return true;
+    if (options.disabled?.() === true) {
+      this.#outcome(version, "skipped");
+      return true;
+    }
     const url = options.target();
-    if (!url) return true;
     const host = options.host();
-    if (host == null) return true;
+    if (!url || host == null) {
+      // The next window loads the active bundle itself.
+      this.#outcome(version, "skipped");
+      return true;
+    }
     const key = url.href;
     if (!this.#budget.allows(key)) {
       log.warn(
         `[experience] ${version} never became ready; no more swaps until relaunch`
       );
+      this.#outcome(version, "gave-up");
       return true;
     }
     if (options.busy()) return false;
@@ -186,6 +213,7 @@ export class RendererSwapScheduler {
       .then(
         (swapped) => {
           if (swapped) log.log(`[experience] renderer swapped to ${version}`);
+          this.#outcome(version, swapped ? "swapped" : "skipped");
         },
         (error: unknown) => {
           if (error instanceof SwapAborted) {
@@ -195,10 +223,12 @@ export class RendererSwapScheduler {
           if (error instanceof SwapNotReady) {
             if (this.#budget.fail(key))
               this.schedule(version, { deferred: true });
-            else
+            else {
               log.warn(
                 `[experience] ${version} never became ready; no more swaps until relaunch`
               );
+              this.#outcome(version, "gave-up");
+            }
             return;
           }
           log.error("[experience] renderer swap failed", error);

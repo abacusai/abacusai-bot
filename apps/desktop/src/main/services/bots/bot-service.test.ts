@@ -45,7 +45,7 @@ const makeCallbacks = (
     sendMessage: vi.fn(),
     removeSession: vi.fn(),
     updateSessionModel: vi.fn(),
-    defaultModel: () => null,
+    effectiveModel: (requested) => requested,
     emitChanged: vi.fn(),
     ...overrides,
   };
@@ -313,7 +313,9 @@ describe("the bot's model", () => {
     // "Default" in the bot dialog has to mean the same model the session
     // pickers show. Left unpinned, the chat started on the CLI's own fallback
     // instead, so a bot quietly ran on a different model from everything else.
-    const callbacks = makeCallbacks({ defaultModel: () => "abacus/route-llm" });
+    const callbacks = makeCallbacks({
+      effectiveModel: (requested) => requested ?? "abacus/route-llm",
+    });
     const service = new BotService(callbacks);
     const bot = service.create({ name: "Scout", description: "Watch." });
 
@@ -327,7 +329,9 @@ describe("the bot's model", () => {
   });
 
   it("pins nothing when the app has no default stored yet", async () => {
-    const callbacks = makeCallbacks({ defaultModel: () => null });
+    const callbacks = makeCallbacks({
+      effectiveModel: (requested) => requested,
+    });
     const service = new BotService(callbacks);
     const bot = service.create({ name: "Scout", description: "Watch." });
 
@@ -337,7 +341,9 @@ describe("the bot's model", () => {
   });
 
   it("prefers the bot's own model over the app default", async () => {
-    const callbacks = makeCallbacks({ defaultModel: () => "abacus/route-llm" });
+    const callbacks = makeCallbacks({
+      effectiveModel: (requested) => requested ?? "abacus/route-llm",
+    });
     const service = new BotService(callbacks);
     const bot = service.create({
       name: "Scout",
@@ -361,6 +367,7 @@ describe("the bot's model", () => {
     await service.openChat(bot.id);
 
     service.update(bot.id, { model: "openllm/auto" });
+    await service.settled();
 
     expect(callbacks.updateSessionModel).toHaveBeenCalledWith(
       "ws-default",
