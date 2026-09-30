@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from "./routes/__root"
 import { Route as BareRouteImport } from "./routes/_bare"
 import { Route as ShellRouteImport } from "./routes/_shell"
 import { Route as BareChar91__uiChar93RouteImport } from "./routes/_bare/[__ui]"
+import { Route as BareOnboardingRouteImport } from "./routes/_bare/onboarding"
 import { Route as ShellIndexRouteImport } from "./routes/_shell/index"
 import { Route as ShellSettingsRouteImport } from "./routes/_shell/settings"
 import { Route as BareOnboardingIndexRouteImport } from "./routes/_bare/onboarding.index"
@@ -68,6 +69,11 @@ const BareChar91__uiChar93Route = BareChar91__uiChar93RouteImport.update({
   path: "/__ui",
   getParentRoute: () => BareRoute,
 } as any)
+const BareOnboardingRoute = BareOnboardingRouteImport.update({
+  id: "/onboarding",
+  path: "/onboarding",
+  getParentRoute: () => BareRoute,
+} as any)
 const ShellIndexRoute = ShellIndexRouteImport.update({
   id: "/",
   path: "/",
@@ -79,14 +85,14 @@ const ShellSettingsRoute = ShellSettingsRouteImport.update({
   getParentRoute: () => ShellRoute,
 } as any)
 const BareOnboardingIndexRoute = BareOnboardingIndexRouteImport.update({
-  id: "/onboarding/",
-  path: "/onboarding/",
-  getParentRoute: () => BareRoute,
+  id: "/",
+  path: "/",
+  getParentRoute: () => BareOnboardingRoute,
 } as any)
 const BareOnboardingStepRoute = BareOnboardingStepRouteImport.update({
-  id: "/onboarding/$step",
-  path: "/onboarding/$step",
-  getParentRoute: () => BareRoute,
+  id: "/$step",
+  path: "/$step",
+  getParentRoute: () => BareOnboardingRoute,
 } as any)
 const ShellartifactsArtifactsRoute = ShellartifactsArtifactsRouteImport.update({
   id: "/(artifacts)/artifacts",
@@ -301,6 +307,7 @@ const ShellbotsBotsBotIdChatsSessionIdRoute =
 export interface FileRoutesByFullPath {
   "/": typeof ShellIndexRoute
   "/__ui": typeof BareChar91__uiChar93Route
+  "/onboarding": typeof BareOnboardingRouteWithChildren
   "/settings": typeof ShellSettingsRouteWithChildren
   "/onboarding/$step": typeof BareOnboardingStepRoute
   "/artifacts": typeof ShellartifactsArtifactsRouteWithChildren
@@ -385,6 +392,7 @@ export interface FileRoutesById {
   "/_bare": typeof BareRouteWithChildren
   "/_shell": typeof ShellRouteWithChildren
   "/_bare/__ui": typeof BareChar91__uiChar93Route
+  "/_bare/onboarding": typeof BareOnboardingRouteWithChildren
   "/_shell/settings": typeof ShellSettingsRouteWithChildren
   "/_shell/": typeof ShellIndexRoute
   "/_bare/onboarding/$step": typeof BareOnboardingStepRoute
@@ -433,6 +441,7 @@ export interface FileRouteTypes {
   fullPaths:
     | "/"
     | "/__ui"
+    | "/onboarding"
     | "/settings"
     | "/onboarding/$step"
     | "/artifacts"
@@ -516,6 +525,7 @@ export interface FileRouteTypes {
     | "/_bare"
     | "/_shell"
     | "/_bare/__ui"
+    | "/_bare/onboarding"
     | "/_shell/settings"
     | "/_shell/"
     | "/_bare/onboarding/$step"
@@ -588,6 +598,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof BareChar91__uiChar93RouteImport
       parentRoute: typeof BareRoute
     }
+    "/_bare/onboarding": {
+      id: "/_bare/onboarding"
+      path: "/onboarding"
+      fullPath: "/onboarding"
+      preLoaderRoute: typeof BareOnboardingRouteImport
+      parentRoute: typeof BareRoute
+    }
     "/_shell/": {
       id: "/_shell/"
       path: "/"
@@ -604,17 +621,17 @@ declare module "@tanstack/react-router" {
     }
     "/_bare/onboarding/": {
       id: "/_bare/onboarding/"
-      path: "/onboarding"
+      path: "/"
       fullPath: "/onboarding/"
       preLoaderRoute: typeof BareOnboardingIndexRouteImport
-      parentRoute: typeof BareRoute
+      parentRoute: typeof BareOnboardingRoute
     }
     "/_bare/onboarding/$step": {
       id: "/_bare/onboarding/$step"
-      path: "/onboarding/$step"
+      path: "/$step"
       fullPath: "/onboarding/$step"
       preLoaderRoute: typeof BareOnboardingStepRouteImport
-      parentRoute: typeof BareRoute
+      parentRoute: typeof BareOnboardingRoute
     }
     "/_shell/(artifacts)/artifacts": {
       id: "/_shell/(artifacts)/artifacts"
@@ -885,16 +902,28 @@ declare module "@tanstack/react-router" {
   }
 }
 
-interface BareRouteChildren {
-  BareChar91__uiChar93Route: typeof BareChar91__uiChar93Route
+interface BareOnboardingRouteChildren {
   BareOnboardingStepRoute: typeof BareOnboardingStepRoute
   BareOnboardingIndexRoute: typeof BareOnboardingIndexRoute
 }
 
-const BareRouteChildren: BareRouteChildren = {
-  BareChar91__uiChar93Route: BareChar91__uiChar93Route,
+const BareOnboardingRouteChildren: BareOnboardingRouteChildren = {
   BareOnboardingStepRoute: BareOnboardingStepRoute,
   BareOnboardingIndexRoute: BareOnboardingIndexRoute,
+}
+
+const BareOnboardingRouteWithChildren = BareOnboardingRoute._addFileChildren(
+  BareOnboardingRouteChildren,
+)
+
+interface BareRouteChildren {
+  BareChar91__uiChar93Route: typeof BareChar91__uiChar93Route
+  BareOnboardingRoute: typeof BareOnboardingRouteWithChildren
+}
+
+const BareRouteChildren: BareRouteChildren = {
+  BareChar91__uiChar93Route: BareChar91__uiChar93Route,
+  BareOnboardingRoute: BareOnboardingRouteWithChildren,
 }
 
 const BareRouteWithChildren = BareRoute._addFileChildren(BareRouteChildren)

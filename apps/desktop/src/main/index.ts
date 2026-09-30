@@ -1761,6 +1761,8 @@ function installRpc(
             : null,
       reportReady: (id, report) => {
         rendererReadiness.report(id, report);
+        if (notchController?.owns(id) && report.barrier === "subscriptions")
+          notchController.documentReady(id);
         if (
           id === rendererWebContents()?.id &&
           report.barrier === "subscriptions"

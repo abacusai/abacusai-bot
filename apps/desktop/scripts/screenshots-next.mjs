@@ -66,22 +66,46 @@ const PORT = Number(option("--port", "9392"));
 export const bandFor = (width) =>
   width >= 1100 ? "xl" : width >= 1000 ? "lg" : width >= 900 ? "md" : "sm";
 
+export const PHASE6_ROUTES = [
+  ...[
+    "welcome",
+    "connect",
+    "connected",
+    "models",
+    "connectors",
+    "first-bot",
+    "done",
+  ].map((step) => `/__ui?fixture=onboarding-${step}`),
+  "/__ui?fixture=tour",
+  ...[
+    "idle",
+    "working",
+    "approval",
+    "question",
+    "reply",
+    "call",
+    "done",
+    "failed",
+  ].map((state) => `/__ui?fixture=notch-${state}`),
+];
 export const ROUTES = option(
   "--routes",
-  [
-    "/bots/new",
-    "/bots/chief-of-staff",
-    "/sessions/new",
-    "/sessions/review-prs?tab=terminal",
-    "/routines",
-    "/routines/new",
-    "/artifacts",
-    "/library/connectors",
-    "/settings/general",
-    "/settings/appearance",
-    "/onboarding/welcome",
-    "/__ui?section=shell",
-  ].join(",")
+  flag("--phase6")
+    ? PHASE6_ROUTES.join(",")
+    : [
+        "/bots/new",
+        "/bots/chief-of-staff",
+        "/sessions/new",
+        "/sessions/review-prs?tab=terminal",
+        "/routines",
+        "/routines/new",
+        "/artifacts",
+        "/library/connectors",
+        "/settings/general",
+        "/settings/appearance",
+        "/onboarding/welcome",
+        "/__ui?section=shell",
+      ].join(",")
 ).split(",");
 
 const OVERLAYS = [
@@ -567,6 +591,7 @@ const main = async () => {
           await capture(cdp, name, { route, width, theme, geometry });
         }
 
+        if (flag("--phase6")) continue;
         // Collapsed, then the floating sidebar on rail hover (V9).
         if (width >= 900) {
           await cdp.evaluate("window.__abacusDev.setPinned(true)");
@@ -733,7 +758,7 @@ const main = async () => {
 
   // Compact density: a launch with the stored setting (main reads it at
   // window creation).
-  {
+  if (!flag("--phase6")) {
     const compactHome = join(scratch, "home-compact");
     mkdirSync(compactHome, { recursive: true });
     writeFileSync(

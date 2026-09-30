@@ -37,8 +37,8 @@ export const useDictation = (
   return {
     state,
     level,
-    start: () => operation.current?.start(),
-    end: () => operation.current?.end(),
+    start: () => operation.current?.start() ?? Promise.resolve(),
+    end: () => operation.current?.end() ?? Promise.resolve(),
     cancel: () => operation.current?.cancel(),
   };
 };

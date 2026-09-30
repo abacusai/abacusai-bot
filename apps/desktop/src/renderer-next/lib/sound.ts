@@ -35,6 +35,7 @@ export interface SoundPlayer {
     options?: { threadId?: string; botId?: string | null; dedupeKey?: string }
   ): void;
   unlock(): void;
+  unlocked(): boolean;
   dispose(): void;
 }
 
@@ -94,7 +95,20 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
         ctx.createAudioContext ??
         (() =>
           typeof AudioContext === "undefined" ? null : new AudioContext());
-      audio = create();
+      try {
+        audio = create();
+        const context = audio as { resume?: () => Promise<void> } | null;
+        void context?.resume?.().catch(() => undefined);
+      } catch {
+        audio = null;
+      }
+    },
+    unlocked() {
+      return (
+        audio != null &&
+        ((audio as { state?: string }).state == null ||
+          (audio as { state?: string }).state === "running")
+      );
     },
     dispose() {
       disposed = true;

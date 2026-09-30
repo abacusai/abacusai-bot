@@ -1,4 +1,4 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 
 import {
   useBot,
@@ -13,13 +13,20 @@ import {
 } from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
+import { NotchGallery } from "#next/features/notch/gallery";
+import { OnboardingGallery } from "#next/features/onboarding/gallery";
+import { TourGallery } from "#next/features/tour/gallery";
+import {
+  ONBOARDING_STEPS,
+  type OnboardingStepId,
+} from "#next/lib/navigation/areas";
 
 type Replay = ReturnType<Awaited<ReturnType<typeof loadFixtureRuntime>>>;
-let replay: Replay = null;
+const replayState = { current: null as Replay };
 const replayReady =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
     ? loadFixtureRuntime().then((create) => {
-        replay = create("bot-golden-plain", {}, "bots-gallery");
+        replayState.current = create("bot-golden-plain", {}, "bots-gallery");
       })
     : null;
 const BotChatGallery = () => {
@@ -33,11 +40,11 @@ const GalleryChat = ({
 }) => {
   const expanded = useComposerExpanded("bots-gallery");
   const slots = useBotChatSlots(bot, "bots-gallery", expanded);
-  return replay ? (
+  return replayState.current ? (
     <div className="h-[650px]">
       <ChatView
         threadId="bots-gallery"
-        runtime={replay.runtime}
+        runtime={replayState.current.runtime}
         skin="bot"
         workspaceRoot={slots.workspaceRoot}
         composer={slots.composer}
@@ -59,6 +66,30 @@ const GalleryChat = ({
 const extension = {
   Nav: (props: { fixture: string | undefined }) => (
     <>
+      <div className="my-3 font-semibold">{"Phase 6" /* i18n-ignore: dev-only gallery label */}</div>
+      {[
+        ...ONBOARDING_STEPS.map((step) => `onboarding-${step}`),
+        "tour",
+        ...[
+          "idle",
+          "working",
+          "approval",
+          "question",
+          "reply",
+          "call",
+          "done",
+          "failed",
+        ].map((state) => `notch-${state}`),
+      ].map((fixture) => (
+        <Link
+          key={fixture}
+          to="/__ui"
+          search={{ fixture }}
+          className="block py-1 text-xs"
+        >
+          {fixture}
+        </Link>
+      ))}
       <botsGallerySections.Nav {...props} />
       <chatGallerySections.Nav {...props} />
     </>
@@ -68,7 +99,13 @@ const extension = {
     step: number | undefined;
     play: boolean;
   }) =>
-    props.fixture === "bots-chat" ? (
+    props.fixture.startsWith("onboarding-") ? (
+      <OnboardingGallery step={props.fixture.slice(11) as OnboardingStepId} />
+    ) : props.fixture.startsWith("notch-") ? (
+      <NotchGallery state={props.fixture.slice(6)} />
+    ) : props.fixture === "tour" ? (
+      <TourGallery />
+    ) : props.fixture === "bots-chat" ? (
       <BotChatGallery />
     ) : isBotsGalleryFixture(props.fixture) ? (
       <botsGallerySections.View {...props} />

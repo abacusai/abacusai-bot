@@ -321,7 +321,12 @@ export class NotchController {
       })
       .catch((error) => {
         console.warn("[notch] boot failed", error);
-        if (e.disposed) return;
+        if (
+          e.disposed ||
+          view.webContents.isDestroyed() ||
+          (standby && e.standby !== view)
+        )
+          return;
         if (standby) {
           e.standby = null;
           disposeView(e.win, view, (id) => this.#forget(id));
@@ -378,6 +383,14 @@ export class NotchController {
     return [...this.#entries.values()].some(
       (e) => e.active.webContents.id === id || e.standby?.webContents.id === id
     );
+  }
+  documentReady(id: number): void {
+    const entry = [...this.#entries.values()].find(
+      (entry) => entry.active.webContents.id === id
+    );
+    if (!entry || entry.disposed) return;
+    entry.ready = true;
+    this.#apply(entry, entry.shape);
   }
   requireActive(id: number): void {
     this.#entry(id);
