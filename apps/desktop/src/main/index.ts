@@ -25,6 +25,7 @@ import {
   clipboard,
   crashReporter,
   autoUpdater as nativeAutoUpdater,
+  webContents as electronWebContents,
 } from "electron";
 import type { WebContents } from "electron";
 import Store from "electron-store";
@@ -70,6 +71,7 @@ export function hasGoogleChrome(
     }
   });
 }
+import type { WindowState } from "#shared/contract";
 import { funnelDetail, isFunnelStep } from "#shared/funnel";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 import type {
@@ -86,7 +88,11 @@ import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { readClipboardImage } from "./clipboard-image";
 import { installCrashGuard } from "./crash-guard";
 import { isSafeExternalUrl } from "./external-links";
-import { disposeLocalModels, registerIpcHandlers } from "./handler";
+import {
+  disposeLocalModels,
+  registerIpcHandlers,
+  type HostOperations,
+} from "./handler";
 import { registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import { resolvePastedFilePath } from "./pasted-temp-files";
@@ -100,11 +106,25 @@ import {
   SwapAborted,
 } from "./renderer-host";
 import { agentEntry, resourcePath, resourcesRoot } from "./resources";
+import { UnavailableAguiSource } from "./rpc/ai/source";
+import type { AppOperations, RpcDeps } from "./rpc/deps";
+import { emitBusChannel } from "./rpc/emit";
+import { mainEventBus } from "./rpc/event-bus";
+import { rendererReadiness } from "./rpc/readiness";
+import { createRouter } from "./rpc/router";
+import { createEventTrackers } from "./rpc/trackers";
+import {
+  installMessagePortTransport,
+  type MessagePortTransport,
+} from "./rpc/transports/message-port";
 import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
-import { registerRendererState } from "./services/config/renderer-state";
+import {
+  registerRendererState,
+  type RendererStateStore,
+} from "./services/config/renderer-state";
 import {
   readNotificationSettings,
   readSettings,
@@ -358,7 +378,7 @@ let rendererSwapTimer: NodeJS.Timeout | null = null;
 const RENDERER_ACTIVITY_HOLD_MS = 15_000;
 let lastRendererActivity = 0;
 ipcMain.on("renderer-activity", () => {
-  lastRendererActivity = Date.now();
+  appOperations.markRendererActivity();
 });
 
 /**
@@ -576,9 +596,21 @@ async function createWindow(restored?: RecreatedWindowState) {
       "window:full-screen-changed",
       mainWindow.isFullScreen()
     );
+    publishWindowState();
+  };
+  // `window.events` for the oRPC renderer: the whole state, to the live view.
+  const publishWindowState = (): void => {
+    const contents = rendererWebContents();
+    const state = mainWindowState();
+    if (contents == null || state == null) return;
+    emitBusChannel("window", { webContentsId: contents.id, state });
   };
   mainWindow.on("enter-full-screen", publishFullScreenState);
   mainWindow.on("leave-full-screen", publishFullScreenState);
+  mainWindow.on("focus", publishWindowState);
+  mainWindow.on("blur", publishWindowState);
+  mainWindow.on("maximize", publishWindowState);
+  mainWindow.on("unmaximize", publishWindowState);
   mainWindow.on("closed", () => {
     if (mainWindowRef !== mainWindow) return;
     mainWindowRef = null;
@@ -723,6 +755,9 @@ async function createWindow(restored?: RecreatedWindowState) {
 
   // Runs on the initial view and on each experience swap's replacement.
   const wireRendererContents = (contents: WebContents): void => {
+    // The only place a webContents becomes trusted for an RPC port.
+    rpcTransport?.registerRendererContents(contents, "main");
+
     if (process.argv.includes("--devtools")) {
       contents.openDevTools({ mode: "right" });
     }
@@ -979,6 +1014,531 @@ async function createWindow(restored?: RecreatedWindowState) {
   loadAppContent();
 }
 
+/** Extension allow-list for the agent-image reader below. */
+const IMAGE_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+  ".svg": "image/svg+xml",
+  ".tif": "image/tiff",
+  ".tiff": "image/tiff",
+};
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_TEXT_BYTES_DEFAULT = 524288; // 512 KB
+// Embedded images come back as base64 data URLs, so the payload lands
+// several times larger than the file; 200 MB wedged the renderer.
+const MAX_PPTX_BYTES = 60 * 1024 * 1024; // 60 MB
+
+const PICKED_FILE_MIME: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+  ".heic": "image/heic",
+  ".tif": "image/tiff",
+  ".tiff": "image/tiff",
+  ".json": "application/json",
+  ".xml": "application/xml",
+  ".csv": "text/csv",
+  ".txt": "text/plain",
+  ".md": "text/markdown",
+  ".html": "text/html",
+  ".css": "text/css",
+  ".js": "text/javascript",
+  ".ts": "text/typescript",
+  ".jsx": "text/javascript",
+  ".tsx": "text/typescript",
+  ".py": "text/x-python",
+  ".yaml": "text/yaml",
+  ".yml": "text/yaml",
+  ".log": "text/plain",
+  ".sh": "text/x-shellscript",
+  ".bat": "text/x-bat",
+  ".toml": "text/plain",
+  ".ini": "text/plain",
+  ".cfg": "text/plain",
+  ".env": "text/plain",
+  ".doc": "application/msword",
+  ".docx":
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".ppt": "application/vnd.ms-powerpoint",
+  ".pptx":
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".zip": "application/zip",
+  ".gz": "application/gzip",
+  ".tar": "application/x-tar",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".mp4": "video/mp4",
+  ".mov": "video/quicktime",
+};
+
+/**
+ * The bodies of the top-level `window.api` handlers, as named operations: the
+ * `ipcMain` handlers registered in `whenReady` and the oRPC procedures
+ * (main/rpc) both call these, so neither carries its own copy.
+ */
+const appOperations: AppOperations = {
+  async openFolderDialog() {
+    const result = await showOpenDialogFromApp({
+      properties: ["openDirectory", "dontAddToRecent", "createDirectory"],
+      title: "Select Folder",
+    });
+    return result?.filePaths?.[0] || null;
+  },
+
+  // `kind: 'image'` narrows the picker for the composer's "Images" item.
+  async openFilesDialog(kind) {
+    const imagesOnly = kind === "image";
+    const result = await showOpenDialogFromApp({
+      properties: ["openFile", "multiSelections"],
+      title: imagesOnly ? "Select Images" : "Select Files",
+      ...(imagesOnly
+        ? {
+            filters: [
+              {
+                name: "Images",
+                extensions: [
+                  "png",
+                  "jpg",
+                  "jpeg",
+                  "gif",
+                  "webp",
+                  "bmp",
+                  "svg",
+                  "ico",
+                  "heic",
+                  "tiff",
+                ],
+              },
+            ],
+          }
+        : {}),
+    });
+
+    if (result.canceled || !result.filePaths?.length) return null;
+
+    const files = await Promise.all(
+      result.filePaths.map(async (filePath) => {
+        const data = await fs.readFile(filePath);
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeType = PICKED_FILE_MIME[ext] || "application/octet-stream";
+        return {
+          path: filePath,
+          name: path.basename(filePath),
+          data,
+          mimeType,
+        };
+      })
+    );
+
+    return files;
+  },
+
+  async openExternal(url) {
+    if (!isSafeExternalUrl(url)) {
+      // Refused rather than thrown: the callers are click handlers that do
+      // not await.
+      console.warn("[Shell] Refused to open", url);
+      return;
+    }
+    await shell.openExternal(url);
+  },
+
+  // Restricted to directories the app works in: the paths include file
+  // links out of model-generated markdown.
+  async openFilePath(filePath) {
+    const roots = [
+      ...workspaceServiceHost
+        .getMetadata()
+        .workspaces.filter((w) => w.isRemote !== true && w.path != null)
+        .map((w) => w.path as string),
+      abacusBotHome(),
+      // Shared on Linux; the guard admits only files this user owns.
+      userTempDir(),
+    ];
+    const decision = decideLocalOpen(filePath, roots);
+    if (decision.action === "refuse") {
+      console.warn("[Shell] Refused to open path", filePath);
+      return { outcome: "refused", reason: decision.reason };
+    }
+    // The resolved path, which the checks ran against; a symlink can be
+    // re-pointed between check and open.
+    if (decision.action === "reveal") {
+      shell.showItemInFolder(decision.path);
+      return { outcome: "revealed" };
+    }
+    await shell.openPath(decision.path);
+    return { outcome: "opened" };
+  },
+
+  showItemInFolder(filePath) {
+    shell.showItemInFolder(filePath);
+  },
+
+  appVersion: () => app.getVersion(),
+  homeDir: () => os.homedir(),
+  botHome: () => abacusBotHome(),
+
+  // Relaunch after adding skills so new agent processes load them at startup.
+  restartApp() {
+    app.relaunch();
+    app.quit();
+  },
+
+  hasGoogleChrome: () => hasGoogleChrome(),
+
+  // First-run milestones; see services/debug-sync/funnel-beacon.ts.
+  reportFunnelStep(step, detail) {
+    if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+  },
+
+  // The local account; see shared/account.ts for why it is optional.
+  account: {
+    get: () => readAccountState(),
+    skip: () => skipOnboarding(),
+    signOut: () => signOut(),
+    forget: () => forgetAccount(),
+  },
+
+  // Pasted/dropped attachments go under <baseFolder>/.abacusai-bot/temp/.
+  async savePastedTempFiles(baseFolder, files) {
+    try {
+      if (typeof baseFolder !== "string" || baseFolder.length === 0) {
+        return { success: false, error: "workspace path required" };
+      }
+      const tempDir = path.join(baseFolder, WORKSPACE_DIR_NAME, "temp");
+      mkdirSync(tempDir, { recursive: true });
+      // Self-ignoring: the user's repo does not ignore .abacusai-bot/, and
+      // untracked attachments would read as "the agent created these".
+      await fs
+        .writeFile(path.join(tempDir, ".gitignore"), "*\n")
+        .catch(() => {});
+      // Renderer-supplied names; resolvePastedFilePath keeps writes inside.
+      const paths = files.map((file) =>
+        resolvePastedFilePath(tempDir, file.name)
+      );
+      await Promise.all(
+        files.map((file, i) => fs.writeFile(paths[i], Buffer.from(file.data)))
+      );
+      return { success: true, dir: tempDir, paths };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  },
+
+  // A summary of this run plus every retained day of logs: the run someone
+  // reports is rarely the one still going.
+  async saveLogs(rendererLogs) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const result = await showSaveDialogFromApp({
+      title: "Save logs",
+      defaultPath: path.join(
+        app.getPath("downloads"),
+        `abacusai-bot-logs-${stamp}.zip`
+      ),
+      filters: [{ name: "Zip Archives", extensions: ["zip"] }],
+    });
+    if (result.canceled || !result.filePath) return { success: false };
+
+    try {
+      const summary = buildLogDump({
+        appVersion: app.getVersion(),
+        isPackaged: app.isPackaged,
+        homeDir: abacusBotHome(),
+        rendererLogs: typeof rendererLogs === "string" ? rendererLogs : "",
+        sessions: workspaceServiceHost.collectAgentDiagnostics(),
+        environment: collectEnvironmentInfo({
+          resourcesPath: resourcesRoot(),
+          agentEntry: agentEntry(),
+          artifactError: resolveArtifactError(),
+        }),
+        retainedDays: RETENTION_DAYS,
+        account: await collectAccountForDump(),
+        ...(await collectUsageForDump()),
+      });
+
+      const files: ZipFile[] = [
+        { name: "summary.txt", content: Buffer.from(summary, "utf-8") },
+      ];
+
+      // `files()` flushes first, so the lines written a moment ago are in.
+      for (const file of logStore().files()) {
+        try {
+          files.push({
+            name: `logs/${file.name}`,
+            content: await fs.readFile(file.path),
+          });
+        } catch {
+          // A file that vanished mid-dump costs its day, not the bundle.
+        }
+      }
+
+      await fs.writeFile(result.filePath, buildZip(files));
+      return { success: true, filePath: result.filePath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
+
+  appendLogs(lines) {
+    if (!Array.isArray(lines)) return;
+
+    for (const line of lines) {
+      if (typeof line === "string") logStore().append("renderer", line);
+    }
+  },
+
+  showNotification(title, body, metadata) {
+    // Gated here, the one place every notification passes through.
+    const prefs = readNotificationSettings();
+    if (!prefs.enabled) return;
+    const notification = new Notification({
+      title,
+      body,
+      silent: !prefs.sound,
+    });
+    notification.on("click", () => {
+      const win = revealMainWindow();
+      // Consumed by the onNotificationClicked subscriber in app.tsx.
+      if (win && metadata) {
+        rendererWebContents()?.send("notification-clicked", metadata);
+        emitBusChannel("system", { type: "notification-clicked", metadata });
+      }
+    });
+    notification.show();
+  },
+
+  // Agent-produced image as a data URL. Real paths on both sides, anything
+  // escaping the root refused, extension allow-list, size cap.
+  async readImageAsDataUrl(args) {
+    try {
+      const filePath = args?.filePath;
+      const hostRoot = args?.hostRoot;
+      if (!filePath || !hostRoot) {
+        return {
+          success: false,
+          error: "filePath and hostRoot are required",
+        };
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeType = IMAGE_MIME[ext];
+      if (!mimeType) {
+        return { success: false, error: "unsupported-extension" };
+      }
+
+      const file = await openHostFile(filePath, hostRoot);
+      if (file.ok === false) return { success: false, error: file.error };
+      const { realFile, stat } = file;
+      if (stat.size > MAX_IMAGE_BYTES) {
+        return {
+          success: false,
+          error: "too-large",
+          sizeBytes: stat.size,
+        };
+      }
+
+      const buf = await fs.readFile(realFile);
+      const dataUrl = `data:${mimeType};base64,${buf.toString("base64")}`;
+      return { success: true, dataUrl, mimeType, sizeBytes: stat.size };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  },
+
+  // Same path resolution and sandboxing as the image reader above.
+  async readFileAsText(args) {
+    try {
+      const filePath = args?.filePath;
+      const hostRoot = args?.hostRoot;
+      if (!filePath || !hostRoot) {
+        return {
+          success: false,
+          error: "filePath and hostRoot are required",
+        };
+      }
+
+      const maxBytes = args?.maxBytes ?? MAX_TEXT_BYTES_DEFAULT;
+
+      const file = await openHostFile(filePath, hostRoot);
+      if (file.ok === false) return { success: false, error: file.error };
+      const { realFile, stat } = file;
+
+      const sizeBytes = stat.size;
+
+      // A null byte in the first 8KB marks a binary file.
+      const fd = await fs.open(realFile, "r");
+      try {
+        const probe = Buffer.alloc(Math.min(8192, sizeBytes));
+        await fd.read(probe, 0, probe.length, 0);
+        if (probe.includes(0)) {
+          return { success: false, error: "binary-file", sizeBytes };
+        }
+      } finally {
+        await fd.close();
+      }
+
+      const truncated = sizeBytes > maxBytes;
+      let content: string;
+      if (truncated) {
+        const buf = Buffer.alloc(maxBytes);
+        const fd2 = await fs.open(realFile, "r");
+        try {
+          await fd2.read(buf, 0, maxBytes, 0);
+        } finally {
+          await fd2.close();
+        }
+        content = buf.toString("utf8");
+      } else {
+        content = await fs.readFile(realFile, "utf8");
+      }
+
+      return { success: true, content, sizeBytes, truncated };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  },
+
+  // Parsed here, not in the renderer: sending back slides is cheaper than
+  // shipping a 40 MB deck across IPC. Same sandboxing as the readers above.
+  async readPptx(args) {
+    try {
+      const filePath = args?.filePath;
+      const hostRoot = args?.hostRoot;
+      if (!filePath || !hostRoot) {
+        return {
+          success: false,
+          error: "filePath and hostRoot are required",
+        };
+      }
+
+      const file = await openHostFile(filePath, hostRoot);
+      if (file.ok === false) return { success: false, error: file.error };
+      const { realFile, stat } = file;
+      if (stat.size > MAX_PPTX_BYTES) {
+        return {
+          success: false,
+          error: "too-large",
+          sizeBytes: stat.size,
+        };
+      }
+
+      const buf = await fs.readFile(realFile);
+      const deck = parsePptx(buf);
+      return { success: true, deck, sizeBytes: stat.size };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  },
+
+  // The picker lives here (needs the focused window); the service validates
+  // and copies. Always global scope.
+  async importLocalSkills(request) {
+    const kind = request?.kind === "folder" ? "folder" : "file";
+    const result = await showOpenDialogFromApp({
+      title:
+        kind === "folder" ? "Select skill folder(s)" : "Select skill file(s)",
+      properties:
+        kind === "folder"
+          ? ["openDirectory", "multiSelections", "dontAddToRecent"]
+          : ["openFile", "multiSelections", "dontAddToRecent"],
+      ...(kind === "file"
+        ? { filters: [{ name: "Skill", extensions: ["md"] }] }
+        : {}),
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, cancelled: true };
+    }
+    return workspaceServiceHost.skillsService.importFromPaths({
+      paths: result.filePaths,
+      kind,
+    });
+  },
+
+  showAboutPanel: () => app.showAboutPanel(),
+
+  markRendererActivity() {
+    lastRendererActivity = Date.now();
+  },
+};
+
+/** The main window's state, as `window.state` reports it. */
+function mainWindowState(): WindowState | null {
+  const window = aliveMainWindow();
+  if (window === null) return null;
+  return {
+    fullScreen: window.isFullScreen(),
+    focused: window.isFocused(),
+    maximized: window.isMaximized(),
+  };
+}
+
+/** Null until whenReady has registered the IPC handlers. */
+let rpcTransport: MessagePortTransport | null = null;
+
+/**
+ * Mount the oRPC router on the MessagePort transport, beside the legacy IPC
+ * (spec 00 A.4). Called once, after the handlers it shares operations with.
+ */
+function installRpc(
+  host: HostOperations,
+  rendererState: RendererStateStore
+): void {
+  const deps: RpcDeps = {
+    serviceHost: workspaceServiceHost,
+    host,
+    app: appOperations,
+    browserRuntime,
+    update: updateService,
+    rendererState,
+    windows: {
+      mainRendererId: () => rendererWebContents()?.id ?? null,
+      contents: (id) => {
+        const contents = electronWebContents.fromId(id);
+        return contents == null || contents.isDestroyed() ? null : contents;
+      },
+      // Every window a port is registered for is the main window's renderer
+      // (the live view or a swap candidate); the notch comes later.
+      state: (id) =>
+        rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+      reportReady: (id, report) => rendererReadiness.report(id, report),
+    },
+    bus: mainEventBus,
+    ai: new UnavailableAguiSource(),
+    trackers: createEventTrackers(mainEventBus),
+  };
+  rpcTransport = installMessagePortTransport({
+    ipcMain,
+    router: createRouter(),
+    deps,
+    readiness: rendererReadiness,
+  });
+}
+
 // Before `whenReady`, or a dev run shows "Electron" in the menu bar. Keep the
 // hyphen: Chromium names its keychain entry (and so the cookie encryption key)
 // after this, and on Linux it is the WM_CLASS. Menus and titles use
@@ -1052,8 +1612,10 @@ app
         );
     });
     workspaceServiceHost.start();
-    registerRendererState();
-    registerIpcHandlers(workspaceServiceHost);
+    const rendererState = registerRendererState();
+    const hostOperations = registerIpcHandlers(workspaceServiceHost);
+    // After the dispatcher: the router shares the handlers' operations.
+    installRpc(hostOperations, rendererState);
     registerBrowserRuntimeIpcHandlers(
       browserRuntime,
       () => rendererWebContents()?.id ?? null
@@ -1107,48 +1669,18 @@ app
         /* cleanup is non-essential */
       }
     })();
-    ipcMain.handle("open-external", async (_event, url: string) => {
-      if (!isSafeExternalUrl(url)) {
-        // Refused rather than thrown: the callers are click handlers that do
-        // not await.
-        console.warn("[Shell] Refused to open", url);
-        return;
-      }
-      await shell.openExternal(url);
-    });
+    ipcMain.handle("open-external", (_event, url: string) =>
+      appOperations.openExternal(url)
+    );
 
-    // Restricted to directories the app works in: the paths include file
-    // links out of model-generated markdown.
     ipcMain.handle(
       "open-file-path",
-      async (_event, filePath: string): Promise<OpenFilePathResult> => {
-        const roots = [
-          ...workspaceServiceHost
-            .getMetadata()
-            .workspaces.filter((w) => w.isRemote !== true && w.path != null)
-            .map((w) => w.path as string),
-          abacusBotHome(),
-          // Shared on Linux; the guard admits only files this user owns.
-          userTempDir(),
-        ];
-        const decision = decideLocalOpen(filePath, roots);
-        if (decision.action === "refuse") {
-          console.warn("[Shell] Refused to open path", filePath);
-          return { outcome: "refused", reason: decision.reason };
-        }
-        // The resolved path, which the checks ran against; a symlink can be
-        // re-pointed between check and open.
-        if (decision.action === "reveal") {
-          shell.showItemInFolder(decision.path);
-          return { outcome: "revealed" };
-        }
-        await shell.openPath(decision.path);
-        return { outcome: "opened" };
-      }
+      (_event, filePath: string): Promise<OpenFilePathResult> =>
+        appOperations.openFilePath(filePath)
     );
 
     ipcMain.handle("show-item-in-folder", (_event, filePath: string) => {
-      shell.showItemInFolder(filePath);
+      appOperations.showItemInFolder(filePath);
     });
 
     app.setAboutPanelOptions({
@@ -1184,8 +1716,8 @@ app
         ])
       );
     }
-    ipcMain.handle("get-app-version", () => app.getVersion());
-    ipcMain.handle("window:show-about", () => app.showAboutPanel());
+    ipcMain.handle("get-app-version", () => appOperations.appVersion());
+    ipcMain.handle("window:show-about", () => appOperations.showAboutPanel());
     ipcMain.handle(
       "window:is-full-screen",
       () => mainWindowRef?.isFullScreen() ?? false
@@ -1193,15 +1725,12 @@ app
 
     // Relaunch after adding skills so new agent processes load them at startup.
     ipcMain.handle("restart-app", () => {
-      app.relaunch();
-      app.quit();
+      appOperations.restartApp();
     });
 
-    ipcMain.handle("get-home-dir", () => {
-      return os.homedir();
-    });
+    ipcMain.handle("get-home-dir", () => appOperations.homeDir());
 
-    ipcMain.handle("has-google-chrome", () => hasGoogleChrome());
+    ipcMain.handle("has-google-chrome", () => appOperations.hasGoogleChrome());
 
     ipcMain.handle(
       "theme:set",
@@ -1236,79 +1765,22 @@ app
 
     // `on`, not `handle`: the renderer must never wait on main to log a line.
     ipcMain.on("append-logs", (_event, lines: unknown) => {
-      if (!Array.isArray(lines)) return;
-
-      for (const line of lines) {
-        if (typeof line === "string") logStore().append("renderer", line);
-      }
+      appOperations.appendLogs(lines);
     });
 
-    // A summary of this run plus every retained day of logs: the run someone
-    // reports is rarely the one still going.
-    ipcMain.handle("save-logs", async (_event, rendererLogs: string) => {
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const result = await showSaveDialogFromApp({
-        title: "Save logs",
-        defaultPath: path.join(
-          app.getPath("downloads"),
-          `abacusai-bot-logs-${stamp}.zip`
-        ),
-        filters: [{ name: "Zip Archives", extensions: ["zip"] }],
-      });
-      if (result.canceled || !result.filePath) return { success: false };
-
-      try {
-        const summary = buildLogDump({
-          appVersion: app.getVersion(),
-          isPackaged: app.isPackaged,
-          homeDir: abacusBotHome(),
-          rendererLogs: typeof rendererLogs === "string" ? rendererLogs : "",
-          sessions: workspaceServiceHost.collectAgentDiagnostics(),
-          environment: collectEnvironmentInfo({
-            resourcesPath: resourcesRoot(),
-            agentEntry: agentEntry(),
-            artifactError: resolveArtifactError(),
-          }),
-          retainedDays: RETENTION_DAYS,
-          account: await collectAccountForDump(),
-          ...(await collectUsageForDump()),
-        });
-
-        const files: ZipFile[] = [
-          { name: "summary.txt", content: Buffer.from(summary, "utf-8") },
-        ];
-
-        // `files()` flushes first, so the lines written a moment ago are in.
-        for (const file of logStore().files()) {
-          try {
-            files.push({
-              name: `logs/${file.name}`,
-              content: await fs.readFile(file.path),
-            });
-          } catch {
-            // A file that vanished mid-dump costs its day, not the bundle.
-          }
-        }
-
-        await fs.writeFile(result.filePath, buildZip(files));
-        return { success: true, filePath: result.filePath };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-    });
+    ipcMain.handle("save-logs", (_event, rendererLogs: string) =>
+      appOperations.saveLogs(rendererLogs)
+    );
 
     // The local account; see shared/account.ts for why it is optional.
-    ipcMain.handle("account:get", () => readAccountState());
-    ipcMain.handle("account:skip", () => skipOnboarding());
-    ipcMain.handle("account:sign-out", () => signOut());
-    ipcMain.handle("account:forget", () => forgetAccount());
+    ipcMain.handle("account:get", () => appOperations.account.get());
+    ipcMain.handle("account:skip", () => appOperations.account.skip());
+    ipcMain.handle("account:sign-out", () => appOperations.account.signOut());
+    ipcMain.handle("account:forget", () => appOperations.account.forget());
 
     // First-run milestones; see services/debug-sync/funnel-beacon.ts.
     ipcMain.on("funnel:step", (_event, step: unknown, detail: unknown) => {
-      if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+      appOperations.reportFunnelStep(step, detail);
     });
     reportFunnelStep(
       "app_opened",
@@ -1318,285 +1790,32 @@ app
         : "signed_out"
     );
 
-    ipcMain.handle("open-folder-dialog", async () => {
-      const result = await showOpenDialogFromApp({
-        properties: ["openDirectory", "dontAddToRecent", "createDirectory"],
-        title: "Select Folder",
-      });
-      return result?.filePaths?.[0] || null;
-    });
+    ipcMain.handle("open-folder-dialog", () =>
+      appOperations.openFolderDialog()
+    );
 
-    // Agent-produced image as a data URL. Real paths on both sides, anything
-    // escaping the root refused, extension allow-list, size cap.
-    {
-      const IMAGE_MIME: Record<string, string> = {
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".gif": "image/gif",
-        ".webp": "image/webp",
-        ".bmp": "image/bmp",
-        ".ico": "image/x-icon",
-        ".svg": "image/svg+xml",
-        ".tif": "image/tiff",
-        ".tiff": "image/tiff",
-      };
-      const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
-
-      ipcMain.handle(
-        "files:read-image-as-data-url",
-        async (_event, args: { filePath?: string; hostRoot?: string }) => {
-          try {
-            const filePath = args?.filePath;
-            const hostRoot = args?.hostRoot;
-            if (!filePath || !hostRoot) {
-              return {
-                success: false,
-                error: "filePath and hostRoot are required",
-              };
-            }
-
-            const ext = path.extname(filePath).toLowerCase();
-            const mimeType = IMAGE_MIME[ext];
-            if (!mimeType) {
-              return { success: false, error: "unsupported-extension" };
-            }
-
-            const file = await openHostFile(filePath, hostRoot);
-            if (file.ok === false) return { success: false, error: file.error };
-            const { realFile, stat } = file;
-            if (stat.size > MAX_IMAGE_BYTES) {
-              return {
-                success: false,
-                error: "too-large",
-                sizeBytes: stat.size,
-              };
-            }
-
-            const buf = await fs.readFile(realFile);
-            const dataUrl = `data:${mimeType};base64,${buf.toString("base64")}`;
-            return { success: true, dataUrl, mimeType, sizeBytes: stat.size };
-          } catch (err) {
-            return {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            };
-          }
-        }
-      );
-    }
-
-    // Same path resolution and sandboxing as the image reader above.
-    {
-      const MAX_TEXT_BYTES_DEFAULT = 524288; // 512 KB
-
-      ipcMain.handle(
-        "files:read-file-as-text",
-        async (
-          _event,
-          args: { filePath?: string; hostRoot?: string; maxBytes?: number }
-        ) => {
-          try {
-            const filePath = args?.filePath;
-            const hostRoot = args?.hostRoot;
-            if (!filePath || !hostRoot) {
-              return {
-                success: false,
-                error: "filePath and hostRoot are required",
-              };
-            }
-
-            const maxBytes = args?.maxBytes ?? MAX_TEXT_BYTES_DEFAULT;
-
-            const file = await openHostFile(filePath, hostRoot);
-            if (file.ok === false) return { success: false, error: file.error };
-            const { realFile, stat } = file;
-
-            const sizeBytes = stat.size;
-
-            // A null byte in the first 8KB marks a binary file.
-            const fd = await fs.open(realFile, "r");
-            try {
-              const probe = Buffer.alloc(Math.min(8192, sizeBytes));
-              await fd.read(probe, 0, probe.length, 0);
-              if (probe.includes(0)) {
-                return { success: false, error: "binary-file", sizeBytes };
-              }
-            } finally {
-              await fd.close();
-            }
-
-            const truncated = sizeBytes > maxBytes;
-            let content: string;
-            if (truncated) {
-              const buf = Buffer.alloc(maxBytes);
-              const fd2 = await fs.open(realFile, "r");
-              try {
-                await fd2.read(buf, 0, maxBytes, 0);
-              } finally {
-                await fd2.close();
-              }
-              content = buf.toString("utf8");
-            } else {
-              content = await fs.readFile(realFile, "utf8");
-            }
-
-            return { success: true, content, sizeBytes, truncated };
-          } catch (err) {
-            return {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            };
-          }
-        }
-      );
-    }
-
-    // Parsed here, not in the renderer: sending back slides is cheaper than
-    // shipping a 40 MB deck across IPC. Same sandboxing as the readers above.
-    {
-      // Embedded images come back as base64 data URLs, so the payload lands
-      // several times larger than the file; 200 MB wedged the renderer.
-      const MAX_PPTX_BYTES = 60 * 1024 * 1024; // 60 MB
-
-      ipcMain.handle(
-        "files:read-pptx",
-        async (_event, args: { filePath?: string; hostRoot?: string }) => {
-          try {
-            const filePath = args?.filePath;
-            const hostRoot = args?.hostRoot;
-            if (!filePath || !hostRoot) {
-              return {
-                success: false,
-                error: "filePath and hostRoot are required",
-              };
-            }
-
-            const file = await openHostFile(filePath, hostRoot);
-            if (file.ok === false) return { success: false, error: file.error };
-            const { realFile, stat } = file;
-            if (stat.size > MAX_PPTX_BYTES) {
-              return {
-                success: false,
-                error: "too-large",
-                sizeBytes: stat.size,
-              };
-            }
-
-            const buf = await fs.readFile(realFile);
-            const deck = parsePptx(buf);
-            return { success: true, deck, sizeBytes: stat.size };
-          } catch (err) {
-            return {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            };
-          }
-        }
-      );
-    }
-
-    // `kind: 'image'` narrows the picker for the composer's "Images" item.
     ipcMain.handle(
-      "open-files-dialog",
-      async (_event, kind?: "all" | "image") => {
-        const imagesOnly = kind === "image";
-        const result = await showOpenDialogFromApp({
-          properties: ["openFile", "multiSelections"],
-          title: imagesOnly ? "Select Images" : "Select Files",
-          ...(imagesOnly
-            ? {
-                filters: [
-                  {
-                    name: "Images",
-                    extensions: [
-                      "png",
-                      "jpg",
-                      "jpeg",
-                      "gif",
-                      "webp",
-                      "bmp",
-                      "svg",
-                      "ico",
-                      "heic",
-                      "tiff",
-                    ],
-                  },
-                ],
-              }
-            : {}),
-        });
+      "files:read-image-as-data-url",
+      (_event, args: { filePath?: string; hostRoot?: string }) =>
+        appOperations.readImageAsDataUrl(args)
+    );
 
-        if (result.canceled || !result.filePaths?.length) return null;
+    ipcMain.handle(
+      "files:read-file-as-text",
+      (
+        _event,
+        args: { filePath?: string; hostRoot?: string; maxBytes?: number }
+      ) => appOperations.readFileAsText(args)
+    );
 
-        const MIME_MAP: Record<string, string> = {
-          ".pdf": "application/pdf",
-          ".png": "image/png",
-          ".jpg": "image/jpeg",
-          ".jpeg": "image/jpeg",
-          ".gif": "image/gif",
-          ".webp": "image/webp",
-          ".svg": "image/svg+xml",
-          ".bmp": "image/bmp",
-          ".ico": "image/x-icon",
-          ".heic": "image/heic",
-          ".tif": "image/tiff",
-          ".tiff": "image/tiff",
-          ".json": "application/json",
-          ".xml": "application/xml",
-          ".csv": "text/csv",
-          ".txt": "text/plain",
-          ".md": "text/markdown",
-          ".html": "text/html",
-          ".css": "text/css",
-          ".js": "text/javascript",
-          ".ts": "text/typescript",
-          ".jsx": "text/javascript",
-          ".tsx": "text/typescript",
-          ".py": "text/x-python",
-          ".yaml": "text/yaml",
-          ".yml": "text/yaml",
-          ".log": "text/plain",
-          ".sh": "text/x-shellscript",
-          ".bat": "text/x-bat",
-          ".toml": "text/plain",
-          ".ini": "text/plain",
-          ".cfg": "text/plain",
-          ".env": "text/plain",
-          ".doc": "application/msword",
-          ".docx":
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          ".xls": "application/vnd.ms-excel",
-          ".xlsx":
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          ".ppt": "application/vnd.ms-powerpoint",
-          ".pptx":
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-          ".zip": "application/zip",
-          ".gz": "application/gzip",
-          ".tar": "application/x-tar",
-          ".mp3": "audio/mpeg",
-          ".wav": "audio/wav",
-          ".mp4": "video/mp4",
-          ".mov": "video/quicktime",
-        };
+    ipcMain.handle(
+      "files:read-pptx",
+      (_event, args: { filePath?: string; hostRoot?: string }) =>
+        appOperations.readPptx(args)
+    );
 
-        const files = await Promise.all(
-          result.filePaths.map(async (filePath) => {
-            const data = await fs.readFile(filePath);
-            const ext = path.extname(filePath).toLowerCase();
-            const mimeType = MIME_MAP[ext] || "application/octet-stream";
-            return {
-              path: filePath,
-              name: path.basename(filePath),
-              data,
-              mimeType,
-            };
-          })
-        );
-
-        return files;
-      }
+    ipcMain.handle("open-files-dialog", (_event, kind?: "all" | "image") =>
+      appOperations.openFilesDialog(kind)
     );
 
     // Backs the "Paste image" attach item, which has no paste event to read
@@ -1696,58 +1915,17 @@ app
         body: string,
         metadata?: { tab?: string; workspaceId?: string; sessionId?: string }
       ) => {
-        // Gated here, the one place every notification passes through.
-        const prefs = readNotificationSettings();
-        if (!prefs.enabled) return;
-        const notification = new Notification({
-          title,
-          body,
-          silent: !prefs.sound,
-        });
-        notification.on("click", () => {
-          const win = revealMainWindow();
-          // Consumed by the onNotificationClicked subscriber in app.tsx.
-          if (win && metadata) {
-            rendererWebContents()?.send("notification-clicked", metadata);
-          }
-        });
-        notification.show();
+        appOperations.showNotification(title, body, metadata);
       }
     );
 
-    // Pasted/dropped attachments go under <baseFolder>/.abacusai-bot/temp/.
     ipcMain.handle(
       "save-pasted-temp-files",
-      async (
+      (
         _event,
         baseFolder: string,
         files: Array<{ name: string; data: Uint8Array }>
-      ) => {
-        try {
-          if (typeof baseFolder !== "string" || baseFolder.length === 0) {
-            return { success: false, error: "workspace path required" };
-          }
-          const tempDir = path.join(baseFolder, WORKSPACE_DIR_NAME, "temp");
-          mkdirSync(tempDir, { recursive: true });
-          // Self-ignoring: the user's repo does not ignore .abacusai-bot/, and
-          // untracked attachments would read as "the agent created these".
-          await fs
-            .writeFile(path.join(tempDir, ".gitignore"), "*\n")
-            .catch(() => {});
-          // Renderer-supplied names; resolvePastedFilePath keeps writes inside.
-          const paths = files.map((file) =>
-            resolvePastedFilePath(tempDir, file.name)
-          );
-          await Promise.all(
-            files.map((file, i) =>
-              fs.writeFile(paths[i], Buffer.from(file.data))
-            )
-          );
-          return { success: true, dir: tempDir, paths };
-        } catch (err) {
-          return { success: false, error: String(err) };
-        }
-      }
+      ) => appOperations.savePastedTempFiles(baseFolder, files)
     );
 
     // Skills management and marketplace (api.skills.*).
@@ -1775,33 +1953,10 @@ app
         return workspaceServiceHost.skillsService.openFile(request);
       }
     );
-    // The picker lives here (needs the focused window); the service validates
-    // and copies. Always global scope.
     ipcMain.handle(
       "skills-import-local",
-      async (_event, request: ImportLocalSkillsRequest) => {
-        const kind = request?.kind === "folder" ? "folder" : "file";
-        const result = await showOpenDialogFromApp({
-          title:
-            kind === "folder"
-              ? "Select skill folder(s)"
-              : "Select skill file(s)",
-          properties:
-            kind === "folder"
-              ? ["openDirectory", "multiSelections", "dontAddToRecent"]
-              : ["openFile", "multiSelections", "dontAddToRecent"],
-          ...(kind === "file"
-            ? { filters: [{ name: "Skill", extensions: ["md"] }] }
-            : {}),
-        });
-        if (result.canceled || result.filePaths.length === 0) {
-          return { success: false, cancelled: true };
-        }
-        return workspaceServiceHost.skillsService.importFromPaths({
-          paths: result.filePaths,
-          kind,
-        });
-      }
+      (_event, request: ImportLocalSkillsRequest) =>
+        appOperations.importLocalSkills(request)
     );
 
     // Global skills layout at startup, even if the Skills dialog never opens.

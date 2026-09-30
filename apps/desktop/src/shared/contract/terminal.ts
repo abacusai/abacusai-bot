@@ -70,8 +70,12 @@ export const PromoteTerminalSessionScopeRequestSchema = v.object({
  * with no gap and no duplicate.
  */
 export type TerminalOutputChunk =
-  /** First: the scrollback, or the bytes after `fromOffset` when still held. */
-  | { type: "snapshot"; data: string; offset: number }
+  /**
+   * First: the bytes after `fromOffset` when main still holds them
+   * (`from === fromOffset`: append), else the whole scrollback (`from` is
+   * where it starts: replace what you have).
+   */
+  | { type: "snapshot"; data: string; from: number; offset: number }
   | { type: "data"; data: string; offset: number }
   /** Exactly once, then the iterator returns. Sticky for a late subscriber. */
   | { type: "exit"; exitCode: number | null; signal: number | null };
