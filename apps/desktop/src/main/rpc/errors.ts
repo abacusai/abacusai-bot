@@ -12,11 +12,15 @@ import type {
 } from "#shared/contract/errors";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
+import { CronParseError } from "#shared/routines/cron";
 import {
   ForbiddenError,
   InvalidInputError,
   PreconditionError,
 } from "#shared/service-errors";
+import { TimeoutError } from "#shared/timeout-error";
+
+import { UnsupportedPlatformError } from "../services/config/login-item";
 
 export type RpcError = ORPCError<string, unknown>;
 
@@ -74,6 +78,20 @@ export const toRpcError = (error: unknown): RpcError => {
   if (error instanceof ForbiddenError)
     return forbidden(error.reason, error.message);
   if (error instanceof InvalidInputError) return badRequest(error.message);
+  if (error instanceof CronParseError)
+    return new ORPCError("BAD_REQUEST", {
+      status: 400,
+      message: error.message,
+      data: { field: "schedule", detail: error.detail },
+    });
+  if (error instanceof TimeoutError)
+    return new ORPCError("TIMEOUT", {
+      status: 504,
+      message: error.message,
+      data: { ms: error.ms },
+    });
+  if (error instanceof UnsupportedPlatformError)
+    return preconditionFailed("unsupported-platform", error.message);
 
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith(WORKSPACE_MISSING_ERROR)) {

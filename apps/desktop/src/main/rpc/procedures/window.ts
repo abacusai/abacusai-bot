@@ -56,6 +56,10 @@ export const windowRouter = impl.window.router({
       input.threadId
     ),
   })),
+  setDensity: impl.window.setDensity.handler(({ input, context }) => {
+    requireWindow(context);
+    return context.deps.app.setTitlebarDensity(input.density);
+  }),
   activity: impl.window.activity.handler(({ context }) => {
     requireWindow(context);
     context.deps.app.markRendererActivity();
