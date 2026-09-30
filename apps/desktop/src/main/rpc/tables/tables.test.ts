@@ -745,8 +745,8 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
     for (const entry of changesOf(feed.batches)) {
       if (entry.type === "delete") continue;
       const paths = entry.value.gitChanges.map((item) => item.path);
-      if (entry.key === idB) expect(paths).not.toContain("a.txt");
-      else expect(entry.key).toBe(idA);
+      if (entry.key === `${idB}:primary`) expect(paths).not.toContain("a.txt");
+      else expect(entry.key).toBe(`${idA}:primary`);
     }
     await feed.close();
   });
@@ -997,8 +997,8 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
     });
     await expect(gitState.next()).resolves.toMatchObject({
       changes: expect.arrayContaining([
-        { type: "delete", key: idB },
-        expect.objectContaining({ type: "insert", key: idA }),
+        { type: "delete", key: `${idB}:primary` },
+        expect.objectContaining({ type: "insert", key: `${idA}:primary` }),
       ]),
     });
     await workspaces.close();

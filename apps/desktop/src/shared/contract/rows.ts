@@ -47,8 +47,14 @@ export interface TablePosition<Key = string> {
   key: Key;
 }
 
-export type SessionRow = AgentSessionListItem & {
+export type SessionRow = Omit<AgentSessionListItem, "worktreeOperationId"> & {
   turn: { phase: SessionTurnPhase; isBusy: boolean; updatedAt: string } | null;
+  /**
+   * The `operationId` of the `git.worktrees.materialize` that attached this
+   * session's worktree (spec 04 §26.4 g), so a start page can reconcile
+   * after a reload. Main always sets it (null when none); not writable.
+   */
+  worktreeOperationId?: string | null;
 };
 
 export type BotRow = Bot;
@@ -81,7 +87,17 @@ export interface MemoryRow {
 
 export type WorkspaceRow = WorkspaceListItem & { isActive: boolean };
 
-export type GitStateRow = GitStateSnapshot & { workspaceId: string };
+/**
+ * One checkout's git state (spec 04 §26.4 b), keyed by `checkoutKey`
+ * (`shared/contract/checkout.ts`): the active workspace's primary checkout,
+ * and every checkout with a live `git.watch`.
+ */
+export type GitStateRow = GitStateSnapshot & {
+  workspaceId: string;
+  checkoutKey: string;
+  /** The directory the state was computed in (null: none, remote). */
+  checkoutPath: string | null;
+};
 
 /**
  * The locales the app ships (renderer/locales/*.json; a shared test keeps the

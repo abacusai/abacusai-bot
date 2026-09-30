@@ -169,7 +169,7 @@ export const createTables = (options: CreateTablesOptions): Tables => {
     gitState: new TableFeed({
       name: "gitState",
       read: () => readGitStateRows(sources),
-      getKey: (row) => row.workspaceId,
+      getKey: (row) => row.checkoutKey,
       equals: sameGitState,
     }),
     prefs: new TableFeed<PrefsRow, "app">({
@@ -254,6 +254,12 @@ export const createTables = (options: CreateTablesOptions): Tables => {
       tables.gitState.notify();
     }),
     prefsStore.onChanged(() => tables.prefs.notify()),
+    sources.onCheckoutRowsChanged?.(() => tables.gitState.notify()) ??
+      (() => undefined),
+    // Fingerprints cost git calls per refresh: only while someone reads.
+    tables.gitState.whileSubscribed(
+      () => sources.wantGitFingerprints?.() ?? (() => undefined)
+    ),
     tables.memories.whileSubscribed(wantMemory),
     bus.whileListened("memory", wantMemory),
   ];

@@ -11,6 +11,7 @@ import type {
   PreconditionReason,
 } from "#shared/contract/errors";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
+import { ForbiddenError } from "#shared/forbidden";
 import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 
 export type RpcError = ORPCError<string, unknown>;
@@ -40,8 +41,8 @@ export const notFound = (entity: NotFoundEntity, id: string): RpcError =>
 export const badRequest = (message: string): RpcError =>
   new ORPCError("BAD_REQUEST", { status: 400, message, data: {} });
 
-export const conflict = (reason: string): RpcError =>
-  new ORPCError("CONFLICT", { status: 409, message: reason, data: { reason } });
+export const conflict = (reason: string, message: string = reason): RpcError =>
+  new ORPCError("CONFLICT", { status: 409, message, data: { reason } });
 
 export const preconditionFailed = (
   reason: PreconditionReason,
@@ -64,6 +65,7 @@ export const toRpcError = (error: unknown): RpcError => {
   if (error instanceof EntityNotFoundError)
     return notFound(error.entity, error.id);
   if (error instanceof ConflictError) return conflict(error.message);
+  if (error instanceof ForbiddenError) return forbidden(error.reason);
 
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith(WORKSPACE_MISSING_ERROR)) {

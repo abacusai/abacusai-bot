@@ -10,7 +10,7 @@ import {
 import { impl, isType, onIpcEvents, stream } from "./impl";
 
 /** The host-file readers' failure codes (services/workspace/host-path.ts). */
-const hostFileError =
+export const hostFileError =
   (filePath: string) =>
   (reason: string): RpcError =>
     reason === "not-found"
@@ -19,26 +19,48 @@ const hostFileError =
         ? forbidden(reason)
         : conflict(reason);
 
+/**
+ * With `checkout`, the checkout-aware service (spec 04 §26.4 a); without it,
+ * the legacy active-workspace method the old renderer's IPC handler calls.
+ */
 export const filesRouter = impl.files.router({
-  treeRoot: impl.files.treeRoot.handler(({ context }) =>
-    context.deps.serviceHost.getFileTreeRoot()
+  treeRoot: impl.files.treeRoot.handler(({ input, context }) =>
+    input?.checkout == null
+      ? context.deps.serviceHost.getFileTreeRoot()
+      : context.deps.serviceHost.checkouts.treeRoot(input.checkout)
   ),
   treeChildren: impl.files.treeChildren.handler(({ input, context }) =>
-    context.deps.serviceHost.getFileTreeChildren(input.directoryPath)
+    input.checkout == null
+      ? context.deps.serviceHost.getFileTreeChildren(input.directoryPath)
+      : context.deps.serviceHost.checkouts.treeChildren(
+          input.checkout,
+          input.directoryPath
+        )
   ),
   search: impl.files.search.handler(({ input, context }) =>
-    context.deps.serviceHost.searchFiles(input.query)
+    input.checkout == null
+      ? context.deps.serviceHost.searchFiles(input.query)
+      : context.deps.serviceHost.checkouts.search(input.checkout, input.query)
   ),
   rename: impl.files.rename.handler(async ({ input, context }) => {
+    const { serviceHost } = context.deps;
     unwrapResult(
-      await context.deps.serviceHost.renameLocalFile(
-        input.fromPath,
-        input.toPath
-      )
+      input.checkout == null
+        ? await serviceHost.renameLocalFile(input.fromPath, input.toPath)
+        : await serviceHost.checkouts.rename(
+            input.checkout,
+            input.fromPath,
+            input.toPath
+          )
     );
   }),
   trash: impl.files.trash.handler(async ({ input, context }) => {
-    unwrapResult(await context.deps.serviceHost.trashLocalFile(input.filePath));
+    const { serviceHost } = context.deps;
+    unwrapResult(
+      input.checkout == null
+        ? await serviceHost.trashLocalFile(input.filePath)
+        : await serviceHost.checkouts.trash(input.checkout, input.filePath)
+    );
   }),
   savePastedTemp: impl.files.savePastedTemp.handler(
     async ({ input, context }) => {
@@ -86,13 +108,20 @@ export const filesRouter = impl.files.router({
       path: "files.events",
       context,
       signal,
-      attach: onIpcEvents(
-        context,
-        isType("file-tree-root-updated", "preview-open"),
-        (event): FilesEvent | null =>
-          event.type === "file-tree-root-updated"
-            ? { type: "tree-root-changed" }
-            : event.type === "preview-open"
+      attach: (push) => {
+        const { serviceHost } = context.deps;
+        const legacy = onIpcEvents(
+          context,
+          isType("file-tree-root-updated", "preview-open"),
+          (event): FilesEvent | null => {
+            if (event.type === "file-tree-root-updated") {
+              // The legacy event is the active workspace's primary checkout.
+              const key = serviceHost.activeCheckoutKey();
+              return key == null
+                ? { type: "tree-root-changed" }
+                : { type: "tree-root-changed", checkoutKey: key };
+            }
+            return event.type === "preview-open"
               ? {
                   type: "preview-open",
                   path: event.path,
@@ -100,11 +129,23 @@ export const filesRouter = impl.files.router({
                     ? {}
                     : { conversationKey: event.conversationKey }),
                 }
-              : null
-      ),
-      // A root change is an invalidation notice; a preview is an action.
+              : null;
+          }
+        )(push);
+        const watched = serviceHost.checkouts.onTreeChanged((checkoutKey) =>
+          push({ type: "tree-root-changed", checkoutKey })
+        );
+        return () => {
+          legacy();
+          watched();
+        };
+      },
+      // A root change is an invalidation notice per checkout; a preview is
+      // an action.
       coalesceKey: (event) =>
-        event.type === "tree-root-changed" ? "tree-root-changed" : null,
+        event.type === "tree-root-changed"
+          ? `tree-root-changed:${event.checkoutKey ?? ""}`
+          : null,
     })
   ),
 });

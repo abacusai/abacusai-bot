@@ -198,7 +198,8 @@ describe("contract types (A-T1)", () => {
     expectTypeOf<
       Mirrors<
         typeof MaterializeSessionWorktreeRequestSchema,
-        MaterializeSessionWorktreeRequest
+        // The procedure requires the operation id the legacy call omits.
+        MaterializeSessionWorktreeRequest & { operationId: string }
       >
     >().toEqualTypeOf<true>();
     expectTypeOf<

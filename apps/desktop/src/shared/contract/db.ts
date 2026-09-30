@@ -167,9 +167,19 @@ export const MemoryDeleteInputSchema = v.object({
 export const db = {
   sessions: {
     ...readTable<SessionRow>(),
-    /** A valid, unused client id is honoured; a taken one is `CONFLICT`. */
+    /**
+     * A valid, unused client id is honoured; a taken one is `CONFLICT`.
+     * `model` and `mode` are persisted at creation (spec 04 §26.4 d): the
+     * agent's first start (`agent.start` without overrides, the relay's
+     * start-on-send) runs on them.
+     */
     insert: write(
-      v.object({ id: v.optional(SessionId), workspaceId: WorkspaceId })
+      v.object({
+        id: v.optional(SessionId),
+        workspaceId: WorkspaceId,
+        model: v.optional(v.nullable(v.pipe(v.string(), v.nonEmpty()))),
+        mode: v.optional(v.nullable(AgentModeSchema)),
+      })
     ),
     /** Only `label` and `model` are writable; any other field is `FORBIDDEN`. */
     update: write(
