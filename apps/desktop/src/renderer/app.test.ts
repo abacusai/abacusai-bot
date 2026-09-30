@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { resolveNeedsOnboarding } from "./app";
+import { resolveNeedsOnboarding, trackFirstRun } from "./app";
 
 const resolved = {
   current: null,
@@ -89,5 +89,37 @@ describe("resolveNeedsOnboarding", () => {
         onboarded: true,
       })
     ).toBe(null);
+  });
+});
+
+describe("when the first bot is made", () => {
+  // Each step is (needsOnboarding, onboarded) as the app sees them in order.
+  const run = (steps: Array<[boolean | null, boolean]>): boolean[] => {
+    let saw = false;
+    return steps.map(([needs, onboarded]) => {
+      const next = trackFirstRun(saw, needs, onboarded);
+      saw = next.sawFirstRun;
+      return next.ended;
+    });
+  };
+
+  it("once first-run onboarding ends, though it marks the account onboarded first", () => {
+    expect(
+      run([
+        [null, false],
+        [true, false],
+        [true, true],
+        [false, true],
+      ])
+    ).toEqual([false, false, false, true]);
+  });
+
+  it("never for an onboarded account coming back through the wall", () => {
+    expect(
+      run([
+        [true, true],
+        [false, true],
+      ])
+    ).toEqual([false, false]);
   });
 });
