@@ -43,7 +43,7 @@ export const SessionWorkspace = ({
   row: SessionRow;
   chat: ReactNode;
   incarnation: string | null;
-  renderAgent: (id: string) => ReactNode;
+  renderAgent: (id: string | undefined) => ReactNode;
   registerHotkeys: SessionDockProps["registerHotkeys"];
   dispatch: (id: TerminalAction) => void;
   presenter: ComponentProps<typeof BrowserSurface>["presenter"];
@@ -225,12 +225,7 @@ export const SessionWorkspace = ({
               );
             if (tab.ref === "changes")
               return <ChangesTab row={row} root={root} onDiff={openDiff} />;
-            if (tab.ref === "agents")
-              return search.agent ? (
-                renderAgent(search.agent)
-              ) : (
-                <p className="p-4">{t("sessions.agents.empty")}</p>
-              );
+            if (tab.ref === "agents") return renderAgent(search.agent);
             return <DeviceTab visible={visible} />;
           }}
         />

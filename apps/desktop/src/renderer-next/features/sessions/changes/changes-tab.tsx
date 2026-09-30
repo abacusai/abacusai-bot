@@ -156,7 +156,7 @@ export const ChangesTab = ({
     );
   return (
     <div className="flex size-full min-h-0">
-      <aside className="flex w-[232px] shrink-0 flex-col gap-1 overflow-auto border-r p-2">
+      <aside className="flex w-[35%] max-w-56 min-w-28 shrink-0 flex-col gap-1 overflow-auto border-r p-2">
         <p className="text-muted-foreground p-2 text-xs">
           {t("sessions.changes.title")}
         </p>

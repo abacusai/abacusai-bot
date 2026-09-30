@@ -2,10 +2,7 @@ export { SessionsSidebar } from "./sessions-sidebar";
 export { SessionIdentity } from "./sessions-pages";
 export { SessionStartPage } from "./start/session-start-page";
 export { SessionWorkspace } from "./session-workspace";
-export {
-  useSession,
-  useWorkspace,
-} from "./data/queries";
+export { useSession, useWorkspace } from "./data/queries";
 export { useSessionComposerModel } from "./data/composer-model";
 export { SessionContextTray } from "./context/context-tray";
 export { FullDiffDialog } from "./changes/full-diff-dialog";
