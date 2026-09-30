@@ -1,3 +1,4 @@
+import { HotkeysProvider } from "@tanstack/react-hotkeys";
 /**
  * Test helpers for the chat kit (tests only): render a node inside the
  * fixture DB (prefs drive the motion preference) with English copy, and
@@ -11,15 +12,16 @@ import { FixtureDb, fixtureTransport } from "#next/data/fixture-db/fixture-db";
 import { i18n, initI18n } from "#next/lib/i18n";
 import { defaultSeed } from "#next/test-support/app-harness";
 
+import { clearDraft } from "./composer/draft-store";
 import {
   fixtureRuntime,
   type FixtureRuntime,
   type PlayOptions,
 } from "./fixtures/player";
 import type { FakeRelay } from "./fixtures/relay";
-import type { ComposerConfig } from "./kit/context";
+import type { ComposerConfig, ChatViewSlots } from "./kit/context";
 import { ChatView } from "./kit/view";
-import { inertHostActions } from "./runtime/host-actions";
+import { inertHostActions, type ChatHostActions } from "./runtime/host-actions";
 import { createChatRuntime, type ChatRuntime } from "./runtime/runtime";
 
 export interface Rendered {
@@ -36,7 +38,19 @@ export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
   await db.collections.prefs.preload();
   let view!: RenderResult;
   await act(async () => {
-    view = render(<DbProvider value={db}>{node}</DbProvider>);
+    view = render(
+      <HotkeysProvider
+        defaultOptions={{
+          hotkey: {
+            platform: "mac",
+            preventDefault: false,
+            stopPropagation: false,
+          },
+        }}
+      >
+        <DbProvider value={db}>{node}</DbProvider>
+      </HotkeysProvider>
+    );
   });
   return {
     view,
@@ -80,7 +94,10 @@ export const renderScenario = async (
         skin={skin}
         runtime={fixture.runtime}
         workspaceRoot={skin === "session" ? "/repo" : null}
-        composer={baseComposer(skin, options.composer)}
+        composer={baseComposer(skin, {
+          dictating: fixture.scenario.view?.dictating === true,
+          ...options.composer,
+        })}
         {...(options.onOpenFile != null
           ? { onOpenFile: options.onOpenFile }
           : {})}
@@ -96,6 +113,7 @@ export const renderScenario = async (
     cleanup: async () => {
       await rendered.cleanup();
       fixture.runtime.forget(fixture.threadId);
+      clearDraft(fixture.threadId);
     },
   };
 };
@@ -104,9 +122,11 @@ export const renderScenario = async (
 export const renderRelay = async (
   relay: FakeRelay,
   skin: "bot" | "session",
-  composer: Partial<ComposerConfig> = {}
+  composer: Partial<ComposerConfig> = {},
+  viewOptions: { focused?: boolean; slots?: ChatViewSlots } = {},
+  host: ChatHostActions = inertHostActions
 ): Promise<Rendered & { runtime: ChatRuntime }> => {
-  const runtime = createChatRuntime(relay.ai, { host: inertHostActions });
+  const runtime = createChatRuntime(relay.ai, { host });
   await runtime.session(relay.threadId).load();
   const rendered = await renderWithDb(
     <div style={{ height: 800 }}>
@@ -116,6 +136,7 @@ export const renderRelay = async (
         runtime={runtime}
         workspaceRoot={skin === "session" ? "/repo" : null}
         composer={baseComposer(skin, composer)}
+        {...viewOptions}
       />
     </div>
   );

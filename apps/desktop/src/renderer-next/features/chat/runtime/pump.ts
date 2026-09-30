@@ -44,28 +44,29 @@ export interface PumpOptions {
   onRecover(reason: "resync" | "join-failed"): void;
   /** The thread is gone (`NOT_FOUND` from the subscription). */
   onNotFound(): void;
+  /** First sequenced live event after subscribe; excludes subscribed/resync. */
+  onLive?(): void;
   /** Reconnect delays (§3.3); the last failure sets `"error"`. */
   retryDelaysMs?: readonly number[];
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
 
 /** Two waits, then the third failure sets `"error"` (§3.3, R2-T34). */
-const RETRY_DELAYS_MS = [250, 1000] as const;
+const RETRY_DELAYS_MS = [250, 1000, 4000] as const;
 
 const defaultSleep = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true }
-    );
+    const finish = (): void => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    signal.addEventListener("abort", finish, { once: true });
+    if (signal.aborted) finish();
   });
 
-type Handled = "continue" | "stop";
+type Handled = "continue" | "accepted" | "stop";
 
 export const runPump = async (options: PumpOptions): Promise<void> => {
   const {
@@ -99,7 +100,7 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
     if (seq == null || seq <= positions.receivedSeq) return "continue";
     positions.receivedSeq = seq;
     push(seq, event);
-    return "continue";
+    return "accepted";
   };
 
   const caughtUp = (): boolean => positions.receivedSeq >= positions.checkpoint;
@@ -147,8 +148,12 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
         { signal }
       );
       for await (const event of iterator) {
-        if (controlOf(event)?.kind === "subscribed") failures = 0;
-        if (accept(event) === "stop") return;
+        const handled = accept(event);
+        if (handled === "stop") return;
+        if (handled === "accepted") {
+          failures = 0;
+          options.onLive?.();
+        }
       }
       throw new Error("chat: the subscription ended");
     } catch (error) {

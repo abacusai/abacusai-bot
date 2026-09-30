@@ -287,10 +287,12 @@ export const PermissionCard = ({
           model.stacked ? "flex-col" : "flex-wrap items-center"
         )}
       >
-        {leading.map((action, index) => (
+        {leading.map((action) => (
           <Button
             key={action.id}
-            ref={index === 0 ? primary : undefined}
+            // Focus goes to the primary action, wherever it sits: for a
+            // credentials read that is Deny, never the secondary Allow once.
+            ref={action.id === primaryAction?.id ? primary : undefined}
             variant={VARIANT[action.variant]}
             size={model.stacked ? "lg" : "default"}
             disabled={sending}
@@ -315,6 +317,7 @@ export const PermissionCard = ({
         {trailing.map((action) => (
           <Button
             key={action.id}
+            ref={action.id === primaryAction?.id ? primary : undefined}
             variant="ghost"
             disabled={sending}
             onClick={() => answer(action.decision)}
@@ -416,6 +419,16 @@ const QuestionCard = ({
       </span>
       <Questionnaire
         shortcuts="letters"
+        onKeyDown={(event) => {
+          if (
+            (event.metaKey || event.ctrlKey) &&
+            event.key === "Enter" &&
+            answering?.state !== "sending"
+          ) {
+            event.preventDefault();
+            event.currentTarget.requestSubmit();
+          }
+        }}
         onSubmit={submit}
         className="flex flex-col gap-3"
       >

@@ -5,6 +5,12 @@
  * (Spinner/Skeleton loop forever, so infinite ones are excluded); fonts are
  * ready; no collection is still loading; two animation frames. Infinite
  * animations are then frozen at a deterministic phase (`currentTime = 0`).
+ *
+ * Scroll-driven animations (a `ScrollTimeline`/`ViewTimeline`, e.g. the
+ * registry's `scroll-fade-*` utilities) are neither waited for nor frozen:
+ * they advance with scrolling, not time, so "finished" never comes. Frames
+ * are bounded by a timer, because Chromium does not run
+ * `requestAnimationFrame` in a hidden or occluded window.
  */
 import type { AnyRouter } from "@tanstack/react-router";
 
@@ -17,19 +23,67 @@ export interface SettleDeps {
   }>;
   frame?: (callback: () => void) => void;
   timeoutMs?: number;
+  /** Longest wait for one frame before a timer stands in (occluded window). */
+  frameFallbackMs?: number;
 }
+
+const FRAME_FALLBACK_MS = 100;
 
 const isInfinite = (animation: Animation): boolean =>
   animation.effect?.getComputedTiming().endTime === Infinity;
 
-const nextFrames = (frame: (callback: () => void) => void, count: number) =>
+/**
+ * Driven by a scroll or view timeline rather than the document's clock.
+ * Checked structurally (a `source` or `subject`, or the constructor name),
+ * since jsdom and older engines have no `ScrollTimeline` global.
+ */
+const isScrollDriven = (animation: Animation, doc: Document): boolean => {
+  const timeline = animation.timeline as
+    | (AnimationTimeline & { source?: unknown; subject?: unknown })
+    | null
+    | undefined;
+  if (timeline == null) return false;
+  if (timeline === doc.timeline) return false;
+  const name = (timeline as { constructor?: { name?: string } }).constructor
+    ?.name;
+  return (
+    name === "ScrollTimeline" ||
+    name === "ViewTimeline" ||
+    "source" in timeline ||
+    "subject" in timeline
+  );
+};
+
+/** One frame, or the fallback timer when frames are not being produced. */
+const oneFrame = (
+  frame: (callback: () => void) => void,
+  doc: Document,
+  fallbackMs: number
+): Promise<void> =>
   new Promise<void>((resolve) => {
-    const step = (left: number): void => {
-      if (left === 0) resolve();
-      else frame(() => step(left - 1));
+    let done = false;
+    const finish = (): void => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve();
     };
-    step(count);
+    const timer = setTimeout(
+      finish,
+      doc.visibilityState === "hidden" ? 0 : fallbackMs
+    );
+    frame(finish);
   });
+
+const nextFrames = async (
+  frame: (callback: () => void) => void,
+  doc: Document,
+  count: number,
+  fallbackMs: number
+): Promise<void> => {
+  for (let left = count; left > 0; left -= 1)
+    await oneFrame(frame, doc, fallbackMs);
+};
 
 const collectionsSettled = (
   collections: NonNullable<SettleDeps["collections"]>
@@ -58,7 +112,9 @@ const settleAnimations = async (doc: Document): Promise<void> => {
   for (let round = 0; round < 5; round += 1) {
     const finite = doc
       .getAnimations()
-      .filter((animation) => !isInfinite(animation));
+      .filter(
+        (animation) => !isInfinite(animation) && !isScrollDriven(animation, doc)
+      );
     const running = finite.filter(
       (animation) => animation.playState === "running"
     );
@@ -68,7 +124,7 @@ const settleAnimations = async (doc: Document): Promise<void> => {
     );
   }
   for (const animation of doc.getAnimations()) {
-    if (!isInfinite(animation)) continue;
+    if (!isInfinite(animation) || isScrollDriven(animation, doc)) continue;
     animation.pause();
     animation.currentTime = 0;
   }
@@ -136,6 +192,6 @@ export const navigateAndSettle = async (
   await settleAnimations(doc);
   await doc.fonts?.ready;
   if (deps.collections != null) await collectionsSettled(deps.collections);
-  await nextFrames(frame, 2);
+  await nextFrames(frame, doc, 2, deps.frameFallbackMs ?? FRAME_FALLBACK_MS);
   await settleAnimations(doc);
 };

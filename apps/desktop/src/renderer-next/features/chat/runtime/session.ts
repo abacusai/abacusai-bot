@@ -19,6 +19,7 @@ import { isNotFound, type AiClient } from "#next/data/ai";
 import type { PermissionDecision } from "#shared/agent-types";
 import type { AiHydration } from "#shared/contract/ai";
 
+import { isAllowed } from "../kit/permissions/decisions";
 import {
   applyEvent,
   customName,
@@ -114,6 +115,7 @@ interface Generation {
   swapped: boolean;
   failed: boolean;
   capTimer: ReturnType<typeof setTimeout> | null;
+  activeStart: number;
 }
 
 export interface ThreadSessionOptions {
@@ -127,6 +129,7 @@ export interface ThreadSessionOptions {
   newId?: (prefix: "u" | "run") => string;
   /** Test seam: wraps the constructed client (the ordering property test). */
   onClient?: (client: ChatClient, g: number) => void;
+  onConsumed?: (seq: number, g: number) => void;
   log?: (message: string, error?: unknown) => void;
 }
 
@@ -154,6 +157,9 @@ const initialHost = (): HostState => ({
   cancelling: false,
 });
 
+const genBoundary = (start: number, total: number): number =>
+  Math.max(0, Math.min(start, total));
+
 const uuid = (): string =>
   globalThis.crypto?.randomUUID?.() ??
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -171,8 +177,18 @@ export class ThreadSession {
   #recoveries = 0;
   #timers = new Set<ReturnType<typeof setTimeout>>();
   #pins = 0;
+  #cancelAttempt = 0;
+  #permissionAttempt = 0;
+  #cancelTimer: ReturnType<typeof setTimeout> | null = null;
   readonly #admission: AdmissionHost;
   /** Message ids confirmed by `abacus.duplicate_echo` (§14.12). */
+  readonly #prependListeners = new Set<() => void>();
+  onPrepend(listener: () => void): () => void {
+    this.#prependListeners.add(listener);
+    return () => {
+      this.#prependListeners.delete(listener);
+    };
+  }
   readonly #echoed = new Set<string>();
 
   constructor(options: ThreadSessionOptions) {
@@ -256,6 +272,10 @@ export class ThreadSession {
   retire(): void {
     if (this.#retired) return;
     this.#retired = true;
+    this.#rev += 1;
+    this.#echoed.clear();
+    this.#prependListeners.clear();
+    this.#host({ rev: this.#rev, outbox: [] });
     const error = new ThreadRetiredError(this.threadId);
     for (const gen of [this.#pending, this.#live]) {
       if (gen == null) continue;
@@ -298,18 +318,9 @@ export class ThreadSession {
       .filter((part) => part.type === "text")
       .map((part) => (part as { content: string }).content)
       .join("");
-    const { gen, rev } = this.#admission.token();
-    const ack = await this.#ai.send({
-      threadId: this.threadId,
-      runId: `run-${this.#newId()}`,
-      messages: [
-        { id: last.id, role: "user", parts: [{ type: "text", content: text }] },
-      ],
-    });
-    if (gen !== this.#gen || rev !== this.#rev) return { kind: "stale" };
-    const kind =
-      ack.status === "duplicate" ? (ack.original ?? "started") : ack.status;
-    return { kind, ...(ack.reason != null ? { reason: ack.reason } : {}) };
+    if (this.hostStore.state.outbox.length > 0)
+      return { kind: "rejected", reason: "busy" };
+    return submitAdmission(this.#admission, text, undefined, last.id).result;
   }
 
   /** The Stop target (§4.5): the active run, else the newest admission. */
@@ -323,16 +334,32 @@ export class ThreadSession {
   async cancel(): Promise<void> {
     if (this.hostStore.state.cancelling) return;
     const runId = this.stopTarget();
+    const attempt = ++this.#cancelAttempt;
+    const rev = this.#rev;
+    const gen = this.#gen;
+    const clear = (): void => {
+      if (
+        !this.#retired &&
+        gen === this.#gen &&
+        rev === this.#rev &&
+        attempt === this.#cancelAttempt &&
+        this.stopTarget() === runId
+      )
+        this.#host({ cancelling: false });
+    };
     this.#host({ cancelling: true });
-    // A terminal clears it; never stuck if none comes.
-    this.#after(15_000, () => this.#host({ cancelling: false }));
+    if (this.#cancelTimer != null) {
+      clearTimeout(this.#cancelTimer);
+      this.#timers.delete(this.#cancelTimer);
+    }
+    this.#cancelTimer = this.#after(15_000, clear);
     try {
       await this.#ai.cancel({
         threadId: this.threadId,
         ...(runId != null ? { runId } : {}),
       });
     } catch (error) {
-      this.#host({ cancelling: false });
+      clear();
       throw error;
     }
   }
@@ -343,6 +370,12 @@ export class ThreadSession {
     descriptor: PermissionDescriptor,
     decision: PermissionDecision
   ): Promise<void> {
+    if (this.#retired) return;
+    if (!isAllowed(descriptor, decision))
+      throw new Error("chat: decision is not allowed");
+    const gen = this.#gen;
+    const rev = this.#rev;
+    const since = ++this.#permissionAttempt;
     const store = this.store;
     const id = descriptor.id;
     const decisionName =
@@ -353,14 +386,22 @@ export class ThreadSession {
         ...state.permissions,
         answering: {
           ...state.permissions.answering,
-          [id]: { state: "sending", decision: decisionName, since: Date.now() },
+          [id]: { state: "sending", decision: decisionName, since },
         },
       },
     }));
     const noResponse = (): void =>
       store.setState((state) => {
         const current = state.permissions.answering[id];
-        if (current?.state !== "sending") return state;
+        if (
+          this.#retired ||
+          gen !== this.#gen ||
+          rev !== this.#rev ||
+          store !== this.store ||
+          current?.state !== "sending" ||
+          current.since !== since
+        )
+          return state;
         return {
           ...state,
           permissions: {
@@ -376,14 +417,16 @@ export class ThreadSession {
           },
         };
       });
-    this.#after(PERMISSION_TIMEOUT_MS, noResponse);
+    const timer = this.#after(PERMISSION_TIMEOUT_MS, noResponse);
     try {
       await this.#ai.respondPermission({
         threadId: this.threadId,
         lineage: descriptor.metadata.abacus.lineage,
-        decision: decision as never,
+        decision,
       });
     } catch {
+      clearTimeout(timer);
+      this.#timers.delete(timer);
       noResponse();
     }
   }
@@ -483,6 +526,7 @@ export class ThreadSession {
       token.gen === this.#gen &&
       token.rev === this.#rev &&
       this.#live?.client === token.client;
+    for (const listener of this.#prependListeners) listener();
     this.#host({ older: "loading" });
     let page: AiHydration;
     try {
@@ -511,6 +555,8 @@ export class ThreadSession {
     const existing = token.client.getMessages();
     const ids = new Set(existing.map((message) => message.id));
     const older = page.messages.filter((message) => !ids.has(message.id));
+    for (const listener of this.#prependListeners) listener();
+    live.activeStart += older.length;
     token.client.setMessagesManually([...older, ...existing]);
     this.#mergeOutcomes(live, page.abacus.runOutcomes);
     this.#host({
@@ -526,14 +572,31 @@ export class ThreadSession {
    * messages (never the active run's) and their outcome records; paging
    * then reaches them again.
    */
+  isMessageInActiveRun(id: string): boolean {
+    const live = this.#live;
+    return (
+      live?.store?.state.runs.active != null &&
+      this.hostStore.state.messages.findIndex((message) => message.id === id) >=
+        live.activeStart
+    );
+  }
+
   retain(max = MAX_MESSAGES): void {
     const live = this.#live;
     const client = live?.client;
     if (live == null || client == null || live.store == null) return;
     const messages = client.getMessages();
     if (messages.length <= max) return;
-    const dropped = messages.slice(0, messages.length - max);
-    const kept = messages.slice(messages.length - max);
+    const active = live.store.state.runs.active;
+    const boundary =
+      active == null
+        ? messages.length
+        : genBoundary(live.activeStart, messages.length);
+    const count = Math.min(messages.length - max, boundary);
+    if (count === 0) return;
+    const dropped = messages.slice(0, count);
+    const kept = messages.slice(count);
+    live.activeStart = Math.max(0, live.activeStart - count);
     const gone = new Set(dropped.map((message) => message.id));
     client.setMessagesManually(kept);
     live.store.setState((state) => ({
@@ -556,6 +619,14 @@ export class ThreadSession {
   // ─── generations (§3.3) ────────────────────────────────────────────
 
   #start(): Generation {
+    // A cancellation belongs to the generation that issued it.
+    this.#cancelAttempt += 1;
+    if (this.#cancelTimer != null) {
+      clearTimeout(this.#cancelTimer);
+      this.#timers.delete(this.#cancelTimer);
+      this.#cancelTimer = null;
+    }
+    this.#host({ cancelling: false });
     const g = ++this.#gen;
     const gen: Generation = {
       g,
@@ -576,6 +647,7 @@ export class ThreadSession {
       swapped: false,
       failed: false,
       capTimer: null,
+      activeStart: 0,
     };
     // Waiting loaders follow the newest generation (review r3-1).
     const superseded = this.#pending;
@@ -587,6 +659,12 @@ export class ThreadSession {
     this.#live?.abort.abort();
     this.#live?.dispatcher?.close();
     this.#pending = gen;
+    gen.capTimer = this.#after(this.#options.readyCapMs ?? READY_CAP_MS, () => {
+      if (gen.g !== this.#gen || gen.swapped || this.#retired) return;
+      if (gen.client == null)
+        this.#fail(gen, new Error("chat: hydration timed out"));
+      else this.#swap(gen, true);
+    });
     if (!this.hostStore.state.ready) this.#host({ phase: "loading" });
     void this.#build(gen);
     return gen;
@@ -600,13 +678,27 @@ export class ThreadSession {
         limit: PAGE_SIZE,
       });
     } catch (error) {
-      if (gen.g !== this.#gen || this.#retired) return;
-      this.#fail(gen, error);
+      if (
+        gen.g !== this.#gen ||
+        gen.failed ||
+        gen.abort.signal.aborted ||
+        this.#retired
+      )
+        return;
+      if (this.hostStore.state.ready && !isNotFound(error)) this.#recover();
+      else this.#fail(gen, error);
       return;
     }
-    if (gen.g !== this.#gen || this.#retired) return;
+    if (
+      gen.g !== this.#gen ||
+      gen.failed ||
+      gen.abort.signal.aborted ||
+      this.#retired
+    )
+      return;
     const abacus = snapshot.abacus;
     const active = abacus.activeRun;
+    gen.activeStart = snapshot.messages.length;
     gen.positions = {
       checkpoint: abacus.cursor,
       receivedSeq: active != null ? active.startSeq - 1 : abacus.cursor,
@@ -626,18 +718,33 @@ export class ThreadSession {
         ? { hasOlderMessages: true, olderCursor: snapshot.page.cursor }
         : { hasOlderMessages: false, olderCursor: null };
 
+    let processingRunError = false;
     const dispatcher = createDispatcher({
-      pre: (item) =>
+      pre: (item) => {
+        if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
+          return;
+        processingRunError = item.event.type === "RUN_ERROR";
+        if (item.event.type === "RUN_STARTED")
+          gen.activeStart =
+            gen.client?.getMessages().length ?? snapshot.messages.length;
         store.setState((state) =>
-          applyEvent(state, item.seq, item.event, { live: gen.swapped })
-        ),
-      post: (item) => this.#post(gen, item.seq, item.event),
+          applyEvent(state, item.seq, item.event, {
+            live: item.seq > gen.positions.checkpoint,
+          })
+        );
+      },
+      error: (error) => this.#options.log?.("chat: event hook failed", error),
+      post: (item) => {
+        processingRunError = false;
+        this.#post(gen, item.seq, item.event);
+      },
     });
     gen.dispatcher = dispatcher;
     const guard =
       <A extends unknown[]>(fn: (...args: A) => void) =>
       (...args: A): void => {
-        if (gen.g !== this.#gen) return;
+        if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
+          return;
         fn(...args);
       };
     const client = new ChatClient({
@@ -665,9 +772,15 @@ export class ThreadSession {
             sessionGenerating || gen.store?.state.runs.active != null,
         })
       ),
-      onError: guard((error: Error) =>
-        this.#options.log?.("chat: client error", error)
-      ),
+      onError: guard((error: Error) => {
+        // ai-client 0.36 reports RUN_ERROR synchronously while consuming it.
+        // Its terminal post-hook must still run, and the stream stays open.
+        if (processingRunError) return;
+        this.#options.log?.("chat: client error", error);
+        dispatcher.close();
+        gen.abort.abort();
+        this.#recover();
+      }),
     });
     gen.client = client;
     this.#options.onClient?.(client, gen.g);
@@ -682,9 +795,6 @@ export class ThreadSession {
       push: (seq, event) => dispatcher.push({ seq, event }),
       onConnection: (connection) => {
         if (gen.g !== this.#gen) return;
-        // A generation that reached a live subscription ends a recovery
-        // streak; one answered with resync again keeps counting.
-        if (connection === "connected") this.#recoveries = 0;
         this.#host({ connection });
       },
       onRecover: () => {
@@ -701,21 +811,32 @@ export class ThreadSession {
     });
 
     this.#checkReady(gen);
-    if (!gen.swapped)
-      gen.capTimer = this.#after(
-        this.#options.readyCapMs ?? READY_CAP_MS,
-        () => {
-          if (gen.g === this.#gen && !gen.swapped) this.#swap(gen, true);
-        }
-      );
   }
 
   #post(gen: Generation, seq: number, event: StreamChunk): void {
-    if (gen.g !== this.#gen) return;
+    if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
+      return;
     gen.appliedSeq = seq;
+    // Reset only after accepted live progress has actually been consumed.
+    if (seq > gen.positions.checkpoint) this.#recoveries = 0;
+    this.#options.onConsumed?.(seq, gen.g);
     if (isTerminal(event)) {
       const messages = gen.client?.getMessages() ?? [];
-      gen.store?.setState((state) => recordTerminal(state, event, messages));
+      gen.store?.setState((state) =>
+        recordTerminal(
+          state,
+          event,
+          messages,
+          Date.now(),
+          gen.activeStart,
+          seq > gen.positions.checkpoint
+        )
+      );
+      this.#cancelAttempt += 1;
+      if (this.#cancelTimer != null) {
+        clearTimeout(this.#cancelTimer);
+        this.#timers.delete(this.#cancelTimer);
+      }
       if (gen.swapped) this.#host({ cancelling: false });
       this.#fields(gen, { sessionGenerating: false });
     } else if (event.type === "RUN_STARTED") {
@@ -726,7 +847,12 @@ export class ThreadSession {
       const messageId = (event as { value?: { messageId?: unknown } }).value
         ?.messageId;
       if (typeof messageId === "string") {
-        this.#echoed.add(messageId);
+        const entry = this.hostStore.state.outbox.find(
+          (entry) => entry.id === messageId
+        );
+        if (entry != null) this.#echoed.add(entry.runId);
+        if (this.#echoed.size > MAX_MESSAGES)
+          this.#echoed.delete(this.#echoed.values().next().value!);
         this.#host({
           outbox: this.hostStore.state.outbox.filter(
             (entry) => entry.id !== messageId
@@ -741,6 +867,7 @@ export class ThreadSession {
       // A reset: a fresh snapshot and client; pages and acks from before
       // are discarded (rev), pending admissions with it.
       this.#rev += 1;
+      this.#echoed.clear();
       this.#host({ rev: this.#rev, outbox: [], cancelling: false });
       this.#start();
       return;
@@ -758,12 +885,17 @@ export class ThreadSession {
   #swap(gen: Generation, partial: boolean): void {
     if (gen.store == null) return;
     gen.swapped = true;
-    if (gen.capTimer != null) clearTimeout(gen.capTimer);
+    if (gen.capTimer != null) {
+      clearTimeout(gen.capTimer);
+      this.#timers.delete(gen.capTimer);
+    }
     const old = this.#live;
     this.#live = gen;
     if (this.#pending === gen) this.#pending = null;
     const outbox = this.hostStore.state.outbox.filter(
-      (entry) => !gen.staged.messages.some((message) => message.id === entry.id)
+      (entry) =>
+        entry.retry ||
+        !gen.staged.messages.some((message) => message.id === entry.id)
     );
     this.hostStore.setState((state) => ({
       ...state,
@@ -779,6 +911,7 @@ export class ThreadSession {
       error: null,
       notFound: false,
       older: "idle",
+      cancelling: false,
     }));
     gen.ready.resolve();
     if (old != null && old !== gen) this.#teardown(old);
@@ -786,6 +919,7 @@ export class ThreadSession {
 
   #fail(gen: Generation, error: unknown): void {
     gen.failed = true;
+    this.#teardown(gen);
     if (this.#pending === gen) this.#pending = null;
     gen.ready.reject(error);
     gen.ready.promise.catch(() => {});
@@ -803,6 +937,9 @@ export class ThreadSession {
     const delay = delays[this.#recoveries];
     this.#recoveries += 1;
     if (delay == null) {
+      const pending = this.#pending;
+      if (pending != null && !pending.swapped)
+        this.#fail(pending, new Error("chat: recovery exhausted"));
       this.#host({ connection: "error" });
       return;
     }
@@ -817,7 +954,10 @@ export class ThreadSession {
   #teardown(gen: Generation): void {
     gen.abort.abort();
     gen.dispatcher?.close();
-    if (gen.capTimer != null) clearTimeout(gen.capTimer);
+    if (gen.capTimer != null) {
+      clearTimeout(gen.capTimer);
+      this.#timers.delete(gen.capTimer);
+    }
     // Its callbacks are already inert (they check the generation, §3.3 step 7).
     gen.client?.unsubscribe();
     gen.client?.dispose();
@@ -836,7 +976,9 @@ export class ThreadSession {
         messages == null
           ? state.outbox
           : state.outbox.filter(
-              (entry) => !messages.some((message) => message.id === entry.id)
+              (entry) =>
+                entry.retry ||
+                !messages.some((message) => message.id === entry.id)
             ),
     }));
   }
@@ -868,28 +1010,30 @@ export class ThreadSession {
     return timer;
   }
 
-  #newId(): string {
-    return this.#options.newId?.("run") ?? uuid();
-  }
-
   #createAdmission(): AdmissionHost {
     return {
       ai: this.#ai,
       threadId: this.threadId,
-      token: () => ({ gen: this.#gen, rev: this.#rev }),
+      onDefinitiveError: (error) => {
+        if (isNotFound(error)) this.#host({ notFound: true });
+      },
+      token: () => ({ gen: this.#gen, rev: this.#rev, retired: this.#retired }),
       outbox: () => this.hostStore.state.outbox,
       setOutbox: (update) =>
         this.hostStore.setState((state) => ({
           ...state,
           outbox: update(state.outbox),
         })),
-      echoed: (messageId) =>
-        this.#echoed.has(messageId) ||
-        (this.#live?.client?.getMessages() ?? []).some(
-          (message) => message.id === messageId
-        ),
+      echoed: (messageId, runId) =>
+        runId != null
+          ? this.#echoed.has(runId)
+          : (this.#live?.client?.getMessages() ?? []).some(
+              (message) => message.id === messageId
+            ),
       reconcileDelaysMs: this.#options.reconcileDelaysMs ?? RECONCILE_DELAYS_MS,
-      schedule: (ms, run) => void this.#after(ms, run),
+      schedule: (ms, run) => {
+        if (!this.#retired) this.#after(ms, run);
+      },
       newId: (prefix) => `${prefix}-${this.#options.newId?.(prefix) ?? uuid()}`,
     };
   }

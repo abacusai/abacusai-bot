@@ -10,8 +10,9 @@ import { ORPCError } from "@orpc/client";
 import type { StreamChunk } from "@tanstack/ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { memoryRelay, closeMemoryRelays } from "#next/test-support/chat-relay";
+
 import * as b from "../fixtures/builders";
-import { FakeRelay } from "../fixtures/relay";
 import { deriveSessionTitle, routeSubmit, type SubmitInput } from "./send";
 import { ThreadSession } from "./session";
 
@@ -113,6 +114,7 @@ describe("R2-T20 routeSubmit", () => {
 
 const sessions: ThreadSession[] = [];
 afterEach(() => {
+  closeMemoryRelays();
   for (const session of sessions.splice(0)) session.retire();
 });
 
@@ -147,7 +149,7 @@ const timeless = (value: unknown): unknown =>
 describe("R2-T20 admission isolation", () => {
   it("queued, rejected and UNAVAILABLE never touch a streaming run", async () => {
     const { head, tail } = runA();
-    const reference = new FakeRelay();
+    const reference = await memoryRelay();
     reference.emitAll([...head, ...tail]);
     const refSession = new ThreadSession({ ai: reference.ai, threadId: "t-1" });
     sessions.push(refSession);
@@ -159,7 +161,7 @@ describe("R2-T20 admission isolation", () => {
       "rejected",
       "throw",
     ];
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input) => {
         const next = acks.shift();
         if (next === "throw") throw new ORPCError("UNAVAILABLE", { data: {} });
@@ -193,7 +195,7 @@ describe("R2-T20 admission isolation", () => {
   });
 
   it("started: the entry stays until its echo is processed, then leaves", async () => {
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input, r) => {
         const id = input.messages[0]!.id;
         const text = (
@@ -220,7 +222,7 @@ describe("R2-T20 admission isolation", () => {
   });
 
   it("abacus.duplicate_echo clears a retry's entry (§14.12)", async () => {
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input, r) => {
         setTimeout(() => {
           r.emitAll([

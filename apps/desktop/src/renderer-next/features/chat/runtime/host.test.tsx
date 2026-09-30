@@ -7,16 +7,22 @@
  * the new binding untouched.
  */
 import type { UseChatReturn } from "@tanstack/ai-react";
-import { renderHook } from "@testing-library/react";
+import { renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
+import { ChatView } from "../kit/view";
+import { renderWithDb } from "../testing";
 import { buildThreadHost, useThreadHost } from "./host";
+import { createChatRuntime } from "./runtime";
 import { ThreadSession } from "./session";
 
 const sessions: ThreadSession[] = [];
-afterEach(() => {
+let rendered: Awaited<ReturnType<typeof renderWithDb>> | null = null;
+afterEach(async () => {
+  await rendered?.cleanup();
+  rendered = null;
   for (const session of sessions.splice(0)) session.retire();
 });
 
@@ -91,15 +97,42 @@ describe("R2-T2 host", () => {
     const page = session.loadOlder();
     const ack = session.submit("late");
     await vi.waitFor(() => expect(relay.stats.send).toHaveLength(1));
-    const before = session.hostStore.state.client;
+    const runtime = createChatRuntime(relay.ai);
+    vi.spyOn(runtime, "session").mockReturnValue(session);
+    rendered = await renderWithDb(
+      <ChatView
+        threadId="t-1"
+        skin="session"
+        runtime={runtime}
+        workspaceRoot="/repo"
+        composer={{
+          mode: "full",
+          placeholder: "Reply",
+          attachmentsBase: "/repo",
+          showModeChip: false,
+          model: null,
+        }}
+      />
+    );
+    expect(await screen.findByText("m59")).toBeTruthy();
+    const before = session.hostStore.state.client!;
+    const unsubscribed = vi.spyOn(before, "unsubscribe");
+    const disposed = vi.spyOn(before, "dispose");
     await session.reconnect();
     const after = session.hostStore.state;
     expect(after.client).not.toBe(before);
+    expect(unsubscribed).toHaveBeenCalled();
+    expect(disposed).toHaveBeenCalled();
     const messages = after.messages;
+    before.unsubscribe();
+    before.dispose();
+    expect(session.hostStore.state.messages).toBe(messages);
+    expect(screen.getByText("m59")).toBeTruthy();
     releasePage();
     await page;
     releaseAck();
-    await expect(ack).resolves.toEqual({ kind: "stale" });
+    await expect(ack).resolves.toEqual({ kind: "started" });
+    expect(session.hostStore.state.outbox[0]?.state).toBe("accepted");
     expect(session.hostStore.state.messages).toBe(messages);
     expect(session.hostStore.state.client).toBe(after.client);
     expect(session.hostStore.state.connection).not.toBe("error");

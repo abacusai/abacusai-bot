@@ -33,9 +33,59 @@ const inlineCode = (body: string): string => {
   return `${ticks}${pad}${body}${pad}${ticks}`;
 };
 
-const displayBlock = (tex: string): string => {
-  const fence = fenceFor(tex, "`");
-  return `\n\n${fence}math\n${tex.trim()}\n${fence}\n\n`;
+/**
+ * The container a line sits in: blockquote markers, and a list item's
+ * marker as spaces (its content indent). A display block keeps it on every
+ * line, so math inside a quote or a list stays inside it.
+ */
+const containerPrefix = (line: string): string => {
+  const quote = /^(?: {0,3}>[ ]?)+/.exec(line)?.[0] ?? "";
+  const rest = line.slice(quote.length);
+  const item = /^( {0,3})([-*+]|\d{1,9}[.)])( {1,4})/.exec(rest);
+  if (item != null) return quote + " ".repeat(item[0].length);
+  if (quote !== "") return quote;
+  return /^\s*/.exec(rest)![0];
+};
+
+/** Removes a container prefix from a continuation line of a display body. */
+const stripPrefix = (line: string, prefix: string): string => {
+  if (prefix === "") return line;
+  if (prefix.includes(">")) return line.replace(/^(?: {0,3}>[ ]?)+/, "");
+  let at = 0;
+  while (at < prefix.length && line[at] === " ") at += 1;
+  return line.slice(at);
+};
+
+const containerOnly = (lineBefore: string): boolean =>
+  /^(?: {0,3}>[ ]?)*(?: {0,3}(?:[-*+]|\d{1,9}[.)]) {1,4})?\s*$/.test(
+    lineBefore
+  );
+
+const displayBlock = (tex: string, lineBefore = ""): string => {
+  const prefix = containerPrefix(lineBefore);
+  const body = tex
+    .split("\n")
+    .map((line, index) => (index === 0 ? line : stripPrefix(line, prefix)))
+    .join("\n")
+    .trim();
+  const fence = fenceFor(body, "`");
+  if (prefix === "") return `\n\n${fence}math\n${body}\n${fence}\n\n`;
+  const fenced = [`${fence}math`, ...body.split("\n"), fence]
+    .map((line, index) => (index === 0 ? line : prefix + line))
+    .join("\n");
+  // Only the container's marker precedes the math on its line: the fence
+  // opens right there (a list item or quote that starts with the block).
+  return containerOnly(lineBefore)
+    ? `${fenced}\n${prefix}`
+    : `\n${prefix}\n${prefix}${fenced}\n${prefix}`;
+};
+
+/** An odd run of backslashes before `at` escapes the character there. */
+const escaped = (text: string, at: number): boolean => {
+  let count = 0;
+  for (let index = at - 1; index >= 0 && text[index] === "\\"; index -= 1)
+    count += 1;
+  return count % 2 === 1;
 };
 
 const inlineMath = (tex: string): string => inlineCode(MATH_SENTINEL + tex);
@@ -112,7 +162,30 @@ const rewriteLinks = (text: string, workspaceRoot: string | null): string =>
     }
   );
 
+/**
+ * Reference definitions (`[x]: /abs/path "title"`) are link targets too;
+ * footnote definitions (`[^1]: text`) are not.
+ */
+const REFERENCE_DEFINITION =
+  /^( {0,3}\[(?!\^)(?:[^\]\\]|\\.)+\]:[ \t]*)(<[^>]*>|\S+)(.*)$/;
+
+const rewriteDefinition = (
+  line: string,
+  workspaceRoot: string | null
+): string => {
+  const match = REFERENCE_DEFINITION.exec(line);
+  if (match == null) return line;
+  const [, head, target, tail] = match;
+  const bare = target!.startsWith("<") ? target!.slice(1, -1) : target!;
+  const abs = fileTarget(bare, workspaceRoot);
+  return abs == null ? line : `${head}${fileHref(abs)}${tail}`;
+};
+
 // ─── the scan ──────────────────────────────────────────────────────────
+
+/** The current (unfinished) output line, for a display block's container. */
+const lineBefore = (out: string): string =>
+  out.slice(out.lastIndexOf("\n") + 1);
 
 /** Text outside code: math spans, then links in what stays text. */
 const rewriteProse = (text: string, options: PrepassOptions): string => {
@@ -141,28 +214,32 @@ const rewriteProse = (text: string, options: PrepassOptions): string => {
       index += run.length;
       continue;
     }
-    if (char === "\\" && (text[index + 1] === "[" || text[index + 1] === "(")) {
+    if (
+      char === "\\" &&
+      (text[index + 1] === "[" || text[index + 1] === "(") &&
+      !escaped(text, index)
+    ) {
       const display = text[index + 1] === "[";
       const closer = display ? "\\]" : "\\)";
       const close = text.indexOf(closer, index + 2);
       const body = close === -1 ? "" : text.slice(index + 2, close);
       if (close !== -1 && (display || !/\n\s*\n/.test(body))) {
         flushPlain();
-        out += display ? displayBlock(body) : inlineMath(body);
+        out += display ? displayBlock(body, lineBefore(out)) : inlineMath(body);
         index = close + 2;
         continue;
       }
     }
-    if (char === "$" && text[index + 1] === "$") {
+    if (char === "$" && text[index + 1] === "$" && !escaped(text, index)) {
       const close = text.indexOf("$$", index + 2);
       if (close !== -1) {
         flushPlain();
-        out += displayBlock(text.slice(index + 2, close));
+        out += displayBlock(text.slice(index + 2, close), lineBefore(out));
         index = close + 2;
         continue;
       }
     }
-    if (char === "$" && text[index - 1] !== "\\") {
+    if (char === "$" && !escaped(text, index)) {
       // Pandoc: `$` then a non-space; closing `$` after a non-space, on the
       // same line, not followed by a digit.
       const next = text[index + 1];
@@ -192,6 +269,16 @@ const rewriteProse = (text: string, options: PrepassOptions): string => {
   return out;
 };
 
+const indentOf = (line: string): number => {
+  let width = 0;
+  for (const char of line) {
+    if (char === " ") width += 1;
+    else if (char === "\t") width += 4 - (width % 4);
+    else break;
+  }
+  return width;
+};
+
 const FENCE_OPEN = /^( {0,3})(`{3,}|~{3,})(.*)$/;
 
 /**
@@ -200,7 +287,7 @@ const FENCE_OPEN = /^( {0,3})(`{3,}|~{3,})(.*)$/;
  * does.
  */
 export const prepass = (source: string, options: PrepassOptions): string => {
-  if (!/[$\\]|\]\(/.test(source)) return source;
+  if (!/[$\\]|\]\(|\]:/.test(source)) return source;
   const lines = source.split("\n");
   const out: string[] = [];
   let prose: string[] = [];
@@ -211,6 +298,10 @@ export const prepass = (source: string, options: PrepassOptions): string => {
   };
   let index = 0;
   let previousBlank = true;
+  // The content indent of the list item the prose is in (0 outside lists):
+  // after a blank line, a line indented less than that + 4 continues the
+  // item; only deeper indentation is indented code (CommonMark).
+  let listIndent = 0;
   while (index < lines.length) {
     const line = lines[index]!;
     const fence = FENCE_OPEN.exec(line);
@@ -232,12 +323,17 @@ export const prepass = (source: string, options: PrepassOptions): string => {
       previousBlank = false;
       continue;
     }
-    if (previousBlank && /^( {4}|\t)/.test(line) && line.trim() !== "") {
+    if (
+      previousBlank &&
+      line.trim() !== "" &&
+      indentOf(line) >= listIndent + 4
+    ) {
       flushProse();
       const block: string[] = [];
       while (
         index < lines.length &&
-        (/^( {4}|\t)/.test(lines[index]!) || lines[index]!.trim() === "")
+        (indentOf(lines[index]!) >= listIndent + 4 ||
+          lines[index]!.trim() === "")
       ) {
         block.push(lines[index]!);
         index += 1;
@@ -246,7 +342,12 @@ export const prepass = (source: string, options: PrepassOptions): string => {
       previousBlank = block.at(-1)?.trim() === "";
       continue;
     }
-    prose.push(line);
+    if (line.trim() !== "") {
+      const item = /^( {0,3})([-*+]|\d{1,9}[.)])( {1,4}|$)/.exec(line);
+      if (item != null) listIndent = item[0].length;
+      else if (previousBlank && indentOf(line) < listIndent) listIndent = 0;
+    }
+    prose.push(rewriteDefinition(line, options.workspaceRoot));
     previousBlank = line.trim() === "";
     index += 1;
   }

@@ -19,12 +19,11 @@ import {
 } from "#next/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#next/ui/tooltip";
 
+import { useToolWindow } from "../../scroller/row-context";
+import { useThreadStore } from "../../store/selectors";
 import { formatElapsed, useSeconds } from "../clock";
 import { SubagentScope, useChatView } from "../context";
 import { toolTitle } from "../tools/tool-line";
-
-const firstSeen = new Map<string, number>();
-const finishedAt = new Map<string, number>();
 
 const stepsOf = (messages: readonly UIMessage[]): number =>
   messages.reduce(
@@ -54,16 +53,28 @@ const KIND_KEYS: Record<string, string> = {
   component: "chat.subagent.kind.component",
 };
 
-export const SubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
+export const SubagentCard = (props: SubagentProps<unknown>) => {
+  const window = useToolWindow();
+  const index = window?.ids.indexOf(`card\0${props.subagent.id}`) ?? -1;
+  if (
+    window != null &&
+    index >= 0 &&
+    (index < window.range.start || index >= window.range.end)
+  )
+    return null;
+  return <MountedSubagentCard {...props} />;
+};
+const MountedSubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
   const { t } = useTranslation();
-  const { runtime, threadId, onOpenSubagent } = useChatView();
+  const { runtime, threadId, session, onOpenSubagent } = useChatView();
   const running =
     subagent.status === "running" || subagent.status === "suspended";
   const now = useSeconds(running);
-  const started = firstSeen.get(subagent.id) ?? now;
-  if (!firstSeen.has(subagent.id)) firstSeen.set(subagent.id, started);
-  if (!running && !finishedAt.has(subagent.id))
-    finishedAt.set(subagent.id, now);
+  const times = useThreadStore(
+    session,
+    (state) => state.subagentTimes[subagent.id]
+  );
+  const started = times?.start ?? now;
   const steps = stepsOf(subagent.messages);
   const description = (subagent as { description?: string }).description;
   const name =
@@ -79,9 +90,7 @@ export const SubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
       ? (subagent.error?.message ?? t("chat.subagent.failed"))
       : t("chat.subagent.done", {
           count: steps,
-          duration: formatElapsed(
-            (finishedAt.get(subagent.id) ?? now) - started
-          ),
+          duration: formatElapsed((times?.end ?? now) - started),
         });
   const PartsView = Parts as ComponentType;
   return (

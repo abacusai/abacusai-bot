@@ -10,7 +10,7 @@ import { botsGallerySections, isBotsGalleryFixture } from "#next/features/bots";
 import {
   useComposerExpanded,
   ChatView,
-  fixtureRuntime,
+  loadFixtureRuntime,
 } from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
@@ -28,7 +28,16 @@ import {
   KeyboardPage,
 } from "#next/features/settings";
 
-const replay = fixtureRuntime("bot-golden-plain", {}, "bots-gallery");
+type Replay = ReturnType<Awaited<ReturnType<typeof loadFixtureRuntime>>>;
+let replay: Replay = null;
+let reportReplay: Replay = null;
+const replayReady =
+  import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
+    ? loadFixtureRuntime().then((create) => {
+        replay = create("bot-golden-plain", {}, "bots-gallery");
+        reportReplay = create("bot-golden-plain", {}, "routine-gallery-report");
+      })
+    : null;
 const BotChatGallery = () => {
   const bot = useBot("chief-of-staff");
   return bot ? <GalleryChat bot={bot} /> : null;
@@ -96,15 +105,13 @@ export const Route = createFileRoute("/_bare/__ui")({
   beforeLoad: () => {
     if (!galleryEnabled()) throw notFound();
   },
+  loader: async () => {
+    if (replayReady != null) await replayReady;
+  },
   validateSearch: GallerySearch,
   component: GalleryRoute,
 });
 
-const reportReplay = fixtureRuntime(
-  "bot-golden-plain",
-  {},
-  "routine-gallery-report"
-);
 function Phase5View({ fixture }: { fixture: string }) {
   const components: Record<string, React.ReactNode> = {
     "routines-sidebar": <RoutineSidebarGallery />,

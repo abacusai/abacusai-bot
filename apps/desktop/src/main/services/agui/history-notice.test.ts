@@ -40,7 +40,7 @@ const relayOver = (store: ThreadStore) =>
   });
 
 describe("an oversized thread's hydrate", () => {
-  it("carries one abacus.notice with the size and the limit, and no messages", async () => {
+  it("carries one abacus.notice with the size, limit and transcript path, and no messages", async () => {
     const transcripts = path.join(home, "transcripts");
     fs.mkdirSync(transcripts, { recursive: true });
     const text = JSON.stringify({
@@ -71,6 +71,7 @@ describe("an oversized thread's hydrate", () => {
           kind: "too-large",
           size: Buffer.byteLength(text),
           limit: 2_000,
+          path: path.join(transcripts, "big-1.json"),
           notificationKey: HISTORY_NOTICE_KEY,
         },
       },

@@ -14,6 +14,7 @@ import type { TFunction } from "i18next";
 
 import type { Db } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
+import { chatRuntimeFor, type ChatRuntime } from "#next/features/chat";
 import type { NavType } from "#next/lib/motion";
 import { Spinner } from "#next/ui/spinner";
 import type { SystemInfo } from "#shared/contract";
@@ -48,6 +49,11 @@ export interface RouterContext {
   db: Db;
   /** `i18n.getFixedT(null)`, for loaders and not-found copy. */
   t: TFunction;
+  /**
+   * The document's chat runtime (spec 02 §2, §14.8): thread loaders await
+   * `chat.session(id).load()`. One per transport, kept across Fast Refresh.
+   */
+  chat: ChatRuntime;
 }
 
 export const routeMasks = [
@@ -101,7 +107,8 @@ export const routeMasks = [
 ];
 
 export interface AppRouterOptions {
-  context: RouterContext;
+  /** `chat` defaults to the transport's runtime; tests may pass their own. */
+  context: Omit<RouterContext, "chat"> & { chat?: ChatRuntime };
   history?: RouterHistory;
 }
 
@@ -109,7 +116,10 @@ export const createAppRouter = ({ context, history }: AppRouterOptions) =>
   createRouter({
     routeTree,
     history: history ?? createHashHistory(),
-    context,
+    context: {
+      ...context,
+      chat: context.chat ?? chatRuntimeFor(context.transport),
+    } satisfies RouterContext,
     routeMasks,
     defaultPreload: "intent",
     // Query and DB own staleness (PLAN "Route tree").

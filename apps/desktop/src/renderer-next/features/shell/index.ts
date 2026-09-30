@@ -7,4 +7,11 @@ export { shellStore } from "./shell-store";
 export { TopBar } from "./top-bar";
 export { Rail } from "./rail";
 export { SidePanelBody, SidePanelFrame } from "./side-panel";
+export { useAppHotkey } from "./hotkeys";
 export { SidePanelContent } from "./side-panel-slot";
+
+export {
+  requestBrowserOpen,
+  BrowserOpenPlaceholder,
+  registerBrowserOpen,
+} from "./browser-open";

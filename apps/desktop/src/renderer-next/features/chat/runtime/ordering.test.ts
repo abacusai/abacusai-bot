@@ -68,7 +68,17 @@ describe("R2-T3 ordering", () => {
       const joinFailAt = random() < 0.3 ? Math.floor(random() * 6) : -1;
       relay.faults.joinRun = (call, delivered) =>
         call === 1 && delivered === joinFailAt ? new Error("lost") : null;
+      const traces = new Map<number, number[]>();
+      const starts = new Map<number, number>();
       const session = new ThreadSession({
+        onClient: (_client, g) => {
+          starts.set(g, session.positions()!.receivedSeq);
+        },
+        onConsumed: (seq, g) => {
+          const trace = traces.get(g) ?? [];
+          trace.push(seq);
+          traces.set(g, trace);
+        },
         ai: relay.ai,
         threadId: relay.threadId,
         recoveryDelaysMs: [0, 0, 0, 0, 0, 0, 0, 0],
@@ -110,6 +120,11 @@ describe("R2-T3 ordering", () => {
                 String(error)
             );
           });
+        const trace = traces.get(session.gen) ?? [];
+        const start = starts.get(session.gen)!;
+        expect(trace, `seed ${seed} consumed sequence`).toEqual(
+          Array.from({ length: relay.lastSeq - start }, (_, i) => start + i + 1)
+        );
         const messages = session.hostStore.state.client!.getMessages();
         expect(
           { seed, name, cut, messages: timeless(messages) },

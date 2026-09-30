@@ -180,7 +180,10 @@ export function maskVolatile(
 /**
  * Fresh fixed directories and env for a scenario. Returns a restore callback.
  */
-export async function prepare(scenario: Scenario): Promise<{
+export async function prepare(
+  scenario: Scenario,
+  root = GOLDEN_ROOT
+): Promise<{
   context: RunContext;
   provider: FakeProvider;
   /** Every port the scenario's model is reachable on, for `maskVolatile`. */
@@ -189,7 +192,6 @@ export async function prepare(scenario: Scenario): Promise<{
   restore: () => void;
 }> {
   const fake = await startProvider();
-  const root = GOLDEN_ROOT;
   const home = path.join(root, "home");
   const cwd = path.join(root, "workspace");
 

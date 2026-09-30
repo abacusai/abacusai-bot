@@ -7,6 +7,11 @@ import { findCheckIn } from "#next/lib/bots/check-in";
 import type { BotRow, RoutineRow, SessionRow } from "#shared/contract/rows";
 
 import {
+  useAllBotActivity,
+  useBotActivity,
+  type BotActivity,
+} from "../chat/activity";
+import {
   botAttention,
   type BotAttention,
   type ThreadAttention,
@@ -16,6 +21,7 @@ import { botSessionsOf, useAllRoutines, useAllSessions } from "./queries";
 import { useUnreadIds } from "./unread-store";
 
 export interface AttentionSources {
+  activities?: Readonly<Record<string, BotActivity>>;
   sessions: readonly SessionRow[];
   routines: readonly RoutineRow[];
   permissions: Readonly<Record<string, ThreadAttention>>;
@@ -25,6 +31,7 @@ export interface AttentionSources {
 
 /** Every source once, for lists that compute many bots' attention. */
 export const useAttentionSources = (): AttentionSources => ({
+  activities: useAllBotActivity(),
   sessions: useAllSessions(),
   routines: useAllRoutines(),
   permissions: usePermissions(),
@@ -45,11 +52,19 @@ export const attentionOf = (
     connectorAsks: sources.asks,
     unread: sources.unread.has(bot.id),
     checkIn: checkIn == null ? null : { enabled: checkIn.enabled },
-    runningTool,
+    runningTool:
+      runningTool ?? sources.activities?.[bot.id]?.runningTool ?? null,
   });
 };
 
 export const useBotAttention = (
   bot: Pick<BotRow, "id">,
   runningTool: string | null = null
-): BotAttention => attentionOf(bot, useAttentionSources(), runningTool);
+): BotAttention => {
+  const activity = useBotActivity(bot.id);
+  return attentionOf(
+    bot,
+    useAttentionSources(),
+    runningTool ?? activity.runningTool
+  );
+};

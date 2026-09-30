@@ -123,6 +123,7 @@ const BOT_CREATE_FIELDS = [
   "persona",
   "avatarColor",
   "avatarShape",
+  "avatarAccessory",
   "workspaceId",
   "model",
   "channel",
@@ -135,6 +136,7 @@ const BOT_UPDATE_FIELDS = [
   "persona",
   "avatarColor",
   "avatarShape",
+  "avatarAccessory",
   "model",
   "channel",
 ] as const;

@@ -10,6 +10,7 @@ import {
   BotPending,
   useBot,
   useBotChatSlots,
+  useBotChatActivity,
   DetailsTab,
   MemoryTab,
   FilesTab,
@@ -17,25 +18,39 @@ import {
   forgetOpenChat,
 } from "#next/features/bots";
 import {
-  chatRuntimeFor,
   ChatView,
-  fixtureRuntime,
+  loadFixtureRuntime,
+  useThreadHost,
   useComposerExpanded,
 } from "#next/features/chat";
 import {
   TopBarSlot,
   useTopBarActions,
   SidePanelContent,
+  requestBrowserOpen,
+  BrowserOpenPlaceholder,
 } from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Button } from "#next/ui/button";
 import { BotId } from "#shared/contract/ids";
-const fixture =
+/**
+ * The dev fixture build (`VITE_NEXT_DB_FIXTURES=1`, gallery and visual
+ * screenshots only): a bot with no forever session yet shows a recorded
+ * agent golden replayed through the real chat runtime.
+ */
+type Fixture = ReturnType<
+  Awaited<ReturnType<typeof loadFixtureRuntime>>
+> | null;
+let fixture: Fixture = null;
+const fixtureReady: Promise<void> | null =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
-    ? fixtureRuntime("bot-golden-plain", {}, "fixture-bot")
+    ? loadFixtureRuntime().then((fixtureRuntime) => {
+        fixture = fixtureRuntime("bot-golden-plain", {}, "fixture-bot");
+      })
     : null;
+
 const ReadyChat = ({
   botId,
   sessionId,
@@ -44,7 +59,6 @@ const ReadyChat = ({
   sessionId: string;
 }) => {
   const bot = useBot(botId);
-  const { transport } = Route.useRouteContext();
   const search = Route.useSearch();
   const navigate = useAppNavigate();
   const expanded = useComposerExpanded(sessionId);
@@ -70,7 +84,6 @@ const ReadyChat = ({
           transition: "none",
         })
       }
-      transport={transport}
     />
   );
 };
@@ -83,7 +96,6 @@ const ComposedChat = ({
   detailsOpen,
   preview,
   toggle,
-  transport,
 }: {
   bot: NonNullable<ReturnType<typeof useBot>>;
   sessionId: string;
@@ -93,18 +105,19 @@ const ComposedChat = ({
   detailsOpen: boolean;
   preview?: string;
   toggle(): void;
-  transport: ReturnType<typeof Route.useRouteContext>["transport"];
 }) => {
   const { t } = useTranslation();
-  const slots = useBotChatSlots(bot, sessionId, expanded);
+  const { chat } = Route.useRouteContext();
+  const runtime = fixture && bot.sessionId == null ? fixture.runtime : chat;
+  const host = useThreadHost(runtime.session(sessionId));
+  useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
+  const slots = useBotChatSlots(bot, sessionId, expanded, false, (url) =>
+    requestBrowserOpen({ sessionId, url })
+  );
   const navigate = useAppNavigate();
   useTopBarActions([
     { id: "details", label: t("bots.panel.detailsTitle"), onSelect: toggle },
   ]);
-  const runtime =
-    fixture && bot.sessionId == null
-      ? fixture.runtime
-      : chatRuntimeFor(transport);
   return (
     <div
       data-testid="bot-chat"
@@ -149,8 +162,12 @@ const ComposedChat = ({
       <SidePanelContent tab="memory">
         <MemoryTab bot={bot} />
       </SidePanelContent>
+      <SidePanelContent tab="browser">
+        <BrowserOpenPlaceholder sessionId={sessionId} />
+      </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab
+          sessionId={sessionId}
           bot={bot}
           preview={preview}
           workspaceRoot={slots.workspaceRoot}
@@ -207,6 +224,7 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
   loader: {
     staleReloadMode: "blocking",
     handler: async ({ context, params, preload }) => {
+      if (fixtureReady != null) await fixtureReady;
       if (fixture) {
         await context.db.collections.bots.preload();
         return {
@@ -221,7 +239,7 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
         {
           db: context.db,
           transport: context.transport,
-          load: (id) => chatRuntimeFor(context.transport).session(id).load(),
+          load: (id) => context.chat.session(id).load(),
         },
         params.botId,
         preload
