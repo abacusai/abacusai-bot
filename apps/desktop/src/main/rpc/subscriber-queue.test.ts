@@ -61,6 +61,8 @@ describe("delivery classes (A-T9)", () => {
       "devices.events": "lossless-actionable",
       "ai.subscribe": "lossless-actionable",
       "ai.joinRun": "lossless-actionable",
+      "ai.runFinished": "lossless-actionable",
+      "ai.attention": "lossless-actionable",
       "devices.stream.chunks": "lossless-actionable",
       "mcp.runtime.events": "coalescing",
       "update.events": "coalescing",

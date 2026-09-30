@@ -16,6 +16,9 @@ export const DELIVERY = {
   // Its own replay ring behind the AguiSource.
   "ai.subscribe": "lossless-actionable",
   "ai.joinRun": "lossless-actionable",
+  // Run ends feed unread and cues; attention is a snapshot plus changes.
+  "ai.runFinished": "lossless-actionable",
+  "ai.attention": "lossless-actionable",
   // Video frames: a dropped delta frame corrupts every frame until the next
   // key frame, so nothing is dropped; overflow ends the stream and the
   // player restarts it, which begins on a key frame.
