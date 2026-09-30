@@ -391,6 +391,10 @@ export const SessionDock = ({
                     }}
                   >
                     {tab.title}
+                    {entries.tabs.filter((t) => t.title === tab.title).length >
+                    1
+                      ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
+                      : ""}
                   </TabsTrigger>
                   {/^(terminal|browser|preview):/.test(ref) ? (
                     <Button
@@ -646,6 +650,10 @@ export const SessionDock = ({
                       onClick={() => select(tab.ref)}
                     >
                       {tab.title}
+                      {entries.tabs.filter((t) => t.title === tab.title)
+                        .length > 1
+                        ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
+                        : ""}
                     </TabsTrigger>
                   ))}
                 </TabsList>

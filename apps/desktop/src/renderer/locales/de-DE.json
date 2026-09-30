@@ -1810,7 +1810,7 @@
     "yesterday": "Yesterday",
     "daysAgo": "{{count}} days ago",
     "page": {
-      "newTitle": "New session",
+      "newTitle": "Neue Sitzung",
       "newDescription": "Pick a folder and tell the agent what to do.",
       "sessionTitle": "Session",
       "sessionDescription": "The conversation opens here in a coming update.",
@@ -1818,11 +1818,11 @@
       "reviewDescription": "Keep or undo what the agent changed."
     },
     "sidebar": {
-      "label": "Sessions",
-      "new": "New session",
-      "pinned": "Pinned",
+      "label": "Sitzungen",
+      "new": "Neue Sitzung",
+      "pinned": "Angeheftet",
       "empty": "Noch keine Sitzungen",
-      "search": "Search sessions…",
+      "search": "Sitzungen durchsuchen…",
       "actions": "Session actions for {{name}}",
       "rename": "Rename session",
       "name": "Session name",
@@ -1838,9 +1838,9 @@
     "gone": "This session was deleted",
     "untitled": "Untitled",
     "common": {
-      "retry": "Retry",
+      "retry": "Erneut versuchen",
       "cancel": "Cancel",
-      "save": "Save"
+      "save": "Speichern"
     },
     "notify": {
       "done": "The agent finished your request.",
@@ -1895,7 +1895,7 @@
       "favorites": "Favorites",
       "local": "On this machine",
       "free": "Free",
-      "connectOpenRouter": "Connect OpenRouter",
+      "connectOpenRouter": "OpenRouter verbinden",
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
@@ -1904,10 +1904,10 @@
       "changes": "Changes",
       "files": "Files",
       "agents": "Agents",
-      "device": "Device",
+      "device": "Gerät",
       "terminal": "Terminal",
       "browser": "Browser",
-      "close": "Close panel",
+      "close": "Panel schließen",
       "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
@@ -1929,7 +1929,7 @@
       "deny": "Deny",
       "session": "Allow until quit",
       "always": "Never ask",
-      "profile": "Browser profile",
+      "profile": "Browserprofil",
       "defaultProfile": "Default profile",
       "zoom-in": "Zoom in",
       "zoom-out": "Zoom out",
@@ -1950,7 +1950,7 @@
     "changes": {
       "staged": "Staged",
       "unstaged": "Changes",
-      "merged": "Merged",
+      "merged": "Zusammengeführt",
       "title": "Changes",
       "empty": "No changes yet",
       "diff": "File diff",
@@ -1976,8 +1976,8 @@
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
       "primary": "Use primary checkout",
-      "choose": "Choose folder",
-      "deleteWorkspace": "Delete workspace",
+      "choose": "Ordner wählen",
+      "deleteWorkspace": "Workspace löschen",
       "deleteBody": "Remove this workspace and its sessions from the app? The folder on disk will remain."
     },
     "agents": {
@@ -2006,7 +2006,7 @@
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
       "default": "Default workspace",
-      "search": "Search workspaces…",
+      "search": "Arbeitsbereiche durchsuchen…",
       "fixedWorkspace": "This session belongs to this workspace.",
       "add": "Add workspace",
       "newWorktree": "New worktree",
@@ -2026,12 +2026,12 @@
       "talk": "Talk to the routine"
     },
     "pr": {
-      "approved": "Approved",
+      "approved": "Genehmigt",
       "pending": "Pending",
-      "changes_requested": "Changes requested",
-      "draft": "Draft",
-      "merged": "Merged",
-      "closed": "Closed",
+      "changes_requested": "Änderungen angefordert",
+      "draft": "Entwurf",
+      "merged": "Zusammengeführt",
+      "closed": "Geschlossen",
       "success": "Passed",
       "failure": "Failed"
     }

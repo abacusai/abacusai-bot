@@ -64,6 +64,10 @@ export const TerminalTab = ({
         if (!start.success || !start.state)
           throw new Error(start.error ?? "Terminal failed");
         view.generation = start.state.generation;
+        if (abort.signal.aborted) {
+          view.element.remove();
+          return;
+        }
         const input = view.term.onData((data) => {
           void transport.client.terminal
             .write({
