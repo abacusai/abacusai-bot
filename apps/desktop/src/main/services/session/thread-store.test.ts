@@ -231,6 +231,11 @@ describe("C-T7 through ServiceHost", () => {
 
   it("a reset through the legacy call and through agent.reset leaves ai.hydrate empty", async () => {
     const host = await makeHost();
+    // ai.hydrate answers NOT_FOUND for a session main does not know.
+    (
+      (host as unknown as Record<string, unknown>)
+        .agentSessionManagerService as Record<string, unknown>
+    ).get = () => ({ workspaceId: "w-live" });
     seed(host);
     const connection = connectInProcess(
       fakeDeps({

@@ -47,7 +47,21 @@ export type AguiControlCommand =
       type: "permission.respond";
       lineage: PermissionLineage;
       decision: PermissionDecision;
-    };
+    }
+  /**
+   * Edit one host queue entry, named by this process's incarnation and the
+   * entry id (spec 02 §14.6): looked up and changed in one synchronous step,
+   * so no index crosses the process boundary. A mismatch or a gone entry is
+   * answered with `queue.command_rejected` and the authoritative queue.
+   */
+  | {
+      type: "queue.update";
+      incarnation: string;
+      entryId: string;
+      message: string;
+    }
+  /** Remove one host queue entry by incarnation and id (spec 02 §14.6). */
+  | { type: "queue.remove"; incarnation: string; entryId: string };
 
 /** AG-UI RunAgentInput as the SubscribeConnectionAdapter sends it. `resume` must be absent or empty. */
 export type RunInput = Omit<AguiRunAgentInput, "forwardedProps"> & {
@@ -303,6 +317,13 @@ export interface CustomValues {
   "tool.output": { toolCallId: string; output: string };
   "tool.display": { toolCallId: string; data: ToolDisplayData };
   "queue.updated": { messages: QueueEntry[]; dequeued: string | null };
+  "queue.command_rejected": {
+    /** The emitting process's incarnation. */
+    incarnation: string;
+    entryId: string;
+    command: "update" | "remove";
+    reason: "incarnation" | "not_found";
+  };
   "queue.steered": { content: string };
   "queue.dequeued": { content: string };
   "skills.loaded": { skills: SkillMetadata[] };
