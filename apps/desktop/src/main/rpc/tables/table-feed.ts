@@ -63,6 +63,10 @@ export class TableFeed<Row, Key extends string = string> {
   readonly #maxPending: number;
   readonly #subscribers = new Set<SubscriberQueue<Published<Row, Key>>>();
   readonly #afterPublish = new Set<() => void>();
+  readonly #activators = new Set<{
+    activate: () => () => void;
+    stop: (() => void) | null;
+  }>();
   #rows: Map<Key, Row> | null = null;
   #seq = 0;
   #scheduled = false;
@@ -122,6 +126,22 @@ export class TableFeed<Row, Key extends string = string> {
     };
   }
 
+  /**
+   * Runs `activate` while this table has at least one `changes()`
+   * subscriber, and its returned stop when the last one leaves: watchers
+   * and clocks cost nothing while no renderer reads the table.
+   */
+  whileSubscribed(activate: () => () => void): () => void {
+    const entry = { activate, stop: null as (() => void) | null };
+    this.#activators.add(entry);
+    if (this.#subscribers.size > 0) entry.stop = activate();
+    return () => {
+      this.#activators.delete(entry);
+      entry.stop?.();
+      entry.stop = null;
+    };
+  }
+
   /** Runs after every published batch (derived tables chain on this). */
   onPublish(listener: () => void): () => void {
     this.#afterPublish.add(listener);
@@ -141,6 +161,7 @@ export class TableFeed<Row, Key extends string = string> {
     });
     // Registered before `hello`, so nothing after hello.seq is missed.
     this.#subscribers.add(queue);
+    if (this.#subscribers.size === 1) this.#activate();
     try {
       yield { kind: "hello", epoch: this.epoch, seq: this.#seq };
       for (;;) {
@@ -149,7 +170,11 @@ export class TableFeed<Row, Key extends string = string> {
           result = await queue.next(signal);
         } catch (error) {
           // Overflowed: the backlog is gone. Tell the client its copy is
-          // invalid, then end with the typed error so it reopens.
+          // invalid, then end with the typed error so it reopens. The reset
+          // reuses the feed's current seq (it is this subscriber's alone and
+          // advances nothing): every batch this stream lost is at or below
+          // it, so a client that has not seen it re-snapshots, and one whose
+          // snapshot already reached it may drop it.
           yield { kind: "reset", epoch: this.epoch, seq: this.#seq };
           throw error;
         }
@@ -157,7 +182,35 @@ export class TableFeed<Row, Key extends string = string> {
         yield result.value;
       }
     } finally {
-      this.#subscribers.delete(queue);
+      this.#detach(queue);
+    }
+  }
+
+  #detach(queue: SubscriberQueue<Published<Row, Key>>): void {
+    if (!this.#subscribers.delete(queue)) return;
+    if (this.#subscribers.size === 0) this.#deactivate();
+  }
+
+  #activate(): void {
+    for (const entry of this.#activators) {
+      if (entry.stop != null) continue;
+      try {
+        entry.stop = entry.activate();
+      } catch (error) {
+        console.error(`[db] ${this.name} activation failed`, error);
+      }
+    }
+  }
+
+  #deactivate(): void {
+    for (const entry of this.#activators) {
+      const stop = entry.stop;
+      entry.stop = null;
+      try {
+        stop?.();
+      } catch (error) {
+        console.error(`[db] ${this.name} deactivation failed`, error);
+      }
     }
   }
 
@@ -208,7 +261,7 @@ export class TableFeed<Row, Key extends string = string> {
     for (const queue of Array.from(this.#subscribers)) {
       queue.push(batch);
       // Overflowed: stop feeding it now; its reader ends with a reset.
-      if (queue.failed) this.#subscribers.delete(queue);
+      if (queue.failed) this.#detach(queue);
     }
     for (const listener of Array.from(this.#afterPublish)) {
       try {

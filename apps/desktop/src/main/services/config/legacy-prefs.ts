@@ -331,7 +331,14 @@ export const importLegacyPrefs = (
   const legacy = composeLegacyPrefs(read, fields);
   const provenance = prefs.provenance();
   const named = Object.keys(legacy.patch) as PrefsField[];
-  const keptUser = named.filter((field) => provenance[field] === "user");
+  // Provenance is per leaf; a field counts as kept when any leaf of it is
+  // the user's (the import skips exactly those leaves).
+  const keptUser = named.filter((field) =>
+    Object.entries(provenance).some(
+      ([leaf, mark]) =>
+        mark === "user" && (leaf === field || leaf.startsWith(`${field}.`))
+    )
+  );
   const { invalid } = prefs.importLegacy(legacy.patch);
   const reset = prefs.resetLegacy(legacy.absent);
   return {

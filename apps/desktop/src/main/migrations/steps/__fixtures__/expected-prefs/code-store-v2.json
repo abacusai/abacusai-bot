@@ -4,17 +4,23 @@
       "browserHomepage": "default",
       "creditsExhaustedAt": "default",
       "defaultMode": "legacy",
-      "dismissals": "default",
+      "dismissals.referralCardUntil": "default",
+      "dismissals.upsell": "default",
       "language": "default",
       "lastPickedWorkspaceId": "legacy",
-      "models": "legacy",
-      "motion": "default",
+      "models.favoriteModelIds": "legacy",
+      "models.perWorkspace": "legacy",
+      "models.selectedModelId": "legacy",
+      "motion.reduce": "default",
       "onboardingStep": "default",
       "panes": "default",
-      "pinned": "legacy",
+      "pinned.botIds": "legacy",
+      "pinned.sessionIds": "legacy",
       "recentFolders": "default",
-      "sidebar": "legacy",
-      "sounds": "default",
+      "sidebar.openSection": "legacy",
+      "sidebar.pinned": "legacy",
+      "sounds.enabled": "default",
+      "sounds.perEvent": "default",
       "theme": "legacy",
       "workspaceExpanded": "legacy"
     },
@@ -30,7 +36,10 @@
       "language": "system",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
-        "favoriteModelIds": ["gpt-5", "claude-opus"],
+        "favoriteModelIds": [
+          "gpt-5",
+          "claude-opus"
+        ],
         "perWorkspace": {
           "ws-1": "claude-opus",
           "ws-2": null
@@ -44,7 +53,9 @@
       "panes": {},
       "pinned": {
         "botIds": [],
-        "sessionIds": ["s-1"]
+        "sessionIds": [
+          "s-1"
+        ]
       },
       "recentFolders": [],
       "sidebar": {
