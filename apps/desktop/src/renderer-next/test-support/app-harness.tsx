@@ -97,6 +97,13 @@ export const defaultSeed = (): FixtureSeed => ({
   routines: fixtureRoutines(1_800_000_000_000),
 });
 
+export interface HarnessOptions {
+  seed?: FixtureSeed;
+  history?: RouterHistory;
+  /** Runs on the FixtureDb before any collection syncs. */
+  beforeRender?: (db: FixtureDb) => void;
+}
+
 export interface AppHarness {
   router: AppRouter;
   history: RouterHistory;
@@ -109,7 +116,7 @@ export interface AppHarness {
 
 export const createHarness = async (
   path: string,
-  options: { seed?: FixtureSeed; history?: RouterHistory } = {}
+  options: HarnessOptions = {}
 ): Promise<AppHarness> => {
   await initI18n();
   await i18n.changeLanguage("en-US");
@@ -118,6 +125,7 @@ export const createHarness = async (
   const calls: Array<[string, unknown]> = [];
   const transport = createMemoryTransport(shellRouter(), { calls });
   const db = new FixtureDb(options.seed ?? defaultSeed());
+  options.beforeRender?.(db);
   const collections = createCollections(directDbSource(db), { backoffMs: [5] });
   await collections.prefs.preload();
   const queryClient = createQueryClient();
@@ -150,10 +158,7 @@ export const createHarness = async (
   };
 };
 
-export const renderApp = async (
-  path: string,
-  options: { seed?: FixtureSeed; history?: RouterHistory } = {}
-) => {
+export const renderApp = async (path: string, options: HarnessOptions = {}) => {
   const harness = await createHarness(path, options);
   const queryClient = (harness.router as { __queryClient?: unknown })
     .__queryClient as ReturnType<typeof createQueryClient>;

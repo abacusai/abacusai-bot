@@ -1,6 +1,7 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 
 import { ShellLayout } from "#next/features/shell";
+import { ignoreLoadError } from "#next/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#next/lib/navigation/search";
 import { useChromeState } from "#next/lib/window-chrome/chrome-state";
 
@@ -26,8 +27,8 @@ export const Route = createFileRoute("/_shell")({
   search: { middlewares: [stripSearchParams(SHELL_DEFAULTS)] },
   loader: ({ context }) =>
     Promise.all([
-      context.collections.sessions.preload(),
-      context.collections.workspaces.preload(),
+      context.collections.sessions.preload().catch(ignoreLoadError),
+      context.collections.workspaces.preload().catch(ignoreLoadError),
     ]),
   component: ShellRoute,
 });

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { ArtifactsPage } from "#next/features/artifacts";
 import { TopBarSlot } from "#next/features/shell";
+import { ignoreLoadError } from "#next/lib/navigation/loaders";
 import { ArtifactsSearch } from "#next/lib/navigation/search";
 
 const ArtifactsRoute = () => {
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/_shell/(artifacts)/artifacts/")({
     from: search.from,
     q: search.q,
   }),
-  loader: ({ context }) => context.collections.artifacts.preload(),
+  loader: ({ context }) =>
+    context.collections.artifacts.preload().catch(ignoreLoadError),
   component: ArtifactsRoute,
 });
