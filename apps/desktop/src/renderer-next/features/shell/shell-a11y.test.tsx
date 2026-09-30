@@ -73,6 +73,74 @@ describe("shell a11y", () => {
       plain.remove();
     }
   });
+
+  it("a hidden element that is itself focusable becomes inert; a focus guard never does (Codex impl r2 #4)", async () => {
+    const link = document.createElement("a");
+    link.href = "#/routines";
+    link.textContent = "Routines";
+    const button = document.createElement("button");
+    button.textContent = "New";
+    const guard = document.createElement("span");
+    guard.tabIndex = 0;
+    guard.setAttribute("data-base-ui-focus-guard", "");
+    document.body.append(link, button, guard);
+    const stop = inertWhileHidden();
+    try {
+      link.setAttribute("aria-hidden", "true");
+      button.setAttribute("aria-hidden", "true");
+      guard.setAttribute("aria-hidden", "true");
+      await waitFor(() => expect(link.hasAttribute("inert")).toBe(true));
+      await waitFor(() => expect(button.hasAttribute("inert")).toBe(true));
+      expect(guard.hasAttribute("inert")).toBe(false);
+      link.removeAttribute("aria-hidden");
+      await waitFor(() => expect(link.hasAttribute("inert")).toBe(false));
+    } finally {
+      stop();
+      link.remove();
+      button.remove();
+      guard.remove();
+    }
+  });
+
+  it("covers subtrees inserted already hidden, and focusable children that arrive later (Codex impl r2 #4)", async () => {
+    const stop = inertWhileHidden();
+    const region = document.createElement("aside");
+    region.setAttribute("aria-hidden", "true");
+    const holder = document.createElement("div");
+    holder.innerHTML =
+      '<nav aria-hidden="true"><button type="button">Bots</button></nav>';
+    const nested = holder.firstElementChild as HTMLElement;
+    const tick = () =>
+      act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    try {
+      // Inserted pre-hidden, with its focusable content.
+      document.body.append(holder);
+      await waitFor(() => expect(nested.hasAttribute("inert")).toBe(true));
+      // Inserted hidden and empty, so not inert yet...
+      document.body.append(region);
+      await tick();
+      expect(region.hasAttribute("inert")).toBe(false);
+      // ...until a focusable child arrives.
+      const late = document.createElement("a");
+      late.textContent = "Library";
+      region.append(late);
+      await tick();
+      // An anchor without href is not focusable.
+      expect(region.hasAttribute("inert")).toBe(false);
+      late.href = "#/library";
+      await waitFor(() => expect(region.hasAttribute("inert")).toBe(true));
+      const button = document.createElement("button");
+      button.textContent = "Later";
+      nested.append(button);
+      await tick();
+      const found = await violations();
+      expect(found.filter((v) => v.id === "aria-hidden-focus")).toEqual([]);
+    } finally {
+      stop();
+      holder.remove();
+      region.remove();
+    }
+  });
 });
 
 describe("the toast viewport (§7.4, Claude impl r1 #23)", () => {
