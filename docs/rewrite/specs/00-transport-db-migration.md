@@ -1062,7 +1062,7 @@ interface ThreadFileV2 {
 |---|---|
 | `TextPart` | `metadata.abacus.segmentId` |
 | `ToolCallPart` | `metadata.abacus.segmentId`; `id` stays `toolCall.id`, because TanStack pairs calls with results by it |
-| `ToolResultPart` | `id` = segment id + `":result"` |
+| `ToolResultPart` | `id` = segment id + `"#result"` (impl r1: derived ids use `#`, which agent ids never contain) |
 | `ImagePart` / `VideoPart` | `metadata.abacus.segmentId` |
 | `ThinkingPart` (no `metadata` field) | `stepId` = segment id |
 | `SubagentPart` | `subagent.id` = the bracket's `created` id; its `metadata.abacus.segments` lists the close frame |
@@ -1098,7 +1098,7 @@ The `at` timestamp of every segment is kept in the `segments` list. C-T2's prope
 **Tool calls.** A `tool_call` segment `{ toolCall, toolResult? }` maps to two parts:
 
 - `{ type: "tool-call", id: toolCall.id, name: toolCall.name, arguments: JSON.stringify(toolCall.args), input: toolCall.args, state, approval?, output?: toolResult?.output, metadata: { abacus: { segmentId, endpoint?, status: toolCall.status } } }`
-- plus a `ToolResultPart` `{ type: "tool-result", id: segmentId + ":result", toolCallId, content, state: resultState, outcome?, error?, metadata: { abacus: { data, rejection } } }`, whenever a result exists or one is synthesised.
+- plus a `ToolResultPart` `{ type: "tool-result", id: segmentId + "#result", toolCallId, content, state: resultState, outcome?, error?, metadata: { abacus: { data, rejection } } }`, whenever a result exists or one is synthesised.
 
 The result's `state` never depends on `error` alone. In the AI clone, `outcome` means the call ended without executing successfully, and "state remains `error`" (`ai/src/types.ts:457-458`).
 
@@ -1430,3 +1430,10 @@ Source: `docs/rewrite/specs/reviews/00-transport-db-migration.codex-r1.md`. Each
 | R22 | Default-equality merge | **Fixed** (B.2, C.4). Merges go by stored provenance. C-T5 covers an explicit `"system"` theme. |
 | R23 | Overwrites and rollback misclassified | **Fixed** (C.1, C.2). Writes are classified as `create`, `replace-derived` or `replace-user`. `replace-user` writes are backed up, commits are journaled, and there is a recovery procedure. The review's failure points are tested in C-T3. |
 | R24 | Archive gate cannot handle `agui` or skipped files | **Fixed** (C.5). Archiving is per file, with rules for `agui` twins (`migratedFrom`), a quarantine for skipped sources, and convert-then-archive. C-T9 covers it. |
+
+### Amendment after the step-1 implementation review (1 Oct 2026)
+
+- Derived and de-duplicated ids in migrated history use `#` (`<id>#result`, `<id>#0`, `<id>#1`, sub-agent children likewise), never `:`, because the agent's own ids (`:result`, `:think:n`, `:user`) use `:`; a migrated thread that AG-UI later appends to can therefore never collide.
+- Migrated tool calls carry no `output`/`input` copies; readers use `expandToolResultData` from `shared/transcript`. Each user message carries `userText` tags (routine fire, system reminder, attachments) and each turn's message a positional `feedback` index (`shared/transcript/user-text.ts`).
+- Twins carry `source.fingerprint` (sha256 of the exact v1 text); freshness compares fingerprints, never timestamps. A clear marker `threads/<id>.cleared` is written before a clear removes anything and is dropped once new history is saved; step 4 archives orphaned v1-derived twins and marker-held v1 files; the cut-over build sets `ThreadStore` `v1Archived: true` with step 4 registered.
+- Files over 64 MB or unreadable are recorded (`tooLarge` / `unreadable`), never converted or quarantined; a twin with `version` > 2 or an unknown `source.kind` is `foreign` and never overwritten.
