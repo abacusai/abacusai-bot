@@ -443,6 +443,9 @@ export const startConnectorConnect = (
         .catch(() => false)
         .then((inApp) => {
           if (settled) return;
+          console.log(
+            `[abacus-connectors] ${serviceKey} hop: ${inApp ? "app window" : "browser"}`
+          );
           if (inApp) {
             window = openConnectWindow({
               url: connectUrl.toString(),
