@@ -34,6 +34,9 @@ export default defineConfig({
     "src/sandbox-support.ts",
     // And the shared atomic write. Imports only node's fs, so main pays nothing.
     "src/atomic-file.ts",
+    // The renderer's tool titles, kinds and result formatting. Browser-safe:
+    // no node or pi anywhere in its closure (tool-display.test.ts).
+    "src/tool-display.ts",
   ],
   deps: {
     // The sandbox runtime finds its vendored seccomp filters and Java agent

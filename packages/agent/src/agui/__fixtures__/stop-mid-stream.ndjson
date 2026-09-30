@@ -1,0 +1,10 @@
+{"type":"event","event":{"type":"mode_changed","mode":"DEFAULT","source":"startup"}}
+{"type":"ready","model":"fake/fake-1","mode":"DEFAULT","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"status_changed","status":"submitted"}}
+{"type":"event","event":{"type":"status_changed","status":"streaming"}}
+{"type":"queue_updated","messages":[],"dequeued":null}
+{"type":"event","event":{"type":"turn_complete","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"fake-1"}}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}

@@ -1178,7 +1178,11 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
-    emitNdjson: (workspaceId, sessionId, payload) => {
+    emitNdjson: (workspaceId, sessionId, payload, origin) => {
+      // An agui runtime serves only the new renderer (spec 00-agent-agui
+      // §2.1): its compat lines feed main's taps below, never the old
+      // renderer's `local-cli-ndjson` stream.
+      const toOldRenderer = origin?.wire !== "agui";
       // Recorded before the filter: a stopped session is exactly one whose
       // log somebody is about to want.
       if (payload.type === "ready" && payload.agentSessionId != null) {
@@ -1199,8 +1203,9 @@ export class ServiceHost {
         // A relayed turn's own words are notes around a <reply> tag, addressed
         // to nobody; the gateway echoes what it actually sent instead.
         if (
-          !isAgentText(payload) ||
-          !this.messagingGatewayService.relayingSession(sessionId)
+          toOldRenderer &&
+          (!isAgentText(payload) ||
+            !this.messagingGatewayService.relayingSession(sessionId))
         )
           this.emitEvent({
             type: "local-cli-ndjson",
@@ -1229,12 +1234,27 @@ export class ServiceHost {
       const communicationUpdate =
         this.agentCommunicationService.handleDesktopEvent(payload);
       if (communicationUpdate.autoAllowDecision != null) {
-        this.agentCommunicationService.respondPermission({
-          workspaceId,
-          sessionId,
-          permissionId: communicationUpdate.autoAllowDecision.permissionId,
-          decision: communicationUpdate.autoAllowDecision.decision,
-        });
+        if (origin?.wire === "agui") {
+          // Bound to the runtime that asked: a replacement process that now
+          // owns the session id never receives another process's answer.
+          this.agentManagerService.sendCommandToRuntime(
+            origin,
+            workspaceId,
+            sessionId,
+            {
+              type: "permission_response",
+              permissionId: communicationUpdate.autoAllowDecision.permissionId,
+              decision: communicationUpdate.autoAllowDecision.decision,
+            }
+          );
+        } else {
+          this.agentCommunicationService.respondPermission({
+            workspaceId,
+            sessionId,
+            permissionId: communicationUpdate.autoAllowDecision.permissionId,
+            decision: communicationUpdate.autoAllowDecision.decision,
+          });
+        }
       }
       if (communicationUpdate.statePatch != null) {
         const mergedState = this.agentManagerService.applyStatePatch(
