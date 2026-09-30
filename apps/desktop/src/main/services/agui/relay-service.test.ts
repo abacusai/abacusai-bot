@@ -17,7 +17,11 @@ import type { AgentSessionStatus } from "#shared/contracts";
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import type { AgentWire } from "../session/cli-manager-service";
 import { ThreadStore } from "../session/thread-store";
-import { AguiRelayService, type AguiRelayHost } from "./relay-service";
+import {
+  AguiRelayService,
+  defaultWire,
+  type AguiRelayHost,
+} from "./relay-service";
 
 type Command = { type: string } & Record<string, unknown>;
 
@@ -405,20 +409,23 @@ describe("ai.cancel, ai.respondPermission, ai.queue.*", () => {
     ]);
   });
 
-  it("queue edits are checked against the live incarnation and entry id, then sent by index", async () => {
+  it("queue edits go to the agent by incarnation and entry id, never by an index a drain can shift; a dead incarnation is refused here", async () => {
     const { agent, client } = setup();
     agent.boot();
-    agent.emit("s1", {
+    const queue = (...ids: string[]) => ({
       type: "CUSTOM",
       name: "queue.updated",
       value: {
-        messages: [
-          { id: "q-1", message: "hidden", hidden: true, waitingFor: "step" },
-          { id: "q-2", message: "shown", waitingFor: "turn" },
-        ],
+        messages: ids.map((id) => ({ id, message: id, waitingFor: "turn" })),
         dequeued: null,
       },
     });
+    agent.emit("s1", queue("q-1", "q-2"));
+    // The agent drains q-1 right as the edit is on its way: main has not seen
+    // that yet (its last queue says q-2 is at index 1). An index would now
+    // name nothing, or another entry; the id still names q-2.
+    agent.answer = (command) =>
+      command.type === "queue.update" ? [queue("q-2")] : [];
     const stream = await client.ai.subscribe({ threadId: "s1" });
     const replayed = await take(stream, 3);
     const head = Number(replayed.at(-1)!.id);
@@ -444,13 +451,24 @@ describe("ai.cancel, ai.respondPermission, ai.queue.*", () => {
     await client.ai.queue.dequeue({ threadId: "s1" });
 
     expect(agent.commands).toEqual([
-      { type: "update_queue_item", index: 1, message: "edited" },
+      {
+        type: "queue.update",
+        incarnation: "inc-1",
+        entryId: "q-2",
+        message: "edited",
+      },
+      // The agent answers a gone id itself, atomically (spec 02 §14.6).
+      { type: "queue.remove", incarnation: "inc-1", entryId: "q-9" },
       { type: "enqueue", message: "later", hidden: false },
       { type: "clear_queue" },
       { type: "dequeue" },
     ]);
-    const answers = await take(stream, 4);
+    expect(
+      agent.commands.some((command) => Object.hasOwn(command, "index"))
+    ).toBe(false);
+    const answers = await take(stream, 3);
     expect(answers.map((entry) => entry.event)).toMatchObject([
+      { name: "queue.updated" },
       {
         name: "queue.command_rejected",
         value: {
@@ -459,11 +477,6 @@ describe("ai.cancel, ai.respondPermission, ai.queue.*", () => {
           command: "remove",
           reason: "incarnation",
         },
-      },
-      { name: "queue.updated" },
-      {
-        name: "queue.command_rejected",
-        value: { entryId: "q-9", reason: "not_found" },
       },
       { name: "queue.updated" },
     ]);
@@ -655,5 +668,383 @@ describe("ai.subscribe, ai.hydrate, ai.joinRun", () => {
     const hydrated = await second.client.ai.hydrate({ threadId: "s1" });
     expect(hydrated.abacus.runOutcomes.map((o) => o.runId)).toEqual(["run-1"]);
     expect(hydrated.abacus.cursor).toBe(0);
+  });
+});
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+describe("ai.send admission (review r1)", () => {
+  it("checks for a duplicate and reserves in one step: simultaneous sends of one run id write run once", async () => {
+    const { agent, relay } = setup();
+    agent.boot();
+    agent.answer = (command) =>
+      command.type === "run"
+        ? started((command.input as { runId: string }).runId)
+        : [];
+    const input = {
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "hi")],
+    };
+
+    // No stagger: both calls start in the same turn.
+    const answers = await Promise.all([relay.send(input), relay.send(input)]);
+
+    expect(answers).toEqual([
+      { runId: "run-1", status: "started" },
+      { runId: "run-1", status: "duplicate", original: "started" },
+    ]);
+    expect(agent.commands.filter((c) => c.type === "run")).toHaveLength(1);
+  });
+
+  it("converts before reserving: a message it cannot convert is BAD_REQUEST, and the run id stays free", async () => {
+    const { agent, client } = setup();
+    agent.boot();
+    agent.answer = (command) =>
+      command.type === "run"
+        ? started((command.input as { runId: string }).runId)
+        : [];
+    // The loose contract admits it; the converter throws (no subagent.name).
+    const bad = {
+      threadId: "s1",
+      runId: "run-1",
+      messages: [
+        userMessage("u-1", "hi"),
+        {
+          id: "a-1",
+          role: "assistant" as const,
+          parts: [{ type: "subagent" }],
+        },
+      ],
+    };
+
+    await expect(client.ai.send(bad)).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+    expect(agent.commands).toEqual([]);
+    expect(agent.marks).toEqual([]);
+    // Nothing waits under that run id: a corrected send goes through.
+    await expect(
+      client.ai.send({ ...bad, messages: [userMessage("u-1", "hi")] })
+    ).resolves.toEqual({ runId: "run-1", status: "started" });
+  });
+
+  it("an unwritable runtime undoes the turn state, and a repeat awaiting the admission gets the same definitive answer", async () => {
+    const { agent, relay } = setup();
+    agent.boot();
+    agent.send = () => false;
+    const input = {
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "hi")],
+    };
+
+    const results = await Promise.allSettled([
+      relay.send(input),
+      relay.send(input),
+    ]);
+    expect(results.map((result) => result.status)).toEqual([
+      "rejected",
+      "rejected",
+    ]);
+    for (const result of results)
+      expect((result as PromiseRejectedResult).reason).toMatchObject({
+        code: "UNAVAILABLE",
+      });
+    expect(agent.marks).toEqual(["sent", "stopped"]);
+  });
+
+  it("an obsolete process's exit leaves its replacement's admission waiting for its own ack", async () => {
+    const { agent, relay } = setup();
+    agent.boot("s1", "inc-1");
+    const old = agent.runtime;
+    // The replacement is up while the old child is still dying.
+    agent.boot("s1", "inc-2");
+    let answer!: () => void;
+    agent.answer = (command) => {
+      if (command.type !== "run") return [];
+      answer = () => {
+        for (const event of started("run-1")) agent.emit("s1", event);
+      };
+      return [];
+    };
+    const pending = relay.send({
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "hi")],
+    });
+    await vi.waitFor(() => expect(agent.commands).toHaveLength(1));
+
+    relay.runtimeExited("s1", {
+      origin: { wire: "agui", runtime: old },
+      code: null,
+      signal: "SIGTERM",
+      requested: false,
+    });
+    answer();
+
+    await expect(pending).resolves.toEqual({
+      runId: "run-1",
+      status: "started",
+    });
+    expect(agent.commands.filter((c) => c.type === "run")).toHaveLength(1);
+  });
+
+  it("two first sends on a cold thread start the agent once", async () => {
+    const { agent, relay } = setup();
+    agent.start = async (threadId: string) => {
+      agent.starts += 1;
+      await sleep(20);
+      agent.boot(threadId, agent.incarnation, relay.wireFor(threadId));
+      return true;
+    };
+    agent.answer = (command) =>
+      command.type === "run"
+        ? started((command.input as { runId: string }).runId)
+        : [];
+
+    const answers = await Promise.all([
+      relay.send({
+        threadId: "s1",
+        runId: "run-a",
+        messages: [userMessage("u-a", "a")],
+      }),
+      relay.send({
+        threadId: "s1",
+        runId: "run-b",
+        messages: [userMessage("u-b", "b")],
+      }),
+    ]);
+
+    expect(answers.map((answer) => answer.status)).toEqual([
+      "started",
+      "started",
+    ]);
+    expect(agent.starts).toBe(1);
+  });
+
+  it("an agent duplicate main has no record of is a duplicate with no guessed original", async () => {
+    const { agent, client } = setup();
+    agent.boot();
+    agent.answer = (command) =>
+      command.type === "run"
+        ? [ack((command.input as { runId: string }).runId, "duplicate")]
+        : [];
+
+    await expect(
+      client.ai.send({
+        threadId: "s1",
+        runId: "run-x",
+        messages: [userMessage("u", "x")],
+      })
+    ).resolves.toEqual({ runId: "run-x", status: "duplicate" });
+  });
+
+  it("a retry of a message the transcript holds, which the agent does not echo again, says abacus.duplicate_echo", async () => {
+    const { agent, client } = setup();
+    agent.boot();
+    agent.answer = (command) => {
+      if (command.type !== "run") return [];
+      const runId = (command.input as { runId: string }).runId;
+      return runId === "run-1"
+        ? [
+            ...started(runId),
+            { type: "TEXT_MESSAGE_START", messageId: "u-1", role: "user" },
+            { type: "TEXT_MESSAGE_CONTENT", messageId: "u-1", delta: "q" },
+            { type: "TEXT_MESSAGE_END", messageId: "u-1" },
+            {
+              type: "RUN_ERROR",
+              message: "failed",
+              metadata: { tanstack: { runId } },
+            },
+          ]
+        : // The same process remembers it echoed u-1: no echo this time.
+          started(runId);
+    };
+    await client.ai.send({
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "q")],
+    });
+    const stream = await client.ai.subscribe({ threadId: "s1" });
+    const [subscribed] = await take(stream, 1);
+    const head = Number(
+      (subscribed!.event.value as { seq: number } | undefined)?.seq
+    );
+
+    await client.ai.send({
+      threadId: "s1",
+      runId: "run-2",
+      messages: [userMessage("u-1", "q")],
+    });
+
+    let notice: Record<string, unknown> | undefined;
+    while (notice == null) {
+      const [next] = await take(stream, 1);
+      if (next == null) break;
+      if (Number(next.id) <= head) continue;
+      if (next.event.name === "abacus.duplicate_echo") notice = next.event;
+    }
+    expect(notice).toMatchObject({
+      value: { runId: "run-2", messageId: "u-1" },
+    });
+    await stream.return?.(undefined);
+  });
+});
+
+describe("streams, checkpoints and cancel (review r1)", () => {
+  it("cancel marks the turn stopped only for the open run or an admission that will open it", async () => {
+    const { agent, relay, client } = setup();
+    agent.boot();
+    for (const event of [...started("run-1"), finished("run-1")])
+      agent.emit("s1", event);
+    // A reset forgets run-1's outcome and log; its ack stays remembered.
+    relay.clearThread("s1");
+    for (const event of started("run-2")) agent.emit("s1", event);
+
+    await client.ai.cancel({ threadId: "s1", runId: "run-1" });
+    expect(agent.marks).toEqual([]);
+
+    // Acked `started`, RUN_STARTED not yet seen: current.
+    agent.emit("s1", finished("run-2"));
+    agent.emit("s1", ack("run-3", "started"));
+    await client.ai.cancel({ threadId: "s1", runId: "run-3" });
+    expect(agent.marks).toEqual(["stopped"]);
+    for (const event of [...started("run-3").slice(1), finished("run-3")])
+      agent.emit("s1", event);
+    await client.ai.cancel({ threadId: "s1", runId: "run-3" });
+    expect(agent.marks).toEqual(["stopped"]);
+  });
+
+  it("a subscriber that overflows while parked is detached at once", () => {
+    const { agent, relay } = setup();
+    agent.boot();
+    const controller = new AbortController();
+    // Never read: flow control holds the consumer back.
+    relay.subscribe("s1", null, controller.signal);
+    expect(relay.listenerCount("s1")).toBe(1);
+
+    for (let n = 0; n <= 10_000; n += 1)
+      agent.emit("s1", {
+        type: "CUSTOM",
+        name: "agent.heartbeat",
+        value: { runningTools: n % 2 },
+      });
+
+    expect(relay.listenerCount("s1")).toBe(0);
+    controller.abort();
+  });
+
+  it("NOT_FOUND for a thread main does not know, and for an unknown page cursor", async () => {
+    const { agent, client } = setup();
+    await expect(client.ai.hydrate({ threadId: "gone" })).rejects.toMatchObject(
+      { code: "NOT_FOUND" }
+    );
+    await expect(
+      client.ai.subscribe({ threadId: "gone" })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    agent.boot();
+    for (const event of [...started("run-1"), finished("run-1")])
+      agent.emit("s1", event);
+    await expect(
+      client.ai.hydrate({ threadId: "s1", limit: 1, before: "nope" })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("a resume point from another relay epoch is resync, never a replay", async () => {
+    const { agent, client, relay } = setup();
+    agent.boot();
+    for (const event of started("run-1")) agent.emit("s1", event);
+
+    const other = await client.ai.subscribe({
+      threadId: "s1",
+      lastEventId: "1",
+      epoch: "another-main-process",
+    });
+    const [, resync] = await take(other, 2);
+    expect(resync!.event).toMatchObject({ name: "abacus.resync" });
+    await other.return?.(undefined);
+
+    const same = await client.ai.subscribe({
+      threadId: "s1",
+      lastEventId: "1",
+      epoch: relay.epoch,
+    });
+    const [, replay] = await take(same, 2);
+    expect(replay!.id).toBe("2");
+    await same.return?.(undefined);
+  });
+
+  it("a reset by main is session.cleared on every open stream", async () => {
+    const { agent, client, relay } = setup();
+    agent.boot();
+    const stream = await client.ai.subscribe({ threadId: "s1" });
+    await take(stream, 2);
+
+    relay.clearThread("s1");
+
+    const [cleared] = await take(stream, 1);
+    expect(cleared!.event).toMatchObject({
+      type: "CUSTOM",
+      name: "session.cleared",
+    });
+    expect(cleared!.id).toBeDefined();
+    await stream.return?.(undefined);
+  });
+
+  it("the v1 dual-write never replaces the relay's agui file, even right after the relay wrote it", () => {
+    const { agent, store } = setup();
+    agent.boot();
+    for (const event of [...started("run-1"), finished("run-1")])
+      agent.emit("s1", event);
+    expect(store.readCurrentFile("s1")?.source.kind).toBe("agui");
+
+    store.writeFromV1("s1", {
+      updatedAt: new Date().toISOString(),
+      segments: [],
+    });
+
+    const file = store.readCurrentFile("s1");
+    expect(file?.source.kind).toBe("agui");
+    expect(file?.runs).toEqual([expect.objectContaining({ runId: "run-1" })]);
+  });
+});
+
+describe("wire selection (review r1)", () => {
+  it("every spawn speaks AG-UI in the new-renderer build; the env flag counts only unpackaged", () => {
+    const env = { ABACUSAI_BOT_AGENT_WIRE: "agui" };
+    expect(defaultWire({ generation: "wco", isPackaged: true, env: {} })).toBe(
+      true
+    );
+    expect(
+      defaultWire({ generation: "legacy", isPackaged: false, env: {} })
+    ).toBe(false);
+    expect(defaultWire({ generation: "legacy", isPackaged: false, env })).toBe(
+      true
+    );
+    const log: string[] = [];
+    expect(
+      defaultWire({
+        generation: "legacy",
+        isPackaged: true,
+        env,
+        log: (line) => log.push(line),
+      })
+    ).toBe(false);
+    expect(log).toHaveLength(1);
+
+    const relay = new AguiRelayService({
+      host: host(new ScriptedAgent()),
+      files: new ThreadStore({ home: () => home, log: () => undefined }),
+      aguiForEverySpawn: defaultWire({
+        generation: "wco",
+        isPackaged: true,
+        env: {},
+      }),
+    });
+    // No ai.* call has named the thread.
+    expect(relay.wireFor("never-asked")).toBe("agui");
   });
 });

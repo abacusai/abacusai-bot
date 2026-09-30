@@ -11,6 +11,8 @@ export type JsonPatchOp = {
   value?: unknown;
 };
 
+const UNSAFE_TOKENS = new Set(["__proto__", "constructor", "prototype"]);
+
 const unescape = (token: string): string =>
   token.replace(/~1/g, "/").replace(/~0/g, "~");
 
@@ -41,6 +43,9 @@ export const applyJsonPatch = <T>(
     }
     if (!operation.path.startsWith("/")) return null;
     const tokens = operation.path.slice(1).split("/").map(unescape);
+    // The paths come from a child process's stdout: no token may reach a
+    // prototype (`add /__proto__/x` would pollute Object.prototype in main).
+    if (tokens.some((token) => UNSAFE_TOKENS.has(token))) return null;
     const last = tokens.pop()!;
     let parent: unknown = root;
     for (const token of tokens) {
@@ -64,7 +69,7 @@ export const applyJsonPatch = <T>(
 
     const record = parent as Record<string, unknown>;
     if (operation.op === "add") record[last] = clone(operation.value);
-    else if (!(last in record)) return null;
+    else if (!Object.hasOwn(record, last)) return null;
     else if (operation.op === "replace") record[last] = clone(operation.value);
     else delete record[last];
   }

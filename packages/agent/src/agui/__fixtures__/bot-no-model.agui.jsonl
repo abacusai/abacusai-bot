@@ -7,5 +7,7 @@
 {"type":"TEXT_MESSAGE_START","messageId":"srv-<1>:user","role":"user"}
 {"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"hello bot"}
 {"type":"TEXT_MESSAGE_END","messageId":"srv-<1>:user"}
+{"type":"TEXT_MESSAGE_START","messageId":"srv-<1>:error","role":"assistant"}
+{"type":"TEXT_MESSAGE_END","messageId":"srv-<1>:error"}
 {"type":"RUN_ERROR","message":"No model provider is configured. Add an API key in Settings.","code":"model_unavailable","metadata":{"tanstack":{"threadId":"t-1","runId":"srv-<1>","model":"unknown/unknown"},"abacus":{"error":{"message":"No model provider is configured. Add an API key in Settings.","code":"model_unavailable"}}}}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}

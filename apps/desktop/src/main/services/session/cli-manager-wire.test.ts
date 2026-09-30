@@ -50,6 +50,8 @@ const SCRIPTS = {
     setInterval(() => {}, 1000);`,
   inline: `process.stdout.write(${JSON.stringify(`${HELLO("inline")}\n\u001e${READY}\n${AGUI_LINE}\n`)});
     setInterval(() => {}, 1000);`,
+  /** Its last line has no newline, and it exits right after writing it. */
+  lastLine: `process.stdout.write(${JSON.stringify(`${HELLO("inline")}\n\u001e${READY}\n${AGUI_LINE}`)}, () => setTimeout(() => process.exit(0), 300));`,
 };
 
 function manager(script: string, wire: AgentWire) {
@@ -73,6 +75,9 @@ function manager(script: string, wire: AgentWire) {
     },
     emitAgui: (_w, _s, event) => {
       agui.push(event);
+    },
+    emitAguiExit: () => {
+      agui.push({ type: "exit" });
     },
     emitSystemReady: () => {},
     emitSessionClosed: () => {},
@@ -167,6 +172,27 @@ describe("spawning with a wire", () => {
         ]);
       });
       expect(service.getSessionState("w", "session-1").status).toBe("running");
+    } finally {
+      await service.dispose();
+    }
+  }, 30_000);
+
+  it("agui: a last line without its newline still reaches the relay, before the exit", async () => {
+    const { service, agui } = manager(SCRIPTS.lastLine, "agui");
+
+    try {
+      await service.startSession({
+        workspaceId: "w",
+        sessionId: "session-1",
+        startupTimeoutMs: 20_000,
+      });
+      await vi.waitFor(() =>
+        expect(agui.map((event) => event.name ?? event.type)).toEqual([
+          "wire.hello",
+          "agent.status",
+          "exit",
+        ])
+      );
     } finally {
       await service.dispose();
     }
