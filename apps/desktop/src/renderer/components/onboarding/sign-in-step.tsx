@@ -35,6 +35,7 @@ const CAPABILITIES = [
  */
 export const SignInStep = ({
   busy,
+  busyBrowser,
   error,
   onConnect,
   browserProfiles = [],
@@ -45,6 +46,11 @@ export const SignInStep = ({
 }: {
   /** The browser hop is out; it can take minutes while an account is created. */
   busy: boolean;
+  /**
+   * The browser whose session is signing in: the window stays hidden while
+   * it does, so the button says what is happening instead.
+   */
+  busyBrowser?: string | null;
   error: string | null;
   /** `signin` is the returning user's button; it always uses the browser. */
   onConnect: (intent: AbacusAuthIntent) => void;
@@ -176,6 +182,7 @@ export const SignInStep = ({
           size="lg"
           data-id="onboarding-connect"
           disabled={busy}
+          aria-busy={busy}
           onClick={() => onConnect("signup")}
           className="from-primary h-14 w-full bg-gradient-to-b to-violet-700 text-base font-semibold shadow-lg"
         >
@@ -184,7 +191,13 @@ export const SignInStep = ({
           ) : (
             <UserRound className="size-5" aria-hidden="true" />
           )}
-          {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
+          <span aria-live="polite">
+            {!busy
+              ? t("onboarding.connectCta")
+              : busyBrowser != null
+                ? t("onboarding.signingInWithBrowser", { browser: busyBrowser })
+                : t("apiKeys.connecting")}
+          </span>
         </Button>
         {!busy &&
           defaultProfile != null && (
@@ -200,7 +213,11 @@ export const SignInStep = ({
           )}
         {!busy &&
           (quickProfile != null ? (
-            <div className="flex w-full gap-2">
+            <div
+              className="flex w-full gap-2"
+              role="group"
+              aria-label={t("onboarding.haveAccountCta")}
+            >
               <Button
                 variant="outline"
                 size="lg"

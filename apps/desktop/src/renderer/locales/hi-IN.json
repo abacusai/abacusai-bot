@@ -1257,7 +1257,8 @@
     "welcomeCapabilityConnectors": "100+ Connectors",
     "haveAccountContinueWith": "मेरा पहले से खाता है · {{browser}} के साथ जारी रखें",
     "signInOptions": "साइन इन करने के अन्य तरीके",
-    "usesBrowserSessions": "Google, Microsoft और Apple साइन-इन आपके {{browser}} खातों का उपयोग करता है।"
+    "usesBrowserSessions": "Google, Microsoft और Apple साइन-इन आपके {{browser}} खातों का उपयोग करता है।",
+    "signingInWithBrowser": "{{browser}} के साथ साइन इन हो रहा है…"
   },
   "openFile": {
     "failed": "वह फ़ाइल नहीं खोली जा सकी।",

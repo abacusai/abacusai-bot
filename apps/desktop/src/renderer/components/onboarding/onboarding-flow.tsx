@@ -129,6 +129,8 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     setStepState(next);
   }, []);
   const [busy, setBusy] = useState(false);
+  // The browser a picked profile belongs to, while its session signs in.
+  const [busyBrowser, setBusyBrowser] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const finishing = useRef(false);
 
@@ -267,6 +269,7 @@ export const OnboardingFlow = (): React.ReactElement | null => {
       await window.api.agent.listModels(true);
     } finally {
       setBusy(false);
+      setBusyBrowser(null);
     }
   };
 
@@ -279,6 +282,16 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     enabled: step === "auth",
     staleTime: Infinity,
   });
+  // A sign-in to abacus.ai in the browser while the wall is up should show
+  // here on return. Window focus, not visibility: switching apps leaves the
+  // window visible, so the query's own focus refetch never fires.
+  const refetchBrowserProfiles = browserProfiles.refetch;
+  useEffect(() => {
+    if (step !== "auth" || busy) return;
+    const onFocus = (): void => void refetchBrowserProfiles();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [step, busy, refetchBrowserProfiles]);
 
   // An account made on the website minutes ago has its session waiting in
   // the browser: go there unasked, and the wall is only ever seen in passing.
@@ -335,7 +348,14 @@ export const OnboardingFlow = (): React.ReactElement | null => {
             error={error}
             onConnect={(intent) => void connect(intent)}
             browserProfiles={browserProfiles.data ?? []}
-            onContinueWith={(profileId) => void connect("signin", profileId)}
+            busyBrowser={busyBrowser}
+            onContinueWith={(profileId) => {
+              setBusyBrowser(
+                browserProfiles.data?.find((p) => p.id === profileId)
+                  ?.browserName ?? null
+              );
+              void connect("signin", profileId);
+            }}
             onCancel={() => void window.api.agent.cancelAbacusAuth()}
             onOpenInBrowser={() =>
               void window.api.agent.openAbacusAuthInBrowser()

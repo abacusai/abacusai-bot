@@ -1257,7 +1257,8 @@
     "welcomeCapabilityConnectors": "100+ Connectors",
     "haveAccountContinueWith": "Ya tengo una cuenta · Continuar con {{browser}}",
     "signInOptions": "Otras formas de iniciar sesión",
-    "usesBrowserSessions": "El inicio de sesión con Google, Microsoft y Apple usa tus cuentas de {{browser}}."
+    "usesBrowserSessions": "El inicio de sesión con Google, Microsoft y Apple usa tus cuentas de {{browser}}.",
+    "signingInWithBrowser": "Iniciando sesión con {{browser}}…"
   },
   "openFile": {
     "failed": "No se pudo abrir ese archivo.",

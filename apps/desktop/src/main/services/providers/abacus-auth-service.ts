@@ -315,14 +315,14 @@ export const startAbacusAuth = async (
         (seeded ||
           (variant === "in_app" &&
             (intent === "signup" || defaultProfile != null)));
-      // Started now so the browser's read overlaps the page load. A picked
-      // profile's flow keeps provider sign-ins as they were.
-      const providerCookies =
-        inWindow && !seeded
-          ? defaultProfile != null
-            ? providerSignInCookies(defaultProfile)
-            : Promise.resolve(null)
-          : undefined;
+      // Which way this attempt went, for the funnel: a short code only.
+      const surface = !inWindow
+        ? "browser"
+        : seeded
+          ? "window_session"
+          : defaultProfile != null
+            ? "window_providers"
+            : "window";
 
       // Port 0 lets the OS pick; loopback-only so nothing off-machine reaches it.
       server.listen(0, "127.0.0.1", () => {
@@ -342,7 +342,10 @@ export const startAbacusAuth = async (
         url.searchParams.set("botPort", String(port));
         url.searchParams.set("botPath", callbackPath);
         authUrl = url;
-        reportFunnelStep("signup_clicked");
+        reportFunnelStep(
+          "signup_clicked",
+          browserRequested ? "browser" : surface
+        );
 
         console.log(
           `[abacus-auth] sign-in surface: ${variant} intent: ${intent}${seeded ? " seeded" : ""}${defaultProfile != null ? ` default: ${defaultProfile.browserName}` : ""}`
@@ -351,6 +354,14 @@ export const startAbacusAuth = async (
           openInBrowser();
           return;
         }
+        // Started only once the window is certain (a headless browser launch
+        // is not free), and before it opens so the read overlaps the page
+        // load. A picked profile's flow keeps provider sign-ins as they were.
+        const providerCookies = seeded
+          ? undefined
+          : defaultProfile != null
+            ? providerSignInCookies(defaultProfile)
+            : Promise.resolve(null);
         void openSignInWindow({
           url: url.toString(),
           port,

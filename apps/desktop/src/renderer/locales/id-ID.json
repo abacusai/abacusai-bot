@@ -1257,7 +1257,8 @@
     "welcomeCapabilityConnectors": "100+ Connectors",
     "haveAccountContinueWith": "Saya sudah punya akun · Lanjutkan dengan {{browser}}",
     "signInOptions": "Cara lain untuk masuk",
-    "usesBrowserSessions": "Masuk dengan Google, Microsoft, dan Apple memakai akun Anda di {{browser}}."
+    "usesBrowserSessions": "Masuk dengan Google, Microsoft, dan Apple memakai akun Anda di {{browser}}.",
+    "signingInWithBrowser": "Masuk dengan {{browser}}…"
   },
   "openFile": {
     "failed": "Tidak dapat membuka berkas itu.",

@@ -11,8 +11,34 @@ const mocks = vi.hoisted(() => ({
   },
   clearStorageData: vi.fn(async () => {}),
   onBeforeRequest: vi.fn(),
+  parent: {
+    minimized: false,
+    visible: true,
+    isDestroyed: () => false,
+    getBounds: () => ({ x: 0, y: 0, width: 1400, height: 900 }),
+    isMinimized() {
+      return this.minimized;
+    },
+    isVisible() {
+      return this.visible;
+    },
+    restore: vi.fn(),
+    show: vi.fn(),
+  },
 }));
 
+type FakeWindowOptions = {
+  parent?: unknown;
+  show?: boolean;
+  modal?: boolean;
+  minimizable?: boolean;
+  maximizable?: boolean;
+  fullscreenable?: boolean;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+};
 const windows: FakeWindow[] = [];
 class FakeWindow extends EventEmitter {
   destroyed = false;
@@ -24,10 +50,28 @@ class FakeWindow extends EventEmitter {
     executeJavaScript: vi.fn(async (_script: string) => null as unknown),
     setWindowOpenHandler: vi.fn(),
   });
-  constructor(readonly options: { parent?: FakeWindow }) {
+  visible = false;
+  bounds = { x: 0, y: 0, width: 0, height: 0 };
+  constructor(readonly options: FakeWindowOptions) {
     super();
     windows.push(this);
+    const { x = 0, y = 0, width = 0, height = 0 } = options;
+    this.bounds = { x, y, width, height };
+    this.visible = options.show !== false;
   }
+  isVisible() {
+    return this.visible;
+  }
+  show = vi.fn(() => {
+    this.visible = true;
+  });
+  focus = vi.fn();
+  getBounds() {
+    return this.bounds;
+  }
+  setBounds = vi.fn((bounds: typeof this.bounds) => {
+    this.bounds = bounds;
+  });
   getChildWindows() {
     return windows.filter(
       (win) => win.options.parent === this && !win.destroyed
@@ -48,7 +92,7 @@ class FakeWindow extends EventEmitter {
 }
 vi.mock("electron", () => ({
   BrowserWindow: class {
-    constructor(options: { parent?: FakeWindow }) {
+    constructor(options: FakeWindowOptions) {
       return new FakeWindow(options);
     }
   },
@@ -58,11 +102,11 @@ vi.mock("electron", () => ({
       webRequest: { onBeforeRequest: mocks.onBeforeRequest },
     }),
   },
+  nativeTheme: { shouldUseDarkColors: false },
   shell: { openExternal: vi.fn() },
 }));
 vi.mock("../../bring-to-front", () => ({
-  parentWindow: () => ({}),
-  presentAsDialog: vi.fn(),
+  parentWindow: () => mocks.parent,
 }));
 vi.mock("../../profile-home", () => ({
   profileBaseDir: () => "/tmp/signin-window-test",
@@ -80,7 +124,10 @@ const flush = async () => {
 };
 
 beforeEach(() => {
+  for (const win of windows) win.destroyed = true;
   windows.length = 0;
+  mocks.parent.minimized = false;
+  mocks.parent.visible = true;
   vi.clearAllMocks();
 });
 
@@ -283,7 +330,7 @@ describe("provider sessions from the default browser", () => {
     expect(providerRequest(google, "script")).toHaveBeenCalledWith({});
   });
 
-  it("are removed when the window closes", async () => {
+  it("outlive the window, for the Gmail hop that follows on this session", async () => {
     const opts = { ...options(), providerCookies: Promise.resolve([sid]) };
     const handle = await openSignInWindow(opts);
     providerRequest(google);
@@ -291,9 +338,221 @@ describe("provider sessions from the default browser", () => {
 
     handle!.close();
 
-    expect(mocks.cookies.remove).toHaveBeenCalledWith(
+    expect(mocks.cookies.remove).not.toHaveBeenCalledWith(
       "https://google.com/",
       "SID"
     );
+  });
+});
+
+describe("sign-in window presentation", () => {
+  const press = (win: FakeWindow, input: Record<string, unknown>) => {
+    const event = { preventDefault: vi.fn() };
+    win.webContents.emit("before-input-event", event, {
+      type: "keyDown",
+      isComposing: false,
+      ...input,
+    });
+    return event;
+  };
+
+  it("opens as a modal sheet over the app, fitted and centred, with nowhere to minimize to", async () => {
+    await openSignInWindow(options());
+    const win = windows[0]!;
+
+    expect(win.options).toMatchObject({
+      parent: mocks.parent,
+      modal: true,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      width: 520,
+      height: 760,
+      x: (1400 - 520) / 2,
+      y: (900 - 760) / 2,
+    });
+    expect(win.show).toHaveBeenCalled();
+    expect(win.focus).toHaveBeenCalled();
+  });
+
+  it("shrinks to fit a small app window without dropping below its minimum", async () => {
+    const getBounds = mocks.parent.getBounds;
+    mocks.parent.getBounds = () => ({ x: 0, y: 0, width: 400, height: 500 });
+    try {
+      await openSignInWindow(options());
+    } finally {
+      mocks.parent.getBounds = getBounds;
+    }
+
+    expect(windows[0]!.bounds).toMatchObject({ width: 380, height: 480 });
+  });
+
+  it("surfaces a minimized or hidden app before showing a sheet on it", async () => {
+    mocks.parent.minimized = true;
+    mocks.parent.visible = false;
+
+    await openSignInWindow(options());
+
+    expect(mocks.parent.restore).toHaveBeenCalled();
+    expect(mocks.parent.show).toHaveBeenCalled();
+  });
+
+  it("dismisses on Escape, as the user's cancel", async () => {
+    const opts = options();
+    await openSignInWindow(opts);
+    const win = windows[0]!;
+
+    press(win, { key: "Enter" });
+    press(win, { key: "Escape", isComposing: true });
+    expect(win.destroyed).toBe(false);
+
+    expect(press(win, { key: "Escape" }).preventDefault).toHaveBeenCalled();
+    expect(win.destroyed).toBe(true);
+    expect(opts.onDismissed).toHaveBeenCalledTimes(1);
+    expect(opts.onHandOff).not.toHaveBeenCalled();
+  });
+
+  it("dismisses from the page's Cancel pill on the trusted page only", async () => {
+    const opts = options();
+    await openSignInWindow(opts);
+    const win = windows[0]!;
+    win.url = "https://apps.abacus.ai/chatllm/signin";
+
+    win.webContents.emit("console-message", {
+      message: "abacus:sign-in-cancel",
+      frame: {},
+    });
+    expect(win.destroyed).toBe(false);
+
+    win.webContents.emit("console-message", {
+      message: "abacus:sign-in-cancel",
+      frame: win.webContents.mainFrame,
+    });
+    expect(win.destroyed).toBe(true);
+    expect(opts.onDismissed).toHaveBeenCalledTimes(1);
+  });
+
+  it("puts Cancel beside the browser pill", async () => {
+    await openSignInWindow(options());
+    const win = windows[0]!;
+    win.url = "https://apps.abacus.ai/chatllm/signin";
+    win.webContents.emit("did-finish-load");
+
+    const script = win.webContents.executeJavaScript.mock.calls[0]![0];
+    expect(script).toContain("abacus-cancel-sign-in");
+    expect(script).toContain("abacus-use-browser");
+  });
+
+  it("keeps its own title over the page's", async () => {
+    await openSignInWindow(options());
+    const event = { preventDefault: vi.fn() };
+
+    windows[0]!.emit("page-title-updated", event, "Google Accounts");
+
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it("opens provider popups as modal sheets over the sign-in window", async () => {
+    await openSignInWindow(options());
+    const win = windows[0]!;
+    const handler = win.webContents.setWindowOpenHandler.mock
+      .calls[0]![0] as (details: { url: string; disposition: string }) => {
+      action: string;
+      overrideBrowserWindowOptions?: FakeWindowOptions;
+    };
+
+    const result = handler({
+      url: "https://appleid.apple.com/auth/authorize",
+      disposition: "new-window",
+    });
+
+    expect(result.overrideBrowserWindowOptions).toMatchObject({
+      parent: win,
+      modal: true,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+    });
+  });
+
+  it("closes only the popup on Escape in a provider popup", async () => {
+    const opts = options();
+    await openSignInWindow(opts);
+    const win = windows[0]!;
+    const popup = new FakeWindow({ parent: win });
+    win.webContents.emit("did-create-window", popup);
+
+    press(popup, { key: "Escape" });
+
+    expect(popup.destroyed).toBe(true);
+    expect(win.destroyed).toBe(false);
+    expect(opts.onDismissed).not.toHaveBeenCalled();
+  });
+
+  it("closes only Google's popup on Escape, leaving the page as it was", async () => {
+    const opts = options();
+    await openSignInWindow(opts);
+    const win = windows[0]!;
+    win.webContents.executeJavaScript.mockResolvedValueOnce({
+      result: { google: "client" },
+    });
+    win.webContents.emit("console-message", {
+      message: "abacus:sign-in-google",
+      frame: win.webContents.mainFrame,
+    });
+    await flush();
+    const popup = windows[1]!;
+    expect(popup.options).toMatchObject({ parent: win, modal: true });
+
+    press(popup, { key: "Escape" });
+    await flush();
+
+    expect(popup.destroyed).toBe(true);
+    expect(win.destroyed).toBe(false);
+    expect(opts.onDismissed).not.toHaveBeenCalled();
+    expect(opts.onHandOff).not.toHaveBeenCalled();
+  });
+
+  it("stays hidden while seeded, then presents as a sheet when the page needs the user", async () => {
+    mocks.parent.visible = false;
+    await openSignInWindow({
+      ...options(),
+      seedCookies: [
+        {
+          name: "sid",
+          value: "v",
+          domain: ".abacus.ai",
+          path: "/",
+          expires: 2_000_000_000,
+          size: 1,
+          httpOnly: true,
+          secure: true,
+          session: false,
+        },
+      ],
+    });
+    const win = windows[0]!;
+    expect(win.show).not.toHaveBeenCalled();
+    expect(mocks.parent.show).not.toHaveBeenCalled();
+
+    win.webContents.emit(
+      "did-navigate",
+      {},
+      "https://apps.abacus.ai/chatllm/signin"
+    );
+
+    expect(mocks.parent.show).toHaveBeenCalled();
+    expect(win.show).toHaveBeenCalled();
+    win.close();
+  });
+
+  it("closes a sign-in window still up when another opens", async () => {
+    const first = options();
+    await openSignInWindow(first);
+    await openSignInWindow(options());
+
+    expect(windows[0]!.destroyed).toBe(true);
+    expect(first.onDismissed).toHaveBeenCalledTimes(1);
+    expect(windows[1]!.destroyed).toBe(false);
   });
 });

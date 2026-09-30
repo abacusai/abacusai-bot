@@ -111,6 +111,36 @@ describe("sign-in funnel across surfaces", () => {
   );
 });
 
+describe("the sign-in path in the funnel", () => {
+  const started = (): unknown =>
+    reportFunnelStep.mock.calls.find(
+      ([step]) => step === "signup_clicked"
+    )?.[1];
+
+  it.each([
+    ["browser", false, false, null],
+    ["window", true, false, null],
+    ["window_providers", true, false, "chrome::Default"],
+    ["window_session", true, true, "chrome::Default"],
+  ] as const)(
+    "is reported as %s",
+    async (detail, inAppSignIn, withSession, defaultId) => {
+      answer({ success: true, result: { inAppSignIn } });
+      defaultProfile =
+        defaultId == null ? null : { id: defaultId, browserName: "Chrome" };
+      if (withSession)
+        profileCookies = [{ name: "auth", value: "v", domain: ".abacus.ai" }];
+      void startAbacusAuth(
+        "signup",
+        withSession ? "chrome::Default" : undefined
+      );
+      await settle();
+
+      expect(started()).toBe(detail);
+    }
+  );
+});
+
 describe("the assigned sign-in arm", () => {
   it("is the app window when the server says so", async () => {
     answer({ success: true, result: { inAppSignIn: true } });
@@ -305,6 +335,22 @@ describe("sign-in startup races", () => {
     expect(closeWindow).not.toHaveBeenCalled();
     cancelAbacusAuth();
     await expect(second).resolves.toMatchObject({ cancelled: true });
+  });
+
+  it("launches no browser read for an attempt moved to the browser early", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    const config = deferred<ReturnType<typeof configResponse>>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => config.promise)
+    );
+    void startAbacusAuth();
+    openAbacusAuthInBrowser();
+    config.resolve(configResponse());
+    await settle();
+
+    expect(providerSignInCookies).not.toHaveBeenCalled();
+    expect(reportFunnelStep).toHaveBeenCalledWith("signup_clicked", "browser");
   });
 
   it("remembers a browser request during the config lookup", async () => {

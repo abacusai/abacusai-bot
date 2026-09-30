@@ -1257,7 +1257,8 @@
     "welcomeCapabilityConnectors": "100+ Connectors",
     "haveAccountContinueWith": "Ich habe bereits ein Konto · Weiter mit {{browser}}",
     "signInOptions": "Andere Anmeldeoptionen",
-    "usesBrowserSessions": "Die Anmeldung mit Google, Microsoft und Apple nutzt deine Konten aus {{browser}}."
+    "usesBrowserSessions": "Die Anmeldung mit Google, Microsoft und Apple nutzt deine Konten aus {{browser}}.",
+    "signingInWithBrowser": "Anmeldung mit {{browser}}…"
   },
   "openFile": {
     "failed": "Diese Datei konnte nicht geöffnet werden.",

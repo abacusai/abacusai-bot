@@ -120,6 +120,12 @@ describe("the default profile's provider sessions", () => {
     );
   });
 
+  it("are empty, not null, for a profile that has none", async () => {
+    readProfileCookies.mockResolvedValueOnce([]);
+
+    expect(await providerSignInCookies(profiles[0]!)).toEqual([]);
+  });
+
   it("are null, not empty, when the browser will not hand them over", async () => {
     readProfileCookies.mockRejectedValueOnce(new Error("locked"));
 

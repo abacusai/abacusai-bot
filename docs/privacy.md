@@ -46,9 +46,12 @@ When you start a sign-up or sign-in in the app window and your default browser
 is one of those Chromium browsers, the sign-in screen says so, and the app reads
 that browser's cookies for the Google, Microsoft, Apple and GitHub login pages
 the same way. They let those providers show the accounts you already use in
-that browser. They go into the sign-in window alone, are copied without an
-expiry, and are removed when the window closes. With any other default browser, a
-Google, Microsoft or Apple sign-in continues in that browser instead.
+that browser. They go into the app's sign-in session alone (the one the
+sign-in window and a connector sign-in that follows it use), are copied without
+an expiry, and are gone when the app quits. With any other default browser,
+or when that browser's cookie store cannot be read (on Windows a running
+browser locks it), a Google, Microsoft or Apple sign-in continues in that
+browser instead.
 
 The app stores pasted provider keys locally. Environment variables take
 precedence for model calls. Abacus.AI service connectors keep their service

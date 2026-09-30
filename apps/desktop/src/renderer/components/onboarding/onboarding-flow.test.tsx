@@ -324,6 +324,33 @@ describe("the default browser", () => {
     );
   });
 
+  it("says whose session is signing in while the hidden window works", async () => {
+    browserProfiles = [{ ...chrome, hasAbacusSession: true }];
+    startAbacusAuth.mockReturnValue(new Promise(() => {}) as never);
+    mount();
+
+    await waitFor(() => byId("onboarding-signin-options"));
+    fireEvent.click(byId("onboarding-have-account"));
+
+    await waitFor(() =>
+      expect(byId("onboarding-connect").textContent).toContain(
+        "onboarding.signingInWithBrowser"
+      )
+    );
+  });
+
+  it("is asked again when the app regains focus, for a sign-in made meanwhile", async () => {
+    browserProfiles = [{ ...chrome, hasAbacusSession: false }];
+    mount();
+    await waitFor(() => byId("onboarding-browser-sessions"));
+    expect(missing("onboarding-signin-options")).toBe(true);
+
+    browserProfiles = [{ ...chrome, hasAbacusSession: true }];
+    fireEvent.focus(window);
+
+    await waitFor(() => byId("onboarding-signin-options"));
+  });
+
   it("is not offered as a session it does not hold", async () => {
     browserProfiles = [{ ...chrome, hasAbacusSession: false }];
     mount();
