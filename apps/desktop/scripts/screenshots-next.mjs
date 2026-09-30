@@ -454,6 +454,10 @@ const main = async () => {
         if (await cdp.evaluate("typeof window.__abacusDev === 'object'")) break;
         await sleep(500);
       }
+      await waitFor(
+        cdp,
+        `document.documentElement.dataset.band === ${JSON.stringify(bandFor(width))}`
+      );
       const size = await cdp.evaluate(
         "({ w: innerWidth, band: document.documentElement.dataset.band })"
       );

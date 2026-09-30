@@ -5,6 +5,8 @@ import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { BotAvatar } from "#next/components/bot-avatar";
+import { BotMemoryList } from "#next/components/bot-memory-list";
 import { useAppForm } from "#next/components/form-kit";
 import { ConfirmAction } from "#next/components/form-kit/confirm";
 import {
@@ -21,12 +23,19 @@ import {
 import { SoundPreview } from "#next/components/sound-preview";
 import { useCollections } from "#next/data/db";
 import { usePrefs, useUpdatePrefs } from "#next/data/db/prefs";
+import { resolveLook } from "#next/lib/bots/avatar";
+import { AppLink } from "#next/lib/navigation/app-link";
 import { isQuietNow } from "#next/lib/notify";
 import type { Cue } from "#next/lib/sound";
 import { showError } from "#next/lib/toast";
-import { useAppContext } from "#next/lib/use-app-context";
+import { useAppContext, rpcError } from "#next/lib/use-app-context";
 import { useNow } from "#next/lib/use-now";
 import { Button } from "#next/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "#next/ui/collapsible";
 import { Textarea } from "#next/ui/textarea";
 import { AgentMode } from "#shared/agent-types";
 import { SUPPORTED_LANGUAGES, type PrefsRow } from "#shared/contract/rows";
@@ -313,6 +322,28 @@ export const MemoryPage = () => {
   const cache = useQueryClient();
   const c = useCollections();
   const memories = useLiveQuery(c.memories).data ?? [];
+  const bots = useLiveQuery(c.bots).data ?? [];
+  const botNotes = useQuery(
+    transport.orpc.memory.bots.queryOptions({ input: {} })
+  );
+  const [memoryError, setMemoryError] = useState<string | null>(null);
+  const [pendingMemory, setPendingMemory] = useState<string | undefined>();
+  const forget = async (id: string) => {
+    setPendingMemory(id);
+    try {
+      await c.memories.delete(id).isPersisted.promise;
+      setMemoryError(null);
+    } catch (error) {
+      setMemoryError(
+        t(
+          rpcError(error)?.code === "CONFLICT"
+            ? "phase5.memoryConflict"
+            : "phase5.saveFailed"
+        )
+      );
+    }
+    setPendingMemory(undefined);
+  };
   const query = useQuery({
     ...transport.orpc.memory.customInstructions.get.queryOptions({ input: {} }),
     refetchOnMount: "always",
@@ -401,6 +432,7 @@ export const MemoryPage = () => {
           </form.Subscribe>
         </form>
       </GroupCard>
+      {memoryError && <p role="alert">{memoryError}</p>}
       {(["remember", "user", "memory"] as const).map((target) => (
         <GroupCard key={target} title={t(`phase5.memoryTargets.${target}`)}>
           {memories
@@ -411,10 +443,7 @@ export const MemoryPage = () => {
                   size="sm"
                   variant="secondary"
                   onClick={() => {
-                    const tx = c.memories.delete(m.id);
-                    void tx.isPersisted.promise.catch(() =>
-                      showError(t("phase5.memoryConflict"))
-                    );
+                    void forget(m.id);
                   }}
                 >
                   {t("phase5.forget")}
@@ -429,6 +458,79 @@ export const MemoryPage = () => {
           />
         </GroupCard>
       ))}
+      <GroupCard title={t("phase5.rememberedByBots")}>
+        {bots.map((bot) => {
+          const entries = memories.filter(
+            (row) => row.scope === "bot" && row.botId === bot.id
+          );
+          const noteDays =
+            botNotes.data?.find((item) => item.botId === bot.id)?.noteDays ?? 0;
+          if (!entries.length && !noteDays) return null;
+          return (
+            <Collapsible key={bot.id}>
+              <SettingRow
+                id={`memory-bot-${bot.id}`}
+                title={t("phase5.botMemoryCount", {
+                  name: bot.name,
+                  count: entries.length,
+                })}
+                detail={entries
+                  .slice(0, 3)
+                  .map((row) => row.entry)
+                  .join(" · ")}
+              >
+                <BotAvatar look={resolveLook(bot)} size={28} />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  nativeButton={false}
+                  render={
+                    <AppLink
+                      to="/bots/$botId"
+                      params={{ botId: bot.id }}
+                      search={{ tab: "memory" }}
+                      transition="settings-out"
+                    />
+                  }
+                >
+                  {t("phase5.openAction")}
+                </Button>
+                <CollapsibleTrigger
+                  render={<Button size="sm" variant="ghost" />}
+                >
+                  {t("phase5.showMemory")}
+                </CollapsibleTrigger>
+              </SettingRow>
+              <CollapsibleContent className="px-3 pb-3">
+                <BotMemoryList
+                  entries={entries}
+                  pendingId={pendingMemory}
+                  onForget={(row) => void forget(row.id)}
+                />
+                {noteDays > 0 && (
+                  <p className="text-muted-foreground text-xs">
+                    {t("bots.panel.memory.notes", { count: noteDays })}
+                  </p>
+                )}
+                <ConfirmAction
+                  title={t("bots.panel.memory.clear")}
+                  description={t("phase5.forgetDescription")}
+                  label={t("phase5.clearAll")}
+                  onConfirm={async () => {
+                    const next = await transport.client.memory.clearBot({
+                      botId: bot.id,
+                    });
+                    cache.setQueryData(
+                      transport.orpc.memory.bots.queryKey({ input: {} }),
+                      next
+                    );
+                  }}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
+      </GroupCard>
     </AreaPage>
   );
 };

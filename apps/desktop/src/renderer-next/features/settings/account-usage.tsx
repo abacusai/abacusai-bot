@@ -359,8 +359,8 @@ export const UsagePage = () => {
           <GroupCard title={t("phase5.byModel")}>
             {snapshot.models.map((model) => (
               <SettingRow
-                id={`usage-${model.modelId}`}
-                key={model.modelId}
+                id={`usage-${model.id}`}
+                key={model.id}
                 title={model.modelId}
                 detail={t("phase5.usageNumbers", { ...model })}
               />

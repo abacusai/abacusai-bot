@@ -5,7 +5,16 @@ import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 
 import { SETTINGS_INDEX } from "./search-index";
 export const SettingsSearch = v.object({
-  focus: optionalField(v.picklist(SETTINGS_INDEX.map((x) => x.id))),
+  focus: optionalField(
+    v.union([
+      v.picklist(SETTINGS_INDEX.map((x) => x.id)),
+      v.pipe(
+        v.string(),
+        v.maxLength(240),
+        v.regex(/^(sounds-bot-|memory-bot-|memory-|usage-)[A-Za-z0-9._:/@-]+$/)
+      ),
+    ])
+  ),
 });
 export const ModelsSearch = v.object({
   provider: optionalField(
