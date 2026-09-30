@@ -164,16 +164,15 @@ import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 import {
-  applyStartupTheme,
+  applyThemedBackground,
   followPrefsTheme,
-  startupBackgroundColor,
+  mainWindowOptions,
 } from "./startup-theme";
 import {
   applyWindowChrome,
   linuxChromeMode,
   subscribeWindowChromeTheme,
   toolbarHeight,
-  windowChromeOptions,
   windowChromeState,
   type ChromeCapability,
   type LinuxChromeMode,
@@ -450,8 +449,11 @@ function currentChromeInput() {
 
 function refreshWindowChrome(): void {
   const window = aliveMainWindow();
-  if (window !== null)
-    applyWindowChrome(window, currentChromeInput(), rendererHost ?? undefined);
+  if (window === null) return;
+  const input = currentChromeInput();
+  applyWindowChrome(window, input, rendererHost ?? undefined);
+  // wco: the window and the view follow the resolved scheme.
+  applyThemedBackground(window, input, rendererHost ?? undefined);
 }
 
 interface RecreatedWindowState {
@@ -565,54 +567,44 @@ async function createWindow(restored?: RecreatedWindowState) {
     void app.dock?.show();
   }
 
-  // The stored theme before the window exists, so the first frame is in it
-  // (spec 01 §7.7). The legacy renderer sets its own through `theme:set`.
-  const startupDark =
-    RENDERER_GENERATION === "wco"
-      ? applyStartupTheme(prefsStore, nativeTheme)
-      : null;
-
   activeLinuxChromeMode =
     RENDERER_GENERATION === "wco" &&
     process.platform === "linux" &&
     useLinuxNativeFrame()
       ? "native-frame"
       : linuxChromeMode(process.env);
-  const chromeOptions = windowChromeOptions(currentChromeInput());
   chromeCapability =
     RENDERER_GENERATION === "legacy" ||
     (process.platform === "linux" && activeLinuxChromeMode === "native-frame")
       ? "native-frame"
       : "overlay-pending";
 
-  // Matches the renderer so neither flashes through; transparent where
-  // vibrancy/mica paint the backdrop.
-  const chromeBackground =
-    chromeOptions.backgroundColor ??
-    (process.platform === "darwin" || process.platform === "win32"
-      ? "#00000000"
-      : "#2a2a28");
-  const backgroundColor =
-    startupDark == null
-      ? chromeBackground
-      : startupBackgroundColor(chromeBackground, startupDark);
+  // wco: the stored theme is applied before the window exists, so the first
+  // frame is in it (spec 01 §7.7), and the background is the resolved
+  // scheme's (transparent only under vibrancy/mica). The legacy renderer
+  // sets its own theme through `theme:set`; its options are unchanged.
+  const windowOptions = mainWindowOptions({
+    generation: RENDERER_GENERATION,
+    prefs: prefsStore,
+    nativeTheme,
+    chromeInput: currentChromeInput,
+    base: {
+      width,
+      height,
+      x,
+      y,
+      minWidth: 800,
+      minHeight: 600,
+      icon: appIcon,
+      title: APP_DISPLAY_NAME,
+      show: false,
+      autoHideMenuBar: true,
+    },
+  });
+  const { backgroundColor } = windowOptions;
 
   // The renderer lives in the RendererHost's view, so an update can replace it.
-  const mainWindow = new BaseWindow({
-    width,
-    height,
-    x,
-    y,
-    minWidth: 800,
-    minHeight: 600,
-
-    backgroundColor,
-    icon: appIcon,
-    title: APP_DISPLAY_NAME,
-    show: false,
-    autoHideMenuBar: true,
-    ...chromeOptions,
-  });
+  const mainWindow = new BaseWindow(windowOptions);
   mainWindowRef = mainWindow;
   if (RENDERER_GENERATION === "wco") {
     const unsubscribeChromeTheme = subscribeWindowChromeTheme(
