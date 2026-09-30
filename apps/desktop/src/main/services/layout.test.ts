@@ -76,6 +76,10 @@ const MAIN_ROOT_FILES = [
   "handler.ts",
   "index.ts",
   "keep-awake.ts",
+  // Registers the app as a login item once per install: an OS setting, made
+  // at sign-in, that no one service owns.
+  "login-item.test.ts",
+  "login-item.ts",
   "local-open-guard.test.ts",
   "local-open-guard.ts",
   // Registers the app as a login item, which only the process level may ask
