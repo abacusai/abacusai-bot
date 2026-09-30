@@ -91,13 +91,18 @@ export const KeymapEditor = () => {
       [id]: candidate,
       ...(remove ? { [remove]: null } : {}),
     };
-    await update({ keymap: map }).catch(() =>
-      showError(t("phase5.saveFailed"))
-    );
+    try {
+      await update({ keymap: map });
+    } catch {
+      showError(t("phase5.saveFailed"));
+      return;
+    }
     setEditing(null);
     setConflict(null);
   };
   const recorder = useHotkeyRecorder({
+    recordBy: "key",
+    platform,
     onRecord: (binding) => {
       if (!editing) return;
       const candidate = normalizeHotkey(binding, platform);
@@ -193,6 +198,19 @@ export const KeymapEditor = () => {
                   >
                     {t("phase5.change")}
                   </Button>
+                  {binding !== null && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        void update({
+                          keymap: { ...prefs.keymap, [id]: null },
+                        }).catch(() => showError(t("phase5.saveFailed")))
+                      }
+                    >
+                      {t("phase5.unbind")}
+                    </Button>
+                  )}
                   {Object.hasOwn(prefs.keymap ?? {}, id) && (
                     <Button
                       size="sm"
@@ -200,7 +218,9 @@ export const KeymapEditor = () => {
                       onClick={() => {
                         const map = { ...prefs.keymap };
                         delete map[id];
-                        void update({ keymap: map });
+                        void update({ keymap: map }).catch(() =>
+                          showError(t("phase5.saveFailed"))
+                        );
                       }}
                     >
                       {t("phase5.reset")}
@@ -212,10 +232,31 @@ export const KeymapEditor = () => {
           );
         })}
       </GroupCard>
-      <Button variant="secondary" onClick={() => void update({ keymap: {} })}>
+      <Button
+        variant="secondary"
+        onClick={() =>
+          void update({ keymap: {} }).catch(() =>
+            showError(t("phase5.saveFailed"))
+          )
+        }
+      >
         {t("phase5.resetShortcuts")}
       </Button>
-      {editing && <p role="status">{t("phase5.recordShortcut")}</p>}
+      {editing && (
+        <>
+          <p role="status">{t("phase5.recordShortcut")}</p>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              recorder.cancelRecording();
+              setEditing(null);
+              setError(null);
+            }}
+          >
+            {t("phase5.cancel")}
+          </Button>
+        </>
+      )}
       {error && <p role="alert">{error}</p>}
       <Dialog
         open={!!conflict}
