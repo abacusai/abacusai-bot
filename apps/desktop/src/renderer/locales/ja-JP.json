@@ -1254,7 +1254,11 @@
     "welcomeFreeBadge": "Free to start",
     "welcomeCapabilityModels": "Access",
     "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors"
+    "welcomeCapabilityConnectors": "100+ Connectors",
+    "haveAccountContinueWith": "アカウントをお持ちの方 · {{browser}} で続行",
+    "signInOptions": "その他のサインイン方法",
+    "usesBrowserSessions": "Google・Microsoft・Apple でのサインインには {{browser}} のアカウントを使います。",
+    "signingInWithBrowser": "{{browser}} でサインインしています…"
   },
   "openFile": {
     "failed": "そのファイルを開けませんでした。",

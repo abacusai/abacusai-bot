@@ -1,4 +1,12 @@
-import { Gift, Brain, Globe, Puzzle, Sparkles, UserRound } from "lucide-react";
+import {
+  Brain,
+  ChevronDown,
+  Gift,
+  Globe,
+  Puzzle,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -27,6 +35,7 @@ const CAPABILITIES = [
  */
 export const SignInStep = ({
   busy,
+  busyBrowser,
   error,
   onConnect,
   browserProfiles = [],
@@ -37,12 +46,17 @@ export const SignInStep = ({
 }: {
   /** The browser hop is out; it can take minutes while an account is created. */
   busy: boolean;
+  /**
+   * The browser whose session is signing in: the window stays hidden while
+   * it does, so the button says what is happening instead.
+   */
+  busyBrowser?: string | null;
   error: string | null;
   /** `signin` is the returning user's button; it always uses the browser. */
   onConnect: (intent: AbacusAuthIntent) => void;
   /**
-   * Chromium profiles that may already be signed in to Abacus.AI, offered
-   * behind "I already have an account".
+   * The default browser's profile, then others that may already be signed in
+   * to Abacus.AI, offered behind "I already have an account".
    */
   browserProfiles?: BrowserSignInProfile[];
   /** Sign in with a picked profile's session. */
@@ -53,6 +67,56 @@ export const SignInStep = ({
   dots: ReactNode;
 }): JSX.Element => {
   const { t } = useTranslation();
+  const defaultProfile = browserProfiles.find((p) => p.isDefault === true);
+  // Unflagged entries are the ones main found an Abacus.AI cookie for.
+  const sessionProfiles = browserProfiles.filter(
+    (p) => p.hasAbacusSession !== false
+  );
+  // The default browser is already signed in: the returning user's link
+  // finishes with it in one click, and the menu keeps every other way.
+  const quickProfile =
+    defaultProfile?.hasAbacusSession === true && onContinueWith != null
+      ? defaultProfile
+      : undefined;
+
+  const profileMenu = (
+    profiles: BrowserSignInProfile[],
+    trigger: JSX.Element,
+    label: ReactNode
+  ): JSX.Element => (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger}>{label}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="center"
+        className="w-auto min-w-72"
+        data-id="onboarding-browser-profiles"
+      >
+        {profiles.map((profile) => (
+          <DropdownMenuItem
+            key={profile.id}
+            data-id="onboarding-continue-with-browser"
+            onClick={() => onContinueWith?.(profile.id)}
+            className="text-sm"
+          >
+            <Globe aria-hidden="true" />
+            {t("onboarding.continueWithBrowser", {
+              browser: profile.browserName,
+              profile: profile.profileName,
+            })}
+          </DropdownMenuItem>
+        ))}
+        {profiles.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuItem
+          data-id="onboarding-signin-another-way"
+          onClick={() => onConnect("signin")}
+          className="text-sm"
+        >
+          <UserRound aria-hidden="true" />
+          {t("onboarding.signInAnotherWay")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div
@@ -118,6 +182,7 @@ export const SignInStep = ({
           size="lg"
           data-id="onboarding-connect"
           disabled={busy}
+          aria-busy={busy}
           onClick={() => onConnect("signup")}
           className="from-primary h-14 w-full bg-gradient-to-b to-violet-700 text-base font-semibold shadow-lg"
         >
@@ -126,55 +191,72 @@ export const SignInStep = ({
           ) : (
             <UserRound className="size-5" aria-hidden="true" />
           )}
-          {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
+          <span aria-live="polite">
+            {!busy
+              ? t("onboarding.connectCta")
+              : busyBrowser != null
+                ? t("onboarding.signingInWithBrowser", { browser: busyBrowser })
+                : t("apiKeys.connecting")}
+          </span>
         </Button>
         {!busy &&
-          (browserProfiles.length > 0 && onContinueWith != null ? (
+          defaultProfile != null && (
+            // Said before the click: the provider popup will already know them.
+            <p
+              className="text-muted-foreground -mt-1 text-xs text-balance"
+              data-id="onboarding-browser-sessions"
+            >
+              {t("onboarding.usesBrowserSessions", {
+                browser: defaultProfile.browserName,
+              })}
+            </p>
+          )}
+        {!busy &&
+          (quickProfile != null ? (
+            <div
+              className="flex w-full gap-2"
+              role="group"
+              aria-label={t("onboarding.haveAccountCta")}
+            >
+              <Button
+                variant="outline"
+                size="lg"
+                data-id="onboarding-have-account"
+                onClick={() => onContinueWith?.(quickProfile.id)}
+                className="h-12 min-w-0 flex-1 text-base"
+              >
+                <Globe aria-hidden="true" />
+                <span className="truncate">
+                  {t("onboarding.haveAccountContinueWith", {
+                    browser: quickProfile.browserName,
+                  })}
+                </span>
+              </Button>
+              {profileMenu(
+                sessionProfiles.filter((p) => p.id !== quickProfile.id),
+                <Button
+                  variant="outline"
+                  size="lg"
+                  data-id="onboarding-signin-options"
+                  aria-label={t("onboarding.signInOptions")}
+                  className="h-12 w-12 shrink-0 px-0"
+                />,
+                <ChevronDown aria-hidden="true" />
+              )}
+            </div>
+          ) : sessionProfiles.length > 0 && onContinueWith != null ? (
             // A browser already signed in to Abacus.AI: the returning user's
-            // link offers its profiles, so the screen keeps two choices.
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    data-id="onboarding-have-account"
-                    className="h-12 w-full text-base"
-                  />
-                }
-              >
-                {t("onboarding.haveAccountCta")}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="center"
-                className="w-auto min-w-72"
-                data-id="onboarding-browser-profiles"
-              >
-                {browserProfiles.map((profile) => (
-                  <DropdownMenuItem
-                    key={profile.id}
-                    data-id="onboarding-continue-with-browser"
-                    onClick={() => onContinueWith(profile.id)}
-                    className="text-sm"
-                  >
-                    <Globe aria-hidden="true" />
-                    {t("onboarding.continueWithBrowser", {
-                      browser: profile.browserName,
-                      profile: profile.profileName,
-                    })}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  data-id="onboarding-signin-another-way"
-                  onClick={() => onConnect("signin")}
-                  className="text-sm"
-                >
-                  <UserRound aria-hidden="true" />
-                  {t("onboarding.signInAnotherWay")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            // button offers its profiles, so the screen keeps two choices.
+            profileMenu(
+              sessionProfiles,
+              <Button
+                variant="outline"
+                size="lg"
+                data-id="onboarding-have-account"
+                className="h-12 w-full text-base"
+              />,
+              t("onboarding.haveAccountCta")
+            )
           ) : (
             // A button, not a link: an account made on the website before
             // the download has to find this one.

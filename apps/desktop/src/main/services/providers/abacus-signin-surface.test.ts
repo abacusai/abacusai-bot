@@ -21,6 +21,7 @@ type WindowOptions = {
   onHandOff: () => void;
   onDismissed: () => void;
   seedCookies?: unknown[];
+  providerCookies?: Promise<unknown[] | null>;
 };
 let lastWindow: WindowOptions | null = null;
 let windowAvailable = true;
@@ -36,8 +37,15 @@ vi.mock("./abacus-signin-window", () => ({
 
 // The cookies a picked browser profile hands over; empty when unreadable.
 let profileCookies: unknown[] = [];
+// The OS default browser's profile, when it is one the app can read.
+let defaultProfile: { id: string; browserName: string } | null = null;
+const providerSignInCookies = vi.fn(async (..._args: unknown[]) => [
+  { name: "SID", value: "v", domain: ".google.com" },
+]);
 vi.mock("./abacus-browser-profiles", () => ({
   browserSignInCookies: async () => profileCookies,
+  defaultSignInProfile: async () => defaultProfile,
+  providerSignInCookies: (...args: unknown[]) => providerSignInCookies(...args),
 }));
 
 const { reportFunnelStep } = vi.hoisted(() => ({ reportFunnelStep: vi.fn() }));
@@ -71,6 +79,8 @@ beforeEach(() => {
   windowAvailable = true;
   windowReady = null;
   profileCookies = [];
+  defaultProfile = null;
+  providerSignInCookies.mockClear();
 });
 
 afterEach(() => {
@@ -97,6 +107,36 @@ describe("sign-in funnel across surfaces", () => {
         )
       ).toHaveLength(1);
       expect(openExternal).toHaveBeenCalledTimes(1);
+    }
+  );
+});
+
+describe("the sign-in path in the funnel", () => {
+  const started = (): unknown =>
+    reportFunnelStep.mock.calls.find(
+      ([step]) => step === "signup_clicked"
+    )?.[1];
+
+  it.each([
+    ["browser", false, false, null],
+    ["window", true, false, null],
+    ["window_providers", true, false, "chrome::Default"],
+    ["window_session", true, true, "chrome::Default"],
+  ] as const)(
+    "is reported as %s",
+    async (detail, inAppSignIn, withSession, defaultId) => {
+      answer({ success: true, result: { inAppSignIn } });
+      defaultProfile =
+        defaultId == null ? null : { id: defaultId, browserName: "Chrome" };
+      if (withSession)
+        profileCookies = [{ name: "auth", value: "v", domain: ".abacus.ai" }];
+      void startAbacusAuth(
+        "signup",
+        withSession ? "chrome::Default" : undefined
+      );
+      await settle();
+
+      expect(started()).toBe(detail);
     }
   );
 });
@@ -160,6 +200,42 @@ describe("an in-app sign-in", () => {
 
     expect(closeWindow).toHaveBeenCalled();
     expect(openExternal).toHaveBeenCalledWith(lastWindow?.url);
+  });
+
+  it("brings the default browser's provider sessions to a sign-up", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    void startAbacusAuth();
+    await settle();
+
+    expect(providerSignInCookies).toHaveBeenCalledWith(defaultProfile);
+    expect(await lastWindow?.providerCookies).toHaveLength(1);
+  });
+
+  it("marks provider sessions unavailable when the default browser is unreadable", async () => {
+    void startAbacusAuth();
+    await settle();
+
+    expect(providerSignInCookies).not.toHaveBeenCalled();
+    expect(await lastWindow?.providerCookies).toBeNull();
+  });
+
+  it("keeps a returning user in the window when the default browser is readable", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    void startAbacusAuth("signin");
+    await settle();
+
+    expect(openExternal).not.toHaveBeenCalled();
+    expect(new URL(lastWindow!.url).searchParams.has("isSignUp")).toBe(false);
+  });
+
+  it("reads no provider session for a picked profile's sign-in", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    profileCookies = [{ name: "auth", value: "v", domain: ".abacus.ai" }];
+    void startAbacusAuth("signin", "chrome::Default");
+    await settle();
+
+    expect(lastWindow?.providerCookies).toBeUndefined();
+    expect(providerSignInCookies).not.toHaveBeenCalled();
   });
 
   it("sends a returning user to the browser's sign-in, not the window", async () => {
@@ -259,6 +335,22 @@ describe("sign-in startup races", () => {
     expect(closeWindow).not.toHaveBeenCalled();
     cancelAbacusAuth();
     await expect(second).resolves.toMatchObject({ cancelled: true });
+  });
+
+  it("launches no browser read for an attempt moved to the browser early", async () => {
+    defaultProfile = { id: "chrome::Default", browserName: "Google Chrome" };
+    const config = deferred<ReturnType<typeof configResponse>>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => config.promise)
+    );
+    void startAbacusAuth();
+    openAbacusAuthInBrowser();
+    config.resolve(configResponse());
+    await settle();
+
+    expect(providerSignInCookies).not.toHaveBeenCalled();
+    expect(reportFunnelStep).toHaveBeenCalledWith("signup_clicked", "browser");
   });
 
   it("remembers a browser request during the config lookup", async () => {

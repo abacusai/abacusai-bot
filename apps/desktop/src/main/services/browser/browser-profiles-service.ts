@@ -47,6 +47,8 @@ interface BrowserDefinition {
   name: string;
   paths: Partial<Record<"darwin" | "win32" | "linux", string>>;
   executables: Partial<Record<"darwin" | "win32" | "linux", string[]>>;
+  /** Other names the OS gives the browser as the https handler. */
+  handlerNames?: string[];
 }
 
 export interface CDPCookie {
@@ -113,6 +115,7 @@ const BROWSERS: BrowserDefinition[] = [
       ],
       linux: ["brave-browser", "brave"],
     },
+    handlerNames: ["Brave Browser"],
   },
   {
     key: "edge",
@@ -177,6 +180,7 @@ const BROWSERS: BrowserDefinition[] = [
       ],
       linux: ["opera"],
     },
+    handlerNames: ["Opera Stable", "Opera Internet Browser"],
   },
   {
     key: "arc",
@@ -195,6 +199,7 @@ const BROWSERS: BrowserDefinition[] = [
       darwin: ["/Applications/Opera GX.app/Contents/MacOS/Opera GX"],
       win32: ["%LOCALAPPDATA%/Programs/Opera GX/opera.exe"],
     },
+    handlerNames: ["Opera GX Stable", "Opera GX Internet Browser"],
   },
 ];
 
@@ -482,7 +487,7 @@ async function copyProfileToTemp(
 function httpGetJson(url: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     http
-      .get(url, (res) => {
+      .get(url, { timeout: 5_000 }, (res) => {
         let data = "";
         res.on("data", (chunk: string) => {
           data += chunk;
@@ -494,6 +499,9 @@ function httpGetJson(url: string): Promise<unknown> {
             reject(err);
           }
         });
+      })
+      .on("timeout", function (this: http.ClientRequest) {
+        this.destroy(new Error("DevTools did not answer"));
       })
       .on("error", reject);
   });
@@ -508,8 +516,10 @@ async function waitForDevToolsPort(
   const filePath = path.join(userDataDir, "DevToolsActivePort");
 
   while (Date.now() < deadline) {
-    if (child.exitCode != null) {
-      throw new Error(`Browser exited early with code ${child.exitCode}`);
+    if (child.exitCode != null || child.signalCode != null) {
+      throw new Error(
+        `Browser exited early with ${child.exitCode ?? child.signalCode}`
+      );
     }
 
     try {
@@ -528,12 +538,43 @@ async function waitForDevToolsPort(
   throw new Error("Timeout waiting for DevToolsActivePort");
 }
 
+/**
+ * Stop a browser started here and wait for it to go, so its temp profile can
+ * be deleted: a process still exiting holds files open, and on Windows the
+ * delete then fails and leaves a cookie store copy behind.
+ */
+async function stopBrowser(child: ChildProcess): Promise<void> {
+  if (child.pid == null || child.exitCode != null || child.signalCode != null)
+    return;
+  const exited = new Promise<void>((resolve) => child.once("exit", resolve));
+  const waited = (ms: number): Promise<boolean> =>
+    Promise.race([
+      exited.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(resolve, ms, false)),
+    ]);
+  try {
+    child.kill();
+  } catch {
+    return;
+  }
+  if (!(await waited(3_000))) {
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      return;
+    }
+    await waited(2_000);
+  }
+}
+
 async function extractCookiesViaCDP(
   execPath: string,
   tempUserDataDir: string,
   profileDir: string,
   // Only the cookies these URLs would send; all of them when omitted.
-  urls?: string[]
+  urls?: string[],
+  // The whole read, launch included: a browser that hangs never blocks a caller.
+  deadlineMs = 30_000
 ): Promise<CDPCookie[]> {
   const args = [
     `--user-data-dir=${tempUserDataDir}`,
@@ -563,7 +604,18 @@ async function extractCookiesViaCDP(
   // Drain stderr so a chatty browser cannot fill the pipe and stall itself.
   child.stderr?.resume();
 
-  try {
+  // A spawn failure (binary removed since it was found) arrives as an event;
+  // unheard, it would be an uncaught exception in main.
+  let deadline: NodeJS.Timeout | undefined;
+  const failed = new Promise<never>((_, reject) => {
+    child.once("error", reject);
+    deadline = setTimeout(
+      () => reject(new Error("Browser did not hand over cookies in time")),
+      deadlineMs
+    );
+  });
+
+  const read = async (): Promise<CDPCookie[]> => {
     const { port } = await waitForDevToolsPort(child, tempUserDataDir, 15_000);
 
     const targets = (await httpGetJson(
@@ -578,24 +630,15 @@ async function extractCookiesViaCDP(
       throw new Error("No page target found");
     }
 
-    const cookies = await cdpGetAllCookies(
-      pageTarget.webSocketDebuggerUrl,
-      urls
-    );
-    return cookies;
+    return cdpGetAllCookies(pageTarget.webSocketDebuggerUrl, urls);
+  };
+
+  try {
+    return await Promise.race([read(), failed]);
   } finally {
-    try {
-      child.kill();
-    } catch {
-      /* already dead */
-    }
-    if (process.platform !== "win32" && child.pid) {
-      try {
-        process.kill(-child.pid, "SIGTERM");
-      } catch {
-        /* already dead */
-      }
-    }
+    clearTimeout(deadline);
+    failed.catch(() => {});
+    await stopBrowser(child);
   }
 }
 
@@ -677,13 +720,143 @@ export function discoverBrowserProfiles(): BrowserProfileInfo[] {
   return results;
 }
 
+// ── The default browser ─────────────────────────────────────────────────────
+
+const normalizeHandlerName = (name: string): string =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/\.(desktop|app|exe)$/, "");
+
+/**
+ * The browser the OS names as the https handler. Electron gives a display
+ * name on macOS and Windows and a .desktop id on Linux, whose basename is the
+ * browser's launcher, so Linux also matches on the executable names.
+ */
+export function matchDefaultBrowser(
+  handlerName: string,
+  platform: NodeJS.Platform = process.platform
+): string | null {
+  const wanted = normalizeHandlerName(handlerName);
+  if (wanted.length === 0) return null;
+  for (const browser of BROWSERS) {
+    const names = [browser.name, ...(browser.handlerNames ?? [])];
+    if (platform === "linux") names.push(...(browser.executables.linux ?? []));
+    if (names.some((name) => normalizeHandlerName(name) === wanted))
+      return browser.key;
+  }
+  return null;
+}
+
+/**
+ * The profile a browser opens by default: Local State's last-used profile,
+ * else the most recently active one, else Default.
+ */
+export function pickDefaultProfileDir(
+  localState: unknown,
+  profileDirs: string[]
+): string | null {
+  if (profileDirs.length === 0) return null;
+  const profile = (localState as { profile?: Record<string, unknown> } | null)
+    ?.profile;
+  const lastUsed = profile?.last_used;
+  if (typeof lastUsed === "string" && profileDirs.includes(lastUsed))
+    return lastUsed;
+  const info = (profile?.info_cache ?? {}) as Record<
+    string,
+    LocalStateProfileEntry
+  >;
+  const byActivity = [...profileDirs].sort(
+    (a, b) => (info[b]?.active_time ?? 0) - (info[a]?.active_time ?? 0)
+  );
+  if ((info[byActivity[0] ?? ""]?.active_time ?? 0) > 0)
+    return byActivity[0] ?? null;
+  return profileDirs.includes("Default") ? "Default" : (profileDirs[0] ?? null);
+}
+
+export interface DefaultBrowser {
+  /** As the OS names it, for a browser this module cannot read too. */
+  handlerName: string;
+  /** Its default profile, when it is a Chromium browser installed here. */
+  profile: BrowserProfileInfo | null;
+}
+
+/** The OS default browser and, when readable, the profile it opens with. */
+export async function findDefaultBrowser(
+  profiles: BrowserProfileInfo[] = discoverBrowserProfiles()
+): Promise<DefaultBrowser | null> {
+  let handlerName = "";
+  try {
+    handlerName = app.getApplicationNameForProtocol("https://abacus.ai");
+  } catch {
+    return null;
+  }
+  if (handlerName.trim().length === 0) return null;
+
+  const key = matchDefaultBrowser(handlerName);
+  const browser = BROWSERS.find((b) => b.key === key);
+  const root = browser == null ? null : getBrowserDataRoot(browser);
+  if (
+    browser == null ||
+    root == null ||
+    (await findBrowserExecutable(browser)) == null
+  )
+    return { handlerName, profile: null };
+
+  let localState: unknown = null;
+  try {
+    localState = JSON.parse(
+      await fsp.readFile(path.join(root, "Local State"), "utf-8")
+    );
+  } catch {
+    // No Local State: the profile directories still say which exist.
+  }
+  const own = profiles.filter((p) => p.browserKey === browser.key);
+  const dir = pickDefaultProfileDir(
+    localState,
+    own.map((p) => p.profileDir)
+  );
+
+  return {
+    handlerName,
+    profile: own.find((p) => p.profileDir === dir) ?? null,
+  };
+}
+
 /** Where a profile keeps its cookie database: Network/ since Chrome 96. */
-const COOKIE_FILES = [
-  path.join("Network", "Cookies"),
-  path.join("Network", "Cookies-journal"),
-  "Cookies",
-  "Cookies-journal",
-];
+const COOKIE_DBS = [path.join("Network", "Cookies"), "Cookies"];
+
+// Answers by file identity: a database that has not changed since the last
+// look says the same thing, so the sign-in screen can re-ask on every focus.
+const mentionsCache = new Map<string, { stamp: string; found: boolean }>();
+
+async function fileMentions(file: string, needle: Buffer): Promise<boolean> {
+  const stat = await fsp.stat(file);
+  const stamp = `${stat.size}:${stat.mtimeMs}`;
+  const key = `${file}\0${needle.toString()}`;
+  const cached = mentionsCache.get(key);
+  if (cached?.stamp === stamp) return cached.found;
+
+  // Streamed with an overlap the needle's length, so a large store is never
+  // held in memory whole and a hit stops the read.
+  let found = false;
+  let tail = Buffer.alloc(0);
+  const stream = fs.createReadStream(file, { highWaterMark: 1 << 20 });
+  try {
+    for await (const chunk of stream as AsyncIterable<Buffer>) {
+      const window = Buffer.concat([tail, chunk]);
+      if (window.includes(needle)) {
+        found = true;
+        break;
+      }
+      tail = window.subarray(Math.max(0, window.length - needle.length + 1));
+    }
+  } finally {
+    stream.destroy();
+  }
+  mentionsCache.set(key, { stamp, found });
+  return found;
+}
 
 /**
  * Whether a profile's cookie database mentions `host` at all. Host names are
@@ -695,24 +868,78 @@ export async function profileMentionsHost(
   host: string
 ): Promise<boolean> {
   const needle = Buffer.from(host);
-  for (const file of COOKIE_FILES) {
-    try {
-      const bytes = await fsp.readFile(
-        path.join(profile.profileDataPath, file)
-      );
-      if (bytes.includes(needle)) return true;
-    } catch {
-      // Missing, or locked by the running browser.
+  for (const db of COOKIE_DBS) {
+    for (const file of [db, `${db}-journal`]) {
+      try {
+        if (
+          await fileMentions(path.join(profile.profileDataPath, file), needle)
+        )
+          return true;
+      } catch {
+        // Missing, or locked by the running browser.
+      }
     }
   }
   return false;
 }
 
+const errorCode = (error: unknown): string | undefined =>
+  (error as NodeJS.ErrnoException | null)?.code;
+
+const cloneOrCopy = (src: string, dst: string): Promise<void> =>
+  fsp
+    .copyFile(src, dst, fsConstants.COPYFILE_FICLONE)
+    .catch(() => fsp.copyFile(src, dst));
+
+/**
+ * Copy a profile's cookie database, its journal and Local State (which holds
+ * the key the database is encrypted with on Windows and Linux) into
+ * `tempDir`. False when the profile has no cookie database; throws when it
+ * has one that cannot be copied (on Windows the running browser holds it
+ * locked), since a browser started without it would answer "no cookies".
+ */
+export async function copyCookieStore(
+  browserRoot: string,
+  profile: Pick<BrowserProfileInfo, "profileDir" | "profileDataPath">,
+  tempDir: string
+): Promise<boolean> {
+  const dstProfile = path.join(tempDir, profile.profileDir);
+  await fsp.mkdir(path.join(dstProfile, "Network"), { recursive: true });
+  const copyRequired = async (src: string, dst: string): Promise<boolean> => {
+    try {
+      await cloneOrCopy(src, dst);
+      return true;
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") return false;
+      throw error;
+    }
+  };
+
+  await copyRequired(
+    path.join(browserRoot, "Local State"),
+    path.join(tempDir, "Local State")
+  );
+  let copied = false;
+  for (const db of COOKIE_DBS) {
+    const src = path.join(profile.profileDataPath, db);
+    const dst = path.join(dstProfile, db);
+    if (!(await copyRequired(src, dst))) continue;
+    copied = true;
+    // A journal is only present mid-write; the database stands without it.
+    await cloneOrCopy(`${src}-journal`, `${dst}-journal`).catch(() => {});
+  }
+  return copied;
+}
+
+// A sign-in waits on this read; past it the flow goes on without it.
+const READ_DEADLINE_MS = 15_000;
+
 /**
  * The cookies a profile would send to `urls`, read by the browser itself from
- * a temp copy of just its cookie store and Local State (which holds the key
- * the store is encrypted with on Windows and Linux). Nothing is written to
- * any Electron session; that is the caller's decision.
+ * a temp copy of just its cookie store. Nothing is written to any Electron
+ * session; that is the caller's decision. Empty when the profile has none for
+ * them; throws when they could not be read, so a caller can tell the two
+ * apart.
  */
 export async function readProfileCookies(
   profile: BrowserProfileInfo,
@@ -722,34 +949,30 @@ export async function readProfileCookies(
   const root = browser == null ? null : getBrowserDataRoot(browser);
   const execPath =
     browser == null ? null : await findBrowserExecutable(browser);
-  if (root == null || execPath == null) return [];
+  if (root == null || execPath == null)
+    throw new Error(`${profile.browserName} is not installed here`);
 
   const tempDir = path.join(app.getPath("temp"), `bp-import-${randomUUID()}`);
   try {
-    const dstProfile = path.join(tempDir, profile.profileDir);
-    await fsp.mkdir(path.join(dstProfile, "Network"), { recursive: true });
-    const copies: Array<[string, string]> = [
-      [path.join(root, "Local State"), path.join(tempDir, "Local State")],
-      ...COOKIE_FILES.map((file): [string, string] => [
-        path.join(profile.profileDataPath, file),
-        path.join(dstProfile, file),
-      ]),
-    ];
-    await Promise.all(
-      copies.map(([src, dst]) =>
-        fsp
-          .copyFile(src, dst, fsConstants.COPYFILE_FICLONE)
-          .catch(() => fsp.copyFile(src, dst))
-          .catch(() => {})
-      )
-    );
+    if (!(await copyCookieStore(root, profile, tempDir))) return [];
 
+    const cookies = await extractCookiesViaCDP(
+      execPath,
+      tempDir,
+      profile.profileDir,
+      urls,
+      READ_DEADLINE_MS
+    );
+    // Values the browser could not decrypt come back empty: that is a failed
+    // read (a key it could not reach), not a profile without sessions.
+    if (cookies.length > 0 && cookies.every((c) => !c.value))
+      throw new Error("the browser could not decrypt its cookies");
     const now = Date.now() / 1000;
-    return (
-      await extractCookiesViaCDP(execPath, tempDir, profile.profileDir, urls)
-    ).filter((c) => c.value && !(c.expires > 0 && c.expires < now));
+    return cookies.filter(
+      (c) => c.value && !(c.expires > 0 && c.expires < now)
+    );
   } finally {
-    fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 

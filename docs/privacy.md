@@ -34,12 +34,24 @@ another model provider or service uses that service's account and authorization
 flow.
 
 When a sign-in opens in the app window, the first screen may offer to continue
-with a Chromium browser profile (Chrome, Edge, Brave, Arc and similar) whose
-cookie store names abacus.ai. Listing those profiles reads no cookie. Only when
-you pick one does the app start that browser in the background on a temporary
-copy of its cookie store and ask it for its Abacus.AI cookies, the same way the
-in-app browser imports a profile. They go into the sign-in window alone, the
-temporary copy is deleted, and no other site's cookies are read.
+with a Chromium browser profile (Chrome, Edge, Brave, Arc and similar): your
+default browser's default profile, and others whose cookie store names
+abacus.ai. Listing those profiles reads no cookie. Only when you pick one does
+the app start that browser in the background on a temporary copy of its cookie
+store and ask it for its Abacus.AI cookies, the same way the in-app browser
+imports a profile. They go into the sign-in window alone and the temporary copy
+is deleted.
+
+When you start a sign-up or sign-in in the app window and your default browser
+is one of those Chromium browsers, the sign-in screen says so, and the app reads
+that browser's cookies for the Google, Microsoft, Apple and GitHub login pages
+the same way. They let those providers show the accounts you already use in
+that browser. They go into the app's sign-in session alone (the one the
+sign-in window and a connector sign-in that follows it use), are copied without
+an expiry, and are gone when the app quits. With any other default browser,
+or when that browser's cookie store cannot be read (on Windows a running
+browser locks it), a Google, Microsoft or Apple sign-in continues in that
+browser instead.
 
 The app stores pasted provider keys locally. Environment variables take
 precedence for model calls. Abacus.AI service connectors keep their service
