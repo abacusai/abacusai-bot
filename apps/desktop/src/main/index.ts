@@ -88,6 +88,7 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { readClipboardImage } from "./clipboard-image";
 import { installCrashGuard } from "./crash-guard";
+import { installMutationHarness } from "./dev/mutation-harness";
 import { isSafeExternalUrl } from "./external-links";
 import {
   disposeLocalModels,
@@ -100,6 +101,12 @@ import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
+import {
+  devContentSize,
+  experienceEntryUrl,
+  rendererEntry,
+  type RendererBase,
+} from "./renderer-entry";
 import { RENDERER_GENERATION } from "./renderer-generation";
 import {
   RendererHost,
@@ -392,7 +399,11 @@ ipcMain.on("renderer-activity", () => {
 const rendererSwaps = new RendererSwapScheduler({
   // Development stays on the Vite server.
   disabled: () => Boolean(process.env.VITE_DEV_SERVER_URL),
-  target: () => experienceRuntime?.activeRendererUrl(),
+  target: () =>
+    experienceEntryUrl(
+      experienceRuntime?.activeRendererUrl(),
+      RENDERER_GENERATION
+    ),
   host: () => rendererHost,
   busy: () =>
     workspaceServiceHost.hasActiveAgentTurn() ||
@@ -599,6 +610,10 @@ async function createWindow(restored?: RecreatedWindowState) {
   }
   if (restored?.maximized) mainWindow.maximize();
   if (restored?.fullScreen) mainWindow.setFullScreen(true);
+  // Screenshot runs only (spec 01 §10.2): an exact content size, zoom 1.
+  const devSize = devContentSize(process.env, app.isPackaged);
+  if (devSize !== null)
+    mainWindow.setContentSize(devSize.width, devSize.height);
   // Connector login windows hang off this so they share its Space.
   setMainWindow(mainWindow);
   const publishFullScreenState = (): void => {
@@ -728,18 +743,32 @@ async function createWindow(restored?: RecreatedWindowState) {
     const contents = host.webContents;
     const experienceUrl = experienceRuntime?.activeRendererUrl() ?? null;
 
+    // The document is the generation's (spec 01 §3.6); legacy URLs are
+    // exactly what they always were.
+    const base: RendererBase | null =
+      restored !== undefined
+        ? null
+        : rendererUrl
+          ? { kind: "dev", url: rendererUrl }
+          : experienceUrl !== null
+            ? { kind: "experience", url: experienceUrl }
+            : {
+                kind: "file",
+                directory: join(import.meta.dirname, "../renderer"),
+              };
+
     if (restored !== undefined) {
       void contents.loadURL(restored.url).catch(() => undefined);
-    } else if (rendererUrl) {
-      void contents.loadURL(rendererUrl).catch(() => undefined);
-    } else if (experienceUrl !== null) {
-      // A verified installed experience supersedes the asar baseline.
-      console.log(`[experience] serving renderer from ${experienceUrl.href}`);
-      void contents.loadURL(experienceUrl.href).catch(() => undefined);
-    } else {
-      void contents
-        .loadFile(join(import.meta.dirname, "../renderer/index.html"))
-        .catch(() => undefined);
+    } else if (base !== null) {
+      if (base.kind === "experience")
+        // A verified installed experience supersedes the asar baseline.
+        console.log(`[experience] serving renderer from ${base.url.href}`);
+      const entry = rendererEntry(base, RENDERER_GENERATION);
+      void (
+        entry.kind === "url"
+          ? contents.loadURL(entry.url)
+          : contents.loadFile(entry.path)
+      ).catch(() => undefined);
     }
   };
 
@@ -778,6 +807,9 @@ async function createWindow(restored?: RecreatedWindowState) {
     if (process.argv.includes("--devtools")) {
       contents.openDevTools({ mode: "right" });
     }
+
+    if (devSize !== null)
+      contents.on("did-finish-load", () => contents.setZoomFactor(1));
 
     // BaseWindow has no 'ready-to-show'; any view's first load reveals it.
     contents.once("did-finish-load", () => {
@@ -1663,6 +1695,11 @@ app
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
+    // Development acceptance runs only (spec 01 §12); inert when packaged.
+    installMutationHarness(workspaceServiceHost, {
+      env: process.env,
+      isPackaged: app.isPackaged,
+    });
     registerBrowserRuntimeIpcHandlers(
       browserRuntime,
       () => rendererWebContents()?.id ?? null
