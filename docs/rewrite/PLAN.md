@@ -359,3 +359,11 @@ Delete the old renderer, conversation layer, NDJSON host, `window.api`, zustand 
 ## Open questions
 
 - None blocking. Sub-agents follow the AG-UI spec’s subagent events (resolved above); pi is bumped to 0.99 with behaviour held constant.
+
+
+## Amendments after phase-0 spec reviews (30 Sep 2026)
+
+- Main's taps (messaging relay, artifacts, routine settle, turn waiter, browser auto-allow, host services) keep reading the agent's byte-identical legacy NDJSON on a compat channel (fd 3); only the renderer reads AG-UI. No `bot.reply` event.
+- Permissions are not TanStack native interrupts (its interrupt manager replaces the pending set and submits all-or-nothing, which would change approval timing). Each permission is an independent `CUSTOM permission.requested` descriptor answered with a `permission.respond` command carrying thread, process incarnation, run and permission id; the run stays open while waiting. The chat kit renders permissions from that state and joins them to tool widgets by `(subagentRunId, toolCallId)`.
+- Host services stay on the compat stream (not AG-UI client tools) for now.
+- Window chrome ships in legacy mode until the new renderer lands (`RENDERER_GENERATION`).
