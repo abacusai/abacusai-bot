@@ -1,6 +1,6 @@
 # 01 — Renderer foundation (phase 1)
 
-Status: draft spec r1 (no code). Branch `rewrite/renderer`, stacked on the phase 0 PRs `rewrite/00a-transport` and `rewrite/00b-db-tables` (spec `00-transport-db-migration.md` r2, sections A and B) and on the window-chrome slice (spec `00-window-chrome.md` r2, commit `a059a113`). Paths are relative to `apps/desktop/` unless noted. Line citations are against `HEAD` `3e46fe3e`; `src/main/index.ts` has uncommitted edits in the working tree, so its numbers are the committed ones.
+Status: draft spec **r2** (no code); r1 reviewed by Codex (`reviews/01-renderer-foundation.codex-r1.md`, 24 findings), responses at the end. Branch `rewrite/renderer`, stacked on the phase 0 PRs `rewrite/00a-transport` and `rewrite/00b-db-tables` (spec `00-transport-db-migration.md` r2, sections A and B) and on the window-chrome slice (spec `00-window-chrome.md` r2, commit `a059a113`). Paths are relative to `apps/desktop/` unless noted. Line citations are against `HEAD` `3e46fe3e`; `src/main/index.ts` has uncommitted edits in the working tree, so its numbers are the committed ones.
 
 Sources read: `docs/rewrite/PLAN.md` (rev 6, all of it); spec 00 transport A.1–A.12 and B.1–B.8 (r2); spec 00 window chrome §6 (renderer contract), §3 (capability), §6 "Popups over the title bar"; the design canvas (`project/canvas.json` plus the boards on pages 1, 5, 6 and the shell parts `Rail`, `TopBar`, `BotsSidebar`, `SessionsSidebar`, `HoverSidebar`, `WidthRules`); reference clones under `scratchpad/refs` (router 1.170.40 / router-plugin 1.168.41 / router-generator tests, db 0.10.0 source, ui with shadcn CLI 4.21.0 source and `style-mira.css`); npm registry (queried 30 Sep 2026); skills `tanstack-router`, `tanstack-db`, `tanstack-query`, `shadcn`, `vercel-react-view-transitions`, `vercel-composition-patterns`.
 
@@ -14,11 +14,11 @@ These were checked against source, not assumed. Each is carried into the section
 |---|---|---|---|
 | F1 | "babel-plugin-react-compiler with `@vitejs/plugin-react`" | No Babel is needed. `@vitejs/plugin-react` **6.1.1** (npm latest; installed 6.0.5) has a native `compiler?: boolean | ReactCompilerPluginOptions` option backed by `oxc-transform-react`, a Rust port of the compiler, declared as an **optional** peer `^0.145.0` (vitejs/vite-plugin-react#1419; `@vitejs/plugin-react@6.1.1 dist/index.d.ts` `Options.compiler`, README "Rust React Compiler", marked experimental). The option takes compiler options (`compilationMode`, `target`, …, plus `logDiagnostics`) but **no include/exclude of its own**: the compiler plugin filters with the React plugin's own `include`/`exclude` (`dist/index.js:194`, `createReactCompilerPlugin(…, include, exclude, …)`). With `compiler` on, that instance also turns off oxc's Fast Refresh transform and does refresh itself, only for its `include` (`dist/index.js:76`). Verified in a scratch Vite 8.2.1 project (below). | §3.3: **two `react()` instances, compiler instance first**: `react({ include: NEXT_SRC, compiler: true })` then `react({ exclude: [node_modules, NEXT_SRC] })`. Measured: renderer-next files compiled + Fast Refresh; old renderer files not compiled + Fast Refresh kept, in dev and in build. The reverse order, or a single scoped instance, drops Fast Refresh for the old renderer. |
 | F2 | `@tanstack/db` 0.10.0 / `@tanstack/react-db` 0.4.2 (PLAN L58, spec 00 B) | Those versions exist only in the clone (`refs/db/packages/db/CHANGELOG.md:3`). npm `latest` is **0.9.2 / 0.4.1** (published 14 Sep 2026). 0.9.2 already has the receipt-returning `commit()`, `truncate`, `markReady`, `markError`, `rowUpdateMode` that spec 00 B.3 relies on (`@tanstack/db@0.9.2 dist/esm/types.d.ts:318-340`). | Pin 0.9.2 / 0.4.1 exact; bump to 0.10.0 / 0.4.2 in a one-line PR when published. Spec 00 B.5 needs the same correction (§15). |
-| F3 | "one components.json per project — decide subfolder + `tailwind.css`, or `--cwd`" | The CLI reads `package.json` **exactly at `cwd`** (`packages/shadcn/src/utils/get-package-info.ts:5-13`), resolves `#` aliases from that file's `imports` (`utils/package-imports.ts:19-31`), and writes `components.json` at `cwd` (`commands/init.ts:732`). A subfolder `--cwd src/renderer-next` has no `package.json`, so alias resolution and dependency install both fail. Config lookup is `cosmiconfig.search(cwd)` upward (`utils/get-config.ts:26-28,198`). | **Decision: the single `apps/desktop/components.json` is re-pointed at renderer-next.** The old renderer's `components/ui` is frozen from now on (it is deleted at cut-over and never regenerated again). §5.1. |
-| F4 | shadcn init "`--base base --preset mira` with lucide" | The `mira` preset is `iconLibrary: "hugeicons"`, `menuColor: "default"`, `rtl: false` (`packages/shadcn/src/preset/defaults.ts:64-78`). With `--force` and a preset, init backs up `components.json` and re-infers aliases from the project; only `registries` survive from the old file (`commands/init.ts:540-560,737-752`). It does honour the existing `tailwind.css` path if that file exists (`preflights/preflight-init.ts:63-68`, `utils/get-project-info.ts:254-261`). | §5.1: hand-write `components.json` first (so the CSS target is renderer-next's), run init, then restore aliases, `iconLibrary: "lucide"`, `menuColor: "default-translucent"` before any `add`, and verify with `shadcn info --json`. |
+| F3 | "one components.json per project — decide subfolder + `tailwind.css`, or `--cwd`" | The CLI reads `package.json` **exactly at `cwd`** (`packages/shadcn/src/utils/get-package-info.ts:5-13`), resolves `#` aliases from that file's `imports` (`utils/package-imports.ts:19-31`, first `./` target of an array, `utils/import-matcher.ts:26-51`), and writes `components.json` at `cwd` (`commands/init.ts:732`). A subfolder `--cwd src/renderer-next` has no `package.json`, so alias resolution and dependency install both fail. Config lookup is `cosmiconfig.search(cwd)` upward (`utils/get-config.ts:26-28,198`). | **Decision: the single `apps/desktop/components.json` is re-pointed at renderer-next** (hand-written; `init` never runs in this package, see F4). The old renderer's `components/ui` is frozen from now on. §5.1. |
+| F4 | shadcn init "`--base base --preset mira` with lucide" | The `mira` preset is `iconLibrary: "hugeicons"`, `menuColor: "default"`, `rtl: false` (`packages/shadcn/src/preset/defaults.ts:64-78`). With a preset, init backs up any existing `components.json` and re-infers aliases from the project (`commands/init.ts:540-560`, `utils/get-project-info.ts:524-560`); a generic `#next/*` wildcard gives it nothing recognisable to infer `components/ui/lib` from, and files are written with the inferred aliases before any post-fix could run (Codex r1 #3). `add` with an existing `components.json` does **not** infer (`getProjectConfig` returns the existing config first, `get-project-info.ts:530-540`). | §5.1: run `init --base base --preset mira` **once in an isolated scratch package** with a standard layout, take its generated CSS, `cn` helper and dependency list, and hand-write this package's `components.json`; every later `add` runs in place, gated by `--dry-run` path assertions. |
 | F5 | PLAN "Nuked: tw-animate-css" | The base registry style declares `devDependencies: ["tw-animate-css", "shadcn"]` and writes `@import "tw-animate-css"` (`apps/v4/registry/bases/base/registry.ts:17-27`); `style-mira.css` uses `animate-in`, `fade-in-0`, `zoom-in-95` from it. | Keep `tw-animate-css` (registry-owned; `ui/` is never edited). Remove it from the "nuked" list in PLAN. |
 | F6 | "sonner/toast" | Registry `sonner.tsx` imports `next-themes` (not in this app); registry `toast.tsx` is Base UI Toast with `data-slot="toast-viewport"`, which is exactly the slot the window-chrome occlusion/no-drag list names. | renderer-next uses registry **`toast`**. `sonner` stays a dependency only for the old renderer. |
-| F7 | `useAppNavigate` with `startTransition` + `addTransitionType` | The router commits matches later, inside its own `React.startTransition(fn)` assigned on every `Transitioner` render (`refs/router/packages/react-router/src/Transitioner.tsx:31-37`; called from `router-core/src/load-client.ts:1881`). A type added in the caller's sync `startTransition` belongs to a different transition and is lost; wrapping in an async action and awaiting `navigate()` deadlocks because the router awaits the render acknowledgement. React 19.3's `addTransitionType` outside a transition logs an error and starts its own (`react@19.3.0 cjs/react.development.js:586-599`). | §6.7: a small seam wraps `router.startTransition` so pending types are added **inside** the router's own commit transition. Router pinned exact because the seam touches an instance field. |
+| F7 | `useAppNavigate` with `startTransition` + `addTransitionType` | The router commits matches inside its own `React.startTransition(fn, expected)` assigned on every `Transitioner` render (`refs/router/packages/react-router/src/Transitioner.tsx:31-37`). It calls it twice per slow navigation: once to **offer pending matches** (`router-core/src/load-client.ts:1524-1530`, one match `status: "pending"`) and once to **commit** (`load-client.ts:1870-1881`; a superseded navigation returns before `commit`). A type added in the caller's sync `startTransition` is lost; awaiting `navigate()` inside an async action deadlocks on the render acknowledgement. React 19.3's `addTransitionType` outside a transition logs and starts its own (`react@19.3.0 cjs/react.development.js:586-599`). | §6.7: intent travels **in the history entry's state** (`navIntent: { id, type }`), and a seam around `router.startTransition` adds types only on the **commit** call (no pending match), only for the location that is actually committing, once per navigation id. Router pinned exact. |
 | F8 | `motion` 12.x (PLAN L68) | npm `latest` is `motion` **13.4.6** (peer `react ^18 || ^19`); import path stays `motion/react`. | Use 13.4.6. |
 | F9 | i18next "latest" | Latest are i18next 26 / react-i18next 17 (majors). Both renderers share one `package.json`. | Keep the installed majors (`i18next ^25.8.7`, `react-i18next ^16.5.4`) in phase 1; the major bump is a separate PR that tests both renderers. |
 | F10 | TanStack Devtools cockpit incl. "db" | There is no published DB devtools package (`@tanstack/db-devtools` and `@tanstack/react-db-devtools` 404 on npm). | Cockpit ships a 60-line in-app "Collections" plugin (status, rows, epoch, seq) until an official one exists. |
@@ -130,8 +130,10 @@ build: {
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 
-const NEXT_SRC = /[\\/]src[\\/]renderer-next[\\/]/;
-const NODE_MODULES = /[\\/]node_modules[\\/]/;
+// vite.shared.ts (included by tsconfig.vite.json, imported by vite.config.ts and vitest.config.ts)
+export const NEXT_SRC = /[\\/]src[\\/]renderer-next[\\/]/;                           // whole tree (exclusions)
+export const NEXT_MODULES = /[\\/]src[\\/]renderer-next[\\/].*\.[cm]?[jt]sx?$/;        // JS/TS modules only (compiler)
+export const NODE_MODULES = /[\\/]node_modules[\\/]/;
 
 plugins: [
   devServerHandle,
@@ -145,7 +147,7 @@ plugins: [
   }),
   tailwindcss(),
   // Order matters: the compiler instance first, the plain instance second.
-  react({ include: NEXT_SRC, compiler: { logDiagnostics: true } }),   // renderer-next: React Compiler (oxc) + its own Fast Refresh
+  react({ include: NEXT_MODULES, compiler: { logDiagnostics: true } }),  // renderer-next JS/TS: React Compiler (oxc) + its own Fast Refresh
   react({ exclude: [NODE_MODULES, NEXT_SRC] }),                        // old renderer: unchanged transform + Fast Refresh
   ...electron(/* unchanged */),
 ]
@@ -158,9 +160,11 @@ plugins: [
 | `react()` only | no | yes | no | yes |
 | **`react({ include: NEXT, compiler: true })`, then `react({ exclude: [node_modules, NEXT] })`** | **no** | **yes** | **yes** | **yes** |
 | same two, reversed order | no | **no** | yes | yes |
+| compiler instance with the directory-only `include: NEXT_SRC` | no | yes | yes | yes, but **`src/next/s.css` fails with "Unexpected token"** (the compiler plugin receives CSS; Codex r1 #1) |
+| **compiler instance with `include: NEXT_MODULES`** (the spec) | no | yes | yes (also `B.jsx?tsr-split=component`) | yes; CSS passes through untouched |
 | single `react({ include: NEXT, compiler: true })` | no | **no** | yes | yes |
 
-Each instance's `config` hook sets `oxc.jsx.refresh` (`!opts.compiler`) and `jsxRefreshInclude/Exclude`; Vite merges plugin configs in order, so the plain instance must come last for `refresh: true` to win, and its `exclude` keeps renderer-next files out of oxc's refresh pass (the compiler instance's transform, `enforce: "pre"`, already emitted JSX-free code with refresh registration for them). Both instances inject the refresh preamble into HTML (the preamble appears twice, measured); it is idempotent, and the acceptance list checks that an edit hot-reloads in both renderers.
+A directory-only `include` replaces the plugin's default `/\.[tj]sx?$/` (`@vitejs/plugin-react@6.1.1 dist/index.js:57-61`), so the compiler instance must carry the extension itself; ids with a query (router split modules `?tsr-split=…`) still match because the plugin wraps filters with `makeIdFiltersToMatchWithQuery`. Each instance's `config` hook sets `oxc.jsx.refresh` (`!opts.compiler`) and `jsxRefreshInclude/Exclude`; Vite merges plugin configs in order, so the plain instance must come last for `refresh: true` to win, and its `exclude` keeps renderer-next files out of oxc's refresh pass (the compiler instance's transform, `enforce: "pre"`, already emitted JSX-free code with refresh registration for them). Both instances inject the refresh preamble into HTML (the preamble appears twice, measured); it is idempotent, and the acceptance list checks that an edit hot-reloads in both renderers.
 
 - `autoCodeSplitting: true` splits each route's `component`/`pendingComponent`/`errorComponent`/`notFoundComponent` into lazy chunks; loaders and `beforeLoad` stay in the main chunk. Chunks load from `file://` and `app://` like today's locale chunks (`i18n.ts:15-26`).
 - `routeTree.gen.ts` is committed (TanStack's recommendation; it is also what the type-checker and the route-tree snapshot test read) and ignored by oxfmt/oxlint (§3.4).
@@ -247,7 +251,7 @@ Added to `vitest.config.ts` `projects`:
 
 ```ts
 {
-  plugins: [react({ include: NEXT_SRC, compiler: true })],   // test what ships: compiled components (NEXT_SRC exported from a shared vite/next-src.ts)
+  plugins: [react({ include: NEXT_MODULES, compiler: true })],   // test what ships: compiled components
   resolve: { alias },                                   // alias gains #next and #locales
   test: {
     name: "renderer-next",
@@ -258,6 +262,8 @@ Added to `vitest.config.ts` `projects`:
   },
 }
 ```
+
+`vite.shared.ts` sits beside the two configs and is added to `tsconfig.vite.json`'s `include` (today exactly `["vite.config.ts", "vitest.config.ts"]`, `tsconfig.vite.json:10`), because that project is `composite` and every imported file must be listed (Codex r1 #22).
 
 `test:unit` becomes `--project shared --project main --project renderer --project renderer-next`. `coverage.exclude` gains `src/renderer-next/routeTree.gen.ts` and `src/renderer-next/ui/**`. The new setup file copies the jsdom shims from `src/renderer/test-support/setup.ts:17-77` (it may not import from the old tree) but replaces the `matchMedia` stub with a **controllable** one (`setMediaMatches({ "(prefers-color-scheme: dark)": true, "(min-width: 1100px)": false, ... })`) and adds `document.startViewTransition` absence (jsdom has none; React skips view transitions gracefully) plus a stub `navigator.windowControlsOverlay` factory.
 
@@ -276,9 +282,10 @@ apps/desktop/src/renderer-next/
 ├─ ui/                      shadcn registry output, never edited (§5)
 ├─ components/              molecules used by ≥2 features
 │  ├─ empty-state/          EmptyState = registry Empty + area glyph + i18n copy
+│  ├─ nav-list/             NavList.* rows for every sidebar (registry Item/Button/Badge/Skeleton/Collapsible)
 │  └─ app-icon/             duotone sprite (<svg><symbol>) + <AppIcon name/>
 ├─ features/
-│  ├─ shell/                rail/ top-bar/ sidebar-slot/ side-panel/ breakpoints.ts occlusion.ts
+│  ├─ shell/                rail/ top-bar/ sidebar-slot/ side-panel/ breakpoints.ts occlusion.ts readiness.tsx
 │  │                        shell-store.ts hotkeys.tsx command-menu.tsx layout.ts (pure)
 │  ├─ bots/                 bots-sidebar.tsx, bots-strip.tsx (88px), bots-empty.tsx
 │  ├─ sessions/             sessions-sidebar.tsx, sessions-empty.tsx
@@ -294,6 +301,7 @@ apps/desktop/src/renderer-next/
 │  ├─ queries/              system.ts window.ts settings.ts invalidation.ts live.ts
 │  └─ query-client.ts
 ├─ lib/
+│  ├─ bootstrap.ts          transport + system.info + prefs before the router (§8.6)
 │  ├─ cn.ts                 shadcn `utils` alias target
 │  ├─ hooks/                shadcn `hooks` alias target (registry use-mobile lands here)
 │  ├─ i18n/                 boot, languages, keys (§9)
@@ -314,7 +322,11 @@ Rules (PLAN L205, restated as checks): routes never import another route or feat
 
 ### 5.1 Init procedure (verified against the CLI source, F3/F4)
 
-1. Hand-edit `apps/desktop/components.json` to:
+`shadcn init` never runs inside `apps/desktop` (F4, Codex r1 #3). It runs once in a throwaway package whose layout the CLI infers without help; this package then gets a hand-written `components.json`, and only `add` (which reads the existing config and infers nothing) touches it.
+
+1. **Scratch init.** `scripts/shadcn-next-init.mjs` creates `<scratch>/shadcn-init/` from the CLI's own Vite template shape: `package.json` (`react`, `react-dom` 19.3.0, `tailwindcss`, `@tailwindcss/vite`, `vite` from the catalog), `tsconfig.json` with `compilerOptions.paths: { "@/*": ["./src/*"] }`, `vite.config.ts`, `src/index.css` containing `@import "tailwindcss";`. It runs `pnpm dlx shadcn@4.21.0 init --base base --preset mira --yes` there (no existing config, so no backup/force path; if the CLI still prompts, the script fails rather than answering blindly). Then it asserts, before copying anything: `components.json` has `style: "base-mira"`, `aliases.ui: "@/components/ui"`, `tailwind.css: "src/index.css"`; the only written files are `components.json`, `src/index.css`, `src/lib/utils.ts`, `package.json` (+ lockfile).
+2. **Transplant** (the script, into this package): `src/index.css` → `src/renderer-next/styles/app.css`; `src/lib/utils.ts` → `src/renderer-next/lib/cn.ts`; the dependency names init added to the scratch `package.json` are printed and must already be in §3.1 (the script fails on anything new, e.g. hugeicons, which is not installed because the config says lucide).
+3. **Hand-written `apps/desktop/components.json`** (kept as a constant in the script and written verbatim):
 
 ```json
 {
@@ -338,25 +350,22 @@ Rules (PLAN L205, restated as checks): routes never import another route or feat
 }
 ```
 
-   and create `src/renderer-next/styles/app.css` containing `@import "tailwindcss";` so preflight finds the configured CSS file (it checks existence first, `get-project-info.ts:256-260`). `rtl: false` matches the preset: none of the 11 shipped locales is right-to-left (`i18n.ts:15-26`); the old `rtl: true` only mattered for logical-property classes.
-2. Run `pnpm --filter @abacus-ai/desktop exec shadcn@4.21.0 init --base base --preset mira --force --no-reinstall --yes` (from `apps/desktop`; `--no-reinstall` so the old `components/ui` is never touched).
-3. Restore the file from step 1 over whatever init wrote: init with a preset re-infers `aliases` from the project and takes `iconLibrary: "hugeicons"`, `menuColor: "default"` from the preset (F4). Script: `scripts/shadcn-next.mjs --restore-config` writes the canonical JSON above (kept in the script as the single source) and fails if init wrote the CSS anywhere other than `styles/app.css`.
-4. Verify: `pnpm --filter @abacus-ai/desktop exec shadcn info --json` reports `resolvedPaths.ui` = `src/renderer-next/ui`, `tailwindCss` = `src/renderer-next/styles/app.css`, `iconLibrary` = `lucide`. `git status src/renderer` must be empty (init must not touch the old tree); `git diff src/renderer/assets/base.css` empty.
-5. Post-edit `styles/app.css` (ours, not registry-owned): change the first line to `@import "tailwindcss" source(none);` and add `@source "../";` so Tailwind scans only renderer-next (otherwise the default detection scans the whole package and emits every old-renderer class into the new CSS); append `@import "./tokens.css";` after the shadcn imports. Keep what init wrote: `@import "tw-animate-css"`, `@import "shadcn/tailwind.css"`, `@import "@fontsource-variable/inter"`, `@custom-variant dark (&:is(.dark *))`, `@theme inline`, `:root`/`.dark` neutral values, the `@layer base` block.
-6. Keep what init generated in `ui/` (`button.tsx`) and `lib/cn.ts`; `button` is on the add list anyway, and `lib/cn.ts` is the `utils` alias target.
+   `#next/*` resolves through the `package.json` `imports` array; the CLI takes its first `./` target (`./src/renderer-next/*.tsx`) and strips the extension for directory aliases (`utils/get-config.ts:145-160`), which is exactly how today's `#renderer/components/ui` config resolves (`components.json:16-21`, `package.json:22-28`). `rtl: false` matches the preset: none of the 11 shipped locales is right-to-left (`i18n.ts:15-26`).
+4. **Write gate for every `add`.** `scripts/shadcn-next.mjs add <items…>` first runs `shadcn add <items…> --dry-run` (`commands/add.ts:64`) and parses the planned file list; it aborts unless every path is under `src/renderer-next/{ui,lib,components}` and no dependency outside §3.1 is planned. Only then does it run the real `add` (against the pinned registry snapshot, §5.4). `pnpm exec shadcn info --json` must report `resolvedPaths.ui = src/renderer-next/ui`, `tailwindCss = src/renderer-next/styles/app.css`, `iconLibrary = lucide`; `git status src/renderer` stays clean.
+5. **Post-edit `styles/app.css`** (ours, not registry-owned): first line `@import "tailwindcss" source(none);` plus `@source "../";`, so Tailwind scans only renderer-next; `@import "./tokens.css";` after the shadcn imports. Keep what init produced: `@import "tw-animate-css"`, `@import "shadcn/tailwind.css"`, `@import "@fontsource-variable/inter"`, `@custom-variant dark (&:is(.dark *))`, `@theme inline`, the `:root`/`.dark` neutral values, the `@layer base` block. The script re-checks these lines on every run.
 
 ### 5.2 Initial `add` list
 
 One command (step 14 of §14), in this order so dependencies resolve once:
 
-`button dialog alert-dialog sheet drawer tabs dropdown-menu context-menu popover tooltip hover-card combobox command resizable scroll-area sidebar kbd field label input input-group textarea item empty spinner skeleton separator badge avatar toggle toggle-group switch select native-select toast message-scroller message bubble attachment marker questionnaire collapsible`
+`button dialog alert-dialog sheet drawer tabs dropdown-menu context-menu popover tooltip hover-card combobox command resizable scroll-area kbd field label input input-group textarea item empty spinner skeleton separator badge avatar toggle toggle-group switch select native-select toast message-scroller message bubble attachment marker questionnaire collapsible`
 
 Notes per item:
 - `toast` replaces sonner (F6). `alert-dialog`, `hover-card`, `label`, `collapsible` are added beyond the brief's list because the overlay-slot list (§7.6) names their slots and the gallery must render them, and `field` depends on `label`.
-- `sidebar`: see §7.3 for how its provider is used (it binds ⌘B itself).
+- **`sidebar` is deliberately not added** (deviation from the brief's list, Codex r1 #8). Its `SidebarProvider` installs a window `keydown` listener for `b` + Ctrl/Meta that ignores Alt/Shift and editable targets (`refs/ui/apps/v4/registry/bases/base/ui/sidebar.tsx:96-109`), writes a cookie, and its `useIsMobile` (max-width 767 px) flips the layout under zoom (800 px window at 125% is 640 CSS px); `SidebarMenuButton` requires that provider. Sidebar rows are built from `item`, `button`, `badge`, `skeleton` and `collapsible` instead (§7.3); nothing in phase 1 needs the registry sidebar's own collapse logic, which the shell replaces.
 - `resizable` wraps `react-resizable-panels` (already a dependency).
 - `message-scroller`, `message`, `bubble`, `attachment`, `marker`, `questionnaire`: added now so the gallery and the a11y smoke cover them; not wired to chat until phase 2.
-- The `add` also brings `lib/hooks/use-mobile.ts` (registry dependency of `sidebar`). Its 768px breakpoint never triggers (window minimum 800×600, `index.ts:548-551`).
+- With `sidebar` gone, no registry hook is installed; `lib/hooks/` exists only as the alias target.
 
 ### 5.3 Tokens
 
@@ -373,7 +382,7 @@ Notes per item:
 | edge `#36363b` | floating sidebar border, dividers | `--sidebar-border` / `--border` | `border-sidebar-border` |
 | text `#f2f2f3` / muted `#8e8e93` | primary and secondary text | `--foreground` / `--muted-foreground` | |
 | menu `#242427` + shadow | popovers, menus | `--popover` with `menuColor: default-translucent` | registry-owned |
-| scrim `rgba(0,0,0,.45)` + blur 2px | drawer at 1000 | registry `drawer-overlay` / `sheet-overlay` | registry-owned |
+| scrim `rgba(0,0,0,.45)` + blur 2px | drawer at 1000 | registry `drawer-overlay` (registry default is `bg-black/80`, `style-mira.css:492-494`) | scoped override in `tokens.css` (§5.3), unlayered so it beats the utility |
 | bot accent `#4ade80` etc. | user bubble, send button | `--bot-accent` (below) | `bg-(--bot-accent)` |
 
 The ordering matches neutral dark (`--background` L 0.145 is darker than `--sidebar` L 0.205, and `--muted` L 0.269 is lighter), which is exactly the canvas's panel < chrome < raised. The screenshot comparison (§12) checks role and contrast, not hex equality.
@@ -412,6 +421,9 @@ html[data-density="compact"] { --toolbar-h: 32px; --row-h: 28px; }
 .titlebar-nodrag { app-region: no-drag; }
 /* OVERLAY_SLOTS, generated list (lib/window-chrome/overlay-slots.ts); a test keeps them equal */
 [data-slot="dialog-content"], [data-slot="alert-dialog-content"], /* … §7.6 … */ [data-slot="toast-viewport"] { app-region: no-drag; }
+/* canvas scrim for the side-panel drawer only (Codex r1 #9): registry overlay is bg-black/80 + backdrop-blur-xs
+   (style-mira.css:492-494); DrawerContent renders its overlay itself (drawer.tsx:99-111), so it is scoped by :has() */
+[data-slot="drawer-portal"]:has([data-side-panel]) [data-slot="drawer-overlay"] { background-color: rgb(0 0 0 / .45); backdrop-filter: blur(2px); }
 /* view transitions: §6.7 */
 ```
 
@@ -421,7 +433,12 @@ html[data-density="compact"] { --toolbar-h: 32px; --row-h: 28px; }
 
 ### 5.4 Keeping `ui/` pristine
 
-`scripts/check-ui-registry.mjs` (CI, network) re-runs `shadcn add <every file in ui/> --overwrite` into a temp copy of the package via `--cwd` of a scratch clone and diffs against the committed `ui/`; any diff fails. Locally, `shadcn diff` is the quick check. Regeneration is the only way `ui/` changes; a desired change is made by wrapping in `components/`, never by editing.
+A CLI pin does not pin registry content (Codex r1 #17): the CLI fetches item JSON from `REGISTRY_URL`, default `https://ui.shadcn.com/r`, overridable by env (`packages/shadcn/src/registry/constants.ts:5-6`). So the registry content is snapshotted:
+
+- `scripts/shadcn-registry-snapshot.mjs` starts a local recording proxy, runs the §5.2 `add` with `REGISTRY_URL=http://127.0.0.1:<port>/r`, and stores every fetched response under `apps/desktop/shadcn-registry/<YYYY-MM-DD>/…` with a `manifest.json` of `{ path, sha256 }` plus the CLI version. The snapshot is committed (a few hundred KB of JSON).
+- Every `add` (§5.1 step 4) runs against that snapshot through the same local server in replay mode (offline, no upstream).
+- `check:ui-registry` (CI, offline): copies the package to a temp dir, deletes `ui/`, replays the snapshot `add`, runs `oxfmt` with the repo config on the output, and diffs against the committed `ui/`. A diff fails. Upstream updates are a deliberate new snapshot directory in its own commit, reviewed as such.
+- `ui/` is never edited; changes are wrappers in `components/`.
 
 ---
 
@@ -433,8 +450,8 @@ Directory form under `src/renderer-next/routes/`. Group folders `(area)` are org
 
 | File | Path / id | Responsibility |
 |---|---|---|
-| `__root.tsx` | root | `createRootRouteWithContext<RouterContext>()`. `beforeLoad`: `const transport = await getTransport()`; `await context.queryClient.ensureQueryData(systemInfoQuery(transport.orpc))`; `await collections.prefs.preload()` (theme and language are needed before paint); returns `{ transport }`. `component`: `<Providers>` (HotkeysProvider, Toast provider + viewport, Tooltip provider, `<ThemeEffect/>`, `<ChromeEffect/>`, `<Outlet/>`, dev cockpit). `errorComponent`: transport failure → "Couldn't connect" + Reload; others → generic error with details in dev. `notFoundComponent`: Empty "Not found" + link to `/bots/new`. `window.ready({ barrier: "failed", reason })` on transport/prefs failure (spec 00 A.4.6). |
-| `_shell.tsx` | pathless `/_shell` | `validateSearch: ShellSearch`; `search.middlewares: [stripSearchParams(SHELL_DEFAULTS)]`; `loader`: `Promise.all([collections.sessions.preload(), collections.workspaces.preload()])` (both `startSync: true`, spec 00 B.3 step 10). Component: `<ShellLayout>` (§7). After its first commit, when prefs/sessions/workspaces are `ready`, calls `window.ready({ barrier: "subscriptions" })` once (items 1, 2 and 4 of spec 00 A.4.6; item 3 has no thread in phase 1). |
+| `__root.tsx` | root | `createRootRouteWithContext<RouterContext>()`. **No async boot work here** (Codex r1 #5): transport, `system.info` and `prefs` are resolved by `bootstrap()` before the router exists (§8.6) and arrive as context. `component`: `<Providers>` (HotkeysProvider, Toaster, Tooltip provider, `<ThemeEffect/>`, `<ChromeEffect/>`, **`<ReadinessReporter/>`**, `<Outlet/>`, dev cockpit). `ReadinessReporter` (`features/shell/readiness.tsx`) runs for **every** entry route, shell or bare (Codex r1 #6): after the first commit it waits for `prefs`, `sessions`, `workspaces` to reach `ready` (spec 00 A.4.6 items 1, 2, 4; item 3 has no thread in phase 1) and calls `window.ready({ barrier: "subscriptions" })` once; if any of them `markError`s it calls `window.ready({ barrier: "failed", reason })`. `errorComponent`: generic error (details in dev). `notFoundComponent`: Empty "Not found" + link to `/bots/new`. |
+| `_shell.tsx` | pathless `/_shell` | `validateSearch: ShellSearch`; `search.middlewares: [stripSearchParams(SHELL_DEFAULTS)]`; `loader`: `Promise.all([collections.sessions.preload(), collections.workspaces.preload()])` (both `startSync: true`, spec 00 B.3 step 10). Component: `<ShellLayout>` (§7). Readiness is not reported here (root does it). |
 | `_shell/index.tsx` | `/` | `beforeLoad: () => { throw redirect({ to: "/bots/new", replace: true }) }`. |
 | `_shell/(bots)/bots.tsx` | `/bots` layout | `staticData: { area: "bots", sidebar: "bots" }`; `loader`: `collections.bots.preload()`; component `<Outlet/>` wrapped by the pane transition (§6.7). |
 | `_shell/(bots)/bots.index.tsx` | `/bots/` | redirect → `/bots/new`. |
@@ -447,10 +464,11 @@ Directory form under `src/renderer-next/routes/`. Group folders `(area)` are org
 | `_shell/(sessions)/sessions.new.tsx` | `/sessions/new` | `validateSearch: NewSessionSearch`; Empty "New session" (canvas `Main` copy). |
 | `_shell/(sessions)/sessions.$sessionId.tsx` | `/sessions/$sessionId` | `validateSearch: SessionSearch`; `loaderDeps: ({ search }) => ({ view: search.view })`; loader: row from `collections.sessions` or `notFound()`; Empty. |
 | `_shell/(sessions)/sessions.$sessionId.review.tsx` | `/sessions/$sessionId/review` | placeholder. |
-| `_shell/(routines)/routines.tsx` | `/routines` layout | `staticData: { area: "routines", sidebar: "routines" }`; loader `collections.routines.preload()`. |
-| `_shell/(routines)/routines.index.tsx` | `/routines/` | Empty "No routines yet" (canvas `RoutineStates`). |
+| `_shell/(routines)/routines.tsx` | `/routines` layout | `staticData: { area: "routines", sidebar: "routines" }`; loader `collections.routines.preload()`; `<Outlet/>`. |
+| `_shell/(routines)/routines._list.tsx` | pathless `/_shell/(routines)/routines/_list` | Renders the **routines page body** (phase 1: Empty "No routines yet", canvas `RoutineStates`) **and** an `<Outlet/>`, so a pop-up child renders over a background that stays mounted (Codex r1 #18: `index` and `new` are siblings, so the index would unmount). |
+| `_shell/(routines)/routines._list.index.tsx` | `/routines/` | Renders `null` (the body is the parent's). |
 | `_shell/(routines)/routines.$routineId.tsx` | `/routines/$routineId` | `validateSearch: RoutineSearch`; placeholder. |
-| `_shell/(routines)/routines.new.tsx` | `/routines/new` | Masked sheet → `/routines`. Rendered as a child of `routines.tsx`, so the index stays visible under it. |
+| `_shell/(routines)/routines._list.new.tsx` | `/routines/new` | Masked sheet (registry `Sheet`) over the `_list` body; mask → `/routines` (§6.6). A masked reload keeps the sheet and its background (mask state lives in the history entry). |
 | `_shell/(artifacts)/artifacts.tsx` | `/artifacts` layout | `staticData: { area: "artifacts", sidebar: "artifacts" }`. |
 | `_shell/(artifacts)/artifacts.index.tsx` | `/artifacts/` | `validateSearch: ArtifactsSearch`; `loaderDeps` on it; `collections.artifacts.preload()`; Empty "Nothing made yet" (canvas `ArtifactsStates`). |
 | `_shell/(library)/library.tsx` | `/library` layout | `staticData: { area: "library", sidebar: "library" }`. |
@@ -461,7 +479,7 @@ Directory form under `src/renderer-next/routes/`. Group folders `(area)` are org
 | `_shell/settings.tsx` | `/settings` layout | `staticData: { area: "settings", sidebar: "settings" }` (settings take over the sidebar, canvas `SettingsInPlace`). |
 | `_shell/settings.index.tsx` | `/settings/` | redirect → `/settings/general`. |
 | `_shell/settings.{general,appearance,notifications,memory,usage,account,models,environment,about}.tsx` | nine pages | Empty per page; `settings.appearance.tsx` renders the real theme control (light/dark/system writes `prefs.theme`), the only interactive setting in phase 1, because the theme gate needs it. |
-| `_bare.tsx` | pathless `/_bare` | No chrome: a `WindowDragRegion` strip of `height: var(--toolbar-h)` with `titlebar-drag`, padded by `--titlebar-x`/`--titlebar-end`, `z-10`; `<Outlet/>`. |
+| `_bare.tsx` | pathless `/_bare` | `loader`: nothing extra (readiness is root-owned, so a direct launch into `/onboarding/*` or `/__ui` still reports). No chrome: a `WindowDragRegion` strip of `height: var(--toolbar-h)` with `titlebar-drag`, padded by `--titlebar-x`/`--titlebar-end`, `z-10`; `<Outlet/>`. |
 | `_bare/onboarding.index.tsx` | `/onboarding/` | redirect → `/onboarding/welcome`. |
 | `_bare/onboarding.$step.tsx` | `/onboarding/$step` | `params.parse: v.parser(v.object({ step: v.picklist(ONBOARDING_STEPS) }))` with `ONBOARDING_STEPS = ["welcome","connect","connected","models","connectors","first-bot","done"]` (canvas page 11); Empty. |
 | `_bare/[__ui].tsx` | `/__ui` | Gallery (§10). `beforeLoad`: `throw notFound()` unless `import.meta.env.DEV || import.meta.env.VITE_UI_GALLERY === "1"`. `validateSearch: GallerySearch`. |
@@ -496,7 +514,7 @@ export const ArtifactsSearch = v.object({
 export const ConnectorsSearch = v.object({ connector: v.optional(v.fallback(v.string(), undefined)) });
 export const GallerySearch = v.object({
   section: v.optional(v.fallback(v.picklist(GALLERY_SECTIONS), undefined)),
-  theme: v.optional(v.fallback(v.picklist(["both","light","dark"]), "both"), "both"),
+  theme: v.optional(v.fallback(v.picklist(["app","light","dark"]), "app"), "app"),
 });
 ```
 
@@ -521,19 +539,20 @@ Limited to `{ area, sidebar }` (PLAN L176); `titleKey`/`backTo` are banned (PLAN
 ```ts
 export interface RouterContext {
   queryClient: QueryClient;
+  transport: Transport;              // resolved by bootstrap() before the router is created (§8.6)
+  system: SystemInfo;                // system.info, also seeded into the query cache
   collections: Collections;          // module singletons (data/collections/index.ts)
   t: TFunction;                      // i18next.getFixedT(null) — for loaders/notFound copy
 }
-// __root beforeLoad adds: { transport: Transport }
 ```
 
-Chat client factory joins the context in phase 2. `createAppRouter()`:
+Chat client factory joins the context in phase 2. `createAppRouter(boot)`:
 
 ```ts
 createRouter({
   routeTree,
   history: createHashHistory(),
-  context: { queryClient, collections, t: i18n.t },
+  context: { queryClient, transport: boot.transport, system: boot.system, collections, t: i18n.getFixedT(null) },
   routeMasks,
   defaultPreload: "intent",
   defaultPreloadStaleTime: 0,           // Query/DB own staleness (PLAN L174)
@@ -544,47 +563,61 @@ createRouter({
 })
 ```
 
+`declare module "@tanstack/react-router" { interface HistoryState { navIntent?: { id: string; type: NavType } } }` types the intent carried in history state (§6.7).
+
 ### 6.5 Loaders
 
-- `context.queryClient.ensureQueryData(opts)` for Query data (only `system.info` in root and `window.chrome` in `_shell` in phase 1).
-- `collection.preload()` for DB: `prefs` (root), `sessions` + `workspaces` (`_shell`), `bots` (`bots.tsx`), `routines` (`routines.tsx`), `artifacts` (`artifacts.index.tsx`). Loaders never read collection rows into loader data except to throw `notFound()`; components read with `useLiveQuery` so updates flow.
+- `context.queryClient.ensureQueryData(opts)` for Query data (only `window.chrome` in `_shell` in phase 1; `system.info` is fetched by `bootstrap()`).
+- `collection.preload()` for DB: `prefs` (`bootstrap()`, before the router, §8.6), `sessions` + `workspaces` (`_shell`), `bots` (`bots.tsx`), `routines` (`routines.tsx`), `artifacts` (`artifacts.index.tsx`). Loaders never read collection rows into loader data except to throw `notFound()`; components read with `useLiveQuery` so updates flow.
 - `loaderDeps` only where the loader depends on search (`sessions.$sessionId`, `artifacts.index`).
 
 ### 6.6 Masks
 
-`router.tsx`:
+`createRouteMask`'s `from` is a route **full path** (`RouteMask.from: RoutePaths<TRouteTree>`, `refs/router/packages/router-core/src/route.ts:1589-1596`), and masks are matched against the next location's **pathname** (`router-core/src/router.ts:2185-2195`, `findFlatMatch(next.pathname, …)`), where pathless layouts and groups never appear (Codex r1 #2). `router.tsx`:
 
 ```ts
 export const routeMasks = [
-  createRouteMask({ routeTree, from: "/_shell/(bots)/bots/$botId/details", to: "/bots/$botId", params: (p) => p, search: (s) => s }),
-  createRouteMask({ routeTree, from: "/_shell/(routines)/routines/new", to: "/routines" }),
-  createRouteMask({ routeTree, from: "/_shell/(library)/library/connectors", to: "/library/connectors",
+  createRouteMask({ routeTree, from: "/bots/$botId/details", to: "/bots/$botId", params: (p) => p, search: (s) => s }),
+  createRouteMask({ routeTree, from: "/routines/new", to: "/routines" }),
+  createRouteMask({ routeTree, from: "/library/connectors", to: "/library/connectors",
                     search: ({ connector: _c, ...rest }) => rest }),
 ];
 ```
 
 - Masking a route onto its own path while stripping `connector` is the documented "hide a search param" case (`refs/router/docs/router/guide/route-masking.md`, first list). Reload keeps the mask (default `unmaskOnReload: false`), which is what we want for a local app.
 - Every pop-up closes with `router.history.back()` (Escape and the close button), per PLAN L175. A pop-up opened from a deep link with no history entry closes by navigating to the mask target instead (`router.history.canGoBack()` check).
+- R1-T1 navigates to each masked route in a memory-history router and asserts `location.maskedLocation.pathname`, the rendered background, and the state after `router.history.back()`; a reload is simulated by re-creating the router from the same history.
 
 ### 6.7 Navigation and view transitions
 
-**`useAppNavigate()`** (`lib/navigation/use-app-navigate.ts`) returns `(opts: NavigateOptions & { transition?: NavType | "none" }) => Promise<void>`. It stores the requested type in `pendingNavType` (module-level, one slot, cleared on read) and calls `router.navigate(opts)`. Components use it (and `<AppLink>`, a thin `createLink` wrapper that does the same on click) instead of raw `useNavigate`.
+**Intent travels with the navigation (Codex r1 #7).** `useAppNavigate()` (`lib/navigation/use-app-navigate.ts`) returns `(opts: NavigateOptions & { transition?: NavType | "none" }) => Promise<void>`. When `transition` is given it calls `router.navigate({ ...opts, state: (prev) => ({ ...prev, navIntent: { id: crypto.randomUUID(), type: opts.transition } }) })`; the intent is part of **that history entry**, so a cancelled, blocked or superseded navigation simply never commits it, and two rapid navigations cannot overwrite each other's intent (there is no module-global slot). `<AppLink>` (a `createLink` wrapper) does the same from a `transition` prop.
 
 **The seam (F7).** `installTransitionTypes(router)` (`lib/navigation/transition-types.ts`) runs once before `<RouterProvider>` mounts:
 
 ```ts
 let inner: StartTransitionFn = router.startTransition;
+let lastCommittedKey: string | undefined;
 Object.defineProperty(router, "startTransition", {
   configurable: true,
-  get: () => (fn, expected) => inner(() => {
-    for (const type of takeTypes(router, expected)) addTransitionType(type);  // inside React.startTransition
-    fn();
-  }, expected),
-  set: (next) => { inner = next },   // Transitioner reassigns on every render (Transitioner.tsx:31)
+  get: () => (fn, expected) => {
+    const isCommit = expected.every((m) => m.status !== "pending");            // offerPending passes one "pending" match (load-client.ts:1524-1530)
+    const loc = router.latestLocation;                                          // the location being committed
+    const key = loc.state.__TSR_key;
+    const types = isCommit && key !== lastCommittedKey ? navTypesFor(router, loc) : [];
+    if (isCommit) lastCommittedKey = key;                                       // once per history entry, not on invalidate/reload commits
+    return inner(() => { for (const t of types) addTransitionType(t); fn(); }, expected);   // inside React.startTransition
+  },
+  set: (next) => { inner = next },                                            // Transitioner reassigns on every render (Transitioner.tsx:31)
 });
 ```
 
-`takeTypes` returns `pendingNavType` when set, else infers from the pending and resolved locations (`inferNavType`, pure): different `staticData.area` → `nav-lateral`; into `settings` → `settings-in`, out of it → `settings-out`; same area, target path extends the current path → `nav-forward`, the reverse → `nav-back`; search-only change → none. Because inference also covers history pops, back/forward and the mouse back button get typed transitions too (unlike the skill's caveat about `router.back()`).
+A superseded navigation returns before calling `commit` (`load-client.ts:1863-1869`), so it never reaches the seam with its location.
+
+**`navTypesFor(router, next)`** (pure core `inferNavType(from, to, direction)`, tested as a table):
+
+1. **History direction first.** Compare `next.state.__TSR_index` with the resolved location's index (`@tanstack/history`, `stateIndexKey = "__TSR_index"`, `refs/router/packages/history/src/index.ts:60,97`): a lower index is a back traversal → `nav-back`, whatever intent the entry carries; a higher index on an entry whose key was committed before is a forward traversal → the entry's own `navIntent` if present, else inference.
+2. **Explicit intent** (`next.state.navIntent.type`) for new entries.
+3. **Semantic inference** from the route relationship table `ROUTE_RANK` in `lib/navigation/nav-type.ts` (not path prefixes, Codex r1 #20): per area, rank 0 = area root/list/new (`/bots/new`, `/sessions/new`, `/routines`, `/artifacts`, library and settings pages), rank 1 = entity (`/bots/$botId`, `/sessions/$sessionId`, `/routines/$routineId`, `/library/tools/$toolsetId`), rank 2 = sub-page (`/sessions/$sessionId/review`, `/bots/$botId/edit`). Different area → `nav-lateral`; into/out of `settings` → `settings-in`/`settings-out`; same area, higher rank → `nav-forward`, lower → `nav-back`, equal rank (sibling entities, settings page to settings page) → `nav-lateral`; search-only change or a masked pop-up opening/closing → none. So `/bots/new` → `/bots/<id>` (a creation) is `nav-forward` by rank, and callers may still pass `transition` explicitly.
 
 **Type names** (exported as `NavType` from `lib/motion.ts`): `nav-lateral`, `nav-forward`, `nav-back`, `settings-in`, `settings-out`. Shared-element names reserved for later phases: `bot-identity-${botId}` (transcript → title bar, 420 ms), `welcome-parade`.
 
@@ -634,7 +667,7 @@ Composition over flags (vercel-composition-patterns): `TopBar` and `SidePanel` a
 | `md` | 900–999 | pinned per prefs | drawer | status text hidden (avatar, name, dot stay) |
 | `sm` | 800–899 (minimum) | **bots:** 88px avatar strip (name on hover, unread dot, working face); **sessions:** unpinned (floats on hover), prefs untouched; others: pinned per prefs | drawer | actions fold into ⋯ (registry `DropdownMenu`); details and panel open as sheets |
 
-Values are from canvas `WidthRules` and `BW1000/BW900/BW800/W900/W800`. `effectivePinned` never writes prefs: growing the window restores the user's choice. `useShellWidth()` (`breakpoints.ts`) is `useSyncExternalStore` over three `matchMedia("(min-width: …px)")` queries, so it is exact at the boundaries and testable with the controllable stub; CSS uses the `shell-*` breakpoints for purely visual differences.
+Values are from canvas `WidthRules` and `BW1000/BW900/BW800/W900/W800`. `effectivePinned` never writes prefs: growing the window restores the user's choice. `useShellWidth()` (`breakpoints.ts`) is `useSyncExternalStore` over three `matchMedia("(min-width: …px)")` queries, so it is exact at the boundaries and testable with the controllable stub; `ShellLayout` mirrors the band to `html[data-band]` (read by the screenshot script and tests); CSS uses the `shell-*` breakpoints for purely visual differences.
 
 `ShellLayout` markup (widths and paddings from the canvas):
 
@@ -661,16 +694,16 @@ Values are from canvas `WidthRules` and `BW1000/BW900/BW800/W900/W800`. `effecti
 ### 7.3 SidebarSlot
 
 - Chooses the sidebar by `useShellMatch().sidebar` from a static map `{ bots: BotsSidebar, sessions: SessionsSidebar, routines: RoutinesSidebar, artifacts: ArtifactsSidebar, library: LibrarySidebar, settings: SettingsSidebar }` (features export them; the map lives in `features/shell/sidebars.ts`, the one place allowed to import several features' public sidebar exports).
-- **Pinned:** in layout, 280 wide, `bg-sidebar`, no border (canvas). **Floating:** absolutely positioned at `left: calc(var(--rail-w) + 4px); top: calc(var(--toolbar-h) + 4px)`, 280×(100% − 8), radius 12, 1px `border-sidebar-border`, shadow `0 24px 64px rgb(0 0 0 / .6)` in dark (lighter in light), over the content, which never reflows (canvas `HoverSidebar`). Open on rail hover-intent or ⌘B-peek; close on pointer leave (300 ms grace), Escape, or navigation. Enter/exit is `motion/react` `AnimatePresence` with the shared spring `springs.sidebar = { type: "spring", stiffness: 500, damping: 40 }` (PLAN motion table), `x: -8 → 0` + opacity; reduced motion → cut.
+- **Pinned:** in layout, 280 wide, `bg-sidebar`, no border (canvas). **Floating:** absolutely positioned at `left: calc(var(--rail-w) + 4px); top: calc(var(--toolbar-h) + 4px)`, 280×(100% − 8), radius 12, 1px `border-sidebar-border`, shadow `0 24px 64px rgb(0 0 0 / .6)` in dark (lighter in light), over the content, which never reflows (canvas `HoverSidebar`). Open on rail hover-intent; close on pointer leave (300 ms grace), Escape, or navigation. Enter/exit is `motion/react` `AnimatePresence` with the shared spring `springs.sidebar = { type: "spring", stiffness: 500, damping: 40 }` (PLAN motion table), `x: -8 → 0` + opacity; reduced motion → cut.
 - **Pinned ↔ unpinned** animates the column width with `motion` `layout` on the slot (spring 500/40); the pane follows via the same layout animation. No reflow of the pane's content while floating.
-- **Registry `sidebar` atoms:** rows use `SidebarGroup`, `SidebarGroupLabel`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuAction`, `SidebarMenuBadge`, `SidebarMenuSkeleton`. `SidebarMenuButton` calls `useSidebar()` (registry `sidebar.tsx`), so `ShellLayout` mounts the registry `SidebarProvider` **controlled**: `open={prefs.sidebar.pinned}`, `onOpenChange={(open) => updatePrefs((p) => { p.sidebar.pinned = open })}`. Its wrapper div (`min-h-svh`, `flex`) becomes the shell's outer element, with `className="h-dvh min-h-0"` overriding the height. The registry `Sidebar` root, `SidebarTrigger` and `SidebarRail` are not used (the slot is ours). The provider's own ⌘B handler therefore *is* our ⌘B (§7.9), and the cookie it writes is harmless (not read by anything). Rows never pass the `tooltip` prop (the provider would show tooltips while "collapsed", i.e. in the floating state).
+- **Row atoms (no registry `sidebar`, §5.2).** A sidebar is `components/nav-list/` (a molecule shared by all six sidebars): `NavList.Root` (`<nav>` with `aria-label`), `NavList.Group` (label + optional `Collapsible` for workspace groups), `NavList.Item` (registry `Item` rendered as an `<AppLink>` via its `render` prop, `data-active`, `aria-current="page"`), `NavList.Action` (icon `Button` revealed on hover/focus), `NavList.Badge` (registry `Badge`), `NavList.Skeleton` (registry `Skeleton` rows). Height `var(--row-h)`, active row `bg-sidebar-accent`. Pinned state is owned by prefs and toggled only by the app's own shortcut handler (§7.9) and the title-bar toggle.
 - **Live sidebars (phase 1 data):**
   - `BotsSidebar`: `useLiveQuery(q => q.from({ b: collections.bots }).orderBy(({ b }) => b.updatedAt, "desc"))`, pinned bots (`prefs.pinned.botIds`) first. Row = colour dot (`avatarColor`) standing in for BotAvatar + name + `title` + relative time from `updatedAt`. Header "Bots" + New (→ `/bots/new`). Strip variant (`sm`, `bots-strip.tsx`): 56×56 tiles with the dot, `title` attribute = name, New button on top (canvas `BW800`). Empty: registry `Empty` with "No bots yet" + "Make a bot".
   - `SessionsSidebar`: sessions where `!botOwned && editorFor == null && routineId == null`, joined to `workspaces` (excluding `kind === "routine" | "bot"`), grouped by workspace (label), pinned group from `prefs.pinned.sessionIds`, sorted by `updatedAt` desc; expanded state from `prefs.workspaceExpanded`. Row shows `label` and a status dot from `turn?.isBusy`. Header "Sessions" + New (→ `/sessions/new`).
   - `RoutinesSidebar`: names and `enabled` state from `collections.routines`; stats and auto-replies are phase 5.
   - `ArtifactsSidebar`: static type/source filter list writing `ArtifactsSearch` (no data).
   - `LibrarySidebar`, `SettingsSidebar`: static nav lists (canvas `SettingsInPlace` groups: Personal — General, Appearance, Notifications, Memory, Usage, Account; Capabilities → Library; Models, Environment, About).
-  - Loading: `SidebarMenuSkeleton` × 6 while the collection `status !== "ready"`; error: inline "Couldn't load" + Retry (`collection.utils.resync()`).
+  - Loading: `NavList.Skeleton` × 6 while the collection `status !== "ready"`; error: inline "Couldn't load" + Retry (`collection.utils.resync()`).
 
 ### 7.4 TopBar
 
@@ -699,42 +732,52 @@ Compound API:
 ### 7.5 SidePanel
 
 - Compound: `SidePanel.Root` (reads layout band + `search.tab`), `SidePanel.Content tab="…"` children supplied by the area route (phase 1: an `Empty` per tab).
-- `xl`: registry `ResizablePanelGroup direction="horizontal"` with the pane and the panel; panel `minSize` from `--side-panel-min` (360 px converted to a percentage of the group on resize), default 400 px, persisted debounced (react-pacer, 300 ms) to `prefs.panes["side-panel"]`.
-- `lg`/`md`/`sm`: registry `Drawer` (Base UI drawer, right edge, `drawer-popup`, 356 px, inset 8, radius 12, scrim from the registry overlay). Opening/closing sets/clears `tab`; the drawer's `onOpenChange(false)` navigates with `transition: "none"`.
+- `xl`: registry `ResizablePanelGroup orientation="horizontal"` (the registry wrapper forwards `react-resizable-panels` v4 props; v4 names the prop `orientation`, `node_modules/react-resizable-panels/dist/react-resizable-panels.d.ts:138-140`) holding the pane and the panel. **Numbers are pixels in v4** (`d.ts:293-300`; strings without a unit are percentages), so the panel is `<ResizablePanel id="side-panel" minSize={360} defaultSize={prefs.panes["side-panel"] ?? 400}>` and the pane gets `minSize={480}` (Codex r1 #4). `onResize(size)` receives `{ asPercentage, inPixels }` (`d.ts:355,375-378`); `size.inPixels` is persisted, debounced 300 ms (react-pacer), to `prefs.panes["side-panel"]`.
+- `lg`/`md`/`sm`: registry `Drawer` with `swipeDirection="right"`; `DrawerContent` gets `data-side-panel` and `className="[--drawer-content-width:var(--side-panel-drawer-w)] [--drawer-inset:var(--pane-inset)] rounded-(--pane-radius)"` (the registry popup reads `--drawer-content-width`/`--drawer-inset`, `refs/ui/apps/v4/registry/bases/base/ui/drawer.tsx:116-126`). `DrawerContent` renders its own overlay (`drawer.tsx:109-112`), whose registry style is an 80% scrim (`style-mira.css:492-494`); the canvas's 45% + 2 px blur comes from the scoped `:has([data-side-panel])` rule in `tokens.css` (§5.3, Codex r1 #9). Opening/closing sets/clears `tab`; `onOpenChange(false)` navigates with `transition: "none"`.
 - Switching `xl` ⇄ `lg` while open animates with `motion` layout + presence (PLAN motion table: "side panel ↔ drawer at 1000px").
 - Tabs live in the title bar (`TopBar.PanelTabs`), never inside the panel (canvas `BotChatPanel`, `SplitView`); the drawer at `lg` shows its own tab row (canvas `BW1000`) because the title bar region under a scrim is not interactive.
+- Verified in the real app (acceptance): dragging the handle at a 1100 px window stops at 360 px panel / 480 px pane; the drawer's computed overlay `background-color` is `rgba(0, 0, 0, 0.45)` and `backdrop-filter` `blur(2px)`.
 
 ### 7.6 Native-surface occlusion watcher
 
-`features/shell/occlusion.ts` + `lib/window-chrome/overlay-slots.ts`:
+`lib/window-chrome/overlay-slots.ts` keeps **three separate lists** (Codex r1 #23):
 
 ```ts
-export const OVERLAY_SLOTS = [
+// 1. Portaled surfaces installed in phase 1 that can cover a native view or the title bar.
+export const OCCLUDER_SLOTS = [
   "dialog-content", "dialog-overlay", "alert-dialog-content", "alert-dialog-overlay",
   "sheet-content", "sheet-overlay", "drawer-popup", "drawer-overlay",
   "popover-content", "dropdown-menu-content", "dropdown-menu-sub-content",
-  "context-menu-content", "context-menu-sub-content", "menubar-content", "menubar-sub-content",
+  "context-menu-content", "context-menu-sub-content",
   "select-content", "combobox-content", "hover-card-content", "tooltip-content",
-  "navigation-menu-content", "toast-viewport",
-] as const;   // CommandDialog renders dialog-content (window-chrome §6, PLAN L252)
-export const OVERLAY_SELECTOR = OVERLAY_SLOTS.map((s) => `[data-slot="${s}"]`).join(",");
+  "toast",                                     // each visible toast root, not the viewport (Codex r1 #10)
+] as const;                                    // CommandDialog renders dialog-content
+// 2. Reserved: slots of registry overlays not installed yet (window-chrome §6 list); covered by CSS so adding them later is safe.
+export const RESERVED_OCCLUDER_SLOTS = ["menubar-content", "menubar-sub-content", "navigation-menu-content"] as const;
+// 3. Title-bar no-drag only: containers that never occlude by themselves but must not be drag regions.
+export const NO_DRAG_ONLY_SLOTS = ["toast-viewport"] as const;
+export const NO_DRAG_SELECTOR = [...OCCLUDER_SLOTS, ...RESERVED_OCCLUDER_SLOTS, ...NO_DRAG_ONLY_SLOTS].map((s) => `[data-slot="${s}"]`).join(",");
+export const OCCLUDER_SELECTOR = [...OCCLUDER_SLOTS, ...RESERVED_OCCLUDER_SLOTS].map((s) => `[data-slot="${s}"]`).join(",");
 ```
 
-- Explicit list, never `[data-slot$="-content"]` (it would catch `message-scroller-content`, `card-content`, `item-content` …; the registry has 40+ `*-content` slots, verified by grepping `refs/ui/apps/v4/registry/bases/base/ui`).
-- `menubar` and `navigation-menu` are not in the phase-1 add list, but their slots stay in the list so adding them later is covered.
-- The watcher: one `MutationObserver` on `document.body` (`childList`, `subtree`, `attributes` filtered to `data-open`, `data-starting-style`, `data-ending-style`, `style`, `hidden`), batched per animation frame; for each match, an element counts as occluding from insertion until removal, **including** while `data-ending-style` is present (exit animation still covers the area); rects come from `getBoundingClientRect()`. It publishes `{ rects: DOMRectReadOnly[], any: boolean }` to `shellStore.occlusion`. Phase 1 has no native surface to hide (browser view is phase 4); the gallery shows a debug outline of the published rects so the watcher is exercised.
-- The same list drives the `app-region: no-drag` rule in `tokens.css` (§5.3); tests keep list, CSS and registry in agreement (§11).
+- Explicit lists, never `[data-slot$="-content"]` (the registry has 40+ `*-content` slots such as `message-scroller-content`, `card-content`, `item-content`; grep of `refs/ui/apps/v4/registry/bases/base/ui`).
+- **Toasts:** Base UI keeps `toast-viewport` mounted with no toasts (registry `Toaster` always renders `ToastViewport`, `toast.tsx:244-258`), and its box does not describe its absolutely positioned toasts (`toast.tsx:20-45`). So the watcher measures each `[data-slot="toast"]` root instead; an empty viewport publishes nothing.
+- **Watcher** (`features/shell/occlusion.ts`): a `MutationObserver` on `document.body` (`childList`, `subtree`, attributes `data-open`, `data-starting-style`, `data-ending-style`, `style`, `hidden`, `class`) finds candidates. A candidate occludes from insertion until removal, including while `data-ending-style` is present. Its rectangle is ignored when empty (`width` or `height` 0) or not rendered (`checkVisibility({ opacityProperty: false, visibilityProperty: true })` false).
+- **Geometry stays current** (Codex r1 #11): each candidate gets a `ResizeObserver`; `window` `resize` and capture-phase `scroll` invalidate all rects; while any candidate has `data-starting-style`/`data-ending-style` or `element.getAnimations({ subtree: true })` returns running animations, a `requestAnimationFrame` loop re-measures every frame and stops when they settle. Publishes are deduplicated (rounded rects) to `shellStore.occlusion = { any, rects }`.
+- Phase 1 has no native surface to hide (browser view is phase 4); the gallery's `occlusion` section draws the published rects.
+- `tokens.css` carries `NO_DRAG_SELECTOR` as the `app-region: no-drag` rule (§5.3); R1-T9 keeps the CSS and the constant equal.
 
 ### 7.7 Theme effect
 
 `lib/theme.ts`:
 
 - `resolveTheme(pref: "system"|"light"|"dark", systemDark: boolean): "light"|"dark"` (pure).
-- `applyTheme(doc, resolved)`: `classList.toggle("dark", resolved === "dark")`, `style.colorScheme = resolved`, `<meta name="theme-color">` not used (Electron ignores it).
-- **Pre-paint:** the first statement of `main.tsx` applies `resolveTheme("system", matchMedia("(prefers-color-scheme: dark)").matches)`, so the connect window (typically under 100 ms) already has the system theme; no inline script is needed (the CSP forbids one). `main.tsx` then awaits `router.load()`, whose root `beforeLoad` preloads prefs, and applies the stored theme **before** `createRoot().render()`, so a user whose choice differs from the system never sees the wrong theme painted by React.
-- `<ThemeEffect/>` (in `__root`): subscribes to `useLiveQuery` on prefs (single row) and to `matchMedia("(prefers-color-scheme: dark)")` change events; re-applies on either. It also writes `html[data-reduce-motion]` from `prefs.motion.reduce` (`system` → attribute removed; the media query does the work).
-- **nativeTheme:** the renderer only writes `prefs.theme` (`collections.prefs.update("app", (d) => { d.theme = next })`). Main applies `nativeTheme.themeSource` as a side effect of the prefs write (spec 00 B.2 "Main side effects of prefs"), which also re-runs `applyWindowChrome` (window-chrome §5). There is no separate theme procedure and no `window.api.setThemeSource` (the old path is `hooks/use-theme.ts:59-66`).
-- `<ChromeEffect/>`: `useQuery(windowChromeQuery(orpc))` + `window.events` subscription (via `data/queries/live.ts`) → `html[data-titlebar]`, `html[data-density]`, `--toolbar-h`.
+- `applyTheme(doc, resolved)`: `classList.toggle("dark", resolved === "dark")`, `style.colorScheme = resolved`.
+- **Startup theme is decided in main, before the window exists** (Codex r1 #14). When the generation is `wco`, main reads `prefs.json` through `PrefsStore` (spec 00 B.2) before `new BaseWindow` and sets `nativeTheme.themeSource = prefs.theme`; the window's initial `backgroundColor` uses the resolved scheme (the window-chrome options module already takes `dark`, `window-chrome-options.ts`). Chromium derives `prefers-color-scheme` from `nativeTheme.themeSource`, so from the first frame the renderer's media query already equals the stored choice, not the OS one. `index-next.html` then needs no script: `app.css` sets `html { background: var(--background) }` under `@media (prefers-color-scheme: dark)` → dark tokens, and `main.tsx`'s first statement applies `resolveTheme("system", matchMedia(…).matches)`, which is the stored theme by construction. The window is revealed on `did-finish-load` as today, after that paint.
+- `<ThemeEffect/>` (in `__root`): live prefs row + `matchMedia("(prefers-color-scheme: dark)")` changes → `applyTheme`; writes `html[data-reduce-motion]` from `prefs.motion.reduce`.
+- **Changing the theme:** the renderer writes only `prefs.theme` (`updatePrefs`); main sets `nativeTheme.themeSource` as the prefs side effect (spec 00 B.2) and re-runs `applyWindowChrome` (window-chrome §5). No `window.api.setThemeSource` (old path `hooks/use-theme.ts:59-66`).
+- `<ChromeEffect/>`: `useQuery(windowChromeQuery(transport.orpc))` + `window.events` (via `data/queries/live.ts`) → `html[data-titlebar]`, `html[data-density]`, `--toolbar-h`.
+- Test: main unit test that `createWindow` sets `themeSource` from prefs before constructing the window (opposite stored/OS themes); R1-T7 renderer side; acceptance checks a launch with stored `dark` on a light OS (and the reverse) with a transport delayed by 2 s: no light frame is captured (CDP screencast from launch).
 
 ### 7.8 Motion and sound modules (shaped, mostly empty)
 
@@ -764,18 +807,18 @@ Rules implemented now (they are pure and testable): never when the causing threa
 
 ### 7.9 Keyboard
 
-`features/shell/hotkeys.tsx`, mounted once in `ShellLayout` under `HotkeysProvider` (`@tanstack/react-hotkeys`):
+**One app-owned handler** (Codex r1 #8): `features/shell/hotkeys.tsx`, mounted once in `__root` under `HotkeysProvider` (`@tanstack/react-hotkeys`), is the only keyboard listener for app shortcuts; no registry atom installs a global one (the registry `sidebar` is not used, §5.2). Every binding is exact: `@tanstack/hotkeys` matches the modifier set of the binding, and letter keys fall back to `event.code`, so macOS Option+B (`∫`) still matches `Mod+Alt+B` (`@tanstack/hotkeys@0.10.1 dist/match.d.ts`). R1-T14 asserts `Mod+Alt+B` never fires the `Mod+B` handler and vice versa.
 
-| Keys | Action | Notes |
+| Keys | Action | Editable targets |
 |---|---|---|
-| `Mod+K` | open the command menu (registry `CommandDialog`; phase 1 lists areas, settings pages, bots and sessions from collections, and "Toggle theme") | `useHotkey("Mod+K", …)` |
-| `Mod+N` | new in the current area: `/bots/new`, `/sessions/new`, `/routines/new` (masked sheet); elsewhere `/sessions/new` | |
-| `Mod+B` | toggle sidebar pinned | **owned by the registry `SidebarProvider`** (§7.3), whose handler calls our controlled `onOpenChange`; we do not register it again (double toggle otherwise). Its hint (`useHotkeyHint`) is still shown in the sidebar toggle's tooltip. |
-| `Mod+Alt+B` | toggle the side panel (`tab` ⇄ last tab for the area) | |
-| `Mod+,` | `/settings/general` with `transition: "settings-in"` | |
-| `Escape` | closes floating sidebar / drawer / pop-up | registry overlays handle their own; the floating sidebar registers `{ enabled: floatingOpen }` |
+| `Mod+K` | open the command menu (registry `CommandDialog`; areas, settings pages, bots and sessions from collections, "Toggle theme") | fires (`ignoreInputs: false`) |
+| `Mod+N` | new in the current area: `/bots/new`, `/sessions/new`, `/routines/new` (masked sheet); elsewhere `/sessions/new` | fires |
+| `Mod+B` | toggle `prefs.sidebar.pinned` | fires in `input`/`textarea`; **skipped inside `[contenteditable]` and `[data-hotkeys="text"]`** (rich-text bold) |
+| `Mod+Alt+B` | toggle the side panel (`tab` ⇄ last tab for the area) | same as `Mod+B` |
+| `Mod+,` | `/settings/general` with `transition: "settings-in"` | fires |
+| `Escape` | closes the floating sidebar | registry overlays handle their own Escape; this one registers `{ enabled: floatingOpen }` |
 
-`Mod` = ⌘ on macOS, Ctrl elsewhere (library semantics). Shortcut labels come from `useHotkeyHint`; platform comes from `system.info.platform` (never `navigator.platform`), cached in `lib/platform.ts`. The devtools cockpit's hotkeys panel lists registrations.
+The contenteditable guard is a small wrapper (`useAppHotkey`) that checks `event.target.closest('[contenteditable="true"],[data-hotkeys="text"]')` before calling the handler, because `ignoreInputs` is one boolean for all input-like targets (`hotkey-manager.d.ts:18-19`). `Mod` = ⌘ on macOS, Ctrl elsewhere, with the platform passed explicitly from `system.info.platform` (`HotkeyOptions.platform`). Labels come from `useHotkeyHint`.
 
 ### 7.10 Devtools cockpit
 
@@ -836,6 +879,8 @@ export const botsCollection = createCollection(ipcCollectionOptions<BotRow, stri
 
 `index.ts` exports `collections = { prefs, sessions, workspaces, bots, routines, routineRuns, artifacts, memories, gitState }` and `type Collections`. `startSync: true` for `prefs`, `sessions`, `workspaces` (spec 00 B.3 step 10); others are lazy (`preload()` from loaders). Row types come from `#shared/contract/rows`.
 
+**Provenance and legacy sync are prerequisites** (Codex r1 #12). Phase 1 depends on spec 00 r2's `PrefsStore` behaviour, not only on the table: `update` marks touched fields `user`, the one-time import and the **live legacy sync** (`RendererStateStore.set` → `prefsStore.importLegacy`, spec 00 C.4 items 1–2) mark `legacy` and never overwrite `user` fields. The renderer never sees provenance. The foundation PR does not merge before spec 00 C's live sync (C-T5, C-T8) is green, and R1-T19 (main) switches generations repeatedly: legacy write → next sees it; next write → a later legacy write of the same field does not override it; legacy-only field changes keep flowing.
+
 **Prefs helpers** (`prefs.ts`): `usePrefs()` (live query of the single `"app"` row, returns the row or `DEFAULT_PREFS` while loading), `updatePrefs(recipe)` → `prefsCollection.update("app", recipe)` (optimistic; resolves on the echoed seq; valibot `PrefsPatch` rejects unknown keys server-side). Pane widths and other high-frequency writes go through a pacer debouncer (300 ms) before `updatePrefs`.
 
 ### 8.4 Query-options modules (skeleton)
@@ -865,14 +910,20 @@ Actions are plain functions (`openFloating`, `closeFloating`, `setOcclusion`, �
 
 ### 8.6 Boot order (`main.tsx`)
 
+Transport, system facts and prefs are resolved by **`bootstrap()` outside the router** (Codex r1 #5): route loading captures errors into error matches rather than rejecting `router.load()`, so boot must not depend on a rejection.
+
 1. `import "./styles/app.css"` (which imports `tokens.css`).
-2. `applyTheme(document, resolveTheme("system", matchMedia("(prefers-color-scheme: dark)").matches))`.
+2. `applyTheme(document, resolveTheme("system", matchMedia("(prefers-color-scheme: dark)").matches))` (the stored theme, §7.7).
 3. Global error listeners (copy of `src/renderer/main.tsx:25-30`).
-4. `await initI18n()` with the fallback language (English bundle is static; §9.2).
-5. `const router = createAppRouter(); installTransitionTypes(router); await router.load()` — runs `__root.beforeLoad` (transport, `system.info`, `prefs.preload()`).
-6. `applyTheme` from prefs; `await changeLanguage(prefs.language)` if it differs.
-7. `createRoot(#root, { onUncaughtError }).render(<QueryClientProvider client><RouterProvider router/></QueryClientProvider>)`.
-8. If step 5 throws `TransportUnavailableError`, render a static "Couldn't connect" screen with Reload (no router) and call nothing else.
+4. `await initI18n()` with `en-US` (static bundle; §9.2).
+5. `const boot = await bootstrap()` (`lib/bootstrap.ts`), each step with its own timeout and typed failure:
+   - `transport = await getTransport()` (spec 00 A.7, 5 s) → `TransportUnavailableError`;
+   - `system = await queryClient.fetchQuery(systemInfoQuery(transport.orpc))` (3 s);
+   - `await collections.prefs.preload()` raced against 5 s and `markError` → `PrefsUnavailableError`.
+   On failure: render `<BootFailure reason />` (a static React tree: no router, no collections, Reload button) and, if a transport exists, call `transport.client.window.ready({ barrier: "failed", reason })`; without a transport main's swap timeout covers it (spec 00 A.4.6). Stop.
+6. `applyTheme` from prefs (a no-op when main already applied it); `await changeLanguage(resolveLanguage(prefs.language))` (§9.2).
+7. `const router = createAppRouter(boot); installTransitionTypes(router);` then `createRoot(#root, { onUncaughtError }).render(<QueryClientProvider client><RouterProvider router/></QueryClientProvider>)`.
+8. **After boot:** a lost port (window reload aside) closes every iterator; collections keep their last rows and retry (spec 00 B.3 step 7), and a `transport.onClose` listener shows a registry `toast` "Reconnecting…" and, after 10 s, the root error component with Reload. R1-T18 covers: transport never answers, `system.info` rejects, prefs snapshot rejects, port closes during `prefs.preload()`, port closes after mount.
 
 Not carried over from the old boot: `installLogCollector`, `installActivityBeacon`, `installUiContinuity` (`src/renderer/main.tsx:14-21`) — their replacements are contract procedures in later phases; the activity beacon is needed before renderer swaps can target renderer-next (listed in §13).
 
@@ -886,7 +937,9 @@ renderer-next reads the **same** JSON files as the old renderer through the `#lo
 
 ### 9.2 Boot
 
-`lib/i18n/index.ts` is a copy of the old module's logic without `durableStorage`: `LOADERS` for the 10 lazy locales, `matchSupportedLanguage` (moved verbatim with its tests from `i18n.ts:34-67` into `lib/i18n/languages.ts`; the old copy stays until cut-over), `initI18n()` initialises with `en-US` only, `changeLanguage(code)` loads the bundle and sets `lang`/`dir`. The language source is `prefs.language` (spec 00 B.2; migrated from `abacusai-bot-language` by spec 00 C.4), falling back to `navigator.languages` when prefs is still the default. `t` is put on the router context as `i18n.getFixedT(null)`.
+`lib/i18n/index.ts` is a copy of the old module's logic without `durableStorage`: `LOADERS` for the 10 lazy locales, `matchSupportedLanguage` (copied with its tests from `i18n.ts:34-67` into `lib/i18n/languages.ts`; the old copy stays until cut-over), `initI18n()` with `en-US` only, `changeLanguage(code)` loads the bundle and sets `lang`/`dir`.
+
+**Explicit "system" language** (Codex r1 #13): `PrefsRow.language` becomes `"system" | SupportedLanguage`, default `"system"` (spec 00 amendment, §15). `resolveLanguage(pref)` = `pref === "system" ? matchSupportedLanguage(navigator.languages) ?? "en-US" : pref`. So a user who picks English gets `"en-US"` stored and keeps it; an unset preference follows the OS. The legacy import (spec 00 C.4) maps `abacusai-bot-language` to the stored code when present and leaves `"system"` otherwise. Settings › General (phase 5) offers "System (…)" as the first option. `t` is on the router context as `i18n.getFixedT(null)`.
 
 ### 9.3 Key organisation (no deletions in phase 1)
 
@@ -909,13 +962,13 @@ renderer-next reads the **same** JSON files as the old renderer through the `#lo
 
 `_bare/[__ui].tsx` → `features/gallery/`. Enabled in dev and in builds made with `VITE_UI_GALLERY=1` (the screenshot build); otherwise `notFound()`.
 
-- Layout: a left index of sections, the right side renders the section in **light and dark side by side** (`theme=both`): two containers, the second with `class="dark"` (the `.dark` token block applies to any subtree, so both themes render at once without touching `<html>`). `theme=light|dark` renders one full-width.
+- **One theme at a time, applied to the whole document** (Codex r1 #21): `GallerySearch.theme` is `"app" | "light" | "dark"` (default `"app"`, the app's own theme). A non-`app` value overrides `.dark`/`color-scheme` on `<html>` while the gallery is mounted (restored on unmount), so tokens, portals and overlays all render in the same theme without duplicating token blocks for a nested scope. Side-by-side comparison is the screenshot contact sheet's job (§10.2), not the page's.
 - Sections (`GALLERY_SECTIONS`):
   - `tokens`: every colour token as a swatch with its value and contrast against its foreground; radius scale; `--toolbar-h`, shell geometry tokens.
-  - One section per `ui/` file (all of §5.2): every exported part, every `variant` × `size`, and states that are prop-driven: disabled, `aria-invalid`, loading (`Spinner`), empty, long text/truncation, RTL-free. Overlays render **open** (`defaultOpen`/`open`) inside a bounded frame (`container` prop on the portal) so they are screenshot-able without interaction; toast renders a pinned viewport with each type.
-  - `shell`: Rail × each active item; TopBar × {pinned, collapsed} × {no panel, panel open with tabs} × simulated chrome {overlay mac-like: `--titlebar-x: 70px`, overlay windows-like: `--titlebar-end: 138px`, native-frame, fullscreen: both 0} (canvas page 5 geometry, set as inline custom properties on the frame); SidebarSlot × {pinned, floating, strip, loading, empty, error}; SidePanel × {in layout, drawer}; EmptyState per area.
-  - `occlusion`: opens a popover and a dialog over a fake "native surface" box and outlines `shellStore.occlusion.rects`.
-  - `motion`: buttons that trigger each `NavType` between two dummy panes (manual check of §6.7 CSS).
+  - One section per `ui/` file (all of §5.2): every exported part, every `variant` × `size`, and prop-driven states: disabled, `aria-invalid`, loading (`Spinner`), empty, long text/truncation. Overlays render **open** (`defaultOpen`/`open`) with their portal `container` set to a bounded frame so they stay inside the section; toasts are added with `toastManager.add` on mount.
+  - `shell`: Rail × each active item; TopBar × {pinned, collapsed} × {no panel, panel open with tabs} × simulated chrome {mac-like `--titlebar-x: 70px`, windows-like `--titlebar-end: 138px`, native-frame, fullscreen: both 0} (canvas page 5 geometry, inline custom properties on the frame); SidebarSlot × {pinned, floating, strip, loading, empty, error}; SidePanel × {in layout, drawer}; EmptyState per area.
+  - `occlusion`: a popover, a dialog and a toast over a fake "native surface" box, outlining `shellStore.occlusion.rects`.
+  - `motion`: buttons that trigger each `NavType` between two dummy panes.
 - Chat parts (`message-scroller`, `bubble`, …) render static sample content only; scripted fixtures are phase 2.
 
 ### 10.2 Screenshot script
@@ -923,14 +976,14 @@ renderer-next reads the **same** JSON files as the old renderer through the `#lo
 `apps/desktop/scripts/screenshots-next.mjs` (node, no Playwright; the isolated-profile CDP recipe):
 
 1. `VITE_UI_GALLERY=1 pnpm exec vite build`.
-2. Seed a scratch home: copy `src/renderer-next/test-support/fixtures/home/` (bots.json with the five canvas bots and colours, local-code.json with the canvas sessions/workspaces, cronjobs.json with two routines, prefs.json with `theme: "system"`) into `<scratch>/home`.
-3. For each width `W` in `[1280, 1000, 900, 800]`: launch `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron .` (per-platform binary path resolved from `electron`'s `path.txt`) with `ABACUSAI_BOT_HOME=<scratch>/home`, `ABACUSAI_BOT_USERDATA=<scratch>/ud-W`, `ABACUSBOT_RENDERER_GENERATION=wco`, `ABACUSBOT_DEV_WINDOW_BOUNDS=Wx800` (new, dev-only, honoured by `createWindow` only when `!app.isPackaged`; real window size so WCO geometry is real), `--remote-debugging-port=9333`.
-4. Connect with Node's built-in `WebSocket` to the page target; for each theme in `["light","dark"]`: `Emulation.setEmulatedMedia({ features: [{ name: "prefers-color-scheme", value }] })` (prefs theme is `system`, so the app follows); for each route in `["/bots/new", "/bots/<first>", "/sessions/new", "/sessions/<first>?tab=terminal", "/routines", "/artifacts", "/library/connectors", "/settings/general", "/settings/appearance", "/onboarding/welcome", "/__ui?section=shell"]`: set `location.hash`, wait for `document.documentElement.dataset.ready === "1"` (set by `_shell` after `window.ready`) and two animation frames, `Page.captureScreenshot`.
-5. Extra states on the 1280 run: sidebar collapsed (`updatePrefs` via a dev-only `window.__abacusDev.setPinned(false)` hook exposed only when `VITE_UI_GALLERY=1`) then `Input.dispatchMouseEvent` hovering the rail (floating sidebar, canvas `HoverSidebar`).
-6. Run axe in the page (`Runtime.evaluate` injecting `axe-core/axe.min.js`, `axe.run(document, { runOnly: ["wcag2a","wcag2aa"] })`) per route and theme; write violations to JSON; contrast violations fail the script (jsdom cannot check contrast, §11).
-7. Output: `.build/screenshots/<git-sha>/<route-slug>@<W>-<theme>.png` + `axe.json` + an `index.html` contact sheet grouped by canvas board, for PR review (the before/after rule in PLAN L43).
+2. Seed a scratch home from `src/renderer-next/test-support/fixtures/home/` (bots.json with the five canvas bots and colours, local-code.json with the canvas sessions/workspaces, cronjobs.json with two routines, prefs.json with `theme: "system"`).
+3. For each width `W` in `[1280, 1000, 900, 800]`: launch Electron (per-platform binary from `electron`'s `path.txt`) with `ABACUSAI_BOT_HOME`, `ABACUSAI_BOT_USERDATA=<scratch>/ud-W`, `ABACUSBOT_RENDERER_GENERATION=wco`, `ABACUSBOT_DEV_CONTENT_SIZE=Wx800` (dev-only, honoured only when `!app.isPackaged`: main calls `setContentSize(W, 800)`, i.e. the **content** size, not outer bounds, and resets the renderer zoom to 1; Codex r1 #16), `--remote-debugging-port=9333`. Before any capture the script asserts `window.innerWidth === W`, `devicePixelRatio`-independent CSS width, and `document.documentElement.dataset.band` equal to the band §7.1 expects; a mismatch fails the run. The same launch also resizes to `W−1` and `W` for 1100/1000/900 and asserts the band flips exactly there (no screenshot).
+4. Per theme in `["light","dark"]` (`Emulation.setEmulatedMedia` `prefers-color-scheme`, prefs theme is `system`), per route in `["/bots/new", "/bots/<first>", "/sessions/new", "/sessions/<first>?tab=terminal", "/routines", "/routines/new", "/artifacts", "/library/connectors", "/settings/general", "/settings/appearance", "/onboarding/welcome", "/__ui?section=shell"]`: call `await window.__abacusDev.navigateAndSettle(href)` (exposed only when `VITE_UI_GALLERY=1`). It resolves only after (Codex r1 #15): the router's `onResolved` for **that** href with no pending matches; `document.activeViewTransition?.finished` (or none active); `document.getAnimations()` all finished or idle; `document.fonts.ready`; collections required by the route `ready`; two animation frames. Then `Page.captureScreenshot`.
+5. Extra states on the 1280 run: sidebar collapsed via `__abacusDev.setPinned(false)`, then `Input.dispatchMouseEvent` over the rail and `navigateAndSettle`-style settling on the floating sidebar's `onAnimationComplete` (canvas `HoverSidebar`).
+6. axe in the page (`Runtime.evaluate` injecting `axe-core/axe.min.js`, `axe.run(document, { runOnly: ["wcag2a","wcag2aa"] })`) per route and theme; contrast violations fail the script.
+7. Output: `.build/screenshots/<git-sha>/<route-slug>@<W>-<theme>.png` + `axe.json` + an `index.html` contact sheet grouped by canvas board, light and dark side by side (PLAN L43).
 
-macOS runs also capture page 5's fullscreen case: CDP emulation cannot enter native fullscreen, so the script sends the standard macOS fullscreen shortcut through `Input.dispatchKeyEvent` (Ctrl+Cmd+F, handled by the `viewMenu` role's `togglefullscreen` item, `src/main/index.ts` `Menu.setApplicationMenu` block) and waits for `geometrychange`. Windows and Linux captures run the same script on those machines (CI where a display exists), matching window-chrome §10's matrix.
+macOS runs also capture page 5's fullscreen case: the script sends Ctrl+Cmd+F through `Input.dispatchKeyEvent` (the app menu's `viewMenu` role includes `togglefullscreen`, `src/main/index.ts` `Menu.setApplicationMenu`) and waits for `geometrychange`. Linux runs are repeated with `ABACUSBOT_NATIVE_FRAME=1` (window-chrome §3) so the bands are also checked under the native-frame fallback. Windows and Linux captures run on those machines (CI where a display exists).
 
 ---
 
@@ -938,23 +991,26 @@ macOS runs also capture page 5's fullscreen case: CDP emulation cannot enter nat
 
 | Id | File | What it proves |
 |---|---|---|
-| R1-T1 | `router.test.ts` | Route tree snapshot: walks `routeTree` from `routeTree.gen.ts` and snapshots `[{ id, fullPath }]` sorted (catches accidental renames/moves); every `_shell` leaf resolves `staticData.area` and `sidebar` through its ancestors; `/`, `/bots`, `/sessions`, `/library`, `/settings`, `/onboarding` redirect to the targets in §6.1 (memory history + `router.load()`); every `routeMasks[].from` is a real route id; `/__ui` is `notFound` with gallery off. |
-| R1-T2 | `lib/navigation/search.test.ts` | Each schema: valid input round-trips; invalid values fall back (bad `tab`, bad `view`, over-long `q`, unknown keys dropped); defaults are stripped from built links (`router.buildLocation`); `retainSearchParams(["view"])` keeps `view` across `/sessions/a` → `/sessions/b`; a bot route cannot carry `tab=terminal`. |
-| R1-T3 | `data/collections/ipc-collection-options.test.ts` | Spec 00 B-T1 (all 11 cases) moved here with the fake table client (`test-support/fake-table.ts`: controllable async queue + deferred snapshot). Plus: `usePrefs()` returns defaults then the row; `updatePrefs` is optimistic and settles on the echo. |
-| R1-T4 | `features/bots/bots-sidebar.test.tsx`, `features/sessions/sessions-sidebar.test.tsx` | Live sidebars over a real `createCollection` + fake table: initial snapshot renders rows in order (pinned first); a `changes` batch (insert, update of `name`/`label`, delete) updates the DOM without remount; filtered sessions (`botOwned`, `editorFor`, `routineId`) never render; grouping by workspace; skeleton while loading, error + Retry after `markError`. |
-| R1-T5 | `features/shell/layout.test.ts` | `layout.ts` table: every band × area × pinned × tab combination from §7.1 (boundaries 799/800, 899/900, 999/1000, 1099/1100). |
-| R1-T6 | `features/shell/shell-layout.test.tsx` | With the controllable `matchMedia`: side panel in layout at xl and a drawer below; bots strip at sm; sessions sidebar unpinned at sm without writing prefs; status text hidden at md; actions fold into ⋯ at sm. Asserts on `data-*` attributes (jsdom has no layout). |
-| R1-T7 | `lib/theme.test.ts` | `resolveTheme` table; `<ThemeEffect/>` applies `.dark` and `color-scheme` for light/dark/system, reacts to a `prefers-color-scheme` change only when `system`, writes `data-reduce-motion`; the settings appearance control writes `prefs.theme` through the collection (fake table records the `update` input). |
-| R1-T8 | `features/gallery/a11y.test.tsx` | a11y smoke: renders every gallery section in jsdom and runs `axe-core` with `color-contrast` and `region` disabled (no layout/landmarks in fragments); zero violations. Contrast is checked in the real app by the screenshot run (§10.2 step 6). |
-| R1-T9 | `lib/window-chrome/overlay-slots.test.ts` | `OVERLAY_SLOTS` equals the `data-slot` values in `ui/*.tsx` matching `/-(content|overlay|popup|viewport)$/` minus an explicit allow-list of non-overlay slots (`card-content`, `message-scroller-content`, `message-scroller-viewport`, `scroll-area-viewport`, `tabs-content`, `item-content`, …); `tokens.css`'s no-drag selector list equals `OVERLAY_SLOTS` (window-chrome §6 test, now against renderer-next). |
-| R1-T10 | `features/shell/occlusion.test.ts` | Watcher publishes on insert, keeps occluding during `data-ending-style`, clears on removal; ignores `message-scroller-content`. |
-| R1-T11 | `lib/navigation/transition-types.test.ts` | `inferNavType` table; `installTransitionTypes` wraps whatever `Transitioner` assigns (setter called repeatedly) and calls `applyTypes` inside the wrapped function before `fn`; explicit `transition` wins over inference; search-only changes add nothing. Motion constants equal the durations in `tokens.css` (parsed). |
-| R1-T12 | `lib/window-chrome/use-titlebar-area.test.ts` | Window-chrome spec §10 renderer cases, against renderer-next. |
-| R1-T13 | `lib/sound.test.ts` | Gating (visible+focused → silent), coalescing, per-event switches, master switch. |
-| R1-T14 | `features/shell/hotkeys.test.tsx` | ⌘K opens the command menu, ⌘N routes per area, ⌘⌥B toggles `tab`, ⌘, goes to settings; ⌘B toggles `prefs.sidebar.pinned` exactly once (provider-owned). |
-| R1-T15 | `guards.test.ts` | Static scan of `src/renderer-next/**`: no `electron`, `window.api`, `ipcRenderer`, `#renderer/`, `framer-motion`, `zustand`, `sonner`; `@base-ui/react` only under `ui/`; features do not import other features' internals; `routes/**` import no `features/*/!(index)`. (Also covers spec 00 A-T7 for `data/**`.) |
-| R1-T16 | `lib/i18n/i18n.test.ts` | `matchSupportedLanguage` (moved tests), new keys exist in `en-US.json`, no new key collides with an existing leaf, `--apply-keymap` fills a missing key from its source in another locale (script test in `shared`-style node env). |
-| R1-T17 (main) | `src/main/renderer-generation.test.ts`, `src/main/renderer-entry.test.ts` | Env override honoured only unpackaged; entry URL for dev/experience/file × legacy/wco. |
+| R1-T1 | `router.test.ts` | Route tree snapshot: walks `routeTree` and snapshots `[{ id, fullPath }]` sorted; every `_shell` leaf resolves `staticData.area` and `sidebar` through its ancestors; `/`, `/bots`, `/sessions`, `/library`, `/settings`, `/onboarding` redirect to their §6.1 targets (memory history); **every `routeMasks[].from` is a `fullPath` in the tree** (not an id); masked navigation to `/bots/<id>/details`, `/routines/new`, `/library/connectors?connector=x` shows the mask target as `maskedLocation`, renders the expected background (routines `_list` body stays mounted), survives a simulated reload (router re-created on the same history) and closes with `history.back()`; `/__ui` is `notFound` with the gallery off. |
+| R1-T2 | `lib/navigation/search.test.ts` | Each schema: valid input round-trips; invalid values fall back (bad `tab`, bad `view`, over-long `q`, unknown keys dropped); defaults stripped from built links; `retainSearchParams(["view"])` keeps `view` across sessions; a bot route cannot carry `tab=terminal`; `GallerySearch.theme` values. |
+| R1-T3 | `data/collections/ipc-collection-options.test.ts` | Spec 00 B-T1 (all cases) with the fake table client (`test-support/fake-table.ts`). Plus `usePrefs()` defaults then row; `updatePrefs` optimistic and settles on the echo. |
+| R1-T4 | `features/bots/bots-sidebar.test.tsx`, `features/sessions/sessions-sidebar.test.tsx` | Live sidebars over a real `createCollection` + fake table: order (pinned first), change batches update the DOM without remount, filtered sessions never render, workspace grouping, skeleton while loading, error + Retry after `markError`. |
+| R1-T5 | `features/shell/layout.test.ts` | `layout.ts` table: every band × area × pinned × tab (boundaries 799/800, 899/900, 999/1000, 1099/1100). |
+| R1-T6 | `features/shell/shell-layout.test.tsx` | Controllable `matchMedia`: side panel in layout at xl (`orientation="horizontal"`, panel `minSize` 360 and `defaultSize` from prefs in **pixels**, `onResize` persists `inPixels` after the debounce) and a drawer below with `data-side-panel`; bots strip at sm; sessions unpinned at sm without writing prefs; status text hidden at md; actions fold at sm; `html[data-band]` follows. |
+| R1-T7 | `lib/theme.test.ts` | `resolveTheme` table; `<ThemeEffect/>` applies `.dark` + `color-scheme` for light/dark/system, follows the media query only for `system`, writes `data-reduce-motion`; the appearance control writes `prefs.theme`. |
+| R1-T8 | `features/gallery/a11y.test.tsx` | axe-core over every gallery section in jsdom (`color-contrast`, `region` off) with zero violations, run once with `theme=light` and once with `theme=dark` while the app theme is the opposite. |
+| R1-T9 | `lib/window-chrome/overlay-slots.test.ts` | (a) every `OCCLUDER_SLOTS` entry exists in some installed `ui/*.tsx`; (b) every installed `data-slot` matching `/-(content|overlay|popup|viewport)$/` or equal to `toast` is in exactly one of `OCCLUDER_SLOTS`, `NO_DRAG_ONLY_SLOTS`, or the explicit `NON_OCCLUDING` list (`card-content`, `message-scroller-content`, `message-scroller-viewport`, `scroll-area-viewport`, `tabs-content`, `item-content`, `drawer-viewport`, …) so a new registry overlay forces a decision; (c) `RESERVED_OCCLUDER_SLOTS` are absent from `ui/` (else they must move to `OCCLUDER_SLOTS`); (d) the `tokens.css` no-drag selector equals `NO_DRAG_SELECTOR`. |
+| R1-T10 | `features/shell/occlusion.test.ts` | Idle `Toaster` (mounted viewport, no toasts) publishes `any: false`; two stacked toasts publish two rects; a candidate keeps occluding during `data-ending-style`; zero-size and `checkVisibility() === false` elements are ignored; a `resize`/`scroll` event and a `ResizeObserver` callback re-measure; while `getAnimations()` reports running animations a rAF loop re-measures and stops afterwards (fake timers + stubbed rects); `message-scroller-content` ignored. |
+| R1-T11 | `lib/navigation/transition-types.test.ts` | Real router (memory history) with `installTransitionTypes`, `addTransitionType` observed through a spy on the module wrapper: (1) a loader delayed past `defaultPendingMs` → the pending **offer** adds nothing, the commit adds the intent; (2) a blocked navigation (`useBlocker`) → nothing added, next navigation unaffected; (3) two rapid navigations → only the second commits, with its own intent; (4) `invalidate()` re-commit of the same entry adds nothing; (5) back/forward use `__TSR_index` direction; (6) `inferNavType` rank table incl. `/bots/new` → `/bots/<id>` = `nav-forward`, sibling sessions = `nav-lateral`, settings in/out, search-only = none. Motion constants equal the durations in `tokens.css`. |
+| R1-T12 | `lib/window-chrome/use-titlebar-area.test.ts` | Window-chrome §10 renderer cases, against renderer-next. |
+| R1-T13 | `lib/sound.test.ts` | Gating, coalescing, per-event switches, master switch. |
+| R1-T14 | `features/shell/hotkeys.test.tsx` | Each binding fires its action once; `Mod+Alt+B` never triggers the `Mod+B` handler and vice versa; `Mod+B` in a `textarea` toggles, inside `[contenteditable]` does not; macOS Option+B (`key: "∫"`, `code: "KeyB"`) matches `Mod+Alt+B`; no other `keydown` listener on `window`/`document` besides the hotkey manager (spy on `addEventListener` during a full shell render). |
+| R1-T15 | `guards.test.ts` | Static scan of `src/renderer-next/**`: no `electron`, `window.api`, `ipcRenderer`, `#renderer/` (except `#locales/`), `framer-motion`, `zustand`, `sonner`; `@base-ui/react` only under `ui/`; features do not import other features' internals; routes import only feature `index` files. |
+| R1-T16 | `lib/i18n/i18n.test.ts` | `matchSupportedLanguage`; `resolveLanguage("system")` follows `navigator.languages`, explicit `"en-US"` stays English with a German OS; new keys exist; no new key collides with an existing leaf; `--apply-keymap` fills a missing key. |
+| R1-T17 (main) | `src/main/renderer-generation.test.ts`, `src/main/renderer-entry.test.ts` | Env override only unpackaged; entry URL for dev/experience/file × legacy/wco; `ABACUSBOT_DEV_CONTENT_SIZE` ignored when packaged. |
+| R1-T18 | `lib/bootstrap.test.ts` | `bootstrap()` with the memory transport: transport never answers → `BootFailure` (transport); `system.info` rejects; prefs snapshot rejects (`markError`); port closed during `prefs.preload()`; port closed after mount → reconnect toast then error. The router is never created on failure. |
+| R1-T19 (main) | `src/main/services/config/prefs-store.generations.test.ts` | Repeated generation switching over one `prefs.json` + `renderer-state.json` (spec 00 C.4 live sync): legacy write visible to next; next (`user`) write not overridden by a later legacy write of the same field; legacy-only fields keep flowing; startup `themeSource` comes from prefs before window creation (with a fake `BaseWindow` recording call order). |
+| R1-T20 | `features/shell/readiness.test.tsx` | `window.ready({ barrier: "subscriptions" })` is called exactly once for a direct launch into `/bots/new`, `/onboarding/welcome` and `/__ui`, only after `prefs`, `sessions`, `workspaces` are ready; `failed` when one `markError`s; not repeated on navigation or HMR. |
 
 The old `renderer` project must stay green on React 19.3 and Base UI 1.8 (acceptance item).
 
@@ -967,13 +1023,14 @@ The old `renderer` project must stay green on React 19.3 and Base UI 1.8 (accept
 - [ ] `pnpm lint`, `pnpm format:check`, `check:knip-next`, `check:i18n`, `check:locales` green; `pnpm test:unit` green including `renderer` (old) and `renderer-next`.
 - [ ] `vite build` emits `dist/renderer/index.html` and `dist/renderer/index-next.html`; the experience bundle contains both.
 - [ ] React Compiler scope: the built renderer-next chunks import `react/compiler-runtime`, the old renderer's chunks do not; in `pnpm dev`, editing a component in each renderer hot-reloads it without a full page reload (Fast Refresh kept in both, §3.3).
-- [ ] With `RENDERER_GENERATION = "legacy"` the app behaves exactly as before (manual smoke + old suites); the PR's `git diff --stat apps/desktop/src/renderer` is empty.
-- [ ] `shadcn info --json` resolves `ui` → `src/renderer-next/ui`, icon library lucide; `check:ui-registry` shows no diff.
+- [ ] With `RENDERER_GENERATION = "legacy"` the app behaves exactly as before (manual smoke + old suites). The PR's diff under `apps/desktop/src/renderer` touches **only `src/renderer/locales/*.json`**, and there only adds keys (Codex r1 #24): a script compares each locale file with its base-branch version and fails if any existing key was removed or its value changed.
+- [ ] `shadcn info --json` resolves `ui` → `src/renderer-next/ui`, icon library lucide; `check:ui-registry` (offline, snapshot replay, formatted) shows no diff.
+- [ ] Importing a `.css` file and an asset from a renderer-next component builds and hot-reloads (compiler scoped to JS/TS, §3.3).
 
 **Canvas page 1 — Navigation** (`BotChat`, `BotChatScrolled`, `HoverSidebar`, `SessionRunning`, `Routines`, `RoutineCreate`, `RoutineStates` as shells only)
 - [ ] Rail: five items with the canvas duotone icons and labels, active pill on the current area, Settings + Account at the bottom; switching areas cross-fades pane and sidebar in 200 ms (`nav-lateral`), drilling `/sessions/new` → `/sessions/<id>` slides 12 px (`nav-forward`), browser back plays `nav-back`.
-- [ ] Sidebars are live: creating/renaming/deleting a bot or a session in the **old** renderer (run it in a second profile against the same home, or via the WebSocket smoke script) shows up in renderer-next within one frame of the change batch.
-- [ ] Collapsed: hovering the rail floats the area's sidebar over content (280, border, shadow, radius 12) without reflowing the pane; leaving closes it; ⌘B pins/unpins with the spring; the app name appears in the title bar only when pinned.
+- [ ] Sidebars are live: creating, renaming and deleting a bot or a session **through the same main process** (the dev WebSocket transport script `scripts/rpc-ws-smoke.mjs mutate …`, spec 00 A.8, which calls `db.bots.*`/`db.sessions.*`; Codex r1 #19) shows up in renderer-next within one frame of the change batch. A second app process on the same home is not a supported scenario (no cross-process feed).
+- [ ] Collapsed: hovering the rail floats the area's sidebar over content (280, border, shadow, radius 12) without reflowing the pane; leaving closes it; ⌘B pins/unpins with the spring, ⌘⌥B toggles only the side panel; the app name appears in the title bar only when pinned.
 - [ ] `/routines/new` opens as a sheet over `/routines` with the URL masked to `/routines`; Escape goes back. Same for `/bots/<id>/details` and `/library/connectors?connector=x`.
 - [ ] Every top-level area and every settings page renders its empty state with the right sidebar; `/` lands on `/bots/new`.
 
@@ -986,14 +1043,16 @@ The old `renderer` project must stay green on React 19.3 and Base UI 1.8 (accept
 
 **Canvas page 6 — Window widths** (`WidthRules`, `BW1000`, `BW900`, `BW800`, `W900`, `W800`)
 - [ ] 1280/1100+: sidebar pinned 280, side panel in layout (min 360) when `tab` is set, identity + status in the title bar.
-- [ ] 1000: side panel is a 356 drawer over a 45% scrim; Escape or scrim closes it and clears `tab`.
+- [ ] 1000: side panel is a 356 drawer over a 45% scrim with 2 px blur (computed style checked); Escape or scrim closes it and clears `tab`.
+- [ ] 1100+: dragging the panel handle stops at 360 px panel and 480 px pane; the width persists across restart.
 - [ ] 900: status text leaves the title bar; avatar/name/dot stay.
 - [ ] 800: bots sidebar is the 88 px strip; sessions sidebar unpins (floats on hover) and comes back pinned when the window grows; title-bar actions fold into ⋯.
 - [ ] 4 widths × 2 themes screenshots produced by `screenshots-next.mjs`, reviewed side by side with the canvas boards; axe (real layout) reports no contrast violations.
 
 **Theme and data**
-- [ ] Light, dark, system: `.dark` + `color-scheme` on `<html>`, no flash of the wrong theme at launch, system changes followed live when `system`; the choice persists in `prefs.json` and main's `nativeTheme` follows (window controls recolour).
-- [ ] `window.ready({ barrier: "subscriptions" })` is called once after prefs/sessions/workspaces are ready; an experience swap to a renderer-next build flips only after it (spec 00 A.4.6).
+- [ ] Light, dark, system: `.dark` + `color-scheme` on `<html>`; with stored `dark` on a light OS (and the reverse) and a transport delayed 2 s, a CDP screencast from launch contains no frame in the wrong theme (main sets `themeSource` before the window exists, §7.7); system changes followed live when `system`; the choice persists and native controls recolour.
+- [ ] `window.ready({ barrier: "subscriptions" })` is called once after prefs/sessions/workspaces are ready, for any entry route including `/onboarding/*` and `/__ui`; an experience swap to a renderer-next build flips only after it (spec 00 A.4.6).
+- [ ] Unavailable transport at launch shows the boot failure screen with Reload; the router is never created.
 - [ ] Devtools cockpit opens in dev with Router, Query, Collections, Hotkeys, Pacer; nothing of it is in the production bundle (grep the built JS for `TanStackDevtools`).
 
 ---
@@ -1001,17 +1060,18 @@ The old `renderer` project must stay green on React 19.3 and Base UI 1.8 (accept
 ## 13. Risks
 
 - **Native React Compiler is experimental** (plugin-react README; oxc blog 2026-08-18). Mitigation: exact pins of `@vitejs/plugin-react` 6.1.1 and `oxc-transform-react` 0.145.0; `logDiagnostics: true`; the acceptance check above. The two-instance ordering relies on how Vite merges the instances' `config` results, so a plugin-react bump re-runs that check. Fallback, if the Rust compiler miscompiles something: drop `compiler` (the app stays correct without it; only memoisation is lost), not a switch back to Babel.
-- **Router seam (F7).** `installTransitionTypes` relies on `router.startTransition` being an instance property that `Transitioner` reassigns. Mitigation: exact router pin; R1-T11 asserts the setter is exercised; on a router bump the test fails loudly. Fallback if upstream changes: drive types from `router.subscribe("onBeforeNavigate")` into a `useLayoutEffect`-scheduled `startTransition` around the commit, accepting a one-frame delay.
+- **Router seam (F7).** `installTransitionTypes` relies on `router.startTransition` being an instance property that `Transitioner` reassigns, and on offer calls carrying a `pending` match. Mitigation: exact router pin; R1-T11 runs the real router through delayed, blocked, superseded and invalidated navigations, so a router bump that changes either fact fails loudly. Fallback: no types (plain cross-fade via a bare `<ViewTransition>`), never a second transition.
 - **Phase 0 not landed.** Phase 1 cannot render sidebars before spec 00 A + B (contract, tables, `ipcCollectionOptions`) and the `window.chrome` addition (§15) land. Mitigation: build shell and gallery against `createMemoryTransport` + fake tables first (tests already require them), switch to the MessagePort transport when 00b merges.
 - **React 19.3 / Base UI 1.8 for the old renderer.** Minor bumps, but they land in the shared package. Mitigation: old suites in the gate; revert path is the catalog line.
-- **Registry drift.** `shadcn add` output depends on the registry at run time. Mitigation: exact CLI pin, `check:ui-registry` in CI, regenerate only in dedicated commits.
-- **`SidebarProvider` side effects.** It owns ⌘B, writes a cookie and wraps the shell in its own div. Accepted (documented in §7.3); if it becomes a problem, rows switch to plain `Item` atoms and the provider goes away (no `ui/` edits either way).
+- **Registry drift.** Mitigated by the committed registry snapshot and offline replay (§5.4); refreshing it is a reviewed commit.
+- **No registry `sidebar`.** Rows are a small `NavList` molecule over registry atoms; if a later phase wants the registry sidebar, it must not mount `SidebarProvider` while the app handler owns ⌘B.
 - **Tailwind source scoping.** `source(none)` + `@source "../"` must be re-applied if a future `shadcn init` rewrites `app.css`; the verification script (§5.1 step 4) checks for it.
 - **Registry sr-only English.** A few atoms carry hard-coded English sr-only text; tracked, and wrapped with translated labels where the API allows.
 - **Screenshot determinism.** WCO geometry differs by OS, font rendering by machine. Comparisons are by role/structure against the canvas, not pixel diffs; the contact sheet is for humans.
 - **Old boot services not yet ported** (log collector, activity beacon, UI continuity). Experience swaps targeting renderer-next need the activity beacon's replacement first; until then `RENDERER_GENERATION` stays `"legacy"` in shipped builds (it does anyway until phase 7).
 - **CSP and dev tools.** Anything needing another origin (devtools event bus, remote fonts) is blocked by design; keep it that way.
-- **Two prefs sources during transition.** The old renderer writes `renderer-state.json`, the new one `prefs.json` (spec 00 B.8); a developer switching generations sees diverging theme/sidebar. Accepted.
+- **Two prefs sources during transition.** Handled by spec 00's provenance-aware live legacy sync (legacy → prefs), a hard prerequisite (§8.3, R1-T19). The reverse direction (new-renderer choices written back into `renderer-state.json`) is **not** done: spec 00 keeps `renderer-state.json` read-only until cut-over for downgrade safety, and shipped builds never switch generation (the override is dev-only). A developer switching back to legacy sees legacy's last own values.
+- **Startup theme in main.** Reading `prefs.json` before window creation adds a synchronous file read to startup (small, atomic-written file); a corrupt file falls back to `system` and logs.
 
 ---
 
@@ -1024,13 +1084,11 @@ Run from the repo root unless noted; each numbered step is a commit on a `rewrit
 3. Add `#next/*` and `#locales/*` to `apps/desktop/package.json` `imports`; aliases in `vite.config.ts` and `vitest.config.ts`.
 4. Create `apps/desktop/tsconfig.renderer-next.json`, reference it from `apps/desktop/tsconfig.json`; create `src/renderer-next/env.d.ts`, `main.tsx` (renders "hello"), `index-next.html`.
 5. `vite.config.ts`: `rolldownOptions.input`, `tanstackRouter(...)`, the two `react()` instances (§3.3); create `src/renderer-next/routes/__root.tsx` with an `<Outlet/>`; `pnpm --filter @abacus-ai/desktop exec vite build` (generates `routeTree.gen.ts`; commit it).
-6. `src/main/renderer-generation.ts` (`resolveRendererGeneration`), `rendererEntry()` in `index.ts` and `renderer-host.ts`, `ABACUSBOT_DEV_WINDOW_BOUNDS`; tests R1-T17; add `"dev:next"` script. `pnpm --filter @abacus-ai/desktop dev:next` shows "hello" inside the WCO window.
-7. `oxlint.config.ts` overrides, `packages/config/build-output-ignores.ts` (`**/routeTree.gen.ts`), `knip.json`, `check:knip-next`; `vitest.config.ts` project `renderer-next` + `test-support/setup.ts`; `test:unit` includes it.
-8. shadcn (from `apps/desktop`): write the canonical `components.json` (§5.1 step 1) and `src/renderer-next/styles/app.css` (`@import "tailwindcss";`), then
-   `pnpm exec shadcn init --base base --preset mira --force --no-reinstall --yes`
-   then `node scripts/shadcn-next.mjs --restore-config`, then `pnpm exec shadcn info --json` (check paths), then `git status src/renderer` (must be clean).
+6. `src/main/renderer-generation.ts` (`resolveRendererGeneration`), `rendererEntry()` in `index.ts` and `renderer-host.ts`, `ABACUSBOT_DEV_CONTENT_SIZE`; tests R1-T17; add `"dev:next"` script. `pnpm --filter @abacus-ai/desktop dev:next` shows "hello" inside the WCO window.
+7. `vite.shared.ts` + `tsconfig.vite.json` include; `oxlint.config.ts` overrides, `packages/config/build-output-ignores.ts` (`**/routeTree.gen.ts`), `knip.json`, `check:knip-next`; `vitest.config.ts` project `renderer-next` + `test-support/setup.ts`; `test:unit` includes it.
+8. shadcn: `node apps/desktop/scripts/shadcn-next-init.mjs` (scratch-package init + transplant + canonical `components.json`, §5.1 steps 1–3), then `node apps/desktop/scripts/shadcn-registry-snapshot.mjs --record` (§5.4), then `pnpm --filter @abacus-ai/desktop exec shadcn info --json` (check paths) and `git status apps/desktop/src/renderer` (must be clean).
 9. Edit `styles/app.css` (§5.1 step 5) and create `styles/tokens.css` (§5.3).
-10. `pnpm exec shadcn add button dialog alert-dialog sheet drawer tabs dropdown-menu context-menu popover tooltip hover-card combobox command resizable scroll-area sidebar kbd field label input input-group textarea item empty spinner skeleton separator badge avatar toggle toggle-group switch select native-select toast message-scroller message bubble attachment marker questionnaire collapsible --yes` (from `apps/desktop`), then `pnpm format`; commit `ui/` alone.
+10. `node apps/desktop/scripts/shadcn-next.mjs add button dialog alert-dialog sheet drawer tabs dropdown-menu context-menu popover tooltip hover-card combobox command resizable scroll-area kbd field label input input-group textarea item empty spinner skeleton separator badge avatar toggle toggle-group switch select native-select toast message-scroller message bubble attachment marker questionnaire collapsible` (dry-run gate, then snapshot-replayed `add`, §5.1 step 4), then `pnpm format`; commit `ui/` and the snapshot alone.
 11. `data/`: transport (from 00a, re-homed), `query-client.ts`, collections registry + prefs helpers, queries skeleton; R1-T3.
 12. `lib/`: theme, motion, sound, platform, window-chrome, navigation (search atoms, `use-app-navigate`, `transition-types`), i18n; R1-T7, R1-T11, R1-T12, R1-T13, R1-T16.
 13. `router.tsx` + all route files of §6.1 (placeholders); regenerate the tree; R1-T1, R1-T2.
@@ -1046,5 +1104,41 @@ Run from the repo root unless noted; each numbered step is a commit on a `rewrit
 1. **Spec 00 transport (A.7, A.9, A-T7, A.11, A.12, L382, L428):** `src/renderer/data/**` → `src/renderer-next/data/**` (F12). The old renderer does not import the transport in phase 0–6.
 2. **Spec 00 B.3, B.5:** `renderer/data/collections/**` → `renderer-next/data/collections/**`; `@tanstack/db` **0.9.2** / `@tanstack/react-db` **0.4.1** until 0.10.0/0.4.2 are on npm (F2); cited source lines are from the 0.10.0 clone and hold for 0.9.2's `commit()` receipt API.
 3. **Spec 00 A.2 `window.*` rows:** add `window.chrome` (Q, `{ mode: ChromeCapability, fullScreen, density, toolbarHeight }`, served by the same `chromeState` main uses for `ipcMain.handle("window:chrome")`, `index.ts:1221`) and `window.events` variant `{ type: "chrome", chrome }` (emitted on capability, fullscreen and density changes).
-4. **PLAN.md:** remove `tw-animate-css` from "Nuked" (F5); `motion` 13.x (F8); Rail's fifth item is Library with the Connectors glyph (F11); DB versions (F2); React Compiler via plugin-react's native `compiler` option + `oxc-transform-react`, no Babel (F1); toast is registry `toast`, not sonner (F6).
-5. **Spec 00 window chrome §6/§10:** `src/renderer/lib/tokens.css` and the renderer tests are realised in renderer-next (`styles/tokens.css`, `lib/window-chrome/*`); the old renderer keeps its constants until cut-over, which is consistent with its §11 (the switch is `RENDERER_GENERATION`).
+4. **Spec 00 B.2 `PrefsRow.language`:** `"system" | SupportedLanguage`, default `"system"`; C.4 maps `abacusai-bot-language` to the explicit code when present. Spec 00 C (live legacy sync, C-T5, C-T8) is a merge prerequisite of this phase. Main reads `prefs.theme` at startup (before `new BaseWindow`) when the generation is `wco`.
+5. **PLAN.md:** remove `tw-animate-css` from "Nuked" (F5); `motion` 13.x (F8); Rail's fifth item is Library with the Connectors glyph (F11); DB versions (F2); React Compiler via plugin-react's native `compiler` option + `oxc-transform-react`, no Babel (F1); toast is registry `toast`, not sonner (F6); the registry `sidebar` is not used (§5.2).
+6. **Spec 00 window chrome §6/§10:** `src/renderer/lib/tokens.css` and the renderer tests are realised in renderer-next (`styles/tokens.css`, `lib/window-chrome/*`); the old renderer keeps its constants until cut-over, which is consistent with its §11 (the switch is `RENDERER_GENERATION`).
+
+---
+
+## Review responses (r1)
+
+Source: `docs/rewrite/specs/reviews/01-renderer-foundation.codex-r1.md` (24 findings). The reviewer could not reach npm; version claims were re-checked here against the registry on 30 Sep 2026 and against installed/packed packages. The earlier post-r1 correction (React Compiler through `react({ compiler })` + `oxc-transform-react`, no Babel) is kept.
+
+| # | Sev. | Verdict | Evidence checked | What changed |
+|---|---|---|---|---|
+| 1 | Blocker | **Accepted** | Reproduced: a CSS import under the compiler instance's directory-only `include` fails with "Unexpected token"; plugin default include is `/\.[tj]sx?$/` (`plugin-react@6.1.1 dist/index.js:57-61`). With `NEXT_MODULES` (JS/TS only) CSS passes, `?tsr-split=` ids still compile, old renderer keeps Fast Refresh. | §3.3 (`vite.shared.ts`: `NEXT_SRC`, `NEXT_MODULES`), verification table rows, §3.7, §12 (CSS/asset import check). |
+| 2 | Blocker | **Accepted** | `RouteMask.from: RoutePaths<…>` (`router-core/src/route.ts:1589-1596`); masks matched on `next.pathname` (`router.ts:2185-2195`). | §6.6 masks use `/bots/$botId/details`, `/routines/new`, `/library/connectors`; R1-T1 asserts fullPaths and real masked navigation + reload. |
+| 3 | Blocker | **Accepted** | `init` with a preset backs up the config and infers aliases (`init.ts:540-560`, `get-project-info.ts:524-560`); `add` with an existing config does not (`get-project-info.ts:530-540`). | §0 F3/F4, §5.1 rewritten: init only in an isolated scratch package, transplant CSS/`cn`, hand-written `components.json`, `add` behind a `--dry-run` path gate. §14 step 8. |
+| 4 | Major | **Accepted** | `react-resizable-panels` 4.12.3 d.ts: `orientation` (`:138-140`), numbers are pixels (`:293-300`), `onResize` gives `{ asPercentage, inPixels }` (`:355,375-378`); registry wrapper forwards props. | §7.5: `orientation="horizontal"`, `minSize={360}`, pane `minSize={480}`, `defaultSize` px, persist `inPixels`; R1-T6; §12 drag check. |
+| 5 | Major | **Accepted** | Router captures load errors into matches. | §8.6: `bootstrap()` resolves transport, `system.info`, prefs before the router exists; static `BootFailure`; post-mount port loss handled; §6.4 context carries `transport`/`system`; R1-T18. |
+| 6 | Major | **Accepted** | `_bare` routes never render `_shell`. | §6.1 `__root` owns `<ReadinessReporter/>` for every entry route; `_shell`/`_bare` rows updated; R1-T20; §12. |
+| 7 | Major | **Accepted** | Offer call passes a `pending` match (`load-client.ts:1524-1530`); commit at `:1870-1881`; superseded tx returns before commit (`:1863-1869`). | §6.7: intent in history state (`navIntent {id,type}`), seam adds types only on commit calls, once per `__TSR_key`; §6.4 `HistoryState` augmentation; R1-T11 uses the real router (delayed, blocked, rapid, invalidate, back/forward). |
+| 8 | Major | **Accepted** (deviates from the brief's add list) | Registry `SidebarProvider` binds `b`+Ctrl/Meta on `window` without Alt/Shift/editable checks (`sidebar.tsx:96-109`); `useIsMobile` 767 px flips under zoom. | §5.2 drops `sidebar`; §7.3 rows via `components/nav-list/` (registry `Item`, `Button`, `Badge`, `Skeleton`, `Collapsible`); §7.9 single app-owned handler with exact modifiers and a contenteditable guard; R1-T14. |
+| 9 | Major | **Accepted** | `style-mira.css:492-494` `bg-black/80` + `backdrop-blur-xs`; `DrawerContent` renders its own overlay (`drawer.tsx:109-112`). | §5.3 scoped unlayered rule `[data-slot="drawer-portal"]:has([data-side-panel]) [data-slot="drawer-overlay"]`; §7.5; canvas mapping table; §12 computed-style check. |
+| 10 | Major | **Accepted** | `Toaster` always renders `ToastViewport` (`toast.tsx:244-258`); toasts are absolutely positioned (`toast.tsx:33-45`). | §7.6: occlusion measures `[data-slot="toast"]` roots; viewport is no-drag only; empty/unrendered rects ignored; R1-T10. |
+| 11 | Major | **Accepted** | — | §7.6: `ResizeObserver` per candidate, `resize`/capture `scroll` invalidation, rAF loop while `data-starting/ending-style` or running animations; R1-T10. |
+| 12 | Major | **Accepted in part** | Spec 00 r2 already specifies provenance and live legacy → prefs sync (`00-transport-db-migration.md` B.2 "Provenance", C.4 items 1–2, C-T8). | §8.3 makes spec 00 C's live sync a merge prerequisite; R1-T19 covers repeated generation switching; §15.4. **Rebutted:** writing new-renderer choices back into `renderer-state.json` — spec 00 keeps that file untouched until cut-over for downgrade safety, and shipped builds never switch generation (override is unpackaged-only). §13 states this. |
+| 13 | Major | **Accepted** | Provenance is private to main, so the row alone cannot tell explicit `en-US` from unset. | §9.2: `PrefsRow.language = "system" \| SupportedLanguage`, default `"system"`, `resolveLanguage`; §15.4 amends spec 00; R1-T16. |
+| 14 | Major | **Accepted** | Chromium's `prefers-color-scheme` follows `nativeTheme.themeSource`. | §7.7: main reads `prefs.theme` and sets `themeSource` + background before `new BaseWindow`; renderer boot follows the media query, so the first frame is already right; §13 risk; §15.4; R1-T19; §12 screencast check with delayed transport. |
+| 15 | Major | **Accepted** | — | §10.2: `__abacusDev.navigateAndSettle(href)` waits for that href's `onResolved`, view transition `finished`, animations, fonts, route collections, 2 frames. |
+| 16 | Major | **Accepted** | — | §10.2: `ABACUSBOT_DEV_CONTENT_SIZE` → `setContentSize` + zoom 1; asserts `innerWidth` and `data-band`, checks both sides of each boundary; Linux repeated under native frame. |
+| 17 | Major | **Accepted** | `REGISTRY_URL` env override (`packages/shadcn/src/registry/constants.ts:5-6`). | §5.4: committed registry snapshot with hashes, offline replay for `add` and `check:ui-registry`, formatted comparison. |
+| 18 | Major | **Accepted** | `index` and `new` are sibling matches. | §6.1: pathless `routines._list.tsx` renders the page body + `<Outlet/>`; `_list.index` renders null; `_list.new` is the masked sheet; R1-T1 checks the mounted background. |
+| 19 | Major | **Accepted** | Table feeds are per main process (spec 00 B.4). | §12: mutations go through the same main process via the dev WebSocket transport; two processes on one home declared unsupported. |
+| 20 | Minor | **Accepted** | `/bots/new` and `/bots/<id>` are siblings by path. | §6.7: `ROUTE_RANK` relationship table + history direction from `__TSR_index`; creation → detail is `nav-forward`; R1-T11 cases. |
+| 21 | Minor | **Accepted** | Portaled overlays escape a nested `.dark` container; `:root` light tokens do not re-apply under a dark `<html>`. | §10.1: one theme per page, applied to `<html>` while the gallery is mounted; side-by-side lives in the contact sheet; §6.2 `GallerySearch.theme`; R1-T8 runs both. |
+| 22 | Minor | **Accepted** | `tsconfig.vite.json:10` includes only the two configs and is `composite`. | §3.3/§3.7 `vite.shared.ts` added to its `include`; §14 step 7. |
+| 23 | Minor | **Accepted** | Menubar/navigation-menu are not installed; drawer adds `drawer-viewport`, toast adds `toast`. | §7.6 three lists (occluders, reserved, no-drag-only); R1-T9 asserts existence, classification of every installed slot, reserved absence, CSS equality separately. |
+| 24 | Minor | **Accepted** | §9 adds keys to `src/renderer/locales/*.json`. | §12: the legacy diff may touch only locale JSON, additions only; a script fails on removed or changed keys. |
+
+Nothing was rejected outright. The one disagreement is the reverse prefs sync in #12, for the reason given in that row.
