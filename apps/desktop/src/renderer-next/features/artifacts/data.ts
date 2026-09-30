@@ -170,10 +170,12 @@ export const cardWindow = (
   length: number,
   scrollTop: number,
   columns: number,
-  height: number
+  height: number,
+  viewportHeight = 800
 ) => {
-  const perRow = Math.max(1, columns);
-  const budget = Math.max(perRow, Math.floor(MAX_MOUNTED / perRow) * perRow);
+  const perRow = Math.min(MAX_MOUNTED, Math.max(1, columns));
+  const rows = Math.ceil(viewportHeight / height) + 8;
+  const budget = Math.min(rows, Math.floor(MAX_MOUNTED / perRow)) * perRow;
   const start = Math.min(
     Math.ceil(Math.max(0, length - budget) / perRow) * perRow,
     Math.max(0, Math.floor(scrollTop / height) - 4) * perRow

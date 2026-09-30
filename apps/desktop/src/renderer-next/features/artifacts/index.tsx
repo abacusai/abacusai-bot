@@ -150,17 +150,24 @@ export const ArtifactsPage = ({
   const selected = rows.find((a) => a.id === search.item);
   const viewport = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(0);
-  const [width, setWidth] = useState(800);
+  const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const list = search.view === "list" || !!search.item;
-  const columns = list ? 1 : Math.max(1, Math.floor(width / 210));
+  const columns = list ? 1 : Math.max(1, Math.floor(size.width / 210));
   const entries = artifactListEntries(filtered, list && search.sort !== "name");
-  const window = cardWindow(entries.length, top, columns, list ? 48 : 190);
+  const window = cardWindow(
+    entries.length,
+    top,
+    columns,
+    list ? 48 : 190,
+    size.height
+  );
   useEffect(() => {
     const el = viewport.current;
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
-      setWidth(entries[0]?.contentRect.width ?? 800);
+      const rect = entries[0]?.contentRect;
+      if (rect) setSize({ width: rect.width, height: rect.height });
     });
     observer.observe(el);
     return () => observer.disconnect();
