@@ -22,7 +22,9 @@ export type PreconditionReason =
   | "workspace-missing"
   | "not-signed-in"
   | "no-credentials"
-  | "git-unavailable";
+  | "git-unavailable"
+  /** The 50-bot limit (spec 03 §24.4). */
+  | "bot-limit";
 
 export interface RpcErrorData {
   BAD_REQUEST: { issues?: readonly unknown[] };

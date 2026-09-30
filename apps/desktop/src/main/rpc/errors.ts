@@ -12,6 +12,11 @@ import type {
 } from "#shared/contract/errors";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
+import {
+  ForbiddenError,
+  InvalidInputError,
+  PreconditionError,
+} from "#shared/service-errors";
 
 export type RpcError = ORPCError<string, unknown>;
 
@@ -22,10 +27,10 @@ export const unavailable = (message: string, retryAfterMs?: number): RpcError =>
     data: retryAfterMs == null ? {} : { retryAfterMs },
   });
 
-export const forbidden = (reason: string): RpcError =>
+export const forbidden = (reason: string, message?: string): RpcError =>
   new ORPCError("FORBIDDEN", {
     status: 403,
-    message: reason,
+    message: message ?? reason,
     data: { reason },
   });
 
@@ -64,6 +69,11 @@ export const toRpcError = (error: unknown): RpcError => {
   if (error instanceof EntityNotFoundError)
     return notFound(error.entity, error.id);
   if (error instanceof ConflictError) return conflict(error.message);
+  if (error instanceof PreconditionError)
+    return preconditionFailed(error.reason, error.message);
+  if (error instanceof ForbiddenError)
+    return forbidden(error.reason, error.message);
+  if (error instanceof InvalidInputError) return badRequest(error.message);
 
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith(WORKSPACE_MISSING_ERROR)) {
