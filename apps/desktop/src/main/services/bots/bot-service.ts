@@ -77,7 +77,9 @@ export interface BotServiceCallbacks {
    * (spec 03 §13.2). Null when nothing is runnable.
    */
   effectiveModel: (
-    requested: string | null
+    requested: string | null,
+    /** The session's stored pin, kept when the catalog cannot judge. */
+    pinned: string | null
   ) => string | null | Promise<string | null>;
   /** A session's workspace, owner stamp and pinned model; null when gone. */
   sessionInfo?: (sessionId: string) => {
@@ -324,39 +326,85 @@ export class BotService {
     }
   }
 
+  /** Per session, the pin in flight: pins of one session run one at a time. */
+  readonly #pinning = new Map<string, Promise<string | null>>();
+
   /**
    * Pins a bot session to its bot's effective model when its stored one
    * differs (spec 03 §24.10 b, c): resolved from `bot.model` with the shared
    * resolver at every start and admission, so an app-default change reaches
    * a null-model bot even when no `openChat` runs. Returns the effective
    * model, or null for a session no bot owns (check-in runs keep their
-   * routine's rules) or when nothing is runnable.
+   * routine's rules), a session gone meanwhile, or when nothing is runnable.
+   *
+   * The catalog read is async and a bot's model can change meanwhile, so
+   * pins of one session are serialised, and a resolution whose `bot.model`
+   * is no longer the bot's is thrown away and redone: two quick edits
+   * resolving in reverse order still leave the session on the latest.
    */
-  async pinSession(
+  pinSession(
     sessionId: string,
     ownerBotId?: string,
     ownerWorkspaceId?: string
   ): Promise<string | null> {
-    const info = this.callbacks.sessionInfo?.(sessionId) ?? null;
-    // A session main no longer has takes no pin.
-    if (this.callbacks.sessionInfo != null && info == null) return null;
-    const botId =
-      ownerBotId ??
-      (info?.owner?.kind === "bot" ? info.owner.botId : null) ??
-      botForSession(sessionId)?.id ??
-      null;
-    if (botId == null) return null;
-    const bot = getBot(botId);
-    if (bot == null) return null;
-    const workspaceId = info?.workspaceId ?? ownerWorkspaceId;
-    if (workspaceId == null) return null;
-    const model = await this.callbacks.effectiveModel(
-      bot.model != null && bot.model.length > 0 ? bot.model : null
-    );
-    if (model == null || model.length === 0) return null;
-    if (info == null || info.model !== model)
-      this.callbacks.updateSessionModel(workspaceId, sessionId, model);
-    return model;
+    const before = this.#pinning.get(sessionId);
+    const run = (before ?? Promise.resolve(null))
+      .catch(() => null)
+      .then(() => this.#pinNow(sessionId, ownerBotId, ownerWorkspaceId));
+    this.#pinning.set(sessionId, run);
+    void run
+      .finally(() => {
+        if (this.#pinning.get(sessionId) === run)
+          this.#pinning.delete(sessionId);
+      })
+      .catch(() => undefined);
+    return run;
+  }
+
+  async #pinNow(
+    sessionId: string,
+    ownerBotId?: string,
+    ownerWorkspaceId?: string
+  ): Promise<string | null> {
+    const requestedOf = (bot: Bot): string | null =>
+      bot.model != null && bot.model.length > 0 ? bot.model : null;
+    // A bot edited again mid-resolution is resolved again; bounded, since
+    // each round is a catalog read.
+    for (let round = 0; round < 4; round += 1) {
+      const info = this.callbacks.sessionInfo?.(sessionId) ?? null;
+      // A session main no longer has takes no pin.
+      if (this.callbacks.sessionInfo != null && info == null) return null;
+      const botId =
+        ownerBotId ??
+        (info?.owner?.kind === "bot" ? info.owner.botId : null) ??
+        botForSession(sessionId)?.id ??
+        null;
+      if (botId == null) return null;
+      const bot = getBot(botId);
+      if (bot == null) return null;
+      const workspaceId = info?.workspaceId ?? ownerWorkspaceId;
+      if (workspaceId == null) return null;
+      const requested = requestedOf(bot);
+      const model = await this.callbacks.effectiveModel(
+        requested,
+        info?.model ?? null
+      );
+      // Rechecked after the await: the session may be gone, the bot deleted
+      // or its model changed.
+      const after =
+        this.callbacks.sessionInfo == null
+          ? info
+          : this.callbacks.sessionInfo(sessionId);
+      if (this.callbacks.sessionInfo != null && after == null) return null;
+      const botAfter = getBot(botId);
+      if (botAfter == null) return null;
+      if (requestedOf(botAfter) !== requested) continue;
+      if (model == null || model.length === 0) return null;
+      if (after == null || after.model !== model)
+        this.callbacks.updateSessionModel(workspaceId, sessionId, model);
+      return model;
+    }
+    return null;
   }
 
   /** Deleting a bot deletes its chat: the conversation *is* the bot. */

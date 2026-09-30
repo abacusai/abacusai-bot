@@ -9,11 +9,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSessionStatus, SessionOwner } from "#shared/contracts";
 import { resolveConfiguredModel, type ModelAvailability } from "#shared/models";
 
+import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import { AguiRelayService } from "../agui/relay-service";
 import { ThreadStore } from "../session/thread-store";
 import { BotService } from "./bot-service";
@@ -72,8 +73,11 @@ const makeMain = () => {
     command: Record<string, unknown>;
   }> = [];
   const startedWith: Array<{ sessionId: string; model: string | null }> = [];
+  const updates: Array<{ sessionId: string; model: string }> = [];
   let counter = 0;
   let runtime = {};
+  /** The catalog read; a test can hold it to order two resolutions. */
+  let catalogRead: () => Promise<ModelAvailability[]> = async () => catalog;
 
   const bots: BotService = new BotService({
     resolveDefaultWorkspaceId: () => "ws",
@@ -95,6 +99,7 @@ const makeMain = () => {
     removeSession: () => undefined,
     // As ServiceHost: persist, and a running agent takes it now.
     updateSessionModel: (_ws, sessionId, next) => {
+      updates.push({ sessionId, model: next });
       const session = sessions.get(sessionId);
       if (session == null) return;
       session.model = next;
@@ -104,11 +109,16 @@ const makeMain = () => {
           command: { type: "set_model", model: next },
         });
     },
-    effectiveModel: (requested) =>
-      effectiveBotModel(requested, {
-        readDefault: () => settings.defaultModel,
-        listCatalog: async () => catalog,
-      }),
+    effectiveModel: (requested, pinned) =>
+      effectiveBotModel(
+        requested,
+        {
+          readDefault: () => settings.defaultModel,
+          listCatalog: async () => catalogRead(),
+          cachedRecommended: () => "abacus/route-llm",
+        },
+        pinned
+      ),
     sessionInfo: (sessionId) => {
       const session = sessions.get(sessionId);
       return session == null
@@ -199,6 +209,7 @@ const makeMain = () => {
 
   return {
     bots,
+    updates,
     relay,
     sessions,
     settings,
@@ -207,6 +218,9 @@ const makeMain = () => {
     send,
     setCatalog: (next: ModelAvailability[]) => {
       catalog = next;
+    },
+    setCatalogRead: (read: () => Promise<ModelAvailability[]>) => {
+      catalogRead = read;
     },
     stop: (sessionId: string) => {
       sessions.get(sessionId)!.status = "stopped";
@@ -373,5 +387,181 @@ describe("the effective bot model in main (spec 03 §24.10)", () => {
       })
     ).toBeNull();
     expect(await main.bots.pinSession(handle.sessionId)).toBeNull();
+  });
+
+  it("two quick bot.model edits whose catalog reads resolve in reverse order leave every session on the latest", async () => {
+    const main = makeMain();
+    main.settings.defaultModel = "openllm/auto";
+    const bot = main.bots.create({ name: "Scout", description: "Watch." });
+    const handle = await main.bots.openChat(bot.id);
+    main.written.length = 0;
+
+    // Each catalog read waits until the test lets it go.
+    const reads: Array<() => void> = [];
+    main.setCatalogRead(
+      () =>
+        new Promise((resolve) => {
+          reads.push(() =>
+            resolve([
+              model("abacus/route-llm", true, { recommended: true }),
+              model("openllm/auto", true),
+              model("deepseek/deepseek-v4-flash", true),
+            ])
+          );
+        })
+    );
+    main.bots.update(bot.id, { model: "abacus/route-llm" });
+    main.bots.update(bot.id, { model: "deepseek/deepseek-v4-flash" });
+    let done = false;
+    void main.bots.settled().then(() => (done = true));
+    // Newest read first, as a slow catalog for the first edit would.
+    while (!done) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      for (const release of reads.splice(0).reverse()) release();
+    }
+
+    expect(main.sessions.get(handle.sessionId)!.model).toBe(
+      "deepseek/deepseek-v4-flash"
+    );
+    expect(
+      main.written.filter((entry) => entry.command.type === "set_model").at(-1)
+        ?.command.model
+    ).toBe("deepseek/deepseek-v4-flash");
+  });
+
+  it("a session deleted while its model resolves takes no pin", async () => {
+    const main = makeMain();
+    main.settings.defaultModel = "openllm/auto";
+    const bot = main.bots.create({ name: "Scout", description: "Watch." });
+    const handle = await main.bots.openChat(bot.id);
+    main.updates.length = 0;
+    let release: () => void = () => undefined;
+    main.setCatalogRead(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve([model("deepseek/deepseek-v4-flash", true)]);
+        })
+    );
+    main.bots.update(bot.id, { model: "deepseek/deepseek-v4-flash" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    main.sessions.delete(handle.sessionId);
+    release();
+    await main.bots.settled();
+    expect(main.updates).toEqual([]);
+  });
+
+  it("an empty, unreadable or partial (offline) catalog keeps the stored pin; only a credential the catalog says is gone moves it", async () => {
+    const main = makeMain();
+    const bot = main.bots.create({
+      name: "Scout",
+      description: "Watch.",
+      model: "deepseek/deepseek-v4-flash",
+    });
+    const handle = await main.bots.openChat(bot.id);
+    expect(main.sessions.get(handle.sessionId)!.model).toBe(
+      "deepseek/deepseek-v4-flash"
+    );
+
+    main.setCatalog([]);
+    await main.bots.pinSession(handle.sessionId);
+    main.setCatalogRead(async () => {
+      throw new Error("offline");
+    });
+    await main.bots.pinSession(handle.sessionId);
+    // Offline: the paid row is simply not listed.
+    main.setCatalogRead(async () => [
+      model("abacus/route-llm", true, { recommended: true }),
+    ]);
+    await main.bots.pinSession(handle.sessionId);
+    expect(main.sessions.get(handle.sessionId)!.model).toBe(
+      "deepseek/deepseek-v4-flash"
+    );
+    expect(
+      main.updates.filter((entry) => entry.sessionId === handle.sessionId)
+    ).toEqual([
+      { sessionId: handle.sessionId, model: "deepseek/deepseek-v4-flash" },
+    ]);
+
+    // Authoritative: the row is there and its credential is gone.
+    main.setCatalogRead(async () => [
+      model("abacus/route-llm", true, { recommended: true }),
+      model("deepseek/deepseek-v4-flash", false),
+    ]);
+    await main.bots.pinSession(handle.sessionId);
+    expect(main.sessions.get(handle.sessionId)!.model).toBe("abacus/route-llm");
+  });
+
+  it("a new bot chat with an empty catalog is still pinned, to the synchronous default", async () => {
+    const main = makeMain();
+    main.setCatalog([]);
+    main.settings.defaultModel = "openllm/auto";
+    const explicit = main.bots.create({
+      name: "Ada",
+      description: "Counts",
+      model: "deepseek/deepseek-v4-flash",
+    });
+    const plain = main.bots.create({ name: "Bo", description: "Counts" });
+    const a = await main.bots.openChat(explicit.id);
+    const b = await main.bots.openChat(plain.id);
+    expect(main.sessions.get(a.sessionId)!.model).toBe(
+      "deepseek/deepseek-v4-flash"
+    );
+    expect(main.sessions.get(b.sessionId)!.model).toBe("openllm/auto");
+    main.settings.defaultModel = null;
+    const c = await main.bots.openChat(
+      main.bots.create({ name: "Cy", description: "Counts" }).id
+    );
+    // The tier's cached recommendation.
+    expect(main.sessions.get(c.sessionId)!.model).toBe("abacus/route-llm");
+  });
+
+  it("RPC agent.start (the real handler) starts a bot session on its effective model, not the remembered pin", async () => {
+    const main = makeMain();
+    main.settings.defaultModel = "openllm/auto";
+    const bot = main.bots.create({ name: "Scout", description: "Watch." });
+    const handle = await main.bots.openChat(bot.id);
+    main.stop(handle.sessionId);
+    // The app default moves while the chat is stopped.
+    main.settings.defaultModel = "deepseek/deepseek-v4-flash";
+
+    const startAgentSession = vi.fn(async (request: object) => ({
+      success: true,
+      created: false,
+      state: request,
+    }));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const connection = connectInProcess(
+      fakeDeps({
+        serviceHost: {
+          listAllAgentSessions: () =>
+            [...main.sessions].map(([id, session]) => ({
+              id,
+              workspaceId: session.workspaceId,
+              model: session.model,
+              mode: null,
+            })),
+          startAgentSession,
+          // `ServiceHost.applyEffectiveBotModel`.
+          applyEffectiveBotModel: async (sessionId: string) => {
+            await main.bots.pinSession(sessionId);
+          },
+        },
+      })
+    );
+    try {
+      await connection.client.agent.start({
+        workspaceId: "ws",
+        sessionId: handle.sessionId,
+      });
+    } finally {
+      connection.closeClient();
+      connection.closeServer();
+      vi.restoreAllMocks();
+    }
+    expect(startAgentSession).toHaveBeenLastCalledWith({
+      workspaceId: "ws",
+      sessionId: handle.sessionId,
+      model: "deepseek/deepseek-v4-flash",
+    });
   });
 });

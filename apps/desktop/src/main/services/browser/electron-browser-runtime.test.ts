@@ -541,6 +541,37 @@ describe("local files on the native surface (spec 04 §12.8, R4-T33)", () => {
     expect(openExternal).toHaveBeenCalledTimes(2);
   });
 
+  it("the same file under another root gets a new view with that root's lock", async () => {
+    const runtime = new ElectronBrowserRuntime(() => owner as never, {
+      openExternal: vi.fn(),
+    });
+    const request = { conversationKey, resourceId: "preview:report", file };
+    const wide = await runtime.materializeFile({ ...request, root: "/work" });
+    const same = await runtime.materializeFile({ ...request, root: "/work" });
+    expect(same.lease.generation).toBe(wide.lease.generation);
+    expect(mocks.views).toHaveLength(1);
+    const narrow = await runtime.materializeFile({ ...request, root });
+    expect(narrow.lease.generation).toBeGreaterThan(wide.lease.generation);
+    expect(mocks.views).toHaveLength(2);
+    const view = mocks.views.at(-1)!;
+    const partition = mocks.sessions.get(
+      (view.options as Options).webPreferences.partition
+    ) as unknown as {
+      webRequest: { onBeforeRequest: ReturnType<typeof vi.fn> };
+    };
+    const filter = partition.webRequest.onBeforeRequest.mock.calls.at(
+      -1
+    )![0] as (
+      details: { url: string },
+      callback: (response: { cancel: boolean }) => void
+    ) => void;
+    let cancelled: boolean | null = null;
+    filter({ url: "file:///work/other/secret.txt" }, ({ cancel }) => {
+      cancelled = cancel;
+    });
+    expect(cancelled).toBe(true);
+  });
+
   it("sub-resources: file: inside the root, data:, blob: and http(s) only", async () => {
     const { partition } = await open();
     const filter = partition.webRequest.onBeforeRequest.mock.calls.at(
