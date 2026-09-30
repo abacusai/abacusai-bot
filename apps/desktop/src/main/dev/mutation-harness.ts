@@ -5,6 +5,10 @@
  * (main/handler.ts), so a change reaches the table feeds through the stores'
  * hooks exactly as an old-renderer action would.
  *
+ * `renderer.dropPort` makes main drop renderer-next's MessagePort the way
+ * it does for a real reconnect (R1-T22: the port-loss reload and the
+ * second-loss error screen, driven against the live renderer).
+ *
  * Installed only when the app is unpackaged **and** ABACUSBOT_DEV_HARNESS=1.
  * Malformed lines and unknown ops are logged and ignored.
  */
@@ -39,7 +43,38 @@ export type HarnessOp =
   | {
       op: "sessions.remove";
       input: { workspaceId: string; sessionId: string };
-    };
+    }
+  | { op: "renderer.dropPort"; input: Record<string, never> };
+
+/** What the harness does outside the ServiceHost. */
+export interface HarnessExtras {
+  /** Main closes renderer-next's active port; resolves with its id. */
+  dropRendererPort(): Promise<unknown>;
+}
+
+/**
+ * The main side of a renderer reconnect (rpc/transports/message-port.ts):
+ * a new `rpc:connect` from the renderer's main frame closes its active port.
+ * The renderer sees `port-closed`, as when main drops it for real.
+ */
+export const dropRendererPortViaReconnect = async (): Promise<unknown> => {
+  const electron = await import("electron");
+  const { RPC_CONNECT_CHANNEL } =
+    await import("../rpc/transports/message-port");
+  const contents = electron.webContents
+    .getAllWebContents()
+    .find((candidate) => candidate.getURL().includes("index-next.html"));
+  if (contents == null) throw new Error("no renderer-next webContents");
+  const channel = new electron.MessageChannelMain();
+  electron.ipcMain.emit(RPC_CONNECT_CHANNEL, {
+    ports: [channel.port1],
+    sender: contents,
+    senderFrame: contents.mainFrame,
+  });
+  // The stand-in port has no renderer behind it.
+  channel.port2.close();
+  return { webContentsId: contents.id };
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -54,7 +89,8 @@ const str = (record: Record<string, unknown>, key: string): string => {
 /** Dispatch one parsed op; throws on a bad shape or an unknown op. */
 export const runHarnessOp = async (
   host: HarnessHost,
-  line: unknown
+  line: unknown,
+  extras: HarnessExtras = { dropRendererPort: dropRendererPortViaReconnect }
 ): Promise<unknown> => {
   if (!isRecord(line) || typeof line.op !== "string" || !isRecord(line.input))
     throw new Error("expected { op: string, input: object }");
@@ -82,6 +118,8 @@ export const runHarnessOp = async (
         str(input, "workspaceId"),
         str(input, "sessionId")
       );
+    case "renderer.dropPort":
+      return extras.dropRendererPort();
     default:
       throw new Error(`unknown op ${line.op}`);
   }
@@ -103,6 +141,7 @@ export const installMutationHarness = (
     isPackaged: boolean;
     input?: Readable;
     log?: (message: string) => void;
+    extras?: HarnessExtras;
   }
 ): (() => void) | null => {
   if (!shouldInstallHarness(options.env, options.isPackaged)) return null;
@@ -118,7 +157,7 @@ export const installMutationHarness = (
       log(`[dev-harness] ignored malformed line: ${text.slice(0, 120)}`);
       return;
     }
-    runHarnessOp(host, parsed).then(
+    runHarnessOp(host, parsed, options.extras).then(
       (result) =>
         log(
           `[dev-harness] ${String((parsed as { op?: unknown }).op)} ok ${JSON.stringify(result ?? null).slice(0, 200)}`

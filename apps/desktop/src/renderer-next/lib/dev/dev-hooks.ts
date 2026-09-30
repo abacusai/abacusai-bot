@@ -20,7 +20,35 @@ interface AbacusDev {
   syncStatus(table: string): unknown;
   /** Types of the document view transitions started since the last call. */
   navTypes(): string[];
+  /**
+   * Every route a navigation enters waits `ms` in `beforeLoad` first (0:
+   * off), so the navigation shows its pending screen (R1-T11b's slow-loader
+   * case). `beforeLoad`, not `loader`: code splitting may replace a loader
+   * when its chunk arrives.
+   */
+  setLoaderDelay(ms: number): void;
+  /** Whether this build reads the dev fixture tables instead of main's db.*. */
+  fixtures: boolean;
+  /** No navigation loading and no view transition running. */
+  idle(): boolean;
 }
+
+/** Wrap each non-root route's `beforeLoad` once; entering waits `delay.ms`. */
+const installLoaderDelay = (router: AnyRouter, delay: { ms: number }): void => {
+  for (const [id, route] of Object.entries(
+    router.routesById as Record<string, { options: { beforeLoad?: unknown } }>
+  )) {
+    if (id === "__root__") continue;
+    const original = route.options.beforeLoad as
+      | ((context: { cause?: string }) => unknown)
+      | undefined;
+    route.options.beforeLoad = async (context: { cause?: string }) => {
+      if (delay.ms > 0 && context.cause === "enter")
+        await new Promise((resolve) => setTimeout(resolve, delay.ms));
+      return original?.(context);
+    };
+  }
+};
 
 export const installDevHooks = (router: AnyRouter, db: Db): void => {
   const tables = db.collections as unknown as Record<
@@ -28,6 +56,8 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
     { toArray: unknown[]; utils: { status(): unknown } }
   >;
   const navTypes: string[] = [];
+  const delay = { ms: 0 };
+  installLoaderDelay(router, delay);
   const dev: AbacusDev = {
     navigateAndSettle: (href) =>
       navigateAndSettle(href, {
@@ -41,6 +71,14 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
     rows: (table) => [...(tables[table]?.toArray ?? [])],
     syncStatus: (table) => tables[table]?.utils.status() ?? null,
     navTypes: () => navTypes.splice(0),
+    setLoaderDelay: (ms) => {
+      delay.ms = ms;
+    },
+    fixtures: import.meta.env.VITE_NEXT_DB_FIXTURES === "1",
+    idle: () =>
+      router.state.status === "idle" &&
+      (document as Document & { activeViewTransition?: unknown })
+        .activeViewTransition == null,
   };
   (window as Window & { __abacusDev?: AbacusDev }).__abacusDev = dev;
   const document_ = transitionTypeSink.document;

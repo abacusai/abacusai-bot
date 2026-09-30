@@ -127,7 +127,9 @@ const NavItem = ({
   params,
   search,
   active = false,
-  transition = "nav-lateral",
+  // Unset: the router infers the type (new → entity is nav-forward, entity
+  // → entity nav-lateral); a forced lateral would flatten a drill-in.
+  transition,
   media,
   title,
   meta,
