@@ -8,6 +8,11 @@
  * renderer builds them: renderer-next/data/db/tables.ts takes it uncast.)
  */
 import type {
+  AgentErrorPayload,
+  AgentState,
+  PermissionDescriptor,
+} from "@abacus-ai/agent";
+import type {
   ClientContext,
   ClientLink,
   ORPCError,
@@ -63,6 +68,15 @@ describe("library type imports (A-T1b)", () => {
     expectTypeOf<ChatHydrateOptions>().not.toBeAny();
     // The derived hydration result still has the fields ai.hydrate returns.
     expectTypeOf<ChatHydrationResult>().toHaveProperty("messages");
+  });
+
+  it("resolves the agent's wire types the ai snapshot carries", () => {
+    expectTypeOf<AgentState>().not.toBeAny();
+    expectTypeOf<AgentErrorPayload>().not.toBeAny();
+    expectTypeOf<PermissionDescriptor>().not.toBeAny();
+    expectTypeOf<
+      PermissionDescriptor["metadata"]["abacus"]["lineage"]
+    >().toHaveProperty("incarnation");
   });
 
   it("resolves every oRPC type", () => {

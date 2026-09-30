@@ -2,6 +2,7 @@ import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
 import type { ChatHydrationResult, StreamChunk } from "./agui";
+import type { AiThreadSnapshot } from "./ai-thread";
 import { mutation, query, subscription } from "./base";
 import { SessionId } from "./ids";
 
@@ -39,23 +40,93 @@ export const AiSendInputSchema = v.object({
 export type AiSendInput = v.InferOutput<typeof AiSendInputSchema>;
 
 /**
- * The AG-UI conversation (spec 00 A.3). The thread id is the session id. Main
- * serves all five from an `AguiSource`; until the AG-UI emitter lands every
- * one of them answers `UNAVAILABLE`.
+ * The agent's `run.ack` for one run id (spec 02 §14.5). A repeated `ai.send`
+ * with a run id main has seen answers `duplicate`, with the first answer's
+ * status in `original`, and writes nothing to the agent.
+ */
+export interface AiSendAck {
+  runId: string;
+  status: "started" | "queued" | "rejected" | "duplicate";
+  original?: "started" | "queued" | "rejected";
+  reason?: "regenerate_unsupported" | "empty" | "resume_unsupported";
+  /** `queued`: the host queue entry the text went into. */
+  entryId?: string;
+}
+
+/**
+ * One `PermissionDecision` (agent `protocol.ts`), validated strictly: a
+ * boolean or `{approved}` is a bad request, never coerced to a rejection.
+ */
+export const PermissionDecisionSchema = v.union([
+  v.picklist(["accept", "reject", "background", "allowAlways", "allowYolo"]),
+  v.strictObject({
+    type: v.literal("accept_with_message"),
+    message: v.string(),
+  }),
+  v.strictObject({
+    type: v.literal("reject_with_message"),
+    message: v.string(),
+  }),
+  v.strictObject({
+    type: v.literal("question_answers"),
+    answers: v.record(v.string(), v.string()),
+  }),
+  v.strictObject({
+    type: v.literal("allow_always_with_rule"),
+    rule: v.string(),
+  }),
+  v.strictObject({
+    type: v.literal("allow_always_with_rules"),
+    rules: v.array(v.string()),
+  }),
+]);
+
+/** Which pending permission an answer is for (agent spec §3.5.3). */
+export const PermissionLineageSchema = v.strictObject({
+  threadId: v.pipe(v.string(), v.nonEmpty()),
+  incarnation: v.pipe(v.string(), v.nonEmpty()),
+  turnSeq: v.pipe(v.number(), v.integer(), v.minValue(0)),
+  runId: v.optional(v.string()),
+  permissionId: v.pipe(v.string(), v.nonEmpty()),
+});
+
+const QueueEntryId = v.pipe(v.string(), v.nonEmpty());
+const Incarnation = v.pipe(v.string(), v.nonEmpty());
+
+/**
+ * `ai.hydrate`: TanStack's hydration result plus the session-scoped state the
+ * chat kit keeps (spec 02 §14.1), all read in one relay turn.
+ */
+export interface AiHydration extends ChatHydrationResult {
+  abacus: AiThreadSnapshot;
+}
+
+/**
+ * The AG-UI conversation (spec 00 A.3, spec 02 §14). The thread id is the
+ * session id. Main serves every one of these from its AG-UI relay.
  */
 export const ai = {
   /**
-   * Replay from the resume point, then live. The first yield is always
-   * `CUSTOM abacus.subscribed`; a resume point older than the replay ring
-   * starts with `CUSTOM abacus.resync`. Never returns by itself.
+   * Replay after `lastEventId` (events with a greater seq), then live. The
+   * first yield is always `CUSTOM abacus.subscribed`; a resume point the ring
+   * no longer holds starts with `CUSTOM abacus.resync`. Neither carries an
+   * event id. Never returns by itself.
    */
   subscribe: subscription
     .input(
       v.object({ threadId: SessionId, lastEventId: v.optional(v.string()) })
     )
     .output(eventIterator(type<StreamChunk>())),
-  /** Resolves once the child accepted the run; events arrive on `subscribe`. */
-  send: mutation.input(AiSendInputSchema).output(type<{ runId: string }>()),
+  /**
+   * Writes the agent's `run` and resolves with its `run.ack` for this run id.
+   * Idempotent by run id across agent incarnations. `BAD_REQUEST`,
+   * `NOT_FOUND` and `UNAVAILABLE` are raised only before `run` is written.
+   */
+  send: mutation.input(AiSendInputSchema).output(type<AiSendAck>()),
+  /**
+   * The completed transcript (excluding the active run's messages), the
+   * active run, and the session-scoped state at one relay seq (`abacus.cursor`).
+   */
   hydrate: query
     .input(
       v.object({
@@ -64,13 +135,70 @@ export const ai = {
         before: v.optional(v.string()),
       })
     )
-    .output(type<ChatHydrationResult>()),
-  /** From `RUN_STARTED`, then live; returns after `RUN_FINISHED`/`RUN_ERROR`. */
+    .output(type<AiHydration>()),
+  /**
+   * Every relay event of the run's thread from its `RUN_STARTED` through its
+   * terminal, then returns. An unknown or evicted run returns at once.
+   */
   joinRun: subscription
     .input(v.object({ runId: v.pipe(v.string(), v.nonEmpty()) }))
     .output(eventIterator(type<StreamChunk>())),
-  /** Ends the run with `RUN_FINISHED{ outcome: "cancelled" }`. */
+  /**
+   * `cancel {runId}` to the agent: applied to the open run or the admission
+   * that will open it, ignored for a stale id. Without `runId`, an
+   * unconditional Stop. The run closes with `RUN_FINISHED{cancelled}`.
+   */
   cancel: mutation
     .input(v.object({ threadId: SessionId, runId: v.optional(v.string()) }))
     .output(type<void>()),
+  /**
+   * One permission answer (`permission.respond`). The outcome arrives on the
+   * stream: `permission.resolved` or `permission.response_rejected`.
+   */
+  respondPermission: mutation
+    .input(
+      v.object({
+        threadId: SessionId,
+        lineage: PermissionLineageSchema,
+        decision: PermissionDecisionSchema,
+      })
+    )
+    .output(type<void>()),
+  /**
+   * The agent's host queue, which is authoritative (agent spec §3.1.6). Entry
+   * ids are per agent process, so an edit or removal names the incarnation
+   * it was read from; a mismatch or a gone entry is answered on the stream
+   * with `CUSTOM queue.command_rejected` and changes nothing.
+   */
+  queue: {
+    enqueue: mutation
+      .input(v.object({ threadId: SessionId, message: v.string() }))
+      .output(type<void>()),
+    update: mutation
+      .input(
+        v.object({
+          threadId: SessionId,
+          incarnation: Incarnation,
+          entryId: QueueEntryId,
+          message: v.string(),
+        })
+      )
+      .output(type<void>()),
+    remove: mutation
+      .input(
+        v.object({
+          threadId: SessionId,
+          incarnation: Incarnation,
+          entryId: QueueEntryId,
+        })
+      )
+      .output(type<void>()),
+    clear: mutation
+      .input(v.object({ threadId: SessionId }))
+      .output(type<void>()),
+    /** "Send now": the head of the queue runs (or steers) at once. */
+    dequeue: mutation
+      .input(v.object({ threadId: SessionId }))
+      .output(type<void>()),
+  },
 };
