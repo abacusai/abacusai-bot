@@ -327,9 +327,7 @@ describe("the default browser", () => {
     fireEvent.focus(window);
 
     await waitFor(() =>
-      expect(listBrowserSignInProfiles.mock.calls.length).toBeGreaterThan(
-        calls
-      )
+      expect(listBrowserSignInProfiles.mock.calls.length).toBeGreaterThan(calls)
     );
   });
 
