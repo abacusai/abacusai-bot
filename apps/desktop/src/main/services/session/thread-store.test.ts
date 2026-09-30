@@ -52,6 +52,7 @@ import { v1ToThreadFile } from "#shared/transcript/thread-file";
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import {
   fingerprintV1,
+  peeksAsDerivedV2,
   ThreadStore,
   type ThreadStoreOptions,
 } from "./thread-store";
@@ -288,10 +289,14 @@ describe("C-T7 thread store", () => {
   });
 
   it("serves the twin as is when the v1 file cannot be read or is too large", async () => {
-    const { threads, transcripts } = make({ maxTranscriptBytes: 400 });
+    // Past both bounds: not even streamed.
+    const { threads, transcripts } = make({
+      maxTranscriptBytes: 400,
+      maxStreamedBytes: 450,
+    });
     transcripts.write("s1", SEGMENTS);
     const twin = fs.readFileSync(v2File("s1"), "utf8");
-    // Over the cap: not converted, not repaired.
+    // Over the caps: not converted, not repaired.
     put(v1File("s1"), {
       version: 1,
       sessionId: "s1",
@@ -628,6 +633,118 @@ describe("C-T7 r2: ownership, clears, held writes", () => {
     expect(fs.existsSync(v1File("s2"))).toBe(false);
     expect(fs.existsSync(v2File("s2"))).toBe(false);
     errors.mockRestore();
+  });
+});
+
+describe("C-T7 r3: Codex r3 findings", () => {
+  it("#2: a v1 save held in memory is what the thread store converts, one HeldFiles for both", async () => {
+    make().transcripts.write("s1", SEGMENTS);
+    const errors = vi.spyOn(console, "error").mockImplementation(silent);
+    // v1 and the journal are held (the change can only stay in memory);
+    // the twin is writable.
+    const blocked = (file: string) =>
+      path.resolve(file) === path.resolve(v1File("s1")) ||
+      path.resolve(file).includes(`${path.sep}.pending${path.sep}`);
+    const { threads, transcripts } = make(
+      { isWriteBlocked: blocked },
+      { isWriteBlocked: blocked }
+    );
+    transcripts.write("s1", MORE);
+    expect(transcripts.read("s1")?.segments).toHaveLength(3);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
+    expect(readJson(v2File("s1")).source.segments).toBe(3);
+    errors.mockRestore();
+  });
+
+  it.each([
+    [
+      "a nested source before the top-level one",
+      '{"version":2,"threadId":"s1","meta":{"source":{"kind":"transcript-v1"}},"source":{"kind":"future"},"messages":[]}',
+    ],
+    [
+      "a nested source inside the top-level one",
+      '{"version":2,"threadId":"s1","updatedAt":"x","source":{"note":{"source":{"kind":"transcript-v1"}},"kind":"future"},"messages":[]}',
+    ],
+  ])("#3: the fast path never trusts %s", async (_label, text) => {
+    const { transcripts } = make();
+    put(v2File("s1"), text);
+    expect(peeksAsDerivedV2(v2File("s1"))).toBe(false);
+    transcripts.write("s1", MORE);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(text);
+  });
+
+  it("#3: the fast path recognises exactly this build's v1-derived writer", () => {
+    for (const fingerprint of [undefined, "fp"]) {
+      put(
+        v2File("s1"),
+        JSON.stringify(
+          v1ToThreadFile({
+            threadId: 'odd "id"',
+            updatedAt: "2026-09-01T10:00:00.000Z",
+            segments: SEGMENTS,
+            ...(fingerprint === undefined ? {} : { fingerprint }),
+          })
+        )
+      );
+      expect(peeksAsDerivedV2(v2File("s1"))).toBe(true);
+    }
+  });
+});
+
+describe("C-T7 r3: oversized v1 history (cut-over r2 #8, #9)", () => {
+  const big = (id: string, size: number) => ({
+    type: "text",
+    id,
+    source: "bot",
+    content: "x".repeat(size),
+  });
+  const limits = { maxTranscriptBytes: 400, maxStreamedBytes: 20_000 };
+
+  it("serves an oversized v1 file with no twin, read-only", async () => {
+    const { threads, transcripts } = make(limits);
+    transcripts.write("s1", [...SEGMENTS, big("b2", 1_000)]);
+    expect(fs.existsSync(v2File("s1"))).toBe(false);
+    const read = threads.readCurrentWithNotice("s1");
+    expect(ids(read.file?.messages ?? [])).toEqual(["u1", "b1"]);
+    expect(read.notice).toBeUndefined();
+    expect(read.file?.source).toMatchObject({
+      kind: "transcript-v1",
+      fingerprint: fingerprintV1(fs.readFileSync(v1File("s1"), "utf8")),
+    });
+    // Never persisted: no twin is written for it.
+    expect(fs.existsSync(v2File("s1"))).toBe(false);
+  });
+
+  it("past the streaming bound, answers with a typed too-large notice", () => {
+    const { threads, transcripts } = make(limits);
+    transcripts.write("s1", [...SEGMENTS, big("b2", 30_000)]);
+    const read = threads.readCurrentWithNotice("s1");
+    expect(read.file).toBeNull();
+    expect(read.notice).toEqual({
+      kind: "too-large",
+      size: fs.statSync(v1File("s1")).size,
+      limit: 20_000,
+    });
+  });
+
+  it("an oversized cleared thread whose v1 removal failed stays cleared across a restart", async () => {
+    const { threads, transcripts } = make(limits);
+    transcripts.write("s1", [...SEGMENTS, big("b2", 1_000)]);
+    // The clear: the marker is written, the v1 removal fails.
+    threads.markCleared("s1");
+    expect(await make(limits).threads.readCurrent("s1")).toEqual([]);
+    expect(make(limits).threads.readCurrentWithNotice("s1")).toEqual({
+      file: null,
+    });
+    // A save after the clear proves new history.
+    make(limits).transcripts.write("s1", [
+      { type: "text", id: "n1", source: "user", content: "new" },
+      big("n2", 1_000),
+    ]);
+    expect(ids(await make(limits).threads.readCurrent("s1"))).toEqual([
+      "n1",
+      "n2",
+    ]);
   });
 });
 

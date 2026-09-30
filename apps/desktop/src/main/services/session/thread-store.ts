@@ -55,6 +55,7 @@ import {
 import { isMigrationWriteBlocked } from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";
 import { HeldFiles } from "./held-files";
+import { streamTranscriptV1 } from "./stream-v1";
 
 export const THREADS_DIR_NAME = "threads";
 export const TRANSCRIPTS_DIR_NAME = "transcripts";
@@ -68,6 +69,16 @@ export const ARCHIVE_INDEX_NAME = ".archive-index.json";
  * converted or quarantined.
  */
 export const MAX_TRANSCRIPT_BYTES = 64 * 1024 * 1024;
+
+/**
+ * The largest v1 transcript read at all, through the streaming reader
+ * (`stream-v1.ts`) and converted in memory only, never persisted as a twin.
+ * Past it, reads answer with a `too-large` notice (cut-over review r2 #8).
+ */
+export const MAX_STREAMED_TRANSCRIPT_BYTES = 512 * 1024 * 1024;
+
+/** Why a thread shows no history although its v1 file exists. */
+export type ThreadNotice = { kind: "too-large"; size: number; limit: number };
 
 /** How long the dual-write waits for more saves of the same thread. */
 export const DUAL_WRITE_DELAY_MS = 2_000;
@@ -124,6 +135,16 @@ export const readThreadTwin = (file: string): ThreadTwin =>
   twinOf(readTextChecked(file));
 
 /**
+ * The exact header this build's v1-derived writer produces
+ * (`v1ToThreadFile` keys in order, compact `JSON.stringify`): the top-level
+ * `source` is recognised only in that position, never a nested one.
+ */
+const JSON_STRING = String.raw`"(?:[^"\\]|\\.)*"`;
+const DERIVED_HEADER = new RegExp(
+  String.raw`^\{"version":2,"threadId":${JSON_STRING},"updatedAt":${JSON_STRING},"source":\{"kind":"transcript-v1","updatedAt":${JSON_STRING},"segments":\d+[,}]`
+);
+
+/**
  * True when a thread file's first 4 KB say it is a version-2 v1-derived
  * file, as this build writes it (`JSON.stringify` keeps `version` first and
  * `source` before `messages`), so the dual-write can replace it without
@@ -136,10 +157,7 @@ export const peeksAsDerivedV2 = (file: string): boolean => {
     const head = Buffer.alloc(4096);
     const bytes = fs.readSync(fd, head, 0, head.length, 0);
     const text = head.subarray(0, bytes).toString("utf8");
-    return (
-      text.startsWith('{"version":2,') &&
-      /"source":\{"kind":"transcript-v1"/.test(text)
-    );
+    return DERIVED_HEADER.test(text);
   } catch {
     return false;
   } finally {
@@ -193,17 +211,54 @@ export interface ArchiveIndex {
   archived: Record<string, { fingerprint: string; updatedAt: string }>;
 }
 
+const isArchiveIndex = (value: unknown): value is ArchiveIndex => {
+  const index = value as ArchiveIndex | null;
+  if (
+    typeof index !== "object" ||
+    index === null ||
+    index.version !== 1 ||
+    typeof index.archived !== "object" ||
+    index.archived === null ||
+    Array.isArray(index.archived)
+  )
+    return false;
+  return Object.values(index.archived).every(
+    (entry) =>
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof entry.fingerprint === "string" &&
+      typeof entry.updatedAt === "string"
+  );
+};
+
+/**
+ * The archive index; empty only when the file does not exist. A file that
+ * cannot be read or validated throws: step 4 must not guess which twins
+ * it archived (it would take them for orphans).
+ */
+export const readArchiveIndexStrict = (threadsDir: string): ArchiveIndex => {
+  const file = path.join(threadsDir, ARCHIVE_INDEX_NAME);
+  const read = readTextChecked(file);
+  if (read.status === "missing") return { version: 1, archived: {} };
+  if (read.status !== "ok")
+    throw new Error(`cannot read ${file}: ${read.status}`);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(read.text);
+  } catch {
+    throw new Error(`${file} is not JSON`);
+  }
+  if (!isArchiveIndex(parsed)) throw new Error(`${file} is not an index`);
+  return parsed;
+};
+
+/** For reads: a damaged index serves nothing from it (nothing is removed). */
 export const readArchiveIndex = (threadsDir: string): ArchiveIndex => {
-  const read = readTextChecked(path.join(threadsDir, ARCHIVE_INDEX_NAME));
-  if (read.status === "ok")
-    try {
-      const parsed = JSON.parse(read.text) as ArchiveIndex;
-      if (parsed?.version === 1 && typeof parsed.archived === "object")
-        return parsed;
-    } catch {
-      // Unparseable: treated as empty, so nothing is served from it.
-    }
-  return { version: 1, archived: {} };
+  try {
+    return readArchiveIndexStrict(threadsDir);
+  } catch {
+    return { version: 1, archived: {} };
+  }
 };
 
 /** Thrown by `writeAgui` for a thread file it must not replace. */
@@ -231,6 +286,8 @@ export interface ThreadStoreOptions {
   writeFile?: (file: string, text: string) => void;
   /** Defaults to `MAX_TRANSCRIPT_BYTES` (tests lower it). */
   maxTranscriptBytes?: number;
+  /** Defaults to `MAX_STREAMED_TRANSCRIPT_BYTES` (tests lower it). */
+  maxStreamedBytes?: number;
   /**
    * The cut-over build sets this once step 4 has archived `transcripts/`:
    * a v1-derived twin is then served without its v1 file.
@@ -239,8 +296,15 @@ export interface ThreadStoreOptions {
 }
 
 type V1Read =
-  | { status: "ok"; meta: Required<V1Meta>; segments: unknown[] }
-  | { status: "missing" | "unreadable" | "tooLarge" | "invalid" };
+  | {
+      status: "ok";
+      meta: Required<V1Meta>;
+      segments: unknown[];
+      /** Over `maxTranscriptBytes`: converted in memory, never persisted. */
+      large: boolean;
+    }
+  | { status: "tooLarge"; size: number }
+  | { status: "missing" | "unreadable" | "invalid" };
 
 interface PendingDualWrite {
   timer: ReturnType<typeof setTimeout> | null;
@@ -260,6 +324,7 @@ export class ThreadStore {
   private readonly log: (message: string) => void;
   private readonly dualWriteDelayMs: number;
   private readonly maxTranscriptBytes: number;
+  private readonly maxStreamedBytes: number;
   private readonly v1Archived: boolean;
   /** Writes and removals, journalled while a migration holds the file. */
   readonly held: HeldFiles;
@@ -281,6 +346,8 @@ export class ThreadStore {
     this.dualWriteDelayMs = options.dualWriteDelayMs ?? DUAL_WRITE_DELAY_MS;
     this.maxTranscriptBytes =
       options.maxTranscriptBytes ?? MAX_TRANSCRIPT_BYTES;
+    this.maxStreamedBytes =
+      options.maxStreamedBytes ?? MAX_STREAMED_TRANSCRIPT_BYTES;
     this.v1Archived = options.v1Archived ?? false;
     this.held = new HeldFiles({
       dir: () => path.join(this.home(), THREADS_DIR_NAME, ".pending"),
@@ -318,14 +385,43 @@ export class ThreadStore {
    * gone (unless step 4 archived it).
    */
   readCurrentFile(sessionId: string): ThreadFileV2 | null {
+    return this.readCurrentWithNotice(sessionId).file;
+  }
+
+  /**
+   * `readCurrentFile`, plus why there is no history when a v1 file exists
+   * but is too large to read at all (for the relay to surface).
+   */
+  readCurrentWithNotice(sessionId: string): {
+    file: ThreadFileV2 | null;
+    notice?: ThreadNotice;
+  } {
     const threadFile = this.threadPath(sessionId);
     const transcriptFile = this.transcriptPath(sessionId);
-    if (threadFile == null || transcriptFile == null) return null;
+    if (threadFile == null || transcriptFile == null) return { file: null };
     this.flush(sessionId);
-
     const marker = this.readMarker(sessionId);
-    const twin = twinOf(this.held.read(threadFile));
     const v1 = this.readV1(transcriptFile);
+    const file = this.current(sessionId, threadFile, marker, v1);
+    return file === null && marker === null && v1.status === "tooLarge"
+      ? {
+          file,
+          notice: {
+            kind: "too-large",
+            size: v1.size,
+            limit: this.maxStreamedBytes,
+          },
+        }
+      : { file };
+  }
+
+  private current(
+    sessionId: string,
+    threadFile: string,
+    marker: ClearMarker | null,
+    v1: V1Read
+  ): ThreadFileV2 | null {
+    const twin = twinOf(this.held.read(threadFile));
     const proven =
       marker !== null &&
       v1.status === "ok" &&
@@ -603,6 +699,8 @@ export class ThreadStore {
     afterClear: string | undefined
   ): ThreadFileV2 {
     const thread = this.convert(sessionId, v1, afterClear);
+    // An oversized v1 file is served, never persisted as a twin.
+    if (v1.large) return thread;
     this.persist(sessionId, threadFile, thread, "repair");
     return thread;
   }
@@ -612,17 +710,54 @@ export class ThreadStore {
   }
 
   private readV1(file: string): V1Read {
-    const read = this.held.read(file, this.maxTranscriptBytes);
-    if (read.status !== "ok") return { status: read.status };
-    const parsed = parseTranscriptV1(read.text);
+    const pending = this.held.pending(file);
+    let text: string;
+    if (pending !== null) {
+      if (pending.op === "remove") return { status: "missing" };
+      text = pending.text;
+    } else {
+      let size: number;
+      try {
+        size = fs.statSync(file).size;
+      } catch (error) {
+        const code = (error as { code?: unknown })?.code;
+        return {
+          status:
+            code === "ENOENT" || code === "ENOTDIR" ? "missing" : "unreadable",
+        };
+      }
+      if (size > this.maxStreamedBytes) return { status: "tooLarge", size };
+      if (size > this.maxTranscriptBytes) {
+        // Streamed and hashed on the way: the clear rules below still apply.
+        const streamed = streamTranscriptV1(file);
+        if (streamed.status !== "ok") return { status: streamed.status };
+        return {
+          status: "ok",
+          meta: {
+            updatedAt: streamed.updatedAt ?? v1UpdatedAt(file, {}),
+            fingerprint: streamed.fingerprint,
+          },
+          segments: streamed.segments,
+          large: true,
+        };
+      }
+      const read = readTextChecked(file);
+      if (read.status !== "ok")
+        return {
+          status: read.status === "tooLarge" ? "unreadable" : read.status,
+        };
+      text = read.text;
+    }
+    const parsed = parseTranscriptV1(text);
     if (parsed.status !== "ok") return { status: "invalid" };
     return {
       status: "ok",
       meta: {
         updatedAt: v1UpdatedAt(file, parsed.file),
-        fingerprint: fingerprintV1(read.text),
+        fingerprint: fingerprintV1(text),
       },
       segments: parsed.file.segments,
+      large: Buffer.byteLength(text) > this.maxTranscriptBytes,
     };
   }
 

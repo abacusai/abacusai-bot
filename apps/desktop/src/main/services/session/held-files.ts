@@ -56,12 +56,20 @@ export class HeldFiles {
     return this.options.isWriteBlocked(file);
   }
 
-  /** Writes `text` to `file`, or journals it while `file` is held. */
-  write(file: string, text: string): "written" | "held" {
+  /**
+   * Writes `text` to `file`, or journals it while `file` is held. `writeFile`
+   * overrides the writer for this call (each service keeps its own seam
+   * while sharing one instance).
+   */
+  write(
+    file: string,
+    text: string,
+    writeFile: (file: string, text: string) => void = this.options.writeFile
+  ): "written" | "held" {
     this.replay(file);
     if (!this.isBlocked(file)) {
       fs.mkdirSync(path.dirname(file), { recursive: true });
-      this.options.writeFile(file, text);
+      writeFile(file, text);
       this.forget(file);
       return "written";
     }

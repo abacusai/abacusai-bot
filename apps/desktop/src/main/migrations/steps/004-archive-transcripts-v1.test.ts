@@ -430,6 +430,29 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
     ).toBe("t2");
   });
 
+  it("r3 #1: an archive index it cannot read or validate stops the step", async () => {
+    const twin = {
+      version: 2,
+      threadId: "gone",
+      updatedAt: "2026-09-01T10:00:00.000Z",
+      source: {
+        kind: "transcript-v1",
+        updatedAt: "2026-09-01T10:00:00.000Z",
+        segments: 1,
+      },
+      messages: [],
+    };
+    for (const index of ["{damaged", JSON.stringify({ version: 9 })]) {
+      put(threads(), "gone.json", twin);
+      put(threads(), ".archive-index.json", index);
+      const result = await run([archiveTranscriptsV1()]);
+      expect(result.applied).toEqual([]);
+      expect(result.failed).not.toBeNull();
+      // The twin of a thread the lost index may have listed is kept.
+      expect(fs.existsSync(path.join(threads(), "gone.json"))).toBe(true);
+    }
+  });
+
   it("keeps quarantined files 90 days", async () => {
     put(transcripts(), "corrupt.json", "{nope");
     await run([archiveTranscriptsV1()]);
