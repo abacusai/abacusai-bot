@@ -38,3 +38,25 @@ Paths below are relative to `apps/desktop/src/renderer-next` unless specified. E
 - Foundation screenshots: **99 captures, zero failures**, all 1280/1000/900/800 light/dark. `.build/screenshots/02399ff7/{shots.json,axe.json,index.html}` and PNGs. Initial 800-band startup sample failed; unchanged script retry passed. Linux native-frame probe skipped on macOS.
 
 Details and all R3-T1…T33 verification gaps are in the appended implementation report. Generated screenshots, native frames and logs live under `.build` and are not source commits.
+
+## Fix pass against r2
+
+2026-10-01. Review: [03-bots.impl-codex-r2.md](03-bots.impl-codex-r2.md). Merged `rewrite/renderer` first, fast-forward from `5a1d64f7` to `22dd2ca1`.
+
+| Finding | Status and change | Regression evidence | Commit |
+|---|---|---|---|
+| 1 | Fixed. Capture check-in edit flags before awaiting bot persistence. After persistence, read the current routine and merge untouched schedule/enabled leaves against it. Use the captured schedule flag for announcements too. | `form/form.test.tsx`: five delayed-persistence cases deliver remote schedule/enabled updates through the fixture feed, with and without baseline sync. A remote update that already saved the requested schedule produces no redundant routine write. Restoring the original submit implementation fails two tests. | `e71892f6` |
+| 2 | Deferred to the phase-4 integration pass. The embedded browser tab is being built in a parallel task. The external-opening placeholder does not satisfy URL deliverable parity; P53 stays gated. | Phase 4 must test primary URL deliverable clicks and automatic previews loading their destination inside the bot's embedded browser tab, with session isolation. | Deferred |
+| 3 | Fixed. A failed configured-mode query without data shows an error and Retry calling `mode.refetch()`. Submission remains disabled during the failed query and pending retry, then uses the resolved configured mode. | Mounted `readiness.test.tsx`: first request rejects, Retry starts a delayed second request, no composer or send appears before resolution, and the eventual outgoing send uses `DEFAULT`. Without the fix, the test fails because Retry is missing. | bdd818ae |
+
+Phase 4 must import `registerBrowserOpen` from `#next/features/shell` and connect this exact registry call to its embedded browser implementation:
+
+```ts
+const unregister = registerBrowserOpen(({ sessionId, url }) => {
+  // Select sessionId's embedded browser tab and load url inside it.
+});
+```
+
+Call the returned `unregister()` during teardown. Producers already call `requestBrowserOpen({ sessionId, url })`; the handler must use that session's bot browser tab for both click and automatic-preview requests. Replace `BrowserOpenPlaceholder` when the embedded tab is ready.
+
+Validation: targeted renderer-next suites pass **24 tests in 2 files**, comprising **16 form tests** and **8 readiness tests**. `tsc -b`, root `oxlint .`, and root `oxfmt .` pass. Lint reports seven warnings in the legacy renderer. Dependencies were installed with `pnpm install --pm-on-fail=ignore` using installed pnpm 12.8.1 against the pinned 12.6.0. The commit hook reports that lefthook is unavailable in PATH; validation used the requested binaries directly.
