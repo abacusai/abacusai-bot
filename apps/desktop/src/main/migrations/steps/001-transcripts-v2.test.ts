@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { v1ToThreadFile } from "#shared/transcript/thread-file";
 
+import { fingerprintV1 } from "../../services/session/thread-store";
 import { backupsRoot, migratingRoot } from "../backup";
 import { readRecord } from "../record";
 import { runMigrations } from "../runner";
@@ -109,6 +110,26 @@ const layOut = () => {
   delete noTime.updatedAt;
   put(transcripts(), "no-time.json", noTime);
   fs.mkdirSync(path.join(transcripts(), "folder.json"));
+  // A newer build's twin, and one that cannot be read: never replaced.
+  put(transcripts(), "foreign.json", v1("foreign"));
+  put(threads(), "foreign.json", { ...AGUI, version: 3 });
+  put(transcripts(), "twin-dir.json", v1("twin-dir"));
+  fs.mkdirSync(path.join(threads(), "twin-dir.json"));
+  // Cleared, but the v1 removal failed: its marker holds these bytes.
+  put(transcripts(), "cleared.json", v1("cleared"));
+  put(threads(), "cleared.cleared", {
+    version: 1,
+    token: "t-1",
+    clearedAt: "2026-09-02T00:00:00.000Z",
+    v1Fingerprint: fingerprintV1(JSON.stringify(v1("cleared"))),
+  });
+  // Over the cap the classification test sets.
+  put(transcripts(), "big.json", {
+    ...v1("big"),
+    segments: [
+      { type: "text", id: "b", source: "bot", content: "x".repeat(3000) },
+    ],
+  });
 };
 
 const hashes = (dir: string): Record<string, string> => {
@@ -156,7 +177,7 @@ const context = (): MigrationContext => {
 describe("C-T4 step 1 transcripts-v2", () => {
   it("classifies every write and skip", async () => {
     layOut();
-    const plan = await transcriptsV2().plan(context());
+    const plan = await transcriptsV2({ maxBytes: 2000 }).plan(context());
     expect(
       Object.fromEntries(
         plan.writes.map((write) => [path.basename(write.dest), write.kind])
@@ -171,17 +192,49 @@ describe("C-T4 step 1 transcripts-v2", () => {
       expect(path.dirname(write.dest)).toBe(threads());
     expect(plan.removals).toEqual([]);
     expect(plan.stats).toEqual({
-      files: 13,
+      files: 17,
       converted: 4,
       created: 2,
       replaced: 2,
       upToDate: 2,
       agui: 1,
+      foreign: 1,
+      twinUnreadable: 1,
+      cleared: 1,
       skipped: 6,
       unsafe: 2,
       corrupt: 2,
       notV1: 2,
+      unreadable: 0,
+      tooLarge: 1,
+      vanished: 0,
+      failed: 0,
     });
+  });
+
+  it("isolates a file that throws, and goes on", async () => {
+    for (let index = 0; index < 5; index++)
+      put(transcripts(), `s${index}.json`, v1(`s${index}`));
+    const write = fs.writeFileSync;
+    const spy = vi
+      .spyOn(fs, "writeFileSync")
+      .mockImplementation((file, ...rest) => {
+        if (String(file).endsWith(`${path.sep}s2.json`))
+          throw Object.assign(new Error("no space"), { code: "ENOSPC" });
+        return write(file, ...rest);
+      });
+    try {
+      const plan = await transcriptsV2().plan(context());
+      expect(plan.stats).toMatchObject({ converted: 4, failed: 1 });
+      expect(plan.writes.map((entry) => path.basename(entry.dest))).toEqual([
+        "s0.json",
+        "s1.json",
+        "s3.json",
+        "s4.json",
+      ]);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("commits, keeps the legacy files byte-identical, and is idempotent", async () => {
@@ -201,6 +254,7 @@ describe("C-T4 step 1 transcripts-v2", () => {
             threadId: "fresh",
             updatedAt: "2026-09-01T10:00:00.000Z",
             segments: SEGMENTS,
+            fingerprint: fingerprintV1(JSON.stringify(v1("fresh"))),
           })
         )
       )
@@ -210,7 +264,16 @@ describe("C-T4 step 1 transcripts-v2", () => {
       kind: "transcript-v1",
       updatedAt: "2026-09-02T00:00:00.000Z",
       segments: 2,
+      fingerprint: fingerprintV1(
+        JSON.stringify(v1("stale", "2026-09-02T00:00:00.000Z"))
+      ),
     });
+    // Never replaced, never converted.
+    expect(readJson(path.join(threads(), "foreign.json")).version).toBe(3);
+    expect(
+      fs.statSync(path.join(threads(), "twin-dir.json")).isDirectory()
+    ).toBe(true);
+    expect(fs.existsSync(path.join(threads(), "cleared.json"))).toBe(false);
     expect(stale.messages).toHaveLength(2);
     // No `updatedAt`: the file's mtime stands in.
     const noTime = readJson(path.join(threads(), "no-time.json"));
@@ -235,7 +298,8 @@ describe("C-T4 step 1 transcripts-v2", () => {
       expect.objectContaining({
         id: 1,
         name: "transcripts-v2",
-        stats: expect.objectContaining({ converted: 4, corrupt: 2 }),
+        // `big.json` is under the default cap here.
+        stats: expect.objectContaining({ converted: 5, corrupt: 2 }),
       }),
     ]);
 
@@ -246,8 +310,11 @@ describe("C-T4 step 1 transcripts-v2", () => {
     expect(await run([1])).toMatchObject({ applied: [1], failed: null });
     expect(readRecord(home).applied.at(-1)?.stats).toMatchObject({
       converted: 0,
-      upToDate: 6,
+      upToDate: 7,
       agui: 1,
+      foreign: 1,
+      twinUnreadable: 1,
+      cleared: 1,
     });
     const after = hashes(home);
     for (const file of Object.keys(settled).filter(
@@ -281,28 +348,54 @@ describe("C-T4 step 1 transcripts-v2", () => {
     expect(await run()).toMatchObject({ applied: [1], failed: null });
     for (const name of fixtures) {
       const source = readJson(path.join(SHARED_FIXTURES, "v1", name));
-      expect(
-        readJson(path.join(threads(), `${source.sessionId}.json`))
-      ).toEqual(readJson(path.join(SHARED_FIXTURES, "expected-v2", name)));
+      const written = readJson(
+        path.join(threads(), `${source.sessionId}.json`)
+      );
+      // The goldens are fingerprint-free (the mapper's output); the step
+      // fingerprints the exact v1 bytes.
+      expect(written.source.fingerprint).toBe(
+        fingerprintV1(
+          fs.readFileSync(
+            path.join(transcripts(), `${source.sessionId}.json`),
+            "utf8"
+          )
+        )
+      );
+      delete written.source.fingerprint;
+      expect(written).toEqual(
+        readJson(path.join(SHARED_FIXTURES, "expected-v2", name))
+      );
     }
   });
 
-  it("streams a large folder, yielding and reporting progress", async () => {
+  it("streams a large folder, yielding and reporting progress mid-walk", async () => {
     for (let index = 0; index < 45; index++)
       put(transcripts(), `s${index}.json`, v1(`s${index}`));
     const progress = vi.fn();
+    const immediates = vi.spyOn(globalThis, "setImmediate");
+    const plan = await transcriptsV2().plan({ ...context(), progress });
+    const yields = immediates.mock.calls.length;
+    immediates.mockRestore();
+    expect(plan.writes).toHaveLength(45);
+    // Every 20 files: at 20 and 40, before the final report.
+    expect(progress.mock.calls.map((call) => call[0])).toEqual([20, 40, 45]);
+    expect(progress.mock.calls[0]).toEqual([20, 45, "Upgrading chat history"]);
+    expect(yields).toBeGreaterThanOrEqual(2);
+    // And through the runner, which scales it.
+    const runnerProgress = vi.fn();
     const result = await runMigrations({
       home,
       userData,
       appVersion: "0.0.0-test",
       steps: [transcriptsV2()],
       log: () => undefined,
-      onProgress: progress,
+      onProgress: runnerProgress,
     });
     expect(result).toMatchObject({ applied: [1], failed: null });
     expect(fs.readdirSync(threads())).toHaveLength(45);
-    const labels = progress.mock.calls.map((call) => call[2]);
-    expect(labels).toContain("Upgrading chat history");
-    expect(progress.mock.calls.at(-1)?.slice(0, 2)).toEqual([1000, 1000]);
+    const midway = runnerProgress.mock.calls.filter(
+      ([done, total]) => done > 0 && done < total
+    );
+    expect(midway.length).toBeGreaterThan(0);
   });
 });

@@ -34,6 +34,10 @@
       "id": "cmp1",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b1"
+          },
           "segments": [
             {
               "at": 1788256801000,

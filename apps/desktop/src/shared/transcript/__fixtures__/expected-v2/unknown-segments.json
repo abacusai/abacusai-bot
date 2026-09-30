@@ -34,6 +34,10 @@
       "id": "x1",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "x8"
+          },
           "segments": [
             {
               "at": 1788256801000,
