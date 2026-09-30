@@ -1,4 +1,5 @@
 import type { Db } from "#next/data/db";
+import { isListedSession } from "#next/data/db/filters";
 import {
   conversationRefFromKey,
   type ConversationKey,
@@ -15,7 +16,7 @@ export const recordBackgroundPreview = (
   const ref = conversationRefFromKey(event.conversationKey as ConversationKey);
   if (ref?.kind !== "session") return;
   const row = db.collections.sessions.get(ref.sessionId);
-  if (!row) return;
+  if (!row || !isListedSession(row)) return;
   const root =
     row.worktreePath ?? db.collections.workspaces.get(row.workspaceId)?.path;
   if (!root) return;
