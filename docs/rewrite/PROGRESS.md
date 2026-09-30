@@ -12,11 +12,11 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 0 | migration runner | section C + notes + 1 Oct amendment | runner 69f12a5d + r2 ce06e642; step 1 d4652ce6 + fixes 41e0dd92 + r2 8dc67139 (archive index, fail-closed clears, durable held writes) | runner Codex r1/r2 + Claude r1 fixed; step 1 Codex r1/r2 + Claude r1 fixed; low-effort Codex r3 running | done (dormant until cut-over) |
 | 0 | Window Controls Overlay + Electron 44 | r2 | a059a113 + cba4ca8a (Codex) | Claude r1 + re-review MERGEABLE; smoke on E44 OK; 2 low items deferred to wco switch | done (legacy default) |
 | 1 | renderer foundation (shell, router, theme, gallery) | r4 + impl amendments (router-owned route transitions) | merged 6847de01; fixes 8acc0ebb (40/40); r2 fixes e14f845d (9/9; Linux native-frame CI job added, unrun locally) | Codex r1 + Claude r1 + Codex r2 fixed; tree green (3,057 tests) | done (dev-only until cut-over) |
-| 2 | chat kit | r4 (final) | checkpoint merged 8b1c9d16 (725 renderer-next tests; screenshots pending) | Codex r1 + Claude r1 running | review |
+| 2 | chat kit | r4 (final) | merged 809f6175 (726 renderer-next tests) | Codex r1 (~20) + Claude r1 (57) → fix agent in worktree (incl. Electron/real-host tests, 6 change requests, knip) | fixing |
 | — | main AG-UI relay (`ai.*` behind AguiSource, wire selection, ring, hydrate/joinRun, thread persistence) | 00-agent-agui §8 + notes (main relay, r2) | merged b4da2b2f; fixes 5d5dc433 (33/33); r2 fixes c07479f7 (4/4; bounded bookkeeping) | Codex r1 + Claude r1 + Codex r2 fixed | done (agui default only in the wco build) |
 | 3 | bots | r3 (final) | Opus agent in worktree | | implementing |
 | 4 | sessions | r3 (b8997551, Codex r1–r2 applied; final) | waits on phases 2–3 | | spec done |
 | 5 | routines, artifacts, library, settings | r3 (Codex r1–r2 applied; final) | waits on phases 2–4 | | spec done |
 | 6 | onboarding, tour, notch | r4 (Codex r1–r3 applied; final) | waits on phases 2–5 + relay `ai.attention` | | spec done |
-| — | main requirements from specs 3–6 (+ cut-over defects #9/#10/#11, step-1 handovers) | specs 03 §24, 04 §26, 05 §31, 06 §23 + notes | merged 0ab59029 (2,717 main tests; PARITY regenerated) | Codex r1 + Claude r1 running | review |
+| — | main requirements from specs 3–6 (+ cut-over defects #9/#10/#11, step-1 handovers) | specs 03 §24, 04 §26, 05 §31, 06 §23 + notes | merged 0ab59029 | Codex r1 (~20, blocker: git.discard rename collision) + Claude r1 (32) → fix agent in worktree | fixing |
 | 7 | cut-over | r3 (Codex r1–r2 applied; final); prerequisites P1–P6 routed to implementers | waits on phases 2–6 | | spec done |
