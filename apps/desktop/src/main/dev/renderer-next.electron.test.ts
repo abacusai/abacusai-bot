@@ -12,8 +12,10 @@
  * - R1-T23 live data: a bot created through the dev mutation harness (the
  *   legacy service path) appears in the renderer's sidebar; a theme written
  *   from the renderer reaches main's nativeTheme.
- * - R1-T22: main drops the renderer's port: the renderer says so, reloads
- *   once and reconnects; a second loss within 10 s shows the error screen.
+ * - R1-T22: main drops the renderer's port: before any reconnection the
+ *   renderer stops its collection syncs and shows the connection-lost
+ *   notification, then reloads exactly once (counted from CDP navigations)
+ *   and reconnects; a second loss within 10 s shows the error screen.
  *
  * Runs `dist/` built with `VITE_UI_GALLERY=1` (no fixtures; the suite builds
  * it when missing or when it finds a fixture build). Without a display or a
@@ -40,6 +42,12 @@ const DESKTOP = resolve(import.meta.dirname, "../../..");
 const REPO = resolve(DESKTOP, "../..");
 const PORT = 9393;
 const FIXTURE_MARKER = "renderer-next fixture-db: dev fixture tables";
+/** `shell.connectionLost` in the bundled English copy. */
+const CONNECTION_LOST = (
+  JSON.parse(
+    readFileSync(join(DESKTOP, "src/renderer/locales/en-US.json"), "utf8")
+  ) as { shell: { connectionLost: string } }
+).shell.connectionLost;
 const REQUIRED =
   process.env.ABACUSBOT_REQUIRE_ELECTRON_SUITES === "1" ||
   (process.env.CI != null && process.env.CI !== "" && process.env.CI !== "0");
@@ -77,6 +85,8 @@ let child: ChildProcess | null = null;
 let scratch = "";
 let send: (method: string, params?: object) => Promise<any> = async () => null;
 const output: string[] = [];
+/** Top-frame document navigations (CDP `Page.frameNavigated`), in order. */
+const navigations: Array<{ url: string; at: number }> = [];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -235,6 +245,13 @@ beforeAll(async () => {
   const pending = new Map<number, (value: any) => void>();
   ws.onmessage = (event) => {
     const message = JSON.parse(String(event.data));
+    if (
+      message.method === "Page.frameNavigated" &&
+      message.params?.frame?.parentId == null
+    ) {
+      navigations.push({ url: message.params.frame.url, at: Date.now() });
+      return;
+    }
     pending.get(message.id)?.(message.result ?? message);
     pending.delete(message.id);
   };
@@ -244,6 +261,7 @@ beforeAll(async () => {
       pending.set(id, r);
       ws.send(JSON.stringify({ id, method, params }));
     });
+  await send("Page.enable");
   await booted();
   await evaluate(RECORDER);
 }, 600_000);
@@ -400,8 +418,33 @@ describe.skipIf(!runnable)("renderer-next acceptance (Electron)", () => {
     await evaluate("window.__abacusDev.setTheme('system')");
   });
 
-  it("R1-T22: a lost port reloads once and reconnects; a second loss within 10 s shows the error screen", async () => {
+  it("R1-T22: a lost port stops the syncs and says so, reloads exactly once and reconnects; a second loss within 10 s shows the error screen", async () => {
     const first = await evaluate<number>("performance.timeOrigin");
+    // Watches the first document from inside it: the moment the
+    // connection-lost toast appears, whether the syncs were already stopped,
+    // and in which document. sessionStorage carries it across the reload.
+    await evaluate(`(() => {
+      sessionStorage.removeItem("__lossProbe");
+      const seen = () =>
+        [...document.querySelectorAll('[data-slot="toast"]')].some((toast) =>
+          (toast.textContent || "").includes(${JSON.stringify(CONNECTION_LOST)})
+        );
+      const record = () => {
+        if (sessionStorage.getItem("__lossProbe") != null || !seen()) return;
+        sessionStorage.setItem("__lossProbe", JSON.stringify({
+          timeOrigin: performance.timeOrigin,
+          stopped: window.__abacusDev.stopped(),
+          at: Date.now(),
+        }));
+      };
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    })()`);
+    const before = navigations.length;
+    const dropped = Date.now();
     harness("renderer.dropPort", {});
     // The reload comes 1.5 s later: a new document that boots again.
     await until(
@@ -414,6 +457,32 @@ describe.skipIf(!runnable)("renderer-next acceptance (Electron)", () => {
       "document.querySelector('[data-slot=\"shell\"]') != null",
       10_000
     );
+    // Reconnected: the new document's collections sync again.
+    expect(await evaluate<boolean>("window.__abacusDev.stopped()")).toBe(false);
+    await until(
+      "window.__abacusDev.syncStatus('prefs')?.state === 'live'",
+      10_000,
+      "prefs live again"
+    );
+
+    const probe = JSON.parse(
+      (await evaluate<string | null>(
+        "sessionStorage.getItem('__lossProbe')"
+      )) ?? "null"
+    ) as { timeOrigin: number; stopped: boolean; at: number } | null;
+    expect(probe, "the connection-lost notification").not.toBeNull();
+    // In the first document, before the reload, with the syncs stopped.
+    expect(probe!.timeOrigin).toBe(first);
+    expect(probe!.stopped).toBe(true);
+    expect(probe!.at).toBeGreaterThanOrEqual(dropped);
+    expect(probe!.at).toBeLessThan(second);
+
+    // Exactly one reload, and no later one.
+    await sleep(3_000);
+    const reloads = navigations.slice(before);
+    expect(reloads, JSON.stringify(reloads)).toHaveLength(1);
+    expect(reloads[0]!.url).toContain("index-next");
+    expect(await evaluate<number>("performance.timeOrigin")).toBe(second);
 
     harness("renderer.dropPort", {});
     await until(
@@ -423,6 +492,7 @@ describe.skipIf(!runnable)("renderer-next acceptance (Electron)", () => {
     );
     await sleep(3_000);
     // No reload loop: still the same document, still the error screen.
+    expect(navigations.slice(before)).toHaveLength(1);
     expect(await evaluate<number>("performance.timeOrigin")).toBe(second);
     expect(
       await evaluate<boolean>(
