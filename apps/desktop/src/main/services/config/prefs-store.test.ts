@@ -139,11 +139,110 @@ describe("PrefsStore", () => {
     });
     expect(store.provenance()).toMatchObject({
       theme: "user",
-      sidebar: "default",
+      "sidebar.pinned": "default",
+      "sidebar.openSection": "default",
     });
 
     fs.writeFileSync(file, "{not json");
     expect(new PrefsStore({ file }).get().theme).toBe("system");
+  });
+
+  it("a failed write changes nothing; the retry writes, and a reload has it", () => {
+    // A directory nobody may write into: the atomic write fails.
+    const locked = path.join(dir, "locked");
+    fs.mkdirSync(locked);
+    const lockedFile = path.join(locked, "prefs.json");
+    const setWritable = (writable: boolean) =>
+      fs.chmodSync(locked, writable ? 0o700 : 0o500);
+    const store = new PrefsStore({ file: lockedFile });
+    const listener = vi.fn();
+    store.onChanged(listener);
+
+    setWritable(false);
+    expect(() => store.update({ theme: "dark" })).toThrow();
+    expect(store.get().theme).toBe("system");
+    expect(store.provenance().theme).toBe("default");
+    expect(listener).not.toHaveBeenCalled();
+    // The rejected choice does not block the old renderer's value either.
+    setWritable(true);
+    expect(store.importLegacy({ theme: "light" }).row.theme).toBe("light");
+    expect(store.provenance().theme).toBe("legacy");
+
+    setWritable(false);
+    expect(() => store.update({ theme: "dark" })).toThrow();
+    setWritable(true);
+    // Same patch again: persisted this time, not answered from memory.
+    expect(store.update({ theme: "dark" }).theme).toBe("dark");
+    const reloaded = new PrefsStore({ file: lockedFile });
+    expect(reloaded.get().theme).toBe("dark");
+    expect(reloaded.provenance().theme).toBe("user");
+  });
+
+  it("keeps provenance per leaf: a user leaf stays, its legacy sibling still flows", () => {
+    const store = new PrefsStore({ file });
+    store.update({ sidebar: { pinned: false } });
+    expect(store.provenance()).toMatchObject({
+      "sidebar.pinned": "user",
+      "sidebar.openSection": "default",
+    });
+
+    // C.4: `local-code-ui-store` and `sidebar-accordion` both feed sidebar.
+    const imported = store.importLegacy({
+      sidebar: { pinned: true, openSection: "bots" },
+    });
+    expect(imported.row.sidebar).toEqual({
+      pinned: false,
+      openSection: "bots",
+    });
+    expect(
+      store.importLegacy({ sidebar: { openSection: "routines" } }).row
+    ).toMatchObject({ sidebar: { pinned: false, openSection: "routines" } });
+    expect(store.provenance()).toMatchObject({
+      "sidebar.pinned": "user",
+      "sidebar.openSection": "legacy",
+    });
+
+    // One legacy key sets one dismissal; its sibling is not invented.
+    store.importLegacy({ dismissals: { upsell: true } });
+    expect(store.get().dismissals).toEqual({
+      referralCardUntil: null,
+      upsell: true,
+    });
+    expect(store.provenance()).toMatchObject({
+      "dismissals.upsell": "legacy",
+      "dismissals.referralCardUntil": "default",
+    });
+
+    const reloaded = new PrefsStore({ file });
+    expect(reloaded.get().sidebar).toEqual({
+      pinned: false,
+      openSection: "routines",
+    });
+    expect(reloaded.provenance()["sidebar.pinned"]).toBe("user");
+  });
+
+  it("counts an invalid leaf of a group and keeps its valid siblings", () => {
+    const store = new PrefsStore({ file });
+    const result = store.importLegacy({
+      sidebar: { pinned: "yes" as never, openSection: "bots" },
+      motion: "fast" as never,
+    });
+    expect(result.invalid).toBe(2);
+    expect(result.row.sidebar).toEqual({ pinned: true, openSection: "bots" });
+  });
+
+  it("reads a group-level mark as the mark of each of its leaves", () => {
+    fs.writeFileSync(
+      file,
+      JSON.stringify({
+        row: { sidebar: { pinned: false, openSection: "bots" } },
+        provenance: { sidebar: "user" },
+      })
+    );
+    expect(new PrefsStore({ file }).provenance()).toMatchObject({
+      "sidebar.pinned": "user",
+      "sidebar.openSection": "user",
+    });
   });
 
   it("keeps everything in memory with no file", () => {

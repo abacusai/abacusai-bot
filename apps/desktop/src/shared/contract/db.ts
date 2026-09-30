@@ -89,44 +89,67 @@ export const RoutineUpdateInputSchema = v.object({
 
 const NullableTimestamp = v.nullable(v.number());
 
-/** Every field optional, unknown keys refused (B.2 `prefs`). */
+/**
+ * Each prefs group's leaves (spec 00 B.2, C.4). Provenance is kept per leaf,
+ * so a patch may carry any subset of a group's leaves.
+ */
+export const PREFS_GROUP_ENTRIES = {
+  sidebar: {
+    pinned: v.boolean(),
+    openSection: v.nullable(v.picklist(["bots", "routines", "sessions"])),
+  },
+  pinned: { sessionIds: v.array(v.string()), botIds: v.array(v.string()) },
+  models: {
+    selectedModelId: v.nullable(v.string()),
+    favoriteModelIds: v.array(v.string()),
+    perWorkspace: v.record(v.string(), v.nullable(v.string())),
+  },
+  dismissals: { referralCardUntil: NullableTimestamp, upsell: v.boolean() },
+  motion: { reduce: v.picklist(["system", "on", "off"]) },
+  sounds: { enabled: v.boolean(), perEvent: v.record(v.string(), v.boolean()) },
+} as const;
+
+/** The scalar (non-group) prefs fields, each one leaf. */
+export const PREFS_SCALAR_ENTRIES = {
+  theme: v.picklist(["system", "light", "dark"]),
+  language: v.picklist(["system", ...SUPPORTED_LANGUAGES]),
+  defaultMode: AgentModeSchema,
+  workspaceExpanded: v.record(v.string(), v.boolean()),
+  lastPickedWorkspaceId: v.nullable(v.string()),
+  recentFolders: v.pipe(v.array(v.string()), v.maxLength(5)),
+  creditsExhaustedAt: NullableTimestamp,
+  browserHomepage: v.nullable(v.string()),
+  onboardingStep: v.nullable(v.string()),
+  panes: v.record(v.string(), v.number()),
+} as const;
+
+const prefsGroup = <E extends v.ObjectEntries>(entries: E) =>
+  v.optional(v.partial(v.strictObject(entries)));
+
+const G = PREFS_GROUP_ENTRIES;
+const S = PREFS_SCALAR_ENTRIES;
+
+/**
+ * Every field optional, unknown keys refused (B.2 `prefs`); a group takes
+ * any subset of its leaves.
+ */
 export const PrefsPatchSchema = v.strictObject({
-  theme: v.optional(v.picklist(["system", "light", "dark"])),
-  language: v.optional(v.picklist(["system", ...SUPPORTED_LANGUAGES])),
-  sidebar: v.optional(
-    v.object({
-      pinned: v.boolean(),
-      openSection: v.nullable(v.picklist(["bots", "routines", "sessions"])),
-    })
-  ),
-  pinned: v.optional(
-    v.object({ sessionIds: v.array(v.string()), botIds: v.array(v.string()) })
-  ),
-  models: v.optional(
-    v.object({
-      selectedModelId: v.nullable(v.string()),
-      favoriteModelIds: v.array(v.string()),
-      perWorkspace: v.record(v.string(), v.nullable(v.string())),
-    })
-  ),
-  defaultMode: v.optional(AgentModeSchema),
-  workspaceExpanded: v.optional(v.record(v.string(), v.boolean())),
-  lastPickedWorkspaceId: v.optional(v.nullable(v.string())),
-  recentFolders: v.optional(v.pipe(v.array(v.string()), v.maxLength(5))),
-  creditsExhaustedAt: v.optional(NullableTimestamp),
-  browserHomepage: v.optional(v.nullable(v.string())),
-  onboardingStep: v.optional(v.nullable(v.string())),
-  dismissals: v.optional(
-    v.object({ referralCardUntil: NullableTimestamp, upsell: v.boolean() })
-  ),
-  panes: v.optional(v.record(v.string(), v.number())),
-  motion: v.optional(v.object({ reduce: v.picklist(["system", "on", "off"]) })),
-  sounds: v.optional(
-    v.object({
-      enabled: v.boolean(),
-      perEvent: v.record(v.string(), v.boolean()),
-    })
-  ),
+  theme: v.optional(S.theme),
+  language: v.optional(S.language),
+  sidebar: prefsGroup(G.sidebar),
+  pinned: prefsGroup(G.pinned),
+  models: prefsGroup(G.models),
+  defaultMode: v.optional(S.defaultMode),
+  workspaceExpanded: v.optional(S.workspaceExpanded),
+  lastPickedWorkspaceId: v.optional(S.lastPickedWorkspaceId),
+  recentFolders: v.optional(S.recentFolders),
+  creditsExhaustedAt: v.optional(S.creditsExhaustedAt),
+  browserHomepage: v.optional(S.browserHomepage),
+  onboardingStep: v.optional(S.onboardingStep),
+  dismissals: prefsGroup(G.dismissals),
+  panes: v.optional(S.panes),
+  motion: prefsGroup(G.motion),
+  sounds: prefsGroup(G.sounds),
 });
 
 export const MemoryDeleteInputSchema = v.object({
