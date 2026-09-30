@@ -45,6 +45,11 @@ export interface GitDiffResult {
   patch?: string;
 }
 
+/**
+ * A change to discard: its checkout-relative path with `/` separators, as
+ * git spells it under the checkout (a backslash is a separator only on
+ * Windows).
+ */
 export const GitDiscardEntrySchema = v.object({
   path: v.pipe(v.string(), v.nonEmpty()),
   /** A rename's source, from the change item's `origPath`. */
@@ -53,13 +58,35 @@ export const GitDiscardEntrySchema = v.object({
 
 export type GitDiscardEntry = v.InferOutput<typeof GitDiscardEntrySchema>;
 
-/** Per entry: put back as in HEAD, or failed with nothing changed for it. */
+/**
+ * Why a discard entry failed. Every reason but `partial` means nothing of
+ * that entry changed.
+ * - `not-changed`: git reports no change at that exact path (a directory,
+ *   another spelling, a path through a symlink, or an `origPath` that is not
+ *   git's rename source).
+ * - `occupied`: a rename's source holds content other than HEAD's, which
+ *   restoring it would destroy.
+ * - `blocked`: a pending migration may still restore the file.
+ * - `trash`: the file could not go to the Trash, so its index entry stayed.
+ * - `git`: a git step failed before anything changed.
+ * - `partial`: a later step failed after an earlier one changed something
+ *   (the new file is in the Trash but still staged; a rename's destination
+ *   is gone but its source is not back).
+ */
+export type GitDiscardFailureReason =
+  | "not-changed"
+  | "occupied"
+  | "blocked"
+  | "trash"
+  | "git"
+  | "partial";
+
+/** Per entry: put back as in HEAD, or failed (see the reasons). */
 export interface GitDiscardResult {
   discarded: string[];
   failed: Array<{
     path: string;
-    /** `trash`: the file could not go to the Trash, so its index entry stayed. */
-    reason: "trash" | "git";
+    reason: GitDiscardFailureReason;
     detail: string;
   }>;
 }
