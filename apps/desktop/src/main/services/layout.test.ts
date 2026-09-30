@@ -19,6 +19,9 @@ const SERVICES = import.meta.dirname;
 /** The groups a service can belong to. Adding one is a deliberate decision. */
 const GROUPS = [
   "agent-tools",
+  // Main's AG-UI relay: an agent's `--wire agui` stream to the renderer's
+  // `ai.*` procedures (transcript, replay ring, run log, thread snapshot).
+  "agui",
   "bots",
   "browser",
   "config",

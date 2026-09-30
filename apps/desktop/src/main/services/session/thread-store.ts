@@ -163,6 +163,38 @@ export class ThreadStore {
     this.write(sessionId, threadFile, thread, "dual-write", true);
   }
 
+  /**
+   * Main's AG-UI persistence (spec 02 §14.7): the relay's transcript and run
+   * outcomes at a terminal, as a `source.kind: "agui"` file, which the
+   * dual-write and the repair never overwrite. `migratedFrom` records the v1
+   * file the history started from, if any. Throws on a failed write.
+   */
+  writeAgui(
+    sessionId: string,
+    thread: {
+      messages: UIMessage[];
+      runs: unknown[];
+      migratedFrom?: { updatedAt: string };
+    }
+  ): void {
+    const threadFile = this.threadPath(sessionId);
+    if (threadFile == null) return;
+    const file: ThreadFileV2 = {
+      version: 2,
+      threadId: sessionId,
+      updatedAt: new Date().toISOString(),
+      source: {
+        kind: "agui",
+        ...(thread.migratedFrom != null && {
+          migratedFrom: thread.migratedFrom,
+        }),
+      },
+      messages: thread.messages,
+      runs: thread.runs,
+    };
+    this.write(sessionId, threadFile, file, "agui", true);
+  }
+
   remove(sessionId: string): void {
     const threadFile = this.threadPath(sessionId);
     if (threadFile == null) return;
@@ -185,7 +217,7 @@ export class ThreadStore {
     sessionId: string,
     file: string,
     thread: ThreadFileV2,
-    reason: "repair" | "dual-write",
+    reason: "repair" | "dual-write" | "agui",
     rethrow = false
   ): void {
     try {
