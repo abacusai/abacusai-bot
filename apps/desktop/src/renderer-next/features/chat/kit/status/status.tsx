@@ -288,6 +288,11 @@ export const ErrorCard = ({
               })}
             </Button>
           ))}
+          {composer.onUseLocalModel != null ? (
+            <Button variant="secondary" onClick={composer.onUseLocalModel}>
+              {t("localModels.useLocal")}
+            </Button>
+          ) : null}
           <Button
             onClick={() =>
               void runtime.host.openExternal(
