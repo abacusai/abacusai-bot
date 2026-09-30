@@ -161,6 +161,7 @@ export const botsCollectionOptions = (
       ),
     }),
     toDeleteInput: (id) => ({ id }),
+    idempotentDelete: true,
     ...overrides,
   });
 
@@ -209,6 +210,7 @@ export const routinesCollectionOptions = (
       },
     }),
     toDeleteInput: (id) => ({ id }),
+    idempotentDelete: true,
     ...overrides,
   });
 
