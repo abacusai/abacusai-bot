@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, RotateCw, ExternalLink } from "lucide-react";
 import { useEffect, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
@@ -41,6 +42,11 @@ export const BrowserTab = ({
 }) => {
   const { t } = useTranslation();
   const transport = useSessionsTransport();
+  const [retry, setRetry] = useState(0);
+  const [profile, setProfile] = useState<string | undefined>();
+  const profiles = useQuery(
+    transport.orpc.browser.profiles.list.queryOptions({ input: {} })
+  );
   const [state, setState] = useState<BrowserRuntimeState | null>(null);
   const [address, setAddress] = useState(url ?? "about:blank");
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +64,12 @@ export const BrowserTab = ({
           conversationKey: key,
           resourceId: id,
           ...(url ? { url } : {}),
+          ...(profile ? { profileId: profile } : {}),
         });
     void promise
       .then((s) => {
         if (live) {
+          setError(null);
           setState(s);
           setAddress(s.url);
         }
@@ -70,7 +78,7 @@ export const BrowserTab = ({
     return () => {
       live = false;
     };
-  }, [transport, key, id, url, file, root]);
+  }, [transport, key, id, url, file, root, retry, profile]);
   useEffect(() => {
     const abort = new AbortController();
     void followNotices(
@@ -103,6 +111,7 @@ export const BrowserTab = ({
       });
       setState(s);
       setAddress(s.url);
+      setError(null);
     } catch (e) {
       setError(String(e));
     }
@@ -172,11 +181,52 @@ export const BrowserTab = ({
           <ExternalLink />
         </Button>
       </div>
+      <div className="flex flex-wrap items-center gap-1">
+        {!file ? (
+          <select
+            aria-label={t("sessions.browser.profile")}
+            value={profile ?? ""}
+            onChange={(e) => setProfile(e.target.value || undefined)}
+          >
+            <option value="">{t("sessions.browser.defaultProfile")}</option>
+            {profiles.data?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.browserName} · {p.profileName}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        {(
+          [
+            "zoom-out",
+            "zoom-reset",
+            "zoom-in",
+            "open-devtools",
+            "clear-site-data",
+          ] as const
+        ).map((command) => (
+          <Button
+            key={command}
+            size="sm"
+            variant="ghost"
+            disabled={!state}
+            onClick={() => void action({ action: command })}
+          >
+            {t(`sessions.browser.${command}`)}
+          </Button>
+        ))}
+      </div>
       {error ? (
         <div role="alert">
           <p>{t("sessions.browser.unavailable")}</p>
           <p>{error}</p>
-          <Button onClick={() => void action({ action: "hard-reload" })}>
+          <Button
+            onClick={() => {
+              setError(null);
+              setState(null);
+              setRetry((n) => n + 1);
+            }}
+          >
             {t("sessions.common.retry")}
           </Button>
         </div>

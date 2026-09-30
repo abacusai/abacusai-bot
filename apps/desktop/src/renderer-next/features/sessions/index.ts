@@ -13,3 +13,5 @@ export {
   sessionsGallerySections,
   isSessionsGalleryFixture,
 } from "./gallery/sections";
+
+export { BrowserTab } from "./browser/browser-tab";

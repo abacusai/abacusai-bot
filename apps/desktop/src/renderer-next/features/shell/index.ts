@@ -17,4 +17,5 @@ export {
   requestBrowserOpen,
   BrowserOpenPlaceholder,
   registerBrowserOpen,
+  useBrowserOpenUrl,
 } from "./browser-open";

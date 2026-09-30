@@ -47,7 +47,22 @@ export const createNativePresenter = (
           : ([...candidates.values()].find(eligible) ?? null);
         const old = current;
         if (old && (old !== chosen || !eligible(old))) {
-          const capture = await safe(() => runtime.capture(old.lease));
+          const capture = await safe(async () => {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+              return await Promise.race([
+                runtime.capture(old.lease),
+                new Promise<never>((_, reject) => {
+                  timer = setTimeout(
+                    () => reject(new Error("Browser capture deadline")),
+                    500
+                  );
+                }),
+              ]);
+            } finally {
+              if (timer) clearTimeout(timer);
+            }
+          });
           if (capture?.dataUrl && candidates.get(old.id) === old)
             captures.setState((s) => ({ ...s, [old.id]: capture.dataUrl! }));
           await safe(() =>
