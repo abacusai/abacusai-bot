@@ -44,30 +44,6 @@ describe("the shape of a first run", () => {
     ]);
   });
 
-  it("asks a Google-hosted account about Gmail right after signing in, once, and never on a rerun", () => {
-    expect(
-      stepsFor({ signedIn: false, paying: false, offerGmail: true })
-    ).toEqual([
-      "auth",
-      "gmail",
-      "welcome",
-      "connectors",
-      "models",
-      "explainer",
-    ]);
-    expect(
-      stepsFor({ signedIn: true, paying: true, offerGmail: true })
-    ).toEqual(["gmail", "welcome", "connectors", "explainer"]);
-    expect(
-      stepsFor({
-        signedIn: true,
-        paying: false,
-        onboarded: true,
-        offerGmail: true,
-      })
-    ).toEqual([]);
-  });
-
   it("does not ask a signed-in user to sign in again", () => {
     expect(stepsFor({ signedIn: true, paying: false })).toEqual([
       "welcome",

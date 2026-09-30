@@ -83,6 +83,7 @@ import type { RoutineCreateInput, RoutineUpdateInput } from "#shared/routines";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 import type { TerminalShellId } from "#shared/terminal-shells";
 
+import { registerLoginItem } from "./login-item";
 import { sessionDefaultWorkspace } from "./paths";
 import {
   activateProfile,
@@ -265,6 +266,7 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     console.log(
       `[account] signed in as ${account.email ?? "?"}: restored ${restored} session(s)`
     );
+    registerLoginItem();
     return { ok: true };
   };
 

@@ -1,6 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ shell: { openExternal: vi.fn() } }));
+const hasAbacusSession = vi.hoisted(() => vi.fn(async () => false));
+vi.mock("./abacus-signin-window", () => ({ hasAbacusSession }));
+const openConnectWindow = vi.hoisted(() =>
+  vi.fn<
+    (options: {
+      url: string;
+      onDismissed: () => void;
+    }) => { close: () => void } | null
+  >(() => null)
+);
+vi.mock("./abacus-connect-window", () => ({ openConnectWindow }));
 
 const bringToFront = vi.fn();
 vi.mock("../../bring-to-front", () => ({ bringToFront: () => bringToFront() }));
@@ -331,6 +342,67 @@ describe("how the browser hop starts", () => {
     const url = await openedUrl();
     expect(url.searchParams.has("autostart")).toBe(false);
     expect(url.searchParams.has("hint")).toBe(false);
+    cancelConnectorConnect();
+    await hop;
+  });
+});
+
+/**
+ * The account that signed in inside the app has its session in the app's
+ * sign-in window, not the browser. The connect page in the browser would
+ * show its own sign-in first; on that session it goes straight to the
+ * provider.
+ */
+describe("where the hop runs", () => {
+  beforeEach(() => {
+    hasAbacusSession.mockResolvedValue(false);
+    openConnectWindow.mockReset();
+    openConnectWindow.mockReturnValue(null);
+  });
+
+  it("runs in an app window on the sign-in session when the account signed in there", async () => {
+    hasAbacusSession.mockResolvedValue(true);
+    const close = vi.fn();
+    openConnectWindow.mockReturnValue({ close });
+    const { shell } = await import("electron");
+    (shell.openExternal as unknown as { mockClear: () => void }).mockClear();
+
+    const hop = startConnectorConnect("gmailuser", { autostart: true });
+    await vi.waitFor(() => expect(openConnectWindow).toHaveBeenCalledOnce());
+    const url = new URL(openConnectWindow.mock.calls[0]![0].url);
+    expect(url.pathname).toBe("/chatllm/connect-connector");
+    expect(url.searchParams.get("autostart")).toBe("1");
+    expect(shell.openExternal).not.toHaveBeenCalled();
+
+    cancelConnectorConnect();
+    await hop;
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("is cancelled when the user closes that window", async () => {
+    hasAbacusSession.mockResolvedValue(true);
+    openConnectWindow.mockReturnValue({ close: vi.fn() });
+
+    const hop = startConnectorConnect("gmailuser");
+    await vi.waitFor(() => expect(openConnectWindow).toHaveBeenCalledOnce());
+    openConnectWindow.mock.calls[0]![0].onDismissed();
+
+    expect(await hop).toMatchObject({ ok: false, cancelled: true });
+  });
+
+  it("falls back to the browser without a session, or without an app window", async () => {
+    const { shell } = await import("electron");
+    (shell.openExternal as unknown as { mockClear: () => void }).mockClear();
+    (
+      shell.openExternal as unknown as {
+        mockResolvedValue: (v: unknown) => void;
+      }
+    ).mockResolvedValue(undefined);
+    hasAbacusSession.mockResolvedValue(true);
+    openConnectWindow.mockReturnValue(null);
+
+    const hop = startConnectorConnect("slack");
+    await vi.waitFor(() => expect(shell.openExternal).toHaveBeenCalledOnce());
     cancelConnectorConnect();
     await hop;
   });

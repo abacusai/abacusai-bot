@@ -13,7 +13,6 @@ export const FUNNEL_STEPS = [
   "first_message",
   // Onboarding screens, in their order.
   "screen_auth",
-  "screen_gmail",
   "screen_welcome",
   "screen_connectors",
   "screen_models",

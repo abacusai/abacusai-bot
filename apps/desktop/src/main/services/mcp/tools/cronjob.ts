@@ -30,7 +30,9 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       "",
       "A routine with a schedule also fires once the moment it is created, whatever its",
       "schedule says, so the user sees it work instead of waiting out the first gap. Tell them",
-      "so, and write the prompt so an off-schedule first run still makes sense.",
+      "so, and write the prompt so an off-schedule first run still makes sense. When this",
+      "conversation has just done the routine's work itself, pass firstRun: false so it is",
+      "not done twice.",
       "",
       "webhook: true makes the routine firable by an outside POST; the user copies its URL",
       "from the Routines panel. The request body arrives as data in the fire prompt.",
@@ -76,6 +78,11 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
         enabled: {
           type: "boolean",
           description: "update: enable or pause the job.",
+        },
+        firstRun: {
+          type: "boolean",
+          description:
+            "create: false skips the fire on creation, for a routine whose first pass this conversation has just done.",
         },
       },
       required: ["action"],

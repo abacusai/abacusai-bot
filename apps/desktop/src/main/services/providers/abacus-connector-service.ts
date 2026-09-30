@@ -14,7 +14,9 @@ import type {
 
 import { bringToFront } from "../../bring-to-front";
 import { credentialFor } from "../config/settings";
+import { openConnectWindow, type ConnectWindow } from "./abacus-connect-window";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
+import { hasAbacusSession } from "./abacus-signin-window";
 
 /**
  * Abacus.AI first-party connectors (Gmail, Slack, Drive, ...). The platform
@@ -295,6 +297,7 @@ export const startConnectorConnect = (
     let settled = false;
     let accepted = false;
     let timer: NodeJS.Timeout | null = null;
+    let window: ConnectWindow | null = null;
 
     const server = http.createServer((req, res) => {
       const host = (req.headers.host ?? "").toLowerCase();
@@ -364,6 +367,8 @@ export const startConnectorConnect = (
       server.closeAllConnections?.();
       server.close();
       if (inFlight?.close === close) inFlight = null;
+      window?.close();
+      window = null;
       if (reveal) bringToFront();
       resolve(result);
     };
@@ -416,15 +421,43 @@ export const startConnectorConnect = (
       const hint = (options.hint ?? "").trim();
       if (HINT_RE.test(hint)) connectUrl.searchParams.set("hint", hint);
 
-      void shell.openExternal(connectUrl.toString()).catch((error: unknown) => {
-        finish({
-          ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Could not open the browser.",
+      const openInBrowser = (): void => {
+        void shell
+          .openExternal(connectUrl.toString())
+          .catch((error: unknown) => {
+            finish({
+              ok: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Could not open the browser.",
+            });
+          });
+      };
+
+      // The account that signed in inside the app has its session here, not
+      // in the browser: the hop runs in an app window on that session, and
+      // the connect page can go straight to the provider. Otherwise the
+      // browser, where the account signed in, as before.
+      void hasAbacusSession()
+        .catch(() => false)
+        .then((inApp) => {
+          if (settled) return;
+          console.log(
+            `[abacus-connectors] ${serviceKey} hop: ${inApp ? "app window" : "browser"}`
+          );
+          if (inApp) {
+            window = openConnectWindow({
+              url: connectUrl.toString(),
+              port,
+              callbackPath,
+              onHandOff: openInBrowser,
+              onDismissed: close,
+            });
+            if (window != null) return;
+          }
+          openInBrowser();
         });
-      });
     });
   });
 };

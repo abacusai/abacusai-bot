@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { isMessageReaction } from "#shared/message-reactions";
 
 import type { SubtaskSummary } from "../../conversation";
+import { getToolDisplayName } from "../../conversation/types";
 import { Markdown } from "../common/markdown";
 import { Button } from "../ui";
 import { UserMessageBubble } from "./agent-message";
@@ -28,6 +29,7 @@ import {
   statusIcon,
   SubtaskReport,
 } from "./subtask-card";
+import { summarizeToolGroup, toolGroupAction } from "./tool-group-logic";
 
 /**
  * A bot's chat as a message thread, not a work log: a bot is not supervised, so
@@ -185,21 +187,60 @@ const BotSubtaskThread = ({
 
 /**
  * A bot's thread hides its tool calls, so without this a bot reading half your
- * home directory looks exactly like one that has stopped replying.
+ * home directory looks exactly like one that has stopped replying. What it is
+ * doing rides along as a line, in the words the tool log would have used, so
+ * a minute of inbox triage reads as triage rather than as silence.
  */
-const WorkingBubble = (): JSX.Element => (
+const WorkingBubble = ({
+  activity,
+}: {
+  activity: string | null;
+}): JSX.Element => (
   <div className="flex items-start" data-id="bot-message-working">
-    <div className="bg-sidebar flex items-center gap-1 rounded-2xl px-3.5 py-3">
-      {[0, 150, 300].map((delay) => (
-        <span
-          key={delay}
-          className="bg-muted-foreground/70 size-1.5 animate-bounce rounded-full"
-          style={{ animationDelay: `${delay}ms` }}
-        />
-      ))}
+    <div className="bg-sidebar flex items-center gap-2 rounded-2xl px-3.5 py-3">
+      <span className="flex items-center gap-1">
+        {[0, 150, 300].map((delay) => (
+          <span
+            key={delay}
+            className="bg-muted-foreground/70 size-1.5 animate-bounce rounded-full"
+            style={{ animationDelay: `${delay}ms` }}
+          />
+        ))}
+      </span>
+      {activity != null && (
+        <ShimmerText className="text-muted-foreground text-sm">
+          <span data-id="bot-message-activity">{activity}</span>
+        </ShimmerText>
+      )}
     </div>
   </div>
 );
+
+/**
+ * The tool call under way in the turn being worked on. File and shell work
+ * reads as the tool log sums it up; a connector or app tool, which the log
+ * only counts, is named, with the action it was asked for: "Gmail Tool:
+ * create draft reply" says more than "Using 1 tool".
+ */
+const currentActivity = (chatItems: ChatRenderItem[]): string | null => {
+  const turn = chatItems.at(-1);
+  if (turn == null || turn.kind !== "agent") return null;
+  const groups = turn.items.filter((item) => item.kind === "tool_group");
+  const group =
+    groups.findLast((item) => item.state === "running") ?? groups.at(-1);
+  if (group == null || group.tools.length === 0) return null;
+  const tool =
+    group.tools.find((item) => item.state === "running") ?? group.tools.at(-1)!;
+  if (toolGroupAction(tool) !== "other") return summarizeToolGroup(group.tools);
+  // An MCP tool carries its server's id in front ("abacus-connectors_Gmail_Tool").
+  const bare = tool.name.replace(/^[a-z0-9]+-[a-z0-9-]+_/, "");
+  const name = getToolDisplayName(bare).replace(/([a-z])([A-Z])/g, "$1 $2");
+  const action =
+    typeof tool.input.action === "string" && tool.input.action.length > 0
+      ? tool.input.action.replace(/[_-]+/g, " ")
+      : null;
+  return action == null ? `Using ${name}` : `${name}: ${action}`;
+};
 
 export const BotMessageList = ({
   onRateTurn,
@@ -224,6 +265,10 @@ export const BotMessageList = ({
 }): JSX.Element => {
   const { t } = useTranslation();
   const botReactions = useMemo(() => agentReactions(chatItems), [chatItems]);
+  const activity = useMemo(
+    () => (isWorking ? currentActivity(chatItems) : null),
+    [chatItems, isWorking]
+  );
   const rows = useMemo(
     () =>
       chatItems
@@ -394,7 +439,7 @@ export const BotMessageList = ({
       })}
       {/* Keep the typing indicator out of layout changes, including reaction-only turns. */}
       <div className="relative h-11 shrink-0" data-id="bot-message-status-slot">
-        {isWorking && <WorkingBubble />}
+        {isWorking && <WorkingBubble activity={activity} />}
       </div>
     </div>
   );

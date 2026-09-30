@@ -1,4 +1,11 @@
-import { ArrowRight, Award, Gift, Link2, Monitor } from "lucide-react";
+import {
+  ArrowRight,
+  Award,
+  Gift,
+  Link2,
+  MessageCircle,
+  Monitor,
+} from "lucide-react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,6 +17,7 @@ const PROMISES = [
   { key: "Agent", icon: Award },
   { key: "Models", icon: Gift },
   { key: "Work", icon: Link2 },
+  { key: "Chat", icon: MessageCircle },
   { key: "Local", icon: Monitor },
 ] as const;
 

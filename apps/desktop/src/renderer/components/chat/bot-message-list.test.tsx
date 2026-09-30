@@ -326,6 +326,87 @@ describe("while the bot is off doing something", () => {
   });
 });
 
+describe("what the bot is doing meanwhile", () => {
+  const working = (tools: unknown[]): ChatRenderItem[] => [
+    { kind: "user", id: "u1", text: "sort my inbox" },
+    {
+      kind: "agent",
+      id: "a1",
+      items: [
+        { kind: "tool_group", id: "g1", summary: "", state: "running", tools },
+      ] as never,
+    },
+  ];
+  const activity = (): string | null =>
+    document.querySelector('[data-id="bot-message-activity"]')?.textContent ??
+    null;
+
+  it("names a connector tool and the action it was asked for", () => {
+    render(
+      (
+        <BotMessageList
+          chatItems={working([
+            {
+              id: "t1",
+              name: "abacus-connectors_Gmail_Tool",
+              streamingArgs: false,
+              input: { action: "create_draft_reply" },
+              state: "running",
+            },
+          ])}
+          isWorking
+        />
+      ) as JSX.Element
+    );
+
+    expect(activity()).toBe("Gmail Tool: create draft reply");
+  });
+
+  it("sums up file and shell work the way the tool log does", () => {
+    render(
+      (
+        <BotMessageList
+          chatItems={working([
+            {
+              id: "t1",
+              name: "read",
+              streamingArgs: false,
+              input: { path: "a" },
+              state: "done",
+            },
+            {
+              id: "t2",
+              name: "read",
+              streamingArgs: false,
+              input: { path: "b" },
+              state: "running",
+            },
+          ])}
+          isWorking
+        />
+      ) as JSX.Element
+    );
+
+    expect(activity()).toBe("Reading 2 files");
+  });
+
+  it("shows only the dots before the first tool call", () => {
+    render(
+      (
+        <BotMessageList
+          chatItems={[{ kind: "user", id: "u1", text: "hi" }]}
+          isWorking
+        />
+      ) as JSX.Element
+    );
+
+    expect(
+      document.querySelector('[data-id="bot-message-working"]')
+    ).toBeTruthy();
+    expect(activity()).toBeNull();
+  });
+});
+
 describe("a failed turn that offers a different model", () => {
   it("puts a Switch model button on the notice, wired to the panel", () => {
     const onSwitchModel = vi.fn();
