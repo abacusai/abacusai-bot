@@ -328,7 +328,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (254)
+## Contract procedures (255)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -520,6 +520,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `referrals.summary` | query | `agent.getReferralSummary` |
 | `referrals.whatsappContacts` | query | `agent.listReferralWhatsappContacts` |
 | `routines.editByChat` | mutation | `agent.editRoutineByChat` |
+| `routines.events` | subscription |  |
 | `routines.run` | mutation | `agent.runRoutine` |
 | `sessions.turnState` | query | `agent.getSessionTurnState` |
 | `settings.defaultMode.get` | query | `agent.getDefaultAgentMode` |

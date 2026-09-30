@@ -137,6 +137,8 @@ import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-ru
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
+import { createLoginItem } from "./services/config/login-item";
+import { notificationSilent } from "./services/config/notification-policy";
 import { PrefsStore, prefsFile } from "./services/config/prefs-store";
 import {
   registerRendererState,
@@ -167,8 +169,6 @@ import {
 import { getLocalUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
-import { createLoginItem } from "./services/system/login-item";
-import { notificationSilent } from "./services/system/notification-policy";
 import {
   initializeExperienceRuntime,
   registerAppScheme,

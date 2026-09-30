@@ -76,6 +76,7 @@ export type { ProcedureKind, ProcedureMeta } from "./base";
 export type { AiHydration, AiSendAck, AiSendInput } from "./ai";
 export type * from "./ai-thread";
 export type { BotsEvent } from "./bots";
+export type { RoutinesEvent } from "./routines";
 export type { BrowserEvent } from "./browser";
 export type { ConnectorsEvent } from "./connectors";
 export type { DevicesEvent } from "./devices";
