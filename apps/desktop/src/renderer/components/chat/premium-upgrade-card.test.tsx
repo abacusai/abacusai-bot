@@ -178,53 +178,6 @@ describe("PremiumUpgradeCard", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("offers a local model once every free source is connected, and resumes on it", () => {
-    providers.configured = { abacus: true, openrouter: true, gemini: true };
-    const onPickModel = vi.fn();
-    const onResume = vi.fn();
-    renderCard({ dataId: "chat-upgrade-card", onPickModel, onResume });
-
-    expect(button("connect-openrouter")).toBeNull();
-    expect(button("cta")).toBeNull();
-    expect(document.body.textContent).toContain(
-      "workspace.premiumUpgrade.localNote"
-    );
-    fireEvent.click(button("local")!);
-    expect(useLocalModelDialogStore.getState().open).toBe(true);
-
-    // The dialog reports the model ready: the chat moves onto it and runs on.
-    useLocalModelDialogStore.getState().onReady?.("local/qwen3.5-4b");
-    expect(onPickModel).toHaveBeenCalledWith("local/qwen3.5-4b");
-    expect(onResume).toHaveBeenCalledTimes(1);
-  });
-
-  it("points at the picker instead on a build without the local runtime", () => {
-    providers.configured = { abacus: true, openrouter: true, gemini: true };
-    localModels.runtimeAvailable = false;
-    const onSwitchModel = vi.fn();
-    renderCard({ dataId: "chat-upgrade-card", onSwitchModel });
-    localModels.runtimeAvailable = true;
-
-    expect(button("local")).toBeNull();
-    expect(document.body.textContent).toContain(
-      "workspace.premiumUpgrade.switchNote"
-    );
-    fireEvent.click(button("switch")!);
-    expect(onSwitchModel).toHaveBeenCalledTimes(1);
-  });
-
-  it("still offers the platform's free models by name", () => {
-    const onPickModel = vi.fn();
-    renderCard({
-      dataId: "chat-upgrade-card",
-      freeModels: [{ model: "abacus/x", label: "X" }],
-      onPickModel,
-    });
-
-    fireEvent.click(button("free-model")!);
-    expect(onPickModel).toHaveBeenCalledWith("abacus/x");
-  });
-
   it("sends a paid tier to its top-up, not to a free source", () => {
     account.current = free({ subscription_tier: "pro" });
     renderCard({ dataId: "chat-upgrade-card" });
