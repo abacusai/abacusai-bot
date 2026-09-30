@@ -3311,12 +3311,14 @@ export class ServiceHost {
     );
   }
 
-  listConnectorRequests(conversationKey: ConversationKey): ConnectorRequest[] {
+  /** One conversation's pending asks, or every conversation's with no key. */
+  listConnectorRequests(conversationKey?: ConversationKey): ConnectorRequest[] {
     return this.connectorGate.listPending(conversationKey);
   }
 
+  /** One conversation's pending asks, or every conversation's with no key. */
   listBrowserPermissionRequests(
-    conversationKey: ConversationKey
+    conversationKey?: ConversationKey
   ): BrowserPermissionRequest[] {
     return this.builtinToolPermissions.listPending(conversationKey);
   }
