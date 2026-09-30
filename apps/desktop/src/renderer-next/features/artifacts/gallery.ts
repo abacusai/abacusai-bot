@@ -18,3 +18,16 @@ export const artifactGalleryRows: ArtifactRow[] = [
   createdAt: "2026-10-01T00:00:00Z",
   updatedAt: "2026-10-01T00:00:00Z",
 }));
+
+/** Performance fixture: the same card/preview implementation, 300 lazy images. */
+export const artifactStressRows: ArtifactRow[] = Array.from(
+  { length: 2000 },
+  (_, index) => ({
+    ...artifactGalleryRows[0]!,
+    id: `stress-artifact-${index}`,
+    title: `Artifact ${String(index).padStart(4, "0")}`,
+    kind: index < 300 ? "image" : "file",
+    location: `/gallery/${index < 300 ? "image.png" : "report.md"}`,
+    updatedAt: new Date(Date.UTC(2026, 9, 1, 0, 0, index)).toISOString(),
+  })
+);

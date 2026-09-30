@@ -1,6 +1,10 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
-import { ArtifactsPage, artifactGalleryRows } from "#next/features/artifacts";
+import {
+  ArtifactsPage,
+  artifactGalleryRows,
+  artifactStressRows,
+} from "#next/features/artifacts";
 import {
   useBot,
   useBotChatSlots,
@@ -116,6 +120,7 @@ function Phase5View({ fixture }: { fixture: string }) {
   const components: Record<string, React.ReactNode> = {
     "routines-sidebar": <RoutineSidebarGallery />,
     "artifacts-grid": <ArtifactsPage fixtureRows={artifactGalleryRows} />,
+    "artifacts-stress": <ArtifactsPage fixtureRows={artifactStressRows} />,
     "library-connectors": <ConnectorsPage />,
     "settings-general": <GeneralPage />,
     "settings-models": <ModelsPage />,
