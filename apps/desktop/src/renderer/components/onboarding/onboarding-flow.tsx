@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { AbacusAuthIntent } from "#shared/contracts";
 import { isPayingAbacusTier } from "#shared/models";
 
-import { CONNECTORS } from "../../connectors";
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
 import { useAbacusCredentialQuery } from "../../hooks/use-abacus-credential";
 import {
@@ -19,10 +18,8 @@ import { settingsQueryKeys } from "../../lib/settings-query-keys";
 import { useAccountStore } from "../../stores/account-store";
 import { useWorkspaceStore } from "../../stores/code-store";
 import { useTourStore } from "../../stores/tour-store";
-import { useConnectFlow } from "../connectors/connect-flow";
 import { WindowDragRegion } from "../layout/window-drag-region";
 import { ConnectorsStep } from "./connectors-step";
-import { GmailPermissionStep } from "./gmail-permission-step";
 import {
   isOnboardingStep,
   nextStep,
@@ -72,15 +69,12 @@ const writeStoredStep = (step: OnboardingStep | null): void => {
 /** Once per install: a sign-in the user closed is not started on them again. */
 const AUTO_SIGN_IN_KEY = "onboarding.autoSignIn";
 const GMAIL_CONNECTOR_ID = "abacus-gmailuser";
-const GMAIL_OFFER_KEY = "onboarding.gmailOffer";
-/** Google-hosted consumer addresses; a Workspace domain cannot be told from the address alone. */
-const isGoogleHostedEmail = (email: string): boolean =>
-  /@(gmail|googlemail)\.com$/i.test(email.trim());
+/** Once per install: the Gmail hop is started on the account's behalf a single time. */
+const GMAIL_HOP_KEY = "onboarding.gmailHop";
 
 const CARD_WIDTH: Record<Exclude<OnboardingStep, "explainer">, string> = {
-  auth: "max-w-2xl",
-  gmail: "max-w-2xl",
-  welcome: "max-w-xl",
+  auth: "max-w-lg",
+  welcome: "max-w-2xl",
   connectors: "max-w-3xl",
   models: "max-w-2xl",
 };
@@ -120,22 +114,10 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     (state) => state.activateWorkspaceSession
   );
   const credential = useAbacusCredentialQuery();
-  const { data: abacusAccount } = useAbacusAccountQuery();
+  const accountQuery = useAbacusAccountQuery();
+  const abacusAccount = accountQuery.data;
   const connectorStatuses = useConnectorStatuses();
-  const connectFlow = useConnectFlow();
-  // "Not now" is an answer: the connectors screen keeps the Gmail tile, this card does not come back.
-  const [gmailDeclined, setGmailDeclined] = useState(
-    () => durableStorage.getItem(GMAIL_OFFER_KEY) === "declined"
-  );
   const email = abacusAccount?.email ?? "";
-  const gmailConnector =
-    CONNECTORS.find((connector) => connector.id === GMAIL_CONNECTOR_ID) ?? null;
-  const offerGmail =
-    gmailConnector != null &&
-    !gmailDeclined &&
-    isGoogleHostedEmail(email) &&
-    connectorStatuses.loaded &&
-    !isConnected(connectorStatuses.statuses, GMAIL_CONNECTOR_ID);
 
   const webSignup = abacusAccount?.web_signup === true;
 
@@ -163,7 +145,6 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     signedIn: signedIn === true,
     paying: isPayingAbacusTier(abacusAccount?.subscription_tier),
     onboarded,
-    offerGmail,
     webSignup,
   });
 
@@ -194,16 +175,46 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   }, [activateWorkspaceSession, activeWorkspaceId, apply, queryClient]);
 
   // The route changed under the current screen: keep it, move on, or leave.
-  // A web signup's route is the Gmail question or nothing, which only the
-  // connector statuses can tell apart: hold the screen until they are in.
-  const routePending =
-    signedIn == null ||
-    (signedIn && webSignup && !onboarded && !connectorStatuses.loaded);
+  // Signing in flips the credential first; the account and the connector
+  // statuses follow a moment later, and the Gmail hop below needs both. The
+  // screen holds until they are in, so a web signup's flow does not end
+  // before the hop has an address to start with.
+  const factsPending =
+    signedIn === true &&
+    !onboarded &&
+    (accountQuery.isFetching ||
+      connectorStatuses.fetching ||
+      !connectorStatuses.loaded);
+  const routePending = signedIn == null || factsPending;
   const settled = routePending ? step : settleStep(steps, step);
   useEffect(() => {
     if (settled == null) void finish();
     else if (settled !== step) setStep(settled);
   }, [settled, step, finish, setStep]);
+
+  // Gmail is connected for the account right after sign-in, unasked: the
+  // browser opens on Google's consent for that very address while the flow
+  // moves on. Once per install, whatever the browser answers; the connectors
+  // screen keeps the tile for anyone who closed the consent.
+  const gmailWanted =
+    signedIn === true &&
+    !onboarded &&
+    !factsPending &&
+    email.length > 0 &&
+    !isConnected(connectorStatuses.statuses, GMAIL_CONNECTOR_ID);
+  const gmailStarted = useRef(durableStorage.getItem(GMAIL_HOP_KEY) != null);
+  useEffect(() => {
+    if (!gmailWanted || gmailStarted.current) return;
+    gmailStarted.current = true;
+    durableStorage.setItem(GMAIL_HOP_KEY, "started");
+    void window.api.agent
+      .connectConnector(GMAIL_CONNECTOR_ID, { autostart: true, hint: email })
+      .then((outcome) => {
+        window.api.reportFunnelStep(
+          outcome.ok ? "gmail_allowed" : "gmail_declined"
+        );
+      });
+  }, [gmailWanted, email]);
 
   // Entering the explainer: the app must render underneath for the spotlight
   // to have a window, and app.tsx reads this to know that.
@@ -276,16 +287,19 @@ export const OnboardingFlow = (): React.ReactElement | null => {
       durableStorage.getItem(AUTO_SIGN_IN_KEY) == null,
     staleTime: Infinity,
   });
-  const autoSignInStarted = useRef(false);
+  // The stored key is the one guard. The answer stays cached across the
+  // flow's remounts (a sign-out brings the wall back), so a ref would reset
+  // and sign the user straight back in.
   useEffect(() => {
-    if (autoSignIn.data !== true || autoSignInStarted.current) return;
-    autoSignInStarted.current = true;
+    if (autoSignIn.data !== true) return;
+    if (step !== "auth" || signedIn !== false || onboarded) return;
+    if (durableStorage.getItem(AUTO_SIGN_IN_KEY) != null) return;
     durableStorage.setItem(AUTO_SIGN_IN_KEY, "started");
     window.api.reportFunnelStep("auto_signin");
     void connect("signin");
     // `connect` is rebuilt every render; the effect is about the answer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSignIn.data]);
+  }, [autoSignIn.data, step, signedIn, onboarded]);
 
   if (step === "explainer") return <WelcomeTour onFinish={advance} />;
 
@@ -297,15 +311,12 @@ export const OnboardingFlow = (): React.ReactElement | null => {
       data-id="onboarding-overlay"
     >
       <WindowDragRegion />
-      <div
-        className={cn(
-          "bg-card/85 border-border m-auto w-full rounded-2xl border p-8 shadow-2xl backdrop-blur-xl",
-          CARD_WIDTH[step]
-        )}
-      >
+      {/* Each screen is the window, not a card in it: content sits on the
+          app's own backdrop, centred, at a width that reads well. */}
+      <div className={cn("m-auto w-full", CARD_WIDTH[step])}>
         {step === "auth" && (
           <SignInStep
-            busy={busy}
+            busy={busy || factsPending}
             error={error}
             onConnect={(intent) => void connect(intent)}
             browserProfiles={browserProfiles.data ?? []}
@@ -316,32 +327,6 @@ export const OnboardingFlow = (): React.ReactElement | null => {
             }
             dots={dots}
           />
-        )}
-        {step === "gmail" && gmailConnector != null && (
-          <>
-            {connectFlow.dialogs}
-            <GmailPermissionStep
-              email={email}
-              dots={dots}
-              onAllow={() =>
-                connectFlow.start(gmailConnector, {
-                  autostart: true,
-                  hint: email,
-                })
-              }
-              onDone={(outcome) => {
-                if (outcome === "declined") {
-                  window.api.reportFunnelStep("gmail_declined");
-                  durableStorage.setItem(GMAIL_OFFER_KEY, "declined");
-                  setGmailDeclined(true);
-                } else {
-                  window.api.reportFunnelStep("gmail_allowed");
-                  void connectorStatuses.refresh();
-                }
-                advance();
-              }}
-            />
-          </>
         )}
         {step === "welcome" && <WelcomeStep onNext={advance} dots={dots} />}
         {step === "connectors" && (

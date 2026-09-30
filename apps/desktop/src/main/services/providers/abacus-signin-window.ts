@@ -45,8 +45,21 @@ import type { CDPCookie } from "../browser/browser-profiles-service";
  * account's profile, so a partition there would start empty after every
  * sign-out or account switch and no provider account could be remembered.
  */
-const signInSessionPath = (): string =>
+export const signInSessionPath = (): string =>
   path.join(profileBaseDir(), "sign-in-session");
+
+/**
+ * Whether the sign-in session holds an Abacus.AI session: the account signed
+ * in here, in the app window, so a connector hop can ride on it without a
+ * browser that may know nothing of the account.
+ */
+export const hasAbacusSession = async (): Promise<boolean> => {
+  const cookies = await session.fromPath(signInSessionPath()).cookies.get({});
+  return cookies.some(({ domain }) => {
+    const host = (domain ?? "").replace(/^\./, "").toLowerCase();
+    return host === "abacus.ai" || host.endsWith(".abacus.ai");
+  });
+};
 
 /** Logged by the injected "Use my browser instead" pill; see HINT_JS. */
 const BROWSER_MESSAGE = "abacus:sign-in-use-browser";
@@ -226,7 +239,7 @@ const connectUrlFor = (signInUrl: string): string => {
 };
 
 /** The loopback callback this attempt listens on, and its result poll. */
-const isOwnCallback = (
+export const isOwnCallback = (
   url: string,
   port: number,
   callbackPath: string

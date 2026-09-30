@@ -230,6 +230,24 @@ describe("the first fire of a new routine", () => {
     expect(text).toContain("do NOT also do that task");
   });
 
+  it("does not fire when the caller has just done the first pass itself", async () => {
+    const runner = spy();
+    const text = await call(
+      server([], { runCronJob: runner.runCronJob }),
+      {
+        action: "create",
+        schedule: "0 8 * * *",
+        prompt: "Draft replies to yesterday's mail.",
+        firstRun: false,
+      },
+      "bot-session"
+    );
+
+    expect(runner.fires).toHaveLength(0);
+    expect(text).toContain("Created.");
+    expect(text).not.toContain("The first one is running now");
+  });
+
   it("fires one pinned to a time of day too, not only an interval", async () => {
     const runner = spy();
     const text = await call(
