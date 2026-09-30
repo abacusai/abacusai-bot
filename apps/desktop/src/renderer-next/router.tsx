@@ -53,6 +53,13 @@ export interface RouterContext {
 export const routeMasks = [
   createRouteMask({
     routeTree,
+    from: "/routines/$routineId/edit",
+    to: "/routines/$routineId",
+    params: true,
+    search: true,
+  }),
+  createRouteMask({
+    routeTree,
     from: "/bots/$botId/check-in",
     to: "/bots/$botId",
     params: true,

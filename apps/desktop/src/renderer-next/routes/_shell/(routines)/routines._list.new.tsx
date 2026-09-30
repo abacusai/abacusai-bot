@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { RoutineCreateSheet } from "#next/features/routines";
-
-/** Masked sheet over the list: the URL shows /routines. */
+import { RoutineCreateDialog } from "#next/features/routines";
 export const Route = createFileRoute("/_shell/(routines)/routines/_list/new")({
-  component: RoutineCreateSheet,
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.db.collections.routines.preload(),
+      context.db.collections.workspaces.preload(),
+    ]);
+  },
+  component: RoutineCreateDialog,
 });
