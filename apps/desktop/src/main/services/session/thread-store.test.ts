@@ -288,7 +288,7 @@ describe("C-T7 thread store", () => {
   });
 
   it("serves the twin as is when the v1 file cannot be read or is too large", async () => {
-    const { threads, transcripts } = make({ maxTranscriptBytes: 200 });
+    const { threads, transcripts } = make({ maxTranscriptBytes: 400 });
     transcripts.write("s1", SEGMENTS);
     const twin = fs.readFileSync(v2File("s1"), "utf8");
     // Over the cap: not converted, not repaired.
@@ -418,7 +418,12 @@ describe("C-T7 write blocks (unresolved migration attempt)", () => {
     expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(v2Bytes);
     expect(transcripts.read("s1")).toBeNull();
     expect(await threads.readCurrent("s1")).toEqual([]);
-    expect(await make().threads.readCurrent("s1")).toEqual([]);
+    // Still cleared after a relaunch with recovery unresolved.
+    expect(
+      await make({ isWriteBlocked }, { isWriteBlocked }).threads.readCurrent(
+        "s1"
+      )
+    ).toEqual([]);
 
     // The relay's write to a held file stays in memory too.
     threads.writeAgui("s1", {
@@ -450,6 +455,179 @@ describe("C-T7 write blocks (unresolved migration attempt)", () => {
     expect(fs.readdirSync(path.join(home, "threads")).sort()).toEqual(before);
     expect(fs.existsSync(v1File("s1"))).toBe(true);
     vi.restoreAllMocks();
+  });
+});
+
+describe("C-T7 r2: ownership, clears, held writes", () => {
+  const held = (...files: string[]) => {
+    const set = new Set(files.map((file) => path.resolve(file)));
+    return (file: string) => set.has(path.resolve(file));
+  };
+  const quiet = () => vi.spyOn(console, "error").mockImplementation(silent);
+
+  it("#4: never takes the fast path over a newer version that says transcript-v1", async () => {
+    const { threads, transcripts } = make();
+    const newer = {
+      version: 3,
+      threadId: "s1",
+      updatedAt: "2030-01-01T00:00:00.000Z",
+      source: { kind: "transcript-v1", updatedAt: "x", segments: 9 },
+      messages: [],
+    };
+    put(v2File("s1"), newer);
+    const bytes = fs.readFileSync(v2File("s1"), "utf8");
+    transcripts.write("s1", MORE);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(bytes);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(bytes);
+  });
+
+  it("#5: a clear marker never lets a repair replace a protected twin", async () => {
+    const { threads, transcripts } = make();
+    transcripts.write("s1", SEGMENTS);
+    put(v2File("s1"), { ...aguiThread("s1"), version: 3 });
+    const bytes = fs.readFileSync(v2File("s1"), "utf8");
+    threads.markCleared("s1");
+    // New history after the clear.
+    transcripts.write("s1", MORE);
+    expect(ids(await make().threads.readCurrent("s1"))).toEqual([
+      "u1",
+      "b1",
+      "u2",
+    ]);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(bytes);
+  });
+
+  it("#7: a clear with no v1 fingerprint stays cleared until a save proves new history", async () => {
+    const { threads, transcripts } = make();
+    transcripts.write("s1", SEGMENTS);
+    const original = fs.readFileSync(v1File("s1"), "utf8");
+    // v1 unreadable at clear time: the marker cannot hold its fingerprint.
+    fs.rmSync(v1File("s1"));
+    fs.mkdirSync(v1File("s1"));
+    threads.markCleared("s1");
+    // A rollback restores the original bytes; the removals had failed.
+    fs.rmdirSync(v1File("s1"));
+    fs.writeFileSync(v1File("s1"), original);
+    expect(await make().threads.readCurrent("s1")).toEqual([]);
+    // A damaged marker fails closed too.
+    fs.writeFileSync(markerFile("s1"), "{damaged");
+    expect(await make().threads.readCurrent("s1")).toEqual([]);
+    // A save after the clear is the proof.
+    const later = make();
+    later.transcripts.write("s1", MORE);
+    expect(ids(await make().threads.readCurrent("s1"))).toEqual([
+      "u1",
+      "b1",
+      "u2",
+    ]);
+  });
+
+  it("#8: writeAgui refuses a foreign or unreadable twin and leaves it", () => {
+    const { threads } = make();
+    put(v2File("s1"), { ...aguiThread("s1"), source: { kind: "future" } });
+    const bytes = fs.readFileSync(v2File("s1"), "utf8");
+    expect(() => threads.writeAgui("s1", { messages: [], runs: [] })).toThrow(
+      /foreign/
+    );
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(bytes);
+    fs.mkdirSync(v2File("s2"), { recursive: true });
+    expect(() => threads.writeAgui("s2", { messages: [], runs: [] })).toThrow(
+      /unreadable/
+    );
+    expect(fs.statSync(v2File("s2")).isDirectory()).toBe(true);
+  });
+
+  it("#9: a held relay write is never replaced by a legacy dual-write", async () => {
+    make().transcripts.write("s1", SEGMENTS);
+    const errors = quiet();
+    const blocked = held(v2File("s1"));
+    const { threads, transcripts } = make(
+      { isWriteBlocked: blocked },
+      { isWriteBlocked: blocked }
+    );
+    threads.writeAgui("s1", {
+      messages: [{ id: "relay", role: "assistant", parts: [] }],
+      runs: [],
+    });
+    transcripts.write("s1", MORE);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["relay"]);
+    errors.mockRestore();
+  });
+
+  it("#10: a memory-only v1 save is what the thread store converts", async () => {
+    make().transcripts.write("s1", SEGMENTS);
+    const errors = quiet();
+    const blocked = held(v1File("s1"));
+    const { threads, transcripts } = make(
+      { isWriteBlocked: blocked },
+      { isWriteBlocked: blocked }
+    );
+    transcripts.write("s1", MORE);
+    expect(transcripts.read("s1")?.segments).toHaveLength(3);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
+    // No backward repair against the unchanged disk v1.
+    expect(readJson(v2File("s1")).source.segments).toBe(3);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
+    errors.mockRestore();
+  });
+
+  it("#12: the deferred dual-write keeps the 64 MB cap", async () => {
+    const { transcripts } = make({ maxTranscriptBytes: 300 });
+    transcripts.write("s1", SEGMENTS);
+    const twin = fs.readFileSync(v2File("s1"), "utf8");
+    transcripts.write("s1", [
+      ...MORE,
+      { type: "text", id: "big", source: "bot", content: "x".repeat(500) },
+    ]);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(twin);
+  });
+
+  it("cut-over #7: send, reset and quit while recovery is unresolved lose nothing", async () => {
+    make().transcripts.write("s1", SEGMENTS);
+    make().transcripts.write("s2", SEGMENTS);
+    const v1Bytes = fs.readFileSync(v1File("s1"), "utf8");
+    const v2Bytes = fs.readFileSync(v2File("s1"), "utf8");
+    const errors = quiet();
+    const blocked = held(
+      v1File("s1"),
+      v2File("s1"),
+      v1File("s2"),
+      v2File("s2")
+    );
+    const first = make(
+      { isWriteBlocked: blocked },
+      { isWriteBlocked: blocked }
+    );
+    // Send: the relay persists a terminal; reset: another thread is cleared.
+    first.threads.writeAgui("s1", {
+      messages: [{ id: "sent", role: "assistant", parts: [] }],
+      runs: [],
+    });
+    first.transcripts.remove("s2");
+    expect(fs.readFileSync(v1File("s1"), "utf8")).toBe(v1Bytes);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(v2Bytes);
+    expect(fs.existsSync(v1File("s2"))).toBe(true);
+
+    // Quit; relaunch with recovery still unresolved: still there, still held.
+    const again = make(
+      { isWriteBlocked: blocked },
+      { isWriteBlocked: blocked }
+    );
+    expect(ids(await again.threads.readCurrent("s1"))).toEqual(["sent"]);
+    expect(await again.threads.readCurrent("s2")).toEqual([]);
+    expect(again.transcripts.read("s2")).toBeNull();
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(v2Bytes);
+
+    // Relaunch once it settled: replayed onto the files.
+    const settled = make();
+    expect(ids(await settled.threads.readCurrent("s1"))).toEqual(["sent"]);
+    expect(readJson(v2File("s1")).source.kind).toBe("agui");
+    expect(await settled.threads.readCurrent("s2")).toEqual([]);
+    expect(settled.transcripts.read("s2")).toBeNull();
+    expect(fs.existsSync(v1File("s2"))).toBe(false);
+    expect(fs.existsSync(v2File("s2"))).toBe(false);
+    errors.mockRestore();
   });
 });
 

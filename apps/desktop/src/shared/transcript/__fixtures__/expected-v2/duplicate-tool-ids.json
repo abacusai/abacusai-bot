@@ -42,76 +42,62 @@
             {
               "at": 1788256801000,
               "id": "marker",
-              "partIndex": null,
-              "raw": {
-                "at": 1788256801000,
-                "id": "marker",
-                "toolCall": {
-                  "args": {
-                    "command": "make"
-                  },
-                  "id": "call-1",
-                  "name": "bash",
-                  "status": "executing"
-                },
-                "type": "tool_call"
-              },
-              "supersededBy": "done",
+              "partIndex": 0,
               "type": "tool_call"
             },
             {
               "at": 1788256802000,
               "id": "b1",
-              "partIndex": 0,
+              "partIndex": 2,
               "type": "text"
             },
             {
               "at": 1788256803000,
               "id": "done",
-              "partIndex": 1,
+              "partIndex": 3,
               "type": "tool_call"
             },
             {
               "at": 1788256804000,
               "id": "t",
-              "partIndex": 3,
+              "partIndex": 5,
               "type": "tool_call"
             },
             {
               "at": 1788256805000,
               "id": "t",
-              "partIndex": 5,
+              "partIndex": 7,
               "type": "tool_call"
             },
             {
               "at": 1788256806000,
               "id": "call-4",
-              "partIndex": 7,
+              "partIndex": 9,
               "type": "tool_call"
             },
             {
               "at": 1788256807000,
               "id": "x",
-              "partIndex": 9,
+              "partIndex": 11,
               "type": "tool_call"
             },
             {
               "at": 1788256807500,
               "id": "no-result",
-              "partIndex": 11,
+              "partIndex": 13,
               "type": "tool_call"
             },
             {
               "at": 1788256808000,
               "id": "sub",
-              "partIndex": 13,
+              "partIndex": 15,
               "status": "created",
               "type": "subtask"
             },
             {
               "at": 1788256810000,
               "id": "sub",
-              "partIndex": 14,
+              "partIndex": 16,
               "status": "created",
               "type": "subtask"
             }
@@ -123,6 +109,32 @@
       },
       "parts": [
         {
+          "arguments": "{\"command\":\"make\"}",
+          "id": "call-1",
+          "metadata": {
+            "abacus": {
+              "segmentId": "marker",
+              "status": "executing"
+            }
+          },
+          "name": "bash",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "marker#result",
+          "metadata": {
+            "abacus": {
+              "synthesised": true
+            }
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "call-1",
+          "type": "tool-result"
+        },
+        {
           "content": "Running make.",
           "metadata": {
             "abacus": {
@@ -133,9 +145,10 @@
         },
         {
           "arguments": "{\"command\":\"make\"}",
-          "id": "call-1",
+          "id": "call-1#2",
           "metadata": {
             "abacus": {
+              "callId": "call-1",
               "segmentId": "done",
               "status": "success"
             }
@@ -158,7 +171,7 @@
             }
           },
           "state": "complete",
-          "toolCallId": "call-1",
+          "toolCallId": "call-1#2",
           "type": "tool-result"
         },
         {
