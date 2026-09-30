@@ -273,7 +273,12 @@ export class FakeRelay {
     };
   }
 
-  async *#iterate(
+  /**
+   * The replay and the live listener are set up in the call's turn (as main
+   * does), not when the consumer first pulls, so nothing emitted in between
+   * is lost.
+   */
+  #iterate(
     replay: RelayEvent[],
     first: StreamChunk | null,
     signal: AbortSignal | undefined,
@@ -287,37 +292,51 @@ export class FakeRelay {
       dropped = error;
       wake?.();
     };
-    if (live) this.#drops.add(drop);
     const listener: Listener = (item) => {
       queue.push(item);
       wake?.();
     };
-    if (live) this.#listeners.add(listener);
-    const onAbort = () => wake?.();
-    signal?.addEventListener("abort", onAbort);
+    if (live) {
+      this.#drops.add(drop);
+      this.#listeners.add(listener);
+    }
     this.stats.openIterators += 1;
-    try {
-      if (first != null) yield first;
-      for (;;) {
-        if (dropped != null) throw dropped;
-        while (queue.length > 0) {
-          if (signal?.aborted === true) return;
-          const item = queue.shift()!;
-          yield deliver(item);
-          if (until(item)) return;
-        }
-        if (!live || signal?.aborted === true) return;
-        await new Promise<void>((resolve) => {
-          wake = resolve;
-        });
-        wake = null;
-      }
-    } finally {
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
       this.#drops.delete(drop);
       this.#listeners.delete(listener);
-      signal?.removeEventListener("abort", onAbort);
       this.stats.openIterators -= 1;
+    };
+    const onAbort = () => {
+      close();
+      wake?.();
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    async function* run(): AsyncGenerator<StreamChunk> {
+      try {
+        if (first != null) yield first;
+        for (;;) {
+          if (dropped != null) throw dropped;
+          while (queue.length > 0) {
+            if (signal?.aborted === true) return;
+            const item = queue.shift()!;
+            yield deliver(item);
+            if (until(item)) return;
+          }
+          if (!live || signal?.aborted === true || closed) return;
+          await new Promise<void>((resolve) => {
+            wake = resolve;
+          });
+          wake = null;
+        }
+      } finally {
+        signal?.removeEventListener("abort", onAbort);
+        close();
+      }
     }
+    return run();
   }
 
   /** The `ai.*` client slice. Typed loosely: oRPC's client options are unused. */
