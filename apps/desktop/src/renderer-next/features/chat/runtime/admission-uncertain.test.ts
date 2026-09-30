@@ -45,8 +45,11 @@ const timeout = () => new ORPCError("TIMEOUT", { data: { ms: 30_000 } });
 describe("R2-T35 uncertain admission", () => {
   it("(a) the echo before the RPC rejection confirms it; the rejection is ignored", async () => {
     const relay = new FakeRelay({
-      onSend: (input, r) => {
+      onSend: async (input, r) => {
         echo(r, input);
+        await vi.waitFor(() =>
+          expect(session.hostStore.state.outbox).toEqual([])
+        );
         return { runId: input.runId, status: "started" };
       },
     });
@@ -55,11 +58,11 @@ describe("R2-T35 uncertain admission", () => {
     // The echo is on the stream; let the client process it before the RPC settles.
     const result = session.submit("hello");
     await expect(result).resolves.toMatchObject({
-      kind: expect.stringMatching(/started|unconfirmed/),
+      kind: "started",
     });
     await vi.waitFor(() => expect(session.hostStore.state.outbox).toEqual([]));
     await new Promise((resolve) => setTimeout(resolve, 80));
-    expect(relay.stats.send.length).toBeLessThanOrEqual(2);
+    expect(relay.stats.send).toHaveLength(1);
     expect(
       session.hostStore.state.messages.filter((m) => m.role === "user")
     ).toHaveLength(1);
@@ -109,23 +112,14 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(d) a prompt that never reached the agent is admitted once by the re-send", async () => {
     let runs = 0;
-    let reached = false;
     const relay = new FakeRelay({
       onSend: (input) => {
         runs += 1;
         return { runId: input.runId, status: "started" };
       },
     });
-    // The first attempt dies before main records anything.
-    const original = relay.ai.send;
-    (relay.ai as { send: unknown }).send = async (input: AiSendInput) => {
-      if (!reached) {
-        reached = true;
-        relay.stats.send.push(input);
-        throw timeout();
-      }
-      return original(input);
-    };
+    // The first attempt dies before the server records an ack.
+    relay.faults.sendLost = (call) => (call === 1 ? timeout() : null);
     const session = await open(relay);
     await expect(session.submit("hello")).resolves.toEqual({
       kind: "unconfirmed",
