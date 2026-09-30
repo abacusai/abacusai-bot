@@ -62,8 +62,7 @@ shared/contract/
 ├─ errors.ts           COMMON_ERRORS map + `RpcErrorCode` union (A.5)
 ├─ ids.ts              valibot id/path atoms: SessionId, WorkspaceId, BotId, RoutineId, TerminalId, AbsPath, HttpUrl
 ├─ serializer.ts       Uint8Array custom JSON serializer, shared by handler and link (A.6)
-├─ agui.ts             AG-UI types re-exported from @tanstack/ai (`StreamChunk`, `UIMessage`, `ChatHydrationResult`,
-│                      `RunAgentInputContext`) — type-only imports, no runtime dependency in main
+├─ agui.ts             type-only AG-UI/TanStack AI imports, each from the package that actually exports it (A.3.1)
 ├─ rows.ts             DB row types (B.2) — shared by main feeds and renderer collections
 ├─ workspaces.ts git.ts files.ts sessions.ts agent.ts ai.ts bots.ts routines.ts settings.ts models.ts
 ├─ local-models.ts account.ts auth.ts referrals.ts connectors.ts mcp.ts browser.ts terminal.ts memory.ts
@@ -106,7 +105,7 @@ Kinds: **Q** query, used through `orpc.<path>.queryOptions`. **M** mutation. **S
 | 17 | `getSettings` | bridge.ts:254 | `settings.get` | Q |  |
 | 18 | `listPromptHistory` | bridge.ts:256 | `settings.promptHistory.list` | Q |  |
 | 19 | `addPromptHistory` | bridge.ts:260 | `settings.promptHistory.add` | M |  |
-| 20 | `listStoredKeyProviders` | bridge.ts:266 | `settings.keys.listProviders` | Q | invalidated by `system.events` `credentials-changed` |
+| 20 | `listStoredKeyProviders` | bridge.ts:266 | `settings.keys.listProviders` | Q | invalidated by `settings.events` `credentials-changed` (the single destination; A.2.3) |
 | 21 | `saveApiKey` | bridge.ts:270 | `settings.keys.save` | M |  |
 | 22 | `setDefaultModel` | bridge.ts:276 | `settings.setDefaultModel` | M |  |
 | 23 | `addWorkspace` | bridge.ts:281 | `workspaces.add` | M | echoes `workspaces` insert |
@@ -130,10 +129,10 @@ Kinds: **Q** query, used through `orpc.<path>.queryOptions`. **M** mutation. **S
 | 41 | `switchGitBranch` | bridge.ts:375 | `git.switchBranch` | M | echoes `gitState` |
 | 42 | `createGitBranch` | bridge.ts:381 | `git.createBranch` | M |  |
 | 43 | `createAgentSession` | bridge.ts:387 | `db.sessions.mutate insert → sessions.create` | T |  |
-| 44 | `listAgentSessions` | bridge.ts:392 | `db.sessions (live query `where workspaceId`)` | T | per-workspace list becomes a live query |
+| 44 | `listAgentSessions` | bridge.ts:392 | `db.sessions` (live query where workspaceId) | T | per-workspace list becomes a live query |
 | 45 | `listAllAgentSessions` | bridge.ts:396 | `db.sessions (snapshot/subscribe)` | T |  |
 | 46 | `listBots` | bridge.ts:400 | `db.bots (snapshot/subscribe)` | T |  |
-| 47 | `listBotChatPreviews` | bridge.ts:401 | `bots.chatPreviews` | Q | invalidated on `bots`/`sessions` change |
+| 47 | `listBotChatPreviews` | bridge.ts:401 | `bots.chatPreviews` | Q | invalidated by `bots.events` `{ type: "previews-changed" }`, published on every legacy `bots-updated` notice, including transcript-only saves (`service-host.ts:1519-1527`), independent of row diffs |
 | 48 | `listBotSenderChats` | bridge.ts:405 | `bots.senderChats` | Q |  |
 | 49 | `createBot` | bridge.ts:409 | `db.bots.mutate insert → bots.create` | T |  |
 | 50 | `updateBot` | bridge.ts:411 | `db.bots.mutate update → bots.update` | T |  |
@@ -141,7 +140,7 @@ Kinds: **Q** query, used through `orpc.<path>.queryOptions`. **M** mutation. **S
 | 52 | `announceBotChange` | bridge.ts:415 | `bots.announceChange` | M |  |
 | 53 | `openBotChat` | bridge.ts:421 | `bots.openChat` | M | echoes `bots` update (sessionId) and `sessions` insert |
 | 54 | `listRoutines` | bridge.ts:426 | `db.routines (snapshot/subscribe)` | T |  |
-| 55 | `listRoutineRuns` | bridge.ts:430 | `db.routineRuns (live query `where routineId`)` | T |  |
+| 55 | `listRoutineRuns` | bridge.ts:430 | `db.routineRuns` (live query where routineId) | T |  |
 | 56 | `editRoutineByChat` | bridge.ts:434 | `routines.editByChat` | M | long-running; returns reply text |
 | 57 | `createRoutine` | bridge.ts:440 | `db.routines.mutate insert → routines.create` | T |  |
 | 58 | `updateRoutine` | bridge.ts:442 | `db.routines.mutate update → routines.update` | T |  |
@@ -241,12 +240,12 @@ Kinds: **Q** query, used through `orpc.<path>.queryOptions`. **M** mutation. **S
 | 152 | `clearBrowserData` | bridge.ts:875 | `browser.clearData` | M |  |
 | 153 | `respondBrowserPermission` | bridge.ts:880 | `browser.permissions.respond` | M |  |
 | 154 | `setAgentSessionModel` | bridge.ts:885 | `db.sessions.mutate update → sessions.setModel` | T |  |
-| 155 | `listMemories` | bridge.ts:896 | `db.memories (scope `global`)` | T |  |
+| 155 | `listMemories` | bridge.ts:896 | `db.memories` (scope global) | T |  |
 | 156 | `getCustomInstructions` | bridge.ts:898 | `memory.customInstructions.get` | Q |  |
 | 157 | `setCustomInstructions` | bridge.ts:900 | `memory.customInstructions.set` | M |  |
 | 158 | `forgetMemory` | bridge.ts:905 | `db.memories.mutate delete → memory.forget` | T |  |
 | 159 | `forgetAllMemories` | bridge.ts:910 | `memory.forgetAll` | M | echoes `memories` deletes |
-| 160 | `listBotMemories` | bridge.ts:915 | `db.memories (scope `bot`)` | T |  |
+| 160 | `listBotMemories` | bridge.ts:915 | `db.memories` (scope bot) + `memory.bots` | T | entries in the table; `memory.bots` (Q) keeps `BotMemoryView` (`noteDays`, bots with no entries), invalidated by `memory.events` |
 | 161 | `forgetBotMemory` | bridge.ts:919 | `db.memories.mutate delete → memory.forgetBot` | T |  |
 | 162 | `clearBotMemory` | bridge.ts:923 | `memory.clearBot` | M | echoes `memories` deletes |
 | 163 | `readTranscript` | bridge.ts:927 | `ai.hydrate` | Q | returns `ChatHydrationResult` (UIMessage[]) from v2 thread files |
@@ -352,8 +351,8 @@ Every push becomes either a DB change (B) or a typed event iterator. In main, a 
 | `metadata-updated` | 500 | `db.workspaces.changes` (feed notify) | — |
 | `git-state-updated` | 501 | `db.gitState.changes` | — |
 | `file-tree-root-updated` | 502 | `files.events` `{ type: "tree-root-changed", workspaceId }` | the renderer invalidates `files.treeRoot`/`treeChildren` |
-| `terminal-output` | 504 | `terminal.output({ terminalId })` iterator of `{ data, generation }` | per terminal, so a hidden pane does not receive other panes' bytes |
-| `terminal-exited` | 513 | `terminal.output` last yield `{ type: "exit", exitCode, signal }`; the iterator then returns | |
+| `terminal-output` | 504 | `terminal.output({ terminalId, generation, fromOffset? })`, a lossless-replayable iterator (A.4.3) | per terminal, filtered before buffering; offset-addressed `snapshot`/`data` chunks |
+| `terminal-exited` | 513 | `terminal.output` final yield `{ type: "exit", exitCode, signal }`, then return | sticky: a late subscriber still receives it |
 | `terminal-state-updated` | 523 | `terminal.events({ conversationKey? })` `{ type: "state", state }` | |
 | `local-cli-state-updated` | 531 | `db.sessions` update (`agentStatus`, `status`) + `ai.subscribe` `CUSTOM abacus.session.state` | |
 | `local-cli-ndjson` | 540 | `ai.subscribe` (AG-UI) | the NDJSON stream is not mounted on oRPC |
@@ -377,10 +376,10 @@ Every push becomes either a DB change (B) or a typed event iterator. In main, a 
 | `device-status-updated` / `device-build-state` | 635, 639 | `devices.events` | |
 | `mcp-runtime-servers` / `-status` / `-log` / `-refresh-failed` / `-restart-failed` | 644-680 | `mcp.runtime.events({ sessionId? })` | |
 | `messaging-updated` | 682 | `messaging.events` `{ type: "updated" }` | invalidates `messaging.snapshot` |
-| `bots-updated` | 683 | `db.bots.changes` (feed notify) | coarse notice → row diff |
+| `bots-updated` | 683 | `db.bots.changes` (feed notify) **and** `bots.events` `{ type: "previews-changed" }` | the row diff may be empty (a transcript save changes no row), so previews get their own notice |
 | `cronjobs-updated` | 684 | `db.routines.changes` (feed notify) | |
 | `messaging-user-message` / `messaging-agent-message` | 688, 696 | `ai.subscribe`: a relay turn is an AG-UI run with a `role: "user"` `TEXT_MESSAGE_*` and `CUSTOM abacus.messaging.sent` | retired as separate events once the emitter lands |
-| `credentials-changed` | 704 | `settings.events` `{ type: "credentials-changed", provider, configured? }` | |
+| `credentials-changed` | 704 | `settings.events` `{ type: "credentials-changed", provider, configured? }` | the only destination. `renderer/data/queries/invalidation.ts` maps it to `settings.keys.listProviders`, `account.*` and `models.list`; A-T11 tests a save and a removal against those query keys |
 | `whisper-download-progress` | 710 | `voice.whisper.progress` iterator | |
 | `sessions-reloaded` | 715 | `db.sessions` `reset` batch (+ `routineRuns`, `artifacts`) | |
 | `local-model-progress` | 718 | `localModels.progress` iterator | |
@@ -398,18 +397,35 @@ interface AguiSource {
   subscribe(threadId: string, afterSeq: number | null, signal: AbortSignal): AsyncIterable<{ seq: number; event: StreamChunk }>;
   joinRun(runId: string, signal: AbortSignal): AsyncIterable<{ seq: number; event: StreamChunk }>;
   send(input: AiSendInput): Promise<{ runId: string }>;
-  hydrate(threadId: string, opts: { limit?: number; before?: string }): Promise<ChatHydrationResult>;
+  /** Authoritative live state for one thread: the in-flight run and the interrupts it is paused on. */
+  liveState(threadId: string): { activeRun: { runId: string } | null; interrupts: ChatHydrationResult["interrupts"] };
   cancel(threadId: string, runId?: string): Promise<void>;
 }
 ```
 
+Hydration is not part of `AguiSource`. It is composed in `main/rpc/ai/hydrate.ts` from two sources: the persisted messages (thread store, C.3) and `AguiSource.liveState`. That keeps "what was said" and "what is running now" from separate owners.
+
 | Procedure | Input (valibot) | Output | Behaviour |
 |---|---|---|---|
-| `ai.subscribe` | `{ threadId: SessionId, lastEventId?: string }` | `eventIterator(type<StreamChunk>())` | Yields `withEventMeta(event, { id: String(seq) })`. The resume point is `input.lastEventId ?? lastEventId` (the retry-plugin header). If the point is older than the thread's replay ring, the first yield is `{ type: "CUSTOM", name: "abacus.resync" }`, then live events; the renderer adapter responds by calling `ai.hydrate`. The iterator never returns by itself. It ends when the signal aborts (port closed, component unmounted). |
+| `ai.subscribe` | `{ threadId: SessionId, lastEventId?: string }` | `eventIterator(type<StreamChunk>())` | The first yield is always `{ type: "CUSTOM", name: "abacus.subscribed", value: { seq } }`, sent after the source has registered the subscriber. It is the readiness signal for A.4.6, and the chat adapter swallows it. Every other yield is `withEventMeta(event, { id: String(seq) })`. The resume point is `input.lastEventId ?? lastEventId` (the retry-plugin header). If the point is older than the thread's replay ring, the first yield is `{ type: "CUSTOM", name: "abacus.resync" }`, then live events; the renderer adapter responds by calling `ai.hydrate`. The iterator never returns by itself. It ends when the signal aborts (port closed, component unmounted). |
 | `ai.send` | `{ threadId, runId, parentRunId?, messages: v.array(UIMessageLoose), resume?: v.array(ResumeItem), forwardedProps?: v.record(v.string(), v.unknown()), clientTools?: v.array(ClientTool) }` | `{ runId: string }` | Starts the run (or queues it, per `forwardedProps.whenBusy`). It resolves once the child has accepted the run; the events arrive on `ai.subscribe`. |
-| `ai.hydrate` | `{ threadId, limit?: v.number(), before?: v.string() }` | `type<ChatHydrationResult>()` | Reads `threads/<id>.json` (v2, C.3). If the file is missing, it converts `transcripts/<id>.json` (v1) on the fly with the same pure mapper, so a failed migration step never blanks a thread. |
+| `ai.hydrate` | `{ threadId, limit?: v.number(), before?: v.string() }` | `type<ChatHydrationResult>()` | Returns `{ messages, activeRun, interrupts, page }`. **Messages** come from the thread store's `readCurrent(threadId)` (C.3, "Freshness"): it reads `threads/<id>.json` (v2), and when the v2 file is missing, or is v1-derived and older than `transcripts/<id>.json`, it converts v1 with the same pure mapper and repairs the v2 file. A failed migration step or dual-write therefore never blanks or staleness-locks a thread. **`activeRun` and `interrupts`** come from `AguiSource.liveState(threadId)`, never from the file. The ai-client uses them to rejoin a generating run (`joinRun`) and to re-prompt pending approvals after a reload. `page` applies `limit`/`before` over `messages` (newest last); `truncated: false` when no `limit` is given. |
 | `ai.joinRun` | `{ runId: v.string() }` | `eventIterator(type<StreamChunk>())` | Replays the run from `RUN_STARTED`, then follows it live. Returns after `RUN_FINISHED`/`RUN_ERROR`. |
 | `ai.cancel` | `{ threadId, runId?: v.string() }` | `void` | Maps to today's `stopAgentTurn`. The source guarantees a closing `RUN_FINISHED{ outcome: "cancelled" }`. |
+
+#### A.3.1 Type sources (checked against the TanStack AI clone: ai 0.63.0, ai-client 0.36.0)
+
+`shared/contract/agui.ts` holds only `import type` statements:
+
+```ts
+import type { StreamChunk, UIMessage } from "@tanstack/ai";                        // ai/src/index.ts:412 `export * from './types'`
+import type { RunAgentInputContext, RunAgentResumeItem, SubscribeConnectionAdapter } from "@tanstack/ai-client"; // ai-client/src/index.ts:154,181,183
+// Not exported from either package root (declared in ai-client/src/connection-adapters.ts:963-994), so derive:
+export type ChatHydrationResult = Awaited<ReturnType<NonNullable<SubscribeConnectionAdapter["hydrate"]>>>;
+export type ChatHydrateOptions = NonNullable<Parameters<NonNullable<SubscribeConnectionAdapter["hydrate"]>>[1]>;
+```
+
+`@tanstack/ai` and `@tanstack/ai-client` become `devDependencies` of the desktop app for types, and `dependencies` once Phase 2 uses them at runtime. Test A-T1b (`lib-imports.types.test.ts`) imports every named type used by `shared/contract/**` and `renderer/data/**` from its declared package and asserts each is not `any` (`expectTypeOf<T>().not.toBeAny()`). A wrong package or a missing export then fails `tsc -b`.
 
 `UIMessageLoose = v.looseObject({ id: v.string(), role: v.picklist(["system","user","assistant"]), parts: v.array(v.looseObject({ type: v.string() })) })`. Main does not re-validate the parts deeply: the agent child owns the message semantics.
 
@@ -445,45 +461,72 @@ const handler = new RPCHandler(router, {
   clientInterceptors: [slowCallWarning(2_000)],
 });
 
-ipcMain.on("rpc:connect", (event, meta: unknown) => {
+// Called once per webContents from wireRendererContents (main/index.ts:690) — the only place listeners are installed.
+export const registerRendererContents = (contents: WebContents, kind: "main" | "notch"): void => {
+  if (registry.has(contents.id)) return;
+  registry.set(contents.id, { kind, port: null });
+  contents.on("did-start-navigation", onNavigation);           // one listener per contents, for its lifetime
+  contents.once("destroyed", () => {
+    closeActivePort(contents.id);
+    contents.off("did-start-navigation", onNavigation);
+    registry.delete(contents.id);                              // unregistered: later connects from this id are refused
+  });
+  function onNavigation(_e: unknown, _u: string, sameDoc: boolean, mainFrame: boolean): void {
+    if (mainFrame && !sameDoc) closeActivePort(contents.id);   // reload: the old document's iterators end
+  }
+};
+
+ipcMain.on("rpc:connect", (event) => {
   const [port] = event.ports;
   if (port == null) return;
-  if (!isTrustedRenderer(event)) { port.close(); return; }       // see rules below
-  const contents = event.sender;
+  const entry = registry.get(event.sender.id);
+  if (entry == null || event.senderFrame !== event.sender.mainFrame) { port.close(); return; }
+  closeActivePort(event.sender.id);                           // at most one live port per contents
+  entry.port = port;
+  port.on("close", () => { if (entry.port === port) entry.port = null; });   // closed ports leave the registry
   handler.upgrade(port, { context: {
-    transport: "message-port", webContentsId: contents.id,
-    windowKind: parseWindowKind(meta), deps } });
+    transport: "message-port", webContentsId: event.sender.id, windowKind: entry.kind, deps } });
   port.start();
-  ports.add(contents.id, port);                                    // several per contents (HMR, reload)
-  contents.once("destroyed", () => ports.closeAll(contents.id));
-  contents.on("did-start-navigation", (_e, _u, sameDoc, mainFrame) => {
-    if (mainFrame && !sameDoc) ports.closeAll(contents.id);        // reload: old page's iterators end
-  });
 });
 ```
 
 Rules:
 
-- **Trust:** `event.senderFrame === event.sender.mainFrame`, and `event.sender.id` is in the set registered by `wireRendererContents` (`main/index.ts:690`). That set holds the live view and any swap candidate. Later it also holds the notch window's contents. Webviews, the connector windows, the Abacus sign-in window (`abacus-signin-window.ts:301`) and PDF/deck windows never get ports, because `wire` never sees them.
-- **One port per page load.** The renderer asks once per document (A.4.4). Closing the port (renderer reload, swap flip `renderer-host.ts:262`, window close) fires `close`. oRPC then aborts every open iterator's `signal`, and each generator's `finally` unsubscribes from the bus.
-- **Swaps:** the candidate `webContents` connects while hidden. Its `ai.subscribe`/`db.*.changes` subscriptions are live before the flip. That is the same guarantee `renderer-ready` gives today (`renderer-host.ts:58-79`). `window.ready` (the procedure) resolves the same `rendererReady` promise: `RendererHost` gets a `markReady(contents)` method, so the legacy `ipc-message` path and the RPC path both work.
-- **Registration** happens in `registerIpcHandlers` (`handler.ts:143`), right after `serviceHost.setEventDispatcher`, so `deps.bus` exists before the first connect.
+- **Trust:** a port is accepted only if the sender is in `registry` and `event.senderFrame === event.sender.mainFrame`. Only `wireRendererContents` registers contents: the live view, any swap candidate and, later, the notch window. Webviews, the connector windows, the Abacus sign-in window (`abacus-signin-window.ts:301`) and PDF/deck windows are never registered. `windowKind` comes from the registry, not from the renderer's message.
+- **Listeners** are installed exactly once per `webContents` (in `registerRendererContents`) and removed on `destroyed`. Per-connection state is only `entry.port`, which is cleared by the port's `close` event. Reloads therefore add no listeners.
+- **One port per document.** The preload refuses a second connect in the same document (A.4.4). Main enforces the same invariant on its side: a new connect closes any previous port for that contents. Closing a port (reload, swap flip `renderer-host.ts:262`, window close) fires `close`. oRPC then aborts every open iterator's `signal`, and each generator's `finally` unsubscribes.
+- **Registration** of the `ipcMain` listener happens in `registerIpcHandlers` (`handler.ts:143`), after `serviceHost.setEventDispatcher`.
 
 #### A.4.3 Event bus
 
-`MainEventBus` wraps `EventPublisher<MainEvents>` (`@orpc/server`). `MainEvents` is keyed by channel: `"ipc"` (legacy `IpcEvent`), `"update"`, `"window:<id>"`, `"system"`, `"device-chunk:<streamId>"`. There is a single entry point:
+`MainEventBus` owns routing. It does **not** use oRPC's `EventPublisher` for anything that must be delivered. `EventPublisher` keeps at most `maxBufferedEvents` per subscriber, silently drops the oldest beyond that, and has no overflow callback (oRPC 1.15.4 `packages/shared/src/event-publisher.ts`).
 
 ```ts
 // main/rpc/event-bus.ts
 export const emitIpcEvent = (event: IpcEvent): void => {
   sendToRenderer(IpcChannels.Event, event);   // legacy renderer, unchanged
-  bus.publish("ipc", event);                   // routed to domain iterators + table feeds
+  bus.dispatch(event);                         // synchronous fan-out to listeners (no buffering here)
 };
+bus.listen(filter: (e: IpcEvent) => boolean, listener: (e: IpcEvent) => void): () => void
 ```
 
-- `handler.ts:144-146` dispatches through `emitIpcEvent`. The direct senders listed under "Where things are today" switch to `emitIpcEvent` or `bus.publish`, keeping their legacy `send`.
-- Domain iterators subscribe with `bus.subscribe("ipc", { signal, maxBufferedEvents: 1_000 })` and filter by type. If an iterator overflows its buffer, that is logged once per subscription. These notices are advisory: the renderer refetches on its next invalidation.
-- DB feeds do **not** read from `EventPublisher` iterators. They subscribe with callbacks (`bus.subscribe("ipc", listener)`) and run their own lossless per-subscriber queue (B.4), because a dropped change would corrupt a collection.
+- `handler.ts:144-146` dispatches through `emitIpcEvent`. The direct senders listed under "Where things are today" switch to `emitIpcEvent` (or `bus.dispatchChannel("update" | "window:<id>" | "system" | "device-chunk:<id>", payload)`), keeping their legacy `send`.
+- **Filter before buffering.** Every event iterator registers a listener with its own predicate (type plus the iterator's `terminalId`, `sessionId`, `conversationKey` and so on). Only matching events enter that subscriber's queue (`main/rpc/subscriber-queue.ts`). Unrelated traffic can never evict an iterator's events.
+- **Three delivery classes.** Each iterator declares its class in `procedures/<domain>.ts`, and a test asserts the declaration (A-T9).
+
+| Class | Iterators | Queue | On overflow | Recovery |
+|---|---|---|---|---|
+| **lossless-replayable** | `terminal.output` | unbounded until 8 MB of pending bytes | end the stream with the typed `RESYNC_REQUIRED` iterator error | the client reopens with `fromOffset`. Main answers with a `snapshot` from `BoundedScrollback` (`conversation-terminal-runtime-registry.ts:87,472,507`), then live chunks. |
+| **lossless-actionable** | `browser.events` (permission-request/cleared, open-preview, runtime-materialized), `connectors.events` (request/cleared), `devices.events` (build-state), `ai.subscribe` (its own replay ring), `terminal.events` | unbounded, 10,000 events | same as above | The first yield on (re)open is a `snapshot` of current actionable state: pending permission requests (`listBrowserPermissionRequests`), pending connector requests (`listConnectorRequests`), device build phase, terminal states. A request is never lost; at worst it is re-announced. |
+| **coalescing** | `browser.events` `cursor`, `status`, `runtime-state`; `mcp.runtime.events` status/servers; `update.events`; `window.events`; `system.events`; `settings.events`; `messaging.events`; `bots.events`; `memory.events`; `localModels.progress`; `voice.whisper.progress`; `files.events` `tree-root-changed` | latest value per key (for example `cursor`, `status:<id>`) | not applicable (bounded by key count) | none needed: each yield is a full state or an invalidation notice. `mcp.runtime.events` `log` entries are lossless-replayable from `mcp.runtime.logs`. |
+
+- **Terminal output is offset-addressed.** `terminal.output({ terminalId, generation, fromOffset? })` yields:
+  - `{ type: "snapshot", data, offset }` first: the scrollback when `fromOffset` is absent or has been evicted, otherwise the bytes after `fromOffset`
+  - then `{ type: "data", data, offset }` chunks, where `offset` is the cumulative byte count after the chunk
+  - then exactly one `{ type: "exit", exitCode, signal }`, after which the iterator returns.
+
+  **Exit is sticky:** main records it on the runtime, so a subscriber that arrives after exit receives `snapshot` + `exit` at once.
+- DB feeds use the same listener API with their own lossless queues (B.4).
 
 #### A.4.4 Preload handshake
 
@@ -491,21 +534,31 @@ File: `apps/desktop/src/preload/rpc-port.ts`, installed from `preload/index.ts` 
 
 ```ts
 export const installRpcPortHandshake = (ipcRenderer: IpcRenderer, win: Window, kind: "main" | "notch"): void => {
+  let answered = false;                                               // one port per document; the preload re-runs per document
   win.addEventListener("message", (event) => {
-    if (event.source !== win) return;                                  // same window only
+    if (event.source !== win) return;
     const data = event.data as { type?: unknown; nonce?: unknown };
     if (data?.type !== "abacus:rpc-connect" || typeof data.nonce !== "string") return;
+    if (answered) {                                                   // duplicate/late request: answer without a port
+      win.postMessage({ type: "abacus:rpc-port", nonce: data.nonce, error: "already-connected" }, "*");
+      return;
+    }
+    answered = true;
     const { port1, port2 } = new MessageChannel();
-    ipcRenderer.postMessage("rpc:connect", { kind }, [port1]);        // → MessagePortMain in main
+    ipcRenderer.postMessage("rpc:connect", { kind }, [port1]);
     win.postMessage({ type: "abacus:rpc-port", nonce: data.nonce }, "*", [port2]);
   });
 };
 ```
 
-- **The renderer initiates, the preload answers.** A preload-initiated post can fire before the page's module scripts have attached a listener, and the message is then lost. With a request/response keyed by `nonce`, there is no race, and each request (reload, Vite HMR full reload) gets a fresh channel.
+Renderer side (`renderer/data/transport/message-port.ts`):
+
+- **One request per document.** The transport promise is stored on `globalThis[Symbol.for("abacus.transport")]`, so a Vite HMR re-execution of the transport module reuses it instead of requesting again. A full reload is a new document, and the preload's `answered` flag resets with it.
+- **Nothing to retry.** The preload's listener exists before any page script runs, and the page's listener exists before it posts, so a request cannot be lost. The earlier "retry after 250 ms" is removed. After `timeoutMs` (default 5,000), the promise rejects with `TransportUnavailableError`, and the root error boundary offers a reload.
+- **Late or unexpected ports are closed.** A `abacus:rpc-port` message whose nonce is not the pending one, or that arrives after the timeout, has `event.ports.forEach(p => p.close())` called. On the main side, closing `port2` closes `port1`, whose `close` clears `entry.port`.
 - `"*"` as the target origin is safe here: posting to your own `window` only reaches that window, and `event.source === win` filters out frames.
-- This is Electron's documented pattern for handing a port to the main world of a context-isolated page (a port created in the isolated world and transferred with `window.postMessage`). The page never sees `ipcRenderer`.
-- The preload also exposes `window.abacusHost = { getPathForFile }` (`webUtils.getPathForFile`, moved from `preload/index.ts:251`). The WebSocket transport has no equivalent; a web mode would upload bytes instead.
+- This is Electron's documented pattern for handing a port to the main world of a context-isolated page. The page never sees `ipcRenderer`.
+- The preload also exposes `window.abacusHost = { getPathForFile }` (`webUtils.getPathForFile`, moved from `preload/index.ts:251`).
 - `window.api` stays exposed and unchanged until cut-over.
 
 #### A.4.5 Window/system facts as procedures
@@ -517,6 +570,28 @@ export const installRpcPortHandshake = (ipcRenderer: IpcRenderer, win: Window, k
 ```
 
 The renderer's `__root` loader awaits it once (`ensureQueryData`, `staleTime: Infinity`). Chrome insets are not procedures: Window Controls Overlay geometry comes from CSS `env(titlebar-area-*)` (PLAN, Window chrome). `window.state` and `window.events` are scoped to the caller's window through `context.webContentsId`.
+
+#### A.4.6 Swap readiness barrier
+
+Today, `renderer-ready` means "first React commit", and `RendererHost` flips anyway after `READY_TIMEOUT_MS = 5_000` (`renderer-host.ts:42`, `:199-202`). Neither says that data subscriptions are live. The new contract defines readiness explicitly:
+
+- **Renderer:** it calls `window.ready({ barrier: "subscriptions" })` only after all of the following have settled:
+  1. The transport is connected.
+  2. `prefs`, `workspaces` and `sessions` have each reached `status === "ready"` (B.3).
+  3. For the thread visible in the carried-over route, `ai.subscribe` has yielded `abacus.subscribed`.
+  4. The first React commit has happened.
+
+  If any of 1–3 fails, the renderer calls `window.ready({ barrier: "failed", reason })` instead.
+- **Main:** `RendererHost` gets `readiness(contents): Promise<"ready" | "failed">`, resolved by the procedure. The legacy `ipc-message` `"renderer-ready"` keeps resolving the old (first-commit) promise for the old renderer.
+- **Timeout policy:**
+
+  | Case | Timeout | Outcome |
+  |---|---|---|
+  | Swap candidate built for this contract (`FOUNDATION_API >= 2`) | `SWAP_READY_TIMEOUT_MS = 10_000` | If it does not report `ready` in time, or reports `failed`, the swap is aborted: the candidate is discarded, its port closes and its subscriptions end, and the old renderer keeps running. `scheduleRendererSwap` retries on the next idle window, at most 3 times per version, and then logs and stops until the next launch. |
+  | Initial load (no swap) | none | There is nothing to preserve. The window reveals on `did-finish-load` as today (`index.ts:697`), and the renderer shows its own loading state until ready. |
+  | Legacy renderer | 5,000 ms | Keeps today's behaviour. |
+
+- A-T10 covers a slow candidate (the barrier resolves after the timeout → aborted, the old one stays, the bus listener count returns to baseline) and a candidate that fails its snapshot (→ aborted).
 
 ### A.5 Error model
 
@@ -530,6 +605,7 @@ The renderer's `__root` loader awaits it once (`ensureQueryData`, `staleTime: In
 | `PRECONDITION_FAILED` | 412 | `{ reason: "workspace-missing" \| "not-signed-in" \| "no-credentials" \| "git-unavailable", detail? }` | `WORKSPACE_MISSING_ERROR` (`contracts.ts:372`) and friends | A feature card, such as "workspace missing" |
 | `FORBIDDEN` | 403 | `{ reason }` | local-open-guard refusal, untrusted path, write to a read-only field | Toast |
 | `UNAVAILABLE` | 503 | `{ retryAfterMs? }` | Service not initialised yet; `ai.*` before the emitter lands | Query retry (3× backoff) |
+| `RESYNC_REQUIRED` | 409 | `{ stream: string }` | A lossless iterator's subscriber queue overflowed (A.4.3) | The caller reopens: `fromOffset` for terminals, re-snapshot for actionable and DB streams |
 | `TIMEOUT` | 504 | `{ ms }` | The child did not answer (agent start timeout) | Retry affordance |
 | `INTERNAL_SERVER_ERROR` | 500 | — | Anything thrown and not mapped | Error boundary; `onError` logs the stack in main |
 
@@ -600,7 +676,9 @@ export const createMemoryTransport = (router, context): Transport     // real Me
 | `apps/desktop/src/shared/experience.ts:11` | `FOUNDATION_API = 2`; the experience updater then refuses an old renderer on this shell, and a new renderer on an old shell (also bump `apps/updater/src/manifest.ts` as that comment requires) |
 | `apps/desktop/src/main/rpc/**` | new (A.4) |
 | `apps/desktop/src/main/handler.ts` | dispatcher → `emitIpcEvent` (144-146); `installMessagePortTransport` after it; extract multi-line handler bodies the procedures reuse |
-| `apps/desktop/src/main/renderer-host.ts` | `markReady(contents)` for `window.ready`; export the trusted-contents registry |
+| `apps/desktop/src/main/renderer-host.ts` | `readiness(contents)` barrier and `SWAP_READY_TIMEOUT_MS` abort path (A.4.6); the legacy first-commit signal is kept |
+| `apps/desktop/src/main/rpc/subscriber-queue.ts` | new: per-subscriber filtered queues with the delivery classes (A.4.3) |
+| `main/services/conversation/conversation-terminal-runtime-registry.ts` | expose the byte offset and a sticky exit on the runtime for `terminal.output` resume |
 | `apps/desktop/src/main/index.ts` | `wireRendererContents` registers contents as trusted (690); full-screen and notification senders → bus (544, 1628) |
 | `main/services/mcp/mcp-agent-tools-server.ts:1164`, `mcp-browser-server.ts:703,1413`, `browser/electron-browser-runtime.ts:750`, `updates/update-service.ts:449` | send through `emitIpcEvent` / `bus.publish` as well |
 | `apps/desktop/src/preload/rpc-port.ts` (new), `preload/index.ts`, `preload/index.d.ts` | handshake; `abacusHost.getPathForFile` |
@@ -613,16 +691,21 @@ export const createMemoryTransport = (router, context): Transport     // real Me
 |---|---|---|
 | A-T1 | shared | `contract.types.test.ts`: `expectTypeOf` for (a) every input schema that mirrors a `contracts.ts` request type (both directions), (b) `ContractRouterClient<Contract>` for a sample of each kind (query returns `Promise<T>`, stream returns `AsyncIteratorClass<E>`), (c) `isDefinedError` narrows `NOT_FOUND.data.entity`. Run by `tsc -b` (`typecheck` script) and vitest. |
 | A-T2 | main | `message-port.test.ts`: Node `MessageChannel` + `RPCHandler`/`RPCLink` (the real adapters) + `createRouter` over fakes. Covers a round-trip query, a mutation, a `BAD_REQUEST` on bad input, a mapped `NOT_FOUND`, `Uint8Array` round-trip, iterator cancel via `AbortController` running the generator's `finally`, and port `close` aborting every open iterator. |
-| A-T3 | main | `connect.test.ts`: `ipcMain.on("rpc:connect")` rejects (closes the port) for a subframe sender and for an unregistered `webContents`; accepts a registered one; `destroyed` and main-frame navigation close its ports. Electron is mocked the same way as `handler.test.ts`. |
-| A-T4 | preload | `rpc-port.test.ts`: fake `window`/`ipcRenderer`. It checks that the handshake answers only same-window messages with a matching `type`; that each request gets a new channel and echoes the nonce; that `ipcRenderer.postMessage` receives `port1`; and that `window.api` is still exposed. |
+| A-T3 | main | `connect.test.ts`: `ipcMain.on("rpc:connect")` rejects (closes the port) for a subframe sender and for an unregistered or destroyed `webContents`; accepts a registered one; a second connect closes the first port. **Listener hygiene:** after 20 reloads (main-frame navigations) and 20 connects, `listenerCount("did-start-navigation")` and `listenerCount("destroyed")` on the contents are still 1, and the registry holds at most one port; `destroyed` removes the registry entry. Electron is mocked the same way as `handler.test.ts`. |
+| A-T4 | preload | `rpc-port.test.ts`: fake `window`/`ipcRenderer`. Checks: only same-window messages with a matching `type` are answered; the first request gets a channel; a **second or late request gets `already-connected` and no port**, and `ipcRenderer.postMessage` was called exactly once; `window.api` is still exposed. Renderer side (same file, with the transport module): a response delayed past the timeout is closed on arrival (`port.close` spy); a response with an unknown nonce is closed; an HMR re-import reuses the global promise and posts no second request. |
 | A-T5 | main | `websocket.smoke.test.ts`: starts `startWebSocketTransport` on port 0 with fakes, connects `@orpc/client/websocket`, calls `system.info`, subscribes to `db.bots.changes`, triggers a fake change, receives the batch, and checks that `window.state` gives `FORBIDDEN`. No `electron` import is reachable: the test runs with `electron` mocked to throw on import. |
 | A-T6 | preload | `parity.test.ts`: builds `createBridge(fakeIpc)` and the top-level `api` keys, and asserts that every key has an entry in `LEGACY_BRIDGE_MAP` (procedure path exists in `contract`, or `retired` with a non-empty reason). It also asserts that every `IpcEvent["type"]` appears in `LEGACY_EVENT_MAP`. It writes `docs/rewrite/PARITY.md` when `UPDATE_PARITY=1`. |
 | A-T7 | renderer | `transport-guard.test.ts`: static scan of `src/renderer/data/**` and `src/shared/contract/**` for `from "electron"`, `window.api`, `ipcRenderer`. |
 | A-T8 | main-serial | `serializer.bench.test.ts`: 1,000 × 64 KB `Uint8Array` through handler/link over `MessageChannel`, reporting the median. Informational: it fails only above 20 ms median, and the 5 ms target is recorded in the PR. |
+| A-T1b | shared | `lib-imports.types.test.ts` (A.3.1): every named type imported from `@tanstack/ai`, `@tanstack/ai-client`, `@tanstack/db` and `@orpc/*` resolves and is not `any`. |
+| A-T9 | main | `subscriber-queue.test.ts`: filtering happens before buffering (10k unrelated events do not evict one terminal chunk); each iterator's declared delivery class matches the A.4.3 table; lossless overflow ends with `RESYNC_REQUIRED`; `terminal.output` resumes from `fromOffset` with no gap or duplicate, falls back to a `snapshot` when the offset has been evicted, and delivers a sticky `exit` to a late subscriber; actionable streams start with a snapshot of pending permission and connector requests. |
+| A-T10 | main | `swap-readiness.test.ts` (Electron mocked, fake clock): a candidate reporting `ready` flips; `failed` aborts; no report within `SWAP_READY_TIMEOUT_MS` aborts, and the old view stays live; an aborted candidate's port closes and the bus listener count returns to baseline; retry is capped at 3 per version. |
+| A-T11 | renderer | `invalidation.test.ts`: a `settings.events` `credentials-changed` for a save and for a removal invalidates exactly `settings.keys.listProviders`, `account.*` and `models.list` (query keys from `orpc.*.key()`); `bots.events` `previews-changed` invalidates `bots.chatPreviews`. |
+| A-T12 | e2e (real Electron) | `scripts/e2e/rpc-handshake.mjs` (isolated profile + CDP, per the repo's screenshot recipe): with `ABACUS_TEST_HANDSHAKE_DELAY_MS=6000` injected into the preload answer, the renderer times out and closes the late port, and main's registry shows 0 live ports; without the delay, exactly 1 port after load, after 5 reloads and after an experience swap. |
 
 ### A.11 Acceptance (A)
 
-- [ ] `pnpm --filter desktop typecheck` and `test:unit` are green; A-T1…A-T8 pass.
+- [ ] `pnpm --filter desktop typecheck` and `test:unit` are green; A-T1…A-T12 (including A-T1b) pass.
 - [ ] The app launches, and the old renderer works unchanged: legacy IPC is untouched, and events still arrive on `IpcChannels.Event`.
 - [ ] From the renderer DevTools console, `(await import("/src/renderer/data/transport/index.ts")).getTransport()` resolves. `transport.client.system.info()` returns the platform and versions. `for await (const b of transport.client.db.bots.changes({}))` yields after creating a bot in the old UI (this needs B; in PR A the check is `update.events`).
 - [ ] A renderer reload and an experience swap each leave exactly one live port per `webContents` (a debug counter in `ports`), and no iterator leaks: the bus subscriber count returns to its baseline.
@@ -631,9 +714,9 @@ export const createMemoryTransport = (router, context): Transport     // real Me
 
 ### A.12 Risks (A)
 
-- **Handshake ordering under `sandbox: false`.** The page could in theory post `rpc-connect` before the preload has installed its listener. The preload runs before any page script, so this cannot happen for our own documents. The renderer still retries the post once after 250 ms if no answer has come.
+- **Handshake.** A request cannot be lost, because the preload's listener precedes page scripts and the page's listener precedes its post. Duplicates are refused and late ports are closed (A.4.4). The residual risk is a document that never gets an answer (a preload crash). It surfaces as `TransportUnavailableError` after 5 s, with a reload affordance, rather than a hang.
 - **oRPC 1.x churn.** The TanStack Query stream helpers are `experimental_*`. Only `queryOptions`/`mutationOptions`/`key` are used in Phase 1. Stream-to-query use is limited to low-rate notices (cursor, status), behind one wrapper in `renderer/data/queries/live.ts`.
-- **Event bus back-pressure.** `EventPublisher` drops the oldest events past `maxBufferedEvents`. That is fine for notices, but tables and AG-UI do not use it (B.4, AG-UI ring).
+- **Event bus back-pressure.** The bus never uses `EventPublisher`, whose drops are silent. Filtered per-subscriber queues with declared delivery classes (A.4.3) make every drop explicit (`RESYNC_REQUIRED`) and recoverable. The remaining risk is memory under a stuck renderer, capped by the overflow limits.
 - **Two sources of truth during the transition.** The legacy `IpcEvent` and the bus are fed from one function, so they cannot diverge. Any new sender must use `emitIpcEvent`. An oxlint `no-restricted-syntax` rule flags `sendToRenderer(IpcChannels.Event` outside `event-bus.ts`.
 - **Device stream throughput** (A.6). The measured fallback is specified but not built.
 - **`strictNullChecks: false` in `tsconfig.main.json`.** `shared/contract` is compiled by both the main and renderer projects, so it must compile cleanly under both. A-T1 runs under the renderer config (strict).
@@ -659,12 +742,14 @@ type ChangeBatch<Row, Key> =
 
 db.<t>.snapshot : base.input(v.object({})).output(type<{ epoch: Epoch; seq: number; rows: Row[] }>())
 db.<t>.changes  : base.input(v.object({})).output(eventIterator(type<ChangeBatch<Row, Key>>()))
-db.<t>.insert / update / delete : base.input(<valibot>).output(type<{ seq: number; key: Key }>())
+db.<t>.insert / update / delete : base.input(<valibot>).output(type<{ epoch: Epoch; seq: number; key: Key }>())
 ```
 
 - `seq` is per table, starts at 0 for each epoch, and advances by exactly 1 per `changes`/`reset` batch. `snapshot().seq` is the seq of the last batch already folded into `rows`.
-- **Race-free start:** the feed registers the subscriber before it yields `hello`. The client asks for the snapshot only after it has received `hello`, so every change after `snapshot().seq` is guaranteed to arrive on the stream. Batches with `seq <= snapshot.seq` are dropped. A batch with `seq > lastSeq + 1` is a gap: the client re-snapshots. A different `epoch` (main restarted, WebSocket reconnect) is treated as `reset`.
-- **Mutation echo:** a mutation procedure applies the write through the owning store, runs the table's diff synchronously, publishes the resulting batch, and only then returns `{ seq }`, the batch that contains the echo. The renderer handler resolves once its collection has applied `seq` (B.3). If the write changed nothing (idempotent), it returns the current seq.
+- **A position is `{ epoch, seq }`.** Seqs are comparable only within one epoch. Every comparison in B.3 checks the epoch first.
+- **Race-free start:** the feed registers the subscriber before it yields `hello`. The client asks for the snapshot only after it has received `hello`, so every change after `snapshot().seq` is guaranteed to arrive on that stream. A snapshot whose `epoch` differs from the stream's `hello.epoch` (main restarted in between) is discarded, and the stream is reopened.
+- **The stream never ends on its own.** A `changes()` stream returns only when the client aborts it, with one exception: after a server-side overflow `reset` (B.4), the server ends it. The client treats any end it did not request (EOF) exactly like an error: reopen, then re-snapshot on the new `hello`.
+- **Mutation echo:** a mutation procedure applies the write through the owning store, runs the table's diff synchronously, publishes the resulting batch, and only then returns `{ epoch, seq, key }`, the position of the batch containing the echo. If the write changed nothing (idempotent), it returns the current position.
 - Updates always carry the whole row. Rows are small: the largest is a routine with `recentRuns` capped at 20.
 
 ### B.2 Tables
@@ -678,12 +763,14 @@ All row types live in `shared/contract/rows.ts`. Keys are strings.
 | `routines` | `RoutineRow = Omit<RoutineListItem, "runs"> & { recentRuns: CronRun[] }` (at most 20, newest first; `shared/routines.ts:15-43`, `cron-store.ts:16-47`) | `id` | `serviceHost.listRoutines()` (`service-host.ts:3573`) | `cronjobs-updated` (the `onCronChanged` and webhook relay callbacks at `service-host.ts:640-645`, `:714-722`, and every other emit site) + a 60 s re-diff from the cron scheduler tick (`service-host.ts:3316`), because `nextRunAt` is derived from the clock | `insert` `RoutineCreateInput & { id?: RoutineId }` → `createRoutine`. `update` `{ id, patch: RoutineUpdateInput }` → `updateRoutine`. `delete` → `removeRoutine`. Fire → `routines.run` (plain mutation) |
 | `routineRuns` | `RoutineRunRow = RoutineRunItem & { routineId: string }` (`contracts.ts:321-328`) | `sessionId` | derived: `listAll()` sessions with `routineId != null && editorFor == null`, mapped as in `service-host.ts:3559-3570` | recomputed whenever the `sessions` feed publishes | read-only |
 | `artifacts` | `SessionArtifact` (`contracts.ts:480-493`) | `id` (`${sessionId}::${location}`) | `SessionArtifactsService.list()` (`session-artifacts-service.ts:56`) | its `onChanged` dependency (`session-artifacts-service.ts:35`), wired at `service-host.ts:1145` | read-only (removed with their session) |
-| `memories` | `MemoryRow = { id; scope: "global" \| "bot"; target: MemoryTargetId \| null; botId: string \| null; botName: string \| null; index: number; entry: string }` | `id` (below) | `listMemories()` (`agent-tools/memory-store.ts:413`) + `listBotMemories()` (`bots/bot-memory-store.ts:60`) | main's own forget calls (`service-host.ts:2354,2378`, `clearBotMemory`) + `fs.watch` on `~/.abacusai-bot/memories/` and each `bots/<id>/` directory (debounced 150 ms), because the agent child writes these files itself (`packages/agent/src/memory-store.ts`, `bot/bot-memory.ts`) | `delete` `{ id }` → `forgetEntryAt(target, index, entry)` / `forgetBotMemoryEntry(botId, index, entry)`, using the row's current `index` and `entry` (the existing stale-click guard, `contracts.ts:1136-1141`). Inserts come from the agent (`remember`), so there is no `insert`. `memory.forgetAll` and `memory.clearBot` stay plain mutations. |
+| `memories` | `MemoryRow = { id; scope: "global" \| "bot"; target: MemoryTargetId \| null; botId: string \| null; botName: string \| null; index: number; entry: string }` | `id` (below) | `listMemories()` (`agent-tools/memory-store.ts:413`) + `listBotMemories()` (`bots/bot-memory-store.ts:60`) | main's own forget calls (`service-host.ts:2354,2378`, `clearBotMemory`) + watchers (debounced 150 ms; the agent child writes these files itself, `packages/agent/src/memory-store.ts`, `bot/bot-memory.ts`). Watched: `~/.abacusai-bot/memories/`; `~/.abacusai-bot/bots/` (a bot directory created or removed adds or drops its watchers); each `bots/<id>/` (for `MEMORY.md`); each `bots/<id>/memory/` (the daily notes counted by `noteDays`, `bot-memory-store.ts:52`), armed when that directory appears. Every notify also publishes `memory.events { type: "changed" }`, which invalidates `memory.bots`. | `delete` `{ id, scope, target, botId, index, entry }`, built by `toDeleteInput` from `mutation.original` (the row the user clicked, not the current row). Main calls `forgetEntryAt(target, index, entry)` / `forgetBotMemoryEntry(botId, index, entry)`, which compare the stored entry at `index` under the store lock (`memory-store.ts:424-452`). A stale click after renumbering therefore gets `CONFLICT` instead of deleting the successor: the existing guard, `contracts.ts:1136-1141`. Inserts come from the agent (`remember`), so there is no `insert`. `memory.forgetAll` and `memory.clearBot` stay plain mutations. |
 | `workspaces` | `WorkspaceRow = WorkspaceListItem & { isActive: boolean }` (`contracts.ts:51-60`) | `id` | `WorkspaceService.getWorkspaces()` / `getActiveWorkspaceId()` (`workspace/workspace-service.ts:88,92`) | `metadata-updated` (`workspace-runtime-service.ts:380`) + an `onChanged` hook in `WorkspaceService`'s store writes (add, remove, rename, switch, markDeleted) | `update` `{ id, patch: { label } }` → `updateWorkspaceLabel`. `delete` → `removeWorkspace`. No `insert`: the id is derived in main from the path, so creation goes through `workspaces.add` and the row arrives as an insert. |
 | `gitState` | `GitStateRow = GitStateSnapshot & { workspaceId: string }` (`contracts.ts:181-187`) | `workspaceId` | `serviceHost.getGitState()` (served at `handler.ts:302`) for the active workspace | `git-state-updated` (`workspace-runtime-service.ts:384`). A change of active workspace deletes the old row and inserts the new one. Today only the active workspace is computed, so the table holds at most one row. | read-only (`git.*` mutations echo here) |
-| `prefs` | `PrefsRow` (below) | `"app"` | new `PrefsStore` (`main/services/config/prefs-store.ts`, file `~/.abacusai-bot/prefs.json`, atomic writes via `writeFileAtomicSync`) | its own writes | `update` `{ patch: PrefsPatch }` (valibot, every field optional, unknown keys rejected). No `insert`/`delete`: the row always exists and is created with defaults on first read. |
+| `prefs` | `PrefsRow` (below) | `"app"` | new `PrefsStore` (`main/services/config/prefs-store.ts`, file `~/.abacusai-bot/prefs.json`, atomic writes via `writeFileAtomicSync`) | its own writes, including the legacy sync (C.4) | `update` `{ patch: PrefsPatch }` (valibot, every field optional, unknown keys rejected). No `insert`/`delete`: the row always exists and is created with defaults on first read. |
 
-`MemoryRow.id` is `${scope}:${botId ?? target}:${sha256(entry).slice(0, 16)}:${n}`, where `n` counts earlier identical entries in the same list. It stays stable when an earlier entry is removed; only `index` changes, which is an `update`.
+`MemoryRow.id` is `${scope}:${botId ?? target}:${sha256(entry).slice(0, 16)}:${n}`, where `n` counts earlier identical entries in the same list. It stays stable when an earlier, different entry is removed; only `index` changes, which is an `update`. With duplicates, removing the first renumbers the second into the first id. That is exactly why deletes carry the original `index` + `entry` and are validated in main. B-T3 covers a duplicate-entry race: two tabs delete `:0` of `["a","a"]`, and the second gets `CONFLICT`, leaving one entry.
+
+`memory.bots` (query) keeps `BotMemoryView[]` from `listBotMemories()` for what entry rows cannot represent: `noteDays`, and bots whose memory is empty.
 
 ```ts
 // shared/contract/rows.ts
@@ -711,6 +798,13 @@ export interface PrefsRow {
 
 Main side effects of `prefs`: `theme` drives `nativeTheme.themeSource`, replacing the `theme:set` handler for the new renderer (`preload/index.ts:90`). Nothing else in main reads prefs in this slice.
 
+**Provenance.** `prefs.json` stores `{ row: PrefsRow, provenance: Record<PrefsField, "default" | "legacy" | "user"> }`. `provenance` is never part of the row the renderer sees.
+
+- A `db.prefs.update` from the new renderer marks the touched fields `"user"`.
+- A legacy import (C.4) marks the fields it sets `"legacy"`.
+- Fields never written stay `"default"`.
+- A legacy import writes a field only if its provenance is not `"user"`. An explicit choice in the new UI (even one equal to the default, such as `theme: "system"`) is never overwritten, and a later legacy change still flows while the user has not touched that field in the new UI.
+
 ### B.3 Renderer: `ipcCollectionOptions`
 
 File: `apps/desktop/src/renderer/data/collections/ipc-collection-options.ts`. One file per table in the same folder (`sessions.ts`, `bots.ts`, …, `prefs.ts`) calls `createCollection(ipcCollectionOptions({...}))` at module level with a lazy transport.
@@ -719,9 +813,9 @@ File: `apps/desktop/src/renderer/data/collections/ipc-collection-options.ts`. On
 interface IpcTableClient<Row, Key> {
   snapshot(input: {}, opts: { signal }): Promise<{ epoch: string; seq: number; rows: Row[] }>;
   changes(input: {}, opts: { signal }): Promise<AsyncIterable<ChangeBatch<Row, Key>>>;
-  insert?(input: unknown): Promise<{ seq: number; key: Key }>;
-  update?(input: unknown): Promise<{ seq: number; key: Key }>;
-  delete?(input: unknown): Promise<{ seq: number; key: Key }>;
+  insert?(input: unknown): Promise<{ epoch: string; seq: number; key: Key }>;
+  update?(input: unknown): Promise<{ epoch: string; seq: number; key: Key }>;
+  delete?(input: unknown): Promise<{ epoch: string; seq: number; key: Key }>;
 }
 
 export function ipcCollectionOptions<Row extends object, Key extends string>(cfg: {
@@ -732,49 +826,70 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(cfg
   toUpdateInput?: (key: Key, changes: Partial<Row>, modified: Row) => unknown;
   toDeleteInput?: (key: Key, original: Row) => unknown;
   echoTimeoutMs?: number;                              // default 10_000
-}): CollectionConfig<Row, Key> & { utils: { awaitSeq(seq: number): Promise<void>; resync(): Promise<void>; status(): SyncStatus } }
+}): CollectionConfig<Row, Key> & { utils: {
+  awaitReceived(pos: { epoch: string; seq: number }): Promise<void>;   // mutation echo (see below)
+  awaitApplied(pos: { epoch: string; seq: number }): Promise<void>;    // visible in collection state (loaders, tests)
+  resync(): Promise<void>;
+  status(): { epoch: string | null; receivedSeq: number; appliedSeq: number; connection: number; state: "connecting" | "live" | "resyncing" };
+} }
 ```
+
+**Received vs applied.** In TanStack DB 0.10.0, `commit()` queues a synced transaction. It becomes visible immediately only when no user transaction is persisting. Otherwise it waits until the persisting transaction settles, and then all queued synced transactions apply together (`db/packages/db/src/collection/state.ts:1335-1395`). `commit()` returns `true` if the change is already visible, or a receipt promise that resolves when it becomes visible (`types.ts:436-448`). The adapter therefore tracks two positions within the current epoch:
+
+- `receivedSeq`: the highest seq whose batch has been committed to the collection's sync queue.
+- `appliedSeq`: the highest seq whose commit returned `true` or whose receipt resolved.
 
 **`sync.sync({ begin, write, commit, markReady, markError, truncate, collection })`**, per the TanStack DB contract (`db/packages/db/src/types.ts:422-490`; guide "Sync Implementation"):
 
-1. Create an `AbortController`. Open `changes()` and start a consumer loop immediately. Until the first snapshot has been applied, every batch after `hello` is pushed onto `buffer`.
-2. On `hello`, record `epoch` and call `loadSnapshot({ initial: true })`.
-3. `loadSnapshot({ initial })`:
-   - `const s = await table.snapshot()`
+1. **Connection generation.** Each time the adapter opens `changes()`, it increments `connection` and creates a fresh buffer tagged with it. Batches, snapshot results and resync completions carry the generation they started under. Anything from an older generation is discarded on arrival, so a replaced stream cannot contaminate its successor.
+2. **Open.** Open `changes()` and consume it at once. Every batch after `hello` goes into this connection's `buffer` until a snapshot has been applied for this connection.
+3. **On `hello`:** if `hello.epoch !== epoch` (a first connect, or main restarted), set `epoch = hello.epoch`, reset `receivedSeq`/`appliedSeq` to -1, and **settle waiters from the old epoch** (below). Then call `loadSnapshot()`.
+4. **`loadSnapshot()`:**
+   - Call `const s = await table.snapshot()`. If `s.epoch !== epoch` or the generation is stale, discard it (the stream will send a new `hello`).
    - `begin()`
-   - if `!initial`, call `truncate()` (it must run inside the open transaction; `sync.ts:315-348` throws otherwise)
-   - `write({ type: "insert", value })` for each row
-   - `commit()`, then `lastSeq = s.seq; epoch = s.epoch`
-   - flush `buffer`: drop batches with `seq <= lastSeq`, apply the rest in order (step 4)
-   - if `initial`, call `markReady()` exactly once
-   - resolve `awaitSeq` waiters `<= lastSeq`
-4. `apply(batch)`:
-   - `reset`, or a different epoch → `resync()`
-   - `seq <= lastSeq` → ignore
-   - `seq !== lastSeq + 1` → `resync()` (gap)
-   - otherwise `begin()`, then for each change: `insert`/`update` → `write({ type, value })`; `delete` → `write({ type: "delete", key })`. Then `commit()`, set `lastSeq = seq`, and resolve waiters.
-5. `resync()` is single-flight: it sets `resyncing = true`, buffers incoming batches, and calls `loadSnapshot({ initial: false })`.
-6. **Errors:** if the initial snapshot fails while `collection.status === "loading"`, call `markError(error)`. A later failure keeps the last good rows. A failed resync is retried with backoff (0.5 s, 1 s, 2 s, then every 5 s). If the stream itself throws, reopen `changes()` and resync on its `hello`.
-7. **Cleanup:** return `() => abort.abort()`. That ends the oRPC iterator, and main's feed unsubscribes in `finally`.
-8. `rowUpdateMode: "full"`. `startSync: true` for `prefs`, `workspaces` and `sessions` (the shell needs them at once); lazy for the others (`collection.preload()` from route loaders).
+   - `truncate()` if the collection already holds a snapshot (this also makes TanStack apply the transaction immediately, `state.ts:1373`)
+   - `write({ type: "insert", value })` per row
+   - `const r = commit()`, then `receivedSeq = s.seq`, then track `r` for `appliedSeq`.
+   - Flush `buffer`: check the **epoch first** (a batch with another epoch triggers a reopen; it is never silently dropped), then drop `seq <= receivedSeq`, then apply the rest in order (step 5).
+   - **Call `markReady()` whenever `collection.status` is `"loading"` or `"error"`**, not only on the first load. A usable snapshot after a failed start, or after recovery, moves an errored collection back to ready (`collection/lifecycle.ts:163-180`: `error → ready` is a valid transition, and `applyReadyTransition` clears `syncError`).
+5. **`apply(batch)`** (same connection only):
+   - `batch.epoch !== epoch` → reopen
+   - `kind === "reset"` → `resync()`
+   - `seq <= receivedSeq` → ignore
+   - `seq !== receivedSeq + 1` → `resync()` (gap)
+   - otherwise `begin()`, then write each change (`insert`/`update` → `{ type, value }`; `delete` → `{ type: "delete", key }`), then `commit()`, advance `receivedSeq`, and track the receipt for `appliedSeq`.
+6. **`resync()`** is single-flight per connection: buffer incoming batches, then run `loadSnapshot()`.
+7. **Reopen** on a stream error **or an unexpected EOF** (the stream returned without our abort), with backoff (0.5 s, 1 s, 2 s, then every 5 s, reset after a successful `hello`). A reopen increments `connection` (step 1).
+8. **Errors:** if the first snapshot fails while `status === "loading"`, call `markError(error)`. Later failures keep the last good rows and keep retrying. A successful retry calls `markReady()` (step 4).
+9. **Cleanup:** `return () => abort.abort()`. That ends the oRPC iterator; main unsubscribes in `finally`. Pending waiters reject with `AbortError`.
+10. `rowUpdateMode: "full"`. `startSync: true` for `prefs`, `workspaces` and `sessions` (the shell needs them at once); lazy for the others (`collection.preload()` from route loaders).
+
+**Waiters are keyed by `{ epoch, seq }`.**
+
+- `awaitReceived(pos)` resolves when `epoch === pos.epoch && receivedSeq >= pos.seq`.
+- `awaitApplied(pos)` resolves when `epoch === pos.epoch && appliedSeq >= pos.seq`.
+- When the epoch changes, waiters for the old epoch resolve once the new epoch's first snapshot is applied: that snapshot is authoritative, whether or not the old write survived.
 
 **Mutations** (Pattern A with a built-in echo wait):
 
 ```ts
 onInsert: async ({ transaction }) => {
   for (const m of transaction.mutations) {
-    const { seq } = await (await cfg.table()).insert!(cfg.toInsertInput!(m.modified));
-    await utils.awaitSeq(seq);        // resolves when lastSeq >= seq; rejects on echoTimeoutMs → triggers resync()
+    const pos = await (await cfg.table()).insert!(cfg.toInsertInput!(m.modified));
+    await utils.awaitReceived(pos);   // echo is in the sync queue; rejects after echoTimeoutMs → resync(), then resolve
   }
 },
 onUpdate: /* same, with toUpdateInput(m.key, m.changes, m.modified) */,
 onDelete: /* same, with toDeleteInput(m.key, m.original) */,
 ```
 
+- **Handlers wait for *received*, not *applied*.** While this handler runs, its own transaction is persisting, so TanStack holds every ordinary synced commit, the echo included, until the handler returns (`state.ts:1373`). Awaiting *applied* would therefore deadlock: the echo applies only after the handler returns, and the handler would return only after the echo applies. Awaiting *received* is the same design as Electric's `awaitTxId`, which waits for the txid to be seen. When the handler resolves, TanStack drops the optimistic layer and applies the queued synced transactions in one step, so the UI goes straight from optimistic to server state (including server-normalised fields: trimmed labels, derived timestamps, generated webhook URLs) with no flicker to the old value. B-T1 case 8b asserts this with a server that normalises the row.
+- **No `begin({ immediate: true })` for echoes.** The guide forbids using it "to bypass that ordering just to settle a load". The only transactions that must apply at once are resync snapshots, and those carry `truncate()`, which TanStack already processes immediately (`state.ts:1373`). `immediate` stays unused. See Review responses R7.
 - A thrown `ORPCError` (such as `CONFLICT`) rejects the handler, and TanStack DB rolls the optimistic state back.
-- On an echo timeout, the write did happen on the server. The handler therefore calls `resync()`, awaits it, and **resolves**, so the optimistic state is replaced by the fresh snapshot instead of being rolled back.
+- On an echo timeout, the write did happen on the server. The handler calls `resync()`, awaits it (up to *received*), and **resolves**, so the snapshot replaces the optimistic state.
+- `awaitApplied` is for route loaders and tests that need visible state (for example "after creating a bot, navigate to it").
 - A table without a given procedure has no handler for it. Calling `collection.insert` on such a table then throws TanStack's "no onInsert handler" error, which is what we want.
-- Client-generated ids come from `crypto.randomUUID()`, and `toInsertInput` passes them through.
+- Client-generated ids come from `crypto.randomUUID()`, and `toInsertInput` passes them through. `toDeleteInput` receives `mutation.original`, the row as the user saw it (memory deletes depend on this, B.2).
 
 ### B.4 Main: `TableFeed`
 
@@ -793,10 +908,10 @@ class TableFeed<Row, Key extends string> {
 ```
 
 - `equals` defaults to a stable JSON comparison. A diff with no changes publishes nothing and does not advance `seq`.
-- Per-subscriber queues are unbounded. If a queue passes 5,000 batches (a stuck renderer), the feed drops the queue and ends the stream with `reset`, and the client re-snapshots.
+- Per-subscriber queues are unbounded up to 5,000 batches. Past that (a stuck renderer), the feed drops the queue, yields `{ kind: "reset" }` and ends the stream. The client re-snapshots on `reset` **and** reopens on the EOF that follows (B.3 step 7), so changes keep flowing afterwards. B-T1 case 12 covers a mutation after overflow recovery.
 - Derived tables (`routineRuns`) are `TableFeed`s whose `read` is computed from the `sessions` baseline. `sessions.notify` chains `routineRuns.notify`.
 - **Triggers:** `createTables` subscribes to `bus` (`"ipc"`) and maps event types to `notify()` calls (the table in B.2). It also installs the direct hooks (`onChanged`/`onWrite`) that B adds to `AgentSessionManagerService`, `bot-store`, `WorkspaceService` and `PrefsStore`, plus the memory `fs.watch`ers. Over-notifying is harmless (diff-based), and under-notifying is what the direct hooks prevent.
-- Procedures: `db.<t>.snapshot` → `feed.snapshot()`. `db.<t>.changes` → `async function* ({ signal }) { yield* feed.subscribe(signal) }`. Mutations → call the ServiceHost method, then `return { seq: await feed.notifyNow(), key }`.
+- Procedures: `db.<t>.snapshot` → `feed.snapshot()`. `db.<t>.changes` → `async function* ({ signal }) { yield* feed.subscribe(signal) }`. Mutations → call the ServiceHost method, then `return { epoch: feed.epoch, seq: await feed.notifyNow(), key }`.
 
 ### B.5 Files to add or change (B)
 
@@ -817,10 +932,10 @@ class TableFeed<Row, Key extends string> {
 
 | Id | Project | Test |
 |---|---|---|
-| B-T1 | renderer (node env acceptable) | `ipc-collection-options.test.ts` with a **fake table client** (a controllable async queue plus deferred snapshot) and the real `createCollection` from `@tanstack/db`. Cases: (1) batches buffered during the snapshot are applied after it, in order; (2) batches with `seq <= snapshot.seq` are dropped; (3) a gap causes one resync with `truncate`, and the collection equals the new snapshot; (4) `reset` truncates and reloads; (5) an epoch change on reconnect is treated as reset; (6) `markReady` is called exactly once, and `markError` on initial failure; (7) cleanup aborts the stream (the fake records `signal.aborted`); (8) the `onInsert` promise resolves only after the echo batch is applied (asserted with a deferred echo); (9) a `CONFLICT` error rolls back the optimistic row; (10) on echo timeout, the handler resyncs and resolves; (11) delete-by-key message shape. |
+| B-T1 | renderer (node env acceptable) | `ipc-collection-options.test.ts` with a **fake table client** (a controllable async queue per connection plus a deferred snapshot) and the real `createCollection` from `@tanstack/db`. Cases: (1) batches buffered during the snapshot are applied after it, in order; (2) same-epoch batches with `seq <= snapshot.seq` are dropped; (3) a gap causes one resync with `truncate`, and the collection equals the new snapshot; (4) `reset` truncates and reloads; (5) an epoch change on reconnect resets both positions and settles old-epoch waiters after the new snapshot; (5b) a buffered batch from another epoch triggers a reopen and is never silently dropped; (5c) a late batch or snapshot from a superseded connection generation is ignored; (6) **failure then recovery**: the initial snapshot fails → `status === "error"`, the retry succeeds → `markReady()` → `status === "ready"`, and live changes apply; (7) cleanup aborts the stream and rejects pending waiters with `AbortError`; (8) `onInsert` resolves only once the echo is *received*, and does not deadlock while its own transaction persists; (8b) a server that normalises the row (trims the label, adds `updatedAt`) produces the normalised value right after the handler resolves, with no intermediate old value in a `subscribeChanges` trace; (8c) `awaitApplied` resolves only after the receipt; (9) a `CONFLICT` error rolls back the optimistic row; (10) on echo timeout, the handler resyncs and resolves; (11) delete-by-key message shape and `toDeleteInput` receiving `mutation.original`; (12) server overflow: `reset` then EOF → reopen → `hello` → snapshot, then a mutation after recovery echoes normally; (13) a clean EOF without `reset` also reopens. |
 | B-T2 | main | `table-feed.test.ts`: diff yields insert/update/delete with contiguous seq; no-op diff publishes nothing; `hello` precedes all batches; snapshot and seq agree under concurrent notify; `notifyNow` returns the seq containing the change; queue overflow ends the stream with `reset`; `finally` unsubscribes on abort. |
-| B-T3 | main | per-table wiring with `ABACUSAI_BOT_HOME` set to a temp dir: create/update/delete a bot through the store → one batch each; a `cronjobs-updated` bus event → routine diff; `setRunOutcome` → sessions update + routineRuns update; writing `memories/MEMORY.md` externally → memories batch within 500 ms; prefs update → `nativeTheme.themeSource` set (Electron mocked). |
-| B-T4 | main | end-to-end over the memory transport (a real `MessageChannel`): collection in the same process, mutate through `collection.update`, assert the row round-trips and `awaitSeq` settles. |
+| B-T3 | main | per-table wiring with `ABACUSAI_BOT_HOME` set to a temp dir: create/update/delete a bot through the store → one batch each; a `cronjobs-updated` bus event → routine diff; `setRunOutcome` → sessions update + routineRuns update; writing `memories/MEMORY.md` externally → memories batch within 500 ms; creating `bots/<id>/memory/` and a daily note → `memory.events` fires and `memory.bots` `noteDays` changes; removing a bot directory drops its watchers; duplicate-entry delete race → the second delete gets `CONFLICT`; a transcript save for a bot session publishes `bots.events` `previews-changed` even though the `bots` diff is empty; prefs update → `nativeTheme.themeSource` set (Electron mocked); prefs provenance: a `user` field survives a legacy import, a `default`/`legacy` field takes it. |
+| B-T4 | main | end-to-end over the memory transport (a real `MessageChannel`): collection in the same process, mutate through `collection.update`, assert the row round-trips, `awaitReceived` settles inside the handler and `awaitApplied` after it. |
 
 ### B.7 Acceptance (B)
 
@@ -837,7 +952,7 @@ class TableFeed<Row, Key extends string> {
 - **`fs.watch` quirks.** Flat directories only (no recursive watch on Linux). Editors replace files through rename, so the watcher re-arms on `rename` events. The debounce and diff absorb duplicates.
 - **Memory keys under duplicates.** Two identical entries get `:0` and `:1` suffixes. Deleting the first renumbers the second, which the renderer sees as a delete plus an update. That is acceptable.
 - **`gitState` covers only the active workspace** until a later slice widens `WorkspaceRuntimeService`. Routes for a non-active workspace show "not tracked" rather than stale data.
-- **Two UIs, two sources of prefs.** During the transition the old renderer writes `renderer-state.json` and the new one writes `prefs.json`. C.4 copies once, and they are not kept in sync afterwards. This is acceptable because users never run both, and the developer flag `--rerun-migration=2` re-imports.
+- **Two UIs, two sources of prefs.** During the transition the old renderer writes `renderer-state.json`, and it stays the shipped UI until Phase 7. A one-time copy would therefore lose every later change. Instead, main keeps `prefs.json` in step with the legacy keys for the whole transition: C.4's live legacy sync plus a final provenance-aware import in cut-over step 3. The residual risk is a key whose mapping is lossy (C.4 table); those are listed in the release notes.
 - **Optimistic ids.** Stores that mint ids (bots, routines, sessions) gain an optional caller id. A collision throws `CONFLICT`, never a silent overwrite.
 
 ---
@@ -846,25 +961,30 @@ class TableFeed<Row, Key extends string> {
 
 ### C.1 Runner
 
-Files: `apps/desktop/src/main/migrations/{runner.ts, record.ts, backup.ts, progress-window.ts, steps/index.ts, steps/001-*.ts, steps/002-*.ts}`.
+Files: `apps/desktop/src/main/migrations/{runner.ts, record.ts, journal.ts, backup.ts, progress-window.ts, steps/index.ts, steps/001-*.ts, steps/002-*.ts}`.
 
 ```ts
+type WriteKind =
+  | "create"            // destination did not exist
+  | "replace-derived"   // destination exists but is fully regenerable from sources the step does not touch
+  | "replace-user";     // destination exists and may hold data found nowhere else → must be backed up
+interface PlannedWrite { dest: string; staged: string; kind: WriteKind }
 interface MigrationContext {
   home: string;                       // abacusBotHome() (paths.ts)
   userData: string;                   // app.getPath("userData")
   appVersion: string;
   staging: string;                    // <home>/.migrating/<id>-<name>/, fresh per attempt
-  backup(relPaths: string[]): Promise<string>;     // copies into <home>/backups/migrations/<stamp>-<id>-<name>/
   progress(done: number, total: number, label?: string): void;
   log: (msg: string) => void;
 }
 interface MigrationStep {
   id: number;                         // 1, 2, …; never reused, never renumbered
   name: string;                       // kebab-case
-  destructive: boolean;               // true = modifies or deletes existing files → must call ctx.backup first
-  run(ctx: MigrationContext): Promise<{ stats: Record<string, number>; commit: () => void }>;
+  plan(ctx: MigrationContext): Promise<{ writes: PlannedWrite[]; removals: string[]; stats: Record<string, number> }>;
 }
 ```
+
+A step never touches destinations itself. It only **plans**: it stages every output under `ctx.staging` and returns the list of writes (each classified by kind) and removals. The runner then commits the plan.
 
 - **Where it runs:** in `main/index.ts`, inside `whenReady`, after the single-instance lock is held (`index.ts:911-925`) and **before** `workspaceServiceHost.initialize()` (`index.ts:960`) and `registerRendererState()` (`index.ts:964`). No service has read the files yet, and nothing writes them concurrently. `local-code.json`'s import-time migrations (`workspace-store.ts:28-103`) are untouched and not part of this runner.
 - **Record:** `~/.abacusai-bot/migrations.json`, written atomically (`writeFileAtomicSync` from `@abacus-ai/agent/atomic-file`, as in `transcript-service.ts:73`):
@@ -874,44 +994,53 @@ interface MigrationStep {
     "lastFailure": { "id": 2, "name": "prefs-from-renderer-state", "at": "ISO", "error": "message" } }
   ```
   A missing or corrupt file means nothing has been applied. Every step is idempotent (C.3, C.4), so re-running is safe.
-- **One transaction per step:**
-  1. `run()` writes only under `ctx.staging`, or into new files that are not read by anything yet.
-  2. `commit()` moves staged outputs into place with `fs.renameSync`, which is atomic within the same volume. Staging sits under `home` for exactly that reason.
-  3. The record is appended only after `commit()` returns.
-  4. A throw anywhere in `run` or `commit` deletes `staging`, records `lastFailure`, logs the error, and **stops the runner**. Later steps have not run; the next launch retries from the failed step.
-- **Failure never blocks launch.** Every consumer has a fallback: `ai.hydrate` converts v1 on the fly (A.3), and `PrefsStore` starts from defaults. The runner resolves, and the app starts.
+- **Commit protocol (per step):**
+  1. For every `replace-user` write and every removal, copy the current destination into `<home>/backups/migrations/<stamp>-<id>-<name>/` (mirroring relative paths). `create` and `replace-derived` writes need no backup.
+  2. Write `commit.journal` into staging (atomically): the plan, the backup directory, and `done: []`.
+  3. For each write, `renameSync(staged, dest)` (atomic within the volume; staging sits under `home` for exactly that reason), then append `dest` to the journal's `done`. Removals move their file into the backup directory in the same way.
+  4. Append the record entry to `migrations.json`.
+  5. Delete staging, journal included.
+- **Recovery on the next launch.** Before running steps, the runner looks for `.migrating/*/commit.journal`:
+  - **Found:** the previous launch died mid-commit.
+    - `replace-user` destinations in `done`, and removals, are restored from the backup directory.
+    - `create` destinations in `done` are deleted.
+    - `replace-derived` destinations in `done` are left: they are correct derived data or will be regenerated.
+    - Then staging is deleted and the step runs again from scratch.
+  - **Not found but staging exists:** the previous launch died before committing. Staging is deleted.
+  - **A failure after step 3 but before step 4** (all renames done, record not written) takes the same journal path. The re-run is idempotent, so the result is identical.
+- **Failure in the current launch:** a throw in `plan()` deletes staging. A throw during commit runs the recovery above immediately. Either way, `lastFailure` is recorded and the runner **stops**: later steps do not run, and the next launch retries from the failed step. Deleting staging alone is never described as a rollback.
+- **Failure never blocks launch.** Every consumer has a fallback: `ai.hydrate` converts v1 on the fly and repairs stale twins (A.3, C.3), and `PrefsStore` starts from defaults and receives the live legacy sync (C.4). The runner resolves, and the app starts.
 - **Order:** steps run in ascending `id`, and only those not present in `applied`. `--rerun-migration=<id>` (unpackaged builds only) removes that id from `applied` before running.
 - **Progress window:** `progress-window.ts` opens a window only if the runner has not finished within 400 ms, so fast upgrades never flash one.
   - `new BrowserWindow({ width: 420, height: 140, frame: false, resizable: false, show: false, backgroundColor, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } })`
   - It loads a self-contained `data:text/html` page (app name, step label, determinate bar; no external resources, so it works under the CSP). It is shown `once("ready-to-show")`.
   - Progress is pushed with `webContents.executeJavaScript(\`window.setProgress(${done},${total},${JSON.stringify(label)})\`)`, throttled to 10/s.
-  - It closes when the runner resolves, before `createWindow`. It is not a `RendererHost` view and never gets an RPC port.
-- **Backups:** a `destructive` step must call `ctx.backup([...])` before touching anything. Backups older than 30 days, and all but the newest 3 per step, are pruned at the end of a successful run. Non-destructive steps (both steps in this slice) create only new files and take no backup.
+  - It closes when the runner resolves, before `createWindow`. It is not a registered renderer and never gets an RPC port.
+- **Backups:** backups older than 30 days, and all but the newest 3 per step, are pruned at the end of a successful run. Quarantine directories (C.5) are kept 90 days.
 - **Rollback rule:** applied steps are never rolled back automatically.
-  - **Downgrade safety comes from never mutating what an older build reads** until the cut-over build. Steps 1–2 add `threads/` and `prefs.json` and leave `transcripts/` and `renderer-state.json` intact, so installing an older build just works.
-  - Destructive steps (C.5, cut-over build only) back up first. Manual rollback means copying the backup directory back and removing the step's entry from `migrations.json`; `PARITY.md` documents the procedure.
-  - A failed step rolls back itself only: it deletes its staging.
+  - Downgrade safety comes from never mutating what an older build reads until the cut-over build. Steps 1–2 write `threads/` and `prefs.json` and leave `transcripts/` and `renderer-state.json` intact.
+  - A manual rollback means copying a step's backup directory back and removing its entry from `migrations.json`; `PARITY.md` documents the procedure.
 
 ### C.2 Steps in this slice
 
-| Id | Name | Destructive | Reads | Writes |
+| Id | Name | Write kinds | Reads | Writes |
 |---|---|---|---|---|
-| 1 | `transcripts-v2` | no | `~/.abacusai-bot/transcripts/*.json` (v1, `transcript-service.ts:14-33`) | `~/.abacusai-bot/threads/<sessionId>.json` (v2) |
-| 2 | `prefs-from-renderer-state` | no | `userData/renderer-state.json` (`renderer-state.ts:132-135`) | `~/.abacusai-bot/prefs.json` |
+| 1 | `transcripts-v2` | `create` (no v2 twin), `replace-derived` (a stale v1-derived twin; regenerable from the untouched v1). It never replaces a `source.kind: "agui"` file. | `~/.abacusai-bot/transcripts/*.json` (v1, `transcript-service.ts:14-33`) | `~/.abacusai-bot/threads/<sessionId>.json` (v2) |
+| 2 | `prefs-from-renderer-state` | `create`, or `replace-user` when `prefs.json` exists (it may hold choices made in the new UI) | `userData/renderer-state.json` (`renderer-state.ts:132-135`) | `~/.abacusai-bot/prefs.json` |
 
 Not migrated, by decision:
 
 - Session and workspace records (`local-code.json`, including `runOutcome: running → failed` on restore, already done at `agent-session-manager-service.ts:107`).
 - Bots (`bots.json`, `bots/<id>/`).
 - Routines (`cronjobs.json`, `routines/<id>/runs/*.md`).
-- Memories (`memories/*.md`, `bots/<id>/MEMORY.md`).
+- Memories (`memories/*.md`, `bots/<id>/MEMORY.md`, `bots/<id>/memory/`).
 - pi's `agent/sessions/desktop/<id>.jsonl` (the model-context source).
 
 The DB tables read all of these in place (B.2).
 
 ### C.3 Step 1: transcripts v1 → v2 (UIMessage JSON)
 
-**Why localStorage is not involved:** transcripts are main-side files. The v1 file holds `ConversationSegment`s, the wire shape (`renderer/conversation/agent-types.ts:354-436`). The renderer serialises into it (`conversation/serialization.ts:123-185`) and stamps each segment with `at` (epoch ms, `conversation/persistence.ts:54-68`). It does not contain the renderer's `Segment` union (`conversation/types.ts:229-244`), whose extra types (`terminal_command`, `file_write`, `file_read`, `pending`) are folded into `tool_call` or dropped before the write (`serialization.ts:11-12`, `:67-71`).
+**Source format.** Transcripts are main-side files, so localStorage is not involved. The v1 file holds `ConversationSegment`s, the wire shape (`renderer/conversation/agent-types.ts:354-436`). The renderer serialises into it (`conversation/serialization.ts:123-185`) and stamps each segment with `at` (epoch ms, `conversation/persistence.ts:54-68`). It does not contain the renderer's `Segment` union (`conversation/types.ts:229-244`), whose extra types are folded into `tool_call` or dropped before the write (`serialization.ts:11-12`, `:67-71`).
 
 **Target file** `threads/<sessionId>.json`:
 
@@ -921,94 +1050,109 @@ interface ThreadFileV2 {
   threadId: string;                                   // = sessionId
   updatedAt: string;                                  // ISO
   source:
-    | { kind: "transcript-v1"; updatedAt: string; segments: number }   // written by this step / the dual-write
-    | { kind: "agui" };                                                // written by main's AG-UI persistence later
-  messages: UIMessage[];                              // @tanstack/ai UIMessage JSON; Date fields never used:
-                                                      // time lives in metadata.tanstack.createdAt (ISO)
+    | { kind: "transcript-v1"; updatedAt: string; segments: number }   // written by this step / the dual-write / hydrate repair
+    | { kind: "agui"; migratedFrom?: { updatedAt: string } };          // written by main's AG-UI persistence later
+  messages: UIMessage[];                              // @tanstack/ai UIMessage JSON; time lives in metadata.tanstack.createdAt (ISO)
 }
 ```
 
-**Extension namespace:** anything AG-UI/TanStack has no part for is kept losslessly as a `TextPart` whose `metadata.abacus.kind` names it. The `content` is a readable fallback, so any renderer shows something. Message-level extras live in `UIMessage.metadata.abacus`.
+**Identity and provenance: every v1 segment is traceable in v2.** The mapper maintains `metadata.abacus.segments` on each message: an ordered list of `{ id, type, at?, partIndex: number | null, groupId? }`, one entry per v1 segment that contributed to the message. That includes segments that produce no part of their own (credits, subtask close frames) and the members of a `tool_group` (with `groupId` set to the group's segment id). Parts also carry their own segment id where the part type allows it:
 
-**Grouping:**
-
-- Walk the segments in order. A user `text` closes the current assistant message and becomes its own `{ role: "user" }` message.
-- Every other segment appends parts to the current assistant message, which opens on the first non-user segment after a user message. Its `id` is the first segment's `id`.
-- Message `metadata.tanstack.createdAt` is the ISO form of the first contributing segment's `at`, and is omitted when there is no `at`.
-- `messageIndex`, `regenerateAttempt` and `versions` go into `metadata.abacus` of the message whose text carried them.
-
-| v1 `ConversationSegment` (agent-types.ts) | v2 |
+| Part | Where the segment id goes |
 |---|---|
-| `text`, `source: "user"` | new `UIMessage { id, role: "user", parts: [{ type: "text", content }] }` |
-| `text`, `source: "bot"` | `{ type: "text", content }` |
-| `thinking` | `{ type: "thinking", content }` (`title` is dropped: display-only; `isSpinny` is always false once persisted) |
-| `collapsible` | `{ type: "text", content, metadata: { abacus: { kind: "collapsible", title } } }` |
-| `tool_call` `{ toolCall, toolResult? }` | two parts, described below |
-| `tool_group` `{ tools, category, summary }` | its `tools` flattened in order through the same rules; `category`/`summary` are dropped (derivable) |
-| `notification` | `{ type: "text", content: message, metadata: { abacus: { kind: "notification", severity, actions?, notificationKey? } } }` |
-| `credits` | added to the current assistant message's `metadata.abacus.creditsUsed` (summed) |
-| `web_search_results` | `{ type: "text", content: query, metadata: { abacus: { kind: "web_search_results", resultType, results } } }` |
-| `media` (image) | `{ type: "image", source: { type: "url", value: url }, metadata: { abacus: { width, height, prompt?, model? } } }` |
-| `media` (video) | `{ type: "video", source: { type: "url", value: url }, metadata: { abacus: { width, height, prompt?, model?, aspectRatio?, duration?, loop } } }` |
-| `feature_limit` | `{ type: "text", content: featureName, metadata: { abacus: { kind: "feature_limit", featureName, limitType } } }` |
-| `compaction` `{ summary }` | `{ type: "text", content: summary, metadata: { abacus: { kind: "compaction" } } }` |
-| `subtask` `created` … `completed` | described below |
-| anything else | `{ type: "text", content: "", metadata: { abacus: { kind: "unknown", raw } } }` (lossless) |
+| `TextPart` | `metadata.abacus.segmentId` |
+| `ToolCallPart` | `metadata.abacus.segmentId`; `id` stays `toolCall.id`, because TanStack pairs calls with results by it |
+| `ToolResultPart` | `id` = segment id + `":result"` |
+| `ImagePart` / `VideoPart` | `metadata.abacus.segmentId` |
+| `ThinkingPart` (no `metadata` field) | `stepId` = segment id |
+| `SubagentPart` | `subagent.id` = the bracket's `created` id; its `metadata.abacus.segments` lists the close frame |
 
-A `tool_call` segment `{ toolCall, toolResult? }` becomes two parts:
+The `at` timestamp of every segment is kept in the `segments` list. C-T2's property ("every input segment id appears in the output") holds by construction.
 
-- `{ type: "tool-call", id: toolCall.id, name: toolCall.name, arguments: JSON.stringify(toolCall.args), input: toolCall.args, state, output?: toolResult?.output, metadata: { abacus: { endpoint?, status: toolCall.status } } }`
-- plus, when a `toolResult` exists: `{ type: "tool-result", toolCallId, content: toolResult.output, state: toolResult.error ? "error" : "complete", outcome?, error?: toolResult.error, metadata: { abacus: { data: toolResult.data, rejection: toolResult.rejection } } }`
+**Message boundaries** (these preserve edit and version targets):
 
-The `state` of the tool-call part comes from `toolCall.status`:
+- A user `text` segment always becomes its own `{ role: "user" }` message (`id` = segment id).
+- Every other segment belongs to an assistant message. A new assistant message starts (a) after a user message, or (b) when a segment carries a `messageIndex` different from the current assistant message's `messageIndex` (the first segment that carries one sets it). A regenerated or edited turn with its own ordinal therefore gets its own message.
+- The assistant message's `id` is its first contributing segment's id. `metadata.abacus` holds `messageIndex`, `regenerateAttempt`, `versions` (taken from the segment that carried them) and `credits: Array<{ segmentId, creditsUsed }>` (per segment, not summed). `metadata.tanstack.createdAt` is the ISO form of the first `at`, omitted when there is none.
 
-| `toolCall.status` | `state` | Extra |
-|---|---|---|
-| `success` | `complete` | — |
-| `error` | `error` | — |
-| `rejected` | `approval-responded` | `approval: { id: \`${id}:approval\`, needsApproval: true, approved: false }` |
-| `pending`, `executing`, `awaiting_permission`, `interrupted`, `skipped`, `abandoned` | `error` | The paired result gets `outcome: "cancelled"`; one is synthesised with `content: ""` if none was stored. A v1 in-flight call can never resume. |
+**Per-segment mapping:**
 
-The result's `outcome` is `"denied"` when `rejection.reason === "rejected"`, and `"cancelled"` for `interrupted` or `sibling_failed`.
+| v1 `ConversationSegment` (agent-types.ts) | v2 part(s) |
+|---|---|
+| `text`, `source: "user"` | new `UIMessage { id, role: "user", parts: [{ type: "text", content, metadata: { abacus: { segmentId } } }] }` |
+| `text`, `source: "bot"` | `{ type: "text", content, metadata: { abacus: { segmentId } } }` |
+| `thinking` | `{ type: "thinking", content, stepId: segmentId }` (`title` is display-only; kept in `segments[]` as `title`) |
+| `collapsible` | `{ type: "text", content, metadata: { abacus: { segmentId, kind: "collapsible", title } } }` |
+| `tool_call` `{ toolCall, toolResult? }` | tool-call part + tool-result part, described below |
+| `tool_group` `{ tools, category, summary }` | its `tools` mapped in order by these rules, each with `groupId`. The group itself is recorded as `{ id, type: "tool_group", category, summary, partIndex: null }` in `segments[]` (provenance, not dropped). |
+| `notification` | `{ type: "text", content: message, metadata: { abacus: { segmentId, kind: "notification", severity, actions?, notificationKey? } } }` |
+| `credits` | an entry in the message's `metadata.abacus.credits`, plus a `segments[]` entry |
+| `web_search_results` | `{ type: "text", content: query, metadata: { abacus: { segmentId, kind: "web_search_results", resultType, results } } }` |
+| `media` (image) | `{ type: "image", source: { type: "url", value: url }, metadata: { abacus: { segmentId, width, height, prompt?, model? } } }` |
+| `media` (video) | `{ type: "video", source: { type: "url", value: url }, metadata: { abacus: { segmentId, width, height, prompt?, model?, aspectRatio?, duration?, loop } } }` |
+| `feature_limit` | `{ type: "text", content: featureName, metadata: { abacus: { segmentId, kind: "feature_limit", featureName, limitType } } }` |
+| `compaction` `{ summary }` | `{ type: "text", content: summary, metadata: { abacus: { segmentId, kind: "compaction" } } }` |
+| `subtask` | the state machine below |
+| anything else | `{ type: "text", content: "", metadata: { abacus: { segmentId, kind: "unknown", raw } } }` (lossless) |
 
-A `subtask` bracket (`created` … `completed`) becomes one `SubagentPart`:
+**Tool calls.** A `tool_call` segment `{ toolCall, toolResult? }` maps to two parts:
 
-```
-{ type: "subagent", subagent: {
-    id, name: kind ?? "delegate", description?,
-    status: outcome === "completed" ? "finished" : "error",
-    error?: outcome === "interrupted" || no closing frame ? { message: "interrupted" } : undefined,
-    messages: [{ id: `${id}:0`, role: "assistant", parts: <members> }],
-    metadata: { abacus: { startTime?, endTime? } } } }
-```
+- `{ type: "tool-call", id: toolCall.id, name: toolCall.name, arguments: JSON.stringify(toolCall.args), input: toolCall.args, state, approval?, output?: toolResult?.output, metadata: { abacus: { segmentId, endpoint?, status: toolCall.status } } }`
+- plus a `ToolResultPart` `{ type: "tool-result", id: segmentId + ":result", toolCallId, content, state: resultState, outcome?, error?, metadata: { abacus: { data, rejection } } }`, whenever a result exists or one is synthesised.
 
-Members are the segments between the `created` and `completed` frames. This is the same positional rule as `serialization.ts:156-181` and `hydration.ts:63`.
+The result's `state` never depends on `error` alone. In the AI clone, `outcome` means the call ended without executing successfully, and "state remains `error`" (`ai/src/types.ts:457-458`).
 
-Other rules:
+| v1 condition | call `state` | result `state` | result `outcome` | result exists |
+|---|---|---|---|---|
+| `status: "success"` and no `rejection`, no `error` | `complete` | `complete` | — | if stored |
+| `status: "error"`, or `toolResult.error` set | `error` | `error` | — | yes (synthesised with `content: ""` and `error: "failed"` if none) |
+| `status: "rejected"`, or `rejection.reason === "rejected"` | `approval-responded`, with `approval: { id: \`${id}:approval\`, needsApproval: true, approved: false }` | `error` | `denied` | yes (synthesised if none) |
+| `rejection.reason` is `interrupted` or `sibling_failed`, or `status` is `interrupted`, `skipped` or `abandoned` | `error` | `error` | `cancelled` | yes (synthesised if none) |
+| `status` is `pending`, `executing` or `awaiting_permission` (saved mid-flight; can never resume) | `error` | `error` | `cancelled` | yes (synthesised) |
 
-- `id`s are preserved everywhere, so edit, rewind and version navigation keep working through `metadata.abacus.messageIndex`.
-- **Idempotent:** a v1 file is converted when the v2 file is missing, or when `v2.source.kind === "transcript-v1" && v2.source.updatedAt < v1.updatedAt`. A v2 file with `source.kind === "agui"` is never overwritten.
-- Unsafe file names (the `isSafeSessionId` rule, `transcript-service.ts:18`) and unparseable or non-v1 files are skipped and counted (`corrupt`, `skipped`).
-- Output is staged in `staging/threads/` and committed file by file with `renameSync` into `threads/`. That is safe to interrupt: a half-done commit just re-converts next time.
-- **Mapper location:** `shared/transcript/v1-to-ui-messages.ts`, a pure function with no Node or Electron imports. Three callers use it: this step, `ai.hydrate`'s on-the-fly fallback, and the **transition dual-write**, where `TranscriptService.write` (`transcript-service.ts:60-84`) also writes the v2 file after a successful v1 write. That keeps `threads/` current while the old renderer still saves v1. The dual-write is removed at cut-over, when main persists v2 from the AG-UI stream.
+The first matching row wins, top to bottom; rejection and status rows take precedence over a successful status.
 
-### C.4 Step 2: renderer durable state → `prefs.json`
+**Subtasks: the same positional state machine as `hydration.ts:14-70`.** One variable holds the open bracket (`open: { ref, part } | null`):
 
-**Decision: read main's durable-state file directly. No renderer handoff.** Every persisted renderer key already lives in `userData/renderer-state.json`, owned by `RendererStateStore` (`renderer-state.ts:19-126`):
+| v1 segment | Action |
+|---|---|
+| `subtask` `created` | If a bracket is open, close it as **completed**: a new bracket while one is open is a hand-back (`hydration.ts:28-29`, default outcome of `finalizeSubtask`). Then open a new `SubagentPart` in the current assistant message: `{ type: "subagent", subagent: { id: created.id, name: kind ?? "delegate", description?, status: "running", messages: [{ id: \`${id}:0\`, role: "assistant", parts: [] }], metadata: { abacus: { startTime? } } } }` |
+| `subtask` `completed` with a bracket open | Close it. `outcome ?? "completed"`: frames written before `outcome` existed only ever meant finished (`hydration.ts:47-53`). `"completed"` → `status: "finished"`; `"interrupted"` → `status: "error", error: { message: "interrupted" }`. `endTime` goes into `metadata.abacus`. |
+| `subtask` `completed` with no bracket open | Ignored (the `else if` in `hydration.ts:47`), but recorded in the message's `segments[]`. |
+| any other segment while a bracket is open | Mapped by the rules above into the open subagent's message parts, not the parent's. A user `text` cannot occur inside a bracket in v1 output; if it does, it closes the bracket as completed and proceeds as a user message. |
+| end of file with a bracket open | Close it as interrupted (`hydration.ts:67-68`; history is never live). |
+
+**Freshness, repair and deletion (thread store).** `main/services/session/thread-store.ts` owns `threads/`:
+
+- **`readCurrent(id)`** is used by `ai.hydrate`. When the v2 file is missing or unparseable, or has `source.kind === "transcript-v1"` with `source.updatedAt < v1.updatedAt`, it converts v1, writes the repaired v2 atomically, and returns it. A `source.kind === "agui"` file is returned as is, since AG-UI persistence owns it.
+- **`writeFromV1(id, v1)`** is the transition dual-write, called from `TranscriptService.write` after the v1 rename (`transcript-service.ts:73-77`). It runs inside its own `try/catch`: a v2 failure is logged, and `onPersist` (`:79-83`) still runs. A stale twin left by a failed dual-write is repaired by the next `readCurrent`.
+- **`remove(id)`** is called from `TranscriptService.remove` (`transcript-service.ts:86-94`). That single function is the path used by conversation reset (`service-host.ts:2631`) and by session and workspace deletion (`service-host.ts:1691`, `:2242`), so every existing removal path deletes the v2 file too. No v2 file outlives its v1 file, and cleared history cannot come back.
+- **Idempotent conversion** (step 1 and `readCurrent`): convert when v2 is missing, unparseable, or v1-derived and older. Never overwrite `agui`. Unsafe file names (`transcript-service.ts:18`) and unparseable or non-v1 v1 files are skipped and counted (`corrupt`, `skipped`).
+- **Mapper location:** `shared/transcript/v1-to-ui-messages.ts`, a pure function with no Node or Electron imports. The dual-write is removed at cut-over, when main persists v2 from the AG-UI stream.
+
+### C.4 Step 2 and the live legacy sync: renderer durable state → `prefs.json`
+
+**Decision: read main's durable-state store directly. No renderer handoff.** Every persisted renderer key already lives in `userData/renderer-state.json`, owned by `RendererStateStore` (`renderer-state.ts:19-126`):
 
 - All zustand `persist()` stores use `createJSONStorage(() => durableStorage)`: `code-store.ts:386`, `sidebar-accordion-store.ts:29`, `language-store.ts:25`, `credits-store.ts:27`, `code-folder-context.ts:68`.
 - The raw keys use `durableStorage` directly: `use-theme.ts:6`, `browser-homepage.ts:5`, `onboarding-flow.tsx:44`, `referral-card.tsx:11`, `credits-exhausted-card.tsx:125`.
-- `durable-storage.ts:72-90` has already copied any origin-local localStorage into the store (marker `durable-storage.migrated`).
+- `durable-storage.ts:72-90` has already copied origin-local localStorage into the store.
 
-localStorage itself is per origin, and origins are versioned per experience (`renderer-state.ts:1-6`), so main could not reach a meaningful localStorage anyway. The one case this misses is a build older than `durable-storage.ts`. Those values sit under an older origin that no current build can read either, and the loss is accepted (it is today's behaviour on any swap).
+localStorage itself is per origin, and origins are versioned per experience (`renderer-state.ts:1-6`), so main could not reach a meaningful localStorage anyway. The one gap is a build older than `durable-storage.ts`, whose values sit under an origin no current build can read. That loss is accepted (it is today's behaviour on any swap).
 
-The step parses the file with the same tolerant reader as `RendererStateStore`'s constructor (factored out as `readRendererStateFile(file)`).
+**Three import points, one mapping** (`main/services/config/legacy-prefs.ts`: `mapLegacyKey(key, raw) → PrefsPatch | null`):
+
+1. **Step 2 (one-time):** the step parses the file with `readRendererStateFile(file)`, factored out of the `RendererStateStore` constructor. It maps every known key and plans a `prefs.json` write that applies the patch through the provenance rule (B.2): a field is written only if its stored provenance is not `"user"`, and it is then marked `"legacy"`.
+2. **Live legacy sync (transition only):** `RendererStateStore.set` (`renderer-state.ts:49`) calls an injected `onSet(key, value)`, which runs `mapLegacyKey` and `prefsStore.importLegacy(patch)` with the same provenance rule. The old renderer, which remains the shipped UI until Phase 7, keeps `prefs.json` current. Removed with the old renderer.
+3. **Final import at cut-over (step 3, C.5):** the same provenance-aware import of the whole file, before the legacy keys are deleted.
+
+Merging is **by provenance, never by default-equality**. An explicit `theme: "system"` chosen in the new UI has provenance `"user"` and is never replaced by a legacy `"dark"`.
 
 | Source key (renderer-state.json) | Format | → `PrefsRow` |
 |---|---|---|
 | `theme` | raw `"light"\|"dark"\|"system"` | `theme` |
 | `abacusai-bot-language` | zustand JSON `{ state: { languageCode } }` | `language` |
-| `local-code-ui-store` (v4, `code-store.ts:384-416`) | zustand JSON | `sidebar.pinned` ← `isSidebarVisible`; `models.selectedModelId`, `models.favoriteModelIds`, `models.perWorkspace` ← `workspaceSelectedModelIds`; `defaultMode` ← `globalSelectedMode`; `workspaceExpanded` ← `workspaceAccordionExpanded`; `pinned.sessionIds`/`botIds`; `lastPickedWorkspaceId`. **Dropped:** `codeSidebarTab` (no equivalent in the new shell). Versions below 4 go through the same field deletions as `code-store.ts:390-403` first. |
+| `local-code-ui-store` (v4, `code-store.ts:384-416`) | zustand JSON | `sidebar.pinned` ← `isSidebarVisible`; `models.selectedModelId`, `models.favoriteModelIds`, `models.perWorkspace` ← `workspaceSelectedModelIds`; `defaultMode` ← `globalSelectedMode`; `workspaceExpanded` ← `workspaceAccordionExpanded`; `pinned.sessionIds`/`botIds`; `lastPickedWorkspaceId`. **Dropped:** `codeSidebarTab` (no equivalent). Versions below 4 go through the same field deletions as `code-store.ts:390-403` first. |
 | `sidebar-accordion` | zustand JSON `{ state: { openSection } }` | `sidebar.openSection` |
 | `abacus-credits` | zustand JSON `{ state: { exhaustedAt } }` | `creditsExhaustedAt` |
 | `abacusai-bot-code-folder` | zustand JSON `{ state: { recentFolders } }` | `recentFolders` (`currentFolder` dropped: the URL owns location) |
@@ -1019,57 +1163,68 @@ The step parses the file with the same tolerant reader as `RendererStateStore`'s
 | `composer.draft:<workspaceId>` | raw string | **not migrated**: drafts are ephemeral TanStack Store state in the new renderer (PLAN, State). Listed in the release notes. |
 | `durable-storage.migrated`, `abacusai-bot.promptSnippets`, anything else | — | ignored |
 
-- Each value is validated with the `PrefsPatch` valibot schema. An invalid field is replaced by its default and counted in `stats.invalid`. The whole row is never rejected.
-- **Merge:** if `prefs.json` already exists (a developer ran the new renderer first), existing fields win. The step only fills fields still at their defaults, so it is idempotent.
-- It writes to `staging/prefs.json`, and `commit()` renames it to `~/.abacusai-bot/prefs.json`. `renderer-state.json` is **not modified**: the old renderer and older builds keep working.
+- Each value is validated with the `PrefsPatch` valibot schema. An invalid field is skipped (left at its current value) and counted in `stats.invalid`. The whole row is never rejected.
+- A key **removed** from the legacy store (`set(key, null)`, or `clear()`) resets the mapped fields to their defaults only if their provenance is `"legacy"`.
+- `renderer-state.json` is **not modified** by steps 1–2 or by the sync.
 
 ### C.5 Later steps (registered only in the cut-over build, listed so ids are reserved)
 
-| Id | Name | Destructive | Action |
+| Id | Name | Write kinds | Action |
 |---|---|---|---|
-| 3 | `drop-legacy-renderer-state` | yes | Back up `renderer-state.json`, then remove the keys in C.4's table. |
-| 4 | `archive-transcripts-v1` | yes | Back up (move) `transcripts/` into the backup directory once every file has a v2 twin with a newer or equal `source.updatedAt`. |
+| 3 | `final-legacy-prefs-import-and-drop` | `replace-user` (`prefs.json`, `renderer-state.json`) | Run the final provenance-aware import (C.4), then remove the mapped keys from `renderer-state.json`. Both files are backed up by the commit protocol. |
+| 4 | `archive-transcripts-v1` | removals (move to backup) | Per file, not per directory; the rules follow. |
+
+Per-file rules for step 4:
+
+- **Archive** `transcripts/<id>.json` when its v2 twin is `source.kind === "transcript-v1"` and `source.updatedAt >= v1.updatedAt`. Also archive it when the twin is `source.kind === "agui"`: AG-UI persistence owns the thread, and the v1 file has been superseded. When AG-UI first writes a thread that had a v1-derived twin, it records `migratedFrom.updatedAt`. Such a twin qualifies only if `migratedFrom.updatedAt >= v1.updatedAt`; an `agui` twin without `migratedFrom` means the thread started under AG-UI, and any v1 file with that id is an orphan, archived as such.
+- **Quarantine** v1 files that step 1 skipped (corrupt, unsafe name, not v1) into `backups/quarantine/transcripts/`. They are kept 90 days, counted in stats and listed in the log.
+- **Convert first:** a v1 file with no qualifying twin is converted, then archived on the next run of the rule. Step 4 is idempotent, so it completes over at most two launches and never waits on a whole-directory condition.
 
 ### C.6 Files to add or change (C)
 
 | Path | Change |
 |---|---|
-| `main/migrations/**` | new (C.1) |
+| `main/migrations/**` | new (C.1), including `journal.ts` for commit recovery |
 | `shared/transcript/v1-to-ui-messages.ts` | new pure mapper (C.3) |
-| `main/services/session/thread-store.ts` | new: read/write `threads/<id>.json` (used by `ai.hydrate` and the dual-write) |
-| `main/services/session/transcript-service.ts` | dual-write v2 after v1 (`:79`, before `onPersist`) |
-| `main/services/config/renderer-state.ts` | extract `readRendererStateFile(file)` from the constructor (`:29-42`) |
-| `main/index.ts` | `await runMigrations(...)` before `workspaceServiceHost.initialize()` (`:960`) |
+| `main/services/session/thread-store.ts` | new: `readCurrent` (repair), `writeFromV1`, `remove` |
+| `main/services/session/transcript-service.ts` | isolated dual-write after the v1 rename (`:73-77`), before `onPersist` (`:79`); `remove` (`:86`) also removes v2 |
+| `main/services/config/renderer-state.ts` | extract `readRendererStateFile(file)` (`:29-42`); `onSet` hook in `set` (`:49`) and `clear` (`:82`) |
+| `main/services/config/legacy-prefs.ts` | new: `mapLegacyKey` |
+| `main/services/config/prefs-store.ts` | provenance-aware `importLegacy`, `update` marks `user` |
+| `main/index.ts` | `await runMigrations(...)` before `workspaceServiceHost.initialize()` (`:960`); wire `onSet` to `prefsStore.importLegacy` |
 
 ### C.7 Test plan (C)
 
 | Id | Project | Test |
 |---|---|---|
-| C-T1 | shared | `v1-to-ui-messages.golden.test.ts`: fixtures in `shared/transcript/__fixtures__/v1/*.json` → `expected-v2/*.json`, compared byte-for-byte after stable key ordering, with `UPDATE_GOLDEN=1` to rewrite. Fixtures: plain chat; bash/read/write/edit/mcp/unknown tool calls; rejected, interrupted and sibling_failed results; an in-flight call; `tool_group`; a subtask completed, one interrupted, and one with no closing frame; image and video media; notification with actions; credits across two turns; compaction; web search; versions/regenerate metadata; an unknown segment type; empty segments; missing `at`. |
-| C-T2 | shared | Mapper properties: every input segment id appears in the output; the output parses with a valibot `ThreadFileV2` schema; running the mapper twice on the same input gives identical output. |
-| C-T3 | main | `runner.test.ts` with a temp `ABACUSAI_BOT_HOME` and `userData`: steps run in order; a second run is a no-op; the record is written only after commit; a throwing step leaves no staging, records `lastFailure`, skips later steps, and the next run retries; `--rerun-migration`; backup-before-destructive is enforced (a destructive step that does not call `backup` fails); pruning. |
-| C-T4 | main | Step 1 against fixture directories: skip rules (unsafe name, corrupt, v2 newer, v2 `agui`); an interrupted commit resumes; stats counts. |
-| C-T5 | main | Step 2 golden: `renderer-state.json` fixtures (v2, v3 and v4 `local-code-ui-store`, missing keys, invalid values) → `prefs.json` expected; merge precedence with an existing `prefs.json`; the source file stays byte-identical. |
+| C-T1 | shared | `v1-to-ui-messages.golden.test.ts`: fixtures in `shared/transcript/__fixtures__/v1/*.json` → `expected-v2/*.json`, compared after stable key ordering, with `UPDATE_GOLDEN=1` to rewrite. Fixtures:<br>• plain chat<br>• bash/read/write/edit/mcp/unknown tool calls<br>• every row of the tool-result state table: success; error; `rejected` status; rejection `rejected` with no `error`; `interrupted`; `sibling_failed`; `skipped`; mid-flight `executing`<br>• `tool_group`<br>• subtasks: completed with outcome; **completed without outcome (historical)**; interrupted; consecutive `created` (hand-back); unmatched `completed`; trailing open bracket<br>• image and video media<br>• notification with actions<br>• credits across two turns<br>• compaction<br>• web search<br>• versions and regenerate: two bot turns with different `messageIndex` and no user message between them<br>• an unknown segment type<br>• empty segments<br>• missing `at` |
+| C-T2 | shared | Mapper properties over the fixtures plus 200 generated transcripts: every input segment id appears exactly once in some message's `metadata.abacus.segments`; every part-producing segment's id is on its part (by the placement table); the output parses with a valibot `ThreadFileV2` schema; no tool-result has `outcome` with `state !== "error"`; converting twice gives identical output. |
+| C-T3 | main | `runner.test.ts` with a temp `ABACUSAI_BOT_HOME` and `userData`: steps run in order; a second run is a no-op; the record is written only after commit; a throwing `plan` leaves no staging, records `lastFailure`, skips later steps, and the next run retries. Commit recovery: kill after the first of three renames (simulated throw) → `replace-user` restored from backup, `create` deleted, `replace-derived` kept, then a rerun succeeds. Failure after all renames but before the record → the rerun gives an identical result. `--rerun-migration`; pruning. |
+| C-T4 | main | Step 1 against fixture directories: skip rules (unsafe name, corrupt, v2 newer, v2 `agui`); a stale v1-derived twin is replaced as `replace-derived`; stats counts. |
+| C-T5 | main | Step 2 golden: `renderer-state.json` fixtures (v2, v3 and v4 `local-code-ui-store`, missing keys, invalid values) → `prefs.json` expected. Provenance: an existing `prefs.json` with `theme: "system"` marked `user` keeps it against a legacy `"dark"`; a `default` field takes the legacy value; a `legacy` field takes a newer legacy value. The source file stays byte-identical. |
 | C-T6 | main | Progress window: not created when the runner finishes in under 400 ms (fake timers); created, updated and closed otherwise (Electron mocked). |
-| C-T7 | main | Dual-write: `TranscriptService.write` produces the matching v2 file; a v2 file with `source.kind === "agui"` is not overwritten. |
+| C-T7 | main | Thread store: a dual-write produces the matching v2; a v2 `agui` file is not overwritten; a failing v2 write does not stop `onPersist`, and the next `readCurrent` repairs the stale twin; `TranscriptService.remove` deletes both files. A reset via `resetAgentConversation` and via the new `agent.reset` both leave `ai.hydrate` empty, and a session delete and a workspace delete remove both files. |
+| C-T8 | main | Live legacy sync: `RendererStateStore.set("theme", "dark")` updates `prefs.json` when the provenance is not `user`, and publishes a `db.prefs` change; `set(key, null)` resets only `legacy` fields. |
+| C-T9 | main | Step 4 (registered in the test only): archives per file with v1 twins and with `agui` twins (with and without `migratedFrom`); quarantines skipped files; converts then archives a file with no twin across two runs. |
 
 ### C.8 Acceptance (C)
 
-- [ ] C-T1…C-T7 green.
-- [ ] Against a copy of a real `~/.abacusai-bot` (the developer's own, anonymised copy kept out of git): the migration completes, `threads/` has one file per `transcripts/` file (minus corrupt ones), and `ai.hydrate` for three sample sessions returns messages whose text parts match what the old UI shows.
-- [ ] The old renderer still opens every session with its full transcript after migration, because the v1 files are untouched.
-- [ ] Prefs: theme, language, pinned bots/sessions, favourite models and default mode read from `db.prefs` equal what the old UI shows.
-- [ ] Killing the app mid-migration (a `SIGKILL` during step 1 in a manual test) leaves a consistent state, and the next launch finishes.
+- [ ] C-T1…C-T9 green.
+- [ ] Against a copy of a real `~/.abacusai-bot` (the developer's own, anonymised copy kept out of git): the migration completes; `threads/` has one file per `transcripts/` file (minus corrupt ones); `ai.hydrate` for three sample sessions returns messages whose text parts match what the old UI shows.
+- [ ] The old renderer still opens every session with its full transcript after migration (the v1 files are untouched).
+- [ ] Prefs: theme, language, pinned bots/sessions, favourite models and default mode read from `db.prefs` equal the old UI's, including after changing them in the old UI post-migration (live sync).
+- [ ] Killing the app mid-migration (a `SIGKILL` during step 1's commit in a manual test) leaves a consistent state, and the next launch recovers from the journal and finishes.
+- [ ] Clearing a conversation in the old UI, then opening it through `ai.hydrate`, shows it empty.
 - [ ] No progress window appears on a machine with fewer than 50 transcripts. With about 2k synthetic transcripts it appears and closes before the main window.
 
 ### C.9 Risks (C)
 
 - **Transcript volume.** Heavy users have thousands of large files. The step streams file by file (never all in memory), yields to the event loop every 20 files so the progress window paints, and uses a 1 MB read buffer. The worst case is bounded by disk reads, since the mapping itself is linear.
-- **Mapping loss.** `thinking.title` and `tool_group` summaries are dropped deliberately. Everything else is kept, either in parts or in `metadata.abacus`. The chat kit (Phase 2) must render `metadata.abacus.kind` text parts. That is a named dependency, not something decided here.
-- **Two writers of `threads/`.** The dual-write (v1-derived) and future AG-UI persistence (`agui`) could collide. The `source.kind` rule makes `agui` always win, and the cut-over removes the dual-write.
-- **Prefs drift during the transition** (B.8).
+- **Mapping fidelity.** Nothing is dropped: display-only fields (`thinking.title`, `tool_group` category and summary) move into `metadata.abacus.segments`. The chat kit (Phase 2) must render `metadata.abacus.kind` text parts and read `metadata.abacus` for edit and version targets. That is a named dependency, not something decided here.
+- **Two writers of `threads/`.** The dual-write and hydrate repair (v1-derived) and future AG-UI persistence (`agui`) could collide. The `source.kind` rule makes `agui` always win, and the cut-over removes the dual-write and repair.
+- **Provenance mistakes.** If a code path wrote prefs without marking provenance, a legacy value could overwrite a user choice. `PrefsStore` is the only writer, and its two entry points (`update`, `importLegacy`) are the only ways provenance is set (C-T5, C-T8).
 - **Timestamps.** Only v1 segments saved after `persistence.ts` began stamping `at` have times. Older threads have no `createdAt`, and the UI must tolerate that (it already does for separators).
-- **Startup latency.** The runner is awaited on the startup path. It is a no-op after the first run (one small JSON read). The first run happens once per machine.
+- **Startup latency.** The runner is awaited on the startup path. It is a no-op after the first run (one small JSON read plus a `.migrating/` directory check).
 
 ---
 
@@ -1086,8 +1241,41 @@ Each PR updates `docs/rewrite/PROGRESS.md` (Spec/Impl/Review columns) and regene
 - oRPC 1.15.4, exact pins. MessagePort channel created in the preload on a renderer-initiated nonce handshake. One port per page load.
 - `window.api` and the legacy IPC stay mounted until the Phase 7 cut-over. Every event goes through one `emitIpcEvent` into both paths.
 - `Uint8Array` travels through a custom oRPC JSON serializer. A raw side port for device streams is the documented fallback, not built.
-- DB wire: `hello` → snapshot → contiguous seq batches; `reset` via `truncate()`; full-row updates; mutations resolve on their echoed seq.
+- DB wire: `hello` → snapshot → contiguous seq batches; positions are `{ epoch, seq }`; `reset` via `truncate()`; full-row updates; streams reopen on error **or** EOF. Mutations resolve when their echo is *received* (awaiting *applied* would deadlock inside TanStack's persisting transaction); `awaitApplied` exists for loaders. `markReady()` is called after every usable snapshot while loading or errored.
+- Event delivery has three declared classes (lossless-replayable, lossless-actionable, coalescing), filtered before buffering. oRPC's `EventPublisher` is not used for delivery.
+- A swap flips only after the candidate passes the subscription readiness barrier, or it is aborted after 10 s.
 - `gitState` covers the active workspace only for now. `memories` has no insert. `workspaces` has no insert (it uses `workspaces.add`).
-- The prefs migration reads `renderer-state.json` in main. There is no renderer handoff.
-- Transcripts become `threads/<id>.json` (v2 UIMessage JSON). v1 is kept until the cut-over build. Main dual-writes v2 during the transition, and `ai.hydrate` falls back to on-the-fly conversion.
+- The prefs migration reads `renderer-state.json` in main. There is no renderer handoff. Legacy keys keep syncing into `prefs.json` for the whole transition. Merges are by provenance (`default`/`legacy`/`user`), never by default-equality.
+- Transcripts become `threads/<id>.json` (v2 UIMessage JSON) with full segment provenance. v1 is kept until the cut-over build. Main dual-writes and dual-removes v2 during the transition, and `ai.hydrate` repairs a missing or stale twin. Migration commits are journaled, with backups for `replace-user` writes.
 - Composer drafts are not migrated.
+
+## Review responses (codex r1)
+
+Source: `docs/rewrite/specs/reviews/00-transport-db-migration.codex-r1.md`. Each finding was checked against the 1.15.4 oRPC package (installed in the scratchpad), the TanStack DB 0.10.0 and TanStack AI (ai 0.63.0 / ai-client 0.36.0) clones, and the current source. 23 are fixed as the review proposed. One (R7) is fixed with a different mechanism, and the reason is given.
+
+| # | Finding | Resolution |
+|---|---|---|
+| R1 | `ChatHydrationResult`/`RunAgentInputContext` imported from the wrong package | **Fixed** (A.3.1). Confirmed: `RunAgentInputContext` and `SubscribeConnectionAdapter` are exported from the `ai-client` root (`index.ts:181,183`), and `ChatHydrationResult` is not exported from any root. It is now derived from `SubscribeConnectionAdapter["hydrate"]`. A-T1b checks every named library import. |
+| R2 | Handshake could create two ports | **Fixed** (A.4.4). The preload answers once per document and refuses later requests without a port. The renderer's retry is removed. Late or unknown-nonce ports are closed. Promise reuse is HMR-safe. Covered by A-T4 and the real-Electron A-T12. |
+| R3 | Lifecycle listeners accumulate | **Fixed** (A.4.2). They are installed once in `registerRendererContents` and removed on `destroyed`. Closed ports clear their registry slot. A-T3 asserts the listener counts. |
+| R4 | Swap readiness overstated | **Fixed** (A.4.6). There is an explicit subscription barrier (transport, `prefs`/`workspaces`/`sessions` ready, `abacus.subscribed` for the visible thread, first commit), plus a 10 s abort-and-retry policy for swap candidates. The legacy 5 s path is unchanged. A-T10 covers it. |
+| R5 | Irreversible events on a lossy bounded publisher | **Fixed** (A.4.3). Confirmed: `EventPublisher` drops the oldest silently. Events are now filtered before buffering, with three declared delivery classes. Terminal output is offset-addressed and resumable from main's `BoundedScrollback`, exit is sticky, and actionable streams start with a pending-state snapshot. Overflow is an explicit `RESYNC_REQUIRED`. A-T9 covers it. |
+| R6 | Two destinations for credentials invalidation | **Fixed.** `settings.events` is the only destination, in both A.2.1 and A.2.3. A-T11 covers it. |
+| R7 | Commit ≠ apply; use immediate transactions | **Fixed differently.** Received and applied positions are now defined and tracked (B.3), and `awaitApplied` exists. But mutation handlers wait on *received*, and `begin({ immediate: true })` is not used for echoes. Verified in `collection/state.ts:1373`: ordinary synced commits apply only when no user transaction is persisting, and during `onInsert/onUpdate/onDelete` the caller's own transaction *is* persisting. Waiting for *applied* inside the handler would deadlock. Forcing `immediate` would contradict the DB guide ("do not use `begin({ immediate: true })` to bypass that ordering just to settle a load"). Once the handler resolves, TanStack applies the queued echo together with dropping the optimistic layer. That is the same pattern as Electric's `awaitTxId`. Resync snapshots apply immediately through `truncate()`. B-T1 cases 8, 8b and 8c cover server-normalised rows. |
+| R8 | Stays in `error` after recovery | **Fixed** (B.3 step 4). `markReady()` is called after any usable snapshot while `loading` or `error`. Verified: `lifecycle.ts` allows `error → ready`, and `applyReadyTransition` clears `syncError`. B-T1 case 6 covers failure then recovery. |
+| R9 | Freeze after overflow EOF | **Fixed** (B.1, B.3 step 7, B.4). The client reopens on unexpected EOF as well as on errors. B-T1 cases 12 and 13 cover it. |
+| R10 | Epoch checked after seq | **Fixed** (B.3 steps 1, 3, 4, 5). The epoch is compared before any seq, a foreign-epoch batch triggers a reopen instead of being dropped, buffers and snapshots are tagged with a connection generation, and waiters are keyed `{ epoch, seq }`. B-T1 cases 5, 5b and 5c cover it. |
+| R11 | Memory stale-click guard removed | **Fixed** (B.2). The delete sends the clicked row's original `index` and `entry`, which main validates under the store lock (`CONFLICT` when stale). B-T3 covers the duplicate-entry race. |
+| R12 | `noteDays` / empty bots / daily-note directory | **Fixed** (A.2.1, B.2). `memory.bots` keeps `BotMemoryView`, and watchers cover `bots/`, `bots/<id>/` and `bots/<id>/memory/`, including creation and removal. B-T3 covers it. |
+| R13 | Chat previews lose their trigger | **Fixed** (A.2.1, A.2.3). Every legacy `bots-updated` also publishes `bots.events previews-changed`, independent of the row diff. Confirmed: the transcript `onPersist` emits `bots-updated` (`service-host.ts:1519-1527`). B-T3 and A-T11 cover it. |
+| R14 | Hydration missing `activeRun`/`interrupts` | **Fixed** (A.3). `ai.hydrate` combines stored messages with `AguiSource.liveState`. |
+| R15 | Segment ids not preserved | **Fixed** (C.3). There is a per-message `metadata.abacus.segments` provenance list, a per-part id placement table, group provenance, and boundaries on user messages and on a `messageIndex` change. C-T2 checks it. |
+| R16 | Completed frame without outcome misread | **Fixed** (C.3). A missing `outcome` defaults to `"completed"`, as in `hydration.ts:47-53`. There is a historical fixture in C-T1. |
+| R17 | Hand-back rule missing | **Fixed** (C.3). The full positional state machine is specified: consecutive `created` closes the previous bracket as completed, an unmatched close is ignored, and a trailing open bracket is interrupted. |
+| R18 | Success state with denied/cancelled outcome | **Fixed** (C.3). Result state is derived from status and rejection as well as error. Confirmed: `ToolResultPart.outcome` implies `state: "error"` (`ai/src/types.ts:457-458`). C-T1 and C-T2 cover it. |
+| R19 | v2 not removed | **Fixed** (C.3, C.6). `TranscriptService.remove`, the path used at `service-host.ts:1691,2242,2631`, removes v2 too. C-T7 covers reset and deletion. |
+| R20 | Stale v2 cannot be repaired | **Fixed** (A.3, C.3). `readCurrent` compares source timestamps and repairs a stale twin, and the dual-write is isolated so `onPersist` still runs. C-T7 covers it. |
+| R21 | Prefs drift justification false | **Fixed** (C.4, B.8). There is a live legacy sync for the whole transition, plus a final provenance-aware import at cut-over (step 3). C-T8 covers it. |
+| R22 | Default-equality merge | **Fixed** (B.2, C.4). Merges go by stored provenance. C-T5 covers an explicit `"system"` theme. |
+| R23 | Overwrites and rollback misclassified | **Fixed** (C.1, C.2). Writes are classified as `create`, `replace-derived` or `replace-user`. `replace-user` writes are backed up, commits are journaled, and there is a recovery procedure. The review's failure points are tested in C-T3. |
+| R24 | Archive gate cannot handle `agui` or skipped files | **Fixed** (C.5). Archiving is per file, with rules for `agui` twins (`migratedFrom`), a quarantine for skipped sources, and convert-then-archive. C-T9 covers it. |
