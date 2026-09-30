@@ -5,14 +5,15 @@ import {
   notFound,
   stripSearchParams,
 } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { useCollections } from "#next/data/db";
 import {
-  chatRuntimeFor,
   ChatView,
   deriveSessionTitle,
+  type ComposerConfig,
 } from "#next/features/chat";
 import { SessionIdentity, SessionPage } from "#next/features/sessions";
 import { TopBarSlot } from "#next/features/shell";
@@ -29,7 +30,7 @@ import { SessionId } from "#shared/contract/ids";
  */
 const SessionChat = ({ sessionId }: { sessionId: string }) => {
   const { t } = useTranslation();
-  const { transport } = Route.useRouteContext();
+  const { transport, chat } = Route.useRouteContext();
   const collections = useCollections();
   const { data: row } = useLiveQuery({
     query: (q) =>
@@ -48,45 +49,63 @@ const SessionChat = ({ sessionId }: { sessionId: string }) => {
     },
     [row?.workspaceId]
   );
+  const root = row?.worktreePath ?? workspace?.path ?? null;
+  const turnBusy = row?.turn?.isBusy === true;
+  const workspaceId = row?.workspaceId ?? null;
+  const routineRun = row?.routineId != null;
+  const label = row?.label ?? "";
+  // One object per real change, not per row update (review Claude 27): the
+  // kit's context value, and every row under it, depends on it.
+  const composer = useMemo(
+    (): ComposerConfig => ({
+      mode: "full",
+      placeholder: t("chat.composer.busySession"),
+      attachmentsBase: root,
+      showModeChip: true,
+      model: null,
+      turnBusy,
+      setMode: (mode: AgentMode) =>
+        transport.client.agent.setMode({
+          workspaceId: workspaceId ?? "",
+          sessionId,
+          mode,
+        }),
+      ...(routineRun
+        ? { readOnly: { reason: t("chat.composer.routineRun") } }
+        : {}),
+      onFirstSend: (text) => {
+        if (label.trim() !== "" && label.trim() !== "Untitled") return;
+        const title = deriveSessionTitle(text);
+        if (title === "") return;
+        try {
+          collections.sessions.update(sessionId, (draft) => {
+            draft.label = title;
+          });
+        } catch {
+          // Titling never blocks a send (spec 02 §8.3).
+        }
+      },
+    }),
+    [
+      t,
+      root,
+      turnBusy,
+      workspaceId,
+      routineRun,
+      label,
+      transport,
+      collections,
+      sessionId,
+    ]
+  );
   if (row == null) return <SessionPage />;
-  const runtime = chatRuntimeFor(transport);
-  const root = row.worktreePath ?? workspace?.path ?? null;
   return (
     <ChatView
       threadId={sessionId}
       skin="session"
-      runtime={runtime}
+      runtime={chat}
       workspaceRoot={root}
-      composer={{
-        mode: "full",
-        placeholder: t("chat.composer.busySession"),
-        attachmentsBase: root,
-        showModeChip: true,
-        model: null,
-        turnBusy: row.turn?.isBusy === true,
-        setMode: (mode: AgentMode) =>
-          transport.client.agent.setMode({
-            workspaceId: row.workspaceId,
-            sessionId,
-            mode,
-          }),
-        ...(row.routineId != null
-          ? { readOnly: { reason: t("chat.composer.routineRun") } }
-          : {}),
-        onFirstSend: (text) => {
-          if (row.label.trim() !== "" && row.label.trim() !== "Untitled")
-            return;
-          const label = deriveSessionTitle(text);
-          if (label === "") return;
-          try {
-            collections.sessions.update(sessionId, (draft) => {
-              draft.label = label;
-            });
-          } catch {
-            // Titling never blocks a send (spec 02 §8.3).
-          }
-        },
-      }}
+      composer={composer}
     />
   );
 };
@@ -115,10 +134,7 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/$sessionId")({
     if (isMissing(sessions, params.sessionId)) throw notFound();
     // The transcript is present before the view commits (spec 02 §3.2).
     if (preload || !sessions.has(params.sessionId)) return;
-    await chatRuntimeFor(context.transport)
-      .session(params.sessionId)
-      .load()
-      .catch(ignoreLoadError);
+    await context.chat.session(params.sessionId).load().catch(ignoreLoadError);
   },
   component: SessionRoute,
 });
