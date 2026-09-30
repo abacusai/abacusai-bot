@@ -14,9 +14,38 @@ export class SwapAborted extends Error {
   }
 }
 
+/**
+ * A swap candidate built for the oRPC contract did not pass its readiness
+ * barrier: it reported `failed`, or nothing within SWAP_READY_TIMEOUT_MS. The
+ * candidate is discarded and the old renderer keeps running.
+ */
+export class SwapNotReady extends Error {
+  constructor(readonly outcome: "failed" | "timeout") {
+    super(`The new renderer did not become ready (${outcome})`);
+    this.name = "SwapNotReady";
+  }
+}
+
+/**
+ * What a candidate must reach before the flip. `first-commit` is the legacy
+ * renderer's `renderer-ready` (or READY_TIMEOUT_MS, whichever first).
+ * `subscriptions` is the oRPC renderer's `window.ready` barrier: transport,
+ * shell tables and visible thread live (spec 00 A.4.6).
+ */
+export type SwapBarrier = "first-commit" | "subscriptions";
+
 export interface SwapOptions {
   /** Checked right before the flip; true rejects with SwapAborted. */
   shouldAbort?: () => boolean;
+  /** Default `first-commit`. */
+  barrier?: SwapBarrier;
+}
+
+export type ReadinessOutcome = "ready" | "failed" | "timeout";
+
+/** Where `window.ready` reports land (main/rpc/readiness.ts). */
+export interface RendererReadinessSource {
+  wait(webContentsId: number, timeoutMs: number): Promise<ReadinessOutcome>;
 }
 
 export interface RendererHostOptions {
@@ -26,6 +55,8 @@ export interface RendererHostOptions {
   /** Runs on every renderer webContents this host creates. */
   wire: (contents: WebContents) => void;
   window: BaseWindow;
+  /** Required for the `subscriptions` barrier. */
+  readiness?: RendererReadinessSource;
 }
 
 const SWAP_TIMEOUT_MS = 30_000;
@@ -40,6 +71,34 @@ const discard = (view: WebContentsView): void => {
  * subscriptions exist. A bundle that never signals still swaps after this.
  */
 const READY_TIMEOUT_MS = 5_000;
+
+/** How long an oRPC-contract candidate has to report ready after loading. */
+export const SWAP_READY_TIMEOUT_MS = 10_000;
+
+/** Readiness failures tolerated per version before swaps stop until relaunch. */
+export const MAX_SWAP_READINESS_ATTEMPTS = 3;
+
+/**
+ * Counts readiness failures per version: a candidate that cannot become
+ * ready is retried at the next idle window, at most
+ * MAX_SWAP_READINESS_ATTEMPTS times, then left alone until the next launch.
+ */
+export class SwapRetryBudget {
+  readonly #failures = new Map<string, number>();
+
+  constructor(readonly max = MAX_SWAP_READINESS_ATTEMPTS) {}
+
+  /** Record one failure; true while another attempt is allowed. */
+  fail(version: string): boolean {
+    const failures = (this.#failures.get(version) ?? 0) + 1;
+    this.#failures.set(version, failures);
+    return failures < this.max;
+  }
+
+  failures(version: string): number {
+    return this.#failures.get(version) ?? 0;
+  }
+}
 
 /** The old renderer answers the continuity capture within this, or not. */
 const CAPTURE_TIMEOUT_MS = 3_000;
@@ -143,6 +202,18 @@ export class RendererHost {
   }
 
   /**
+   * The oRPC renderer's readiness report for `contents`, or `timeout` after
+   * SWAP_READY_TIMEOUT_MS. Without a readiness source nothing can report, so
+   * it is `failed`.
+   */
+  readiness(contents: WebContents): Promise<ReadinessOutcome> {
+    const source = this.#options.readiness;
+    return source == null
+      ? Promise.resolve("failed")
+      : source.wait(contents.id, SWAP_READY_TIMEOUT_MS);
+  }
+
+  /**
    * Replace the renderer with `url`, keeping the route. On failure the old
    * renderer keeps running. Serialized; false when the window went away.
    */
@@ -199,12 +270,20 @@ export class RendererHost {
 
     let timer: NodeJS.Timeout | undefined;
     const ready = rendererReady(next.webContents);
+    const barrier = options?.barrier ?? "first-commit";
 
     try {
       await Promise.race([
-        next.webContents
-          .loadURL(target.href)
-          .then(() => Promise.race([ready.promise, delay(READY_TIMEOUT_MS)])),
+        next.webContents.loadURL(target.href).then(async () => {
+          if (barrier === "first-commit") {
+            await Promise.race([ready.promise, delay(READY_TIMEOUT_MS)]);
+            return;
+          }
+          // No flip on a guess: a candidate that never says its data is
+          // live, or says it failed, is discarded (its port closes with it).
+          const outcome = await this.readiness(next.webContents);
+          if (outcome !== "ready") throw new SwapNotReady(outcome);
+        }),
         new Promise<never>((_resolve, reject) => {
           timer = setTimeout(() => {
             reject(

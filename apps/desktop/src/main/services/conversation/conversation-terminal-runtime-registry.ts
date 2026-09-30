@@ -94,7 +94,27 @@ type PendingStart = {
   promise: Promise<StartConversationTerminalResult>;
 };
 
+/** Where a terminal's output stands, for a reader resuming by offset. */
+export type ConversationTerminalOutputState = {
+  /** The output after `from`: the delta asked for, or the whole scrollback. */
+  data: string;
+  from: number;
+  /** The offset after `data`. */
+  offset: number;
+  /** Set once the shell exited; sticky for a reader that arrives late. */
+  exit: { exitCode: number | null; signal: number | null } | null;
+};
+
+type ExitedRuntime = {
+  generation: number;
+  scrollback: BoundedScrollback;
+  exitCode: number | null;
+  signal: number | null;
+};
+
 const DEFAULT_SCROLLBACK_BYTES = 2 * 1024 * 1024;
+/** Exited terminals kept for late readers, oldest dropped first. */
+const MAX_EXITED_RUNTIMES = 8;
 export const DEFAULT_TERMINAL_ID = "terminal-1";
 
 const runtimeKey = (key: ConversationKey, terminalId: string): string =>
@@ -110,6 +130,8 @@ const safeUtf8Suffix = (value: Buffer, maximumBytes: number): Buffer => {
 export class BoundedScrollback {
   private chunks: Buffer[] = [];
   private byteLength = 0;
+  /** Every byte ever appended, evicted or not: the offset of the next byte. */
+  private endOffset = 0;
 
   constructor(readonly maximumBytes: number) {
     if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
@@ -117,8 +139,32 @@ export class BoundedScrollback {
     }
   }
 
+  /**
+   * Offsets address the terminal's whole output as UTF-8 bytes, so a reader
+   * that saw up to `end` can ask for exactly what came after.
+   */
+  get end(): number {
+    return this.endOffset;
+  }
+
+  /** The offset of the oldest byte still held. */
+  get start(): number {
+    return this.endOffset - this.byteLength;
+  }
+
+  /** The output after `offset`, or null when part of it was evicted. */
+  readFrom(offset: number): string | null {
+    if (!Number.isSafeInteger(offset) || offset < this.start) return null;
+    if (offset > this.endOffset) return null;
+    return Buffer.concat(this.chunks, this.byteLength)
+      .subarray(offset - this.start)
+      .toString("utf8");
+  }
+
   append(value: string): void {
-    let chunk = safeUtf8Suffix(Buffer.from(value, "utf8"), this.maximumBytes);
+    const bytes = Buffer.from(value, "utf8");
+    this.endOffset += bytes.length;
+    let chunk = safeUtf8Suffix(bytes, this.maximumBytes);
     if (chunk.length === 0) return;
 
     this.chunks.push(chunk);
@@ -155,6 +201,7 @@ export class ConversationTerminalRuntimeRegistry {
   private readonly pendingStarts = new Map<string, PendingStart>();
   private readonly generations = new Map<string, number>();
   private readonly promotedSessionKeys = new Set<ConversationKey>();
+  private readonly exited = new Map<string, ExitedRuntime>();
   private readonly maximumScrollbackBytes: number;
 
   constructor(
@@ -233,6 +280,43 @@ export class ConversationTerminalRuntimeRegistry {
     return [...this.runtimes.values()]
       .filter((runtime) => runtime.key === key)
       .map((runtime) => this.attachment(runtime));
+  }
+
+  /** Every running terminal, in every conversation. */
+  listAll(): ConversationTerminalAttachment[] {
+    return [...this.runtimes.values()].map((runtime) =>
+      this.attachment(runtime)
+    );
+  }
+
+  /**
+   * One generation's output from `fromOffset` (the whole scrollback when it
+   * is absent or evicted), and its exit once it exited. Null for a terminal
+   * this registry never ran or has forgotten.
+   */
+  outputState(
+    key: ConversationKey,
+    generation: number,
+    terminalId = DEFAULT_TERMINAL_ID,
+    fromOffset?: number
+  ): ConversationTerminalOutputState | null {
+    const runtime = this.currentRuntime(key, terminalId, generation);
+    const exited = this.exited.get(runtimeKey(key, terminalId));
+    const record =
+      runtime ?? (exited?.generation === generation ? exited : null);
+    if (record == null) return null;
+
+    const { scrollback } = record;
+    const delta = fromOffset == null ? null : scrollback.readFrom(fromOffset);
+    return {
+      data: delta ?? scrollback.read(),
+      from: delta == null ? scrollback.start : fromOffset!,
+      offset: scrollback.end,
+      exit:
+        runtime != null || exited == null
+          ? null
+          : { exitCode: exited.exitCode, signal: exited.signal },
+    };
   }
 
   write(
@@ -480,7 +564,21 @@ export class ConversationTerminalRuntimeRegistry {
     });
     pty.onExit((event) => {
       if (!this.isCurrent(runtime)) return;
-      this.runtimes.delete(runtimeKey(runtime.key, runtime.terminalId));
+      const id = runtimeKey(runtime.key, runtime.terminalId);
+      this.runtimes.delete(id);
+      // Kept briefly, so a reader that arrives after the exit still gets the
+      // output and the exit rather than nothing.
+      this.exited.delete(id);
+      this.exited.set(id, {
+        generation: runtime.generation,
+        scrollback: runtime.scrollback,
+        exitCode: event.exitCode ?? null,
+        signal: event.signal ?? null,
+      });
+      if (this.exited.size > MAX_EXITED_RUNTIMES) {
+        const oldest = this.exited.keys().next().value;
+        if (oldest != null) this.exited.delete(oldest);
+      }
       this.options.onExit?.({
         terminalId: runtime.terminalId,
         key: runtime.key,

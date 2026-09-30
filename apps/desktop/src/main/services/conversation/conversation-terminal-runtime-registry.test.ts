@@ -269,3 +269,76 @@ describe("conversation terminal runtime registry", () => {
     expect(pty.kill).toHaveBeenCalledOnce();
   });
 });
+
+// For `terminal.output` (spec 00 A.4.3): offsets address the whole output as
+// UTF-8 bytes, and an exit stays readable for a subscriber that comes late.
+describe("terminal output by offset", () => {
+  it("counts every byte, evicted or not, and reads after an offset", () => {
+    const scrollback = new BoundedScrollback(8);
+    scrollback.append("héllo");
+    expect(scrollback.end).toBe(6);
+    expect(scrollback.start).toBe(0);
+    expect(scrollback.readFrom(3)).toBe("llo");
+    expect(scrollback.readFrom(6)).toBe("");
+
+    scrollback.append(" world");
+    expect(scrollback.end).toBe(12);
+    expect(scrollback.start).toBe(4);
+    expect(scrollback.readFrom(2)).toBeNull();
+    expect(scrollback.readFrom(12)).toBe("");
+    expect(scrollback.readFrom(13)).toBeNull();
+  });
+
+  it("serves a delta when it has one and the whole scrollback when not", async () => {
+    const { registry, ptys } = setup(8);
+    const started = await registry.start({
+      scope: draft("workspace-1"),
+      cols: 80,
+      rows: 24,
+    });
+    ptys[0]!.emitData("abc");
+
+    expect(
+      registry.outputState(started.key, started.generation, undefined, 1)
+    ).toEqual({ data: "bc", from: 1, offset: 3, exit: null });
+
+    ptys[0]!.emitData("defghijk");
+    expect(
+      registry.outputState(started.key, started.generation, undefined, 1)
+    ).toEqual({ data: "defghijk", from: 3, offset: 11, exit: null });
+    expect(
+      registry.outputState(started.key, started.generation + 1)
+    ).toBeNull();
+  });
+
+  it("keeps an exited terminal's output and exit for a late reader", async () => {
+    const { registry, ptys } = setup();
+    const started = await registry.start({
+      scope: draft("workspace-1"),
+      cols: 80,
+      rows: 24,
+    });
+    ptys[0]!.emitData("bye");
+    ptys[0]!.emitExit(7, 15);
+
+    expect(registry.list(started.key)).toEqual([]);
+    expect(registry.outputState(started.key, started.generation)).toEqual({
+      data: "bye",
+      from: 0,
+      offset: 3,
+      exit: { exitCode: 7, signal: 15 },
+    });
+  });
+
+  it("lists every running terminal across conversations", async () => {
+    const { registry } = setup();
+    await registry.start({ scope: draft("workspace-1"), cols: 80, rows: 24 });
+    await registry.start({
+      scope: session("workspace-1", "session-1"),
+      cols: 80,
+      rows: 24,
+    });
+
+    expect(registry.listAll()).toHaveLength(2);
+  });
+});
