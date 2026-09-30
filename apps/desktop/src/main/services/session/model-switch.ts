@@ -9,8 +9,8 @@
  * apart. Every switch for a session (the checked RPC, the legacy
  * fire-and-forget one and a bot re-pin alike) therefore goes through one
  * queue per session: one `set_model` is outstanding at a time, the next is
- * written only once it is answered or its process is invalidated. An answer settles
- * only the outstanding switch — `model_changed` only when it names the
+ * written only once it is answered or its process is invalidated. An answer
+ * settles only the outstanding switch. `model_changed` must name the
  * requested model (an OpenLLM rotation or a startup notice settles
  * nothing). No answer within the timeout resolves (the pin applies at the
  * next start either way); an agent without a model runtime answers nothing,
