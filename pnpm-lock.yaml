@@ -297,6 +297,9 @@ importers:
       '@abacus-ai/connectors':
         specifier: workspace:*
         version: link:../../packages/connectors
+      '@abacus-ai/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
       '@abacus-ai/updater':
         specifier: workspace:*
         version: link:../updater
