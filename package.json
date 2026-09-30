@@ -9,8 +9,10 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build vendor",
-    "check": "turbo run format:check lint typecheck test check:i18n check:locales check:audit --concurrency=1",
+    "changelog": "node scripts/sync-changelog.js",
+    "check": "turbo run format:check lint typecheck test check:i18n check:locales check:audit check:knip-next check:ui-registry --concurrency=1",
     "check:audit": "node scripts/check-audit.js",
+    "check:knip-next": "knip --workspace apps/desktop --include files,exports,types,duplicates",
     "dev": "pnpm run dev:desktop",
     "dev:desktop": "turbo run dev --filter=@abacus-ai/desktop",
     "format": "oxfmt .",
@@ -23,12 +25,12 @@
     "test:coverage": "turbo run test:coverage",
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
-    "typecheck:tools": "tsc -p tsconfig.tools.json",
-    "changelog": "node scripts/sync-changelog.js"
+    "typecheck:tools": "tsc -p tsconfig.tools.json"
   },
   "devDependencies": {
     "@abacus-ai/config": "workspace:*",
     "@types/node": "catalog:",
+    "knip": "6.38.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "turbo": "catalog:",

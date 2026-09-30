@@ -13,7 +13,7 @@ import type { Transport, TransportHost } from "./types";
 
 export const RPC_CONNECT_REQUEST = "abacus:rpc-connect";
 export const RPC_PORT_RESPONSE = "abacus:rpc-port";
-export const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
+const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
 
 /** No port came: the preload is missing, crashed, or refused a second one. */
 export class TransportUnavailableError extends Error {

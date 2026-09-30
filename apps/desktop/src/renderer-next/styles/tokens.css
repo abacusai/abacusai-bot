@@ -1,0 +1,206 @@
+/*
+ * Our tokens (spec 01 §5.3): layout geometry, the title-bar contract, the
+ * no-drag rule for overlays and the view-transition CSS. Colours are not
+ * here: every surface maps to a shadcn token in app.css by role.
+ */
+
+@theme inline {
+  --breakpoint-shell-sm: 800px; /* minimum band */
+  --breakpoint-shell-md: 900px;
+  --breakpoint-shell-lg: 1000px;
+  --breakpoint-shell-xl: 1100px;
+}
+
+:root {
+  color-scheme: light;
+  /* window chrome contract, spec 00-window-chrome §6 */
+  --titlebar-x: env(titlebar-area-x, 0px);
+  --titlebar-end: calc(
+    100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)
+  );
+  --toolbar-h: 40px; /* overwritten from window.chrome density */
+  /* shell geometry (canvas) */
+  --rail-w: 56px;
+  --sidebar-w: 280px;
+  --sidebar-strip-w: 88px;
+  --sidebar-occupied-w: 280px;
+  --side-panel-min: 360px;
+  --side-panel-drawer-w: 356px;
+  --pane-inset: 8px;
+  --pane-radius: 12px;
+  /* density */
+  --row-h: 32px;
+  --bot-accent: var(--primary);
+  --bot-accent-foreground: var(--primary-foreground);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+html[data-density="compact"] {
+  --toolbar-h: 32px;
+  --row-h: 28px;
+}
+
+/*
+ * Before the renderer applies the stored theme (main already set
+ * nativeTheme, so the media query is the stored choice, §7.7), paint the
+ * window in the right scheme instead of a light frame.
+ */
+html {
+  background-color: var(--sidebar);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme: dark;
+    background-color: oklch(0.205 0 0);
+  }
+}
+
+.titlebar-drag {
+  app-region: drag;
+}
+.titlebar-nodrag {
+  app-region: no-drag;
+}
+
+/* NO_DRAG_SELECTOR (lib/window-chrome/overlay-slots.ts); R1-T9 keeps them equal. */
+[data-slot="dialog-content"],
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-content"],
+[data-slot="alert-dialog-overlay"],
+[data-slot="sheet-content"],
+[data-slot="sheet-overlay"],
+[data-slot="drawer-popup"],
+[data-slot="drawer-overlay"],
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="context-menu-content"],
+[data-slot="context-menu-sub-content"],
+[data-slot="select-content"],
+[data-slot="combobox-content"],
+[data-slot="hover-card-content"],
+[data-slot="tooltip-content"],
+[data-slot="toast"],
+[data-slot="menubar-content"],
+[data-slot="menubar-sub-content"],
+[data-slot="navigation-menu-content"],
+[data-slot="toast-viewport"] {
+  app-region: no-drag;
+}
+
+/*
+ * Side-panel drawer geometry (§7.5). Unlayered, so it beats the registry's
+ * layered utilities, including data-[swipe-axis=x]:[--drawer-content-width:75%]
+ * and its sm: 24rem variant.
+ */
+[data-slot="drawer-popup"][data-side-panel] {
+  --drawer-content-width: var(--side-panel-drawer-w);
+  --drawer-inset: var(--pane-inset);
+  margin: 0;
+  top: calc(var(--toolbar-h) + var(--pane-inset));
+  right: var(--pane-inset);
+  bottom: var(--pane-inset);
+  height: auto;
+  border-radius: var(--pane-radius);
+}
+
+/* View transitions (§6.7). Durations mirror lib/motion.ts (a test compares). */
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-slide-in-end {
+  from {
+    opacity: 0;
+    translate: 12px 0;
+  }
+}
+@keyframes vt-slide-out-start {
+  to {
+    opacity: 0;
+    translate: -12px 0;
+  }
+}
+@keyframes vt-slide-in-start {
+  from {
+    opacity: 0;
+    translate: -12px 0;
+  }
+}
+@keyframes vt-slide-out-end {
+  to {
+    opacity: 0;
+    translate: 12px 0;
+  }
+}
+
+/*
+ * The router starts a document-level view transition for typed navigations
+ * only; these names give the pane and the sidebar their own snapshots and the
+ * classes the rules below select.
+ */
+[data-slot="pane"] {
+  view-transition-name: app-pane;
+  view-transition-class: pane;
+}
+[data-slot="sidebar-slot"] {
+  view-transition-name: app-sidebar;
+  view-transition-class: sidebar;
+}
+
+::view-transition-group(*) {
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html:active-view-transition-type(nav-lateral)::view-transition-old(.pane),
+html:active-view-transition-type(nav-lateral)::view-transition-old(.sidebar) {
+  animation: 200ms vt-fade-out both;
+}
+html:active-view-transition-type(nav-lateral)::view-transition-new(.pane),
+html:active-view-transition-type(nav-lateral)::view-transition-new(.sidebar) {
+  animation: 200ms vt-fade-in both;
+}
+html:active-view-transition-type(nav-forward)::view-transition-old(.pane) {
+  animation: 200ms vt-slide-out-start both;
+}
+html:active-view-transition-type(nav-forward)::view-transition-new(.pane) {
+  animation: 200ms vt-slide-in-end both;
+}
+html:active-view-transition-type(nav-back)::view-transition-old(.pane) {
+  animation: 200ms vt-slide-out-end both;
+}
+html:active-view-transition-type(nav-back)::view-transition-new(.pane) {
+  animation: 200ms vt-slide-in-start both;
+}
+html:active-view-transition-type(settings-in)::view-transition-old(.pane),
+html:active-view-transition-type(settings-out)::view-transition-old(.pane),
+html:active-view-transition-type(settings-in)::view-transition-old(.sidebar),
+html:active-view-transition-type(settings-out)::view-transition-old(.sidebar) {
+  animation: 200ms vt-fade-out both;
+}
+html:active-view-transition-type(settings-in)::view-transition-new(.pane),
+html:active-view-transition-type(settings-out)::view-transition-new(.pane),
+html:active-view-transition-type(settings-in)::view-transition-new(.sidebar),
+html:active-view-transition-type(settings-out)::view-transition-new(.sidebar) {
+  animation: 200ms vt-fade-in both;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 120ms !important;
+    animation-name: vt-fade-in !important;
+  }
+}
+html[data-reduce-motion="on"]::view-transition-old(*),
+html[data-reduce-motion="on"]::view-transition-new(*) {
+  animation: 120ms vt-fade-in both !important;
+}

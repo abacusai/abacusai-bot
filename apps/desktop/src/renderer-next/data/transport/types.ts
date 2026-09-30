@@ -3,6 +3,8 @@ import type { RouterUtils } from "@orpc/tanstack-query";
 
 import type { Contract } from "#shared/contract";
 
+import type { CloseReason, TransportState } from "./close-signal";
+
 /** The typed oRPC client for the whole contract. */
 export type AppClient = ContractRouterClient<Contract>;
 
@@ -25,5 +27,17 @@ export interface Transport {
   readonly client: AppClient;
   readonly orpc: AppQueryUtils;
   readonly host: TransportHost;
+  /**
+   * `"closed"` once the channel is gone, for good: a document gets one port,
+   * so a closed transport is never reopened (spec 01 §8.6 step 8).
+   */
+  readonly state: TransportState;
+  /**
+   * Called once when the channel closes: `"port-closed"` when the other end
+   * went away, `"explicit"` after `close()`. On an already-closed transport
+   * the listener runs once on the next microtask. Returns an unsubscribe.
+   */
+  onClose(listener: (reason: CloseReason) => void): () => void;
+  /** Idempotent; reports `"explicit"`. */
   close(): void;
 }
