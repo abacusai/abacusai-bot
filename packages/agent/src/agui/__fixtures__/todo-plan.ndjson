@@ -1,0 +1,13 @@
+{"type":"event","event":{"type":"mode_changed","mode":"YOLO","source":"startup"}}
+{"type":"ready","model":"fake/fake-1","mode":"YOLO","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"status_changed","status":"submitted"}}
+{"type":"event","event":{"type":"status_changed","status":"streaming"}}
+{"type":"event","event":{"type":"status_changed","status":"executing-tool"}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"call-0-0","name":"todo","type":"todo","input":{"action":"set","todos":[{"content":"  first  ","status":"in_progress"},{"content":"second","status":"pending"}]},"args":{"action":"set","todos":[{"content":"  first  ","status":"in_progress"},{"content":"second","status":"pending"}]}}}}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"call-0-0","name":"todo","type":"todo","input":{"action":"set","todos":[{"content":"  first  ","status":"in_progress"},{"content":"second","status":"pending"}]},"args":{"action":"set","todos":[{"content":"  first  ","status":"in_progress"},{"content":"second","status":"pending"}]}},"result":{"id":"call-0-0","content":"Plan updated.\n\n[~] first\n[ ] second","rejected":false}}}
+{"type":"event","event":{"type":"text_delta","content":"Planned.","messageId":"msg-2"}}
+{"type":"event","event":{"type":"turn_complete","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"}}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
