@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { SettingsPageEmpty } from "#next/features/settings";
+import { NotificationsPage } from "#next/features/settings";
 import { TopBarSlot } from "#next/features/shell";
 
 const NotificationsSettingsRoute = () => {
@@ -10,10 +10,10 @@ const NotificationsSettingsRoute = () => {
     <>
       <TopBarSlot>
         <span className="text-sidebar-foreground truncate font-medium">
-          {t("settings.pages.notifications")}
+          {t("settings.sidebar.label")}
         </span>
       </TopBarSlot>
-      <SettingsPageEmpty page="notifications" />
+      <NotificationsPage />
     </>
   );
 };

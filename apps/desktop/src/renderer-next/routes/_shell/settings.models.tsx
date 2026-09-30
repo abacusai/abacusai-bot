@@ -1,23 +1,73 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { SettingsPageEmpty } from "#next/features/settings";
+import { ModelsPage, ModelsSearch } from "#next/features/settings";
 import { TopBarSlot } from "#next/features/shell";
+import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 
 const ModelsSettingsRoute = () => {
   const { t } = useTranslation();
+  const { db, transport } = Route.useRouteContext();
+  const navigate = useAppNavigate();
+  const adoptModel = async (target: string, model: string) => {
+    if (!target.startsWith("session:"))
+      throw new Error(t("phase5.draftModelUnavailable"));
+    const id = target.slice(8);
+    const row = db.collections.sessions.get(id);
+    if (!row) throw new Error(t("phase5.threadGone"));
+    const tx = row.owner
+      ? db.collections.bots.update(row.owner.botId, (draft) => {
+          draft.model = model;
+        })
+      : db.collections.sessions.update(id, (draft) => {
+          draft.model = model;
+        });
+    await tx.isPersisted.promise;
+    if (row.status === "running")
+      await transport.client.agent.setModel({
+        workspaceId: row.workspaceId,
+        sessionId: id,
+        model,
+      });
+    if (row.routineId)
+      await navigate({
+        to: "/routines/$routineId",
+        params: { routineId: row.routineId },
+        search: { run: id },
+        transition: "settings-out",
+      });
+    else if (row.owner?.role === "forever")
+      await navigate({
+        to: "/bots/$botId",
+        params: { botId: row.owner.botId },
+        transition: "settings-out",
+      });
+    else if (row.owner)
+      await navigate({
+        to: "/bots/$botId/chats/$sessionId",
+        params: { botId: row.owner.botId, sessionId: id },
+        transition: "settings-out",
+      });
+    else
+      await navigate({
+        to: "/sessions/$sessionId",
+        params: { sessionId: id },
+        transition: "settings-out",
+      });
+  };
   return (
     <>
       <TopBarSlot>
         <span className="text-sidebar-foreground truncate font-medium">
-          {t("settings.pages.models")}
+          {t("settings.sidebar.label")}
         </span>
       </TopBarSlot>
-      <SettingsPageEmpty page="models" />
+      <ModelsPage adoptModel={adoptModel} />
     </>
   );
 };
 
 export const Route = createFileRoute("/_shell/settings/models")({
+  validateSearch: ModelsSearch,
   component: ModelsSettingsRoute,
 });
