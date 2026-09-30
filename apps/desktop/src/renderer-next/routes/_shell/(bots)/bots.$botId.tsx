@@ -10,6 +10,7 @@ import {
   BotPending,
   useBot,
   useBotChatSlots,
+  useBotChatActivity,
   DetailsTab,
   MemoryTab,
   FilesTab,
@@ -19,6 +20,7 @@ import {
 import {
   chatRuntimeFor,
   ChatView,
+  useThreadHost,
   fixtureRuntime,
   useComposerExpanded,
 } from "#next/features/chat";
@@ -26,6 +28,8 @@ import {
   TopBarSlot,
   useTopBarActions,
   SidePanelContent,
+  requestBrowserOpen,
+  BrowserOpenPlaceholder,
 } from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
@@ -96,15 +100,19 @@ const ComposedChat = ({
   transport: ReturnType<typeof Route.useRouteContext>["transport"];
 }) => {
   const { t } = useTranslation();
-  const slots = useBotChatSlots(bot, sessionId, expanded);
-  const navigate = useAppNavigate();
-  useTopBarActions([
-    { id: "details", label: t("bots.panel.detailsTitle"), onSelect: toggle },
-  ]);
   const runtime =
     fixture && bot.sessionId == null
       ? fixture.runtime
       : chatRuntimeFor(transport);
+  const host = useThreadHost(runtime.session(sessionId));
+  useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
+  const slots = useBotChatSlots(bot, sessionId, expanded, false, (url) =>
+    requestBrowserOpen({ sessionId, url })
+  );
+  const navigate = useAppNavigate();
+  useTopBarActions([
+    { id: "details", label: t("bots.panel.detailsTitle"), onSelect: toggle },
+  ]);
   return (
     <div
       data-testid="bot-chat"
@@ -149,8 +157,12 @@ const ComposedChat = ({
       <SidePanelContent tab="memory">
         <MemoryTab bot={bot} />
       </SidePanelContent>
+      <SidePanelContent tab="browser">
+        <BrowserOpenPlaceholder sessionId={sessionId} />
+      </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab
+          sessionId={sessionId}
           bot={bot}
           preview={preview}
           workspaceRoot={slots.workspaceRoot}

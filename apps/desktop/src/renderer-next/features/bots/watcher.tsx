@@ -112,6 +112,29 @@ export const BotsGlobals = () => {
       abort.signal
     );
     let lastEventId: string | undefined;
+    const ready = async (): Promise<void> => {
+      while (!abort.signal.aborted) {
+        try {
+          await Promise.all([
+            db.collections.bots.preload(),
+            db.collections.routines.preload(),
+          ]);
+          return;
+        } catch {
+          await new Promise<void>((resolve) => {
+            const done = () => {
+              clearTimeout(timer);
+              abort.signal.removeEventListener("abort", done);
+              resolve();
+            };
+            const timer = setTimeout(done, 250);
+            abort.signal.addEventListener("abort", done, { once: true });
+          });
+        }
+      }
+    };
+    let delivery = ready();
+    const queued = new Set<string>();
     void followNotices(
       transport,
       ({ signal }) =>
@@ -120,13 +143,19 @@ export const BotsGlobals = () => {
           { signal }
         ),
       (notice) => {
-        // A reopened stream resumes after the last notice seen (§24.11).
-        lastEventId = getEventMeta(notice as object)?.id ?? lastEventId;
-        if (deps.current != null) handleRunFinished(deps.current, notice);
+        if (queued.has(notice.runId)) return;
+        queued.add(notice.runId);
+        if (queued.size > 10_000) queued.delete(queued.values().next().value!);
+        // Resume only after attribution; queued run ids suppress reconnect repeats.
+        delivery = delivery.then(() => {
+          if (abort.signal.aborted || deps.current == null) return;
+          handleRunFinished(deps.current, notice);
+          lastEventId = getEventMeta(notice as object)?.id ?? lastEventId;
+        });
+        void delivery.catch(() => undefined);
       },
       abort.signal
     );
-    void db.collections.routines.preload().catch(() => undefined);
     const unlock = (): void => soundPlayer().unlock();
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => {

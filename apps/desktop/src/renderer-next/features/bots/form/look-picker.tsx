@@ -36,7 +36,7 @@ export const LookPicker = ({
             key={shape}
             value={shape}
             aria-label={t(`bots.avatar.shapes.${shape}`)}
-            className="size-9 p-1"
+            className={`size-9 p-1 ${value.shape === shape ? "bot-accent-control" : ""}`}
           >
             <BotAvatar size={26} look={{ ...value, shape }} />
           </ToggleGroupItem>

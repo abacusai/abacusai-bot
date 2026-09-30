@@ -1,9 +1,25 @@
 /** R3-T4,T13,T14,T16,T20,T24: routed interaction checks over live collections. */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { createElement, type ComponentProps } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fixtureBots, fixtureSessions } from "#next/data/fixture-db/rows";
 import { renderApp } from "#next/test-support/app-harness";
+// Tag the actual motion spans from both features without changing the chat kit.
+vi.mock("motion/react", async (original) => {
+  const actual = await original<typeof import("motion/react")>();
+  const Span = (props: ComponentProps<typeof actual.motion.span>) =>
+    createElement(actual.motion.span, {
+      ...props,
+      "data-model-layout-id": props.layoutId,
+    } as ComponentProps<typeof actual.motion.span>);
+  return {
+    ...actual,
+    motion: new Proxy(actual.motion, {
+      get: (target, key) => (key === "span" ? Span : Reflect.get(target, key)),
+    }),
+  };
+});
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
   app?.view.unmount();
@@ -77,9 +93,8 @@ describe("bots interactions", () => {
     ).not.toContain("Details");
     await screen.findByTestId("bot-chat");
     const count = () =>
-      document.querySelectorAll(
-        '[data-slot="bot-model-value"], [data-slot="composer-model"] span[data-bot-model-value]'
-      ).length;
+      document.querySelectorAll('[data-model-layout-id="model:chief-of-staff"]')
+        .length;
     expect(count()).toBe(1);
     const input = screen.getByRole("textbox", {
       name: /Message Chief of Staff/,
@@ -88,6 +103,7 @@ describe("bots interactions", () => {
     await waitFor(() =>
       expect(document.querySelector('[data-slot="bot-model-value"]')).toBeNull()
     );
+    expect(count()).toBe(1);
     expect(screen.getAllByRole("button", { name: /App default/ })).toHaveLength(
       1
     );
@@ -99,10 +115,12 @@ describe("bots interactions", () => {
       })
     );
     expect(document.querySelector('[data-slot="bot-model-value"]')).toBeNull();
+    expect(count()).toBe(1);
     fireEvent.blur(input);
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: /App default/ })).toBeNull()
     );
+    expect(count()).toBe(0);
   });
   it("keeps the model chip mounted while its popover has focus", async () => {
     app = await renderApp("/bots/chief-of-staff?tab=details");

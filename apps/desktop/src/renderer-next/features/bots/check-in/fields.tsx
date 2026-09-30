@@ -33,8 +33,10 @@ export const CheckInFields = ({
         aria-labelledby="check-in-label"
         value={value.preset === "custom" ? [] : [value.preset]}
         onValueChange={(items) => {
-          if (items[0])
+          if (items[0]) {
             onChange({ ...value, preset: items[0] as CheckInDraft["preset"] });
+            if (items[0] === "off") onBlur?.();
+          }
         }}
         className="bg-muted flex-wrap rounded-xl p-1"
       >

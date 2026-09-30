@@ -21,7 +21,7 @@ afterEach(async () => {
   resetOpenChats();
   vi.restoreAllMocks();
 });
-const setup = async () => {
+const setup = async (cold = false) => {
   const bot = fixtureBots()[0]!;
   const forever = {
     ...fixtureSessions()[0]!,
@@ -69,11 +69,12 @@ const setup = async () => {
     routines: [routine],
   });
   db = createDb(fixtureTransport(feed));
-  await Promise.all([
-    db.collections.bots.preload(),
-    db.collections.sessions.preload(),
-    db.collections.routines.preload(),
-  ]);
+  if (!cold)
+    await Promise.all([
+      db.collections.bots.preload(),
+      db.collections.sessions.preload(),
+      db.collections.routines.preload(),
+    ]);
   return { bot, forever, sender, run, routine, feed, db };
 };
 describe("bot loaders", () => {
@@ -99,6 +100,43 @@ describe("bot loaders", () => {
     ]);
     expect(openChat).toHaveBeenCalledTimes(1);
     expect(load).toHaveBeenCalledWith("s-forever");
+  });
+  it("cold snapshots block lookup and hydration until bots, sessions and routines are ready", async () => {
+    const { bot, db, feed } = await setup(true);
+    const releaseBots = feed.bots.holdSnapshot();
+    const releaseSessions = feed.sessions.holdSnapshot();
+    const releaseRoutines = feed.routines.holdSnapshot();
+    const openChat = vi.fn(async () => ({
+      botId: bot.id,
+      sessionId: "s-forever",
+      workspaceId: "ws-1",
+    }));
+    const load = vi.fn(async () => {});
+    let ready = false;
+    const pending = loadSenderChat({ db, load }, bot.id, "s-run", false).then(
+      () => {
+        ready = true;
+      }
+    );
+    const chat = loadBotChat(
+      { db, transport: { client: { bots: { openChat } } } as never, load },
+      bot.id,
+      false
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(ready).toBe(false);
+    expect(openChat).not.toHaveBeenCalled();
+    expect(load).not.toHaveBeenCalled();
+    releaseBots();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(openChat).not.toHaveBeenCalled();
+    releaseSessions();
+    await chat;
+    expect(ready).toBe(false);
+    expect(load).toHaveBeenCalledWith("s-forever");
+    releaseRoutines();
+    await pending;
+    expect(load).toHaveBeenCalledWith("s-run");
   });
   it("loads check-in runs by routineId and refuses unrelated sessions and deleted bots", async () => {
     const { bot, db } = await setup();
