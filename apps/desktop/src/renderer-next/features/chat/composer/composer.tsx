@@ -97,6 +97,15 @@ const useComposer = (): ComposerContextValue => {
 };
 
 const focusedThreads = new Store<ReadonlySet<string>>(new Set<string>());
+const modelMenus = new Store<ReadonlySet<string>>(new Set<string>());
+const setModelMenu = (threadId: string, open: boolean): void => {
+  modelMenus.setState((state) => {
+    const next = new Set(state);
+    if (open) next.add(threadId);
+    else next.delete(threadId);
+    return next;
+  });
+};
 const setThreadFocus = (threadId: string, focused: boolean): void => {
   focusedThreads.setState((state) => {
     if (state.has(threadId) === focused) return state;
@@ -113,7 +122,8 @@ export const useComposerExpanded = (threadId: string): boolean => {
     const draft = state[threadId];
     return draft != null && (draft.text !== "" || draft.attachments.length > 0);
   });
-  return focused || drafted;
+  const menu = useSelector(modelMenus, (state) => state.has(threadId));
+  return focused || drafted || menu;
 };
 
 const Attachments = () => {
@@ -294,7 +304,14 @@ export const ThreadComposer = () => {
   const skills = useThreadStore(session, (state) => state.skills);
   const focused = useSelector(focusedThreads, (state) => state.has(threadId));
   const setFocused = (value: boolean): void => setThreadFocus(threadId, value);
-  useEffect(() => () => setThreadFocus(threadId, false), [threadId]);
+  const modelMenuOpen = useSelector(modelMenus, (state) => state.has(threadId));
+  useEffect(
+    () => () => {
+      setThreadFocus(threadId, false);
+      setModelMenu(threadId, false);
+    },
+    [threadId]
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState<TriggerState | null>(null);
@@ -306,7 +323,7 @@ export const ThreadComposer = () => {
   const expanded =
     config.mode === "full" && skin === "session"
       ? !menuOpen
-      : focused || hasDraft;
+      : focused || hasDraft || modelMenuOpen;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"
@@ -491,7 +508,12 @@ export const ThreadComposer = () => {
     />
   ) : null;
   const model =
-    config.model != null ? <ModelChip binding={config.model} /> : null;
+    config.model != null ? (
+      <ModelChip
+        binding={config.model}
+        onOpenChange={(open) => setModelMenu(threadId, open)}
+      />
+    ) : null;
 
   return (
     <ComposerContext value={value}>
@@ -500,6 +522,11 @@ export const ThreadComposer = () => {
         data-slot="composer"
         data-state={state}
         data-expanded={expanded ? "" : undefined}
+        onFocusCapture={() => setFocused(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+            setFocused(false);
+        }}
       >
         {trigger != null ? (
           <TriggerMenu
@@ -547,8 +574,6 @@ export const ThreadComposer = () => {
             value={draft.text}
             placeholder={placeholder}
             rows={1}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
             onChange={(event) =>
               setText(event.target.value, event.target.selectionStart)
             }
