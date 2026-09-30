@@ -31,6 +31,9 @@ import { type DesktopEvent } from "../protocol.js";
 import { AgentMode } from "../protocol.js";
 import { BotSession } from "./bot-session.js";
 
+// A stall is noticed in well under a second here, not two minutes.
+process.env.ABACUSAI_BOT_MODEL_STALL_MS = "700";
+
 let provider: FakeProvider;
 let home: string;
 let botDir: string;
@@ -389,5 +392,77 @@ describe("a bot's mode", () => {
     expect(currentMode()).toBe(AgentMode.Yolo);
     session.setMode("normal");
     expect(currentMode()).toBe(AgentMode.Normal);
+  });
+});
+
+describe("a bot whose model goes silent", () => {
+  beforeEach(() => {
+    provider.calls.length = 0;
+  });
+
+  it("abandons the call and carries the turn on with the next model", async () => {
+    provider.scriptSequence([
+      { stall: {} },
+      { say: "answered by the next model" },
+    ]);
+    const { session, events } = botSession();
+    await session.start();
+    await session.send("hi");
+
+    const text = events
+      .filter(
+        (event): event is Extract<DesktopEvent, { type: "event" }> =>
+          event.type === "event"
+      )
+      .map((event) => event.event)
+      .map((event) => (event.type === "text_delta" ? event.content : ""))
+      .join("");
+    expect(text).toContain("answered by the next model");
+    expect(
+      events.filter(
+        (event) => event.type === "event" && event.event.type === "error"
+      )
+    ).toEqual([]);
+    provider.script(() => ({ say: "ok" }));
+  });
+});
+
+describe("what a bot says when the whole pool has failed", () => {
+  it("is the pool's sentence, not the provider's envelope", async () => {
+    provider.calls.length = 0;
+    provider.scriptSequence([
+      {
+        fail: {
+          status: 429,
+          message:
+            '{"error":{"code":429,"message":"You exceeded your current quota"}}',
+        },
+      },
+      {
+        fail: {
+          status: 429,
+          message:
+            '{"error":{"code":429,"message":"You exceeded your current quota"}}',
+        },
+      },
+    ]);
+    const { session, events } = botSession();
+    await session.start();
+    await session.send("hi");
+
+    const failure = events
+      .filter(
+        (event): event is Extract<DesktopEvent, { type: "event" }> =>
+          event.type === "event"
+      )
+      .map((event) => event.event)
+      .find(
+        (event) => event.type === "error" && event.error?.code === "turn_failed"
+      );
+    expect(failure).toBeDefined();
+    const message = (failure as { error: { message: string } }).error.message;
+    expect(message).not.toContain("{");
+    expect(message).not.toContain("429");
+    provider.script(() => ({ say: "ok" }));
   });
 });

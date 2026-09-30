@@ -132,6 +132,13 @@ import {
 } from "./sandbox/index.js";
 import { serviceRoutingPrompt } from "./service-routing-prompt.js";
 import { conversationSessionManager } from "./session-file.js";
+import {
+  MAX_STALL_RECOVERIES_PER_TURN,
+  STALL_CONTINUATION_PROMPT,
+  STALL_CONTINUATION_TYPE,
+  StallWatch,
+  modelStallMs,
+} from "./stall-watch.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
@@ -658,8 +665,11 @@ export class AbacusBotSession {
    * reported as a hang. Armed while a model call is expected to be producing
    * output, never while a tool runs (tools have their own limits).
    */
-  private stallTimer: NodeJS.Timeout | null = null;
-  private awaitingModel = false;
+  private readonly stallWatch = new StallWatch({
+    turnRunning: () => this.turnRunning,
+    toolsRunning: () => this.heartbeat.size,
+    onStall: () => void this.onModelStall(),
+  });
   private pendingStall: { modelId: string } | null = null;
   private stallRecoveriesThisTurn = 0;
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
@@ -1534,60 +1544,13 @@ export class AbacusBotSession {
   }
 
   /** Which pi events mean a model call is (still) being waited on. */
-  private noteModelActivity(type: string): void {
-    switch (type) {
-      case "tool_execution_end":
-        // Parallel tool calls: the model is asked again only once the last one
-        // ends. Arming here while a sibling still runs (a browser sub-agent,
-        // minutes long) reads its silence as the model's and aborts it. The
-        // heartbeat still holds the call that is ending.
-        if (this.heartbeat.size > 1) return;
-        this.awaitingModel = true;
-        this.armStallTimer();
-
-        return;
-      case "agent_start":
-      case "message_start":
-        this.awaitingModel = true;
-        this.armStallTimer();
-
-        return;
-      case "message_end":
-      case "tool_execution_start":
-      case "agent_end":
-        this.awaitingModel = false;
-        this.clearStallTimer();
-
-        return;
-      default:
-        // A delta of any kind is proof of life.
-        if (this.awaitingModel) this.armStallTimer();
-    }
-  }
-
-  private armStallTimer(): void {
-    this.clearStallTimer();
-
-    if (!this.turnRunning) return;
-
-    this.stallTimer = setTimeout(() => {
-      this.stallTimer = null;
-      void this.onModelStall();
-    }, modelStallMs());
-  }
-
-  private clearStallTimer(): void {
-    if (this.stallTimer != null) clearTimeout(this.stallTimer);
-    this.stallTimer = null;
-  }
-
   private async onModelStall(): Promise<void> {
-    if (!this.turnRunning || this.interrupted || !this.awaitingModel) return;
+    if (!this.turnRunning || this.interrupted || !this.stallWatch.take())
+      return;
 
     const model = this.session?.model;
     const modelId = model ? `${model.provider}/${model.id}` : "the model";
 
-    this.awaitingModel = false;
     this.pendingStall = { modelId };
     process.stderr.write(
       `[abacusai-bot-agent] ${modelId} produced nothing for ${modelStallMs() / 1000}s; aborting the call\n`
@@ -1900,8 +1863,7 @@ export class AbacusBotSession {
    */
   private finishTurn(): void {
     this.turnRunning = false;
-    this.clearStallTimer();
-    this.awaitingModel = false;
+    this.stallWatch.clear();
     for (const subtaskId of this.componentSubtasks.values()) {
       this.emitAgentEvent({
         type: "subtask_end",
@@ -2312,7 +2274,7 @@ export class AbacusBotSession {
       process.stderr.write(`[pi] ${event.type}\n`);
     }
 
-    this.noteModelActivity(event.type);
+    this.stallWatch.note(event.type);
 
     switch (event.type) {
       case "agent_start":
@@ -3269,15 +3231,8 @@ const COMPACTION_CONTINUATION_PROMPT =
  * server's own first-token limit is well under this, so silence this long is
  * a connection that will never finish, not a slow model.
  */
-const MODEL_STALL_MS = 120_000;
 
 /** Read per arming, so a test can shorten the window after the import. */
-const modelStallMs = (): number =>
-  Number(process.env.ABACUSAI_BOT_MODEL_STALL_MS) || MODEL_STALL_MS;
-const MAX_STALL_RECOVERIES_PER_TURN = 1;
-const STALL_CONTINUATION_TYPE = "abacusai-bot:stall-recovery";
-const STALL_CONTINUATION_PROMPT =
-  "The previous provider call produced no output and was abandoned. Continue the task from the transcript above. Do not restart it or repeat work that already completed.";
 
 /**
  * Whether a finished turn's last word from the model was a mangled tool call.
