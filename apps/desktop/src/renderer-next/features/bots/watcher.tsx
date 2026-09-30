@@ -51,6 +51,10 @@ export const BotsGlobals = () => {
   useEffect(() => {
     setDocumentSoundPrefs(prefs.sounds);
   }, [prefs.sounds]);
+  const soundPrefs = useRef(prefs.sounds);
+  useEffect(() => {
+    soundPrefs.current = prefs.sounds;
+  }, [prefs.sounds]);
   const notificationsOn = useRef(true);
   useEffect(() => {
     notificationsOn.current = notifications.data?.enabled ?? true;
@@ -67,7 +71,7 @@ export const BotsGlobals = () => {
       notifier: createNotifier({
         isWindowFocused: () => document.hasFocus(),
         notificationsEnabled: () => notificationsOn.current,
-        sounds: () => prefs.sounds,
+        sounds: () => soundPrefs.current,
         now: () => new Date(),
         send: (input) => transport.client.system.notify(input),
       }),
