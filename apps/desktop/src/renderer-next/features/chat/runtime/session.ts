@@ -675,12 +675,24 @@ export class ThreadSession {
         limit: PAGE_SIZE,
       });
     } catch (error) {
-      if (gen.g !== this.#gen || this.#retired) return;
+      if (
+        gen.g !== this.#gen ||
+        gen.failed ||
+        gen.abort.signal.aborted ||
+        this.#retired
+      )
+        return;
       if (this.hostStore.state.ready && !isNotFound(error)) this.#recover();
       else this.#fail(gen, error);
       return;
     }
-    if (gen.g !== this.#gen || this.#retired) return;
+    if (
+      gen.g !== this.#gen ||
+      gen.failed ||
+      gen.abort.signal.aborted ||
+      this.#retired
+    )
+      return;
     const abacus = snapshot.abacus;
     const active = abacus.activeRun;
     gen.activeStart = snapshot.messages.length;
@@ -703,10 +715,12 @@ export class ThreadSession {
         ? { hasOlderMessages: true, olderCursor: snapshot.page.cursor }
         : { hasOlderMessages: false, olderCursor: null };
 
+    let processingRunError = false;
     const dispatcher = createDispatcher({
       pre: (item) => {
         if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
           return;
+        processingRunError = item.event.type === "RUN_ERROR";
         if (item.event.type === "RUN_STARTED")
           gen.activeStart =
             gen.client?.getMessages().length ?? snapshot.messages.length;
@@ -717,7 +731,10 @@ export class ThreadSession {
         );
       },
       error: (error) => this.#options.log?.("chat: event hook failed", error),
-      post: (item) => this.#post(gen, item.seq, item.event),
+      post: (item) => {
+        processingRunError = false;
+        this.#post(gen, item.seq, item.event);
+      },
     });
     gen.dispatcher = dispatcher;
     const guard =
@@ -753,6 +770,9 @@ export class ThreadSession {
         })
       ),
       onError: guard((error: Error) => {
+        // ai-client 0.36 reports RUN_ERROR synchronously while consuming it.
+        // Its terminal post-hook must still run, and the stream stays open.
+        if (processingRunError) return;
         this.#options.log?.("chat: client error", error);
         dispatcher.close();
         gen.abort.abort();
