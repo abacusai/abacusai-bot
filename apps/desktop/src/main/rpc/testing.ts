@@ -9,6 +9,12 @@ import type { ContractRouterClient } from "@orpc/contract";
 import { RPCHandler } from "@orpc/server/message-port";
 
 import type { Contract } from "#shared/contract";
+import {
+  createFlowControlLinkInterceptor,
+  FLOW_CONTEXT_KEY,
+  FlowRegistry,
+  withFlowAcks,
+} from "#shared/contract/flow-control";
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 import type { UpdateStatus } from "#shared/update";
 
@@ -93,29 +99,65 @@ export type TestClient = ContractRouterClient<Contract>;
 
 export interface InProcessConnection {
   client: TestClient;
+  /** The connection's flow registry (open flows, for leak checks). */
+  flows: FlowRegistry;
   /** Close the renderer's end, as a reload or a closed window does. */
   closeClient(): void;
   /** Close main's end. */
   closeServer(): void;
 }
 
-/** The real router, handler and link over a Node MessageChannel. */
+export interface ConnectInProcessOptions {
+  /** Gate iterators on the link's acknowledgements, as main's port does. */
+  flowControl?: boolean;
+  /** Events the server may send ahead of the consumer. */
+  flowWindow?: number;
+  /** Sees every message the server posts, as the renderer receives it. */
+  onServerMessage?: (message: unknown) => void;
+}
+
+/**
+ * The real router, handler and link over a Node MessageChannel, with the
+ * same flow control as main's MessagePort transport.
+ */
 export const connectInProcess = (
   deps: RpcDeps,
-  context: Partial<Omit<RpcContext, "deps">> = {}
+  context: Partial<Omit<RpcContext, "deps">> = {},
+  options: ConnectInProcessOptions = {}
 ): InProcessConnection => {
   const { port1: server, port2: renderer } = new MessageChannel();
   const handler = new RPCHandler<RpcContext>(
     createRouter(),
     rpcHandlerOptions()
   );
-  handler.upgrade(server, {
+  const flowControl = options.flowControl !== false;
+  const flows = new FlowRegistry();
+  const observe = options.onServerMessage;
+  const serverPort =
+    observe == null
+      ? server
+      : new Proxy(server, {
+          get(target, property, receiver) {
+            if (property === "postMessage")
+              return (
+                message: unknown,
+                transfer?: Parameters<MessagePort["postMessage"]>[1]
+              ) => {
+                observe(message);
+                target.postMessage(message, transfer);
+              };
+            const value: unknown = Reflect.get(target, property, receiver);
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        });
+  handler.upgrade(flowControl ? withFlowAcks(serverPort, flows) : serverPort, {
     context: {
       transport: "memory",
       webContentsId: 1,
       windowKind: "main",
       ...context,
       deps,
+      ...(flowControl ? { [FLOW_CONTEXT_KEY]: flows } : {}),
     },
   });
   server.start();
@@ -123,11 +165,20 @@ export const connectInProcess = (
   const link = new RPCLink({
     port: renderer,
     customJsonSerializers: CUSTOM_JSON_SERIALIZERS,
+    clientInterceptors: flowControl
+      ? [
+          createFlowControlLinkInterceptor(
+            (ack) => renderer.postMessage(ack),
+            options.flowWindow
+          ),
+        ]
+      : [],
   });
   renderer.start();
 
   return {
     client: createORPCClient(link),
+    flows,
     closeClient: () => renderer.close(),
     closeServer: () => server.close(),
   };

@@ -65,10 +65,24 @@ export async function* stream<T>(
     sizeOf: options.sizeOf,
     maxBytes: options.maxBytes,
   });
-  const detach = options.attach(
-    (event) => queue.push(event),
+  let detached = false;
+  let detachListeners: (() => void) | null = null;
+  const detach = (): void => {
+    if (detached) return;
+    detached = true;
+    detachListeners?.();
+  };
+  detachListeners = options.attach(
+    (event) => {
+      queue.push(event);
+      // Overflowed while the consumer is parked (flow control holds it back):
+      // the queue has dropped its backlog, so stop listening now rather than
+      // when the consumer next reads.
+      if (queue.failed) detach();
+    },
     () => queue.end()
   );
+  if (detached) detachListeners();
   try {
     for (const event of (await options.initial?.()) ?? []) yield event;
     for (;;) {
