@@ -15,8 +15,8 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 2 | chat kit | r4 (final) | merged 809f6175 (726 renderer-next tests) | Codex r1 (~20) + Claude r1 (57) → Codex fix task in worktree (incl. Electron/real-host tests, 6 change requests, knip) | fixing |
 | — | main AG-UI relay (`ai.*` behind AguiSource, wire selection, ring, hydrate/joinRun, thread persistence) | 00-agent-agui §8 + notes (main relay, r2) | merged b4da2b2f; fixes 5d5dc433 (33/33); r2 fixes c07479f7 (4/4; bounded bookkeeping) | Codex r1 + Claude r1 + Codex r2 fixed | done (agui default only in the wco build) |
 | 3 | bots | r3 (final) | merged (Codex, 11 commits; 25 screenshots; report docs/rewrite/reports/03-bots-implementation.md); avatarAccessory wiring, shared shims (§24.9), URL previews (phase 4) and the full R3 matrix pending | Codex r1 running | review |
-| 4 | sessions | r3 (b8997551, Codex r1–r2 applied; final) | waits on phases 2–3 | | spec done |
-| 5 | routines, artifacts, library, settings | r3 (Codex r1–r2 applied; final) | waits on phases 2–4 | | spec done |
+| 4 | sessions | r3 (final) | Codex task in worktree codex-sessions (from 33301dc9) | | implementing |
+| 5 | routines, artifacts, library, settings | r3 (final) | Codex task in worktree codex-phase5 (from 33301dc9) | | implementing |
 | 6 | onboarding, tour, notch | r4 (Codex r1–r3 applied; final) | waits on phases 2–5 + relay `ai.attention` | | spec done |
 | — | main requirements from specs 3–6 (+ cut-over defects #9/#10/#11, step-1 handovers, Bot.avatarAccessory) | specs 03 §24, 04 §26, 05 §31, 06 §23 + notes | merged 0ab59029; fixes 8eaec2b1; r2 fixes e75cb79d; accessory a868db96 (all Codex) | Codex r1 + Claude r1 + Codex r2 fixed; tree green (3,528 tests) | done |
 | 7 | cut-over | r3 (Codex r1–r2 applied; final); prerequisites P1–P6 routed to implementers | waits on phases 2–6 | | spec done |
