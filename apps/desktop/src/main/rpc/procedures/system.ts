@@ -18,6 +18,14 @@ export const systemRouter = impl.system.router({
       context.deps.app.openFilesDialog(input?.kind)
     ),
   },
+  loginItem: {
+    get: impl.system.loginItem.get.handler(({ context }) =>
+      context.deps.app.loginItem.get()
+    ),
+    set: impl.system.loginItem.set.handler(({ input, context }) =>
+      context.deps.app.loginItem.set(input.openAtLogin)
+    ),
+  },
   openExternal: impl.system.openExternal.handler(({ input, context }) =>
     context.deps.app.openExternal(input.url)
   ),

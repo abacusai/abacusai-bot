@@ -167,6 +167,8 @@ import {
 import { getLocalUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
+import { createLoginItem } from "./services/system/login-item";
+import { notificationSilent } from "./services/system/notification-policy";
 import {
   initializeExperienceRuntime,
   registerAppScheme,
@@ -375,7 +377,7 @@ function notifyTaskRunningInBackground(): void {
     const notification = new Notification({
       title: "Task still running",
       body: "We'll notify you when it finishes.",
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => revealMainWindow());
     notification.show();
@@ -1391,7 +1393,7 @@ const appOperations: AppOperations = {
     const notification = new Notification({
       title,
       body,
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => {
       const win = revealMainWindow();
@@ -1561,6 +1563,18 @@ const appOperations: AppOperations = {
   },
 
   showAboutPanel: () => app.showAboutPanel(),
+
+  async setTitlebarDensity(value) {
+    const density = setTitlebarDensity(value);
+    if (RENDERER_GENERATION === "wco") {
+      refreshWindowChrome();
+      publishChromeState();
+      if (process.platform === "darwin") await recreateMainWindow();
+    }
+    return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
+  },
+
+  loginItem: createLoginItem(app),
 
   markRendererActivity() {
     lastRendererActivity = Date.now();
@@ -1884,17 +1898,8 @@ app
     // The same state the oRPC renderer reads through `window.chrome`.
     ipcMain.handle("window:chrome", () => chromeState());
     ipcMain.handle("window:recreate", () => recreateMainWindow());
-    ipcMain.handle(
-      "settings:set-titlebar-density",
-      async (_event, value: unknown) => {
-        const density = setTitlebarDensity(value);
-        if (RENDERER_GENERATION === "wco") {
-          refreshWindowChrome();
-          publishChromeState();
-          if (process.platform === "darwin") await recreateMainWindow();
-        }
-        return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
-      }
+    ipcMain.handle("settings:set-titlebar-density", (_event, value: unknown) =>
+      appOperations.setTitlebarDensity(value)
     );
 
     // `on`, not `handle`: the renderer must never wait on main to log a line.

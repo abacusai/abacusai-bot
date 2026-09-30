@@ -22,7 +22,8 @@ export type PreconditionReason =
   | "workspace-missing"
   | "not-signed-in"
   | "no-credentials"
-  | "git-unavailable";
+  | "git-unavailable"
+  | "unsupported-platform";
 
 export interface RpcErrorData {
   BAD_REQUEST: { issues?: readonly unknown[] };

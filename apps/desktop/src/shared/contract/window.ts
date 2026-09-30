@@ -13,6 +13,14 @@ export interface WindowState {
   maximized: boolean;
 }
 
+export type TitlebarDensity = "comfortable" | "compact";
+
+export interface SetDensityResult {
+  density: TitlebarDensity;
+  /** The legacy generation reads the density only at the next launch. */
+  appliesOnRestart: boolean;
+}
+
 export type WindowEvent =
   | { type: "state"; state: WindowState }
   /** The native chrome changed: capability, full screen or density. */
@@ -33,6 +41,14 @@ export const window = {
   events: subscription
     .input(NoInput)
     .output(eventIterator(type<WindowEvent>())),
+  /**
+   * The title bar density (spec 05 §31.5 b): `settings:set-titlebar-density`
+   * with its side effects (refresh the chrome, publish it, recreate the
+   * window on macOS in the wco generation).
+   */
+  setDensity: mutation
+    .input(v.object({ density: v.picklist(["comfortable", "compact"]) }))
+    .output(type<SetDensityResult>()),
   /** User-input beacon, fire-and-forget; a renderer swap defers while it is recent. */
   activity: mutation.input(NoInput).output(type<void>()),
   /**
