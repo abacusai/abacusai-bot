@@ -415,7 +415,10 @@ export class AguiEmitter {
 
     if (options.dequeued) out.push(custom("queue.dequeued", { content }));
     out.push(
-      ...this.userMessage(options.messageId ?? userMessageId(runId), content)
+      ...this.userMessage(
+        nativeId(options.messageId ?? userMessageId(runId)),
+        content
+      )
     );
 
     return out;
