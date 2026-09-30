@@ -7,8 +7,10 @@ import { ORPCError } from "@orpc/client";
 import type { StreamChunk } from "@tanstack/ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { memoryRelay, closeMemoryRelays } from "#next/test-support/chat-relay";
+
 import { golden } from "../fixtures/goldens";
-import { FakeRelay, type RelayEvent } from "../fixtures/relay";
+import { type FakeRelay, type RelayEvent } from "../fixtures/relay";
 import { ThreadRetiredError, ThreadSession } from "./session";
 
 const sessions: ThreadSession[] = [];
@@ -27,6 +29,7 @@ const open = (
   return session;
 };
 afterEach(() => {
+  closeMemoryRelays();
   for (const session of sessions.splice(0)) session.retire();
 });
 
@@ -47,7 +50,7 @@ const midRun = (): { before: RelayEvent[]; after: RelayEvent[] } => {
 };
 
 const reference = async (): Promise<unknown> => {
-  const relay = new FakeRelay({ events: golden("tool-bash") });
+  const relay = await memoryRelay({ events: golden("tool-bash") });
   const session = open(relay);
   await session.load();
   return timeless(session.hostStore.state.messages);
@@ -62,7 +65,7 @@ describe("R2-T4 recovery", () => {
     );
     const replayLength = before.length - startIndex;
     for (let failAt = 1; failAt < replayLength; failAt += 1) {
-      const relay = new FakeRelay({ events: before });
+      const relay = await memoryRelay({ events: before });
       relay.faults.joinRun = (call, delivered) =>
         call === 1 && delivered === failAt ? new Error("port lost") : null;
       const session = open(relay);
@@ -80,7 +83,7 @@ describe("R2-T4 recovery", () => {
   it("a join ending after N switches to subscribe seamlessly", async () => {
     const expected = await reference();
     const { before, after } = midRun();
-    const relay = new FakeRelay({ events: before });
+    const relay = await memoryRelay({ events: before });
     const replay =
       before.length -
       before.findIndex((item) => item.event.type === "RUN_STARTED");
@@ -98,7 +101,7 @@ describe("R2-T4 recovery", () => {
   });
 
   it("abacus.resync starts a new generation and disposes the old client", async () => {
-    const relay = new FakeRelay({ events: golden("plain-text") });
+    const relay = await memoryRelay({ events: golden("plain-text") });
     const clients: Array<{ g: number; disposed: boolean }> = [];
     const session = open(relay, {
       onClient: (client, g) => {
@@ -130,7 +133,7 @@ describe("R2-T4 recovery", () => {
   });
 
   it("an epoch mismatch answers resync and rebuilds", async () => {
-    const relay = new FakeRelay({ events: golden("plain-text") });
+    const relay = await memoryRelay({ events: golden("plain-text") });
     const session = open(relay);
     await session.load();
     await vi.waitFor(() =>
@@ -144,7 +147,7 @@ describe("R2-T4 recovery", () => {
   });
 
   it("ring eviction with a reset in the gap shows the empty transcript", async () => {
-    const relay = new FakeRelay({ events: golden("plain-text") });
+    const relay = await memoryRelay({ events: golden("plain-text") });
     const session = open(relay);
     await session.load();
     expect(session.hostStore.state.messages).toHaveLength(2);
@@ -161,7 +164,7 @@ describe("R2-T4 recovery", () => {
 
   it("chains readiness across superseded generations; retire rejects every waiter", async () => {
     const { before } = midRun();
-    const relay = new FakeRelay({ events: before });
+    const relay = await memoryRelay({ events: before });
     relay.faults.joinRun = (call, delivered) =>
       call <= 2 && delivered === 1 ? new Error("lost") : null;
     const session = open(relay);
@@ -172,7 +175,7 @@ describe("R2-T4 recovery", () => {
     expect(session.gen).toBe(3);
     expect(session.ready).toBe(true);
 
-    const relay2 = new FakeRelay({ events: before });
+    const relay2 = await memoryRelay({ events: before });
     relay2.faults.joinRun = (_call, delivered) =>
       delivered === 1 ? new Error("lost") : null;
     const session2 = open(relay2, { recoveryDelaysMs: [30, 30, 30] });
@@ -185,7 +188,7 @@ describe("R2-T4 recovery", () => {
   });
 
   it("a failed hydrate rejects readiness; NOT_FOUND marks the thread gone", async () => {
-    const relay = new FakeRelay({ events: golden("plain-text") });
+    const relay = await memoryRelay({ events: golden("plain-text") });
     relay.faults.hydrate = (call) =>
       call === 1
         ? new ORPCError("NOT_FOUND", { data: { entity: "thread", id: "t-1" } })

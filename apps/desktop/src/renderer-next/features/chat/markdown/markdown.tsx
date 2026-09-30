@@ -11,6 +11,7 @@ import {
   createContext,
   isValidElement,
   use,
+  useEffect,
   useRef,
   useState,
   type ComponentProps,
@@ -41,6 +42,11 @@ const StreamingContext = createContext(false);
 
 const COLLAPSE_LINES = 30;
 
+/**
+ * The app routes on the hash (`router.tsx`), so no link in a message may
+ * navigate the window: every click is cancelled and routed by target.
+ * In-message anchors (footnotes, `#section`) scroll within the transcript.
+ */
 const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
   const links = use(LinksContext);
   const file = pathFromHref(href);
@@ -51,18 +57,36 @@ const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
       href={href}
       data-file={file != null ? "" : undefined}
       onClick={(event) => {
-        if (file != null) {
-          event.preventDefault();
-          links.openFile(file);
-        } else if (external) {
-          event.preventDefault();
-          links.openExternal(href!);
-        }
+        event.preventDefault();
+        if (file != null) links.openFile(file);
+        else if (external) links.openExternal(href!);
+        else if (href?.startsWith("#") === true && href.length > 1)
+          scrollToAnchor(event.currentTarget, href.slice(1));
       }}
     >
       {children}
     </a>
   );
+};
+
+const safeDecode = (value: string): string => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+/** The element with that id inside the same transcript (or message). */
+const scrollToAnchor = (from: HTMLElement, id: string): void => {
+  const scope = from.closest('[role="log"]') ?? from.closest(".chat-prose");
+  if (scope == null) return;
+  const wanted = safeDecode(id);
+  const target = [...scope.querySelectorAll<HTMLElement>("[id]")].find(
+    (element) =>
+      element.id === wanted || element.id === `user-content-${wanted}`
+  );
+  target?.scrollIntoView?.({ block: "center" });
 };
 
 const innerHtmlOf = (children: ReactNode): string | null => {
@@ -81,6 +105,13 @@ const CodeBlock = (props: ComponentProps<"pre"> & { "data-lang"?: string }) => {
   const ref = useRef<HTMLPreElement>(null);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copiedTimer.current != null) clearTimeout(copiedTimer.current);
+    },
+    []
+  );
   const html = innerHtmlOf(props.children);
   if (lang === "math")
     return (
@@ -96,7 +127,8 @@ const CodeBlock = (props: ComponentProps<"pre"> & { "data-lang"?: string }) => {
     const text = ref.current?.textContent ?? "";
     void navigator.clipboard?.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    if (copiedTimer.current != null) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 1200);
   };
   return (
     <div className="chat-code" data-lang={lang}>
@@ -188,12 +220,15 @@ export const Markdown = ({
   workspaceRoot = null,
   className,
 }: MarkdownProps) => {
-  // Re-render once temml has loaded (math renders as TeX until then).
-  useMathVersion();
+  // Re-render once temml has loaded (math renders as TeX until then). The
+  // React Compiler memoises the element on its props, so the version is
+  // the key: a new version is a new element, not a cached one.
+  const mathVersion = useMathVersion();
   const source = prepass(content, { workspaceRoot });
   return (
     <StreamingContext value={streaming}>
       <TextPart
+        key={mathVersion}
         content={source}
         role={role}
         highlighter={highlight}

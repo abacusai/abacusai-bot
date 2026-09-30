@@ -59,6 +59,43 @@ describe("R2-T19 pre-pass", () => {
   it("fences hold a body with backticks", () => {
     expect(pp("$`a`$")).toBe(`\`\` ${MATH_SENTINEL}\`a\` \`\``);
   });
+
+  it("keeps display math inside its blockquote or list item", () => {
+    expect(pp("> $$x^2$$")).toBe("> ```math\n> x^2\n> ```\n> ");
+    expect(pp("> see\n> $$\n> a\n> b\n> $$")).toContain(
+      "> ```math\n> a\n> b\n> ```"
+    );
+    expect(pp("- $$x$$\n- next")).toBe("- ```math\n  x\n  ```\n  \n- next");
+    expect(pp("1. text \\[y\\] more")).toBe(
+      "1. text \n   \n   ```math\n   y\n   ```\n    more"
+    );
+  });
+
+  it("a list continuation after a blank line is prose, not code", () => {
+    const out = pp("- item\n\n    more $x$ and [l](/p)\n\nafter");
+    expect(out).toContain(`\`${MATH_SENTINEL}x\``);
+    expect(out).toContain("(#abacus-file=%2Fp)");
+    // Deeper than the item's content + 4 is code.
+    expect(pp("- item\n\n        $x$ code")).toContain("        $x$ code");
+    // Outside a list, four spaces are still code.
+    expect(pp("text\n\n    $x$")).toBe("text\n\n    $x$");
+  });
+
+  it("an escaped delimiter is not math", () => {
+    expect(pp("\\\\(x\\\\)")).toBe("\\\\(x\\\\)");
+    expect(pp("\\\\[x\\\\]")).toBe("\\\\[x\\\\]");
+    expect(pp("\\$\\$x$$")).not.toContain("```math");
+    // An escaped backslash before one that opens: still math.
+    expect(pp("\\\\\\(x\\)")).toContain(MATH_SENTINEL);
+  });
+
+  it("rewrites reference-definition targets, not footnotes", () => {
+    expect(
+      prepass('[x]: /abs/path "t"\n[y]: https://a.b', { workspaceRoot: null })
+    ).toBe('[x]: #abacus-file=%2Fabs%2Fpath "t"\n[y]: https://a.b');
+    expect(pp("[x]: <file:///a%20b/c>")).toBe("[x]: #abacus-file=%2Fa%20b%2Fc");
+    expect(pp("[^1]: /not/a/link")).toBe("[^1]: /not/a/link");
+  });
 });
 
 describe("R2-T19 rendering", () => {

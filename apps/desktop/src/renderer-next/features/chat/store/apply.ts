@@ -364,6 +364,27 @@ export const applyEvent = (
   let next = state;
   if (clearsRetry(event) && state.activity.retry != null)
     next = { ...next, activity: { ...next.activity, retry: null } };
+  if (
+    event.type === "SUBAGENT_STARTED" ||
+    event.type === "SUBAGENT_FINISHED" ||
+    event.type === "SUBAGENT_ERROR"
+  ) {
+    const id = String(
+      (event as { subagentRunId?: string }).subagentRunId ?? ""
+    );
+    const time = eventTime(event, Date.now());
+    const previous = next.subagentTimes[id];
+    return {
+      ...next,
+      subagentTimes: {
+        ...Object.fromEntries(Object.entries(next.subagentTimes).slice(-299)),
+        [id]:
+          event.type === "SUBAGENT_STARTED"
+            ? { start: time }
+            : { start: previous?.start ?? time, end: time },
+      },
+    };
+  }
   switch (event.type) {
     case "RUN_STARTED": {
       const meta = (event as { metadata?: { abacus?: Loose } }).metadata;
@@ -389,7 +410,7 @@ export const applyEvent = (
       return {
         ...next,
         fresh: {
-          ...next.fresh,
+          ...Object.fromEntries(Object.entries(next.fresh).slice(-299)),
           [(event as { messageId?: string }).messageId ?? ""]: true,
         },
       };
@@ -417,7 +438,11 @@ const isToolCallPart = (part: UIMessage["parts"][number]): boolean =>
  * The run's parent tool calls: tool-call parts of the assistant messages
  * after the run's user echo (children count inside their own card, §4.2).
  */
-const stepsOf = (messages: readonly UIMessage[], runId: string): number => {
+const stepsOf = (
+  messages: readonly UIMessage[],
+  runId: string,
+  runStart?: number
+): number => {
   let start = messages.findLastIndex(
     (message) =>
       message.role === "user" &&
@@ -427,7 +452,7 @@ const stepsOf = (messages: readonly UIMessage[], runId: string): number => {
   );
   if (start === -1) start = messages.findLastIndex((m) => m.role === "user");
   return messages
-    .slice(start + 1)
+    .slice(runStart ?? start + 1)
     .filter((message) => message.role === "assistant")
     .reduce(
       (count, message) => count + message.parts.filter(isToolCallPart).length,
@@ -448,7 +473,9 @@ export const recordTerminal = (
   state: ThreadStoreState,
   event: StreamChunk,
   messages: readonly UIMessage[],
-  now = Date.now()
+  now = Date.now(),
+  runStart?: number,
+  live = false
 ): ThreadStoreState => {
   const runId = terminalRunId(event) ?? state.runs.active?.runId ?? "";
   if (state.runs.outcomes.some((outcome) => outcome.runId === runId))
@@ -466,12 +493,13 @@ export const recordTerminal = (
       : typed.outcome?.type === "cancelled"
         ? "cancelled"
         : "success";
-  const record: RunOutcomeRecord = {
+  const record: RunOutcomeRecord & { live: boolean } = {
+    live,
     runId,
     kind,
     startedAt: state.runs.active?.startedAt ?? now,
     endedAt: eventTime(event, now),
-    steps: stepsOf(messages, runId),
+    steps: stepsOf(messages, runId, runStart),
     afterMessageId: lastMessageId(messages),
     ...(Array.isArray(typed.usage) && typed.usage[0] != null
       ? { usage: typed.usage[0] }

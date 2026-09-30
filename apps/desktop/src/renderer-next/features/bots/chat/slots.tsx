@@ -203,6 +203,7 @@ export const useBotChatSlots = (
     openFile,
     chat: {
       decorateMessage,
+      isMessageHidden: decorateMessage.isMessageHidden,
       banner: (
         <>
           {asks.current && (

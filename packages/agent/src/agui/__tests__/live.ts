@@ -35,6 +35,8 @@ export async function live(options: {
   mode?: string;
   env?: Record<string, string>;
   incarnation?: string;
+  /** Separate fixture files for parallel real-host renderer tests. */
+  isolated?: boolean;
   /** Wraps the real session (e.g. to delay setModel). */
   wrap?: (session: AbacusBotSession) => AbacusBotSession;
   /** Runs after the fixed directories exist, before the host is built. */
@@ -43,13 +45,22 @@ export async function live(options: {
   realSessionChoice?: boolean;
 }): Promise<Live> {
   const { PassThrough } = await import("node:stream");
-  const { context, provider, gates, restore } = await prepare({
-    name: "live",
-    ...(options.mode != null ? { mode: options.mode } : {}),
-    ...(options.env != null ? { env: options.env } : {}),
-    reply: options.reply,
-    steps: [],
-  });
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const root = options.isolated
+    ? fs.mkdtempSync(path.join(os.tmpdir(), "abacus-agui-live-"))
+    : undefined;
+  const { context, provider, gates, restore } = await prepare(
+    {
+      name: "live",
+      ...(options.mode != null ? { mode: options.mode } : {}),
+      ...(options.env != null ? { env: options.env } : {}),
+      reply: options.reply,
+      steps: [],
+    },
+    root
+  );
   options.setup?.();
   const stdin = new PassThrough();
   let stdout = "";
@@ -141,6 +152,7 @@ export async function live(options: {
       stdin.end();
       await done;
       restore();
+      if (root != null) fs.rmSync(root, { recursive: true, force: true });
     },
   };
 }

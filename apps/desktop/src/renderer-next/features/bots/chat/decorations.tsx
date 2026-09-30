@@ -25,7 +25,7 @@ import type { TurnFeedbackInput, TurnFeedbackOutcome } from "#shared/contracts";
 
 import { MessageFeedback } from "./feedback";
 
-interface MessageDecorationContext {
+export interface MessageDecorationContext {
   messages: readonly UIMessage[];
   index: number;
   runActive: boolean;
@@ -100,7 +100,12 @@ export const feedbackSegmentId = (message: UIMessage): string => {
 
 export const botMessageDecorations = (
   options: BotDecorationOptions
-): DecorateMessage => {
+): DecorateMessage & {
+  isMessageHidden(
+    message: UIMessage,
+    context: MessageDecorationContext
+  ): boolean;
+} => {
   const cache = new WeakMap<
     readonly UIMessage[],
     { runActive: boolean; views: BotMessageView[] }
@@ -131,7 +136,7 @@ export const botMessageDecorations = (
     />
   );
 
-  return (message, context) => {
+  const decorate: DecorateMessage = (message, context) => {
     let index = context.index;
     if (context.messages[index]?.id !== message.id)
       index = context.messages.findIndex((row) => row.id === message.id);
@@ -166,6 +171,21 @@ export const botMessageDecorations = (
       );
     return decoration;
   };
+  return Object.assign(decorate, {
+    isMessageHidden: (
+      message: UIMessage,
+      context: MessageDecorationContext
+    ): boolean => {
+      const index =
+        context.messages[context.index]?.id === message.id
+          ? context.index
+          : context.messages.findIndex((row) => row.id === message.id);
+      return (
+        index >= 0 &&
+        viewsFor(context.messages, context.runActive)[index]?.hidden === true
+      );
+    },
+  });
 };
 
 /** `agent.feedback` over the document's transport. */

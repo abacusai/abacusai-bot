@@ -5,7 +5,6 @@
  * send (outbox admission), enqueue while busy, or blocked. Keyboard is
  * element-level, except Stop (`Mod+.`), the one global shortcut.
  */
-import { useHotkey } from "@tanstack/react-hotkeys";
 import { Store, useSelector } from "@tanstack/react-store";
 import { ArrowUp, FileText, Folder, Mic, Plus, X } from "lucide-react";
 import { motion } from "motion/react";
@@ -74,7 +73,13 @@ import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 /** The composer's max height before it scrolls (today's `COMPOSER_MAX_HEIGHT`). */
 const COMPOSER_MAX_HEIGHT = 200;
 
-type ComposerState = "resting" | "focused" | "typing" | "busy" | "blocked";
+type ComposerState =
+  | "resting"
+  | "focused"
+  | "typing"
+  | "busy"
+  | "blocked"
+  | "dictating";
 
 interface ComposerContextValue {
   threadId: string;
@@ -314,7 +319,12 @@ export const ThreadComposer = () => {
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trigger, setTrigger] = useState<TriggerState | null>(null);
+  const [trigger, setTrigger] = useState<TriggerState | null>(() =>
+    triggerAt(draft.text, draft.text.length, {
+      mentions: config.mentions != null,
+      skills: skills.length > 0,
+    })
+  );
   const field = useRef<HTMLTextAreaElement>(null);
   const pref = useMotionPreference();
   const fieldId = useId();
@@ -323,17 +333,19 @@ export const ThreadComposer = () => {
   const expanded =
     config.mode === "full" && skin === "session"
       ? !menuOpen
-      : focused || hasDraft || modelMenuOpen;
+      : focused || hasDraft || modelMenuOpen || config.dictating === true;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"
-      : busy
-        ? "busy"
-        : draft.text !== ""
-          ? "typing"
-          : focused
-            ? "focused"
-            : "resting";
+      : config.dictating === true
+        ? "dictating"
+        : busy
+          ? "busy"
+          : draft.text !== ""
+            ? "typing"
+            : focused
+              ? "focused"
+              : "resting";
 
   const submit = (): void => {
     const route = routeSubmit({
@@ -359,8 +371,12 @@ export const ThreadComposer = () => {
       case "enqueue": {
         const saved = draft;
         clearDraft(threadId);
+        // Draft identity is its revision: typing and erasing still replaces it.
+        const cleared = draftStore.state[threadId];
         runtime.queue.enqueue(threadId, route.text).catch(() => {
-          updateDraft(threadId, () => saved);
+          updateDraft(threadId, (current) =>
+            current === cleared ? saved : current
+          );
           setError(t("chat.composer.queueFailed"));
         });
         return;
@@ -368,8 +384,12 @@ export const ThreadComposer = () => {
       case "send": {
         const saved = draft;
         clearDraft(threadId);
+        // Draft identity is its revision: typing and erasing still replaces it.
+        const cleared = draftStore.state[threadId];
         const restore = (message: string) => {
-          updateDraft(threadId, () => saved);
+          updateDraft(threadId, (current) =>
+            current === cleared ? saved : current
+          );
           setError(message);
         };
         session
@@ -378,12 +398,16 @@ export const ThreadComposer = () => {
             if (result.kind === "rejected")
               restore(t("chat.composer.rejected"));
             else if (result.kind === "stale")
-              updateDraft(threadId, () => saved);
+              updateDraft(threadId, (current) =>
+                current === cleared ? saved : current
+              );
             else config.onFirstSend?.(route.text);
           })
           .catch((thrown: unknown) => {
             if (rpcCode(thrown) === "CONFLICT") {
-              void runtime.queue.enqueue(threadId, route.text);
+              void runtime.queue
+                .enqueue(threadId, route.text)
+                .catch(() => restore(t("chat.composer.queueFailed")));
               return;
             }
             if (isNotFound(thrown)) {
@@ -397,15 +421,6 @@ export const ThreadComposer = () => {
     }
   };
   const stop = (): void => void session.cancel().catch(() => {});
-
-  useHotkey(
-    "Mod+." as never,
-    (event) => {
-      event.preventDefault();
-      stop();
-    },
-    { ignoreInputs: false, enabled: busy && view.focused }
-  );
 
   const setText = (text: string, caret: number | null) => {
     updateDraft(threadId, (current) => ({ ...current, text }));
@@ -531,6 +546,7 @@ export const ThreadComposer = () => {
         {trigger != null ? (
           <TriggerMenu
             trigger={trigger}
+            field={field}
             skills={skills}
             mentions={config.mentions}
             onPick={(insert) => {
@@ -571,6 +587,11 @@ export const ThreadComposer = () => {
             ref={field}
             id={fieldId}
             aria-label={config.placeholder}
+            title={
+              config.attachmentsBase == null
+                ? t("chat.composer.pasteUnavailable")
+                : undefined
+            }
             value={draft.text}
             placeholder={placeholder}
             rows={1}
