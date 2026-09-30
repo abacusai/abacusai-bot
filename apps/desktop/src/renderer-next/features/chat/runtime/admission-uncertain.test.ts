@@ -146,6 +146,35 @@ describe("R2-T35 uncertain admission", () => {
     expect(session.hostStore.state.outbox).toEqual([]);
   });
 
+  it("(e) manual Retry keeps the reservation and cannot admit an already accepted run twice", async () => {
+    let runs = 0;
+    const relay = await memoryRelay({
+      onSend: (input) => {
+        runs += 1;
+        return { runId: input.runId, status: "started" };
+      },
+    });
+    relay.faults.send = (call) => (call <= 3 ? timeout() : null);
+    const session = await open(relay);
+    await session.submit("hello");
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.outbox[0]?.state).toBe("failed")
+    );
+    const entry = session.hostStore.state.outbox[0]!;
+    await expect(session.retryOutbox(entry.id)).resolves.toEqual({
+      kind: "started",
+    });
+    expect(relay.stats.send).toHaveLength(4);
+    expect(new Set(relay.stats.send.map((input) => input.runId))).toEqual(
+      new Set([entry.runId])
+    );
+    expect(
+      new Set(relay.stats.send.map((input) => input.messages[0]!.id))
+    ).toEqual(new Set([entry.id]));
+    expect(runs).toBe(1);
+    expect(session.hostStore.state.outbox[0]?.state).toBe("accepted");
+  });
+
   it("(f) UNAVAILABLE is definitive: the entry leaves at once", async () => {
     const relay = await memoryRelay();
     relay.faults.send = () => new ORPCError("UNAVAILABLE", { data: {} });
