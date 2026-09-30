@@ -1,10 +1,18 @@
 /**
  * C-T7: the thread store and the transition dual-write (spec 00 C.3).
- * - A v1 write produces the matching v2 twin; an `agui` twin is never
- *   overwritten, by the dual-write or by the repair.
- * - A failing v2 write does not stop `onPersist`, and the next
- *   `readCurrent` repairs the stale twin.
- * - `TranscriptService.remove` deletes both files.
+ * - A v1 write produces the matching v2 twin (fingerprinted); the deferred
+ *   dual-write coalesces saves and a read flushes it; an `agui` twin is
+ *   never overwritten, by the dual-write or by the repair.
+ * - A failing v2 write (an injected fs error, not a permission bit) does not
+ *   stop `onPersist`, and the next `readCurrent` repairs the stale twin, also
+ *   when both v1 saves share one millisecond (fixed clock).
+ * - Never replaced: an unreadable twin, a newer build's twin; a v1 file that
+ *   cannot be read or is over the size cap is not converted.
+ * - Clearing: `TranscriptService.remove` deletes both files; a failed or
+ *   interrupted removal leaves a clear marker, so neither a v1-derived nor an
+ *   `agui` twin comes back, across a restart too, until new history is saved.
+ * - Write blocks: hydration, save, reset and deletion against an unresolved
+ *   migration attempt keep changes in memory and leave the files alone.
  * - Through the real `ServiceHost` methods: a reset (the legacy IPC's
  *   `resetAgentConversation` and the new `agent.reset` procedure) leaves
  *   `ai.hydrate` empty, and a session delete and a workspace delete remove
@@ -14,6 +22,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => {
@@ -41,8 +50,15 @@ vi.mock("electron", () => {
 import { v1ToThreadFile } from "#shared/transcript/thread-file";
 
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
-import { ThreadStore } from "./thread-store";
-import { TranscriptService } from "./transcript-service";
+import {
+  fingerprintV1,
+  ThreadStore,
+  type ThreadStoreOptions,
+} from "./thread-store";
+import {
+  TranscriptService,
+  type TranscriptServiceOptions,
+} from "./transcript-service";
 
 const SEGMENTS = [
   { type: "text", id: "u1", source: "user", content: "hello", at: 1 },
@@ -66,17 +82,23 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   if (previousHome === undefined) delete process.env.ABACUSAI_BOT_HOME;
   else process.env.ABACUSAI_BOT_HOME = previousHome;
-  fs.chmodSync(root, 0o700);
-  const threads = path.join(home, "threads");
-  if (fs.existsSync(threads)) fs.chmodSync(threads, 0o700);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
 const v1File = (id: string) => path.join(home, "transcripts", `${id}.json`);
 const v2File = (id: string) => path.join(home, "threads", `${id}.json`);
+const markerFile = (id: string) => path.join(home, "threads", `${id}.cleared`);
 const readJson = (file: string) => JSON.parse(fs.readFileSync(file, "utf8"));
+const put = (file: string, contents: unknown) => {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(
+    file,
+    typeof contents === "string" ? contents : JSON.stringify(contents)
+  );
+};
 
 const aguiThread = (id: string) => ({
   version: 2,
@@ -89,13 +111,35 @@ const aguiThread = (id: string) => ({
 
 const silent = () => undefined;
 
+/** A store and a transcript service sharing it, dual-writing at once. */
+const make = (
+  threadOptions: ThreadStoreOptions = {},
+  transcriptOptions: TranscriptServiceOptions = {}
+) => {
+  const threads = new ThreadStore({
+    log: silent,
+    dualWriteDelayMs: 0,
+    isWriteBlocked: () => false,
+    ...threadOptions,
+  });
+  const transcripts = new TranscriptService({
+    threads,
+    isWriteBlocked: () => false,
+    ...transcriptOptions,
+  });
+  return { threads, transcripts };
+};
+
+const ids = (messages: Array<{ id: string }>) =>
+  messages.map((message) => message.id);
+
 describe("C-T7 thread store", () => {
-  it("a dual-write produces the matching v2 twin", () => {
-    const threads = new ThreadStore({ log: silent });
-    const transcripts = new TranscriptService({ threads });
+  it("a dual-write produces the matching, fingerprinted v2 twin", () => {
+    const { threads, transcripts } = make();
     transcripts.write("s1", SEGMENTS);
 
-    const v1 = readJson(v1File("s1"));
+    const text = fs.readFileSync(v1File("s1"), "utf8");
+    const v1 = JSON.parse(text);
     expect(readJson(v2File("s1"))).toEqual(
       JSON.parse(
         JSON.stringify(
@@ -103,6 +147,7 @@ describe("C-T7 thread store", () => {
             threadId: "s1",
             updatedAt: v1.updatedAt,
             segments: v1.segments,
+            fingerprint: fingerprintV1(text),
           })
         )
       )
@@ -113,34 +158,62 @@ describe("C-T7 thread store", () => {
       kind: "transcript-v1",
       updatedAt: v1.updatedAt,
       segments: 2,
+      fingerprint: fingerprintV1(text),
     });
     expect(fs.statSync(v2File("s1")).mtimeMs).toBe(before);
   });
 
-  it("never overwrites an agui twin", async () => {
-    const threads = new ThreadStore({ log: silent });
-    fs.mkdirSync(path.dirname(v2File("s1")), { recursive: true });
-    const agui = JSON.stringify(aguiThread("s1"));
-    fs.writeFileSync(v2File("s1"), agui);
+  it("defers and coalesces the dual-write; a read flushes it", async () => {
+    vi.useFakeTimers();
+    const writes: string[] = [];
+    const { threads, transcripts } = make({
+      dualWriteDelayMs: 2_000,
+      writeFile: (file, text) => {
+        writes.push(path.basename(path.dirname(file)));
+        writeFileAtomicSync(file, text);
+      },
+    });
+    for (let index = 0; index < 5; index++) transcripts.write("s1", MORE);
+    expect(fs.existsSync(v2File("s1"))).toBe(false);
+    vi.advanceTimersByTime(2_000);
+    expect(writes).toEqual(["threads"]);
+    expect(readJson(v2File("s1")).source.segments).toBe(3);
 
-    new TranscriptService({ threads }).write("s1", MORE);
+    // A read before the timer runs the pending write first.
+    transcripts.write("s2", SEGMENTS);
+    expect(ids(await threads.readCurrent("s2"))).toEqual(["u1", "b1"]);
+    expect(writes).toEqual(["threads", "threads"]);
+    vi.advanceTimersByTime(5_000);
+    expect(writes).toHaveLength(2);
+  });
+
+  it("never overwrites an agui twin", async () => {
+    const { threads, transcripts } = make();
+    const agui = JSON.stringify(aguiThread("s1"));
+    put(v2File("s1"), agui);
+
+    transcripts.write("s1", MORE);
     expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(agui);
     expect(await threads.readCurrent("s1")).toEqual(aguiThread("s1").messages);
     expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(agui);
   });
 
   it("keeps onPersist when the v2 write fails, and repairs the stale twin on read", async () => {
-    const threads = new ThreadStore({ log: silent });
-    const transcripts = new TranscriptService({ threads });
+    let failThreads = false;
+    const { threads, transcripts } = make({
+      writeFile: (file, text) => {
+        if (failThreads)
+          throw Object.assign(new Error("ENOSPC"), { code: "ENOSPC" });
+        writeFileAtomicSync(file, text);
+      },
+    });
     const persisted: string[] = [];
     transcripts.setOnPersist((id) => persisted.push(id));
     const errors = vi.spyOn(console, "error").mockImplementation(silent);
 
     transcripts.write("s1", SEGMENTS);
     const stale = fs.readFileSync(v2File("s1"), "utf8");
-    // The threads folder turns read-only: the next dual-write fails.
-    fs.chmodSync(path.join(home, "threads"), 0o500);
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    failThreads = true;
     transcripts.write("s1", MORE);
     expect(persisted).toEqual(["s1", "s1"]);
     expect(errors).toHaveBeenCalledWith(
@@ -148,19 +221,49 @@ describe("C-T7 thread store", () => {
       expect.anything()
     );
     expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(stale);
-    fs.chmodSync(path.join(home, "threads"), 0o700);
+    failThreads = false;
     errors.mockRestore();
 
-    const messages = await threads.readCurrent("s1");
-    expect(messages.map((message) => message.id)).toEqual(["u1", "b1", "u2"]);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
     const repaired = readJson(v2File("s1"));
     expect(repaired.source.updatedAt).toBe(readJson(v1File("s1")).updatedAt);
     expect(repaired.source.segments).toBe(3);
   });
 
-  it("repairs a missing or unparseable twin, and never revives a cleared one", async () => {
-    const threads = new ThreadStore({ log: silent });
-    new TranscriptService().write("s1", SEGMENTS);
+  it("repairs a stale twin when both v1 saves share one millisecond", async () => {
+    const clock = new Date("2026-09-01T10:00:00.000Z");
+    let failThreads = false;
+    const { threads, transcripts } = make(
+      {
+        writeFile: (file, text) => {
+          if (failThreads) throw new Error("boom");
+          writeFileAtomicSync(file, text);
+        },
+      },
+      { now: () => clock }
+    );
+    vi.spyOn(console, "error").mockImplementation(silent);
+    transcripts.write("s1", SEGMENTS);
+    failThreads = true;
+    transcripts.write("s1", MORE);
+    failThreads = false;
+    vi.restoreAllMocks();
+    // Same `updatedAt` on both sides; only the fingerprint tells them apart.
+    expect(readJson(v2File("s1")).source.updatedAt).toBe(
+      readJson(v1File("s1")).updatedAt
+    );
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
+  });
+
+  it("repairs a missing or unparseable twin, and treats a twin without v1 as cleared", async () => {
+    const threads = new ThreadStore({
+      log: silent,
+      isWriteBlocked: () => false,
+    });
+    new TranscriptService({ isWriteBlocked: () => false }).write(
+      "s1",
+      SEGMENTS
+    );
     expect(fs.existsSync(v2File("s1"))).toBe(false);
     expect((await threads.readCurrent("s1")).length).toBe(2);
     expect(fs.existsSync(v2File("s1"))).toBe(true);
@@ -175,14 +278,178 @@ describe("C-T7 thread store", () => {
     expect(await threads.readCurrent("../escape")).toEqual([]);
   });
 
-  it("TranscriptService.remove deletes both files", () => {
-    const threads = new ThreadStore({ log: silent });
-    const transcripts = new TranscriptService({ threads });
+  it("never replaces a twin it cannot read, and serves v1 instead", async () => {
+    const { threads, transcripts } = make();
+    // A directory where the file should be: EISDIR, not ENOENT.
+    fs.mkdirSync(v2File("s1"), { recursive: true });
+    transcripts.write("s1", SEGMENTS);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1"]);
+    expect(fs.statSync(v2File("s1")).isDirectory()).toBe(true);
+  });
+
+  it("serves the twin as is when the v1 file cannot be read or is too large", async () => {
+    const { threads, transcripts } = make({ maxTranscriptBytes: 200 });
+    transcripts.write("s1", SEGMENTS);
+    const twin = fs.readFileSync(v2File("s1"), "utf8");
+    // Over the cap: not converted, not repaired.
+    put(v1File("s1"), {
+      version: 1,
+      sessionId: "s1",
+      segments: [
+        ...MORE,
+        { type: "text", id: "big", source: "bot", content: "x".repeat(500) },
+      ],
+    });
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1"]);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(twin);
+    // Unreadable (not missing): not taken for cleared.
+    fs.rmSync(v1File("s1"));
+    fs.mkdirSync(v1File("s1"));
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1"]);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(twin);
+  });
+
+  it.each([
+    ["a newer version", { ...aguiThread("s1"), version: 3 }],
+    [
+      "an unknown source kind",
+      { ...aguiThread("s1"), source: { kind: "sqlite-v3" } },
+    ],
+  ])("never overwrites a twin with %s", async (_label, foreign) => {
+    const { threads, transcripts } = make();
+    put(v2File("s1"), foreign);
+    const bytes = fs.readFileSync(v2File("s1"), "utf8");
+    transcripts.write("s1", MORE);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(bytes);
+    // Served from v1 in memory; the file is left for the newer build.
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(bytes);
+  });
+
+  it("TranscriptService.remove deletes both files and the clear marker", () => {
+    const { transcripts } = make();
     transcripts.write("s1", SEGMENTS);
     expect(fs.existsSync(v2File("s1"))).toBe(true);
     transcripts.remove("s1");
     expect(fs.existsSync(v1File("s1"))).toBe(false);
     expect(fs.existsSync(v2File("s1"))).toBe(false);
+    expect(fs.existsSync(markerFile("s1"))).toBe(false);
+  });
+
+  it("an interrupted clear stays cleared, across a restart, until new history is saved", async () => {
+    const { threads, transcripts } = make();
+    transcripts.write("s1", SEGMENTS);
+    // Crash after the marker and the v1 removal, before the v2 removal.
+    threads.markCleared("s1");
+    fs.rmSync(v1File("s1"));
+    expect(await threads.readCurrent("s1")).toEqual([]);
+    const restarted = make().threads;
+    expect(await restarted.readCurrent("s1")).toEqual([]);
+    expect(fs.existsSync(v2File("s1"))).toBe(true);
+
+    // The v1 removal failed instead: the same bytes are still cleared.
+    transcripts.write("s2", SEGMENTS);
+    threads.markCleared("s2");
+    expect(await make().threads.readCurrent("s2")).toEqual([]);
+
+    // New history after the clear is served, and the marker goes.
+    const later = make();
+    later.transcripts.write("s1", MORE);
+    expect(ids(await later.threads.readCurrent("s1"))).toEqual([
+      "u1",
+      "b1",
+      "u2",
+    ]);
+    expect(fs.existsSync(markerFile("s1"))).toBe(false);
+  });
+
+  it("an interrupted clear hides an agui twin too", async () => {
+    const { threads } = make();
+    put(v2File("s1"), aguiThread("s1"));
+    threads.markCleared("s1");
+    expect(await make().threads.readCurrent("s1")).toEqual([]);
+    // The relay's next save is new history.
+    threads.writeAgui("s1", { messages: [], runs: [] });
+    expect(readJson(v2File("s1")).source.afterClear).toBeTypeOf("string");
+    expect(fs.existsSync(markerFile("s1"))).toBe(false);
+    expect(make().threads.readCurrentFile("s1")?.source.kind).toBe("agui");
+  });
+});
+
+describe("C-T7 write blocks (unresolved migration attempt)", () => {
+  const blockedEverything = () => {
+    const held = new Set<string>();
+    const isWriteBlocked = (file: string) => held.has(path.resolve(file));
+    return { held, isWriteBlocked };
+  };
+
+  it("hydration, save, reset and deletion leave held files alone", async () => {
+    // Settled files from before the failed attempt.
+    make().transcripts.write("s1", SEGMENTS);
+    const v1Bytes = fs.readFileSync(v1File("s1"), "utf8");
+    const v2Bytes = fs.readFileSync(v2File("s1"), "utf8");
+
+    const { held, isWriteBlocked } = blockedEverything();
+    held.add(v1File("s1"));
+    held.add(v2File("s1"));
+    const errors = vi.spyOn(console, "error").mockImplementation(silent);
+    const { threads, transcripts } = make(
+      { isWriteBlocked },
+      { isWriteBlocked }
+    );
+
+    // Hydration of a stale twin repairs in memory only.
+    fs.writeFileSync(v2File("s1"), "{half");
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1"]);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe("{half");
+    fs.writeFileSync(v2File("s1"), v2Bytes);
+
+    // Save: memory only, and both reads see it.
+    transcripts.write("s1", MORE);
+    expect(fs.readFileSync(v1File("s1"), "utf8")).toBe(v1Bytes);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(v2Bytes);
+    expect(transcripts.read("s1")?.segments).toHaveLength(3);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["u1", "b1", "u2"]);
+
+    // Reset: memory only; cleared for this launch, and the marker (not held)
+    // keeps it cleared whatever the rollback leaves.
+    transcripts.remove("s1");
+    expect(fs.readFileSync(v1File("s1"), "utf8")).toBe(v1Bytes);
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(v2Bytes);
+    expect(transcripts.read("s1")).toBeNull();
+    expect(await threads.readCurrent("s1")).toEqual([]);
+    expect(await make().threads.readCurrent("s1")).toEqual([]);
+
+    // The relay's write to a held file stays in memory too.
+    threads.writeAgui("s1", {
+      messages: [{ id: "m", role: "assistant", parts: [] }],
+      runs: [],
+    });
+    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(v2Bytes);
+    expect(ids(await threads.readCurrent("s1"))).toEqual(["m"]);
+
+    // Deletion of an unheld session still works.
+    transcripts.write("s2", SEGMENTS);
+    transcripts.remove("s2");
+    expect(fs.existsSync(v1File("s2"))).toBe(false);
+    expect(fs.existsSync(v2File("s2"))).toBe(false);
+    errors.mockRestore();
+  });
+
+  it("holds every file when an attempt's destinations are unknown", async () => {
+    make().transcripts.write("s1", SEGMENTS);
+    const before = fs.readdirSync(path.join(home, "threads")).sort();
+    const { threads, transcripts } = make(
+      { isWriteBlocked: () => true },
+      { isWriteBlocked: () => true }
+    );
+    vi.spyOn(console, "error").mockImplementation(silent);
+    transcripts.write("s1", MORE);
+    transcripts.remove("s1");
+    expect(await threads.readCurrent("s1")).toEqual([]);
+    expect(fs.readdirSync(path.join(home, "threads")).sort()).toEqual(before);
+    expect(fs.existsSync(v1File("s1"))).toBe(true);
+    vi.restoreAllMocks();
   });
 });
 
