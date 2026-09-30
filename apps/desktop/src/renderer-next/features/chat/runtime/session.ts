@@ -46,9 +46,9 @@ import { deferred, type Deferred } from "./deferred";
 import { createDispatcher, type Dispatcher } from "./dispatcher";
 import { runPump, type ConnectionState } from "./pump";
 
-export const PAGE_SIZE = 50;
+const PAGE_SIZE = 50;
 /** Processor retention (§10). */
-export const MAX_MESSAGES = 300;
+const MAX_MESSAGES = 300;
 const READY_CAP_MS = 5000;
 const PERMISSION_TIMEOUT_MS = 10_000;
 const QUEUE_COMMAND_TIMEOUT_MS = 10_000;
@@ -60,7 +60,7 @@ export class ThreadRetiredError extends Error {
   }
 }
 
-export class ChatBusyError extends Error {
+class ChatBusyError extends Error {
   constructor(reason: string) {
     super(`chat.send-while-busy (${reason})`);
     this.name = "ChatBusyError";
@@ -68,7 +68,7 @@ export class ChatBusyError extends Error {
 }
 
 /** F1: a request path through the client is a bug; it rejects loudly. */
-export const throwWhenBusy: QueueStrategy = ({ busyReason }) => {
+const throwWhenBusy: QueueStrategy = ({ busyReason }) => {
   throw new ChatBusyError(String(busyReason));
 };
 

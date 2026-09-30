@@ -18,7 +18,7 @@ import { PermissionCard } from "./permission-card";
 import { present } from "./presenters";
 import { permissionSelection, selectPermission } from "./selection";
 
-export const inlineKeyOf = (descriptor: PermissionDescriptor): string | null =>
+const inlineKeyOf = (descriptor: PermissionDescriptor): string | null =>
   descriptor.toolCallId == null
     ? null
     : toolKey(descriptor.subagentRunId, descriptor.toolCallId);

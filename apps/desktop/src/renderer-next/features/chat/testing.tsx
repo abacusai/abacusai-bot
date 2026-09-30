@@ -47,7 +47,7 @@ export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
   };
 };
 
-export const baseComposer = (
+const baseComposer = (
   skin: "bot" | "session",
   extra: Partial<ComposerConfig> = {}
 ): ComposerConfig => ({

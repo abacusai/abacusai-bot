@@ -114,7 +114,7 @@ export const expanderFor = (name: string): Expander => {
 };
 
 /** Everything a row needs, from the part, its result and the store. */
-export const useNormalizedTool = (
+const useNormalizedTool = (
   part: ToolCallPart,
   result: ToolResultPart | undefined
 ): {
@@ -250,9 +250,7 @@ const DiffView = ({
   );
 };
 
-export const linesOfDiff = (
-  diff: NonNullable<NormalizedTool["diff"]>
-): DiffLine[] =>
+const linesOfDiff = (diff: NonNullable<NormalizedTool["diff"]>): DiffLine[] =>
   diff.unified != null && diff.original == null
     ? parseUnified(diff.unified)
     : diffLines(

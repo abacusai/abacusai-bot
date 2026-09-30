@@ -26,7 +26,7 @@ import { highlight } from "./highlighter";
 import { renderMath, useMathVersion } from "./math";
 import { MATH_SENTINEL, pathFromHref, prepass } from "./prepass";
 
-export interface MarkdownLinks {
+interface MarkdownLinks {
   openFile(absPath: string): void;
   openExternal(url: string): void;
 }

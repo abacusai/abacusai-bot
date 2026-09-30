@@ -16,7 +16,7 @@ const MIME_EXT: Record<string, string> = {
 };
 
 /** A pasted file's name on disk: its own extension, else one from its type. */
-export const pastedName = (
+const pastedName = (
   id: string,
   file: { name: string; type: string }
 ): string => {

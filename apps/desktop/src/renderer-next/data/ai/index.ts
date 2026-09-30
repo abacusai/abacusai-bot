@@ -7,5 +7,5 @@ import type { Transport } from "#next/data/transport";
 
 export type AiClient = Transport["client"]["ai"];
 
-export { controlOf, eventSeq, resumePoint, type ControlEvent } from "./events";
+export { controlOf, eventSeq, resumePoint } from "./events";
 export { isDefinitive, isNotFound, rpcCode } from "./errors";

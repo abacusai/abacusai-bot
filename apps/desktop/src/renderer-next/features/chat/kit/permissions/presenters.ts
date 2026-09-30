@@ -8,7 +8,7 @@ import type { PermissionDecision, PermissionRequest } from "@abacus-ai/agent";
 
 import { diffLines, parseUnified, type DiffLine } from "../tools/normalize";
 
-export type ActionVariant = "primary" | "secondary" | "deny" | "warning";
+type ActionVariant = "primary" | "secondary" | "deny" | "warning";
 
 export interface CardAction {
   id: string;
@@ -60,7 +60,7 @@ export interface CardModel {
   chipValues?: Record<string, string>;
 }
 
-export const basename = (path: string): string =>
+const basename = (path: string): string =>
   path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
 /** Today's "Always allow" rule for a command (F20). */

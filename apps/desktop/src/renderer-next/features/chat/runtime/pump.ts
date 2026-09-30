@@ -23,7 +23,7 @@ export type ConnectionState =
   | "reconnecting"
   | "error";
 
-export interface PumpPositions {
+interface PumpPositions {
   /** The checkpoint `N`. */
   readonly checkpoint: number;
   /** The last seq accepted from the server. */
@@ -50,7 +50,7 @@ export interface PumpOptions {
 }
 
 /** Two waits, then the third failure sets `"error"` (§3.3, R2-T34). */
-export const RETRY_DELAYS_MS = [250, 1000] as const;
+const RETRY_DELAYS_MS = [250, 1000] as const;
 
 const defaultSleep = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
