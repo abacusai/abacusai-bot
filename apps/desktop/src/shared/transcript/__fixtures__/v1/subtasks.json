@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "sessionId": "sess-subtasks",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Research and write the report",
+      "at": 1788256800000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Delegating two pieces of work.",
+      "at": 1788256801000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-a",
+      "status": "created",
+      "description": "Collect sources",
+      "kind": "delegate",
+      "startTime": 1788256802000,
+      "at": 1788256802000
+    },
+    {
+      "type": "tool_call",
+      "id": "sa-1",
+      "toolCall": {
+        "id": "sa-call",
+        "name": "web_search_text_only",
+        "args": {
+          "query": "solar output 2025"
+        },
+        "status": "success"
+      },
+      "at": 1788256803000,
+      "toolResult": {
+        "toolCallId": "sa-call",
+        "output": "3 results"
+      }
+    },
+    {
+      "type": "text",
+      "id": "sa-text",
+      "source": "bot",
+      "content": "Found three sources.",
+      "at": 1788256804000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-a",
+      "status": "completed",
+      "outcome": "completed",
+      "endTime": 1788256805000,
+      "at": 1788256805000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-b",
+      "status": "created",
+      "description": "Old frame without outcome",
+      "at": 1788256806000
+    },
+    {
+      "type": "text",
+      "id": "sb-text",
+      "source": "bot",
+      "content": "Summarised.",
+      "at": 1788256807000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-b",
+      "status": "completed",
+      "at": 1788256808000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-c",
+      "status": "created",
+      "description": "Browse the site",
+      "kind": "browser",
+      "startTime": 1788256809000,
+      "at": 1788256809000
+    },
+    {
+      "type": "text",
+      "id": "sc-text",
+      "source": "bot",
+      "content": "Opened the page.",
+      "at": 1788256810000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-c",
+      "status": "completed",
+      "outcome": "interrupted",
+      "endTime": 1788256811000,
+      "at": 1788256811000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-d",
+      "status": "created",
+      "description": "First half",
+      "kind": "component",
+      "at": 1788256812000
+    },
+    {
+      "type": "text",
+      "id": "sd-text",
+      "source": "bot",
+      "content": "First half done.",
+      "at": 1788256813000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-e",
+      "status": "created",
+      "description": "Hand-back: second half",
+      "at": 1788256814000
+    },
+    {
+      "type": "credits",
+      "id": "se-credits",
+      "creditsUsed": 4,
+      "at": 1788256815000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-e",
+      "status": "completed",
+      "outcome": "completed",
+      "at": 1788256816000
+    },
+    {
+      "type": "text",
+      "id": "b2",
+      "source": "bot",
+      "content": "Report written.",
+      "at": 1788256817000
+    }
+  ]
+}

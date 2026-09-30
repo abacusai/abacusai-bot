@@ -1,0 +1,176 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Go",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "sub-u",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "sub-u",
+              "partIndex": 0,
+              "status": "created",
+              "type": "subtask"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "subagent": {
+            "description": "Interrupted by the user",
+            "id": "sub-u",
+            "messages": [
+              {
+                "id": "sub-u:0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256802000,
+                        "id": "su-text",
+                        "partIndex": 0,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:02.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "Working...",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "su-text"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {}
+            },
+            "name": "delegate",
+            "status": "finished"
+          },
+          "type": "subagent"
+        }
+      ],
+      "role": "assistant"
+    },
+    {
+      "id": "u2",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256803000,
+              "id": "u2",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:03.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Stop and do something else",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u2"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "sub-u:1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256804000,
+              "id": "sub-u",
+              "outcome": "completed",
+              "partIndex": null,
+              "status": "completed",
+              "type": "subtask"
+            },
+            {
+              "at": 1788256805000,
+              "id": "b1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:04.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Okay.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 6,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-user-inside-bracket",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

@@ -166,7 +166,7 @@ export interface RpcDeps {
   ai: AguiSource;
   /** The DB tables' feeds and the prefs store (spec 00 B). */
   tables: Tables;
-  /** Absent until the thread store (sub-slice C) lands. */
+  /** The thread store (`ServiceHost.threadStore`); optional for test deps. */
   threads?: ThreadReader;
   trackers: EventTrackers;
 }

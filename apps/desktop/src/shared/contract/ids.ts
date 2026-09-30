@@ -1,8 +1,8 @@
 /**
  * Valibot atoms for ids, paths and URLs (spec 00 A.1). Ids reuse the
- * transcript path guard (main/services/session/transcript-service.ts): a path
- * separator or leading dot in an id would let a caller address a file outside
- * the store it names.
+ * transcript path guard (`isSafeSessionId` in
+ * main/services/session/thread-store.ts): a path separator or leading dot in
+ * an id would let a caller address a file outside the store it names.
  */
 import * as v from "valibot";
 
