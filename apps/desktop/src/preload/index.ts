@@ -12,6 +12,21 @@ import type { PptxReadResult } from "#shared/pptx";
 import type { UpdateStatus } from "#shared/update";
 
 import { createBridge } from "./bridge";
+import {
+  handshakeDelayFromEnv,
+  installRpcPortHandshake,
+  type HandshakeWindow,
+} from "./rpc-port";
+
+// The oRPC port handshake (spec 00 A.4.4). Its listener is in place before any
+// page script runs, so a page's first request cannot be missed. Additive: the
+// legacy `window.api` below is unchanged.
+installRpcPortHandshake(
+  ipcRenderer,
+  (globalThis as unknown as { window: HandshakeWindow }).window,
+  "main",
+  { delayMs: handshakeDelayFromEnv(process.env) }
+);
 
 // Read synchronously so the state exists before the first renderer module
 // runs; a shell without the store leaves this null (localStorage fallback).
@@ -251,14 +266,23 @@ const api = {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
 };
 
+// The only preload export the new renderer needs besides the port:
+// `webUtils` runs in the preload context alone.
+const abacusHost = {
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+};
+
 // Expose through contextBridge when isolated, else on the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld("api", api);
+    contextBridge.exposeInMainWorld("abacusHost", abacusHost);
   } catch (error) {
     console.error(error);
   }
 } else {
   // @ts-expect-error (define in dts)
   window.api = api;
+  // @ts-expect-error (define in dts)
+  window.abacusHost = abacusHost;
 }

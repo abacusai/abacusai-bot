@@ -176,9 +176,16 @@ interface CustomAPI {
   signalRendererReady?: () => void;
 }
 
+/** What the preload exposes to the oRPC renderer besides its port. */
+interface AbacusHostAPI {
+  getPathForFile: (file: File) => string;
+}
+
 declare global {
   interface Window {
     api: CustomAPI;
+    /** Optional: an older shell's preload predates it. */
+    abacusHost?: AbacusHostAPI;
   }
 }
 export {};
