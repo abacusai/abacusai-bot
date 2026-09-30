@@ -6,6 +6,9 @@ import * as v from "valibot";
  */
 import { describe, expect, it } from "vitest";
 
+import legacyDialog from "#renderer/components/bots/new-bot-dialog.tsx?raw";
+import { describeCheckIn as sharedDescribe } from "#shared/bots/check-in";
+
 import checkInPromptFixture from "./__fixtures__/legacy-model-strings/check-in-prompt.txt?raw";
 import describeFixture from "./__fixtures__/legacy-model-strings/describe-check-in.json";
 import nameOnlyFixture from "./__fixtures__/legacy-model-strings/name-only-mission.txt?raw";
@@ -54,11 +57,21 @@ describe("model-facing strings (fixtures)", () => {
   it("match the pre-migration bytes", () => {
     expect(NAME_ONLY_MISSION).toBe(nameOnlyFixture);
     expect(CHECK_IN_PROMPT).toBe(checkInPromptFixture);
+    expect(legacyDialog).toContain(
+      'export { NAME_ONLY_MISSION, CHECK_IN_PROMPT } from "#shared/bots/check-in";'
+    );
   });
 
   it("describe every preset as the old dialog did", () => {
     expect(describeFixture.length).toBeGreaterThan(10);
-    for (const { input, output } of describeFixture)
+    for (const { input, output } of describeFixture) {
+      expect(
+        sharedDescribe(
+          input.preset as CheckInPreset,
+          input.time,
+          input.weekday as Weekday
+        )
+      ).toBe(output);
       expect(
         describeCheckIn({
           preset: input.preset as CheckInPreset,
@@ -66,6 +79,7 @@ describe("model-facing strings (fixtures)", () => {
           weekday: input.weekday as Weekday,
         })
       ).toBe(output);
+    }
   });
 });
 
@@ -156,7 +170,8 @@ describe("checkInFromRoutine", () => {
   it("validates the draft", () => {
     expect(v.safeParse(CheckInDraftSchema, draft()).success).toBe(true);
     expect(
-      v.safeParse(CheckInDraftSchema, draft({ time: "25:00" })).success
+      v.safeParse(CheckInDraftSchema, draft({ preset: "daily", time: "25:00" }))
+        .success
     ).toBe(false);
   });
 });
