@@ -159,6 +159,9 @@ describe("sessions insert, start and model (R4-T33)", () => {
       const silent = waiters.wait("s", "a/a", () => true, 1_000);
       vi.advanceTimersByTime(1_000);
       await expect(silent).resolves.toBeUndefined();
+      // The caller deadline leaves the anonymous command outstanding.
+      expect(waiters.pending).toBe(1);
+      waiters.invalidate("s");
       expect(waiters.pending).toBe(0);
     } finally {
       vi.useRealTimers();

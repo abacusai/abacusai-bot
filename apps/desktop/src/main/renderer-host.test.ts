@@ -134,6 +134,7 @@ vi.mock("electron", () => ({ WebContentsView: mocks.FakeWebContentsView }));
 
 import {
   RendererHost,
+  RendererSwapScheduler,
   rendererWebContents,
   sendToRenderer,
   setActiveRendererHost,
@@ -304,5 +305,71 @@ describe("sendToRenderer", () => {
 
     expect(rendererWebContents()).toBe(host.webContents);
     expect(contentsOf(host).send).toHaveBeenCalledWith("channel", "payload");
+  });
+});
+
+describe("RendererSwapScheduler adoption and targets", () => {
+  it("ignores a previous adoption's rejection after a replacement opens", async () => {
+    const first = makeHost().host;
+    const replacement = makeHost().host;
+    let rejectFirst!: (error: Error) => void;
+    let readyReplacement!: (ready: boolean) => void;
+    vi.spyOn(first, "initialReadiness").mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          rejectFirst = reject;
+        })
+    );
+    vi.spyOn(replacement, "initialReadiness").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          readyReplacement = resolve;
+        })
+    );
+    const onOutcome = vi.fn();
+    const scheduler = new RendererSwapScheduler({
+      target: () => new URL("app://bundle.new/"),
+      host: () => null,
+      busy: () => false,
+      barrier: "first-commit",
+      onOutcome,
+    });
+    scheduler.schedule("v2");
+    scheduler.adopt(first);
+    scheduler.adopt(replacement);
+    rejectFirst(new Error("old window closed"));
+    await Promise.resolve();
+    expect(onOutcome).not.toHaveBeenCalled();
+    expect(scheduler.outstanding).toBe("v2");
+    readyReplacement(true);
+    await Promise.resolve();
+    expect(onOutcome).toHaveBeenCalledWith("v2", "swapped", undefined);
+  });
+
+  it("aborts a ready candidate when its target changes without a new schedule", async () => {
+    vi.useFakeTimers();
+    try {
+      const { host } = makeHost();
+      const first = host.webContents;
+      let target: URL | null = new URL("app://bundle.new/");
+      const onOutcome = vi.fn();
+      const scheduler = new RendererSwapScheduler({
+        target: () => target,
+        host: () => host,
+        busy: () => false,
+        barrier: "first-commit",
+        onOutcome,
+      });
+      scheduler.schedule("v2");
+      await vi.advanceTimersByTimeAsync(0);
+      target = null;
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(host.webContents).toBe(first);
+      expect(onOutcome).not.toHaveBeenCalled();
+      expect(scheduler.outstanding).toBeNull();
+      scheduler.cancel();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

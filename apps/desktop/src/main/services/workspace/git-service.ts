@@ -1064,7 +1064,7 @@ export class GitService {
   private async headObject(
     top: string,
     gitPath: string
-  ): Promise<{ type: string; object: string } | null> {
+  ): Promise<{ mode: string; type: string; object: string } | null> {
     try {
       const { stdout } = await execFileAsync(
         "git",
@@ -1074,8 +1074,9 @@ export class GitService {
       for (const record of stdout.split("\0")) {
         const tab = record.indexOf("\t");
         if (tab === -1 || record.slice(tab + 1) !== gitPath) continue;
-        const [, type, object] = record.slice(0, tab).split(" ");
-        if (type != null && object != null) return { type, object };
+        const [mode, type, object] = record.slice(0, tab).split(" ");
+        if (mode != null && type != null && object != null)
+          return { mode, type, object };
       }
       return null;
     } catch {
@@ -1270,9 +1271,20 @@ export class GitService {
             fail("git", `HEAD has no file at ${origin.slice(prefix.length)}`);
             continue;
           }
-          if (await pathExists(absoluteOf(origin))) {
-            const current = await this.hashFile(top, origin);
-            if (current !== head.object) {
+          const source = await fs
+            .lstat(absoluteOf(origin))
+            .catch((error: NodeJS.ErrnoException) => {
+              if (error.code === "ENOENT") return null;
+              throw error;
+            });
+          if (source != null) {
+            // Hashing follows symlinks. Only a regular file with HEAD's
+            // type can qualify as already restored, before trashing anything.
+            const sameType =
+              source.isFile() &&
+              (head.mode === "100644" || head.mode === "100755");
+            const current = sameType ? await this.hashFile(top, origin) : null;
+            if (!sameType || current !== head.object) {
               fail(
                 "occupied",
                 `${origin.slice(prefix.length)} holds new content; move it before discarding the rename`
