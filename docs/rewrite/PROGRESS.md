@@ -18,4 +18,5 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 4 | sessions | r3 (b8997551, Codex r1–r2 applied; final) | waits on phases 2–3 | | spec done |
 | 5 | routines, artifacts, library, settings | r3 (Codex r1–r2 applied; final) | waits on phases 2–4 | | spec done |
 | 6 | onboarding, tour, notch | r4 (Codex r1–r3 applied; final) | waits on phases 2–5 + relay `ai.attention` | | spec done |
-| 7 | cut-over | r1 (551c59b8) → Codex r1 running; two-release plan (N flip + deletions, N+1 steps 3–4) proposed | | | spec |
+| — | main requirements from specs 3–6 (run-finished, attention, checkout-aware files/git, bot model, routine attempts, update failedPhase, sound opt-out import, prefs leaves, cue claims) + 3 cut-over defects | specs 03 §24, 04 §26, 05 §31, 06 §23 | Opus agent in worktree | | implementing |
+| 7 | cut-over | r1 (551c59b8) → Codex r1 (25 items, 3 blockers) → r2 in progress; 5 code defects routed to implementers | | | spec |
