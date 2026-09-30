@@ -14,7 +14,7 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 1 | renderer foundation (shell, router, theme, gallery) | r4 + impl amendments (router-owned route transitions) | merged 6847de01; fixes 8acc0ebb (40/40); r2 fixes e14f845d (9/9; Linux native-frame CI job added, unrun locally) | Codex r1 + Claude r1 + Codex r2 fixed; tree green (3,057 tests) | done (dev-only until cut-over) |
 | 2 | chat kit | r4 (final) | merged 809f6175 (726 renderer-next tests) | Codex r1 (~20) + Claude r1 (57) → fix agent in worktree (incl. Electron/real-host tests, 6 change requests, knip) | fixing |
 | — | main AG-UI relay (`ai.*` behind AguiSource, wire selection, ring, hydrate/joinRun, thread persistence) | 00-agent-agui §8 + notes (main relay, r2) | merged b4da2b2f; fixes 5d5dc433 (33/33); r2 fixes c07479f7 (4/4; bounded bookkeeping) | Codex r1 + Claude r1 + Codex r2 fixed | done (agui default only in the wco build) |
-| 3 | bots | r3 (final) | Opus agent in worktree | | implementing |
+| 3 | bots | r3 (final) | renderer routes, forms, data, notices and panels committed in bots worktree; [implementation report](reports/03-bots-implementation.md) | acceptance coverage recorded in report; no independent diff review yet | implemented with outstanding dependencies and acceptance cases |
 | 4 | sessions | r3 (b8997551, Codex r1–r2 applied; final) | waits on phases 2–3 | | spec done |
 | 5 | routines, artifacts, library, settings | r3 (Codex r1–r2 applied; final) | waits on phases 2–4 | | spec done |
 | 6 | onboarding, tour, notch | r4 (Codex r1–r3 applied; final) | waits on phases 2–5 + relay `ai.attention` | | spec done |
