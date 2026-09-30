@@ -21,7 +21,7 @@ import {
 import type { FakeRelay } from "./fixtures/relay";
 import type { ComposerConfig, ChatViewSlots } from "./kit/context";
 import { ChatView } from "./kit/view";
-import { inertHostActions } from "./runtime/host-actions";
+import { inertHostActions, type ChatHostActions } from "./runtime/host-actions";
 import { createChatRuntime, type ChatRuntime } from "./runtime/runtime";
 
 export interface Rendered {
@@ -123,9 +123,10 @@ export const renderRelay = async (
   relay: FakeRelay,
   skin: "bot" | "session",
   composer: Partial<ComposerConfig> = {},
-  viewOptions: { focused?: boolean; slots?: ChatViewSlots } = {}
+  viewOptions: { focused?: boolean; slots?: ChatViewSlots } = {},
+  host: ChatHostActions = inertHostActions
 ): Promise<Rendered & { runtime: ChatRuntime }> => {
-  const runtime = createChatRuntime(relay.ai, { host: inertHostActions });
+  const runtime = createChatRuntime(relay.ai, { host });
   await runtime.session(relay.threadId).load();
   const rendered = await renderWithDb(
     <div style={{ height: 800 }}>
