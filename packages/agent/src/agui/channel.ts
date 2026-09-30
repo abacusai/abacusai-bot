@@ -130,7 +130,9 @@ export function streamWriter(
 }
 
 /** Inline mode: compat lines interleaved on stdout behind the RS byte. */
-export function inlineWriter(writeStdout: (text: string) => void): CompatWriter {
+export function inlineWriter(
+  writeStdout: (text: string) => void
+): CompatWriter {
   return {
     mode: "inline",
     write: (line) => writeStdout(`${INLINE_COMPAT_PREFIX}${line}`),

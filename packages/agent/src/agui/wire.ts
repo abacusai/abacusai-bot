@@ -159,7 +159,10 @@ export interface ToolCallEndMeta {
 
 /** TOOL_CALL_RESULT metadata; the error fields make StreamProcessor mark the part as an error. */
 export interface ToolCallResultMeta {
-  tanstack?: { state: "output-error"; toolResultOutcome?: "denied" | "cancelled" };
+  tanstack?: {
+    state: "output-error";
+    toolResultOutcome?: "denied" | "cancelled";
+  };
 }
 
 /** TOOL_CALL_RESULT content is JSON.stringify(ToolResultContent). */
@@ -230,7 +233,10 @@ export type CompatMode = "fd" | "inline" | "none";
 
 export type RunAckStatus = "started" | "queued" | "duplicate" | "rejected";
 
-export type RunAckReason = "regenerate_unsupported" | "empty" | "resume_unsupported";
+export type RunAckReason =
+  | "regenerate_unsupported"
+  | "empty"
+  | "resume_unsupported";
 
 export type ResponseRejectedReason =
   | "incarnation"

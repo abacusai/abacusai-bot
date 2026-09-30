@@ -37,6 +37,10 @@
       "types": "./dist/main.d.ts",
       "default": "./dist/main.js"
     },
+    "./tool-display": {
+      "types": "./dist/tool-display.d.ts",
+      "default": "./dist/tool-display.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

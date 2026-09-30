@@ -5,6 +5,7 @@
  */
 import {
   EventType,
+  type BaseEvent,
   type Event as AguiCoreEvent,
   type EventPayloadOf,
 } from "@ag-ui/core";
@@ -25,7 +26,8 @@ export function setEventClock(next: (() => number) | null): void {
 
 export function aguiEvent<T extends EmittedType>(
   type: T,
-  payload: EventPayloadOf<T>
+  payload: EventPayloadOf<T> &
+    Partial<Pick<BaseEvent, "metadata" | "subagentRunId">>
 ): Extract<AguiCoreEvent, { type: T }> {
   return { type, ...payload, timestamp: clock() } as unknown as Extract<
     AguiCoreEvent,

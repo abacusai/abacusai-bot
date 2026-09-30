@@ -11,9 +11,8 @@ import type { Scenario, Step } from "./harness.js";
 type AgentType = Extract<DesktopEvent, { type: "event" }>["event"]["type"];
 
 const agentEvents = (events: DesktopEvent[], type: AgentType): number =>
-  events.filter(
-    (event) => event.type === "event" && event.event.type === type
-  ).length;
+  events.filter((event) => event.type === "event" && event.event.type === type)
+    .length;
 
 /** Waits until at least `count` agent events of `type` have arrived. */
 export const seen = (type: AgentType, count = 1): Step => ({
@@ -191,10 +190,7 @@ export const SCENARIOS: GoldenScenario[] = [
   },
   {
     name: "stop-mid-stream",
-    reply: (index) =>
-      index === 0
-        ? { stall: {} }
-        : { say: "unused" },
+    reply: (index) => (index === 0 ? { stall: {} } : { say: "unused" }),
     steps: [
       { send: { type: "send", message: "long answer" } },
       { calls: 1 },
@@ -245,10 +241,7 @@ export const SCENARIOS: GoldenScenario[] = [
   },
   {
     name: "stop-then-message",
-    reply: (index) =>
-      index === 0
-        ? { stall: {} }
-        : { say: "After stop." },
+    reply: (index) => (index === 0 ? { stall: {} } : { say: "After stop." }),
     steps: [
       { send: { type: "send", message: "slow" } },
       { calls: 1 },
@@ -294,9 +287,7 @@ export const SCENARIOS: GoldenScenario[] = [
   {
     name: "dequeue-idle",
     reply: (index) =>
-      index === 0
-        ? { stall: {} }
-        : { say: `Answer ${index}.` },
+      index === 0 ? { stall: {} } : { say: `Answer ${index}.` },
     steps: [
       { send: { type: "send", message: "slow" } },
       { calls: 1 },

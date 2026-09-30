@@ -31,7 +31,8 @@ describe("compat preflight", () => {
     const fake: PreflightFs = {
       fstatSync: () => ({}),
       writeSync: (_fd, data) => {
-        const text = typeof data === "string" ? data : Buffer.from(data).toString();
+        const text =
+          typeof data === "string" ? data : Buffer.from(data).toString();
         writes.push(text);
 
         return Buffer.byteLength(text);
@@ -39,7 +40,10 @@ describe("compat preflight", () => {
     };
 
     expect(preflightCompat(3, "inc-1", fake)).toBe("fd");
-    expect(writes).toEqual(["", '{"type":"compat.hello","incarnation":"inc-1"}\n']);
+    expect(writes).toEqual([
+      "",
+      '{"type":"compat.hello","incarnation":"inc-1"}\n',
+    ]);
   });
 
   it.each(["EBADF", "EPIPE", "EINVAL"])(
@@ -102,7 +106,8 @@ describe("compat writers", () => {
   it("inline prefixes each legacy line with one RS byte, and main strips exactly that", () => {
     const out: string[] = [];
     const writer = inlineWriter((text) => out.push(text));
-    const legacy = '{"type":"event","event":{"type":"status_changed","status":"idle"}}\n';
+    const legacy =
+      '{"type":"event","event":{"type":"status_changed","status":"idle"}}\n';
 
     writer.write(legacy);
 
@@ -145,11 +150,22 @@ describe("events", () => {
   });
 
   it("scopes CUSTOM names as the spec table says", () => {
-    expect(isRunScoped(custom("tool.output", { toolCallId: "x", output: "y" }))).toBe(true);
-    expect(isRunScoped(custom("agent.status", { status: "idle" as never }))).toBe(false);
     expect(
-      isRunScoped(aguiEvent(EventType.TEXT_MESSAGE_CONTENT, { messageId: "m", delta: "d" }))
+      isRunScoped(custom("tool.output", { toolCallId: "x", output: "y" }))
     ).toBe(true);
-    expect(isRunScoped(aguiEvent(EventType.STATE_DELTA, { delta: [] }))).toBe(false);
+    expect(
+      isRunScoped(custom("agent.status", { status: "idle" as never }))
+    ).toBe(false);
+    expect(
+      isRunScoped(
+        aguiEvent(EventType.TEXT_MESSAGE_CONTENT, {
+          messageId: "m",
+          delta: "d",
+        })
+      )
+    ).toBe(true);
+    expect(isRunScoped(aguiEvent(EventType.STATE_DELTA, { delta: [] }))).toBe(
+      false
+    );
   });
 });
