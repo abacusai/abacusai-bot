@@ -769,7 +769,18 @@ export interface AbacusConnectorsSnapshot {
 
 export type AbacusConnectorOutcome =
   | { ok: true }
-  | { ok: false; error: string; cancelled?: boolean };
+  | {
+      ok: false;
+      error: string;
+      cancelled?: boolean;
+      /**
+       * `wrong-account`: the provider finished but the connector attached to a
+       * different Abacus.AI account than the app's, on `surface`. The UI words
+       * the way out per surface; `error` is the plain-text fallback.
+       */
+      code?: "wrong-account";
+      surface?: "app" | "browser";
+    };
 
 /** Same contract for every connector kind. */
 export type ConnectorOutcome = AbacusConnectorOutcome;
@@ -809,6 +820,12 @@ export const ABACUS_CONNECTORS_SERVER_NAME = GATEWAY_SERVER_NAME;
 export interface ConnectorConnectOptions {
   autostart?: boolean;
   hint?: string;
+  /**
+   * Who started the hop. A screen cancels only the hops it started itself
+   * (owner unset) when it leaves; a hop the app started on the user's behalf
+   * names itself and outlives the screen it was started from.
+   */
+  owner?: "first-run";
 }
 
 export const abacusConnectorsMcpEntry = (mcpUrl: string): McpServerEntry => ({

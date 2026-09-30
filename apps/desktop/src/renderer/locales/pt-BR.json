@@ -639,8 +639,8 @@
     "add": "Add",
     "addFailed": "Could not add {{name}}.",
     "added": "{{name}} added.",
-    "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
     "adding": "Adding…",
+    "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
     "auth": {
       "key": "API key",
       "oauth": "Sign-in",
@@ -685,6 +685,8 @@
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
+    "wrongAccountApp": "{{name}} attached to a different Abacus.AI account: the app's sign-in window held another account. Sign out and back in, then connect again.",
+    "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again.",
     "yours": "Yours"
   },
   "creditsCard": {

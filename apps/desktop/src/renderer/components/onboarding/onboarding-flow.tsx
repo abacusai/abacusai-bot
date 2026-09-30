@@ -208,7 +208,11 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     gmailStarted.current = true;
     durableStorage.setItem(GMAIL_HOP_KEY, "started");
     void window.api.agent
-      .connectConnector(GMAIL_CONNECTOR_ID, { autostart: true, hint: email })
+      .connectConnector(GMAIL_CONNECTOR_ID, {
+        autostart: true,
+        hint: email,
+        owner: "first-run",
+      })
       .then((outcome) => {
         window.api.reportFunnelStep(
           outcome.ok ? "gmail_allowed" : "gmail_declined"
