@@ -5,23 +5,21 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "src/renderer/assets/base.css",
+    "css": "src/renderer-next/styles/app.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
   },
   "iconLibrary": "lucide",
-  "rtl": true,
+  "rtl": false,
   "aliases": {
-    "components": "#renderer/components",
-    "utils": "#renderer/lib/cn",
-    "ui": "#renderer/components/ui",
-    "lib": "#renderer/lib",
-    "hooks": "#renderer/hooks"
+    "components": "#next/components",
+    "utils": "#next/lib/cn",
+    "ui": "#next/ui",
+    "lib": "#next/lib",
+    "hooks": "#next/lib/hooks"
   },
   "menuColor": "default-translucent",
   "menuAccent": "subtle",
-  "registries": {
-    "@aceternity": "https://ui.aceternity.com/registry/{name}.json"
-  }
+  "registries": {}
 }

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    "apps/desktop": {
+      "entry": [
+        "src/renderer-next/main.tsx",
+        "src/renderer-next/routes/**/*.tsx",
+        "src/renderer-next/**/*.test.{ts,tsx}"
+      ],
+      "project": ["src/renderer-next/**/*.{ts,tsx}"],
+      "ignore": [
+        "src/renderer-next/routeTree.gen.ts",
+        "src/renderer-next/ui/**"
+      ]
+    }
+  }
+}

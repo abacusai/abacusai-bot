@@ -5,7 +5,8 @@
     "moduleResolution": "Bundler",
     "types": ["node"],
     "composite": true,
+    "allowImportingTsExtensions": true,
     "tsBuildInfoFile": "../../node_modules/.tmp/desktop.vite.tsbuildinfo"
   },
-  "include": ["vite.config.ts", "vitest.config.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "vite.shared.ts"]
 }
