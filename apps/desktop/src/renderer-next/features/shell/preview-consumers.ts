@@ -1,10 +1,10 @@
 export interface PreviewEvent {
-  conversationKey: string;
+  conversationKey?: string;
   path?: string;
   url?: string;
 }
 export interface PreviewConsumer {
-  owns(key: string): boolean;
+  owns(key: string | undefined): boolean;
   open(event: PreviewEvent): void;
 }
 const consumers = new Set<PreviewConsumer>();

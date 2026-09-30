@@ -64,18 +64,25 @@ export const dispatchAppHotkey = (id: keyof typeof APP_HOTKEYS): void => {
 export const useAppHotkey = (
   binding: string,
   handler: () => void,
-  options: { guardRichText?: boolean; enabled?: boolean } = {}
+  options: {
+    guardRichText?: boolean;
+    enabled?: boolean;
+    actionId?: keyof typeof APP_HOTKEYS;
+  } = {}
 ): void => {
   const run = useEffectEvent(handler);
   const enabled = options.enabled ?? true;
+  const actionBinding = options.actionId
+    ? APP_HOTKEYS[options.actionId]
+    : binding;
   useEffect(() => {
     if (!enabled) return;
     const action = () => run();
-    actions.set(binding, action);
+    actions.set(actionBinding, action);
     return () => {
-      if (actions.get(binding) === action) actions.delete(binding);
+      if (actions.get(actionBinding) === action) actions.delete(actionBinding);
     };
-  }, [binding, enabled]);
+  }, [actionBinding, enabled]);
   useHotkey(
     binding as never,
     (event) => {
