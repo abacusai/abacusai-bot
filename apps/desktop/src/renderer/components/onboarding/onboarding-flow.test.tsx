@@ -219,12 +219,19 @@ describe("the sign-in wall", () => {
     await waitFor(() => expect(missing("onboarding-error")).toBe(true));
   });
 
-  it("sends everyone to the browser, where their Google account already is", async () => {
+  it("sends returning users down the sign-in path, new ones down sign-up", async () => {
     mount();
-    expect(missing("onboarding-have-account")).toBe(true);
-    fireEvent.click(byId("onboarding-connect"));
+    fireEvent.click(byId("onboarding-have-account"));
     await waitFor(() =>
       expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
+    );
+  });
+
+  it("starts a sign-up from the main button", async () => {
+    mount();
+    fireEvent.click(byId("onboarding-connect"));
+    await waitFor(() =>
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signup")
     );
   });
 });
@@ -460,31 +467,28 @@ describe("a renderer restarted mid-flow", () => {
 });
 
 describe("the sign-in screen", () => {
-  it("shows the product and one button: Google", () => {
+  it("shows what the account is for, not just what it is called", () => {
     mount();
 
     const overlay = byId("onboarding-overlay");
 
-    expect(overlay.textContent).toContain("onboarding.welcomeTitle");
     expect(overlay.textContent).toContain("onboarding.welcomeTagline");
-    expect(byId("onboarding-play-tour")).toBeTruthy();
-    expect(byId("onboarding-connect").textContent).toContain(
-      "onboarding.connectCta"
-    );
+    for (const capability of ["Memory", "Connectors", "Models"]) {
+      expect(overlay.textContent).toContain(
+        `onboarding.welcomeCapability${capability}`
+      );
+    }
     expect(
-      overlay.querySelectorAll(
-        "button:not([data-id^='onboarding-have-account'])"
-      )
-    ).toHaveLength(2);
+      overlay.querySelectorAll('[data-id^="onboarding-capability-"]')
+    ).toHaveLength(3);
   });
 
-  it("plays the tour in place, without leaving the wall", async () => {
+  it("answers what it costs before asking for anything", () => {
     mount();
-    fireEvent.click(byId("onboarding-play-tour"));
 
-    await waitFor(() => byId("onboarding-tour"));
-    expect(byId("onboarding-tour").querySelector("video")).not.toBeNull();
-    expect(byId("onboarding-connect")).toBeTruthy();
+    expect(byId("onboarding-free-badge").textContent).toContain(
+      "onboarding.welcomeFreeBadge"
+    );
   });
 });
 

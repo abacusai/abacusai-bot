@@ -1190,8 +1190,7 @@
   "onboarding": {
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "Tu navegador se abre para iniciar sesión o crear una cuenta. La app recibe su propia clave de API; tu contraseña nunca pasa por ella.",
-    "connectCta": "Iniciar sesión con Google",
-    "playTourCta": "Ver el recorrido",
+    "connectCta": "Registrarse / Iniciar sesión",
     "openInBrowserCta": "Usar mi navegador",
     "haveAccountCta": "Ya tengo una cuenta",
     "connectTitle": "Conectar Abacus.AI",
@@ -1209,8 +1208,8 @@
     "setupSignInCta": "Sign in / Create Free Account",
     "signInCta": "Iniciar sesión en Abacus.AI",
     "skipCta": "Not now",
-    "welcomeTagline": "Un compañero de trabajo con IA, de código abierto, que vive en tu computadora.",
-    "welcomeTitle": "Bienvenido a AbacusAI Bot.",
+    "welcomeTagline": "Tu compañero de IA personal y de código abierto con memoria persistente",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
     "connectedPromiseModels": "Access to free models",
     "connectedPromiseWork": "Gets your work done, and connects to all your services",
@@ -1249,7 +1248,11 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "Continuar con {{browser}} · {{profile}}",
-    "signInAnotherWay": "Iniciar sesión de otra forma"
+    "signInAnotherWay": "Iniciar sesión de otra forma",
+    "welcomeFreeBadge": "Free to start",
+    "welcomeCapabilityModels": "Access",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors"
   },
   "openFile": {
     "failed": "No se pudo abrir ese archivo.",
