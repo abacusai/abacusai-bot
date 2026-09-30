@@ -37,10 +37,7 @@ const isInfinite = (animation: Animation): boolean =>
  * Checked structurally (a `source` or `subject`, or the constructor name),
  * since jsdom and older engines have no `ScrollTimeline` global.
  */
-export const isScrollDriven = (
-  animation: Animation,
-  doc: Document
-): boolean => {
+const isScrollDriven = (animation: Animation, doc: Document): boolean => {
   const timeline = animation.timeline as
     | (AnimationTimeline & { source?: unknown; subject?: unknown })
     | null
