@@ -193,4 +193,5 @@ export interface RpcDeps {
   trackers: EventTrackers;
   /** `window.claimCue` / `window.visibleThread` (spec 06 §14.2). */
   cues: CueArbiter;
+  notch?: import("../notch/controller").NotchController;
 }

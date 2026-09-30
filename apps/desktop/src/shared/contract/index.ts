@@ -21,6 +21,7 @@ import { mcp } from "./mcp";
 import { memory } from "./memory";
 import { messaging } from "./messaging";
 import { models } from "./models";
+import { notch } from "./notch";
 import { referrals } from "./referrals";
 import { routines } from "./routines";
 import { sessions } from "./sessions";
@@ -42,6 +43,7 @@ export const contract = {
   ai,
   bots,
   routines,
+  notch,
   settings,
   models,
   localModels,
@@ -119,3 +121,5 @@ export type {
 export type * from "./rows";
 export { SUPPORTED_LANGUAGES } from "./rows";
 export type * from "./agui";
+
+export type * from "./notch";
