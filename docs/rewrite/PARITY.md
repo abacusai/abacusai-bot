@@ -328,7 +328,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (251)
+## Contract procedures (253)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -356,6 +356,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `agent.state` | query | `agent.getAgentSessionState` |
 | `agent.stop` | mutation | `agent.stopAgentSession` |
 | `agent.switchConversation` | mutation | `agent.switchAgentConversation` |
+| `ai.attention` | subscription |  |
 | `ai.cancel` | mutation | `agent.stopAgentTurn` |
 | `ai.hydrate` | query | `agent.readTranscript` |
 | `ai.joinRun` | subscription |  |
@@ -365,6 +366,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `ai.queue.remove` | mutation |  |
 | `ai.queue.update` | mutation |  |
 | `ai.respondPermission` | mutation |  |
+| `ai.runFinished` | subscription |  |
 | `ai.send` | mutation | `agent.sendAgentMessage` |
 | `ai.subscribe` | subscription |  |
 | `auth.abacus.browserProfiles` | query | `agent.listBrowserSignInProfiles` |

@@ -73,7 +73,14 @@ export { COMMON_ERRORS, RPC_ERROR_CODES } from "./errors";
 export type { RpcErrorCode, RpcErrorData } from "./errors";
 export { CUSTOM_JSON_SERIALIZERS, uint8ArraySerializer } from "./serializer";
 export type { ProcedureKind, ProcedureMeta } from "./base";
-export type { AiHydration, AiSendAck, AiSendInput } from "./ai";
+export type {
+  AiHydration,
+  AiSendAck,
+  AiSendInput,
+  AttentionEvent,
+  AttentionSummary,
+  RunFinishedNotice,
+} from "./ai";
 export type * from "./ai-thread";
 export type { BotsEvent } from "./bots";
 export type { BrowserEvent } from "./browser";

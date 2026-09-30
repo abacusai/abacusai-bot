@@ -127,6 +127,51 @@ const record = (value: unknown): Record<string, unknown> =>
 const stringOr = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
 
+/** What a reply the user never sees says (the bot loop's silent answer). */
+export const NO_REPLY = "NO_REPLY";
+
+/**
+ * Whether `messages` (a run's own) hold an assistant text part a user sees:
+ * trimmed, non-empty and not exactly `NO_REPLY` (spec 03 §24.11).
+ */
+export const hasVisibleAssistantText = (
+  messages: readonly UIMessage[]
+): boolean =>
+  messages.some(
+    (message) =>
+      message.role === "assistant" &&
+      message.parts.some((part) => {
+        if (part.type !== "text") return false;
+        const text = String(
+          (part as { content?: unknown }).content ?? ""
+        ).trim();
+        return text !== "" && text !== NO_REPLY;
+      })
+  );
+
+/**
+ * A run's authoritative end (spec 03 §24.11): the first terminal the relay
+ * applied for it, once per run id, main's own included.
+ */
+export interface RunFinishedInfo {
+  runId: string;
+  outcome: "success" | "cancelled" | "error";
+  errorCode?: string;
+  hasVisibleAssistantText: boolean;
+  /** The terminal's relay seq: the notice's event id. */
+  seq: number;
+  at: number;
+}
+
+/**
+ * The thread's answerable pending permissions (spec 06 §23.6): the live
+ * incarnation's only.
+ */
+export interface PendingPermissionsInfo {
+  incarnation: string | null;
+  items: PermissionDescriptor[];
+}
+
 /** Where seqs come from: one counter for every thread, never reused. */
 export class SeqClock {
   #value = 0;
@@ -166,6 +211,10 @@ export interface ThreadRelayOptions {
   reload?: () => ThreadHistory | null;
   /** A run's log is no longer joinable here (expired, evicted or cleared). */
   onRunForgotten?: (runId: string) => void;
+  /** A run reached its authoritative terminal (once per run id). */
+  onRunFinished?: (info: RunFinishedInfo) => void;
+  /** The answerable pending permissions may have changed. */
+  onPendingChanged?: (pending: PendingPermissionsInfo) => void;
   /** Overrides `ACTIVE_LOG_CAP` (tests). */
   activeLogCap?: number;
   now?: () => number;
@@ -200,6 +249,8 @@ interface ActiveRun extends AiActiveRun {
   skippedUserIds: Set<string>;
   /** User message ids `abacus.duplicate_echo` was sent for in this run. */
   noticedEchoes: Set<string>;
+  /** Message ids the transcript held when the run started. */
+  priorMessageIds: Set<string>;
 }
 
 interface FinishedLog {
@@ -243,6 +294,8 @@ export class ThreadRelay {
   readonly #remove: () => void;
   readonly #reload: (() => ThreadHistory | null) | undefined;
   readonly #onRunForgotten: (runId: string) => void;
+  readonly #onRunFinished: (info: RunFinishedInfo) => void;
+  readonly #onPendingChanged: (pending: PendingPermissionsInfo) => void;
   readonly #activeLogCap: number;
   readonly #now: () => number;
   readonly #log: (message: string) => void;
@@ -276,6 +329,8 @@ export class ThreadRelay {
     runningTools: 0,
   };
   #notices: AiNotice[] = [];
+  /** The answerable set last reported (`#checkPending`); "" for none. */
+  #pendingKey = "";
 
   readonly #listeners = new Set<Listener>();
   /** Last time anything touched this thread, for eviction. */
@@ -289,6 +344,8 @@ export class ThreadRelay {
     this.#remove = options.remove;
     this.#reload = options.reload;
     this.#onRunForgotten = options.onRunForgotten ?? (() => undefined);
+    this.#onRunFinished = options.onRunFinished ?? (() => undefined);
+    this.#onPendingChanged = options.onPendingChanged ?? (() => undefined);
     this.#activeLogCap = options.activeLogCap ?? ACTIVE_LOG_CAP;
     this.#now = options.now ?? Date.now;
     this.#log =
@@ -872,6 +929,9 @@ export class ThreadRelay {
         },
         skippedUserIds: new Set(),
         noticedEchoes: new Set(),
+        priorMessageIds: new Set(
+          this.#processor.getMessages().map((message) => message.id)
+        ),
       };
     }
 
@@ -890,8 +950,9 @@ export class ThreadRelay {
     if (this.#active != null && isRunScoped(event))
       this.#track(this.#active.open, event);
     this.#applySessionState(event, chunk.seq);
+    this.#checkPending(event);
     this.#record(chunk, event);
-    if (isTerminal(event)) this.#finishRun(event);
+    if (isTerminal(event)) this.#finishRun(event, chunk.seq);
 
     // A copy: a listener may unsubscribe itself (a joined run ends).
     for (const listener of Array.from(this.#listeners)) listener(chunk);
@@ -983,10 +1044,11 @@ export class ThreadRelay {
     }
   }
 
-  #finishRun(event: RelayEvent): void {
+  #finishRun(event: RelayEvent, seq: number): void {
     const active = this.#active;
     if (active == null) return;
     this.#active = null;
+    this.#publishFinished(active, event, seq);
 
     this.#finished.set(active.runId, {
       log: this.#activeLog(active),
@@ -1019,6 +1081,76 @@ export class ThreadRelay {
     } catch (error) {
       this.#log(
         `${this.threadId}: persisting the transcript failed: ${String(error)}`
+      );
+    }
+  }
+
+  /** The run's one notice, from the messages it added to the processor. */
+  #publishFinished(active: ActiveRun, event: RelayEvent, seq: number): void {
+    const own = this.#processor
+      .getMessages()
+      .filter((message) => !active.priorMessageIds.has(message.id));
+    const outcome =
+      event.type === "RUN_ERROR"
+        ? "error"
+        : record(event.outcome).type === "cancelled"
+          ? "cancelled"
+          : "success";
+    const code = stringOr(event.code);
+    try {
+      this.#onRunFinished({
+        runId: active.runId,
+        outcome,
+        ...(outcome === "error" && code != null && { errorCode: code }),
+        hasVisibleAssistantText: hasVisibleAssistantText(own),
+        seq,
+        at: typeof event.timestamp === "number" ? event.timestamp : this.#now(),
+      });
+    } catch (error) {
+      this.#log(
+        `${this.threadId}: the run-finished notice failed: ${String(error)}`
+      );
+    }
+  }
+
+  /** The permissions a client may still answer: the live incarnation's. */
+  get pendingPermissions(): PendingPermissionsInfo {
+    return {
+      incarnation: this.incarnation,
+      items: this.#permissions.items.filter(
+        (item) =>
+          this.incarnation == null ||
+          item.metadata.abacus.lineage.incarnation === this.incarnation
+      ),
+    };
+  }
+
+  /**
+   * After an event that can change the answerable set (its list, or the
+   * live incarnation): tells the host when the set really changed.
+   */
+  #checkPending(event: RelayEvent): void {
+    const relevant =
+      event.type === "STATE_SNAPSHOT" ||
+      (event.type === "CUSTOM" &&
+        (event.name === "permission.pending" ||
+          event.name === "session.ready" ||
+          event.name === "wire.hello"));
+    if (!relevant) return;
+    const pending = this.pendingPermissions;
+    const key =
+      pending.items.length === 0
+        ? ""
+        : `${pending.incarnation ?? ""}\u0000${pending.items
+            .map((item) => item.metadata.abacus.lineage.permissionId)
+            .join("\u0000")}`;
+    if (key === this.#pendingKey) return;
+    this.#pendingKey = key;
+    try {
+      this.#onPendingChanged(pending);
+    } catch (error) {
+      this.#log(
+        `${this.threadId}: the attention update failed: ${String(error)}`
       );
     }
   }
