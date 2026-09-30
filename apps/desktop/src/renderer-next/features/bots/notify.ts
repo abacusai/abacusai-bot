@@ -23,7 +23,10 @@ export interface BotsWatcherDeps {
   /** The thread is on screen in a focused window. */
   seen(threadId: string): boolean;
   unread: UnreadStore;
-  play(cue: Cue, options: { threadId: string; botId: string }): void;
+  play(
+    cue: Cue,
+    options: { threadId: string; botId: string; dedupeKey?: string }
+  ): void;
   notifier: Pick<Notifier, "notify">;
   labels: {
     done(bot: string): { title: string; body: string };
@@ -63,7 +66,7 @@ export const handleRunFinished = (
         .map((row) => row.id)
     ),
   });
-  if (cue) deps.play(cue.kind, cueOptions);
+  if (cue) deps.play(cue.kind, { ...cueOptions, dedupeKey: cue.dedupeKey });
 
   if (deps.seen(notice.threadId))
     react(bot.id, notice.outcome === "error" ? "sad" : "happy");
@@ -110,7 +113,11 @@ export const handleWaiting = (
   const bot = deps.bots().find((row) => row.id === target.botId);
   if (bot == null) return;
   if (deps.seen(session.id)) react(bot.id, "surprised");
-  deps.play("needs-you", { threadId: session.id, botId: bot.id });
+  deps.play("needs-you", {
+    threadId: session.id,
+    botId: bot.id,
+    dedupeKey: `${session.id}:${session.turn.updatedAt}`,
+  });
   const copy = deps.labels.needsYou(bot.name);
   deps.notifier.notify({
     kind: "needs-you",
@@ -133,7 +140,11 @@ export const handleConnectorAsk = (
   const bot = deps.bots().find((row) => row.id === target.botId);
   if (!bot) return;
   if (deps.seen(session.id)) react(bot.id, "surprised");
-  deps.play("needs-you", { threadId: session.id, botId: bot.id });
+  deps.play("needs-you", {
+    threadId: session.id,
+    botId: bot.id,
+    dedupeKey: requestId,
+  });
   const copy = deps.labels.needsYou(bot.name);
   deps.notifier.notify({
     kind: "needs-you",
