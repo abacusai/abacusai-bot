@@ -126,28 +126,28 @@ export const decomposeCron = (schedule: string | null): ScheduleDraft => {
     return {
       ...DEFAULT_SCHEDULE,
       preset: "hourly",
-      time: asTime(found[1], "9"),
+      time: asTime(found[1]!, "9"),
     };
   found = match(/^(\d{1,2}) (\d{1,2}) \* \* \*$/);
   if (found != null)
     return {
       ...DEFAULT_SCHEDULE,
       preset: "daily",
-      time: asTime(found[1], found[2]),
+      time: asTime(found[1]!, found[2]!),
     };
   found = match(/^(\d{1,2}) (\d{1,2}) \* \* 1-5$/);
   if (found != null)
     return {
       ...DEFAULT_SCHEDULE,
       preset: "weekdays",
-      time: asTime(found[1], found[2]),
+      time: asTime(found[1]!, found[2]!),
     };
   found = match(/^(\d{1,2}) (\d{1,2}) \* \* ([0-6])$/);
   if (found != null)
     return {
       ...DEFAULT_SCHEDULE,
       preset: "weekly",
-      time: asTime(found[1], found[2]),
+      time: asTime(found[1]!, found[2]!),
       weekday: Number(found[3]) as Weekday,
     };
   return { ...DEFAULT_SCHEDULE, preset: "custom", custom: trimmed };

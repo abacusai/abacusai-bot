@@ -1,0 +1,43 @@
+/*
+ * The bots area's status tokens (spec 03 §7.3, §19): the same values as the
+ * chat kit's `--chat-status-*` (features/chat/chat.css), declared here too
+ * because the sidebar renders in every area, before any chat has loaded
+ * the kit's stylesheet. Text pairs meet 4.5:1 in both themes.
+ */
+:root {
+  --bots-attention: oklch(0.52 0.15 50);
+  --bots-attention-foreground: oklch(0.985 0 0);
+  --bots-running: oklch(0.52 0.15 50);
+  --bots-done: oklch(0.47 0.12 150);
+}
+
+.dark {
+  --bots-attention: oklch(0.84 0.1 60);
+  --bots-attention-foreground: oklch(0.205 0 0);
+  --bots-running: oklch(0.84 0.1 60);
+  --bots-done: oklch(0.87 0.12 150);
+}
+
+/* Unread dots and needs-you badges appear (§16.1): scale 0.6 → 1 + fade. */
+.bots-pop {
+  transition:
+    scale 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@starting-style {
+  .bots-pop {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion="off"]) .bots-pop {
+    transition: none;
+  }
+}
+
+html[data-reduce-motion="on"] .bots-pop {
+  transition: none;
+}

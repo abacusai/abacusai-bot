@@ -12,8 +12,6 @@ import { RouteSheet } from "#next/components/route-sheet";
 import { useCollections } from "#next/data/db";
 import { botAccentStyle } from "#next/lib/theme";
 
-import { BotDot } from "./bots-sidebar";
-
 const useBot = (botId: string) => {
   const collections = useCollections();
   const { data } = useLiveQuery({
@@ -86,7 +84,11 @@ export const BotIdentity = ({ botId }: { botId: string }) => {
   if (bot == null) return null;
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <BotDot color={bot.avatarColor} />
+      <span
+        aria-hidden
+        className="size-2.5 rounded-full"
+        style={{ background: bot.avatarColor }}
+      />
       <span className="text-sidebar-foreground truncate font-medium">
         {bot.name}
       </span>

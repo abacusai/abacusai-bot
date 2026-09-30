@@ -350,7 +350,30 @@
     "sidebar": {
       "label": "Bots",
       "new": "New bot",
-      "empty": "No bots yet"
+      "empty": "No bots yet",
+      "search": "Search bots",
+      "searchPlaceholder": "Search bots",
+      "noMatches": "No bots match",
+      "needsYou": "Needs you",
+      "yesterday": "Yesterday",
+      "waiting_one": "{{count}} waiting on you",
+      "waiting_other": "{{count}} waiting on you",
+      "unread": "Unread",
+      "options": "Options for {{name}}",
+      "emptyBody": "Make one for a job you hand off often.",
+      "moreWaiting_one": "{{count}} more",
+      "moreWaiting_other": "{{count}} more",
+      "markUnread": "Mark as unread",
+      "duplicate": "Duplicate",
+      "pauseCheckIns": "Pause check-ins",
+      "resumeCheckIns": "Resume check-ins",
+      "title": "Bots",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinned": "Pinned",
+      "edit": "Edit bot",
+      "delete": "Delete bot",
+      "emptyTitle": "No bots yet"
     },
     "avatar": {
       "shapes": {
@@ -441,6 +464,73 @@
         "research": "Research",
         "social-media": "Social Media"
       }
+    },
+    "chat": {
+      "deliverables": {
+        "files": "Files",
+        "showInFolder": "Show in folder",
+        "openInBrowser": "Open in browser",
+        "showAll": "Show all ({{count}} more)",
+        "showLess": "Show less"
+      },
+      "preview": {
+        "openExternally": "Open with default app",
+        "noViewer": "There is no preview for this kind of file here.",
+        "failed": "Couldn't read this file.",
+        "truncated": "Showing the start of a long file.",
+        "slide": "Slide {{n}}"
+      },
+      "feedback": {
+        "rate": "Rate this reply",
+        "helpful": "Good response",
+        "notHelpful": "Bad response",
+        "tellUsMore": "Tell us more",
+        "placeholder": "What went wrong?",
+        "send": "Send",
+        "sent": "Thanks for the feedback",
+        "notSynced": "Couldn't send feedback yet",
+        "failed": "Couldn't send your feedback. Please try again."
+      },
+      "reaction": "Agent reacted with {{emoji}}",
+      "yesterday": "Yesterday",
+      "connector": {
+        "title": "{{provider}} is not connected",
+        "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
+        "connect": "Connect {{provider}}",
+        "connecting": "Connecting… check your browser to complete the steps",
+        "decline": "Not now",
+        "failed": "Could not connect {{provider}}.",
+        "stop": "Stop connecting",
+        "refreshFailed": "Connected, but the agent couldn't load it: {{error}}"
+      }
+    },
+    "deleteDialog": {
+      "checkIn": "Its check-in keeps running as an ordinary routine.",
+      "title": "Delete bot",
+      "body": "This deletes {{name}} and its chat. This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "error": "Could not delete the bot."
+    },
+    "status": {
+      "needsYou": "Needs you",
+      "needsYouTitle": "Needs you · {{title}}",
+      "checkingIn": "Checking in",
+      "working": "Working",
+      "workingOn": "Working · {{caption}}",
+      "error": "Stopped with an error",
+      "paused": "Check-ins paused",
+      "on": "on {{app}}"
+    },
+    "notify": {
+      "doneBody": "Has a reply for you",
+      "needsYouTitle": "{{name}} needs you",
+      "needsYouBody": "Waiting for your approval"
+    },
+    "errors": {
+      "pin": "Couldn't pin",
+      "duplicate": "Couldn't duplicate the bot",
+      "checkIn": "Couldn't change the check-in"
     }
   },
   "browserPermission": {

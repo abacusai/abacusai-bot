@@ -27,21 +27,32 @@ import {
 } from "#next/ui/drawer";
 import { Tabs, TabsList, TabsTrigger } from "#next/ui/tabs";
 
+import { SidePanelOutlet, useSidePanelFilled } from "./side-panel-slot";
+
 export const PANEL_MIN_PX = 360;
 export const PANE_MIN_PX = 360;
 export const PANEL_DEFAULT_PX = 400;
 export const PANEL_PREF_KEY = "side-panel";
 
-/** What one tab shows in phase 1. */
+/**
+ * One tab's body: the route's `SidePanelContent` for it, portalled into the
+ * outlet, or the placeholder when no mounted route fills it.
+ */
 export const SidePanelBody = ({ tab }: { tab: SidePanelTabId }) => {
   const { t } = useTranslation();
+  const filled = useSidePanelFilled(tab);
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center p-4">
-      <EmptyState
-        title={t(`shell.panel.tabs.${tab}`)}
-        description={t("shell.panel.emptyDescription")}
-      />
-    </div>
+    <>
+      <SidePanelOutlet className={filled ? undefined : "hidden"} />
+      {!filled && (
+        <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+          <EmptyState
+            title={t(`shell.panel.tabs.${tab}`)}
+            description={t("shell.panel.emptyDescription")}
+          />
+        </div>
+      )}
+    </>
   );
 };
 
