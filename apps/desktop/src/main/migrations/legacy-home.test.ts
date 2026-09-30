@@ -202,4 +202,21 @@ describe("migrating a legacy home", () => {
     });
     legacy.flushSync();
   });
+
+  it("does not record step 2 when renderer-state.json exists but cannot be read; the next launch imports it", async () => {
+    const state = path.join(userData, "renderer-state.json");
+    const aside = path.join(root, "state-aside.json");
+    fs.renameSync(state, aside);
+    fs.mkdirSync(state); // EISDIR, as EACCES or EBUSY would be
+
+    const first = await migrate();
+    expect(first.failed).toMatchObject({ id: 2 });
+    expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([1]);
+
+    fs.rmdirSync(state);
+    fs.renameSync(aside, state);
+    const second = await migrate();
+    expect(second).toMatchObject({ applied: [2], failed: null });
+    expect(readRecord(home).applied.at(-1)?.stats.keys).toBeGreaterThan(0);
+  });
 });
