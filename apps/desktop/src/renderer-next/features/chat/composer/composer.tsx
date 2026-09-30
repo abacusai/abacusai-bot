@@ -243,7 +243,7 @@ const Dictate = () => {
 
 const SendOrStop = () => {
   const { t } = useTranslation();
-  const { skin } = useChatView();
+  const { skin, composer: config } = useChatView();
   const { draft, busy, submit, stop, cancelling } = useComposer();
   const hasText = draft.text.trim() !== "" || draft.attachments.length > 0;
   if (busy && !hasText)
@@ -266,7 +266,7 @@ const SendOrStop = () => {
     <Button
       size="icon-lg"
       aria-label={busy ? t("chat.composer.queue") : t("chat.composer.send")}
-      disabled={!hasText}
+      disabled={!hasText || !!config.blocked}
       className={cn(
         "size-9 rounded-full",
         skin === "bot" &&
@@ -348,7 +348,9 @@ export const ThreadComposer = () => {
       questionPending: question,
       preStart: config.preStart === true,
       hydrated: hydrated || config.preStart === true,
-      ...(draft.mode != null ? { mode: draft.mode } : {}),
+      ...((draft.mode ?? config.defaultMode) != null
+        ? { mode: draft.mode ?? config.defaultMode }
+        : {}),
       ...(draft.model != null ? { model: draft.model } : {}),
       ...(config.fixedMode != null ? { fixedMode: config.fixedMode } : {}),
     });
@@ -542,7 +544,7 @@ export const ThreadComposer = () => {
     <ModeChip
       availableModes={config.availableModes}
       value={liveMode}
-      draft={draft.mode}
+      draft={draft.mode ?? config.defaultMode}
       live={incarnation != null}
       onDraft={(next: AgentMode) =>
         updateDraft(threadId, (current) => ({ ...current, mode: next }))
