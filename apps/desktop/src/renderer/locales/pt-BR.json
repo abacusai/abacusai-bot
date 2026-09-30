@@ -1898,12 +1898,22 @@
       "reviews": "{{approved}} aprovados · {{changes}} alterações solicitadas · {{requested}} pendentes"
     },
     "premiumUpgrade": {
-      "connectNote": "Connect a free source to keep going. No card needed",
+      "connectCta": "Connect",
+      "connectNote": "Connect one of these to keep going. No card needed.",
+      "continueCta": "Continue",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Or run a model on this computer for free, with no limits",
+      "localMeta": "Free, no limits · downloads once",
+      "localName": "A model on this computer",
+      "localNote": "Every free source is connected. A model on this computer keeps going with no limits.",
       "poolOutTitle": "Every free source is used up for now",
-      "switchNote": "Pick another model in the model picker to keep going"
+      "setUpCta": "Set up",
+      "sourceGemini": "Google AI Studio",
+      "sourceGeminiMeta": "Gemini · free API key",
+      "sourceOpenrouter": "OpenRouter",
+      "sourceOpenrouterMeta": "Free models · sign in with Google or GitHub",
+      "switchNote": "Pick another model in the model picker to keep going",
+      "topUpMeta": "Add credits to your account"
     },
     "preview": {
       "addSurface": "Add surface",
