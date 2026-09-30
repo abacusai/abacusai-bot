@@ -867,7 +867,7 @@ export class ThreadSession {
       (this.#live?.client?.getMessages() ?? []).some(
         (message) => message.id === messageId
       ),
-    reconcileDelaysMs: RECONCILE_DELAYS_MS,
+    reconcileDelaysMs: this.#options.reconcileDelaysMs ?? RECONCILE_DELAYS_MS,
     schedule: (ms, run) => void this.#after(ms, run),
     newId: (prefix) =>
       `${prefix}-${this.#options.newId?.(prefix) ?? uuid()}`,
