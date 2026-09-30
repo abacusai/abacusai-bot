@@ -53,7 +53,6 @@
     "vendor": "node scripts/download-tools.js"
   },
   "dependencies": {
-    "@ag-ui/core": "1.0.0",
     "@anthropic-ai/sandbox-runtime": "0.0.76",
     "@ast-grep/lang-python": "^0.0.6",
     "@ast-grep/napi": "^0.45.1"
@@ -62,6 +61,7 @@
     "@abacus-ai/config": "workspace:*",
     "@abacus-ai/connectors": "workspace:*",
     "@abacus-ai/test-support": "workspace:*",
+    "@ag-ui/core": "1.0.0",
     "@anthropic-ai/sdk": "^0.117.1",
     "@earendil-works/pi-coding-agent": "^0.85.1",
     "@tanstack/ai": "~0.63.0",
