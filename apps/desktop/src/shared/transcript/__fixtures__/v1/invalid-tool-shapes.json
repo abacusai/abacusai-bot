@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "sessionId": "sess-invalid-tool-shapes",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Shapes",
+      "at": 1788256800000
+    },
+    {
+      "type": "tool_call",
+      "id": "bad-name",
+      "toolCall": { "id": "c1", "name": 7, "args": [1, 2] },
+      "at": 1788256801000
+    },
+    {
+      "type": "tool_call",
+      "id": "nameless",
+      "toolCall": { "id": "c2", "name": "", "args": {}, "status": "success" },
+      "at": 1788256802000
+    },
+    {
+      "type": "tool_call",
+      "id": "bad-result",
+      "toolCall": {
+        "id": "c3",
+        "name": "bash",
+        "args": {},
+        "status": "success"
+      },
+      "toolResult": "oops",
+      "at": 1788256803000
+    },
+    {
+      "type": "tool_call",
+      "id": "extras",
+      "hint": "kept",
+      "toolCall": {
+        "id": "c4",
+        "name": "bash",
+        "args": { "command": "ls" },
+        "status": "success",
+        "retries": 2
+      },
+      "toolResult": {
+        "toolCallId": "other-id",
+        "output": "x",
+        "elapsedMs": 12
+      },
+      "at": 1788256804000
+    },
+    {
+      "type": "thinking",
+      "id": "th",
+      "content": "hmm",
+      "isSpinny": false,
+      "extraField": 1,
+      "at": 1788256805000
+    }
+  ]
+}
