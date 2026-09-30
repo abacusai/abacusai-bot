@@ -36,6 +36,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "#next/ui/tabs";
 import type { SessionRow } from "#shared/contract/rows";
 import { sessionConversationKey } from "#shared/conversation-scope";
+import {
+  terminalShellsForPlatform,
+  type TerminalShellId,
+} from "#shared/terminal-shells";
 
 import { useSessionsTransport, useGitState } from "../data/queries";
 import {
@@ -101,6 +105,9 @@ export const SessionDock = ({
   const git = useGitState({ workspaceId: row.workspaceId, sessionId: row.id });
   const device = useQuery(
     transport.orpc.devices.status.queryOptions({ input: {} })
+  );
+  const shells = useQuery(
+    transport.orpc.terminal.shell.get.queryOptions({ input: {} })
   );
   const split =
     size.width + 56 >= 1100 &&
@@ -267,22 +274,32 @@ export const SessionDock = ({
     const index = refs.indexOf(active ?? "");
     select(refs[(index + direction + refs.length) % refs.length]);
   };
-  const add = (kind: string) => {
+  const add = (kind: string, shell?: TerminalShellId) => {
     const ref =
       kind === "terminal"
         ? terminalId()
         : kind === "browser"
           ? `browser:browser-${crypto.randomUUID()}`
           : kind;
-    openTab(key, { ref, title: t(`sessions.dock.${kind}`) });
+    openTab(key, {
+      ref,
+      title: t(`sessions.dock.${kind}`),
+      ...(shell ? { shell } : {}),
+    });
     select(ref);
   };
-  const move = (tab: string, target: string, edge?: "right" | "bottom") => {
+  const move = (
+    tab: string,
+    target: string,
+    edge?: "left" | "right" | "top" | "bottom",
+    before?: string
+  ) => {
     const next = dockReducer(tree, {
       type: "move",
       tab,
       target,
       ...(edge ? { edge } : {}),
+      ...(before ? { before } : {}),
       id: crypto.randomUUID(),
     });
     if (
@@ -348,6 +365,13 @@ export const SessionDock = ({
                   className="flex shrink-0 items-center"
                   draggable
                   onDragStart={() => setDrag(ref)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (drag && drag !== ref)
+                      move(drag, node.id, undefined, ref);
+                  }}
                   onDragEnd={() => setDrag(null)}
                   onAuxClick={(e) => {
                     if (e.button === 1) close(ref);
@@ -442,16 +466,21 @@ export const SessionDock = ({
             ) : null;
           })}
         </div>
-        {drag ? (
-          <div
-            className="border-primary bg-primary/10 absolute inset-y-0 right-0 w-12 border-2"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.stopPropagation();
-              if (drag) move(drag, node.id, "right");
-            }}
-          />
-        ) : null}
+        {drag
+          ? (["left", "right", "top", "bottom"] as const).map((edge) => (
+              <div
+                key={edge}
+                data-drop-edge={edge}
+                className={`border-primary bg-primary/10 absolute border-2 ${edge === "left" ? "inset-y-9 left-0 w-10" : edge === "right" ? "inset-y-9 right-0 w-10" : edge === "top" ? "inset-x-10 top-9 h-10" : "inset-x-10 bottom-0 h-10"}`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  move(drag, node.id, edge);
+                }}
+              />
+            ))
+          : null}
       </div>
     );
   return (
@@ -486,6 +515,27 @@ export const SessionDock = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuGroup>
+                  {terminalShellsForPlatform(
+                    (document.documentElement.dataset.platform ??
+                      "darwin") as NodeJS.Platform
+                  ).map((shell) => (
+                    <DropdownMenuItem
+                      key={shell.id}
+                      disabled={
+                        shells.data?.statuses.find((s) => s.id === shell.id)
+                          ?.available === false
+                      }
+                      onClick={() =>
+                        void transport.client.terminal.shell
+                          .set({ shell: shell.id as TerminalShellId })
+                          .then(() => add("terminal", shell.id))
+                      }
+                    >
+                      {t("sessions.terminal.newShell", {
+                        shell: t(`terminalShells.${shell.labelKey}`),
+                      })}
+                    </DropdownMenuItem>
+                  ))}
                   {[
                     "browser",
                     "terminal",

@@ -15,3 +15,7 @@ export {
 } from "./gallery/sections";
 
 export { BrowserTab } from "./browser/browser-tab";
+
+export { SessionTasks } from "./context/tasks";
+
+export { SessionChangesCard } from "./changes/changes-card";

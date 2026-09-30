@@ -2,11 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#next/data/db/prefs";
-import {
-  chatRuntimeFor,
-  StartComposer,
-  updateDraft,
-} from "#next/features/chat";
+import { StartComposer, updateDraft } from "#next/features/chat";
 import {
   SessionStartPage,
   useSessionComposerModel,
@@ -16,7 +12,7 @@ import { NewSessionSearch } from "#next/lib/navigation/search";
 import { draftConversationKey } from "#shared/conversation-scope";
 const SessionsNewRoute = () => {
   const { t } = useTranslation();
-  const { transport } = Route.useRouteContext();
+  const { transport, chat } = Route.useRouteContext();
   const { workspaceId } = Route.useLoaderData();
   const model = useSessionComposerModel();
   const prefs = usePrefs();
@@ -34,7 +30,7 @@ const SessionsNewRoute = () => {
         renderComposer={(binding) => (
           <StartComposer
             threadId={binding.threadId}
-            runtime={chatRuntimeFor(transport)}
+            runtime={chat}
             context={binding.context}
             config={{
               mode: "full",
@@ -42,6 +38,7 @@ const SessionsNewRoute = () => {
               attachmentsBase: binding.root,
               showModeChip: true,
               model: model.model,
+              onBlocked: model.onBlocked,
               availableModes: model.availableModes,
               defaultMode: prefs.defaultMode,
               blocked: binding.blocked ? "loading" : model.blocked,

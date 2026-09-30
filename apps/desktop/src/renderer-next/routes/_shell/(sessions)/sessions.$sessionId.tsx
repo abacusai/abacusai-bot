@@ -26,6 +26,8 @@ import {
   useWorkspace,
   useSessionComposerModel,
   SessionContextTray,
+  SessionTasks,
+  SessionChangesCard,
   openSessionOnce,
   openTab,
 } from "#next/features/sessions";
@@ -165,6 +167,34 @@ const SessionGone = () => {
     </div>
   );
 };
+const SessionBeside = ({ id }: { id: string }) => {
+  const { chat } = Route.useRouteContext();
+  const row = useSession(id);
+  const workspace = useWorkspace(row?.workspaceId ?? "");
+  const { t } = useTranslation();
+  useEffect(() => {
+    void chat.session(id).load();
+  }, [chat, id]);
+  if (!row) return <SessionGone />;
+  return (
+    <ChatView
+      threadId={id}
+      skin="session"
+      runtime={chat}
+      focused={false}
+      workspaceRoot={row.worktreePath ?? workspace?.path ?? null}
+      composer={{
+        mode: "mini",
+        attachmentsBase: null,
+        showModeChip: false,
+        placeholder: t("sessions.sidebar.openBeside"),
+        model: null,
+        turnBusy: false,
+        readOnly: { reason: row.label },
+      }}
+    />
+  );
+};
 const SessionRoute = () => {
   const { sessionId } = Route.useParams();
   const { transport, chat: runtime } = Route.useRouteContext();
@@ -177,6 +207,10 @@ const SessionRoute = () => {
   const session = runtime.session(sessionId);
   const host = useSelector(session.hostStore, (s) => s);
   const incarnation = useSelector(host.store, (s) => s.incarnation);
+  const completed = useSelector(
+    host.store,
+    (s) => s.runs.active === null && s.runs.outcomes.at(-1)?.kind === "success"
+  );
   const presenter = nativePresenterFor(transport.client);
   useEffect(() => {
     openSessionOnce(sessionId);
@@ -244,6 +278,7 @@ const SessionRoute = () => {
         registerHotkeys={(next, previous, close) => (
           <DockHotkeys next={next} previous={previous} close={close} />
         )}
+        renderSession={(id) => <SessionBeside id={id} />}
         renderAgent={(id) => (
           <SessionAgents runtime={runtime} threadId={sessionId} selected={id} />
         )}
@@ -269,13 +304,23 @@ const SessionRoute = () => {
               } as never)
             }
             slots={{
-              composerContext: (
-                <SessionContextTray
-                  workspaceId={row.workspaceId}
-                  sessionId={sessionId}
-                  mode={row.mode}
-                  busy={row.turn?.isBusy === true}
+              runTail: (
+                <SessionChangesCard
+                  row={row}
+                  finished={completed}
+                  review={() => select("changes")}
                 />
+              ),
+              composerContext: (
+                <>
+                  <SessionTasks messages={host.messages} />
+                  <SessionContextTray
+                    workspaceId={row.workspaceId}
+                    sessionId={sessionId}
+                    mode={row.mode}
+                    busy={row.turn?.isBusy === true}
+                  />
+                </>
               ),
             }}
             composer={{
@@ -284,6 +329,7 @@ const SessionRoute = () => {
               attachmentsBase: root,
               showModeChip: true,
               model: model.model,
+              onBlocked: model.onBlocked,
               availableModes: model.availableModes,
               blocked: model.blocked,
               turnBusy: row.turn?.isBusy === true,
@@ -314,7 +360,19 @@ const SessionRoute = () => {
                 });
               },
               ...(row.routineId
-                ? { readOnly: { reason: t("chat.composer.routineRun") } }
+                ? {
+                    readOnly: {
+                      reason: t("chat.composer.routineRun"),
+                      action: (
+                        <AppLink
+                          to="/routines/$routineId"
+                          params={{ routineId: row.routineId }}
+                        >
+                          {t("sessions.routine.talk")}
+                        </AppLink>
+                      ),
+                    },
+                  }
                 : workspace?.status === "deleted" || model.missing
                   ? { readOnly: { reason: t("sessions.missing.folder") } }
                   : {}),

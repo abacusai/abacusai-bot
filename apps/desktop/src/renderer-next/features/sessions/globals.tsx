@@ -9,6 +9,7 @@ import {
   documentSoundPlayer,
   setDocumentSoundPrefs,
 } from "#next/lib/document-sound";
+import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { isThreadSeen } from "#next/lib/navigation/visible-thread";
 import { createNotifier } from "#next/lib/notify";
 import { subscribeRunFinished } from "#next/lib/run-finished";
@@ -30,6 +31,7 @@ export const SessionsGlobals = ({
   }) => boolean;
 }) => {
   const { t } = useTranslation();
+  const navigate = useAppNavigate();
   const transport = useSessionsTransport();
   const db = useDb();
   const prefs = usePrefs();
@@ -134,6 +136,28 @@ export const SessionsGlobals = ({
       },
       abort.signal
     );
+    void followNotices(
+      transport,
+      ({ signal }) => transport.client.system.events({}, { signal }),
+      (event) => {
+        const id = event.metadata.sessionId;
+        if (!id) return;
+        const row = db.collections.sessions.get(id);
+        if (row?.owner?.kind === "bot")
+          void navigate({
+            to: "/bots/$botId",
+            params: { botId: row.owner.botId },
+            transition: "nav-lateral",
+          });
+        else if (row)
+          void navigate({
+            to: "/sessions/$sessionId",
+            params: { sessionId: id },
+            transition: "nav-lateral",
+          });
+      },
+      abort.signal
+    );
     const unlock = () => documentSoundPlayer().unlock();
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => {
@@ -141,6 +165,6 @@ export const SessionsGlobals = ({
       abort.abort();
       window.removeEventListener("pointerdown", unlock);
     };
-  }, [transport, db, qc]);
+  }, [transport, db, qc, navigate]);
   return <BrowserAskHost />;
 };

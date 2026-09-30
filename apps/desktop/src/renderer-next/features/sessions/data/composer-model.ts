@@ -43,6 +43,8 @@ export const useSessionComposerModel = (row?: SessionRow) => {
   });
   return {
     error,
+    onBlocked: () =>
+      void navigate({ to: "/settings/models", transition: "nav-lateral" }),
     missing: checkout.data?.exists === false,
     availableModes: sandbox.data?.available
       ? [

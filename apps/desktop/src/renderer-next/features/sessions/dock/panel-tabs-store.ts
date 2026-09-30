@@ -8,6 +8,8 @@ export interface PanelTab {
   title: string;
   openedAt: number;
   path?: string;
+  sessionId?: string;
+  shell?: import("#shared/terminal-shells").TerminalShellId;
   url?: string;
 }
 export interface PanelTabs {
@@ -39,7 +41,9 @@ export const updateTabs = (
 export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
   updateTabs(key, (s) => {
     const exists = s.tabs.find((t) => t.ref === tab.ref);
-    let tabs = exists ? s.tabs : [...s.tabs, { ...tab, openedAt: Date.now() }];
+    let tabs = exists
+      ? s.tabs.map((t) => (t.ref === tab.ref ? { ...t, ...tab } : t))
+      : [...s.tabs, { ...tab, openedAt: Date.now() }];
     const previews = tabs.filter((t) => t.ref.startsWith("preview:"));
     if (previews.length > 50)
       tabs = tabs.filter((t) => t.ref !== previews[0]?.ref);

@@ -65,3 +65,38 @@ it("R4-T15 folds at 1100 only for a split, keeps chat distinct from closed", () 
   });
   expect(clampChatWidth(480, 800, 488)).toBe(360);
 });
+it("reorders within a leaf without duplicating tabs and accepts all edge directions", () => {
+  const leaf: DockNode = {
+    kind: "leaf",
+    id: "root",
+    tabs: ["files", "changes", "browser:b"],
+    active: "files",
+  };
+  const reordered = dockReducer(leaf, {
+    type: "move",
+    tab: "browser:b",
+    target: "root",
+    before: "files",
+    id: "unused",
+  });
+  expect(dockLeaves(reordered)[0]!.tabs).toEqual([
+    "browser:b",
+    "files",
+    "changes",
+  ]);
+  for (const edge of ["left", "right", "top", "bottom"] as const) {
+    const split = dockReducer(leaf, {
+      type: "move",
+      tab: "files",
+      target: "root",
+      edge,
+      id: "new",
+    });
+    expect(
+      dockLeaves(split)
+        .flatMap((l) => l.tabs)
+        .sort()
+    ).toEqual([...leaf.tabs].sort());
+    expect(dockLeaves(split)).toHaveLength(2);
+  }
+});

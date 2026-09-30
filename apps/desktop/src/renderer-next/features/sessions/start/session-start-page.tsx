@@ -1,9 +1,13 @@
+import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#next/data/db";
+import { isListedSession } from "#next/data/db/filters";
+import { usePrefs } from "#next/data/db/prefs";
+import { AppLink } from "#next/lib/navigation/app-link";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Button } from "#next/ui/button";
 
@@ -37,6 +41,8 @@ export const SessionStartPage = ({
 }) => {
   const { t } = useTranslation();
   const db = useDb();
+  const prefs = usePrefs();
+  const { data: recent } = useLiveQuery(db.collections.sessions);
   const transport = useSessionsTransport();
   const navigate = useAppNavigate();
   const draft = useSelector(startDraftStore, (s) => s);
@@ -141,6 +147,37 @@ export const SessionStartPage = ({
           <p role="alert" className="text-destructive text-sm">
             {error}
           </p>
+        ) : null}
+        {!prefs.sidebar.pinned ? (
+          <div>
+            <h2 className="text-sm">
+              {t("sessions.start.recent", { workspace: workspace?.label })}
+            </h2>
+            {(recent ?? [])
+              .filter(
+                (s) => isListedSession(s) && s.workspaceId === workspace?.id
+              )
+              .toSorted(
+                (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)
+              )
+              .slice(0, 4)
+              .map((s) => (
+                <AppLink
+                  key={s.id}
+                  to="/sessions/$sessionId"
+                  params={{ sessionId: s.id }}
+                  className="flex justify-between rounded-lg p-2 text-sm"
+                >
+                  <span>{s.label || t("sessions.untitled")}</span>
+                  <time dateTime={s.updatedAt}>
+                    {new Intl.DateTimeFormat(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    }).format(new Date(s.updatedAt))}
+                  </time>
+                </AppLink>
+              ))}
+          </div>
         ) : null}
         <div>
           <p className="text-muted-foreground mb-2 text-xs">

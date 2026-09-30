@@ -1,3 +1,4 @@
+import { UrlRegexProvider } from "ghostty-web";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -6,6 +7,7 @@ import {
   terminalKeyHandler,
   type TerminalAction,
 } from "#next/components/terminal/keys";
+import { followNotices } from "#next/data/queries/live";
 import type { SessionRow } from "#shared/contract/rows";
 import {
   sessionConversationKey,
@@ -22,12 +24,16 @@ export const TerminalTab = ({
   visible,
   onClose,
   dispatch,
+  onUrl,
+  shell,
 }: {
   row: SessionRow;
   id: string;
   visible: boolean;
   onClose: () => void;
   dispatch: (id: TerminalAction) => void;
+  onUrl: (url: string) => void;
+  shell?: import("#shared/terminal-shells").TerminalShellId;
 }) => {
   const { t } = useTranslation();
   const transport = useSessionsTransport();
@@ -36,6 +42,7 @@ export const TerminalTab = ({
   const [error, setError] = useState<string | null>(null);
   const focused = useRef(false);
   const action = useEffectEvent(dispatch);
+  const openUrl = useEffectEvent(onUrl);
   const close = useEffectEvent(onClose);
   useEffect(() => {
     const abort = new AbortController();
@@ -50,6 +57,7 @@ export const TerminalTab = ({
           conversationKey: key,
           conversation: sessionConversationRef(row.workspaceId, row.id),
           generation: view.generation,
+          ...(shell ? { shell } : {}),
           cols: view.term.cols || 80,
           rows: view.term.rows || 24,
         });
@@ -78,6 +86,19 @@ export const TerminalTab = ({
             view.term
           )
         );
+        const links = new UrlRegexProvider(view.term);
+        view.term.registerLinkProvider({
+          provideLinks(y, callback) {
+            links.provideLinks(y, (found) =>
+              callback(
+                found?.map((link) => ({
+                  ...link,
+                  activate: () => openUrl(link.text),
+                }))
+              )
+            );
+          },
+        });
         const removeMouse = installMouseReporting(view.term, view.element);
         let outputAbort: AbortController | undefined;
         const connectOutput = () => {
@@ -125,6 +146,27 @@ export const TerminalTab = ({
         };
         view.reconnect = connectOutput;
         connectOutput();
+        void followNotices(
+          transport,
+          ({ signal }) =>
+            transport.client.terminal.events(
+              { conversationKey: key },
+              { signal }
+            ),
+          (event) => {
+            const state =
+              event.type === "snapshot"
+                ? event.states.find((s) => s.terminalId === id)
+                : event.state.terminalId === id
+                  ? event.state
+                  : undefined;
+            if (state && state.generation !== view.generation) {
+              view.generation = state.generation;
+              connectOutput();
+            }
+          },
+          abort.signal
+        );
         let timer: ReturnType<typeof setTimeout> | undefined;
         const fit = () => {
           if (timer) clearTimeout(timer);
@@ -153,6 +195,7 @@ export const TerminalTab = ({
           observer.disconnect();
           input.dispose();
           removeMouse();
+          links.dispose();
           if (timer) clearTimeout(timer);
           view.element.remove();
         };
@@ -163,7 +206,7 @@ export const TerminalTab = ({
       cleanup();
       if (exitTimer) clearTimeout(exitTimer);
     };
-  }, [transport, key, id, row.workspaceId, row.id, t]);
+  }, [transport, key, id, row.workspaceId, row.id, t, shell]);
   useEffect(() => {
     if (!visible)
       void getTerminalView(`${key}:${id}`).then((view) => {
