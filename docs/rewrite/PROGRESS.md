@@ -11,7 +11,7 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 0 | DB tables (snapshot + change events) | same spec as transport | | | spec |
 | 0 | migration runner | same spec as transport | | | spec |
 | 0 | Window Controls Overlay + Electron 44 | r2 | a059a113 + cba4ca8a (Codex) | Claude r1 + re-review MERGEABLE; smoke on E44 OK; 2 low items deferred to wco switch | done (legacy default) |
-| 1 | renderer foundation (shell, router, theme, gallery) | r4 (Codex r1–r3 applied) | waits on transport A fixes (Transport.state/onClose) | | spec done |
+| 1 | renderer foundation (shell, router, theme, gallery) | r4 (Codex r1–r3 applied) | implemented on rewrite/01-foundation work (agent worktree); DB tables served by dev fixtures until 00 sub-slice B | | implementing (review next) |
 | 2 | chat kit | | | | todo |
 | 3 | bots | | | | todo |
 | 4 | sessions | | | | todo |
