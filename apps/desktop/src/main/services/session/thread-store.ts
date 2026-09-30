@@ -290,6 +290,24 @@ export class ThreadStore {
     });
   }
 
+  /**
+   * Applies every journalled write whose destination is no longer held, for
+   * every thread, opened or not. Main calls it once at startup, right after
+   * the migration runner set this launch's write blocks: a thread saved
+   * while a previous launch's recovery was unresolved, and never opened
+   * again, still reaches its file.
+   */
+  replayHeld(): number {
+    try {
+      const applied = this.held.replayAll();
+      if (applied > 0) this.log(`replayed ${applied} held thread write(s)`);
+      return applied;
+    } catch (error) {
+      this.log(`replaying held thread writes failed: ${String(error)}`);
+      return 0;
+    }
+  }
+
   threadPath(sessionId: string): string | null {
     return isSafeSessionId(sessionId)
       ? path.join(this.home(), THREADS_DIR_NAME, `${sessionId}.json`)

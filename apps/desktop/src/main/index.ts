@@ -1738,6 +1738,9 @@ app
     // store reads the files they derive. Never throws; a failure is recorded
     // and retried next launch, and every consumer has a fallback.
     await runStartupMigrations(APP_DISPLAY_NAME);
+    // The blocks for this launch are set: journalled thread writes whose
+    // files are free again land now, even for threads nobody opens.
+    workspaceServiceHost.threadStore.replayHeld();
     // An unresolved commit that may cover prefs.json: this session writes a
     // copy, so the next launch's rollback neither overwrites nor is defeated
     // by what the user changes now.
