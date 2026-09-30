@@ -335,6 +335,7 @@ import {
   recommendedModelId,
 } from "./services/providers/models";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
+import { agentTurnBusy } from "./services/session/agent-busy";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
@@ -1555,9 +1556,18 @@ export class ServiceHost {
     this.logSyncService.syncNow();
   }
 
-  /** True while a user-requested agent turn is still in flight. */
+  /**
+   * True while an agent turn is in flight: an agui runtime's from the
+   * relay's run state (authoritative, never raced by compat; spec 07 review
+   * r1 #10), an ndjson runtime's from main's turn state.
+   */
   hasActiveAgentTurn(): boolean {
-    return this.sessionTurnStateService.hasBusyTurn();
+    return agentTurnBusy({
+      relay: this.aguiRelay,
+      turnState: this.sessionTurnStateService,
+      wireOf: (sessionId) =>
+        this.agentManagerService.getRuntimeInfo(sessionId)?.wire ?? null,
+    });
   }
 
   /** True while any terminal PTY (user shell or preview server) is alive. */

@@ -95,7 +95,7 @@ import {
   registerIpcHandlers,
   type HostOperations,
 } from "./handler";
-import { registerKeepAwakeHandlers } from "./keep-awake";
+import { registerKeepAwakeHandlers, setMainAgentBusy } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
@@ -1787,6 +1787,11 @@ app
       .catch(() => undefined);
 
     registerKeepAwakeHandlers();
+    // Keep-awake follows the relay's run state too, re-evaluated at every
+    // AG-UI run start and terminal (spec 07 review r1 #10).
+    workspaceServiceHost.aguiRelay.onBusyChange((busy) => {
+      setMainAgentBusy(busy);
+    });
 
     // Best-effort cleanup of attachment temp files older than 7 days across
     // every workspace; never blocks startup.
