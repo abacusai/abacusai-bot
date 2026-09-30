@@ -59,7 +59,7 @@ describe("debug sync, feedback and previews on v2 AG-UI threads", () => {
       readTranscript: (id) =>
         syncLogFor(id, {
           readV1: (sessionId) => transcripts.read(sessionId),
-          readThread: (sessionId) => store.readCurrentFile(sessionId),
+          readThread: (sessionId) => store.readAguiFile(sessionId),
         }),
       clientVersion: "1.0.0",
     });
@@ -229,4 +229,25 @@ describe("debug sync, feedback and previews on v2 AG-UI threads", () => {
       log?.segments.map((segment) => (segment as { id: string }).id)
     ).toEqual(["text:0:1", "run-3:a", "run-3:a#1"]);
   });
+});
+
+it("debug-sync reads v1 history without creating or repairing its v2 twin", () => {
+  const store = new ThreadStore({ home: () => home, log: () => undefined });
+  const transcripts = new TranscriptService({ threads: store });
+  fs.mkdirSync(path.join(home, "transcripts"), { recursive: true });
+  const file = path.join(home, "transcripts", "legacy.json");
+  const bytes = JSON.stringify({
+    version: 1,
+    sessionId: "legacy",
+    updatedAt: "2026-09-01T00:00:00Z",
+    segments: [{ id: "u", type: "text", source: "user", content: "hi" }],
+  });
+  fs.writeFileSync(file, bytes);
+  const result = syncLogFor("legacy", {
+    readV1: (id) => transcripts.read(id),
+    readThread: (id) => store.readAguiFile(id),
+  });
+  expect(result?.segments).toHaveLength(1);
+  expect(fs.existsSync(store.threadPath("legacy")!)).toBe(false);
+  expect(fs.readFileSync(file, "utf8")).toBe(bytes);
 });

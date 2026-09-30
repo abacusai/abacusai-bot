@@ -11,7 +11,9 @@ import type { TableSources } from "./sources";
  */
 export const readRoutineRunRows = (sources: TableSources): RoutineRunRow[] => {
   const history = new Map<string, readonly RoutineRun[]>(
-    sources.listRoutines().map((routine) => [routine.id, routine.runs])
+    (sources.listRoutineHistories?.() ?? sources.listRoutines()).map(
+      (routine) => [routine.id, routine.runs]
+    )
   );
   return sources
     .listAllAgentSessions()
