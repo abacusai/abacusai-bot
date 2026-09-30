@@ -218,7 +218,12 @@ const ShellSection = () => {
             key={area}
             className="bg-sidebar h-[420px] overflow-hidden rounded-md border"
           >
-            <Rail area={area} floatingEnabled={false} initials="RR" />
+            <Rail
+              area={area}
+              floatingEnabled={false}
+              initials="RR"
+              label={`Rail, ${area} active`}
+            />
           </div>
         ))}
       </Atoms.Row>

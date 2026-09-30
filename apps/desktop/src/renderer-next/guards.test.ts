@@ -1,0 +1,136 @@
+/**
+ * R1-T15 (covers spec 00 A-T7 for data/**): every renderer-next source file
+ * parsed to an ESTree AST. No `window.api` (or `globalThis.api`/`self.api`),
+ * no `ipcRenderer` identifier, no import of electron, the old renderer
+ * (except `#locales/*`), framer-motion, zustand or sonner; Base UI only
+ * under ui/; features import only other features' index files (and only the
+ * shell's sidebar map and the dev gallery import other features at all);
+ * routes import only feature index files.
+ */
+import { parseAst } from "rolldown/parseAst";
+import { describe, expect, it } from "vitest";
+
+const sources = import.meta.glob<string>(
+  ["./**/*.{ts,tsx}", "!./**/*.d.ts", "!./routeTree.gen.ts"],
+  { query: "?raw", import: "default", eager: true }
+);
+
+type Node = { type: string; [key: string]: unknown };
+
+const walk = (node: unknown, visit: (node: Node) => void): void => {
+  if (Array.isArray(node)) {
+    for (const child of node) walk(child, visit);
+    return;
+  }
+  if (node === null || typeof node !== "object") return;
+  const typed = node as Node;
+  if (typeof typed.type === "string") visit(typed);
+  for (const value of Object.values(typed)) walk(value, visit);
+};
+
+const files = Object.entries(sources).map(([path, source]) => ({
+  path: path.replace(/^\.\//, ""),
+  source,
+  ast: parseAst(source, { lang: path.endsWith(".tsx") ? "tsx" : "ts" }, path),
+}));
+
+const importsOf = (ast: unknown): string[] => {
+  const found: string[] = [];
+  walk(ast, (node) => {
+    if (
+      (node.type === "ImportDeclaration" ||
+        node.type === "ExportNamedDeclaration" ||
+        node.type === "ExportAllDeclaration" ||
+        node.type === "ImportExpression") &&
+      node.source != null &&
+      typeof (node.source as { value?: unknown }).value === "string"
+    )
+      found.push((node.source as { value: string }).value);
+  });
+  return found;
+};
+
+const BANNED = ["electron", "framer-motion", "zustand", "sonner"];
+
+describe("renderer-next guards", () => {
+  it("parses every file", () => {
+    expect(files.length).toBeGreaterThan(100);
+  });
+
+  it("never touches window.api or ipcRenderer", () => {
+    const hits: string[] = [];
+    for (const file of files)
+      walk(file.ast, (node) => {
+        if (node.type === "MemberExpression") {
+          const object = node.object as Node & { name?: string };
+          const property = node.property as Node & { name?: string };
+          if (
+            object.type === "Identifier" &&
+            ["window", "globalThis", "self"].includes(object.name ?? "") &&
+            property.type === "Identifier" &&
+            property.name === "api"
+          )
+            hits.push(`${file.path}: ${object.name}.api`);
+        }
+        if (node.type === "Identifier" && node.name === "ipcRenderer")
+          hits.push(`${file.path}: ipcRenderer`);
+      });
+    expect(hits).toEqual([]);
+  });
+
+  it("imports none of the legacy stack and nothing from the old tree but locales", () => {
+    const hits: string[] = [];
+    for (const file of files)
+      for (const specifier of importsOf(file.ast)) {
+        if (BANNED.includes(specifier)) hits.push(`${file.path}: ${specifier}`);
+        if (specifier.startsWith("#renderer/"))
+          hits.push(`${file.path}: ${specifier}`);
+        if (
+          /(^|\/)renderer\//.test(specifier) &&
+          !specifier.startsWith("#locales/")
+        )
+          hits.push(`${file.path}: ${specifier}`);
+      }
+    expect(hits).toEqual([]);
+  });
+
+  it("imports Base UI only under ui/", () => {
+    const hits = files.flatMap((file) =>
+      file.path.startsWith("ui/")
+        ? []
+        : importsOf(file.ast)
+            .filter((specifier) => specifier.startsWith("@base-ui/"))
+            .map((specifier) => `${file.path}: ${specifier}`)
+    );
+    expect(hits).toEqual([]);
+  });
+
+  it("keeps features apart and routes on feature index files", () => {
+    const hits: string[] = [];
+    for (const file of files) {
+      const own = /^features\/([^/]+)\//.exec(file.path)?.[1];
+      for (const specifier of importsOf(file.ast)) {
+        const target = /^#next\/features\/([^/]+)(\/.*)?$/.exec(specifier);
+        if (target == null) continue;
+        const [, feature, rest] = target;
+        if (feature === own) continue;
+        const testCode =
+          file.path.startsWith("test-support/") ||
+          /\.test\.tsx?$/.test(file.path);
+        if (!testCode && rest != null && rest !== "" && rest !== "/index")
+          hits.push(`${file.path}: ${specifier} (internal)`);
+        const allowed =
+          file.path.startsWith("routes/") ||
+          file.path === "main.tsx" ||
+          file.path.endsWith(".test.ts") ||
+          file.path.endsWith(".test.tsx") ||
+          file.path.startsWith("test-support/") ||
+          file.path === "features/shell/sidebars.ts" ||
+          own === "gallery";
+        if (own != null && !allowed)
+          hits.push(`${file.path}: ${specifier} (other feature)`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+});
