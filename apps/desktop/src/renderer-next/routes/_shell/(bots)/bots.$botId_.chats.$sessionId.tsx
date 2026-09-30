@@ -11,7 +11,7 @@ import {
   loadSenderChat,
   FilesTab,
 } from "#next/features/bots";
-import { chatRuntimeFor, ChatView, useThreadHost } from "#next/features/chat";
+import { ChatView, useThreadHost } from "#next/features/chat";
 import {
   TopBarSlot,
   SidePanelContent,
@@ -33,9 +33,8 @@ const Sender = ({
   bot: NonNullable<ReturnType<typeof useBot>>;
   sessionId: string;
 }) => {
-  const { transport } = Route.useRouteContext();
-  const runtime = chatRuntimeFor(transport);
-  const host = useThreadHost(runtime.session(sessionId));
+  const { chat } = Route.useRouteContext();
+  const host = useThreadHost(chat.session(sessionId));
   useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
   const slots = useBotChatSlots(bot, sessionId, false, true, (url) =>
     requestBrowserOpen({ sessionId, url })
@@ -54,7 +53,7 @@ const Sender = ({
       <ChatView
         threadId={sessionId}
         skin="bot"
-        runtime={chatRuntimeFor(transport)}
+        runtime={chat}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}
         slots={slots.chat}
@@ -86,7 +85,7 @@ export const Route = createFileRoute(
       loadSenderChat(
         {
           db: context.db,
-          load: (id) => chatRuntimeFor(context.transport).session(id).load(),
+          load: (id) => context.chat.session(id).load(),
         },
         params.botId,
         params.sessionId,

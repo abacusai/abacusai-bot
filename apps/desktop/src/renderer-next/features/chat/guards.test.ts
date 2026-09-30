@@ -47,9 +47,12 @@ const files = Object.entries(sources).map(([path, source]) => ({
 
 const memberPath = (node: Node): string[] => {
   if (node.type === "Identifier") return [String(node.name)];
-  if (node.type === "MemberExpression" && !node.computed) {
+  if (node.type === "MemberExpression") {
     const property = node.property as Node;
-    return [...memberPath(node.object as Node), String(property.name)];
+    return [
+      ...memberPath(node.object as Node),
+      String(node.computed ? property.value : property.name),
+    ];
   }
   return ["?"];
 };
@@ -151,6 +154,29 @@ describe("R2-T30 chat guards", () => {
           path.at(-2) === "client"
       )
       .map(({ file, path }) => `${file}: ${path.join(".")}`);
+    expect(hits).toEqual([]);
+  });
+
+  it("request methods cannot be destructured or accessed through computed keys in the kit", () => {
+    const hits: string[] = [];
+    for (const file of files.filter((f) => f.path.startsWith("features/chat/")))
+      walk(file.ast, (node) => {
+        if (node.type === "ObjectPattern")
+          for (const entry of node.properties as Node[]) {
+            const key = entry.key as Node | undefined;
+            if (
+              key != null &&
+              REQUEST_METHODS.has(String(key.name ?? key.value))
+            )
+              hits.push(file.path);
+          }
+        if (
+          node.type === "MemberExpression" &&
+          node.computed &&
+          REQUEST_METHODS.has(String((node.property as Node).value))
+        )
+          hits.push(file.path);
+      });
     expect(hits).toEqual([]);
   });
 

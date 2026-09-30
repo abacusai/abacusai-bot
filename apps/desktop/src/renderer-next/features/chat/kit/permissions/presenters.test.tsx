@@ -8,7 +8,9 @@
  */
 import type { PermissionRequest } from "@abacus-ai/agent";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+
+import { loadUntyped } from "#next/test-support/chat-relay";
 
 import * as b from "../../fixtures/builders";
 import { FakeRelay } from "../../fixtures/relay";
@@ -21,38 +23,17 @@ import {
 } from "./decisions";
 import { bashRule, present } from "./presenters";
 
-const FILE_KINDS = [
-  "accept",
-  "reject",
-  "allowAlways",
-  "allowYolo",
-  "accept_with_message",
-  "reject_with_message",
-];
-const SANDBOX_KINDS = [
-  "accept",
-  "accept_with_message",
-  "background",
-  "allowAlways",
-  "allow_always_with_rule",
-  "allow_always_with_rules",
-  "allowYolo",
-  "reject",
-  "reject_with_message",
-];
-const allowedFor = (type: string): string[] =>
-  type === "run_terminal"
-    ? [
-        ...FILE_KINDS,
-        "background",
-        "allow_always_with_rule",
-        "allow_always_with_rules",
-      ]
-    : type === "ask_user_question"
-      ? ["question_answers", "reject"]
-      : type === "sandbox_denied" || type === "network_host"
-        ? SANDBOX_KINDS
-        : FILE_KINDS;
+let allowedFor: (type: PermissionRequest["type"]) => string[];
+beforeAll(async () => {
+  allowedFor = (
+    await loadUntyped<{ allowedDecisions: typeof allowedFor }>(
+      new URL(
+        "../../../../../../../../packages/agent/src/agui/permissions.ts",
+        import.meta.url
+      ).pathname
+    )
+  ).allowedDecisions;
+});
 
 const tool = { id: "c1", name: "x", type: "x", input: {} };
 const REQUESTS: Array<[PermissionRequest, RegExp | string, string[]]> = [
@@ -373,6 +354,60 @@ describe("R2-T24 questions", () => {
   afterEach(async () => {
     await current?.cleanup();
     current = null;
+  });
+
+  it("Skip all sends reject without answers", async () => {
+    const request = {
+      type: "ask_user_question",
+      questions: [questions[0]],
+      tool: { id: "c1", name: "ask_user_question", type: "x", input: {} },
+      displayName: "",
+    } as unknown as PermissionRequest;
+    const d = b.descriptor(request, {
+      id: "skip",
+      allowed: ["question_answers", "reject"],
+    });
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r1"),
+      ...b.permissionEvents([d], d),
+    ]);
+    current = await renderRelay(relay, "session");
+    fireEvent.click(await screen.findByRole("button", { name: "Skip all" }));
+    await waitFor(() => expect(relay.stats.respond).toHaveLength(1));
+    expect(relay.stats.respond[0]!.decision).toBe("reject");
+  });
+
+  it("letter shortcuts choose an answer and Mod+Enter submits", async () => {
+    const request = {
+      type: "ask_user_question",
+      questions: [questions[0]],
+      tool: { id: "c1", name: "ask_user_question", type: "x", input: {} },
+      displayName: "",
+    } as unknown as PermissionRequest;
+    const d = b.descriptor(request, {
+      id: "keys",
+      allowed: ["question_answers", "reject"],
+    });
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r1"),
+      ...b.permissionEvents([d], d),
+    ]);
+    current = await renderRelay(relay, "session");
+    const card = await screen.findByRole("group", {
+      name: "The agent asks you a question",
+    });
+    const form = card.querySelector("form")!;
+    fireEvent.keyDown(form, { key: "b" });
+    fireEvent.keyDown(form, { key: "Enter", metaKey: true });
+    await waitFor(() => expect(relay.stats.respond).toHaveLength(1));
+    expect(relay.stats.respond[0]!.decision).toEqual({
+      type: "question_answers",
+      answers: { question_0: "768" },
+    });
   });
 
   it("the rendered questionnaire sends question_answers; Skip all sends reject", async () => {

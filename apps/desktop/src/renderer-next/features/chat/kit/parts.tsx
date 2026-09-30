@@ -5,8 +5,10 @@
  */
 import type { PartProps } from "@tanstack/ai-react/ui";
 import { Brain, ChevronRight, FileText, Globe, Layers } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ABACUS_PLAN_URL } from "#next/lib/abacus-links";
 import { cn } from "#next/lib/cn";
 import {
   Attachment,
@@ -15,6 +17,7 @@ import {
   AttachmentMedia,
   AttachmentTitle,
 } from "#next/ui/attachment";
+import { Button } from "#next/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -67,6 +70,7 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
   const { t } = useTranslation();
   const { workspaceRoot, runtime, skin } = useChatView();
   const scope = useMessageScope();
+  const [dismissed, setDismissed] = useState(false);
   const abacus = abacusOf(part);
   const kind = typeof abacus.kind === "string" ? abacus.kind : null;
   const content = (part as { content: string }).content;
@@ -93,6 +97,7 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
       );
     }
     case "notification":
+      if (dismissed) return null;
       return (
         <NoticeRow
           notice={{
@@ -105,7 +110,7 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
               actions: abacus.actions,
             },
           }}
-          onDismiss={() => {}}
+          onDismiss={() => setDismissed(true)}
         />
       );
     case "collapsible":
@@ -161,6 +166,12 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
           {t("chat.part.featureLimit", {
             feature: String(abacus.featureName ?? ""),
           })}
+          <Button
+            variant="secondary"
+            onClick={() => void runtime.host.openExternal(ABACUS_PLAN_URL)}
+          >
+            {t("creditsCard.topUpCta")}
+          </Button>
         </div>
       );
     case "compaction":
@@ -190,14 +201,26 @@ export const ThinkingView = ({ part }: PartProps<unknown, "thinking">) => {
   const { workspaceRoot } = useChatView();
   const scope = useMessageScope();
   const content = (part as { content: string }).content;
-  const thinking = scope.streaming && isLive(part);
+  const thinking = scope.streaming && scope.message?.parts.at(-1) === part;
+  const provenance = (
+    scope.message?.metadata?.abacus?.segments as
+      | Array<{ partIndex?: number; title?: string }>
+      | undefined
+  )?.find((entry) => entry.partIndex === scope.message?.parts.indexOf(part));
   const title =
-    typeof abacusOf(part).title === "string"
+    provenance?.title ??
+    (typeof abacusOf(part).title === "string"
       ? String(abacusOf(part).title)
-      : null;
+      : null);
   return (
     <Collapsible>
       <Marker
+        role="status"
+        aria-label={
+          thinking
+            ? t("chat.part.thinking")
+            : (title ?? t("chat.part.thoughts"))
+        }
         render={<CollapsibleTrigger />}
         className="hover:text-foreground cursor-pointer"
       >
@@ -220,22 +243,6 @@ export const ThinkingView = ({ part }: PartProps<unknown, "thinking">) => {
     </Collapsible>
   );
 };
-
-/** Whether a thinking part is the last of the newest assistant message. */
-const lastThinking = new WeakSet<object>();
-export const markLiveThinking = (message: {
-  role: string;
-  parts: readonly object[];
-}): void => {
-  const last = message.parts.at(-1);
-  if (
-    message.role === "assistant" &&
-    last != null &&
-    (last as { type?: string }).type === "thinking"
-  )
-    lastThinking.add(last);
-};
-const isLive = (part: object): boolean => lastThinking.has(part);
 
 const mediaSource = (part: unknown): string | null => {
   const source = (

@@ -373,9 +373,7 @@
       "pinned": "Pinned",
       "edit": "Editar bot",
       "delete": "Eliminar bot",
-      "emptyTitle": "Aún no hay bots",
-      "waiting": "{{count}} waiting on you",
-      "moreWaiting": "{{count}} more"
+      "emptyTitle": "Aún no hay bots"
     },
     "avatar": {
       "shapes": {
@@ -2602,15 +2600,15 @@
       "approval": "Needs your approval: {{title}}",
       "error": "Error: {{message}}",
       "finished": "Reply finished",
-      "stopped": "Stopped"
+      "stopped": "Stopped",
+      "newMessages_one": "{{count}} new message",
+      "newMessages_other": "{{count}} new messages"
     },
     "busy": {
-      "agents": "Waiting on {{count}} agents",
       "agents_one": "Waiting on {{count}} agent",
       "agents_other": "Waiting on {{count}} agents",
       "needsYou": "Needs you",
       "retrying": "Retrying, {{attempt}} of {{max}}",
-      "tools": "Running {{count}} tools",
       "tools_one": "Running {{count}} tool",
       "tools_other": "Running {{count}} tools",
       "typing": "Typing",
@@ -2620,16 +2618,15 @@
       "copied": "Copied",
       "copy": "Copy code",
       "showLess": "Show less",
-      "showMore": "Show {{count}} more lines",
       "showMore_one": "Show {{count}} more line",
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
-      "attach": "Attach",
+      "attach": "Adjuntar",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
       "attachFolder": "Folder",
-      "botPlaceholder": "Message {{name}}",
+      "botPlaceholder": "Mensaje a {{name}}",
       "busyBot": "Add to the queue, or stop",
       "busySession": "Steer the run, or queue the next step",
       "channelBot": "This chat lives in your messaging app. Reply there.",
@@ -2650,8 +2647,9 @@
       "searchModels": "Search models",
       "send": "Send",
       "skills": "Skills",
-      "stop": "Stop",
-      "uploading": "Wait for the attachments to finish saving"
+      "stop": "Detener",
+      "uploading": "Wait for the attachments to finish saving",
+      "pasteUnavailable": "Pasting files isn't available here"
     },
     "day": {
       "today": "Today",
@@ -2661,18 +2659,16 @@
       "crashed": "The agent stopped unexpectedly",
       "label": "Error",
       "open": "Open",
-      "retry": "Retry",
+      "retry": "Reintentar",
       "switchModel": "Switch model"
     },
     "message": {
-      "credits": "Used {{count}} credits",
       "credits_one": "Used {{count}} credit",
       "credits_other": "Used {{count}} credits",
       "discard": "Discard",
       "notSent": "Not sent",
-      "retry": "Retry",
+      "retry": "Reintentar",
       "sending": "Sending",
-      "workedThrough": "Worked through {{count}} steps",
       "workedThrough_one": "Worked through {{count}} step",
       "workedThrough_other": "Worked through {{count}} steps"
     },
@@ -2705,7 +2701,7 @@
     },
     "permission": {
       "action": {
-        "allow": "Allow",
+        "allow": "Permitir",
         "allowOnce": "Allow once",
         "alwaysAcceptEdits": "Always accept edits this session",
         "alwaysAllow": "Always allow",
@@ -2714,7 +2710,7 @@
         "alwaysAllowRule": "Always allow {{rule}}",
         "alwaysAllowSite": "Always allow this site, this session",
         "alwaysAllowThese": "Always allow these this session",
-        "deny": "Deny",
+        "deny": "Denegar",
         "planAcceptAll": "Yes, and accept all edits",
         "planApproveEach": "Yes, and approve each edit",
         "planFullAccess": "Yes, with full access",
@@ -2737,7 +2733,6 @@
         "runCommand": "Run command"
       },
       "notePlaceholder": "Tell the agent what to do instead",
-      "pending": "{{count}} requests waiting",
       "pending_one": "{{count}} request waiting",
       "pending_other": "{{count}} requests waiting",
       "problem": {
@@ -2782,7 +2777,7 @@
       }
     },
     "question": {
-      "next": "Next",
+      "next": "Siguiente",
       "previous": "Back",
       "progress": "{{current}} of {{total}}",
       "submit": "Submit"
@@ -2792,7 +2787,6 @@
       "editLabel": "Edit queued message",
       "fewer": "Show fewer",
       "label": "Queued messages",
-      "more": "{{count}} more waiting",
       "more_one": "{{count}} more waiting",
       "more_other": "{{count}} more waiting",
       "problem": {
@@ -2808,14 +2802,12 @@
       }
     },
     "run": {
-      "done": "Done in {{duration}}, {{count}} steps",
       "done_one": "Done in {{duration}}, {{count}} step",
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
       "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
     },
     "subagent": {
-      "done": "Done, {{count}} steps, {{duration}}",
       "done_one": "Done, {{count}} step, {{duration}}",
       "done_other": "Done, {{count}} steps, {{duration}}",
       "failed": "Failed",
@@ -2826,10 +2818,9 @@
         "generic": "Agent"
       },
       "open": "Open agent",
-      "steps": "{{count}} steps",
       "steps_one": "{{count}} step",
       "steps_other": "{{count}} steps",
-      "stop": "Stop",
+      "stop": "Detener",
       "stopHint": "Stops the whole reply"
     },
     "tool": {
@@ -2837,16 +2828,13 @@
       "meta": {
         "exit": "exit {{code}}",
         "lines": "lines {{from}} to {{to}}",
-        "matches": "{{count}} matches",
         "matches_one": "{{count}} match",
         "matches_other": "{{count}} matches"
       },
-      "moreSteps": "{{count}} more steps",
       "moreSteps_one": "{{count}} more step",
       "moreSteps_other": "{{count}} more steps",
       "openFile": "Open file",
       "show": "Show",
-      "showAll": "Show all {{count}} lines",
       "showAll_one": "Show all {{count}} line",
       "showAll_other": "Show all {{count}} lines",
       "status": {
@@ -2856,25 +2844,25 @@
         "refused": "refused",
         "running": "runs",
         "stopped": "stopped"
-      }
+      },
+      "earlierSteps_one": "{{count}} earlier step",
+      "earlierSteps_other": "{{count}} earlier steps"
     },
     "transcript": {
       "jump": "Jump to the end",
-      "jumpNew": "{{count}} new messages",
       "jumpNew_one": "{{count}} new message",
       "jumpNew_other": "{{count}} new messages",
       "label": "Conversation",
-      "new": "{{count}} new",
       "new_one": "{{count}} new",
       "new_other": "{{count}} new",
       "olderFailed": "Couldn't load earlier messages",
-      "retry": "Retry",
+      "retry": "Reintentar",
       "showEarlier": "Show earlier",
       "showLater": "Show later"
     },
     "view": {
       "gone": "This conversation no longer exists.",
-      "retry": "Retry",
+      "retry": "Reintentar",
       "unavailable": "The agent isn't available yet"
     }
   }

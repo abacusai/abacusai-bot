@@ -13,6 +13,7 @@ interface PickedPath {
 
 export interface ChatHostActions {
   openExternal(url: string): Promise<void>;
+  accountTier(): Promise<"free" | "basic" | "paid" | "unknown">;
   showItemInFolder(path: string): Promise<void>;
   pickFiles(): Promise<PickedPath[] | null>;
   pickFolder(): Promise<string | null>;
@@ -29,18 +30,59 @@ export interface ChatHostActions {
 export const hostActionsFor = (transport: Transport): ChatHostActions => {
   const client = transport.client;
   return {
+    accountTier: async () => {
+      const account = await client.account.abacus();
+      const tier = (
+        account?.subscription_tier ??
+        account?.plan ??
+        ""
+      ).toLowerCase();
+      return tier === "free"
+        ? "free"
+        : tier === "basic"
+          ? "basic"
+          : ["pro", "max", "enterprise", "paid"].includes(tier)
+            ? "paid"
+            : "unknown";
+    },
     openExternal: (url) => client.system.openExternal({ url }),
     showItemInFolder: (path) => client.system.showItemInFolder({ path }),
-    pickFiles: async () => {
-      const picked = await client.system.dialog.openFiles({ kind: "all" });
-      return (
-        picked?.map((file) => ({
-          path: file.path,
-          name: file.name,
-          size: file.data.byteLength,
-        })) ?? null
-      );
-    },
+    // Native File objects expose metadata without reading file contents. The
+    // preload bridge resolves their paths without the byte-returning picker RPC.
+    pickFiles: () =>
+      new Promise((resolve, reject) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.multiple = true;
+        input.hidden = true;
+        const finish = (paths: PickedPath[] | null) => {
+          input.remove();
+          resolve(paths);
+        };
+        input.addEventListener("cancel", () => finish(null), { once: true });
+        input.addEventListener(
+          "change",
+          () => {
+            try {
+              const paths = Array.from(input.files ?? []).map((file) => {
+                const path = transport.host.getPathForFile?.(file);
+                if (!path)
+                  throw new Error(
+                    "The host cannot resolve the selected file's path"
+                  );
+                return { path, name: file.name, size: file.size };
+              });
+              finish(paths.length === 0 ? null : paths);
+            } catch (error) {
+              input.remove();
+              reject(error);
+            }
+          },
+          { once: true }
+        );
+        document.body.append(input);
+        input.click();
+      }),
     pickFolder: () => client.system.dialog.openFolder(),
     savePasted: async (baseFolder, files) =>
       (await client.files.savePastedTemp({ baseFolder, files })).paths,
@@ -53,6 +95,7 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
 /** A host that does nothing (gallery, tests). */
 export const inertHostActions: ChatHostActions = {
   openExternal: async () => {},
+  accountTier: async () => "unknown",
   showItemInFolder: async () => {},
   pickFiles: async () => null,
   pickFolder: async () => null,
