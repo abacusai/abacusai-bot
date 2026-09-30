@@ -23,6 +23,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [permission, setPermission] = useState(false);
+  const denied = useRef(new Set<string>());
   const [text, setText] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => setActive(visible), visible ? 0 : 10000);
@@ -85,6 +86,13 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
           .catch(() => {});
       if (device.platform === "ios") {
         try {
+          await transport.client.devices.boot({
+            platform: device.platform,
+            deviceId: device.id,
+            focus: false,
+          });
+          if (denied.current.has(device.id))
+            throw new Error(t("sessions.device.permission"));
           const aspect = await paintScreenshot().catch(() => null);
           for (let attempt = 0; ; attempt++) {
             const source = await transport.client.devices.simulatorWindowSource(
@@ -94,6 +102,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
               source.screenPermission &&
               source.screenPermission !== "granted"
             ) {
+              denied.current.add(device.id);
               setPermission(true);
               throw new Error(t("sessions.device.permission"));
             }
@@ -120,6 +129,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
           }
           const video = document.createElement("video");
           video.muted = true;
+          video.playsInline = true;
           video.srcObject = media!;
           await video.play();
           const draw = () => {
@@ -154,6 +164,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
           setError(null);
           return;
         } catch (e) {
+          media?.getTracks().forEach((track) => track.stop());
           if (!abort.signal.aborted) setError(String(e));
         }
       }
@@ -314,6 +325,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
               size="sm"
               variant="ghost"
               onClick={() => {
+                denied.current.delete(device.id);
                 setPermission(false);
                 setError(null);
                 setRetry((n) => n + 1);
