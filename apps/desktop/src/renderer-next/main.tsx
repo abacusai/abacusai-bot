@@ -46,7 +46,10 @@ window.addEventListener("error", (event) => {
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[renderer-next] unhandled rejection", event.reason);
 });
-if (import.meta.env.DEV) guardSingleViewTransition(document);
+// Dev and the acceptance build: a second view transition in one commit is
+// reported (and counted for R1-T11b).
+if (import.meta.env.DEV || import.meta.env.VITE_UI_GALLERY === "1")
+  guardSingleViewTransition(document);
 
 const container = document.getElementById("root");
 if (container == null) throw new Error("renderer-next: #root is missing");

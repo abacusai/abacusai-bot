@@ -24,6 +24,14 @@ import {
 
 const os = implement(contract);
 
+/**
+ * Said once when a fixture build boots; also the marker the Electron
+ * acceptance suite looks for in a build to refuse it (acceptance reads
+ * main's real db.*).
+ */
+const FIXTURE_BUILD_MARKER =
+  "renderer-next fixture-db: dev fixture tables, not main's db.*";
+
 type Handlerish = (input: never) => unknown;
 
 /** Every `db.<table>.<procedure>` the fixture client has, as a handler. */
@@ -75,5 +83,6 @@ export const createMemoryDbTransport = (
 ): { db: FixtureDb; transport: LazyTransport } => {
   const db = new FixtureDb(seed);
   const transport = createMemoryTransport(buildRouter(db), {});
+  if (import.meta.env.MODE !== "test") console.info(FIXTURE_BUILD_MARKER);
   return { db, transport: async () => transport };
 };

@@ -22,6 +22,20 @@ const fakeHost = (): HarnessHost &
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
+describe("renderer.dropPort", () => {
+  it("asks main to drop renderer-next's port (R1-T22)", async () => {
+    const dropRendererPort = vi.fn(async () => ({ webContentsId: 3 }));
+    await expect(
+      runHarnessOp(
+        fakeHost(),
+        { op: "renderer.dropPort", input: {} },
+        { dropRendererPort }
+      )
+    ).resolves.toEqual({ webContentsId: 3 });
+    expect(dropRendererPort).toHaveBeenCalledOnce();
+  });
+});
+
 describe("shouldInstallHarness", () => {
   it("needs an unpackaged app and ABACUSBOT_DEV_HARNESS=1", () => {
     expect(shouldInstallHarness({ ABACUSBOT_DEV_HARNESS: "1" }, false)).toBe(

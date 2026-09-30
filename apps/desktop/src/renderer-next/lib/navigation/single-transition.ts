@@ -1,16 +1,19 @@
 /**
  * "Never two view transitions in one commit" (spec 01 §6.7 amendment, §13):
  * a React `<ViewTransition>` that animated while the router's document
- * transition runs would start a second `document.startViewTransition`, which
- * skips the first. Dev builds wrap `startViewTransition` and report an
- * overlap; R1-T11b reads the count in the real renderer.
+ * transition is committing would start a second `document.startViewTransition`
+ * inside the first one's update, which skips the first. The dev and
+ * acceptance builds wrap `startViewTransition` and count a start that
+ * happens while another transition's update callback is still running; a
+ * new navigation that interrupts a finished commit's animation is normal
+ * and not counted. R1-T11b reads the count in the real renderer.
  */
 type StartViewTransition = Document["startViewTransition"];
 
 const GUARDED = Symbol.for("abacus.singleViewTransition");
 
 export interface OverlapReport {
-  /** Transitions started while another was still running. */
+  /** Transitions started inside another transition's update (one commit). */
   overlaps: number;
 }
 
@@ -27,20 +30,20 @@ export const guardSingleViewTransition = (
   if (typeof doc.startViewTransition !== "function") return null;
   const original = doc.startViewTransition.bind(doc) as StartViewTransition;
   const report: OverlapReport = { overlaps: 0 };
-  let running = 0;
+  let updating = 0;
   doc.startViewTransition = ((arg?: unknown) => {
-    if (running > 0) {
+    if (updating > 0) {
       report.overlaps += 1;
       onOverlap(
-        "[renderer-next] a second view transition started while one was running"
+        "[renderer-next] a view transition started inside another one's commit"
       );
     }
     const transition = original(arg as never);
-    running += 1;
+    updating += 1;
     const done = (): void => {
-      running -= 1;
+      updating -= 1;
     };
-    transition.finished.then(done, done);
+    transition.updateCallbackDone.then(done, done);
     return transition;
   }) as StartViewTransition;
   target[GUARDED] = report;
