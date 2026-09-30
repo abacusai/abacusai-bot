@@ -12,6 +12,8 @@ import type {
 } from "#shared/contract/errors";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
+import { CronParseError } from "#shared/routines/cron";
+import { TimeoutError } from "#shared/timeout-error";
 
 import { UnsupportedPlatformError } from "../services/system/login-item";
 
@@ -66,6 +68,18 @@ export const toRpcError = (error: unknown): RpcError => {
   if (error instanceof EntityNotFoundError)
     return notFound(error.entity, error.id);
   if (error instanceof ConflictError) return conflict(error.message);
+  if (error instanceof CronParseError)
+    return new ORPCError("BAD_REQUEST", {
+      status: 400,
+      message: error.message,
+      data: { field: "schedule", detail: error.detail },
+    });
+  if (error instanceof TimeoutError)
+    return new ORPCError("TIMEOUT", {
+      status: 504,
+      message: error.message,
+      data: { ms: error.ms },
+    });
   if (error instanceof UnsupportedPlatformError)
     return preconditionFailed("unsupported-platform", error.message);
 

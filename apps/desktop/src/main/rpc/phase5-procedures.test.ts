@@ -1,9 +1,12 @@
 /**
  * Spec 05 §31.5's new procedures through the real router and transport:
  * `window.setDensity` (b), `system.loginItem` (c) with its typed Linux
- * refusal.
+ * refusal, typed routine errors (e).
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { parseCron } from "#shared/routines/cron";
+import { TimeoutError } from "#shared/timeout-error";
 
 import { createLoginItem } from "../services/system/login-item";
 import { connectInProcess, fakeDeps, type FakeDepsOverrides } from "./testing";
@@ -86,5 +89,60 @@ describe("system.loginItem (spec 05 §31.5 c)", () => {
         defined: true,
         data: { reason: "unsupported-platform" },
       });
+  });
+});
+
+describe("typed routine errors (spec 05 §31.5 e)", () => {
+  it("a schedule that does not parse is BAD_REQUEST { field, detail }", async () => {
+    const client = connect({
+      serviceHost: {
+        // The real parser, as cron-store's createJob/updateJob call it.
+        createRoutine: (input: { schedule?: string | null }) => {
+          parseCron(input.schedule ?? "");
+          throw new Error("unreachable");
+        },
+        updateRoutine: (_id: string, patch: { schedule?: string | null }) => {
+          parseCron(patch.schedule ?? "");
+        },
+      },
+    });
+    const detail =
+      "Names like MON or JAN are not supported. Use numbers: 0-6 for weekday, 1-12 for month.";
+    await expect(
+      client.db.routines.insert({ prompt: "p", schedule: "0 9 * * MON" })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      defined: true,
+      data: { field: "schedule", detail },
+    });
+    await expect(
+      client.db.routines.update({
+        id: "job-1",
+        patch: { schedule: "0 9 * *" },
+      })
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: {
+        field: "schedule",
+        detail: "Expected five fields (minute hour day month weekday), got 4.",
+      },
+    });
+  });
+
+  it("an edit-by-chat that never answers is TIMEOUT { ms }", async () => {
+    const client = connect({
+      serviceHost: {
+        editRoutineByChat: async () => {
+          throw new TimeoutError("The routine did not answer in time.", 90_000);
+        },
+      },
+    });
+    await expect(
+      client.routines.editByChat({ routineId: "job-1", text: "at 9" })
+    ).rejects.toMatchObject({
+      code: "TIMEOUT",
+      defined: true,
+      data: { ms: 90_000 },
+    });
   });
 });

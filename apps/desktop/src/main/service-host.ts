@@ -167,6 +167,7 @@ import type {
   TerminalShellId,
   TerminalShellState,
 } from "#shared/terminal-shells";
+import { TimeoutError } from "#shared/timeout-error";
 import { isToolsetEnabled, TOOLSETS, TOOLSETS_BY_ID } from "#shared/toolsets";
 
 import {
@@ -3643,7 +3644,9 @@ export class ServiceHost {
     return new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.turnWaiters.delete(sessionId);
-        reject(new Error("The routine did not answer in time."));
+        reject(
+          new TimeoutError("The routine did not answer in time.", timeoutMs)
+        );
       }, timeoutMs);
       this.turnWaiters.set(sessionId, {
         text: [],
