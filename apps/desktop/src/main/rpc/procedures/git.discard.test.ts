@@ -236,6 +236,23 @@ it("refuses an occupied rename source before trashing anything", async () => {
   );
 });
 
+it("refuses a symlink at the rename source even when its target matches HEAD", async () => {
+  await git(worktree, "mv", "src/a.txt", "src/b.txt");
+  await fs.symlink("b.txt", path.join(worktree, "src/a.txt"));
+  const before = await status(worktree);
+  const result = await client.git.discard({
+    checkout,
+    entries: [{ path: "src/b.txt", origPath: "src/a.txt" }],
+  });
+  expect(result.failed).toMatchObject([{ reason: "occupied" }]);
+  expect(indexAtTrash.size).toBe(0);
+  expect(await status(worktree)).toBe(before);
+  expect(await fs.readlink(path.join(worktree, "src/a.txt"))).toBe("b.txt");
+  expect(await fs.readFile(path.join(worktree, "src/b.txt"), "utf8")).toBe(
+    ORIGINAL_A
+  );
+});
+
 it("a subfolder checkout restores mixed-case tracked paths and renames from the repository root", async () => {
   primary = path.join(primary, "src");
   const repo = path.dirname(primary);
