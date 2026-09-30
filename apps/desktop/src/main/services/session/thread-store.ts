@@ -161,6 +161,11 @@ export interface ThreadStoreOptions {
   writeFile?: (file: string, text: string) => void;
   /** Defaults to `MAX_TRANSCRIPT_BYTES` (tests lower it). */
   maxTranscriptBytes?: number;
+  /**
+   * The cut-over build sets this once step 4 has archived `transcripts/`:
+   * a v1-derived twin is then served without its v1 file.
+   */
+  v1Archived?: boolean;
 }
 
 type V1Read =
@@ -179,6 +184,7 @@ export class ThreadStore {
   private readonly dualWriteDelayMs: number;
   private readonly writeFile: (file: string, text: string) => void;
   private readonly maxTranscriptBytes: number;
+  private readonly v1Archived: boolean;
   /**
    * What this store last wrote per thread (size, mtime and source kind), so
    * the dual-write does not re-read a large file it wrote itself just to
@@ -202,6 +208,7 @@ export class ThreadStore {
     this.writeFile = options.writeFile ?? writeFileAtomicSync;
     this.maxTranscriptBytes =
       options.maxTranscriptBytes ?? MAX_TRANSCRIPT_BYTES;
+    this.v1Archived = options.v1Archived ?? false;
   }
 
   threadPath(sessionId: string): string | null {
@@ -267,6 +274,10 @@ export class ThreadStore {
     }
     switch (v1.status) {
       case "missing":
+        // Transition: v1 is the source of truth, so a derived twin without
+        // it was cleared. At the cut-over (after step 4 archived v1 files
+        // and orphaned twins), the twin stands on its own.
+        return this.v1Archived && twin.status === "ok" ? twin.file : null;
       case "invalid":
         return null;
       case "unreadable":
