@@ -9,7 +9,10 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
+import { EntityNotFoundError } from "#shared/not-found";
+
 import { abacusBotHome } from "../../paths";
+import { ConflictError } from "../conflict";
 
 export type CronTrigger = "schedule" | "webhook" | "manual" | "create";
 
@@ -69,6 +72,19 @@ const read = (): CronJob[] => {
   }
 };
 
+const writeListeners = new Set<() => void>();
+
+/**
+ * Called after every write of `cronjobs.json`, whoever made it: the routines
+ * table's direct hook (spec 00 B.2), beside the `cronjobs-updated` events.
+ */
+export const onCronStoreWrite = (listener: () => void): (() => void) => {
+  writeListeners.add(listener);
+  return () => {
+    writeListeners.delete(listener);
+  };
+};
+
 const write = (jobs: CronJob[]): void => {
   const file = FILE();
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -76,6 +92,13 @@ const write = (jobs: CronJob[]): void => {
   const temp = `${file}.tmp`;
   fs.writeFileSync(temp, `${JSON.stringify(jobs, null, 2)}\n`, "utf8");
   fs.renameSync(temp, file);
+  for (const listener of Array.from(writeListeners)) {
+    try {
+      listener();
+    } catch (error) {
+      console.error("[cron-store] write listener threw", error);
+    }
+  }
 };
 
 const deriveName = (prompt: string): string => {
@@ -245,16 +268,20 @@ export const jobForWebhookToken = (token: string): CronJob | null =>
     ? null
     : (read().find((job) => job.webhookToken === token) ?? null);
 
-export const createJob = (input: {
-  schedule?: string | null;
-  runAt?: number | null;
-  /** True mints a webhook token, making the job POST-firable. */
-  webhook?: boolean;
-  prompt: string;
-  name?: string;
-  workspaceId?: string | null;
-  botId?: string | null;
-}): CronJob => {
+/** `id`: the caller's own (an optimistic insert); a taken one is refused. */
+export const createJob = (
+  input: {
+    schedule?: string | null;
+    runAt?: number | null;
+    /** True mints a webhook token, making the job POST-firable. */
+    webhook?: boolean;
+    prompt: string;
+    name?: string;
+    workspaceId?: string | null;
+    botId?: string | null;
+  },
+  id?: string
+): CronJob => {
   const schedule = input.schedule?.trim() ?? "";
   const hasSchedule = schedule.length > 0;
   const runAt = input.runAt ?? null;
@@ -267,9 +294,13 @@ export const createJob = (input: {
   if (input.prompt.trim().length === 0)
     throw new Error("A prompt is required.");
 
+  const existing = read();
+  if (id != null && existing.some((job) => job.id === id))
+    throw new ConflictError(`A routine with id "${id}" already exists.`);
+
   const prompt = input.prompt.trim();
   const job: CronJob = {
-    id: `job-${Date.now()}-${++counter}`,
+    id: id ?? `job-${Date.now()}-${++counter}`,
     name: (input.name ?? "").trim() || deriveName(prompt),
     schedule: hasSchedule ? schedule : null,
     // One or the other: a time to run once wins over a repeating schedule.
@@ -287,7 +318,7 @@ export const createJob = (input: {
     runs: [],
   };
 
-  write([...read(), job]);
+  write([...existing, job]);
 
   return job;
 };
@@ -310,7 +341,8 @@ export const updateJob = (
   const jobs = read();
   const index = jobs.findIndex((job) => job.id === id);
 
-  if (index < 0) throw new Error(`No job with id "${id}".`);
+  if (index < 0)
+    throw new EntityNotFoundError("routine", id, `No job with id "${id}".`);
 
   if (changes.schedule != null && changes.schedule.trim().length > 0)
     parseCron(changes.schedule);
@@ -346,7 +378,7 @@ export const removeJob = (id: string): void => {
   const remaining = jobs.filter((job) => job.id !== id);
 
   if (remaining.length === jobs.length)
-    throw new Error(`No job with id "${id}".`);
+    throw new EntityNotFoundError("routine", id, `No job with id "${id}".`);
 
   write(remaining);
 };

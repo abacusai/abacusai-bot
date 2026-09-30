@@ -7,6 +7,7 @@
 import fs from "fs";
 import path from "path";
 
+import { ConflictError } from "../conflict";
 import { botDir, listBots } from "./bot-store";
 
 export interface BotMemoryView {
@@ -77,7 +78,9 @@ export const forgetBotMemoryEntry = (
   const entries = readEntries(botId);
 
   if (index < 0 || index >= entries.length || entries[index] !== expected)
-    throw new Error("That entry changed on disk; the list has been refreshed.");
+    throw new ConflictError(
+      "That entry changed on disk; the list has been refreshed."
+    );
 
   writeEntries(
     botId,
