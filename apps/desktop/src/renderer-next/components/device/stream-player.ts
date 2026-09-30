@@ -20,17 +20,26 @@ export class DeviceStreamPlayer {
   private barrier = true;
   private timestamp = 0;
   private decoding = false;
+  private watchdog: ReturnType<typeof setTimeout> | undefined;
+  private painted = false;
   private codec: string | null = null;
   constructor(
     private canvas: HTMLCanvasElement,
     private fatal: (error: unknown) => void
-  ) {}
+  ) {
+    this.watchdog = setTimeout(() => {
+      if (!this.disposed && !this.painted)
+        this.fatal(new Error("No device frame decoded in 5 seconds"));
+    }, 5000);
+  }
   resetBarrier() {
     this.barrier = true;
   }
   private paint(frame: VideoFrame | ImageBitmap) {
     try {
       if (this.disposed) return;
+      this.painted = true;
+      if (this.watchdog) clearTimeout(this.watchdog);
       const width =
         frame instanceof ImageBitmap ? frame.width : frame.displayWidth;
       const height =
@@ -104,6 +113,7 @@ export class DeviceStreamPlayer {
   }
   dispose() {
     this.disposed = true;
+    if (this.watchdog) clearTimeout(this.watchdog);
     if (this.decoder?.state !== "closed") this.decoder?.close();
     this.decoder = null;
   }
