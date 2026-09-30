@@ -340,6 +340,7 @@ import {
   INACTIVITY_TIMEOUT_MINUTES,
   SessionTurnStateService,
 } from "./services/session/session-turn-state-service";
+import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
 import {
@@ -448,7 +449,11 @@ export class ServiceHost {
   private busDispatcher: BusDispatcher | null = null;
 
   readonly mcpConfigService = new McpConfigService();
-  private readonly transcriptService = new TranscriptService();
+  /** The v2 thread files (spec 00 C.3); `ai.hydrate` reads them. */
+  readonly threadStore = new ThreadStore();
+  private readonly transcriptService = new TranscriptService({
+    threads: this.threadStore,
+  });
   private readonly debugSyncService = new DebugSyncService({
     readTranscript: (sessionId) => this.transcriptService.read(sessionId),
     clientVersion: app.getVersion(),
