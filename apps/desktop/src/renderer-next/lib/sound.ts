@@ -22,6 +22,7 @@ export interface SoundContext {
   now(): number;
   /** For tests; the default synthesises into the unlocked AudioContext. */
   synth?(cue: Cue): void;
+  claim?(cueId: string, threadId: string | null): Promise<boolean>;
   /** For tests (quiet hours); defaults to `new Date(now())`. */
   date?(): Date;
   /** For tests; the real one is `new AudioContext()`. */
@@ -29,7 +30,10 @@ export interface SoundContext {
 }
 
 export interface SoundPlayer {
-  play(cue: Cue, options?: { threadId?: string; botId?: string | null }): void;
+  play(
+    cue: Cue,
+    options?: { threadId?: string; botId?: string | null; dedupeKey?: string }
+  ): void;
   unlock(): void;
   dispose(): void;
 }
@@ -71,7 +75,18 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       const now = ctx.now();
       if (now - lastPlayedAt < COALESCE_MS) return;
       lastPlayedAt = now;
-      synth(cue);
+      if (ctx.claim && cue !== "sent" && cue !== "routine-fired") {
+        if (!audio && !ctx.synth) return;
+        void ctx
+          .claim(
+            `${cue}:${options.dedupeKey ?? `${options.threadId ?? ""}:${now}`}`,
+            options.threadId ?? null
+          )
+          .then((play) => {
+            if (play && !disposed) synth(cue);
+          })
+          .catch(() => undefined);
+      } else synth(cue);
     },
     unlock() {
       if (audio !== null || disposed) return;
@@ -113,7 +128,7 @@ export const CUE_TONES: Readonly<Record<Cue, readonly Tone[]>> = {
     { at: 0, duration: 0.07, from: 880, gain: 0.07 },
     { at: 0.11, duration: 0.07, from: 1175, gain: 0.07 },
   ],
-  "needs-you": [0, 0.14, 0.28].map((at) => ({
+  "needs-you": [0, 0.08, 0.16].map((at) => ({
     at,
     duration: 0.06,
     from: 740,
@@ -121,8 +136,8 @@ export const CUE_TONES: Readonly<Record<Cue, readonly Tone[]>> = {
     type: "triangle" as const,
   })),
   done: [
-    { at: 0, duration: 0.08, from: 659, gain: 0.07 },
-    { at: 0.09, duration: 0.12, from: 988, gain: 0.07 },
+    { at: 0, duration: 0.09, from: 523, gain: 0.08 },
+    { at: 0.12, duration: 0.09, from: 784, gain: 0.08 },
   ],
   failed: [{ at: 0, duration: 0.18, from: 440, to: 294, gain: 0.08 }],
   "routine-fired": [
@@ -155,3 +170,7 @@ export const synthCue = (
     oscillator.stop(t1 + 0.02);
   }
 };
+
+/** Settings preview is local and never claims an attention cue. */
+export const previewCue = (audio: AudioContextLike, cue: Cue): void =>
+  synthCue(audio, cue);
