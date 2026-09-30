@@ -106,6 +106,7 @@ export const RoutineDialog = ({
     onSubmit: async ({ value }) => {
       const parsed = v.parse(RoutineFormSchema, value);
       setError(null);
+      setScheduleError(null);
       try {
         if (routineId) {
           await db.collections.routines.update(routineId, (d) =>
@@ -220,6 +221,7 @@ export const RoutineDialog = ({
     // eslint-disable-next-line react/set-state-in-effect
     if (conflict) setRemote(true);
   }, [row, form]);
+  if (routineId && !row) return null;
   return (
     <>
       <Dialog
@@ -273,7 +275,16 @@ export const RoutineDialog = ({
                   const preview = nextPreview(d, new Date());
                   return (
                     <>
-                      <Field>
+                      <Field
+                        onBlurCapture={() => {
+                          form.setFieldMeta("schedule", (meta) => ({
+                            ...meta,
+                            isTouched: true,
+                            isBlurred: true,
+                          }));
+                          void form.validateField("schedule", "blur");
+                        }}
+                      >
                         <FieldLabel>{t("phase5.scheduleLabel")}</FieldLabel>
                         <Segments
                           label={t("phase5.scheduleLabel")}
