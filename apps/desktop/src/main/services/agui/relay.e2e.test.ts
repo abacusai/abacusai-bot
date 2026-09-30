@@ -544,6 +544,45 @@ describe("main's AG-UI relay with a spawned agent", () => {
     await window.disconnect();
   }, 120_000);
 
+  it("converts text, multi-line and attachment-only UIMessages at the boundary, keeping the client ids (spec 02 §14.2)", async () => {
+    const { client, relay } = build();
+    replies = () => ({ say: "ok" });
+    const window = await Window.open(client);
+    const cases = [
+      ["u-text", "plain text"],
+      ["u-lines", "first line\nsecond line\n\nfourth"],
+      ["u-attach", "@/tmp/report.pdf\n@/tmp/chart.png"],
+    ] as const;
+
+    for (const [index, [id, text]] of cases.entries()) {
+      const runId = `run-${index}`;
+      await expect(
+        client.ai.send({
+          threadId: THREAD,
+          runId,
+          messages: [userMessage(id, text)],
+        })
+      ).resolves.toEqual({ runId, status: "started" });
+      await vi.waitFor(
+        () => expect(window.has(isTerminal(runId))).toBe(true),
+        WAIT
+      );
+      const echo = window.events.filter(
+        (event) =>
+          event.type === "TEXT_MESSAGE_CONTENT" && event.messageId === id
+      );
+      expect(echo.map((event) => event.delta).join("")).toBe(text);
+    }
+    expect(relay.wireFor(THREAD)).toBe("agui");
+    const users = (
+      await client.ai.hydrate({ threadId: THREAD })
+    ).messages.filter((message) => message.role === "user");
+    expect(users.map((m) => [m.id, textOf(m)])).toEqual(
+      cases.map(([id, text]) => [id, text])
+    );
+    await window.disconnect();
+  }, 120_000);
+
   it("a signal exit mid-run gets main's RUN_ERROR, and the thread settles", async () => {
     const { client, manager } = build();
     replies = () => ({ stall: { say: "Partial" } });

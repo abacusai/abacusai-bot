@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import { applyJsonPatch } from "./json-patch";
 import {
+  RING_EVENTS,
   SeqClock,
   ThreadRelay,
   type RelayChunk,
@@ -235,6 +236,23 @@ describe("a thread's relay", () => {
       "resync"
     );
     expect(relay.subscribe(clock.current, () => undefined).replay).toEqual([]);
+  });
+
+  it("evicts completed runs from the ring (resync), while the transcript still holds them", () => {
+    const { relay } = make();
+    relay.ingest(hello("inc-1"));
+    const first = run("run-1", "first");
+    const [start] = feed(relay, first.start);
+    feed(relay, [...first.reply("a-1", "one"), first.finished]);
+    for (let i = 0; i < RING_EVENTS; i += 1)
+      relay.ingest(custom("agent.heartbeat", { runningTools: i % 3 }));
+
+    expect(relay.subscribe(start!.seq, () => undefined).replay).toBe("resync");
+    const { messages, snapshot } = relay.checkpoint();
+    expect(textOf(messages).map((m) => m.text)).toEqual(["first", "one"]);
+    expect(snapshot.runOutcomes.map((o) => o.runId)).toEqual(["run-1"]);
+    // Its log is still joinable while it is among the last finished runs.
+    expect(relay.joinRun("run-1", () => undefined)?.ended).toBe(true);
   });
 
   it("does not echo a user message the transcript already holds (a retry after a respawn)", () => {
