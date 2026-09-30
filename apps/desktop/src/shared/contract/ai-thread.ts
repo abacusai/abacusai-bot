@@ -49,11 +49,15 @@ export interface AiActiveRun {
   serverInitiated: boolean;
 }
 
-/** A live `agent.notification`, or a non-terminal `agent.error`. */
+/**
+ * A live `agent.notification`, a non-terminal `agent.error`, or main's own
+ * `abacus.notice` about the thread (a history too large to read: `value`
+ * `{ kind: "too-large", size, limit, notificationKey: "abacus.history" }`).
+ */
 export interface AiNotice {
   /** The relay seq it arrived at. */
   seq: number;
-  name: "agent.notification" | "agent.error";
+  name: "agent.notification" | "agent.error" | "abacus.notice";
   value: Record<string, unknown>;
 }
 
