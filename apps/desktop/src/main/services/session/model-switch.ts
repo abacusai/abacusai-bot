@@ -9,12 +9,13 @@
  * apart. Every switch for a session (the checked RPC, the legacy
  * fire-and-forget one and a bot re-pin alike) therefore goes through one
  * queue per session: one `set_model` is outstanding at a time, the next is
- * written only once it is answered (or timed out), and an answer settles
+ * written only once it is answered or its process is invalidated. An answer settles
  * only the outstanding switch — `model_changed` only when it names the
  * requested model (an OpenLLM rotation or a startup notice settles
  * nothing). No answer within the timeout resolves (the pin applies at the
  * next start either way); an agent without a model runtime answers nothing,
- * so that switch costs the timeout.
+ * so its caller waits only until the deadline, while subsequent commands
+ * remain queued until a response or process invalidation.
  */
 import type { DesktopEvent } from "#shared/agent-types";
 
@@ -117,7 +118,9 @@ export class ModelSwitchWaiters {
     const head = this.#queues.get(sessionId)?.[0];
     if (head == null) return;
     head.timer = setTimeout(
-      () => this.#settle(sessionId, head, null),
+      // The caller's deadline cannot retire an anonymous command: its
+      // late refusal must still belong to this head, never the next caller.
+      () => head.resolve(),
       head.timeoutMs
     );
     head.timer.unref?.();
@@ -149,6 +152,17 @@ export class ModelSwitchWaiters {
     else entry.reject(error);
     // The next switch goes out only now that this one is answered.
     if (queue != null && queue.length > 0) this.#dispatch(sessionId);
+  }
+
+  /** The process stopped or was replaced. Stored pins apply on next start. */
+  invalidate(sessionId: string): void {
+    const queue = this.#queues.get(sessionId);
+    this.#queues.delete(sessionId);
+    for (const entry of queue ?? []) {
+      entry.settled = true;
+      clearTimeout(entry.timer);
+      entry.resolve();
+    }
   }
 
   /** One agent event for `sessionId` (compat taps, both wires). */
