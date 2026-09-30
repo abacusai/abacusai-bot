@@ -31,6 +31,8 @@ export const transitionTypeSink = {
   add: (type: NavType): void => addTransitionType(type),
   /** Each router transition the seam saw: a pending offer or a commit. */
   observe: (_kind: "offer" | "commit"): void => undefined,
+  /** Each type the document-level view transition starts with. */
+  document: (_type: NavType): void => undefined,
 };
 
 const INSTALLED = Symbol.for("abacus.transitionTypes");
@@ -92,6 +94,34 @@ export const installTransitionTypes = (router: AnyRouter): void => {
   const target = router as AnyRouter & { [INSTALLED]?: true };
   if (target[INSTALLED]) return;
   target[INSTALLED] = true;
+
+  // The document's view transition (spec 01 §6.7, implementation note): the
+  // router commits matches through store subscriptions, which React renders
+  // synchronously even inside startTransition, so React never starts a view
+  // transition for a route change. The router's own document-level view
+  // transition carries the same types instead; an untyped change (`false`)
+  // commits with none. The pane and sidebar are named in tokens.css.
+  const documentKeys = new Set<string>();
+  let documentLastKey: string | undefined;
+  (
+    router.options as { defaultViewTransition?: unknown }
+  ).defaultViewTransition = {
+    types: ({
+      fromLocation,
+      toLocation,
+    }: {
+      fromLocation?: ParsedLocation;
+      toLocation: ParsedLocation;
+    }) => {
+      const key = (toLocation.state as NavState).__TSR_key;
+      if (key !== undefined && key === documentLastKey) return false;
+      const types = navTypesFor(router, fromLocation, toLocation, documentKeys);
+      documentLastKey = key;
+      if (key !== undefined) documentKeys.add(key);
+      for (const type of types) transitionTypeSink.document(type);
+      return types.length > 0 ? types : false;
+    },
+  };
 
   let inner: StartTransitionFn = router.startTransition;
   let lastCommittedKey: string | undefined;

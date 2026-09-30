@@ -6,6 +6,7 @@ import type { AnyRouter } from "@tanstack/react-router";
 
 import type { Collections } from "#next/data/collections";
 import { updatePrefs } from "#next/data/collections/prefs";
+import { transitionTypeSink } from "#next/lib/navigation/transition-types";
 
 import { navigateAndSettle } from "./settle";
 
@@ -37,4 +38,17 @@ export const installDevHooks = (
     band: () => document.documentElement.dataset.band,
   };
   (window as Window & { __abacusDev?: AbacusDev }).__abacusDev = dev;
+  // What the router seam adds and sees, for the Electron view-transition test.
+  const add = transitionTypeSink.add;
+  const observe = transitionTypeSink.observe;
+  const log: string[] = [];
+  (window as Window & { __abacusNavLog?: string[] }).__abacusNavLog = log;
+  transitionTypeSink.add = (type) => {
+    log.push(`type:${type}`);
+    add(type);
+  };
+  transitionTypeSink.observe = (kind) => {
+    log.push(kind);
+    observe(kind);
+  };
 };

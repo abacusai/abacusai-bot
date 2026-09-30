@@ -6,7 +6,6 @@
  */
 import { useStore } from "@tanstack/react-store";
 import { AnimatePresence, motion, type Transition } from "motion/react";
-import { ViewTransition, type ViewTransitionClassPerType } from "react";
 
 import {
   motionFor,
@@ -24,14 +23,6 @@ import {
 } from "./shell-store";
 import { BotsStrip, SIDEBARS } from "./sidebars";
 
-/** Animated only for typed navigations (spec 01 §6.7); "none" otherwise. */
-const SIDEBAR_VT: ViewTransitionClassPerType = {
-  "nav-lateral": "sidebar",
-  "settings-in": "sidebar",
-  "settings-out": "sidebar",
-  default: "none",
-};
-
 const SidebarContent = ({
   sidebarId,
 }: {
@@ -39,16 +30,9 @@ const SidebarContent = ({
 }) => {
   const Sidebar = sidebarId == null ? null : SIDEBARS[sidebarId];
   return (
-    <ViewTransition
-      key={sidebarId ?? "none"}
-      enter={SIDEBAR_VT}
-      exit={SIDEBAR_VT}
-      default="none"
-    >
-      <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-        {Sidebar != null && <Sidebar />}
-      </div>
-    </ViewTransition>
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+      {Sidebar != null && <Sidebar />}
+    </div>
   );
 };
 
