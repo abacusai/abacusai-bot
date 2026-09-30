@@ -6,16 +6,13 @@
  * show "Not sent" with Retry/Discard when they failed. An assistant message
  * with no parts renders nothing (F12).
  */
-import type {
-  ToolCallPart,
-  ToolResultPart,
-  UIMessage,
-} from "@tanstack/ai-client";
+import type { UIMessage } from "@tanstack/ai-client";
 import type { MessageProps } from "@tanstack/ai-react/ui";
-import { ChevronRight, FileText, ListChecks } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { botVisibleMessage } from "#next/lib/bot-turns/turns";
 import { cn } from "#next/lib/cn";
 import {
   Attachment,
@@ -26,12 +23,6 @@ import {
   AttachmentTitle,
 } from "#next/ui/attachment";
 import { Button } from "#next/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "#next/ui/collapsible";
-import { Marker, MarkerContent, MarkerIcon } from "#next/ui/marker";
 import {
   isRoutineFire,
   stripAttachmentRefs,
@@ -44,7 +35,7 @@ import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView, type MessageDecoration } from "./context";
 import { MessageScope } from "./message-scope";
 import { markLiveThinking } from "./parts";
-import { ToolLine } from "./tools/tool-line";
+import { BotUI } from "./ui";
 
 type Loose = Record<string, unknown>;
 
@@ -251,82 +242,6 @@ const useStreaming = (message: UIMessage): boolean => {
   return active && message.role === "assistant" && message.id === lastId;
 };
 
-const pairs = (
-  message: UIMessage
-): Array<{ part: ToolCallPart; result?: ToolResultPart }> => {
-  const results = new Map<string, ToolResultPart>();
-  for (const part of message.parts)
-    if (part.type === "tool-result")
-      results.set(part.toolCallId, part as ToolResultPart);
-  return message.parts
-    .filter((part): part is ToolCallPart => part.type === "tool-call")
-    .map((part) => {
-      const result = results.get(part.id);
-      return result != null ? { part, result } : { part };
-    });
-};
-
-const MAX_TOOL_ROWS = 50;
-
-/** Tool rows past the first 50 collapse to "{n} more steps" (§10). */
-const StepList = ({
-  items,
-}: {
-  items: Array<{ part: ToolCallPart; result?: ToolResultPart }>;
-}) => {
-  const { t } = useTranslation();
-  const [limit, setLimit] = useState(MAX_TOOL_ROWS);
-  return (
-    <div className="flex flex-col">
-      {items.slice(0, limit).map(({ part, result }) => (
-        <ToolLine
-          key={part.id}
-          part={part}
-          {...(result != null ? { result } : {})}
-        />
-      ))}
-      {items.length > limit ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="self-start"
-          onClick={() => setLimit((value) => value + 100)}
-        >
-          {t("chat.tool.moreSteps", { count: items.length - limit })}
-        </Button>
-      ) : null}
-    </div>
-  );
-};
-
-const WorkedThrough = ({ message }: { message: UIMessage }) => {
-  const { t } = useTranslation();
-  const items = pairs(message);
-  if (items.length === 0) return null;
-  return (
-    <Collapsible>
-      <Marker
-        render={<CollapsibleTrigger />}
-        className="group/w hover:text-foreground w-fit cursor-pointer"
-      >
-        <MarkerIcon>
-          <ListChecks aria-hidden />
-        </MarkerIcon>
-        <MarkerContent>
-          {t("chat.message.workedThrough", { count: items.length })}
-        </MarkerContent>
-        <ChevronRight
-          aria-hidden
-          className="size-3 transition-transform group-data-[panel-open]/w:rotate-90"
-        />
-      </Marker>
-      <CollapsibleContent className="pt-1">
-        <StepList items={items} />
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
-
 const isEmptyAssistant = (message: UIMessage): boolean =>
   message.role === "assistant" && message.parts.length === 0;
 
@@ -347,7 +262,20 @@ const useDecoration = (message: UIMessage): MessageDecoration | null => {
 export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   const decoration = useDecoration(message);
-  if (isEmptyAssistant(message) || decoration?.hidden === true) return null;
+  const { session } = useChatView();
+  const messages = useHost(session, (state) => state.messages);
+  const runActive = useThreadStore(
+    session,
+    (state) => state.runs.active != null
+  );
+  const visible = botVisibleMessage(message, messages, runActive);
+  if (visible !== message) return <BotUI.Message message={visible} />;
+  if (
+    isEmptyAssistant(message) ||
+    (decoration?.hidden === true &&
+      !message.parts.some((part) => part.type === "tool-call"))
+  )
+    return null;
   if (message.role === "user")
     return (
       <>
@@ -363,7 +291,6 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
       {decoration?.before}
       <div className="flex flex-col items-start gap-1.5" data-role="assistant">
         <PartsView />
-        <WorkedThrough message={message} />
         <Credits message={message} />
         {decoration?.after}
       </div>
