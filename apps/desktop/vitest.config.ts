@@ -40,6 +40,9 @@ const CONTENDS_FOR_THE_MACHINE = [
   "src/main/rpc/serializer.bench.test.ts",
   // Spawns Electron for the real MessagePort handshake (spec 00 A-T12).
   "src/main/rpc/transports/rpc-handshake.electron.test.ts",
+  // The one real-fs.watch test: FSEvents start-up latency stretches under the
+  // parallel main project's load, so it runs here with the machine to itself.
+  "src/main/rpc/tables/memories.fs.test.ts",
   // Drives the built renderer-next in Electron (spec 01 R1-T11b).
   "src/main/dev/renderer-next.electron.test.ts",
 ];
