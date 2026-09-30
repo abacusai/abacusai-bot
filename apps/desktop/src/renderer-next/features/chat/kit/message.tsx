@@ -368,19 +368,17 @@ const StepList = ({
         const group = segments?.find(
           (segment) => segment.type === "tool_group" && segment.id === block.id
         );
+        const header =
+          window?.ids.indexOf(`group\0${scope}\0${message?.id}\0${block.id}`) ??
+          -1;
+        const headerVisible =
+          window == null || (header >= start && header < end);
+        // Continuations have no header unit in this range. Show their rows
+        // directly so a closed group cannot hide the rest of the transcript.
+        if (!headerVisible) return <div key={block.id}>{content}</div>;
         return (
           <Collapsible key={block.id} data-slot="tool-group">
-            <CollapsibleTrigger
-              hidden={
-                window != null &&
-                (() => {
-                  const index = window.ids.indexOf(
-                    `group\0${scope}\0${message?.id}\0${block.id}`
-                  );
-                  return index < start || index >= end;
-                })()
-              }
-            >
+            <CollapsibleTrigger>
               {group?.summary ?? group?.category ?? block.id}
             </CollapsibleTrigger>
             <CollapsibleContent>{content}</CollapsibleContent>
@@ -469,7 +467,13 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
     >
       <div className="flex flex-col items-start gap-1.5" data-role="assistant">
         {decoration?.before}
+        {message.parts.some((part) => part.type === "subagent") ? (
+          <StepControls side="earlier" />
+        ) : null}
         <PartsView />
+        {message.parts.some((part) => part.type === "subagent") ? (
+          <StepControls side="more" />
+        ) : null}
         <WorkedThrough message={message} />
         <Credits message={message} />
         {decoration?.after}
@@ -572,6 +576,7 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
                 })()
             );
           if (!headerVisible && !childVisible) return null;
+          if (!headerVisible) return <div key={block.id}>{content}</div>;
           const group = segments?.find(
             (segment) =>
               segment.id === block.id && segment.type === "tool_group"

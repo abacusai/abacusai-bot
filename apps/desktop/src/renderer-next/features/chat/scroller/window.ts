@@ -21,9 +21,9 @@ export const ROW_FALLBACK_PX = 64;
 /** One visible message, as far as the budget is concerned. */
 export interface RowItem {
   id: string;
-  /** Rows that are always mounted with the message (itself, sub-agent cards). */
+  /** Rows always mounted with the message (itself and anchored outcomes). */
   fixed: number;
-  /** Tool units it could mount (0 when its steps are closed, bots). */
+  /** Pageable tool, group-header and sub-agent card units. */
   units: number;
 }
 
