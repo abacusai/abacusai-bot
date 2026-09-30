@@ -6,7 +6,11 @@
  *
  * Compound: Root, Leading, Identity, Actions, PanelTabs, PanelToggle.
  */
-import { useCanGoBack, useRouter } from "@tanstack/react-router";
+import {
+  useCanGoBack,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "#next/lib/cn";
 import { useCanGoForward } from "#next/lib/navigation/can-go-forward";
 import type { SidePanelTabId } from "#next/lib/navigation/search";
+import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Badge } from "#next/ui/badge";
 import { Button } from "#next/ui/button";
 import {
@@ -30,6 +35,7 @@ import {
 } from "#next/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "#next/ui/tabs";
 
+import { shellStore } from "./shell-store";
 import { setIdentityTarget, useTopBarActionList } from "./top-bar-slots";
 
 const BarButton = ({
@@ -80,6 +86,10 @@ const Leading = ({
   const { t } = useTranslation();
   const router = useRouter();
   const canGoBack = useCanGoBack();
+  const settings = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/settings"),
+  });
+  const navigate = useAppNavigate();
   const canGoForward = useCanGoForward();
   return (
     <div
@@ -92,9 +102,17 @@ const Leading = ({
       )}
     >
       <BarButton
-        label={t("shell.topBar.back")}
-        disabled={!canGoBack}
-        onClick={() => router.history.back()}
+        label={t(settings ? "settings.backToApp" : "shell.topBar.back")}
+        disabled={!settings && !canGoBack}
+        onClick={() =>
+          settings
+            ? void navigate({
+                ...shellStore.state.lastLocationOutsideSettings,
+                to: shellStore.state.lastLocationOutsideSettings.pathname,
+                transition: "settings-out",
+              } as Parameters<typeof navigate>[0])
+            : router.history.back()
+        }
       >
         <ArrowLeft />
       </BarButton>
