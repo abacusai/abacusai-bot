@@ -8,3 +8,16 @@ export { TopBar } from "./top-bar";
 export { Rail } from "./rail";
 export { SidePanelBody, SidePanelFrame } from "./side-panel";
 export { SidePanelContent } from "./side-panel-slot";
+
+export { SidePanelOverride } from "./side-panel-slot";
+export { useAppHotkey, dispatchAppHotkey } from "./hotkeys";
+export {
+  nativePresenterFor,
+  createNativePresenter,
+  type NativePresenter,
+} from "./native-presenter";
+export {
+  registerPreviewConsumer,
+  dispatchPreview,
+  type PreviewEvent,
+} from "./preview-consumers";

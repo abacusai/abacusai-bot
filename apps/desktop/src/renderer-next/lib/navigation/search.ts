@@ -43,12 +43,31 @@ export const NewSessionSearch = v.object({
   workspace: optionalField(WorkspaceId),
 });
 
-const SESSION_TABS = ["changes", "terminal", "files", "browser"] as const;
+export const SessionTabRef = v.union([
+  v.picklist(["chat", "changes", "files", "agents", "device"]),
+  v.pipe(
+    v.string(),
+    v.regex(/^(terminal|browser|preview):[A-Za-z0-9._-]{1,80}$/)
+  ),
+]);
+export type SessionTabRef = v.InferOutput<typeof SessionTabRef>;
 export const SESSION_DEFAULTS = { view: "split" } as const;
 export const SessionSearch = v.object({
   view: v.optional(v.fallback(v.picklist(["split", "full"]), "split"), "split"),
-  tab: optionalField(v.picklist(SESSION_TABS)),
-  agent: optionalField(v.string()),
+  tab: optionalField(SessionTabRef),
+  agent: optionalField(v.pipe(v.string(), v.regex(/^[A-Za-z0-9._-]{1,80}$/))),
+  file: optionalField(v.pipe(v.string(), v.maxLength(4096))),
+  scope: optionalField(v.picklist(["staged", "unstaged"])),
+});
+export const DiffSearch = v.object({
+  ...SessionSearch.entries,
+  path: v.pipe(v.string(), v.minLength(1), v.maxLength(4096)),
+  source: v.optional(v.fallback(v.picklist(["git", "tool"]), "git"), "git"),
+  toolKey: optionalField(v.string()),
+  mode: v.optional(
+    v.fallback(v.picklist(["unified", "split"]), "unified"),
+    "unified"
+  ),
 });
 
 export const RoutineSearch = v.object({
