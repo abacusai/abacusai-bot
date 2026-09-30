@@ -25,6 +25,8 @@ export const useConnectorStatuses = (): {
   statuses: ConnectorStatuses;
   /** Null until the first read lands: "not connected" is not the same as unknown. */
   loaded: boolean;
+  /** A read is in flight, so `statuses` may be about to change. */
+  fetching: boolean;
   refresh: () => Promise<void>;
 } => {
   const queryClient = useQueryClient();
@@ -47,6 +49,7 @@ export const useConnectorStatuses = (): {
   return {
     statuses: query.data ?? EMPTY,
     loaded: query.data != null,
+    fetching: query.isFetching,
     refresh: async () => {
       await queryClient.invalidateQueries({
         queryKey: settingsQueryKeys.connectors.statuses,

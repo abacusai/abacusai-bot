@@ -44,7 +44,7 @@ describe("the shape of a first run", () => {
     ]);
   });
 
-  it("asks a Google-hosted account about Gmail right after signing in, once, and never on a rerun", () => {
+  it("asks about Gmail right after signing in, once, and never on a rerun", () => {
     expect(
       stepsFor({ signedIn: false, paying: false, offerGmail: true })
     ).toEqual([

@@ -73,9 +73,6 @@ const writeStoredStep = (step: OnboardingStep | null): void => {
 const AUTO_SIGN_IN_KEY = "onboarding.autoSignIn";
 const GMAIL_CONNECTOR_ID = "abacus-gmailuser";
 const GMAIL_OFFER_KEY = "onboarding.gmailOffer";
-/** Google-hosted consumer addresses; a Workspace domain cannot be told from the address alone. */
-const isGoogleHostedEmail = (email: string): boolean =>
-  /@(gmail|googlemail)\.com$/i.test(email.trim());
 
 const CARD_WIDTH: Record<Exclude<OnboardingStep, "explainer">, string> = {
   auth: "max-w-2xl",
@@ -120,7 +117,8 @@ export const OnboardingFlow = (): React.ReactElement | null => {
     (state) => state.activateWorkspaceSession
   );
   const credential = useAbacusCredentialQuery();
-  const { data: abacusAccount } = useAbacusAccountQuery();
+  const accountQuery = useAbacusAccountQuery();
+  const abacusAccount = accountQuery.data;
   const connectorStatuses = useConnectorStatuses();
   const connectFlow = useConnectFlow();
   // "Not now" is an answer: the connectors screen keeps the Gmail tile, this card does not come back.
@@ -130,10 +128,12 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   const email = abacusAccount?.email ?? "";
   const gmailConnector =
     CONNECTORS.find((connector) => connector.id === GMAIL_CONNECTOR_ID) ?? null;
+  // Any address: a Workspace domain cannot be told from a consumer one, and
+  // Allow on an account with no Google identity comes back to this card.
   const offerGmail =
     gmailConnector != null &&
     !gmailDeclined &&
-    isGoogleHostedEmail(email) &&
+    email.length > 0 &&
     connectorStatuses.loaded &&
     !isConnected(connectorStatuses.statuses, GMAIL_CONNECTOR_ID);
 
@@ -194,11 +194,17 @@ export const OnboardingFlow = (): React.ReactElement | null => {
   }, [activateWorkspaceSession, activeWorkspaceId, apply, queryClient]);
 
   // The route changed under the current screen: keep it, move on, or leave.
-  // A web signup's route is the Gmail question or nothing, which only the
-  // connector statuses can tell apart: hold the screen until they are in.
-  const routePending =
-    signedIn == null ||
-    (signedIn && webSignup && !onboarded && !connectorStatuses.loaded);
+  // Signing in flips the credential first; the account and the connector
+  // statuses follow a moment later, and the Gmail question depends on both.
+  // A route settled before they land moves past that question for good, so
+  // the screen holds until they are in.
+  const factsPending =
+    signedIn === true &&
+    !onboarded &&
+    (accountQuery.isFetching ||
+      connectorStatuses.fetching ||
+      !connectorStatuses.loaded);
+  const routePending = signedIn == null || factsPending;
   const settled = routePending ? step : settleStep(steps, step);
   useEffect(() => {
     if (settled == null) void finish();
@@ -305,7 +311,7 @@ export const OnboardingFlow = (): React.ReactElement | null => {
       >
         {step === "auth" && (
           <SignInStep
-            busy={busy}
+            busy={busy || factsPending}
             error={error}
             onConnect={(intent) => void connect(intent)}
             browserProfiles={browserProfiles.data ?? []}

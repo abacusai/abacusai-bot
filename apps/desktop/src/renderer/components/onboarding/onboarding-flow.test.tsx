@@ -533,15 +533,18 @@ describe("the Gmail question", () => {
     await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
   });
 
-  it("is not asked of another address, nor when Gmail is already connected", async () => {
+  it("is asked of any address, but not when Gmail is already connected", async () => {
+    // A Workspace domain looks like any other; the card is the one place to find out.
     getAbacusAccount.mockResolvedValue({
       subscription_tier: null,
       email: "me@company.com",
     });
     getSettings.mockResolvedValue(signedInSettings);
     mount();
-    await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
-    expect(has("onboarding-gmail")).toBe(false);
+    await waitFor(() => expect(has("onboarding-gmail")).toBe(true));
+    expect(byId("onboarding-gmail").getAttribute("data-email")).toBe(
+      "me@company.com"
+    );
     cleanup();
 
     await signedInGmail();
@@ -551,6 +554,32 @@ describe("the Gmail question", () => {
     mount();
     await waitFor(() => expect(has("onboarding-welcome-connected")).toBe(true));
     expect(has("onboarding-gmail")).toBe(false);
+  });
+
+  it("holds the wall after a sign-in until the account is back, then asks", async () => {
+    // Main announces the stored key before the account is read, and the
+    // credential cache flips on that announcement (useCredentialRefresh). A
+    // route settled in between has no address to ask about and would move
+    // past the question for good.
+    let accountReady!: () => void;
+    const account = new Promise<void>((resolve) => {
+      accountReady = resolve;
+    });
+    getAbacusAccount.mockImplementation(async () => {
+      await account;
+      return { subscription_tier: null, email: "someone@gmail.com" };
+    });
+    const queryClient = mount();
+    await waitFor(() => byId("onboarding-connect"));
+
+    queryClient.setQueryData(settingsQueryKeys.models.abacusCredential, true);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(has("onboarding-welcome-connected")).toBe(false);
+    expect(has("onboarding-gmail")).toBe(false);
+
+    accountReady();
+    await waitFor(() => expect(has("onboarding-gmail")).toBe(true));
+    expect(has("onboarding-welcome-connected")).toBe(false);
   });
 
   it("takes Not now as the answer, and does not ask again", async () => {

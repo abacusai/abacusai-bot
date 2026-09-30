@@ -28,7 +28,7 @@ export interface OnboardingRoute {
    * so a returning account gets the sign-in wall back and nothing behind it.
    */
   onboarded?: boolean;
-  /** A Google-hosted account whose Gmail is not connected and who has not said "not now": ask once, right after sign-in. */
+  /** An account whose Gmail is not connected and who has not said "not now": ask once, right after sign-in. */
   offerGmail?: boolean;
   /**
    * The account signed up on the website, which already made the pitch and
