@@ -75,6 +75,8 @@ export default defineConfig({
         test: {
           name: "renderer-next",
           environment: "jsdom",
+          // Tests read tokens.css as text (`?raw`); nothing is styled.
+          css: { include: [/tokens\.css/] },
           ...ciTimeouts,
           include: ["src/renderer-next/**/*.test.{ts,tsx}"],
           setupFiles: ["./src/renderer-next/test-support/setup.ts"],

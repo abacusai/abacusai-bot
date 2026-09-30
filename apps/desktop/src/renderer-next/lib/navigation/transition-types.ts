@@ -29,6 +29,8 @@ type StartTransitionFn = AnyRouter["startTransition"];
 /** Indirection so tests can observe what the seam adds. */
 export const transitionTypeSink = {
   add: (type: NavType): void => addTransitionType(type),
+  /** Each router transition the seam saw: a pending offer or a commit. */
+  observe: (_kind: "offer" | "commit"): void => undefined,
 };
 
 const INSTALLED = Symbol.for("abacus.transitionTypes");
@@ -98,6 +100,7 @@ export const installTransitionTypes = (router: AnyRouter): void => {
   const wrapped: StartTransitionFn = (fn, expected) => {
     // offerPending passes one "pending" match; a commit has none.
     const isCommit = expected.every((match) => match.status !== "pending");
+    transitionTypeSink.observe(isCommit ? "commit" : "offer");
     const next = router.latestLocation;
     const key = (next.state as NavState).__TSR_key;
     let types: NavType[] = [];

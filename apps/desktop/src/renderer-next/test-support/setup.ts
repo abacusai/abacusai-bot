@@ -66,6 +66,7 @@ if (typeof window !== "undefined") {
   if (window.HTMLElement.prototype.scrollIntoView == null) {
     window.HTMLElement.prototype.scrollIntoView = () => {};
   }
+  window.scrollTo = () => undefined;
   if (window.HTMLElement.prototype.getAnimations == null) {
     window.HTMLElement.prototype.getAnimations = () => [];
   }

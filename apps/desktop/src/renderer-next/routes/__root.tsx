@@ -8,13 +8,14 @@ import { lazy, Suspense } from "react";
 import { AppRoot, NotFound, RootError } from "#next/features/shell";
 import type { RouterContext } from "#next/router";
 
-const Devtools = import.meta.env.DEV
-  ? lazy(() =>
-      import("#next/lib/devtools").then((module) => ({
-        default: module.Devtools,
-      }))
-    )
-  : null;
+const Devtools =
+  import.meta.env.DEV && import.meta.env.MODE !== "test"
+    ? lazy(() =>
+        import("#next/lib/devtools").then((module) => ({
+          default: module.Devtools,
+        }))
+      )
+    : null;
 
 const RootComponent = () => {
   const { transport, collections, system } = Route.useRouteContext();

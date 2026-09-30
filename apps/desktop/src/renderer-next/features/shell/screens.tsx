@@ -91,6 +91,7 @@ export const NotFound = () => {
         action={
           <Button
             size="sm"
+            nativeButton={false}
             render={<AppLink to="/bots/new" transition="nav-lateral" />}
           >
             {t("errors.goHome")}
