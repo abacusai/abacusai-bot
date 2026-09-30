@@ -20,7 +20,12 @@ import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario, renderWithDb } from "../testing";
 import { ModeChip } from "./chips";
 import { useComposerExpanded } from "./composer";
-import { clearDraft, updateDraft } from "./draft-store";
+import {
+  clearDraft,
+  updateDraft,
+  draftRevision,
+  draftStore,
+} from "./draft-store";
 
 let current: { cleanup(): Promise<void> } | null = null;
 afterEach(async () => {
@@ -359,4 +364,61 @@ describe("R2-T25 composer", () => {
     );
     expect(screen.queryByText("disk full")).toBeNull();
   });
+});
+
+describe("r2 draft revisions", () => {
+  it("increments per thread across updates, mode/model changes and successive clears", () => {
+    const initial = draftRevision("t-1");
+    const other = draftRevision("other-thread");
+    updateDraft("t-1", (draft) => ({ ...draft, text: "typed" }));
+    updateDraft("t-1", (draft) => ({ ...draft, text: "" }));
+    updateDraft("t-1", (draft) => ({
+      ...draft,
+      mode: "PLAN",
+      model: "chosen",
+    }));
+    clearDraft("t-1");
+    clearDraft("t-1");
+    expect(draftRevision("t-1")).toBe(initial + 5);
+    expect(draftRevision("other-thread")).toBe(other);
+  });
+
+  it.each(["queue", "rejected", "stale", "exception"])(
+    "%s restoration respects the revision captured after clearing",
+    async (path) => {
+      const relay = new FakeRelay();
+      relay.emitAll(b.sessionReady());
+      const rendered = await renderRelay(relay, "session", {
+        turnBusy: path === "queue",
+      });
+      current = rendered;
+      let settle!: () => void;
+      if (path === "queue")
+        vi.spyOn(rendered.runtime.queue, "enqueue").mockImplementation(
+          () =>
+            new Promise((_, reject) => {
+              settle = () => reject(new Error("failed"));
+            })
+        );
+      else
+        vi.spyOn(rendered.runtime.session("t-1"), "submit").mockImplementation(
+          () =>
+            new Promise((resolve, reject) => {
+              settle = () =>
+                path === "exception"
+                  ? reject(new Error("failed"))
+                  : resolve({ kind: path as "rejected" | "stale" });
+            })
+        );
+      fireEvent.change(field(), { target: { value: "sent draft" } });
+      const before = draftRevision("t-1");
+      fireEvent.keyDown(field(), { key: "Enter" });
+      expect(draftRevision("t-1")).toBe(before + 1);
+      // An update can deliberately retain object identity. It still advances revision.
+      act(() => updateDraft("t-1", (draft) => draft));
+      await act(async () => settle());
+      expect(draftStore.state["t-1"]!.text).toBe("");
+      expect(draftRevision("t-1")).toBe(before + 2);
+    }
+  );
 });
