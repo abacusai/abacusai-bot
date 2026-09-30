@@ -4,7 +4,8 @@
  * written, on the compat channel (stdout itself under `--wire ndjson`), and
  * then, under `--wire agui`, the AG-UI events the emitter derives from it.
  */
-import type { DesktopEvent, InternalAgentEvent } from "../protocol.js";
+import type { InternalAgentEvent } from "../internal-events.js";
+import type { DesktopEvent } from "../protocol.js";
 import type { CompatWriter } from "./channel.js";
 import type { AguiEmitter } from "./emit.js";
 import { isRunScoped, serialize } from "./event.js";

@@ -55,7 +55,9 @@ export interface SessionInit {
   model?: string;
   mode?: string;
   emit: (event: DesktopEvent) => void;
-  emitInternal: (event: import("../protocol.js").InternalAgentEvent) => void;
+  emitInternal: (
+    event: import("../internal-events.js").InternalAgentEvent
+  ) => void;
 }
 
 /** The newest user message of a RunAgentInput, as text. */

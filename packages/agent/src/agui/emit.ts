@@ -12,10 +12,10 @@
 import { EventType } from "@ag-ui/core";
 
 import { eventMeta } from "../event-meta.js";
+import type { InternalAgentEvent } from "../internal-events.js";
 import type {
   AgentEvent,
   DesktopEvent,
-  InternalAgentEvent,
   PermissionRequest,
   ToolDisplayData,
 } from "../protocol.js";

@@ -42,6 +42,7 @@ import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
 import toolTimeouts from "../extensions/tool-timeouts.js";
 import { githubPrompt } from "../github-prompt.js";
+import type { InternalAgentEvent } from "../internal-events.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
 import { buildMcpToolDefinitions } from "../mcp/tools.js";
 import { fileCooldownStore } from "../openllm-cooldowns.js";
@@ -67,7 +68,6 @@ import {
   AgentStatus,
   type AgentEvent,
   type DesktopEvent,
-  type InternalAgentEvent,
   type PermissionDecision,
   type PermissionRequest,
   type ToolRequest,
