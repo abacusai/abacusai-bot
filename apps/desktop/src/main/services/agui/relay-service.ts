@@ -216,6 +216,10 @@ const toHistory = (file: ThreadFileV2 | null): ThreadHistory => {
     runs: [],
     migratedFrom: { updatedAt: file.source.updatedAt },
     v1Derived: true,
+    // Freshness is by the v1 bytes, not the clock (a same-millisecond save).
+    ...(file.source.fingerprint !== undefined && {
+      v1Fingerprint: file.source.fingerprint,
+    }),
   };
 };
 
