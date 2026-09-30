@@ -1254,11 +1254,7 @@
     "welcomeFreeBadge": "Free to start",
     "welcomeCapabilityModels": "Access",
     "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors",
-    "haveAccountContinueWith": "Ich habe bereits ein Konto · Weiter mit {{browser}}",
-    "signInOptions": "Andere Anmeldeoptionen",
-    "usesBrowserSessions": "Die Anmeldung mit Google, Microsoft und Apple nutzt deine Konten aus {{browser}}.",
-    "signingInWithBrowser": "Anmeldung mit {{browser}}…"
+    "welcomeCapabilityConnectors": "100+ Connectors"
   },
   "openFile": {
     "failed": "Diese Datei konnte nicht geöffnet werden.",
