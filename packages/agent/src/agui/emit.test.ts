@@ -957,3 +957,14 @@ describe("the # id reservation (desktop spec 00 C.3)", () => {
     expect(r.legacy.join("\n")).toContain("call#9%");
   });
 });
+
+it("encodes a userInput message id before emitting it", () => {
+  const { emitter } = rig();
+  const events = emitter.userInput("r", "hello", {
+    dequeued: false,
+    messageId: "client#0%23",
+  });
+  expect(
+    events.find((event) => event.type === "TEXT_MESSAGE_START")
+  ).toMatchObject({ messageId: "client%230%2523" });
+});
