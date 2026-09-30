@@ -25,6 +25,7 @@ export {
   DEFAULT_CONNECT_TIMEOUT_MS,
 } from "./message-port";
 export { createWebSocketTransport } from "./websocket";
+export type { CloseReason, TransportState } from "./close-signal";
 export type {
   AppClient,
   AppQueryUtils,
