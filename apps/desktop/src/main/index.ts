@@ -95,7 +95,7 @@ import {
   registerIpcHandlers,
   type HostOperations,
 } from "./handler";
-import { registerKeepAwakeHandlers, setMainAgentBusy } from "./keep-awake";
+import { followMainAgentBusy, registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
@@ -1673,6 +1673,12 @@ function installRpc(
       state: (id) =>
         rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
     }),
+    // Each renderer generation reports its thread once; forget it when gone.
+    onWindowGone: (id, forget) => {
+      const contents = electronWebContents.fromId(id);
+      if (contents == null || contents.isDestroyed()) forget();
+      else contents.once("destroyed", forget);
+    },
   });
   const deps: RpcDeps = {
     serviceHost: workspaceServiceHost,
@@ -1833,10 +1839,9 @@ app
 
     registerKeepAwakeHandlers();
     // Keep-awake follows the relay's run state too, re-evaluated at every
-    // AG-UI run start and terminal (spec 07 review r1 #10).
-    workspaceServiceHost.aguiRelay.onBusyChange((busy) => {
-      setMainAgentBusy(busy);
-    });
+    // AG-UI run start and terminal (spec 07 review r1 #10), starting from the
+    // value it already has (the relay and the cron scheduler started above).
+    followMainAgentBusy(workspaceServiceHost.aguiRelay);
 
     // Best-effort cleanup of attachment temp files older than 7 days across
     // every workspace; never blocks startup.
