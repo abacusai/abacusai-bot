@@ -14,6 +14,7 @@ import { tagEvent } from "../event-meta.js";
 import { parseModeStrict } from "../permissions.js";
 import type { DesktopCommand, DesktopEvent } from "../protocol.js";
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
+import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
 import type { CompatWriter } from "./channel.js";
 import { AguiEmitter } from "./emit.js";
 import { custom, serialize } from "./event.js";
@@ -142,17 +143,21 @@ export class AguiHost {
   private readonly log: (line: string) => void;
   /** Bumped by every stop and reset: a preparation that sees a new value never prompts. */
   private admissionGen = 0;
-  /** Run ids already answered with an ack, duplicates included. */
-  private readonly ackedRunIds = new Set<string>();
+  /**
+   * Run ids already answered with an ack, duplicates included: the newest
+   * `RUN_IDS_KEPT`, which covers every repeat main can still forward
+   * (bounded.ts).
+   */
+  private readonly ackedRunIds = new BoundedSet<string>(RUN_IDS_KEPT);
   /** The newest user message this incarnation prompted, and the run that did. */
   private lastPrompt: { messageId: string; runId: string } | undefined;
   /**
    * Client user-message ids already echoed on stdout this incarnation. A
    * retry reuses its message id; echoing the text again would append it to
    * the message a continuous StreamProcessor (main's transcript, a second
-   * window) already holds.
+   * window) already holds. Bounded like `ackedRunIds`: one id per run.
    */
-  private readonly echoedUserIds = new Set<string>();
+  private readonly echoedUserIds = new BoundedSet<string>(RUN_IDS_KEPT);
   /** A reset is landing: its cancelled terminal precedes the new `session.ready`. */
   private resetInFlight = false;
   private exiting = false;

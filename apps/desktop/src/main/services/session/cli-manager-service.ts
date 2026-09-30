@@ -884,6 +884,20 @@ export class AgentManagerService {
     return this.sendCommand(workspaceId, sessionId, command);
   }
 
+  /**
+   * `sendCommand` to the session's live runtime, whatever its workspace.
+   * Returns the process written to (the identity `NdjsonOrigin.runtime`
+   * names), or null: the AG-UI relay binds an admission to the process that
+   * actually received it, which may not have said `wire.hello` yet.
+   */
+  sendCommandToSession(sessionId: string, command: unknown): object | null {
+    const runtime = this.runtimes.get(sessionId);
+    if (runtime == null) return null;
+    return this.sendCommand(runtime.workspaceId, sessionId, command)
+      ? runtime.process
+      : null;
+  }
+
   sendCommand(
     workspaceId: string,
     sessionId: string,

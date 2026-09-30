@@ -488,17 +488,8 @@ export class ServiceHost {
         });
         return result.success;
       },
-      send: (threadId, command) => {
-        const runtime = this.agentManagerService.getRuntimeInfo(threadId);
-        return (
-          runtime != null &&
-          this.agentManagerService.sendCommand(
-            runtime.workspaceId,
-            threadId,
-            command
-          )
-        );
-      },
+      send: (threadId, command) =>
+        this.agentManagerService.sendCommandToSession(threadId, command),
       markSent: (threadId) => {
         const runtime = this.agentManagerService.getRuntimeInfo(threadId);
         if (runtime != null)
