@@ -34,7 +34,12 @@ export type NavType =
   | "nav-forward"
   | "nav-back"
   | "settings-in"
-  | "settings-out";
+  | "settings-out"
+  | "onboarding-step"
+  | "onboarding-finish"
+  | "notch-expand"
+  | "notch-contract"
+  | "notch-swap";
 
 export const NAV_TYPES: readonly NavType[] = [
   "nav-lateral",
@@ -42,6 +47,11 @@ export const NAV_TYPES: readonly NavType[] = [
   "nav-back",
   "settings-in",
   "settings-out",
+  "onboarding-step",
+  "onboarding-finish",
+  "notch-expand",
+  "notch-contract",
+  "notch-swap",
 ];
 
 export type MotionPreference = "full" | "reduced";
@@ -75,4 +85,34 @@ export const motionFor = <T>(pref: MotionPreference, full: T, reduced: T): T =>
 /** A reduced transition: a 120 ms fade, never a spring or a slide. */
 export const reducedTransition = {
   duration: durations.reduced / 1000,
+} as const;
+
+// Design canvas OnboardMotion and NotchRules. Dwell limits are spec 06 policy.
+export const onboarding = {
+  stepExit: 160,
+  stepEnter: 320,
+  stagger: 60,
+  rise: 12,
+  shellScaleFrom: 0.98,
+} as const;
+export const spotlight = {
+  mask: { type: "spring", mass: 1, stiffness: 80, damping: 14 },
+  cardLag: 40,
+} as const;
+export const hatch = {
+  wobbleCycles: 3,
+  wobbleMs: 220,
+  squash: 0.9,
+  pop: 1.08,
+  settle: { type: "spring", mass: 1, stiffness: 420, damping: 18 },
+  confettiMs: 2400,
+  confettiPieces: 7,
+} as const;
+export const notch = {
+  shape: 350,
+  contentFade: 120,
+  reaction: 600,
+  doneDwell: 5000,
+  replyExpanded: 6000,
+  ackExpiry: 600_000,
 } as const;
