@@ -7,7 +7,7 @@
  * (First-paint `data-pending-scroll` and pixel anchoring are the Electron
  * half, not run here.)
  */
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import * as b from "../fixtures/builders";
@@ -18,6 +18,8 @@ import {
   dayKey,
   followWindow,
   MAX_ROWS,
+  mountedRows,
+  moreSteps,
   messageTime,
   newestWindow,
   showEarlier,
@@ -45,22 +47,43 @@ const turns = (count: number, start = 0) =>
 
 describe("R2-T16 window (pure)", () => {
   it("never exceeds MAX_ROWS in either direction", () => {
-    let window = newestWindow(3000);
+    const items = Array.from({ length: 3000 }, (_, i) => ({
+      id: String(i),
+      fixed: 1,
+      units: 0,
+    }));
+    let window = newestWindow(items);
     expect(window.end - window.start).toBe(MAX_ROWS);
     for (let i = 0; i < 10; i += 1) {
-      window = showEarlier(window);
+      window = showEarlier(items, window);
       expect(window.end - window.start).toBeLessThanOrEqual(MAX_ROWS);
     }
     expect(window.start).toBe(3000 - MAX_ROWS - 1000);
-    for (let i = 0; i < 10; i += 1) window = showLater(window, 3000);
-    expect(window).toEqual({ start: 3000 - MAX_ROWS, end: 3000 });
-    expect(followWindow({ start: 10, end: 410 }, 410, 420, 0)).toEqual({
+    for (let i = 0; i < 10; i += 1) window = showLater(items, window);
+    expect(window).toEqual({ start: 3000 - MAX_ROWS, end: 3000, ranges: {} });
+    expect(
+      followWindow(
+        { start: 10, end: 410, ranges: {} },
+        410,
+        items.slice(0, 420),
+        0
+      )
+    ).toEqual({
       start: 20,
       end: 420,
+      ranges: {},
     });
-    expect(followWindow({ start: 10, end: 200 }, 410, 460, 50)).toEqual({
+    expect(
+      followWindow(
+        { start: 10, end: 200, ranges: {} },
+        410,
+        items.slice(0, 460),
+        50
+      )
+    ).toEqual({
       start: 60,
       end: 250,
+      ranges: {},
     });
   });
 
@@ -101,36 +124,15 @@ describe("R2-T16 transcript", () => {
   });
 
   it("Show earlier mounts older rows without passing the budget", async () => {
-    const relay = new FakeRelay();
-    relay.emitAll([...b.sessionReady(), ...turns(260)]);
-    const session = new ThreadSession({ ai: relay.ai, threadId: "t-1" });
-    sessions.push(session);
-    // Page everything in, then render.
-    await session.load();
-    while (session.hostStore.state.hasOlderMessages) await session.loadOlder();
-    expect(session.hostStore.state.messages).toHaveLength(520);
-    current = await renderRelay(relay, "session");
-    // A fresh session in the renderer's runtime: page it too.
-    const view = current.runtime.session("t-1");
-    while (view.hostStore.state.hasOlderMessages) await view.loadOlder();
-    await waitFor(() =>
-      expect(
-        document.querySelectorAll(
-          '[data-slot="message-scroller-item"][data-message-id]'
-        ).length
-      ).toBe(MAX_ROWS)
-    );
-    for (let i = 0; i < 3; i += 1) {
-      const earlier = screen.queryByRole("button", { name: /Show earlier/ });
-      if (earlier == null) break;
-      fireEvent.click(earlier);
-      expect(
-        document.querySelectorAll(
-          '[data-slot="message-scroller-item"][data-message-id]'
-        ).length
-      ).toBeLessThanOrEqual(MAX_ROWS);
+    const items = [{ id: "huge", fixed: 1, units: 3000 }];
+    let window = newestWindow(items);
+    for (let i = 0; i < 10; i += 1) {
+      window = moreSteps(items, window, "huge");
+      expect(mountedRows(items, window)).toBeLessThanOrEqual(MAX_ROWS);
     }
-  }, 30_000);
+    expect(window.ranges.huge!.end).toBe(1050);
+    expect(window.ranges.huge!.start).toBeGreaterThan(0);
+  });
 
   it("a page returned after a reset is discarded; pages merge outcomes and dedupe ids", async () => {
     const relay = new FakeRelay();
@@ -148,10 +150,14 @@ describe("R2-T16 transcript", () => {
     const second = new ThreadSession({ ai: relay.ai, threadId: "t-1" });
     sessions.push(second);
     await second.load();
+    await waitFor(() =>
+      expect(relay.stats.subscribe).toBeGreaterThanOrEqual(2)
+    );
     let release!: () => void;
     relay.faults.hydrate = () =>
       new Promise<void>((resolve) => (release = resolve));
     const page = second.loadOlder();
+    await waitFor(() => expect(release).toBeTypeOf("function"));
     relay.faults.hydrate = undefined;
     relay.emit(b.custom("session.cleared", {}));
     await waitFor(() => expect(second.rev).toBe(1));

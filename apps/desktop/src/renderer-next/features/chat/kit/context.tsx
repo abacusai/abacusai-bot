@@ -137,6 +137,10 @@ const ChatViewContext = createContext<ChatViewContextValue | null>(null);
 
 export const ChatViewProvider = ChatViewContext.Provider;
 
+/** The enclosing view, or null outside one (the notch's `PermissionList`). */
+export const useOptionalChatView = (): ChatViewContextValue | null =>
+  use(ChatViewContext);
+
 export const useChatView = (): ChatViewContextValue => {
   const value = use(ChatViewContext);
   if (value == null)

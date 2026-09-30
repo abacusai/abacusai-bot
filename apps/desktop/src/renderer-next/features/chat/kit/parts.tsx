@@ -190,14 +190,26 @@ export const ThinkingView = ({ part }: PartProps<unknown, "thinking">) => {
   const { workspaceRoot } = useChatView();
   const scope = useMessageScope();
   const content = (part as { content: string }).content;
-  const thinking = scope.streaming && isLive(part);
+  const thinking = scope.streaming && scope.message?.parts.at(-1) === part;
+  const provenance = (
+    scope.message?.metadata?.abacus?.segments as
+      | Array<{ partIndex?: number; title?: string }>
+      | undefined
+  )?.find((entry) => entry.partIndex === scope.message?.parts.indexOf(part));
   const title =
-    typeof abacusOf(part).title === "string"
+    provenance?.title ??
+    (typeof abacusOf(part).title === "string"
       ? String(abacusOf(part).title)
-      : null;
+      : null);
   return (
     <Collapsible>
       <Marker
+        role="status"
+        aria-label={
+          thinking
+            ? t("chat.part.thinking")
+            : (title ?? t("chat.part.thoughts"))
+        }
         render={<CollapsibleTrigger />}
         className="hover:text-foreground cursor-pointer"
       >
@@ -220,22 +232,6 @@ export const ThinkingView = ({ part }: PartProps<unknown, "thinking">) => {
     </Collapsible>
   );
 };
-
-/** Whether a thinking part is the last of the newest assistant message. */
-const lastThinking = new WeakSet<object>();
-export const markLiveThinking = (message: {
-  role: string;
-  parts: readonly object[];
-}): void => {
-  const last = message.parts.at(-1);
-  if (
-    message.role === "assistant" &&
-    last != null &&
-    (last as { type?: string }).type === "thinking"
-  )
-    lastThinking.add(last);
-};
-const isLive = (part: object): boolean => lastThinking.has(part);
 
 const mediaSource = (part: unknown): string | null => {
   const source = (

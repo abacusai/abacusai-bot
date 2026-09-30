@@ -453,7 +453,8 @@ export const recordTerminal = (
   event: StreamChunk,
   messages: readonly UIMessage[],
   now = Date.now(),
-  runStart?: number
+  runStart?: number,
+  live = false
 ): ThreadStoreState => {
   const runId = terminalRunId(event) ?? state.runs.active?.runId ?? "";
   if (state.runs.outcomes.some((outcome) => outcome.runId === runId))
@@ -471,7 +472,8 @@ export const recordTerminal = (
       : typed.outcome?.type === "cancelled"
         ? "cancelled"
         : "success";
-  const record: RunOutcomeRecord = {
+  const record: RunOutcomeRecord & { live: boolean } = {
+    live,
     runId,
     kind,
     startedAt: state.runs.active?.startedAt ?? now,

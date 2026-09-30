@@ -9,6 +9,7 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { ArrowDown } from "lucide-react";
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ComponentType,
@@ -30,6 +31,7 @@ import {
 import { Skeleton } from "#next/ui/skeleton";
 
 import { useChatView } from "../kit/context";
+import { userView } from "../kit/message";
 import {
   BusyLine,
   busyLabel,
@@ -40,6 +42,7 @@ import {
 } from "../kit/status/status";
 import { useHost, useThreadStore } from "../store/selectors";
 import type { RunOutcomeRecord } from "../store/thread-store";
+import { ToolWindowProvider } from "./row-context";
 import {
   dayKey,
   followWindow,
@@ -47,7 +50,12 @@ import {
   newestWindow,
   showEarlier,
   showLater,
-  type RowWindow,
+  type WindowState,
+  type RowItem,
+  rangeOf,
+  moreSteps,
+  earlierSteps,
+  ROW_FALLBACK_PX,
 } from "./window";
 
 /** The screenshot run's build (dev fixture tables). */
@@ -213,72 +221,118 @@ const Placeholder = ({
   label: string;
   onActivate(): void;
 }) => (
-  <Button
-    variant="ghost"
-    size="sm"
-    className="self-center"
-    onClick={onActivate}
-    data-slot="window-placeholder"
+  <div
+    style={{ minHeight: rows * ROW_FALLBACK_PX }}
+    className="flex shrink-0 items-center justify-center"
   >
-    {label}
-    <span className="sr-only">{` (${rows})`}</span>
-  </Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="self-center"
+      onClick={onActivate}
+      data-slot="window-placeholder"
+    >
+      {label}
+      <span className="sr-only">{` (${rows})`}</span>
+    </Button>
+  </div>
 );
 
 export const Transcript = ({ messages, Message }: TranscriptProps) => {
   const { t } = useTranslation();
-  const { session, slots } = useChatView();
+  const { session, slots, skin } = useChatView();
   const active = useThreadStore(session, (s) => s.runs.active != null);
   const outcomes = useThreadStore(session, (s) => s.runs.outcomes);
   const fresh = useThreadStore(session, (s) => s.fresh);
-  const [window, setWindow] = useState<RowWindow>(() =>
-    newestWindow(messages.length)
+  const visible = messages.filter((message) =>
+    message.role === "user"
+      ? !userView(message).hidden
+      : message.parts.length > 0
   );
+  const items: RowItem[] = visible.map((message) => ({
+    id: message.id,
+    fixed: 1 + message.parts.filter((p) => p.type === "subagent").length,
+    units:
+      skin === "session"
+        ? message.parts.filter((p) => p.type === "tool-call").length
+        : 0,
+  }));
+  const [window, setWindow] = useState<WindowState>(() => newestWindow(items));
+  const away = useMessageScrollerScrollable().end;
+  useEffect(() => {
+    if (!away) session.retain();
+  }, [away, messages, session]);
+  const anchor = useRef<{
+    el: Element;
+    top: number;
+    viewport: HTMLElement;
+  } | null>(null);
+  const preserve = (change: () => void) => {
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="message-scroller-viewport"]'
+    );
+    if (viewport != null && away) {
+      const top = viewport.getBoundingClientRect().top;
+      const el = [
+        ...viewport.querySelectorAll("[data-message-id], [data-tool]"),
+      ].find(
+        (el) =>
+          el.getBoundingClientRect().top >= top &&
+          el.getBoundingClientRect().bottom <= top + viewport.clientHeight
+      );
+      if (el != null)
+        anchor.current = { el, top: el.getBoundingClientRect().top, viewport };
+    }
+    change();
+  };
+  useLayoutEffect(() => {
+    const saved = anchor.current;
+    if (saved != null && saved.el.isConnected)
+      saved.viewport.scrollTop +=
+        saved.el.getBoundingClientRect().top - saved.top;
+    anchor.current = null;
+  });
   const [previous, setPrevious] = useState({
-    total: messages.length,
-    first: messages[0]?.id,
+    total: visible.length,
+    first: visible[0]?.id,
   });
   const marker = useNewMarker(messages);
 
   // Follow list changes (a page mounts above; the end follows new rows).
-  if (
-    previous.total !== messages.length ||
-    previous.first !== messages[0]?.id
-  ) {
+  if (previous.total !== visible.length || previous.first !== visible[0]?.id) {
     const oldFirst = previous.first;
     const prepended =
       oldFirst == null
         ? 0
         : Math.max(
             0,
-            messages.findIndex((m) => m.id === oldFirst)
+            visible.findIndex((m) => m.id === oldFirst)
           );
-    const next = followWindow(
-      window,
-      previous.total,
-      messages.length,
-      prepended
-    );
-    setPrevious({ total: messages.length, first: messages[0]?.id });
+    const next = followWindow(window, previous.total, items, prepended);
+    setPrevious({ total: visible.length, first: visible[0]?.id });
     if (next.start !== window.start || next.end !== window.end) setWindow(next);
   }
 
   const byAnchor = new Map<string, RunOutcomeRecord[]>();
   const orphans: RunOutcomeRecord[] = [];
-  const ids = new Set(messages.map((m) => m.id));
+  const ids = new Set(visible.map((m) => m.id));
   for (const outcome of outcomes) {
     if (outcome.afterMessageId != null && ids.has(outcome.afterMessageId))
       byAnchor.set(outcome.afterMessageId, [
         ...(byAnchor.get(outcome.afterMessageId) ?? []),
         outcome,
       ]);
-    else if (outcome.afterMessageId == null) orphans.push(outcome);
+    else if (
+      outcome.afterMessageId == null ||
+      messages.some((m) => m.id === outcome.afterMessageId)
+    )
+      orphans.push(outcome);
   }
   const latest = active ? null : outcomes.at(-1)?.runId;
-  const shown = messages.slice(window.start, window.end);
+  const shown = visible.slice(window.start, window.end);
   let lastDay: string | null = null;
   for (let index = 0; index < window.start; index += 1) {
-    const key = dayKey(messageTime(messages[index]!));
+    const key = dayKey(messageTime(visible[index]!));
     if (key != null) lastDay = key;
   }
   const rows: ReactNode[] = [];
@@ -304,7 +358,25 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         scrollAnchor={message.role === "user"}
         data-fresh={fresh[message.id] ? "" : undefined}
       >
-        <Message message={message} />
+        <ToolWindowProvider
+          value={{
+            ids: message.parts
+              .filter((p) => p.type === "tool-call")
+              .map((p) => p.id),
+            range: rangeOf(
+              items.find((i) => i.id === message.id)!,
+              window.ranges
+            ),
+            more: () =>
+              preserve(() => setWindow(moreSteps(items, window, message.id))),
+            earlier: () =>
+              preserve(() =>
+                setWindow(earlierSteps(items, window, message.id))
+              ),
+          }}
+        >
+          <Message message={message} />
+        </ToolWindowProvider>
       </MessageScrollerItem>
     );
     for (const outcome of byAnchor.get(message.id) ?? [])
@@ -337,7 +409,9 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
             <Placeholder
               rows={window.start}
               label={t("chat.transcript.showEarlier")}
-              onActivate={() => setWindow(showEarlier(window))}
+              onActivate={() =>
+                preserve(() => setWindow(showEarlier(items, window)))
+              }
             />
           ) : null}
           {orphans.map((outcome) => (
@@ -346,11 +420,13 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
             </MessageScrollerItem>
           ))}
           {rows}
-          {window.end < messages.length ? (
+          {window.end < visible.length ? (
             <Placeholder
-              rows={messages.length - window.end}
+              rows={visible.length - window.end}
               label={t("chat.transcript.showLater")}
-              onActivate={() => setWindow(showLater(window, messages.length))}
+              onActivate={() =>
+                preserve(() => setWindow(showLater(items, window)))
+              }
             />
           ) : null}
           <RunTail messages={messages} />
@@ -363,7 +439,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
             ? t("chat.transcript.jumpNew", { count: marker.count })
             : t("chat.transcript.jump")
         }
-        onClick={() => setWindow(newestWindow(messages.length))}
+        onClick={() => setWindow(newestWindow(items))}
       >
         <ArrowDown aria-hidden />
         {marker.count > 0 ? (
