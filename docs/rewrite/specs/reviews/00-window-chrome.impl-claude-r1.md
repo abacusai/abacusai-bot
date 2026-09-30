@@ -9,3 +9,6 @@
 7. Low — Linux WCO background `#ffffff/#0a0a0a` vs spec opaque `#2a2a28`-style; host view background not updated on theme change.
 8. Low — clipboard: `continue` on empty PNG data instead of returning null; add TIFF (Preview copy) to manual checks.
 9. Info — deferred to renderer switch: integration test (all todo), §7 deletions, tokens.css/useTitlebarArea, popup no-drag, browser-view zoom/transition fixes.
+
+## Re-review of cba4ca8a — MERGEABLE
+All 8 fixed. Two low items to do before RENDERER_GENERATION="wco": (A) probe reschedules every 250 ms while the window is hidden/minimized — use `once("show")`/`once("restore")` instead of the timer for those cases; (B) `window:recreate` IPC/preload exposed in legacy mode — register only when wco.
