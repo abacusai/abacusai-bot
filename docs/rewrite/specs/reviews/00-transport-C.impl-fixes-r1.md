@@ -67,5 +67,6 @@ Commits (worktree branch, on top of `446b38a0`):
 
 ## Test counts
 
-- `vitest run --project main --project preload --project shared`: see the report for the final numbers. The pre-existing failures are unrelated to this slice and were present before it: `packaged-startup.test.ts` and `agent-runtime-deps.test.ts` (`pnpm exec vite build` refuses the installed pnpm version), and the flaky B-T3 memories watcher test.
-- Migrations and config only (`src/main/migrations`, `src/main/services/config`): all pass.
+- `vitest run --project main --project preload --project shared`: 2401 passed, 6 failed, 7 todo (240 files). All 6 failures are outside this slice and also fail without it. 3 are the packaging tests `packaged-startup.test.ts` and `agent-runtime-deps.test.ts`, because `pnpm exec vite build` refuses the installed pnpm version. The other 3 are memory-watcher cases in `rpc/tables/tables.test.ts`, which are timing-flaky: a different subset fails on each run, including when the file runs alone.
+- Migrations and config only (`src/main/migrations`, `src/main/services/config`): 14 files, 226 tests, all pass. The kill harness is 6 of them.
+- `tsc -b`, `oxlint .` (0 errors) and `oxfmt .` are clean.
