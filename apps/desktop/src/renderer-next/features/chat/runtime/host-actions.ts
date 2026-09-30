@@ -1,0 +1,62 @@
+/**
+ * What the chat kit asks of the host besides `ai.*` (spec 02 §7.5, §8.6):
+ * external links, revealing files, the attach pickers, pasted files and
+ * thumbnails. Built from the transport in production; faked in fixtures.
+ */
+import type { Transport } from "#next/data/transport";
+
+export interface PickedPath {
+  path: string;
+  name: string;
+  size?: number;
+}
+
+export interface ChatHostActions {
+  openExternal(url: string): Promise<void>;
+  showItemInFolder(path: string): Promise<void>;
+  pickFiles(): Promise<PickedPath[] | null>;
+  pickFolder(): Promise<string | null>;
+  /** Writes pasted blobs under `baseFolder`; returns their absolute paths. */
+  savePasted(
+    baseFolder: string,
+    files: Array<{ name: string; data: Uint8Array<ArrayBuffer> }>
+  ): Promise<string[]>;
+  /** A dropped file's real path, when it has one (spec 00 A.4.4). */
+  pathForFile(file: File): string | null;
+  readImage(filePath: string, hostRoot: string): Promise<string>;
+}
+
+export const hostActionsFor = (transport: Transport): ChatHostActions => {
+  const client = transport.client;
+  return {
+    openExternal: (url) => client.system.openExternal({ url }),
+    showItemInFolder: (path) => client.system.showItemInFolder({ path }),
+    pickFiles: async () => {
+      const picked = await client.system.dialog.openFiles({ kind: "all" });
+      return (
+        picked?.map((file) => ({
+          path: file.path,
+          name: file.name,
+          size: file.data.byteLength,
+        })) ?? null
+      );
+    },
+    pickFolder: () => client.system.dialog.openFolder(),
+    savePasted: async (baseFolder, files) =>
+      (await client.files.savePastedTemp({ baseFolder, files })).paths,
+    pathForFile: (file) => transport.host.getPathForFile?.(file) || null,
+    readImage: async (filePath, hostRoot) =>
+      (await client.files.readImageAsDataUrl({ filePath, hostRoot })).dataUrl,
+  };
+};
+
+/** A host that does nothing (gallery, tests). */
+export const inertHostActions: ChatHostActions = {
+  openExternal: async () => {},
+  showItemInFolder: async () => {},
+  pickFiles: async () => null,
+  pickFolder: async () => null,
+  savePasted: async () => [],
+  pathForFile: () => null,
+  readImage: async () => "",
+};
