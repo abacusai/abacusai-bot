@@ -598,7 +598,7 @@
         "too-long": "This is too long",
         "color": "Choose a valid colour"
       },
-      "accessoryUnavailable": "Accessories need the bot storage update."
+      "accessoryUnavailable": "Accessories are not available yet."
     },
     "panel": {
       "detailsTitle": "Details",
