@@ -119,7 +119,7 @@ const DaySeparator = ({ date }: { date: Date }) => {
           });
   return (
     <div className="flex justify-center py-1" data-slot="day-separator">
-      <span className="text-muted-foreground rounded-full bg-[var(--chat-surface-2)] px-2 py-1 text-xs">
+      <span className="rounded-full bg-[var(--chat-surface-2)] px-2 py-1 text-xs text-[var(--chat-status-muted)]">
         {label}
       </span>
     </div>

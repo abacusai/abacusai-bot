@@ -6,13 +6,14 @@
  * element-level, except Stop (`Mod+.`), the one global shortcut.
  */
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { useSelector } from "@tanstack/react-store";
+import { Store, useSelector } from "@tanstack/react-store";
 import { ArrowUp, FileText, Folder, Mic, Plus, X } from "lucide-react";
 import { motion } from "motion/react";
 import {
   createContext,
   use,
   useId,
+  useEffect,
   useRef,
   useState,
   type ClipboardEvent,
@@ -95,12 +96,35 @@ const useComposer = (): ComposerContextValue => {
   return value;
 };
 
-/** Derived, not stored (§8.7): the bot pill is "open" with focus or a draft. */
-export const useComposerExpanded = (threadId: string): boolean =>
-  useSelector(draftStore, (state) => {
+const focusedThreads = new Store<ReadonlySet<string>>(new Set<string>());
+const modelMenus = new Store<ReadonlySet<string>>(new Set<string>());
+const setModelMenu = (threadId: string, open: boolean): void => {
+  modelMenus.setState((state) => {
+    const next = new Set(state);
+    if (open) next.add(threadId);
+    else next.delete(threadId);
+    return next;
+  });
+};
+const setThreadFocus = (threadId: string, focused: boolean): void => {
+  focusedThreads.setState((state) => {
+    if (state.has(threadId) === focused) return state;
+    const next = new Set(state);
+    if (focused) next.add(threadId);
+    else next.delete(threadId);
+    return next;
+  });
+};
+/** The bot pill is expanded with focus or a non-empty draft (§8.7, 03 §16.3). */
+export const useComposerExpanded = (threadId: string): boolean => {
+  const focused = useSelector(focusedThreads, (state) => state.has(threadId));
+  const drafted = useSelector(draftStore, (state) => {
     const draft = state[threadId];
     return draft != null && (draft.text !== "" || draft.attachments.length > 0);
   });
+  const menu = useSelector(modelMenus, (state) => state.has(threadId));
+  return focused || drafted || menu;
+};
 
 const Attachments = () => {
   const { t } = useTranslation();
@@ -278,7 +302,16 @@ export const ThreadComposer = () => {
   const incarnation = useThreadStore(session, (state) => state.incarnation);
   const queue = useThreadStore(session, (state) => state.queue);
   const skills = useThreadStore(session, (state) => state.skills);
-  const [focused, setFocused] = useState(false);
+  const focused = useSelector(focusedThreads, (state) => state.has(threadId));
+  const setFocused = (value: boolean): void => setThreadFocus(threadId, value);
+  const modelMenuOpen = useSelector(modelMenus, (state) => state.has(threadId));
+  useEffect(
+    () => () => {
+      setThreadFocus(threadId, false);
+      setModelMenu(threadId, false);
+    },
+    [threadId]
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState<TriggerState | null>(null);
@@ -290,7 +323,7 @@ export const ThreadComposer = () => {
   const expanded =
     config.mode === "full" && skin === "session"
       ? !menuOpen
-      : focused || hasDraft;
+      : focused || hasDraft || modelMenuOpen;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"
@@ -475,7 +508,12 @@ export const ThreadComposer = () => {
     />
   ) : null;
   const model =
-    config.model != null ? <ModelChip binding={config.model} /> : null;
+    config.model != null ? (
+      <ModelChip
+        binding={config.model}
+        onOpenChange={(open) => setModelMenu(threadId, open)}
+      />
+    ) : null;
 
   return (
     <ComposerContext value={value}>
@@ -484,6 +522,11 @@ export const ThreadComposer = () => {
         data-slot="composer"
         data-state={state}
         data-expanded={expanded ? "" : undefined}
+        onFocusCapture={() => setFocused(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+            setFocused(false);
+        }}
       >
         {trigger != null ? (
           <TriggerMenu
@@ -531,8 +574,6 @@ export const ThreadComposer = () => {
             value={draft.text}
             placeholder={placeholder}
             rows={1}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
             onChange={(event) =>
               setText(event.target.value, event.target.selectionStart)
             }

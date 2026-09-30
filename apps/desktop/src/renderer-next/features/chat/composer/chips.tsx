@@ -144,7 +144,9 @@ export const ModeChip = ({
 export const ModelChip = ({
   binding,
   compact = false,
+  onOpenChange,
 }: {
+  onOpenChange?(open: boolean): void;
   binding: ModelChipBinding;
   compact?: boolean;
 }) => {
@@ -187,6 +189,7 @@ export const ModelChip = ({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
+        onOpenChange?.(next);
         if (!next) setQuery("");
       }}
     >
