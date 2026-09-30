@@ -35,3 +35,35 @@ it("R4-T18 recovers the capture/hide/present chain and drops closed candidates",
   one();
   await presenter.refresh();
 });
+it("hides the old owner after the capture deadline even when capture never resolves", async () => {
+  vi.useFakeTimers();
+  const runtime = {
+    capture: vi.fn(() => new Promise(() => {})),
+    hide: vi.fn(async () => {}),
+    present: vi.fn(async () => ({})),
+  };
+  const presenter = createNativePresenter(runtime as never);
+  const candidate = (id: string) => ({
+    id,
+    lease: { conversationKey: "k", resourceId: id, generation: 1 } as never,
+    bounds: () => ({ x: 0, y: 0, width: 100, height: 100 }),
+    visible: () => true,
+    blocked: () => false,
+  });
+  const one = presenter.register(candidate("one"));
+  await presenter.refresh();
+  const two = presenter.register(candidate("two"));
+  const finished = presenter.refresh();
+  await vi.advanceTimersByTimeAsync(501);
+  await finished;
+  expect(runtime.hide).toHaveBeenCalledWith(
+    expect.objectContaining({ presentationId: "one" })
+  );
+  expect(presenter.owner.state).toBe("two");
+  one();
+  two();
+  const cleanup = presenter.refresh();
+  await vi.advanceTimersByTimeAsync(501);
+  await cleanup;
+  vi.useRealTimers();
+});

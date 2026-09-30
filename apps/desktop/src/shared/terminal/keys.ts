@@ -25,5 +25,5 @@ export const terminalAction = (
   if (key === "b" && event.altKey && !event.shiftKey) return "togglePanel";
   if (event.altKey) return;
   if (key === "w" && event.shiftKey === (platform !== "mac")) return "closeTab";
-  if (key === "n" && !event.shiftKey) return "new";
+  if (platform === "mac" && key === "n" && !event.shiftKey) return "new";
 };

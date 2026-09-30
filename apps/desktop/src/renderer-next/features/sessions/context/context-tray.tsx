@@ -5,6 +5,11 @@ import { useTranslation } from "react-i18next";
 
 import { useDb } from "#next/data/db";
 import { Button } from "#next/ui/button";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "#next/ui/hover-card";
 import { Input } from "#next/ui/input";
 import { Popover, PopoverTrigger, PopoverContent } from "#next/ui/popover";
 
@@ -172,18 +177,54 @@ export const SessionContextTray = ({
             </PopoverContent>
           </Popover>
         ) : null}
-        {sessionId ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={!pr.data}
-            onClick={() =>
-              pr.data &&
-              void transport.client.system.openExternal({ url: pr.data.url })
-            }
-          >
-            {pr.data ? `PR ${pr.data.number}` : t("sessions.tray.noPr")}
-          </Button>
+        {sessionId && pr.data ? (
+          <HoverCard>
+            <HoverCardTrigger
+              render={
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    void transport.client.system.openExternal({
+                      url: pr.data!.url,
+                    })
+                  }
+                />
+              }
+            >
+              PR {pr.data.number}
+            </HoverCardTrigger>
+            <HoverCardContent>
+              <p className="font-medium">{pr.data.title}</p>
+              <p>{t(`sessions.pr.${pr.data.reviewState}`)}</p>
+              <p className="font-mono">
+                +{pr.data.additions} −{pr.data.deletions}
+              </p>
+              <ul>
+                {pr.data.checks.map((check) => (
+                  <li key={check.name}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={!check.url}
+                      onClick={() =>
+                        check.url &&
+                        void transport.client.system.openExternal({
+                          url: check.url,
+                        })
+                      }
+                    >
+                      {check.name} · {t(`sessions.pr.${check.status}`)}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </HoverCardContent>
+          </HoverCard>
+        ) : sessionId ? (
+          <span className="text-muted-foreground">
+            {t("sessions.tray.noPr")}
+          </span>
         ) : null}
       </div>
       <Popover>

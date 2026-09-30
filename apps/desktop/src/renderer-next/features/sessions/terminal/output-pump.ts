@@ -39,6 +39,7 @@ export const pumpOutput = async (
           return;
         }
         applyTerminalOutput(view, chunk);
+        failures = 0;
       }
       if (!signal.aborted)
         throw new Error("Terminal stream ended without retirement");

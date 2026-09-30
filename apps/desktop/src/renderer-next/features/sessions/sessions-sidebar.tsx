@@ -18,6 +18,7 @@ import { isListedSession, isListedWorkspace } from "#next/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#next/data/db/prefs";
 import { useCollectionStatus } from "#next/data/db/status";
 import { usePendingConnectorAsks } from "#next/lib/connector-requests";
+import { formatChatStamp } from "#next/lib/format/chat-stamp";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import {
@@ -31,6 +32,13 @@ import {
   AlertDialogAction,
 } from "#next/ui/alert-dialog";
 import { Button } from "#next/ui/button";
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+} from "#next/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +59,9 @@ import { sessionConversationKey } from "#shared/conversation-scope";
 import { sessionAttention } from "./data/attention";
 import { useSessionsTransport } from "./data/queries";
 import { renameSession, deleteSession } from "./data/session-actions";
-import { sessionsUnreadStore } from "./data/unread-store";
+import { sessionsUnreadStore, markSessionUnread } from "./data/unread-store";
+import { openTab } from "./dock/panel-tabs-store";
+import { newStartDraft, startDraftStore } from "./start/start-session";
 
 export interface SessionGroups {
   pinned: SessionRow[];
@@ -100,9 +110,22 @@ export const SessionsSidebar = () => {
   const asks = usePendingConnectorAsks(useSessionsTransport());
   const [query, setQuery] = useState("");
   const params = useParams({ strict: false }) as { sessionId?: string };
-  const { pinned, groups } = groupSessions(
-    (sessions ?? []).filter((s) =>
+  const needs = (sessions ?? []).filter(
+    (s) =>
+      isListedSession(s) &&
+      sessionAttention(
+        s,
+        false,
+        asks[sessionConversationKey(s.workspaceId, s.id)] ?? 0
+      ).kind === "needs-you" &&
       s.label.toLowerCase().includes(query.toLowerCase())
+  );
+  const needsIds = new Set(needs.map((s) => s.id));
+  const { pinned, groups } = groupSessions(
+    (sessions ?? []).filter(
+      (s) =>
+        !needsIds.has(s.id) &&
+        s.label.toLowerCase().includes(query.toLowerCase())
     ),
     workspaces ?? [],
     prefs.pinned.sessionIds
@@ -152,12 +175,17 @@ export const SessionsSidebar = () => {
         />
       ) : status === "loading" ? (
         <NavList.Skeleton />
-      ) : pinned.length === 0 && groups.length === 0 ? (
+      ) : pinned.length === 0 && groups.length === 0 && needs.length === 0 ? (
         <p className="text-muted-foreground px-2 pt-2 text-xs">
           {t("sessions.sidebar.empty")}
         </p>
       ) : (
         <div className="flex flex-col">
+          {needs.length ? (
+            <NavList.Group label={t("sessions.attention.needs-you")}>
+              {needs.map((s) => row(s, false))}
+            </NavList.Group>
+          ) : null}
           {pinned.length > 0 && (
             <NavList.Group label={t("sessions.sidebar.pinned")}>
               {pinned.map((session) => row(session, false))}
@@ -168,7 +196,7 @@ export const SessionsSidebar = () => {
               key={workspace.id}
               label={workspace.label}
               icon={<Folder className="size-3.5 shrink-0" />}
-              meta={workspace.description || undefined}
+              meta={rows.length}
               open={prefs.workspaceExpanded[workspace.id] ?? true}
               onOpenChange={(open) =>
                 void updatePrefs({
@@ -204,7 +232,10 @@ const SessionSidebarRow = ({
   const db = useDb();
   const prefs = usePrefs();
   const navigate = useAppNavigate();
+  const currentId = (useParams({ strict: false }) as { sessionId?: string })
+    .sessionId;
   const transport = useSessionsTransport();
+  const [now] = useState(() => Date.now());
   const unread = useSelector(sessionsUnreadStore, (s) => s.has(session.id));
   const attention = sessionAttention(session, unread, asks);
   const [rename, setRename] = useState(false);
@@ -220,127 +251,229 @@ const SessionSidebarRow = ({
           : [...prefs.pinned.sessionIds, session.id],
       },
     });
-  return (
-    <div className="group relative flex items-center">
-      <NavList.Item
-        to="/sessions/$sessionId"
-        params={{ sessionId: session.id }}
-        active={active}
-        title={session.label || t("sessions.untitled")}
-        indent={indent}
-        className="min-w-0 flex-1 pr-8"
-        trailing={
-          attention.kind !== "idle" ? (
-            <span
-              role="img"
-              aria-label={t(`sessions.attention.${attention.kind}`)}
-              className={
-                attention.kind === "needs-you"
-                  ? "text-amber-600"
-                  : "text-muted-foreground"
-              }
-            >
-              ●
-            </span>
-          ) : null
+  const actions = [
+    {
+      id: "rename",
+      label: t("sessions.sidebar.rename"),
+      run: () => {
+        setLabel(session.label);
+        setRename(true);
+      },
+    },
+    {
+      id: "pin",
+      label: t(
+        prefs.pinned.sessionIds.includes(session.id)
+          ? "sessions.sidebar.unpin"
+          : "sessions.sidebar.pin"
+      ),
+      run: pin,
+    },
+    {
+      id: "unread",
+      label: t("sessions.sidebar.markUnread"),
+      run: () => markSessionUnread(session.id),
+    },
+    {
+      id: "beside",
+      label: t("sessions.sidebar.openBeside"),
+      run: () => {
+        const current = currentId
+          ? db.collections.sessions.get(currentId)
+          : undefined;
+        if (!current) {
+          void navigate({
+            to: "/sessions/$sessionId",
+            params: { sessionId: session.id },
+            transition: "nav-lateral",
+          });
+          return;
         }
-      />
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="absolute right-0"
-              aria-label={t("sessions.sidebar.actions", {
-                name: session.label,
-              })}
-            />
+        const ref = `preview:session-${session.id}`;
+        openTab(sessionConversationKey(current.workspaceId, current.id), {
+          ref,
+          title: session.label,
+          sessionId: session.id,
+        });
+        void navigate({
+          search: (p: Record<string, unknown>) => ({
+            ...p,
+            tab: ref,
+            view: "split",
+          }),
+          transition: "none",
+        } as never);
+      },
+    },
+    {
+      id: "worktree",
+      label: t("sessions.sidebar.newWorktree"),
+      run: () => {
+        void transport.client.git
+          .currentBranch({
+            workspaceId: session.workspaceId,
+            sessionId: session.id,
+          })
+          .then((branch) => {
+            if (!branch.currentBranch)
+              throw new Error(t("sessions.tray.noBranch"));
+            startDraftStore.setState(() => ({
+              ...newStartDraft(),
+              workspaceId: session.workspaceId,
+              worktree: { kind: "new", baseRef: branch.currentBranch! },
+            }));
+            return navigate({
+              to: "/sessions/new",
+              search: { workspace: session.workspaceId },
+              transition: "nav-forward",
+            });
+          })
+          .catch((e) => setError(String(e)));
+      },
+    },
+    {
+      id: "copy",
+      label: t("sessions.sidebar.copyId"),
+      run: () => void navigator.clipboard.writeText(session.id),
+    },
+    {
+      id: "delete",
+      label: t("sessions.sidebar.delete"),
+      run: () => setRemove(true),
+    },
+  ];
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={<div className="group relative flex items-center" />}
+      >
+        <NavList.Item
+          to="/sessions/$sessionId"
+          params={{ sessionId: session.id }}
+          active={active}
+          title={session.label || t("sessions.untitled")}
+          meta={formatChatStamp(
+            Date.parse(session.updatedAt),
+            now,
+            navigator.language,
+            t("workspace.yesterday")
+          )}
+          hint={`${session.label} · ${session.worktreeBranch ?? session.workspaceId}`}
+          indent={indent}
+          className="min-w-0 flex-1 pr-8"
+          trailing={
+            attention.kind !== "idle" ? (
+              <span
+                role="img"
+                aria-label={t(`sessions.attention.${attention.kind}`)}
+                className={
+                  attention.kind === "needs-you"
+                    ? "text-amber-600"
+                    : "text-muted-foreground"
+                }
+              >
+                ●
+              </span>
+            ) : null
           }
-        >
-          ⋯
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              onClick={() => {
-                setLabel(session.label);
-                setRename(true);
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="absolute right-0"
+                aria-label={t("sessions.sidebar.actions", {
+                  name: session.label,
+                })}
+              />
+            }
+          >
+            ⋯
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuGroup>
+              {actions.map((action) => (
+                <DropdownMenuItem key={action.id} onClick={action.run}>
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Dialog open={rename} onOpenChange={setRename}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("sessions.sidebar.rename")}</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void renameSession(db, session.id, label)
+                  .then(() => setRename(false))
+                  .catch((e) => setError(String(e)));
               }}
             >
-              {t("sessions.sidebar.rename")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={pin}>
-              {t(
-                prefs.pinned.sessionIds.includes(session.id)
-                  ? "sessions.sidebar.unpin"
-                  : "sessions.sidebar.pin"
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => void navigator.clipboard.writeText(session.id)}
-            >
-              {t("sessions.sidebar.copyId")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setRemove(true)}>
-              {t("sessions.sidebar.delete")}
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Dialog open={rename} onOpenChange={setRename}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("sessions.sidebar.rename")}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void renameSession(db, session.id, label)
-                .then(() => setRename(false))
-                .catch((e) => setError(String(e)));
-            }}
-          >
-            <Input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              aria-label={t("sessions.sidebar.name")}
-            />
-            <Button type="submit" disabled={!label.trim()}>
-              {t("sessions.common.save")}
-            </Button>
-            {error ? <p role="alert">{error}</p> : null}
-          </form>
-        </DialogContent>
-      </Dialog>
-      <AlertDialog open={remove} onOpenChange={setRemove}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("sessions.sidebar.delete")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("sessions.sidebar.deleteBody")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("sessions.common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                void deleteSession(db, transport.client, session, () => {
-                  if (active)
-                    void navigate({
-                      to: "/sessions/new",
-                      search: { workspace: session.workspaceId },
-                      replace: true,
-                      transition: "nav-lateral",
-                    });
-                }).catch((e) => setError(String(e)))
-              }
-            >
-              {t("sessions.sidebar.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              <Input
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                aria-label={t("sessions.sidebar.name")}
+              />
+              <Button type="submit" disabled={!label.trim()}>
+                {t("sessions.common.save")}
+              </Button>
+              {error ? <p role="alert">{error}</p> : null}
+            </form>
+          </DialogContent>
+        </Dialog>
+        <AlertDialog open={remove} onOpenChange={setRemove}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("sessions.sidebar.delete")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("sessions.sidebar.deleteBody")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {t("sessions.common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() =>
+                  void deleteSession(db, transport.client, session, () => {
+                    if (active)
+                      void navigate({
+                        to: "/sessions/new",
+                        search: { workspace: session.workspaceId },
+                        replace: true,
+                        transition: "nav-lateral",
+                      });
+                  }).catch((e) => setError(String(e)))
+                }
+              >
+                {t("sessions.sidebar.delete")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {error ? (
+          <p role="alert" className="text-destructive text-xs">
+            {error}
+          </p>
+        ) : null}
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuGroup>
+          {actions.map((action) => (
+            <ContextMenuItem key={action.id} onClick={action.run}>
+              {action.label}
+            </ContextMenuItem>
+          ))}
+        </ContextMenuGroup>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };

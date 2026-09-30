@@ -19,6 +19,7 @@ import { sessionConversationKey } from "#shared/conversation-scope";
 
 import { BrowserTab } from "./browser/browser-tab";
 import { ChangesTab } from "./changes/changes-tab";
+import { WorkspaceMissing } from "./context/workspace-missing";
 import { agentLifecycle } from "./data/agent-start";
 import {
   useWorkspace,
@@ -35,6 +36,7 @@ export const SessionWorkspace = ({
   chat,
   incarnation,
   renderAgent,
+  renderSession,
   registerHotkeys,
   dispatch,
   presenter,
@@ -44,6 +46,7 @@ export const SessionWorkspace = ({
   chat: ReactNode;
   incarnation: string | null;
   renderAgent: (id: string | undefined) => ReactNode;
+  renderSession: (id: string) => ReactNode;
   registerHotkeys: SessionDockProps["registerHotkeys"];
   dispatch: (id: TerminalAction) => void;
   presenter: ComponentProps<typeof BrowserSurface>["presenter"];
@@ -135,6 +138,18 @@ export const SessionWorkspace = ({
           <Button onClick={() => void status.refetch()}>
             {t("sessions.common.retry")}
           </Button>
+          {status.data.kind !== "worktree" ? (
+            <WorkspaceMissing
+              workspaceId={row.workspaceId}
+              retry={() => void status.refetch()}
+              removed={() =>
+                void navigate({
+                  to: "/sessions/new",
+                  transition: "nav-lateral",
+                })
+              }
+            />
+          ) : null}
           {status.data.kind === "worktree" ? (
             <Button
               onClick={() =>
@@ -188,9 +203,15 @@ export const SessionWorkspace = ({
                 <TerminalTab
                   row={row}
                   id={tab.ref.slice(9)}
+                  shell={tab.shell}
                   visible={visible}
                   onClose={onClose}
                   dispatch={dispatch}
+                  onUrl={(url) => {
+                    const ref = `browser:${crypto.randomUUID()}`;
+                    openTab(key, { ref, title: url, url });
+                    select(ref);
+                  }}
                 />
               );
             if (tab.ref.startsWith("browser:"))
@@ -205,6 +226,7 @@ export const SessionWorkspace = ({
                   blocked={blocked}
                 />
               );
+            if (tab.sessionId) return renderSession(tab.sessionId);
             if (tab.ref.startsWith("preview:"))
               return (
                 <SessionFilePreview

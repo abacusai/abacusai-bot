@@ -1830,7 +1830,10 @@
       "unpin": "Unpin",
       "copyId": "Copy session ID",
       "delete": "Delete session",
-      "deleteBody": "This session and its transcript will be deleted. This cannot be undone."
+      "deleteBody": "This session and its transcript will be deleted. This cannot be undone.",
+      "markUnread": "Mark as unread",
+      "openBeside": "Open beside this chat",
+      "newWorktree": "New worktree from here"
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -1882,7 +1885,8 @@
           "name": "Review my pull requests",
           "detail": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
         }
-      }
+      },
+      "recent": "Pick up where you left off in {{workspace}}"
     },
     "model": {
       "choose": "Choose a model",
@@ -1937,7 +1941,11 @@
       "filter": "Filter files…",
       "preview": "Open preview",
       "trash": "Move to Trash",
-      "select": "Select a file to preview."
+      "select": "Select a file to preview.",
+      "openEditor": "Open in editor",
+      "copyPath": "Copy path",
+      "trashFolder": "Move folder to Trash?",
+      "trashFolderBody": "Move {{path}} and all its contents to Trash?"
     },
     "changes": {
       "staged": "Staged",
@@ -1960,12 +1968,17 @@
       "added": "Added line",
       "removed": "Removed line",
       "keepAll": "Keep all",
-      "undoAll": "Undo all"
+      "undoAll": "Undo all",
+      "summary": "{{count}} files changed",
+      "review": "Review changes"
     },
     "missing": {
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
-      "primary": "Use primary checkout"
+      "primary": "Use primary checkout",
+      "choose": "Choose folder",
+      "deleteWorkspace": "Delete workspace",
+      "deleteBody": "Remove this workspace and its sessions from the app? The folder on disk will remain."
     },
     "agents": {
       "empty": "No sub-agent selected.",
@@ -1975,11 +1988,20 @@
     "device": {
       "empty": "Choose a device to preview.",
       "permission": "Allow screen recording to preview the simulator.",
-      "screen": "Device screen"
+      "screen": "Device screen",
+      "refresh": "Refresh devices",
+      "open": "Open device",
+      "build": "Build and run",
+      "home": "Home",
+      "grant": "Open Screen Recording settings",
+      "type": "Type on device",
+      "send": "Send",
+      "unavailable": "Device stream unavailable"
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})"
+      "exited": "Process exited ({{code}})",
+      "newShell": "New terminal · {{shell}}"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -1996,7 +2018,22 @@
       "targetFallback": "{{name}} is unavailable; using Local.",
       "branchSearch": "Search branches…",
       "stopFirst": "Stop the agent before switching branches.",
-      "createBranch": "Create branch {{name}}"
+      "createBranch": "Create branch {{name}}",
+      "tasks": "Tasks {{done}} of {{total}}",
+      "noBranch": "This checkout has no branch."
+    },
+    "routine": {
+      "talk": "Talk to the routine"
+    },
+    "pr": {
+      "approved": "Approved",
+      "pending": "Pending",
+      "changes_requested": "Changes requested",
+      "draft": "Draft",
+      "merged": "Merged",
+      "closed": "Closed",
+      "success": "Passed",
+      "failure": "Failed"
     }
   },
   "sidebarNav": {

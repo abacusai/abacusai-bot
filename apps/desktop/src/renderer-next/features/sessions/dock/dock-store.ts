@@ -18,6 +18,7 @@ export type DockAction =
       target: string;
       edge?: "left" | "right" | "top" | "bottom";
       id: string;
+      before?: string;
     }
   | { type: "close"; tab: string }
   | { type: "focus"; tab: string };
@@ -88,7 +89,18 @@ export const dockReducer = (tree: DockNode, action: DockAction): DockNode => {
     mapLeaves(stripped, (l) => {
       if (l.id !== action.target) return l;
       if (!action.edge)
-        return { ...l, tabs: [...l.tabs, action.tab], active: action.tab };
+        return {
+          ...l,
+          tabs:
+            action.before && l.tabs.includes(action.before)
+              ? [
+                  ...l.tabs.slice(0, l.tabs.indexOf(action.before)),
+                  action.tab,
+                  ...l.tabs.slice(l.tabs.indexOf(action.before)),
+                ]
+              : [...l.tabs, action.tab],
+          active: action.tab,
+        };
       const next: DockLeaf = {
         kind: "leaf",
         id: action.id,
