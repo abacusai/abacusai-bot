@@ -3,14 +3,55 @@ import { useMatchRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { NavList } from "#next/components/nav-list";
+import { usePrefs, useUpdatePrefs } from "#next/data/db/prefs";
+import { AppLink } from "#next/lib/navigation/app-link";
 import { LIBRARY_PAGES } from "#next/lib/navigation/areas";
+import { showError } from "#next/lib/toast";
+import { Button } from "#next/ui/button";
 
 export const LibrarySidebar = () => {
   const { t } = useTranslation();
   const matchRoute = useMatchRoute();
+  const queue = usePrefs().onboardingPairing ?? [];
+  const update = useUpdatePrefs();
   return (
     <NavList.Root label={t("library.sidebar.label")}>
       <NavList.Header title={t("library.sidebar.label")} />
+      {queue.length > 0 && (
+        <div role="status" className="flex flex-col gap-2 p-3 text-xs">
+          <p>{t("phase5.pairingPending")}</p>
+          {queue.map((platform) => (
+            <Button
+              key={platform}
+              size="sm"
+              variant="secondary"
+              nativeButton={false}
+              render={
+                <AppLink
+                  to="/library/messaging"
+                  search={{ platform }}
+                  transition="none"
+                />
+              }
+            >
+              {t("phase5.finishPairing", {
+                platform: t(`messaging.platforms.${platform}`),
+              })}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() =>
+              void update({ onboardingPairing: [] }).catch(() =>
+                showError(t("phase5.saveFailed"))
+              )
+            }
+          >
+            {t("phase5.dismiss")}
+          </Button>
+        </div>
+      )}
       <NavList.Rows>
         {LIBRARY_PAGES.map((page) => (
           <NavList.Item

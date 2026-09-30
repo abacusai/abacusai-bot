@@ -197,6 +197,8 @@ export const defaultSeed = (): FixtureSeed => ({
 
 export interface HarnessOptions {
   seed?: FixtureSeed;
+  /** Feature-owned procedures exercise the real contract and memory transport. */
+  procedures?: Record<string, unknown>;
   history?: RouterHistory;
   /** Runs on the FixtureDb before any collection syncs. */
   beforeRender?: (db: FixtureDb) => void;
@@ -233,9 +235,28 @@ export const createHarness = async (
   resetShellStore();
   resetReadinessForTests();
   const calls: Array<[string, unknown]> = [];
-  const transport = createMemoryTransport(shellRouter(SYSTEM_INFO, options), {
-    calls,
-  });
+  const mergeProcedures = (
+    base: Record<string, unknown>,
+    extra: Record<string, unknown>
+  ): Record<string, unknown> => {
+    const result = { ...base };
+    for (const [key, value] of Object.entries(extra))
+      result[key] =
+        value && typeof value === "object" && !("~orpc" in value)
+          ? mergeProcedures(
+              (base[key] ?? {}) as Record<string, unknown>,
+              value as Record<string, unknown>
+            )
+          : value;
+    return result;
+  };
+  const transport = createMemoryTransport(
+    mergeProcedures(
+      shellRouter(SYSTEM_INFO, options) as Record<string, unknown>,
+      options.procedures ?? {}
+    ) as ReturnType<typeof shellRouter>,
+    { calls }
+  );
   const db = new FixtureDb(options.seed ?? defaultSeed());
   options.beforeRender?.(db);
   const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });

@@ -105,3 +105,23 @@ describe("connection lifecycle", () => {
     expect(d.calls.filter((c) => c === "whatsapp:false")).toHaveLength(1);
   });
 });
+
+it("R5-T16 pairing watchdog settles the pending caller and disables its platform", async () => {
+  vi.useFakeTimers();
+  try {
+    const d = setup();
+    const flow = createConnectFlow(d);
+    const entry = CONNECTORS.find(
+      (e) => e.kind === "messaging" && e.platform === "whatsapp"
+    )!;
+    const pending = flow.start(entry.id);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(d.navigate).toHaveBeenCalledWith("whatsapp");
+    await vi.advanceTimersByTimeAsync(180000);
+    expect(await pending).toMatchObject({ ok: false, cancelled: true });
+    expect(d.calls).toContain("whatsapp:false");
+    expect(flow.store.state.error).toBe("timeout");
+  } finally {
+    vi.useRealTimers();
+  }
+});

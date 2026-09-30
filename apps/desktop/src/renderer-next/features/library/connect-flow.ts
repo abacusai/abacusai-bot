@@ -45,6 +45,7 @@ export type FlowState = {
   connectorId: string | null;
   phase: "idle" | "hop" | "fields" | "pairing" | "signing-in";
   error?: string;
+  chromeMissing?: boolean;
 };
 export const connectPlatform = async (
   deps: Pick<FlowDeps, "transport" | "queryClient">,
@@ -121,6 +122,26 @@ export const createConnectFlow = (deps: FlowDeps) => {
       queryKey: deps.transport.orpc.connectors.statuses.queryKey({ input: {} }),
     });
   };
+  const complete = async (
+    id: number,
+    entry: Connector,
+    result: ConnectorOutcome
+  ) => {
+    if (active?.id !== id) return;
+    let chromeMissing = false;
+    if (result.ok) {
+      await refresh();
+      if (entry.kind === "mcp" && entry.requires === "google-chrome")
+        chromeMissing = await deps.transport.client.browser
+          .hasGoogleChrome({})
+          .then((present) => !present)
+          .catch(() => false);
+    }
+    if (active?.id !== id) return;
+    finish(id, result);
+    if (chromeMissing)
+      store.setState((state) => ({ ...state, chromeMissing: true }));
+  };
   const cancel = async () => {
     const a = active;
     if (!a) return;
@@ -173,7 +194,20 @@ export const createConnectFlow = (deps: FlowDeps) => {
     const entry = connectorById(connectorId);
     if (!entry) return { ok: false, error: "unknown-connector" };
     const outcome = new Promise<ConnectorOutcome>((resolve) => {
-      active = { id, connectorId, resolve };
+      active = {
+        id,
+        connectorId,
+        resolve,
+        timer: setTimeout(() => {
+          if (active?.id !== id) return;
+          void cancel().catch(() => undefined);
+          store.setState(() => ({
+            connectorId,
+            phase: "idle",
+            error: "timeout",
+          }));
+        }, CONNECT_WATCHDOG_MS),
+      };
     });
     const current = () => active?.id === id;
     void (async () => {
@@ -220,21 +254,11 @@ export const createConnectFlow = (deps: FlowDeps) => {
           return;
         }
         store.setState(() => ({ connectorId, phase: "hop" }));
-        if (active)
-          active.timer = setTimeout(() => {
-            void cancel();
-            store.setState(() => ({
-              connectorId,
-              phase: "idle",
-              error: "timeout",
-            }));
-          }, CONNECT_WATCHDOG_MS);
         const result = await deps.transport.client.connectors.connect({
           connectorId,
         });
         if (!current()) return;
-        if (result.ok) await refresh();
-        finish(id, result);
+        await complete(id, entry, result);
       } catch (e) {
         finish(id, { ok: false, error: errorText(e) });
       }
@@ -249,8 +273,8 @@ export const createConnectFlow = (deps: FlowDeps) => {
         connectorId: a.connectorId,
         values,
       });
-      if (result.ok) await refresh();
-      finish(a.id, result);
+      const entry = connectorById(a.connectorId);
+      if (entry) await complete(a.id, entry, result);
     } catch (e) {
       finish(a.id, { ok: false, error: errorText(e) });
     }
