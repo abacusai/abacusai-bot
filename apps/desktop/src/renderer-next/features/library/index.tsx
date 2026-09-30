@@ -1,17 +1,9 @@
-/**
- * Library, phase 1: static navigation (connectors, messaging, MCP servers,
- * skills, tools), an empty state per page and the search-driven connector
- * sheet (masked: the URL hides `connector`).
- */
+/** Public library navigation and feature components. */
 import { useMatchRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { EmptyState } from "#next/components/empty-state";
 import { NavList } from "#next/components/nav-list";
-import { RouteSheet } from "#next/components/route-sheet";
-import { LIBRARY_PAGES, type LibraryPageId } from "#next/lib/navigation/areas";
-
-export type LibraryPage = LibraryPageId;
+import { LIBRARY_PAGES } from "#next/lib/navigation/areas";
 
 export const LibrarySidebar = () => {
   const { t } = useTranslation();
@@ -36,36 +28,15 @@ export const LibrarySidebar = () => {
   );
 };
 
-export const LibraryPageEmpty = ({ page }: { page: LibraryPage }) => {
-  const { t } = useTranslation();
-  return (
-    <EmptyState
-      icon="library"
-      title={t(`library.pages.${page}`)}
-      description={t("library.emptyDescription")}
-    />
-  );
-};
-
-export const ToolsetPage = ({ toolsetName }: { toolsetName: string }) => {
-  const { t } = useTranslation();
-  return (
-    <EmptyState
-      icon="library"
-      title={toolsetName}
-      description={t("library.emptyDescription")}
-    />
-  );
-};
-
-/** Open while `?connector=` is set; closing goes back (the mask hides it). */
-export const ConnectorSheet = ({ connector }: { connector: string }) => {
-  const { t } = useTranslation();
-  return (
-    <RouteSheet
-      title={connector}
-      description={t("library.connectorDescription")}
-      fallbackHref="/library/connectors"
-    />
-  );
-};
+export {
+  ConnectorsPage,
+  ConnectorSheet,
+  ConnectorFieldsDialog,
+} from "./connectors";
+export { MessagingPage } from "./messaging";
+export { McpPage } from "./mcp";
+export { SkillsPage, ToolsPage, ToolsetPage } from "./skills-tools";
+export { MessagingSearch, McpSearch, SkillsSearch } from "./search";
+/** @public Connect flow shared with phase 6 onboarding. */
+export { startConnect, useConnectFlow } from "./connect-flow";
+export { LibraryGlobals } from "./globals";
