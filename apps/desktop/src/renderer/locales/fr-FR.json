@@ -1565,7 +1565,54 @@
     "signInAnotherWay": "Se connecter autrement",
     "haveAccountContinueWith": "J'ai déjà un compte · Continuer avec {{browser}}",
     "signInOptions": "Autres façons de se connecter",
-    "usesBrowserSessions": "La connexion avec Google, Microsoft et Apple utilise vos comptes de {{browser}}."
+    "usesBrowserSessions": "La connexion avec Google, Microsoft et Apple utilise vos comptes de {{browser}}.",
+    "welcomeModels": "Access",
+    "welcomeConnectors": "100+ Connectors",
+    "welcomeMemory": "Persistent Memory",
+    "connectorsContinue": "Continue",
+    "frame.progress": "Step {{n}} of 5",
+    "frame.failed": "Something went wrong. Try again.",
+    "pages.connectedLabel": "Connected",
+    "pages.connectLabel": "Connect",
+    "pages.more": "{{count}}+ more in Settings",
+    "pages.newSession": "New session",
+    "pages.newBot": "Nouveau bot",
+    "pages.skip": "Not now",
+    "pages.keyPrivate": "Stored on this machine only.",
+    "pages.retry": "Try again",
+    "pages.connect.title": "Connecting your account",
+    "pages.connect.body": "Finish signing in in the browser window.",
+    "pages.connect.waiting": "Waiting for sign-in…",
+    "pages.connected.body": "Your account is ready. Your bot works across your models, files and tools.",
+    "pages.connected.promise1": "An open-source AI agent",
+    "pages.connected.promise2": "Powerful models, including free options",
+    "pages.connected.promise3": "Work across your tools and services",
+    "pages.connected.promise4": "Runs locally. Chat wherever you work.",
+    "pages.models.title": "Hook up your AI",
+    "pages.models.body": "Connect models to unlock more inside your bot.",
+    "pages.models.abacus": "Abacus.AI",
+    "pages.models.openrouter": "OpenRouter",
+    "pages.models.gemini": "Google Gemini",
+    "pages.connectors.title": "Connect your tools and services",
+    "pages.connectors.body": "Chat where you work.",
+    "pages.first-bot.title": "Meet your first bot",
+    "pages.first-bot.body": "A Chief of Staff to help you plan your day.",
+    "pages.done.title": "You're ready",
+    "pages.done.body": "Start a conversation or make something new.",
+    "pages.deferred": "Finish after setup",
+    "pages.removed": "This bot was removed",
+    "pages.checkIn": "Weekday check-ins at 08:00",
+    "pages.noCheckIn": "No check-ins",
+    "pages.hello": "Say hello",
+    "pages.scratch": "Start from scratch",
+    "pages.message": "Message {{name}}",
+    "pages.addKey": "Add API key",
+    "pages.keyTitle": "Connect Gemini",
+    "pages.openGemini": "Open Google AI Studio",
+    "pages.pairing": "Finish connecting {{platform}}",
+    "pages.finishPairing": "Finish connecting",
+    "pages.localModels": "Local models",
+    "pages.localDetails": "Use a model running on this machine."
   },
   "openFile": {
     "failed": "Impossible d’ouvrir ce fichier.",
@@ -1970,6 +2017,56 @@
       "welcome": {
         "title": "Bienvenue dans AbacusAI Bot",
         "body": "Un tour rapide de la fenêtre : ce qu'est chaque panneau et à quoi il sert. Quinze courtes étapes, et vous pouvez partir à n'importe laquelle."
+      }
+    },
+    "stops": {
+      "rail": {
+        "title": "Vos bots",
+        "body": "Des agents permanents avec leurs propres instructions, horaires et conversations. Créez-en un pour le travail que vous déléguez plus d'une fois."
+      },
+      "make-bot": {
+        "title": "Make a bot",
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+      },
+      "workspaces": {
+        "title": "Vos espaces de travail",
+        "body": "Chaque dossier ouvert et chaque conversation qu'il contient. C'est ici que vous changez d'espace ou rouvrez une session de la semaine dernière."
+      },
+      "start-session": {
+        "title": "Démarrer une session",
+        "body": "Ouvre un champ vide dans l'espace courant. Une session par tâche garde le contexte collé au travail auquel il appartient."
+      },
+      "connectors": {
+        "title": "Connecteurs",
+        "body": "Connectez les outils que vous utilisez déjà. Un compte Abacus.AI gratuit en rattache tout un lot en un clic."
+      },
+      "changes": {
+        "title": "Modifications",
+        "body": "Chaque édition de l'agent, sous forme de diff à lire avant que quoi que ce soit ne parte. À côté : vos fichiers et les sous-agents en cours."
+      },
+      "preview-terminal": {
+        "title": "Terminal",
+        "body": "Un vrai shell dans votre espace, dans le dossier même où travaille l'agent. Le bouton terminal de la barre de titre l'affiche et le masque."
+      },
+      "memory": {
+        "title": "Mémoire",
+        "body": "Ce que l'agent garde d'une session à l'autre, et les consignes permanentes qu'il suit. Lisez-les, modifiez-les, supprimez ce qui a vieilli."
+      },
+      "artifacts": {
+        "title": "Artefacts",
+        "body": "Les fichiers produits par une session (documents, images, rapports) rassemblés au même endroit plutôt qu'éparpillés dans l'historique."
+      },
+      "welcome": {
+        "title": "Welcome to AbacusAI Bot",
+        "body": "A quick lap around the window. {{n}} stops; leave at any time."
+      },
+      "talk": {
+        "title": "Talk to your bot",
+        "body": "Give your bot a task here. It can ask questions and show its work."
+      },
+      "notch": {
+        "title": "Your companion",
+        "body": "Replies and approvals can appear above your workspace. Open the app for the full conversation."
       }
     }
   },
@@ -2580,6 +2677,27 @@
     "theme": {
       "label": "Theme",
       "description": "Follow the system, or always light or dark."
+    },
+    "general": {
+      "notch": {
+        "title": "Notch companion",
+        "description": "Live status, replies and approvals from the notch",
+        "windowsDescription": "Live status, replies and approvals from a capsule by the clock",
+        "failed": "The notch companion couldn't start.",
+        "metricsUnavailable": "The notch companion couldn't measure this screen.",
+        "retry": "Try again",
+        "idle": "Show when idle",
+        "displays": "On every display",
+        "haptics": "Haptics",
+        "shortcut": "Shortcut",
+        "shortcutUnavailable": "In use by another app"
+      }
+    },
+    "notifications": {
+      "showInNotch": {
+        "title": "Show in the notch",
+        "description": "Replies and approvals appear in the notch companion"
+      }
     }
   },
   "onboardingFlow": {
@@ -2863,6 +2981,55 @@
       "gone": "This conversation no longer exists.",
       "retry": "Réessayer",
       "unavailable": "The agent isn't available yet"
+    }
+  },
+  "notch": {
+    "a11y": {
+      "region": "Companion"
+    },
+    "actions": {
+      "open": "Open in app",
+      "message": "Message",
+      "call": "Call",
+      "pause": "Pause check-ins",
+      "resume": "Resume check-ins"
+    },
+    "wings": {
+      "idle": "Ready when you are",
+      "question": "A quick question",
+      "approval": "Needs you",
+      "connector-ask": "Connect a tool",
+      "failed": "That did not work",
+      "working": "Working on it",
+      "reply": "A reply for you",
+      "done": "All done"
+    },
+    "approval": {
+      "answerInApp": "Answer in app",
+      "notNow": "Not now",
+      "reviewOnly": "Review this request in the app.",
+      "review": "Review",
+      "noResponse": "Couldn't send your response. Try again."
+    },
+    "reply": {
+      "placeholder": "Reply…",
+      "failed": "Couldn't send. Your reply is still here.",
+      "openFailed": "Couldn't open the chat"
+    },
+    "quiet": {
+      "until": "Quiet until {{time}}"
+    },
+    "listening": {
+      "end": "End",
+      "title": "Listening…",
+      "transcribing": "Transcribing…",
+      "error": "Couldn't use the microphone. Check permission in System Settings → Privacy."
+    },
+    "done": {
+      "title": "Finished"
+    },
+    "failed": {
+      "title": "Something went wrong"
     }
   }
 }
