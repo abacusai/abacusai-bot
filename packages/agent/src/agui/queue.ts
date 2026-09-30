@@ -17,6 +17,7 @@ import {
   AgentStatus,
   type DesktopCommand,
   type DesktopEvent,
+  type PermissionDecision,
   type QueueEntry,
 } from "../protocol.js";
 import { shutdownRuntime } from "../sandbox/index.js";
@@ -45,8 +46,19 @@ export interface TurnHooks {
     text: string,
     options: { dequeued: boolean; echoed: boolean }
   ): TurnToken | undefined;
-  /** The send owned by `token` is in flight (or finished, with null). */
+  /** The send owned by `token` is in flight. */
   sending?(token: TurnToken | undefined): void;
+  /**
+   * The send owned by `token` returned. Only this token's own bookkeeping is
+   * released: an aborted send can resolve after a newer one started.
+   */
+  sent?(token: TurnToken | undefined): void;
+  /**
+   * The send owned by `token` threw. Returns true when the failure was
+   * recorded as that token's own run terminal, so the thrown-handler error
+   * line adds nothing more on AG-UI (spec §2.1).
+   */
+  failed?(token: TurnToken | undefined, error: unknown): boolean;
   /** The first owner-valid settle closes the token's run. */
   settle?(token: TurnToken | undefined): void;
   /** Synchronously, before a stop or reset is awaited. */
@@ -54,7 +66,20 @@ export interface TurnHooks {
   /** After the stop/reset landed, before the host says idle. */
   afterAbort?(kind: "stop" | "reset"): void;
   /** A legacy `permission_response` released a waiter. */
-  legacyPermissionAnswered?(permissionId: string, decision: unknown): void;
+  legacyPermissionAnswered?(
+    permissionId: string,
+    decision: PermissionDecision
+  ): void;
+}
+
+export interface HostCoreOptions {
+  /**
+   * `--wire agui` only: Stop and reset hold the admission guard until they
+   * have landed, so no turn starter can prompt the session being aborted or
+   * replaced; whatever arrives meanwhile waits for the turn and runs after.
+   * Off under `--wire ndjson`, whose behaviour is the legacy host's.
+   */
+  reserveDuringAbort?: boolean;
 }
 
 export interface HostIo {
@@ -95,6 +120,12 @@ export class HostCore {
    * prompt exists: input then waits for the turn, like during a stop.
    */
   preparing = false;
+  /** True while a reset is landing (reserved admission only). */
+  resetting = false;
+  /** Bumped by every Stop and reset; the newest one owns the release. */
+  private aborts = 0;
+  /** Errors a turn's own run already reported (see TurnHooks.failed). */
+  private readonly attributed = new WeakSet<object>();
   /** Entries the desktop already echoed, so no `user_message_dequeued` for them. */
   private readonly echoed = new Set<string>();
   /** Commands still running, so stdin EOF can wait for them instead of killing them. */
@@ -110,7 +141,8 @@ export class HostCore {
   constructor(
     readonly session: HostSession,
     private readonly emitEvent: (event: DesktopEvent) => void,
-    private readonly hooks: TurnHooks = {}
+    private readonly hooks: TurnHooks = {},
+    private readonly options: HostCoreOptions = {}
   ) {}
 
   /** Starts the session; a failure is reported as today and rethrown. */
@@ -139,11 +171,14 @@ export class HostCore {
    */
   async readCommands(
     stdin: Readable,
-    dispatch: (command: DesktopCommand) => Promise<void>
+    dispatch: (command: DesktopCommand) => Promise<void>,
+    /** Sees every raw stdin line first (ABACUSAI_BOT_WIRE_RECORD). */
+    onLine?: (line: string) => void
   ): Promise<void> {
     const input = readline.createInterface({ input: stdin });
 
     for await (const line of input) {
+      onLine?.(line);
       const trimmed = line.trim();
 
       if (!trimmed) {
@@ -181,15 +216,16 @@ export class HostCore {
       // Deliberately not awaited: a turn can park on a permission prompt whose
       // answer is the next stdin line, so awaiting here would deadlock.
       // Ordering is still safe: `runTurn` serializes prompts through `busy`.
-      const startsTurn =
-        (command as { type?: unknown }).type === "send" ||
-        (command as { type?: unknown }).type === "run";
-      const pending = dispatch(command).catch((error) => {
+      // Nothing about the parsed value is read here: a line such as `null`
+      // must fail inside the handler, where the catch below reports it.
+      const pending = dispatch(command).catch((error: unknown) => {
         this.emit({
           type: "event",
           event: tagEvent(
             { type: "error", error: { message: describe(error) } },
-            { origin: startsTurn ? "turn" : "host" }
+            this.wasAttributed(error)
+              ? { origin: "turn", attributed: true }
+              : { origin: "host" }
           ),
         });
       });
@@ -262,21 +298,35 @@ export class HostCore {
         return;
       }
 
-      case "reset_conversation":
+      case "reset_conversation": {
         this.queue.length = 0;
         this.echoed.clear();
         this.emitQueue();
         // Same supersede as `stop`: a turn still unwinding from the old
         // conversation must not drain into the new one.
         this.turn += 1;
+        const reserved = this.reserveAbort();
+
+        if (reserved != null) this.resetting = true;
         this.hooks.beforeAbort?.("reset");
-        await this.session.resetConversation();
+        try {
+          await this.session.resetConversation();
+        } catch (error) {
+          // Reserved admission is never held past a failed abort.
+          if (reserved != null) this.releaseAbort(reserved);
+
+          throw error;
+        }
         // After the await, like `stop`: the reset aborts the in-flight turn.
-        this.busy = false;
-        this.preparing = false;
+        const owns = this.releaseAbort(reserved);
+
         this.hooks.afterAbort?.("reset");
+        // Reserved: what arrived while the reset landed runs now, in the new
+        // conversation.
+        if (reserved != null && owns) await this.runAfterStop();
 
         return;
+      }
 
       case "enqueue":
         // Same as a send: a message that arrives mid-turn steers the turn.
@@ -396,22 +446,69 @@ export class HostCore {
     this.emitQueue();
     this.turn += 1;
     this.stopping = true;
+    const reserved = this.reserveAbort();
+
     this.hooks.beforeAbort?.("stop");
     try {
       await this.session.stop();
+    } catch (error) {
+      // Reserved admission is never held past a failed abort.
+      if (reserved != null) this.releaseAbort(reserved);
+
+      throw error;
     } finally {
-      this.stopping = false;
+      if (reserved == null) this.stopping = false;
     }
     // Only after the abort has fully landed: a send racing the stop must
     // wait rather than run against a session that is still aborting.
-    this.busy = false;
-    this.preparing = false;
+    const owns = this.releaseAbort(reserved);
+
     this.hooks.afterAbort?.("stop");
     this.emit({
       type: "event",
       event: { type: "status_changed", status: AgentStatus.Idle },
     });
-    await this.runAfterStop();
+    if (owns) await this.runAfterStop();
+  }
+
+  /**
+   * Reserved admission (`reserveDuringAbort`): `busy` is held from here until
+   * the abort lands, so every turn starter queues behind it. Returns this
+   * abort's sequence number, or null under the legacy (ndjson) behaviour.
+   */
+  private reserveAbort(): number | null {
+    if (this.options.reserveDuringAbort !== true) return null;
+    this.busy = true;
+
+    return ++this.aborts;
+  }
+
+  /**
+   * Releases admission after an abort landed: always under ndjson (exactly
+   * the legacy assignments), and under reservation only for the newest Stop
+   * or reset, so an older one finishing late never frees a guard a newer
+   * one, or the turn it started, now holds. Returns whether it released.
+   */
+  private releaseAbort(reserved: number | null): boolean {
+    if (reserved != null && reserved !== this.aborts) return false;
+    this.stopping = false;
+    this.resetting = false;
+    this.busy = false;
+    this.preparing = false;
+
+    return true;
+  }
+
+  /** Whether `error` was already reported as its own run's terminal. */
+  wasAttributed(error: unknown): boolean {
+    return (
+      error !== null && typeof error === "object" && this.attributed.has(error)
+    );
+  }
+
+  /** Marks `error` as reported by its own run's terminal (see TurnHooks.failed). */
+  markAttributed(error: unknown): void {
+    if (error !== null && typeof error === "object") this.attributed.add(error);
   }
 
   /**
@@ -505,9 +602,18 @@ export class HostCore {
       await this.session.send(message, {
         settled: () => this.hooks.settle?.(token),
       });
+    } catch (error) {
+      // Recorded against this token's own run before the settle below
+      // closes it, so the run ends in RUN_ERROR and never in a success
+      // followed by a stray error (spec §2.1).
+      if (this.hooks.failed?.(token, error) === true) {
+        this.markAttributed(error);
+      }
+
+      throw error;
     } finally {
       this.hooks.settle?.(token);
-      this.hooks.sending?.(undefined);
+      this.hooks.sent?.(token);
     }
   }
 
@@ -530,7 +636,7 @@ export class HostCore {
       id: `q-${++this.queueIds}`,
       message,
       waitingFor:
-        this.stopping || this.preparing
+        this.stopping || this.preparing || this.resetting
           ? "turn"
           : this.awaitingPermission
             ? "permission"
@@ -553,7 +659,7 @@ export class HostCore {
   }
 
   /** Whatever arrived while the stop was landing runs now, as its own turn. */
-  private async runAfterStop(): Promise<void> {
+  async runAfterStop(): Promise<void> {
     const next = this.queue.shift();
 
     if (next === undefined) return;

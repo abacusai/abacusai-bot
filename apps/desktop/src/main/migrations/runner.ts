@@ -122,8 +122,10 @@ export interface UnresolvedAttempt {
 }
 
 export interface RunMigrationsResult {
-  /** Ids committed in this run. */
+  /** Ids committed and recorded in this run. */
   applied: number[];
+  /** Ids committed in this run with work left (`plan.pending`): not recorded. */
+  partial: number[];
   failed: { id: number; name: string; error: string } | null;
   /** Staging directories found on launch, with what was done to them. */
   recovered: {
@@ -187,6 +189,7 @@ export const runMigrations = async (
     ((message: string) => console.log(`[migrations] ${message}`));
   const result: RunMigrationsResult = {
     applied: [],
+    partial: [],
     failed: null,
     recovered: [],
     unresolved: [],
@@ -535,7 +538,23 @@ export const runMigrations = async (
       }
       if (options.hooks?.beforeRecord?.() === "crash")
         throw new SimulatedCrash();
-      // 4. The record, then its mark in the log.
+      // 4. The record, then its mark in the log. A plan that left work for
+      // the next launch (`pending`) is final here but not recorded, so the
+      // step runs again; its `recorded` line alone marks it final.
+      if ((plan.pending ?? 0) > 0) {
+        appendLog(staging, attempt, { op: "recorded" }, io);
+        try {
+          removeStaging(staging);
+        } catch (error) {
+          log(`cannot delete ${staging}: ${errorMessage(error)}`);
+        }
+        fraction(1);
+        result.partial.push(step.id);
+        log(
+          `committed ${step.id} ${step.name} with ${plan.pending} left for the next launch ${JSON.stringify(plan.stats)}`
+        );
+        continue;
+      }
       const entry: AppliedMigration = {
         id: step.id,
         name: step.name,

@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "sessionId": "sess-unknown-segments",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Hello",
+      "at": 1788256800000
+    },
+    {
+      "type": "future_widget",
+      "id": "x1",
+      "payload": {
+        "a": 1
+      },
+      "at": 1788256801000
+    },
+    {
+      "type": "text",
+      "id": "x2",
+      "source": "bot",
+      "content": 42,
+      "at": 1788256802000
+    },
+    {
+      "type": "tool_call",
+      "id": "x3",
+      "at": 1788256803000
+    },
+    {
+      "type": "media",
+      "id": "x4",
+      "media": {
+        "kind": "audio",
+        "url": "https://example.com/a.mp3"
+      },
+      "at": 1788256804000
+    },
+    {
+      "type": "subtask",
+      "id": "x5",
+      "status": "paused",
+      "at": 1788256805000
+    },
+    {
+      "id": "x6",
+      "content": "no type"
+    },
+    null,
+    "a bare string",
+    {
+      "type": "credits",
+      "id": "x7",
+      "creditsUsed": "many"
+    },
+    {
+      "type": "text",
+      "source": "bot",
+      "content": "no id"
+    },
+    {
+      "type": "text",
+      "id": "x8",
+      "source": "bot",
+      "content": "bad time",
+      "at": 1e20
+    }
+  ]
+}

@@ -298,9 +298,15 @@ export const createJob = (
   if (id != null && existing.some((job) => job.id === id))
     throw new ConflictError(`A routine with id "${id}" already exists.`);
 
+  const taken = new Set(existing.map((job) => job.id));
+  let generated = `job-${Date.now()}-${++counter}`;
+  // A caller id may look like a minted one (same clock, same counter).
+  while (id == null && taken.has(generated))
+    generated = `job-${Date.now()}-${++counter}`;
+
   const prompt = input.prompt.trim();
   const job: CronJob = {
-    id: id ?? `job-${Date.now()}-${++counter}`,
+    id: id ?? generated,
     name: (input.name ?? "").trim() || deriveName(prompt),
     schedule: hasSchedule ? schedule : null,
     // One or the other: a time to run once wins over a repeating schedule.

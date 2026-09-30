@@ -2,7 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createJob,
@@ -221,5 +221,26 @@ describe("a job that runs once", () => {
     const repeating = updateJob(job.id, { schedule: "0 9 * * *" });
     expect(repeating.runAt).toBeNull();
     expect(repeating.schedule).toBe("0 9 * * *");
+  });
+});
+
+describe("minted ids", () => {
+  it("never reuse a caller's id that looks minted, with a frozen clock", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-30T12:00:00.000Z"));
+    try {
+      const first = createJob({ prompt: "one", schedule: "0 9 * * *" });
+      const [, now, count] = /^job-(\d+)-(\d+)$/.exec(first.id)!;
+      createJob(
+        { prompt: "two", schedule: "0 9 * * *" },
+        `job-${now}-${Number(count) + 1}`
+      );
+      const third = createJob({ prompt: "three", schedule: "0 9 * * *" });
+      const ids = listJobs().map((job) => job.id);
+      expect(new Set(ids).size).toBe(3);
+      expect(ids).toContain(third.id);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

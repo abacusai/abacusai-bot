@@ -14,6 +14,8 @@
  * is normalised.
  */
 import * as fs from "node:fs";
+import * as http from "node:http";
+import type { AddressInfo } from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
 import { PassThrough, type Readable, type Writable } from "node:stream";
@@ -21,6 +23,7 @@ import { PassThrough, type Readable, type Writable } from "node:stream";
 import {
   FakeProvider,
   fakeProviderConfig,
+  type RecordedCall,
   type Reply,
 } from "@abacus-ai/test-support/fake-provider";
 
@@ -60,14 +63,34 @@ export type Step =
    * pi-internal moments the legacy stream cannot see, such as an assistant
    * message having started before a Stop lands.
    */
-  | { aguiUntil: (stdout: string) => boolean; label: string };
+  | { aguiUntil: (stdout: string) => boolean; label: string }
+  /**
+   * `--wire agui` only: a command built from the AG-UI stream so far, such
+   * as a `permission.respond` carrying the descriptor's lineage or a
+   * `cancel` naming the open run.
+   */
+  | { sendFrom: (stdout: string) => object; label: string };
 
 export interface Scenario {
   name: string;
   mode?: string;
   env?: Record<string, string>;
   /** The fake model's replies, by request index. */
-  reply: (index: number, gates: Gates) => Reply | Promise<Reply>;
+  reply?: (index: number, gates: Gates) => Reply | Promise<Reply>;
+  /** Instead of `reply`: replies chosen from the request itself. */
+  respond?: (
+    call: RecordedCall,
+    index: number,
+    gates: Gates
+  ) => Reply | Promise<Reply>;
+  /** Runs once the fixed directories and the default config exist. */
+  setup?: (paths: { root: string; home: string; cwd: string }) => void;
+  /**
+   * Serve the model through a proxy that gives every sub-agent's tool calls
+   * the same provider ids (`child-<position>`), as providers that number
+   * calls per message do: parallel children then reuse each other's ids.
+   */
+  collidingChildIds?: boolean;
   steps: Step[];
 }
 
@@ -115,7 +138,10 @@ export function parseLegacy(bytes: string): DesktopEvent[] {
  * Replace the values that differ between two runs of the same scenario by
  * construction. Everything else must match byte for byte.
  */
-export function maskVolatile(bytes: string, port: number): string {
+export function maskVolatile(
+  bytes: string,
+  ports: number | readonly number[]
+): string {
   let out = bytes;
   const ready = lines(bytes)
     .map((line) => {
@@ -140,7 +166,9 @@ export function maskVolatile(bytes: string, port: number): string {
   }
 
   out = out.split(GOLDEN_ROOT).join("<ROOT>");
-  out = out.split(`127.0.0.1:${port}`).join("127.0.0.1:<PORT>");
+  for (const port of typeof ports === "number" ? [ports] : ports) {
+    out = out.split(`127.0.0.1:${port}`).join("127.0.0.1:<PORT>");
+  }
   out = out.replace(
     /(delegate|document|deck|design|browser)-\d{13}-/g,
     "$1-<T>-"
@@ -155,6 +183,8 @@ export function maskVolatile(bytes: string, port: number): string {
 export async function prepare(scenario: Scenario): Promise<{
   context: RunContext;
   provider: FakeProvider;
+  /** Every port the scenario's model is reachable on, for `maskVolatile`. */
+  ports: number[];
   gates: Gates;
   restore: () => void;
 }> {
@@ -166,7 +196,19 @@ export async function prepare(scenario: Scenario): Promise<{
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(home, { recursive: true });
   fs.mkdirSync(cwd, { recursive: true });
-  fs.writeFileSync(path.join(home, "config.json"), fakeProviderConfig(fake));
+  const proxy =
+    scenario.collidingChildIds === true
+      ? await startIdProxy(fake.port)
+      : undefined;
+
+  fs.writeFileSync(
+    path.join(home, "config.json"),
+    proxy != null
+      ? fakeProviderConfig(fake)
+          .split(`127.0.0.1:${fake.port}`)
+          .join(`127.0.0.1:${proxy.port}`)
+      : fakeProviderConfig(fake)
+  );
 
   const saved = new Map<string, string | undefined>();
   const userHome = path.join(root, "user");
@@ -189,8 +231,13 @@ export async function prepare(scenario: Scenario): Promise<{
 
   const gates = new Gates();
 
+  scenario.setup?.({ root, home, cwd });
   fake.calls.length = 0;
-  fake.script((_call, index) => scenario.reply(index, gates));
+  fake.script((call, index) =>
+    scenario.respond != null
+      ? scenario.respond(call, index, gates)
+      : (scenario.reply?.(index, gates) ?? { say: "ok" })
+  );
 
   return {
     context: {
@@ -198,12 +245,76 @@ export async function prepare(scenario: Scenario): Promise<{
       ...(scenario.mode != null ? { mode: scenario.mode } : {}),
     },
     provider: fake,
+    ports: proxy != null ? [fake.port, proxy.port] : [fake.port],
     gates,
     restore: () => {
       for (const [key, value] of saved) {
         if (value === undefined) delete process.env[key];
         else process.env[key] = value;
       }
+      proxy?.close();
+    },
+  };
+}
+
+/** A sub-agent's request: its prompt forbids delegating further. */
+export const isChildCall = (call: RecordedCall): boolean =>
+  call.messages.some(
+    (message) =>
+      typeof message.content === "string" &&
+      message.content.includes("You cannot delegate further")
+  ) ||
+  call.userText.some((text) => text.includes("You cannot delegate further"));
+
+/**
+ * Forwards to the fake provider; for a sub-agent's request, rewrites each
+ * tool call id `call-<request>-<position>` to `child-<position>`, so two
+ * sub-agents' calls carry the same provider id.
+ */
+async function startIdProxy(
+  target: number
+): Promise<{ port: number; close: () => void }> {
+  const server = http.createServer((request, response) => {
+    let body = "";
+
+    request.on("data", (chunk: Buffer) => (body += chunk.toString("utf8")));
+    request.on("end", () => {
+      const child = body.includes("You cannot delegate further");
+      const upstream = http.request(
+        {
+          host: "127.0.0.1",
+          port: target,
+          path: request.url,
+          method: request.method,
+          headers: { ...request.headers, host: `127.0.0.1:${target}` },
+        },
+        (reply) => {
+          response.writeHead(reply.statusCode ?? 502, reply.headers);
+          reply.on("data", (chunk: Buffer) => {
+            const text = chunk.toString("utf8");
+
+            response.write(
+              child
+                ? text.replace(/"id":"call-\d+-(\d+)"/g, '"id":"child-$1"')
+                : text
+            );
+          });
+          reply.on("end", () => response.end());
+        }
+      );
+
+      upstream.on("error", () => response.destroy());
+      upstream.end(body);
+    });
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+  return {
+    port: (server.address() as AddressInfo).port,
+    close: () => {
+      server.closeAllConnections();
+      server.close();
     },
   };
 }
@@ -264,6 +375,15 @@ export async function drive(
           () => `${scenario.name}: ${step.label}`
         );
       }
+    } else if ("sendFrom" in step) {
+      const stdout = host.stdout;
+
+      if (stdout == null) {
+        throw new Error(
+          `${scenario.name}: ${step.label} needs the AG-UI stream (aguiSteps only)`
+        );
+      }
+      host.write(JSON.stringify(step.sendFrom(stdout())));
     } else if ("release" in step) {
       gates.open(step.release);
     } else {
@@ -361,7 +481,10 @@ export function aguiDriver(
  * An AG-UI stream with its volatile values made stable for a fixture:
  * timestamps dropped, server run ids and pi session ids numbered in order.
  */
-export function normalizeAgui(stdout: string, port: number): string {
+export function normalizeAgui(
+  stdout: string,
+  ports: number | readonly number[]
+): string {
   const ids = new Map<string, string>();
   let masked = stdout;
   let n = 0;
@@ -384,11 +507,11 @@ export function normalizeAgui(stdout: string, port: number): string {
         .join(`<SESSION_ID_${n}>`);
   }
 
+  masked = masked.split(GOLDEN_ROOT).join("<ROOT>");
+  for (const port of typeof ports === "number" ? [ports] : ports) {
+    masked = masked.split(`127.0.0.1:${port}`).join("127.0.0.1:<PORT>");
+  }
   masked = masked
-    .split(GOLDEN_ROOT)
-    .join("<ROOT>")
-    .split(`127.0.0.1:${port}`)
-    .join("127.0.0.1:<PORT>")
     .replace(/(delegate|document|deck|design|browser)-\d{13}-/g, "$1-<T>-")
     .replace(/srv-[0-9a-f-]{36}|<SESSION_ID_\d+>:\d{13}/g, (id) => {
       if (!ids.has(id)) {
@@ -407,10 +530,18 @@ export function normalizeAgui(stdout: string, port: number): string {
     .map((line) => {
       const event = JSON.parse(line) as Record<string, unknown>;
 
+      const timestamp =
+        typeof event.timestamp === "number" ? event.timestamp : undefined;
+
       delete event.timestamp;
 
+      // The incarnation is the host's fixed one and stays as is, so a wrong
+      // lineage shows. An approval deadline is kept as its offset from the
+      // event that carried it, to the second: a changed budget shows too.
       return JSON.stringify(event, (key, value: unknown) =>
-        key === "expiresAt" || key === "incarnation" ? `<${key}>` : value
+        key === "expiresAt" && typeof value === "string" && timestamp != null
+          ? `<now+${Math.round((Date.parse(value) - timestamp) / 1000)}s>`
+          : value
       );
     })
     .join("\n")

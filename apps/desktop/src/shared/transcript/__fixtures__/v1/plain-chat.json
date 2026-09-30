@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "sessionId": "sess-plain-chat",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "What is the capital of France?",
+      "at": 1788256800000,
+      "messageIndex": 0
+    },
+    {
+      "type": "thinking",
+      "id": "t1",
+      "content": "The user asks a geography question.",
+      "title": "Recalling facts",
+      "isSpinny": false,
+      "at": 1788256801000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "The capital of France is **Paris**.",
+      "at": 1788256802000,
+      "messageIndex": 1
+    },
+    {
+      "type": "text",
+      "id": "u2",
+      "source": "user",
+      "content": "And of Italy?",
+      "at": 1788256810000,
+      "messageIndex": 2
+    },
+    {
+      "type": "text",
+      "id": "b2",
+      "source": "bot",
+      "content": "Rome.",
+      "at": 1788256811000,
+      "messageIndex": 3
+    }
+  ]
+}

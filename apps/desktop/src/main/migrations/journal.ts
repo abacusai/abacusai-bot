@@ -231,7 +231,9 @@ export const validateJournal = (
 
 /**
  * A migration only ever writes under the home or userData, and never into
- * its own bookkeeping (`.migrating/`, `backups/`, `migrations.json`).
+ * its own bookkeeping (`.migrating/`, `backups/migrations/`,
+ * `migrations.json`). The quarantine (`backups/quarantine/`) is a legitimate
+ * destination (step 4).
  */
 export const isDestination = (
   file: string,
@@ -241,7 +243,7 @@ export const isDestination = (
   path.normalize(file) === file &&
   (inside(roots.home, file) != null || inside(roots.userData, file) != null) &&
   inside(migratingRoot(roots.home), file) == null &&
-  inside(path.join(roots.home, "backups"), file) == null &&
+  inside(backupsRoot(roots.home), file) == null &&
   file !== path.join(roots.home, RECORD_FILE_NAME);
 
 const parseLog = (

@@ -2,11 +2,12 @@
  * Backups, file moves and the filesystem seam for the migration commit
  * protocol (spec 00 C.1).
  *
- * A step's backups live in `<home>/backups/migrations/<stamp>-<id>-<name>-<attempt>/`,
+ * A step's backups live in `<home>/backups/migrations/<stamp>_<attempt>-<id>-<name>/`,
  * mirroring each file's path under the home (`home/…`), else under userData
  * (`userData/…`), else its absolute path (`abs/…`). Quarantined sources
- * (C.5) live in `<home>/backups/quarantine/<kind>/<stamp>/`, pruned by that
- * stamp (a move keeps a file's mtime, so the file's own age says nothing).
+ * (C.5) live in `<home>/backups/quarantine/<kind>/`: a freshly written copy
+ * aged by its mtime (step 4), or a `<stamp>/` run directory aged by its
+ * stamp (for anything moved in, since a move keeps the source's mtime).
  *
  * Every filesystem call the runner, the journal and the backups make goes
  * through a `MigrationIo`, so the crash harness (`runner.crash.test.ts`) can
@@ -51,13 +52,17 @@ export const parseStamp = (stamp: string): Date | null => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-/** The backup directory's name for one commit attempt. */
+/**
+ * The backup directory's name for one commit attempt:
+ * `<stamp>_<attempt>-<id>-<name>`. The attempt keeps two attempts in one
+ * millisecond apart; the name still ends in `-<id>-<name>`.
+ */
 export const backupDirName = (
   commit: string,
   id: number,
   name: string,
   attempt: string
-): string => `${commit}-${id}-${name}-${attempt}`;
+): string => `${commit}_${attempt}-${id}-${name}`;
 
 /** `path.relative` when `file` is strictly inside `root`, else null. */
 export const inside = (root: string, file: string): string | null => {
@@ -227,7 +232,8 @@ export const moveFile = (
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const BACKUP_DIR = /^(\d{8}T\d{9}Z)-(\d+)-(.+)$/;
+/** Stamp, optional attempt (older names have none), step id, step name. */
+const BACKUP_DIR = /^(\d{8}T\d{9}Z)(?:_[0-9a-f]+)?-(\d+)-(.+)$/;
 const PRUNING_PREFIX = ".pruning-";
 
 export interface PruneOptions {
@@ -236,8 +242,9 @@ export interface PruneOptions {
    * Backup directory names the record points at (applied commits). Only
    * these count toward the newest-per-step limit; any other directory (an
    * undone or abandoned attempt) is kept until it is `maxAgeDays` old.
+   * Omitted: every backup directory counts (the runner always passes it).
    */
-  referenced: ReadonlySet<string>;
+  referenced?: ReadonlySet<string>;
   /** Backups older than this go (30 days). */
   maxAgeDays?: number;
   /** Per step, only the newest this many applied commits keep theirs (3). */
@@ -302,7 +309,7 @@ export const pruneBackups = (home: string, options: PruneOptions): string[] => {
       removeTree(root, name, io, removed);
       continue;
     }
-    if (!options.referenced.has(name)) continue;
+    if (options.referenced != null && !options.referenced.has(name)) continue;
     const list = byStep.get(match[2] ?? "") ?? [];
     list.push({ name, at: at.getTime() });
     byStep.set(match[2] ?? "", list);
@@ -328,9 +335,19 @@ export const pruneBackups = (home: string, options: PruneOptions): string[] => {
         io.rmSync(path.join(directory, run), { recursive: true });
         continue;
       }
-      // Only stamped runs are aged; anything else is not ours to judge.
-      const at = parseStamp(run);
-      if (at == null || now - at.getTime() <= quarantineAge) continue;
+      // A stamped run directory is aged by its stamp. A single file is aged
+      // by its mtime, which is the quarantine time only because step 4
+      // writes a fresh copy into staging (a plain move would keep the
+      // source's mtime and must use `quarantineDirFor` instead).
+      let at = parseStamp(run)?.getTime() ?? null;
+      if (at == null) {
+        try {
+          at = io.lstatSync(path.join(directory, run)).mtimeMs;
+        } catch {
+          continue;
+        }
+      }
+      if (now - at <= quarantineAge) continue;
       removeTree(directory, run, io, removed);
     }
   }

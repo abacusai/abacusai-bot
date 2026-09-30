@@ -358,7 +358,7 @@ Delete the old renderer, conversation layer, NDJSON host, `window.api`, zustand 
 
 ## Open questions
 
-- None blocking. Sub-agents follow the AG-UI spec’s subagent events (resolved above); pi is bumped to 0.99 with behaviour held constant.
+- None blocking. Sub-agents follow the AG-UI spec’s subagent events (resolved above). The pi bump to 0.99 was tried and reverted (30 Sep 2026): 0.99 drops `anthropic/claude-fable-5` from the builtin catalog and reorders `<skills>` after the custom-instructions addendum, both behaviour changes; the agent stays on pi 0.85 until those are handled deliberately.
 
 
 ## Amendments after phase-0 spec reviews (30 Sep 2026)
@@ -368,3 +368,5 @@ Delete the old renderer, conversation layer, NDJSON host, `window.api`, zustand 
 - Host services stay on the compat stream (not AG-UI client tools) for now.
 - Window chrome ships in legacy mode until the new renderer lands (`RENDERER_GENERATION`).
 - Busy input never enters ChatClient's local queue: TanStack AI has no `whenBusy: "error"` (`WhenBusy` is `queue | drop | interrupt`), so the chat kit passes a `QueueStrategy` function that throws (`chat.send-while-busy`), making an accidental busy `sendMessage()` reject loudly; the composer routes busy input to the host queue (`ai.queue.enqueue`). Supersedes "`whenBusy: "queue"`, fifo" in the Chat UI table (spec 02 F1).
+- Run admission on an AG-UI runtime reserves the session synchronously (agent impl r1): a client `run` that races an idle Stop or reset is queued and runs afterwards instead of being sent into the session being aborted. The NDJSON runtime keeps its legacy ordering byte for byte.
+- Main owns cross-incarnation concerns the agent cannot: run-id de-duplication across agent respawns, `ai.send` idempotent by run id (a repeat answers `duplicate` + the original ack), a synthesized `RUN_ERROR` when the agent exits on a signal, the UIMessage→wire conversion (`uiMessagesToWire`, client message id kept), and steering/queue identity checks by incarnation (specs 00-agent-agui §3.8/§5.2, 02 §14).

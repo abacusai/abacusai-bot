@@ -117,6 +117,8 @@ export class AguiEmitter {
 
   // ------------------------------------------------------------ session state
   private hiddenDepth = 0;
+  /** The customType of each open hidden turn, innermost last (for the usage log). */
+  private readonly hiddenTypes: string[] = [];
   /** No STATE_DELTA before the first snapshot: pre-ready changes fold into it. */
   private snapshotted = false;
   private readonly state: AgentState;
@@ -155,6 +157,17 @@ export class AguiEmitter {
 
   isHidden(): boolean {
     return this.hiddenDepth > 0;
+  }
+
+  /**
+   * A run opened. No hidden turn can be in progress now: housekeeping runs
+   * inside `send()` with admission held, so a run opens only after it ended
+   * or was aborted. An aborted one's closing bracket can land after the new
+   * RUN_STARTED; forgetting the depth here keeps it from hiding that run.
+   */
+  runOpened(): void {
+    this.hiddenDepth = 0;
+    this.hiddenTypes.length = 0;
   }
 
   /** Set by the host before `session.stop()` / `resetConversation()`. */
@@ -245,6 +258,8 @@ export class AguiEmitter {
         0,
         this.hiddenDepth + (event.phase === "start" ? 1 : -1)
       );
+      if (event.phase === "start") this.hiddenTypes.push(event.customType);
+      else this.hiddenTypes.pop();
 
       return [];
     }
@@ -261,7 +276,10 @@ export class AguiEmitter {
 
     switch (event.type) {
       case "message_open":
-        return this.messageOpen(event.key, event.messageId);
+        return this.messageOpen(
+          event.key,
+          event.messageId ?? this.fallbackMessageId(event.key)
+        );
 
       case "message_close": {
         this.ctx.runs.recordStopReason(event.stopReason);
@@ -460,6 +478,9 @@ export class AguiEmitter {
         ];
 
       case "error":
+        // Already this run's terminal (a thrown send, recorded by its token).
+        if (meta.attributed === true) return [];
+
         return this.error(event.error, meta.origin);
 
       case "notification": {
@@ -487,7 +508,9 @@ export class AguiEmitter {
       case "turn_complete":
         if (event.usage == null) return [];
         if (this.hiddenDepth > 0) {
-          this.ctx.log(`[usage] housekeeping ${JSON.stringify(event.usage)}\n`);
+          this.ctx.log(
+            `[usage] housekeeping ${this.hiddenTypes.at(-1) ?? "unknown"} ${JSON.stringify(event.usage)}\n`
+          );
 
           return [];
         }
@@ -522,7 +545,10 @@ export class AguiEmitter {
         out.push(custom("queue.steered", { content: event.content }));
         this.steerCount += 1;
         out.push(
-          ...this.userMessage(steerMessageId(this.steerCount), event.content)
+          ...this.userMessage(
+            steerMessageId(this.ctx.incarnation, this.steerCount),
+            event.content
+          )
         );
 
         return out;
@@ -635,7 +661,7 @@ export class AguiEmitter {
         return this.subtaskStart(event, subagentRunId, meta.parentToolCallId);
 
       case "subtask_end":
-        return this.subtaskEnd(event);
+        return this.subtaskEnd(event, meta.unfinished === true);
 
       default:
         return [];
@@ -677,6 +703,19 @@ export class AguiEmitter {
     out.push(...this.startAssistant(key, id));
 
     return out;
+  }
+
+  /**
+   * An assistant message id with no pi timestamp to anchor it. The legacy
+   * `msg-N` counter restarts in every process, and a resumed pi session keeps
+   * its id, while main keeps one transcript per thread across respawns: the
+   * incarnation keeps a new process's `msg-1` from landing on an old one.
+   */
+  private fallbackMessageId(key: string): string {
+    const base =
+      this.state.agentSessionId ?? this.ctx.runs.openRunId() ?? "run";
+
+    return `${base}:${this.ctx.incarnation}:${key}`;
   }
 
   private uniqueMessageId(requested: string): string {
@@ -722,11 +761,10 @@ export class AguiEmitter {
     }
 
     const known = key != null ? this.messageIds.get(key) : undefined;
-    const base = this.ctx.runs.openRunId() ?? "run";
     const id =
       known ??
       this.uniqueMessageId(
-        `${this.state.agentSessionId ?? base}:${key ?? `msg-x${++this.fallbackCount}`}`
+        this.fallbackMessageId(key ?? `msg-x${++this.fallbackCount}`)
       );
 
     if (key != null && known == null) this.messageIds.set(key, id);
@@ -852,7 +890,7 @@ export class AguiEmitter {
     event: E,
     subagentRunId: string | undefined
   ): E {
-    return subagentRunId != null ? ({ ...event, subagentRunId } as E) : event;
+    return subagentRunId != null ? { ...event, subagentRunId } : event;
   }
 
   private announce(tool: ToolState): AguiEvent[] {
@@ -1096,7 +1134,8 @@ export class AguiEmitter {
   }
 
   private subtaskEnd(
-    event: Extract<AgentEvent, { type: "subtask_end" }>
+    event: Extract<AgentEvent, { type: "subtask_end" }>,
+    unfinished: boolean
   ): AguiEvent[] {
     const child = this.children.get(event.id);
 
@@ -1115,6 +1154,8 @@ export class AguiEmitter {
     this.children.delete(event.id);
 
     if (event.status === "failed") {
+      // A component bracket the turn closed because its tool never ended
+      // (`finishTurn`) is unfinished, not a failure the component reported.
       out.push(
         aguiEvent(EventType.SUBAGENT_ERROR, {
           subagentRunId: event.id,
@@ -1122,7 +1163,7 @@ export class AguiEmitter {
             child.finalText.trim().length > 0
               ? child.finalText
               : "The sub-agent did not finish.",
-          code: "failed",
+          code: unfinished ? "unfinished" : "failed",
         })
       );
     } else {

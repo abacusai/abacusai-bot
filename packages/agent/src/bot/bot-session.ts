@@ -1143,10 +1143,12 @@ export class BotSession {
           this.currentMessageId = `msg-${++this.messageCounter}`;
           this.toolCallStream.reset();
           if (!this.hiddenTurn) {
+            const messageId = this.aguiMessageId(event.message);
+
             this.emitInternal({
               type: "message_open",
               key: this.currentMessageId,
-              messageId: this.aguiMessageId(event.message),
+              ...(messageId != null ? { messageId } : {}),
             });
           }
         }
@@ -1705,13 +1707,11 @@ export class BotSession {
   }
 
   /** See AbacusBotSession.aguiMessageId. */
-  private aguiMessageId(message: unknown): string {
+  private aguiMessageId(message: unknown): string | undefined {
     const timestamp = (message as { timestamp?: unknown }).timestamp;
     const base = this.session?.sessionId ?? "session";
 
-    return typeof timestamp === "number"
-      ? `${base}:${timestamp}`
-      : `${base}:${this.currentMessageId ?? "msg"}`;
+    return typeof timestamp === "number" ? `${base}:${timestamp}` : undefined;
   }
 
   private requireSession(): AgentSession {

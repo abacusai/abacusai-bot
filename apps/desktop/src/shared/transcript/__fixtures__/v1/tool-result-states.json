@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "sessionId": "sess-tool-result-states",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Run everything",
+      "at": 1788256800000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-success",
+      "toolCall": {
+        "id": "c1",
+        "name": "bash",
+        "args": {
+          "command": "true"
+        },
+        "status": "success"
+      },
+      "at": 1788256801000,
+      "toolResult": {
+        "toolCallId": "c1",
+        "output": "done"
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "r-error-status",
+      "toolCall": {
+        "id": "c2",
+        "name": "bash",
+        "args": {
+          "command": "false"
+        },
+        "status": "error"
+      },
+      "at": 1788256802000,
+      "toolResult": {
+        "toolCallId": "c2",
+        "output": "exit 1",
+        "error": "Command failed"
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "r-error-field",
+      "toolCall": {
+        "id": "c3",
+        "name": "read",
+        "args": {
+          "file_path": "missing.txt"
+        },
+        "status": "success"
+      },
+      "at": 1788256803000,
+      "toolResult": {
+        "toolCallId": "c3",
+        "output": "",
+        "error": "ENOENT"
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "r-error-none",
+      "toolCall": {
+        "id": "c4",
+        "name": "bash",
+        "args": {
+          "command": "crash"
+        },
+        "status": "error"
+      },
+      "at": 1788256804000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-rejected-status",
+      "toolCall": {
+        "id": "c5",
+        "name": "bash",
+        "args": {
+          "command": "rm -rf build"
+        },
+        "status": "rejected"
+      },
+      "at": 1788256805000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-rejection-rejected",
+      "toolCall": {
+        "id": "c6",
+        "name": "write",
+        "args": {
+          "file_path": "a.txt"
+        },
+        "status": "success"
+      },
+      "at": 1788256806000,
+      "toolResult": {
+        "toolCallId": "c6",
+        "output": "User rejected",
+        "rejection": {
+          "reason": "rejected",
+          "userMessage": "not now"
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "r-interrupted",
+      "toolCall": {
+        "id": "c7",
+        "name": "bash",
+        "args": {
+          "command": "sleep 100"
+        },
+        "status": "interrupted"
+      },
+      "at": 1788256807000,
+      "toolResult": {
+        "toolCallId": "c7",
+        "output": "",
+        "rejection": {
+          "reason": "interrupted"
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "r-sibling-failed",
+      "toolCall": {
+        "id": "c8",
+        "name": "read",
+        "args": {
+          "file_path": "b.txt"
+        },
+        "status": "success"
+      },
+      "at": 1788256808000,
+      "toolResult": {
+        "toolCallId": "c8",
+        "output": "",
+        "rejection": {
+          "reason": "sibling_failed"
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "r-skipped",
+      "toolCall": {
+        "id": "c9",
+        "name": "bash",
+        "args": {
+          "command": "echo skipped"
+        },
+        "status": "skipped"
+      },
+      "at": 1788256809000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-abandoned",
+      "toolCall": {
+        "id": "c10",
+        "name": "bash",
+        "args": {
+          "command": "echo abandoned"
+        },
+        "status": "abandoned"
+      },
+      "at": 1788256810000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-executing",
+      "toolCall": {
+        "id": "c11",
+        "name": "bash",
+        "args": {
+          "command": "npm run build"
+        },
+        "status": "executing"
+      },
+      "at": 1788256811000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-pending",
+      "toolCall": {
+        "id": "c12",
+        "name": "edit",
+        "args": {
+          "file_path": "c.ts"
+        },
+        "status": "pending"
+      },
+      "at": 1788256812000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-awaiting",
+      "toolCall": {
+        "id": "c13",
+        "name": "bash",
+        "args": {
+          "command": "git push"
+        },
+        "status": "awaiting_permission"
+      },
+      "at": 1788256813000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-no-status",
+      "toolCall": {
+        "id": "c14",
+        "name": "glob",
+        "args": {
+          "pattern": "*.ts"
+        }
+      },
+      "toolResult": {
+        "toolCallId": "c14",
+        "output": "a.ts"
+      },
+      "at": 1788256814000
+    },
+    {
+      "type": "tool_call",
+      "id": "r-bad-args",
+      "toolCall": {
+        "id": "c15",
+        "name": "bash",
+        "args": "not-an-object",
+        "status": "success"
+      },
+      "at": 1788256815000
+    }
+  ]
+}

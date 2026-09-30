@@ -1,18 +1,27 @@
 /**
  * The startup theme (spec 01 §7.7, spec 00 "Deferred additions"): main sets
  * `themeSource` from the stored pref before the window exists, and the
- * window's first opaque background follows the resolved scheme.
+ * options `createWindow` hands to `new BaseWindow` (all of them come from
+ * `mainWindowOptions`) carry a background in the resolved scheme on every
+ * platform. The legacy generation's options are unchanged.
  */
 import { describe, expect, it, vi } from "vitest";
 
 import { PrefsStore } from "./services/config/prefs-store";
 import {
   applyStartupTheme,
+  applyThemedBackground,
   followPrefsTheme,
-  startupBackgroundColor,
+  mainWindowOptions,
   type ThemeTarget,
 } from "./startup-theme";
-import { WINDOW_SURFACE } from "./window-chrome-options";
+import {
+  WINDOW_SURFACE,
+  windowChromeOptions,
+  type LinuxChromeMode,
+  type WindowChromeInput,
+  type WindowChromeMode,
+} from "./window-chrome-options";
 
 /** `nativeTheme` over an OS that is dark or light. */
 const fakeNativeTheme = (osDark: boolean): ThemeTarget => {
@@ -36,34 +45,194 @@ const storedTheme = (theme: "system" | "light" | "dark") => {
   return prefs;
 };
 
-describe("startup theme", () => {
-  it("applies a stored dark theme on a light OS before the window exists", () => {
-    const nativeTheme = fakeNativeTheme(false);
-    const order: string[] = [];
-    const createWindow = () => {
-      order.push(`window:${nativeTheme.themeSource}`);
+const BASE = { width: 1200, height: 800, show: false, title: "App" };
+
+/** What `createWindow` passes: `currentChromeInput()` read at call time. */
+const windowFor = (options: {
+  generation: WindowChromeMode;
+  platform: string;
+  stored: "system" | "light" | "dark";
+  osDark: boolean;
+  reducedTransparency?: boolean;
+  linuxMode?: LinuxChromeMode;
+}) => {
+  const nativeTheme = fakeNativeTheme(options.osDark);
+  const seen: string[] = [];
+  const chromeInput = (): WindowChromeInput => {
+    seen.push(nativeTheme.themeSource);
+    return {
+      mode: options.generation,
+      platform: options.platform,
+      dark: nativeTheme.shouldUseDarkColors,
+      reducedTransparency: options.reducedTransparency ?? false,
+      overlayHeight: 40,
+      linuxMode: options.linuxMode ?? "overlay",
     };
+  };
+  const result = mainWindowOptions({
+    generation: options.generation,
+    prefs: storedTheme(options.stored),
+    nativeTheme,
+    chromeInput,
+    base: BASE,
+  });
+  return { result, nativeTheme, seen };
+};
 
-    const dark = applyStartupTheme(storedTheme("dark"), nativeTheme);
-    createWindow();
-
-    expect(dark).toBe(true);
-    expect(order).toEqual(["window:dark"]);
-    expect(startupBackgroundColor("#2a2a28", dark)).toBe(WINDOW_SURFACE.dark);
+describe("startup theme: the options new BaseWindow gets", () => {
+  it("applies the stored theme before the chrome is computed", () => {
+    const { nativeTheme, seen } = windowFor({
+      generation: "wco",
+      platform: "darwin",
+      stored: "dark",
+      osDark: false,
+    });
+    expect(seen).toEqual(["dark"]);
+    expect(nativeTheme.themeSource).toBe("dark");
   });
 
-  it("applies a stored light theme on a dark OS", () => {
+  it.each([
+    ["light", true, WINDOW_SURFACE.light],
+    ["dark", false, WINDOW_SURFACE.dark],
+  ] as const)(
+    "Linux overlay, stored %s on the opposite OS: the resolved surface, not the overlay's fixed backdrop",
+    (stored, osDark, surface) => {
+      const { result } = windowFor({
+        generation: "wco",
+        platform: "linux",
+        stored,
+        osDark,
+      });
+      expect(result).toMatchObject({
+        ...BASE,
+        titleBarStyle: "hidden",
+        backgroundColor: surface,
+      });
+    }
+  );
+
+  it("Linux native frame: the resolved surface", () => {
+    const { result } = windowFor({
+      generation: "wco",
+      platform: "linux",
+      stored: "dark",
+      osDark: false,
+      linuxMode: "native-frame",
+    });
+    expect(result).toEqual({
+      ...BASE,
+      frame: true,
+      backgroundColor: WINDOW_SURFACE.dark,
+    });
+  });
+
+  it.each(["darwin", "win32"])(
+    "%s: transparent while vibrancy/mica paints the backdrop",
+    (platform) => {
+      const { result } = windowFor({
+        generation: "wco",
+        platform,
+        stored: "dark",
+        osDark: false,
+      });
+      expect(result.backgroundColor).toBe("#00000000");
+      expect(
+        platform === "darwin" ? result.vibrancy : result.backgroundMaterial
+      ).toBe(platform === "darwin" ? "under-window" : "mica");
+    }
+  );
+
+  it.each(["darwin", "win32"])(
+    "%s with reduced transparency: nothing paints the backdrop, so the resolved surface",
+    (platform) => {
+      const { result } = windowFor({
+        generation: "wco",
+        platform,
+        stored: "light",
+        osDark: true,
+        reducedTransparency: true,
+      });
+      expect(result.backgroundColor).toBe(WINDOW_SURFACE.light);
+      expect(result.vibrancy).toBeUndefined();
+    }
+  );
+
+  it.each([
+    ["darwin", "#00000000"],
+    ["win32", "#00000000"],
+    ["linux", "#2a2a28"],
+  ])(
+    "legacy on %s: no theme applied, the options as before",
+    (platform, background) => {
+      const { result, nativeTheme } = windowFor({
+        generation: "legacy",
+        platform,
+        stored: "dark",
+        osDark: false,
+      });
+      expect(nativeTheme.themeSource).toBe("system");
+      const chrome = windowChromeOptions({
+        mode: "legacy",
+        platform,
+        dark: false,
+        reducedTransparency: false,
+        overlayHeight: 40,
+        linuxMode: "overlay",
+      });
+      expect(result).toEqual({
+        ...BASE,
+        backgroundColor: background,
+        ...chrome,
+      });
+    }
+  );
+});
+
+describe("startup theme: live", () => {
+  const input = (over: Partial<WindowChromeInput>): WindowChromeInput => ({
+    mode: "wco",
+    platform: "linux",
+    dark: false,
+    reducedTransparency: false,
+    overlayHeight: 40,
+    linuxMode: "overlay",
+    ...over,
+  });
+  const fakeWindow = () => ({
+    isDestroyed: () => false,
+    setBackgroundColor: vi.fn(),
+  });
+
+  it("the window and the renderer's view follow the scheme", () => {
+    const window = fakeWindow();
+    const host = { setBackgroundColor: vi.fn() };
+    applyThemedBackground(window, input({ dark: true }), host);
+    expect(window.setBackgroundColor).toHaveBeenLastCalledWith(
+      WINDOW_SURFACE.dark
+    );
+    expect(host.setBackgroundColor).toHaveBeenLastCalledWith(
+      WINDOW_SURFACE.dark
+    );
+    applyThemedBackground(
+      window,
+      input({ platform: "darwin", reducedTransparency: true }),
+      host
+    );
+    expect(host.setBackgroundColor).toHaveBeenLastCalledWith(
+      WINDOW_SURFACE.light
+    );
+  });
+
+  it("leaves the legacy window alone", () => {
+    const window = fakeWindow();
+    applyThemedBackground(window, input({ mode: "legacy" }));
+    expect(window.setBackgroundColor).not.toHaveBeenCalled();
+  });
+
+  it("applyStartupTheme returns the resolved scheme", () => {
     const nativeTheme = fakeNativeTheme(true);
-    const dark = applyStartupTheme(storedTheme("light"), nativeTheme);
+    expect(applyStartupTheme(storedTheme("light"), nativeTheme)).toBe(false);
     expect(nativeTheme.themeSource).toBe("light");
-    expect(dark).toBe(false);
-    expect(startupBackgroundColor("#2a2a28", dark)).toBe(WINDOW_SURFACE.light);
-  });
-
-  it("follows the OS for system and keeps a transparent backdrop", () => {
-    const nativeTheme = fakeNativeTheme(true);
-    expect(applyStartupTheme(storedTheme("system"), nativeTheme)).toBe(true);
-    expect(startupBackgroundColor("#00000000", true)).toBe("#00000000");
   });
 
   it("follows later prefs changes and re-applies the chrome", () => {
