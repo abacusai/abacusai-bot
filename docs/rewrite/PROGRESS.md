@@ -6,11 +6,11 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 
 | Phase | Slice | Spec | Impl | Review | Status |
 |---|---|---|---|---|---|
-| 0 | agent AG-UI host + emitter | | | | todo |
-| 0 | main oRPC contract + MessagePort transport | | | | todo |
-| 0 | DB tables (snapshot + change events) | | | | todo |
-| 0 | migration runner | | | | todo |
-| 0 | Window Controls Overlay + Electron 44 | | | | todo |
+| 0 | agent AG-UI host + emitter | r1 → Codex review running | | | spec |
+| 0 | main oRPC contract + MessagePort transport | r1 → revising (Codex r1) | | | spec |
+| 0 | DB tables (snapshot + change events) | same spec as transport | | | spec |
+| 0 | migration runner | same spec as transport | | | spec |
+| 0 | Window Controls Overlay + Electron 44 | r2 (Codex r1 applied) | a059a113 (Codex, legacy mode default) | Claude review + smoke run in progress | reviewing |
 | 1 | renderer foundation (deps, shadcn base-mira, routes skeleton, data layer, tokens, /__ui) | | | | todo |
 | 2 | chat kit | | | | todo |
 | 3 | bots | | | | todo |
