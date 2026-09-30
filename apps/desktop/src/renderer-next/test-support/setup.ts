@@ -67,6 +67,8 @@ if (typeof window !== "undefined") {
     window.HTMLElement.prototype.scrollIntoView = () => {};
   }
   window.scrollTo = () => undefined;
+  // index-next.html has one; axe checks it.
+  document.title = "AbacusAI Bot";
   if (window.HTMLElement.prototype.getAnimations == null) {
     window.HTMLElement.prototype.getAnimations = () => [];
   }

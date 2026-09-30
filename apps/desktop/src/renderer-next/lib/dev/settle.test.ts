@@ -45,7 +45,8 @@ const fakeRouter = () => {
     },
     resolve(href: string) {
       state.location.href = href;
-      for (const listener of [...listeners]) listener({ toLocation: { href } });
+      for (const listener of Array.from(listeners))
+        listener({ toLocation: { href } });
     },
   };
 };

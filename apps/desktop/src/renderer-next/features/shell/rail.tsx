@@ -65,8 +65,11 @@ export const Rail = ({
   area,
   floatingEnabled,
   initials,
+  label,
 }: {
   area: ShellArea | undefined;
+  /** Overrides the landmark name (the gallery shows several rails). */
+  label?: string;
   /** The sidebar is not pinned: hovering opens it floating. */
   floatingEnabled: boolean;
   initials: string;
@@ -82,7 +85,7 @@ export const Rail = ({
 
   return (
     <nav
-      aria-label={t("shell.rail.label")}
+      aria-label={label ?? t("shell.rail.label")}
       data-slot="rail"
       className="flex w-(--rail-w) shrink-0 flex-col items-center gap-1 pt-1 pb-3"
       onPointerEnter={() => {

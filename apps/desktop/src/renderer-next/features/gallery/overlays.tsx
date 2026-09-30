@@ -24,8 +24,10 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxTrigger,
 } from "#next/ui/combobox";
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -60,6 +62,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -70,6 +73,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "#next/ui/hover-card";
+import { InputGroupAddon } from "#next/ui/input-group";
 import {
   Popover,
   PopoverContent,
@@ -209,9 +213,11 @@ export const DropdownMenuExample = () => {
         Actions
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuLabel>Session</DropdownMenuLabel>
-        <DropdownMenuItem>Rename</DropdownMenuItem>
-        <DropdownMenuItem>Pin</DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Session</DropdownMenuLabel>
+          <DropdownMenuItem>Rename</DropdownMenuItem>
+          <DropdownMenuItem>Pin</DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
       </DropdownMenuContent>
@@ -281,7 +287,16 @@ export const ComboboxExample = () => {
   const state = useOverlay("combobox");
   return (
     <Combobox items={FRUITS} {...state}>
-      <ComboboxInput placeholder="Pick a fruit" aria-label="Fruit" />
+      {/* The registry trigger has no accessible name; ours does. */}
+      <ComboboxInput
+        placeholder="Pick a fruit"
+        aria-label="Fruit"
+        showTrigger={false}
+      >
+        <InputGroupAddon align="inline-end">
+          <ComboboxTrigger aria-label="Show fruits" />
+        </InputGroupAddon>
+      </ComboboxInput>
       <ComboboxContent>
         <ComboboxEmpty>Nothing found.</ComboboxEmpty>
         <ComboboxList>
@@ -304,16 +319,18 @@ export const CommandExample = () => {
         Open command menu
       </Button>
       <CommandDialog {...state} title="Command menu" description="Search">
-        <CommandInput placeholder="Type a command" />
-        <CommandList>
-          <CommandEmpty>No results.</CommandEmpty>
-          <CommandGroup heading="Areas">
-            <CommandItem>
-              Bots <CommandShortcut>⌘1</CommandShortcut>
-            </CommandItem>
-            <CommandItem>Sessions</CommandItem>
-          </CommandGroup>
-        </CommandList>
+        <Command>
+          <CommandInput placeholder="Type a command" />
+          <CommandList>
+            <CommandEmpty>No results.</CommandEmpty>
+            <CommandGroup heading="Areas">
+              <CommandItem>
+                Bots <CommandShortcut>⌘1</CommandShortcut>
+              </CommandItem>
+              <CommandItem>Sessions</CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </CommandDialog>
     </>
   );
