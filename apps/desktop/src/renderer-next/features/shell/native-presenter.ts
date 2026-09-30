@@ -19,6 +19,7 @@ export const createNativePresenter = (
 ) => {
   const candidates = new Map<string, NativeCandidate>();
   const captures = new Store<Record<string, string>>({});
+  const owner = new Store<string | null>(null);
   let desired: string | null = null;
   let current: NativeCandidate | null = null;
   let lastBounds = "";
@@ -53,6 +54,7 @@ export const createNativePresenter = (
             runtime.hide({ lease: old.lease, presentationId: old.id })
           );
           current = null;
+          owner.setState(() => null);
           lastBounds = "";
         }
         if (
@@ -74,8 +76,20 @@ export const createNativePresenter = (
               bounds,
             })
           );
+          if (
+            presented &&
+            (requested !== revision ||
+              candidates.get(chosen.id) !== chosen ||
+              !eligible(chosen))
+          ) {
+            await safe(() =>
+              runtime.hide({ lease: chosen.lease, presentationId: chosen.id })
+            );
+            return;
+          }
           if (presented && requested === revision) {
             current = chosen;
+            owner.setState(() => chosen.id);
             lastBounds = signature;
           }
         }
@@ -84,6 +98,7 @@ export const createNativePresenter = (
   };
   return {
     captures,
+    owner,
     refresh,
     activate(id: string) {
       desired = id;
