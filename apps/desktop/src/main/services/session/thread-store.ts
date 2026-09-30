@@ -55,6 +55,7 @@ import {
 import { isMigrationWriteBlocked } from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";
 import { HeldFiles } from "./held-files";
+import { streamTranscriptV1 } from "./stream-v1";
 
 export const THREADS_DIR_NAME = "threads";
 export const TRANSCRIPTS_DIR_NAME = "transcripts";
@@ -68,6 +69,16 @@ export const ARCHIVE_INDEX_NAME = ".archive-index.json";
  * converted or quarantined.
  */
 export const MAX_TRANSCRIPT_BYTES = 64 * 1024 * 1024;
+
+/**
+ * The largest v1 transcript read at all, through the streaming reader
+ * (`stream-v1.ts`) and converted in memory only, never persisted as a twin.
+ * Past it, reads answer with a `too-large` notice (cut-over review r2 #8).
+ */
+export const MAX_STREAMED_TRANSCRIPT_BYTES = 512 * 1024 * 1024;
+
+/** Why a thread shows no history although its v1 file exists. */
+export type ThreadNotice = { kind: "too-large"; size: number; limit: number };
 
 /** How long the dual-write waits for more saves of the same thread. */
 export const DUAL_WRITE_DELAY_MS = 2_000;
@@ -231,6 +242,8 @@ export interface ThreadStoreOptions {
   writeFile?: (file: string, text: string) => void;
   /** Defaults to `MAX_TRANSCRIPT_BYTES` (tests lower it). */
   maxTranscriptBytes?: number;
+  /** Defaults to `MAX_STREAMED_TRANSCRIPT_BYTES` (tests lower it). */
+  maxStreamedBytes?: number;
   /**
    * The cut-over build sets this once step 4 has archived `transcripts/`:
    * a v1-derived twin is then served without its v1 file.
@@ -239,8 +252,15 @@ export interface ThreadStoreOptions {
 }
 
 type V1Read =
-  | { status: "ok"; meta: Required<V1Meta>; segments: unknown[] }
-  | { status: "missing" | "unreadable" | "tooLarge" | "invalid" };
+  | {
+      status: "ok";
+      meta: Required<V1Meta>;
+      segments: unknown[];
+      /** Over `maxTranscriptBytes`: converted in memory, never persisted. */
+      large: boolean;
+    }
+  | { status: "tooLarge"; size: number }
+  | { status: "missing" | "unreadable" | "invalid" };
 
 interface PendingDualWrite {
   timer: ReturnType<typeof setTimeout> | null;
@@ -260,6 +280,7 @@ export class ThreadStore {
   private readonly log: (message: string) => void;
   private readonly dualWriteDelayMs: number;
   private readonly maxTranscriptBytes: number;
+  private readonly maxStreamedBytes: number;
   private readonly v1Archived: boolean;
   /** Writes and removals, journalled while a migration holds the file. */
   readonly held: HeldFiles;
@@ -281,6 +302,8 @@ export class ThreadStore {
     this.dualWriteDelayMs = options.dualWriteDelayMs ?? DUAL_WRITE_DELAY_MS;
     this.maxTranscriptBytes =
       options.maxTranscriptBytes ?? MAX_TRANSCRIPT_BYTES;
+    this.maxStreamedBytes =
+      options.maxStreamedBytes ?? MAX_STREAMED_TRANSCRIPT_BYTES;
     this.v1Archived = options.v1Archived ?? false;
     this.held = new HeldFiles({
       dir: () => path.join(this.home(), THREADS_DIR_NAME, ".pending"),
@@ -318,14 +341,43 @@ export class ThreadStore {
    * gone (unless step 4 archived it).
    */
   readCurrentFile(sessionId: string): ThreadFileV2 | null {
+    return this.readCurrentWithNotice(sessionId).file;
+  }
+
+  /**
+   * `readCurrentFile`, plus why there is no history when a v1 file exists
+   * but is too large to read at all (for the relay to surface).
+   */
+  readCurrentWithNotice(sessionId: string): {
+    file: ThreadFileV2 | null;
+    notice?: ThreadNotice;
+  } {
     const threadFile = this.threadPath(sessionId);
     const transcriptFile = this.transcriptPath(sessionId);
-    if (threadFile == null || transcriptFile == null) return null;
+    if (threadFile == null || transcriptFile == null) return { file: null };
     this.flush(sessionId);
-
     const marker = this.readMarker(sessionId);
-    const twin = twinOf(this.held.read(threadFile));
     const v1 = this.readV1(transcriptFile);
+    const file = this.current(sessionId, threadFile, marker, v1);
+    return file === null && marker === null && v1.status === "tooLarge"
+      ? {
+          file,
+          notice: {
+            kind: "too-large",
+            size: v1.size,
+            limit: this.maxStreamedBytes,
+          },
+        }
+      : { file };
+  }
+
+  private current(
+    sessionId: string,
+    threadFile: string,
+    marker: ClearMarker | null,
+    v1: V1Read
+  ): ThreadFileV2 | null {
+    const twin = twinOf(this.held.read(threadFile));
     const proven =
       marker !== null &&
       v1.status === "ok" &&
@@ -603,6 +655,8 @@ export class ThreadStore {
     afterClear: string | undefined
   ): ThreadFileV2 {
     const thread = this.convert(sessionId, v1, afterClear);
+    // An oversized v1 file is served, never persisted as a twin.
+    if (v1.large) return thread;
     this.persist(sessionId, threadFile, thread, "repair");
     return thread;
   }
@@ -612,17 +666,54 @@ export class ThreadStore {
   }
 
   private readV1(file: string): V1Read {
-    const read = this.held.read(file, this.maxTranscriptBytes);
-    if (read.status !== "ok") return { status: read.status };
-    const parsed = parseTranscriptV1(read.text);
+    const pending = this.held.pending(file);
+    let text: string;
+    if (pending !== null) {
+      if (pending.op === "remove") return { status: "missing" };
+      text = pending.text;
+    } else {
+      let size: number;
+      try {
+        size = fs.statSync(file).size;
+      } catch (error) {
+        const code = (error as { code?: unknown })?.code;
+        return {
+          status:
+            code === "ENOENT" || code === "ENOTDIR" ? "missing" : "unreadable",
+        };
+      }
+      if (size > this.maxStreamedBytes) return { status: "tooLarge", size };
+      if (size > this.maxTranscriptBytes) {
+        // Streamed and hashed on the way: the clear rules below still apply.
+        const streamed = streamTranscriptV1(file);
+        if (streamed.status !== "ok") return { status: streamed.status };
+        return {
+          status: "ok",
+          meta: {
+            updatedAt: streamed.updatedAt ?? v1UpdatedAt(file, {}),
+            fingerprint: streamed.fingerprint,
+          },
+          segments: streamed.segments,
+          large: true,
+        };
+      }
+      const read = readTextChecked(file);
+      if (read.status !== "ok")
+        return {
+          status: read.status === "tooLarge" ? "unreadable" : read.status,
+        };
+      text = read.text;
+    }
+    const parsed = parseTranscriptV1(text);
     if (parsed.status !== "ok") return { status: "invalid" };
     return {
       status: "ok",
       meta: {
         updatedAt: v1UpdatedAt(file, parsed.file),
-        fingerprint: fingerprintV1(read.text),
+        fingerprint: fingerprintV1(text),
       },
       segments: parsed.file.segments,
+      large: Buffer.byteLength(text) > this.maxTranscriptBytes,
     };
   }
 
