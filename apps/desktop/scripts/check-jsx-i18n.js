@@ -32,7 +32,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const SCAN_DIRS = ["src/renderer"];
+const SCAN_DIRS = ["src/renderer", "src/renderer-next"];
+// Registry output (never edited) and the dev-only, English-only gallery.
+const SKIP_DIRS = [
+  "src/renderer-next/ui",
+  "src/renderer-next/features/gallery",
+];
 const BASELINE_PATH = path.join(
   import.meta.dirname,
   "i18n-literals-baseline.json"
@@ -55,8 +60,9 @@ function collectTsx(dir) {
   if (!fs.existsSync(abs)) return out;
   for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
     const rel = path.join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...collectTsx(rel));
-    else if (
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.includes(rel)) out.push(...collectTsx(rel));
+    } else if (
       entry.isFile() &&
       entry.name.endsWith(".tsx") &&
       !entry.name.endsWith(".test.tsx")

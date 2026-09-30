@@ -81,6 +81,40 @@ export interface LegacyKeyMapping {
   invalid: PrefsField[];
 }
 
+/**
+ * The old renderer's onboarding screens (`onboarding-steps.ts` `STEP_ORDER`;
+ * `legacy-prefs.test.ts` checks they match). A stored step outside it reads
+ * as none there.
+ */
+export const LEGACY_ONBOARDING_STEPS: readonly string[] = [
+  "auth",
+  "welcome",
+  "connectors",
+  "models",
+  "explainer",
+];
+
+const isOnboardingStep = (value: string): boolean =>
+  LEGACY_ONBOARDING_STEPS.includes(value);
+
+/**
+ * `browser-homepage.ts`'s `normalizeBrowserHomepage` for a non-blank value
+ * (the test checks they agree): a bare host gains `https://`, anything but
+ * http(s) is null (the default).
+ */
+export const normalizeBrowserHomepage = (value: string): string | null => {
+  const trimmed = value.trim();
+  try {
+    const url = new URL(
+      /^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`
+    );
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -106,12 +140,9 @@ const zustandState = (
     return "invalid";
   }
   if (!isRecord(parsed) || !isRecord(parsed.state)) return "invalid";
-  if (
-    storeVersion !== null &&
-    typeof parsed.version === "number" &&
-    parsed.version !== storeVersion
-  )
-    return "absent";
+  // zustand compares `stored.version !== options.version`, so a missing
+  // version is a mismatch too, and without `migrate` the value is dropped.
+  if (storeVersion !== null && parsed.version !== storeVersion) return "absent";
   return parsed.state;
 };
 
@@ -212,13 +243,19 @@ export const mapLegacyKey = (
           ? {}
           : { recentFolders: state.recentFolders }
       );
-    case "browser.homepage":
+    case "browser.homepage": {
+      // As browser-homepage.ts's getBrowserHomepage: blank or not http(s)
+      // shows the default (the row's null); anything else is normalised.
+      const normalized =
+        raw.trim() === "" ? null : normalizeBrowserHomepage(raw);
+      return { values: { browserHomepage: normalized }, invalid: [] };
+    }
+    case "onboarding.step":
+      // As onboarding-flow.tsx: a step it does not know reads as none.
       return {
-        values: { browserHomepage: raw.trim() === "" ? null : raw },
+        values: { onboardingStep: isOnboardingStep(raw) ? raw : null },
         invalid: [],
       };
-    case "onboarding.step":
-      return { values: { onboardingStep: raw }, invalid: [] };
     case "referral-card.dismissed-until": {
       const until = Number(raw);
       return Number.isFinite(until)
@@ -241,6 +278,11 @@ export interface LegacyPrefs {
   absent: PrefsField[];
   /** Fields it holds something unusable for; left at their current value. */
   invalid: PrefsField[];
+  /**
+   * Member fields with some unusable keys and some usable ones: imported
+   * from the usable ones (in `patch`), and counted as invalid.
+   */
+  invalidMembers: PrefsField[];
   /** The mapped keys present. */
   keys: string[];
 }
@@ -265,7 +307,13 @@ export const composeLegacyPrefs = (
   read: (key: string) => string | undefined,
   fields: readonly PrefsField[] = LEGACY_PREFS_FIELDS
 ): LegacyPrefs => {
-  const result: LegacyPrefs = { patch: {}, absent: [], invalid: [], keys: [] };
+  const result: LegacyPrefs = {
+    patch: {},
+    absent: [],
+    invalid: [],
+    invalidMembers: [],
+    keys: [],
+  };
   const mappings: LegacyKeyMapping[] = [];
   for (const key of LEGACY_PREFS_KEYS.keys()) {
     const raw = read(key);
@@ -283,12 +331,24 @@ export const composeLegacyPrefs = (
       result.absent.push(field);
       continue;
     }
-    if (contributing.some((mapping) => mapping.invalid.includes(field))) {
+    const valid = contributing.filter(
+      (mapping) => !mapping.invalid.includes(field)
+    );
+    // A scalar field with any unusable key, or a member field whose every
+    // key is unusable, is left at its current value. A member field keeps
+    // what its usable keys hold: the old renderer shows the base for the
+    // members an unusable key would have held (zustand drops a corrupt
+    // store; `Number("abc")` hides nothing).
+    if (
+      valid.length === 0 ||
+      (!MEMBER_FIELDS.has(field) && valid.length < contributing.length)
+    ) {
       result.invalid.push(field);
       continue;
     }
+    if (valid.length < contributing.length) result.invalidMembers.push(field);
     let value: unknown = structuredClone(legacyBase(field));
-    for (const mapping of contributing) {
+    for (const mapping of valid) {
       const part = mapping.values[field];
       value =
         MEMBER_FIELDS.has(field) && isRecord(value) && isRecord(part)
@@ -331,14 +391,21 @@ export const importLegacyPrefs = (
   const legacy = composeLegacyPrefs(read, fields);
   const provenance = prefs.provenance();
   const named = Object.keys(legacy.patch) as PrefsField[];
-  const keptUser = named.filter((field) => provenance[field] === "user");
+  // Provenance is per leaf; a field counts as kept when any leaf of it is
+  // the user's (the import skips exactly those leaves).
+  const keptUser = named.filter((field) =>
+    Object.entries(provenance).some(
+      ([leaf, mark]) =>
+        mark === "user" && (leaf === field || leaf.startsWith(`${field}.`))
+    )
+  );
   const { invalid } = prefs.importLegacy(legacy.patch);
   const reset = prefs.resetLegacy(legacy.absent);
   return {
     keys: legacy.keys.length,
     imported: named.length - keptUser.length - invalid,
     keptUser: keptUser.length,
-    invalid: legacy.invalid.length + invalid,
+    invalid: legacy.invalid.length + legacy.invalidMembers.length + invalid,
     reset: reset.length,
   };
 };

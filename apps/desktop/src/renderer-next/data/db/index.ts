@@ -10,6 +10,7 @@ import { getTransport } from "../transport";
 import {
   artifactsCollectionOptions,
   botsCollectionOptions,
+  createUpdatePrefs,
   gitStateCollectionOptions,
   memoriesCollectionOptions,
   prefsCollectionOptions,
@@ -22,6 +23,9 @@ import {
 export const prefsCollection = createCollection(
   prefsCollectionOptions(getTransport)
 );
+/** Sends every leaf it names, so each becomes the user's (B.2). */
+export const updatePrefs = createUpdatePrefs(prefsCollection, getTransport);
+
 export const workspacesCollection = createCollection(
   workspacesCollectionOptions(getTransport)
 );

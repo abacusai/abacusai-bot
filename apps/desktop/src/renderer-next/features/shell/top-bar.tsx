@@ -1,0 +1,263 @@
+/**
+ * The title bar (spec 01 §7.4, canvas `TopBar`, page 5). Laid out from the
+ * window-chrome variables only: `--titlebar-x` (macOS traffic lights) and
+ * `--titlebar-end` (caption buttons) pad the bar, so no platform branches.
+ * The whole bar drags the window; every interactive child is no-drag.
+ *
+ * Compound: Root, Leading, Identity, Actions, PanelTabs, PanelToggle.
+ */
+import { useCanGoBack, useRouter } from "@tanstack/react-router";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Ellipsis,
+  PanelLeft,
+  PanelRight,
+} from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+
+import { cn } from "#next/lib/cn";
+import type { SidePanelTabId } from "#next/lib/navigation/search";
+import { Badge } from "#next/ui/badge";
+import { Button } from "#next/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#next/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "#next/ui/tabs";
+
+import { setIdentityTarget, useTopBarActionList } from "./top-bar-slots";
+
+const BarButton = ({
+  label,
+  className,
+  ...props
+}: { label: string } & ComponentProps<typeof Button>) => (
+  <Button
+    variant="ghost"
+    size="icon-sm"
+    aria-label={label}
+    title={label}
+    className={cn(
+      "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground size-7",
+      className
+    )}
+    {...props}
+  />
+);
+
+const Root = ({ children }: { children: ReactNode }) => (
+  <header
+    data-slot="topbar"
+    className="titlebar-drag text-muted-foreground flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),8px)] pl-(--titlebar-x) text-[13px] select-none"
+  >
+    {children}
+  </header>
+);
+
+/**
+ * Back, forward, sidebar toggle and (pinned only) the app name. With a
+ * sidebar column in layout its width ends at the content pane's left edge;
+ * `min-width: min-content` keeps the buttons whole when the reservation is
+ * wider than the column (the 88 px strip under macOS lights).
+ */
+const Leading = ({
+  sidebarInLayout,
+  showAppName,
+  onToggleSidebar,
+}: {
+  sidebarInLayout: boolean;
+  showAppName: boolean;
+  onToggleSidebar(): void;
+}) => {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+  return (
+    <div
+      data-slot="topbar-leading"
+      className={cn(
+        "flex items-center gap-0.5 pl-2",
+        sidebarInLayout
+          ? "w-[calc(var(--rail-w)+var(--sidebar-occupied-w)-var(--titlebar-x))] min-w-min flex-none"
+          : "flex-none pr-2.5"
+      )}
+    >
+      <BarButton
+        label={t("shell.topBar.back")}
+        disabled={!canGoBack}
+        onClick={() => router.history.back()}
+      >
+        <ArrowLeft />
+      </BarButton>
+      <BarButton
+        label={t("shell.topBar.forward")}
+        onClick={() => router.history.forward()}
+      >
+        <ArrowRight />
+      </BarButton>
+      <BarButton
+        label={t("shell.topBar.toggleSidebar")}
+        onClick={onToggleSidebar}
+      >
+        <PanelLeft />
+      </BarButton>
+      {showAppName && (
+        <span
+          data-slot="topbar-app-name"
+          className="text-sidebar-foreground min-w-0 truncate pl-2 font-semibold"
+        >
+          {t("shell.appName")}
+        </span>
+      )}
+    </div>
+  );
+};
+
+const Identity = ({
+  status,
+  statusText,
+  badge,
+  children,
+}: {
+  status: boolean;
+  statusText?: string;
+  badge?: ReactNode;
+  /** Static content instead of the routes' portal slot (the gallery). */
+  children?: ReactNode;
+}) => (
+  <div
+    data-slot="topbar-identity"
+    className="flex min-w-0 flex-1 items-center gap-2 pr-2"
+  >
+    {children === undefined ? (
+      <div
+        ref={setIdentityTarget}
+        className="flex min-w-0 items-center gap-2"
+      />
+    ) : (
+      <div className="flex min-w-0 items-center gap-2">{children}</div>
+    )}
+    {status && statusText != null && (
+      <span
+        data-slot="topbar-status"
+        className="shell-lg:inline hidden truncate"
+      >
+        {statusText}
+      </span>
+    )}
+    {badge}
+  </div>
+);
+
+const Actions = ({ folded }: { folded: boolean }) => {
+  const { t } = useTranslation();
+  const actions = useTopBarActionList();
+  if (actions.length === 0) return null;
+  if (folded)
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<BarButton label={t("shell.topBar.more")} />}
+          data-testid="topbar-more"
+        >
+          <Ellipsis />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {actions.map((action) => (
+            <DropdownMenuItem key={action.id} onClick={action.onSelect}>
+              {action.icon}
+              {action.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  return (
+    <div data-slot="topbar-actions" className="flex items-center gap-0.5">
+      {actions.map((action) => (
+        <Button
+          key={action.id}
+          variant="ghost"
+          size="sm"
+          className="titlebar-nodrag"
+          onClick={action.onSelect}
+        >
+          {action.icon}
+          {action.label}
+        </Button>
+      ))}
+    </div>
+  );
+};
+
+const PanelTabs = ({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: readonly SidePanelTabId[];
+  value: SidePanelTabId;
+  onChange(tab: SidePanelTabId): void;
+}) => {
+  const { t } = useTranslation();
+  if (tabs.length === 0) return null;
+  return (
+    <Tabs
+      value={value}
+      onValueChange={(next) => onChange(next as SidePanelTabId)}
+      className="titlebar-nodrag"
+    >
+      <TabsList aria-label={t("shell.topBar.panelTabs")} className="h-7">
+        {tabs.map((tab) => (
+          <TabsTrigger key={tab} value={tab} className="px-2 text-xs">
+            {t(`shell.panel.tabs.${tab}`)}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  );
+};
+
+const PanelToggle = ({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle(): void;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <BarButton
+      label={open ? t("shell.topBar.closePanel") : t("shell.topBar.openPanel")}
+      aria-expanded={open}
+      data-testid="panel-toggle"
+      onClick={onToggle}
+    >
+      <PanelRight />
+    </BarButton>
+  );
+};
+
+/** Dev only: the chrome reported `overlay-unavailable` (release-blocking). */
+const GeometryBadge = () => {
+  const { t } = useTranslation();
+  return (
+    <Badge variant="destructive" data-testid="geometry-badge">
+      {t("shell.topBar.geometryMissing")}
+    </Badge>
+  );
+};
+
+export const TopBar = {
+  Root,
+  Leading,
+  Identity,
+  Actions,
+  PanelTabs,
+  PanelToggle,
+  GeometryBadge,
+};
