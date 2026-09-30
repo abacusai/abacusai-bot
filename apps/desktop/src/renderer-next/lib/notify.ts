@@ -61,6 +61,8 @@ export interface NotifyDeps {
   sounds(): PrefsRow["sounds"];
   now(): Date;
   send(input: {
+    kind?: "needs-you" | "done" | "failed";
+    dedupeKey?: string;
     title: string;
     body: string;
     metadata?: { workspaceId?: string; sessionId?: string };
@@ -99,6 +101,8 @@ export const createNotifier = (deps: NotifyDeps) => {
         seen.delete(seen.values().next().value as string);
       void deps
         .send({
+          kind: notice.kind,
+          dedupeKey: notice.dedupeKey,
           title: notice.title,
           body: notice.body,
           metadata: notice.metadata,
