@@ -30,17 +30,27 @@ const open = async (relay: FakeRelay) => {
 describe("R2-T2 host", () => {
   it("is a UseChatReturn whose request methods return Promise<void>", () => {
     expectTypeOf(buildThreadHost).returns.toEqualTypeOf<UseChatReturn>();
-    expectTypeOf<UseChatReturn["sendMessage"]>().returns.toEqualTypeOf<Promise<void>>();
-    expectTypeOf<UseChatReturn["reload"]>().returns.toEqualTypeOf<Promise<void>>();
-    expectTypeOf<ThreadSession["submit"]>().returns.resolves.toHaveProperty("kind");
+    expectTypeOf<UseChatReturn["sendMessage"]>().returns.toEqualTypeOf<
+      Promise<void>
+    >();
+    expectTypeOf<UseChatReturn["reload"]>().returns.toEqualTypeOf<
+      Promise<void>
+    >();
+    expectTypeOf<ThreadSession["submit"]>().returns.resolves.toHaveProperty(
+      "kind"
+    );
   });
 
   it("maps sendMessage, reload and stop to the session", async () => {
     const relay = new FakeRelay();
     relay.emitAll(b.sessionReady());
     const session = await open(relay);
-    const submit = vi.spyOn(session, "submit").mockResolvedValue({ kind: "started" });
-    const retry = vi.spyOn(session, "retry").mockResolvedValue({ kind: "started" });
+    const submit = vi
+      .spyOn(session, "submit")
+      .mockResolvedValue({ kind: "started" });
+    const retry = vi
+      .spyOn(session, "retry")
+      .mockResolvedValue({ kind: "started" });
     const cancel = vi.spyOn(session, "cancel").mockResolvedValue();
     const { result } = renderHook(() => useThreadHost(session));
     await expect(result.current.sendMessage("hi")).resolves.toBeUndefined();
@@ -60,7 +70,14 @@ describe("R2-T2 host", () => {
           releaseAck = () => resolve({ runId: input.runId, status: "started" });
         }),
     });
-    relay.emitAll([...b.sessionReady(), ...Array.from({ length: 60 }, (_, i) => [b.runStarted(`r${i}`), ...b.text(`u${i}`, "user", `m${i}`), b.runFinished(`r${i}`)]).flat()]);
+    relay.emitAll([
+      ...b.sessionReady(),
+      ...Array.from({ length: 60 }, (_, i) => [
+        b.runStarted(`r${i}`),
+        ...b.text(`u${i}`, "user", `m${i}`),
+        b.runFinished(`r${i}`),
+      ]).flat(),
+    ]);
     const session = await open(relay);
     expect(session.hostStore.state.hasOlderMessages).toBe(true);
     // A page and an ack in flight across a new generation.

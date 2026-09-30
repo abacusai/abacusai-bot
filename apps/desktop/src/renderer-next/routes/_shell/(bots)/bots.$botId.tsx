@@ -22,7 +22,9 @@ import { BotId } from "#shared/contract/ids";
  * agent golden replayed through the real chat runtime.
  */
 const FIXTURE_BUILD = import.meta.env.VITE_NEXT_DB_FIXTURES === "1";
-const fixture = FIXTURE_BUILD ? fixtureRuntime("bot-golden-plain", {}, "fixture-bot") : null;
+const fixture = FIXTURE_BUILD
+  ? fixtureRuntime("bot-golden-plain", {}, "fixture-bot")
+  : null;
 
 const useBotRow = (botId: string) => {
   const collections = useCollections();
@@ -40,11 +42,18 @@ const BotChat = ({ botId }: { botId: string }) => {
   const { t } = useTranslation();
   const { transport } = Route.useRouteContext();
   const bot = useBotRow(botId);
-  const threadId = bot?.sessionId ?? (fixture != null ? fixture.threadId : null);
+  const threadId =
+    bot?.sessionId ?? (fixture != null ? fixture.threadId : null);
   if (bot == null || threadId == null) return <BotPage botId={botId} />;
-  const runtime = bot.sessionId == null && fixture != null ? fixture.runtime : chatRuntimeFor(transport);
+  const runtime =
+    bot.sessionId == null && fixture != null
+      ? fixture.runtime
+      : chatRuntimeFor(transport);
   return (
-    <div className="size-full" style={botAccentStyle(bot.avatarColor) as CSSProperties}>
+    <div
+      className="size-full"
+      style={botAccentStyle(bot.avatarColor) as CSSProperties}
+    >
       <ChatView
         threadId={threadId}
         skin="bot"
@@ -57,7 +66,9 @@ const BotChat = ({ botId }: { botId: string }) => {
           showModeChip: false,
           model: null,
           fixedMode: AgentMode.Yolo,
-          ...(bot.channel != null ? { readOnly: { reason: t("chat.composer.channelBot") } } : {}),
+          ...(bot.channel != null
+            ? { readOnly: { reason: t("chat.composer.channelBot") } }
+            : {}),
         }}
       />
     </div>

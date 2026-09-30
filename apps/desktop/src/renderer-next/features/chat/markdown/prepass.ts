@@ -42,7 +42,8 @@ const inlineMath = (tex: string): string => inlineCode(MATH_SENTINEL + tex);
 
 // ─── file links ────────────────────────────────────────────────────────
 
-const isWindowsAbsolute = (path: string): boolean => /^[A-Za-z]:[\\/]/.test(path);
+const isWindowsAbsolute = (path: string): boolean =>
+  /^[A-Za-z]:[\\/]/.test(path);
 
 const hasScheme = (target: string): boolean =>
   /^[A-Za-z][A-Za-z0-9+.-]*:/.test(target) && !isWindowsAbsolute(target);
@@ -128,8 +129,7 @@ const rewriteProse = (text: string, options: PrepassOptions): string => {
     if (char === "`") {
       const run = /^`+/.exec(text.slice(index))![0];
       const close = text.indexOf(run, index + run.length);
-      const closeValid =
-        close !== -1 && text[close + run.length] !== "`";
+      const closeValid = close !== -1 && text[close + run.length] !== "`";
       if (closeValid) {
         // Code is never rewritten (neither math nor links).
         flushPlain();
@@ -223,7 +223,9 @@ export const prepass = (source: string, options: PrepassOptions): string => {
         const current = lines[index]!;
         block.push(current);
         index += 1;
-        const closing = new RegExp(`^ {0,3}${marker[0] === "`" ? "`" : "~"}{${marker.length},}\\s*$`);
+        const closing = new RegExp(
+          `^ {0,3}${marker[0] === "`" ? "`" : "~"}{${marker.length},}\\s*$`
+        );
         if (closing.test(current)) break;
       }
       out.push(block.join("\n"));

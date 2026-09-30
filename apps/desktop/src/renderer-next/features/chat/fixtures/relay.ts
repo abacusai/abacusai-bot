@@ -11,15 +11,23 @@
  * so fixtures, the gallery and tests exercise the production path.
  */
 import { ORPCError, withEventMeta } from "@orpc/client";
-import { StreamProcessor, type StreamChunk, type UIMessage } from "@tanstack/ai";
+import {
+  StreamProcessor,
+  type StreamChunk,
+  type UIMessage,
+} from "@tanstack/ai";
 import { restoreInboundChunk } from "@tanstack/ai/client";
 
 import type { AiClient } from "#next/data/ai";
-
 import type { AiHydration, AiSendAck, AiSendInput } from "#shared/contract/ai";
 import type { AiNotice, RunOutcomeRecord } from "#shared/contract/ai-thread";
 
-import { applyEvent, isTerminal, recordTerminal, terminalRunId } from "../store/apply";
+import {
+  applyEvent,
+  isTerminal,
+  recordTerminal,
+  terminalRunId,
+} from "../store/apply";
 import { emptyThreadState, type ThreadStoreState } from "../store/thread-store";
 
 export interface RelayEvent {
@@ -41,7 +49,10 @@ export interface FakeRelayOptions {
   epoch?: string;
   onSend?: SendHandler;
   onCancel?: (input: { runId?: string }, relay: FakeRelay) => void;
-  onRespond?: (input: { lineage: unknown; decision: unknown }, relay: FakeRelay) => void;
+  onRespond?: (
+    input: { lineage: unknown; decision: unknown },
+    relay: FakeRelay
+  ) => void;
   onQueue?: (
     command: "enqueue" | "update" | "remove" | "clear" | "dequeue",
     input: Record<string, unknown>,
@@ -53,8 +64,16 @@ export interface FakeRelayOptions {
 
 type Listener = (item: RelayEvent) => void;
 
-const control = (name: "abacus.subscribed" | "abacus.resync", epoch: string): StreamChunk =>
-  ({ type: "CUSTOM", name, value: { epoch }, timestamp: Date.now() }) as unknown as StreamChunk;
+const control = (
+  name: "abacus.subscribed" | "abacus.resync",
+  epoch: string
+): StreamChunk =>
+  ({
+    type: "CUSTOM",
+    name,
+    value: { epoch },
+    timestamp: Date.now(),
+  }) as unknown as StreamChunk;
 
 const deliver = (item: RelayEvent): StreamChunk =>
   withEventMeta(structuredClone(item.event) as object, {
@@ -138,7 +157,7 @@ export class FakeRelay {
 
   /** Open live iterators throw (a port blip); the pump reconnects. */
   dropSubscriptions(error = new Error("chat: connection lost")): void {
-    for (const drop of [...this.#drops]) drop(error);
+    for (const drop of Array.from(this.#drops)) drop(error);
   }
 
   /** Main restarted: a new relay lifetime. */
@@ -182,16 +201,27 @@ export class FakeRelay {
         (event as { name?: string }).name === "session.cleared"
       ) {
         processor = new StreamProcessor();
-        state = { ...emptyThreadState(-1), agent: state.agent, incarnation: state.incarnation, skills: state.skills };
+        state = {
+          ...emptyThreadState(-1),
+          agent: state.agent,
+          incarnation: state.incarnation,
+          skills: state.skills,
+        };
         notices = [];
         continue;
       }
-      const name = event.type === "CUSTOM" ? (event as { name: string }).name : null;
+      const name =
+        event.type === "CUSTOM" ? (event as { name: string }).name : null;
       if (name === "agent.notification" || name === "agent.error") {
         const value = (event as { value: Record<string, unknown> }).value;
-        const key = typeof value.notificationKey === "string" ? value.notificationKey : null;
+        const key =
+          typeof value.notificationKey === "string"
+            ? value.notificationKey
+            : null;
         notices = [
-          ...notices.filter((notice) => key == null || notice.value.notificationKey !== key),
+          ...notices.filter(
+            (notice) => key == null || notice.value.notificationKey !== key
+          ),
           { seq, name, value },
         ];
       }
@@ -230,7 +260,10 @@ export class FakeRelay {
     const window = messages.slice(start, end);
     const ids = new Set(window.map((message) => message.id));
     const newest = end === messages.length;
-    const activeStart = active == null ? null : this.log.find((item) => item.seq === active.startSeq);
+    const activeStart =
+      active == null
+        ? null
+        : this.log.find((item) => item.seq === active.startSeq);
     return {
       messages: window,
       activeRun: active == null ? null : { runId: active.runId },
@@ -250,10 +283,16 @@ export class FakeRelay {
                 runId: active.runId,
                 startSeq: active.startSeq,
                 startedAt:
-                  (activeStart?.event as { timestamp?: number } | undefined)?.timestamp ?? Date.now(),
+                  (activeStart?.event as { timestamp?: number } | undefined)
+                    ?.timestamp ?? Date.now(),
                 serverInitiated:
-                  (activeStart?.event as { metadata?: { abacus?: { serverInitiated?: boolean } } } | undefined)
-                    ?.metadata?.abacus?.serverInitiated === true,
+                  (
+                    activeStart?.event as
+                      | {
+                          metadata?: { abacus?: { serverInitiated?: boolean } };
+                        }
+                      | undefined
+                  )?.metadata?.abacus?.serverInitiated === true,
               },
         permissions: state.permissions.items,
         queue: state.queue,
@@ -266,7 +305,8 @@ export class FakeRelay {
         notices,
         runOutcomes: outcomes.filter(
           (outcome) =>
-            (outcome.afterMessageId != null && ids.has(outcome.afterMessageId)) ||
+            (outcome.afterMessageId != null &&
+              ids.has(outcome.afterMessageId)) ||
             (outcome.afterMessageId == null && newest)
         ),
       },
@@ -341,7 +381,11 @@ export class FakeRelay {
 
   /** The `ai.*` client slice. Typed loosely: oRPC's client options are unused. */
   readonly ai: AiClient = {
-    hydrate: async (input: { threadId: string; limit?: number; before?: string }) => {
+    hydrate: async (input: {
+      threadId: string;
+      limit?: number;
+      before?: string;
+    }) => {
       this.stats.hydrate += 1;
       const fault = await this.faults.hydrate?.(this.stats.hydrate);
       if (fault instanceof Error) throw fault;
@@ -354,14 +398,21 @@ export class FakeRelay {
       this.stats.subscribe += 1;
       const fault = this.faults.subscribe?.(this.stats.subscribe);
       if (fault != null) throw fault;
-      const after = input.lastEventId == null ? this.#seq : Number(input.lastEventId);
+      const after =
+        input.lastEventId == null ? this.#seq : Number(input.lastEventId);
       const outside =
         !Number.isSafeInteger(after) ||
         after < this.floor ||
         after > this.#seq ||
         (input.epoch != null && input.epoch !== this.epoch);
       if (outside)
-        return this.#iterate([], control("abacus.resync", this.epoch), options?.signal, () => false, true);
+        return this.#iterate(
+          [],
+          control("abacus.resync", this.epoch),
+          options?.signal,
+          () => false,
+          true
+        );
       return this.#iterate(
         this.log.filter((item) => item.seq > after),
         control("abacus.subscribed", this.epoch),
@@ -370,17 +421,24 @@ export class FakeRelay {
         true
       );
     },
-    joinRun: async (input: { runId: string }, options?: { signal?: AbortSignal }) => {
+    joinRun: async (
+      input: { runId: string },
+      options?: { signal?: AbortSignal }
+    ) => {
       this.stats.joinRun += 1;
       const call = this.stats.joinRun;
       const start = this.log.find(
-        (item) => item.event.type === "RUN_STARTED" && (item.event as { runId: string }).runId === input.runId
+        (item) =>
+          item.event.type === "RUN_STARTED" &&
+          (item.event as { runId: string }).runId === input.runId
       );
-      if (start == null) return this.#iterate([], null, options?.signal, () => true, false);
+      if (start == null)
+        return this.#iterate([], null, options?.signal, () => true, false);
       let terminal = false;
       const replay = this.log.filter((item) => {
         if (item.seq < start.seq || terminal) return false;
-        if (isTerminal(item.event) && terminalRunId(item.event) === input.runId) terminal = true;
+        if (isTerminal(item.event) && terminalRunId(item.event) === input.runId)
+          terminal = true;
         return true;
       });
       const faults = this.faults.joinRun;
@@ -389,7 +447,8 @@ export class FakeRelay {
         replay,
         null,
         options?.signal,
-        (item) => isTerminal(item.event) && terminalRunId(item.event) === input.runId,
+        (item) =>
+          isTerminal(item.event) && terminalRunId(item.event) === input.runId,
         !terminal
       );
       const signal = options?.signal;
@@ -416,7 +475,11 @@ export class FakeRelay {
       const known = this.#acks.get(input.runId);
       if (known != null) {
         if (fault != null) throw fault;
-        return { runId: input.runId, status: "duplicate", original: known.status as never };
+        return {
+          runId: input.runId,
+          status: "duplicate",
+          original: known.status as never,
+        };
       }
       const ack = (await this.#options.onSend?.(input, this)) ?? {
         runId: input.runId,
@@ -427,19 +490,30 @@ export class FakeRelay {
       return ack;
     },
     cancel: async (input: { threadId: string; runId?: string }) => {
-      this.stats.cancel.push({ ...(input.runId != null ? { runId: input.runId } : {}) });
+      this.stats.cancel.push(input.runId != null ? { runId: input.runId } : {});
       this.#options.onCancel?.(input, this);
     },
-    respondPermission: async (input: { lineage: unknown; decision: unknown }) => {
-      this.stats.respond.push({ lineage: input.lineage, decision: input.decision });
+    respondPermission: async (input: {
+      lineage: unknown;
+      decision: unknown;
+    }) => {
+      this.stats.respond.push({
+        lineage: input.lineage,
+        decision: input.decision,
+      });
       this.#options.onRespond?.(input, this);
     },
     queue: {
-      enqueue: async (input: Record<string, unknown>) => this.#queue("enqueue", input),
-      update: async (input: Record<string, unknown>) => this.#queue("update", input),
-      remove: async (input: Record<string, unknown>) => this.#queue("remove", input),
-      clear: async (input: Record<string, unknown>) => this.#queue("clear", input),
-      dequeue: async (input: Record<string, unknown>) => this.#queue("dequeue", input),
+      enqueue: async (input: Record<string, unknown>) =>
+        this.#queue("enqueue", input),
+      update: async (input: Record<string, unknown>) =>
+        this.#queue("update", input),
+      remove: async (input: Record<string, unknown>) =>
+        this.#queue("remove", input),
+      clear: async (input: Record<string, unknown>) =>
+        this.#queue("clear", input),
+      dequeue: async (input: Record<string, unknown>) =>
+        this.#queue("dequeue", input),
     },
   } as unknown as AiClient;
 

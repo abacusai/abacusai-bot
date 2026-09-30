@@ -29,12 +29,16 @@ export const withSeqs = (text) =>
   text
     .split("\n")
     .filter((line) => line.trim() !== "")
-    .map((line, index) => JSON.stringify({ seq: index + 1, event: JSON.parse(line) }))
+    .map((line, index) =>
+      JSON.stringify({ seq: index + 1, event: JSON.parse(line) })
+    )
     .join("\n") + "\n";
 
 mkdirSync(target, { recursive: true });
 let stale = 0;
-for (const name of readdirSync(source).filter((file) => file.endsWith(".agui.jsonl")).sort()) {
+for (const name of readdirSync(source)
+  .filter((file) => file.endsWith(".agui.jsonl"))
+  .sort()) {
   const expected = withSeqs(readFileSync(join(source, name), "utf8"));
   const path = join(target, name);
   const current = existsSync(path) ? readFileSync(path, "utf8") : null;
@@ -44,4 +48,6 @@ for (const name of readdirSync(source).filter((file) => file.endsWith(".agui.jso
   else writeFileSync(path, expected);
 }
 if (check && stale > 0) process.exit(1);
-console.log(check ? "chat fixtures in sync" : `chat fixtures: ${stale} written`);
+console.log(
+  check ? "chat fixtures in sync" : `chat fixtures: ${stale} written`
+);

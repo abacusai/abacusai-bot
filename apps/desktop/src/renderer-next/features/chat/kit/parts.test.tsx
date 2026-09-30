@@ -18,7 +18,10 @@ const V1 = import.meta.glob<{ segments: unknown[] }>(
   "../../../../shared/transcript/__fixtures__/v1/*.json",
   { import: "default", eager: true }
 );
-const fixture = (name: string) => v1ToUiMessages(V1[`../../../../shared/transcript/__fixtures__/v1/${name}.json`]!.segments);
+const fixture = (name: string) =>
+  v1ToUiMessages(
+    V1[`../../../../shared/transcript/__fixtures__/v1/${name}.json`]!.segments
+  );
 
 let current: Awaited<ReturnType<typeof renderRelay>> | null = null;
 afterEach(async () => {
@@ -33,14 +36,20 @@ const migrated = async (name: string, skin: "bot" | "session" = "session") => {
 describe("R2-T11 parts", () => {
   it("compaction: a separator with the summary", async () => {
     await migrated("compaction");
-    expect(await screen.findByText("Earlier conversation summarised")).toBeTruthy();
+    expect(
+      await screen.findByText("Earlier conversation summarised")
+    ).toBeTruthy();
     expect(screen.getByText("Continuing from the summary.")).toBeTruthy();
   });
 
   it("notifications render as notice rows", async () => {
     await migrated("notification");
-    expect(await screen.findByText("You are out of premium credits.")).toBeTruthy();
-    expect(document.querySelectorAll('[data-slot="notice"]').length).toBeGreaterThanOrEqual(2);
+    expect(
+      await screen.findByText("You are out of premium credits.")
+    ).toBeTruthy();
+    expect(
+      document.querySelectorAll('[data-slot="notice"]').length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("image and video media", async () => {
@@ -52,7 +61,9 @@ describe("R2-T11 parts", () => {
 
   it("credits footers", async () => {
     await migrated("credits");
-    expect((await screen.findAllByText(/Used \d+ credits?/)).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText(/Used \d+ credits?/)).length
+    ).toBeGreaterThan(0);
   });
 
   it("thinking, collapsible and feature limit", async () => {
@@ -67,7 +78,11 @@ describe("R2-T11 parts", () => {
     relay.emitAll([
       ...b.sessionReady(),
       b.runStarted("r1"),
-      ...b.text("u1", "user", "hello<system_reminder>secret</system_reminder>\n\n@/tmp/report.pdf"),
+      ...b.text(
+        "u1",
+        "user",
+        "hello<system_reminder>secret</system_reminder>\n\n@/tmp/report.pdf"
+      ),
       ...b.text("a1", "assistant", ""),
       b.runError("r1", { message: "Boom" }),
       b.runStarted("r2"),
@@ -79,7 +94,9 @@ describe("R2-T11 parts", () => {
     expect(screen.queryByText(/secret/)).toBeNull();
     expect(screen.getByText("report.pdf")).toBeTruthy();
     expect(screen.queryByText(/Daily digest/)).toBeNull();
-    expect(document.querySelector('[data-message-id="a1"] [data-role]')).toBeNull();
+    expect(
+      document.querySelector('[data-message-id="a1"] [data-role]')
+    ).toBeNull();
     expect(screen.getByText("Boom")).toBeTruthy();
   });
 });

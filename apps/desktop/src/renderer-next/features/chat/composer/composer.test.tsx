@@ -5,7 +5,13 @@
  * pasted files through `savePasted`, the `/` menu inserting a skill, a busy
  * submit going to the host queue, `ArrowUp` editing the last queued item.
  */
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as b from "../fixtures/builders";
@@ -22,16 +28,9 @@ afterEach(async () => {
   clearDraft("t-1");
 });
 
-const composer = () => document.querySelector('[data-slot="composer"]') as HTMLElement;
+const composer = () =>
+  document.querySelector('[data-slot="composer"]') as HTMLElement;
 const field = () => within(composer()).getByRole("textbox");
-
-/** Base UI menus open on pointer down (then click). */
-const openMenu = (trigger: HTMLElement) => {
-  trigger.focus();
-  fireEvent.keyDown(trigger, { key: "ArrowDown" });
-  if (trigger.getAttribute("aria-expanded") !== "true") fireEvent.keyDown(trigger, { key: "Enter" });
-  if (trigger.getAttribute("aria-expanded") !== "true") fireEvent.click(trigger, { detail: 1 });
-};
 
 describe("R2-T25 composer", () => {
   it("bot: a pill at rest, a box with text; Send tinted only with text", async () => {
@@ -40,25 +39,41 @@ describe("R2-T25 composer", () => {
     current = await renderRelay(relay, "bot");
     await waitFor(() => expect(composer()).toBeTruthy());
     expect(composer().hasAttribute("data-expanded")).toBe(false);
-    expect(within(composer()).getByRole("button", { name: "Send" }).hasAttribute("disabled")).toBe(true);
+    expect(
+      within(composer())
+        .getByRole("button", { name: "Send" })
+        .hasAttribute("disabled")
+    ).toBe(true);
     fireEvent.change(field(), { target: { value: "hello" } });
     expect(composer().hasAttribute("data-expanded")).toBe(true);
-    expect(within(composer()).getByRole("button", { name: "Send" }).hasAttribute("disabled")).toBe(false);
+    expect(
+      within(composer())
+        .getByRole("button", { name: "Send" })
+        .hasAttribute("disabled")
+    ).toBe(false);
   });
 
   it("session: two rows at rest with the mode chip; Enter sends; Stop while busy; busy submit enqueues", async () => {
     let started: (() => void) | null = null;
     const relay = new FakeRelay({
       onSend: (input, r) => {
-        started = () => r.emitAll([b.runStarted(input.runId), ...b.text(input.messages[0]!.id, "user", "hi")]);
+        started = () =>
+          r.emitAll([
+            b.runStarted(input.runId),
+            ...b.text(input.messages[0]!.id, "user", "hi"),
+          ]);
         return { runId: input.runId, status: "started" };
       },
     });
     relay.emitAll(b.sessionReady());
     const rendered = await renderRelay(relay, "session");
     current = rendered;
-    await waitFor(() => expect(composer().hasAttribute("data-expanded")).toBe(true));
-    expect(within(composer()).getByRole("button", { name: /Supervised/ })).toBeTruthy();
+    await waitFor(() =>
+      expect(composer().hasAttribute("data-expanded")).toBe(true)
+    );
+    expect(
+      within(composer()).getByRole("button", { name: /Supervised/ })
+    ).toBeTruthy();
     fireEvent.change(field(), { target: { value: "hi" } });
     fireEvent.keyDown(field(), { key: "Enter" });
     await waitFor(() => expect(relay.stats.send).toHaveLength(1));
@@ -67,7 +82,12 @@ describe("R2-T25 composer", () => {
     await screen.findByRole("button", { name: "Stop" });
     fireEvent.change(field(), { target: { value: "and this" } });
     fireEvent.keyDown(field(), { key: "Enter" });
-    await waitFor(() => expect(relay.stats.queue.at(-1)).toMatchObject({ command: "enqueue", input: { message: "and this" } }));
+    await waitFor(() =>
+      expect(relay.stats.queue.at(-1)).toMatchObject({
+        command: "enqueue",
+        input: { message: "and this" },
+      })
+    );
     fireEvent.click(screen.getByRole("button", { name: "Stop" }));
     await waitFor(() => expect(relay.stats.cancel).toHaveLength(1));
   });
@@ -88,7 +108,9 @@ describe("R2-T25 composer", () => {
     const relay = new FakeRelay();
     current = await renderRelay(relay, "session", { preStart: true });
     await waitFor(() => expect(composer()).toBeTruthy());
-    act(() => updateDraft("t-1", (draft) => ({ ...draft, mode: "PLAN" as never })));
+    act(() =>
+      updateDraft("t-1", (draft) => ({ ...draft, mode: "PLAN" as never }))
+    );
     fireEvent.change(field(), { target: { value: "plan it" } });
     fireEvent.keyDown(field(), { key: "Enter" });
     await waitFor(() => expect(relay.stats.send).toHaveLength(1));
@@ -100,7 +122,15 @@ describe("R2-T25 composer", () => {
     const setMode = vi.fn(() => Promise.resolve());
     const onRevert = vi.fn();
     const rendered = await renderWithDb(
-      <ModeChip value={"DEFAULT" as never} draft={undefined} live onDraft={() => {}} setMode={setMode} onRevert={onRevert} defaultOpen />
+      <ModeChip
+        value={"DEFAULT" as never}
+        draft={undefined}
+        live
+        onDraft={() => {}}
+        setMode={setMode}
+        onRevert={onRevert}
+        defaultOpen
+      />
     );
     current = rendered;
     for (const [label, description] of [
@@ -122,7 +152,19 @@ describe("R2-T25 composer", () => {
 
   it("`/` opens the skills menu and inserts the skill", async () => {
     const relay = new FakeRelay();
-    relay.emitAll([...b.sessionReady(), b.custom("skills.loaded", { skills: [{ id: "review", name: "review", description: "Review a diff", location: "" }] })]);
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.custom("skills.loaded", {
+        skills: [
+          {
+            id: "review",
+            name: "review",
+            description: "Review a diff",
+            location: "",
+          },
+        ],
+      }),
+    ]);
     current = await renderRelay(relay, "session");
     await waitFor(() => expect(composer()).toBeTruthy());
     const textarea = field() as HTMLTextAreaElement;
@@ -136,7 +178,9 @@ describe("R2-T25 composer", () => {
     current = await renderScenario("session-running");
     await waitFor(() => expect(composer()).toBeTruthy());
     fireEvent.keyDown(field(), { key: "ArrowUp" });
-    expect(await screen.findByRole("textbox", { name: "Edit queued message" })).toBeTruthy();
+    expect(
+      await screen.findByRole("textbox", { name: "Edit queued message" })
+    ).toBeTruthy();
   });
 
   it("pasted files are saved under the attachments base", async () => {
@@ -144,7 +188,9 @@ describe("R2-T25 composer", () => {
     relay.emitAll(b.sessionReady());
     const rendered = await renderRelay(relay, "session");
     current = rendered;
-    const savePasted = vi.spyOn(rendered.runtime.host, "savePasted").mockResolvedValue(["/repo/.attachments/x.png"]);
+    const savePasted = vi
+      .spyOn(rendered.runtime.host, "savePasted")
+      .mockResolvedValue(["/repo/.attachments/x.png"]);
     await waitFor(() => expect(composer()).toBeTruthy());
     const file = new File([new Uint8Array([1, 2])], "", { type: "image/png" });
     fireEvent.paste(field(), { clipboardData: { files: [file] } });

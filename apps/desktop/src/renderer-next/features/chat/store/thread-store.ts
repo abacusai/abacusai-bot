@@ -9,6 +9,11 @@
 import { Store } from "@tanstack/react-store";
 
 import type { ToolDisplayData } from "#shared/agent-types";
+import type {
+  AgentStatus,
+  QueueEntry,
+  SkillMetadata,
+} from "#shared/agent-types";
 import type { AiThreadSnapshot } from "#shared/contract/ai-thread";
 import type {
   AgentErrorPayload,
@@ -17,7 +22,6 @@ import type {
   RunOutcomeRecord,
   RunTokenUsage,
 } from "#shared/contract/ai-thread";
-import type { AgentStatus, QueueEntry, SkillMetadata } from "#shared/agent-types";
 
 export type {
   AgentErrorPayload,

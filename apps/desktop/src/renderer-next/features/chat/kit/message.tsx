@@ -6,18 +6,32 @@
  * show "Not sent" with Retry/Discard when they failed. An assistant message
  * with no parts renders nothing (F12).
  */
-import type { ToolCallPart, ToolResultPart, UIMessage } from "@tanstack/ai-client";
+import type {
+  ToolCallPart,
+  ToolResultPart,
+  UIMessage,
+} from "@tanstack/ai-client";
 import type { MessageProps } from "@tanstack/ai-react/ui";
 import { ChevronRight, FileText, ListChecks } from "lucide-react";
 import { useEffect, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
-import { Attachment, AttachmentContent, AttachmentDescription, AttachmentGroup, AttachmentMedia, AttachmentTitle } from "#next/ui/attachment";
+import {
+  Attachment,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "#next/ui/attachment";
 import { Button } from "#next/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "#next/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "#next/ui/collapsible";
 import { Marker, MarkerContent, MarkerIcon } from "#next/ui/marker";
-
 import {
   isRoutineFire,
   stripAttachmentRefs,
@@ -37,7 +51,9 @@ type Loose = Record<string, unknown>;
 const ATTACHMENT_LINE = /^@((?:[A-Za-z]:[\\/]|\/)\S.*)$/;
 
 /** The text and the trailing `@/abs/path` lines of a user message (§8.6). */
-export const splitAttachments = (text: string): { body: string; paths: string[] } => {
+export const splitAttachments = (
+  text: string
+): { body: string; paths: string[] } => {
   const lines = text.split("\n");
   const paths: string[] = [];
   while (lines.length > 0) {
@@ -84,10 +100,18 @@ const AttachmentChip = ({ path }: { path: string }) => {
   return (
     <Attachment
       className="w-64 cursor-pointer"
-      onClick={() => (onOpenFile != null ? onOpenFile(path) : void runtime.host.showItemInFolder(path))}
+      onClick={() =>
+        onOpenFile != null
+          ? onOpenFile(path)
+          : void runtime.host.showItemInFolder(path)
+      }
     >
       <AttachmentMedia>
-        {thumb != null ? <img src={thumb} alt="" className="size-full object-cover" /> : <FileText aria-hidden />}
+        {thumb != null ? (
+          <img src={thumb} alt="" className="size-full object-cover" />
+        ) : (
+          <FileText aria-hidden />
+        )}
       </AttachmentMedia>
       <AttachmentContent>
         <AttachmentTitle>{name}</AttachmentTitle>
@@ -100,17 +124,36 @@ const AttachmentChip = ({ path }: { path: string }) => {
 const PendingState = ({ message }: { message: UIMessage }) => {
   const { t } = useTranslation();
   const { session } = useChatView();
-  const abacus = (message.metadata as { abacus?: { pending?: boolean; state?: string } } | undefined)?.abacus;
+  const abacus = (
+    message.metadata as
+      | { abacus?: { pending?: boolean; state?: string } }
+      | undefined
+  )?.abacus;
   if (abacus?.pending !== true) return null;
   if (abacus.state !== "failed")
-    return <div className="text-end text-xs text-muted-foreground">{t("chat.message.sending")}</div>;
+    return (
+      <div className="text-muted-foreground text-end text-xs">
+        {t("chat.message.sending")}
+      </div>
+    );
   return (
-    <div className="flex items-center justify-end gap-1 text-xs text-destructive" role="status">
+    <div
+      className="text-destructive flex items-center justify-end gap-1 text-xs"
+      role="status"
+    >
       {t("chat.message.notSent")}
-      <Button variant="ghost" size="sm" onClick={() => void session.retryOutbox(message.id)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => void session.retryOutbox(message.id)}
+      >
         {t("chat.message.retry")}
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => session.discardOutbox(message.id)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => session.discardOutbox(message.id)}
+      >
         {t("chat.message.discard")}
       </Button>
     </div>
@@ -128,18 +171,33 @@ interface UserTextMeta {
  * chips (migrated messages carry them as `userText.attachments`; live ones
  * as trailing `@/abs/path` lines).
  */
-export const userView = (message: UIMessage): { hidden: boolean; body: string; paths: string[] } => {
+export const userView = (
+  message: UIMessage
+): { hidden: boolean; body: string; paths: string[] } => {
   const raw = textOf(message);
-  const tags = (message.metadata as { abacus?: { userText?: UserTextMeta } } | undefined)?.abacus?.userText;
-  if (tags?.routineFire === true || isRoutineFire(raw)) return { hidden: true, body: "", paths: [] };
+  const tags = (
+    message.metadata as { abacus?: { userText?: UserTextMeta } } | undefined
+  )?.abacus?.userText;
+  if (tags?.routineFire === true || isRoutineFire(raw))
+    return { hidden: true, body: "", paths: [] };
   const visible = visibleUserText(raw);
   if (tags?.attachments != null)
-    return { hidden: false, body: stripAttachmentRefs(visible), paths: tags.attachments.map((ref) => ref.path) };
+    return {
+      hidden: false,
+      body: stripAttachmentRefs(visible),
+      paths: tags.attachments.map((ref) => ref.path),
+    };
   const { body, paths } = splitAttachments(visible);
   return { hidden: false, body, paths };
 };
 
-const UserMessage = ({ message, tint }: { message: UIMessage; tint: boolean }) => {
+const UserMessage = ({
+  message,
+  tint,
+}: {
+  message: UIMessage;
+  tint: boolean;
+}) => {
   const { workspaceRoot } = useChatView();
   const { hidden, body, paths } = userView(message);
   if (hidden) return null;
@@ -171,10 +229,18 @@ const UserMessage = ({ message, tint }: { message: UIMessage; tint: boolean }) =
 
 const Credits = ({ message }: { message: UIMessage }) => {
   const { t } = useTranslation();
-  const credits = (message.metadata as { abacus?: { credits?: Array<{ creditsUsed: number }> } } | undefined)?.abacus?.credits;
+  const credits = (
+    message.metadata as
+      | { abacus?: { credits?: Array<{ creditsUsed: number }> } }
+      | undefined
+  )?.abacus?.credits;
   if (credits == null || credits.length === 0) return null;
   const total = credits.reduce((sum, item) => sum + item.creditsUsed, 0);
-  return <div className="text-xs text-muted-foreground">{t("chat.message.credits", { count: total })}</div>;
+  return (
+    <div className="text-muted-foreground text-xs">
+      {t("chat.message.credits", { count: total })}
+    </div>
+  );
 };
 
 const useStreaming = (message: UIMessage): boolean => {
@@ -184,9 +250,13 @@ const useStreaming = (message: UIMessage): boolean => {
   return active && message.role === "assistant" && message.id === lastId;
 };
 
-const pairs = (message: UIMessage): Array<{ part: ToolCallPart; result?: ToolResultPart }> => {
+const pairs = (
+  message: UIMessage
+): Array<{ part: ToolCallPart; result?: ToolResultPart }> => {
   const results = new Map<string, ToolResultPart>();
-  for (const part of message.parts) if (part.type === "tool-result") results.set(part.toolCallId, part as ToolResultPart);
+  for (const part of message.parts)
+    if (part.type === "tool-result")
+      results.set(part.toolCallId, part as ToolResultPart);
   return message.parts
     .filter((part): part is ToolCallPart => part.type === "tool-call")
     .map((part) => {
@@ -198,16 +268,29 @@ const pairs = (message: UIMessage): Array<{ part: ToolCallPart; result?: ToolRes
 const MAX_TOOL_ROWS = 50;
 
 /** Tool rows past the first 50 collapse to "{n} more steps" (§10). */
-export const StepList = ({ items }: { items: Array<{ part: ToolCallPart; result?: ToolResultPart }> }) => {
+export const StepList = ({
+  items,
+}: {
+  items: Array<{ part: ToolCallPart; result?: ToolResultPart }>;
+}) => {
   const { t } = useTranslation();
   const [limit, setLimit] = useState(MAX_TOOL_ROWS);
   return (
     <div className="flex flex-col">
       {items.slice(0, limit).map(({ part, result }) => (
-        <ToolLine key={part.id} part={part} {...(result != null ? { result } : {})} />
+        <ToolLine
+          key={part.id}
+          part={part}
+          {...(result != null ? { result } : {})}
+        />
       ))}
       {items.length > limit ? (
-        <Button variant="ghost" size="sm" className="self-start" onClick={() => setLimit((value) => value + 100)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          onClick={() => setLimit((value) => value + 100)}
+        >
           {t("chat.tool.moreSteps", { count: items.length - limit })}
         </Button>
       ) : null}
@@ -221,12 +304,20 @@ const WorkedThrough = ({ message }: { message: UIMessage }) => {
   if (items.length === 0) return null;
   return (
     <Collapsible>
-      <Marker render={<CollapsibleTrigger />} className="group/w w-fit cursor-pointer hover:text-foreground">
+      <Marker
+        render={<CollapsibleTrigger />}
+        className="group/w hover:text-foreground w-fit cursor-pointer"
+      >
         <MarkerIcon>
           <ListChecks aria-hidden />
         </MarkerIcon>
-        <MarkerContent>{t("chat.message.workedThrough", { count: items.length })}</MarkerContent>
-        <ChevronRight aria-hidden className="size-3 transition-transform group-data-[panel-open]/w:rotate-90" />
+        <MarkerContent>
+          {t("chat.message.workedThrough", { count: items.length })}
+        </MarkerContent>
+        <ChevronRight
+          aria-hidden
+          className="size-3 transition-transform group-data-[panel-open]/w:rotate-90"
+        />
       </Marker>
       <CollapsibleContent className="pt-1">
         <StepList items={items} />
@@ -258,15 +349,20 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
 export const SessionMessage = ({ message, Parts }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   if (isEmptyAssistant(message)) return null;
-  if (message.role === "user") return <UserMessage message={message} tint={false} />;
+  if (message.role === "user")
+    return <UserMessage message={message} tint={false} />;
   markLiveThinking(message);
   const PartsView = Parts as ComponentType;
-  const grouped = (message.metadata as { abacus?: { segments?: Loose[] } } | undefined)?.abacus?.segments?.some(
-    (segment) => segment.type === "tool_group"
-  );
+  const grouped = (
+    message.metadata as { abacus?: { segments?: Loose[] } } | undefined
+  )?.abacus?.segments?.some((segment) => segment.type === "tool_group");
   return (
     <MessageScope value={{ id: message.id, role: "assistant", streaming }}>
-      <div className="flex flex-col gap-2" data-role="assistant" data-grouped={grouped ? "" : undefined}>
+      <div
+        className="flex flex-col gap-2"
+        data-role="assistant"
+        data-grouped={grouped ? "" : undefined}
+      >
         <PartsView />
         <Credits message={message} />
       </div>

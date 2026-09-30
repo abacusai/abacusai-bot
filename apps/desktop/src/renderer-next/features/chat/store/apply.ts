@@ -223,7 +223,8 @@ const applySessionCustom = (
         ...state,
         activity: {
           ...state.activity,
-          status: (value.status as ThreadStoreState["activity"]["status"]) ?? null,
+          status:
+            (value.status as ThreadStoreState["activity"]["status"]) ?? null,
         },
       };
     case "agent.heartbeat":

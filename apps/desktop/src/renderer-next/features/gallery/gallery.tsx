@@ -478,7 +478,11 @@ const renderSection = (section: GallerySection): ReactNode => {
  */
 export interface GalleryExtension {
   Nav: ComponentType<{ fixture: string | undefined }>;
-  View: ComponentType<{ fixture: string; step: number | undefined; play: boolean }>;
+  View: ComponentType<{
+    fixture: string;
+    step: number | undefined;
+    play: boolean;
+  }>;
 }
 
 export const Gallery = ({
@@ -560,7 +564,9 @@ export const Gallery = ({
                 </li>
               ))}
             </ul>
-            {extension != null ? <extension.Nav fixture={search.fixture} /> : null}
+            {extension != null ? (
+              <extension.Nav fixture={search.fixture} />
+            ) : null}
           </nav>
           <main
             className="min-w-0 flex-1 overflow-y-auto px-8"

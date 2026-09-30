@@ -10,7 +10,12 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
-import { durations, easings, motionFor, useMotionPreference } from "#next/lib/motion";
+import {
+  durations,
+  easings,
+  motionFor,
+  useMotionPreference,
+} from "#next/lib/motion";
 import { Button } from "#next/ui/button";
 import {
   DropdownMenu,
@@ -20,7 +25,6 @@ import {
 } from "#next/ui/dropdown-menu";
 import { Input } from "#next/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "#next/ui/popover";
-
 import { AgentMode } from "#shared/agent-types";
 
 import type { ModelChipBinding } from "../kit/context";
@@ -42,20 +46,33 @@ export interface ModeChipProps {
   defaultOpen?: boolean;
 }
 
-export const ModeChip = ({ value, draft, live, onDraft, setMode, onOpenChange, onRevert, defaultOpen = false }: ModeChipProps) => {
+export const ModeChip = ({
+  value,
+  draft,
+  live,
+  onDraft,
+  setMode,
+  onOpenChange,
+  onRevert,
+  defaultOpen = false,
+}: ModeChipProps) => {
   const { t } = useTranslation();
   const [optimistic, setOptimistic] = useState<AgentMode | null>(null);
-  const shown = optimistic ?? (live ? value : draft) ?? value ?? AgentMode.Normal;
+  // Confirmed once the agent's state shows it (a STATE_DELTA /mode).
+  const pending =
+    optimistic != null && optimistic !== value ? optimistic : null;
+  const shown = pending ?? (live ? value : draft) ?? value ?? AgentMode.Normal;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const valueRef = useRef(value);
   useEffect(() => {
-    if (optimistic != null && value === optimistic) {
-      setOptimistic(null);
+    valueRef.current = value;
+  }, [value]);
+  useEffect(
+    () => () => {
       if (timer.current != null) clearTimeout(timer.current);
-    }
-  }, [optimistic, value]);
-  useEffect(() => () => {
-    if (timer.current != null) clearTimeout(timer.current);
-  }, []);
+    },
+    []
+  );
   const choose = (mode: AgentMode) => {
     if (!live || setMode == null) {
       onDraft(mode);
@@ -64,8 +81,8 @@ export const ModeChip = ({ value, draft, live, onDraft, setMode, onOpenChange, o
     setOptimistic(mode);
     if (timer.current != null) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
+      if (valueRef.current !== mode) onRevert?.();
       setOptimistic(null);
-      onRevert?.();
     }, MODE_CONFIRM_MS);
     void setMode(mode).catch(() => {
       setOptimistic(null);
@@ -73,28 +90,50 @@ export const ModeChip = ({ value, draft, live, onDraft, setMode, onOpenChange, o
     });
   };
   return (
-    <DropdownMenu defaultOpen={defaultOpen} {...(onOpenChange != null ? { onOpenChange } : {})}>
+    <DropdownMenu
+      defaultOpen={defaultOpen}
+      {...(onOpenChange != null ? { onOpenChange } : {})}
+    >
       <DropdownMenuTrigger
         render={
           <Button
             variant="ghost"
             size="sm"
             aria-haspopup="menu"
-            className={cn("h-[30px] rounded-full px-2.5 text-[13px]", shown === AgentMode.Yolo && "text-[var(--chat-status-attention)]")}
+            className={cn(
+              "h-[30px] rounded-full px-2.5 text-[13px]",
+              shown === AgentMode.Yolo && "text-[var(--chat-status-attention)]"
+            )}
           />
         }
       >
         <Shield aria-hidden />
         {t(MODE_LABEL_KEYS[shown] ?? "chat.mode.DEFAULT")}
-        {optimistic != null ? <span aria-hidden className="size-1.5 rounded-full bg-[var(--chat-status-running)]" /> : null}
+        {pending != null ? (
+          <span
+            aria-hidden
+            className="size-1.5 rounded-full bg-[var(--chat-status-running)]"
+          />
+        ) : null}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[340px]" align="start" side="top">
         {MODE_ORDER.map((mode) => (
-          <DropdownMenuItem key={mode} onClick={() => choose(mode)} className="flex flex-col items-start gap-0.5 py-2">
-            <span className={cn("font-medium", mode === AgentMode.Yolo && "text-[var(--chat-status-attention)]")}>
+          <DropdownMenuItem
+            key={mode}
+            onClick={() => choose(mode)}
+            className="flex flex-col items-start gap-0.5 py-2"
+          >
+            <span
+              className={cn(
+                "font-medium",
+                mode === AgentMode.Yolo && "text-[var(--chat-status-attention)]"
+              )}
+            >
               {t(MODE_LABEL_KEYS[mode]!)}
             </span>
-            <span className="text-muted-foreground">{t(MODE_DESCRIPTION_KEYS[mode]!)}</span>
+            <span className="text-muted-foreground">
+              {t(MODE_DESCRIPTION_KEYS[mode]!)}
+            </span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -102,7 +141,13 @@ export const ModeChip = ({ value, draft, live, onDraft, setMode, onOpenChange, o
   );
 };
 
-export const ModelChip = ({ binding, compact = false }: { binding: ModelChipBinding; compact?: boolean }) => {
+export const ModelChip = ({
+  binding,
+  compact = false,
+}: {
+  binding: ModelChipBinding;
+  compact?: boolean;
+}) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -112,18 +157,29 @@ export const ModelChip = ({ binding, compact = false }: { binding: ModelChipBind
     .map((group) => ({
       ...group,
       items: group.items.filter(
-        (item) => q === "" || item.label.toLowerCase().includes(q) || item.id.toLowerCase().includes(q)
+        (item) =>
+          q === "" ||
+          item.label.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q)
       ),
     }))
-    .filter((group) => group.items.length > 0 || (q === "" && group.connect != null));
+    .filter(
+      (group) => group.items.length > 0 || (q === "" && group.connect != null)
+    );
   const label = binding.label;
   const trigger = (
     <Button
       variant="ghost"
       size={compact ? "icon" : "sm"}
       aria-haspopup="listbox"
-      aria-label={compact ? t("chat.composer.model", { name: label }) : undefined}
-      className={cn("h-[30px] rounded-full text-[13px]", !compact && "px-2.5", open && "bg-secondary")}
+      aria-label={
+        compact ? t("chat.composer.model", { name: label }) : undefined
+      }
+      className={cn(
+        "h-[30px] rounded-full text-[13px]",
+        !compact && "px-2.5",
+        open && "bg-secondary"
+      )}
     />
   );
   return (
@@ -140,7 +196,11 @@ export const ModelChip = ({ binding, compact = false }: { binding: ModelChipBind
         ) : binding.layoutId != null ? (
           <motion.span
             layoutId={binding.layoutId}
-            transition={motionFor(pref, { duration: durations.layout / 1000, ease: easings.standard }, { duration: 0 })}
+            transition={motionFor(
+              pref,
+              { duration: durations.layout / 1000, ease: easings.standard },
+              { duration: 0 }
+            )}
           >
             {label}
           </motion.span>
@@ -158,10 +218,21 @@ export const ModelChip = ({ binding, compact = false }: { binding: ModelChipBind
           aria-label={t("chat.composer.searchModels")}
           className="mb-1 h-8"
         />
-        <div role="listbox" aria-label={t("chat.composer.models")} className="flex max-h-80 flex-col overflow-y-auto">
+        <div
+          role="listbox"
+          aria-label={t("chat.composer.models")}
+          className="flex max-h-80 flex-col overflow-y-auto"
+        >
           {groups.map((group) => (
-            <div key={group.id} role="group" aria-label={group.label} className="flex flex-col">
-              <div className="px-2.5 pt-1.5 pb-1 text-xs text-muted-foreground">{group.label}</div>
+            <div
+              key={group.id}
+              role="group"
+              aria-label={group.label}
+              className="flex flex-col"
+            >
+              <div className="text-muted-foreground px-2.5 pt-1.5 pb-1 text-xs">
+                {group.label}
+              </div>
               {group.items.map((item) => {
                 const selected = (binding.value ?? "") === item.id;
                 return (
@@ -170,22 +241,30 @@ export const ModelChip = ({ binding, compact = false }: { binding: ModelChipBind
                     type="button"
                     role="option"
                     aria-selected={selected}
-                    className="flex h-8 items-center gap-2 rounded-md px-2.5 text-start text-[13px] outline-none hover:bg-secondary focus-visible:bg-secondary"
+                    className="hover:bg-secondary focus-visible:bg-secondary flex h-8 items-center gap-2 rounded-md px-2.5 text-start text-[13px] outline-none"
                     onClick={() => {
                       binding.onChange(item.id === "" ? null : item.id);
                       setOpen(false);
                     }}
                   >
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    {item.description != null ? <span className="text-muted-foreground">{item.description}</span> : null}
-                    {selected ? <Check aria-hidden className="size-3.5" /> : null}
+                    <span className="min-w-0 flex-1 truncate">
+                      {item.label}
+                    </span>
+                    {item.description != null ? (
+                      <span className="text-muted-foreground">
+                        {item.description}
+                      </span>
+                    ) : null}
+                    {selected ? (
+                      <Check aria-hidden className="size-3.5" />
+                    ) : null}
                   </button>
                 );
               })}
               {group.connect != null && q === "" ? (
                 <button
                   type="button"
-                  className="flex h-8 items-center rounded-md px-2.5 text-start text-[13px] hover:bg-secondary"
+                  className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
                   onClick={() => {
                     group.connect!.onSelect();
                     setOpen(false);

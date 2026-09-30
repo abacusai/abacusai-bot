@@ -20,7 +20,11 @@ const echo = (relay: FakeRelay, input: AiSendInput) => {
   const message = input.messages[0]!;
   relay.emitAll([
     b.runStarted(input.runId),
-    ...b.text(message.id, "user", (message.parts[0] as unknown as { content: string }).content),
+    ...b.text(
+      message.id,
+      "user",
+      (message.parts[0] as unknown as { content: string }).content
+    ),
   ]);
 };
 
@@ -50,11 +54,15 @@ describe("R2-T35 uncertain admission", () => {
     const session = await open(relay);
     // The echo is on the stream; let the client process it before the RPC settles.
     const result = session.submit("hello");
-    await expect(result).resolves.toMatchObject({ kind: expect.stringMatching(/started|unconfirmed/) });
+    await expect(result).resolves.toMatchObject({
+      kind: expect.stringMatching(/started|unconfirmed/),
+    });
     await vi.waitFor(() => expect(session.hostStore.state.outbox).toEqual([]));
     await new Promise((resolve) => setTimeout(resolve, 80));
     expect(relay.stats.send.length).toBeLessThanOrEqual(2);
-    expect(session.hostStore.state.messages.filter((m) => m.role === "user")).toHaveLength(1);
+    expect(
+      session.hostStore.state.messages.filter((m) => m.role === "user")
+    ).toHaveLength(1);
   });
 
   it("(b) an echo after the failure: pending until it arrives", async () => {
@@ -67,7 +75,9 @@ describe("R2-T35 uncertain admission", () => {
     });
     relay.faults.send = () => timeout();
     const session = await open(relay);
-    await expect(session.submit("hello")).resolves.toEqual({ kind: "unconfirmed" });
+    await expect(session.submit("hello")).resolves.toEqual({
+      kind: "unconfirmed",
+    });
     expect(session.hostStore.state.outbox[0]?.state).toBe("unconfirmed");
     echo(relay, pending!);
     await vi.waitFor(() => expect(session.hostStore.state.outbox).toEqual([]));
@@ -83,12 +93,18 @@ describe("R2-T35 uncertain admission", () => {
     });
     relay.faults.send = (call) => (call === 1 ? timeout() : null);
     const session = await open(relay);
-    await expect(session.submit("hello")).resolves.toEqual({ kind: "unconfirmed" });
+    await expect(session.submit("hello")).resolves.toEqual({
+      kind: "unconfirmed",
+    });
     await vi.waitFor(() => expect(relay.stats.send).toHaveLength(2));
     expect(runs).toBe(1);
     expect(relay.stats.send[0]!.runId).toBe(relay.stats.send[1]!.runId);
-    expect(relay.stats.send[0]!.messages[0]!.id).toBe(relay.stats.send[1]!.messages[0]!.id);
-    await vi.waitFor(() => expect(session.hostStore.state.outbox[0]?.state).toBe("accepted"));
+    expect(relay.stats.send[0]!.messages[0]!.id).toBe(
+      relay.stats.send[1]!.messages[0]!.id
+    );
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.outbox[0]?.state).toBe("accepted")
+    );
   });
 
   it("(d) a prompt that never reached the agent is admitted once by the re-send", async () => {
@@ -111,9 +127,13 @@ describe("R2-T35 uncertain admission", () => {
       return original(input);
     };
     const session = await open(relay);
-    await expect(session.submit("hello")).resolves.toEqual({ kind: "unconfirmed" });
+    await expect(session.submit("hello")).resolves.toEqual({
+      kind: "unconfirmed",
+    });
     await vi.waitFor(() => expect(runs).toBe(1));
-    await vi.waitFor(() => expect(session.hostStore.state.outbox[0]?.state).toBe("accepted"));
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.outbox[0]?.state).toBe("accepted")
+    );
   });
 
   it("(e) two failed re-sends: Not sent, and Discard gives the text back", async () => {
@@ -121,7 +141,9 @@ describe("R2-T35 uncertain admission", () => {
     relay.faults.send = () => timeout();
     const session = await open(relay);
     await session.submit("hello");
-    await vi.waitFor(() => expect(session.hostStore.state.outbox[0]?.state).toBe("failed"));
+    await vi.waitFor(() =>
+      expect(session.hostStore.state.outbox[0]?.state).toBe("failed")
+    );
     expect(relay.stats.send).toHaveLength(3);
     const entry = session.discardOutbox(session.hostStore.state.outbox[0]!.id);
     expect(entry?.text).toBe("hello");

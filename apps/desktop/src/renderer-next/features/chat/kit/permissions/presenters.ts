@@ -26,7 +26,12 @@ export type CardBody =
   | { kind: "text"; text: string }
   | { kind: "path"; path: string }
   | { kind: "plan"; markdown: string }
-  | { kind: "denials"; command: string; denials: Array<{ verb: "read" | "write" | "reach"; target: string }>; note?: string }
+  | {
+      kind: "denials";
+      command: string;
+      denials: Array<{ verb: "read" | "write" | "reach"; target: string }>;
+      note?: string;
+    }
   | { kind: "question" }
   | { kind: "none" };
 
@@ -35,7 +40,9 @@ export interface CardModel {
   title: string;
   titleValues?: Record<string, string>;
   /** Right-hand label (mode, `+a -d`). */
-  aside?: { kind: "mode" } | { kind: "changes"; additions: number; deletions: number };
+  aside?:
+    | { kind: "mode" }
+    | { kind: "changes"; additions: number; deletions: number };
   /** An orange dot before the title. */
   warning?: boolean;
   description?: string;
@@ -63,7 +70,10 @@ export const bashRule = (command: string): string =>
 const split = (text: string): string[] => (text === "" ? [] : text.split("\n"));
 
 const diffOf = (original: string, next: string, unified?: string): CardBody => {
-  const lines = unified != null && unified !== "" ? parseUnified(unified) : diffLines(split(original), split(next));
+  const lines =
+    unified != null && unified !== ""
+      ? parseUnified(unified)
+      : diffLines(split(original), split(next));
   return {
     kind: "diff",
     lines,
@@ -72,12 +82,27 @@ const diffOf = (original: string, next: string, unified?: string): CardBody => {
   };
 };
 
-const allowOnce = (): CardAction => ({ id: "accept", label: "allowOnce", decision: "accept", variant: "primary" });
-const deny = (): CardAction => ({ id: "reject", label: "deny", decision: "reject", variant: "deny" });
+const allowOnce = (): CardAction => ({
+  id: "accept",
+  label: "allowOnce",
+  decision: "accept",
+  variant: "primary",
+});
+const deny = (): CardAction => ({
+  id: "reject",
+  label: "deny",
+  decision: "reject",
+  variant: "deny",
+});
 
 const fileActions = (): CardAction[] => [
   allowOnce(),
-  { id: "allowAlways", label: "alwaysAcceptEdits", decision: "allowAlways", variant: "secondary" },
+  {
+    id: "allowAlways",
+    label: "alwaysAcceptEdits",
+    decision: "allowAlways",
+    variant: "secondary",
+  },
   deny(),
 ];
 
@@ -98,8 +123,18 @@ export const present = (request: PermissionRequest): CardModel => {
           body: { kind: "command", command: request.command, cwd: request.cwd },
           paths: request.credentialPaths,
           actions: [
-            { id: "accept", label: "allowOnce", decision: "accept", variant: "secondary" },
-            { id: "reject", label: "deny", decision: "reject", variant: "primary" },
+            {
+              id: "accept",
+              label: "allowOnce",
+              decision: "accept",
+              variant: "secondary",
+            },
+            {
+              id: "reject",
+              label: "deny",
+              decision: "reject",
+              variant: "primary",
+            },
           ],
           note: true,
           chip: "runCommand",
@@ -119,7 +154,14 @@ export const present = (request: PermissionRequest): CardModel => {
             variant: "secondary",
           },
           ...(request.background
-            ? [{ id: "background", label: "runInBackground", decision: "background", variant: "secondary" } as CardAction]
+            ? [
+                {
+                  id: "background",
+                  label: "runInBackground",
+                  decision: "background",
+                  variant: "secondary",
+                } as CardAction,
+              ]
             : []),
           deny(),
         ],
@@ -128,8 +170,15 @@ export const present = (request: PermissionRequest): CardModel => {
       };
     }
     case "edit_file": {
-      const body = diffOf(request.originalContent, request.newContent, request.diffContent);
-      const changes = body.kind === "diff" ? { additions: body.additions, deletions: body.deletions } : { additions: 0, deletions: 0 };
+      const body = diffOf(
+        request.originalContent,
+        request.newContent,
+        request.diffContent
+      );
+      const changes =
+        body.kind === "diff"
+          ? { additions: body.additions, deletions: body.deletions }
+          : { additions: 0, deletions: 0 };
       return {
         title: "editFile",
         titleValues: { name: basename(request.filePath) },
@@ -147,7 +196,10 @@ export const present = (request: PermissionRequest): CardModel => {
         return {
           title: "createFile",
           titleValues: { name },
-          body: { kind: "content", text: split(request.content).slice(0, 12).join("\n") },
+          body: {
+            kind: "content",
+            text: split(request.content).slice(0, 12).join("\n"),
+          },
           actions: fileActions(),
           note: true,
           chip: "createFile",
@@ -157,7 +209,15 @@ export const present = (request: PermissionRequest): CardModel => {
       return {
         title: "overwriteFile",
         titleValues: { name },
-        ...(body.kind === "diff" ? { aside: { kind: "changes" as const, additions: body.additions, deletions: body.deletions } } : {}),
+        ...(body.kind === "diff"
+          ? {
+              aside: {
+                kind: "changes" as const,
+                additions: body.additions,
+                deletions: body.deletions,
+              },
+            }
+          : {}),
         body,
         actions: fileActions(),
         note: true,
@@ -222,7 +282,12 @@ export const present = (request: PermissionRequest): CardModel => {
         body: { kind: "none" },
         actions: [
           allowOnce(),
-          { id: "allowAlways", label: "alwaysAllowHost", decision: "allowAlways", variant: "secondary" },
+          {
+            id: "allowAlways",
+            label: "alwaysAllowHost",
+            decision: "allowAlways",
+            variant: "secondary",
+          },
           deny(),
         ],
         note: true,
@@ -239,14 +304,22 @@ export const present = (request: PermissionRequest): CardModel => {
           command: request.command,
           denials: request.denials.map((denial) =>
             denial.kind === "host"
-              ? { verb: "reach" as const, target: `${denial.host}:${denial.port}` }
+              ? {
+                  verb: "reach" as const,
+                  target: `${denial.host}:${denial.port}`,
+                }
               : { verb: denial.kind, target: denial.path }
           ),
           ...(request.note != null ? { note: request.note } : {}),
         },
         actions: [
           allowOnce(),
-          { id: "allowAlways", label: "alwaysAllowThese", decision: "allowAlways", variant: "secondary" },
+          {
+            id: "allowAlways",
+            label: "alwaysAllowThese",
+            decision: "allowAlways",
+            variant: "secondary",
+          },
           deny(),
         ],
         note: true,
@@ -259,7 +332,12 @@ export const present = (request: PermissionRequest): CardModel => {
         body: { kind: "command", command: request.url },
         actions: [
           allowOnce(),
-          { id: "allowAlways", label: "alwaysAllowSite", decision: "allowAlways", variant: "secondary" },
+          {
+            id: "allowAlways",
+            label: "alwaysAllowSite",
+            decision: "allowAlways",
+            variant: "secondary",
+          },
           deny(),
         ],
         note: true,
@@ -270,7 +348,10 @@ export const present = (request: PermissionRequest): CardModel => {
       return {
         title: "browserAction",
         titleValues: { description: request.description },
-        body: request.url != null ? { kind: "command", command: request.url } : { kind: "none" },
+        body:
+          request.url != null
+            ? { kind: "command", command: request.url }
+            : { kind: "none" },
         actions: [allowOnce(), deny()],
         note: false,
         delayed: true,
@@ -283,7 +364,12 @@ export const present = (request: PermissionRequest): CardModel => {
         body: { kind: "text", text: request.inputSummary },
         actions: [
           allowOnce(),
-          { id: "allowAlways", label: "alwaysAllow", decision: "allowAlways", variant: "secondary" },
+          {
+            id: "allowAlways",
+            label: "alwaysAllow",
+            decision: "allowAlways",
+            variant: "secondary",
+          },
           deny(),
         ],
         note: true,
@@ -296,10 +382,30 @@ export const present = (request: PermissionRequest): CardModel => {
         body: { kind: "plan", markdown: request.planContent },
         stacked: true,
         actions: [
-          { id: "accept", label: "planApproveEach", decision: "accept", variant: "primary" },
-          { id: "allowAlways", label: "planAcceptAll", decision: "allowAlways", variant: "secondary" },
-          { id: "allowYolo", label: "planFullAccess", decision: "allowYolo", variant: "warning" },
-          { id: "reject", label: "planKeepPlanning", decision: "reject", variant: "deny" },
+          {
+            id: "accept",
+            label: "planApproveEach",
+            decision: "accept",
+            variant: "primary",
+          },
+          {
+            id: "allowAlways",
+            label: "planAcceptAll",
+            decision: "allowAlways",
+            variant: "secondary",
+          },
+          {
+            id: "allowYolo",
+            label: "planFullAccess",
+            decision: "allowYolo",
+            variant: "warning",
+          },
+          {
+            id: "reject",
+            label: "planKeepPlanning",
+            decision: "reject",
+            variant: "deny",
+          },
         ],
         note: true,
         chip: "plan",
@@ -308,7 +414,14 @@ export const present = (request: PermissionRequest): CardModel => {
       return {
         title: "question",
         body: { kind: "question" },
-        actions: [{ id: "reject", label: "skipAll", decision: "reject", variant: "deny" }],
+        actions: [
+          {
+            id: "reject",
+            label: "skipAll",
+            decision: "reject",
+            variant: "deny",
+          },
+        ],
         note: false,
         chip: "question",
       };

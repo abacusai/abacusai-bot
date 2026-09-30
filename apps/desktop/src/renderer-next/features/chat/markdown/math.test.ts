@@ -25,11 +25,17 @@ describe("R2-T19 pre-pass", () => {
     for (const whole of ["$$x^2$$", "\\[x^2\\]", "\\(x^2\\)", "$x^2$"])
       for (let cut = 1; cut < whole.length; cut += 1) {
         const prefix = whole.slice(0, cut);
-        if (whole.startsWith("$$") && prefix.endsWith("$") && cut === whole.length - 1) continue;
+        if (
+          whole.startsWith("$$") &&
+          prefix.endsWith("$") &&
+          cut === whole.length - 1
+        )
+          continue;
         const out = pp(`see ${prefix}`);
-        expect(out.includes("```math") || out.includes(MATH_SENTINEL), `${prefix} → ${out}`).toBe(
-          prefix === "$$x^2$" ? true : false
-        );
+        expect(
+          out.includes("```math") || out.includes(MATH_SENTINEL),
+          `${prefix} → ${out}`
+        ).toBe(prefix === "$$x^2$" ? true : false);
       }
   });
 
@@ -90,7 +96,9 @@ describe("R2-T19 rendering", () => {
       // `javascript:` URL.
       const host = document.createElement("div");
       host.innerHTML = html;
-      expect(host.querySelector("script, iframe, object, embed, img, a")).toBeNull();
+      expect(
+        host.querySelector("script, iframe, object, embed, img, a")
+      ).toBeNull();
       for (const element of host.querySelectorAll("*"))
         for (const attribute of element.attributes) {
           expect(attribute.name).not.toMatch(/^on/i);
@@ -106,6 +114,8 @@ describe("R2-T19 rendering", () => {
       eager: true,
     });
     for (const [path, source] of Object.entries(sources))
-      expect(source, path).not.toMatch(/import\s*\{[^}]*\}\s*from\s*["']temml["']/);
+      expect(source, path).not.toMatch(
+        /import\s*\{[^}]*\}\s*from\s*["']temml["']/
+      );
   });
 });

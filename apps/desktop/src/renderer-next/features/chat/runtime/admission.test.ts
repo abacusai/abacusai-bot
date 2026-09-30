@@ -28,22 +28,48 @@ const base: SubmitInput = {
 describe("R2-T20 routeSubmit", () => {
   it("routes by state", () => {
     expect(routeSubmit({ ...base, text: "  " })).toEqual({ kind: "noop" });
-    expect(routeSubmit({ ...base, readOnly: true })).toEqual({ kind: "blocked", reason: "read-only" });
-    expect(routeSubmit({ ...base, questionPending: true })).toEqual({ kind: "blocked", reason: "question-pending" });
+    expect(routeSubmit({ ...base, readOnly: true })).toEqual({
+      kind: "blocked",
+      reason: "read-only",
+    });
+    expect(routeSubmit({ ...base, questionPending: true })).toEqual({
+      kind: "blocked",
+      reason: "question-pending",
+    });
     expect(
-      routeSubmit({ ...base, attachments: [{ path: null, state: "uploading" }] })
+      routeSubmit({
+        ...base,
+        attachments: [{ path: null, state: "uploading" }],
+      })
     ).toEqual({ kind: "blocked", reason: "uploading" });
-    expect(routeSubmit({ ...base, hydrated: false })).toEqual({ kind: "blocked", reason: "loading" });
+    expect(routeSubmit({ ...base, hydrated: false })).toEqual({
+      kind: "blocked",
+      reason: "loading",
+    });
     expect(routeSubmit(base)).toEqual({ kind: "send", text: "hello" });
-    expect(routeSubmit({ ...base, busy: true })).toEqual({ kind: "enqueue", text: "hello" });
+    expect(routeSubmit({ ...base, busy: true })).toEqual({
+      kind: "enqueue",
+      text: "hello",
+    });
     expect(routeSubmit({ ...base, composing: true })).toEqual({ kind: "noop" });
   });
 
   it("sends mode and model only before the runtime exists (or a fixed mode)", () => {
     expect(
-      routeSubmit({ ...base, preStart: true, mode: "PLAN" as never, model: "m-1" })
-    ).toEqual({ kind: "send", text: "hello", forwardedProps: { mode: "PLAN", model: "m-1" } });
-    expect(routeSubmit({ ...base, mode: "PLAN" as never, model: "m-1" })).toEqual({
+      routeSubmit({
+        ...base,
+        preStart: true,
+        mode: "PLAN" as never,
+        model: "m-1",
+      })
+    ).toEqual({
+      kind: "send",
+      text: "hello",
+      forwardedProps: { mode: "PLAN", model: "m-1" },
+    });
+    expect(
+      routeSubmit({ ...base, mode: "PLAN" as never, model: "m-1" })
+    ).toEqual({
       kind: "send",
       text: "hello",
     });
@@ -56,21 +82,32 @@ describe("R2-T20 routeSubmit", () => {
 
   it("appends attachments as @path lines; attachment-only is a prompt", () => {
     expect(
-      routeSubmit({ ...base, attachments: [{ path: "/a/b.pdf", state: "done" }] })
+      routeSubmit({
+        ...base,
+        attachments: [{ path: "/a/b.pdf", state: "done" }],
+      })
     ).toEqual({ kind: "send", text: "hello\n\n@/a/b.pdf" });
     expect(
-      routeSubmit({ ...base, text: "", attachments: [{ path: "/a/b.pdf", state: "done" }] })
+      routeSubmit({
+        ...base,
+        text: "",
+        attachments: [{ path: "/a/b.pdf", state: "done" }],
+      })
     ).toEqual({ kind: "send", text: "@/a/b.pdf" });
   });
 
   it("derives session titles as the old transport did", () => {
     expect(deriveSessionTitle("/help me with this")).toBe("help me with this");
-    expect(deriveSessionTitle("look at @src/main/index.ts please")).toBe("look at index.ts please");
+    expect(deriveSessionTitle("look at @src/main/index.ts please")).toBe(
+      "look at index.ts please"
+    );
     expect(deriveSessionTitle("```js\nconst a = 1\n```")).toBe("");
     expect(deriveSessionTitle("a".repeat(80))).toBe(`${"a".repeat(48)}…`);
-    expect(deriveSessionTitle("the quick brown fox jumps over the lazy dog and keeps running")).toBe(
-      "the quick brown fox jumps over the lazy dog and…"
-    );
+    expect(
+      deriveSessionTitle(
+        "the quick brown fox jumps over the lazy dog and keeps running"
+      )
+    ).toBe("the quick brown fox jumps over the lazy dog and…");
   });
 });
 
@@ -101,7 +138,11 @@ const runA = (): { head: StreamChunk[]; tail: StreamChunk[] } => {
 };
 
 const timeless = (value: unknown): unknown =>
-  JSON.parse(JSON.stringify(value, (key, v: unknown) => (key === "createdAt" ? undefined : v)));
+  JSON.parse(
+    JSON.stringify(value, (key, v: unknown) =>
+      key === "createdAt" ? undefined : v
+    )
+  );
 
 describe("R2-T20 admission isolation", () => {
   it("queued, rejected and UNAVAILABLE never touch a streaming run", async () => {
@@ -113,7 +154,11 @@ describe("R2-T20 admission isolation", () => {
     await refSession.load();
     const expected = timeless(refSession.hostStore.state.messages);
 
-    const acks: Array<"queued" | "rejected" | "throw"> = ["queued", "rejected", "throw"];
+    const acks: Array<"queued" | "rejected" | "throw"> = [
+      "queued",
+      "rejected",
+      "throw",
+    ];
     const relay = new FakeRelay({
       onSend: (input) => {
         const next = acks.shift();
@@ -127,17 +172,23 @@ describe("R2-T20 admission isolation", () => {
     await session.load();
     const client = session.hostStore.state.client!;
     const outboxSeen: number[] = [];
-    session.hostStore.subscribe(() => outboxSeen.push(session.hostStore.state.outbox.length));
+    session.hostStore.subscribe(() =>
+      outboxSeen.push(session.hostStore.state.outbox.length)
+    );
 
     await expect(session.submit("second")).resolves.toEqual({ kind: "queued" });
-    await expect(session.submit("third")).resolves.toEqual({ kind: "rejected" });
+    await expect(session.submit("third")).resolves.toEqual({
+      kind: "rejected",
+    });
     await expect(session.submit("fourth")).rejects.toBeInstanceOf(ORPCError);
     expect(outboxSeen).toContain(1);
     expect(session.hostStore.state.outbox).toEqual([]);
     expect(session.hostStore.state.client).toBe(client);
 
     relay.emitAll(tail);
-    await vi.waitFor(() => expect(session.store.state.runs.outcomes).toHaveLength(1));
+    await vi.waitFor(() =>
+      expect(session.store.state.runs.outcomes).toHaveLength(1)
+    );
     expect(timeless(session.hostStore.state.messages)).toEqual(expected);
   });
 
@@ -145,7 +196,9 @@ describe("R2-T20 admission isolation", () => {
     const relay = new FakeRelay({
       onSend: (input, r) => {
         const id = input.messages[0]!.id;
-        const text = (input.messages[0]!.parts[0] as unknown as { content: string }).content;
+        const text = (
+          input.messages[0]!.parts[0] as unknown as { content: string }
+        ).content;
         setTimeout(() => {
           r.emitAll([b.runStarted(input.runId), ...b.text(id, "user", text)]);
         }, 10);
@@ -160,7 +213,9 @@ describe("R2-T20 admission isolation", () => {
     const [entry] = session.hostStore.state.outbox;
     expect(entry?.state).toBe("accepted");
     await vi.waitFor(() => expect(session.hostStore.state.outbox).toEqual([]));
-    const users = session.hostStore.state.messages.filter((m) => m.role === "user");
+    const users = session.hostStore.state.messages.filter(
+      (m) => m.role === "user"
+    );
     expect(users.map((m) => m.id)).toEqual([entry!.id]);
   });
 
@@ -170,7 +225,10 @@ describe("R2-T20 admission isolation", () => {
         setTimeout(() => {
           r.emitAll([
             b.runStarted(input.runId),
-            b.custom("abacus.duplicate_echo", { runId: input.runId, messageId: input.messages[0]!.id }),
+            b.custom("abacus.duplicate_echo", {
+              runId: input.runId,
+              messageId: input.messages[0]!.id,
+            }),
           ]);
         }, 5);
         return { runId: input.runId, status: "started" };

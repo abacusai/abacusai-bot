@@ -68,8 +68,9 @@ const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
 const innerHtmlOf = (children: ReactNode): string | null => {
   const child = Children.toArray(children)[0];
   if (!isValidElement(child)) return null;
-  const html = (child as ReactElement<{ dangerouslySetInnerHTML?: { __html: string } }>)
-    .props.dangerouslySetInnerHTML?.__html;
+  const html = (
+    child as ReactElement<{ dangerouslySetInnerHTML?: { __html: string } }>
+  ).props.dangerouslySetInnerHTML?.__html;
   return html ?? null;
 };
 
@@ -115,7 +116,10 @@ const CodeBlock = (props: ComponentProps<"pre"> & { "data-lang"?: string }) => {
       <pre
         {...props}
         ref={ref}
-        className={cn(props.className, collapsible && !expanded && "chat-code-collapsed")}
+        className={cn(
+          props.className,
+          collapsible && !expanded && "chat-code-collapsed"
+        )}
       />
       {collapsible ? (
         <button
@@ -134,7 +138,10 @@ const CodeBlock = (props: ComponentProps<"pre"> & { "data-lang"?: string }) => {
 
 const InlineCode = (props: ComponentProps<"code">) => {
   const { children, ...rest } = props;
-  if (props.dangerouslySetInnerHTML != null || /\blanguage-/.test(props.className ?? ""))
+  if (
+    props.dangerouslySetInnerHTML != null ||
+    /\blanguage-/.test(props.className ?? "")
+  )
     return <code {...props} />;
   const text = typeof children === "string" ? children : null;
   if (text?.startsWith(MATH_SENTINEL) === true)
@@ -158,7 +165,13 @@ const Image = ({ alt, ...props }: ComponentProps<"img">) => (
   <img {...props} alt={alt ?? ""} loading="lazy" className="chat-image" />
 );
 
-const COMPONENTS = { a: ChatLink, pre: CodeBlock, code: InlineCode, table: Table, img: Image };
+const COMPONENTS = {
+  a: ChatLink,
+  pre: CodeBlock,
+  code: InlineCode,
+  table: Table,
+  img: Image,
+};
 
 export interface MarkdownProps {
   content: string;
@@ -185,7 +198,11 @@ export const Markdown = ({
         role={role}
         highlighter={highlight}
         components={COMPONENTS}
-        className={cn("chat-prose", streaming && "chat-prose-streaming", className)}
+        className={cn(
+          "chat-prose",
+          streaming && "chat-prose-streaming",
+          className
+        )}
       />
     </StreamingContext>
   );

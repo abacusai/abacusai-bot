@@ -16,35 +16,49 @@ const MIME_EXT: Record<string, string> = {
 };
 
 /** A pasted file's name on disk: its own extension, else one from its type. */
-export const pastedName = (id: string, file: { name: string; type: string }): string => {
+export const pastedName = (
+  id: string,
+  file: { name: string; type: string }
+): string => {
   const own = /\.([A-Za-z0-9]{1,8})$/.exec(file.name)?.[1];
-  const ext = own ?? MIME_EXT[file.type] ?? file.type.split("/")[1]?.replace(/[^a-z0-9]/gi, "") ?? "bin";
+  const ext =
+    own ??
+    MIME_EXT[file.type] ??
+    file.type.split("/")[1]?.replace(/[^a-z0-9]/gi, "") ??
+    "bin";
   return `${id}.${ext || "bin"}`;
 };
 
 let counter = 0;
 const nextId = (): string => `att-${Date.now().toString(36)}-${++counter}`;
 
-const patch = (threadId: string, id: string, change: Partial<DraftAttachment>): void =>
+const patch = (
+  threadId: string,
+  id: string,
+  change: Partial<DraftAttachment>
+): void =>
   updateDraft(threadId, (draft) => ({
     ...draft,
-    attachments: draft.attachments.map((a) => (a.id === id ? { ...a, ...change } : a)),
+    attachments: draft.attachments.map((a) =>
+      a.id === id ? { ...a, ...change } : a
+    ),
   }));
 
-export const addPaths = (threadId: string, files: Array<{ path: string; name?: string; size?: number }>): void =>
+export const addPaths = (
+  threadId: string,
+  files: Array<{ path: string; name?: string; size?: number }>
+): void =>
   updateDraft(threadId, (draft) => ({
     ...draft,
     attachments: [
       ...draft.attachments,
-      ...files.map(
-        (file): DraftAttachment => ({
-          id: nextId(),
-          name: file.name ?? file.path.split(/[\\/]/).at(-1) ?? file.path,
-          path: file.path,
-          state: "done",
-          ...(file.size != null ? { size: file.size } : {}),
-        })
-      ),
+      ...files.map((file): DraftAttachment => ({
+        id: nextId(),
+        name: file.name ?? file.path.split(/[\\/]/).at(-1) ?? file.path,
+        path: file.path,
+        state: "done",
+        ...(file.size != null ? { size: file.size } : {}),
+      })),
     ],
   }));
 
@@ -63,7 +77,11 @@ export const addFiles = async (
     }
     if (attachmentsBase == null) continue;
     const id = nextId();
-    const preview = file.type.startsWith("image/") && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : undefined;
+    const preview =
+      file.type.startsWith("image/") &&
+      typeof URL.createObjectURL === "function"
+        ? URL.createObjectURL(file)
+        : undefined;
     updateDraft(threadId, (draft) => ({
       ...draft,
       attachments: [
@@ -81,11 +99,16 @@ export const addFiles = async (
     }));
     try {
       const data = new Uint8Array(await file.arrayBuffer());
-      const [saved] = await host.savePasted(attachmentsBase, [{ name: pastedName(id, file), data }]);
+      const [saved] = await host.savePasted(attachmentsBase, [
+        { name: pastedName(id, file), data },
+      ]);
       if (saved == null) throw new Error("not saved");
       patch(threadId, id, { path: saved, state: "done" });
     } catch (error) {
-      patch(threadId, id, { state: "error", error: error instanceof Error ? error.message : String(error) });
+      patch(threadId, id, {
+        state: "error",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 };
@@ -94,7 +117,10 @@ export const removeAttachment = (threadId: string, id: string): void =>
   updateDraft(threadId, (draft) => {
     const gone = draft.attachments.find((a) => a.id === id);
     if (gone?.preview != null) URL.revokeObjectURL?.(gone.preview);
-    return { ...draft, attachments: draft.attachments.filter((a) => a.id !== id) };
+    return {
+      ...draft,
+      attachments: draft.attachments.filter((a) => a.id !== id),
+    };
   });
 
 export const formatSize = (bytes: number | undefined): string => {

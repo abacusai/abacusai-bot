@@ -9,7 +9,11 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { useCollections } from "#next/data/db";
-import { chatRuntimeFor, ChatView, deriveSessionTitle } from "#next/features/chat";
+import {
+  chatRuntimeFor,
+  ChatView,
+  deriveSessionTitle,
+} from "#next/features/chat";
 import { SessionIdentity, SessionPage } from "#next/features/sessions";
 import { TopBarSlot } from "#next/features/shell";
 import { ignoreLoadError, isMissing } from "#next/lib/navigation/loaders";
@@ -61,10 +65,17 @@ const SessionChat = ({ sessionId }: { sessionId: string }) => {
         model: null,
         turnBusy: row.turn?.isBusy === true,
         setMode: (mode: AgentMode) =>
-          transport.client.agent.setMode({ workspaceId: row.workspaceId, sessionId, mode }),
-        ...(row.routineId != null ? { readOnly: { reason: t("chat.composer.routineRun") } } : {}),
+          transport.client.agent.setMode({
+            workspaceId: row.workspaceId,
+            sessionId,
+            mode,
+          }),
+        ...(row.routineId != null
+          ? { readOnly: { reason: t("chat.composer.routineRun") } }
+          : {}),
         onFirstSend: (text) => {
-          if (row.label.trim() !== "" && row.label.trim() !== "Untitled") return;
+          if (row.label.trim() !== "" && row.label.trim() !== "Untitled")
+            return;
           const label = deriveSessionTitle(text);
           if (label === "") return;
           try {

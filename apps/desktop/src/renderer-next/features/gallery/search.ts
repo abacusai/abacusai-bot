@@ -102,7 +102,9 @@ export const GallerySearch = v.object({
   /** A chat scenario (spec 02 §11.2), shown at full size instead of sections. */
   fixture: optionalField(v.pipe(v.string(), v.regex(/^[a-z0-9-]+$/))),
   /** Stop after this many events (mid-stream states). */
-  step: optionalField(v.pipe(v.unknown(), v.transform(Number), v.integer(), v.minValue(0))),
+  step: optionalField(
+    v.pipe(v.unknown(), v.transform(Number), v.integer(), v.minValue(0))
+  ),
   /** Stream the rest live. */
   play: optionalField(v.picklist([1, "1"])),
 });

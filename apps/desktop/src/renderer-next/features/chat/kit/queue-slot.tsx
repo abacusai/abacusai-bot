@@ -31,7 +31,9 @@ const problemKey = (command: QueueCommandState | undefined): string | null => {
   if (command == null) return null;
   if (command.state === "timeout") return "chat.queue.problem.noAnswer";
   if (command.state === "rejected")
-    return command.reason === "incarnation" ? "chat.queue.problem.restarted" : "chat.queue.problem.wentOut";
+    return command.reason === "incarnation"
+      ? "chat.queue.problem.restarted"
+      : "chat.queue.problem.wentOut";
   return null;
 };
 
@@ -53,7 +55,10 @@ const QueueRow = ({
   const problem = problemKey(command);
   useEffect(() => {
     if (problem == null) return;
-    const timer = setTimeout(() => session.clearQueueCommand(entry.id), PROBLEM_MS);
+    const timer = setTimeout(
+      () => session.clearQueueCommand(entry.id),
+      PROBLEM_MS
+    );
     return () => clearTimeout(timer);
   }, [problem, session, entry.id]);
   return (
@@ -71,7 +76,8 @@ const QueueRow = ({
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.nativeEvent.isComposing) {
               event.preventDefault();
-              if (draft.trim() !== "" && draft !== entry.message) void session.updateQueued(entry.id, draft);
+              if (draft.trim() !== "" && draft !== entry.message)
+                void session.updateQueued(entry.id, draft);
               onEdit(false);
             }
             if (event.key === "Escape") {
@@ -86,15 +92,22 @@ const QueueRow = ({
         <div className="min-w-0 flex-1 truncate">{entry.message}</div>
       )}
       {problem != null ? (
-        <span role="status" className="shrink-0 text-destructive">
+        <span role="status" className="text-destructive shrink-0">
           {t(problem)}
         </span>
       ) : (
-        <span className="shrink-0 text-muted-foreground">{t(HINT_KEYS[entry.waitingFor])}</span>
+        <span className="text-muted-foreground shrink-0">
+          {t(HINT_KEYS[entry.waitingFor])}
+        </span>
       )}
       {pending ? <Spinner aria-hidden /> : null}
       {editing ? null : (
-        <Button variant="ghost" size="sm" disabled={pending} onClick={() => onEdit(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pending}
+          onClick={() => onEdit(true)}
+        >
           {t("chat.queue.edit")}
         </Button>
       )}
@@ -112,10 +125,20 @@ const QueueRow = ({
 };
 
 /** Rows of entries the stream removed while a rejection is still shown. */
-const ghostRows = (queue: readonly QueueEntry[], commands: Record<string, QueueCommandState>): QueueEntry[] =>
+const ghostRows = (
+  queue: readonly QueueEntry[],
+  commands: Record<string, QueueCommandState>
+): QueueEntry[] =>
   Object.entries(commands)
-    .filter(([id, command]) => command.state !== "pending" && !queue.some((entry) => entry.id === id))
-    .map(([id, command]) => ({ id, message: command.text ?? "", waitingFor: "step" }));
+    .filter(
+      ([id, command]) =>
+        command.state !== "pending" && !queue.some((entry) => entry.id === id)
+    )
+    .map(([id, command]) => ({
+      id,
+      message: command.text ?? "",
+      waitingFor: "step",
+    }));
 
 export const QueueSlot = ({
   editingId,
@@ -135,7 +158,12 @@ export const QueueSlot = ({
   const shown = expanded || rows.length <= 3 ? rows : rows.slice(0, 3);
   const transition = queueRow(pref);
   return (
-    <div className="flex flex-col gap-1.5 px-4" data-slot="queue-slot" aria-label={t("chat.queue.label")} role="list">
+    <div
+      className="flex flex-col gap-1.5 px-4"
+      data-slot="queue-slot"
+      aria-label={t("chat.queue.label")}
+      role="list"
+    >
       <AnimatePresence initial={false}>
         {shown.map((entry) => (
           <motion.div
@@ -157,11 +185,18 @@ export const QueueSlot = ({
         ))}
       </AnimatePresence>
       {rows.length > 3 ? (
-        <Button variant="ghost" size="sm" className="self-start" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
-          {expanded ? t("chat.queue.fewer") : t("chat.queue.more", { count: rows.length - 3 })}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded
+            ? t("chat.queue.fewer")
+            : t("chat.queue.more", { count: rows.length - 3 })}
         </Button>
       ) : null}
     </div>
   );
 };
-

@@ -26,7 +26,9 @@ const agentQueue = () => {
   let entries: QueueEntry[] = [];
   let next = 0;
   const publish = (relay: FakeRelay) =>
-    relay.emit(b.custom("queue.updated", { messages: entries, dequeued: null }));
+    relay.emit(
+      b.custom("queue.updated", { messages: entries, dequeued: null })
+    );
   return {
     respawn(relay: FakeRelay) {
       incarnation = "inc-2";
@@ -39,9 +41,20 @@ const agentQueue = () => {
       entries = entries.slice(1);
       publish(relay);
     },
-    handler: (command: string, input: Record<string, unknown>, relay: FakeRelay) => {
+    handler: (
+      command: string,
+      input: Record<string, unknown>,
+      relay: FakeRelay
+    ) => {
       if (command === "enqueue") {
-        entries = [...entries, { id: `q-${++next}`, message: String(input.message), waitingFor: "step" }];
+        entries = [
+          ...entries,
+          {
+            id: `q-${++next}`,
+            message: String(input.message),
+            waitingFor: "step",
+          },
+        ];
         publish(relay);
         return;
       }
@@ -53,7 +66,8 @@ const agentQueue = () => {
             incarnation,
             entryId,
             command,
-            reason: input.incarnation !== incarnation ? "incarnation" : "not_found",
+            reason:
+              input.incarnation !== incarnation ? "incarnation" : "not_found",
           })
         );
         publish(relay);
@@ -62,7 +76,11 @@ const agentQueue = () => {
       entries =
         command === "remove"
           ? entries.filter((entry) => entry.id !== entryId)
-          : entries.map((entry) => (entry.id === entryId ? { ...entry, message: String(input.message) } : entry));
+          : entries.map((entry) =>
+              entry.id === entryId
+                ? { ...entry, message: String(input.message) }
+                : entry
+            );
       publish(relay);
     },
   };
@@ -71,7 +89,11 @@ const agentQueue = () => {
 const open = async () => {
   const queue = agentQueue();
   const relay = new FakeRelay({ onQueue: queue.handler });
-  relay.emitAll([...b.sessionReady(), b.runStarted("r1"), ...b.text("u1", "user", "go")]);
+  relay.emitAll([
+    ...b.sessionReady(),
+    b.runStarted("r1"),
+    ...b.text("u1", "user", "go"),
+  ]);
   const session = new ThreadSession({ ai: relay.ai, threadId: "t-1" });
   sessions.push(session);
   await session.load();
@@ -82,13 +104,17 @@ describe("R2-T21 queue (runtime)", () => {
   it("enqueue shows only through queue.updated; edit/remove carry incarnation + id", async () => {
     const { relay, session } = await open();
     await session.enqueue("later");
-    await vi.waitFor(() => expect(session.store.state.queue.map((e) => e.message)).toEqual(["later"]));
+    await vi.waitFor(() =>
+      expect(session.store.state.queue.map((e) => e.message)).toEqual(["later"])
+    );
     await session.updateQueued("q-1", "sooner");
     expect(relay.stats.queue.at(-1)).toMatchObject({
       command: "update",
       input: { incarnation: "inc-1", entryId: "q-1", message: "sooner" },
     });
-    await vi.waitFor(() => expect(session.store.state.queue[0]?.message).toBe("sooner"));
+    await vi.waitFor(() =>
+      expect(session.store.state.queue[0]?.message).toBe("sooner")
+    );
     expect(session.store.state.queueCommands).toEqual({});
     await session.removeQueued("q-1");
     await vi.waitFor(() => expect(session.store.state.queue).toEqual([]));
@@ -102,21 +128,36 @@ describe("R2-T21 queue (runtime)", () => {
     queue.drain(relay);
     await session.updateQueued("q-1", "edited");
     await vi.waitFor(() =>
-      expect(session.store.state.queueCommands["q-1"]).toMatchObject({ state: "rejected", reason: "not_found" })
+      expect(session.store.state.queueCommands["q-1"]).toMatchObject({
+        state: "rejected",
+        reason: "not_found",
+      })
     );
     session.clearQueueCommand("q-1");
     await session.enqueue("b");
     await vi.waitFor(() => expect(session.store.state.queue).toHaveLength(1));
     const staleIncarnation = session.store.state.incarnation;
     queue.respawn(relay);
-    await vi.waitFor(() => expect(session.store.state.incarnation).toBe("inc-2"));
-    // A command still carrying the old incarnation (read before the respawn).
-    relay.ai.queue.update({ threadId: "t-1", incarnation: staleIncarnation!, entryId: "q-1", message: "x" });
     await vi.waitFor(() =>
-      expect(relay.stats.queue.at(-1)).toMatchObject({ command: "update", input: { incarnation: "inc-1" } })
+      expect(session.store.state.incarnation).toBe("inc-2")
+    );
+    // A command still carrying the old incarnation (read before the respawn).
+    relay.ai.queue.update({
+      threadId: "t-1",
+      incarnation: staleIncarnation!,
+      entryId: "q-1",
+      message: "x",
+    });
+    await vi.waitFor(() =>
+      expect(relay.stats.queue.at(-1)).toMatchObject({
+        command: "update",
+        input: { incarnation: "inc-1" },
+      })
     );
     await vi.waitFor(() =>
-      expect(session.store.state.queueCommands["q-1"]).toMatchObject({ reason: "incarnation" })
+      expect(session.store.state.queueCommands["q-1"]).toMatchObject({
+        reason: "incarnation",
+      })
     );
     expect(session.store.state.queue.map((e) => e.message)).toEqual(["b"]);
   });
@@ -127,7 +168,14 @@ describe("R2-T21 queue (runtime)", () => {
     const session = new ThreadSession({ ai: relay.ai, threadId: "t-1" });
     sessions.push(session);
     await session.load();
-    relay.emit(b.custom("queue.command_rejected", { incarnation: "inc-1", entryId: "q-1", command: "update", reason: "not_found" }));
+    relay.emit(
+      b.custom("queue.command_rejected", {
+        incarnation: "inc-1",
+        entryId: "q-1",
+        command: "update",
+        reason: "not_found",
+      })
+    );
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(session.store.state.queueCommands).toEqual({});
     vi.useFakeTimers();
@@ -148,7 +196,9 @@ describe("R2-T21 queue (runtime)", () => {
 
 describe("R2-T10 busy", () => {
   it("any source is busy", () => {
-    expect(isBusy({ turnBusy: false, activeRun: false, outbox: 0 })).toBe(false);
+    expect(isBusy({ turnBusy: false, activeRun: false, outbox: 0 })).toBe(
+      false
+    );
     expect(isBusy({ turnBusy: true, activeRun: false, outbox: 0 })).toBe(true);
     expect(isBusy({ turnBusy: false, activeRun: true, outbox: 0 })).toBe(true);
     expect(isBusy({ turnBusy: false, activeRun: false, outbox: 1 })).toBe(true);
@@ -158,7 +208,11 @@ describe("R2-T10 busy", () => {
     let started: (() => void) | null = null;
     const relay = new FakeRelay({
       onSend: (input, r) => {
-        started = () => r.emitAll([b.runStarted(input.runId), ...b.text(input.messages[0]!.id, "user", "x")]);
+        started = () =>
+          r.emitAll([
+            b.runStarted(input.runId),
+            ...b.text(input.messages[0]!.id, "user", "x"),
+          ]);
         return { runId: input.runId, status: "started" };
       },
     });

@@ -9,7 +9,6 @@
 import type { UIMessage } from "@tanstack/ai-client";
 
 import { isDefinitive, type AiClient } from "#next/data/ai";
-
 import type { AiSendAck } from "#shared/contract/ai";
 
 export type OutboxState = "sending" | "accepted" | "unconfirmed" | "failed";
@@ -76,7 +75,9 @@ const remove = (host: AdmissionHost, id: string): void =>
 const find = (host: AdmissionHost, id: string): OutboxEntry | undefined =>
   host.outbox().find((entry) => entry.id === id);
 
-const statusOf = (ack: AiSendAck): Exclude<AdmissionKind, "unconfirmed" | "stale" | "duplicate"> =>
+const statusOf = (
+  ack: AiSendAck
+): Exclude<AdmissionKind, "unconfirmed" | "stale" | "duplicate"> =>
   ack.status === "duplicate" ? (ack.original ?? "started") : ack.status;
 
 export const admit = async (
@@ -87,7 +88,10 @@ export const admit = async (
   if (entry == null) return { kind: "stale" };
   const { gen, rev } = host.token();
   const attempts = entry.attempts + 1;
-  patch(host, entryId, { attempts, state: entry.state === "failed" ? "sending" : entry.state });
+  patch(host, entryId, {
+    attempts,
+    state: entry.state === "failed" ? "sending" : entry.state,
+  });
   const stale = (): boolean => {
     const now = host.token();
     return now.gen !== gen || now.rev !== rev;
@@ -203,14 +207,14 @@ export const withOutbox = (
   const ids = new Set(messages.map((message) => message.id));
   const pending = outbox
     .filter((entry) => !ids.has(entry.id))
-    .map(
-      (entry): UIMessage => ({
-        id: entry.id,
-        role: "user",
-        parts: [{ type: "text", content: entry.text }],
-        createdAt: new Date(entry.createdAt),
-        metadata: { abacus: { pending: true, state: entry.state } },
-      })
-    );
-  return pending.length === 0 ? (messages as UIMessage[]) : [...messages, ...pending];
+    .map((entry): UIMessage => ({
+      id: entry.id,
+      role: "user",
+      parts: [{ type: "text", content: entry.text }],
+      createdAt: new Date(entry.createdAt),
+      metadata: { abacus: { pending: true, state: entry.state } },
+    }));
+  return pending.length === 0
+    ? (messages as UIMessage[])
+    : [...messages, ...pending];
 };

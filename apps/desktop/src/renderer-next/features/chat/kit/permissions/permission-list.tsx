@@ -19,7 +19,9 @@ import { present } from "./presenters";
 import { permissionSelection, selectPermission } from "./selection";
 
 export const inlineKeyOf = (descriptor: PermissionDescriptor): string | null =>
-  descriptor.toolCallId == null ? null : toolKey(descriptor.subagentRunId, descriptor.toolCallId);
+  descriptor.toolCallId == null
+    ? null
+    : toolKey(descriptor.subagentRunId, descriptor.toolCallId);
 
 const useItems = (): PermissionDescriptor[] => {
   const { session } = useChatView();
@@ -27,25 +29,41 @@ const useItems = (): PermissionDescriptor[] => {
 };
 
 /** The chip or card that answers next when the current one is answered. */
-const nextAfter = (items: readonly PermissionDescriptor[], id: string): string | null => {
+const nextAfter = (
+  items: readonly PermissionDescriptor[],
+  id: string
+): string | null => {
   const rest = items.filter((item) => item.id !== id);
   const index = items.findIndex((item) => item.id === id);
   return (rest[index] ?? rest[0])?.id ?? null;
 };
 
-export const PermissionTray = ({ autoFocus = false }: { autoFocus?: boolean }) => {
+export const PermissionTray = ({
+  autoFocus = false,
+}: {
+  autoFocus?: boolean;
+}) => {
   const { t } = useTranslation();
   const { threadId } = useChatView();
   const items = useItems();
-  const chosen = useSelector(permissionSelection, (state) => state[threadId] ?? null);
+  const chosen = useSelector(
+    permissionSelection,
+    (state) => state[threadId] ?? null
+  );
   if (items.length === 0) return null;
   const selected = items.find((item) => item.id === chosen) ?? items[0]!;
   return (
     <div className="flex flex-col gap-2" data-slot="permission-tray">
       {items.length > 1 ? (
-        <div role="toolbar" aria-label={t("chat.permission.pending", { count: items.length })} className="flex flex-wrap gap-1.5">
+        <div
+          role="toolbar"
+          aria-label={t("chat.permission.pending", { count: items.length })}
+          className="flex flex-wrap gap-1.5"
+        >
           {items.map((item) => {
-            const model = present(item.metadata.abacus.request as PermissionRequest);
+            const model = present(
+              item.metadata.abacus.request as PermissionRequest
+            );
             return (
               <button
                 key={item.id}
@@ -53,10 +71,10 @@ export const PermissionTray = ({ autoFocus = false }: { autoFocus?: boolean }) =
                 aria-pressed={item.id === selected.id}
                 onClick={() => selectPermission(threadId, item.id)}
                 className={cn(
-                  "h-7 max-w-60 truncate rounded-full px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "focus-visible:ring-ring h-7 max-w-60 truncate rounded-full px-3 text-xs outline-none focus-visible:ring-2",
                   item.id === selected.id
                     ? "bg-foreground text-background"
-                    : "bg-[var(--chat-surface)] text-foreground hover:bg-[var(--chat-surface-2)]"
+                    : "text-foreground bg-[var(--chat-surface)] hover:bg-[var(--chat-surface-2)]"
                 )}
               >
                 {t(`chat.permission.chip.${model.chip}`, model.chipValues)}
@@ -69,7 +87,9 @@ export const PermissionTray = ({ autoFocus = false }: { autoFocus?: boolean }) =
         key={selected.id}
         descriptor={selected}
         autoFocus={autoFocus}
-        onAnswered={() => selectPermission(threadId, nextAfter(items, selected.id))}
+        onAnswered={() =>
+          selectPermission(threadId, nextAfter(items, selected.id))
+        }
       />
     </div>
   );

@@ -23,19 +23,32 @@ const audit = async () => {
     runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
     rules: { "color-contrast": { enabled: false }, region: { enabled: false } },
   });
-  return results.violations.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`);
+  return results.violations.map(
+    (violation) =>
+      `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`
+  );
 };
 
 describe("R2-T26 a11y", () => {
-  it.each(SCENARIOS.map((scenario) => scenario.id))("%s has no axe violations and named icon buttons", async (id) => {
-    current = await renderScenario(id);
-    await waitFor(() => expect(document.querySelector('[data-slot="chat-layout"]')).toBeTruthy());
-    expect(await audit()).toEqual([]);
-    for (const button of document.querySelectorAll("button"))
-      expect(button.getAttribute("aria-label") ?? button.textContent?.trim(), button.outerHTML.slice(0, 120)).toBeTruthy();
-    for (const card of document.querySelectorAll('[data-slot="permission-card"]'))
-      expect(card.getAttribute("role")).toBe("group");
-  });
+  it.each(SCENARIOS.map((scenario) => scenario.id))(
+    "%s has no axe violations and named icon buttons",
+    async (id) => {
+      current = await renderScenario(id);
+      await waitFor(() =>
+        expect(document.querySelector('[data-slot="chat-layout"]')).toBeTruthy()
+      );
+      expect(await audit()).toEqual([]);
+      for (const button of document.querySelectorAll("button"))
+        expect(
+          button.getAttribute("aria-label") ?? button.textContent?.trim(),
+          button.outerHTML.slice(0, 120)
+        ).toBeTruthy();
+      for (const card of document.querySelectorAll(
+        '[data-slot="permission-card"]'
+      ))
+        expect(card.getAttribute("role")).toBe("group");
+    }
+  );
 
   it("tray chips are toggle buttons", async () => {
     current = await renderScenario("perm-two-pending");
@@ -48,7 +61,10 @@ describe("R2-T26 a11y", () => {
     current = await renderScenario("session-running");
     const region = document.querySelector('[data-slot="chat-announcer"]')!;
     act(() => {
-      current!.fixture.relay.emitAll([b.toolResult("c4", { text: "ok" }), b.runFinished("r1")]);
+      current!.fixture.relay.emitAll([
+        b.toolResult("c4", { text: "ok" }),
+        b.runFinished("r1"),
+      ]);
     });
     await waitFor(() => expect(region.textContent).toBe("Reply finished"));
   });

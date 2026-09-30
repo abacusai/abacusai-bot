@@ -11,7 +11,10 @@ import { FakeRelay } from "../fixtures/relay";
 import { ThreadSession } from "./session";
 
 const sessions: ThreadSession[] = [];
-const open = (relay: FakeRelay, extra: Partial<ConstructorParameters<typeof ThreadSession>[0]> = {}) => {
+const open = (
+  relay: FakeRelay,
+  extra: Partial<ConstructorParameters<typeof ThreadSession>[0]> = {}
+) => {
   const session = new ThreadSession({
     ai: relay.ai,
     threadId: relay.threadId,
@@ -53,7 +56,9 @@ describe("R2-T1 positions", () => {
   it("replays the active run inclusively from RUN_STARTED", async () => {
     const events = golden("plain-text");
     const cut = events.findIndex(
-      (item) => item.event.type === "TEXT_MESSAGE_CONTENT" && (item.event as { messageId: string }).messageId !== "u-1"
+      (item) =>
+        item.event.type === "TEXT_MESSAGE_CONTENT" &&
+        (item.event as { messageId: string }).messageId !== "u-1"
     );
     const relay = new FakeRelay({ events: events.slice(0, cut + 1) });
     const startSeq = relay.activeRun()!.startSeq;
@@ -81,7 +86,9 @@ describe("R2-T1 positions", () => {
 
   it("is busy with a Stop target before any replayed content", async () => {
     const events = golden("plain-text");
-    const cut = events.findIndex((item) => item.event.type === "TEXT_MESSAGE_END");
+    const cut = events.findIndex(
+      (item) => item.event.type === "TEXT_MESSAGE_END"
+    );
     const relay = new FakeRelay({ events: events.slice(0, cut + 1) });
     relay.faults.joinRun = () => "stall";
     const session = open(relay, { readyCapMs: 20 });

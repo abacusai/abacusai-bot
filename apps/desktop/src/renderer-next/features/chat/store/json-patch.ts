@@ -72,8 +72,7 @@ const applyObject = (
 };
 
 const applyOne = (doc: unknown, op: PatchOp): unknown => {
-  if (op.op !== "add" && op.op !== "replace" && op.op !== "remove")
-    return FAIL;
+  if (op.op !== "add" && op.op !== "replace" && op.op !== "remove") return FAIL;
   const tokens = parsePointer(op.path);
   if (tokens == null) return FAIL;
   if (tokens.length === 0) return op.op === "remove" ? FAIL : op.value;

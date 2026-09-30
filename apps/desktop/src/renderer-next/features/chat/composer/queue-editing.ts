@@ -3,5 +3,8 @@ import { Store } from "@tanstack/react-store";
 
 export const queueEditing = new Store<Record<string, string | null>>({});
 
-export const setQueueEditing = (threadId: string, entryId: string | null): void =>
+export const setQueueEditing = (
+  threadId: string,
+  entryId: string | null
+): void =>
   queueEditing.setState((state) => ({ ...state, [threadId]: entryId }));

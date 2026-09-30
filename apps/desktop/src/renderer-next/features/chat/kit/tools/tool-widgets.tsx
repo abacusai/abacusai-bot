@@ -25,7 +25,17 @@ const lineFor = (name: string): Widget => {
   return Line;
 };
 
-const KNOWN = ["bash", "read", "batch_file_read", "write", "edit", "ast_edit", "batch_edit", "notebook_edit", "todo"];
+const KNOWN = [
+  "bash",
+  "read",
+  "batch_file_read",
+  "write",
+  "edit",
+  "ast_edit",
+  "batch_edit",
+  "notebook_edit",
+  "todo",
+];
 const KNOWN_TOOL_WIDGETS: Record<string, Widget> = Object.fromEntries(
   KNOWN.map((name) => [name, lineFor(name)])
 );
@@ -36,17 +46,23 @@ const GenericLine = ({ part, result }: ToolProps<unknown>) => (
 );
 
 export const sessionToolWidgets = new Proxy(KNOWN_TOOL_WIDGETS, {
-  get: (known, name) => (typeof name === "string" ? (known[name] ?? GenericLine) : undefined),
+  get: (known, name) =>
+    typeof name === "string" ? (known[name] ?? GenericLine) : undefined,
 }) as Record<string, Widget>;
 
 /** Bots: the inline approval card of the canvas BotApproval board. */
 const BotToolSlot = ({ part }: ToolProps<unknown>) => {
   const { session, inline } = useChatView();
   const scope = useSubagentScope();
-  const descriptor = useThreadStore(session, (state) => descriptorFor(state, scope, part.id));
+  const descriptor = useThreadStore(session, (state) =>
+    descriptorFor(state, scope, part.id)
+  );
   const key = toolKey(scope, part.id);
   const joined = descriptor != null;
-  useEffect(() => (joined ? inline.register(key) : undefined), [joined, inline, key]);
+  useEffect(
+    () => (joined ? inline.register(key) : undefined),
+    [joined, inline, key]
+  );
   return descriptor == null ? null : <PermissionCard descriptor={descriptor} />;
 };
 

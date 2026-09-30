@@ -4,7 +4,11 @@
  * expanders (bash, diff, read, browser, generic).
  */
 import { buildToolTitle } from "@abacus-ai/agent/tool-display";
-import { parsePartialJSON, type ToolCallPart, type ToolResultPart } from "@tanstack/ai-client";
+import {
+  parsePartialJSON,
+  type ToolCallPart,
+  type ToolResultPart,
+} from "@tanstack/ai-client";
 import {
   Bot,
   ChevronRight,
@@ -22,7 +26,11 @@ import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
 import { Button } from "#next/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "#next/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "#next/ui/collapsible";
 
 import { highlightCode, languageForPath } from "../../markdown/highlighter";
 import { Markdown } from "../../markdown/markdown";
@@ -85,12 +93,21 @@ const firstSeenOf = (id: string): number => {
   return at;
 };
 
-export type Expander = "bash" | "diff" | "read" | "browser" | "generic" | "none";
+export type Expander =
+  | "bash"
+  | "diff"
+  | "read"
+  | "browser"
+  | "generic"
+  | "none";
 
 export const expanderFor = (name: string): Expander => {
   if (name === "bash") return "bash";
   if (name === "read" || name === "batch_file_read") return "read";
-  if (["write", "edit", "ast_edit", "batch_edit", "notebook_edit"].includes(name)) return "diff";
+  if (
+    ["write", "edit", "ast_edit", "batch_edit", "notebook_edit"].includes(name)
+  )
+    return "diff";
   if (name.startsWith("browser")) return "browser";
   if (name === "todo") return "none";
   return "generic";
@@ -100,29 +117,49 @@ export const expanderFor = (name: string): Expander => {
 export const useNormalizedTool = (
   part: ToolCallPart,
   result: ToolResultPart | undefined
-): { tool: NormalizedTool; input: Record<string, unknown>; needsYou: string | null } => {
+): {
+  tool: NormalizedTool;
+  input: Record<string, unknown>;
+  needsYou: string | null;
+} => {
   const { session } = useChatView();
   const scope = useSubagentScope();
   const key = toolKey(scope, part.id);
-  const live = useThreadStore(session, (state) => ({
-    output: state.tools.output[key],
-    display: state.tools.display[key],
-    runActive: state.runs.active != null,
-    needsYou: descriptorFor(state, scope, part.id)?.id ?? null,
-  }), (a, b) =>
-    a.output === b.output && a.display === b.display && a.runActive === b.runActive && a.needsYou === b.needsYou
+  const live = useThreadStore(
+    session,
+    (state) => ({
+      output: state.tools.output[key],
+      display: state.tools.display[key],
+      runActive: state.runs.active != null,
+      needsYou: descriptorFor(state, scope, part.id)?.id ?? null,
+    }),
+    (a, b) =>
+      a.output === b.output &&
+      a.display === b.display &&
+      a.runActive === b.runActive &&
+      a.needsYou === b.needsYou
   );
   const tool = normalizeTool(
     part,
     result,
-    { ...(live.output != null ? { output: live.output } : {}), ...(live.display != null ? { display: live.display } : {}) },
+    {
+      ...(live.output != null ? { output: live.output } : {}),
+      ...(live.display != null ? { display: live.display } : {}),
+    },
     { runActive: live.runActive, needsYou: live.needsYou != null },
     parsePartialJSON
   );
-  return { tool, input: toolInput(part, parsePartialJSON), needsYou: live.needsYou };
+  return {
+    tool,
+    input: toolInput(part, parsePartialJSON),
+    needsYou: live.needsYou,
+  };
 };
 
-export const toolTitle = (name: string, input: Record<string, unknown>): string => {
+export const toolTitle = (
+  name: string,
+  input: Record<string, unknown>
+): string => {
   try {
     return buildToolTitle(name, input);
   } catch {
@@ -138,18 +175,38 @@ const Meta = ({ meta }: { meta: ToolMeta }) => {
     case "changes":
       return (
         <span className="flex gap-1">
-          <span className="text-[var(--chat-diff-add-fg)]">+{meta.additions}</span>
-          <span className="text-[var(--chat-diff-del-fg)]">-{meta.deletions}</span>
+          <span className="text-[var(--chat-diff-add-fg)]">
+            +{meta.additions}
+          </span>
+          <span className="text-[var(--chat-diff-del-fg)]">
+            -{meta.deletions}
+          </span>
         </span>
       );
     case "lines":
-      return <span className="text-muted-foreground">{t("chat.tool.meta.lines", { from: meta.from, to: meta.to })}</span>;
+      return (
+        <span className="text-muted-foreground">
+          {t("chat.tool.meta.lines", { from: meta.from, to: meta.to })}
+        </span>
+      );
     case "matches":
-      return <span className="text-muted-foreground">{t("chat.tool.meta.matches", { count: meta.count })}</span>;
+      return (
+        <span className="text-muted-foreground">
+          {t("chat.tool.meta.matches", { count: meta.count })}
+        </span>
+      );
     case "elapsed":
-      return <span className="text-muted-foreground">{formatElapsed(now - meta.since)}</span>;
+      return (
+        <span className="text-muted-foreground">
+          {formatElapsed(now - meta.since)}
+        </span>
+      );
     case "exit":
-      return <span className="text-destructive">{t("chat.tool.meta.exit", { code: meta.code })}</span>;
+      return (
+        <span className="text-destructive">
+          {t("chat.tool.meta.exit", { code: meta.code })}
+        </span>
+      );
   }
 };
 
@@ -180,7 +237,12 @@ const DiffView = ({
         ))}
       </div>
       {limit != null && lines.length > limit && !all ? (
-        <Button variant="ghost" size="sm" className="self-start" onClick={() => setAll(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          onClick={() => setAll(true)}
+        >
           {t("chat.tool.showAll", { count: lines.length })}
         </Button>
       ) : null}
@@ -188,11 +250,15 @@ const DiffView = ({
   );
 };
 
-export const linesOfDiff = (diff: NonNullable<NormalizedTool["diff"]>): DiffLine[] =>
+export const linesOfDiff = (
+  diff: NonNullable<NormalizedTool["diff"]>
+): DiffLine[] =>
   diff.unified != null && diff.original == null
     ? parseUnified(diff.unified)
     : diffLines(
-        diff.original == null || diff.original === "" ? [] : diff.original.split("\n"),
+        diff.original == null || diff.original === ""
+          ? []
+          : diff.original.split("\n"),
         diff.final == null || diff.final === "" ? [] : diff.final.split("\n")
       );
 
@@ -218,7 +284,10 @@ const BashBody = ({ tool }: { tool: NormalizedTool }) => {
           className="chat-terminal"
           onScroll={(event) => {
             const element = event.currentTarget;
-            setFollowing(element.scrollHeight - element.scrollTop - element.clientHeight < 8);
+            setFollowing(
+              element.scrollHeight - element.scrollTop - element.clientHeight <
+                8
+            );
           }}
         >
           {tail}
@@ -228,24 +297,43 @@ const BashBody = ({ tool }: { tool: NormalizedTool }) => {
   );
 };
 
-const ReadBody = ({ tool, input }: { tool: NormalizedTool; input: Record<string, unknown> }) => {
+const ReadBody = ({
+  tool,
+  input,
+}: {
+  tool: NormalizedTool;
+  input: Record<string, unknown>;
+}) => {
   const { t } = useTranslation();
   const { onOpenFile, workspaceRoot } = useChatView();
   const content = tool.read?.content ?? tool.text;
-  const path = tool.read?.filePath ?? (typeof input.path === "string" ? input.path : undefined);
+  const path =
+    tool.read?.filePath ??
+    (typeof input.path === "string" ? input.path : undefined);
   const shown = content.split("\n").slice(0, 200).join("\n");
   const abs =
-    path == null ? null : path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || workspaceRoot == null
-      ? path
-      : `${workspaceRoot.replace(/[\\/]+$/, "")}/${path}`;
+    path == null
+      ? null
+      : path.startsWith("/") ||
+          /^[A-Za-z]:[\\/]/.test(path) ||
+          workspaceRoot == null
+        ? path
+        : `${workspaceRoot.replace(/[\\/]+$/, "")}/${path}`;
   return (
     <div className="flex flex-col gap-1.5">
       <pre
         className="chat-terminal"
-        dangerouslySetInnerHTML={{ __html: highlightCode(shown, languageForPath(path)) }}
+        dangerouslySetInnerHTML={{
+          __html: highlightCode(shown, languageForPath(path)),
+        }}
       />
       {abs != null && onOpenFile != null ? (
-        <Button variant="ghost" size="sm" className="self-start" onClick={() => onOpenFile(abs)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          onClick={() => onOpenFile(abs)}
+        >
           {t("chat.tool.openFile")}
         </Button>
       ) : null}
@@ -270,11 +358,15 @@ const Body = ({
       return <BashBody tool={tool} />;
     case "diff":
       return tool.diff == null ? (
-        tool.text === "" ? null : <pre className="chat-terminal">{tool.text}</pre>
+        tool.text === "" ? null : (
+          <pre className="chat-terminal">{tool.text}</pre>
+        )
       ) : (
         <DiffView
           lines={linesOfDiff(tool.diff)}
-          lang={languageForPath(typeof input.path === "string" ? input.path : undefined)}
+          lang={languageForPath(
+            typeof input.path === "string" ? input.path : undefined
+          )}
           limit={linesOfDiff(tool.diff).length > 2000 ? 400 : undefined}
         />
       );
@@ -284,14 +376,22 @@ const Body = ({
       return (
         <div className="flex flex-col gap-1 text-xs">
           <div className="chat-mono text-muted-foreground">
-            {[input.action, input.url].filter((v) => typeof v === "string").join(" ")}
+            {[input.action, input.url]
+              .filter((v) => typeof v === "string")
+              .join(" ")}
           </div>
-          {tool.text === "" ? null : <pre className="chat-terminal">{tool.text}</pre>}
+          {tool.text === "" ? null : (
+            <pre className="chat-terminal">{tool.text}</pre>
+          )}
         </div>
       );
     case "generic":
       return tool.formatted != null ? (
-        <Markdown content={tool.formatted} role="assistant" workspaceRoot={workspaceRoot} />
+        <Markdown
+          content={tool.formatted}
+          role="assistant"
+          workspaceRoot={workspaceRoot}
+        />
       ) : tool.text === "" ? null : (
         <pre className="chat-terminal">{tool.text}</pre>
       );
@@ -304,7 +404,12 @@ const hasBody = (expander: Expander, tool: NormalizedTool): boolean => {
   if (expander === "none") return false;
   if (expander === "bash") return tool.terminal != null || tool.text !== "";
   if (expander === "diff") return tool.diff != null || tool.text !== "";
-  return tool.text !== "" || tool.formatted != null || tool.error != null || expander === "browser";
+  return (
+    tool.text !== "" ||
+    tool.formatted != null ||
+    tool.error != null ||
+    expander === "browser"
+  );
 };
 
 export interface ToolLineProps {
@@ -320,16 +425,29 @@ export const ToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   const expander = fixed ?? expanderFor(part.name);
   const Icon = KIND_ICONS[kindOf(part.name)] ?? Wrench;
   const title = toolTitle(part.name, input);
-  const meta = toolMeta(part.name, input, tool, tool.status === "running" ? firstSeenOf(part.id) : null);
+  const meta = toolMeta(
+    part.name,
+    input,
+    tool,
+    tool.status === "running" ? firstSeenOf(part.id) : null
+  );
   const bodyId = useId();
   const expandable = hasBody(expander, tool);
   const row = (
     <>
-      <span className={cn("shrink-0", STATUS_CLASS[tool.status])} data-status={tool.status}>
+      <span
+        className={cn("shrink-0", STATUS_CLASS[tool.status])}
+        data-status={tool.status}
+      >
         {t(STATUS_KEY[tool.status])}
       </span>
-      <Icon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className={cn("min-w-0 truncate text-foreground", tool.status === "running" && "shimmer")}>
+      <Icon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+      <span
+        className={cn(
+          "text-foreground min-w-0 truncate",
+          tool.status === "running" && "shimmer"
+        )}
+      >
         {title}
       </span>
       <Meta meta={meta} />
@@ -337,11 +455,11 @@ export const ToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   );
   return (
     <Collapsible className="chat-tool-line" data-tool={part.name}>
-      <div className="flex min-h-7 items-center gap-2 font-mono text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex min-h-7 items-center gap-2 font-mono text-xs">
         {expandable ? (
           <CollapsibleTrigger
             aria-controls={bodyId}
-            className="group/tool flex min-w-0 flex-1 items-center gap-2 rounded-md text-start outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group/tool focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-2 rounded-md text-start outline-none focus-visible:ring-2"
           >
             {row}
             <ChevronRight
@@ -353,13 +471,17 @@ export const ToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
           <div className="flex min-w-0 flex-1 items-center gap-2">{row}</div>
         )}
         {needsYou != null ? (
-          <Button variant="ghost" size="sm" onClick={() => selectPermission(threadId, needsYou)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => selectPermission(threadId, needsYou)}
+          >
             {t("chat.tool.show")}
           </Button>
         ) : null}
       </div>
       {expandable ? (
-        <CollapsibleContent id={bodyId} className="pb-2 pt-1 ps-5">
+        <CollapsibleContent id={bodyId} className="ps-5 pt-1 pb-2">
           <Body expander={expander} tool={tool} input={input} />
         </CollapsibleContent>
       ) : null}

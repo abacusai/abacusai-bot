@@ -21,17 +21,52 @@ afterEach(async () => {
   current = null;
 });
 
-const t = (key: string, values?: Record<string, unknown>) => `${key}${values != null ? JSON.stringify(values) : ""}`;
+const t = (key: string, values?: Record<string, unknown>) =>
+  `${key}${values != null ? JSON.stringify(values) : ""}`;
 
 describe("R2-T15 status", () => {
   it("busy line labels", () => {
     const state = emptyThreadState();
-    expect(busyLabel(t, { state, running: ["Run npm test"], agents: 0 })).toBe("Run npm test");
-    expect(busyLabel(t, { state, running: ["a", "b"], agents: 0 })).toBe('chat.busy.tools{"count":2}');
-    expect(busyLabel(t, { state, running: [], agents: 3 })).toBe('chat.busy.agents{"count":3}');
-    expect(busyLabel(t, { state: { ...state, activity: { ...state.activity, retry: { attempt: 2, maxAttempts: 5, delayMs: 1, isNetworkError: false } } }, running: [], agents: 0 })).toBe('chat.busy.retrying{"attempt":2,"max":5}');
-    expect(busyLabel(t, { state: { ...state, permissions: { items: [{} as never], answering: {} } }, running: [], agents: 0 })).toBe("chat.busy.needsYou");
-    expect(busyLabel(t, { state, running: [], agents: 0 })).toBe("chat.busy.working");
+    expect(busyLabel(t, { state, running: ["Run npm test"], agents: 0 })).toBe(
+      "Run npm test"
+    );
+    expect(busyLabel(t, { state, running: ["a", "b"], agents: 0 })).toBe(
+      'chat.busy.tools{"count":2}'
+    );
+    expect(busyLabel(t, { state, running: [], agents: 3 })).toBe(
+      'chat.busy.agents{"count":3}'
+    );
+    expect(
+      busyLabel(t, {
+        state: {
+          ...state,
+          activity: {
+            ...state.activity,
+            retry: {
+              attempt: 2,
+              maxAttempts: 5,
+              delayMs: 1,
+              isNetworkError: false,
+            },
+          },
+        },
+        running: [],
+        agents: 0,
+      })
+    ).toBe('chat.busy.retrying{"attempt":2,"max":5}');
+    expect(
+      busyLabel(t, {
+        state: {
+          ...state,
+          permissions: { items: [{} as never], answering: {} },
+        },
+        running: [],
+        agents: 0,
+      })
+    ).toBe("chat.busy.needsYou");
+    expect(busyLabel(t, { state, running: [], agents: 0 })).toBe(
+      "chat.busy.working"
+    );
   });
 
   it("run marker: duration and steps (sessions)", async () => {
@@ -66,10 +101,17 @@ describe("R2-T15 status", () => {
     ]);
     current = await renderRelay(relay, "session");
     expect(await screen.findByText("Stopped")).toBeTruthy();
-    expect(screen.getByText("The model provider had a problem (400).")).toBeTruthy();
+    expect(
+      screen.getByText("The model provider had a problem (400).")
+    ).toBeTruthy();
     const log = screen.getByRole("log");
-    const order = [...log.querySelectorAll("[data-message-id], [data-slot=run-marker], [data-slot=error-card]")].map(
-      (node) => node.getAttribute("data-message-id") ?? node.getAttribute("data-slot")
+    const order = [
+      ...log.querySelectorAll(
+        "[data-message-id], [data-slot=run-marker], [data-slot=error-card]"
+      ),
+    ].map(
+      (node) =>
+        node.getAttribute("data-message-id") ?? node.getAttribute("data-slot")
     );
     expect(order.indexOf("run-marker")).toBeGreaterThan(order.indexOf("u1"));
     expect(order.indexOf("error-card")).toBeGreaterThan(order.indexOf("u2"));
@@ -79,8 +121,16 @@ describe("R2-T15 status", () => {
     const relay = new FakeRelay();
     relay.emitAll([
       ...b.sessionReady(),
-      b.custom("agent.notification", { severity: "info", message: "one", notificationKey: "k" }),
-      b.custom("agent.notification", { severity: "info", message: "two", notificationKey: "k" }),
+      b.custom("agent.notification", {
+        severity: "info",
+        message: "one",
+        notificationKey: "k",
+      }),
+      b.custom("agent.notification", {
+        severity: "info",
+        message: "two",
+        notificationKey: "k",
+      }),
     ]);
     current = await renderRelay(relay, "session");
     expect(await screen.findByText("two")).toBeTruthy();
@@ -91,17 +141,25 @@ describe("R2-T15 status", () => {
 describe("R2-T14 sub-agents", () => {
   it("Stop cancels the parent run; Open opens the agent", async () => {
     const onOpenSubagent = vi.fn();
-    const rendered = await renderScenario("session-subagents", { onOpenSubagent });
+    const rendered = await renderScenario("session-subagents", {
+      onOpenSubagent,
+    });
     current = rendered;
     const rows = await waitFor(() => {
-      const found = document.querySelectorAll<HTMLElement>('[data-slot="subagent-row"]');
+      const found = document.querySelectorAll<HTMLElement>(
+        '[data-slot="subagent-row"]'
+      );
       expect(found).toHaveLength(3);
       return found;
     });
-    fireEvent.click(within(rows[0]!).getByRole("button", { name: "Open agent" }));
+    fireEvent.click(
+      within(rows[0]!).getByRole("button", { name: "Open agent" })
+    );
     expect(onOpenSubagent).toHaveBeenCalledWith("sub-1");
     fireEvent.click(within(rows[1]!).getByRole("button", { name: "Stop" }));
-    await waitFor(() => expect(rendered.fixture.relay.stats.cancel).toEqual([{ runId: "r1" }]));
+    await waitFor(() =>
+      expect(rendered.fixture.relay.stats.cancel).toEqual([{ runId: "r1" }])
+    );
   });
 });
 
@@ -112,13 +170,34 @@ describe("R2-T21 queue (rendered)", () => {
       ...b.sessionReady(),
       b.runStarted("r1"),
       ...b.text("u1", "user", "go"),
-      b.custom("queue.updated", { messages: [{ id: "q-1", message: "later", waitingFor: "turn" }], dequeued: null }),
+      b.custom("queue.updated", {
+        messages: [{ id: "q-1", message: "later", waitingFor: "turn" }],
+        dequeued: null,
+      }),
     ]);
     current = await renderRelay(relay, "session");
     await screen.findByText("later");
-    relay.emit(b.custom("queue.command_rejected", { incarnation: "inc-1", entryId: "q-1", command: "update", reason: "not_found" }) as StreamChunk);
-    expect(await screen.findByText("That message already went out")).toBeTruthy();
-    relay.emit(b.custom("queue.command_rejected", { incarnation: "inc-1", entryId: "q-1", command: "update", reason: "incarnation" }));
-    expect(await screen.findByText("The agent restarted, so the queue changed")).toBeTruthy();
+    relay.emit(
+      b.custom("queue.command_rejected", {
+        incarnation: "inc-1",
+        entryId: "q-1",
+        command: "update",
+        reason: "not_found",
+      }) as StreamChunk
+    );
+    expect(
+      await screen.findByText("That message already went out")
+    ).toBeTruthy();
+    relay.emit(
+      b.custom("queue.command_rejected", {
+        incarnation: "inc-1",
+        entryId: "q-1",
+        command: "update",
+        reason: "incarnation",
+      })
+    );
+    expect(
+      await screen.findByText("The agent restarted, so the queue changed")
+    ).toBeTruthy();
   });
 });
