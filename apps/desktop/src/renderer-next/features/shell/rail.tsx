@@ -137,7 +137,7 @@ export const Rail = ({
         className="titlebar-nodrag focus-visible:ring-ring/50 mt-1.5 rounded-full outline-none focus-visible:ring-2"
       >
         <Avatar size="sm">
-          <AvatarFallback className="text-[11px] font-semibold">
+          <AvatarFallback className="text-foreground text-[11px] font-semibold">
             {initials}
           </AvatarFallback>
         </Avatar>

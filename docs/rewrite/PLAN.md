@@ -44,7 +44,7 @@ A from-scratch front end and a protocol change underneath it: `packages/agent` e
 
 - **Structure** — `ui/` atoms · `components/` molecules · `features/<area>/` organisms, hooks, collections · `routes/` compose only. Shared primitives stay under the renderer.
 
-- **Nuked** — zustand, framer-motion, react-tourlight, tsparticles, uuid, dicebear, monaco, katex, @lobehub icons, @aceternity registry, tw-animate-css, the legacy dialog wrapper, hand-rolled tabs/menus/listboxes, `?view=` redirects, `staticData.titleKey/backTo`, the 9.1k-line conversation layer.
+- **Nuked** — zustand, framer-motion, react-tourlight, tsparticles, uuid, dicebear, monaco, katex, @lobehub icons, @aceternity registry, the legacy dialog wrapper, hand-rolled tabs/menus/listboxes, `?view=` redirects, `staticData.titleKey/backTo`, the 9.1k-line conversation layer.
 
 - **Small libraries** — Typed + ESM; alpha/beta fine if maintained in the last 90 days; TanStack/shadcn first when equivalent.
 
@@ -55,7 +55,7 @@ A from-scratch front end and a protocol change underneath it: `packages/agent` e
 | react, react-dom | 19.2.8 | **19.3.x** | Stable `<ViewTransition>`, `<Activity>`, Fragment refs. |
 | @tanstack/react-router | 1.170.31, code-based | 1.170.40+, `@tanstack/router-plugin` 1.168+, `react-router-devtools` | File routes; `validateSearch` takes valibot directly (no adapter needed). |
 | @tanstack/react-query | 5.101.4 | latest 5.x | Non-collection reads and mutations. |
-| @tanstack/db, @tanstack/react-db | — | 0.10.0 / 0.4.2 | Custom `sync` over IPC; plain `createCollection` singletons (DbClient is for SSR). |
+| @tanstack/db, @tanstack/react-db | — | 0.9.2 / 0.4.1 (0.10.0 / 0.4.2 once published; spec 01 F2) | Custom `sync` over IPC; plain `createCollection` singletons (DbClient is for SSR). |
 | @tanstack/ai-react, ai-client, ai | — | 0.29.3 / 0.36.0 / 0.63.0 | Client is browser-safe; main runs `chat()`. |
 | @earendil-works/pi-coding-agent (SDK, headless) | 0.85.1 | **0.99.x** | We use its session/extension runtime, not its TUI. Bump for the positives (`ctx.executeTool`, `builtin:mcp` available, settle/turn boundaries, virtual models) but adopt a feature only where it does not change today’s behaviour. `pi-agent-core` alone would force re-implementing sessions, compaction and extensions. |
 | @orpc/server, @orpc/client, @orpc/contract, @orpc/tanstack-query | — | latest | Typed transport: MessagePort (Electron) and WebSocket adapters; event iterators for streams. |
@@ -65,12 +65,12 @@ A from-scratch front end and a protocol change underneath it: `packages/agent` e
 | @tanstack/markdown, @tanstack/highlight | 0.0.13 / 0.0.10 | latest | Used by TanStack AI’s `TextPart` too; highlight replaces Monaco for read-only views. |
 | @tanstack/react-form, react-pacer, react-devtools, react-hotkeys | form 1.33 | latest | Forms; debounce/queue; dev cockpit; typed shortcuts. |
 | valibot | — | 1.x | Search params, forms, IPC payload guards. |
-| motion | framer-motion 12.43 | `motion` 12.x (`motion/react`) | Layout, drag, springs, presence. |
+| motion | framer-motion 12.43 | `motion` 13.x (`motion/react`; spec 01 F8) | Layout, drag, springs, presence. |
 | shadcn, @shadcn/react, @shadcn/helpers | 4.19 / 0.3 / — | latest | Registry chat parts; `@shadcn/react` needs React ≥19; helpers for scripted chat fixtures (pins ai-client 0.20 — verify against 0.36). |
 | @base-ui/react | 1.7.0 | 1.6+ (registry decides) | Never imported outside `ui/`. |
 | tailwindcss, @tailwindcss/vite | 4.3.3 | latest 4.x | `shadcn/tailwind.css` brings `scroll-fade-*` and `shimmer-*` utilities. |
 | temml | katex | latest | Math as MathML Core; 10 KB font minimum. |
-| react-resizable-panels, i18next, ghostty-web, @pierre/trees, sonner, lucide-react | present | keep | Panels, 11 locales, terminal engine, file tree, toasts, icons. |
+| react-resizable-panels, i18next, ghostty-web, @pierre/trees, lucide-react | present | keep | Panels, 11 locales, terminal engine, file tree, icons. Toasts are the registry `toast` (Base UI), not sonner (spec 01 F6); `cn` and `cmdk` arrive with the registry (spec 01 §3.1). |
 | electron | 43.4.1 | **44.4.x** | Window Controls Overlay on Linux; overlay geometry delivered to WebContentsViews (#53639); View Transitions; `type: "panel"` windows. |
 
 ## Architecture
@@ -292,7 +292,7 @@ The `/__ui` gallery replays scripted conversations through `@shadcn/helpers/tans
 
 ## Tooling
 
-- **React Compiler** on the renderer (babel plugin via `@vitejs/plugin-react`); no hand-written memoisation.
+- **React Compiler** on the renderer through `@vitejs/plugin-react`'s native `compiler` option (`oxc-transform-react`, no Babel; spec 01 F1); no hand-written memoisation.
 - **TanStack Devtools** cockpit in dev: router, query, db, ai (`ai-client/devtools`), pacer; stripped in production.
 - **UI gallery** at `/__ui` with scripted chat fixtures; screenshot script (isolated-profile CDP) captures every route at 1280/1000/900/800 in both themes for PR review.
 - **knip**, **size-limit**, oxlint with React/a11y rules, oxfmt; Vitest browser mode for layout-dependent molecules; RTL stays; `@copilotkit/aimock`-style mock LLM for main-side host tests.
@@ -367,3 +367,4 @@ Delete the old renderer, conversation layer, NDJSON host, `window.api`, zustand 
 - Permissions are not TanStack native interrupts (its interrupt manager replaces the pending set and submits all-or-nothing, which would change approval timing). Each permission is an independent `CUSTOM permission.requested` descriptor answered with a `permission.respond` command carrying thread, process incarnation, run and permission id; the run stays open while waiting. The chat kit renders permissions from that state and joins them to tool widgets by `(subagentRunId, toolCallId)`.
 - Host services stay on the compat stream (not AG-UI client tools) for now.
 - Window chrome ships in legacy mode until the new renderer lands (`RENDERER_GENERATION`).
+- Spec 01 (renderer foundation) amendments: `tw-animate-css` stays (registry-owned); the rail's fifth item is Library with the canvas Connectors glyph; the registry `sidebar` is not used (its provider owns a global ⌘B); DB packages are 0.9.2 / 0.4.1 until 0.10.0 / 0.4.2 are published.
