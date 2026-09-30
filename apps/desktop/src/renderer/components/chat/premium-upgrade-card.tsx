@@ -9,7 +9,6 @@ import {
   useConnectFreeProvider,
   type FreeSource,
 } from "../../hooks/use-connect-free-provider";
-import { useLocalModels } from "../../hooks/use-local-models";
 import { useModelProvidersQuery } from "../../hooks/use-model-providers";
 import {
   ABACUS_BUY_CREDITS_URL,
@@ -17,7 +16,6 @@ import {
   creditsTier,
 } from "../../lib/abacus-credits";
 import { useCreditsStore } from "../../stores/credits-store";
-import { useLocalModelDialogStore } from "../../stores/local-model-dialog-store";
 import { Button } from "../ui";
 import { ProviderMark } from "./provider-mark";
 
@@ -39,19 +37,11 @@ const SOURCE_META: Record<FreeSource, string> = {
 export const PremiumUpgradeCard = ({
   dataId,
   scope = "abacus",
-  freeModels = [],
-  onPickModel,
-  onSwitchModel,
   onResume,
 }: {
   dataId: string;
   /** See exhaustedScope: what ran out, which the title names. */
   scope?: "abacus" | "pool";
-  /** Models the platform still serves for free; each one is a way to keep going. */
-  freeModels?: FreeModelSwitch[];
-  onPickModel?: (modelId: string) => void;
-  /** Point the user at the model picker: the other models they already hold. */
-  onSwitchModel?: () => void;
   /** Run the dead turn again on the free pool, once a source has joined it. */
   onResume?: () => void;
 }): JSX.Element => {
@@ -60,8 +50,6 @@ export const PremiumUpgradeCard = ({
   const { data: account } = useAbacusAccountQuery();
   const { data: providers } = useModelProvidersQuery();
   const { connect, connecting, keyDialog } = useConnectFreeProvider();
-  const { state: localModels } = useLocalModels();
-  const showLocalModelDialog = useLocalModelDialogStore((store) => store.show);
 
   // A card standing where a turn died is the freshest word that the credits
   // are gone; the sidebar keeps showing the way out after this chat is gone.
@@ -72,9 +60,6 @@ export const PremiumUpgradeCard = ({
   const tier = creditsTier(account);
   const paying = tier === "paid" || tier === "basic";
   const missing = paying ? [] : missingFreeSources(providers?.configured);
-  // Every free source connected and spent: the model that cannot run out.
-  const canGoLocal =
-    !paying && missing.length === 0 && localModels?.runtimeAvailable === true;
 
   const title = paying
     ? t("creditsCard.paidTitle")
@@ -85,9 +70,7 @@ export const PremiumUpgradeCard = ({
     ? t("creditsCard.paidBody")
     : missing.length > 0
       ? t("workspace.premiumUpgrade.connectNote")
-      : canGoLocal
-        ? t("workspace.premiumUpgrade.localNote")
-        : t("workspace.premiumUpgrade.switchNote");
+      : t("workspace.premiumUpgrade.switchNote");
 
   // A header and one row per way forward, each with its own button: the
   // decision is "which source?", and a list of them reads as a choice where
@@ -107,64 +90,19 @@ export const PremiumUpgradeCard = ({
           },
         },
       ]
-    : [
-        ...(onPickModel != null
-          ? freeModels.map((choice) => ({
-              key: "free-model",
-              mark: "abacus",
-              name: choice.label,
-              meta: t("workspace.premiumUpgrade.continueOn", {
-                model: choice.label,
-              }),
-              cta: t("workspace.premiumUpgrade.continueCta"),
-              onClick: () => onPickModel(choice.model),
-            }))
-          : []),
-        ...missing.map((source) => ({
-          key: `connect-${source}`,
-          mark: source,
-          name: t(SOURCE_NAME[source]),
-          meta: t(SOURCE_META[source]),
-          cta: t("workspace.premiumUpgrade.connectCta"),
-          disabled: connecting != null,
-          onClick: () => {
-            void connect(source).then((connected) => {
-              if (connected) onResume?.();
-            });
-          },
-        })),
-        ...(canGoLocal
-          ? [
-              {
-                key: "local",
-                mark: "local",
-                name: t("workspace.premiumUpgrade.localName"),
-                meta: t("workspace.premiumUpgrade.localMeta"),
-                cta: t("workspace.premiumUpgrade.setUpCta"),
-                quiet: true,
-                // Once the model is ready the dead turn runs again on it.
-                onClick: () =>
-                  showLocalModelDialog((model) => {
-                    onPickModel?.(model);
-                    onResume?.();
-                  }),
-              },
-            ]
-          : []),
-        ...(missing.length === 0 && !canGoLocal && onSwitchModel != null
-          ? [
-              {
-                key: "switch",
-                mark: "abacus",
-                name: t("workspace.switchModel"),
-                meta: t("workspace.premiumUpgrade.switchNote"),
-                cta: t("workspace.switchModel"),
-                quiet: true,
-                onClick: onSwitchModel,
-              },
-            ]
-          : []),
-      ];
+    : missing.map((source) => ({
+        key: `connect-${source}`,
+        mark: source,
+        name: t(SOURCE_NAME[source]),
+        meta: t(SOURCE_META[source]),
+        cta: t("workspace.premiumUpgrade.connectCta"),
+        disabled: connecting != null,
+        onClick: () => {
+          void connect(source).then((connected) => {
+            if (connected) onResume?.();
+          });
+        },
+      }));
 
   return (
     <div

@@ -25,7 +25,6 @@ import { FeedbackRow } from "./feedback-row";
 import {
   PremiumUpgradeCard,
   exhaustedScope,
-  freeModelSwitches,
   wantsUpgradeCard,
 } from "./premium-upgrade-card";
 import type {
@@ -175,7 +174,6 @@ const AgentTurnContent = ({
   agentStatus,
   onRetry,
   onSwitchModel,
-  onPickModel,
   onResume,
   onRateTurn,
   creditsTotal = 0,
@@ -189,7 +187,6 @@ const AgentTurnContent = ({
   onRetry?: () => void;
   onSwitchModel?: () => void;
   /** Pick a named model straight from a card, no picker hop. */
-  onPickModel?: (modelId: string) => void;
   /** Run the dead turn again on the free pool once a source has joined it. */
   onResume?: () => void;
   /** Thumbs on a turn, by the rated bot text segment's id. */
@@ -264,9 +261,6 @@ const AgentTurnContent = ({
                 key={`${item.id}-${idx}`}
                 dataId="chat-upgrade-card"
                 scope={exhaustedScope(item.actions)}
-                freeModels={freeModelSwitches(item.actions)}
-                onPickModel={onPickModel}
-                onSwitchModel={onSwitchModel}
                 onResume={onResume}
               />
             );
@@ -519,7 +513,6 @@ export const ChatMessageList = ({
   agentStatus,
   onRetry,
   onSwitchModel,
-  onPickModel,
   onResume,
   onRateTurn,
   creditsTotal = 0,
@@ -533,7 +526,6 @@ export const ChatMessageList = ({
   agentStatus?: AgentStatus;
   onRetry?: () => void;
   onSwitchModel?: () => void;
-  onPickModel?: (modelId: string) => void;
   onResume?: () => void;
   onRateTurn?: (
     segmentId: string,
@@ -587,7 +579,6 @@ export const ChatMessageList = ({
               agentStatus={isCurrentTurn ? agentStatus : undefined}
               onRetry={onRetry}
               onSwitchModel={onSwitchModel}
-              onPickModel={onPickModel}
               onResume={onResume}
               onRateTurn={onRateTurn}
               creditsTotal={creditsTotal}
