@@ -365,8 +365,8 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
         <PartsView />
         <WorkedThrough message={message} />
         <Credits message={message} />
+        {decoration?.after}
       </div>
-      {decoration?.after}
     </MessageScope>
   );
 };
