@@ -13,11 +13,8 @@ export { SidePanelOverride } from "./side-panel-slot";
 export { useAppHotkey, dispatchAppHotkey, APP_HOTKEYS } from "./hotkeys";
 export {
   nativePresenterFor,
-  createNativePresenter,
-  type NativePresenter,
 } from "./native-presenter";
 export {
   registerPreviewConsumer,
   dispatchPreview,
-  type PreviewEvent,
 } from "./preview-consumers";
