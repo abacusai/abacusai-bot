@@ -40,6 +40,7 @@ export interface ChatViewProps {
   workspaceRoot: string | null;
   onOpenFile?: (absPath: string) => void;
   onOpenSubagent?: (subagentRunId: string) => void;
+  onOpenDiff?: (path: string, toolKey?: string) => void;
   /** Whether this is the focused thread view (Mod+. applies here). */
   focused?: boolean;
   notchEnabled?: boolean;
@@ -155,6 +156,7 @@ export const ChatView = (props: ChatViewProps) => {
     ...(props.onOpenSubagent != null
       ? { onOpenSubagent: props.onOpenSubagent }
       : {}),
+    ...(props.onOpenDiff ? { onOpenDiff: props.onOpenDiff } : {}),
     focused: props.focused ?? true,
     notchEnabled: props.notchEnabled ?? false,
     inline,

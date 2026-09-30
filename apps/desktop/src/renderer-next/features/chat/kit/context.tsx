@@ -9,6 +9,7 @@ import { createContext, use, type ReactNode } from "react";
 
 import type { AgentMode } from "#shared/agent-types";
 
+import type { SubmissionEnvelope } from "../runtime/admission";
 import type { ChatRuntime } from "../runtime/runtime";
 import type { ThreadSession } from "../runtime/session";
 
@@ -44,6 +45,11 @@ export interface MentionSource {
 
 export interface ComposerConfig {
   mode: "full" | "mini";
+  availableModes?: AgentMode[];
+  blocked?: "no-model" | "loading";
+  onBlocked?: () => void;
+  history?: { list(): Promise<string[]>; add(text: string): Promise<void> };
+  onSubmitEnvelope?: (envelope: SubmissionEnvelope) => Promise<void>;
   readOnly?: { reason: ReactNode; action?: ReactNode };
   placeholder: string;
   /** Folder for pasted files; null disables paste-to-file. */
@@ -116,6 +122,7 @@ export interface ChatViewContextValue {
   workspaceRoot: string | null;
   onOpenFile?: (absPath: string) => void;
   onOpenSubagent?: (subagentRunId: string) => void;
+  onOpenDiff?: (path: string, toolKey?: string) => void;
   /** This view is the focused thread (Mod+. stops only here). */
   focused: boolean;
   /** Bots: the canvas's "Also in the notch" note on approval cards (phase 6). */
