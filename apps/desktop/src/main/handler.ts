@@ -83,6 +83,7 @@ import type { RoutineCreateInput, RoutineUpdateInput } from "#shared/routines";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 import type { TerminalShellId } from "#shared/terminal-shells";
 
+import { registerLoginItem } from "./login-item";
 import { sessionDefaultWorkspace } from "./paths";
 import {
   activateProfile,
@@ -265,6 +266,7 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     console.log(
       `[account] signed in as ${account.email ?? "?"}: restored ${restored} session(s)`
     );
+    registerLoginItem();
     return { ok: true };
   };
 
@@ -697,7 +699,7 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     IpcChannels.StartAbacusAuth,
     async (_event, intent: unknown, browserProfileId: unknown) => {
       const result = await startAbacusAuth(
-        intent === "signin" ? "signin" : "signup",
+        intent === "signin" || intent === "google" ? intent : "signup",
         // Only an id from the listing resolves to a profile; anything else is
         // a plain sign-in.
         typeof browserProfileId === "string" ? browserProfileId : undefined
