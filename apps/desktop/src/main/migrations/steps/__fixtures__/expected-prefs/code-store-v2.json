@@ -1,0 +1,74 @@
+{
+  "prefs": {
+    "provenance": {
+      "browserHomepage": "default",
+      "creditsExhaustedAt": "default",
+      "defaultMode": "legacy",
+      "dismissals": "default",
+      "language": "default",
+      "lastPickedWorkspaceId": "legacy",
+      "models": "legacy",
+      "motion": "default",
+      "onboardingStep": "default",
+      "panes": "default",
+      "pinned": "legacy",
+      "recentFolders": "default",
+      "sidebar": "legacy",
+      "sounds": "default",
+      "theme": "legacy",
+      "workspaceExpanded": "legacy"
+    },
+    "row": {
+      "browserHomepage": null,
+      "creditsExhaustedAt": null,
+      "defaultMode": "DEFAULT",
+      "dismissals": {
+        "referralCardUntil": null,
+        "upsell": false
+      },
+      "id": "app",
+      "language": "system",
+      "lastPickedWorkspaceId": "ws-1",
+      "models": {
+        "favoriteModelIds": ["gpt-5", "claude-opus"],
+        "perWorkspace": {
+          "ws-1": "claude-opus",
+          "ws-2": null
+        },
+        "selectedModelId": "gpt-5"
+      },
+      "motion": {
+        "reduce": "system"
+      },
+      "onboardingStep": null,
+      "panes": {},
+      "pinned": {
+        "botIds": [],
+        "sessionIds": ["s-1"]
+      },
+      "recentFolders": [],
+      "sidebar": {
+        "openSection": "bots",
+        "pinned": false
+      },
+      "sounds": {
+        "enabled": true,
+        "perEvent": {}
+      },
+      "theme": "light",
+      "updatedAt": "2026-09-30T12:00:00.000Z",
+      "workspaceExpanded": {
+        "ws-1": true,
+        "ws-2": false
+      }
+    }
+  },
+  "stats": {
+    "imported": 7,
+    "invalid": 0,
+    "keptUser": 0,
+    "keys": 2,
+    "reset": 0,
+    "written": 1
+  }
+}
