@@ -9,7 +9,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  parseClearMarker,
   parseTranscriptV1,
   type ClearMarker,
   type ThreadTwinSummary,
@@ -18,8 +17,10 @@ import {
 import {
   clearMarkerPath,
   fingerprintV1,
+  isProvenAfterClear,
   isSafeSessionId,
   MAX_TRANSCRIPT_BYTES,
+  parseMarkerRead,
   readTextChecked,
   readThreadTwin,
   THREADS_DIR_NAME,
@@ -41,24 +42,50 @@ export const threadsDir = (home: string): string =>
  * atomic-write temp file, `.DS_Store`, a clear marker, a folder) is left
  * alone.
  */
-const listJsonFiles = (dir: string): string[] => {
+const listJsonFiles = (
+  dir: string,
+  options: { symlinks: boolean }
+): string[] => {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return [];
+  } catch (error) {
+    // Only a folder that is not there is empty. Anything else (EACCES, EIO)
+    // stops the step: an unlisted transcript would make its twin look
+    // orphaned.
+    if ((error as { code?: unknown })?.code === "ENOENT") return [];
+    throw error;
   }
   return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .filter(
+      (entry) =>
+        (entry.isFile() || (options.symlinks && entry.isSymbolicLink())) &&
+        entry.name.endsWith(".json")
+    )
     .map((entry) => entry.name)
     .sort();
 };
 
+/** The v1 files, symlinked ones included (reading follows the link). */
 export const listTranscriptFiles = (home: string): string[] =>
-  listJsonFiles(transcriptsDir(home));
+  listJsonFiles(transcriptsDir(home), { symlinks: true });
 
 export const listThreadFiles = (home: string): string[] =>
-  listJsonFiles(threadsDir(home));
+  listJsonFiles(threadsDir(home), { symlinks: false });
+
+/**
+ * Whether nothing at all is at `transcripts/<id>.json` (not a file, a
+ * folder, a link or anything that cannot be stat'ed): only then can its
+ * twin be an orphan.
+ */
+export const v1PathIsAbsent = (home: string, sessionId: string): boolean => {
+  try {
+    fs.lstatSync(path.join(transcriptsDir(home), `${sessionId}.json`));
+    return false;
+  } catch (error) {
+    return (error as { code?: unknown })?.code === "ENOENT";
+  }
+};
 
 /** The twin reduced to what the rules read (the parsed file is dropped). */
 export const readTwinSummary = (file: string): ThreadTwinSummary => {
@@ -70,17 +97,10 @@ export const readTwinSummary = (file: string): ThreadTwinSummary => {
 export const readClearMarker = (
   home: string,
   sessionId: string
-): ClearMarker | null => {
-  const read = readTextChecked(clearMarkerPath(threadsDir(home), sessionId));
-  if (read.status === "missing") return null;
-  return (
-    (read.status === "ok" ? parseClearMarker(read.text) : null) ?? {
-      version: 1,
-      token: "",
-      clearedAt: "",
-    }
+): ClearMarker | null =>
+  parseMarkerRead(
+    readTextChecked(clearMarkerPath(threadsDir(home), sessionId))
   );
-};
 
 export type InspectedTranscript =
   | { status: "unsafe"; name: string; file: string }
@@ -143,14 +163,14 @@ export const inspectTranscript = (
 };
 
 /**
- * Whether a clear marker says this v1 file is cleared history: its bytes
- * are the ones the conversation held when it was cleared.
+ * Whether a clear marker says this v1 file is cleared history: unless a
+ * save after the clear wrote exactly these bytes, it is (fail closed).
  */
 export const isClearedV1 = (found: {
   marker: ClearMarker | null;
   fingerprint: string;
 }): boolean =>
-  found.marker !== null && found.marker.v1Fingerprint === found.fingerprint;
+  found.marker !== null && !isProvenAfterClear(found.marker, found.fingerprint);
 
 export const yieldToEventLoop = (): Promise<void> =>
   new Promise((resolve) => setImmediate(resolve));

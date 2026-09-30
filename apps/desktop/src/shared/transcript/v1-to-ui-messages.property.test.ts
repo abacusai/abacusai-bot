@@ -405,6 +405,24 @@ describe("C-T2 mapper properties", () => {
       }).toEqual({ id: entry.id, ok: true });
     }
 
+    // A superseded lifecycle segment sits in the same message as the
+    // segment that replaced it (same run, same scope), and that one has a part.
+    for (const { entry, message } of hits) {
+      if (entry.supersededBy === undefined) continue;
+      const newest = message?.metadata as
+        | {
+            abacus: {
+              segments: Array<{ id: string; partIndex: number | null }>;
+            };
+          }
+        | undefined;
+      expect(
+        newest?.abacus.segments.some(
+          (other) => other.id === entry.supersededBy && other.partIndex !== null
+        )
+      ).toBe(true);
+    }
+
     // Only malformed input maps to `unknown` (generated cases).
     if (_name.startsWith("generated")) {
       const unknownParts = hits.filter(
@@ -499,6 +517,56 @@ describe("C-T2 mapper properties", () => {
 });
 
 describe("C-T2 edge cases", () => {
+  const read = (id: string, callId: string, status = "success") => ({
+    type: "tool_call",
+    id,
+    toolCall: { id: callId, name: "read", args: { id }, status },
+    ...(status === "success"
+      ? { toolResult: { toolCallId: callId, output: id } }
+      : {}),
+  });
+  const callsOf = (messages: UIMessage[]) =>
+    allMessages(messages).map((message) =>
+      message.parts.flatMap((part) =>
+        part.type === "tool-call"
+          ? [
+              `${part.id}<-${(part.metadata as { abacus: { segmentId: string } }).abacus.segmentId}`,
+            ]
+          : []
+      )
+    );
+
+  it("deduplicates a call's lifecycle only within its run and scope (r2 #3)", () => {
+    const file = convert([
+      { type: "text", id: "u1", source: "user", content: "one" },
+      read("pending-1", "call-1", "executing"),
+      { type: "thinking", id: "th", content: "…" },
+      read("done-1", "call-1"),
+      { type: "text", id: "b1", source: "bot", content: "Read it." },
+      // A new run in the same message: an independent call reusing the id.
+      read("again", "call-1"),
+      { type: "text", id: "u2", source: "user", content: "two" },
+      // Another turn.
+      read("turn-2", "call-1"),
+      // A child scope.
+      { type: "subtask", id: "sub", status: "created" },
+      read("child", "call-1"),
+      { type: "subtask", id: "sub", status: "completed" },
+      read("after-child", "call-1"),
+    ]);
+    expect(callsOf(file.messages)).toEqual([
+      [],
+      ["call-1<-done-1", "call-1#2<-again"],
+      [],
+      ["call-1#3<-turn-2", "call-1#5<-after-child"],
+      ["call-1#4<-child"],
+    ]);
+    const superseded = provenance(file.messages).filter(
+      (hit) => hit.entry.supersededBy !== undefined
+    );
+    expect(superseded.map((hit) => hit.entry.id)).toEqual(["pending-1"]);
+  });
+
   it("allocates repeated ids in linear time", () => {
     const segments = Array.from({ length: 8000 }, () => ({
       type: "text",
