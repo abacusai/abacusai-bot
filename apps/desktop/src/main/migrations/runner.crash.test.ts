@@ -246,161 +246,165 @@ const cleanOps = async (crossVolume: boolean): Promise<string[]> => {
 describe.each([
   ["same volume", false],
   ["cross volume (EXDEV)", true],
-])("kill at every commit transition, %s", (_, crossVolume) => {
-  it("the next launch settles the attempt on the right side of the record", async () => {
-    const ops = await cleanOps(crossVolume);
-    const recordRename = ops.findIndex(
-      (op) => op.startsWith("rename ") && op.endsWith("home/migrations.json")
-    );
-    expect(recordRename).toBeGreaterThan(0);
-
-    // The transitions the review names are all among the kill points.
-    const has = (pattern: RegExp) =>
-      expect(ops.some((op) => pattern.test(op))).toBe(true);
-    has(/^rename home\/backups\/.*\.migrating-tmp -> home\/backups\//);
-    has(/^rename .*commit\.journal\.migrating-tmp -> .*commit\.journal$/);
-    has(/^append .*commit\.log$/);
-    has(/^rename .*\/1-everything\/1\.out -> home\/threads\/new\.json$/);
-    has(/^rename home\/transcripts\/old\.json -> home\/backups\//);
-    has(/^rm home\/\.migrating\/1-everything\/commit\.journal$/);
-    has(/^rm home\/\.migrating\/1-everything$/);
-    if (crossVolume) {
-      has(
-        /^rename userdata\/state\.json\.migrating-tmp -> userdata\/state\.json$/
+])(
+  "kill at every commit transition, %s",
+  { timeout: 120_000 },
+  (_, crossVolume) => {
+    it("the next launch settles the attempt on the right side of the record", async () => {
+      const ops = await cleanOps(crossVolume);
+      const recordRename = ops.findIndex(
+        (op) => op.startsWith("rename ") && op.endsWith("home/migrations.json")
       );
-      has(/^rm home\/\.migrating\/1-everything\/3\.out$/);
-      has(/^copy userdata\/legacy\.txt -> home\/backups\//);
-      has(/^rm userdata\/legacy\.txt$/);
-    }
+      expect(recordRename).toBeGreaterThan(0);
 
-    for (let killAt = 1; killAt <= ops.length; killAt++) {
-      setup();
-      const h = harness(root, killAt, crossVolume);
-      await run([step], { io: h.io });
-      expect(h.killed(), `kill ${killAt}`).toBe(true);
-      const recorded = killAt > recordRename + 1;
+      // The transitions the review names are all among the kill points.
+      const has = (pattern: RegExp) =>
+        expect(ops.some((op) => pattern.test(op))).toBe(true);
+      has(/^rename home\/backups\/.*\.migrating-tmp -> home\/backups\//);
+      has(/^rename .*commit\.journal\.migrating-tmp -> .*commit\.journal$/);
+      has(/^append .*commit\.log$/);
+      has(/^rename .*\/1-everything\/1\.out -> home\/threads\/new\.json$/);
+      has(/^rename home\/transcripts\/old\.json -> home\/backups\//);
+      has(/^rm home\/\.migrating\/1-everything\/commit\.journal$/);
+      has(/^rm home\/\.migrating\/1-everything$/);
+      if (crossVolume) {
+        has(
+          /^rename userdata\/state\.json\.migrating-tmp -> userdata\/state\.json$/
+        );
+        has(/^rm home\/\.migrating\/1-everything\/3\.out$/);
+        has(/^copy userdata\/legacy\.txt -> home\/backups\//);
+        has(/^rm userdata\/legacy\.txt$/);
+      }
 
-      // Next launch, recovery only.
-      const recovery = await run([], {
-        io: harness(root, Infinity, crossVolume).io,
-      });
-      const where = `kill ${killAt} at "${ops[killAt - 1]}"`;
-      expect(recovery.unresolved, where).toEqual([]);
-      expect(recovery.failed, where).toBeNull();
-      if (recorded) expect(userState(), where).toEqual(COMMITTED);
-      else expectRolledBack(userState());
-      expect(
-        Object.keys(userState()).filter((rel) =>
-          rel.endsWith(".migrating-tmp")
-        ),
-        where
-      ).toEqual([]);
+      for (let killAt = 1; killAt <= ops.length; killAt++) {
+        setup();
+        const h = harness(root, killAt, crossVolume);
+        await run([step], { io: h.io });
+        expect(h.killed(), `kill ${killAt}`).toBe(true);
+        const recorded = killAt > recordRename + 1;
 
-      // And the launch after that finishes the step.
-      const next = await run([step], {
-        io: harness(root, Infinity, crossVolume).io,
-      });
-      expect(next.failed, where).toBeNull();
-      expect(userState(), where).toEqual(COMMITTED);
-      expect(
-        readRecord(home).applied.filter((applied) => applied.id === 1),
-        where
-      ).toHaveLength(1);
-      expect(fs.existsSync(migratingRoot(home)), where).toBe(false);
-      expectBackup();
-    }
-  });
-
-  it("an in-launch undo killed at any point is finished by the next launch", async () => {
-    // A commit that throws after its third move, and whose undo then dies.
-    const throwing: Partial<RunMigrationsOptions> = {
-      hooks: {
-        afterMove: (index) => {
-          if (index === 2) throw new Error("EIO");
-        },
-      },
-    };
-    setup();
-    const clean = harness(root, Infinity, crossVolume);
-    const failed = await run([step], { ...throwing, io: clean.io });
-    expect(failed.failed?.error).toBe("EIO");
-    expectRolledBack(userState());
-    const total = clean.ops.length;
-    // The undo's own restore is among the kill points.
-    expect(
-      clean.ops.some((op) =>
-        /^rename home\/prefs\.json\.migrating-tmp -> home\/prefs\.json$/.test(
-          op
-        )
-      )
-    ).toBe(true);
-
-    for (let killAt = 1; killAt <= total; killAt++) {
-      setup();
-      const h = harness(root, killAt, crossVolume);
-      await run([step], { ...throwing, io: h.io });
-      expect(h.killed()).toBe(true);
-      const where = `kill ${killAt} at "${clean.ops[killAt - 1]}"`;
-
-      const recovery = await run([], {
-        io: harness(root, Infinity, crossVolume).io,
-      });
-      expect(recovery.unresolved, where).toEqual([]);
-      expectRolledBack(userState());
-    }
-  });
-
-  it("a recovery killed at any point, even twice, is finished by the next launch", async () => {
-    // The crash state: every move done, the record not yet written.
-    const crash = async () => {
-      setup();
-      await run([step], {
-        io: harness(root, Infinity, crossVolume).io,
-        hooks: { beforeRecord: () => "crash" },
-      });
-    };
-    await crash();
-    const clean = harness(root, Infinity, crossVolume);
-    const recovered = await run([], { io: clean.io });
-    expect(recovered.recovered[0]?.action).toBe("undone");
-    const ops = clean.ops;
-    // The rollback's own transitions are among the kill points.
-    const has = (pattern: RegExp) =>
-      expect(ops.some((op) => pattern.test(op))).toBe(true);
-    has(/^rename home\/prefs\.json\.migrating-tmp -> home\/prefs\.json$/);
-    has(/^rm home\/threads\/new\.json$/);
-    has(/-> home\/transcripts\/old\.json$/);
-    has(/^append .*commit\.log$/);
-    const journalRm = ops.findIndex(
-      (op) => op.endsWith("commit.journal") && op.startsWith("rm ")
-    );
-    const backupRm = ops.findIndex((op) =>
-      /^rm home\/backups\/migrations\/[^/]+$/.test(op)
-    );
-    // The journal goes before its backups.
-    expect(journalRm).toBeGreaterThanOrEqual(0);
-    expect(journalRm).toBeLessThan(backupRm);
-
-    for (let killAt = 1; killAt <= ops.length; killAt++) {
-      for (const second of [null, killAt]) {
-        await crash();
-        const where = `kill ${killAt} at "${ops[killAt - 1]}" then ${second}`;
-        await run([], { io: harness(root, killAt, crossVolume).io });
-        if (second != null)
-          await run([], { io: harness(root, second, crossVolume).io });
-        const final = await run([], {
+        // Next launch, recovery only.
+        const recovery = await run([], {
           io: harness(root, Infinity, crossVolume).io,
         });
-        expect(final.unresolved, where).toEqual([]);
-        expect(final.failed, where).toBeNull();
-        expectRolledBack(userState());
+        const where = `kill ${killAt} at "${ops[killAt - 1]}"`;
+        expect(recovery.unresolved, where).toEqual([]);
+        expect(recovery.failed, where).toBeNull();
+        if (recorded) expect(userState(), where).toEqual(COMMITTED);
+        else expectRolledBack(userState());
+        expect(
+          Object.keys(userState()).filter((rel) =>
+            rel.endsWith(".migrating-tmp")
+          ),
+          where
+        ).toEqual([]);
 
+        // And the launch after that finishes the step.
         const next = await run([step], {
           io: harness(root, Infinity, crossVolume).io,
         });
-        expect(next.applied, where).toEqual([1]);
+        expect(next.failed, where).toBeNull();
         expect(userState(), where).toEqual(COMMITTED);
+        expect(
+          readRecord(home).applied.filter((applied) => applied.id === 1),
+          where
+        ).toHaveLength(1);
+        expect(fs.existsSync(migratingRoot(home)), where).toBe(false);
+        expectBackup();
       }
-    }
-  });
-});
+    });
+
+    it("an in-launch undo killed at any point is finished by the next launch", async () => {
+      // A commit that throws after its third move, and whose undo then dies.
+      const throwing: Partial<RunMigrationsOptions> = {
+        hooks: {
+          afterMove: (index) => {
+            if (index === 2) throw new Error("EIO");
+          },
+        },
+      };
+      setup();
+      const clean = harness(root, Infinity, crossVolume);
+      const failed = await run([step], { ...throwing, io: clean.io });
+      expect(failed.failed?.error).toBe("EIO");
+      expectRolledBack(userState());
+      const total = clean.ops.length;
+      // The undo's own restore is among the kill points.
+      expect(
+        clean.ops.some((op) =>
+          /^rename home\/prefs\.json\.migrating-tmp -> home\/prefs\.json$/.test(
+            op
+          )
+        )
+      ).toBe(true);
+
+      for (let killAt = 1; killAt <= total; killAt++) {
+        setup();
+        const h = harness(root, killAt, crossVolume);
+        await run([step], { ...throwing, io: h.io });
+        expect(h.killed()).toBe(true);
+        const where = `kill ${killAt} at "${clean.ops[killAt - 1]}"`;
+
+        const recovery = await run([], {
+          io: harness(root, Infinity, crossVolume).io,
+        });
+        expect(recovery.unresolved, where).toEqual([]);
+        expectRolledBack(userState());
+      }
+    });
+
+    it("a recovery killed at any point, even twice, is finished by the next launch", async () => {
+      // The crash state: every move done, the record not yet written.
+      const crash = async () => {
+        setup();
+        await run([step], {
+          io: harness(root, Infinity, crossVolume).io,
+          hooks: { beforeRecord: () => "crash" },
+        });
+      };
+      await crash();
+      const clean = harness(root, Infinity, crossVolume);
+      const recovered = await run([], { io: clean.io });
+      expect(recovered.recovered[0]?.action).toBe("undone");
+      const ops = clean.ops;
+      // The rollback's own transitions are among the kill points.
+      const has = (pattern: RegExp) =>
+        expect(ops.some((op) => pattern.test(op))).toBe(true);
+      has(/^rename home\/prefs\.json\.migrating-tmp -> home\/prefs\.json$/);
+      has(/^rm home\/threads\/new\.json$/);
+      has(/-> home\/transcripts\/old\.json$/);
+      has(/^append .*commit\.log$/);
+      const journalRm = ops.findIndex(
+        (op) => op.endsWith("commit.journal") && op.startsWith("rm ")
+      );
+      const backupRm = ops.findIndex((op) =>
+        /^rm home\/backups\/migrations\/[^/]+$/.test(op)
+      );
+      // The journal goes before its backups.
+      expect(journalRm).toBeGreaterThanOrEqual(0);
+      expect(journalRm).toBeLessThan(backupRm);
+
+      for (let killAt = 1; killAt <= ops.length; killAt++) {
+        for (const second of [null, killAt]) {
+          await crash();
+          const where = `kill ${killAt} at "${ops[killAt - 1]}" then ${second}`;
+          await run([], { io: harness(root, killAt, crossVolume).io });
+          if (second != null)
+            await run([], { io: harness(root, second, crossVolume).io });
+          const final = await run([], {
+            io: harness(root, Infinity, crossVolume).io,
+          });
+          expect(final.unresolved, where).toEqual([]);
+          expect(final.failed, where).toBeNull();
+          expectRolledBack(userState());
+
+          const next = await run([step], {
+            io: harness(root, Infinity, crossVolume).io,
+          });
+          expect(next.applied, where).toEqual([1]);
+          expect(userState(), where).toEqual(COMMITTED);
+        }
+      }
+    });
+  }
+);

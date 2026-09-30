@@ -29,13 +29,13 @@ vi.mock("./runner", async (original) => ({
 
 import {
   disposeMigrationProgress,
-  migrationWriteBlocked,
   parseRerunArgs,
   prefsFileAfterMigrations,
   progressWindowDark,
   resetStartupMigrationsForTest,
   runStartupMigrations,
 } from "./startup";
+import { isMigrationWriteBlocked } from "./write-block";
 
 let home: string;
 const argv = process.argv;
@@ -97,7 +97,7 @@ describe("startup migrations", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await runStartupMigrations("App");
-    expect(migrationWriteBlocked(prefs)).toBe(false);
+    expect(isMigrationWriteBlocked(prefs)).toBe(false);
     expect(prefsFileAfterMigrations(prefs, temp)).toBe(prefs);
 
     run.mockResolvedValue({
@@ -115,8 +115,8 @@ describe("startup migrations", () => {
       ],
     });
     await runStartupMigrations("App");
-    expect(migrationWriteBlocked(prefs)).toBe(true);
-    expect(migrationWriteBlocked(path.join(home, "other.json"))).toBe(false);
+    expect(isMigrationWriteBlocked(prefs)).toBe(true);
+    expect(isMigrationWriteBlocked(path.join(home, "other.json"))).toBe(false);
     const session = prefsFileAfterMigrations(prefs, temp);
     expect(session).not.toBe(prefs);
     expect(fs.readFileSync(session ?? "", "utf8")).toBe("REAL");
@@ -133,7 +133,7 @@ describe("startup migrations", () => {
       ],
     });
     await runStartupMigrations("App");
-    expect(migrationWriteBlocked(path.join(home, "anything"))).toBe(true);
+    expect(isMigrationWriteBlocked(path.join(home, "anything"))).toBe(true);
     error.mockRestore();
   });
 
