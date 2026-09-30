@@ -45,7 +45,7 @@
       "motion": {
         "reduce": "system"
       },
-      "onboardingStep": "connect-whatsapp",
+      "onboardingStep": null,
       "panes": {},
       "pinned": {
         "botIds": ["bot-a"],
