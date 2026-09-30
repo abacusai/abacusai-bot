@@ -36,15 +36,22 @@ import type {
   AiHydration,
   AiSendAck,
   AiSendInput,
+  AttentionEvent,
+  AttentionSummary,
   RunOutcomeRecord,
 } from "#shared/contract";
-import type { AgentSessionStatus } from "#shared/contracts";
+import type { AgentSessionStatus, SessionOwner } from "#shared/contracts";
+import {
+  isPlainNativeId,
+  RESERVED_ID_DELIMITER,
+} from "#shared/transcript/native-ids";
 import type { ThreadFileV2 } from "#shared/transcript/thread-file";
 
 import type {
   AguiSource,
   AiRespondPermissionInput,
   SequencedChunk,
+  SequencedNotice,
 } from "../../rpc/ai/source";
 import { DELIVERY } from "../../rpc/delivery";
 import {
@@ -59,9 +66,12 @@ import {
   SeqClock,
   terminalRunId,
   ThreadRelay,
+  type PendingPermissionsInfo,
   type RelayChunk,
   type RelayEvent,
+  type RunFinishedInfo,
   type ThreadHistory,
+  type ThreadHistoryNotice,
 } from "./thread-relay";
 
 /** What the relay needs from the rest of main. */
@@ -86,11 +96,32 @@ export interface AguiRelayHost {
   markSent(threadId: string): void;
   /** Main's turn state: the user stopped the turn (legacy `stopAgentTurn`). */
   markStopped(threadId: string): void;
+  /**
+   * The session's parentage for `ai.runFinished` (bot owner, routine id).
+   * Absent: both null.
+   */
+  ownerOf?(threadId: string): {
+    owner: SessionOwner | null;
+    routineId: string | null;
+  };
+  /**
+   * Every accepted `ai.send`, just before `run` is written (spec 03 §24.10 c):
+   * the host may re-pin the running agent's model. Errors are logged.
+   */
+  beforeRun?(threadId: string): Promise<void>;
 }
 
 /** The thread files (`ThreadStore`). */
 export interface AguiThreadFiles {
   readCurrentFile(threadId: string): ThreadFileV2 | null;
+  /**
+   * `readCurrentFile` plus why a thread shows no history although its v1
+   * file exists (too large to read); the relay surfaces it as a notice.
+   */
+  readCurrentWithNotice?(threadId: string): {
+    file: ThreadFileV2 | null;
+    notice?: ThreadHistoryNotice;
+  };
   writeAgui(
     threadId: string,
     thread: {
@@ -182,6 +213,8 @@ const ACKS_KEPT = 10_000;
 /** Run ids seen starting (answered `duplicate` without an ack), over every thread. */
 const STARTED_RUNS_KEPT = 10_000;
 const POLL_MS = 25;
+/** Run-finished notices kept for a `lastEventId` resume, over every thread. */
+export const NOTICES_KEPT = 1_000;
 
 const REASONS = new Set([
   "regenerate_unsupported",
@@ -201,8 +234,12 @@ const trim = (collection: Map<string, unknown> | Set<string>, max: number) => {
     collection.delete(collection.keys().next().value!);
 };
 
-const toHistory = (file: ThreadFileV2 | null): ThreadHistory => {
-  if (file == null) return { messages: [], runs: [] };
+const toHistory = (
+  file: ThreadFileV2 | null,
+  notice?: ThreadHistoryNotice
+): ThreadHistory => {
+  if (file == null)
+    return { messages: [], runs: [], ...(notice != null && { notice }) };
   if (file.source.kind === "agui")
     return {
       messages: file.messages,
@@ -258,6 +295,19 @@ export class AguiRelayService implements AguiSource {
   /** threadId → the runtime start in progress (one at a time per thread). */
   readonly #starting = new Map<string, Promise<void>>();
 
+  /** The newest run-finished notices, oldest first, for `lastEventId`. */
+  readonly #notices: SequencedNotice[] = [];
+  readonly #noticeListeners = new Set<(notice: SequencedNotice) => void>();
+  /** `ai.attention`'s table: threads with answerable permissions. */
+  readonly #attention = new Map<string, AttentionSummary>();
+  /** threadId → permission id → when main first saw it pending. */
+  readonly #pendingSince = new Map<string, Map<string, number>>();
+  #attentionRevision = 0;
+  readonly #attentionListeners = new Set<(event: AttentionEvent) => void>();
+  /** The last `busy` reported to `onBusyChange` listeners. */
+  #busy = false;
+  readonly #busyListeners = new Set<(busy: boolean) => void>();
+
   constructor(options: AguiRelayOptions) {
     this.#host = options.host;
     this.#files = options.files;
@@ -303,6 +353,7 @@ export class AguiRelayService implements AguiSource {
     }
     if (relayEvent.type === "CUSTOM" && relayEvent.name === "run.ack")
       this.#settleAck(threadId, relayEvent.value);
+    this.#busyCheck();
   }
 
   /** `AgentManagerService.emitAguiExit`: an agui runtime's process closed. */
@@ -340,6 +391,7 @@ export class AguiRelayService implements AguiSource {
       );
       this.#release(threadId, runId, pending);
     }
+    this.#busyCheck();
   }
 
   /**
@@ -348,11 +400,45 @@ export class AguiRelayService implements AguiSource {
    */
   failActiveRun(threadId: string, code: string, message: string): void {
     this.#threads.get(threadId)?.failActiveRun(code, message);
+    this.#busyCheck();
   }
 
   /** The conversation was reset by main (not via the agent). */
   clearThread(threadId: string): void {
     this.#threads.get(threadId)?.clearByMain();
+    this.#busyCheck();
+  }
+
+  /**
+   * Whether any agui thread has a run open or an admission in flight: the
+   * authoritative busy aggregate (spec 07 review r1 #10), from the relay's
+   * own run state and never from compat turn state, whose pipe (fd 3) is
+   * ordered independently of stdout.
+   */
+  get busy(): boolean {
+    if (this.#waiting.size > 0 || this.#awaitingStart.size > 0) return true;
+    for (const thread of this.#threads.values())
+      if (thread.activeRunId != null) return true;
+    return false;
+  }
+
+  /** Called with the new value whenever `busy` changes. Returns the removal. */
+  onBusyChange(listener: (busy: boolean) => void): () => void {
+    this.#busyListeners.add(listener);
+    return () => this.#busyListeners.delete(listener);
+  }
+
+  #busyCheck(): void {
+    const busy = this.busy;
+    if (busy === this.#busy) return;
+    this.#busy = busy;
+    for (const listener of Array.from(this.#busyListeners)) {
+      try {
+        listener(busy);
+      } catch (error) {
+        this.#log(`a busy listener threw: ${String(error)}`);
+      }
+    }
   }
 
   /** Threads with per-thread admission bookkeeping (leak checks, diagnostics). */
@@ -387,6 +473,176 @@ export class AguiRelayService implements AguiSource {
     for (const key of this.#startedRuns)
       if (key.startsWith(prefix)) this.#startedRuns.delete(key);
     this.#awaitingStart.delete(threadId);
+    // Session deletion: nothing of it waits on the user any more.
+    this.#setAttention(threadId, { incarnation: null, items: [] });
+    this.#busyCheck();
+  }
+
+  // ─── run-finished notices and attention ───────────────────────────────
+
+  runFinished(
+    afterSeq: number | null,
+    signal: AbortSignal
+  ): AsyncIterable<SequencedNotice> {
+    const queue = new SubscriberQueue<SequencedNotice>({
+      stream: "ai.runFinished",
+      delivery: DELIVERY["ai.runFinished"],
+    });
+    // Registered and replayed in one synchronous step: nothing between.
+    const listener = (notice: SequencedNotice): void => {
+      queue.push(notice);
+      if (queue.failed) unsubscribe();
+    };
+    const unsubscribe = (): void => {
+      this.#noticeListeners.delete(listener);
+    };
+    this.#noticeListeners.add(listener);
+    signal.addEventListener("abort", unsubscribe, { once: true });
+    const replay =
+      afterSeq == null || afterSeq > this.#clock.current
+        ? []
+        : this.#notices.filter((notice) => notice.seq > afterSeq);
+
+    return (async function* () {
+      try {
+        yield* replay;
+        yield* drain(queue, signal, unsubscribe);
+      } finally {
+        unsubscribe();
+      }
+    })();
+  }
+
+  attention(signal: AbortSignal): AsyncIterable<AttentionEvent> {
+    const queue = new SubscriberQueue<AttentionEvent>({
+      stream: "ai.attention",
+      delivery: DELIVERY["ai.attention"],
+    });
+    const listener = (event: AttentionEvent): void => {
+      queue.push(event);
+      if (queue.failed) unsubscribe();
+    };
+    const unsubscribe = (): void => {
+      this.#attentionListeners.delete(listener);
+    };
+    // The snapshot and the registration are one synchronous step.
+    this.#attentionListeners.add(listener);
+    const snapshot: AttentionEvent = {
+      type: "snapshot",
+      revision: this.#attentionRevision,
+      items: [...this.#attention.values()].map((item) => ({ ...item })),
+    };
+    signal.addEventListener("abort", unsubscribe, { once: true });
+
+    return (async function* () {
+      try {
+        yield snapshot;
+        yield* drain(queue, signal, unsubscribe);
+      } finally {
+        unsubscribe();
+      }
+    })();
+  }
+
+  #publishRunFinished(threadId: string, info: RunFinishedInfo): void {
+    let parentage: { owner: SessionOwner | null; routineId: string | null } = {
+      owner: null,
+      routineId: null,
+    };
+    try {
+      parentage = this.#host.ownerOf?.(threadId) ?? parentage;
+    } catch (error) {
+      this.#log(
+        `${threadId}: reading the session owner failed: ${String(error)}`
+      );
+    }
+    const notice: SequencedNotice = {
+      seq: info.seq,
+      notice: {
+        threadId,
+        runId: info.runId,
+        outcome: info.outcome,
+        ...(info.errorCode != null && { errorCode: info.errorCode }),
+        hasVisibleAssistantText: info.hasVisibleAssistantText,
+        owner: parentage.owner,
+        routineId: parentage.routineId,
+        at: info.at,
+      },
+    };
+    this.#notices.push(notice);
+    if (this.#notices.length > NOTICES_KEPT)
+      this.#notices.splice(0, this.#notices.length - NOTICES_KEPT);
+    for (const listener of Array.from(this.#noticeListeners)) listener(notice);
+  }
+
+  /** The thread's answerable set changed: its attention row follows. */
+  #setAttention(threadId: string, pending: PendingPermissionsInfo): void {
+    const items = pending.items;
+    const previous = this.#attention.get(threadId);
+    if (items.length === 0) {
+      this.#pendingSince.delete(threadId);
+      if (previous == null) return;
+      this.#attention.delete(threadId);
+      this.#emitAttention({
+        type: "remove",
+        revision: ++this.#attentionRevision,
+        threadId,
+      });
+      return;
+    }
+
+    const incarnation =
+      pending.incarnation ??
+      items[0]!.metadata.abacus.lineage.incarnation ??
+      "";
+    // Another process's pending entries are not this one's: its item goes.
+    if (previous != null && previous.incarnation !== incarnation) {
+      this.#pendingSince.delete(threadId);
+      this.#attention.delete(threadId);
+      this.#emitAttention({
+        type: "remove",
+        revision: ++this.#attentionRevision,
+        threadId,
+      });
+    }
+    const now = Date.now();
+    const seen = this.#pendingSince.get(threadId) ?? new Map<string, number>();
+    const next = new Map<string, number>();
+    for (const item of items) {
+      const id = item.metadata.abacus.lineage.permissionId;
+      next.set(id, seen.get(id) ?? now);
+    }
+    this.#pendingSince.set(threadId, next);
+    const oldest = [...items].sort(
+      (a, b) =>
+        next.get(a.metadata.abacus.lineage.permissionId)! -
+        next.get(b.metadata.abacus.lineage.permissionId)!
+    )[0]!;
+    const questions = items.filter(
+      (item) => item.reason === "abacus:question"
+    ).length;
+    const item: AttentionSummary = {
+      threadId,
+      incarnation,
+      questions,
+      approvals: items.length - questions,
+      oldestAt: next.get(oldest.metadata.abacus.lineage.permissionId)!,
+      firstTitle:
+        typeof oldest.message === "string" && oldest.message !== ""
+          ? oldest.message
+          : null,
+    };
+    this.#attention.set(threadId, item);
+    this.#emitAttention({
+      type: "upsert",
+      revision: ++this.#attentionRevision,
+      item,
+    });
+  }
+
+  #emitAttention(event: AttentionEvent): void {
+    for (const listener of Array.from(this.#attentionListeners))
+      listener(event);
   }
 
   // ─── AguiSource ───────────────────────────────────────────────────────
@@ -501,6 +757,15 @@ export class AguiRelayService implements AguiSource {
     if (conversationId != null && conversationId !== threadId)
       throw badRequest("forwardedProps.conversationId is not this thread");
 
+    // The `#` reservation (spec 00 C.3): the run id (main derives message
+    // ids from it) and the message that enters the thread keep to native
+    // ids, which the v1 mapper's derived ids can never equal.
+    const echoId = newestUserId(input.messages);
+    if (!isPlainNativeId(runId) || (echoId != null && !isPlainNativeId(echoId)))
+      throw badRequest(
+        `Ids containing "${RESERVED_ID_DELIMITER}" or "%" are reserved; use another run or message id`
+      );
+
     // Converted before anything is reserved: a message main cannot convert
     // is a definitive BAD_REQUEST, and nothing is left waiting.
     let command: object;
@@ -518,6 +783,7 @@ export class AguiRelayService implements AguiSource {
     if (repeat != null) return repeat;
     const pending = waiter();
     this.#waitingFor(threadId).set(runId, pending);
+    this.#busyCheck();
 
     let marked = false;
     let written = false;
@@ -526,6 +792,18 @@ export class AguiRelayService implements AguiSource {
       await this.#ensureAguiRuntime(threadId);
       // The session was forgotten while the runtime started.
       if (pending.abandoned !== undefined) throw pending.abandoned;
+
+      // The running agent takes the effective model before this run.
+      if (this.#host.beforeRun != null) {
+        try {
+          await this.#host.beforeRun(threadId);
+        } catch (error) {
+          this.#log(
+            `${threadId}: re-pinning before the run failed: ${String(error)}`
+          );
+        }
+        if (pending.abandoned !== undefined) throw pending.abandoned;
+      }
 
       const thread = this.#thread(threadId);
       const echo = newestUserId(input.messages);
@@ -567,6 +845,7 @@ export class AguiRelayService implements AguiSource {
     } finally {
       clearTimeout(timer);
       this.#release(threadId, runId, pending);
+      this.#busyCheck();
     }
   }
 
@@ -649,21 +928,27 @@ export class AguiRelayService implements AguiSource {
     const existing = this.#threads.get(threadId);
     if (existing != null) return existing;
 
-    const read = (): ThreadFileV2 | null => {
+    const read = (): {
+      file: ThreadFileV2 | null;
+      notice?: ThreadHistoryNotice;
+    } => {
       try {
-        return this.#files.readCurrentFile(threadId);
+        return this.#files.readCurrentWithNotice != null
+          ? this.#files.readCurrentWithNotice(threadId)
+          : { file: this.#files.readCurrentFile(threadId) };
       } catch (error) {
         this.#log(
           `${threadId}: reading the thread file failed: ${String(error)}`
         );
-        return null;
+        return { file: null };
       }
     };
+    const initial = read();
     const thread = new ThreadRelay({
       threadId,
       clock: this.#clock,
       epoch: this.epoch,
-      history: toHistory(read()),
+      history: toHistory(initial.file, initial.notice),
       persist: (history) =>
         this.#files.writeAgui(threadId, {
           messages: history.messages,
@@ -674,13 +959,15 @@ export class AguiRelayService implements AguiSource {
         }),
       remove: () => this.#files.remove(threadId),
       reload: () => {
-        const file = read();
-        return file == null ? null : toHistory(file);
+        const { file, notice } = read();
+        return file == null ? null : toHistory(file, notice);
       },
       onRunForgotten: (runId) => {
         if (this.#runOwners.get(runId) === threadId)
           this.#runOwners.delete(runId);
       },
+      onRunFinished: (info) => this.#publishRunFinished(threadId, info),
+      onPendingChanged: (pending) => this.#setAttention(threadId, pending),
       log: this.#log,
     });
     this.#threads.set(threadId, thread);

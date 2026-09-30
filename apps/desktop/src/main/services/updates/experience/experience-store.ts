@@ -102,6 +102,17 @@ export class ExperienceStore {
     this.experiencesDirectory,
     "previous.json"
   );
+  readonly #rejectedFile = path.join(
+    this.experiencesDirectory,
+    "rejected.json"
+  );
+  /** An activation not yet persisted (waiting on the renderer's readiness). */
+  #pending: ActivePointer | undefined;
+  /** What `active.json` names, in memory, while an activation is pending. */
+  #committed:
+    | { directory: string; manifest: ExperienceManifest }
+    | null
+    | undefined;
 
   async initialize(): Promise<void> {
     this.#initialization ??= this.#initialize();
@@ -228,21 +239,101 @@ export class ExperienceStore {
     return installed;
   }
 
-  async activate(candidate: InstalledExperience): Promise<void> {
+  /**
+   * Makes `candidate` live for this process. With `commit` (the default) its
+   * pointer is written at once. Without it (a renderer change, which must
+   * first pass the swap's readiness barrier) nothing is persisted until
+   * `commitActivation`: a relaunch before that, or after
+   * `abandonActivation`, boots the committed experience, never a candidate
+   * that was not seen ready (spec 07 review r1 #9).
+   */
+  async activate(
+    candidate: InstalledExperience,
+    { commit = true }: { commit?: boolean } = {}
+  ): Promise<void> {
     const { manifest, manifestSha256 } = candidate;
 
     await this.linkRuntime(candidate.directory);
+    const pointer = { manifestSha256, version: manifest.experienceVersion };
+    // The first pending activation remembers what is committed.
+    if (this.#pending === undefined) this.#committed = this.#active;
+    this.#active = { directory: candidate.directory, manifest };
+    this.#staged.delete(manifest.experienceVersion);
+    this.#pending = pointer;
+
+    if (commit) await this.commitActivation(manifest.experienceVersion);
+  }
+
+  /** The candidate became ready (or nothing had to): persist its pointer. */
+  async commitActivation(version: string): Promise<void> {
+    const pending = this.#pending;
+    if (pending?.version !== version) return;
     const current = await readPointer(this.#activeFile);
 
-    if (current !== undefined) {
+    if (current !== undefined && current.version !== version) {
       await writePointer(this.#previousFile, current);
     }
 
-    await writePointer(this.#activeFile, {
-      manifestSha256,
-      version: manifest.experienceVersion,
-    });
-    this.#active = { directory: candidate.directory, manifest };
-    this.#staged.delete(manifest.experienceVersion);
+    await writePointer(this.#activeFile, pending);
+    this.#pending = undefined;
+    this.#committed = undefined;
+  }
+
+  /**
+   * The candidate never became ready: this process goes back to the
+   * committed experience, and the candidate is remembered as rejected so the
+   * updater does not install it again (this launch or the next).
+   */
+  async abandonActivation(version: string): Promise<void> {
+    const pending = this.#pending;
+    if (pending?.version !== version) return;
+    this.#pending = undefined;
+    this.#active = this.#committed ?? null;
+    this.#committed = undefined;
+    const rejected = await this.#readRejected();
+    if (
+      !rejected.some(
+        (entry) =>
+          entry.version === pending.version &&
+          entry.manifestSha256 === pending.manifestSha256
+      )
+    ) {
+      rejected.push(pending);
+      await writeFileAtomic(
+        this.#rejectedFile,
+        JSON.stringify(rejected.slice(-REJECTED_KEPT)),
+        { restrict: true }
+      );
+    }
+    console.warn(
+      `[experience] ${version} never became ready; staying on ${this.version ?? "the baseline"}`
+    );
+  }
+
+  /** A candidate a previous readiness failure rejected. */
+  async isRejected(version: string, manifestSha256: string): Promise<boolean> {
+    return (await this.#readRejected()).some(
+      (entry) =>
+        entry.version === version && entry.manifestSha256 === manifestSha256
+    );
+  }
+
+  async #readRejected(): Promise<ActivePointer[]> {
+    try {
+      const raw: unknown = JSON.parse(
+        await fs.readFile(this.#rejectedFile, "utf-8")
+      );
+      return Array.isArray(raw)
+        ? raw.flatMap((entry) => {
+            const pointer = parsePointer(entry);
+            return pointer === undefined ? [] : [pointer];
+          })
+        : [];
+    } catch {
+      return [];
+    }
   }
 }
+
+/** Rejected candidates remembered (newest kept). */
+const REJECTED_KEPT = 20;

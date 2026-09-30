@@ -215,9 +215,15 @@ export class WorkspaceService {
   }
 
   /** Repoint at another folder, keeping the id so its sessions survive. */
+  /**
+   * `restore`: a tombstoned (`deleted`) workspace comes back at the new
+   * path (spec 04 §26.4 d, §17.3 "Choose folder"). The legacy IPC handler
+   * passes nothing and keeps the tombstone, as it always has.
+   */
   async relocateWorkspace(
     workspaceId: string,
-    newPath: string
+    newPath: string,
+    options: { restore?: boolean } = {}
   ): Promise<RelocateWorkspaceResult> {
     const workspace = this.workspaces.find((w) => w.id === workspaceId);
     if (workspace == null) {
@@ -252,10 +258,18 @@ export class WorkspaceService {
     }
 
     // The label is what chats are filed under and may be hand-renamed; keep it.
+    const restore = options.restore === true && workspace.status === "deleted";
     this.workspaces = this.workspaces.map((w) =>
-      w.id === workspaceId
-        ? { ...w, path: normalized, description: normalized }
-        : w
+      w.id !== workspaceId
+        ? w
+        : restore
+          ? this.withActiveStatus({
+              ...w,
+              path: normalized,
+              description: normalized,
+              status: "idle",
+            })
+          : { ...w, path: normalized, description: normalized }
     );
     this.persist();
     return { success: true };

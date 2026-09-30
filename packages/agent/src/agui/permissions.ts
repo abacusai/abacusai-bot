@@ -4,6 +4,7 @@
  * lineage checked before anything reaches the session. No native interrupts.
  */
 import type { PermissionDecision, PermissionRequest } from "../protocol.js";
+import { nativeId } from "./ids.js";
 import type {
   DecisionKind,
   PermissionDescriptor,
@@ -139,7 +140,8 @@ export function attachToolCall(
   attachedBy: PermissionDescriptor["metadata"]["abacus"]["attachedBy"];
 } {
   if (fromGate) {
-    return { toolCallId: request.tool.id, attachedBy: "gate" };
+    // The AG-UI id the tool call was emitted under (the reservation).
+    return { toolCallId: nativeId(request.tool.id), attachedBy: "gate" };
   }
 
   if (request.type === "sandbox_denied") {

@@ -27,6 +27,7 @@ import {
   reasoningMessageId,
   resultMessageId,
   steerMessageId,
+  nativeId,
   toolKey,
   userMessageId,
 } from "./ids.js";
@@ -188,7 +189,7 @@ export class AguiEmitter {
   errorAnchor(runId: string): AguiEvent[] {
     if (this.runHadAssistant) return [];
     this.runHadAssistant = true;
-    const id = this.uniqueMessageId(`${runId}:error`);
+    const id = this.uniqueMessageId(nativeId(`${runId}:error`));
 
     return [
       aguiEvent(EventType.TEXT_MESSAGE_START, {
@@ -307,7 +308,9 @@ export class AguiEmitter {
       case "message_open":
         return this.messageOpen(
           event.key,
-          event.messageId ?? this.fallbackMessageId(event.key)
+          event.messageId != null
+            ? nativeId(event.messageId)
+            : this.fallbackMessageId(event.key)
         );
 
       case "message_close": {
@@ -744,7 +747,7 @@ export class AguiEmitter {
     const base =
       this.state.agentSessionId ?? this.ctx.runs.openRunId() ?? "run";
 
-    return `${base}:${this.ctx.incarnation}:${key}`;
+    return nativeId(`${base}:${this.ctx.incarnation}:${key}`);
   }
 
   private uniqueMessageId(requested: string): string {
@@ -871,9 +874,10 @@ export class AguiEmitter {
     subagentRunId: string | undefined,
     legacyId: string
   ): string {
+    // A provider's tool call id passes through, under the reservation.
     return subagentRunId != null
       ? childToolCallId(subagentRunId, legacyId)
-      : legacyId;
+      : nativeId(legacyId);
   }
 
   private tool(

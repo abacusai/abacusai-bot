@@ -94,6 +94,28 @@ export const aiRouter = impl.ai.router({
         )
       )
   ),
+  runFinished: impl.ai.runFinished.handler(
+    ({ input, context, signal, lastEventId }) => {
+      const afterSeq = afterSeqOf(input.lastEventId ?? lastEventId);
+      const notices = context.deps.ai.runFinished(
+        // An unreadable resume point replays nothing: the consumer continues.
+        afterSeq != null && afterSeq < 0 ? null : afterSeq,
+        signal ?? new AbortController().signal
+      );
+      return (async function* () {
+        for await (const { seq, notice } of notices)
+          yield withEventMeta(notice, { id: String(seq) });
+      })();
+    }
+  ),
+  attention: impl.ai.attention.handler(({ context, signal }) => {
+    const events = context.deps.ai.attention(
+      signal ?? new AbortController().signal
+    );
+    return (async function* () {
+      yield* events;
+    })();
+  }),
   send: impl.ai.send.handler(({ input, context }) =>
     context.deps.ai.send(input)
   ),

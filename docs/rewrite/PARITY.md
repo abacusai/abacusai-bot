@@ -328,7 +328,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (251)
+## Contract procedures (263)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -356,6 +356,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `agent.state` | query | `agent.getAgentSessionState` |
 | `agent.stop` | mutation | `agent.stopAgentSession` |
 | `agent.switchConversation` | mutation | `agent.switchAgentConversation` |
+| `ai.attention` | subscription |  |
 | `ai.cancel` | mutation | `agent.stopAgentTurn` |
 | `ai.hydrate` | query | `agent.readTranscript` |
 | `ai.joinRun` | subscription |  |
@@ -365,6 +366,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `ai.queue.remove` | mutation |  |
 | `ai.queue.update` | mutation |  |
 | `ai.respondPermission` | mutation |  |
+| `ai.runFinished` | subscription |  |
 | `ai.send` | mutation | `agent.sendAgentMessage` |
 | `ai.subscribe` | subscription |  |
 | `auth.abacus.browserProfiles` | query | `agent.listBrowserSignInProfiles` |
@@ -394,6 +396,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `browser.runtime.close` | mutation | `agent.closeBrowserRuntime` |
 | `browser.runtime.hide` | mutation | `agent.hideBrowserRuntime` |
 | `browser.runtime.materialize` | mutation | `agent.materializeBrowserRuntime` |
+| `browser.runtime.materializeFile` | mutation |  |
 | `browser.runtime.navigate` | mutation | `agent.navigateBrowserRuntime` |
 | `browser.runtime.present` | mutation | `agent.presentBrowserRuntime` |
 | `browser.runtime.promoteScope` | mutation | `agent.promoteBrowserRuntimeScope` |
@@ -472,11 +475,14 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `files.treeChildren` | query | `agent.getFileTreeChildren` |
 | `files.treeRoot` | query | `agent.getFileTreeRoot` |
 | `git.branches` | query | `agent.getGitBranches` |
+| `git.checkoutStatus` | query |  |
 | `git.createBranch` | mutation | `agent.createGitBranch` |
 | `git.currentBranch` | query | `agent.getGitCurrentBranch` |
 | `git.diff` | query |  |
+| `git.discard` | mutation |  |
 | `git.prInfo` | query | `agent.getPrInfo` |
 | `git.switchBranch` | mutation | `agent.switchGitBranch` |
+| `git.watch` | subscription |  |
 | `git.worktrees.create` | mutation | `agent.createWorktree` |
 | `git.worktrees.list` | query | `agent.listWorktrees` |
 | `git.worktrees.materialize` | mutation | `agent.materializeSessionWorktree` |
@@ -520,6 +526,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `referrals.summary` | query | `agent.getReferralSummary` |
 | `referrals.whatsappContacts` | query | `agent.listReferralWhatsappContacts` |
 | `routines.editByChat` | mutation | `agent.editRoutineByChat` |
+| `routines.events` | subscription |  |
 | `routines.run` | mutation | `agent.runRoutine` |
 | `sessions.turnState` | query | `agent.getSessionTurnState` |
 | `settings.defaultMode.get` | query | `agent.getDefaultAgentMode` |
@@ -549,6 +556,8 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `system.events` | subscription | `onNotificationClicked` |
 | `system.funnelStep` | mutation | `reportFunnelStep` |
 | `system.info` | query | `getAppVersion`, `getHomeDir`, `platform`, `versions` |
+| `system.loginItem.get` | query |  |
+| `system.loginItem.set` | mutation |  |
 | `system.logs.append` | mutation | `appendLogs` |
 | `system.logs.save` | mutation | `saveLogs` |
 | `system.notify` | mutation | `showNotification` |
@@ -575,10 +584,13 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `voice.whisper.progress` | subscription |  |
 | `window.activity` | mutation | `reportUiActivity` |
 | `window.chrome` | query | `getWindowChrome` |
+| `window.claimCue` | mutation |  |
 | `window.events` | subscription | `onFullScreenChange`, `onWindowChromeChange` |
 | `window.ready` | mutation | `signalRendererReady` |
+| `window.setDensity` | mutation |  |
 | `window.showAbout` | mutation | `showAboutPanel` |
 | `window.state` | query | `isFullScreen` |
+| `window.visibleThread` | mutation |  |
 | `workspaces.add` | mutation | `agent.addWorkspace` |
 | `workspaces.checkPath` | query | `agent.checkWorkspacePath` |
 | `workspaces.ensureSessionHome` | mutation | `agent.ensureSessionHomeWorkspace` |

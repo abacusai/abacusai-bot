@@ -275,4 +275,78 @@ describe("PrefsStore", () => {
     expect(store.get().theme).toBe("light");
     expect(fs.readdirSync(dir)).toEqual([]);
   });
+
+  // Spec 05 §31.5 a, spec 06 §23.5 b: every new leaf has a default, its own
+  // provenance, and validates.
+  it("carries the phase 5/6 leaves with their defaults and per-leaf provenance", () => {
+    const store = new PrefsStore({ file });
+    expect(store.get()).toMatchObject({
+      keymap: {},
+      appearance: { textSize: 14, bubbleTint: true },
+      sounds: {
+        enabled: true,
+        perEvent: {},
+        perBot: {},
+        quietHours: { enabled: false, start: "22:00", end: "08:00" },
+      },
+      notch: {
+        enabled: true,
+        haptics: true,
+        idleVisible: true,
+        extraDisplays: false,
+        showInNotch: true,
+      },
+      tour: { status: "unseen", at: null },
+      onboardingFlow: null,
+      onboardingExit: null,
+      onboardingPairing: [],
+    });
+    store.update({
+      sounds: {
+        perBot: { "bot-1": "needs-me" },
+        quietHours: { enabled: true, start: "23:30", end: "07:00" },
+      },
+      appearance: { textSize: 15 },
+      keymap: { "new-bot": "Mod+Shift+B", "close-tab@terminal": null },
+      notch: { haptics: false },
+      tour: { status: "done", at: 5 },
+      onboardingFlow: 2,
+      onboardingExit: { to: "bot", botId: "b1", edit: true },
+      onboardingPairing: ["whatsapp", "telegram"],
+    });
+    const provenance = new PrefsStore({ file }).provenance();
+    expect(provenance).toMatchObject({
+      "sounds.perBot": "user",
+      "sounds.quietHours": "user",
+      "sounds.enabled": "default",
+      "appearance.textSize": "user",
+      "appearance.bubbleTint": "default",
+      keymap: "user",
+      "notch.haptics": "user",
+      "notch.enabled": "default",
+      "tour.status": "user",
+      onboardingExit: "user",
+      onboardingPairing: "user",
+    });
+    expect(new PrefsStore({ file }).get().appearance).toEqual({
+      textSize: 15,
+      bubbleTint: true,
+    });
+  });
+
+  it("refuses invalid values for the new leaves", () => {
+    const store = new PrefsStore({ file: null });
+    for (const patch of [
+      { appearance: { textSize: 16 } },
+      {
+        sounds: { quietHours: { enabled: true, start: "25:00", end: "07:00" } },
+      },
+      { sounds: { perBot: { b: "loud" } } },
+      { onboardingPairing: ["whatsapp", "whatsapp"] },
+      { onboardingPairing: ["slack"] },
+      { onboardingExit: { to: "bot" } },
+      { tour: { status: "maybe" } },
+    ])
+      expect(() => store.update(patch as never)).toThrow();
+  });
 });

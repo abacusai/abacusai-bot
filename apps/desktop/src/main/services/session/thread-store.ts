@@ -357,6 +357,24 @@ export class ThreadStore {
     });
   }
 
+  /**
+   * Applies every journalled write whose destination is no longer held, for
+   * every thread, opened or not. Main calls it once at startup, right after
+   * the migration runner set this launch's write blocks: a thread saved
+   * while a previous launch's recovery was unresolved, and never opened
+   * again, still reaches its file.
+   */
+  replayHeld(): number {
+    try {
+      const applied = this.held.replayAll();
+      if (applied > 0) this.log(`replayed ${applied} held thread write(s)`);
+      return applied;
+    } catch (error) {
+      this.log(`replaying held thread writes failed: ${String(error)}`);
+      return 0;
+    }
+  }
+
   threadPath(sessionId: string): string | null {
     return isSafeSessionId(sessionId)
       ? path.join(this.home(), THREADS_DIR_NAME, `${sessionId}.json`)
@@ -604,6 +622,26 @@ export class ThreadStore {
       runs: thread.runs,
     };
     this.persist(sessionId, threadFile, file, "agui", true);
+    // Held in memory (write-blocked) or on disk: readers now see it.
+    for (const listener of this.aguiListeners) {
+      try {
+        listener(sessionId);
+      } catch (error) {
+        this.log(`an AG-UI persist listener threw: ${String(error)}`);
+      }
+    }
+  }
+
+  private readonly aguiListeners = new Set<(sessionId: string) => void>();
+
+  /**
+   * After every `writeAgui` (spec 03 §24.12 c): what `TranscriptService`'s
+   * `onPersist` is for v1 saves (debug sync, bot previews). Returns the
+   * removal.
+   */
+  onAguiPersist(listener: (sessionId: string) => void): () => void {
+    this.aguiListeners.add(listener);
+    return () => this.aguiListeners.delete(listener);
   }
 
   /**

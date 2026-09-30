@@ -8,7 +8,9 @@ import type {
   AiHydration,
   AiSendAck,
   AiSendInput,
+  AttentionEvent,
   PermissionDescriptor,
+  RunFinishedNotice,
   StreamChunk,
   UIMessage,
 } from "#shared/contract";
@@ -23,6 +25,12 @@ import { unavailable } from "../errors";
 export interface SequencedChunk {
   seq: number | null;
   event: StreamChunk;
+}
+
+/** A run-finished notice and its event id (the terminal's relay seq). */
+export interface SequencedNotice {
+  seq: number;
+  notice: RunFinishedNotice;
 }
 
 export type PermissionLineage =
@@ -48,6 +56,16 @@ export interface AguiSource {
   ): AsyncIterable<SequencedChunk>;
   /** From `RUN_STARTED` through the terminal, then returns. */
   joinRun(runId: string, signal: AbortSignal): AsyncIterable<SequencedChunk>;
+  /**
+   * Every thread's run-finished notices with seq `> afterSeq` still in the
+   * notice ring (null: none replayed), then live.
+   */
+  runFinished(
+    afterSeq: number | null,
+    signal: AbortSignal
+  ): AsyncIterable<SequencedNotice>;
+  /** A snapshot taken with registration, then revisioned changes. */
+  attention(signal: AbortSignal): AsyncIterable<AttentionEvent>;
   send(input: AiSendInput): Promise<AiSendAck>;
   /**
    * The whole completed transcript plus the checkpoint; the procedure pages
@@ -94,6 +112,14 @@ export class UnavailableAguiSource implements AguiSource {
   }
 
   joinRun(): AsyncIterable<SequencedChunk> {
+    return notYet();
+  }
+
+  runFinished(): AsyncIterable<SequencedNotice> {
+    return notYet();
+  }
+
+  attention(): AsyncIterable<AttentionEvent> {
     return notYet();
   }
 

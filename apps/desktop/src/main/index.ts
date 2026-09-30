@@ -95,13 +95,14 @@ import {
   registerIpcHandlers,
   type HostOperations,
 } from "./handler";
-import { registerKeepAwakeHandlers } from "./keep-awake";
+import { registerKeepAwakeHandlers, setMainAgentBusy } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
   prefsFileAfterMigrations,
   runStartupMigrations,
 } from "./migrations/startup";
+import { CueArbiter, mainOnlyCueWindows } from "./notch/cue-arbiter";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
@@ -137,6 +138,8 @@ import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-ru
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
+import { createLoginItem } from "./services/config/login-item";
+import { notificationSilent } from "./services/config/notification-policy";
 import { PrefsStore, prefsFile } from "./services/config/prefs-store";
 import {
   registerRendererState,
@@ -144,9 +147,14 @@ import {
 } from "./services/config/renderer-state";
 import {
   readNotificationSettings,
+  readLegacySoundOptOut,
+  onNotificationSettingsWritten,
   readSettings,
 } from "./services/config/settings";
-import { reportFunnelStep } from "./services/debug-sync/funnel-beacon";
+import {
+  reportFunnelStep,
+  reportFunnelStepOnce,
+} from "./services/debug-sync/funnel-beacon";
 import {
   buildLogDump,
   collectEnvironmentInfo,
@@ -373,7 +381,7 @@ function notifyTaskRunningInBackground(): void {
     const notification = new Notification({
       title: "Task still running",
       body: "We'll notify you when it finishes.",
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => revealMainWindow());
     notification.show();
@@ -423,6 +431,18 @@ const rendererSwaps = new RendererSwapScheduler({
   // The integrity check admits only experiences built for this shell's
   // FOUNDATION_API, so this is also the candidate's contract.
   barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
+  // Activation is transactional with readiness (spec 07 review r1 #9).
+  onOutcome: (version, outcome) => {
+    const store = experienceRuntime?.store;
+    if (store == null) return;
+    const settle =
+      outcome === "gave-up"
+        ? store.abandonActivation(version)
+        : store.commitActivation(version);
+    settle.catch((error: unknown) => {
+      console.error(`[experience] settling ${version} failed`, error);
+    });
+  },
 });
 
 function scheduleRendererSwap(version: string): void {
@@ -444,7 +464,12 @@ const browserRuntimeWindow = (): BrowserRuntimeWindow | null => {
     },
   };
 };
-const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow);
+const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow, {
+  // A local file view's http(s) links (spec 04 §12.8): the system browser.
+  openExternal: (url) => {
+    if (isSafeExternalUrl(url)) void shell.openExternal(url);
+  },
+});
 workspaceServiceHost.attachBrowserRuntime(browserRuntime);
 
 let activeLinuxChromeMode: LinuxChromeMode = "native-frame";
@@ -1279,8 +1304,11 @@ const appOperations: AppOperations = {
   hasGoogleChrome: () => hasGoogleChrome(),
 
   // First-run milestones; see services/debug-sync/funnel-beacon.ts.
-  reportFunnelStep(step, detail) {
-    if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+  reportFunnelStep(step, detail, once) {
+    if (!isFunnelStep(step)) return;
+    // `once`: the persisted first-time report (spec 06 §6.5).
+    if (once === true) reportFunnelStepOnce(step, funnelDetail(detail));
+    else reportFunnelStep(step, funnelDetail(detail));
   },
 
   // The local account; see shared/account.ts for why it is optional.
@@ -1389,7 +1417,7 @@ const appOperations: AppOperations = {
     const notification = new Notification({
       title,
       body,
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => {
       const win = revealMainWindow();
@@ -1560,6 +1588,18 @@ const appOperations: AppOperations = {
 
   showAboutPanel: () => app.showAboutPanel(),
 
+  async setTitlebarDensity(value) {
+    const density = setTitlebarDensity(value);
+    if (RENDERER_GENERATION === "wco") {
+      refreshWindowChrome();
+      publishChromeState();
+      if (process.platform === "darwin") await recreateMainWindow();
+    }
+    return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
+  },
+
+  loginItem: createLoginItem(app),
+
   markRendererActivity() {
     lastRendererActivity = Date.now();
   },
@@ -1608,6 +1648,14 @@ function installRpc(
   host: HostOperations,
   rendererState: RendererStateStore
 ): void {
+  // Before the notch exists, the main renderer is the only audible document.
+  const cueArbiter = new CueArbiter({
+    windows: mainOnlyCueWindows({
+      mainRendererId: () => rendererWebContents()?.id ?? null,
+      state: (id) =>
+        rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+    }),
+  });
   const deps: RpcDeps = {
     serviceHost: workspaceServiceHost,
     host,
@@ -1638,6 +1686,7 @@ function installRpc(
     ai: workspaceServiceHost.aguiRelay,
     threads: workspaceServiceHost.threadStore,
     trackers: createEventTrackers(mainEventBus),
+    cues: cueArbiter,
   };
   rpcTransport = installMessagePortTransport({
     ipcMain,
@@ -1710,6 +1759,9 @@ app
     // store reads the files they derive. Never throws; a failure is recorded
     // and retried next launch, and every consumer has a fallback.
     await runStartupMigrations(APP_DISPLAY_NAME);
+    // The blocks for this launch are set: journalled thread writes whose
+    // files are free again land now, even for threads nobody opens.
+    workspaceServiceHost.threadStore.replayHeld();
     // An unresolved commit that may cover prefs.json: this session writes a
     // copy, so the next launch's rollback neither overwrites nor is defeated
     // by what the user changes now.
@@ -1734,7 +1786,10 @@ app
     const rendererState = registerRendererState();
     // The old renderer is the shipped UI until the cut-over: its durable
     // state keeps `prefs.json` current, by provenance (spec 00 C.4).
-    installLegacyPrefsSync(rendererState, prefsStore);
+    installLegacyPrefsSync(rendererState, prefsStore, undefined, {
+      read: readLegacySoundOptOut,
+      onWrite: onNotificationSettingsWritten,
+    });
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
@@ -1759,6 +1814,11 @@ app
       .catch(() => undefined);
 
     registerKeepAwakeHandlers();
+    // Keep-awake follows the relay's run state too, re-evaluated at every
+    // AG-UI run start and terminal (spec 07 review r1 #10).
+    workspaceServiceHost.aguiRelay.onBusyChange((busy) => {
+      setMainAgentBusy(busy);
+    });
 
     // Best-effort cleanup of attachment temp files older than 7 days across
     // every workspace; never blocks startup.
@@ -1879,17 +1939,8 @@ app
     // The same state the oRPC renderer reads through `window.chrome`.
     ipcMain.handle("window:chrome", () => chromeState());
     ipcMain.handle("window:recreate", () => recreateMainWindow());
-    ipcMain.handle(
-      "settings:set-titlebar-density",
-      async (_event, value: unknown) => {
-        const density = setTitlebarDensity(value);
-        if (RENDERER_GENERATION === "wco") {
-          refreshWindowChrome();
-          publishChromeState();
-          if (process.platform === "darwin") await recreateMainWindow();
-        }
-        return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
-      }
+    ipcMain.handle("settings:set-titlebar-density", (_event, value: unknown) =>
+      appOperations.setTitlebarDensity(value)
     );
 
     // `on`, not `handle`: the renderer must never wait on main to log a line.
