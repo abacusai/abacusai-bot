@@ -47,6 +47,8 @@ export interface AdmissionHost {
   setOutbox(update: (outbox: OutboxEntry[]) => OutboxEntry[]): void;
   /** The echo of this message id was processed. */
   echoed(messageId: string, runId?: string): boolean;
+  /** Definitive failures from any admission path, after lineage checks. */
+  onDefinitiveError?(error: unknown): void;
   /** Re-send delays for an uncertain admission. */
   readonly reconcileDelaysMs: readonly number[];
   schedule(ms: number, run: () => void): void;
@@ -114,6 +116,7 @@ const admit = async (
       return { kind: "started" };
     if (isDefinitive(error)) {
       remove(host, entryId);
+      host.onDefinitiveError?.(error);
       throw error;
     }
     patch(host, entryId, { state: "unconfirmed" });
