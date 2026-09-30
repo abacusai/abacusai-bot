@@ -62,7 +62,7 @@ overrides:
 minimumReleaseAgeExclude:
   # Pinned exact in apps/desktop, so the age gate could only block that one
   # pinned install. Every bump is already an individual, human-reviewed PR.
-  - electron@43.4.1
+  - electron@44.4.5
   # Younger than the age window when #217 pinned it; the exclusion names the
   # exact version, so it lapses on its own at the next bump.
   - typebox@1.3.16

@@ -63,6 +63,9 @@ const MAIN_ROOT_FILES = [
   // not import the entry module to say so.
   "bring-to-front.test.ts",
   "bring-to-front.ts",
+  // Clipboard IPC and native chrome belong to the main window/process.
+  "clipboard-image.test.ts",
+  "clipboard-image.ts",
   "crash-guard.test.ts",
   "crash-guard.ts",
   "external-links.test.ts",
@@ -90,6 +93,7 @@ const MAIN_ROOT_FILES = [
   "profile-home-init.ts",
   "profile-home.test.ts",
   "profile-home.ts",
+  "renderer-generation.ts",
   "renderer-csp.test.ts",
   "renderer-csp.ts",
   // The main window's renderer view, its swap machinery, and the send-to-
@@ -99,6 +103,13 @@ const MAIN_ROOT_FILES = [
   "resources.ts",
   "service-host.ts",
   "spellcheck-dictionary.ts",
+  "window-chrome-options.test.ts",
+  "window-chrome-options.ts",
+  "window-chrome-probe.test.ts",
+  "window-chrome-probe.ts",
+  "window-chrome-settings.test.ts",
+  "window-chrome-settings.ts",
+  "window-chrome.electron.test.ts",
 ];
 
 const entries = readdirSync(SERVICES, { withFileTypes: true });

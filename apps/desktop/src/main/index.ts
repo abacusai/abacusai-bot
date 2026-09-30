@@ -80,13 +80,10 @@ import type {
   RemoveSkillRequest,
   SearchMarketplaceSkillsRequest,
 } from "#shared/skills-types";
-import {
-  MACOS_TRAFFIC_LIGHT_POSITION,
-  windowChromeMetrics,
-} from "#shared/window-chrome";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
+import { readClipboardImage } from "./clipboard-image";
 import { installCrashGuard } from "./crash-guard";
 import { isSafeExternalUrl } from "./external-links";
 import { disposeLocalModels, registerIpcHandlers } from "./handler";
@@ -95,6 +92,7 @@ import { decideLocalOpen } from "./local-open-guard";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { rendererCspHeaders } from "./renderer-csp";
+import { RENDERER_GENERATION } from "./renderer-generation";
 import {
   RendererHost,
   rendererWebContents,
@@ -140,6 +138,26 @@ import { registerUpdateHandlers } from "./services/updates/update-handler";
 import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
+import {
+  applyWindowChrome,
+  linuxChromeMode,
+  subscribeWindowChromeTheme,
+  toolbarHeight,
+  windowChromeOptions,
+  type ChromeCapability,
+  type LinuxChromeMode,
+} from "./window-chrome-options";
+import {
+  OVERLAY_PROBE_SCRIPT,
+  probeWindowChrome,
+  type OverlayGeometry,
+} from "./window-chrome-probe";
+import {
+  getTitlebarDensity,
+  persistLinuxNativeFrame,
+  setTitlebarDensity,
+  useLinuxNativeFrame,
+} from "./window-chrome-settings";
 
 const APP_DISPLAY_NAME = "AbacusAI Bot";
 
@@ -430,7 +448,33 @@ const browserRuntimeWindow = (): BrowserRuntimeWindow | null => {
 const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow);
 workspaceServiceHost.attachBrowserRuntime(browserRuntime);
 
-async function createWindow() {
+let activeLinuxChromeMode: LinuxChromeMode = "native-frame";
+let chromeCapability: ChromeCapability = "native-frame";
+
+function currentChromeInput() {
+  return {
+    mode: RENDERER_GENERATION,
+    platform: process.platform,
+    dark: nativeTheme.shouldUseDarkColors,
+    reducedTransparency: nativeTheme.prefersReducedTransparency,
+    overlayHeight: toolbarHeight(getTitlebarDensity()),
+    linuxMode: activeLinuxChromeMode,
+  };
+}
+
+function refreshWindowChrome(): void {
+  const window = aliveMainWindow();
+  if (window !== null) applyWindowChrome(window, currentChromeInput());
+}
+
+interface RecreatedWindowState {
+  url: string;
+  visible: boolean;
+  maximized: boolean;
+  fullScreen: boolean;
+}
+
+async function createWindow(restored?: RecreatedWindowState) {
   const Store = (await import("electron-store")).default;
   // A corrupt JSON file would otherwise brick the app on every launch.
   store = new Store<WindowStateSchema>({
@@ -440,7 +484,8 @@ async function createWindow() {
 
   // Set before a silent update restart of a hidden window, so the relaunch
   // stays hidden instead of popping over the user's work.
-  const startHiddenAfterUpdate = consumeRelaunchHidden();
+  const startHiddenAfterUpdate =
+    restored !== undefined ? !restored.visible : consumeRelaunchHidden();
 
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
@@ -481,14 +526,23 @@ async function createWindow() {
     void app.dock?.show();
   }
 
-  const titlebar = windowChromeMetrics(process.platform);
+  activeLinuxChromeMode = useLinuxNativeFrame()
+    ? "native-frame"
+    : linuxChromeMode(process.env);
+  const chromeOptions = windowChromeOptions(currentChromeInput());
+  chromeCapability =
+    RENDERER_GENERATION === "legacy" ||
+    (process.platform === "linux" && activeLinuxChromeMode === "native-frame")
+      ? "native-frame"
+      : "overlay-pending";
 
   // Matches the renderer so neither flashes through; transparent where
   // vibrancy/mica paint the backdrop.
   const backgroundColor =
-    process.platform === "darwin" || process.platform === "win32"
+    chromeOptions.backgroundColor ??
+    (process.platform === "darwin" || process.platform === "win32"
       ? "#00000000"
-      : "#2a2a28";
+      : "#2a2a28");
 
   // The renderer lives in the RendererHost's view, so an update can replace it.
   const mainWindow = new BaseWindow({
@@ -504,38 +558,16 @@ async function createWindow() {
     title: APP_DISPLAY_NAME,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === "darwin"
-      ? {
-          titleBarStyle: "hiddenInset" as const,
-          trafficLightPosition: MACOS_TRAFFIC_LIGHT_POSITION,
-          ...(nativeTheme.prefersReducedTransparency
-            ? {}
-            : {
-                vibrancy: "under-window" as const,
-                visualEffectState: "active" as const,
-              }),
-        }
-      : process.platform === "win32"
-        ? {
-            // Native controls (with Snap) under the renderer's own top bar.
-            titleBarStyle: "hidden" as const,
-            titleBarOverlay: {
-              color: "#00000000",
-              symbolColor: nativeTheme.shouldUseDarkColors
-                ? "#fafafa"
-                : "#171717",
-              height: titlebar.titlebarHeight,
-            },
-            backgroundMaterial: nativeTheme.prefersReducedTransparency
-              ? ("none" as const)
-              : ("mica" as const),
-          }
-        : {
-            // Linux window-manager support for custom overlays is inconsistent.
-            frame: true,
-          }),
+    ...chromeOptions,
   });
   mainWindowRef = mainWindow;
+  const unsubscribeChromeTheme = subscribeWindowChromeTheme(
+    nativeTheme,
+    refreshWindowChrome
+  );
+  mainWindow.once("closed", unsubscribeChromeTheme);
+  if (restored?.maximized) mainWindow.maximize();
+  if (restored?.fullScreen) mainWindow.setFullScreen(true);
   // Connector login windows hang off this so they share its Space.
   setMainWindow(mainWindow);
   const publishFullScreenState = (): void => {
@@ -647,7 +679,9 @@ async function createWindow() {
     const contents = host.webContents;
     const experienceUrl = experienceRuntime?.activeRendererUrl() ?? null;
 
-    if (rendererUrl) {
+    if (restored !== undefined) {
+      void contents.loadURL(restored.url).catch(() => undefined);
+    } else if (rendererUrl) {
       void contents.loadURL(rendererUrl).catch(() => undefined);
     } else if (experienceUrl !== null) {
       // A verified installed experience supersedes the asar baseline.
@@ -714,6 +748,63 @@ async function createWindow() {
       }
       // A silent update restart of a hidden window comes back hidden.
       if (!startHiddenAfterUpdate) mainWindow.show();
+      if (
+        RENDERER_GENERATION === "wco" &&
+        chromeCapability === "overlay-pending"
+      ) {
+        const probeAfterShow = (): void => {
+          if (mainWindow.isDestroyed()) return;
+          if (mainWindow.isFullScreen()) {
+            mainWindow.once("leave-full-screen", probeAfterShow);
+            return;
+          }
+          void probeWindowChrome(
+            () =>
+              contents.executeJavaScript(
+                OVERLAY_PROBE_SCRIPT
+              ) as Promise<OverlayGeometry | null>
+          )
+            .then(async (available) => {
+              if (mainWindow.isDestroyed() || mainWindowRef !== mainWindow)
+                return;
+              if (mainWindow.isFullScreen()) {
+                mainWindow.once("leave-full-screen", probeAfterShow);
+                return;
+              }
+              chromeCapability = available ? "overlay" : "overlay-unavailable";
+              if (available) return;
+              console.warn("[window-chrome] overlay-unavailable", {
+                sessionType: process.env.XDG_SESSION_TYPE,
+                desktop: process.env.XDG_CURRENT_DESKTOP,
+                electron: process.versions.electron,
+              });
+              if (process.platform !== "linux") return;
+              persistLinuxNativeFrame();
+              const bounds = mainWindow.getNormalBounds();
+              store.set("windowWidth", bounds.width);
+              store.set("windowHeight", bounds.height);
+              store.set("windowX", bounds.x);
+              store.set("windowY", bounds.y);
+              const state: RecreatedWindowState = {
+                url: host.webContents.getURL(),
+                visible: mainWindow.isVisible(),
+                maximized: mainWindow.isMaximized(),
+                fullScreen: mainWindow.isFullScreen(),
+              };
+              // destroy bypasses the normal close-to-background guard. The closed
+              // handler disposes the host/browser views before the replacement loads.
+              mainWindow.destroy();
+              await createWindow(state);
+            })
+            .catch((error) => {
+              console.error("[window-chrome] recreation failed", error);
+            });
+        };
+        // A silent relaunch may stay hidden. Probe only once native controls
+        // can be visible, never mistake a hidden/fullscreen window for failure.
+        if (mainWindow.isVisible()) probeAfterShow();
+        else mainWindow.once("show", probeAfterShow);
+      }
     });
 
     // Spelling suggestions plus the standard editing actions.
@@ -1120,27 +1211,26 @@ app
         }
         nativeTheme.themeSource = source;
 
-        const window = mainWindowRef;
-        if (window != null && !window.isDestroyed()) {
-          if (process.platform === "win32") {
-            window.setTitleBarOverlay({
-              color: "#00000000",
-              symbolColor: nativeTheme.shouldUseDarkColors
-                ? "#fafafa"
-                : "#171717",
-              height: windowChromeMetrics("win32").titlebarHeight,
-            });
-            window.setBackgroundMaterial(
-              nativeTheme.prefersReducedTransparency ? "none" : "mica"
-            );
-          } else if (process.platform === "darwin") {
-            window.setVibrancy(
-              nativeTheme.prefersReducedTransparency ? null : "under-window"
-            );
-          }
-        }
+        refreshWindowChrome();
 
         return nativeTheme.shouldUseDarkColors;
+      }
+    );
+
+    // Main-only plumbing until the new renderer adds its typed procedures.
+    ipcMain.handle("window:chrome", () => ({
+      mode: chromeCapability,
+      fullScreen: aliveMainWindow()?.isFullScreen() ?? false,
+      density: getTitlebarDensity(),
+      toolbarHeight: toolbarHeight(getTitlebarDensity()),
+    }));
+    ipcMain.handle(
+      "settings:set-titlebar-density",
+      (_event, value: unknown) => {
+        const density = setTitlebarDensity(value);
+        // Legacy geometry stays fixed. macOS applies native height at recreation.
+        if (RENDERER_GENERATION === "wco") refreshWindowChrome();
+        return { density, appliesOnRestart: process.platform === "darwin" };
       }
     );
 
@@ -1511,21 +1601,14 @@ app
 
     // Backs the "Paste image" attach item, which has no paste event to read
     // because the click happens in a menu. Null when there is no image.
-    ipcMain.handle("read-clipboard-image", () => {
-      try {
-        const image = clipboard.readImage();
-        if (image == null || image.isEmpty()) return null;
-        const data = image.toPNG();
-        if (data.length === 0) return null;
-        return {
-          name: `clipboard-${Date.now()}.png`,
-          data,
-          mimeType: "image/png",
-        };
-      } catch {
-        return null;
-      }
-    });
+    ipcMain.handle("read-clipboard-image", () =>
+      readClipboardImage({
+        read: () => clipboard.read(),
+        toPNG: (data) => nativeImage.createFromBuffer(data).toPNG(),
+        logError: (error) =>
+          console.error("[clipboard] failed to read image", error),
+      })
+    );
 
     // A user-directed fetch of a user-typed address for staging as an
     // attachment. http/https only, and capped so an endless body cannot wedge
@@ -1741,7 +1824,7 @@ app
       console.error("[experience] runtime failed to initialize", error);
     }
   })
-  .then(createWindow)
+  .then(() => createWindow())
   .then(() => {
     updateService.checkForUpdatesOnStartup();
 
