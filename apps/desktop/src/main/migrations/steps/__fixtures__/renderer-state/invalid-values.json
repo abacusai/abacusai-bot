@@ -1,0 +1,12 @@
+{
+  "theme": "purple",
+  "abacusai-bot-language": "{broken",
+  "local-code-ui-store": "{\"state\":{\"isSidebarVisible\":\"yes\",\"selectedModelId\":\"gpt-5\",\"favoriteModelIds\":\"gpt-5\",\"globalSelectedMode\":\"WARP\",\"workspaceAccordionExpanded\":{\"ws-1\":\"open\"},\"pinnedSessionIds\":[\"s-1\"],\"pinnedBotIds\":[42],\"lastPickedWorkspaceId\":\"ws-1\"},\"version\":4}",
+  "sidebar-accordion": "{\"state\":{\"openSection\":\"bots\"},\"version\":7}",
+  "abacus-credits": "not json",
+  "abacusai-bot-code-folder": "{\"state\":{\"recentFolders\":[\"/a\",\"/b\",\"/c\",\"/d\",\"/e\",\"/f\"]},\"version\":0}",
+  "browser.homepage": "   ",
+  "referral-card.dismissed-until": "soon",
+  "onboarding.step": "welcome",
+  "empty-value": 3
+}

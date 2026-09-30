@@ -1,0 +1,68 @@
+{
+  "prefs": {
+    "provenance": {
+      "browserHomepage": "default",
+      "creditsExhaustedAt": "default",
+      "defaultMode": "legacy",
+      "dismissals": "default",
+      "language": "default",
+      "lastPickedWorkspaceId": "legacy",
+      "models": "legacy",
+      "motion": "default",
+      "onboardingStep": "default",
+      "panes": "default",
+      "pinned": "legacy",
+      "recentFolders": "default",
+      "sidebar": "legacy",
+      "sounds": "default",
+      "theme": "legacy",
+      "workspaceExpanded": "legacy"
+    },
+    "row": {
+      "browserHomepage": null,
+      "creditsExhaustedAt": null,
+      "defaultMode": "AUTO",
+      "dismissals": {
+        "referralCardUntil": null,
+        "upsell": false
+      },
+      "id": "app",
+      "language": "system",
+      "lastPickedWorkspaceId": null,
+      "models": {
+        "favoriteModelIds": [],
+        "perWorkspace": {},
+        "selectedModelId": "abacus/route-llm-code"
+      },
+      "motion": {
+        "reduce": "system"
+      },
+      "onboardingStep": null,
+      "panes": {},
+      "pinned": {
+        "botIds": [],
+        "sessionIds": []
+      },
+      "recentFolders": [],
+      "sidebar": {
+        "openSection": "sessions",
+        "pinned": true
+      },
+      "sounds": {
+        "enabled": true,
+        "perEvent": {}
+      },
+      "theme": "system",
+      "updatedAt": "2026-09-30T12:00:00.000Z",
+      "workspaceExpanded": {}
+    }
+  },
+  "stats": {
+    "imported": 7,
+    "invalid": 0,
+    "keptUser": 0,
+    "keys": 3,
+    "reset": 0,
+    "written": 1
+  }
+}
