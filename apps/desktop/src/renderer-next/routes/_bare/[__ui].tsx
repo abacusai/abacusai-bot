@@ -1,10 +1,11 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
+import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
 
 const GalleryRoute = () => {
   const search = Route.useSearch();
-  return <Gallery search={search} />;
+  return <Gallery search={search} extension={chatGallerySections} />;
 };
 
 /** The dev gallery (spec 01 §10): dev builds and VITE_UI_GALLERY=1 only. */

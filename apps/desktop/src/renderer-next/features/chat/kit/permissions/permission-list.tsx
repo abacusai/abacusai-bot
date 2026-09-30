@@ -79,10 +79,10 @@ export const PermissionTray = ({ autoFocus = false }: { autoFocus?: boolean }) =
 export const PermissionList = () => {
   const { inline } = useChatView();
   const items = useItems();
-  useSyncExternalStore(inline.subscribe, inline.version);
+  const registered = useSyncExternalStore(inline.subscribe, inline.keys);
   const listed = items.filter((item) => {
     const key = inlineKeyOf(item);
-    return key == null || !inline.has(key);
+    return key == null || !registered.has(key);
   });
   if (listed.length === 0) return null;
   return (

@@ -1,2 +1,2 @@
-export { Gallery } from "./gallery";
+export { Gallery, type GalleryExtension } from "./gallery";
 export { GallerySearch, galleryEnabled } from "./search";
