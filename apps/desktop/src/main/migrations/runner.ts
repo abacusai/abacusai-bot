@@ -74,8 +74,10 @@ export interface RunMigrationsOptions {
 }
 
 export interface RunMigrationsResult {
-  /** Ids committed in this run. */
+  /** Ids committed and recorded in this run. */
   applied: number[];
+  /** Ids committed in this run with work left (`plan.pending`): not recorded. */
+  partial: number[];
   failed: { id: number; name: string; error: string } | null;
   /** Staging directories found on launch, with what was done to them. */
   recovered: { staging: string; action: "undone" | "discarded" | "finished" }[];
@@ -84,6 +86,9 @@ export interface RunMigrationsResult {
 }
 
 class SimulatedCrash extends Error {}
+
+/** A committed plan with `pending` work: not recorded, so it runs again. */
+class Deferred extends Error {}
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -113,6 +118,7 @@ export const runMigrations = async (
     ((message: string) => console.log(`[migrations] ${message}`));
   const result: RunMigrationsResult = {
     applied: [],
+    partial: [],
     failed: null,
     recovered: [],
   };
@@ -299,7 +305,9 @@ export const runMigrations = async (
       }
       if (options.hooks?.beforeRecord?.() === "crash")
         throw new SimulatedCrash();
-      // 4. The record.
+      // 4. The record, unless the step left work for the next launch: then
+      // it runs again, and a journal left by a crash is undone as usual.
+      if ((plan.pending ?? 0) > 0) throw new Deferred();
       const entry: AppliedMigration = {
         id: step.id,
         name: step.name,
@@ -320,6 +328,19 @@ export const runMigrations = async (
       if (error instanceof SimulatedCrash) {
         result.crashed = true;
         return result;
+      }
+      if (error instanceof Deferred) {
+        try {
+          removeStaging(staging);
+        } catch (cleanupError) {
+          log(`cannot delete ${staging}: ${errorMessage(cleanupError)}`);
+        }
+        report(1, 1);
+        result.partial.push(step.id);
+        log(
+          `committed ${step.id} ${step.name} with ${plan.pending} left for the next launch ${JSON.stringify(plan.stats)}`
+        );
+        continue;
       }
       // Undo at once, as the next launch would.
       try {
