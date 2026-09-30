@@ -267,7 +267,7 @@ handler stays until the cut-over).
 | 52 | `signalRendererReady` | preload/index.ts | `window.ready` | M | renderer-host also accepts this, per webContents, as the swap-ready signal |
 | 53 | `getPathForFile` | preload/index.ts | `(preload) window.abacusHost.getPathForFile` | M | needs webUtils in the preload; the only non-port preload export |
 
-## `IpcEvent` variants (46)
+## `IpcEvent` variants (47)
 
 | `IpcEvent.type` | New home | Notes |
 |---|---|---|
@@ -284,6 +284,7 @@ handler stays until the cut-over).
 | `cronjobs-updated` | db.routines.changes (feed notify) |  |
 | `device-build-state` | devices.events { type: "build-state", phase, error? } |  |
 | `device-status-updated` | devices.events { type: "status", status } |  |
+| `exec-backend` | settings.events { type: "exec-backend", backend } | backend or terminal shell changed; invalidates execBackend and sandboxSupport in every window |
 | `file-tree-root-updated` | files.events { type: "tree-root-changed" } | the renderer invalidates files.treeRoot / treeChildren |
 | `git-state-updated` | db.gitState.changes |  |
 | `local-cli-ndjson` | ai.subscribe (AG-UI) | the NDJSON stream is not mounted on oRPC |

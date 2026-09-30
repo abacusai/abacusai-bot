@@ -145,7 +145,9 @@ export const ModelChip = ({
   binding,
   compact = false,
   onOpenChange,
+  onUseLocalModel,
 }: {
+  onUseLocalModel?(): void;
   onOpenChange?(open: boolean): void;
   binding: ModelChipBinding;
   compact?: boolean;
@@ -227,6 +229,20 @@ export const ModelChip = ({
           aria-label={t("chat.composer.models")}
           className="flex max-h-80 flex-col overflow-y-auto"
         >
+          {onUseLocalModel != null && q === "" ? (
+            <button
+              type="button"
+              role="option"
+              aria-selected={false}
+              className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
+              onClick={() => {
+                onUseLocalModel();
+                setOpen(false);
+              }}
+            >
+              {t("localModels.useLocal")}
+            </button>
+          ) : null}
           {groups.map((group) => (
             <div
               key={group.id}

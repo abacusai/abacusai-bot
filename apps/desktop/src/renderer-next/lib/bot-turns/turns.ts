@@ -127,7 +127,9 @@ export function botThreadView(
     const deliverables = turnDeliverables(assistants);
     let lastShown = -1;
     turn.assistantIndices.forEach((index, position) => {
-      const spoken = spokenParts(messages[index]!);
+      const spoken = spokenParts(
+        botVisibleMessage(messages[index]!, messages, runActive)
+      );
       const texts = spoken.filter((part) => part.kind === "text");
       const emojiOnly =
         texts.length > 0 &&
@@ -170,4 +172,41 @@ export function botThreadView(
     if (at != null) previous = at;
   });
   return views;
+}
+
+/** Keep spoken parts and tool pairs used by inline permission cards. */
+export function botVisibleMessage(
+  message: UIMessage,
+  messages: readonly UIMessage[],
+  runActive: boolean
+): UIMessage {
+  if (message.role !== "assistant") return message;
+  const index = messages.findIndex((row) => row.id === message.id);
+  const turn = turnsOf(messages).find((row) =>
+    row.assistantIndices.includes(index)
+  );
+  const reaction = turn
+    ? turnReaction(turn.assistantIndices.map((i) => messages[i]!))
+    : null;
+  const trailing = runActive && index === messages.length - 1;
+  const parts = message.parts.filter((part, partIndex) => {
+    if (
+      part.type === "tool-call" ||
+      part.type === "tool-result" ||
+      part.type === "subagent"
+    )
+      return true;
+    if (part.type !== "text") return false;
+    const kind = kindOf(part);
+    if (kind === "notification" || kind === "feature_limit") return true;
+    if (kind !== null || !part.content.trim()) return false;
+    if (!isEmojiOnly(part.content)) return true;
+    return (
+      part.content.trim() !== reaction &&
+      !(trailing && partIndex === message.parts.length - 1)
+    );
+  });
+  return parts.length === message.parts.length
+    ? message
+    : { ...message, parts };
 }

@@ -176,25 +176,64 @@ describe("checkLegacyDiff in a temporary repository (Codex impl r2 #8)", () => {
 
   it("accepts the sanctioned files exactly as the pinned commit left them, and nothing else", async () => {
     const { checkLegacyDiff } = await load();
-    // The real allow-list: pinned to a79707f6, the sign-in change.
+    // Sign-in and shared-helper shims have separate, exact commit pins.
     const { allow } = JSON.parse(readFileSync(ALLOW_FILE, "utf8")) as {
       allow: AllowEntry[];
     };
-    expect(allow.length).toBeGreaterThan(0);
-    for (const entry of allow) {
-      expect(entry.commit).toBe("a79707f6");
-      expect(entry.path).toMatch(/^src\/renderer\//);
-    }
+    expect(
+      Object.fromEntries(allow.map(({ path, commit }) => [path, commit]))
+    ).toEqual({
+      "src/renderer/components/onboarding/onboarding-flow.tsx": "a79707f6",
+      "src/renderer/components/onboarding/onboarding-flow.test.tsx": "a79707f6",
+      "src/renderer/components/onboarding/sign-in-step.tsx": "a79707f6",
+      "src/renderer/components/bots/bot-templates.ts":
+        "426123829bec09be4709d41a3e479a2348aefd19",
+      "src/renderer/components/bots/new-bot-dialog.tsx":
+        "426123829bec09be4709d41a3e479a2348aefd19",
+      "src/renderer/components/settings/routine-schedule.ts":
+        "426123829bec09be4709d41a3e479a2348aefd19",
+    });
+    expect(allow).toHaveLength(6);
 
     const repo = diverged();
-    for (const entry of allow) repo.write(entry.path, `// ${entry.why}\n`);
-    const sanctioned = repo.commit("Sign-in: the sanctioned legacy change");
-    // The same entries, pinned to this repository's sanctioned commit.
-    const pinned = allow.map((entry) => ({ ...entry, commit: sanctioned }));
+    const pins = new Map<string, string>();
+    for (const pin of new Set(allow.map((entry) => entry.commit))) {
+      for (const entry of allow.filter((entry) => entry.commit === pin))
+        repo.write(entry.path, `// ${entry.why}\n`);
+      pins.set(pin, repo.commit(`sanctioned change ${pin}`));
+    }
+    const pinned = allow.map((entry) => ({
+      ...entry,
+      commit: pins.get(entry.commit)!,
+    }));
     expect(
       checkLegacyDiff({ cwd: repo.desktop, base: "main", allow: pinned })
         .problems
     ).toEqual([]);
+    // Every pin rejects subsequent edits, including each shared-helper shim.
+    const originals = new Map(
+      pinned.map((entry) => [
+        entry.path,
+        readFileSync(join(repo.desktop, entry.path), "utf8"),
+      ])
+    );
+    for (const entry of pinned)
+      repo.write(
+        entry.path,
+        `${originals.get(entry.path)}export const unauthorized = true;\n`
+      );
+    expect(
+      checkLegacyDiff({ cwd: repo.desktop, base: "main", allow: pinned })
+        .problems
+    ).toEqual(
+      pinned
+        .map(
+          (entry) =>
+            `${entry.path}: only locale JSON may change under src/renderer`
+        )
+        .sort()
+    );
+    for (const [path, original] of originals) repo.write(path, original);
     // Unlisted, the same files fail: the list is what exempts them.
     expect(
       checkLegacyDiff({ cwd: repo.desktop, base: "main", allow: [] }).problems

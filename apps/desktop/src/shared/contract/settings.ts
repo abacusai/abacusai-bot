@@ -32,15 +32,18 @@ export const BackendIdSchema = v.picklist([
   "ssh",
 ] as BackendId[]);
 
-/**
- * The only destination for a stored or removed credential. The renderer maps
- * it to `settings.keys.listProviders`, `account.*` and `models.list`.
- */
-export type SettingsEvent = {
-  type: "credentials-changed";
-  provider: string;
-  configured?: boolean;
-};
+/** Global settings invalidations, delivered to every subscribed window. */
+export type SettingsEvent =
+  | {
+      type: "credentials-changed";
+      provider: string;
+      configured?: boolean;
+    }
+  | {
+      /** Backend or terminal shell changed; re-read backend and sandbox support. */
+      type: "exec-backend";
+      backend: BackendId;
+    };
 
 export const settings = {
   get: query.input(NoInput).output(type<AbacusBotSettings>()),

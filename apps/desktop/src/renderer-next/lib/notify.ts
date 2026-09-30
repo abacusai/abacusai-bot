@@ -4,6 +4,7 @@
  * quiet hours and the per-bot level, then — for notifications — focus, the
  * user's switch and per-document dedupe.
  */
+import type { NotificationMetadata } from "#shared/contract";
 import type {
   BotSoundLevel,
   PrefsRow,
@@ -65,7 +66,7 @@ export interface NotifyDeps {
     dedupeKey?: string;
     title: string;
     body: string;
-    metadata?: { workspaceId?: string; sessionId?: string };
+    metadata?: NotificationMetadata;
   }): Promise<unknown>;
 }
 
@@ -75,7 +76,7 @@ export interface AttentionNotice {
   botId: string | null;
   title: string;
   body: string;
-  metadata: { sessionId: string; workspaceId?: string };
+  metadata: NotificationMetadata & { sessionId: string };
 }
 
 const DEDUPE_CAP = 500;

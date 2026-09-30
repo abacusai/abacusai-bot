@@ -7,11 +7,17 @@ import {
   BotChatIdentity,
   useBot,
   useBotChatSlots,
+  useBotChatActivity,
   loadSenderChat,
   FilesTab,
 } from "#next/features/bots";
-import { ChatView } from "#next/features/chat";
-import { TopBarSlot, SidePanelContent } from "#next/features/shell";
+import { ChatView, useThreadHost } from "#next/features/chat";
+import {
+  TopBarSlot,
+  SidePanelContent,
+  requestBrowserOpen,
+  BrowserOpenPlaceholder,
+} from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { BotId, SessionId } from "#shared/contract/ids";
@@ -28,7 +34,11 @@ const Sender = ({
   sessionId: string;
 }) => {
   const { chat } = Route.useRouteContext();
-  const slots = useBotChatSlots(bot, sessionId, false, true);
+  const host = useThreadHost(chat.session(sessionId));
+  useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
+  const slots = useBotChatSlots(bot, sessionId, false, true, (url) =>
+    requestBrowserOpen({ sessionId, url })
+  );
   const search = Route.useSearch();
   if (!slots.session) return <BotGone chat />;
   return (
@@ -49,8 +59,12 @@ const Sender = ({
         slots={slots.chat}
         composer={slots.composer}
       />
+      <SidePanelContent tab="browser">
+        <BrowserOpenPlaceholder sessionId={sessionId} />
+      </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab
+          sessionId={sessionId}
           bot={bot}
           preview={search.preview}
           workspaceRoot={slots.workspaceRoot}
