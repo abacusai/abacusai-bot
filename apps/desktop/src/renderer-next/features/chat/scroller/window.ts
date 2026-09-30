@@ -39,7 +39,8 @@ export const followWindow = (
   max = MAX_ROWS
 ): RowWindow => {
   const atEnd = window.end >= previousTotal;
-  if (atEnd) return { start: Math.max(0, Math.min(window.start + prepended, total - max)), end: total };
+  // At the end, a page of history mounts above (up to the budget).
+  if (atEnd) return { start: Math.max(0, total - max), end: total };
   const start = Math.min(total, window.start + prepended);
   const end = Math.min(total, window.end + prepended);
   return { start, end: Math.min(end, start + max) };
