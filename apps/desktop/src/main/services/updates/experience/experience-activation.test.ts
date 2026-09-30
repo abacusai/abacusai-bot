@@ -24,6 +24,7 @@ const fakes = vi.hoisted(() => {
     silent: [] as string[],
     /** Documents whose URL starts with one of these fail to load. */
     failing: [] as string[],
+    hanging: [] as string[],
   };
   let nextId = 1;
 
@@ -47,6 +48,8 @@ const fakes = vi.hoisted(() => {
       return this.url;
     }
     async loadURL(url: string): Promise<void> {
+      if (behaviour.hanging.some((prefix) => url.startsWith(prefix)))
+        await new Promise<void>(() => {});
       if (behaviour.failing.some((prefix) => url.startsWith(prefix)))
         throw new Error("ERR_FILE_NOT_FOUND");
       this.url = url;
@@ -149,6 +152,7 @@ beforeEach(() => {
   paths.appVersion = "1.0.0";
   fakes.behaviour.silent = [];
   fakes.behaviour.failing = [];
+  fakes.behaviour.hanging = [];
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "log").mockImplementation(() => {});
@@ -274,25 +278,28 @@ describe("experience activation is transactional with renderer readiness", () =>
     expect((await restart()).version).toBe(VERSION(2));
   });
 
-  it("a load that fails is retried within the budget, then gives up (not left pending)", async () => {
-    vi.useFakeTimers();
-    const store = await restart();
-    await store.activate(installTree(store, 1));
-    await store.activate(installTree(store, 2), { commit: false });
-    const host = makeHost();
-    const swap = vi.spyOn(host, "swap");
-    fakes.behaviour.failing = [rendererUrl(VERSION(2)).href];
-    const { scheduler, outcomes, settle } = wire(store, () => host);
+  it.each(["failing", "hanging"] as const)(
+    "a %s load is retried within the budget, then gives up",
+    async (mode) => {
+      vi.useFakeTimers();
+      const store = await restart();
+      await store.activate(installTree(store, 1));
+      await store.activate(installTree(store, 2), { commit: false });
+      const host = makeHost();
+      const swap = vi.spyOn(host, "swap");
+      fakes.behaviour[mode] = [rendererUrl(VERSION(2)).href];
+      const { scheduler, outcomes, settle } = wire(store, () => host);
 
-    scheduler.schedule(VERSION(2));
-    await vi.advanceTimersByTimeAsync(10_000);
-    expect(swap).toHaveBeenCalledTimes(MAX_SWAP_READINESS_ATTEMPTS);
-    expect(outcomes).toEqual([{ version: VERSION(2), outcome: "gave-up" }]);
-    expect(scheduler.pending).toBe(false);
-    await settle();
-    expect(store.version).toBe(VERSION(1));
-    expect(store.pendingVersion).toBeNull();
-  });
+      scheduler.schedule(VERSION(2));
+      await vi.advanceTimersByTimeAsync(100_000);
+      expect(swap).toHaveBeenCalledTimes(MAX_SWAP_READINESS_ATTEMPTS);
+      expect(outcomes).toEqual([{ version: VERSION(2), outcome: "gave-up" }]);
+      expect(scheduler.pending).toBe(false);
+      await settle();
+      expect(store.version).toBe(VERSION(1));
+      expect(store.pendingVersion).toBeNull();
+    }
+  );
 
   it("the swap's first-commit barrier rejects a candidate that never signals", async () => {
     vi.useFakeTimers();
