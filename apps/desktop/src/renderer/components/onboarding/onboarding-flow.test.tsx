@@ -219,19 +219,12 @@ describe("the sign-in wall", () => {
     await waitFor(() => expect(missing("onboarding-error")).toBe(true));
   });
 
-  it("sends returning users down the sign-in path, new ones down sign-up", async () => {
+  it("sends everyone to the browser, where their Google account already is", async () => {
     mount();
-    fireEvent.click(byId("onboarding-have-account"));
-    await waitFor(() =>
-      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
-    );
-  });
-
-  it("starts with Google from the main button", async () => {
-    mount();
+    expect(missing("onboarding-have-account")).toBe(true);
     fireEvent.click(byId("onboarding-connect"));
     await waitFor(() =>
-      expect(startAbacusAuth).toHaveBeenLastCalledWith("google")
+      expect(startAbacusAuth).toHaveBeenLastCalledWith("signin")
     );
   });
 });

@@ -39,8 +39,10 @@ const GoogleMark = (): JSX.Element => (
 
 /**
  * The sign-in wall. The app requires an account, so this is the one screen
- * with no way past it but the button: Google, for almost everyone, in one
- * click; every other way to sign in sits behind a small link underneath.
+ * with no way past it but the button. It opens the browser, where the user's
+ * Google account already is and the sign-in page's Google button finishes
+ * it; a browser profile already signed in to Abacus.AI is offered behind a
+ * small link underneath.
  */
 export const SignInStep = ({
   busy,
@@ -55,7 +57,7 @@ export const SignInStep = ({
   /** The browser hop is out; it can take minutes while an account is created. */
   busy: boolean;
   error: string | null;
-  /** `google` is the main button; `signin` is every other way, in the browser. */
+  /** The main button: the browser, where the user's Google account already is. */
   onConnect: (intent: AbacusAuthIntent) => void;
   /**
    * Chromium profiles that may already be signed in to Abacus.AI, offered
@@ -123,7 +125,7 @@ export const SignInStep = ({
           size="lg"
           data-id="onboarding-connect"
           disabled={busy}
-          onClick={() => onConnect("google")}
+          onClick={() => onConnect("signin")}
           className="bg-background text-foreground hover:bg-muted border-border h-14 w-full max-w-sm rounded-full border text-base font-semibold shadow-lg"
         >
           {busy ? (
@@ -134,7 +136,8 @@ export const SignInStep = ({
           {busy ? t("apiKeys.connecting") : t("onboarding.connectCta")}
         </Button>
         {!busy &&
-          (browserProfiles.length > 0 && onContinueWith != null ? (
+          browserProfiles.length > 0 &&
+          onContinueWith != null && (
             // A browser already signed in to Abacus.AI: the link offers its
             // profiles, so the screen keeps one button.
             <DropdownMenu>
@@ -180,17 +183,7 @@ export const SignInStep = ({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Button
-              variant="link"
-              size="sm"
-              data-id="onboarding-have-account"
-              onClick={() => onConnect("signin")}
-              className="text-muted-foreground hover:text-secondary-foreground text-xs"
-            >
-              {t("onboarding.signInAnotherWay")}
-            </Button>
-          ))}
+          )}
         {busy && (
           <div className="flex items-center gap-2">
             {/* For anyone whose browser already holds their Abacus.AI session

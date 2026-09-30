@@ -310,13 +310,9 @@ export const startAbacusAuth = async (
         console.log(
           `[abacus-auth] sign-in surface: ${variant} intent: ${intent}${seeded ? " seeded" : ""}`
         );
-        // Google's picker runs in the app window whatever the arm: that is
-        // the whole of what the main button promises.
         if (
           browserRequested ||
-          (!seeded &&
-            intent !== "google" &&
-            (intent === "signin" || variant !== "in_app"))
+          (!seeded && (intent === "signin" || variant !== "in_app"))
         ) {
           openInBrowser();
           return;
@@ -330,7 +326,6 @@ export const startAbacusAuth = async (
             if (!browserRequested) close();
           },
           ...(seeded ? { seedCookies } : {}),
-          ...(intent === "google" ? { google: true } : {}),
         })
           .then((win) => {
             if (win == null) {

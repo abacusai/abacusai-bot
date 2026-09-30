@@ -699,7 +699,7 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     IpcChannels.StartAbacusAuth,
     async (_event, intent: unknown, browserProfileId: unknown) => {
       const result = await startAbacusAuth(
-        intent === "signin" || intent === "google" ? intent : "signup",
+        intent === "signin" ? "signin" : "signup",
         // Only an id from the listing resolves to a profile; anything else is
         // a plain sign-in.
         typeof browserProfileId === "string" ? browserProfileId : undefined
