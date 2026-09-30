@@ -1565,7 +1565,54 @@
     "signInAnotherWay": "Sign in another way",
     "haveAccountContinueWith": "I already have an account · Continue with {{browser}}",
     "signInOptions": "Other ways to sign in",
-    "usesBrowserSessions": "Google, Microsoft and Apple sign-in use your {{browser}} accounts."
+    "usesBrowserSessions": "Google, Microsoft and Apple sign-in use your {{browser}} accounts.",
+    "welcomeModels": "100+ AI Models",
+    "welcomeConnectors": "100+ Connectors",
+    "welcomeMemory": "Persistent Memory",
+    "connectorsContinue": "Continue",
+    "frame.progress": "Step {{n}} of 5",
+    "frame.failed": "Something went wrong. Try again.",
+    "pages.connectedLabel": "Connected",
+    "pages.connectLabel": "Connect",
+    "pages.more": "Many more",
+    "pages.newSession": "New session",
+    "pages.newBot": "New bot",
+    "pages.skip": "Skip for now",
+    "pages.keyPrivate": "Stored on this machine only.",
+    "pages.retry": "Try again",
+    "pages.connect.title": "Connecting your account",
+    "pages.connect.body": "Finish signing in in the browser window.",
+    "pages.connect.waiting": "Waiting for sign-in…",
+    "pages.connected.body": "Your account is ready. Your bot works across your models, files and tools.",
+    "pages.connected.promise1": "An open-source AI agent",
+    "pages.connected.promise2": "Powerful models, including free options",
+    "pages.connected.promise3": "Work across your tools and services",
+    "pages.connected.promise4": "Runs locally. Chat wherever you work.",
+    "pages.models.title": "Hook up your AI",
+    "pages.models.body": "Connect models to unlock more inside your bot.",
+    "pages.models.abacus": "Abacus.AI",
+    "pages.models.openrouter": "OpenRouter",
+    "pages.models.gemini": "Google Gemini",
+    "pages.connectors.title": "Connect your tools and services",
+    "pages.connectors.body": "Chat where you work.",
+    "pages.first-bot.title": "Meet your first bot",
+    "pages.first-bot.body": "A Chief of Staff to help you plan your day.",
+    "pages.done.title": "You're ready",
+    "pages.done.body": "Start a conversation or make something new.",
+    "pages.deferred": "Finish after setup",
+    "pages.removed": "This bot was removed",
+    "pages.checkIn": "Weekday check-ins at 08:00",
+    "pages.noCheckIn": "No check-ins",
+    "pages.hello": "Say hello",
+    "pages.scratch": "Start from scratch",
+    "pages.message": "Message {{name}}",
+    "pages.addKey": "Add API key",
+    "pages.keyTitle": "Connect Gemini",
+    "pages.openGemini": "Open Google AI Studio",
+    "pages.pairing": "Finish connecting {{platform}}",
+    "pages.finishPairing": "Finish connecting",
+    "pages.localModels": "Local models",
+    "pages.localDetails": "Use a model running on this machine."
   },
   "openFile": {
     "failed": "Could not open that file.",
@@ -1970,6 +2017,56 @@
       "welcome": {
         "title": "Welcome to AbacusAI Bot",
         "body": "A quick lap around the window: what each panel is and what it is for. Fifteen short stops, and you can leave at any one of them."
+      }
+    },
+    "stops": {
+      "rail": {
+        "title": "Your bots & sessions",
+        "body": "Standing agents with their own instructions, schedules and chats. Create one for a job you hand off more than once."
+      },
+      "make-bot": {
+        "title": "Make a bot",
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+      },
+      "workspaces": {
+        "title": "Your Workspaces",
+        "body": "All your folders and conversations in one place. Switch workspaces or jump back into a previous session."
+      },
+      "start-session": {
+        "title": "Start a session",
+        "body": "Opens an empty composer in the current workspace. One session per task keeps each conversation's context to the job it belongs to."
+      },
+      "connectors": {
+        "title": "Connectors",
+        "body": "Connect the tools you already use. Sign in with a free Abacus.AI account to add built-in connectors in one click."
+      },
+      "changes": {
+        "title": "Changes",
+        "body": "Every edit the agent makes, as a diff you can read before it goes anywhere. The tabs beside it hold your files and any subagents that are running."
+      },
+      "preview-terminal": {
+        "title": "Terminal",
+        "body": "A real shell connected to your workspace. Open or hide it anytime from the terminal button."
+      },
+      "memory": {
+        "title": "Memory",
+        "body": "What the agent carries between sessions, and the standing instructions it follows. Read it, edit it, and delete whatever has gone stale."
+      },
+      "artifacts": {
+        "title": "Artifacts",
+        "body": "The files a session produced (documents, images, reports) gathered in one place instead of scattered up the transcript."
+      },
+      "welcome": {
+        "title": "Welcome to AbacusAI Bot",
+        "body": "A quick lap around the window. {{n}} stops; leave at any time."
+      },
+      "talk": {
+        "title": "Talk to your bot",
+        "body": "Give your bot a task here. It can ask questions and show its work."
+      },
+      "notch": {
+        "title": "Your companion",
+        "body": "Replies and approvals can appear above your workspace. Open the app for the full conversation."
       }
     }
   },
@@ -2580,6 +2677,27 @@
     "theme": {
       "label": "Theme",
       "description": "Follow the system, or always light or dark."
+    },
+    "general": {
+      "notch": {
+        "title": "Notch companion",
+        "description": "Live status, replies and approvals from the notch",
+        "windowsDescription": "Live status, replies and approvals from a capsule by the clock",
+        "failed": "The notch companion couldn't start.",
+        "metricsUnavailable": "The notch companion couldn't measure this screen.",
+        "retry": "Try again",
+        "idle": "Show when idle",
+        "displays": "On every display",
+        "haptics": "Haptics",
+        "shortcut": "Shortcut",
+        "shortcutUnavailable": "In use by another app"
+      }
+    },
+    "notifications": {
+      "showInNotch": {
+        "title": "Show in the notch",
+        "description": "Replies and approvals appear in the notch companion"
+      }
     }
   },
   "onboardingFlow": {
@@ -2863,6 +2981,55 @@
       "gone": "This conversation no longer exists.",
       "retry": "Retry",
       "unavailable": "The agent isn't available yet"
+    }
+  },
+  "notch": {
+    "a11y": {
+      "region": "Companion"
+    },
+    "actions": {
+      "open": "Open in app",
+      "message": "Message",
+      "call": "Call",
+      "pause": "Pause check-ins",
+      "resume": "Resume check-ins"
+    },
+    "wings": {
+      "idle": "Ready when you are",
+      "question": "A quick question",
+      "approval": "Needs you",
+      "connector-ask": "Connect a tool",
+      "failed": "That did not work",
+      "working": "Working on it",
+      "reply": "A reply for you",
+      "done": "All done"
+    },
+    "approval": {
+      "answerInApp": "Answer in app",
+      "notNow": "Not now",
+      "reviewOnly": "Review this request in the app.",
+      "review": "Review",
+      "noResponse": "Couldn't send your response. Try again."
+    },
+    "reply": {
+      "placeholder": "Reply…",
+      "failed": "Couldn't send. Your reply is still here.",
+      "openFailed": "Couldn't open the chat"
+    },
+    "quiet": {
+      "until": "Quiet until {{time}}"
+    },
+    "listening": {
+      "end": "End",
+      "title": "Listening…",
+      "transcribing": "Transcribing…",
+      "error": "Couldn't use the microphone. Check permission in System Settings → Privacy."
+    },
+    "done": {
+      "title": "Finished"
+    },
+    "failed": {
+      "title": "Something went wrong"
     }
   }
 }
