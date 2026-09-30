@@ -104,7 +104,7 @@ export const archiveTranscriptsV1 = (): MigrationStep => ({
         }
         continue;
       }
-      const decision = decideConversion(found.updatedAt, twin);
+      const decision = decideConversion({ updatedAt: found.updatedAt }, twin);
       if (decision.action === "skip") {
         stats.archived += 1;
         removals.push(found.file);

@@ -70,7 +70,10 @@ export const transcriptsV2 = (): MigrationStep => ({
         ctx.log(`skipped ${name}: ${found.status}`);
         continue;
       }
-      const decision = decideConversion(found.updatedAt, found.twin);
+      const decision = decideConversion(
+        { updatedAt: found.updatedAt },
+        found.twin
+      );
       if (decision.action === "skip") {
         if (decision.reason === "agui") stats.agui += 1;
         else stats.upToDate += 1;
