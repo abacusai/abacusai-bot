@@ -29,6 +29,8 @@
  *   its pending permissions, queue and activity are cleared on the stream;
  *   only the admissions written to that process are answered uncertain.
  */
+import * as path from "node:path";
+
 import { ORPCError } from "@orpc/server";
 import { uiMessagesToWire, type UIMessage } from "@tanstack/ai";
 
@@ -118,6 +120,8 @@ export interface AguiRelayHost {
 /** The thread files (`ThreadStore`). */
 export interface AguiThreadFiles {
   readCurrentFile(threadId: string): ThreadFileV2 | null;
+  /** The v1 transcript file to reveal for a history notice. */
+  transcriptPath?(threadId: string): string | null;
   /**
    * `readCurrentFile` plus why a thread shows no history although its v1
    * file exists (too large to read); the relay surfaces it as a notice.
@@ -962,9 +966,18 @@ export class AguiRelayService implements AguiSource {
       notice?: ThreadHistoryNotice;
     } => {
       try {
-        return this.#files.readCurrentWithNotice != null
-          ? this.#files.readCurrentWithNotice(threadId)
-          : { file: this.#files.readCurrentFile(threadId) };
+        const result =
+          this.#files.readCurrentWithNotice != null
+            ? this.#files.readCurrentWithNotice(threadId)
+            : { file: this.#files.readCurrentFile(threadId) };
+        const transcriptPath =
+          result.notice != null ? this.#files.transcriptPath?.(threadId) : null;
+        return result.notice != null && transcriptPath != null
+          ? {
+              ...result,
+              notice: { ...result.notice, path: path.resolve(transcriptPath) },
+            }
+          : result;
       } catch (error) {
         this.#log(
           `${threadId}: reading the thread file failed: ${String(error)}`

@@ -193,6 +193,8 @@ export class SeqClock {
  */
 export type ThreadHistoryNotice = {
   kind: "too-large";
+  /** Absolute v1 transcript path, when the file store provides it. */
+  path?: string;
   size: number;
   limit: number;
 };

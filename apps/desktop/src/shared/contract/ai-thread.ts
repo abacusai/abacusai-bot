@@ -52,13 +52,16 @@ export interface AiActiveRun {
 /**
  * A live `agent.notification`, a non-terminal `agent.error`, or main's own
  * `abacus.notice` about the thread (a history too large to read: `value`
- * `{ kind: "too-large", size, limit, notificationKey: "abacus.history" }`).
+ * `{ kind: "too-large", size, limit, path, notificationKey: "abacus.history" }`).
  */
 export interface AiNotice {
   /** The relay seq it arrived at. */
   seq: number;
   name: "agent.notification" | "agent.error" | "abacus.notice";
-  value: Record<string, unknown>;
+  value: Record<string, unknown> & {
+    /** Absolute file path for the history notice's Show in folder action. */
+    path?: string;
+  };
 }
 
 export interface AiThreadSnapshot {
