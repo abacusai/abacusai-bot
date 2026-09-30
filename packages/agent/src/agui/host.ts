@@ -171,6 +171,7 @@ export class AguiHost {
       write: (event) => this.sink.writeAgui(event),
       closeOpenParts: () => this.emitter.closeOpenParts(),
       model: () => this.emitter.model(),
+      onOpen: () => this.emitter.runOpened(),
     });
     this.emitter = new AguiEmitter({
       threadId: options.threadId,

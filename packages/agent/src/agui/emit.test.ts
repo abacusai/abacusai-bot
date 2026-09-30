@@ -21,7 +21,10 @@ import { RunController, toTokenUsage, type TurnToken } from "./runs.js";
 import { HostSink } from "./sink.js";
 import type { AguiEvent } from "./wire.js";
 
-function rig() {
+function rig(
+  incarnation = "inc-1",
+  log: (line: string) => void = () => undefined
+) {
   const out: AguiEvent[] = [];
   const legacy: string[] = [];
   const sink = new HostSink({ mode: "fd", write: (line) => legacy.push(line) });
@@ -30,14 +33,15 @@ function rig() {
     write: (event) => sink.writeAgui(event),
     closeOpenParts: () => emitter.closeOpenParts(),
     model: () => emitter.model(),
+    onOpen: () => emitter.runOpened(),
   });
   const emitter: AguiEmitter = new AguiEmitter({
     threadId: "t-1",
-    incarnation: "inc-1",
+    incarnation,
     runs,
     approvalTimeoutMs: () => Number.POSITIVE_INFINITY,
     now: () => 0,
-    log: () => undefined,
+    log,
   });
 
   sink.attach({
@@ -687,5 +691,144 @@ describe("the compat line", () => {
       if (isRunScoped(event)) expect(event.type).not.toBe("RUN_STARTED");
     }
     expect(noCompat.mode).toBe("none");
+  });
+});
+
+describe("implementation review r1", () => {
+  it("scopes steer ids by incarnation, so a respawn's steer-1 never overwrites the last one", () => {
+    const streams = ["inc-a", "inc-b"].map((incarnation) => {
+      const r = rig(incarnation);
+
+      r.open(`run-${incarnation}`);
+      r.agent({ type: "user_message_steered", content: `from ${incarnation}` });
+      r.runs.settleOpen();
+
+      return r.out;
+    });
+    // Main keeps one transcript per thread across respawns.
+    const users = process([...streams[0]!, ...streams[1]!]).filter(
+      (message) => message.role === "user"
+    );
+
+    expect(users.map((message) => message.id)).toEqual([
+      "steer-inc-a-1",
+      "steer-inc-b-1",
+    ]);
+    expect(
+      users.map((message) => (message.parts[0] as { content: string }).content)
+    ).toEqual(["from inc-a", "from inc-b"]);
+  });
+
+  it("scopes an assistant message with no pi timestamp by incarnation", () => {
+    const ids = ["inc-a", "inc-b"].map((incarnation) => {
+      const r = rig(incarnation);
+
+      r.desktop({
+        type: "ready",
+        model: "m",
+        mode: "DEFAULT",
+        agentSessionId: "resumed-session",
+      });
+      r.open();
+      r.internal({ type: "message_open", key: "msg-1" });
+      r.agent({ type: "text_delta", content: "hi", messageId: "msg-1" });
+
+      return (
+        r.out.find((event) => event.type === "TEXT_MESSAGE_START") as {
+          messageId: string;
+        }
+      ).messageId;
+    });
+
+    expect(ids).toEqual([
+      "resumed-session:inc-a:msg-1",
+      "resumed-session:inc-b:msg-1",
+    ]);
+  });
+
+  it("closes a component bracket the turn ended as unfinished, and a reported failure as failed", () => {
+    const r = rig();
+
+    r.open();
+    r.agent({ type: "subtask_start", id: "component-1", kind: "component" });
+    r.agent({ type: "subtask_start", id: "component-2", kind: "component" });
+    // finishTurn's close-out, tagged by the session.
+    r.agent(
+      tagEvent(
+        { type: "subtask_end", id: "component-1", status: "failed" },
+        { unfinished: true }
+      )
+    );
+    r.agent({ type: "subtask_end", id: "component-2", status: "failed" });
+
+    expect(
+      r.out
+        .filter((event) => event.type === "SUBAGENT_ERROR")
+        .map((event) => (event as { code?: string }).code)
+    ).toEqual(["unfinished", "failed"]);
+  });
+
+  it("names the hidden turn's customType in the housekeeping usage log", () => {
+    const logged: string[] = [];
+    const r = rig("inc-1", (line) => logged.push(line));
+    const usage = {
+      input: 1,
+      output: 2,
+      cacheRead: 0,
+      cacheWrite: 0,
+      requests: 1,
+      model: "m",
+    };
+
+    r.internal({
+      type: "hidden_turn",
+      phase: "start",
+      customType: "abacusai-bot:memory-flush",
+    });
+    r.agent({ type: "turn_complete", usage });
+    r.internal({
+      type: "hidden_turn",
+      phase: "end",
+      customType: "abacusai-bot:memory-flush",
+    });
+
+    expect(logged).toEqual([
+      `[usage] housekeeping abacusai-bot:memory-flush ${JSON.stringify(usage)}\n`,
+    ]);
+    expect(r.out).toEqual([]);
+  });
+
+  it("does not let an aborted hidden turn's late closing bracket hide the next run", () => {
+    const r = rig();
+
+    r.internal({ type: "hidden_turn", phase: "start", customType: "h" });
+    // Stopped mid-housekeeping; the next run opens before the bracket closes.
+    r.open("next");
+    r.agent({ type: "text_delta", content: "visible" });
+    r.internal({ type: "hidden_turn", phase: "end", customType: "h" });
+    r.agent({ type: "text_delta", content: " still" });
+
+    expect(
+      r.out
+        .filter((event) => event.type === "TEXT_MESSAGE_CONTENT")
+        .map((event) => (event as { delta: string }).delta)
+    ).toEqual(["visible", " still"]);
+  });
+
+  it("adds nothing for an error its own run already reported as its terminal", () => {
+    const r = rig();
+
+    r.open();
+    r.agent(
+      tagEvent(
+        { type: "error", error: { message: "thrown" } },
+        { origin: "turn", attributed: true }
+      )
+    );
+
+    expect(r.out.map((event) => event.type)).toEqual(["RUN_STARTED"]);
+    expect(r.legacy.at(-1)).toBe(
+      '{"type":"event","event":{"type":"error","error":{"message":"thrown"}}}\n'
+    );
   });
 });
