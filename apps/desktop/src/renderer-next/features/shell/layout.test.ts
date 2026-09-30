@@ -40,7 +40,11 @@ describe("shellLayout", () => {
 
             let sidebar = pinned ? "pinned" : "floating";
             if (band === "sm" && area === "bots" && pinned) sidebar = "strip";
-            if (band === "sm" && area === "sessions") sidebar = "floating";
+            if (
+              area === "sessions" &&
+              (band === "sm" || (band === "xl" && panelOpen))
+            )
+              sidebar = "floating";
             expect(state.sidebar).toBe(sidebar);
             expect(state.sidebarOccupied).toBe(
               sidebar === "pinned" ? 280 : sidebar === "strip" ? 88 : 0
