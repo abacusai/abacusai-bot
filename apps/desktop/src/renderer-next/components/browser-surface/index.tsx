@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { BrowserRuntimeLease } from "#shared/contracts";
 interface Presenter {
   captures: Store<Record<string, string>>;
+  owner: Store<string | null>;
   refresh(): Promise<void>;
   activate(id: string): Promise<void>;
   register(candidate: {
@@ -33,6 +34,7 @@ export const BrowserSurface = ({
   useEffect(() => {
     live.current = { visible, blocked };
   }, [visible, blocked]);
+  const owner = useSelector(presenter.owner, (s) => s);
   const capture = useSelector(presenter.captures, (s) => s[id]);
   useEffect(() => {
     const unregister = presenter.register({
@@ -58,10 +60,28 @@ export const BrowserSurface = ({
     window.addEventListener("resize", refresh);
     document.addEventListener("visibilitychange", refresh);
     const interval = setInterval(refresh, 500);
+    let frame = 0;
+    let last = "";
+    const watch = () => {
+      const signature =
+        String(!!document.activeViewTransition) +
+        String(
+          node.current &&
+            live.current.blocked(node.current.getBoundingClientRect())
+        ) +
+        String(live.current.visible);
+      if (signature !== last) {
+        last = signature;
+        refresh();
+      }
+      frame = requestAnimationFrame(watch);
+    };
+    frame = requestAnimationFrame(watch);
     return () => {
       unregister();
       observer.disconnect();
       clearInterval(interval);
+      cancelAnimationFrame(frame);
       window.removeEventListener("resize", refresh);
       document.removeEventListener("visibilitychange", refresh);
     };
@@ -89,9 +109,11 @@ export const BrowserSurface = ({
           className="absolute inset-0 size-full object-fill"
         />
       ) : null}
-      <div className="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm">
-        {t("sessions.browser.activate")}
-      </div>
+      {owner !== id ? (
+        <div className="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm">
+          {t("sessions.browser.activate")}
+        </div>
+      ) : null}
     </div>
   );
 };

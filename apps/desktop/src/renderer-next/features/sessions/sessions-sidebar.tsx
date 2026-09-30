@@ -1,21 +1,57 @@
+import { useLiveQuery } from "@tanstack/react-db";
+import { useParams } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
+import { Folder, Plus } from "lucide-react";
 /**
  * The Sessions sidebar (spec 01 §7.3, canvas `SessionsSidebar`): sessions
  * that are not a bot's chat, a routine run or a routine editor, grouped by
  * their workspace (routine and bot folders excluded), pinned ones first, each
  * group newest first, groups collapsible (prefs.workspaceExpanded).
  */
-import { useLiveQuery } from "@tanstack/react-db";
-import { useParams } from "@tanstack/react-router";
-import { Folder, Plus } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { NavList } from "#next/components/nav-list";
+import { useDb } from "#next/data/db";
 import { useCollections } from "#next/data/db";
 import { isListedSession, isListedWorkspace } from "#next/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#next/data/db/prefs";
 import { useCollectionStatus } from "#next/data/db/status";
+import { usePendingConnectorAsks } from "#next/lib/connector-requests";
 import { AppLink } from "#next/lib/navigation/app-link";
+import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "#next/ui/alert-dialog";
+import { Button } from "#next/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "#next/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+} from "#next/ui/dropdown-menu";
+import { Input } from "#next/ui/input";
 import type { SessionRow, WorkspaceRow } from "#shared/contract";
+import { sessionConversationKey } from "#shared/conversation-scope";
+
+import { sessionAttention } from "./data/attention";
+import { useSessionsTransport } from "./data/queries";
+import { renameSession, deleteSession } from "./data/session-actions";
+import { sessionsUnreadStore } from "./data/unread-store";
 
 export interface SessionGroups {
   pinned: SessionRow[];
@@ -52,14 +88,6 @@ export const groupSessions = (
   };
 };
 
-const StatusDot = ({ busy }: { busy: boolean }) =>
-  busy ? (
-    <span
-      aria-hidden="true"
-      className="size-1.5 shrink-0 rounded-full bg-emerald-400"
-    />
-  ) : null;
-
 export const SessionsSidebar = () => {
   const { t } = useTranslation();
   const collections = useCollections();
@@ -69,9 +97,13 @@ export const SessionsSidebar = () => {
   const { data: workspaces } = useLiveQuery(collections.workspaces);
   const sessionsStatus = useCollectionStatus(collections.sessions);
   const workspacesStatus = useCollectionStatus(collections.workspaces);
+  const asks = usePendingConnectorAsks(useSessionsTransport());
+  const [query, setQuery] = useState("");
   const params = useParams({ strict: false }) as { sessionId?: string };
   const { pinned, groups } = groupSessions(
-    sessions ?? [],
+    (sessions ?? []).filter((s) =>
+      s.label.toLowerCase().includes(query.toLowerCase())
+    ),
     workspaces ?? [],
     prefs.pinned.sessionIds
   );
@@ -83,14 +115,12 @@ export const SessionsSidebar = () => {
         : "loading";
 
   const row = (session: SessionRow, indent: boolean) => (
-    <NavList.Item
+    <SessionSidebarRow
       key={session.id}
-      to="/sessions/$sessionId"
-      params={{ sessionId: session.id }}
-      active={params.sessionId === session.id}
-      title={session.label}
+      session={session}
       indent={indent}
-      trailing={<StatusDot busy={session.turn?.isBusy === true} />}
+      active={params.sessionId === session.id}
+      asks={asks[sessionConversationKey(session.workspaceId, session.id)] ?? 0}
     />
   );
 
@@ -104,6 +134,13 @@ export const SessionsSidebar = () => {
           <Plus />
         </NavList.Action>
       </NavList.Header>
+      <Input
+        className="mb-2"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label={t("sessions.sidebar.search")}
+        placeholder={t("sessions.sidebar.search")}
+      />
       {status === "error" ? (
         <NavList.Error
           message={t("shell.sidebar.loadError")}
@@ -149,5 +186,161 @@ export const SessionsSidebar = () => {
         </div>
       )}
     </NavList.Root>
+  );
+};
+
+const SessionSidebarRow = ({
+  session,
+  indent,
+  active,
+  asks,
+}: {
+  session: SessionRow;
+  indent: boolean;
+  active: boolean;
+  asks: number;
+}) => {
+  const { t } = useTranslation();
+  const db = useDb();
+  const prefs = usePrefs();
+  const navigate = useAppNavigate();
+  const transport = useSessionsTransport();
+  const unread = useSelector(sessionsUnreadStore, (s) => s.has(session.id));
+  const attention = sessionAttention(session, unread, asks);
+  const [rename, setRename] = useState(false);
+  const [label, setLabel] = useState(session.label);
+  const [remove, setRemove] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pin = () =>
+    void db.updatePrefs({
+      pinned: {
+        ...prefs.pinned,
+        sessionIds: prefs.pinned.sessionIds.includes(session.id)
+          ? prefs.pinned.sessionIds.filter((id) => id !== session.id)
+          : [...prefs.pinned.sessionIds, session.id],
+      },
+    });
+  return (
+    <div className="group relative flex items-center">
+      <NavList.Item
+        to="/sessions/$sessionId"
+        params={{ sessionId: session.id }}
+        active={active}
+        title={session.label || t("sessions.untitled")}
+        indent={indent}
+        className="min-w-0 flex-1 pr-8"
+        trailing={
+          attention.kind !== "idle" ? (
+            <span
+              role="img"
+              aria-label={t(`sessions.attention.${attention.kind}`)}
+              className={
+                attention.kind === "needs-you"
+                  ? "text-amber-600"
+                  : "text-muted-foreground"
+              }
+            >
+              ●
+            </span>
+          ) : null
+        }
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className="absolute right-0"
+              aria-label={t("sessions.sidebar.actions", {
+                name: session.label,
+              })}
+            />
+          }
+        >
+          ⋯
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={() => {
+                setLabel(session.label);
+                setRename(true);
+              }}
+            >
+              {t("sessions.sidebar.rename")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={pin}>
+              {t(
+                prefs.pinned.sessionIds.includes(session.id)
+                  ? "sessions.sidebar.unpin"
+                  : "sessions.sidebar.pin"
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => void navigator.clipboard.writeText(session.id)}
+            >
+              {t("sessions.sidebar.copyId")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRemove(true)}>
+              {t("sessions.sidebar.delete")}
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Dialog open={rename} onOpenChange={setRename}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("sessions.sidebar.rename")}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void renameSession(db, session.id, label)
+                .then(() => setRename(false))
+                .catch((e) => setError(String(e)));
+            }}
+          >
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              aria-label={t("sessions.sidebar.name")}
+            />
+            <Button type="submit" disabled={!label.trim()}>
+              {t("sessions.common.save")}
+            </Button>
+            {error ? <p role="alert">{error}</p> : null}
+          </form>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={remove} onOpenChange={setRemove}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("sessions.sidebar.delete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("sessions.sidebar.deleteBody")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("sessions.common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                void deleteSession(db, transport.client, session, () => {
+                  if (active)
+                    void navigate({
+                      to: "/sessions/new",
+                      search: { workspace: session.workspaceId },
+                      replace: true,
+                      transition: "nav-lateral",
+                    });
+                }).catch((e) => setError(String(e)))
+              }
+            >
+              {t("sessions.sidebar.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };

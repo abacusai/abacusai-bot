@@ -26,9 +26,18 @@ const SIDE_PANEL_TABS = [
 const SidePanelTab = v.picklist(SIDE_PANEL_TABS);
 export type SidePanelTabId = v.InferOutput<typeof SidePanelTab>;
 
+export const SessionTabRef = v.union([
+  v.picklist(["chat", "changes", "files", "agents", "device"]),
+  v.pipe(
+    v.string(),
+    v.regex(/^(terminal|browser|preview):[A-Za-z0-9._-]{1,80}$/)
+  ),
+]);
+export type SessionTabRef = v.InferOutput<typeof SessionTabRef>;
+
 export const ShellSearch = v.object({
   /** The side panel is open on this tab; absent = closed. */
-  tab: optionalField(SidePanelTab),
+  tab: optionalField(v.union([SidePanelTab, SessionTabRef])),
 });
 export const SHELL_DEFAULTS = {} as const;
 
@@ -43,14 +52,6 @@ export const NewSessionSearch = v.object({
   workspace: optionalField(WorkspaceId),
 });
 
-export const SessionTabRef = v.union([
-  v.picklist(["chat", "changes", "files", "agents", "device"]),
-  v.pipe(
-    v.string(),
-    v.regex(/^(terminal|browser|preview):[A-Za-z0-9._-]{1,80}$/)
-  ),
-]);
-export type SessionTabRef = v.InferOutput<typeof SessionTabRef>;
 export const SESSION_DEFAULTS = { view: "split" } as const;
 export const SessionSearch = v.object({
   view: v.optional(v.fallback(v.picklist(["split", "full"]), "split"), "split"),

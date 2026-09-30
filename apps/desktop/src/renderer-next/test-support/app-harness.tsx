@@ -89,6 +89,20 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       events: os.window.events.handler(quiet as never),
     },
     settings: {
+      sandboxSupport: os.settings.sandboxSupport.handler(() => ({
+        available: true,
+        reason: null,
+      })),
+      execBackend: {
+        get: os.settings.execBackend.get.handler(
+          () =>
+            ({
+              selected: "local",
+              effective: "local",
+              statuses: [{ id: "local", ready: true }],
+            }) as never
+        ),
+      },
       events: os.settings.events.handler(quiet as never),
       get: os.settings.get.handler(() => ({ defaultModel: null }) as never),
       defaultMode: {
@@ -137,7 +151,60 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       events: os.memory.events.handler(quiet as never),
     },
     account: { abacus: os.account.abacus.handler(() => null) },
-    files: { events: os.files.events.handler(quiet as never) },
+    workspaces: {
+      checkPath: os.workspaces.checkPath.handler(({ input }) => ({
+        workspaceId: input.workspaceId,
+        path: "/repo",
+        exists: true,
+      })),
+      ensureSessionHome: os.workspaces.ensureSessionHome.handler(
+        ({ context }) => {
+          context.calls.push(["workspaces.ensureSessionHome", null]);
+          return { workspaceId: "default" };
+        }
+      ),
+    },
+    git: {
+      checkoutStatus: os.git.checkoutStatus.handler(() => ({
+        kind: "primary",
+        path: "/repo",
+        exists: true,
+        workspaceExists: true,
+      })),
+      watch: os.git.watch.handler(quiet as never),
+      currentBranch: os.git.currentBranch.handler(
+        () => ({ currentBranch: "main" }) as never
+      ),
+      branches: os.git.branches.handler(() => ({ branches: [] }) as never),
+      prInfo: os.git.prInfo.handler(() => null),
+      worktrees: {
+        list: os.git.worktrees.list.handler(() => ({ worktrees: [] }) as never),
+      },
+      diff: os.git.diff.handler(() => ({ kind: "none" })),
+    },
+    devices: {
+      status: os.devices.status.handler(
+        () => ({ available: false, enabled: false }) as never
+      ),
+      list: os.devices.list.handler(() => []),
+    },
+    terminal: { events: os.terminal.events.handler(quiet as never) },
+    browser: { events: os.browser.events.handler(quiet as never) },
+    agent: {
+      start: os.agent.start.handler(({ context, input }) => {
+        context.calls.push(["agent.start", input]);
+        return { success: true } as never;
+      }),
+      switchConversation: os.agent.switchConversation.handler(() => {}),
+    },
+    files: {
+      events: os.files.events.handler(quiet as never),
+      treeRoot: os.files.treeRoot.handler(() => ({
+        fileTree: [],
+        lastUpdatedAt: "now",
+      })),
+      search: os.files.search.handler(() => ({ items: [] })),
+    },
     ai: {
       hydrate: os.ai.hydrate.handler(({ input }) => relay.ai.hydrate(input)),
       subscribe: os.ai.subscribe.handler(

@@ -281,3 +281,12 @@ html[data-reduce-motion="on"]::view-transition-old(*) {
 html[data-reduce-motion="on"]::view-transition-new(*) {
   animation: 120ms vt-fade-in both !important;
 }
+
+html:active-view-transition-type(session-view)::view-transition-group(.session-view) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html:active-view-transition-type(session-view)::view-transition-old(.session-view),
+html:active-view-transition-type(session-view)::view-transition-new(.session-view) {
+  animation-duration: 120ms;
+}

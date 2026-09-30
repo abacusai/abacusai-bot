@@ -9,6 +9,8 @@ export interface TerminalView {
   element: HTMLDivElement;
   offset: number | undefined;
   generation: number | null;
+  received: number;
+  reconnect?: () => void;
 }
 const views = new Map<string, Promise<TerminalView>>();
 export const getTerminalView = (key: string): Promise<TerminalView> => {
@@ -38,7 +40,14 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
       const fit = new FitAddon();
       term.loadAddon(fit);
       term.open(element);
-      return { term, fit, element, offset: undefined, generation: null };
+      return {
+        term,
+        fit,
+        element,
+        offset: undefined,
+        generation: null,
+        received: 0,
+      };
     })();
     views.set(key, view);
   }
@@ -52,3 +61,26 @@ export const disposeTerminalView = (key: string): void => {
     v.element.remove();
   });
 };
+
+if (import.meta.env.VITE_UI_GALLERY === "1") {
+  (
+    window as Window & { __sessionsTerminalTest?: unknown }
+  ).__sessionsTerminalTest = {
+    snapshot: async (key: string) => {
+      const view = await views.get(key);
+      if (!view) return null;
+      const buffer = view.term.buffer.active;
+      return {
+        offset: view.offset,
+        received: view.received,
+        generation: view.generation,
+        lines: buffer.length,
+        text: Array.from(
+          { length: buffer.length },
+          (_, i) => buffer.getLine(i)?.translateToString(true) ?? ""
+        ).join("\n"),
+      };
+    },
+    reconnect: async (key: string) => (await views.get(key))?.reconnect?.(),
+  };
+}

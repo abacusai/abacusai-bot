@@ -2,7 +2,7 @@ import { Store } from "@tanstack/react-store";
 
 import type { TerminalSessionSnapshot } from "#shared/contracts";
 
-import type { DockNode } from "./dock-store";
+import { dockLeaves, dockReducer, type DockNode } from "./dock-store";
 export interface PanelTab {
   ref: string;
   title: string;
@@ -43,7 +43,17 @@ export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
     const previews = tabs.filter((t) => t.ref.startsWith("preview:"));
     if (previews.length > 50)
       tabs = tabs.filter((t) => t.ref !== previews[0]?.ref);
-    return { ...s, tabs, last: tab.ref };
+    let tree = s.tree;
+    if (tree && !dockLeaves(tree).some((leaf) => leaf.tabs.includes(tab.ref))) {
+      const first = dockLeaves(tree)[0]!;
+      tree = dockReducer(tree, {
+        type: "move",
+        tab: tab.ref,
+        target: first.id,
+        id: tab.ref,
+      });
+    }
+    return { ...s, tabs, tree, last: tab.ref };
   });
 export const closeTab = (key: string, ref: string): string | undefined => {
   let next: string | undefined;
@@ -67,14 +77,17 @@ export const reconcileTerminals = (
     tabs: s.tabs.filter(
       (t) =>
         !t.ref.startsWith("terminal:") ||
+        Date.now() - t.openedAt < 5000 ||
         states.some((v) => `terminal:${v.terminalId}` === t.ref)
     ),
   }));
+  const previousLast = panelTabsStore.state[key]?.last;
   for (const state of states)
     openTab(key, {
       ref: `terminal:${state.terminalId}`,
       title: state.terminalId,
     });
+  if (previousLast) updateTabs(key, (s) => ({ ...s, last: previousLast }));
 };
 export const promoteTabs = (from: string, to: string): void =>
   panelTabsStore.setState((s) => {

@@ -13,6 +13,10 @@ import {
 } from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
+import {
+  sessionsGallerySections,
+  isSessionsGalleryFixture,
+} from "#next/features/sessions";
 
 const replay = fixtureRuntime("bot-golden-plain", {}, "bots-gallery");
 const BotChatGallery = () => {
@@ -52,6 +56,7 @@ const GalleryChat = ({
 const extension = {
   Nav: (props: { fixture: string | undefined }) => (
     <>
+      <sessionsGallerySections.Nav {...props} />
       <botsGallerySections.Nav {...props} />
       <chatGallerySections.Nav {...props} />
     </>
@@ -61,7 +66,9 @@ const extension = {
     step: number | undefined;
     play: boolean;
   }) =>
-    props.fixture === "bots-chat" ? (
+    isSessionsGalleryFixture(props.fixture) ? (
+      <sessionsGallerySections.View {...props} />
+    ) : props.fixture === "bots-chat" ? (
       <BotChatGallery />
     ) : isBotsGalleryFixture(props.fixture) ? (
       <botsGallerySections.View {...props} />

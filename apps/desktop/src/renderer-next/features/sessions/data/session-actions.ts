@@ -38,11 +38,16 @@ export const setSessionModel = async (
   await db.collections.sessions.update(row.id, (d) => {
     d.model = model;
   }).isPersisted.promise;
-  if (row.status === "running")
-    await client.agent.setModel({
-      workspaceId: row.workspaceId,
-      sessionId: row.id,
-      model,
-    });
-  await client.settings.setDefaultModel({ modelId: model });
+  const results = await Promise.allSettled([
+    client.settings.setDefaultModel({ modelId: model }),
+    row.status === "running"
+      ? client.agent.setModel({
+          workspaceId: row.workspaceId,
+          sessionId: row.id,
+          model,
+        })
+      : Promise.resolve(),
+  ]);
+  const refused = results.find((r) => r.status === "rejected");
+  if (refused?.status === "rejected") throw refused.reason;
 };

@@ -3,6 +3,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
 @import "./tokens.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -130,3 +131,7 @@
     @apply font-sans;
     }
 }
+
+.session-dock-mini [data-slot="chat-layout"] > .relative { display: none; }
+.session-dock-mini [data-slot="chat-view"], .session-dock-mini [data-slot="chat-layout"] { height: auto; }
+.session-dock-mini [data-slot="chat-announcer"] { position: absolute; }
