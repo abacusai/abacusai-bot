@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "sessionId": "sess-compaction",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Keep going",
+      "at": 1788256800000
+    },
+    {
+      "type": "compaction",
+      "id": "cmp1",
+      "summary": "Earlier: the user set up a Vite project and asked for tests.",
+      "at": 1788256801000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Continuing from the summary.",
+      "at": 1788256802000
+    }
+  ]
+}

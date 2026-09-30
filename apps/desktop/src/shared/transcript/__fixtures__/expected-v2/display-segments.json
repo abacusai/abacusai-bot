@@ -1,0 +1,134 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Show me everything",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "th1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "th1",
+              "partIndex": 0,
+              "type": "thinking"
+            },
+            {
+              "at": 1788256802000,
+              "id": "col1",
+              "partIndex": 1,
+              "type": "collapsible"
+            },
+            {
+              "at": 1788256803000,
+              "id": "col2",
+              "partIndex": 2,
+              "type": "collapsible"
+            },
+            {
+              "at": 1788256804000,
+              "id": "fl1",
+              "partIndex": 3,
+              "type": "feature_limit"
+            },
+            {
+              "at": 1788256805000,
+              "id": "b1",
+              "partIndex": 4,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Planning.",
+          "stepId": "th1",
+          "type": "thinking"
+        },
+        {
+          "content": "1. Read\n2. Write",
+          "metadata": {
+            "abacus": {
+              "kind": "collapsible",
+              "segmentId": "col1",
+              "title": "Plan"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "Untitled body",
+          "metadata": {
+            "abacus": {
+              "kind": "collapsible",
+              "segmentId": "col2"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "Image generation",
+          "metadata": {
+            "abacus": {
+              "featureName": "Image generation",
+              "kind": "feature_limit",
+              "limitType": "daily",
+              "segmentId": "fl1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "Done.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 6,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-display-segments",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

@@ -1,0 +1,103 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Continue",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "n1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "n1",
+              "partIndex": 0,
+              "type": "notification"
+            },
+            {
+              "at": 1788256802000,
+              "id": "n2",
+              "partIndex": 1,
+              "type": "notification"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "You are out of premium credits.",
+          "metadata": {
+            "abacus": {
+              "actions": [
+                {
+                  "label": "Route LLM",
+                  "model": "abacus/route-llm",
+                  "type": "switch-model"
+                },
+                {
+                  "link": "https://example.com/upgrade",
+                  "type": "upgrade-abacus"
+                }
+              ],
+              "kind": "notification",
+              "notificationKey": "credits-out",
+              "segmentId": "n1",
+              "severity": "warning"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "Retried after a network error.",
+          "metadata": {
+            "abacus": {
+              "kind": "notification",
+              "segmentId": "n2",
+              "severity": "info"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 3,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-notification",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}
