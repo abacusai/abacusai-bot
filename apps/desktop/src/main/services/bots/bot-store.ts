@@ -20,8 +20,10 @@ import {
   type BotCreateInput,
   type BotUpdateInput,
 } from "#shared/bots";
+import { EntityNotFoundError } from "#shared/not-found";
 
 import { abacusBotHome } from "../../paths";
+import { ConflictError } from "../conflict";
 
 const FILE = (): string => path.join(abacusBotHome(), "bots.json");
 
@@ -51,8 +53,28 @@ const read = (): Bot[] => {
   }
 };
 
+const writeListeners = new Set<() => void>();
+
+/**
+ * Called after every write of `bots.json`, whoever made it: the DB table's
+ * direct hook (spec 00 B.2), so a write that emits no event is still seen.
+ */
+export const onBotStoreWrite = (listener: () => void): (() => void) => {
+  writeListeners.add(listener);
+  return () => {
+    writeListeners.delete(listener);
+  };
+};
+
 const write = (bots: Bot[]): void => {
   writeFileAtomicSync(FILE(), `${JSON.stringify(bots, null, 2)}\n`);
+  for (const listener of Array.from(writeListeners)) {
+    try {
+      listener();
+    } catch (error) {
+      console.error("[bot-store] write listener threw", error);
+    }
+  }
 };
 
 let counter = 0;
@@ -62,7 +84,8 @@ export const listBots = (): Bot[] => read();
 export const getBot = (id: string): Bot | null =>
   read().find((bot) => bot.id === id) ?? null;
 
-export const createBot = (input: BotCreateInput): Bot => {
+/** `id`: the caller's own (an optimistic insert); a taken one is refused. */
+export const createBot = (input: BotCreateInput, id?: string): Bot => {
   const name = input.name.trim().slice(0, MAX_BOT_NAME);
   if (name.length === 0) throw new Error("A bot needs a name.");
 
@@ -73,9 +96,11 @@ export const createBot = (input: BotCreateInput): Bot => {
   const bots = read();
   if (bots.length >= MAX_BOTS)
     throw new Error(`At most ${MAX_BOTS} bots are supported.`);
+  if (id != null && bots.some((bot) => bot.id === id))
+    throw new ConflictError(`A bot with id "${id}" already exists.`);
 
   const bot: Bot = {
-    id: `bot-${Date.now()}-${++counter}`,
+    id: id ?? `bot-${Date.now()}-${++counter}`,
     name,
     title: (input.title ?? "").trim().slice(0, MAX_BOT_TITLE),
     description,
@@ -99,7 +124,8 @@ export const updateBot = (id: string, changes: BotUpdateInput): Bot => {
   const bots = read();
   const index = bots.findIndex((bot) => bot.id === id);
 
-  if (index < 0) throw new Error(`No bot with id "${id}".`);
+  if (index < 0)
+    throw new EntityNotFoundError("bot", id, `No bot with id "${id}".`);
 
   const merged: Bot = { ...bots[index], ...changes, updatedAt: Date.now() };
   merged.name = merged.name.trim().slice(0, MAX_BOT_NAME);
@@ -138,7 +164,8 @@ export const removeBot = (id: string): Bot => {
   const bots = read();
   const removed = bots.find((bot) => bot.id === id);
 
-  if (removed == null) throw new Error(`No bot with id "${id}".`);
+  if (removed == null)
+    throw new EntityNotFoundError("bot", id, `No bot with id "${id}".`);
 
   write(bots.filter((bot) => bot.id !== id));
 

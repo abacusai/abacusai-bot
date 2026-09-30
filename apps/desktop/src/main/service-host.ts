@@ -181,6 +181,7 @@ import {
   getJob,
   listJobs,
   nextRun,
+  onCronStoreWrite,
   recordRun,
   removeJob,
   updateJob,
@@ -240,6 +241,7 @@ import { BotService } from "./services/bots/bot-service";
 import {
   getBot,
   listSenderSessionEntries,
+  onBotStoreWrite,
   recordBotSession,
   recordSenderSession,
   removeSenderSession,
@@ -266,6 +268,7 @@ import {
   readSettings,
   storedKeyProviders,
 } from "./services/config/settings";
+import { ConflictError } from "./services/conflict";
 import { ConnectorFlowService } from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
@@ -1989,7 +1992,9 @@ export class ServiceHost {
   createAgentSession(
     workspaceId: string,
     routineId: string | null = null,
-    owner: SessionOwner | null = null
+    owner: SessionOwner | null = null,
+    /** The caller's own id (an optimistic insert); a taken one is `ConflictError`. */
+    id?: string
   ): AgentSessionListItem {
     if (this.isWorkspaceDeleted(workspaceId)) {
       throw new Error(
@@ -1999,7 +2004,9 @@ export class ServiceHost {
     const session = this.agentSessionManagerService.create(
       workspaceId,
       routineId,
-      owner
+      owner,
+      null,
+      id
     );
     this.emitEvent({
       type: "local-cli-session-created",
@@ -2017,6 +2024,33 @@ export class ServiceHost {
 
   listAllAgentSessions(): AgentSessionListItem[] {
     return this.agentSessionManagerService.listAll();
+  }
+
+  /** Every session's cached turn state, for the sessions table's join. */
+  listSessionTurnStates(): SessionTurnStateSnapshot[] {
+    return this.sessionTurnStateService.list();
+  }
+
+  /** The DB tables' direct hooks (spec 00 B.2): writes that emit no event. */
+  onSessionsChanged(listener: () => void): () => void {
+    return this.agentSessionManagerService.onChanged(listener);
+  }
+
+  onWorkspacesChanged(listener: () => void): () => void {
+    return this.workspaceService.onChanged(listener);
+  }
+
+  onBotsWritten(listener: () => void): () => void {
+    return onBotStoreWrite(listener);
+  }
+
+  onRoutinesWritten(listener: () => void): () => void {
+    return onCronStoreWrite(listener);
+  }
+
+  /** Where memories and bots live; the memory watchers' root. */
+  botHome(): string {
+    return abacusBotHome();
   }
 
   getMessagingSnapshot(): MessagingSnapshot {
@@ -2235,8 +2269,8 @@ export class ServiceHost {
       });
   }
 
-  createBot(input: BotCreateInput): Bot {
-    return this.botService.create(input);
+  createBot(input: BotCreateInput, id?: string): Bot {
+    return this.botService.create(input, id);
   }
 
   updateBot(id: string, changes: BotUpdateInput): Bot {
@@ -2393,7 +2427,7 @@ export class ServiceHost {
    * a successful delete, and the user would believe the entries were gone.
    */
   private failIfNotDone(result: MemoryResult): void {
-    if (!result.ok) throw new Error(result.message);
+    if (!result.ok) throw new ConflictError(result.message);
   }
 
   /** A running session keeps the snapshot in its prompt until it restarts. */
@@ -3659,8 +3693,8 @@ export class ServiceHost {
     }));
   }
 
-  createRoutine(input: RoutineCreateInput): Routine {
-    const job = createJob(input);
+  createRoutine(input: RoutineCreateInput, id?: string): Routine {
+    const job = createJob(input, id);
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
