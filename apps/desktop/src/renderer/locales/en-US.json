@@ -351,6 +351,96 @@
       "label": "Bots",
       "new": "New bot",
       "empty": "No bots yet"
+    },
+    "avatar": {
+      "shapes": {
+        "blob": "Blob",
+        "round": "Round",
+        "squircle": "Squircle",
+        "pebble": "Pebble",
+        "leaf": "Leaf",
+        "drop": "Drop",
+        "bean": "Bean",
+        "slab": "Slab",
+        "mochi": "Mochi",
+        "egg": "Egg",
+        "pillow": "Pillow",
+        "jelly": "Jelly",
+        "star": "Star",
+        "flower": "Flower",
+        "heart": "Heart",
+        "cloud": "Cloud",
+        "hex": "Hexagon",
+        "gem": "Gem",
+        "clover": "Clover",
+        "burst": "Burst",
+        "bunny": "Bunny",
+        "cat": "Cat",
+        "bear": "Bear",
+        "ghost": "Ghost"
+      },
+      "colors": {
+        "green": "Green",
+        "blue": "Blue",
+        "purple": "Purple",
+        "pink": "Pink",
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "teal": "Teal",
+        "indigo": "Indigo",
+        "stone": "Stone"
+      },
+      "accessories": {
+        "none": "None",
+        "glasses": "Glasses",
+        "shades": "Shades",
+        "bow": "Bow",
+        "cap": "Cap",
+        "headphones": "Headphones",
+        "antenna": "Antenna",
+        "crown": "Crown",
+        "monocle": "Monocle"
+      }
+    },
+    "model": {
+      "defaultGroup": "Default",
+      "appDefault": "App default",
+      "favorites": "Favorites",
+      "localProvider": "On this machine",
+      "connectOpenRouter": "Connect OpenRouter",
+      "connectGoogleAi": "Connect Google AI Studio",
+      "tierFree": "Free",
+      "tierLocal": "Local"
+    },
+    "checkIn": {
+      "label": "Checks in",
+      "off": "Off",
+      "hourly": "Hourly",
+      "daily": "Daily",
+      "weekdays": "Weekdays",
+      "weekly": "Weekly",
+      "summary": {
+        "off": "Off",
+        "hourly": "Every hour",
+        "daily": "Every day, {{time}}",
+        "weekdays": "Weekdays, {{time}}",
+        "weekly": "Every {{day}}, {{time}}",
+        "custom": "Custom",
+        "paused": "Paused"
+      }
+    },
+    "start": {
+      "categories": {
+        "featured": "Featured",
+        "finance": "Finance",
+        "marketing": "Marketing",
+        "personal-assistant": "Personal Assistant",
+        "productivity": "Productivity",
+        "recruiting": "Recruiting",
+        "research": "Research",
+        "social-media": "Social Media"
+      }
     }
   },
   "browserPermission": {
