@@ -358,6 +358,23 @@ const tick = (): Promise<void> =>
   new Promise((resolve) => setImmediate(resolve));
 
 /**
+ * Drops a torn last line (a crash mid-append) before anything is appended
+ * after it, so it never becomes a malformed line in the middle of the log.
+ */
+const trimTornTail = (staging: string, io: MigrationIo): void => {
+  const file = logFile(staging);
+  let text: string;
+  try {
+    text = io.readFileSync(file).toString("utf8");
+  } catch (error) {
+    if (isAbsentError(error)) return;
+    throw error;
+  }
+  if (text === "" || text.endsWith("\n")) return;
+  writeFileAtomic(file, text.slice(0, text.lastIndexOf("\n") + 1), io);
+};
+
+/**
  * Puts a commit back, whether or not each move happened, so it needs no
  * record of which did (the cross-volume copy has a window the log cannot
  * see: the destination published, the staged source not yet removed):
@@ -395,6 +412,7 @@ export const rollback = async (
     if (operations % every === 0) await tick();
   };
 
+  trimTornTail(staging, io);
   for (const [index, write] of journal.writes.entries()) {
     await pace();
     if (log.undone.has(logKey("write", index))) continue;
