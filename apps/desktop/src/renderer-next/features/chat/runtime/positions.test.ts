@@ -95,6 +95,12 @@ describe("R2-T1 positions", () => {
     await session.load();
     expect(session.hostStore.state.partial).toBe(true);
     expect(session.positions()!.reconstructed).toBe(false);
+    expect(session.positions()!.receivedSeq).toBe(
+      relay.activeRun()!.startSeq - 1
+    );
+    expect(session.positions()!.appliedSeq).toBe(
+      relay.activeRun()!.startSeq - 1
+    );
     expect(session.hostStore.state.messages).toEqual([]);
     expect(session.store.state.runs.active?.runId).toBe("run-1");
     expect(session.stopTarget()).toBe("run-1");

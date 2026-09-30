@@ -22,9 +22,9 @@ import { loadUntyped, memoryAi } from "./chat-relay";
 type Json = Record<string, unknown>;
 
 /** A fake-provider reply (`@abacus-ai/test-support/fake-provider`). */
-export type Reply = Json;
+type Reply = Json;
 
-export interface Gates {
+interface Gates {
   wait(name: string): Promise<void>;
   open(name: string): void;
 }

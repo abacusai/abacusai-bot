@@ -5,14 +5,16 @@
 import { ORPCError } from "@orpc/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { memoryRelay, closeMemoryRelays } from "#next/test-support/chat-relay";
 import type { AiSendInput } from "#shared/contract/ai";
 
 import * as b from "../fixtures/builders";
-import { FakeRelay } from "../fixtures/relay";
+import type { FakeRelay } from "../fixtures/relay";
 import { ThreadSession } from "./session";
 
 const sessions: ThreadSession[] = [];
 afterEach(() => {
+  closeMemoryRelays();
   for (const session of sessions.splice(0)) session.retire();
 });
 
@@ -44,7 +46,7 @@ const timeout = () => new ORPCError("TIMEOUT", { data: { ms: 30_000 } });
 
 describe("R2-T35 uncertain admission", () => {
   it("(a) the echo before the RPC rejection confirms it; the rejection is ignored", async () => {
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: async (input, r) => {
         echo(r, input);
         await vi.waitFor(() =>
@@ -70,7 +72,7 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(b) an echo after the failure: pending until it arrives", async () => {
     let pending: AiSendInput | null = null;
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input) => {
         pending = input;
         return { runId: input.runId, status: "started" };
@@ -88,7 +90,7 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(c) a lost ack: the re-send is a duplicate of started, no second run", async () => {
     let runs = 0;
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input) => {
         runs += 1;
         return { runId: input.runId, status: "started" };
@@ -112,7 +114,7 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(d) a prompt that never reached the agent is admitted once by the re-send", async () => {
     let runs = 0;
-    const relay = new FakeRelay({
+    const relay = await memoryRelay({
       onSend: (input) => {
         runs += 1;
         return { runId: input.runId, status: "started" };
@@ -131,7 +133,7 @@ describe("R2-T35 uncertain admission", () => {
   });
 
   it("(e) two failed re-sends: Not sent, and Discard gives the text back", async () => {
-    const relay = new FakeRelay();
+    const relay = await memoryRelay();
     relay.faults.send = () => timeout();
     const session = await open(relay);
     await session.submit("hello");
@@ -145,7 +147,7 @@ describe("R2-T35 uncertain admission", () => {
   });
 
   it("(f) UNAVAILABLE is definitive: the entry leaves at once", async () => {
-    const relay = new FakeRelay();
+    const relay = await memoryRelay();
     relay.faults.send = () => new ORPCError("UNAVAILABLE", { data: {} });
     const session = await open(relay);
     await expect(session.submit("hello")).rejects.toBeInstanceOf(ORPCError);

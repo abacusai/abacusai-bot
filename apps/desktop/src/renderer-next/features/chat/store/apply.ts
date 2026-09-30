@@ -364,6 +364,27 @@ export const applyEvent = (
   let next = state;
   if (clearsRetry(event) && state.activity.retry != null)
     next = { ...next, activity: { ...next.activity, retry: null } };
+  if (
+    event.type === "SUBAGENT_STARTED" ||
+    event.type === "SUBAGENT_FINISHED" ||
+    event.type === "SUBAGENT_ERROR"
+  ) {
+    const id = String(
+      (event as { subagentRunId?: string }).subagentRunId ?? ""
+    );
+    const time = eventTime(event, Date.now());
+    const previous = next.subagentTimes[id];
+    return {
+      ...next,
+      subagentTimes: {
+        ...Object.fromEntries(Object.entries(next.subagentTimes).slice(-299)),
+        [id]:
+          event.type === "SUBAGENT_STARTED"
+            ? { start: time }
+            : { start: previous?.start ?? time, end: time },
+      },
+    };
+  }
   switch (event.type) {
     case "RUN_STARTED": {
       const meta = (event as { metadata?: { abacus?: Loose } }).metadata;
@@ -389,7 +410,7 @@ export const applyEvent = (
       return {
         ...next,
         fresh: {
-          ...next.fresh,
+          ...Object.fromEntries(Object.entries(next.fresh).slice(-299)),
           [(event as { messageId?: string }).messageId ?? ""]: true,
         },
       };
