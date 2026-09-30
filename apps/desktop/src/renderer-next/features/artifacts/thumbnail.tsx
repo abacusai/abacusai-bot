@@ -39,6 +39,8 @@ export const ArtifactThumbnail = ({ artifact }: { artifact: ArtifactRow }) => {
   return (
     <div
       ref={ref}
+      data-artifact-thumbnail={artifact.kind}
+      data-requested={near ? "true" : "false"}
       className="bg-muted flex h-24 w-full items-center justify-center overflow-hidden"
     >
       {image.data ? (

@@ -8,6 +8,7 @@ export const phase5FixtureIds = [
   "routines-sidebar",
   "routine-report",
   "artifacts-grid",
+  "artifacts-stress",
   "library-connectors",
   "settings-general",
   "settings-models",

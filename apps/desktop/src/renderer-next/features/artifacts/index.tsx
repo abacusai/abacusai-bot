@@ -488,4 +488,4 @@ export const ArtifactsPage = ({
   );
 };
 
-export { artifactGalleryRows } from "./gallery";
+export { artifactGalleryRows, artifactStressRows } from "./gallery";
