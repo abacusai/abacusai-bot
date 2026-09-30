@@ -7,13 +7,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, onTestFinished } from "vitest";
 
-import { parseCron } from "#shared/routines/cron";
 import { TimeoutError } from "#shared/timeout-error";
 
 import {
   createJob,
+  updateJob,
   onRoutineRunStarted,
   recordRun,
 } from "../services/agent-tools/cron-store";
@@ -103,17 +103,19 @@ describe("system.loginItem (spec 05 §31.5 c)", () => {
 
 describe("typed routine errors (spec 05 §31.5 e)", () => {
   it("a schedule that does not parse is BAD_REQUEST { field, detail }", async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "cron-parse-rpc-"));
+    const previousHome = process.env.ABACUSAI_BOT_HOME;
+    process.env.ABACUSAI_BOT_HOME = home;
+    const job = createJob({ prompt: "p" }, "job-1");
+    expect(job.id).toBe("job-1");
     const client = connect({
-      serviceHost: {
-        // The real parser, as cron-store's createJob/updateJob call it.
-        createRoutine: (input: { schedule?: string | null }) => {
-          parseCron(input.schedule ?? "");
-          throw new Error("unreachable");
-        },
-        updateRoutine: (_id: string, patch: { schedule?: string | null }) => {
-          parseCron(patch.schedule ?? "");
-        },
-      },
+      serviceHost: { createRoutine: createJob, updateRoutine: updateJob },
+    });
+    // Restore after both RPC calls, even if an assertion fails.
+    onTestFinished(() => {
+      if (previousHome == null) delete process.env.ABACUSAI_BOT_HOME;
+      else process.env.ABACUSAI_BOT_HOME = previousHome;
+      fs.rmSync(home, { recursive: true, force: true });
     });
     const detail =
       "Names like MON or JAN are not supported. Use numbers: 0-6 for weekday, 1-12 for month.";

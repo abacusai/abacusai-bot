@@ -324,3 +324,25 @@ describe("ai.attention (spec 06 §11.2)", () => {
     abort.abort();
   });
 });
+
+it("a late permission list cannot replace a new incarnation's list", async () => {
+  const { relay, boot, pending } = setup();
+  boot("s1", "old");
+  pending("s1", "old", [{ id: "old-permission" }]);
+  boot("s1", "new");
+  pending("s1", "new", [{ id: "new-permission" }]);
+  pending("s1", "old", [{ id: "late-old" }]);
+  const abort = new AbortController();
+  const stream = relay.attention(abort.signal)[Symbol.asyncIterator]();
+  expect((await stream.next()).value).toMatchObject({
+    items: [
+      expect.objectContaining({
+        threadId: "s1",
+        incarnation: "new",
+        firstTitle: "ask new-permission",
+      }),
+    ],
+  });
+  abort.abort();
+  await stream.return?.();
+});

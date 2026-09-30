@@ -1,13 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { BotDetailsSheet } from "#next/features/bots";
-
-const BotDetailsRoute = () => {
-  const { botId } = Route.useParams();
-  return <BotDetailsSheet botId={botId} />;
-};
-
-/** Masked pop-up: the URL shows /bots/$botId (router.tsx routeMasks). */
+import { createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/_shell/(bots)/bots/$botId/details")({
-  component: BotDetailsRoute,
+  beforeLoad: ({ params, search }) => {
+    throw redirect({
+      to: "/bots/$botId",
+      params,
+      search: { ...search, tab: "details" },
+      replace: true,
+    });
+  },
 });

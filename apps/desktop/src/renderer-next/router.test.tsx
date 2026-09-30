@@ -103,14 +103,12 @@ describe("redirects", () => {
     );
   });
 
-  it("renders the Empty state and the bots sidebar on /bots/new", async () => {
+  it("renders the start page and the bots sidebar on /bots/new", async () => {
     harness = await renderApp("/bots/new");
+    expect(await screen.findByRole("textbox", { name: "Name" })).toBeTruthy();
     expect(
-      await screen.findByText("Make a bot", {
-        selector: "[data-slot=empty-title]",
-      })
+      await screen.findByRole("link", { name: /Chief of Staff/ })
     ).toBeTruthy();
-    expect(await screen.findByText("Chief of Staff")).toBeTruthy();
   });
 
   it("treats /__ui as not found with the gallery off", async () => {
@@ -135,10 +133,10 @@ describe("masked pop-ups", () => {
       background: "routines-list-body",
     },
     {
-      name: "bot details",
-      to: "/bots/chief-of-staff/details",
+      name: "bot check-in",
+      to: "/bots/chief-of-staff/check-in",
       masked: "/bots/chief-of-staff",
-      background: "empty-state",
+      background: "bot-chat",
     },
     {
       name: "connector sheet",
@@ -153,7 +151,7 @@ describe("masked pop-ups", () => {
       harness = await renderApp("/bots/new", { history });
       const start = harness.router.state.location.pathname;
       const base = to
-        .replace(/\/(new|details)$/, (_, last) => (last === "new" ? "" : ""))
+        .replace(/\/(new|check-in)$/, (_, last) => (last === "new" ? "" : ""))
         .split("?")[0]!;
       // Go to the background first, as a user would.
       await act(async () => {
@@ -169,7 +167,7 @@ describe("masked pop-ups", () => {
       expect(harness.router.state.location.maskedLocation?.pathname).toBe(
         masked
       );
-      await screen.findByTestId(/route-sheet|connector-sheet/);
+      await screen.findByTestId(/route-sheet|connector-sheet|check-in-dialog/);
       // The background instance survived the pop-up opening.
       expect(screen.getAllByTestId(background)[0]).toBe(before);
 

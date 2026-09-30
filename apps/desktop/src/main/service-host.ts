@@ -148,6 +148,7 @@ import type {
   RespondConnectorRequest,
 } from "#shared/contracts";
 import {
+  conversationRefFromKey,
   sessionConversationKey,
   type ConversationKey,
 } from "#shared/conversation-scope";
@@ -345,6 +346,7 @@ import {
   resolveBackend,
 } from "./services/providers/exec-backend-service";
 import {
+  cachedRecommendedModelId,
   listAvailableModels,
   recommendedModelId,
 } from "./services/providers/models";
@@ -544,7 +546,7 @@ export class ServiceHost {
     readTranscript: (sessionId) =>
       syncLogFor(sessionId, {
         readV1: (id) => this.transcriptService.read(id),
-        readThread: (id) => this.threadStore.readCurrentFile(id),
+        readThread: (id) => this.threadStore.readAguiFile(id),
       }),
     clientVersion: app.getVersion(),
   });
@@ -1047,6 +1049,32 @@ export class ServiceHost {
     },
   });
 
+  /**
+   * The folders a conversation may preview local files from (spec 04
+   * §12.8): its checkout (the session's worktree when it has one) and the
+   * folders of its workspace's recorded file artifacts. Derived here, never
+   * from the renderer: `materializeFile`'s `hostRoot` must lie inside one.
+   */
+  localPreviewRoots(key: ConversationKey): string[] {
+    const ref = conversationRefFromKey(key);
+    if (ref == null) return [];
+    const roots: string[] = [];
+    try {
+      roots.push(
+        this.checkouts.resolve({
+          workspaceId: ref.workspaceId,
+          ...(ref.kind === "session" && { sessionId: ref.sessionId }),
+        }).path
+      );
+    } catch {
+      // No local checkout: artifact folders only.
+    }
+    for (const artifact of this.sessionArtifactsService.list())
+      if (artifact.workspaceId === ref.workspaceId && artifact.kind !== "link")
+        roots.push(path.dirname(artifact.location));
+    return [...new Set(roots)];
+  }
+
   /** The active workspace's primary checkout key (legacy tree events). */
   activeCheckoutKey(): string | null {
     const active = this.workspaceService.getActiveWorkspaceId();
@@ -1275,11 +1303,16 @@ export class ServiceHost {
     // One resolver for display and execution (spec 03 §13.2): the bot's
     // own model when configured, else the stored default when configured,
     // else the tier's recommendation, else the fallback.
-    effectiveModel: (requested) =>
-      effectiveBotModel(requested, {
-        readDefault: () => readSettings().defaultModel,
-        listCatalog: () => listAvailableModels(),
-      }),
+    effectiveModel: (requested, pinned) =>
+      effectiveBotModel(
+        requested,
+        {
+          readDefault: () => readSettings().defaultModel,
+          listCatalog: () => listAvailableModels(),
+          cachedRecommended: () => cachedRecommendedModelId(),
+        },
+        pinned
+      ),
     sessionInfo: (sessionId) => {
       const session = this.agentSessionManagerService.get(sessionId);
       return session == null
@@ -1361,6 +1394,8 @@ export class ServiceHost {
     resolveAdditionalConfigEnv: async (sessionId: string) =>
       this.buildAdditionalConfigEnv("code", sessionId),
     emitStateUpdated: (workspaceId, sessionId, state) => {
+      if (state.status === "starting" || state.pid == null)
+        this.modelSwitches.invalidate(sessionId);
       this.agentSessionManagerService.updateFromCliState(state);
       this.emitEvent({
         type: "local-cli-state-updated",
@@ -2916,8 +2951,15 @@ export class ServiceHost {
     this.agentCommunicationService.setMode(request);
   }
 
+  /**
+   * Fire-and-forget, as the legacy IPC has always been; it still joins the
+   * session's switch queue so its answer is not taken for a checked one's
+   * (`ModelSwitchWaiters`).
+   */
   setAgentModel(request: AgentSetModelRequest): void {
-    this.agentCommunicationService.setModel(request);
+    this.modelSwitches.post(request.sessionId, request.model, () =>
+      this.agentCommunicationService.setModel(request)
+    );
   }
 
   private readonly modelSwitches = new ModelSwitchWaiters();
@@ -2928,7 +2970,7 @@ export class ServiceHost {
    * running agent, or no answer in time, resolves.
    */
   setAgentModelChecked(request: AgentSetModelRequest): Promise<void> {
-    return this.modelSwitches.wait(request.sessionId, () =>
+    return this.modelSwitches.wait(request.sessionId, request.model, () =>
       this.agentCommunicationService.setModel(request)
     );
   }
@@ -3916,6 +3958,11 @@ export class ServiceHost {
         outcome: session.runOutcome ?? "completed",
         trigger: session.runTrigger,
       }));
+  }
+
+  /** History only: run-row joins must not compute cron schedules. */
+  listRoutineHistories(): Array<Pick<Routine, "id" | "runs">> {
+    return listJobs().map(({ id, runs }) => ({ id, runs }));
   }
 
   /** The routine list, enriched with what the UI shows per row. */

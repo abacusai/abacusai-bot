@@ -95,7 +95,7 @@ import {
   registerIpcHandlers,
   type HostOperations,
 } from "./handler";
-import { registerKeepAwakeHandlers, setMainAgentBusy } from "./keep-awake";
+import { followMainAgentBusy, registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
@@ -401,6 +401,8 @@ let mainWindowRef: BaseWindow | null = null;
 let rendererHost: RendererHost | null = null;
 /** Null until whenReady; wherever it stays null the packaged baseline runs. */
 let experienceRuntime: ExperienceRuntime | null = null;
+/** Reloads the main window's app content; set while a window is up. */
+let reloadRendererContent: (() => void) | null = null;
 
 // Throttled input reports from renderer/lib/activity-beacon; a swap defers
 // while input is recent.
@@ -418,11 +420,15 @@ ipcMain.on("renderer-activity", () => {
 const rendererSwaps = new RendererSwapScheduler({
   // Development stays on the Vite server.
   disabled: () => Boolean(process.env.VITE_DEV_SERVER_URL),
-  target: () =>
-    experienceEntryUrl(
-      experienceRuntime?.activeRendererUrl(),
-      RENDERER_GENERATION
-    ),
+  // Only while `version` is still the active experience: a superseded
+  // version has nothing to swap to (the newer one's schedule settles).
+  target: (version) =>
+    experienceRuntime?.store.version === version
+      ? experienceEntryUrl(
+          experienceRuntime.activeRendererUrl(),
+          RENDERER_GENERATION
+        )
+      : null,
   host: () => rendererHost,
   busy: () =>
     workspaceServiceHost.hasActiveAgentTurn() ||
@@ -432,16 +438,22 @@ const rendererSwaps = new RendererSwapScheduler({
   // FOUNDATION_API, so this is also the candidate's contract.
   barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
   // Activation is transactional with readiness (spec 07 review r1 #9).
-  onOutcome: (version, outcome) => {
+  onOutcome: (version, outcome, detail) => {
     const store = experienceRuntime?.store;
     if (store == null) return;
     const settle =
       outcome === "gave-up"
         ? store.abandonActivation(version)
         : store.commitActivation(version);
-    settle.catch((error: unknown) => {
-      console.error(`[experience] settling ${version} failed`, error);
-    });
+    settle
+      .then(() => {
+        // A new window's first document gave up: show the committed one.
+        if (outcome === "gave-up" && detail?.live === true)
+          reloadRendererContent?.();
+      })
+      .catch((error: unknown) => {
+        console.error(`[experience] settling ${version} failed`, error);
+      });
   },
 });
 
@@ -1114,6 +1126,12 @@ async function createWindow(restored?: RecreatedWindowState) {
   });
   rendererHost = host;
   setActiveRendererHost(host);
+  reloadRendererContent = () => {
+    if (rendererHost === host) loadAppContent();
+  };
+  // An activation still waiting on readiness (no window was up to swap)
+  // settles on this window's first document, which is its bundle.
+  rendererSwaps.adopt(host);
 
   loadAppContent();
 }
@@ -1655,6 +1673,12 @@ function installRpc(
       state: (id) =>
         rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
     }),
+    // Each renderer generation reports its thread once; forget it when gone.
+    onWindowGone: (id, forget) => {
+      const contents = electronWebContents.fromId(id);
+      if (contents == null || contents.isDestroyed()) forget();
+      else contents.once("destroyed", forget);
+    },
   });
   const deps: RpcDeps = {
     serviceHost: workspaceServiceHost,
@@ -1815,10 +1839,9 @@ app
 
     registerKeepAwakeHandlers();
     // Keep-awake follows the relay's run state too, re-evaluated at every
-    // AG-UI run start and terminal (spec 07 review r1 #10).
-    workspaceServiceHost.aguiRelay.onBusyChange((busy) => {
-      setMainAgentBusy(busy);
-    });
+    // AG-UI run start and terminal (spec 07 review r1 #10), starting from the
+    // value it already has (the relay and the cron scheduler started above).
+    followMainAgentBusy(workspaceServiceHost.aguiRelay);
 
     // Best-effort cleanup of attachment temp files older than 7 days across
     // every workspace; never blocks startup.

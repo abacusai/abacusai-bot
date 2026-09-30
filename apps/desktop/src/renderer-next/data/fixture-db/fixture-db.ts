@@ -173,6 +173,25 @@ export const fixtureDbClient = (db: FixtureDb): DbClient =>
       delete: ({ id }: { id: string }) => db.workspaces.remove(id),
     }),
     routines: tableClient(db.routines, {
+      insert: (input: Partial<RoutineRow> & { id: string; prompt: string }) =>
+        db.routines.upsert({
+          name: "Check-in",
+          schedule: null,
+          runAt: null,
+          webhookToken: null,
+          workspaceId: null,
+          botId: null,
+          enabled: true,
+          createdAt: Date.now(),
+          lastRunAt: null,
+          lastResult: null,
+          nextRunAt: null,
+          webhookUrl: null,
+          webhookPublicPending: false,
+          botName: null,
+          recentRuns: [],
+          ...input,
+        }),
       update: ({ id, patch }: { id: string; patch: Partial<RoutineRow> }) =>
         db.updateRow(db.routines, id, patch),
       delete: ({ id }: { id: string }) => db.routines.remove(id),

@@ -109,6 +109,12 @@ export interface IpcCollectionConfig<Row extends object, Key extends string> {
     original: Row
   ) => unknown;
   toDeleteInput?: (key: Key, original: Row) => unknown;
+  /**
+   * A delete main answers `NOT_FOUND` (the row is already gone: another
+   * window, main itself) resolves after a resync instead of rolling back
+   * (spec 03 §24.5). Bots and routines set it.
+   */
+  idempotentDelete?: boolean;
   /** How long a handler waits for its echo before it resyncs. */
   echoTimeoutMs?: number;
   /** Sync on creation (the shell's tables), not on first use. */
@@ -133,6 +139,12 @@ export type IpcCollectionOptions<
 };
 
 const DEFAULT_ECHO_TIMEOUT_MS = 10_000;
+
+/** A typed `NOT_FOUND` from main (oRPC error `code`), never a message match. */
+const isNotFoundError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { code?: unknown }).code === "NOT_FOUND";
 
 /** 0.5 s, 1 s, 2 s, then every 5 s. */
 const defaultRetryDelayMs = (attempt: number): number =>
@@ -699,12 +711,19 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
       for (const mutation of transaction.mutations) {
         const { delete: remove } = await table();
         if (remove == null) throw new Error(`${config.id} has no delete`);
-        await awaitEcho(
-          await remove(
+        let position: TablePositionLike;
+        try {
+          position = await remove(
             toInput(mutation.key as Key, mutation.original) as never
-          ),
-          collection
-        );
+          );
+        } catch (error) {
+          if (config.idempotentDelete !== true || !isNotFoundError(error))
+            throw error;
+          // Already gone in main: the snapshot drops it for real.
+          await utils.resync().catch(() => undefined);
+          continue;
+        }
+        await awaitEcho(position, collection);
       }
     };
   }

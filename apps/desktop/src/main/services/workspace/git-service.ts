@@ -649,7 +649,7 @@ export class GitService {
    */
   async readGitChanges(
     workspacePath: string,
-    options: { fingerprints?: boolean } = {}
+    options: { fingerprints?: boolean; checkoutRelative?: boolean } = {}
   ): Promise<GitStatusResult> {
     if (!(await this.isInsideWorkTree(workspacePath))) {
       return {
@@ -668,9 +668,27 @@ export class GitService {
         "-uall",
         "-z",
       ]);
-      const changes: GitChangeItem[] = parseStatusZ(statusOutput.stdout).sort(
-        (a, b) => a.path.localeCompare(b.path)
-      );
+      let changes: GitChangeItem[] = parseStatusZ(statusOutput.stdout);
+      if (options.checkoutRelative === true) {
+        const location = await this.repositoryLocation(workspacePath);
+        const prefix = location?.prefix ?? "";
+        changes = changes
+          .filter((change) => change.path.startsWith(prefix))
+          .map((change) => ({
+            ...change,
+            path: change.path.slice(prefix.length),
+            ...(change.origPath != null && {
+              origPath: path
+                .relative(
+                  workspacePath,
+                  path.join(location!.top, change.origPath)
+                )
+                .split(path.sep)
+                .join("/"),
+            }),
+          }));
+      }
+      changes.sort((a, b) => a.path.localeCompare(b.path));
       if (options.fingerprints === true)
         await this.addFingerprints(workspacePath, changes);
 
@@ -1016,22 +1034,53 @@ export class GitService {
     return out;
   }
 
-  /** Whether HEAD has `relativePath` (false on an unborn branch). */
-  async existsInHead(
-    checkoutPath: string,
-    relativePath: string
-  ): Promise<boolean> {
+  /**
+   * Where `checkoutPath` sits in its repository: git's top level (a real
+   * path) and the checkout's prefix under it (`""` at the top, else ending
+   * in `/`). Null outside a work tree. Git resolves `HEAD:<path>` and the
+   * status output from the top level but pathspecs from `-C`, so every
+   * discard step runs at the top level on the prefixed path.
+   */
+  async repositoryLocation(
+    checkoutPath: string
+  ): Promise<{ top: string; prefix: string } | null> {
     try {
-      await execFileAsync("git", [
+      const { stdout } = await execFileAsync("git", [
         "-C",
         checkoutPath,
-        "cat-file",
-        "-e",
-        `HEAD:${relativePath.replace(/\\/g, "/")}`,
+        "rev-parse",
+        "--show-toplevel",
+        "--show-prefix",
       ]);
-      return true;
+      const [top, prefix = ""] = stdout.split("\n");
+      if (top == null || top.length === 0) return null;
+      return { top, prefix };
     } catch {
-      return false;
+      return null;
+    }
+  }
+
+  /** HEAD's object at a top-level-relative path (null: absent or unborn). */
+  private async headObject(
+    top: string,
+    gitPath: string
+  ): Promise<{ mode: string; type: string; object: string } | null> {
+    try {
+      const { stdout } = await execFileAsync(
+        "git",
+        ["-C", top, "ls-tree", "-z", "HEAD", "--", gitPath],
+        LITERAL_PATHSPECS
+      );
+      for (const record of stdout.split("\0")) {
+        const tab = record.indexOf("\t");
+        if (tab === -1 || record.slice(tab + 1) !== gitPath) continue;
+        const [mode, type, object] = record.slice(0, tab).split(" ");
+        if (mode != null && type != null && object != null)
+          return { mode, type, object };
+      }
+      return null;
+    } catch {
+      return null;
     }
   }
 
@@ -1039,6 +1088,7 @@ export class GitService {
    * One file's diff with its kind (spec 04 §26.4 h). The whole-file view
    * against nothing is used only when git reports the path untracked; a
    * tracked path with no change in `scope` is `none`, never all-added.
+   * `relativePath` is checkout-relative with `/` separators.
    */
   async diffForPath(
     checkoutPath: string,
@@ -1047,6 +1097,7 @@ export class GitService {
   ): Promise<GitDiffResult> {
     if (!(await this.isInsideWorkTree(checkoutPath))) return { kind: "none" };
     try {
+      const location = await this.repositoryLocation(checkoutPath);
       const status = await execFileAsync(
         "git",
         [
@@ -1061,8 +1112,10 @@ export class GitService {
         ],
         LITERAL_PATHSPECS
       );
+      // Status paths are top-level relative, whatever `-C` is.
+      const gitPath = `${location?.prefix ?? ""}${relativePath}`;
       const entry = parseStatusZ(status.stdout).find(
-        (change) => change.path === relativePath.replace(/\\/g, "/")
+        (change) => change.path === gitPath
       );
       if (entry?.status === "??") {
         if (scope === "staged") return { kind: "none" };
@@ -1096,84 +1149,214 @@ export class GitService {
   }
 
   /**
-   * Puts each entry back as HEAD has it (spec 04 §26.4 c). A path absent
-   * from HEAD (a staged addition, a rename's destination) goes to the Trash
-   * first and only then leaves the index, so its content is recoverable; a
-   * Trash failure stops that entry before any index change. A rename's
-   * source is restored from HEAD after its destination is dealt with.
+   * Puts each entry back as HEAD has it (spec 04 §26.4 c). Entries are
+   * checkout-relative with `/` separators, spelled exactly as the change
+   * git reports (a fresh `git status` of the checkout): anything else (a
+   * directory, another case, a path through a symlink, an unchanged file)
+   * is `not-changed` and nothing happens to it. What git reports decides
+   * the action, not the caller: a path HEAD has is restored from HEAD; one
+   * it lacks (untracked, a staged addition, a rename's destination) goes to
+   * the Trash first and only then leaves the index, so its content is
+   * recoverable; a Trash failure stops that entry before any index change.
+   * A rename's source (git's, which the caller's `origPath` must match) is
+   * restored from HEAD afterwards, and is refused up front (`occupied`) when
+   * something other than HEAD's content sits there. A path a migration may
+   * still roll back is `blocked`. `partial`: a later step failed after an
+   * earlier one changed something.
+   *
+   * With `requireTopLevel`, the checkout must be its repository's top level
+   * (a worktree whose `.git` file is gone would otherwise act on whatever
+   * repository git finds above it).
    */
   async discard(
     checkoutPath: string,
     entries: Array<{ path: string; origPath?: string }>,
-    trash: (absolutePath: string) => Promise<void>
+    trash: (absolutePath: string) => Promise<void>,
+    options: {
+      requireTopLevel?: boolean;
+      isBlocked?: (absolutePath: string) => boolean;
+    } = {}
   ): Promise<GitDiscardResult> {
     const result: GitDiscardResult = { discarded: [], failed: [] };
+    const failAll = (detail: string): GitDiscardResult => ({
+      discarded: [],
+      failed: entries.map((entry) => ({
+        path: entry.path,
+        reason: "git" as const,
+        detail,
+      })),
+    });
+    const location = await this.repositoryLocation(checkoutPath);
+    if (location == null) return failAll("Not a git checkout.");
+    const { top, prefix } = location;
+    if (options.requireTopLevel === true && prefix !== "")
+      return failAll(
+        `${checkoutPath} is not the top level of its own repository (git found ${top}).`
+      );
+    let changes: Map<string, { origPath?: string }>;
+    try {
+      const { stdout } = await execFileAsync(
+        "git",
+        [
+          "-C",
+          top,
+          "status",
+          "--porcelain",
+          "-uall",
+          "-z",
+          ...(prefix === "" ? [] : ["--", prefix]),
+        ],
+        LITERAL_PATHSPECS
+      );
+      changes = new Map(
+        parseStatusZ(stdout).map((change) => [
+          change.path,
+          change.origPath == null ? {} : { origPath: change.origPath },
+        ])
+      );
+    } catch (error) {
+      return failAll(this.errorMessage(error));
+    }
+    const absoluteOf = (gitPath: string): string =>
+      path.join(top, ...gitPath.split("/"));
+    const isBlocked = options.isBlocked ?? (() => false);
+
     for (const entry of entries) {
-      const relative = entry.path.replace(/\\/g, "/");
+      const fail = (
+        reason: GitDiscardResult["failed"][number]["reason"],
+        detail: string
+      ): void => {
+        result.failed.push({ path: entry.path, reason, detail });
+      };
+      const gitPath = `${prefix}${entry.path}`;
+      const change = changes.get(gitPath);
+      if (change == null) {
+        fail("not-changed", `git reports no change at ${entry.path}`);
+        continue;
+      }
+      const expectedOrig =
+        entry.origPath == null ? undefined : `${prefix}${entry.origPath}`;
+      if (expectedOrig !== change.origPath) {
+        fail(
+          "not-changed",
+          change.origPath == null
+            ? `${entry.path} is not a rename`
+            : `${entry.path} was renamed from ${change.origPath.slice(prefix.length)}`
+        );
+        continue;
+      }
+      const absolute = absoluteOf(gitPath);
+      const origin = change.origPath;
+      if (
+        isBlocked(absolute) ||
+        (origin != null && isBlocked(absoluteOf(origin)))
+      ) {
+        fail("blocked", "A pending migration may still restore this file.");
+        continue;
+      }
+      let changed = false;
       try {
-        if (await this.existsInHead(checkoutPath, relative)) {
-          await this.restoreFromHead(checkoutPath, relative);
+        if ((await fs.lstat(absolute).catch(() => null))?.isDirectory()) {
+          fail(
+            "not-changed",
+            "Discard files individually; directories may hold new files."
+          );
+          continue;
+        }
+        // The rename's source must be free (or already HEAD's content)
+        // before anything moves: restoring it overwrites what is there.
+        if (origin != null) {
+          const head = await this.headObject(top, origin);
+          if (head == null || head.type !== "blob") {
+            fail("git", `HEAD has no file at ${origin.slice(prefix.length)}`);
+            continue;
+          }
+          const source = await fs
+            .lstat(absoluteOf(origin))
+            .catch((error: NodeJS.ErrnoException) => {
+              if (error.code === "ENOENT") return null;
+              throw error;
+            });
+          if (source != null) {
+            // Hashing follows symlinks. Only a regular file with HEAD's
+            // type can qualify as already restored, before trashing anything.
+            const sameType =
+              source.isFile() &&
+              (head.mode === "100644" || head.mode === "100755");
+            const current = sameType ? await this.hashFile(top, origin) : null;
+            if (!sameType || current !== head.object) {
+              fail(
+                "occupied",
+                `${origin.slice(prefix.length)} holds new content; move it before discarding the rename`
+              );
+              continue;
+            }
+          }
+        }
+        const head = await this.headObject(top, gitPath);
+        if (head != null) {
+          await this.restoreFromHead(top, gitPath);
+          changed = true;
         } else {
-          const absolute = path.join(checkoutPath, ...relative.split("/"));
           if (await pathExists(absolute)) {
             try {
               await trash(absolute);
             } catch (error) {
-              result.failed.push({
-                path: entry.path,
-                reason: "trash",
-                detail: this.errorMessage(error),
-              });
+              fail("trash", this.errorMessage(error));
               continue;
             }
+            changed = true;
           }
           await execFileAsync(
             "git",
             [
               "-C",
-              checkoutPath,
+              top,
               "rm",
               "--cached",
               "--quiet",
               "--ignore-unmatch",
               "--",
-              relative,
+              gitPath,
             ],
             LITERAL_PATHSPECS
           );
+          changed = true;
         }
-        if (entry.origPath != null)
-          await this.restoreFromHead(
-            checkoutPath,
-            entry.origPath.replace(/\\/g, "/")
-          );
+        if (origin != null) await this.restoreFromHead(top, origin);
         result.discarded.push(entry.path);
       } catch (error) {
-        result.failed.push({
-          path: entry.path,
-          reason: "git",
-          detail: this.errorMessage(error),
-        });
+        fail(changed ? "partial" : "git", this.errorMessage(error));
       }
     }
     return result;
   }
 
-  private async restoreFromHead(
-    checkoutPath: string,
-    relative: string
-  ): Promise<void> {
+  private async hashFile(top: string, gitPath: string): Promise<string | null> {
+    try {
+      const { stdout } = await execFileAsync(
+        "git",
+        ["-C", top, "hash-object", "--", gitPath],
+        LITERAL_PATHSPECS
+      );
+      return stdout.trim();
+    } catch {
+      return null;
+    }
+  }
+
+  private async restoreFromHead(top: string, gitPath: string): Promise<void> {
     await execFileAsync(
       "git",
       [
         "-C",
-        checkoutPath,
+        top,
         "restore",
         "--source=HEAD",
         "--staged",
         "--worktree",
         "--",
-        relative,
+        gitPath,
       ],
       LITERAL_PATHSPECS
     );

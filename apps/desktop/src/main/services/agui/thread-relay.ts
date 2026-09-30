@@ -1271,6 +1271,8 @@ export class ThreadRelay {
         }
         return;
       case "permission.pending":
+        if (this.incarnation != null && value.incarnation !== this.incarnation)
+          return;
         this.#permissions = {
           incarnation:
             typeof value.incarnation === "string" ? value.incarnation : null,

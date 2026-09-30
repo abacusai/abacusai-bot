@@ -29,6 +29,8 @@ export type {
   ModelChipBinding,
   ModelGroup,
   ChatViewSlots,
+  MessageDecoration,
+  MessageDecorationContext,
 } from "./kit/context";
 export type {
   AgentState,

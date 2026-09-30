@@ -137,6 +137,56 @@ describe("CueArbiter (spec 06 §14.2)", () => {
     }
   });
 
+  it("the fallback rechecks focused-thread silence: main focusing the thread during the wait silences the cue", async () => {
+    vi.useFakeTimers();
+    const { facts, windows } = makeWindows();
+    facts.focused = false;
+    const arbiter = new CueArbiter({ windows });
+    const waiting = arbiter.claim(NOTCH_A, "needs-you:p9", "s9");
+    // During the 1 s wait main focuses the cue's thread.
+    arbiter.setVisibleThread(MAIN, "s9");
+    facts.focused = true;
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(waiting).resolves.toBe(false);
+    expect(arbiter.decision("needs-you:p9")).toBe("suppressed");
+  });
+
+  it("a decided cue evicted by the count bound is never granted again within its TTL", async () => {
+    let now = 0;
+    const { windows } = makeWindows();
+    const arbiter = new CueArbiter({
+      windows,
+      maxEntries: 3,
+      ttlMs: 60_000,
+      now: () => now,
+    });
+    await expect(arbiter.claim(MAIN, "done:first", null)).resolves.toBe(true);
+    for (let index = 0; index < 10; index += 1)
+      void arbiter.claim(MAIN, `done:${index}`, null);
+    expect(arbiter.decision("done:first")).toBeNull();
+    await expect(arbiter.claim(MAIN, "done:first", null)).resolves.toBe(false);
+    // Past its TTL the tombstone goes too.
+    now = 120_000;
+    void arbiter.claim(MAIN, "done:later", null);
+    await expect(arbiter.claim(MAIN, "done:first", null)).resolves.toBe(true);
+  });
+
+  it("a window's visibility report is forgotten when its webContents is destroyed", () => {
+    const { windows } = makeWindows();
+    const gone = new Map<number, () => void>();
+    const arbiter = new CueArbiter({
+      windows,
+      onWindowGone: (id, forget) => gone.set(id, forget),
+    });
+    for (const generation of [11, 12, 13]) {
+      arbiter.setVisibleThread(generation, "s1");
+      arbiter.setVisibleThread(generation, "s2");
+      gone.get(generation)!();
+    }
+    expect(gone.size).toBe(3);
+    expect(arbiter.trackedWindows).toBe(0);
+  });
+
   it("the decision map is bounded", () => {
     const { windows } = makeWindows();
     const arbiter = new CueArbiter({ windows, maxEntries: 3 });

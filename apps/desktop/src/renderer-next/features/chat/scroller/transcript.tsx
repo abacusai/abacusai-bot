@@ -127,7 +127,7 @@ const DaySeparator = ({ date }: { date: Date }) => {
           });
   return (
     <div className="flex justify-center py-1" data-slot="day-separator">
-      <span className="text-muted-foreground rounded-full bg-[var(--chat-surface-2)] px-2 py-1 text-xs">
+      <span className="rounded-full bg-[var(--chat-surface-2)] px-2 py-1 text-xs text-[var(--chat-status-muted)]">
         {label}
       </span>
     </div>
@@ -310,15 +310,26 @@ const TranscriptMessage = ({
 
 export const Transcript = ({ messages, Message }: TranscriptProps) => {
   const { t } = useTranslation();
-  const { session, slots } = useChatView();
+  const { session, slots, skin } = useChatView();
   const active = useThreadStore(session, (s) => s.runs.active != null);
   const outcomes = useThreadStore(session, (s) => s.runs.outcomes);
   const fresh = useThreadStore(session, (s) => s.fresh);
-  const visible = messages.filter((message) =>
-    message.role === "user"
-      ? !userView(message).hidden
-      : message.parts.length > 0
-  );
+  const visible = messages.filter((message, index) => {
+    if (
+      message.role === "user"
+        ? userView(message).hidden
+        : message.parts.length === 0
+    )
+      return false;
+    return (
+      skin !== "bot" ||
+      slots.isMessageHidden?.(message, {
+        messages,
+        index,
+        runActive: active,
+      }) !== true
+    );
+  });
   const items: RowItem[] = visible.map((message) => ({
     id: message.id,
     fixed:
