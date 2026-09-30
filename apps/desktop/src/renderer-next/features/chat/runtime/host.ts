@@ -21,6 +21,9 @@ const toConnectionStatus = (connection: ConnectionState): ConnectionStatus =>
       ? "error"
       : "connecting";
 
+const EMPTY: never[] = [];
+Object.freeze(EMPTY);
+
 const unsupported = (name: string) => (): never => {
   throw new Error(`chat: ${name} is not supported by the chat kit`);
 };
@@ -42,7 +45,7 @@ export const buildThreadHost = (
   ({
     messages: withOutbox(s.messages, s.outbox),
     subagents: s.subagents,
-    queue: [],
+    queue: EMPTY,
     runId: activeRunId ?? s.outbox.at(-1)?.runId ?? null,
     isLoading: s.outbox.length > 0,
     status: s.status,
@@ -50,9 +53,9 @@ export const buildThreadHost = (
     isSubscribed: s.connection !== "error",
     connectionStatus: toConnectionStatus(s.connection),
     sessionGenerating: activeRunId !== null || s.sessionGenerating,
-    interrupts: [],
-    pendingInterrupts: [],
-    interruptErrors: [],
+    interrupts: EMPTY,
+    pendingInterrupts: EMPTY,
+    interruptErrors: EMPTY,
     resuming: false,
     hasOlderMessages: s.hasOlderMessages,
     sendMessage: async (content) => {
@@ -61,7 +64,10 @@ export const buildThreadHost = (
     reload: async () => {
       await session.retry();
     },
-    stop: () => void session.cancel(),
+    stop: () =>
+      void session
+        .cancel()
+        .catch((error: unknown) => console.warn("chat: cancel failed", error)),
     loadOlderMessages: () => session.loadOlder(),
     setMessages: unsupported("setMessages"),
     append: unsupported("append"),

@@ -144,4 +144,66 @@ describe("navigateAndSettle", () => {
     for (const listener of listeners) listener();
     await done;
   });
+
+  it("neither waits for nor freezes a scroll-driven animation", async () => {
+    // A scroll timeline's animation never "finishes" while nobody scrolls.
+    class ScrollTimeline {
+      source = {};
+    }
+    const fade = {
+      ...animation(1000, 60_000),
+      timeline: new ScrollTimeline(),
+    };
+    const doc = {
+      timeline: {},
+      getAnimations: () => [fade],
+      fonts: { ready: Promise.resolve() },
+    } as unknown as Document;
+    const router = fakeRouter();
+    const done = navigateAndSettle("/sessions/new", {
+      router: router as never,
+      doc,
+      frame,
+    });
+    router.resolve("/sessions/new");
+    await done;
+    expect(fade.playState).toBe("running");
+    expect(fade.paused).toBe(false);
+  });
+
+  it("does not hang when animation frames never come (occluded window)", async () => {
+    const doc = {
+      getAnimations: () => [],
+      fonts: { ready: Promise.resolve() },
+      visibilityState: "visible",
+    } as unknown as Document;
+    const router = fakeRouter();
+    const done = navigateAndSettle("/sessions/new", {
+      router: router as never,
+      doc,
+      frame: () => undefined,
+      frameFallbackMs: 20,
+    });
+    router.resolve("/sessions/new");
+    await done;
+  });
+
+  it("uses timers at once while the document is hidden", async () => {
+    const doc = {
+      getAnimations: () => [],
+      fonts: { ready: Promise.resolve() },
+      visibilityState: "hidden",
+    } as unknown as Document;
+    const router = fakeRouter();
+    const started = Date.now();
+    const done = navigateAndSettle("/sessions/new", {
+      router: router as never,
+      doc,
+      frame: () => undefined,
+      frameFallbackMs: 10_000,
+    });
+    router.resolve("/sessions/new");
+    await done;
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
 });

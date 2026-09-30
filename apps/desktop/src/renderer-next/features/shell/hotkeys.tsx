@@ -7,13 +7,10 @@
  * off, because it cancels *before* the callback: `useAppHotkey` decides, so a
  * rich-text target keeps native Mod+B (bold) when `guardRichText` is set.
  */
-import {
-  formatForDisplay,
-  HotkeysProvider,
-  useHotkey,
-} from "@tanstack/react-hotkeys";
+import { formatForDisplay, HotkeysProvider } from "@tanstack/react-hotkeys";
 import type { ReactNode } from "react";
 
+import { useAppHotkey } from "#next/lib/hotkeys";
 import type { HotkeyPlatform } from "#next/lib/platform";
 
 export const APP_HOTKEYS = {
@@ -41,43 +38,8 @@ export const AppHotkeysProvider = ({
   </HotkeysProvider>
 );
 
-/** A contenteditable target, or one inside `[data-hotkeys="text"]`. */
-const isRichTextTarget = (target: EventTarget | null): boolean => {
-  const element = target as HTMLElement | null;
-  if (element == null || typeof element.closest !== "function") return false;
-  if (element.isContentEditable) return true;
-  // jsdom has no isContentEditable; the attribute decides there.
-  const editable = element.closest("[contenteditable]");
-  if (editable != null && editable.getAttribute("contenteditable") !== "false")
-    return true;
-  return element.closest('[data-hotkeys="text"]') != null;
-};
-
-const useAppHotkey = (
-  binding: string | null,
-  handler: () => void,
-  options: {
-    guardRichText?: boolean;
-    enabled?: boolean;
-    actionId?: string;
-  } = {}
-): void => {
-  useHotkey(
-    (binding ?? "F24") as never,
-    (event) => {
-      if (options.guardRichText === true && isRichTextTarget(event.target))
-        return;
-      event.preventDefault();
-      handler();
-    },
-    {
-      // App shortcuts fire in inputs and textareas too (§7.9 table).
-      ignoreInputs: false,
-      enabled: binding != null && (options.enabled ?? true),
-      meta: { actionId: options.actionId },
-    }
-  );
-};
+/** Re-exported: the one registration path for app shortcuts (§7.9). */
+export { useAppHotkey };
 
 export interface ShellActions {
   openCommand(): void;
@@ -124,6 +86,7 @@ export const AppHotkeys = ({
     actions.togglePanel,
     {
       guardRichText: true,
+      actionId: "toggle-side-panel",
     }
   );
   useAppHotkey(

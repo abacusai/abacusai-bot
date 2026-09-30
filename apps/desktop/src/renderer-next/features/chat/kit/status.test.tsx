@@ -5,12 +5,17 @@
  * for a pre-output cancellation and a message-free failure after reload,
  * notices deduplicated. R2-T21 (§8.5) rendered: rejections show their text.
  */
+import { implement } from "@orpc/server";
 import type { StreamChunk } from "@tanstack/ai";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createMemoryTransport } from "#next/data/transport/memory";
+import { contract } from "#shared/contract";
+
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
+import { hostActionsFor } from "../runtime/host-actions";
 import { emptyThreadState } from "../store/thread-store";
 import { renderRelay, renderScenario } from "../testing";
 import { busyLabel } from "./status/status";
@@ -139,7 +144,7 @@ describe("R2-T15 status", () => {
 });
 
 describe("abacus.notice (main's own history notice)", () => {
-  it("renders the too-large history notice from the snapshot, with Show in folder when a path is given", async () => {
+  it("renders the too-large history notice from the snapshot, and reveals its path through system.showItemInFolder", async () => {
     const relay = new FakeRelay();
     relay.emitAll([
       ...b.sessionReady(),
@@ -151,17 +156,43 @@ describe("abacus.notice (main's own history notice)", () => {
         path: "/home/.abacusai-bot/transcripts/t-1.json",
       }),
     ]);
-    const rendered = await renderRelay(relay, "session");
-    current = rendered;
-    const show = vi.spyOn(rendered.runtime.host, "showItemInFolder");
+    const show = vi.fn();
+    const impl = implement(contract);
+    const transport = createMemoryTransport(
+      {
+        system: {
+          showItemInFolder: impl.system.showItemInFolder.handler(
+            ({ input }) => {
+              show(input);
+            }
+          ),
+        },
+      },
+      {}
+    );
+    const rendered = await renderRelay(
+      relay,
+      "session",
+      {},
+      {},
+      hostActionsFor(transport)
+    );
+    current = {
+      cleanup: async () => {
+        await rendered.cleanup();
+        await transport.close();
+      },
+    };
     expect(
       await screen.findByText(
         "Earlier history is too large to show here (600 MB, the limit is 512 MB)."
       )
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Show in folder" }));
-    expect(show).toHaveBeenCalledWith(
-      "/home/.abacusai-bot/transcripts/t-1.json"
+    await waitFor(() =>
+      expect(show).toHaveBeenCalledExactlyOnceWith({
+        path: "/home/.abacusai-bot/transcripts/t-1.json",
+      })
     );
   });
 });

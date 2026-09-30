@@ -6,7 +6,7 @@
  */
 import { act, screen, waitFor } from "@testing-library/react";
 import axe from "axe-core";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as b from "../fixtures/builders";
 import { SCENARIOS } from "../fixtures/scenarios";
@@ -14,6 +14,7 @@ import { renderScenario } from "../testing";
 
 let current: Awaited<ReturnType<typeof renderScenario>> | null = null;
 afterEach(async () => {
+  vi.useRealTimers();
   await current?.cleanup();
   current = null;
 });
@@ -59,6 +60,7 @@ describe("R2-T26 a11y", () => {
 
   it("the status region announces a finished reply once", async () => {
     current = await renderScenario("session-running");
+    vi.useFakeTimers();
     const region = document.querySelector('[data-slot="chat-announcer"]')!;
     act(() => {
       current!.fixture.relay.emitAll([
@@ -66,6 +68,28 @@ describe("R2-T26 a11y", () => {
         b.runFinished("r1"),
       ]);
     });
-    await waitFor(() => expect(region.textContent).toBe("Reply finished"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(499);
+    });
+    expect(region.textContent).toBe("");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(region.textContent).toBe("Reply finished");
+    const writes: string[] = [];
+    const observer = new MutationObserver(() =>
+      writes.push(region.textContent ?? "")
+    );
+    observer.observe(region, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    act(() => current!.fixture.relay.emit(b.runFinished("r1")));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    observer.disconnect();
+    expect(writes).toEqual([]);
   });
 });

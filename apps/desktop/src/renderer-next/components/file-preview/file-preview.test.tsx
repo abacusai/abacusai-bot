@@ -5,7 +5,7 @@
  * documents to the OS; the card's rows and secondary actions. The routing
  * and the `preview-open` bridge are `features/bots/chat/preview.test.tsx`.
  */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#next/lib/i18n";
@@ -57,10 +57,34 @@ describe("FilePreview", () => {
     text: vi.fn(async () => ({ content: "# Title\n\nbody", truncated: false })),
     image: vi.fn(async () => "data:image/png;base64,AAAA"),
     pptx: vi.fn(async () => ({
-      slides: [
-        { shapes: [{ body: { paragraphs: [{ runs: [{ text: "Hi" }] }] } }] },
-      ],
+      deck: {
+        widthEmu: 9144000,
+        heightEmu: 5143500,
+        warnings: [],
+        slides: [
+          {
+            number: 1,
+            templateShapes: [],
+            background: { type: "solid", color: "#123456" },
+            shapes: [
+              {
+                kind: "image",
+                id: "image",
+                xEmu: 914400,
+                yEmu: 914400,
+                widthEmu: 1828800,
+                heightEmu: 914400,
+                dataUrl: "data:image/png;base64,AAAA",
+                geometry: "rect",
+                line: null,
+              },
+            ],
+            notes: null,
+          },
+        ],
+      },
     })),
+    localUrl: vi.fn(async () => "file:///host/w/report.pdf"),
   });
 
   it("reads text with the containment root and renders markdown", async () => {
@@ -102,7 +126,7 @@ describe("FilePreview", () => {
     );
   });
 
-  it("shows a pptx deck's text", async () => {
+  it("renders authored slide backgrounds and image geometry", async () => {
     render(
       <FilePreview
         path="/w/d.pptx"
@@ -111,7 +135,55 @@ describe("FilePreview", () => {
         onOpenExternally={() => {}}
       />
     );
-    await screen.findByText("Hi");
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="file-preview-slides"] img')
+      ).toBeTruthy()
+    );
+    const img = document.querySelector<HTMLImageElement>(
+      '[data-slot="file-preview-slides"] img'
+    )!;
+    expect(img.style.left).toBe("96px");
+    expect(img.style.width).toBe("192px");
+    expect(img.parentElement?.style.background).toBe("rgb(18, 52, 86)");
+  });
+  it.each(["pdf", "html"])(
+    "resolves guest %s through the host boundary before loading",
+    async (extension) => {
+      const read = reads();
+      const { container } = render(
+        <FilePreview
+          path={`/workspace/report.${extension}`}
+          hostRoot="/host/w"
+          read={read}
+          onOpenExternally={() => {}}
+        />
+      );
+      await waitFor(() =>
+        expect(container.querySelector("webview")?.getAttribute("src")).toBe(
+          "file:///host/w/report.pdf"
+        )
+      );
+      expect(read.localUrl).toHaveBeenCalledWith(
+        `/workspace/report.${extension}`,
+        "/host/w"
+      );
+    }
+  );
+
+  it("rejects a non-file URL returned by the local host resolver", async () => {
+    const read = reads();
+    read.localUrl.mockResolvedValue("https://example.com/report.pdf");
+    const { container } = render(
+      <FilePreview
+        path="/workspace/report.pdf"
+        hostRoot="/host/w"
+        read={read}
+        onOpenExternally={() => {}}
+      />
+    );
+    await screen.findByRole("status");
+    expect(container.querySelector("webview")).toBeNull();
   });
 
   it("offers the OS app for office documents without reading them", () => {
