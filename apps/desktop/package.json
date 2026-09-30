@@ -48,7 +48,7 @@
     "sync:locales": "node scripts/sync-locales.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:unit": "vitest run --project shared --project main --project renderer",
+    "test:unit": "vitest run --project shared --project main --project renderer --project renderer-next",
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "vendor": "node scripts/download-scrcpy.js && node scripts/download-wa-js.js && node scripts/download-llama-server.js"
