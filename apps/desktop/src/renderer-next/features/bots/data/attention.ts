@@ -27,10 +27,7 @@ export interface ThreadAttention {
   oldestAt: number;
 }
 
-export type AttentionSession = Pick<
-  SessionRow,
-  "id" | "owner" | "routineId" | "turn"
->;
+type AttentionSession = Pick<SessionRow, "id" | "owner" | "routineId" | "turn">;
 
 export interface BotAttentionInput {
   /** The bot's sessions, check-in runs included, in session order. */

@@ -42,6 +42,9 @@ vi.mock("#next/ui/resizable", async (importOriginal) => {
 let harness: AppHarness | null = null;
 beforeEach(() => setViewportWidth(1280));
 afterEach(async () => {
+  (
+    harness as (AppHarness & { view?: { unmount(): void } }) | null
+  )?.view?.unmount();
   await harness?.cleanup();
   harness = null;
 });
@@ -51,7 +54,12 @@ const shell = () => document.querySelector<HTMLElement>('[data-slot="shell"]')!;
 const at = async (width: number, path: string, seed = defaultSeed()) => {
   setViewportWidth(width);
   harness = await renderApp(path, { seed });
-  await screen.findAllByTestId("empty-state");
+  if (path.startsWith("/bots/"))
+    await screen.findByTestId(path === "/bots/new" ? "bot-start" : "bot-chat");
+  else
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="shell"]')).toBeTruthy()
+    );
   return harness;
 };
 
@@ -178,6 +186,9 @@ describe("ShellLayout", () => {
       await harness!.router.navigate({ to: "/bots/chief-of-staff" } as never);
     });
     expect(document.querySelector('[data-slot="topbar-status"]')).toBeNull();
+    expect(
+      document.querySelector('[data-slot="bot-identity-status"]')?.textContent
+    ).toBe(defaultSeed().bots![0]!.title);
     expect(screen.queryByText("Ready")).toBeNull();
   });
 
@@ -424,14 +435,14 @@ describe("loading", () => {
         db.bots.failSnapshot = new Error("UNAVAILABLE");
       },
     });
-    await screen.findByRole("button", { name: "Retry" });
+    await screen.findAllByRole("button", { name: "Retry" });
     expect(screen.queryByText("Not found")).toBeNull();
     expect(harness.router.state.location.pathname).toBe("/bots/chief-of-staff");
   });
 
-  it("the closed command menu never starts the lazy bots table (Claude #21)", async () => {
+  it("the closed command menu adds no bots subscription beyond global needs-you", async () => {
     await at(1280, "/sessions/new");
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 50)));
-    expect(harness!.collections.bots.status).toBe("idle");
+    await waitFor(() => expect(harness!.collections.bots.status).toBe("ready"));
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 });

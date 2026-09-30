@@ -5,7 +5,7 @@
  * §10; the spec's `shared/bots/schedule.ts`).
  */
 
-export type SchedulePreset =
+type SchedulePreset =
   | "manual"
   | "once"
   | "hourly"
@@ -14,6 +14,7 @@ export type SchedulePreset =
   | "weekly"
   | "custom";
 
+/** @public Shared schedule API for the routines phase. */
 export const SCHEDULE_PRESETS: readonly SchedulePreset[] = [
   "manual",
   "once",
@@ -27,6 +28,7 @@ export const SCHEDULE_PRESETS: readonly SchedulePreset[] = [
 /** 0 = Sunday … 6 = Saturday, as cron counts them. */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+/** @public Shared schedule API for the routines phase. */
 export const WEEKDAYS: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
 
 export interface ScheduleDraft {
@@ -76,6 +78,7 @@ export const decomposeSchedule = (
     ? { ...DEFAULT_SCHEDULE, preset: "once", runAt: toLocalDateTime(runAt) }
     : decomposeCron(schedule);
 
+/** @public Shared schedule API for the routines phase. */
 export const presetHasTime = (preset: SchedulePreset): boolean =>
   preset === "daily" || preset === "weekdays" || preset === "weekly";
 

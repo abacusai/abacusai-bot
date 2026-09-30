@@ -25,13 +25,13 @@ import type { TurnFeedbackInput, TurnFeedbackOutcome } from "#shared/contracts";
 
 import { MessageFeedback } from "./feedback";
 
-export interface MessageDecorationContext {
+interface MessageDecorationContext {
   messages: readonly UIMessage[];
   index: number;
   runActive: boolean;
 }
 
-export interface MessageDecoration {
+interface MessageDecoration {
   hidden?: boolean;
   before?: ReactNode;
   after?: ReactNode;

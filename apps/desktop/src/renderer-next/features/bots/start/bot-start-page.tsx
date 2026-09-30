@@ -68,7 +68,11 @@ export const BotStartPage = ({
     .map((id) => BOT_TEMPLATES.find((item) => item.id === id)!)
     .filter(Boolean);
   return (
-    <div className="size-full overflow-auto" style={accentVars(look)}>
+    <div
+      data-testid="bot-start"
+      className="size-full overflow-auto"
+      style={accentVars(look)}
+    >
       <div className="mx-auto flex w-[calc(100%-48px)] max-w-[760px] flex-col items-center gap-5 py-8">
         {empty && (
           <>
@@ -93,6 +97,7 @@ export const BotStartPage = ({
           onValueChange={(items) => {
             if (items[0])
               updateDraft({
+                lookPicked: true,
                 values: {
                   ...values,
                   look: { ...look, shape: items[0] as Look["shape"] },
@@ -133,7 +138,7 @@ export const BotStartPage = ({
                   values: {
                     ...values,
                     name,
-                    look: { ...defaultLook(name), shape: look.shape },
+                    look: draft.lookPicked ? look : defaultLook(name),
                   },
                 });
               }}

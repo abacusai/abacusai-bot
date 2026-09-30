@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppLink } from "#next/lib/navigation/app-link";
@@ -70,7 +70,10 @@ export const BotIdentity = ({
     >
       <BotFace bot={bot} mood={moodFor(attention)} size={22} />
       <span>{bot.name}</span>
-      <span data-slot="topbar-status" className="text-muted-foreground text-xs">
+      <span
+        data-slot="bot-identity-status"
+        className="text-muted-foreground hidden text-xs xl:inline"
+      >
         {attention.kind === "idle"
           ? bot.title
           : t(`bots.status.${attention.kind}`)}
@@ -91,6 +94,7 @@ export const BotTranscriptIdentity = ({
 }) => {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
+  const [docked, setDocked] = useState(false);
   const style = useSharedElementName(`bot-identity-${bot.id}`);
   const attention = useBotAttention(bot);
   useEffect(() => {
@@ -98,7 +102,11 @@ export const BotTranscriptIdentity = ({
     if (!element || typeof IntersectionObserver === "undefined") return;
     const root = element.closest('[data-slot="message-scroller-viewport"]');
     const observer = new IntersectionObserver(
-      ([entry]) => onDock((entry?.intersectionRatio ?? 1) < 0.5),
+      ([entry]) => {
+        const value = (entry?.intersectionRatio ?? 1) < 0.5;
+        setDocked(value);
+        onDock(value);
+      },
       { root, threshold: 0.5 }
     );
     observer.observe(element);
@@ -109,6 +117,8 @@ export const BotTranscriptIdentity = ({
       <Button
         variant="ghost"
         className="h-auto flex-col"
+        aria-hidden={docked}
+        tabIndex={docked ? -1 : 0}
         onClick={onToggle}
         aria-expanded={detailsOpen}
         aria-label={t("bots.panel.detailsFor", { name: bot.name })}

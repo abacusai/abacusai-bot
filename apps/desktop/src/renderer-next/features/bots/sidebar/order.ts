@@ -9,7 +9,7 @@ import type { BotChatPreview } from "#shared/contracts";
 
 import type { BotAttention } from "../data/attention";
 
-export type SidebarGroup = "needs-you" | "pinned" | "rest";
+type SidebarGroup = "needs-you" | "pinned" | "rest";
 
 export type SidebarEntry =
   | {
@@ -20,7 +20,7 @@ export type SidebarEntry =
   | { kind: "bot"; key: string; bot: BotRow; group: SidebarGroup };
 
 /** Case- and accent-insensitive (`sensitivity: "base"` on normalised text). */
-export const matchesQuery = (
+const matchesQuery = (
   bot: Pick<BotRow, "name" | "title">,
   query: string
 ): boolean => {
@@ -34,7 +34,7 @@ export const matchesQuery = (
   return fold(bot.name).includes(needle) || fold(bot.title).includes(needle);
 };
 
-export const lastActivity = (
+const lastActivity = (
   bot: BotRow,
   previews: Readonly<Record<string, BotChatPreview>>
 ): number => previews[bot.id]?.at ?? bot.updatedAt;

@@ -2,6 +2,7 @@ import type { Db } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
 import {
   CHECK_IN_PROMPT,
+  findCheckIn,
   NAME_ONLY_MISSION,
   checkInPersistence,
   describeCheckIn,
@@ -64,7 +65,7 @@ export const persistCheckIn = async (
       draft.enabled = false;
     }).isPersisted.promise;
 };
-export const boundedReadiness = async (
+const boundedReadiness = async (
   ready: () => Promise<unknown>,
   ms = 5000
 ): Promise<void> => {
@@ -119,10 +120,17 @@ export const submitCreate = async (
     draft.stages.bot = true;
     saveStage(draft);
   }
+  let navigating = false;
   const saveCheckIn = async (): Promise<void> => {
-    await persistCheckIn(deps.db, row, null, values.checkIn, deps.routineName);
+    await persistCheckIn(
+      deps.db,
+      row,
+      findCheckIn(deps.db.collections.routines.toArray, row.id),
+      values.checkIn,
+      deps.routineName
+    );
     draft.stages.checkIn = "persisted";
-    saveStage(draft);
+    if (!navigating) saveStage(draft);
   };
   if (values.checkIn.preset !== "off" && draft.stages.checkIn !== "persisted") {
     try {
@@ -141,6 +149,7 @@ export const submitCreate = async (
     );
     await deps.load(handle.sessionId);
   });
+  navigating = true;
   await deps.navigate(row.id);
 };
 export const submitEdit = async (
@@ -162,10 +171,14 @@ export const submitEdit = async (
       values.checkIn,
       deps.routineName
     );
+  const scheduleChanged = !equalValue(
+    { ...values.checkIn, enabled: baseline.checkIn.enabled },
+    baseline.checkIn
+  );
   announceChange(deps.transport, bot.id, {
     ...(patch.description !== undefined ? { mission: true } : {}),
     ...(patch.persona !== undefined ? { persona: true } : {}),
-    ...(checkInChanged && values.checkIn.preset !== "custom"
+    ...(scheduleChanged && values.checkIn.preset !== "custom"
       ? {
           checkIn: describeCheckIn({
             ...values.checkIn,

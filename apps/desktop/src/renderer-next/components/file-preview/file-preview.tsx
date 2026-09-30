@@ -18,7 +18,7 @@ import { Skeleton } from "#next/ui/skeleton";
 
 import { previewKind } from "./paths";
 
-export interface FilePreviewReaders {
+interface FilePreviewReaders {
   text(
     path: string,
     hostRoot: string

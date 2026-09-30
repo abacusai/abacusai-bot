@@ -34,6 +34,7 @@ const ids = [
   "bots-memory",
   "bots-files",
   "bots-check-in",
+  "bots-chat",
 ] as const;
 const Nav = ({ fixture }: { fixture: string | undefined }) => {
   const navigate = useNavigate();

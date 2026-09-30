@@ -373,7 +373,9 @@
       "pinned": "Pinned",
       "edit": "봇 편집",
       "delete": "봇 삭제",
-      "emptyTitle": "아직 봇이 없습니다"
+      "emptyTitle": "아직 봇이 없습니다",
+      "waiting": "{{count}} waiting on you",
+      "moreWaiting": "{{count}} more"
     },
     "avatar": {
       "shapes": {
@@ -595,7 +597,8 @@
         "required": "Enter a name",
         "too-long": "This is too long",
         "color": "Choose a valid colour"
-      }
+      },
+      "accessoryUnavailable": "Accessories need the bot storage update."
     },
     "panel": {
       "detailsTitle": "Details",

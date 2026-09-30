@@ -11,11 +11,11 @@ import {
 } from "#next/lib/bots/templates";
 import { optionalField } from "#next/lib/navigation/search";
 
-export const TemplateId = v.picklist(
+const TemplateId = v.picklist(
   BOT_TEMPLATES.map((template) => template.id) as [string, ...string[]]
 );
 
-export const TemplateCategory = v.picklist(
+const TemplateCategory = v.picklist(
   BOT_TEMPLATE_CATEGORIES as unknown as [
     BotTemplateCategory,
     ...BotTemplateCategory[],
@@ -30,5 +30,3 @@ export const NewBotSearch = v.object({
   template: optionalField(TemplateId),
   category: v.optional(v.fallback(TemplateCategory, "featured"), "featured"),
 });
-
-export type NewBotSearchValue = v.InferOutput<typeof NewBotSearch>;

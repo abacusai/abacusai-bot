@@ -7,6 +7,8 @@ import { DeleteKeyNotFoundError } from "@tanstack/db";
 
 import type { Collections, Db } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
+import { resolveLook } from "#next/lib/bots/avatar";
+import { BOT_TEMPLATES } from "#next/lib/bots/templates";
 import { MAX_BOT_NAME, MAX_BOTS, type BotChangeNotice } from "#shared/bots";
 import type { BotRow, MemoryRow, RoutineRow } from "#shared/contract/rows";
 
@@ -20,7 +22,7 @@ export const codeOf = (error: unknown): string | null => {
   return typeof code === "string" ? code : null;
 };
 
-export const dataOf = (error: unknown): Record<string, unknown> | null => {
+const dataOf = (error: unknown): Record<string, unknown> | null => {
   const data = (error as { data?: unknown } | null)?.data;
   return typeof data === "object" && data !== null
     ? (data as Record<string, unknown>)
@@ -28,7 +30,7 @@ export const dataOf = (error: unknown): Record<string, unknown> | null => {
 };
 
 /** What a failed create/save tells the form (§6.4). */
-export type BotSaveError =
+type BotSaveError =
   | { kind: "limit" }
   | { kind: "conflict" }
   | { kind: "not-found" }
@@ -229,11 +231,34 @@ export const announceChange = (
   });
 };
 
-export const decideSenderPairing = (
-  transport: Pick<Transport, "client">,
-  input: {
-    platformId: string;
-    userId: string;
-    decision: "pause" | "resume";
-  }
-): Promise<unknown> => transport.client.messaging.decidePairing(input as never);
+/** Phase 6's first-bot flow uses the same collection-backed creation path. */
+export const createBotFromTemplate = async (
+  bots: Pick<BotsCollection, "insert">,
+  templateId: string,
+  name: string
+): Promise<string> => {
+  const template = BOT_TEMPLATES.find((row) => row.id === templateId);
+  if (!template)
+    throw Object.assign(new Error("Unknown template"), { code: "BAD_REQUEST" });
+  const look = resolveLook({
+    name,
+    avatarShape: template.avatarShape,
+    avatarColor: template.avatarColor,
+  });
+  const now = Date.now();
+  return createBot(bots, {
+    id: newBotId(),
+    name,
+    title: template.title,
+    persona: template.persona,
+    description: template.mission,
+    avatarShape: look.shape,
+    avatarColor: look.color,
+    model: null,
+    channel: null,
+    sessionId: null,
+    workspaceId: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+};

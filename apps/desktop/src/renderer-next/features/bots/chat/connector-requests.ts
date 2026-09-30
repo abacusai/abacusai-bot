@@ -75,7 +75,7 @@ const respond = async (
     .catch(() => undefined);
 };
 
-export const declineRequest = (
+const declineRequest = (
   client: Client,
   request: ConnectorRequest
 ): Promise<void> => respond(client, request, "declined");
@@ -220,7 +220,7 @@ export const useConnectorRequests = (
 };
 
 /** Pending asks per conversation key, from the keyless stream (attention). */
-export const reduceAskCounts = (
+const reduceAskCounts = (
   asks: ReadonlyMap<string, string>,
   event: ConnectorsEvent
 ): Map<string, string> => {
@@ -235,7 +235,7 @@ export const reduceAskCounts = (
   return next;
 };
 
-export const countAsks = (
+const countAsks = (
   asks: ReadonlyMap<string, string>
 ): Record<string, number> => {
   const counts: Record<string, number> = {};

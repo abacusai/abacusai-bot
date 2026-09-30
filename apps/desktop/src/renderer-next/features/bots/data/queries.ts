@@ -33,8 +33,6 @@ export const botsQueries = (orpc: AppQueryUtils) => ({
   account: () => orpc.account.abacus.queryOptions({ input: {} }),
 });
 
-export type BotsQueries = ReturnType<typeof botsQueries>;
-
 /** Every bot, newest first, and the table's load state. */
 export const useBots = (): {
   bots: BotRow[];
@@ -65,10 +63,6 @@ export const useBot = (botId: string): BotRow | undefined => {
   );
   return data;
 };
-
-/** Is the bots table loaded (so an absent row really is gone)? */
-export const useBotsReady = (): boolean =>
-  useCollectionStatus(useCollections().bots) === "ready";
 
 export const useAllSessions = (): SessionRow[] => {
   const collections = useCollections();

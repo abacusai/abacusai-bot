@@ -18,7 +18,7 @@ const inflight = new Map<string, Promise<BotChatHandle>>();
 const resolved = new Map<string, BotChatHandle>();
 
 /** The cached handle, when it is still valid for `bot`. */
-export const cachedChat = (
+const cachedChat = (
   bot: { id: string; sessionId: string | null },
   sessions: { has(id: string): boolean }
 ): BotChatHandle | null => {

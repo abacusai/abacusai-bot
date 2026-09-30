@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "#next/ui/dialog";
 
@@ -88,6 +89,9 @@ export const CheckInDialog = ({ botId }: { botId: string }) => {
       <DialogContent data-testid="check-in-dialog" className="max-w-[420px]">
         <DialogHeader>
           <DialogTitle>{t("bots.checkIn.label")}</DialogTitle>
+          <DialogDescription>
+            {t("bots.checkIn.routineName", { name: bot?.name ?? "" })}
+          </DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {

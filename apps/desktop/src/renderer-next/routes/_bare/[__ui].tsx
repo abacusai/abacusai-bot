@@ -1,9 +1,54 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
+import {
+  useBot,
+  useBotChatSlots,
+  BotTranscriptIdentity,
+} from "#next/features/bots";
 import { botsGallerySections, isBotsGalleryFixture } from "#next/features/bots";
+import {
+  useComposerExpanded,
+  ChatView,
+  fixtureRuntime,
+} from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
 
+const replay = fixtureRuntime("bot-golden-plain", {}, "bots-gallery");
+const BotChatGallery = () => {
+  const bot = useBot("chief-of-staff");
+  return bot ? <GalleryChat bot={bot} /> : null;
+};
+const GalleryChat = ({
+  bot,
+}: {
+  bot: NonNullable<ReturnType<typeof useBot>>;
+}) => {
+  const expanded = useComposerExpanded("bots-gallery");
+  const slots = useBotChatSlots(bot, "bots-gallery", expanded);
+  return replay ? (
+    <div className="h-[650px]">
+      <ChatView
+        threadId="bots-gallery"
+        runtime={replay.runtime}
+        skin="bot"
+        workspaceRoot={slots.workspaceRoot}
+        composer={slots.composer}
+        slots={{
+          ...slots.chat,
+          header: (
+            <BotTranscriptIdentity
+              bot={bot}
+              onDock={() => {}}
+              onToggle={() => {}}
+              detailsOpen={false}
+            />
+          ),
+        }}
+      />
+    </div>
+  ) : null;
+};
 const extension = {
   Nav: (props: { fixture: string | undefined }) => (
     <>
@@ -16,7 +61,9 @@ const extension = {
     step: number | undefined;
     play: boolean;
   }) =>
-    isBotsGalleryFixture(props.fixture) ? (
+    props.fixture === "bots-chat" ? (
+      <BotChatGallery />
+    ) : isBotsGalleryFixture(props.fixture) ? (
       <botsGallerySections.View {...props} />
     ) : (
       <chatGallerySections.View {...props} />

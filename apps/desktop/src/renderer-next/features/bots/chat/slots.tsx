@@ -8,19 +8,22 @@ import { ConnectorRequestCard } from "#next/components/connector-request-card";
 import { useCollections } from "#next/data/db";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { useVisibleThread } from "#next/lib/navigation/visible-thread";
-import { showError } from "#next/lib/toast";
+import { showError, showInfo } from "#next/lib/toast";
 import { Button } from "#next/ui/button";
 import { AgentMode } from "#shared/agent-types";
 import type { BotRow } from "#shared/contract/rows";
 import { sessionConversationKey } from "#shared/conversation-scope";
 import type { MessagingPlatformId } from "#shared/messaging";
+import { detectRememberRequest } from "#shared/remember";
 
+import { react } from "../avatar";
 import { setBotModel, setCheckInsEnabled } from "../data/bot-actions";
 import { botsQueries } from "../data/queries";
 import { useCheckIn } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { botsUnreadStore } from "../data/unread-store";
 import { useBotModelBinding } from "../model/picker";
+import { playBotCue } from "../watcher";
 import { useConnectorRequests } from "./connector-requests";
 import { botMessageDecorations, feedbackSender } from "./decorations";
 import {
@@ -104,65 +107,83 @@ export const useBotChatSlots = (
       ),
     `model:${bot.id}`
   );
-  const pairing = senderInfo?.userId ? (
+  const pairing = sender ? (
     <Button
       variant="secondary"
       size="sm"
+      disabled={!senderInfo?.userId}
+      title={
+        !senderInfo?.userId
+          ? t("bots.chat.senderReadOnly", {
+              bot: bot.name,
+              sender: session?.label ?? "",
+            })
+          : undefined
+      }
       onClick={() =>
         void transport.client.messaging
           .decidePairing({
-            platformId: senderInfo.platform as MessagingPlatformId,
-            userId: senderInfo.userId!,
-            decision: senderInfo.autoReply === "approved" ? "pause" : "resume",
+            platformId: senderInfo!.platform as MessagingPlatformId,
+            userId: senderInfo!.userId!,
+            decision: senderInfo?.autoReply === "approved" ? "pause" : "resume",
           })
           .catch(() => showError(t("bots.form.saveError")))
       }
     >
       {t(
-        senderInfo.autoReply === "approved"
+        senderInfo?.autoReply === "approved"
           ? "bots.chat.pause"
           : "bots.chat.resume"
       )}
     </Button>
   ) : undefined;
-  const readOnly = isRun
-    ? { reason: t("routines.runReadOnly") }
-    : sender
-      ? {
-          reason: t("bots.chat.senderReadOnly", {
-            bot: bot.name,
-            sender: senderInfo?.senderName ?? session?.label ?? "",
-          }),
-          ...(pairing ? { action: pairing } : {}),
-        }
-      : bot.channel
+  const workspaceDeleted =
+    workspaces != null &&
+    session?.workspaceId != null &&
+    !workspaces.some(
+      (workspace) =>
+        workspace.id === session.workspaceId && workspace.status !== "deleted"
+    );
+  const readOnly = workspaceDeleted
+    ? { reason: t("workspace.deletedWorkspaceReadOnly") }
+    : isRun
+      ? { reason: t("routines.runReadOnly") }
+      : sender
         ? {
-            reason: t(
-              bot.channel === "whatsapp"
-                ? "bots.chat.channelReadOnlyWhatsapp"
-                : "bots.chat.channelReadOnly",
-              { app: bot.channel }
-            ),
-            ...(channel?.sharedLink
-              ? {
-                  action: (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() =>
-                        void transport.client.messaging.openSharedLink({
-                          platformId: channel.id,
-                          target: "dm",
-                        })
-                      }
-                    >
-                      {t("bots.chat.openApp", { app: channel.id })}
-                    </Button>
-                  ),
-                }
-              : {}),
+            reason: t("bots.chat.senderReadOnly", {
+              bot: bot.name,
+              sender: senderInfo?.senderName ?? session?.label ?? "",
+            }),
+            ...(pairing ? { action: pairing } : {}),
           }
-        : undefined;
+        : bot.channel
+          ? {
+              reason: t(
+                bot.channel === "whatsapp"
+                  ? "bots.chat.channelReadOnlyWhatsapp"
+                  : "bots.chat.channelReadOnly",
+                { app: bot.channel }
+              ),
+              ...(channel?.sharedLink
+                ? {
+                    action: (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          void transport.client.messaging.openSharedLink({
+                            platformId: channel.id,
+                            target: "dm",
+                          })
+                        }
+                      >
+                        {t("bots.chat.openApp", { app: channel.id })}
+                      </Button>
+                    ),
+                  }
+                : {}),
+            }
+          : undefined;
   const decorateMessage = botMessageDecorations({
     sessionId,
     model: session?.model,
@@ -221,6 +242,12 @@ export const useBotChatSlots = (
       showModeChip: false,
       model: expanded && !readOnly ? binding : null,
       fixedMode: mode.data ?? AgentMode.Yolo,
+      onFirstSend: (text: string) => {
+        if (detectRememberRequest(text) != null)
+          showInfo(t("memory.rememberedToast"));
+        react(bot.id, "happy");
+        playBotCue("sent", sessionId, bot.id);
+      },
       ...(readOnly ? { readOnly } : {}),
     },
   };

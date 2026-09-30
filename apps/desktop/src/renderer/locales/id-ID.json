@@ -373,7 +373,9 @@
       "pinned": "Pinned",
       "edit": "Edit bot",
       "delete": "Hapus bot",
-      "emptyTitle": "Belum ada bot"
+      "emptyTitle": "Belum ada bot",
+      "waiting": "{{count}} waiting on you",
+      "moreWaiting": "{{count}} more"
     },
     "avatar": {
       "shapes": {
@@ -595,7 +597,8 @@
         "required": "Enter a name",
         "too-long": "This is too long",
         "color": "Choose a valid colour"
-      }
+      },
+      "accessoryUnavailable": "Accessories need the bot storage update."
     },
     "panel": {
       "detailsTitle": "Details",
