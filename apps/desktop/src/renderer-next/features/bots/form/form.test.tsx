@@ -294,6 +294,105 @@ describe("draft and staged creation", () => {
     );
     expect(db.collections.routines.get(routine.id)?.enabled).toBe(false);
   });
+  it.each([
+    ["pause", false],
+    ["pause", true],
+    ["schedule", false],
+    ["schedule", true],
+    ["already-saved", false],
+  ] as const)(
+    "%s edit preserves remote leaves during persistence with baseline sync %s",
+    async (edit, syncBaseline) => {
+      const feed = new FixtureDb({ bots: fixtureBots() });
+      const transport = await fixtureTransport(feed)();
+      let release!: () => void;
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const update = transport.client.db.bots.update;
+      const delayed = vi
+        .spyOn(transport.client.db.bots, "update")
+        .mockImplementation(async (...args) => {
+          await pending;
+          return update(...args);
+        });
+      db = createDb(async () => transport);
+      await Promise.all([
+        db.collections.bots.preload(),
+        db.collections.routines.preload(),
+        db.collections.sessions.preload(),
+      ]);
+      const bot = fixtureBots()[0]!;
+      await persistCheckIn(
+        db,
+        bot,
+        null,
+        { ...values().checkIn, preset: "daily", time: "09:00" },
+        "Check"
+      );
+      const routine = db.collections.routines.toArray[0]!;
+      const baseline = valuesForBot(bot, routine);
+      const submitted = {
+        ...baseline,
+        persona: "Edited persona",
+        checkIn: {
+          ...baseline.checkIn,
+          ...(edit === "pause" ? { enabled: false } : { time: "11:00" }),
+        },
+      };
+      const announceChange = vi.fn(async () => {});
+      const saving = submitEdit(
+        {
+          db,
+          transport: { client: { bots: { announceChange } } } as never,
+          load: vi.fn(),
+          navigate: vi.fn(),
+          routineName: "Check",
+          checkInFailed: vi.fn(),
+        },
+        bot,
+        routine,
+        submitted,
+        baseline
+      );
+      await vi.waitFor(() => expect(delayed).toHaveBeenCalledOnce());
+      const routineUpdate = vi.spyOn(db.collections.routines, "update");
+      const remotePatch =
+        edit === "pause"
+          ? { schedule: "0 10 * * *" }
+          : edit === "already-saved"
+            ? { schedule: "0 11 * * *", enabled: false }
+            : { enabled: false };
+      feed.updateRow(feed.routines, routine.id, remotePatch);
+      await vi.waitFor(() =>
+        expect(db!.collections.routines.get(routine.id)).toMatchObject(
+          remotePatch
+        )
+      );
+      if (syncBaseline)
+        baseline.checkIn = valuesForBot(
+          bot,
+          db.collections.routines.get(routine.id)!
+        ).checkIn;
+      release();
+      await saving;
+      expect(db.collections.bots.get(bot.id)?.persona).toBe("Edited persona");
+      expect(db.collections.routines.get(routine.id)).toMatchObject({
+        schedule: edit === "pause" ? "0 10 * * *" : "0 11 * * *",
+        enabled: false,
+      });
+      if (edit === "already-saved")
+        expect(routineUpdate).not.toHaveBeenCalled();
+      expect(announceChange).toHaveBeenCalledOnce();
+      expect(announceChange).toHaveBeenCalledWith({
+        id: bot.id,
+        notice:
+          edit === "pause"
+            ? { persona: true }
+            : { persona: true, checkIn: "every day at 11:00" },
+      });
+    }
+  );
   it("edit announces mission only, and stores NAME_ONLY_MISSION for whitespace instructions", async () => {
     const db = await setup();
     const bot = fixtureBots()[0]!;
