@@ -130,7 +130,7 @@ export class ThreadStore {
     if (v1 == null || v1.status !== "ok") return null;
 
     const updatedAt = v1UpdatedAt(transcriptFile, v1.file);
-    const decision = decideConversion(updatedAt, twin);
+    const decision = decideConversion({ updatedAt }, twin);
     if (decision.action === "skip" && twin.status === "ok") return twin.file;
 
     const thread = v1ToThreadFile({

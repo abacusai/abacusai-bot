@@ -10,7 +10,9 @@
             {
               "at": 1788256800000,
               "id": "u1",
+              "messageIndex": 0,
               "partIndex": 0,
+              "regenerateAttempt": 0,
               "type": "text"
             }
           ]
@@ -48,7 +50,9 @@
             {
               "at": 1788256801000,
               "id": "b1",
+              "messageIndex": 1,
               "partIndex": 0,
+              "regenerateAttempt": 0,
               "type": "text"
             },
             {
@@ -80,13 +84,19 @@
       "id": "b2",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b3"
+          },
           "messageIndex": 3,
           "regenerateAttempt": 1,
           "segments": [
             {
               "at": 1788256803000,
               "id": "b2",
+              "messageIndex": 3,
               "partIndex": 0,
+              "regenerateAttempt": 1,
               "type": "text"
             },
             {
@@ -134,9 +144,6 @@
         {
           "arguments": "{\"file_path\":\"poems.md\"}",
           "id": "v-call",
-          "input": {
-            "file_path": "poems.md"
-          },
           "metadata": {
             "abacus": {
               "segmentId": "v-tool",
@@ -144,13 +151,12 @@
             }
           },
           "name": "read",
-          "output": "...",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "...",
-          "id": "v-tool:result",
+          "id": "v-tool#result",
           "metadata": {
             "abacus": {}
           },
