@@ -1,10 +1,11 @@
 /**
- * The dev fixture mode (VITE_NEXT_DB_FIXTURES=1): main's `db.*` answers
- * UNAVAILABLE until spec 00 sub-slice B lands, so the shell's tables come from
- * a FixtureDb served over a real oRPC memory transport (the same link,
- * serializer and flow control as the MessagePort). Everything else still goes
- * to main. Loaded only through a dynamic import behind the env flag, so
- * production bundles never contain it.
+ * The dev fixture mode (VITE_NEXT_DB_FIXTURES=1), for the UI gallery
+ * (`dev:next:fixtures`) and the visual screenshot run only: the shell's
+ * tables come from a seeded FixtureDb served over a real oRPC memory transport
+ * (the same link, serializer and flow control as the MessagePort), so those
+ * runs show stable rows. Everything else still goes to main, and every other
+ * run, acceptance included, reads main's real `db.*`. Loaded only through a
+ * dynamic import behind the env flag, so production bundles never contain it.
  */
 import { implement, type Router } from "@orpc/server";
 
