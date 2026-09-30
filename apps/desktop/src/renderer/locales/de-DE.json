@@ -2343,11 +2343,11 @@
       "showMore_other": "Show {{count}} more lines"
     },
     "composer": {
-      "attach": "Attach",
+      "attach": "Anhängen",
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
       "attachFolder": "Folder",
-      "botPlaceholder": "Message {{name}}",
+      "botPlaceholder": "Nachricht an {{name}}",
       "busyBot": "Add to the queue, or stop",
       "busySession": "Steer the run, or queue the next step",
       "channelBot": "This chat lives in your messaging app. Reply there.",
@@ -2368,7 +2368,7 @@
       "searchModels": "Search models",
       "send": "Send",
       "skills": "Skills",
-      "stop": "Stop",
+      "stop": "Stoppen",
       "uploading": "Wait for the attachments to finish saving"
     },
     "day": {
@@ -2377,9 +2377,9 @@
     },
     "error": {
       "crashed": "The agent stopped unexpectedly",
-      "label": "Error",
+      "label": "Fehler",
       "open": "Open",
-      "retry": "Retry",
+      "retry": "Erneut versuchen",
       "switchModel": "Switch model"
     },
     "message": {
@@ -2387,7 +2387,7 @@
       "credits_other": "Used {{count}} credits",
       "discard": "Discard",
       "notSent": "Not sent",
-      "retry": "Retry",
+      "retry": "Erneut versuchen",
       "sending": "Sending",
       "workedThrough_one": "Worked through {{count}} step",
       "workedThrough_other": "Worked through {{count}} steps"
@@ -2421,7 +2421,7 @@
     },
     "permission": {
       "action": {
-        "allow": "Allow",
+        "allow": "Zulassen",
         "allowOnce": "Allow once",
         "alwaysAcceptEdits": "Always accept edits this session",
         "alwaysAllow": "Always allow",
@@ -2430,7 +2430,7 @@
         "alwaysAllowRule": "Always allow {{rule}}",
         "alwaysAllowSite": "Always allow this site, this session",
         "alwaysAllowThese": "Always allow these this session",
-        "deny": "Deny",
+        "deny": "Ablehnen",
         "planAcceptAll": "Yes, and accept all edits",
         "planApproveEach": "Yes, and approve each edit",
         "planFullAccess": "Yes, with full access",
@@ -2497,7 +2497,7 @@
       }
     },
     "question": {
-      "next": "Next",
+      "next": "Weiter",
       "previous": "Back",
       "progress": "{{current}} of {{total}}",
       "submit": "Submit"
@@ -2540,7 +2540,7 @@
       "open": "Open agent",
       "steps_one": "{{count}} step",
       "steps_other": "{{count}} steps",
-      "stop": "Stop",
+      "stop": "Stoppen",
       "stopHint": "Stops the whole reply"
     },
     "tool": {
@@ -2574,13 +2574,13 @@
       "new_one": "{{count}} new",
       "new_other": "{{count}} new",
       "olderFailed": "Couldn't load earlier messages",
-      "retry": "Retry",
+      "retry": "Erneut versuchen",
       "showEarlier": "Show earlier",
       "showLater": "Show later"
     },
     "view": {
       "gone": "This conversation no longer exists.",
-      "retry": "Retry",
+      "retry": "Erneut versuchen",
       "unavailable": "The agent isn't available yet"
     }
   }
