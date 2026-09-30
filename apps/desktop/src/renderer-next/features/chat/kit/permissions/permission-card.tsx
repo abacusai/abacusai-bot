@@ -419,6 +419,16 @@ const QuestionCard = ({
       </span>
       <Questionnaire
         shortcuts="letters"
+        onKeyDown={(event) => {
+          if (
+            (event.metaKey || event.ctrlKey) &&
+            event.key === "Enter" &&
+            answering?.state !== "sending"
+          ) {
+            event.preventDefault();
+            event.currentTarget.requestSubmit();
+          }
+        }}
         onSubmit={submit}
         className="flex flex-col gap-3"
       >

@@ -5,6 +5,7 @@
  */
 import type { UIMessage } from "@tanstack/ai-client";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -227,16 +228,32 @@ export interface ErrorCardProps {
 export const ErrorCard = ({
   outcome,
   latest,
-  tier = "unknown",
+  tier: providedTier,
 }: ErrorCardProps) => {
   const { t } = useTranslation();
   const { session, composer, runtime } = useChatView();
+  const [accountTier, setAccountTier] =
+    useState<NonNullable<ErrorCardProps["tier"]>>("unknown");
+  useEffect(() => {
+    if (providedTier != null) return;
+    let live = true;
+    runtime.host
+      .accountTier()
+      .then((value) => {
+        if (live) setAccountTier(value);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [providedTier, runtime]);
+  const tier = providedTier ?? accountTier;
   const error = outcome.error ?? { message: "" };
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
   const crashed = error.code === "agent_exit" || error.code === "agent_crashed";
-  const retry = () => void session.retry();
+  const retry = () => void session.retry().catch(() => {});
   if (wantsUpgradeCard(actions)) {
     const scope = exhaustedScope(actions);
     return (
@@ -313,6 +330,14 @@ export const ErrorCard = ({
                   key={index}
                   variant="secondary"
                   data-action="switch-model"
+                  onClick={(event) =>
+                    event.currentTarget
+                      .closest('[data-slot="chat-view"]')
+                      ?.querySelector<HTMLButtonElement>(
+                        '[data-slot="chat-model-picker"]'
+                      )
+                      ?.click()
+                  }
                 >
                   {t("chat.error.switchModel")}
                 </Button>,
@@ -324,7 +349,22 @@ export const ErrorCard = ({
               <Button
                 key={index}
                 variant="secondary"
-                onClick={() => void runtime.host.openExternal(action.link!)}
+                onClick={(event) => {
+                  if (action.type === "retry")
+                    void session.retry().catch(() => {});
+                  else if (action.type === "switch-model") {
+                    if (action.model != null)
+                      composer.model?.onChange(action.model);
+                    else
+                      event.currentTarget
+                        .closest('[data-slot="chat-view"]')
+                        ?.querySelector<HTMLButtonElement>(
+                          '[data-slot="chat-model-picker"]'
+                        )
+                        ?.click();
+                  } else if (action.link != null)
+                    void runtime.host.openExternal(action.link);
+                }}
               >
                 {action.label ?? t("chat.error.open")}
               </Button>,
@@ -386,7 +426,7 @@ export const NoticeRow = ({
   onDismiss(): void;
 }) => {
   const { t } = useTranslation();
-  const { runtime } = useChatView();
+  const { runtime, session, composer } = useChatView();
   const severity = (
     notice.name === "agent.error"
       ? "error"
@@ -434,13 +474,32 @@ export const NoticeRow = ({
         </Button>
       ) : null}
       {actions
-        .filter((action) => action.link != null)
+        .filter(
+          (action) =>
+            action.link != null ||
+            action.type === "retry" ||
+            action.type === "switch-model"
+        )
         .map((action, index) => (
           <Button
             key={index}
             variant="ghost"
             size="sm"
-            onClick={() => void runtime.host.openExternal(action.link!)}
+            onClick={(event) => {
+              if (action.type === "retry") void session.retry().catch(() => {});
+              else if (action.type === "switch-model") {
+                if (action.model != null)
+                  composer.model?.onChange(action.model);
+                else
+                  event.currentTarget
+                    .closest('[data-slot="chat-view"]')
+                    ?.querySelector<HTMLButtonElement>(
+                      '[data-slot="chat-model-picker"]'
+                    )
+                    ?.click();
+              } else if (action.link != null)
+                void runtime.host.openExternal(action.link);
+            }}
           >
             {action.label ?? t("chat.error.open")}
           </Button>

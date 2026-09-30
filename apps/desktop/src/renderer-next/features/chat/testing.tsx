@@ -1,3 +1,4 @@
+import { HotkeysProvider } from "@tanstack/react-hotkeys";
 /**
  * Test helpers for the chat kit (tests only): render a node inside the
  * fixture DB (prefs drive the motion preference) with English copy, and
@@ -36,7 +37,19 @@ export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
   await db.collections.prefs.preload();
   let view!: RenderResult;
   await act(async () => {
-    view = render(<DbProvider value={db}>{node}</DbProvider>);
+    view = render(
+      <HotkeysProvider
+        defaultOptions={{
+          hotkey: {
+            platform: "mac",
+            preventDefault: false,
+            stopPropagation: false,
+          },
+        }}
+      >
+        <DbProvider value={db}>{node}</DbProvider>
+      </HotkeysProvider>
+    );
   });
   return {
     view,
@@ -104,7 +117,8 @@ export const renderScenario = async (
 export const renderRelay = async (
   relay: FakeRelay,
   skin: "bot" | "session",
-  composer: Partial<ComposerConfig> = {}
+  composer: Partial<ComposerConfig> = {},
+  viewOptions: { focused?: boolean } = {}
 ): Promise<Rendered & { runtime: ChatRuntime }> => {
   const runtime = createChatRuntime(relay.ai, { host: inertHostActions });
   await runtime.session(relay.threadId).load();
@@ -116,6 +130,7 @@ export const renderRelay = async (
         runtime={runtime}
         workspaceRoot={skin === "session" ? "/repo" : null}
         composer={baseComposer(skin, composer)}
+        {...viewOptions}
       />
     </div>
   );

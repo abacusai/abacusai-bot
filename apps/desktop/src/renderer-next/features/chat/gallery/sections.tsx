@@ -26,6 +26,10 @@ const GALLERY_GROUPS: Array<{
       s.id === "session-migrated",
   },
   {
+    id: "chat-markdown",
+    match: (s) => s.id === "session-review" || s.id === "session-migrated",
+  },
+  {
     id: "chat-tools",
     match: (s) =>
       [

@@ -12,7 +12,7 @@
 import { useHotkey } from "@tanstack/react-hotkeys";
 
 /** A contenteditable target, or one inside `[data-hotkeys="text"]`. */
-export const isRichTextTarget = (target: EventTarget | null): boolean => {
+const isRichTextTarget = (target: EventTarget | null): boolean => {
   const element = target as HTMLElement | null;
   if (element == null || typeof element.closest !== "function") return false;
   if (element.isContentEditable) return true;

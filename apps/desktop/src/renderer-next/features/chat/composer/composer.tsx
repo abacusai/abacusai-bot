@@ -361,7 +361,9 @@ export const ThreadComposer = () => {
           })
           .catch((thrown: unknown) => {
             if (rpcCode(thrown) === "CONFLICT") {
-              void runtime.queue.enqueue(threadId, route.text);
+              void runtime.queue
+                .enqueue(threadId, route.text)
+                .catch(() => restore(t("chat.composer.queueFailed")));
               return;
             }
             if (isNotFound(thrown)) {

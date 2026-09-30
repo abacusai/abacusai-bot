@@ -115,12 +115,8 @@ describe("keys", () => {
       resources: { "en-US": { translation: enUS } },
       interpolation: { escapeValue: false },
     });
-    expect(instance.t("chat.busy.tools", { count: 1 })).toBe(
-      "Running 1 tool"
-    );
-    expect(instance.t("chat.busy.tools", { count: 3 })).toBe(
-      "Running 3 tools"
-    );
+    expect(instance.t("chat.busy.tools", { count: 1 })).toBe("Running 1 tool");
+    expect(instance.t("chat.busy.tools", { count: 3 })).toBe("Running 3 tools");
   });
 
   it("has a rail label per area, the settings page titles and every panel tab", () => {
