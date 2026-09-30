@@ -14,10 +14,7 @@ import type {
   PiStopReason,
   RunErrorMeta,
   RunFinishedMeta,
-  RunInput,
 } from "./wire.js";
-
-type RunAgentInputLike = RunInput;
 
 export interface TurnToken {
   readonly seq: number;
@@ -43,6 +40,8 @@ export interface RunControllerDeps {
   closeOpenParts: (cancelled: boolean) => AguiEvent[];
   /** The model reference the run's terminal names. */
   model: () => string;
+  /** Right after RUN_STARTED is written. */
+  onOpen?: () => void;
 }
 
 /** `TurnUsage` as @ag-ui/core accounts it: input includes the cache (§3.3.8). */
@@ -122,11 +121,16 @@ export class RunController {
     return this.run?.token.seq === token.seq && this.run.cancelling;
   }
 
-  /** The only writer of RUN_STARTED. */
+  /**
+   * The only writer of RUN_STARTED. The client's RunAgentInput is not echoed:
+   * it carries the whole history on every turn (O(transcript) bytes per run
+   * into main's log and ring). The run's new user message goes out as its
+   * own TEXT_MESSAGE_* right after.
+   */
   open(
     token: TurnToken,
     runId: string,
-    options: { serverInitiated: boolean; input?: RunAgentInputLike }
+    options: { serverInitiated: boolean }
   ): void {
     if (this.run != null) {
       throw new Error(
@@ -145,12 +149,12 @@ export class RunController {
       aguiEvent(EventType.RUN_STARTED, {
         threadId: this.deps.threadId,
         runId,
-        ...(options.input != null ? { input: options.input as never } : {}),
         ...(options.serverInitiated
           ? { metadata: { abacus: { serverInitiated: true } } }
           : {}),
       })
     );
+    this.deps.onOpen?.();
   }
 
   /** Synchronously, before any abort is awaited (§3.1.2). */
@@ -166,6 +170,20 @@ export class RunController {
     this.run.failure = error;
 
     return true;
+  }
+
+  /**
+   * A failure of the send `token` owns: recorded only while that token's own
+   * run is open and has no failure yet. A thrown command never fails another
+   * command's run (spec §2.1).
+   */
+  recordFailureFor(
+    token: TurnToken | null | undefined,
+    error: AgentErrorPayload
+  ): boolean {
+    if (token == null || this.run?.token.seq !== token.seq) return false;
+
+    return this.recordFailure(error);
   }
 
   recordUsage(usage: TurnUsage): void {

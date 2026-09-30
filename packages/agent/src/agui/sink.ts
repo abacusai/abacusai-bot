@@ -22,6 +22,8 @@ export interface AguiSide {
   runs: RunController;
   /** Writes one already-serialized stdout line. */
   write: (line: string) => void;
+  /** Called with each legacy event before the emitter translates it. */
+  beforeLegacy?: (event: DesktopEvent) => void;
 }
 
 export class HostSink {
@@ -45,6 +47,8 @@ export class HostSink {
     const agui = this.agui;
 
     if (agui == null) return;
+
+    agui.beforeLegacy?.(event);
 
     // A reset's cancelled terminal comes before its notice (§3.3.2 :2350).
     if (event.type === "event" && event.event.type === "segments_cleared") {

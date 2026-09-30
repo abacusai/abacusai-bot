@@ -99,8 +99,14 @@ export const createBot = (input: BotCreateInput, id?: string): Bot => {
   if (id != null && bots.some((bot) => bot.id === id))
     throw new ConflictError(`A bot with id "${id}" already exists.`);
 
+  const taken = new Set(bots.map((bot) => bot.id));
+  let generated = `bot-${Date.now()}-${++counter}`;
+  // A caller id may look like a minted one (same clock, same counter).
+  while (id == null && taken.has(generated))
+    generated = `bot-${Date.now()}-${++counter}`;
+
   const bot: Bot = {
-    id: id ?? `bot-${Date.now()}-${++counter}`,
+    id: id ?? generated,
     name,
     title: (input.title ?? "").trim().slice(0, MAX_BOT_TITLE),
     description,

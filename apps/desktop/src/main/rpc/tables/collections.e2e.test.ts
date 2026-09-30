@@ -194,6 +194,9 @@ const world = () => {
       ...state.git,
       lastUpdatedAt: new Date().toISOString(),
     }),
+    // Always current here; tables.test covers a lagging refresh.
+    gitStateWorkspacePath: () =>
+      state.workspaces.find((entry) => entry.id === state.active)?.path ?? null,
     botHome: () => "/nowhere",
     // Mutations: the store normalises, then its hook fires.
     updateAgentSessionLabel: (_ws: string, id: string, label: string) => {
@@ -270,7 +273,15 @@ const connect = async () => {
   };
   const emit = (event: Pick<IpcEvent, "type">) =>
     bus.dispatch({ ...event, emittedAt: "" } as IpcEvent);
-  return { state, hooks, tables, bus, collectionFor, emit };
+  return {
+    state,
+    hooks,
+    tables,
+    bus,
+    collectionFor,
+    emit,
+    client: connection.client,
+  };
 };
 
 type Env = Awaited<ReturnType<typeof connect>>;
@@ -551,6 +562,69 @@ describe("DB tables end to end (B-T4)", () => {
     );
     expect(collection.get("app")).toMatchObject({ panes: { sidebar: 300 } });
     expect(env.tables.prefsStore.provenance().panes).toBe("user");
+  });
+
+  it("prefs: updatePrefs makes an explicit choice of the current value the user's", async () => {
+    const env = await connect();
+    const collection = env.collectionFor("prefs");
+    await collection.preload();
+    const { createUpdatePrefs } = (await loadFactories()) as unknown as {
+      createUpdatePrefs: (
+        collection: unknown,
+        transport: () => Promise<{ client: TestClient }>
+      ) => (patch: Record<string, unknown>) => Promise<void>;
+    };
+    // TanStack drops an assignment of the current value: nothing is sent.
+    await collection.update("app", (draft) => {
+      draft.theme = "system";
+    }).isPersisted.promise;
+    expect(env.tables.prefsStore.provenance().theme).toBe("default");
+
+    const updatePrefs = createUpdatePrefs(collection, async () => ({
+      client: env.client,
+    }));
+    await updatePrefs({ theme: "system" });
+    expect(env.tables.prefsStore.provenance().theme).toBe("user");
+    // So a legacy import no longer overwrites it.
+    env.tables.prefsStore.importLegacy({ theme: "dark" });
+    expect(env.tables.prefsStore.get().theme).toBe("system");
+
+    // A visible change goes through the collection optimistically and echoes.
+    await updatePrefs({ sidebar: { pinned: false } });
+    expect(collection.get("app")).toMatchObject({
+      sidebar: { pinned: false, openSection: null },
+    });
+    expect(env.tables.prefsStore.provenance()).toMatchObject({
+      "sidebar.pinned": "user",
+      "sidebar.openSection": "default",
+    });
+  });
+
+  it("prefs: a collection update of one leaf marks only that leaf", async () => {
+    const env = await connect();
+    const collection = env.collectionFor("prefs");
+    await collection.preload();
+    await collection.update("app", (draft) => {
+      draft.sidebar.openSection = "bots";
+    }).isPersisted.promise;
+    expect(env.tables.prefsStore.provenance()).toMatchObject({
+      "sidebar.openSection": "user",
+      "sidebar.pinned": "default",
+    });
+  });
+
+  it("a read-only field is refused and rolled back, not silently dropped", async () => {
+    const env = await connect();
+    const collection = env.collectionFor("sessions");
+    await collection.preload();
+    const before = collection.get("s1");
+    const tx = collection.update("s1", (draft) => {
+      draft.runOutcome = "failed";
+    });
+    await expect(tx.isPersisted.promise).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    expect(collection.get("s1")).toEqual(before);
   });
 
   it("read-only tables refuse writes", async () => {

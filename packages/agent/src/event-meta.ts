@@ -15,6 +15,17 @@ export interface EventMeta {
   subagentRunId?: string;
   /** On subtask_start: the tool call that started the sub-agent. */
   parentToolCallId?: string;
+  /**
+   * On a thrown-handler `error`: the host already recorded this failure as
+   * the terminal of the run that owned the throwing send (spec §2.1), so the
+   * AG-UI side adds nothing for it. Compat still carries the legacy line.
+   */
+  attributed?: true;
+  /**
+   * On `subtask_end`: the turn closed a component bracket whose tool never
+   * ended (`finishTurn`), which AG-UI reports as `unfinished` (§3.3.2).
+   */
+  unfinished?: true;
 }
 
 const meta = new WeakMap<object, EventMeta>();

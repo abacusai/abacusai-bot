@@ -46,6 +46,10 @@ export class MainEventBus {
     listener: Listener<IpcEvent>;
   }>();
   readonly #channels = new Map<BusChannel, Set<Listener<unknown>>>();
+  readonly #activators = new Map<
+    BusChannel,
+    Set<{ activate: () => () => void; stop: (() => void) | null }>
+  >();
 
   /** Every `IpcEvent`, as emitIpcEvent sends it to the legacy renderer. */
   dispatch(event: IpcEvent): void {
@@ -91,9 +95,47 @@ export class MainEventBus {
     }
     const added = listener as Listener<unknown>;
     listeners.add(added);
+    if (listeners.size === 1) this.#setActive(channel, true);
     return () => {
-      listeners.delete(added);
+      if (!listeners.delete(added)) return;
+      if (listeners.size === 0) this.#setActive(channel, false);
     };
+  }
+
+  /**
+   * Runs `activate` while `channel` has at least one listener, and its
+   * returned stop when the last one leaves (a producer that costs nothing
+   * while nobody listens).
+   */
+  whileListened(channel: BusChannel, activate: () => () => void): () => void {
+    let entries = this.#activators.get(channel);
+    if (entries == null) {
+      entries = new Set();
+      this.#activators.set(channel, entries);
+    }
+    const entry = { activate, stop: null as (() => void) | null };
+    entries.add(entry);
+    if ((this.#channels.get(channel)?.size ?? 0) > 0) entry.stop = activate();
+    return () => {
+      entries.delete(entry);
+      entry.stop?.();
+      entry.stop = null;
+    };
+  }
+
+  #setActive(channel: BusChannel, active: boolean): void {
+    for (const entry of this.#activators.get(channel) ?? []) {
+      try {
+        if (active && entry.stop == null) entry.stop = entry.activate();
+        else if (!active && entry.stop != null) {
+          const stop = entry.stop;
+          entry.stop = null;
+          stop();
+        }
+      } catch (error) {
+        console.error("[rpc] bus activation failed", error);
+      }
+    }
   }
 
   /** Live subscriptions; a leak shows as a count that never comes back down. */

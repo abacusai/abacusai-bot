@@ -1,0 +1,26 @@
+{"type":"event","event":{"type":"mode_changed","mode":"YOLO","source":"startup"}}
+{"type":"ready","model":"fake/fake-1","mode":"YOLO","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"status_changed","status":"submitted"}}
+{"type":"event","event":{"type":"status_changed","status":"streaming"}}
+{"type":"event","event":{"type":"status_changed","status":"executing-tool"}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"call-0-0","name":"delegate_task","type":"delegate_task","input":{"task":"task A: list files"},"args":{"task":"task A: list files"}}}}
+{"type":"event","event":{"type":"status_changed","status":"executing-tool"}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"call-0-1","name":"delegate_task","type":"delegate_task","input":{"task":"task B: list files"},"args":{"task":"task B: list files"}}}}
+{"type":"event","event":{"type":"subtask_start","id":"delegate-<T>-1","description":"task A: list files","kind":"delegate"}}
+{"type":"event","event":{"type":"subtask_start","id":"delegate-<T>-2","description":"task B: list files","kind":"delegate"}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"sub-child-0","name":"ls","type":"ls","input":{"path":"."},"args":{"path":"."}}}}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"sub-child-0","name":"ls","type":"ls","input":{"path":"."},"args":{"path":"."}},"result":{"id":"sub-child-0","content":"Tool ls not found","rejected":true}}}
+{"type":"event","event":{"type":"text_delta","content":"A looked."}}
+{"type":"event","event":{"type":"subtask_end","id":"delegate-<T>-1","status":"completed"}}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"call-0-0","name":"delegate_task","type":"delegate_task","input":{"task":"task A: list files"},"args":{"task":"task A: list files"}},"result":{"id":"call-0-0","content":"A looked.","rejected":false}}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"sub-child-0","name":"ls","type":"ls","input":{"path":"."},"args":{"path":"."}}}}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"sub-child-0","name":"ls","type":"ls","input":{"path":"."},"args":{"path":"."}},"result":{"id":"sub-child-0","content":"Tool ls not found","rejected":true}}}
+{"type":"event","event":{"type":"text_delta","content":"B looked."}}
+{"type":"event","event":{"type":"subtask_end","id":"delegate-<T>-2","status":"completed"}}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"call-0-1","name":"delegate_task","type":"delegate_task","input":{"task":"task B: list files"},"args":{"task":"task B: list files"}},"result":{"id":"call-0-1","content":"B looked.","rejected":false}}}
+{"type":"event","event":{"type":"text_delta","content":"Both delegates reported.","messageId":"msg-2"}}
+{"type":"event","event":{"type":"turn_complete","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"}}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}

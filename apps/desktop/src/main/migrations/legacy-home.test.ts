@@ -3,9 +3,9 @@
  * leaves it (`__fixtures__/legacy-home`: `local-code.json`, `bots.json`,
  * `cronjobs.json`, `transcripts/`, `electron/` as userData with
  * `renderer-state.json` and `window-state.json`; synthetic values). The run
- * derives `prefs.json` and records itself, never touches a legacy file, is a
- * no-op the second time, and the live sync keeps `prefs.json` following the
- * old UI afterwards.
+ * derives `threads/` and `prefs.json` and records itself, never touches a
+ * legacy file, is a no-op the second time, and the live sync keeps
+ * `prefs.json` following the old UI afterwards.
  */
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -24,6 +24,7 @@ import { AgentMode } from "#shared/agent-types";
 import { installLegacyPrefsSync } from "../services/config/legacy-prefs";
 import { PrefsStore } from "../services/config/prefs-store";
 import { RendererStateStore } from "../services/config/renderer-state";
+import { ThreadStore } from "../services/session/thread-store";
 import { backupsRoot, migratingRoot } from "./backup";
 import { readRecord } from "./record";
 import { runMigrations } from "./runner";
@@ -73,7 +74,7 @@ const migrate = () =>
   });
 
 describe("migrating a legacy home", () => {
-  it("derives prefs.json, touches nothing else, and is a no-op the second time", async () => {
+  it("derives threads/ and prefs.json, touches nothing else, and is a no-op the second time", async () => {
     // A launch that died before committing left staging behind.
     const leftover = path.join(
       migratingRoot(home),
@@ -85,7 +86,7 @@ describe("migrating a legacy home", () => {
     delete before[path.relative(home, path.join(leftover, "prefs.json"))];
 
     const first = await migrate();
-    expect(first).toMatchObject({ applied: [2], failed: null });
+    expect(first).toMatchObject({ applied: [1, 2], failed: null });
     expect(first.recovered).toEqual([
       { staging: leftover, action: "discarded" },
     ]);
@@ -97,7 +98,11 @@ describe("migrating a legacy home", () => {
       Object.keys(after)
         .filter((file) => !(file in before))
         .sort()
-    ).toEqual(["migrations.json", "prefs.json"]);
+    ).toEqual([
+      "migrations.json",
+      "prefs.json",
+      path.join("threads", "sess-fixture-1.json"),
+    ]);
     expect(fs.existsSync(migratingRoot(home))).toBe(false);
     expect(fs.existsSync(backupsRoot(home))).toBe(false);
 
@@ -116,7 +121,31 @@ describe("migrating a legacy home", () => {
       defaultMode: AgentMode.Auto,
       workspaceExpanded: { "00000000-0000-4000-8000-000000000003": true },
     });
+    // The transcript, through the thread store as `ai.hydrate` reads it.
+    const thread = new ThreadStore({ home: () => home }).readCurrentFile(
+      "sess-fixture-1"
+    );
+    expect(thread?.source).toEqual({
+      kind: "transcript-v1",
+      updatedAt: "2026-09-01T10:00:00.000Z",
+      segments: 2,
+    });
+    expect(
+      thread?.messages.map((message) => [
+        message.role,
+        message.parts.map((part) => (part.type === "text" ? part.content : "")),
+      ])
+    ).toEqual([
+      ["user", ["hello"]],
+      ["assistant", ["hi there"]],
+    ]);
     expect(readRecord(home).applied).toEqual([
+      expect.objectContaining({
+        id: 1,
+        name: "transcripts-v2",
+        appVersion: "1.2.3",
+        stats: expect.objectContaining({ files: 1, converted: 1, skipped: 0 }),
+      }),
       expect.objectContaining({
         id: 2,
         name: "prefs-from-renderer-state",

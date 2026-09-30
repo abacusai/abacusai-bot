@@ -4,6 +4,8 @@ Phase 0, slice 1 of `docs/rewrite/PLAN.md` ("Protocol: AG-UI straight from pi").
 
 Rev 2 resolved the findings in `docs/rewrite/specs/reviews/00-agent-agui.codex-r1.md`. Rev 3 resolves every item in `…codex-r2.md`. §9 maps both rounds to their changes.
 
+**Amended after implementation review round 1** (`reviews/00-agent-agui.impl-codex-r1.md`, `…impl-claude-r1.md`; fix log `…impl-fixes-r1.md`). The amendments are marked *(impl r1)* where they land: §2.1, §2.2, §2.3, §2.4, §3.1.1-§3.1.6, §3.2, §3.3.7, §3.5.3, §3.8, §4, §5.2, §6.3, §7.1, §7.2, §8.1. **PLAN.md needs a matching amendment:** busy input goes to the host queue, and ChatClient's guard is a queue strategy function that throws, not `whenBusy: "error"`, which ai-client 0.36 does not have (§3.1.6). PLAN.md's `queue` row (`whenBusy: "queue"`, fifo) is superseded.
+
 Orchestrator decisions that still apply:
 
 - **Zero behaviour change for main's taps.** They read a compatibility stream of today's exact NDJSON (§2.4).
@@ -99,6 +101,9 @@ Sources read, beyond rev 1 and rev 2:
   - if the command's own run is still open, it becomes a `RUN_ERROR` for that run;
   - otherwise it becomes `CUSTOM agent.error`.
 
+  *(impl r1)* "Its own run" is decided by the token, never by the command's type. A `session.send()` that throws is recorded against the token that owns it, before the `finally` settles that token's run, so the run ends in `RUN_ERROR` and never in `RUN_FINISHED success` followed by a stray error. The compat line the command's catch then writes is marked as already reported and adds nothing to AG-UI. A throw that belongs to no open run of its own (a queued `send`'s failed steer, a run that already settled) is `CUSTOM agent.error`, and never fails another command's run.
+- *(impl r1)* A stdin line that parses as JSON but is not a command (`null`, a number) is handed to the handler like any other and fails there, exactly as the legacy host did: its `error` line goes to compat and `CUSTOM agent.error` to AG-UI. Nothing about the parsed value is read before dispatch.
+
 **Scope:**
 
 - **Run-scoped** AG-UI events (`TEXT_MESSAGE_*`, `REASONING_*`, `TOOL_CALL_*`, `SUBAGENT_*`, and the `CUSTOM` names marked *R*) appear only inside an open run.
@@ -175,9 +180,9 @@ The rev-1 aliases (`queue.*`, `mcp.*`, `providers.refresh`, `client_tool_result`
 
 | Command | Handler |
 |---|---|
-| `run` | Admission (§3.1.1). If idle, a client run is opened. If busy (a race, §3.1.6), the input is queued with `run.ack {queued}` and no run is opened. |
+| `run` | *(impl r1)* The envelope first: `input.threadId` must equal `--thread-id`, `forwardedProps.conversationId` (when present) must too, and `resume` must be absent or an empty array; otherwise `run.ack {rejected, thread_mismatch \| resume_unsupported}`, and nothing else happens: the run id is not recorded, nothing is queued, the session's mode and model are untouched, and compat gets no byte. Then admission (§3.1.1). If idle, a client run is opened. If busy (a race, §3.1.6), the input is queued with `run.ack {queued}` and no run is opened. |
 | `cancel` | Run-id check (above), then the `stop` handler (`host.ts:160-182`) with `markCancelling` first (§3.8) |
-| `permission.respond` | Lineage check (§3.5.3), then `session.respondPermission` + `releaseParked()`: the same two calls as `host.ts:199-205` |
+| `permission.respond` | Lineage check (§3.5.3), then `session.respondPermission` + `releaseParked()`: the same two calls as `host.ts:199-205`. *(impl r1)* `permission.resolved` + `permission.pending` go out between the two (§3.5.3). |
 | `permission_response` (legacy) | Unchanged semantics. Written only by main's browser auto-allow, bound to the runtime that raised the request (§3.5.6). |
 | `enqueue`, `dequeue`, `get_queue`, `clear_queue`, `remove_from_queue`, `update_queue_item` (legacy) | Unchanged. These are the host queue, which is authoritative for the new renderer too (§3.1.6). |
 | `host_service_response` (legacy) | Unchanged. Host services never appear on AG-UI (§3.7). |
@@ -186,7 +191,9 @@ The rev-1 aliases (`queue.*`, `mcp.*`, `providers.refresh`, `client_tool_result`
 
 ### 2.3 Events (stdout)
 
-The types come from `@ag-ui/core@1.0.0`. It becomes a runtime dependency of the agent: the ESM entry is 28 KB and does not load `./schemas` or zod. Events are built with the `EventType` enum through one checked constructor, so they are assignable to `@ag-ui/core`'s `Event` and TanStack's `StreamChunk` without casts (finding 24).
+The types come from `@ag-ui/core@1.0.0`. It becomes a runtime dependency of the agent: the ESM entry is 28 KB and does not load `./schemas` or zod. Events are built with the `EventType` enum through one constructor, so they are assignable to `@ag-ui/core`'s `Event` and TanStack's `StreamChunk`, and no call site needs a cast (finding 24).
+
+*(impl r1)* The constructor itself holds the package's one type assertion on its output: TypeScript cannot prove `{type, ...payload, timestamp}` is `Extract<Event, {type: T}>` for a generic `T`. It is verified instead of trusted: every event of every golden is parsed by `@ag-ui/core/schemas`' `EventSchemas` (a test-only import), and a unit test builds every emitted type through the emitter and parses it the same way.
 
 ```ts
 import {
@@ -328,7 +335,7 @@ export type DecisionKind =
 | `agent.error` | S | `AgentErrorPayload` (non-terminal errors) |
 | `agent.notification` | S | `{message, severity, actions?, notificationKey?, …}` (verbatim) |
 | `agent.retry` | R | `{attempt, maxAttempts, delayMs, isNetworkError}` |
-| `run.ack` | S | `{runId, status: "started" \| "queued" \| "duplicate" \| "rejected", entryId?, waitingFor?, reason?: "regenerate_unsupported" \| "empty" \| "resume_unsupported"}` |
+| `run.ack` | S | `{runId, status: "started" \| "queued" \| "duplicate" \| "rejected", entryId?, waitingFor?, reason?: "regenerate_unsupported" \| "empty" \| "resume_unsupported" \| "thread_mismatch"}` *(impl r1: `thread_mismatch`)* |
 | `permission.requested` | S | `PermissionDescriptor` |
 | `permission.resolved` | S | `{permissionId, decisionKind: DecisionKind, source: "respond" \| "legacy_response"}` |
 | `permission.cleared` | S | `{permissionId, reason: "expired" \| "stopped" \| "reset"}` |
@@ -350,7 +357,7 @@ export type DecisionKind =
 **Handshake (findings r2-14, r2-15).** Main spawns the agent with `stdio: ["pipe","pipe","pipe","pipe"]` (today it passes three, `cli-manager-service.ts:542`) and `--compat-fd 3`. **Before** the session is constructed, and before either writer is enabled, `main.ts` preflights the channel synchronously:
 
 1. Build `hello = {"type":"CUSTOM","name":"wire.hello","value":{"protocol":1,"wire":"agui","compat":?,"incarnation":<uuid>},"timestamp":…}`.
-2. Try `fs.fstatSync(3)`, then `fs.writeSync(3, "")` (zero bytes), then `fs.writeSync(3, JSON.stringify({type:"compat.hello", incarnation}) + "\n")`. These are synchronous calls, so `EBADF`/`EPIPE`/`EAGAIN` are thrown here and not reported later. `EAGAIN` is retried for up to 1 s.
+2. Try `fs.fstatSync(3)`, then `fs.writeSync(3, "")` (zero bytes), then `fs.writeSync(3, JSON.stringify({type:"compat.hello", incarnation}) + "\n")`. These are synchronous calls, so `EBADF`/`EPIPE`/`EAGAIN` are thrown here and not reported later. `EAGAIN` is retried for up to 1 s. *(impl r1)* On POSIX the `fstat` must also report a FIFO or a socket: without main's pipe, fd 3 can still be open for the runtime's own use (libuv's kqueue, an inherited file), and a successful write there would send compat nowhere. Anything else is inline. (On Windows a CRT descriptor the runtime did not open is simply not open.)
    - **Success:** `compat = "fd"`.
    - **Any throw:** `compat = "inline"`.
 3. `fs.writeSync(1, JSON.stringify(hello) + "\n")`. This is always stdout line 1.
@@ -375,6 +382,8 @@ There is no exit-78 path and no respawn. Startup failure and closure handling (`
 2. writes `RUN_ERROR {code:"compat_lost"}` for an open run;
 3. writes one stderr line;
 4. exits with code 75.
+
+*(impl r1)* Lines 1 and 2 go out as one stdout write queued behind everything already written, and the exit waits for that write's callback (or 5 s, for a reader that has gone), so neither they nor the earlier lines are lost to an asynchronous pipe under backpressure. A spawned test holds ~400 KB unread on stdout when fd 3 goes away.
 
 Main sees an ordinary child exit, which is today's crash path: session closed, turn stopped. It never keeps running with taps detached. Backpressure (writes buffered in-process) is handled as stdout is today.
 
@@ -433,7 +442,7 @@ The function runs its decision **synchronously**:
    - the token is `{seq, runId}`.
 
    A `run` then gets `run.ack {started}`, and `RUN_STARTED` is written (server runs: §3.1.3). This single `busy` flag is what every source checks, so a legacy `send` arriving while a `run` is preparing is queued, not started (finding r2-10).
-4. **Preparation** is `run` only: `setMode` when `forwardedProps.mode` differs, then `await setModel` when `.model` differs. Failures are non-terminal (§3.2). **After every await**, the host checks `gen === admissionGen && !token.cancelling && turn === capturedTurn`. If any check fails, preparation stops:
+4. **Preparation** is `run` only: `setMode` when `forwardedProps.mode` differs, then `await setModel` when `.model` differs. Failures are non-terminal (§3.2). *(impl r1)* A throw from either is reported as a `command`-origin error (compat: the legacy thrown-handler line a failed `set_model` writes; AG-UI: `CUSTOM agent.error`) and the prompt still runs, as `set_model` failing before `send` does today. Anything else that throws before the prompt ends the run in `RUN_ERROR` and releases `busy` and `preparing` (then drains the queue) unless a Stop or reset has taken admission over. **After every await**, the host checks `gen === admissionGen && !token.cancelling && turn === capturedTurn`. If any check fails, preparation stops:
    - the prompt is **not** sent;
    - `preparing = false`;
    - the run has already been closed `cancelled` by the Stop or reset that intervened (§3.8).
@@ -442,6 +451,8 @@ The function runs its decision **synchronously**:
 5. **Prompt.** `preparing = false`, then `runTurn(text, token)` (the existing body, with `busy` already held).
 
 For legacy sources the NDJSON behaviour is unchanged. They have no preparation step, so `preparing` is never observed and the compat bytes stay identical (§7.2).
+
+*(impl r1)* **Stop and reset hold admission too** (`--wire agui` only). From the moment a Stop or reset starts until it has landed, `busy` is held, so every turn starter queues behind it (`waitingFor:"turn"`) instead of prompting a session that is being aborted or replaced; once it lands, `runAfterStop()` runs what arrived (after a reset: in the new conversation). Only the newest Stop or reset releases admission, so an older one finishing late never frees a guard a newer one, or the turn it started, holds. Under `--wire ndjson` the legacy host's behaviour, including that race, is kept byte for byte; the compat stream of an agui runtime differs from ndjson only in that race (the message is queued, not sent into the aborting session).
 
 #### 3.1.2 Turn tokens (finding 12)
 
@@ -452,6 +463,7 @@ Every `session.send()` the host makes is owned by an immutable `TurnToken {seq, 
 - `runs.settle(token)` is a no-op unless `token.seq` equals the open run's token.
 - `cancel` / `stop` / `reset` call `runs.markCancelling(currentToken)` **synchronously, before** awaiting the abort.
 - The host keeps `currentToken` set until `send()` resolves, including through bot housekeeping. That is what permission lineage binds to (§3.5.3).
+- *(impl r1)* When a `send()` resolves, only its own token is released: an aborted send can resolve after `runAfterStop` started a newer one, and clearing the newer token would bind that send's permissions to turn 0.
 
 #### 3.1.3 Server-initiated runs
 
@@ -460,10 +472,13 @@ A legacy `send`, a queue drain (`host.ts:353-368`), `runAfterStop` (`host.ts:407
 - `runId = "srv-" + randomUUID()`;
 - `metadata.abacus.serverInitiated`.
 
-Each one opens with `CUSTOM queue.dequeued {content}` plus a **user** text message (`TEXT_MESSAGE_START {role:"user", messageId: runId+":user"}` + `CONTENT` + `END`), unless the entry was echoed (`!echoed.delete(id)`, the same rule that suppresses `user_message_dequeued`).
+Each one opens with `CUSTOM queue.dequeued {content}` (for dequeued input) plus a **user** text message (`TEXT_MESSAGE_START {role:"user", messageId: runId+":user"}` + `CONTENT` + `END`).
+
+*(impl r1)* **Always, echoed or not.** `echoed` (`!echoed.delete(id)`) only suppresses the compat `user_message_dequeued`, which exists so the old renderer does not draw a second bubble for text it drew itself when it showed idle. On an agui runtime nothing has drawn it: a `run` raced into a Stop is acked `queued`, main injects `RUN_ERROR {queued}`, and the renderer removes its optimistic message. The run that finally carries the text must carry it on AG-UI too, or it is missing from the transcript, main's processor and `hydrate`.
 
 - A legacy `send` from main (messaging, routine) also carries its user text message.
 - Each drained `session.send()` gets its own run and token. The previous run settles before the next `RUN_STARTED`.
+- *(impl r1)* `RUN_STARTED` never carries `input`. A client run's `RunAgentInput` holds the whole history on every turn, attachments included; echoing it put O(transcript) bytes per run into stdout, main's active-run log and its ring, and could pass main's 16 MB line cap (the `RUN_STARTED` would then be dropped and the run never start). A client run's newest user message goes out as `TEXT_MESSAGE_*` under the client's own id right after `RUN_STARTED`, which is all main's transcript and `joinRun` need.
 
 #### 3.1.4 Regeneration and retries (finding 14)
 
@@ -474,6 +489,8 @@ A new `runId` whose newest user message id equals the last user message id this 
 - **The previous run ended in `success` without `intent`.** This is treated as a new prompt, as today when a user sends the same text twice.
 
 Deduplication is by `runId` only (§3.1.1). A reused message id is never proof of redundancy.
+
+*(impl r1)* A retry reuses its message id, and `StreamProcessor` keeps one message per id and appends a second `CONTENT` to it (a continuous processor that saw both runs held `"questionquestion"`). So a client message id already echoed in this incarnation is not echoed again; the retry's run carries no user `TEXT_MESSAGE_*`. Across incarnations the agent cannot know: main's transcript processor must skip a user `TEXT_MESSAGE_*` whose id it already holds (main slice, §5.2).
 
 #### 3.1.5 Settle
 
@@ -523,7 +540,7 @@ ChatClient's `streamResponse()` awaits `connection.send()` and then its own `pro
   | clear | `clear_queue` |
   | send now | `dequeue` |
 
-  Queued messages survive Stop exactly as today (`host.ts:164`, `runAfterStop`). ChatClient is configured with `whenBusy: "error"`, so an accidental busy `sendMessage` fails loudly instead of queueing locally.
+  Queued messages survive Stop exactly as today (`host.ts:164`, `runAfterStop`). *(impl r1)* ChatClient's busy guard fails loudly instead of queueing locally. `whenBusy: "error"` does not exist in ai-client 0.36 (`WhenBusy` is `"queue" | "drop" | "interrupt"`; `drop` returns silently, and `maxSize: 0` with `onOverflow: "reject"` is silent too). The guard is a queue **strategy function that throws**: `decideWhenBusy` calls it synchronously inside `sendMessage` (`chat-client.ts:2355-2376`), so an accidental busy `sendMessage` rejects, and nothing is queued locally or sent. A per-call `sendOptions.whenBusy` bypasses a strategy, so the chat kit never passes one. The agent's tests use `failLoudlyWhenBusy` (`agui/__tests__/chat-adapter.ts`).
 - **The race.** If a `run` still arrives while the host is busy (another window started a turn between the check and the send), the host queues the text and emits `run.ack {queued}` (§3.1.1). Main's `ai.send` procedure sees that ack for its own request and **injects into that requesting subscription only** a terminal:
 
   ```
@@ -538,10 +555,10 @@ Every `emitAgentEvent({type:"error"})` site gains an internal `origin`, stripped
 
 | Origin | Sites | AG-UI |
 |---|---|---|
-| `turn` | `session.ts:1249` (thrown in send), `:1275` (budget), `:1296` (reportTurnFailure), `:1553` (stall), `:1653` (compaction), `:1737` (pool exhausted in rotation); `bot-session.ts:508` (no model in send), `:540`, `:721`, `:761`; `host.ts:128` when the throwing command was `run`/`send` | **Terminal** for the owning token. The first one becomes the run's `RUN_ERROR` at settle (`message` = `error.message ?? segmentData.message ?? "The agent reported an error."`, `code`, `metadata.abacus.error` verbatim). Later ones in the same run go out as `CUSTOM agent.error`. |
+| `turn` | `session.ts:1249` (thrown in send), `:1275` (budget), `:1296` (reportTurnFailure), `:1553` (stall), `:1653` (compaction), `:1737` (pool exhausted in rotation); `bot-session.ts:508` (no model in send), `:540`, `:721`, `:761`; `host.ts:128` when a `session.send()` threw while its own token's run was open (*impl r1*: recorded against that token before its settle; the compat line adds nothing on AG-UI) | **Terminal** for the owning token. The first one becomes the run's `RUN_ERROR` at settle (`message` = `error.message ?? segmentData.message ?? "The agent reported an error."`, `code`, `metadata.abacus.error` verbatim). Later ones in the same run go out as `CUSTOM agent.error`. |
 | `command` | `session.ts:2096`, `:2157`, `:2172`, `:2214` (set_model paths, including `forwardedProps.model`); `bot-session.ts:942` | `CUSTOM agent.error`, never terminal |
 | `startup` | `host.ts:79`, `session.ts:1069`, `bot-session.ts:441` | `CUSTOM agent.error` |
-| `host` | `host.ts:109` (malformed), `host.ts:128` for other commands | `CUSTOM agent.error` |
+| `host` | `host.ts:109` (malformed), `host.ts:128` for every other throw (*impl r1*: including a `run`/`send` whose throw has no open run of its own) | `CUSTOM agent.error` |
 
 On compat, errors keep today's exact order, including idle-then-error. `MessagingGatewayService` ignores a provider failure that arrives after idle (`messaging-gateway-service.ts:1209-1241`), and `feedTurnWaiter` resolves on idle first (`service-host.ts:3449-3465`). Both keep doing so because they read compat (finding 15). The renderer gets one terminal per run, and that divergence is intended and confined to the chat UI.
 
@@ -666,13 +683,13 @@ A processor probe must render these as `state:"error"` with the text as the erro
 
 | Id | Value |
 |---|---|
-| Assistant message | `${agentSessionId}:${partial.timestamp}` (pi `AssistantMessage.timestamp`, persisted in the pi file). A collision gets a `:2` suffix; a missing timestamp falls back to `${agentSessionId}:msg-N`. |
+| Assistant message | `${agentSessionId}:${partial.timestamp}` (pi `AssistantMessage.timestamp`, persisted in the pi file). A collision gets a `:2` suffix; a missing timestamp falls back to `${agentSessionId}:${incarnation}:msg-N` (*impl r1*: `msg-N` restarts in every process and a resumed pi session keeps its id, while main keeps one transcript per thread across respawns). |
 | Tool call | pi's id |
 | Child tool call | `${subagentRunId}:${legacyPrefixedId}`, with the legacy id in `metadata.abacus.legacyToolCallId`. This makes child ids unique across parallel children that reuse provider ids. |
 | Child message | `${subagentRunId}:final` or `${subagentRunId}:web-N`. Unique per invocation, routed by `subagentRunId`. Compat keeps the legacy absence or `web-N` exactly (finding 17). |
 | Result message | `${toolCallId}:result` |
 | Reasoning | `${messageId}:think:${n}` |
-| User message | `${runId}:user`, or `steer-${n}` |
+| User message | `${runId}:user`, the client's own id for a client run, or `steer-${incarnation}-${n}` (*impl r1*: `steer-${n}` restarted per process and overwrote the previous process's `steer-1` in main's transcript) |
 | Permission | `perm-N` (with `incarnation` in the lineage) |
 | Subagent run | today's subtask id |
 
@@ -767,8 +784,11 @@ PLAN.md's `resolveInterrupt(approved, {payload})` is superseded. The chat-kit wi
 **On success:**
 
 1. `session.respondPermission(id, decision)`;
-2. `awaitingPermission = false` and `releaseParked()` (`host.ts:199-205`);
-3. `permission.resolved {source:"respond"}` + `permission.pending`.
+2. `awaitingPermission = false`;
+3. `permission.resolved {source:"respond"}` + `permission.pending`, synchronously;
+4. `releaseParked()` (`host.ts:199-205`).
+
+*(impl r1)* The resolution goes out before anything the released waiter or the parked steers cause (the approved tool's `TOOL_CALL_*`, a sibling's new `permission.requested`), as on the legacy path, so the authoritative set never shows an answered card.
 
 **Legacy `permission_response`.** Its semantics are unchanged. In an agui runtime its only writer is main's browser auto-allow (§3.5.6). The old renderer never talks to agui runtimes (§2.1), so an old window's delayed `perm-1` can never reach a replacement process (finding r2-9). Auto-allow is bound to the exact runtime that produced the request (§3.5.6). If it releases a waiter, the host emits `permission.resolved {source:"legacy_response"}` + `permission.pending`.
 
@@ -847,11 +867,12 @@ Nothing is emitted on AG-UI, so there is nothing for main to filter, and no payl
 
     A preparation still awaiting `setModel` sees the bumped generation and never prompts (§3.1.1).
   - Legacy `stop` is the same, without the `runId` check.
-- **`reset_conversation`** follows `host.ts:207-218`, including `markCancelling`, the `admissionGen` bump and the cancelled settle. After that: `session.ready` (new pi session id and file, same incarnation), `STATE_SNAPSHOT`, `session.cleared` and `agent.status idle`.
+- **`reset_conversation`** follows `host.ts:207-218`, including `markCancelling`, the `admissionGen` bump and the cancelled settle. After that: `session.ready` (new pi session id and file, same incarnation), `STATE_SNAPSHOT`, `session.cleared` and `agent.status idle`. *(impl r1)* The session emits `ready` before `segments_cleared`, so the cancelled terminal is written when the replacement session's `ready` arrives during a reset, before `session.ready`; the old run's unwinding events then fall outside any run and are dropped (golden `reset-mid-run`).
 - **stdin EOF.** After in-flight commands settle (`host.ts:138-145`), an open run gets `RUN_ERROR {code:"agent_exit"}`.
-- **Crash.** `host.emergencyClose(code)` runs in `main.ts:18-29` and `process.on("exit")`. It writes `RUN_ERROR {agent_crashed | agent_exit}` for an open run with `fs.writeSync(1, …)`. It is idempotent, and compat gets nothing extra.
+- **Crash.** `host.emergencyClose(code)` runs in `main.ts:18-29` and `process.on("exit")`. It writes `RUN_ERROR {agent_crashed | agent_exit}` for an open run with `fs.writeSync(1, …)`. It is idempotent, and compat gets nothing extra. *(impl r1)* Only when `process.stdout.writableLength === 0`: with earlier lines still queued in-process (a pipe under backpressure on macOS or Windows), a synchronous write would overtake them or land inside a half-written line, and they die with the process anyway; the agent then writes nothing and main synthesizes the terminal.
+- *(impl r1)* **Signals.** A signal exit runs no `exit` handler: `background-processes.ts:264-275` re-raises SIGTERM (and the others it handles) with the default action after its cleanup. SIGTERM is how the desktop stops an agent, so no last words are written for it either. For **any** signal exit, not only SIGKILL, main synthesizes the open run's terminal (main slice).
 - **Compat loss** is handled as in §2.4 (`RUN_ERROR {compat_lost}`, then exit 75).
-- **Structural guarantee.** `RUN_STARTED` is written only by `runs.open(token)`, which throws when a run is open. Every `session.send` has a token-owned `try/finally` settle. So every `RUN_STARTED` gets exactly one terminal before the next `RUN_STARTED` and before exit; for SIGKILL, main synthesizes it. The only terminal ever written without a `RUN_STARTED` is main's per-subscription `RUN_ERROR {queued}` (§3.1.6). The agent never writes one.
+- **Structural guarantee.** `RUN_STARTED` is written only by `runs.open(token)`, which throws when a run is open. Every `session.send` has a token-owned `try/finally` settle. So every `RUN_STARTED` gets exactly one terminal before the next `RUN_STARTED` and before exit; for a signal exit (*impl r1*: any signal, SIGTERM included) and for last words skipped under backpressure, main synthesizes it. The only terminal ever written without a `RUN_STARTED` is main's per-subscription `RUN_ERROR {queued}` (§3.1.6). The agent never writes one.
 - **No agent-side watchdog** (finding 22). Main's inactivity watchdog keeps reading compat and sends `stop`. Main's own `RUN_ERROR {inactivity_timeout}` to the renderer follows the first-terminal-wins rule (main slice).
 
 ---
@@ -862,6 +883,7 @@ Nothing is emitted on AG-UI, so there is nothing for main to filter, and no payl
   - `runHiddenTurn` (`bot-session.ts:587-608`) brackets `sendCustomMessage` with the internal `hidden_turn {phase:"start" | "end"}`.
   - Between them the emitter drops every run-scoped event plus `agent.status`, `agent.retry` and `agent.heartbeat`.
   - Hidden-turn usage is logged to stderr: `[usage] housekeeping <customType> <json>`.
+  - *(impl r1)* A run opening forgets any hidden-turn depth: housekeeping runs inside `send()` with admission held, so a run opens only after it ended or was aborted, and an aborted one's closing bracket (its `finally`) can land after the new `RUN_STARTED`.
   - A permission raised in a hidden turn still produces `permission.requested`, so it can be answered, as today's card could be. Its lineage is bound to the still-current `turnSeq` and carries no `runId` (§3.5.3). It renders in the `PermissionList` (§3.5.5).
   - **The compat stream is unchanged:** it still carries the lines the bot leaks today (`:1098`, `:1323`, `:1369-1374`, `:217`), so main's turn state behaves exactly as before.
 - **The user's run settles before housekeeping.** The `settled()` callback fires before `runMemoryMaintenance()` (§3.1.5). `busy` stays true until `send()` resolves, as today. That keeps today's quirk that a message sent during a housekeeping turn is steered into it (§8.3).
@@ -901,6 +923,8 @@ The `health-check.ts` ready probe keeps spawning `--wire ndjson` until cut-over.
   - `ai.cancel({threadId, runId})` → `cancel`;
   - `ai.respondPermission(lineage, decision)` → `permission.respond`.
 - **Turn-state phase** per thread (from compat) is published to every window. The composer uses it (§3.1.6).
+- *(impl r1)* **Across incarnations** the agent's `runId` dedupe starts empty: `ai.send` must dedupe a retried `runId` against its own log before writing `run`, and the transcript processor must skip a user `TEXT_MESSAGE_*` whose id it already holds (§3.1.4).
+- *(impl r1)* **Production wiring** of `resolveWire`/`emitAgui`, the relay and the `ai.*` procedures is this main slice; the agent slice ships the runtime and test-only adapters (`agui/__tests__/relay.ts`, `chat-adapter.ts`).
 - **The descriptor store** (latest `permission.pending`) and the **queue** (latest `queue.updated`) are kept per thread and exposed for hydration.
 
 ### 5.3 Hydration through TanStack's own contract (findings 23, r2-5 to r2-8)
@@ -960,11 +984,11 @@ The agent's contract for all of this: stdout is complete and self-describing; ev
 
 | File | Change |
 |---|---|
-| `protocol.ts` | Add `InternalAgentEvent`: `message_open`, `message_close`, `tool_call_start` / `tool_call_delta` / `tool_call_stop` (the existing producer-less shapes at `:126-133`), `tool_blocked`, `plan_changed`, `hidden_turn`. Add optional internal fields: `origin` on `error`, `subagentRunId` on every `AgentEvent`, `parentToolCallId` on `subtask_start`. `DesktopEvent` / `DesktopCommand` are unchanged. |
-| `host.ts` (`NdjsonHost`) | Becomes `queue.ts` + `HostSink` with the compat writer = stdout and no AG-UI emitter. Output is byte-identical (§7.2). `ABACUSAI_BOT_WIRE_RECORD=<path>` records stdin plus pre-strip events for fixtures. |
+| `protocol.ts` | Add `InternalAgentEvent`: `message_open`, `message_close`, `tool_call_start` / `tool_call_delta` / `tool_call_stop` (the existing producer-less shapes at `:126-133`), `tool_blocked`, `plan_changed`, `hidden_turn`. Add optional internal fields: `origin` on `error`, `subagentRunId` on every `AgentEvent`, `parentToolCallId` on `subtask_start`. `DesktopEvent` / `DesktopCommand` are unchanged. *(As built: `InternalAgentEvent` lives in `internal-events.ts`, since `protocol.ts` is the mirrored wire; the internal fields live in a WeakMap side table, `event-meta.ts`, invisible to `JSON.stringify`, including impl r1's `attributed` and `unfinished`. `message_open.messageId` is optional: absent when pi gave no timestamp, §3.3.7.)* |
+| `host.ts` (`NdjsonHost`) | Becomes `queue.ts` + `HostSink` with the compat writer = stdout and no AG-UI emitter. Output is byte-identical (§7.2). `ABACUSAI_BOT_WIRE_RECORD=<path>` records stdin plus pre-strip events for fixtures. *(impl r1)* `agui/record.ts`: one JSON line each, in order: `{dir:"in", line}`, `{dir:"out", event, meta?}` (the legacy event and its internal facts: `origin`, `subagentRunId`, `parentToolCallId`, …), `{dir:"internal", event}`. Only when recording does `NdjsonHost` give the session `emitInternal`. |
 | `main.ts` | Parse `--wire`, `--thread-id`, `--compat-fd`. Run the synchronous compat preflight and write `wire.hello` before constructing the session (§2.4). Wire `emergencyClose` into `:18-29` and `exit`. |
 | `tsdown.config.ts` | Add the `src/tool-display.ts` entry. |
-| `index.ts` | Export `AguiHost` and the wire types; keep `NdjsonHost`. |
+| `index.ts` | ~~Export `AguiHost` and the wire types~~ *(impl r1)* Export the wire types; keep `NdjsonHost`. `AguiHost` is not exported, for the reason `openllm.ts` is not: the `BotSession` in its signature drags pi's declaration tree into the dts bundle and breaks the build. `dist/main.js` (`--wire agui`) is its entry, and nothing else runs it. |
 | `session.ts` | Emit internal `message_open` / `message_close` (`:2374`, `:2389`) and `tool_call_*` (`:2599`, extracted per §3.3.5). The gate emits `tool_call_start` at entry (`:2650`) and `tool_blocked` at its block returns. Add `origin` at the error sites in §3.2. Emit `plan_changed` on a successful `todo` end (`:2477`). `send(text, turn?)` calls `turn.settled()` per §3.1.5. No logic change. |
 | `bot/bot-session.ts` | The same internals (suppressed in hidden turns), `origin`, `send(text, turn?)`, `settled()` at `:537` / `:540` / `:508`, and `hidden_turn` at `:595` / `:605`. |
 | `delegate-tool.ts`, `document-tool.ts`, `deck-tool.ts`, `design-tool.ts`, `browser-task-tool.ts` | `scopeEmit` and `parentToolCallId` (§3.3.4) |
@@ -984,6 +1008,15 @@ Nothing in this slice. At cut-over (phase 7), the NDJSON-only host path and the 
 
 1. **Record.** Run `NdjsonHost` with `ABACUSAI_BOT_WIRE_RECORD` against scripted `@abacus-ai/test-support/fake-provider` replies, one per scenario. This produces `__fixtures__/<scenario>.jsonl` (commands plus pre-strip internal events). The ids and times are deterministic under the in-process harness (§7.2).
 2. **AG-UI golden.** Replay through `HostSink` + `AguiEmitter` + `RunController`, driving the commands through a fake session that replays the recorded internal events. Compare with `toMatchFileSnapshot("<scenario>.agui.jsonl")`.
+
+*(impl r1, as built)* The AG-UI goldens are produced **live**: the real `AguiHost` with the real session runs the scenario against the fake provider, its compat bytes are asserted equal to the pre-change `.ndjson` baseline in the same run, and its stdout is normalised and compared with `<scenario>.agui.jsonl`. That is equivalent to replaying a recording, and stronger (the host-session interplay is real, not re-enacted): `wire-record.integration.test.ts` shows, per scenario, that the recording's `out` events serialise to exactly the baseline stdout and that the internal events the agui host's session feeds the emitter are exactly the recorded ones. So the recording and the live run feed the emitter the same stream. Normalisation drops `timestamp`, numbers `srv-…` and `<session>:<timestamp>` ids in order, masks the pi session id/file, the root and the port, keeps the incarnation (the golden host's is fixed), and keeps each `expiresAt` as its offset from its event (`<now+900s>`). Every event is also parsed by `@ag-ui/core/schemas`.
+
+*(impl r1)* Scenarios the fake provider cannot drive, and what covers them instead:
+
+- **Two permissions pending at once** (reverse order, one expiring): pi 0.85 prepares sibling tool calls one after another (`agent-loop.js` `executeToolCallsParallel` awaits each `prepareToolCall`, gate included, before any executes), so two gate cards never coexist; concurrent cards come from sandbox asks of commands already running, which need an OS sandbox. Covered on the real `AguiHost` over a scripted session (`host-scripted.test.ts`), including byte-equal compat for `permission.respond` and `permission_response`.
+- **`browser_task` child text** and **`sandbox_denied` / `network_host` attach**: need a browser, an OS sandbox and a network proxy. Covered by synthetic events through the real host and main's relay into a fresh processor (`host-scripted.test.ts`), and by the emitter tests.
+- **Housekeeping permission**: a bot's hidden turn raising a card needs a scripted flush; covered in `host-scripted.test.ts` (lineage, hydrate, answer, expiry).
+- **`ppt`/`document` components**: need main's host services; their compat is unchanged by construction and the emitter tests cover the brackets, including `unfinished`.
 
 **Scenarios:**
 
@@ -1058,7 +1091,7 @@ For every §7.1 scenario:
 1. Run `--wire ndjson` with the scenario's legacy command script, and capture stdout bytes **B**.
 2. Run `--wire agui` with the equivalent script (the AG-UI command → legacy mapping in §2.4, or the same legacy commands for main-originated ones), and capture fd-3 bytes **C**.
 3. Assert `C === B`, **byte for byte**, with no normalisation.
-4. Assert that **B** equals the checked-in baseline `__fixtures__/<scenario>.ndjson`, recorded from the pre-change build (`git stash` baseline). This proves `--wire ndjson` itself is unchanged.
+4. Assert that **B** equals the checked-in baseline `__fixtures__/<scenario>.ndjson`, recorded from the pre-change build (`git stash` baseline). This proves `--wire ndjson` itself is unchanged. *(impl r1)* Every baseline is recorded on `d9cf445e`, the last commit before any `src` change, with the current harness copied in; the golden test only reads them (`RECORD_NDJSON_BASELINE=1` writes a missing one and never overwrites).
 5. Assert that rejected, duplicate and invalid AG-UI commands (`run.ack rejected/duplicate`, `permission.response_rejected`, a stale `cancel {runId}`) add **no** bytes to **C**.
 
 **Spawned-process check.** Run `dist/main.js --wire agui --compat-fd 3` against `dist/main.js --wire ndjson` for three scenarios on macOS, Linux and Windows CI. Mask only the pi session id, the `ts` fields and the `Date.now()`-derived subtask ids, and drop the single fd-mode `compat.hello` preamble. This proves fd 3 works across platforms.
@@ -1187,7 +1220,7 @@ These run in-process, with main's relay (transcript processor, run log and store
 - [ ] PLAN.md is amended:
   - no `bot.reply`;
   - no native interrupts; permissions use the descriptor store, `permission.respond` and the `PermissionList`;
-  - busy input goes to the host queue via `ai.queue.enqueue`, and `whenBusy` is `"error"`;
+  - busy input goes to the host queue via `ai.queue.enqueue`, and ChatClient's busy guard is a queue strategy function that throws (*impl r1*: `whenBusy: "error"` does not exist in ai-client 0.36);
   - hydration uses `hydrate` + `joinRun` over main's processor transcript and run log;
   - host services stay on compat;
   - compat feeds main's taps.
@@ -1277,3 +1310,7 @@ These are unchanged from rev 1:
 | r2-16 | `finishReason:"tool_calls"` on a final terminal skips completion | Final terminals only use `stop`, `length` or `null`, and `toolUse` maps to `"stop"`. `tool_calls` is reserved for a future continuation protocol. Tested. | §3.1.5, §6.2, §7.6 |
 | r2-17 | Cache accounting | `inputTokens = input + cacheRead + cacheWrite`, cache fields as parts, `totalTokens = in + out`, and a null model is omitted. Tested. | §3.3.8, §7.6 |
 | r2-18 | The `tool-display` export had no build entry | A dedicated browser-safe `src/tool-display.ts`, a tsdown entry and a package export. A lint rule bans node and pi imports. The renderer bundle and packaged app are checked. | §6.1, §6.3, §7.6 |
+
+### Implementation review round 1 (`reviews/00-agent-agui.impl-codex-r1.md`, `…impl-claude-r1.md`)
+
+The per-finding status, commits, tests and rebuttals are in `reviews/00-agent-agui.impl-fixes-r1.md`. The spec amendments are marked *(impl r1)* in place. Codex #9 (production wiring of `resolveWire`/`emitAgui`, main's relay and the `ai.*` procedures) is the main slice (§5.2) and out of this slice's scope.

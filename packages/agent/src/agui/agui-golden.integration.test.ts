@@ -6,6 +6,7 @@
  *   golden uses), and so equals the pre-change baseline;
  * - the AG-UI stream is well formed (§7.4) and matches its golden fixture.
  */
+import { EventSchemas } from "@ag-ui/core/schemas";
 import { afterAll, describe, expect, it } from "vitest";
 
 import {
@@ -31,7 +32,8 @@ afterAll(async () => {
 describe("--wire agui", () => {
   for (const scenario of SCENARIOS) {
     it(scenario.name, async () => {
-      const { context, provider, gates, restore } = await prepare(scenario);
+      const { context, provider, ports, gates, restore } =
+        await prepare(scenario);
 
       try {
         const host = aguiDriver(
@@ -57,7 +59,7 @@ describe("--wire agui", () => {
         );
 
         // Compat carries today's NDJSON, byte for byte.
-        const compat = maskVolatile(host.bytes(), provider.port);
+        const compat = maskVolatile(host.bytes(), ports);
 
         expect(compat).toBe(readGolden(`${scenario.name}.ndjson`));
 
@@ -68,7 +70,15 @@ describe("--wire agui", () => {
 
         expect(violations(events)).toEqual([]);
 
-        const normalized = normalizeAgui(host.stdout(), provider.port);
+        // Every event is a valid @ag-ui/core event, checked by its own
+        // schema: the one assertion inside aguiEvent() is verified here.
+        for (const event of events) {
+          const parsed = EventSchemas.safeParse(event);
+
+          expect(parsed.success, JSON.stringify(event)).toBe(true);
+        }
+
+        const normalized = normalizeAgui(host.stdout(), ports);
 
         expect(normalized).toBe(
           golden(`${scenario.name}.agui.jsonl`, normalized) ?? normalized

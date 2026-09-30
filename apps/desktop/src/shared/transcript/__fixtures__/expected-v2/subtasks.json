@@ -1,0 +1,421 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Research and write the report",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "b1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "b1",
+              "partIndex": 0,
+              "type": "text"
+            },
+            {
+              "at": 1788256802000,
+              "id": "sub-a",
+              "partIndex": 1,
+              "status": "created",
+              "type": "subtask"
+            },
+            {
+              "at": 1788256806000,
+              "id": "sub-b",
+              "partIndex": 2,
+              "status": "created",
+              "type": "subtask"
+            },
+            {
+              "at": 1788256809000,
+              "id": "sub-c",
+              "partIndex": 3,
+              "status": "created",
+              "type": "subtask"
+            },
+            {
+              "at": 1788256812000,
+              "id": "sub-d",
+              "partIndex": 4,
+              "status": "created",
+              "type": "subtask"
+            },
+            {
+              "at": 1788256814000,
+              "id": "sub-e",
+              "partIndex": 5,
+              "status": "created",
+              "type": "subtask"
+            },
+            {
+              "at": 1788256817000,
+              "id": "b2",
+              "partIndex": 6,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Delegating two pieces of work.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "subagent": {
+            "description": "Collect sources",
+            "id": "sub-a",
+            "messages": [
+              {
+                "id": "sub-a:0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256803000,
+                        "id": "sa-1",
+                        "partIndex": 0,
+                        "type": "tool_call"
+                      },
+                      {
+                        "at": 1788256804000,
+                        "id": "sa-text",
+                        "partIndex": 2,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:03.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "arguments": "{\"query\":\"solar output 2025\"}",
+                    "id": "sa-call",
+                    "input": {
+                      "query": "solar output 2025"
+                    },
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "sa-1",
+                        "status": "success"
+                      }
+                    },
+                    "name": "web_search_text_only",
+                    "output": "3 results",
+                    "state": "complete",
+                    "type": "tool-call"
+                  },
+                  {
+                    "content": "3 results",
+                    "id": "sa-1:result",
+                    "metadata": {
+                      "abacus": {}
+                    },
+                    "state": "complete",
+                    "toolCallId": "sa-call",
+                    "type": "tool-result"
+                  },
+                  {
+                    "content": "Found three sources.",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "sa-text"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {
+                "endTime": 1788256805000,
+                "segments": [
+                  {
+                    "at": 1788256805000,
+                    "id": "sub-a",
+                    "outcome": "completed",
+                    "partIndex": null,
+                    "status": "completed",
+                    "type": "subtask"
+                  }
+                ],
+                "startTime": 1788256802000
+              }
+            },
+            "name": "delegate",
+            "status": "finished"
+          },
+          "type": "subagent"
+        },
+        {
+          "subagent": {
+            "description": "Old frame without outcome",
+            "id": "sub-b",
+            "messages": [
+              {
+                "id": "sub-b:0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256807000,
+                        "id": "sb-text",
+                        "partIndex": 0,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:07.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "Summarised.",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "sb-text"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {
+                "segments": [
+                  {
+                    "at": 1788256808000,
+                    "id": "sub-b",
+                    "partIndex": null,
+                    "status": "completed",
+                    "type": "subtask"
+                  }
+                ]
+              }
+            },
+            "name": "delegate",
+            "status": "finished"
+          },
+          "type": "subagent"
+        },
+        {
+          "subagent": {
+            "description": "Browse the site",
+            "error": {
+              "message": "interrupted"
+            },
+            "id": "sub-c",
+            "messages": [
+              {
+                "id": "sub-c:0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256810000,
+                        "id": "sc-text",
+                        "partIndex": 0,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:10.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "Opened the page.",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "sc-text"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {
+                "endTime": 1788256811000,
+                "segments": [
+                  {
+                    "at": 1788256811000,
+                    "id": "sub-c",
+                    "outcome": "interrupted",
+                    "partIndex": null,
+                    "status": "completed",
+                    "type": "subtask"
+                  }
+                ],
+                "startTime": 1788256809000
+              }
+            },
+            "name": "browser",
+            "status": "error"
+          },
+          "type": "subagent"
+        },
+        {
+          "subagent": {
+            "description": "First half",
+            "id": "sub-d",
+            "messages": [
+              {
+                "id": "sub-d:0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256813000,
+                        "id": "sd-text",
+                        "partIndex": 0,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:13.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "First half done.",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "sd-text"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {}
+            },
+            "name": "component",
+            "status": "finished"
+          },
+          "type": "subagent"
+        },
+        {
+          "subagent": {
+            "description": "Hand-back: second half",
+            "id": "sub-e",
+            "messages": [
+              {
+                "id": "sub-e:0",
+                "metadata": {
+                  "abacus": {
+                    "credits": [
+                      {
+                        "creditsUsed": 4,
+                        "segmentId": "se-credits"
+                      }
+                    ],
+                    "segments": [
+                      {
+                        "at": 1788256815000,
+                        "id": "se-credits",
+                        "partIndex": null,
+                        "type": "credits"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:15.000Z"
+                  }
+                },
+                "parts": [],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {
+                "segments": [
+                  {
+                    "at": 1788256816000,
+                    "id": "sub-e",
+                    "outcome": "completed",
+                    "partIndex": null,
+                    "status": "completed",
+                    "type": "subtask"
+                  }
+                ]
+              }
+            },
+            "name": "delegate",
+            "status": "finished"
+          },
+          "type": "subagent"
+        },
+        {
+          "content": "Report written.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b2"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 18,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-subtasks",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

@@ -989,3 +989,83 @@ describe("C-T3 runner", () => {
     expect(progress.at(-1)).toEqual([2000, 2000, "two"]);
   });
 });
+
+describe("C-T3 runner: pending work", () => {
+  it("commits a plan with pending work without recording it, and finishes on the next launch", async () => {
+    const out = path.join(home, "out.json");
+    const later = path.join(home, "later.json");
+    let launches = 0;
+    const step: MigrationStep = {
+      id: 7,
+      name: "two-phase",
+      plan: async (ctx) => {
+        launches += 1;
+        const staged = path.join(ctx.staging, "out");
+        fs.writeFileSync(staged, `launch ${launches}`);
+        return {
+          writes: [
+            {
+              dest: launches === 1 ? out : later,
+              staged,
+              kind: "create",
+            },
+          ],
+          removals: [],
+          stats: { launch: launches },
+          pending: launches === 1 ? 1 : 0,
+        };
+      },
+    };
+    const after = fileStep(8, "after", () => [
+      { dest: path.join(home, "after.json"), content: "x", kind: "create" },
+    ]);
+
+    const first = await run([step, after]);
+    expect(first).toMatchObject({ applied: [8], partial: [7], failed: null });
+    expect(read(out)).toBe("launch 1");
+    expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([8]);
+    expect(fs.existsSync(migratingRoot(home))).toBe(false);
+
+    const second = await run([step, after]);
+    expect(second).toMatchObject({ applied: [7], partial: [], failed: null });
+    expect([read(out), read(later)]).toEqual(["launch 1", "launch 2"]);
+    expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([8, 7]);
+    expect(await run([step, after])).toMatchObject({
+      applied: [],
+      partial: [],
+    });
+  });
+
+  it("undoes a pending commit that crashed before the record point", async () => {
+    const out = path.join(home, "out.json");
+    const step: MigrationStep = {
+      id: 7,
+      name: "two-phase",
+      plan: async (ctx) => {
+        const staged = path.join(ctx.staging, "out");
+        fs.writeFileSync(staged, "x");
+        return {
+          writes: [{ dest: out, staged, kind: "create" }],
+          removals: [],
+          stats: {},
+          pending: 1,
+        };
+      },
+    };
+    const crashed = await run([step], {
+      hooks: { beforeRecord: () => "crash" },
+    });
+    expect(crashed.crashed).toBe(true);
+    expect(read(out)).toBe("x");
+
+    const next = await run([step]);
+    expect(next.recovered).toEqual([
+      {
+        staging: path.join(migratingRoot(home), "7-two-phase"),
+        action: "undone",
+      },
+    ]);
+    expect(next).toMatchObject({ partial: [7], failed: null });
+    expect(read(out)).toBe("x");
+  });
+});

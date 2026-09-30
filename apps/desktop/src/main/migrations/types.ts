@@ -24,6 +24,12 @@ export interface MigrationPlan {
   /** Files moved into the step's backup directory. */
   removals: string[];
   stats: Record<string, number>;
+  /**
+   * Work this plan left for the next launch (step 4 converts a transcript
+   * first and archives it on the next run). While above zero the plan is
+   * committed but the step is not recorded as applied, so it runs again.
+   */
+  pending?: number;
 }
 
 export interface MigrationContext {

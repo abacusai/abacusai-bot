@@ -1,0 +1,566 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Run everything",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "r-success",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "r-success",
+              "partIndex": 0,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256802000,
+              "id": "r-error-status",
+              "partIndex": 2,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256803000,
+              "id": "r-error-field",
+              "partIndex": 4,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256804000,
+              "id": "r-error-none",
+              "partIndex": 6,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256805000,
+              "id": "r-rejected-status",
+              "partIndex": 8,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256806000,
+              "id": "r-rejection-rejected",
+              "partIndex": 10,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256807000,
+              "id": "r-interrupted",
+              "partIndex": 12,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256808000,
+              "id": "r-sibling-failed",
+              "partIndex": 14,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256809000,
+              "id": "r-skipped",
+              "partIndex": 16,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256810000,
+              "id": "r-abandoned",
+              "partIndex": 18,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256811000,
+              "id": "r-executing",
+              "partIndex": 20,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256812000,
+              "id": "r-pending",
+              "partIndex": 22,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256813000,
+              "id": "r-awaiting",
+              "partIndex": 24,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256814000,
+              "id": "r-no-status",
+              "partIndex": 26,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256815000,
+              "id": "r-bad-args",
+              "partIndex": 28,
+              "type": "tool_call"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "arguments": "{\"command\":\"true\"}",
+          "id": "c1",
+          "input": {
+            "command": "true"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-success",
+              "status": "success"
+            }
+          },
+          "name": "bash",
+          "output": "done",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "done",
+          "id": "r-success:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "complete",
+          "toolCallId": "c1",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"command\":\"false\"}",
+          "id": "c2",
+          "input": {
+            "command": "false"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-error-status",
+              "status": "error"
+            }
+          },
+          "name": "bash",
+          "output": "exit 1",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "exit 1",
+          "error": "Command failed",
+          "id": "r-error-status:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "error",
+          "toolCallId": "c2",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"file_path\":\"missing.txt\"}",
+          "id": "c3",
+          "input": {
+            "file_path": "missing.txt"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-error-field",
+              "status": "success"
+            }
+          },
+          "name": "read",
+          "output": "",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "error": "ENOENT",
+          "id": "r-error-field:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "error",
+          "toolCallId": "c3",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"command\":\"crash\"}",
+          "id": "c4",
+          "input": {
+            "command": "crash"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-error-none",
+              "status": "error"
+            }
+          },
+          "name": "bash",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "error": "failed",
+          "id": "r-error-none:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "error",
+          "toolCallId": "c4",
+          "type": "tool-result"
+        },
+        {
+          "approval": {
+            "approved": false,
+            "id": "c5:approval",
+            "needsApproval": true
+          },
+          "arguments": "{\"command\":\"rm -rf build\"}",
+          "id": "c5",
+          "input": {
+            "command": "rm -rf build"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-rejected-status",
+              "status": "rejected"
+            }
+          },
+          "name": "bash",
+          "state": "approval-responded",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-rejected-status:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "outcome": "denied",
+          "state": "error",
+          "toolCallId": "c5",
+          "type": "tool-result"
+        },
+        {
+          "approval": {
+            "approved": false,
+            "id": "c6:approval",
+            "needsApproval": true
+          },
+          "arguments": "{\"file_path\":\"a.txt\"}",
+          "id": "c6",
+          "input": {
+            "file_path": "a.txt"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-rejection-rejected",
+              "status": "success"
+            }
+          },
+          "name": "write",
+          "output": "User rejected",
+          "state": "approval-responded",
+          "type": "tool-call"
+        },
+        {
+          "content": "User rejected",
+          "id": "r-rejection-rejected:result",
+          "metadata": {
+            "abacus": {
+              "rejection": {
+                "reason": "rejected",
+                "userMessage": "not now"
+              }
+            }
+          },
+          "outcome": "denied",
+          "state": "error",
+          "toolCallId": "c6",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"command\":\"sleep 100\"}",
+          "id": "c7",
+          "input": {
+            "command": "sleep 100"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-interrupted",
+              "status": "interrupted"
+            }
+          },
+          "name": "bash",
+          "output": "",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-interrupted:result",
+          "metadata": {
+            "abacus": {
+              "rejection": {
+                "reason": "interrupted"
+              }
+            }
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "c7",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"file_path\":\"b.txt\"}",
+          "id": "c8",
+          "input": {
+            "file_path": "b.txt"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-sibling-failed",
+              "status": "success"
+            }
+          },
+          "name": "read",
+          "output": "",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-sibling-failed:result",
+          "metadata": {
+            "abacus": {
+              "rejection": {
+                "reason": "sibling_failed"
+              }
+            }
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "c8",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"command\":\"echo skipped\"}",
+          "id": "c9",
+          "input": {
+            "command": "echo skipped"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-skipped",
+              "status": "skipped"
+            }
+          },
+          "name": "bash",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-skipped:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "c9",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"command\":\"echo abandoned\"}",
+          "id": "c10",
+          "input": {
+            "command": "echo abandoned"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-abandoned",
+              "status": "abandoned"
+            }
+          },
+          "name": "bash",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-abandoned:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "c10",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"command\":\"npm run build\"}",
+          "id": "c11",
+          "input": {
+            "command": "npm run build"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-executing",
+              "status": "executing"
+            }
+          },
+          "name": "bash",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-executing:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "c11",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"file_path\":\"c.ts\"}",
+          "id": "c12",
+          "input": {
+            "file_path": "c.ts"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-pending",
+              "status": "pending"
+            }
+          },
+          "name": "edit",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-pending:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "c12",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"command\":\"git push\"}",
+          "id": "c13",
+          "input": {
+            "command": "git push"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-awaiting",
+              "status": "awaiting_permission"
+            }
+          },
+          "name": "bash",
+          "state": "error",
+          "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "r-awaiting:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "outcome": "cancelled",
+          "state": "error",
+          "toolCallId": "c13",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{\"pattern\":\"*.ts\"}",
+          "id": "c14",
+          "input": {
+            "pattern": "*.ts"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-no-status"
+            }
+          },
+          "name": "glob",
+          "output": "a.ts",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "a.ts",
+          "id": "r-no-status:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "complete",
+          "toolCallId": "c14",
+          "type": "tool-result"
+        },
+        {
+          "arguments": "{}",
+          "id": "c15",
+          "input": {},
+          "metadata": {
+            "abacus": {
+              "segmentId": "r-bad-args",
+              "status": "success"
+            }
+          },
+          "name": "bash",
+          "state": "complete",
+          "type": "tool-call"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 16,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-tool-result-states",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

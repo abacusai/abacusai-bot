@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "sessionId": "sess-notification",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Continue",
+      "at": 1788256800000
+    },
+    {
+      "type": "notification",
+      "id": "n1",
+      "message": "You are out of premium credits.",
+      "severity": "warning",
+      "actions": [
+        {
+          "type": "switch-model",
+          "model": "abacus/route-llm",
+          "label": "Route LLM"
+        },
+        {
+          "type": "upgrade-abacus",
+          "link": "https://example.com/upgrade"
+        }
+      ],
+      "notificationKey": "credits-out",
+      "at": 1788256801000
+    },
+    {
+      "type": "notification",
+      "id": "n2",
+      "message": "Retried after a network error.",
+      "severity": "info",
+      "at": 1788256802000
+    }
+  ]
+}

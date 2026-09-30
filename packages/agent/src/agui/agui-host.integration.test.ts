@@ -10,7 +10,11 @@ import { ChatClient } from "@tanstack/ai-client";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { AbacusBotSession } from "../session.js";
-import { hostAdapter } from "./__tests__/chat-adapter.js";
+import {
+  BusySendError,
+  failLoudlyWhenBusy,
+  hostAdapter,
+} from "./__tests__/chat-adapter.js";
 import { lines, prepare, stopProvider } from "./__tests__/harness.js";
 import { violations } from "./__tests__/invariants.js";
 import {
@@ -372,7 +376,10 @@ describe("permissions", () => {
     });
   });
 
-  it("expires one permission while the other stays answerable", async () => {
+  // One gate permission only: pi 0.85 runs sibling gates one after another
+  // (agent-loop.js executeToolCallsParallel), so two pending gate cards never
+  // coexist. Independence under expiry is host-scripted.test.ts.
+  it("expires a pending permission: its card clears, the call is denied, the run goes on", async () => {
     const l = await start({
       env: { ABACUSAI_BOT_APPROVAL_TIMEOUT_MS: "150" },
       reply: (index) => (index === 0 ? writeCall("c.txt") : { say: "done" }),
@@ -426,7 +433,7 @@ describe("ChatClient", () => {
     const chat = new ChatClient({
       connection: hostAdapter(l),
       threadId: "t-1",
-      queue: { whenBusy: "drop" },
+      queue: failLoudlyWhenBusy,
       onCustomEvent: (name) => customs.push(name),
     });
 
@@ -468,6 +475,34 @@ describe("ChatClient", () => {
     expect(text).toContain("Wrote it.");
   });
 
+  it("fails loudly on a busy sendMessage: it rejects, and nothing is queued locally or sent", async () => {
+    const l = await start({
+      reply: (index, gates) =>
+        index === 0
+          ? gates.wait("first").then(() => ({ say: "A done" }))
+          : { say: "never" },
+    });
+    const chat = new ChatClient({
+      connection: hostAdapter(l),
+      threadId: "t-1",
+      queue: failLoudlyWhenBusy,
+    });
+    const first = chat.sendMessage("first");
+
+    await l.waitFor(() => l.providerCalls() === 1, "first streaming");
+    const runsBefore = l.custom("run.ack").length;
+
+    await expect(chat.sendMessage("accidental")).rejects.toBeInstanceOf(
+      BusySendError
+    );
+    expect(chat.getQueue()).toEqual([]);
+    expect(l.custom("run.ack")).toHaveLength(runsBefore);
+
+    l.gates.open("first");
+    await first;
+    expect(l.providerCalls()).toBe(1);
+  });
+
   it("a raced run settles on the injected queued terminal before the other run ends", async () => {
     const l = await start({
       reply: (index, gates) =>
@@ -478,12 +513,12 @@ describe("ChatClient", () => {
     const a = new ChatClient({
       connection: hostAdapter(l),
       threadId: "t-1",
-      queue: { whenBusy: "drop" },
+      queue: failLoudlyWhenBusy,
     });
     const b = new ChatClient({
       connection: hostAdapter(l),
       threadId: "t-1",
-      queue: { whenBusy: "drop" },
+      queue: failLoudlyWhenBusy,
     });
 
     const sentA = a.sendMessage("from window A");
@@ -590,7 +625,7 @@ describe("sub-agents", () => {
 });
 
 describe("compat channel loss", () => {
-  it("says so on stdout, fails the open run, and exits 75", async () => {
+  it("says so on stdout, fails the open run, and exits 75 only once those lines are out", async () => {
     const { context, gates, restore } = await prepare({
       name: "loss",
       reply: (_index, g) => g.wait("hold").then(() => ({ say: "x" })),
@@ -600,6 +635,7 @@ describe("compat channel loss", () => {
     const fd3 = new PassThrough();
     let stdout = "";
     const exits: number[] = [];
+    let flush: (() => void) | undefined;
     let host: AguiHost | undefined;
     const compat = streamWriter(fd3, (error) => host?.compatLost(error));
 
@@ -611,6 +647,12 @@ describe("compat channel loss", () => {
       stdin,
       writeStdout: (text) => {
         stdout += text;
+      },
+      // A piped stdout under backpressure: the last write is handed to the
+      // OS only when the test says so.
+      writeStdoutLast: (text, done) => {
+        stdout += text;
+        flush = done;
       },
       exit: (code) => exits.push(code),
       log: () => undefined,
@@ -631,6 +673,9 @@ describe("compat channel loss", () => {
     fd3.emit("error", new Error("EPIPE"));
     const after = events().length;
 
+    // Not before the last lines have left the process.
+    expect(exits).toEqual([]);
+    flush?.();
     expect(exits).toEqual([75]);
     const tail = events().slice(after - 2);
 
@@ -672,5 +717,32 @@ describe("last words", () => {
       type: "RUN_ERROR",
       code: "agent_crashed",
     });
+  });
+
+  it("writes nothing synchronously while earlier stdout is still queued in-process", async () => {
+    const l = await start({
+      reply: (_i, gates) => gates.wait("hold").then(() => ({ say: "x" })),
+    });
+    const written: string[] = [];
+
+    l.send(runInput("r", "hi"));
+    await l.waitFor(hasType("RUN_STARTED"), "started");
+
+    const options = (
+      l.host as unknown as {
+        options: {
+          writeStdoutSync?: (t: string) => void;
+          pendingStdout?: () => number;
+        };
+      }
+    ).options;
+
+    options.writeStdoutSync = (text) => written.push(text);
+    // A pipe under backpressure: a synchronous write would overtake these
+    // bytes, or land inside a half-written line. Main synthesizes instead.
+    options.pendingStdout = () => 4096;
+    l.host.emergencyClose("agent_exit");
+
+    expect(written).toEqual([]);
   });
 });

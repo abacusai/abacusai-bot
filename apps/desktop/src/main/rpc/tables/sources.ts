@@ -34,6 +34,11 @@ export interface TableSources {
   /** Fired after every workspace store write. */
   onWorkspacesChanged(listener: () => void): Unhook;
   getGitState(): GitStateSnapshot;
+  /**
+   * The local workspace path `getGitState` describes (null: none, remote or
+   * pathless). It lags the active workspace while a refresh is in flight.
+   */
+  gitStateWorkspacePath(): string | null;
   /** `~/.abacusai-bot` (or `ABACUSAI_BOT_HOME`): the memory watchers' root. */
   botHome(): string;
 }
