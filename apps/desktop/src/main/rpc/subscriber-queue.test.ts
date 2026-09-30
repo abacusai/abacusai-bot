@@ -59,6 +59,7 @@ describe("delivery classes (A-T9)", () => {
       "browser.events": "lossless-actionable",
       "connectors.events": "lossless-actionable",
       "devices.events": "lossless-actionable",
+      "routines.events": "lossless-actionable",
       "ai.subscribe": "lossless-actionable",
       "ai.joinRun": "lossless-actionable",
       "devices.stream.chunks": "lossless-actionable",

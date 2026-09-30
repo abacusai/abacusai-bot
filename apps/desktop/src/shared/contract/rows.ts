@@ -58,7 +58,17 @@ export type RoutineRow = Omit<RoutineListItem, "runs"> & {
   recentRuns: RoutineRun[];
 };
 
-export type RoutineRunRow = RoutineRunItem & { routineId: string };
+/**
+ * A run session. `attemptId`: the `started`/`start-failed` history entry
+ * with this session (null: none recorded). `result`: the latest follow-up's
+ * result for that attempt (a timeout), else the attempt's own (spec 05
+ * §31.5 f).
+ */
+export type RoutineRunRow = RoutineRunItem & {
+  routineId: string;
+  attemptId: string | null;
+  result: string | null;
+};
 
 export type ArtifactRow = SessionArtifact;
 

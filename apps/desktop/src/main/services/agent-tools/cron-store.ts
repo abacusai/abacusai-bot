@@ -10,21 +10,29 @@ import path from "path";
 
 import { ConflictError } from "#shared/conflict";
 import { EntityNotFoundError } from "#shared/not-found";
+import type { RoutineRun, RoutineRunKind } from "#shared/routines";
 import { matches, nextRun, parseCron } from "#shared/routines/cron";
 
 import { abacusBotHome } from "../../paths";
+import {
+  classifyLegacyRuns,
+  isAttempt,
+  legacyKind,
+  mintAttemptId,
+  type StoredRun,
+} from "./routine-attempts";
 
 // One parser for main and the new renderer (spec 05 §31.7).
 export { CronParseError, nextRun, parseCron } from "#shared/routines/cron";
 
 export type CronTrigger = "schedule" | "webhook" | "manual" | "create";
 
-export interface CronRun {
-  at: number;
-  trigger: CronTrigger;
-  /** Short outcome, capped: "started session x", or why it did not. */
-  result: string;
-}
+/**
+ * One history entry (spec 05 §31.5 f): its id is minted once when recorded
+ * and never recomputed; `result` is the short outcome, capped ("started
+ * session x", or why it did not).
+ */
+export type CronRun = RoutineRun;
 
 export interface CronJob {
   id: string;
@@ -68,7 +76,12 @@ const read = (): CronJob[] => {
       runAt: job.runAt ?? null,
       webhookToken: job.webhookToken ?? null,
       botId: job.botId ?? null,
-      runs: Array.isArray(job.runs) ? job.runs : [],
+      // Entries from before ids are given theirs by migration step 5; one
+      // it has not reached (the step failed) gets the same derived id here,
+      // persisted by the next write.
+      runs: Array.isArray(job.runs)
+        ? classifyLegacyRuns(job.id, job.runs as StoredRun[]).runs
+        : [],
     }));
   } catch {
     return [];
@@ -244,25 +257,86 @@ export const removeJob = (id: string): void => {
   write(remaining);
 };
 
+/** What a `started` attempt announces (`routines.events`, spec 05 §31.5 j). */
+export interface RoutineRunStarted {
+  routineId: string;
+  attemptId: string;
+  trigger: CronTrigger;
+  startedAt: number;
+}
+
+const runStartedListeners = new Set<(event: RoutineRunStarted) => void>();
+
+/** Called after a `started` attempt is persisted. */
+export const onRoutineRunStarted = (
+  listener: (event: RoutineRunStarted) => void
+): (() => void) => {
+  runStartedListeners.add(listener);
+  return () => {
+    runStartedListeners.delete(listener);
+  };
+};
+
+export interface RecordRunDetails {
+  /** Defaults to what `result` says (main's own strings). */
+  kind?: RoutineRunKind;
+  sessionId?: string | null;
+  /** A follow-up's attempt. */
+  attemptId?: string | null;
+}
+
+/**
+ * Records one history entry, newest first, with a freshly minted id.
+ * Returns it, or null for a routine that is gone. An attempt also sets the
+ * routine's `lastRunAt`/`lastResult`; so does a follow-up, as before.
+ */
 export const recordRun = (
   id: string,
   result: string,
-  trigger: CronTrigger = "schedule"
-): void => {
+  trigger: CronTrigger = "schedule",
+  details: RecordRunDetails = {}
+): CronRun | null => {
   const jobs = read();
   const index = jobs.findIndex((job) => job.id === id);
 
-  if (index < 0) return;
+  if (index < 0) return null;
 
   const at = Date.now();
+  const run: CronRun = {
+    id: mintAttemptId(),
+    at,
+    trigger,
+    result: result.slice(0, 300),
+    kind: details.kind ?? legacyKind(result),
+    sessionId: details.sessionId ?? null,
+    attemptId: details.attemptId ?? null,
+  };
   jobs[index] = {
     ...jobs[index],
     lastRunAt: at,
     lastResult: result.slice(0, 500),
-    runs: [{ at, trigger, result: result.slice(0, 300) }, ...jobs[index].runs],
+    runs: [run, ...jobs[index].runs],
   };
   write(jobs);
+  if (run.kind === "started" && isAttempt(run))
+    for (const listener of Array.from(runStartedListeners)) {
+      try {
+        listener({ routineId: id, attemptId: run.id, trigger, startedAt: at });
+      } catch (error) {
+        console.error("[cron-store] run-started listener threw", error);
+      }
+    }
+  return run;
 };
+
+/** The attempt that started `sessionId`, if the routine recorded one. */
+export const attemptOfSession = (
+  routineId: string,
+  sessionId: string
+): CronRun | null =>
+  getJob(routineId)?.runs.find(
+    (run) => isAttempt(run) && run.sessionId === sessionId
+  ) ?? null;
 
 /** Jobs whose schedule matches this minute. Webhook-only jobs never tick. */
 export const dueJobs = (at: Date = new Date()): CronJob[] =>

@@ -185,7 +185,10 @@ import {
   listJobs,
   nextRun,
   onCronStoreWrite,
+  attemptOfSession,
+  onRoutineRunStarted,
   recordRun,
+  type RoutineRunStarted,
   removeJob,
   updateJob,
   type CronJob,
@@ -215,6 +218,10 @@ import {
   renderDocument,
   type RenderDocumentRequest,
 } from "./services/agent-tools/pdf-agent";
+import {
+  ROUTINE_RESULTS,
+  started as startedResult,
+} from "./services/agent-tools/routine-attempts";
 import {
   hasRunInFlight,
   ranOutOfAbacusCredits,
@@ -2116,6 +2123,13 @@ export class ServiceHost {
     return onBotStoreWrite(listener);
   }
 
+  /** A `started` attempt was recorded (`routines.events`, spec 05 §31.5 j). */
+  onRoutineRunStarted(
+    listener: (event: RoutineRunStarted) => void
+  ): () => void {
+    return onRoutineRunStarted(listener);
+  }
+
   onRoutinesWritten(listener: () => void): () => void {
     return onCronStoreWrite(listener);
   }
@@ -3568,7 +3582,8 @@ export class ServiceHost {
     const job = getJob(routineId);
     if (job == null || !job.enabled) return;
     updateJob(routineId, { enabled: false });
-    recordRun(routineId, reason);
+    // Administrative history (spec 05 §31.5 f): no session, no attempt.
+    recordRun(routineId, reason, "schedule", { kind: "paused" });
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -3593,7 +3608,12 @@ export class ServiceHost {
           outcome: "failed",
           reply: text.join("").trim(),
         });
-        recordRun(job.id, "failed: the run was stopped after 30 minutes");
+        // A follow-up of the attempt that started this session.
+        recordRun(job.id, ROUTINE_RESULTS.timedOut, "schedule", {
+          kind: "timed-out",
+          sessionId: run.sessionId,
+          attemptId: attemptOfSession(job.id, run.sessionId)?.id ?? null,
+        });
         this.pauseIfFailingRepeatedly(job.id);
       }
     }
@@ -3874,7 +3894,7 @@ export class ServiceHost {
 
     // One run at a time, or a five-minute routine whose runs take eight stacks.
     if (hasRunInFlight(this.listRoutineRuns(jobId))) {
-      recordRun(jobId, "skipped: the previous run is still going", trigger);
+      recordRun(jobId, ROUTINE_RESULTS.skipped, trigger, { kind: "skipped" });
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
@@ -3909,7 +3929,9 @@ export class ServiceHost {
     );
 
     if (target == null) {
-      recordRun(jobId, "no workspace to run in", trigger);
+      recordRun(jobId, ROUTINE_RESULTS.noWorkspace, trigger, {
+        kind: "no-workspace",
+      });
       this.emitEvent({
         type: "cronjobs-updated",
         emittedAt: new Date().toISOString(),
@@ -3948,8 +3970,9 @@ export class ServiceHost {
       this.agentSessionManagerService.setRunOutcome(session.id, "failed");
       recordRun(
         jobId,
-        `session failed to start: ${started.error ?? "unknown"}`,
-        trigger
+        `${ROUTINE_RESULTS.startFailedPrefix}${started.error ?? "unknown"}`,
+        trigger,
+        { kind: "start-failed", sessionId: session.id }
       );
       this.emitEvent({
         type: "cronjobs-updated",
@@ -3969,7 +3992,10 @@ export class ServiceHost {
       sessionId: session.id,
       message: prompt,
     });
-    recordRun(jobId, `started session ${session.id}`, trigger);
+    recordRun(jobId, startedResult(session.id), trigger, {
+      kind: "started",
+      sessionId: session.id,
+    });
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),

@@ -1,14 +1,23 @@
 /**
  * Spec 05 §31.5's new procedures through the real router and transport:
  * `window.setDensity` (b), `system.loginItem` (c) with its typed Linux
- * refusal, typed routine errors (e).
+ * refusal, typed routine errors (e), `routines.events` (j).
  */
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseCron } from "#shared/routines/cron";
 import { TimeoutError } from "#shared/timeout-error";
 
-import { createLoginItem } from "../services/system/login-item";
+import {
+  createJob,
+  onRoutineRunStarted,
+  recordRun,
+} from "../services/agent-tools/cron-store";
+import { createLoginItem } from "../services/config/login-item";
 import { connectInProcess, fakeDeps, type FakeDepsOverrides } from "./testing";
 
 const connections: Array<{ closeClient(): void; closeServer(): void }> = [];
@@ -144,5 +153,65 @@ describe("typed routine errors (spec 05 §31.5 e)", () => {
       defined: true,
       data: { ms: 90_000 },
     });
+  });
+});
+
+// R5-T26 (main side): the routine start notice.
+describe("routines.events (spec 05 §31.5 j)", () => {
+  it("publishes run-started for a started attempt only, with no snapshot", async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "routines-events-"));
+    process.env.ABACUSAI_BOT_HOME = home;
+    try {
+      const job = createJob({ prompt: "p", schedule: "0 9 * * *" });
+      // An earlier start: a new subscription never replays it.
+      recordRun(job.id, "started session s-0", "manual", {
+        kind: "started",
+        sessionId: "s-0",
+      });
+      let attached!: () => void;
+      const ready = new Promise<void>((resolve) => {
+        attached = resolve;
+      });
+      const client = connect({
+        serviceHost: {
+          onRoutineRunStarted: (
+            listener: Parameters<typeof onRoutineRunStarted>[0]
+          ) => {
+            const off = onRoutineRunStarted(listener);
+            attached();
+            return off;
+          },
+        },
+      });
+      const events = await client.routines.events();
+      const first = events.next();
+      await ready;
+      recordRun(
+        job.id,
+        "skipped: the previous run is still going",
+        "schedule",
+        {
+          kind: "skipped",
+        }
+      );
+      const attempt = recordRun(job.id, "started session s-1", "webhook", {
+        kind: "started",
+        sessionId: "s-1",
+      });
+      await expect(first).resolves.toEqual({
+        done: false,
+        value: {
+          type: "run-started",
+          routineId: job.id,
+          attemptId: attempt!.id,
+          trigger: "webhook",
+          startedAt: attempt!.at,
+        },
+      });
+      await events.return?.();
+    } finally {
+      delete process.env.ABACUSAI_BOT_HOME;
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   });
 });

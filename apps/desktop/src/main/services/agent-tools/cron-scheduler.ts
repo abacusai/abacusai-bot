@@ -64,7 +64,9 @@ export class CronScheduler {
         // One failing job must not stop the others from firing.
         recordRun(
           job.id,
-          `failed to start: ${err instanceof Error ? err.message : String(err)}`
+          `failed to start: ${err instanceof Error ? err.message : String(err)}`,
+          "schedule",
+          { kind: "start-failed" }
         );
       }
     }

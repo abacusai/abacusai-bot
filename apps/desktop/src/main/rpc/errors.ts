@@ -15,7 +15,7 @@ import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 import { CronParseError } from "#shared/routines/cron";
 import { TimeoutError } from "#shared/timeout-error";
 
-import { UnsupportedPlatformError } from "../services/system/login-item";
+import { UnsupportedPlatformError } from "../services/config/login-item";
 
 export type RpcError = ORPCError<string, unknown>;
 

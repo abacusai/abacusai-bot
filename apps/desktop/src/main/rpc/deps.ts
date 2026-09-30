@@ -34,7 +34,7 @@ import type { UpdateStatus } from "#shared/update";
 
 import type { HostOperations } from "../handler";
 import type { ServiceHost } from "../service-host";
-import type { LoginItem } from "../services/system/login-item";
+import type { LoginItem } from "../services/config/login-item";
 import type { AguiSource, ThreadReader } from "./ai/source";
 import type { MainEventBus } from "./event-bus";
 import type { ReadinessReport } from "./readiness";
