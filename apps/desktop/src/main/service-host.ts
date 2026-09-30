@@ -546,7 +546,7 @@ export class ServiceHost {
     readTranscript: (sessionId) =>
       syncLogFor(sessionId, {
         readV1: (id) => this.transcriptService.read(id),
-        readThread: (id) => this.threadStore.readCurrentFile(id),
+        readThread: (id) => this.threadStore.readAguiFile(id),
       }),
     clientVersion: app.getVersion(),
   });
@@ -3956,6 +3956,11 @@ export class ServiceHost {
         outcome: session.runOutcome ?? "completed",
         trigger: session.runTrigger,
       }));
+  }
+
+  /** History only: run-row joins must not compute cron schedules. */
+  listRoutineHistories(): Array<Pick<Routine, "id" | "runs">> {
+    return listJobs().map(({ id, runs }) => ({ id, runs }));
   }
 
   /** The routine list, enriched with what the UI shows per row. */

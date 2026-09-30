@@ -391,6 +391,21 @@ export class ThreadStore {
     return clearMarkerPath(path.join(this.home(), THREADS_DIR_NAME), sessionId);
   }
 
+  /** Debug sync reads only an existing AG-UI twin, without converting v1. */
+  readAguiFile(sessionId: string): ThreadFileV2 | null {
+    const file = this.threadPath(sessionId);
+    if (file == null) return null;
+    const twin = twinOf(this.held.read(file));
+    if (twin.status !== "ok" || twin.source.kind !== "agui") return null;
+    const marker = this.readMarker(sessionId);
+    if (
+      marker != null &&
+      (marker.token === "" || twin.source.afterClear !== marker.token)
+    )
+      return null;
+    return twin.file;
+  }
+
   /** `ai.hydrate`'s messages (`ThreadReader`). */
   async readCurrent(sessionId: string): Promise<UIMessage[]> {
     return this.readCurrentFile(sessionId)?.messages ?? [];
