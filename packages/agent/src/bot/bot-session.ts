@@ -33,6 +33,7 @@ import {
   PROVIDER_API_KEY_ENV,
 } from "../config.js";
 import { setCurrentMode } from "../current-mode.js";
+import { tagEvent, type EventMeta } from "../event-meta.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import budgets from "../extensions/budgets.js";
 import compactionPruner from "../extensions/compaction-pruner.js";
@@ -66,6 +67,7 @@ import {
   AgentStatus,
   type AgentEvent,
   type DesktopEvent,
+  type InternalAgentEvent,
   type PermissionDecision,
   type PermissionRequest,
   type ToolRequest,
@@ -86,11 +88,13 @@ import {
   type ReplyLanguageMismatch,
 } from "../reply-language.js";
 import { conversationSessionManager } from "../session-file.js";
+import type { TurnHandle } from "../session.js";
 import {
   mcpPrompt,
   mcpRosterFingerprint,
   reserveContextHeadroom,
 } from "../session.js";
+import { ToolCallStream } from "../tool-call-stream.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "../tools-arrived.js";
 import { turnUsage, type TurnUsage } from "../turn-usage.js";
@@ -127,6 +131,8 @@ export interface BotSessionOptions {
   model?: string;
   mode?: string;
   emit: (event: DesktopEvent) => void;
+  /** Facts for the AG-UI emitter only; see SessionOptions.emitInternal. */
+  emitInternal?: (event: InternalAgentEvent) => void;
 }
 
 interface PendingPermission {
@@ -212,6 +218,10 @@ export class BotSession {
   private rawStreamed = "";
   private currentMessageId: string | null = null;
   private messageCounter = 0;
+  /** Streamed tool calls, for the AG-UI emitter only. */
+  private readonly toolCallStream = new ToolCallStream(
+    (name) => TOOL_NAME_ALIASES[name] ?? name
+  );
   private readonly toolInputs = new Map<string, Record<string, unknown>>();
   private readonly heartbeat = new ToolHeartbeat((event) =>
     this.options.emit(event)
@@ -498,17 +508,21 @@ export class BotSession {
 
   // ---------------------------------------------------------------- commands
 
-  async send(text: string): Promise<void> {
+  async send(text: string, turn?: TurnHandle): Promise<void> {
     const session = this.requireSession();
 
     // A bot spawned while the account was signed out has no model. The key
     // may have arrived since; read it and pick a model before prompting, or
     // pi answers with its own /login hint and that reaches the user's phone.
     if (!(await this.ensureUsableModel())) {
-      this.emitAgentEvent({
-        type: "error",
-        error: { message: NO_MODEL_CONFIGURED, code: "model_unavailable" },
-      });
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: { message: NO_MODEL_CONFIGURED, code: "model_unavailable" },
+        },
+        { origin: "turn" }
+      );
+      turn?.settled?.();
 
       return;
     }
@@ -535,15 +549,21 @@ export class BotSession {
       await session.prompt(text);
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
+      // The user's reply is over; housekeeping below is not part of it.
+      turn?.settled?.();
       await this.runMemoryMaintenance();
     } catch (error) {
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: describe(error),
-          ...this.upgradeActionsFor(describe(error)),
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: describe(error),
+            ...this.upgradeActionsFor(describe(error)),
+          },
         },
-      });
+        { origin: "turn" }
+      );
+      turn?.settled?.();
     }
   }
 
@@ -593,6 +613,7 @@ export class BotSession {
     if (session == null) return;
 
     this.hiddenTurn = true;
+    this.emitInternal({ type: "hidden_turn", phase: "start", customType });
 
     try {
       await session.sendCustomMessage(
@@ -603,6 +624,7 @@ export class BotSession {
       // Housekeeping must never surface as a failed reply.
     } finally {
       this.hiddenTurn = false;
+      this.emitInternal({ type: "hidden_turn", phase: "end", customType });
     }
   }
 
@@ -718,14 +740,17 @@ export class BotSession {
     try {
       await session.compact();
     } catch {
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message:
-            "This conversation is too long for the model. Start a new chat, or switch to a model with a larger context.",
-          code: "turn_failed",
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message:
+              "This conversation is too long for the model. Start a new chat, or switch to a model with a larger context.",
+            code: "turn_failed",
+          },
         },
-      });
+        { origin: "turn" }
+      );
       this.finishTurn();
 
       return;
@@ -758,14 +783,17 @@ export class BotSession {
 
     if (typeof message !== "string" || message.length === 0) return;
 
-    this.emitAgentEvent({
-      type: "error",
-      error: {
-        message: compactFailure(message),
-        code: "turn_failed",
-        ...this.upgradeActionsFor(message),
+    this.emitAgentEvent(
+      {
+        type: "error",
+        error: {
+          message: compactFailure(message),
+          code: "turn_failed",
+          ...this.upgradeActionsFor(message),
+        },
       },
-    });
+      { origin: "turn" }
+    );
   }
 
   /**
@@ -960,6 +988,11 @@ export class BotSession {
     });
   }
 
+  /** Whether an answer for `permissionId` would release a waiter now. */
+  hasPendingPermission(permissionId: string): boolean {
+    return this.pending.has(permissionId);
+  }
+
   respondPermission(permissionId: string, decision: PermissionDecision): void {
     const pending = this.pending.get(permissionId);
 
@@ -1108,6 +1141,14 @@ export class BotSession {
           this.rawStreamed = "";
           this.sanitizer.reset();
           this.currentMessageId = `msg-${++this.messageCounter}`;
+          this.toolCallStream.reset();
+          if (!this.hiddenTurn) {
+            this.emitInternal({
+              type: "message_open",
+              key: this.currentMessageId,
+              messageId: this.aguiMessageId(event.message),
+            });
+          }
         }
 
         return;
@@ -1117,6 +1158,16 @@ export class BotSession {
           type: string;
           delta?: string;
         };
+
+        if (stream.type.startsWith("toolcall_")) {
+          const internals = this.toolCallStream.handle(stream);
+
+          if (!this.hiddenTurn) {
+            for (const internal of internals) this.emitInternal(internal);
+          }
+
+          return;
+        }
 
         if (stream.type === "text_delta" && stream.delta) {
           this.rawStreamed += stream.delta;
@@ -1201,6 +1252,17 @@ export class BotSession {
             // new is owed.
             this.sanitizer.reset();
           }
+        }
+
+        if (!this.hiddenTurn && this.currentMessageId != null) {
+          const stopReason = (event.message as { stopReason?: unknown })
+            .stopReason;
+
+          this.emitInternal({
+            type: "message_close",
+            key: this.currentMessageId,
+            ...(typeof stopReason === "string" ? { stopReason } : {}),
+          });
         }
 
         this.rawStreamed = "";
@@ -1386,6 +1448,16 @@ export class BotSession {
         event.input as Record<string, unknown>
       );
 
+      if (!this.hiddenTurn) {
+        this.emitInternal({
+          type: "tool_call_start",
+          toolCallId: event.toolCallId,
+          toolName: tool.name,
+          rawName: event.toolName,
+          input: tool.input,
+        });
+      }
+
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
@@ -1401,9 +1473,15 @@ export class BotSession {
 
       if (gate.kind === "allow") return;
 
-      if (gate.kind === "refuse") return { block: true, reason: gate.reason };
+      if (gate.kind === "refuse") {
+        this.noteBlocked(event.toolCallId, "refused");
+
+        return { block: true, reason: gate.reason };
+      }
 
       if (!process.stdout.writable || process.stdout.destroyed) {
+        this.noteBlocked(event.toolCallId, "rejected");
+
         return {
           block: true,
           reason:
@@ -1460,7 +1538,13 @@ export class BotSession {
         });
       });
 
-      return this.applyDecision(decision, tool, gate.request);
+      const verdict = this.applyDecision(decision, tool, gate.request);
+
+      if (verdict?.block === true) {
+        this.noteBlocked(event.toolCallId, "rejected");
+      }
+
+      return verdict;
     });
   };
 
@@ -1604,8 +1688,30 @@ export class BotSession {
     return this.currentMessageId;
   }
 
-  private emitAgentEvent(event: AgentEvent): void {
+  private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {
+    if (meta != null) tagEvent(event, meta);
     this.options.emit({ type: "event", event });
+  }
+
+  /** A fact for the AG-UI emitter only; never a legacy line. */
+  private emitInternal(event: InternalAgentEvent): void {
+    this.options.emitInternal?.(event);
+  }
+
+  private noteBlocked(toolCallId: string, cause: "rejected" | "refused"): void {
+    if (!this.hiddenTurn) {
+      this.emitInternal({ type: "tool_blocked", toolCallId, cause });
+    }
+  }
+
+  /** See AbacusBotSession.aguiMessageId. */
+  private aguiMessageId(message: unknown): string {
+    const timestamp = (message as { timestamp?: unknown }).timestamp;
+    const base = this.session?.sessionId ?? "session";
+
+    return typeof timestamp === "number"
+      ? `${base}:${timestamp}`
+      : `${base}:${this.currentMessageId ?? "msg"}`;
   }
 
   private requireSession(): AgentSession {

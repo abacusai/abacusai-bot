@@ -6,6 +6,7 @@
 import { Type } from "typebox";
 
 import { runDocumentTask, type DocumentContext } from "./document-task.js";
+import { scopeEmit, tagEvent } from "./event-meta.js";
 import type { AgentEvent } from "./protocol.js";
 import { resolveInWorkspace } from "./workspace-path.js";
 
@@ -70,7 +71,7 @@ export function buildDocumentTool(
           "Where to write the PDF. Relative paths resolve against the workspace.",
       }),
     }),
-    execute: async (_toolCallId, params, signal) => {
+    execute: async (toolCallId, params, signal) => {
       // Stop can land before the tool starts; a sub-session would outlive the
       // turn.
       if (signal?.aborted) {
@@ -109,12 +110,19 @@ export function buildDocumentTool(
       }
 
       const subtaskId = `document-${Date.now()}-${++counter}`;
-      emit({
-        type: "subtask_start",
-        id: subtaskId,
-        description: brief.length > 120 ? `${brief.slice(0, 117)}…` : brief,
-        kind: "delegate",
-      });
+      emit(
+        tagEvent(
+          {
+            type: "subtask_start",
+            id: subtaskId,
+            description: brief.length > 120 ? `${brief.slice(0, 117)}…` : brief,
+            kind: "delegate",
+          },
+          { parentToolCallId: toolCallId }
+        )
+      );
+      // Everything the sub-agent does is tagged as its own (AG-UI only).
+      const childEmit = scopeEmit(emit, subtaskId);
 
       let result;
       let status: "completed" | "failed" = "failed";
@@ -123,7 +131,7 @@ export function buildDocumentTool(
           context,
           brief,
           outputPath,
-          emit,
+          childEmit,
           signal
         );
         // Printing is the deliverable, whether or not the run ran out of turns.
@@ -134,7 +142,7 @@ export function buildDocumentTool(
             : "failed";
 
         if (result.text.trim().length > 0)
-          emit({ type: "text_delta", content: result.text });
+          childEmit({ type: "text_delta", content: result.text });
       } finally {
         emit({ type: "subtask_end", id: subtaskId, status });
       }

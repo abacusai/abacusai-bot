@@ -1,0 +1,22 @@
+{"type":"event","event":{"type":"mode_changed","mode":"DEFAULT","source":"startup"}}
+{"type":"ready","model":"fake/fake-1","mode":"DEFAULT","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"status_changed","status":"submitted"}}
+{"type":"event","event":{"type":"status_changed","status":"streaming"}}
+{"type":"event","event":{"type":"status_changed","status":"executing-tool"}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"call-0-0","name":"write","type":"write","input":{"path":"one.txt","content":"1\n"},"args":{"path":"one.txt","content":"1\n"}}}}
+{"type":"permission_needed","permissionId":"perm-1","request":{"type":"write_file","tool":{"id":"call-0-0","name":"write","type":"write","input":{"path":"one.txt","content":"1\n"},"args":{"path":"one.txt","content":"1\n"}},"displayName":"Create file","filePath":"one.txt","originalContent":"","content":"1\n","isNewFile":true}}
+{"type":"event","event":{"type":"status_changed","status":"waiting-for-tool-permission"}}
+{"type":"queue_updated","messages":[],"dequeued":null}
+{"type":"event","event":{"type":"status_changed","status":"executing-tool"}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"call-0-1","name":"write","type":"write","input":{"path":"two.txt","content":"2\n"},"args":{"path":"two.txt","content":"2\n"}}}}
+{"type":"permission_needed","permissionId":"perm-2","request":{"type":"write_file","tool":{"id":"call-0-1","name":"write","type":"write","input":{"path":"two.txt","content":"2\n"},"args":{"path":"two.txt","content":"2\n"}},"displayName":"Create file","filePath":"two.txt","originalContent":"","content":"2\n","isNewFile":true}}
+{"type":"event","event":{"type":"status_changed","status":"waiting-for-tool-permission"}}
+{"type":"queue_updated","messages":[],"dequeued":null}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"call-0-1","name":"write","type":"write","input":{"path":"two.txt","content":"2\n"},"args":{"path":"two.txt","content":"2\n"}},"result":{"id":"call-0-1","content":"The user rejected this tool call.","rejected":true}}}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"call-0-0","name":"write","type":"write","input":{"path":"one.txt","content":"1\n"},"args":{"path":"one.txt","content":"1\n"}},"result":{"id":"call-0-0","content":"Successfully wrote to one.txt","rejected":false}}}
+{"type":"event","event":{"type":"text_delta","content":"Both done.","messageId":"msg-2"}}
+{"type":"event","event":{"type":"turn_complete","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"}}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}

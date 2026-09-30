@@ -1,0 +1,24 @@
+{"type":"CUSTOM","name":"session.ready","value":{"model":"fake/fake-1","mode":"YOLO","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>","incarnation":"<incarnation>"}}
+{"type":"STATE_SNAPSHOT","snapshot":{"mode":"YOLO","modeSource":"startup","model":"fake/fake-1","incarnation":"<incarnation>","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}}
+{"type":"CUSTOM","name":"skills.loaded","value":{"skills":[]}}
+{"type":"CUSTOM","name":"mcp.servers","value":{"servers":[]}}
+{"type":"RUN_STARTED","threadId":"t-1","runId":"srv-<1>","metadata":{"abacus":{"serverInitiated":true}}}
+{"type":"TEXT_MESSAGE_START","messageId":"srv-<1>:user","role":"user"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"run it"}
+{"type":"TEXT_MESSAGE_END","messageId":"srv-<1>:user"}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"submitted"}}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}
+{"type":"TEXT_MESSAGE_START","messageId":"<MSG_2>","role":"assistant"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_2>","delta":"Let me check."}
+{"type":"TOOL_CALL_START","toolCallId":"call-0-0","toolCallName":"bash","parentMessageId":"<MSG_2>","metadata":{"abacus":{"rawName":"bash"}}}
+{"type":"TOOL_CALL_ARGS","toolCallId":"call-0-0","delta":"{\"command\":\"echo golden\"}"}
+{"type":"TOOL_CALL_END","toolCallId":"call-0-0","metadata":{"tanstack":{"input":{"command":"echo golden"}}}}
+{"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"executing-tool"}}
+{"type":"TOOL_CALL_RESULT","messageId":"call-0-0:result","toolCallId":"call-0-0","role":"tool","content":"{\"text\":\"golden\\n\",\"rejected\":false,\"formatted\":\"```console\\ngolden\\n\\n```\"}"}
+{"type":"TEXT_MESSAGE_START","messageId":"<MSG_3>","role":"assistant"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_3>","delta":"All good."}
+{"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}
+{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"success"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"},"stopReason":"stop","serverInitiated":true}}}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}

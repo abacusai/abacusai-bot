@@ -1,0 +1,8 @@
+{"type":"CUSTOM","name":"session.ready","value":{"model":"fake/fake-1","mode":"DEFAULT","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>","incarnation":"<incarnation>"}}
+{"type":"STATE_SNAPSHOT","snapshot":{"mode":"DEFAULT","modeSource":"startup","model":"fake/fake-1","incarnation":"<incarnation>","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}}
+{"type":"CUSTOM","name":"skills.loaded","value":{"skills":[]}}
+{"type":"CUSTOM","name":"mcp.servers","value":{"servers":[]}}
+{"type":"CUSTOM","name":"agent.error","value":{"message":"A message could not be read by the agent and was not sent. Try sending it again.","code":"malformed_command"}}
+{"type":"CUSTOM","name":"agent.notification","value":{"severity":"warning","message":"\"sideways\" is not a mode. Use one of: default, acceptedits, plan, auto, yolo. Staying in default."}}
+{"type":"STATE_DELTA","delta":[{"op":"replace","path":"/mode","value":"DEFAULT"},{"op":"replace","path":"/modeSource","value":"user"}]}
+{"type":"CUSTOM","name":"agent.error","value":{"message":"Model \"nope/missing\" not found. Use --list-models to see available models.","code":"model_unavailable"}}

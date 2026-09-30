@@ -1,13 +1,30 @@
 #!/usr/bin/env node
 /**
  * The agent as a process, one per session. cwd is the workspace; stdio is the
- * NDJSON protocol (see host.ts). Runs standalone too:
+ * protocol. `--wire ndjson` (the default) is the NDJSON protocol (host.ts);
+ * `--wire agui` speaks AG-UI on stdout with the NDJSON lines on a
+ * compatibility channel (agui/host.ts). Runs standalone too:
  *   echo '{"type":"send","message":"list the files here"}' | node dist/main.js
  */
+import * as fs from "node:fs";
+
+import {
+  inlineWriter,
+  noCompat,
+  openFdWriter,
+  preflightCompat,
+  type CompatWriter,
+} from "./agui/channel.js";
+import { helloEvent, serialize } from "./agui/event.js";
+import { AguiHost } from "./agui/host.js";
+import { newIncarnation } from "./agui/ids.js";
 import { useBundledTools } from "./bundled-tools.js";
 import { applyStoredApiKeys } from "./config.js";
 import { NdjsonHost } from "./host.js";
 import { sandboxAvailability } from "./sandbox/index.js";
+
+/** The AG-UI host, once there is one: its open run gets last words at exit. */
+let aguiHost: AguiHost | undefined;
 
 /**
  * A spawn whose binary is missing reports it on the child's 'error' event; a
@@ -25,7 +42,12 @@ process.on("uncaughtException", (error: Error) => {
     return;
   }
   console.error("[agent] uncaught exception:", error.stack ?? error.message);
+  aguiHost?.emergencyClose("agent_crashed");
   process.exit(1);
+});
+
+process.on("exit", () => {
+  aguiHost?.emergencyClose("agent_exit");
 });
 
 function readFlag(argv: readonly string[], name: string): string | undefined {
@@ -57,14 +79,67 @@ async function main(): Promise<void> {
 
   const model = readFlag(argv, "--model");
   const mode = readFlag(argv, "--permission-mode");
+  const wire = readFlag(argv, "--wire") ?? "ndjson";
 
-  const host = new NdjsonHost({
+  if (wire === "ndjson") {
+    const host = new NdjsonHost({
+      cwd: process.cwd(),
+      ...(model != null ? { model } : {}),
+      ...(mode != null ? { mode } : {}),
+    });
+
+    await host.run();
+
+    return;
+  }
+
+  if (wire !== "agui") {
+    throw new Error(`unknown --wire ${wire}; expected ndjson or agui`);
+  }
+
+  const threadId = readFlag(argv, "--thread-id");
+
+  if (threadId == null || threadId.length === 0) {
+    throw new Error("--wire agui needs --thread-id");
+  }
+
+  const compatFlag = readFlag(argv, "--compat-fd");
+  const compatFd = compatFlag != null ? Number(compatFlag) : undefined;
+
+  if (compatFd != null && !Number.isInteger(compatFd)) {
+    throw new Error(
+      `--compat-fd must be a descriptor number, not ${compatFlag}`
+    );
+  }
+
+  // The handshake (spec §2.4): negotiated synchronously, before the session
+  // exists and before either writer is enabled; `wire.hello` is stdout line 1.
+  const incarnation = newIncarnation();
+  const negotiated = preflightCompat(compatFd, incarnation);
+
+  fs.writeSync(1, serialize(helloEvent(negotiated, incarnation)));
+
+  const writeStdout = (text: string): void => {
+    process.stdout.write(text);
+  };
+  const compat: CompatWriter =
+    negotiated === "fd" && compatFd != null
+      ? openFdWriter(compatFd, (error) => aguiHost?.compatLost(error))
+      : negotiated === "inline"
+        ? inlineWriter(writeStdout)
+        : noCompat;
+
+  aguiHost = new AguiHost({
     cwd: process.cwd(),
     ...(model != null ? { model } : {}),
     ...(mode != null ? { mode } : {}),
+    threadId,
+    incarnation,
+    compat,
+    writeStdout,
   });
 
-  await host.run();
+  await aguiHost.run();
 }
 
 main().catch((error: unknown) => {

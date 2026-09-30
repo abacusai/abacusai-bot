@@ -1,0 +1,16 @@
+{"type":"event","event":{"type":"mode_changed","mode":"DEFAULT","source":"startup"}}
+{"type":"ready","model":"fake/fake-1","mode":"DEFAULT","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"status_changed","status":"submitted"}}
+{"type":"event","event":{"type":"status_changed","status":"streaming"}}
+{"type":"event","event":{"type":"status_changed","status":"executing-tool"}}
+{"type":"event","event":{"type":"tool_execution_start","tool":{"id":"call-0-0","name":"write","type":"write","input":{"path":"a.txt","content":"hello\n"},"args":{"path":"a.txt","content":"hello\n"}}}}
+{"type":"permission_needed","permissionId":"perm-1","request":{"type":"write_file","tool":{"id":"call-0-0","name":"write","type":"write","input":{"path":"a.txt","content":"hello\n"},"args":{"path":"a.txt","content":"hello\n"}},"displayName":"Create file","filePath":"a.txt","originalContent":"","content":"hello\n","isNewFile":true}}
+{"type":"event","event":{"type":"status_changed","status":"waiting-for-tool-permission"}}
+{"type":"queue_updated","messages":[],"dequeued":null}
+{"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"call-0-0","name":"write","type":"write","input":{"path":"a.txt","content":"hello\n"},"args":{"path":"a.txt","content":"hello\n"}},"result":{"id":"call-0-0","content":"Successfully wrote to a.txt","rejected":false}}}
+{"type":"event","event":{"type":"text_delta","content":"Wrote it.","messageId":"msg-2"}}
+{"type":"event","event":{"type":"turn_complete","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"}}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}

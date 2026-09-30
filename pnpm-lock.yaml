@@ -539,12 +539,21 @@ importers:
       '@abacus-ai/test-support':
         specifier: workspace:*
         version: link:../test-support
+      '@ag-ui/core':
+        specifier: 1.0.0
+        version: 1.0.0(zod@4.4.3)
       '@anthropic-ai/sdk':
         specifier: ^0.117.1
         version: 0.117.1(zod@4.4.3)
       '@earendil-works/pi-coding-agent':
         specifier: ^0.85.1
         version: 0.85.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.4.3))(supports-color@7.2.0)(ws@8.21.3)(zod@4.4.3)
+      '@tanstack/ai':
+        specifier: ~0.63.0
+        version: 0.63.0(@opentelemetry/api@1.9.0)(zod@4.4.3)
+      '@tanstack/ai-client':
+        specifier: ~0.36.0
+        version: 0.36.0(@opentelemetry/api@1.9.0)(zod@4.4.3)
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
@@ -3082,11 +3091,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
@@ -6220,6 +6224,10 @@ snapshots:
     optionalDependencies:
       zod: 3.25.76
 
+  '@ag-ui/core@1.0.0(zod@4.4.3)':
+    optionalDependencies:
+      zod: 4.4.3
+
   '@anthropic-ai/sandbox-runtime@0.0.76':
     dependencies:
       '@pondwader/socks5-server': 1.0.10
@@ -7248,7 +7256,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.3)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -7270,7 +7278,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.3)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -7836,6 +7844,15 @@ snapshots:
       - '@opentelemetry/api'
       - zod
 
+  '@tanstack/ai-client@0.36.0(@opentelemetry/api@1.9.0)(zod@4.4.3)':
+    dependencies:
+      '@tanstack/ai': 0.63.0(@opentelemetry/api@1.9.0)(zod@4.4.3)
+      '@tanstack/ai-event-client': 0.13.0
+      '@tanstack/ai-utils': 0.4.1
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - zod
+
   '@tanstack/ai-event-client@0.13.0':
     dependencies:
       '@tanstack/devtools-event-client': 0.4.4
@@ -7845,6 +7862,18 @@ snapshots:
   '@tanstack/ai@0.63.0(@opentelemetry/api@1.9.0)(zod@3.25.76)':
     dependencies:
       '@ag-ui/core': 1.0.0(zod@3.25.76)
+      '@standard-schema/spec': 1.1.0
+      '@tanstack/ai-event-client': 0.13.0
+      '@tanstack/ai-utils': 0.4.1
+      partial-json: 0.1.7
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.0
+    transitivePeerDependencies:
+      - zod
+
+  '@tanstack/ai@0.63.0(@opentelemetry/api@1.9.0)(zod@4.4.3)':
+    dependencies:
+      '@ag-ui/core': 1.0.0(zod@4.4.3)
       '@standard-schema/spec': 1.1.0
       '@tanstack/ai-event-client': 0.13.0
       '@tanstack/ai-utils': 0.4.1
@@ -8538,9 +8567,7 @@ snapshots:
     optionalDependencies:
       ajv: 8.20.0
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
-      ajv: 8.20.0
+  ajv-formats@3.0.1: {}
 
   ajv@8.20.0:
     dependencies:

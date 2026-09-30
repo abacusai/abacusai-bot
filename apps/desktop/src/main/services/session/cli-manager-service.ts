@@ -43,11 +43,36 @@ const MCP_LOG_TAIL_PER_SERVER = 200;
 const shouldRunCliInDebugMode = (): boolean =>
   process.env.ABACUSAI_BOT_AGENT_DEBUG === "1";
 
+/**
+ * Which protocol a runtime's stdout speaks. `ndjson` is today's agent and the
+ * default. `agui` (spec 00-agent-agui) puts AG-UI on stdout and today's exact
+ * NDJSON on a compatibility channel, fd 3 or RS-prefixed lines on stdout, which
+ * feeds the same pipeline below; nothing selects it until the new renderer does.
+ */
+export type AgentWire = "ndjson" | "agui";
+
+/** The inline compat line prefix under `--wire agui` (agent: agui/channel.ts). */
+const INLINE_COMPAT_PREFIX = "\u001e";
+
+/** Where a compat line came from, so a reply can be bound to that exact runtime. */
+export type NdjsonOrigin = {
+  wire: AgentWire;
+  /** The spawned child: identity of the runtime that produced the event. */
+  runtime: object;
+};
+
 type CliRuntime = {
   workspaceId: string;
   sessionId: string;
   process: ChildProcessWithoutNullStreams;
   state: AgentSessionSnapshot;
+  wire: AgentWire;
+  /** agui: how compat arrives, from `wire.hello` (stdout line 1). */
+  compatMode: "pending" | "fd" | "inline" | "none";
+  /** agui: the fd-3 line buffer. */
+  compatBuffer: string;
+  /** agui: the one `compat.hello` preamble on fd 3 has been discarded. */
+  compatPreambleSeen: boolean;
   stdoutBuffer: string;
   stderrBuffer: string;
   /** Last known runtime state of each MCP server (keyed by server id). */
@@ -97,7 +122,16 @@ type AgentManagerServiceOptions = {
   emitNdjson: (
     workspaceId: string,
     sessionId: string,
-    event: DesktopEvent
+    event: DesktopEvent,
+    origin?: NdjsonOrigin
+  ) => void;
+  /** Which wire to spawn a session with. Absent: `ndjson`, as always. */
+  resolveWire?: (sessionId: string) => AgentWire;
+  /** One AG-UI event from an agui runtime's stdout (the renderer's relay). */
+  emitAgui?: (
+    workspaceId: string,
+    sessionId: string,
+    event: Record<string, unknown>
   ) => void;
   emitSystemReady: (workspaceId: string, sessionId: string) => void;
   emitSessionClosed: (workspaceId: string, sessionId: string) => void;
@@ -530,6 +564,18 @@ export class AgentManagerService {
     if (request.model != null && request.model.length > 0)
       spawnArgs.push("--model", request.model);
     if (request.mode != null) spawnArgs.push("--permission-mode", request.mode);
+    const wire: AgentWire =
+      this.options.resolveWire?.(request.sessionId) ?? "ndjson";
+    if (wire === "agui") {
+      spawnArgs.push(
+        "--wire",
+        "agui",
+        "--thread-id",
+        request.sessionId,
+        "--compat-fd",
+        "3"
+      );
+    }
     // See shouldRunCliInDebugMode.
     if (shouldRunCliInDebugMode()) spawnArgs.push("--debug");
     const command = `${artifact.execPath} ${spawnArgs.join(" ")}`;
@@ -539,8 +585,12 @@ export class AgentManagerService {
       child = spawn(artifact.execPath, spawnArgs, {
         cwd: workspacePath,
         env,
-        stdio: ["pipe", "pipe", "pipe"],
-      });
+        // agui: fd 3 is the compatibility channel the agent negotiates.
+        stdio:
+          wire === "agui"
+            ? ["pipe", "pipe", "pipe", "pipe"]
+            : ["pipe", "pipe", "pipe"],
+      }) as ChildProcessWithoutNullStreams;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       // A synchronous spawn() throw must reach the dump with the interpreter
@@ -577,6 +627,10 @@ export class AgentManagerService {
       workspaceId: request.workspaceId,
       sessionId: request.sessionId,
       process: child,
+      wire,
+      compatMode: wire === "agui" ? "pending" : "none",
+      compatBuffer: "",
+      compatPreambleSeen: false,
       stdoutBuffer: "",
       stderrBuffer: "",
       mcpServers: new Map(),
@@ -642,7 +696,29 @@ export class AgentManagerService {
         return;
       }
       const data = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-      this.handleStdout(request.sessionId, data, resolveStartup);
+      if (wire === "agui") {
+        this.handleAguiStdout(request.sessionId, data, resolveStartup);
+      } else {
+        this.handleStdout(request.sessionId, data, resolveStartup);
+      }
+    });
+
+    const compatPipe = (child.stdio as unknown[])[3] as
+      | NodeJS.ReadableStream
+      | null
+      | undefined;
+    // An EPIPE on the compat pipe must not become an uncaught exception.
+    (
+      compatPipe as {
+        on?: (event: string, listener: () => void) => void;
+      } | null
+    )?.on?.("error", () => {});
+    compatPipe?.on("data", (chunk: Buffer | string) => {
+      if (!ownsSession()) {
+        return;
+      }
+      const data = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+      this.handleCompatFd(request.sessionId, data, resolveStartup);
     });
 
     child.stderr.on("data", (chunk: Buffer | string) => {
@@ -744,6 +820,22 @@ export class AgentManagerService {
       created: true,
       state: { ...runtime.state },
     };
+  }
+
+  /**
+   * `sendCommand`, but only to the runtime that `origin` names: an answer to
+   * something a runtime asked (browser auto-allow) must never reach a
+   * replacement process that happens to own the session id now.
+   */
+  sendCommandToRuntime(
+    origin: NdjsonOrigin,
+    workspaceId: string,
+    sessionId: string,
+    command: unknown
+  ): boolean {
+    if (this.runtimes.get(sessionId)?.process !== origin.runtime) return false;
+
+    return this.sendCommand(workspaceId, sessionId, command);
   }
 
   sendCommand(
@@ -871,9 +963,103 @@ export class AgentManagerService {
     }
 
     for (const line of drained.lines) {
+      this.handleNdjsonLine(runtime, line, onReady);
+    }
+  }
+
+  /**
+   * An agui runtime's stdout: line 1 is `wire.hello`, which says where compat
+   * arrives; after it, RS-prefixed lines are compat (inline mode) and every
+   * other line is one AG-UI event for the renderer's relay.
+   */
+  private handleAguiStdout(
+    sessionId: string,
+    chunk: string,
+    onReady: () => void
+  ): void {
+    const runtime = this.runtimes.get(sessionId);
+    if (runtime == null) {
+      return;
+    }
+
+    const drained = drainLines(runtime.stdoutBuffer + chunk);
+    runtime.stdoutBuffer = trimBuffer(drained.rest);
+
+    for (const line of drained.lines) {
+      if (line.startsWith(INLINE_COMPAT_PREFIX)) {
+        this.handleNdjsonLine(
+          runtime,
+          line.slice(INLINE_COMPAT_PREFIX.length),
+          onReady
+        );
+        continue;
+      }
+      const trimmed = line.trim();
+      if (trimmed.length === 0) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        console.error(
+          `[CLI] ${sessionId}: dropping undecodable AG-UI line (${trimmed.length} chars): ${trimmed.slice(0, 200)}…`
+        );
+        continue;
+      }
+      if (typeof parsed !== "object" || parsed == null) continue;
+      const event = parsed as Record<string, unknown>;
+
+      if (
+        runtime.compatMode === "pending" &&
+        event.type === "CUSTOM" &&
+        event.name === "wire.hello"
+      ) {
+        const compat = (event.value as { compat?: unknown } | undefined)
+          ?.compat;
+
+        runtime.compatMode =
+          compat === "fd" || compat === "inline" || compat === "none"
+            ? compat
+            : "none";
+      }
+      this.options.emitAgui?.(runtime.workspaceId, runtime.sessionId, event);
+    }
+  }
+
+  /** An agui runtime's fd 3: the one preamble line, then today's NDJSON. */
+  private handleCompatFd(
+    sessionId: string,
+    chunk: string,
+    onReady: () => void
+  ): void {
+    const runtime = this.runtimes.get(sessionId);
+    if (runtime == null) {
+      return;
+    }
+
+    const drained = drainLines(runtime.compatBuffer + chunk);
+    runtime.compatBuffer = trimBuffer(drained.rest);
+
+    for (const line of drained.lines) {
+      if (!runtime.compatPreambleSeen) {
+        runtime.compatPreambleSeen = true;
+        if (line.includes('"type":"compat.hello"')) continue;
+      }
+      this.handleNdjsonLine(runtime, line, onReady);
+    }
+  }
+
+  /** One legacy NDJSON line, from stdout (ndjson) or compat (agui). */
+  private handleNdjsonLine(
+    runtime: CliRuntime,
+    line: string,
+    onReady: () => void
+  ): void {
+    const sessionId = runtime.sessionId;
+
+    {
       const trimmed = line.trim();
       if (trimmed.length === 0) {
-        continue;
+        return;
       }
       let parsed: unknown;
       try {
@@ -882,20 +1068,21 @@ export class AgentManagerService {
         console.error(
           `[CLI] ${sessionId}: dropping undecodable NDJSON line (${trimmed.length} chars): ${trimmed.slice(0, 200)}…`
         );
-        continue;
+        return;
       }
       if (
         typeof parsed !== "object" ||
         parsed == null ||
         typeof (parsed as { type?: unknown }).type !== "string"
       ) {
-        continue;
+        return;
       }
       const desktopEvent = parsed as DesktopEvent;
       this.options.emitNdjson(
         runtime.workspaceId,
         runtime.sessionId,
-        desktopEvent
+        desktopEvent,
+        { wire: runtime.wire, runtime: runtime.process }
       );
 
       // The agent's own account of the run, for the log dump. Transcript text
@@ -907,7 +1094,7 @@ export class AgentManagerService {
       if (desktopEvent.type === "ready") {
         // A ready after a startup timeout must not resurrect the session.
         if (runtime.startupFailed) {
-          continue;
+          return;
         }
         onReady();
         this.reportSpawnResultOnce(runtime.sessionId);
