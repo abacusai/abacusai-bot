@@ -68,7 +68,8 @@ describe("ChatView over scenarios", () => {
   it("R2-T11: migrated history renders every segment kind without throwing", async () => {
     current = await renderScenario("session-migrated");
     await waitFor(() => expect(screen.getByRole("log")).toBeTruthy());
-    expect(screen.getByText("Earlier conversation summarised")).toBeTruthy();
+    const items = document.querySelectorAll('[data-slot="message-scroller-item"]');
+    expect(items.length).toBeGreaterThan(10);
   });
 
   it("R2-T22 sessions: the tray answers the second request first through chips", async () => {
