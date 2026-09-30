@@ -98,6 +98,7 @@ import { registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
+  prefsFileAfterMigrations,
   runStartupMigrations,
 } from "./migrations/startup";
 import { resolvePastedFilePath } from "./pasted-temp-files";
@@ -130,7 +131,7 @@ import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-ru
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
-import { PrefsStore } from "./services/config/prefs-store";
+import { PrefsStore, prefsFile } from "./services/config/prefs-store";
 import {
   registerRendererState,
   type RendererStateStore,
@@ -517,8 +518,10 @@ export const recreateMainWindow = windowLifecycle.recreateMainWindow;
 /**
  * `~/.abacusai-bot/prefs.json`, the new renderer's prefs row (spec 00 B.2).
  * Read before the window exists for the startup theme; served as `db.prefs`.
+ * Nothing reads it before the migrations; if they leave `prefs.json` held by
+ * an unresolved commit, it is replaced by one over a session-only copy.
  */
-const prefsStore = new PrefsStore();
+let prefsStore = new PrefsStore();
 
 async function createWindow(restored?: RecreatedWindowState) {
   const Store = (await import("electron-store")).default;
@@ -1676,6 +1679,12 @@ app
     // store reads the files they derive. Never throws; a failure is recorded
     // and retried next launch, and every consumer has a fallback.
     await runStartupMigrations(APP_DISPLAY_NAME);
+    // An unresolved commit that may cover prefs.json: this session writes a
+    // copy, so the next launch's rollback neither overwrites nor is defeated
+    // by what the user changes now.
+    const sessionPrefs = prefsFileAfterMigrations(prefsFile());
+    if (sessionPrefs !== prefsFile())
+      prefsStore = new PrefsStore({ file: sessionPrefs });
 
     registerUpdateHandlers(updateService);
     workspaceServiceHost.initialize();
@@ -2065,7 +2074,6 @@ app
   })
   .then(() => createWindow())
   .then(() => {
-    disposeMigrationProgress();
     updateService.checkForUpdatesOnStartup();
 
     app.on("activate", function () {
@@ -2089,7 +2097,10 @@ app
       // exit, not quit: the shutdown path can hold a probe process open.
       app.exit(0);
     }
-  });
+  })
+  // Once the main window exists, or when the chain failed before it did (the
+  // hidden progress window would otherwise keep the process alive).
+  .finally(disposeMigrationProgress);
 
 // On macOS the app stays in the dock.
 app.on("window-all-closed", windowLifecycle.onWindowAllClosed);
@@ -2106,6 +2117,8 @@ let quitGracefulInProgress = false;
 app.on("before-quit", (event) => {
   // So the window 'close' handler stops intercepting.
   markQuitting();
+  // The progress window refuses to close by itself; free it before the quit.
+  disposeMigrationProgress();
   logStore().flush();
   try {
     browserRuntime.disposeAll();
