@@ -781,7 +781,14 @@ export class ThreadSession {
     if (isTerminal(event)) {
       const messages = gen.client?.getMessages() ?? [];
       gen.store?.setState((state) =>
-        recordTerminal(state, event, messages, Date.now(), gen.activeStart)
+        recordTerminal(
+          state,
+          event,
+          messages,
+          Date.now(),
+          gen.activeStart,
+          seq > gen.positions.checkpoint
+        )
       );
       this.#cancelAttempt += 1;
       if (this.#cancelTimer != null) {

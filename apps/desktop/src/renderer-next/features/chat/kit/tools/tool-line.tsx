@@ -34,6 +34,7 @@ import {
 
 import { highlightCode, languageForPath } from "../../markdown/highlighter";
 import { Markdown } from "../../markdown/markdown";
+import { useToolWindow } from "../../scroller/row-context";
 import { descriptorFor, useThreadStore } from "../../store/selectors";
 import { toolKey } from "../../store/thread-store";
 import { formatElapsed, useSeconds } from "../clock";
@@ -416,7 +417,18 @@ export interface ToolLineProps {
   expander?: Expander;
 }
 
-export const ToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
+export const ToolLine = (props: ToolLineProps) => {
+  const window = useToolWindow();
+  const index = window?.ids.indexOf(props.part.id) ?? -1;
+  if (
+    window != null &&
+    index >= 0 &&
+    (index < window.range.start || index >= window.range.end)
+  )
+    return null;
+  return <MountedToolLine {...props} />;
+};
+const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   const { t } = useTranslation();
   const { threadId } = useChatView();
   const { tool, input, needsYou } = useNormalizedTool(part, result);

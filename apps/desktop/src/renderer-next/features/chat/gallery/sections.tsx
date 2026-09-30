@@ -4,7 +4,7 @@
  * (`?fixture=<id>&step=<n>&play=1`). Dev-only, English-only.
  */
 import { useNavigate } from "@tanstack/react-router";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import { botAccentStyle } from "#next/lib/theme";
 import { BOT_AVATAR_COLORS } from "#shared/bots";
@@ -173,6 +173,12 @@ const View = ({
 }) => {
   const [runtime] = useState(() =>
     fixtureRuntime(fixture, { ...(step != null ? { step } : {}), play })
+  );
+  useEffect(
+    () => () => {
+      if (runtime != null) runtime.runtime.forget(runtime.threadId);
+    },
+    [runtime]
   );
   const [model, setModel] = useState<string | null>("route-llm");
   if (runtime == null)

@@ -13,7 +13,7 @@ import type {
 } from "@tanstack/ai-client";
 import type { MessageProps } from "@tanstack/ai-react/ui";
 import { ChevronRight, FileText, ListChecks } from "lucide-react";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
@@ -24,6 +24,7 @@ import {
   AttachmentGroup,
   AttachmentMedia,
   AttachmentTitle,
+  AttachmentTrigger,
 } from "#next/ui/attachment";
 import { Button } from "#next/ui/button";
 import {
@@ -40,10 +41,10 @@ import {
 } from "#shared/transcript/user-text";
 
 import { Markdown } from "../markdown/markdown";
+import { useToolWindow } from "../scroller/row-context";
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
 import { MessageScope } from "./message-scope";
-import { markLiveThinking } from "./parts";
 import { ToolLine } from "./tools/tool-line";
 
 type Loose = Record<string, unknown>;
@@ -83,38 +84,67 @@ const AttachmentChip = ({ path }: { path: string }) => {
   const name = path.split(/[\\/]/).at(-1) ?? path;
   const ext = name.includes(".") ? name.split(".").at(-1)!.toUpperCase() : "";
   const [thumb, setThumb] = useState<string | null>(null);
-  const image = IMAGE.test(name) && workspaceRoot != null;
+  const image = IMAGE.test(name);
+  const chip = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(
+    () => typeof IntersectionObserver === "undefined"
+  );
   useEffect(() => {
-    if (!image || workspaceRoot == null) return;
+    if (chip.current == null) return;
+    if (typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setInView(true);
+        observer.disconnect();
+      }
+    });
+    observer.observe(chip.current);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!image || !inView) return;
     let live = true;
     runtime.host
-      .readImage(path, workspaceRoot)
+      .readImage(
+        path,
+        workspaceRoot ??
+          path.slice(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")))
+      )
       .then((url) => live && url !== "" && setThumb(url))
       .catch(() => {});
     return () => {
       live = false;
     };
-  }, [image, path, runtime, workspaceRoot]);
+  }, [image, inView, path, runtime, workspaceRoot]);
   return (
-    <Attachment
-      className="w-64 cursor-pointer"
-      onClick={() =>
-        onOpenFile != null
-          ? onOpenFile(path)
-          : void runtime.host.showItemInFolder(path)
-      }
-    >
-      <AttachmentMedia>
-        {thumb != null ? (
-          <img src={thumb} alt="" className="size-full object-cover" />
-        ) : (
-          <FileText aria-hidden />
-        )}
-      </AttachmentMedia>
-      <AttachmentContent>
-        <AttachmentTitle>{name}</AttachmentTitle>
-        <AttachmentDescription>{ext}</AttachmentDescription>
-      </AttachmentContent>
+    <Attachment className="w-64 cursor-pointer" ref={chip}>
+      <AttachmentTrigger
+        aria-label={name}
+        onClick={() =>
+          onOpenFile != null
+            ? onOpenFile(path)
+            : void runtime.host.showItemInFolder(path)
+        }
+      >
+        <AttachmentMedia>
+          {thumb != null ? (
+            <img
+              src={thumb}
+              alt=""
+              loading="lazy"
+              className="size-full object-cover"
+            />
+          ) : (
+            <FileText aria-hidden />
+          )}
+        </AttachmentMedia>
+        <AttachmentContent>
+          <AttachmentTitle>{name}</AttachmentTitle>
+          <AttachmentDescription>{ext}</AttachmentDescription>
+        </AttachmentContent>
+      </AttachmentTrigger>
     </Attachment>
   );
 };
@@ -169,7 +199,7 @@ interface UserTextMeta {
  * chips (migrated messages carry them as `userText.attachments`; live ones
  * as trailing `@/abs/path` lines).
  */
-const userView = (
+export const userView = (
   message: UIMessage
 ): { hidden: boolean; body: string; paths: string[] } => {
   const raw = textOf(message);
@@ -331,10 +361,11 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   if (isEmptyAssistant(message)) return null;
   if (message.role === "user") return <UserMessage message={message} tint />;
-  markLiveThinking(message);
   const PartsView = Parts as ComponentType;
   return (
-    <MessageScope value={{ id: message.id, role: "assistant", streaming }}>
+    <MessageScope
+      value={{ id: message.id, role: "assistant", streaming, message }}
+    >
       <div className="flex flex-col items-start gap-1.5" data-role="assistant">
         <PartsView />
         <WorkedThrough message={message} />
@@ -344,24 +375,50 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
   );
 };
 
+const StepControls = ({ side }: { side: "earlier" | "more" }) => {
+  const window = useToolWindow();
+  const { t } = useTranslation();
+  if (window == null) return null;
+  const count =
+    side === "earlier"
+      ? window.range.start
+      : window.ids.length - window.range.end;
+  if (count === 0) return null;
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      data-slot="steps-more"
+      onClick={side === "earlier" ? window.earlier : window.more}
+    >
+      {side === "earlier"
+        ? `${count} earlier steps`
+        : t("chat.tool.moreSteps", { count })}
+    </Button>
+  );
+};
+
 export const SessionMessage = ({ message, Parts }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   if (isEmptyAssistant(message)) return null;
   if (message.role === "user")
     return <UserMessage message={message} tint={false} />;
-  markLiveThinking(message);
   const PartsView = Parts as ComponentType;
   const grouped = (
     message.metadata as { abacus?: { segments?: Loose[] } } | undefined
   )?.abacus?.segments?.some((segment) => segment.type === "tool_group");
   return (
-    <MessageScope value={{ id: message.id, role: "assistant", streaming }}>
+    <MessageScope
+      value={{ id: message.id, role: "assistant", streaming, message }}
+    >
       <div
         className="flex flex-col gap-2"
         data-role="assistant"
         data-grouped={grouped ? "" : undefined}
       >
+        <StepControls side="earlier" />
         <PartsView />
+        <StepControls side="more" />
         <Credits message={message} />
       </div>
     </MessageScope>

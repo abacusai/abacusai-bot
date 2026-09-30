@@ -44,7 +44,9 @@ export const chatGallerySections = {
   Nav: lazy(async () => ({
     default: (await import("./gallery/sections")).chatGallerySections.Nav,
   })),
+  // Scenarios, plus the Electron gates' `bench-*` fixtures (R2-T16, R2-T31).
   View: lazy(async () => ({
-    default: (await import("./gallery/sections")).chatGallerySections.View,
+    default: (await import("./fixtures/perf/extension")).chatGalleryWithBench
+      .View,
   })),
 };

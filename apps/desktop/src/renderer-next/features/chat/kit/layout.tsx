@@ -20,14 +20,21 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAppHotkey } from "#next/lib/hotkeys";
 import { useMotionPreference } from "#next/lib/motion";
-import { MessageScrollerProvider } from "#next/ui/message-scroller";
+import { Button } from "#next/ui/button";
+import {
+  MessageScrollerProvider,
+  useMessageScrollerScrollable,
+} from "#next/ui/message-scroller";
+import { Spinner } from "#next/ui/spinner";
 
 import { ThreadComposer } from "../composer/composer";
 import { queueEditing, setQueueEditing } from "../composer/queue-editing";
 import { cardEnter, composerExit } from "../motion";
 import { Transcript } from "../scroller/transcript";
-import { useThreadStore } from "../store/selectors";
+import { useBusy, useHost, useThreadStore } from "../store/selectors";
+import type { RunOutcomeRecord } from "../store/thread-store";
 import { useChatView } from "./context";
 import { PermissionList, PermissionTray } from "./permissions/permission-list";
 import { present } from "./permissions/presenters";
@@ -69,61 +76,109 @@ const Notices = () => {
   );
 };
 
-/** One status line per milestone, at most one per 500 ms (§12.1). */
+/** Recorded by the live post-hook, not merged from a hydrate or a page. */
+const isLive = (outcome: RunOutcomeRecord): boolean =>
+  (outcome as RunOutcomeRecord & { live?: boolean }).live === true;
+
+const ANNOUNCE_GAP_MS = 500;
+
+/**
+ * One status line per milestone, each announced once, at most one per
+ * 500 ms (§12.1): a live run's terminal (never the old runs a history page
+ * or a new generation's snapshot brings in, review r1 #21), a new approval,
+ * and "{n} new messages" for messages that arrive while the reader is away
+ * from the end. A burst of new messages is one announcement with the latest
+ * count.
+ */
 const Announcer = () => {
   const { t } = useTranslation();
   const { session } = useChatView();
   const outcomes = useThreadStore(session, (state) => state.runs.outcomes);
   const items = useThreadStore(session, (state) => state.permissions.items);
+  const messages = useHost(session, (state) => state.messages);
+  const scrollable = useMessageScrollerScrollable();
   const [text, setText] = useState("");
   const seen = useRef<{
     outcomes: Set<string>;
     permissions: Set<string>;
+    lastMessageId: string | null;
+    count: number;
+    unread: number;
   } | null>(null);
-  const queue = useRef<string[]>([]);
+  const queue = useRef<Array<{ kind: "milestone" | "new"; text: string }>>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const awayFromEnd = scrollable.end;
   useEffect(() => {
+    const last = messages.at(-1)?.id ?? null;
     if (seen.current == null) {
       seen.current = {
         outcomes: new Set(outcomes.map((o) => o.runId)),
         permissions: new Set(items.map((i) => i.id)),
+        lastMessageId: last,
+        count: messages.length,
+        unread: 0,
       };
       return;
     }
+    const state = seen.current;
     for (const outcome of outcomes) {
-      if (seen.current.outcomes.has(outcome.runId)) continue;
-      seen.current.outcomes.add(outcome.runId);
-      queue.current.push(
-        outcome.kind === "success"
-          ? t("chat.announce.finished")
-          : outcome.kind === "cancelled"
-            ? t("chat.announce.stopped")
-            : t("chat.announce.error", {
-                message: outcome.error?.message ?? "",
-              })
-      );
+      if (state.outcomes.has(outcome.runId)) continue;
+      state.outcomes.add(outcome.runId);
+      if (!isLive(outcome)) continue;
+      queue.current.push({
+        kind: "milestone",
+        text:
+          outcome.kind === "success"
+            ? t("chat.announce.finished")
+            : outcome.kind === "cancelled"
+              ? t("chat.announce.stopped")
+              : t("chat.announce.error", {
+                  message: outcome.error?.message ?? "",
+                }),
+      });
     }
     for (const item of items) {
-      if (seen.current.permissions.has(item.id)) continue;
-      seen.current.permissions.add(item.id);
+      if (state.permissions.has(item.id)) continue;
+      state.permissions.add(item.id);
       const model = present(item.metadata.abacus.request as PermissionRequest);
-      queue.current.push(
-        t("chat.announce.approval", {
+      queue.current.push({
+        kind: "milestone",
+        text: t("chat.announce.approval", {
           title: t(`chat.permission.title.${model.title}`, model.titleValues),
-        })
-      );
+        }),
+      });
     }
+    // Appended at the end (a page prepends and keeps the last id).
+    if (last !== state.lastMessageId) {
+      const added = Math.max(0, messages.length - state.count);
+      const fromOthers =
+        messages.at(-1)?.role !== "user" &&
+        messages.at(-1)?.metadata?.abacus?.pending !== true;
+      if (added > 0 && fromOthers && awayFromEnd) {
+        state.unread += added;
+        const next = {
+          kind: "new" as const,
+          text: t("chat.announce.newMessages", { count: state.unread }),
+        };
+        const index = queue.current.findIndex((entry) => entry.kind === "new");
+        if (index === -1) queue.current.push(next);
+        else queue.current[index] = next;
+      }
+    }
+    if (!awayFromEnd) state.unread = 0;
+    state.lastMessageId = last;
+    state.count = messages.length;
     const flush = () => {
       const next = queue.current.shift();
       if (next == null) {
         timer.current = null;
         return;
       }
-      setText(next);
-      timer.current = setTimeout(flush, 500);
+      setText(next.text);
+      timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
     };
     if (timer.current == null) flush();
-  }, [outcomes, items, t]);
+  }, [outcomes, items, messages, awayFromEnd, t]);
   useEffect(
     () => () => {
       if (timer.current != null) clearTimeout(timer.current);
@@ -140,6 +195,20 @@ const Announcer = () => {
       {text}
     </div>
   );
+};
+
+/**
+ * `Mod+.` stops the run (§8.4): one registration per mounted `ChatView`,
+ * through the app's hotkey wrapper, enabled only while this view is the
+ * focused thread and busy.
+ */
+const StopHotkey = () => {
+  const { session, focused, composer } = useChatView();
+  const busy = useBusy(session, composer.turnBusy === true);
+  useAppHotkey("Mod+.", () => void session.cancel().catch(() => {}), {
+    enabled: busy && focused,
+  });
+  return null;
 };
 
 export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
@@ -189,8 +258,35 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
           </div>
         </div>
         <Announcer />
+        <StopHotkey />
       </div>
     </MessageScrollerProvider>
+  );
+};
+
+/** Stop while the permission tray has taken the composer's place (§4.5). */
+const TrayStop = () => {
+  const { t } = useTranslation();
+  const { session, composer } = useChatView();
+  const busy = useBusy(session, composer.turnBusy === true);
+  const cancelling = useHost(session, (state) => state.cancelling);
+  if (!busy) return null;
+  return (
+    <div className="flex justify-end">
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={cancelling}
+        onClick={() => void session.cancel().catch(() => {})}
+      >
+        {cancelling ? (
+          <Spinner aria-hidden />
+        ) : (
+          <span aria-hidden className="size-2 rounded-[2px] bg-current" />
+        )}
+        {t("chat.composer.stop")}
+      </Button>
+    </div>
   );
 };
 
@@ -202,16 +298,27 @@ export const ComposerSlot = () => {
     (state) => state.permissions.items.length > 0
   );
   const pref = useMotionPreference();
-  const [composerFocused, setComposerFocused] = useState(false);
+  const slot = useRef<HTMLDivElement>(null);
   const tray = skin === "session" && pending;
+  // Whether the composer had focus when the tray took its place (§6.4): read
+  // when the tray appears, not remembered from an earlier focus event.
+  const [trayFocus, setTrayFocus] = useState<{
+    tray: boolean;
+    focus: boolean;
+  }>({ tray, focus: false });
+  if (trayFocus.tray !== tray) {
+    const active =
+      typeof document === "undefined" ? null : document.activeElement;
+    setTrayFocus({
+      tray,
+      focus:
+        tray &&
+        active instanceof HTMLTextAreaElement &&
+        active.closest('[data-slot="composer"]') != null,
+    });
+  }
   return (
-    <div
-      onFocusCapture={(event) => {
-        setComposerFocused(
-          (event.target as HTMLElement).tagName === "TEXTAREA"
-        );
-      }}
-    >
+    <div ref={slot}>
       <AnimatePresence mode="popLayout" initial={false}>
         {tray ? (
           <motion.div
@@ -221,8 +328,10 @@ export const ComposerSlot = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={cardEnter(pref)}
+            className="flex flex-col gap-1.5"
           >
-            <PermissionTray autoFocus={composerFocused} />
+            <PermissionTray autoFocus={trayFocus.focus} />
+            <TrayStop />
           </motion.div>
         ) : (
           <motion.div

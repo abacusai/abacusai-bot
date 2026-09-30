@@ -5,7 +5,6 @@
  * send (outbox admission), enqueue while busy, or blocked. Keyboard is
  * element-level, except Stop (`Mod+.`), the one global shortcut.
  */
-import { useHotkey } from "@tanstack/react-hotkeys";
 import { useSelector } from "@tanstack/react-store";
 import { ArrowUp, FileText, Folder, Mic, Plus, X } from "lucide-react";
 import { motion } from "motion/react";
@@ -327,7 +326,11 @@ export const ThreadComposer = () => {
         const saved = draft;
         clearDraft(threadId);
         runtime.queue.enqueue(threadId, route.text).catch(() => {
-          updateDraft(threadId, () => saved);
+          updateDraft(threadId, (current) =>
+            current.text === "" && current.attachments.length === 0
+              ? saved
+              : current
+          );
           setError(t("chat.composer.queueFailed"));
         });
         return;
@@ -336,7 +339,11 @@ export const ThreadComposer = () => {
         const saved = draft;
         clearDraft(threadId);
         const restore = (message: string) => {
-          updateDraft(threadId, () => saved);
+          updateDraft(threadId, (current) =>
+            current.text === "" && current.attachments.length === 0
+              ? saved
+              : current
+          );
           setError(message);
         };
         session
@@ -345,7 +352,11 @@ export const ThreadComposer = () => {
             if (result.kind === "rejected")
               restore(t("chat.composer.rejected"));
             else if (result.kind === "stale")
-              updateDraft(threadId, () => saved);
+              updateDraft(threadId, (current) =>
+                current.text === "" && current.attachments.length === 0
+                  ? saved
+                  : current
+              );
             else config.onFirstSend?.(route.text);
           })
           .catch((thrown: unknown) => {
@@ -364,15 +375,6 @@ export const ThreadComposer = () => {
     }
   };
   const stop = (): void => void session.cancel().catch(() => {});
-
-  useHotkey(
-    "Mod+." as never,
-    (event) => {
-      event.preventDefault();
-      stop();
-    },
-    { ignoreInputs: false, enabled: busy && view.focused }
-  );
 
   const setText = (text: string, caret: number | null) => {
     updateDraft(threadId, (current) => ({ ...current, text }));
@@ -488,6 +490,7 @@ export const ThreadComposer = () => {
         {trigger != null ? (
           <TriggerMenu
             trigger={trigger}
+            field={field}
             skills={skills}
             mentions={config.mentions}
             onPick={(insert) => {
