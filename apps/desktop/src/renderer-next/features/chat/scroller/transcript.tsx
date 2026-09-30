@@ -50,6 +50,9 @@ import {
   type RowWindow,
 } from "./window";
 
+/** The screenshot run's build (dev fixture tables). */
+const VISUAL_BUILD = import.meta.env.VITE_NEXT_DB_FIXTURES === "1";
+
 export interface TranscriptProps {
   messages: UIMessage[];
   Message: ComponentType<{ message: UIMessage }>;
@@ -314,10 +317,16 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
 
   return (
     <MessageScroller>
-      {/* No `scroll-fade-t` yet: its scroll-driven animation never finishes,
-          and the screenshot run's settle step waits for every finite one
-          (change request on `lib/dev/settle.ts`). */}
-      <MessageScrollerViewport aria-label={t("chat.transcript.label")}>
+      {/* No `scroll-fade-t` yet, and in the visual (fixture) build no
+          scroll fade at all: the scroll-driven fade animations never finish,
+          and the screenshot run's settle step waits for every finite
+          animation (change request on `lib/dev/settle.ts`). */}
+      <MessageScrollerViewport
+        aria-label={t("chat.transcript.label")}
+        {...(VISUAL_BUILD
+          ? { style: { animation: "none", maskImage: "none" } }
+          : {})}
+      >
         <MessageScrollerContent
           aria-busy={active}
           className="mx-auto w-full max-w-[720px] gap-3 px-4 pt-6 pb-4"
