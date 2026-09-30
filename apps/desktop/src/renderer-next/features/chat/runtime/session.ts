@@ -667,6 +667,9 @@ export class ThreadSession {
       push: (seq, event) => dispatcher.push({ seq, event }),
       onConnection: (connection) => {
         if (gen.g !== this.#gen) return;
+        // A generation that reached a live subscription ends a recovery
+        // streak; one answered with resync again keeps counting.
+        if (connection === "connected") this.#recoveries = 0;
         this.#host({ connection });
       },
       onRecover: () => {
@@ -760,7 +763,6 @@ export class ThreadSession {
       older: "idle",
     }));
     gen.ready.resolve();
-    this.#recoveries = 0;
     if (old != null && old !== gen) this.#teardown(old);
   }
 

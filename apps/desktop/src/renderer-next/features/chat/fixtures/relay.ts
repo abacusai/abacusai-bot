@@ -100,6 +100,7 @@ export class FakeRelay {
   } = {};
   history: UIMessage[];
   #listeners = new Set<Listener>();
+  #drops = new Set<(error: Error) => void>();
   #acks = new Map<string, AiSendAck>();
   #options: FakeRelayOptions;
   #seq = 0;
@@ -133,6 +134,16 @@ export class FakeRelay {
     const item = { seq, event };
     this.log.push(item);
     for (const listener of this.#listeners) listener(item);
+  }
+
+  /** Open live iterators throw (a port blip); the pump reconnects. */
+  dropSubscriptions(error = new Error("chat: connection lost")): void {
+    for (const drop of [...this.#drops]) drop(error);
+  }
+
+  /** Main restarted: a new relay lifetime. */
+  setEpoch(epoch: string): void {
+    (this as { epoch: string }).epoch = epoch;
   }
 
   /** The run in flight: a `RUN_STARTED` with no terminal after it. */
@@ -271,6 +282,12 @@ export class FakeRelay {
   ): AsyncGenerator<StreamChunk> {
     const queue: RelayEvent[] = [...replay];
     let wake: (() => void) | null = null;
+    let dropped: Error | null = null;
+    const drop = (error: Error) => {
+      dropped = error;
+      wake?.();
+    };
+    if (live) this.#drops.add(drop);
     const listener: Listener = (item) => {
       queue.push(item);
       wake?.();
@@ -282,6 +299,7 @@ export class FakeRelay {
     try {
       if (first != null) yield first;
       for (;;) {
+        if (dropped != null) throw dropped;
         while (queue.length > 0) {
           if (signal?.aborted === true) return;
           const item = queue.shift()!;
@@ -295,6 +313,7 @@ export class FakeRelay {
         wake = null;
       }
     } finally {
+      this.#drops.delete(drop);
       this.#listeners.delete(listener);
       signal?.removeEventListener("abort", onAbort);
       this.stats.openIterators -= 1;
