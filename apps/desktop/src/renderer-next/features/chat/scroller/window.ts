@@ -12,9 +12,9 @@
  * (possibly earlier rows of the same message). Returning to the end snaps
  * back to the newest rows with default tool ranges.
  */
-export const MAX_ROWS = 400;
-export const STEP = 100;
-export const TOOL_PAGE = 50;
+export const MAX_ROWS = 200;
+const STEP = 100;
+const TOOL_PAGE = 50;
 /** Placeholder height per row never measured (§10). */
 export const ROW_FALLBACK_PX = 64;
 
@@ -40,8 +40,6 @@ export interface WindowState {
   ranges: Readonly<Record<string, Range>>;
 }
 
-export const emptyWindow: WindowState = { start: 0, end: 0, ranges: {} };
-
 export const rangeOf = (
   item: RowItem,
   ranges: WindowState["ranges"]
@@ -52,10 +50,7 @@ export const rangeOf = (
   return { start, end: Math.max(start, Math.min(set.end, item.units)) };
 };
 
-export const rowsOf = (
-  item: RowItem,
-  ranges: WindowState["ranges"]
-): number => {
+const rowsOf = (item: RowItem, ranges: WindowState["ranges"]): number => {
   const range = rangeOf(item, ranges);
   return item.fixed + (range.end - range.start);
 };
@@ -199,13 +194,6 @@ export const earlierSteps = (
   return fit(items, next, "bottom", id);
 };
 
-/** A message's own rows changed (steps opened or a group expanded). */
-export const refit = (
-  items: readonly RowItem[],
-  state: WindowState,
-  id: string
-): WindowState => fit(items, state, "top", id);
-
 /**
  * Keeps the window valid as the list changes. At the end it follows new
  * rows (a page of history mounts above, up to the budget); elsewhere it
@@ -215,12 +203,13 @@ export const followWindow = (
   state: WindowState,
   previousTotal: number,
   items: readonly RowItem[],
-  prepended: number
+  prepended: number,
+  follow = state.end >= previousTotal
 ): WindowState => {
-  if (state.end >= previousTotal) return newestWindow(items, state.ranges);
+  if (follow) return newestWindow(items, state.ranges);
   const start = Math.min(items.length, state.start + prepended);
   const end = Math.min(items.length, state.end + prepended);
-  return fit(items, { ...state, start, end }, "top");
+  return fit(items, { ...state, start, end }, "bottom");
 };
 
 /** Local day key for separators; null without a time (§10). */

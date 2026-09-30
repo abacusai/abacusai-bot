@@ -166,6 +166,8 @@ const Announcer = () => {
       }
     }
     if (!awayFromEnd) state.unread = 0;
+    state.outcomes = new Set(outcomes.map((o) => o.runId));
+    state.permissions = new Set(items.map((i) => i.id));
     state.lastMessageId = last;
     state.count = messages.length;
     const flush = () => {
@@ -177,7 +179,8 @@ const Announcer = () => {
       setText(next.text);
       timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
     };
-    if (timer.current == null) flush();
+    if (timer.current == null && queue.current.length > 0)
+      timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
   }, [outcomes, items, messages, awayFromEnd, t]);
   useEffect(
     () => () => {

@@ -5,8 +5,10 @@
  */
 import type { PartProps } from "@tanstack/ai-react/ui";
 import { Brain, ChevronRight, FileText, Globe, Layers } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ABACUS_PLAN_URL } from "#next/lib/abacus-links";
 import { cn } from "#next/lib/cn";
 import {
   Attachment,
@@ -15,6 +17,7 @@ import {
   AttachmentMedia,
   AttachmentTitle,
 } from "#next/ui/attachment";
+import { Button } from "#next/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -67,6 +70,7 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
   const { t } = useTranslation();
   const { workspaceRoot, runtime, skin } = useChatView();
   const scope = useMessageScope();
+  const [dismissed, setDismissed] = useState(false);
   const abacus = abacusOf(part);
   const kind = typeof abacus.kind === "string" ? abacus.kind : null;
   const content = (part as { content: string }).content;
@@ -93,6 +97,7 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
       );
     }
     case "notification":
+      if (dismissed) return null;
       return (
         <NoticeRow
           notice={{
@@ -105,7 +110,7 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
               actions: abacus.actions,
             },
           }}
-          onDismiss={() => {}}
+          onDismiss={() => setDismissed(true)}
         />
       );
     case "collapsible":
@@ -161,6 +166,12 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
           {t("chat.part.featureLimit", {
             feature: String(abacus.featureName ?? ""),
           })}
+          <Button
+            variant="secondary"
+            onClick={() => void runtime.host.openExternal(ABACUS_PLAN_URL)}
+          >
+            {t("creditsCard.topUpCta")}
+          </Button>
         </div>
       );
     case "compaction":

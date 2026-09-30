@@ -27,6 +27,7 @@ import {
   type ChatViewContextValue,
 } from "./context";
 import { MessageComponentProvider } from "./layout";
+import { KitPartsProvider } from "./message-scope";
 import { BotUI, SessionUI } from "./ui";
 
 export interface ChatViewProps {
@@ -100,7 +101,9 @@ const Kit = ({ skin }: { skin: "bot" | "session" }) => {
   const Message = UI.Message as ComponentType<{ message: UIMessage }>;
   return (
     <MessageComponentProvider value={Message}>
-      <UI.Chat chat={host} />
+      <KitPartsProvider value={UI}>
+        <UI.Chat chat={host} />
+      </KitPartsProvider>
     </MessageComponentProvider>
   );
 };

@@ -5,7 +5,7 @@
  * helpers (reminders stripped, routine fires hidden, attachment chips); an
  * empty assistant message renders nothing (F12).
  */
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { v1ToUiMessages } from "#shared/transcript/v1-to-ui-messages";
@@ -72,6 +72,84 @@ describe("R2-T11 parts", () => {
     expect(screen.getByText("Thoughts")).toBeTruthy();
     expect(document.querySelector('[data-slot="feature-limit"]')).toBeTruthy();
   });
+
+  it.each(["session", "bot"] as const)(
+    "tool groups have a summary and the %s default expansion",
+    async (skin) => {
+      await migrated("tool-group", skin);
+      if (skin === "bot")
+        fireEvent.click(await screen.findByText(/Worked through/));
+      const summary = await screen.findByRole("button", {
+        name: "Read 2 files, searched 1 pattern",
+      });
+      expect(summary.getAttribute("aria-expanded")).toBe(
+        skin === "session" ? "true" : "false"
+      );
+      if (skin === "bot") fireEvent.click(summary);
+      expect(document.querySelectorAll("[data-tool]")).toHaveLength(3);
+    }
+  );
+
+  it.each(["session", "bot"] as const)(
+    "%s renders web search and unknown migrated parts",
+    async (skin) => {
+      await migrated("display-segments", skin);
+      expect(await screen.findByText("Done.")).toBeTruthy();
+      expect(
+        document.querySelector('[data-slot="feature-limit"]')
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: /Top up|Upgrade/ })
+      ).toBeTruthy();
+    }
+  );
+
+  it.each(["session", "bot"] as const)(
+    "%s renders migrated search results and preserves unknown data",
+    async (skin) => {
+      await migrated("web-search", skin);
+      expect(
+        document.querySelectorAll('[data-slot="search-results"]')
+      ).toHaveLength(2);
+      const links = document.querySelectorAll(
+        '[data-slot="search-results"] button'
+      );
+      expect(links.length).toBeGreaterThan(0);
+      await current!.cleanup();
+      current = null;
+      await migrated("unknown-segments", skin);
+      expect((await screen.findAllByText("[unknown]")).length).toBeGreaterThan(
+        0
+      );
+    }
+  );
+
+  it.each(["session", "bot"] as const)(
+    "%s handles a document part through the default kit map",
+    async (skin) => {
+      current = await renderRelay(
+        new FakeRelay({
+          history: [
+            {
+              id: "doc",
+              role: "assistant",
+              parts: [
+                {
+                  type: "document",
+                  source: {
+                    type: "url",
+                    value: "https://example.com/report.pdf",
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+        skin
+      );
+      expect(await screen.findByText(/report.pdf|document/i)).toBeTruthy();
+    }
+  );
 
   it("live: reminders stripped, routine fires hidden, attachments as chips, empty assistant renders nothing", async () => {
     const relay = new FakeRelay();

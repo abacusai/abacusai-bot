@@ -44,7 +44,7 @@ import { Markdown } from "../markdown/markdown";
 import { useToolWindow } from "../scroller/row-context";
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
-import { MessageScope } from "./message-scope";
+import { useKitParts, useMessageScope, MessageScope } from "./message-scope";
 import { ToolLine } from "./tools/tool-line";
 
 type Loose = Record<string, unknown>;
@@ -127,24 +127,23 @@ const AttachmentChip = ({ path }: { path: string }) => {
             ? onOpenFile(path)
             : void runtime.host.showItemInFolder(path)
         }
-      >
-        <AttachmentMedia>
-          {thumb != null ? (
-            <img
-              src={thumb}
-              alt=""
-              loading="lazy"
-              className="size-full object-cover"
-            />
-          ) : (
-            <FileText aria-hidden />
-          )}
-        </AttachmentMedia>
-        <AttachmentContent>
-          <AttachmentTitle>{name}</AttachmentTitle>
-          <AttachmentDescription>{ext}</AttachmentDescription>
-        </AttachmentContent>
-      </AttachmentTrigger>
+      />
+      <AttachmentMedia>
+        {thumb != null ? (
+          <img
+            src={thumb}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        ) : (
+          <FileText aria-hidden />
+        )}
+      </AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>{name}</AttachmentTitle>
+        <AttachmentDescription>{ext}</AttachmentDescription>
+      </AttachmentContent>
     </Attachment>
   );
 };
@@ -303,23 +302,65 @@ const StepList = ({
 }) => {
   const { t } = useTranslation();
   const [limit, setLimit] = useState(MAX_TOOL_ROWS);
+  const window = useToolWindow();
+  const message = useMessageScope().message;
+  const segments = message?.metadata?.abacus?.segments as
+    | Array<{
+        id: string;
+        type: string;
+        groupId?: string;
+        partIndex?: number;
+        summary?: string;
+        category?: string;
+      }>
+    | undefined;
+  const blocks: Array<{ id: string | null; items: typeof items }> = [];
+  const start = window?.range.start ?? 0;
+  const end = window?.range.end ?? limit;
+  for (const item of items.slice(start, end)) {
+    const index = message?.parts.indexOf(item.part);
+    const id =
+      segments?.find((segment) => segment.partIndex === index)?.groupId ?? null;
+    const previous = blocks.at(-1);
+    if (id != null && previous?.id === id) previous.items.push(item);
+    else blocks.push({ id, items: [item] });
+  }
   return (
     <div className="flex flex-col">
-      {items.slice(0, limit).map(({ part, result }) => (
-        <ToolLine
-          key={part.id}
-          part={part}
-          {...(result != null ? { result } : {})}
-        />
-      ))}
-      {items.length > limit ? (
+      {window != null && start > 0 ? <StepControls side="earlier" /> : null}
+      {blocks.map((block, index) => {
+        const content = block.items.map(({ part, result }) => (
+          <ToolLine
+            key={part.id}
+            part={part}
+            {...(result != null ? { result } : {})}
+          />
+        ));
+        if (block.id == null) return <div key={index}>{content}</div>;
+        const group = segments?.find(
+          (segment) => segment.type === "tool_group" && segment.id === block.id
+        );
+        return (
+          <Collapsible key={index} data-slot="tool-group">
+            <CollapsibleTrigger>
+              {group?.summary ?? group?.category ?? block.id}
+            </CollapsibleTrigger>
+            <CollapsibleContent>{content}</CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+      {items.length > end ? (
         <Button
           variant="ghost"
           size="sm"
           className="self-start"
-          onClick={() => setLimit((value) => value + 100)}
+          onClick={() =>
+            window != null
+              ? window.more()
+              : setLimit((value) => Math.min(399, value + 100))
+          }
         >
-          {t("chat.tool.moreSteps", { count: items.length - limit })}
+          {t("chat.tool.moreSteps", { count: items.length - end })}
         </Button>
       ) : null}
     </div>
@@ -398,6 +439,56 @@ const StepControls = ({ side }: { side: "earlier" | "more" }) => {
   );
 };
 
+const GroupedParts = ({ message }: { message: UIMessage }) => {
+  const SessionUI = useKitParts();
+  const segments = message.metadata?.abacus?.segments as
+    | Array<{
+        id: string;
+        groupId?: string;
+        partIndex: number | null;
+        type: string;
+        summary?: string;
+        category?: string;
+      }>
+    | undefined;
+  return (
+    <SessionUI.Message message={message}>
+      {(parts) => {
+        const blocks: Array<{ id: string | null; parts: typeof parts }> = [];
+        for (const part of parts) {
+          if (part.part.type === "tool-result") continue;
+          const index = message.parts.indexOf(part.part);
+          const id =
+            segments?.find((segment) => segment.partIndex === index)?.groupId ??
+            null;
+          const previous = blocks.at(-1);
+          if (id != null && previous?.id === id) previous.parts.push(part);
+          else blocks.push({ id, parts: [part] });
+        }
+        return blocks.map((block, index) => {
+          const content = block.parts.map((part, i) => (
+            <SessionUI.Part key={i} part={part} />
+          ));
+          if (block.id == null) return <div key={index}>{content}</div>;
+          const group = segments?.find(
+            (segment) =>
+              segment.id === block.id && segment.type === "tool_group"
+          );
+          return (
+            <Collapsible key={index} defaultOpen data-slot="tool-group">
+              <CollapsibleTrigger className="text-muted-foreground flex items-center gap-2 text-xs">
+                <ChevronRight aria-hidden className="size-3" />
+                {group?.summary ?? group?.category ?? block.id}
+              </CollapsibleTrigger>
+              <CollapsibleContent>{content}</CollapsibleContent>
+            </Collapsible>
+          );
+        });
+      }}
+    </SessionUI.Message>
+  );
+};
+
 export const SessionMessage = ({ message, Parts }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
   if (isEmptyAssistant(message)) return null;
@@ -417,7 +508,7 @@ export const SessionMessage = ({ message, Parts }: MessageProps<unknown>) => {
         data-grouped={grouped ? "" : undefined}
       >
         <StepControls side="earlier" />
-        <PartsView />
+        {grouped ? <GroupedParts message={message} /> : <PartsView />}
         <StepControls side="more" />
         <Credits message={message} />
       </div>

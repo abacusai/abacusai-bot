@@ -1,7 +1,7 @@
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
-import { useMemo, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -50,20 +50,15 @@ const BotChat = ({ botId }: { botId: string }) => {
   const bot = useBotRow(botId);
   const readOnlyReason =
     bot?.channel != null ? t("chat.composer.channelBot") : null;
-  const composer = useMemo(
-    () => ({
-      mode: "full" as const,
-      placeholder: t("chat.composer.botPlaceholder", { name: bot?.name }),
-      attachmentsBase: null,
-      showModeChip: false,
-      model: null,
-      fixedMode: AgentMode.Yolo,
-      ...(readOnlyReason != null
-        ? { readOnly: { reason: readOnlyReason } }
-        : {}),
-    }),
-    [t, bot?.name, readOnlyReason]
-  );
+  const composer = {
+    mode: "full" as const,
+    placeholder: t("chat.composer.botPlaceholder", { name: bot?.name }),
+    attachmentsBase: null,
+    showModeChip: false,
+    model: null,
+    fixedMode: AgentMode.Yolo,
+    ...(readOnlyReason != null ? { readOnly: { reason: readOnlyReason } } : {}),
+  };
   const threadId =
     bot?.sessionId ?? (fixture != null ? fixture.threadId : null);
   if (bot == null || threadId == null) return <BotPage botId={botId} />;

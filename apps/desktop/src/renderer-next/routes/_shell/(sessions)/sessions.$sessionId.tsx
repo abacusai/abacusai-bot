@@ -5,7 +5,6 @@ import {
   notFound,
   stripSearchParams,
 } from "@tanstack/react-router";
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -54,50 +53,35 @@ const SessionChat = ({ sessionId }: { sessionId: string }) => {
   const workspaceId = row?.workspaceId ?? null;
   const routineRun = row?.routineId != null;
   const label = row?.label ?? "";
-  // One object per real change, not per row update (review Claude 27): the
-  // kit's context value, and every row under it, depends on it.
-  const composer = useMemo(
-    (): ComposerConfig => ({
-      mode: "full",
-      placeholder: t("chat.composer.busySession"),
-      attachmentsBase: root,
-      showModeChip: true,
-      model: null,
-      turnBusy,
-      setMode: (mode: AgentMode) =>
-        transport.client.agent.setMode({
-          workspaceId: workspaceId ?? "",
-          sessionId,
-          mode,
-        }),
-      ...(routineRun
-        ? { readOnly: { reason: t("chat.composer.routineRun") } }
-        : {}),
-      onFirstSend: (text) => {
-        if (label.trim() !== "" && label.trim() !== "Untitled") return;
-        const title = deriveSessionTitle(text);
-        if (title === "") return;
-        try {
-          collections.sessions.update(sessionId, (draft) => {
-            draft.label = title;
-          });
-        } catch {
-          // Titling never blocks a send (spec 02 §8.3).
-        }
-      },
-    }),
-    [
-      t,
-      root,
-      turnBusy,
-      workspaceId,
-      routineRun,
-      label,
-      transport,
-      collections,
-      sessionId,
-    ]
-  );
+  const composer: ComposerConfig = {
+    mode: "full",
+    placeholder: t("chat.composer.busySession"),
+    attachmentsBase: root,
+    showModeChip: true,
+    model: null,
+    turnBusy,
+    setMode: (mode: AgentMode) =>
+      transport.client.agent.setMode({
+        workspaceId: workspaceId ?? "",
+        sessionId,
+        mode,
+      }),
+    ...(routineRun
+      ? { readOnly: { reason: t("chat.composer.routineRun") } }
+      : {}),
+    onFirstSend: (text) => {
+      if (label.trim() !== "" && label.trim() !== "Untitled") return;
+      const title = deriveSessionTitle(text);
+      if (title === "") return;
+      try {
+        collections.sessions.update(sessionId, (draft) => {
+          draft.label = title;
+        });
+      } catch {
+        // Titling never blocks a send (spec 02 §8.3).
+      }
+    },
+  };
   if (row == null) return <SessionPage />;
   return (
     <ChatView

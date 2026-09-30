@@ -69,7 +69,7 @@ describe("R2-T16 window (pure)", () => {
         0
       )
     ).toEqual({
-      start: 20,
+      start: 420 - MAX_ROWS,
       end: 420,
       ranges: {},
     });

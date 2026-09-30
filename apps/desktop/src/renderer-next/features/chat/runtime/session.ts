@@ -274,6 +274,7 @@ export class ThreadSession {
     this.#retired = true;
     this.#rev += 1;
     this.#echoed.clear();
+    this.#prependListeners.clear();
     this.#host({ rev: this.#rev, outbox: [] });
     const error = new ThreadRetiredError(this.threadId);
     for (const gen of [this.#pending, this.#live]) {

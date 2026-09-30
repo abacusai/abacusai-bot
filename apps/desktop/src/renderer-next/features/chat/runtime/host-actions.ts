@@ -13,6 +13,7 @@ interface PickedPath {
 
 export interface ChatHostActions {
   openExternal(url: string): Promise<void>;
+  accountTier(): Promise<"free" | "basic" | "paid" | "unknown">;
   showItemInFolder(path: string): Promise<void>;
   pickFiles(): Promise<PickedPath[] | null>;
   pickFolder(): Promise<string | null>;
@@ -29,6 +30,21 @@ export interface ChatHostActions {
 export const hostActionsFor = (transport: Transport): ChatHostActions => {
   const client = transport.client;
   return {
+    accountTier: async () => {
+      const account = await client.account.abacus();
+      const tier = (
+        account?.subscription_tier ??
+        account?.plan ??
+        ""
+      ).toLowerCase();
+      return tier === "free"
+        ? "free"
+        : tier === "basic"
+          ? "basic"
+          : ["pro", "max", "enterprise", "paid"].includes(tier)
+            ? "paid"
+            : "unknown";
+    },
     openExternal: (url) => client.system.openExternal({ url }),
     showItemInFolder: (path) => client.system.showItemInFolder({ path }),
     pickFiles: async () => {
@@ -53,6 +69,7 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
 /** A host that does nothing (gallery, tests). */
 export const inertHostActions: ChatHostActions = {
   openExternal: async () => {},
+  accountTier: async () => "unknown",
   showItemInFolder: async () => {},
   pickFiles: async () => null,
   pickFolder: async () => null,

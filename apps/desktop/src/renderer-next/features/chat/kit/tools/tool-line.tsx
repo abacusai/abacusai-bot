@@ -35,10 +35,11 @@ import {
 import { highlightCode, languageForPath } from "../../markdown/highlighter";
 import { Markdown } from "../../markdown/markdown";
 import { useToolWindow } from "../../scroller/row-context";
-import { descriptorFor, useThreadStore } from "../../store/selectors";
+import { descriptorFor, useHost, useThreadStore } from "../../store/selectors";
 import { toolKey } from "../../store/thread-store";
 import { formatElapsed, useSeconds } from "../clock";
 import { useChatView, useSubagentScope } from "../context";
+import { useMessageScope } from "../message-scope";
 import { selectPermission } from "../permissions/selection";
 import {
   diffLines,
@@ -82,18 +83,6 @@ const STATUS_KEY: Record<ToolStatus, string> = {
   stopped: "chat.tool.status.stopped",
 };
 
-/** When each call was first seen (bash elapsed time while running). */
-const firstSeen = new Map<string, number>();
-const firstSeenOf = (id: string): number => {
-  let at = firstSeen.get(id);
-  if (at == null) {
-    at = Date.now();
-    firstSeen.set(id, at);
-    if (firstSeen.size > 5000) firstSeen.delete(firstSeen.keys().next().value!);
-  }
-  return at;
-};
-
 export type Expander =
   | "bash"
   | "diff"
@@ -126,12 +115,24 @@ const useNormalizedTool = (
   const { session } = useChatView();
   const scope = useSubagentScope();
   const key = toolKey(scope, part.id);
+  const message = useMessageScope();
+  const childActive = useHost(session, (state) =>
+    state.subagents.some(
+      (child) =>
+        child.id === scope &&
+        (child.status === "running" || child.status === "suspended")
+    )
+  );
   const live = useThreadStore(
     session,
     (state) => ({
       output: state.tools.output[key],
       display: state.tools.display[key],
-      runActive: state.runs.active != null,
+      runActive:
+        state.runs.active != null &&
+        (scope != null
+          ? childActive
+          : session.isMessageInActiveRun(message.id)),
       needsYou: descriptorFor(state, scope, part.id)?.id ?? null,
     }),
     (a, b) =>
@@ -419,7 +420,8 @@ export interface ToolLineProps {
 
 export const ToolLine = (props: ToolLineProps) => {
   const window = useToolWindow();
-  const index = window?.ids.indexOf(props.part.id) ?? -1;
+  const scope = useSubagentScope();
+  const index = window?.ids.indexOf(`${scope ?? ""}\0${props.part.id}`) ?? -1;
   if (
     window != null &&
     index >= 0 &&
@@ -430,7 +432,8 @@ export const ToolLine = (props: ToolLineProps) => {
 };
 const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   const { t } = useTranslation();
-  const { threadId } = useChatView();
+  const { threadId, skin } = useChatView();
+  const [firstSeen] = useState(() => Date.now());
   const { tool, input, needsYou } = useNormalizedTool(part, result);
   const expander = fixed ?? expanderFor(part.name);
   const Icon = KIND_ICONS[kindOf(part.name)] ?? Wrench;
@@ -439,7 +442,7 @@ const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
     part.name,
     input,
     tool,
-    tool.status === "running" ? firstSeenOf(part.id) : null
+    tool.status === "running" ? firstSeen : null
   );
   const bodyId = useId();
   const expandable = hasBody(expander, tool);
@@ -480,7 +483,7 @@ const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-2">{row}</div>
         )}
-        {needsYou != null ? (
+        {needsYou != null && skin === "session" ? (
           <Button
             variant="ghost"
             size="sm"

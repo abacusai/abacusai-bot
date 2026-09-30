@@ -171,6 +171,7 @@ export const ModelChip = ({
     <Button
       variant="ghost"
       size={compact ? "icon" : "sm"}
+      data-slot="chat-model-picker"
       aria-haspopup="listbox"
       aria-label={
         compact ? t("chat.composer.model", { name: label }) : undefined
