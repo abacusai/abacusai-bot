@@ -6,6 +6,12 @@
 import { EventType } from "@ag-ui/core";
 
 import type { TurnUsage } from "../turn-usage.js";
+import {
+  BoundedMap,
+  BoundedSet,
+  RUN_IDS_KEPT,
+  RUN_OUTCOMES_KEPT,
+} from "./bounded.js";
 import { aguiEvent } from "./event.js";
 import { toFinishReason } from "./vendor/pi-acp/stop-reason.js";
 import type {
@@ -79,12 +85,13 @@ export class RunController {
   /** The send in flight: what permission lineage binds to (§3.5.3). */
   private current: TurnToken | null = null;
   private run: OpenRun | null = null;
-  private readonly seenRunIds = new Set<string>();
+  /** Run ids opened in this process; the newest `RUN_IDS_KEPT` (bounded.ts). */
+  private readonly seenRunIds = new BoundedSet<string>(RUN_IDS_KEPT);
   /** Terminal outcome per run id, for retry/regenerate decisions (§3.1.4). */
-  private readonly outcomes = new Map<
+  private readonly outcomes = new BoundedMap<
     string,
     "success" | "error" | "cancelled"
-  >();
+  >(RUN_OUTCOMES_KEPT);
 
   constructor(private readonly deps: RunControllerDeps) {}
 
