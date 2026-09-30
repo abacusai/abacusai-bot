@@ -1,9 +1,5 @@
-export type TerminalAction =
-  | "closeTab"
-  | "nextTab"
-  | "previousTab"
-  | "togglePanel"
-  | "new";
+import { terminalAction, type TerminalAction } from "#shared/terminal/keys";
+export type { TerminalAction } from "#shared/terminal/keys";
 export const terminalKeyHandler =
   (
     platform: "mac" | "windows" | "linux",
@@ -20,45 +16,7 @@ export const terminalKeyHandler =
     if (event.type !== "keydown") return false;
     const key = event.key.toLowerCase();
     const mac = platform === "mac";
-    let action: TerminalAction | undefined;
-    if (event.ctrlKey && !event.metaKey && !event.altKey && key === "tab")
-      action = event.shiftKey ? "previousTab" : "nextTab";
-    if (
-      (mac
-        ? event.metaKey && !event.ctrlKey
-        : event.ctrlKey && !event.metaKey) &&
-      event.altKey &&
-      !event.shiftKey &&
-      key === "b"
-    )
-      action = "togglePanel";
-    if (
-      mac &&
-      event.metaKey &&
-      !event.ctrlKey &&
-      !event.altKey &&
-      !event.shiftKey &&
-      key === "w"
-    )
-      action = "closeTab";
-    if (
-      !mac &&
-      event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey &&
-      event.shiftKey &&
-      key === "w"
-    )
-      action = "closeTab";
-    if (
-      mac &&
-      event.metaKey &&
-      !event.ctrlKey &&
-      !event.altKey &&
-      !event.shiftKey &&
-      key === "n"
-    )
-      action = "new";
+    const action = terminalAction(event, platform);
     if (action) {
       dispatch(action);
       return true;
