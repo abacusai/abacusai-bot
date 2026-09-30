@@ -1,23 +1,29 @@
-# Spec 00: `packages/agent` AG-UI host and emitter (rev 2)
+# Spec 00: `packages/agent` AG-UI host and emitter (rev 3)
 
-Phase 0, slice 1 of `docs/rewrite/PLAN.md` ("Protocol: AG-UI straight from pi"). This is a spec, not code; the only code in it is type declarations.
+Phase 0, slice 1 of `docs/rewrite/PLAN.md` ("Protocol: AG-UI straight from pi"). This is a spec, not code. The only code in it is type declarations.
 
-Rev 2 resolves every finding in `docs/rewrite/specs/reviews/00-agent-agui.codex-r1.md`. §9 maps each finding to its change. It also applies these orchestrator decisions:
+Rev 2 resolved the findings in `docs/rewrite/specs/reviews/00-agent-agui.codex-r1.md`. Rev 3 resolves every item in `…codex-r2.md`. §9 maps both rounds to their changes.
 
-- **Zero behaviour change for main's taps.** A compatibility stream carries today's exact NDJSON to main (§2.4).
-- **No permission batching.** Each permission resolves on its own through an explicit control command. It is not a TanStack batch interrupt (§3.5).
+Orchestrator decisions that still apply:
 
-Sources read: the rev-1 list, plus the following.
+- **Zero behaviour change for main's taps.** They read a compatibility stream of today's exact NDJSON (§2.4).
+- **No permission batching.** Each permission is answered on its own through an explicit control command (§3.5).
 
-- TanStack `ai-client/src/interrupt-manager.ts`:
-  - `hydrate()` replaces the whole pending set.
-  - `maybeSubmit()` submits all-or-nothing.
-- `ai-client/src/ui/selectors.ts:100-138`: only `kind:"tool-approval"` joins tools.
-- `ai/src/activities/chat/stream/processor.ts`:
-  - `handleToolCallResultEvent` reads `metadata.tanstack.state` / `toolResultOutcome`.
-  - `routeToChild` routes child events to their subagent.
-- `@ag-ui/core@1.0.0`: the `EventType` enum and `Attributable`. Its main entry has no zod import.
-- `apps/desktop/src/main/services/session/cli-manager-service.ts:542` spawns with three stdio pipes.
+Rev 3 adds three design points:
+
+- **Input while a run is busy never goes through ChatClient's `send()`.** It goes to the host's queue through a separate procedure (§3.1.6).
+- **Reload uses TanStack's own hydration.** Main owns it through `hydrate()` + `joinRun()`, backed by main's `StreamProcessor` transcript and a complete per-run event log (§5.3).
+- **The compat channel is negotiated with a synchronous handshake before the session starts.** If fd 3 is unusable, compat falls back to inline framing on stdout, with no respawn (§2.4).
+
+Sources read, beyond rev 1 and rev 2:
+
+- TanStack `ai-client/src/chat-client.ts`:
+  - `isIntermediateToolTurn()` (`:190-198`) skips `resolveProcessing` when `finishReason === "tool_calls"`;
+  - `streamResponse()` awaits `connection.send()`, then `processingComplete` (`:2557`, `:2625`).
+- `ai-client/src/connection-adapters.ts:963-994`: `ChatHydrationResult {messages: UIMessage[], activeRun, interrupts}`, plus `SubscribeConnectionAdapter.hydrate` / `joinRun`.
+- `ai-react/src/chat-ui/create-ui.tsx:818`: the Interrupts slot reads `chat.interrupts` only.
+- `@ag-ui/core@1.0.0` `TokenUsage`: `inputTokens` includes cache reads and writes, and `totalTokens` equals `inputTokens + outputTokens`.
+- `packages/agent/tsdown.config.ts:23-40`: build entries are enumerated explicitly.
 
 ---
 
@@ -27,10 +33,10 @@ Sources read: the rev-1 list, plus the following.
 
 1. **A second wire for the renderer.** With `--wire agui`:
    - stdout carries one AG-UI event per line;
-   - fd 3 carries the **compatibility stream**, today's NDJSON `DesktopEvent` lines byte for byte (§2.4).
+   - the **compatibility stream** carries today's NDJSON `DesktopEvent` lines byte for byte. It goes on fd 3, or inline on stdout behind a one-byte prefix when fd 3 fails the startup preflight (§2.4).
 
    Both come from one `emit()` call.
-2. **stdin.** It accepts today's `DesktopCommand` set unchanged, so every existing main producer keeps working. It adds four commands: `run`, `cancel`, `permission.respond`, `sync` (§2.2).
+2. **stdin.** It accepts today's `DesktopCommand` set unchanged, so every existing main producer keeps working. It adds three commands: `run`, `cancel`, `permission.respond` (§2.2).
 3. **`packages/agent/src/agui/`.** Wire types, the translator (emitter), the run controller, the host, permission descriptors, ids, and the vendored pi-acp helpers.
 4. **The `--wire ndjson|agui` flag**, defaulting to `ndjson` until cut-over. Both hosts drive the same `AbacusBotSession` / `BotSession` through one shared queue module.
 5. **Minimal session plumbing** for facts NDJSON never carried:
@@ -58,7 +64,7 @@ Sources read: the rev-1 list, plus the following.
 
   They read the compat stream and write the same stdin commands as today. Only the renderer consumes AG-UI.
 - **No new abort or timeout policy.** Watchdogs stay in main (finding 22).
-- **No agent-side UI history.** Main owns the transcript and replay (§5).
+- **No agent-side UI history.** Main owns the transcript, the active-run log and hydration (§5).
 - **No `CUSTOM bot.reply`.** The messaging relay keeps reading `text_delta` from the compat stream (§4). This supersedes PLAN.md's wording.
 - **No TanStack native interrupts.** No `RUN_FINISHED{outcome:"interrupt"}` is emitted and no `approval-requested` either (§3.5). PLAN.md's interrupt wording is superseded.
 - **The pi 0.85 → 0.99 bump** is a separate commit (§8.2).
@@ -72,8 +78,8 @@ Sources read: the rev-1 list, plus the following.
 | Channel | Direction | Content |
 |---|---|---|
 | stdin | main → agent | One JSON `AgentCommand` per line (§2.2). U+2028/2029 are escaped as `serializeCommand` does (`cli-manager-service.ts:178-182`). |
-| stdout | agent → main | One AG-UI event per line (§2.3). Nothing else. |
-| fd 3 (compat) | agent → main | One legacy `DesktopEvent` per line, byte-identical to what `--wire ndjson` writes to stdout for the same session (§2.4). |
+| stdout | agent → main | Line 1 is always `CUSTOM wire.hello` (§2.4). After that, one AG-UI event per line (§2.3). In **inline compat mode** only, compat lines also appear here, each prefixed with one `\u001e` byte (§2.4). |
+| fd 3 (compat, preferred) | agent → main | One legacy `DesktopEvent` per line, byte-identical to what `--wire ndjson` writes to stdout for the same session (§2.4). |
 | stderr | agent → main | Diagnostics, as today. |
 
 **Process flags** (`main.ts`):
@@ -81,18 +87,24 @@ Sources read: the rev-1 list, plus the following.
 - `--wire ndjson|agui` (default `ndjson`).
 - With `agui`:
   - `--thread-id <id>` (required);
-  - `--compat-fd <n>` (main passes `3`), or `--compat-pipe <path>` as the fallback (§2.4).
+  - `--compat-fd <n>` (main passes `3`).
+
+  The rev-2 `--compat-pipe` and the exit-78 respawn are removed.
 - `--model`, `--permission-mode` and `--sandbox-probe` are unchanged.
 
 **Error handling:**
 
 - A malformed stdin line never kills the process. It produces `error {code:"malformed_command"}` on compat (as `host.ts:109-119`) and `CUSTOM agent.error` on AG-UI.
-- A throwing handler behaves as `host.ts:127-131` on compat. On AG-UI it becomes a `RUN_ERROR` for the command's own run if that run is still open, otherwise `CUSTOM agent.error`.
+- A throwing handler behaves as `host.ts:127-131` on compat. On AG-UI:
+  - if the command's own run is still open, it becomes a `RUN_ERROR` for that run;
+  - otherwise it becomes `CUSTOM agent.error`.
 
 **Scope:**
 
-- **Run-scoped** AG-UI events (`TEXT_MESSAGE_*`, `REASONING_*`, `TOOL_CALL_*`, `SUBAGENT_*`, and the `CUSTOM` names marked *run* in §2.3) appear only inside an open run.
-- **Session-scoped** events (`STATE_*` and the `CUSTOM` names marked *session*) may appear any time.
+- **Run-scoped** AG-UI events (`TEXT_MESSAGE_*`, `REASONING_*`, `TOOL_CALL_*`, `SUBAGENT_*`, and the `CUSTOM` names marked *R*) appear only inside an open run.
+- **Session-scoped** events (`STATE_*` and the names marked *S*) may appear at any time.
+
+**One renderer protocol per runtime.** A `--wire agui` runtime serves only the new renderer. Old-renderer windows keep `--wire ndjson` runtimes, and main never forwards an agui runtime's compat lines to an old renderer (finding r2-9).
 
 ### 2.2 Commands (stdin)
 
@@ -106,27 +118,29 @@ import type { DesktopCommand, PermissionDecision } from "../protocol.js";
 export type AgentCommand = DesktopCommand | AguiControlCommand;
 
 export type AguiControlCommand =
-  /** A turn from the renderer's chat client. */
+  /** A turn from the renderer's chat client. Sent only when the thread is idle (§3.1.6). */
   | { type: "run"; input: RunInput }
-  /** Stop the reply in flight. Same handler as the legacy `stop`. */
+  /**
+   * Stop the reply in flight. With `runId`: applied only if that run, or the
+   * admission that will open it, is current; otherwise ignored (finding r2-12).
+   * Without it: unconditional, like the legacy `stop`.
+   */
   | { type: "cancel"; runId?: string }
   /** Answer one permission, independently of any other (§3.5). */
-  | { type: "permission.respond"; lineage: PermissionLineage; decision: PermissionDecision }
-  /** Ask for an authoritative snapshot (§5.3). Answered with CUSTOM session.sync. */
-  | { type: "sync" };
+  | { type: "permission.respond"; lineage: PermissionLineage; decision: PermissionDecision };
 
 /** AG-UI RunAgentInput as the SubscribeConnectionAdapter sends it. `resume` must be absent or empty (§3.5). */
 export type RunInput = Omit<AguiRunAgentInput, "forwardedProps"> & {
   forwardedProps?: {
-    /** Applied before the prompt when it differs; same path as set_mode. Main omits it for bots. */
+    /** Applied during turn preparation when it differs; same path as set_mode. Main omits it for bots. */
     mode?: string;
-    /** Applied (awaited) before the prompt when it differs; same path as set_model. */
+    /** Applied (awaited) during turn preparation when it differs; same path as set_model. */
     model?: string;
     /** Accepted and ignored: host.ts:156 drops send.activeSkills today. */
     activeSkills?: string[];
     /** Accepted and ignored; must equal threadId when present. */
     conversationId?: string;
-    /** "regenerate": explicit request to answer the newest user message again (§3.1.4). */
+    /** "regenerate": an explicit request to answer the newest user message again (§3.1.4). */
     intent?: "send" | "regenerate";
   };
 };
@@ -134,25 +148,40 @@ export type RunInput = Omit<AguiRunAgentInput, "forwardedProps"> & {
 /** Identifies the exact pending permission an answer is for (§3.5.3). */
 export interface PermissionLineage {
   threadId: string;
-  /** From session.ready / the descriptor; new per agent process. */
+  /** From wire.hello / session.ready / the descriptor; new per agent process. */
   incarnation: string;
-  /** The run the permission was raised in. */
-  runId: string;
+  /**
+   * The host turn that owned the permission when it was raised: the TurnToken
+   * seq of the send still in flight. It survives into bot housekeeping, where
+   * no run is open (finding r2-13).
+   */
+  turnSeq: number;
+  /** The run open when it was raised, if any. Informational; not validated. */
+  runId?: string;
   /** perm-N from the descriptor. */
   permissionId: string;
 }
 ```
 
-**The legacy commands are accepted verbatim** (`protocol.ts:417-453`), and each has exactly today's handler (`host.ts:147-327`). The legacy commands that start turns (`send`, `enqueue` while idle, `dequeue`), which main's messaging gateway, routines and routine editor use, open **server-initiated** AG-UI runs (§3.1.3). The rev-1 aliases (`queue.*`, `mcp.*`, `providers.refresh`, `client_tool_result`) are dropped. Main already speaks the legacy names, and one spelling per operation keeps the two hosts identical.
+**The legacy commands are accepted verbatim** (`protocol.ts:417-453`), with today's handlers (`host.ts:147-327`). Every command that can start a turn passes through **one** admission guard (§3.1.1):
+
+- legacy `send` (messaging gateway, routines, routine editor);
+- `enqueue`, which the new renderer's queue uses too (§3.1.6);
+- `dequeue`;
+- queue drains;
+- `runAfterStop`.
+
+The rev-1 aliases (`queue.*`, `mcp.*`, `providers.refresh`, `client_tool_result`) and the rev-2 `sync` command are dropped. Hydration is main's (§5.3).
 
 | Command | Handler |
 |---|---|
-| `run` | Admission (§3.1.1); `runTurn(text)` under a client run |
-| `cancel` | The `stop` handler (`host.ts:160-182`) plus run closure (§3.8) |
-| `permission.respond` | Lineage check (§3.5.3), then `session.respondPermission` + `releaseParked()`, i.e. the same two calls as `host.ts:199-205` |
-| `permission_response` (legacy) | Unchanged. Main's browser auto-allow uses it (§3.5.6). |
-| `host_service_response` (legacy) | Unchanged (`settleHostService`). Host services never appear on AG-UI (§3.7). |
-| `sync` | Emits `CUSTOM session.sync` (§5.3) |
+| `run` | Admission (§3.1.1). If idle, a client run is opened. If busy (a race, §3.1.6), the input is queued with `run.ack {queued}` and no run is opened. |
+| `cancel` | Run-id check (above), then the `stop` handler (`host.ts:160-182`) with `markCancelling` first (§3.8) |
+| `permission.respond` | Lineage check (§3.5.3), then `session.respondPermission` + `releaseParked()`: the same two calls as `host.ts:199-205` |
+| `permission_response` (legacy) | Unchanged semantics. Written only by main's browser auto-allow, bound to the runtime that raised the request (§3.5.6). |
+| `enqueue`, `dequeue`, `get_queue`, `clear_queue`, `remove_from_queue`, `update_queue_item` (legacy) | Unchanged. These are the host queue, which is authoritative for the new renderer too (§3.1.6). |
+| `host_service_response` (legacy) | Unchanged. Host services never appear on AG-UI (§3.7). |
+| `stop` (legacy) | Unconditional, as today |
 | every other legacy command | Unchanged handler |
 
 ### 2.3 Events (stdout)
@@ -197,7 +226,7 @@ The agent's conventions are layered on top: which fields it sets, and the typed 
 ```ts
 /** RUN_FINISHED: outcome is "success" or "cancelled"; never "interrupt" (§3.5). */
 export interface RunFinishedMeta {
-  tanstack?: { model?: string; finishReason?: "stop" | "length" | "tool_calls" | null };
+  tanstack?: { model?: string; finishReason?: "stop" | "length" | null /* never "tool_calls" on a final terminal (finding r2-16) */ };
   abacus?: { turnUsage?: TurnUsage; stopReason?: PiStopReason; serverInitiated?: true };
 }
 /** RUN_ERROR: threadId/runId ride in metadata.tanstack (TanStack's RunErrorEvent convention). */
@@ -292,17 +321,18 @@ export type DecisionKind =
 |---|---|---|
 | `session.ready` | S | `{model, mode, agentSessionId?, agentSessionFile?, incarnation}` |
 | `session.cleared` | S | `{}` |
-| `session.sync` | S | `SessionSync` (§5.3) |
+| `wire.hello` | S | `{protocol: 1, wire: "agui", compat: "fd" \| "inline" \| "none", incarnation}`: always stdout line 1 (§2.4) |
+| `wire.compat_lost` | S | `{error}`: then the process exits with 75 (§2.4) |
 | `agent.status` | S | `{status: AgentStatus}` |
 | `agent.heartbeat` | S | `{runningTools}` |
 | `agent.error` | S | `AgentErrorPayload` (non-terminal errors) |
 | `agent.notification` | S | `{message, severity, actions?, notificationKey?, …}` (verbatim) |
 | `agent.retry` | R | `{attempt, maxAttempts, delayMs, isNetworkError}` |
-| `run.ack` | S | `{runId, status: "started" \| "queued" \| "duplicate" \| "rejected", entryId?, waitingFor?, reason?: "regenerate_unsupported" \| "busy_regenerate" \| "empty" \| "resume_unsupported"}` |
+| `run.ack` | S | `{runId, status: "started" \| "queued" \| "duplicate" \| "rejected", entryId?, waitingFor?, reason?: "regenerate_unsupported" \| "empty" \| "resume_unsupported"}` |
 | `permission.requested` | S | `PermissionDescriptor` |
 | `permission.resolved` | S | `{permissionId, decisionKind: DecisionKind, source: "respond" \| "legacy_response"}` |
 | `permission.cleared` | S | `{permissionId, reason: "expired" \| "stopped" \| "reset"}` |
-| `permission.response_rejected` | S | `{lineage, reason: "incarnation" \| "thread" \| "run" \| "not_pending" \| "invalid_decision" \| "decision_not_allowed"}` |
+| `permission.response_rejected` | S | `{lineage, reason: "incarnation" \| "thread" \| "turn" \| "not_pending" \| "invalid_decision" \| "decision_not_allowed"}` |
 | `permission.pending` | S | `{incarnation, items: PermissionDescriptor[]}`: the authoritative set, after every change |
 | `tool.output` | R | `{toolCallId, output}` |
 | `tool.display` | R | `{toolCallId, data: ToolDisplayData}` |
@@ -317,41 +347,58 @@ export type DecisionKind =
 
 ### 2.4 The compatibility stream
 
-**Mechanism.** Main spawns the agent with `stdio: ["pipe","pipe","pipe","pipe"]`. Today it passes three pipes (`cli-manager-service.ts:542`). It also passes `--compat-fd 3`. The agent opens `new net.Socket({ fd: 3, readable: false, writable: true })`:
+**Handshake (findings r2-14, r2-15).** Main spawns the agent with `stdio: ["pipe","pipe","pipe","pipe"]` (today it passes three, `cli-manager-service.ts:542`) and `--compat-fd 3`. **Before** the session is constructed, and before either writer is enabled, `main.ts` preflights the channel synchronously:
 
-- It is a Node-created pipe, so this works on POSIX and on Windows (libuv passes extra stdio pipes through).
-- If the socket cannot be constructed, the agent falls back to `fs.createWriteStream("", { fd: 3 })`.
+1. Build `hello = {"type":"CUSTOM","name":"wire.hello","value":{"protocol":1,"wire":"agui","compat":?,"incarnation":<uuid>},"timestamp":…}`.
+2. Try `fs.fstatSync(3)`, then `fs.writeSync(3, "")` (zero bytes), then `fs.writeSync(3, JSON.stringify({type:"compat.hello", incarnation}) + "\n")`. These are synchronous calls, so `EBADF`/`EPIPE`/`EAGAIN` are thrown here and not reported later. `EAGAIN` is retried for up to 1 s.
+   - **Success:** `compat = "fd"`.
+   - **Any throw:** `compat = "inline"`.
+3. `fs.writeSync(1, JSON.stringify(hello) + "\n")`. This is always stdout line 1.
+4. Only now start the session and enable both writers.
 
-**Fallback.** If fd 3 is unusable (constructor throws, or the first write fails `EBADF`), main may instead pass `--compat-pipe <path>`: a `\\.\pipe\abacusai-bot-<uuid>` named pipe on Windows, or a unix socket in the profile's run dir on POSIX. Main listens on it; the agent connects before writing anything. If neither channel opens within 5 s:
+Main's read loop reads line 1 of stdout (the `wire.hello` handshake). It **must** then do two things:
 
-1. The agent writes one stderr line.
-2. It exits with code 78 (`EX_CONFIG`) **before any stdout output**.
-3. Main then respawns the conversation with `--wire ndjson` (the old host), so behaviour is never degraded.
+- in fd mode, discard the one `compat.hello` line on fd 3;
+- route compat from wherever `hello.compat` says.
 
-`--wire agui` without either compat flag is valid only for standalone/test use. The compat stream is then disabled.
+There is no exit-78 path and no respawn. Startup failure and closure handling (`cli-manager-service.ts:613-630`, `:684-740`) stay exactly as they are. The renderer protocol is always AG-UI for an agui runtime, whichever compat mode was negotiated (finding r2-14).
 
-**Production: one `emit()`, two writers.** Both hosts share `agui/queue.ts` (the queue and turn logic extracted from `NdjsonHost`). Every `DesktopEvent` a session or the host produces goes through one `HostSink.emit(event)`, which does two things in order:
+**Modes:**
 
-1. **`compat.write(toNdjsonWire(event))`.** `toNdjsonWire` drops the internal-only types (§6.3), strips the internal fields, and returns `JSON.stringify(stripped) + "\n"`. This is exactly the line `NdjsonHost.emit` writes today (`host.ts:482-484`). Under `--wire ndjson` the same function writes to stdout, so the two bytes are the same by construction.
-2. **`agui.accept(event)`.** The emitter's AG-UI lines go to stdout.
+- **fd:** after the preflight, compat lines go to `new net.Socket({ fd: 3, readable: false, writable: true })`, falling back to `fs.createWriteStream("", { fd: 3 })` if the socket cannot be built. This is a Node-created pipe, so it works on POSIX and on Windows.
+- **inline:** each compat line is written to stdout as `"\u001e" + <exact legacy line>`. AG-UI lines always start with `{`, so the prefix is unambiguous. Main strips the one byte and passes the remainder to the unchanged compat pipeline. In this mode compat and AG-UI are also totally ordered relative to each other.
+- **none:** `--wire agui` without `--compat-fd`, for standalone and test use. `hello.compat = "none"` and no compat is written.
+
+**Channel loss after the handshake (finding r2-15).** An asynchronous error on the fd-3 writer means main's taps have stopped receiving. That must never be silent, so the agent:
+
+1. writes `CUSTOM wire.compat_lost {error}` to stdout;
+2. writes `RUN_ERROR {code:"compat_lost"}` for an open run;
+3. writes one stderr line;
+4. exits with code 75.
+
+Main sees an ordinary child exit, which is today's crash path: session closed, turn stopped. It never keeps running with taps detached. Backpressure (writes buffered in-process) is handled as stdout is today.
+
+**Production: one `emit()`, two writers.** Both hosts share `agui/queue.ts`, the queue and turn logic extracted from `NdjsonHost`. Every `DesktopEvent` goes through one `HostSink.emit(event)`, which does two things in order:
+
+1. `compat.write(toNdjsonWire(event))`. `toNdjsonWire` drops internal-only types, strips internal fields, and returns `JSON.stringify(stripped) + "\n"`, exactly the line `NdjsonHost.emit` writes (`host.ts:482-484`).
+2. `agui.accept(event)` (stdout).
+
+Under `--wire ndjson` the same `toNdjsonWire` writes to stdout, so the compat bytes are identical by construction.
 
 **Guarantees:**
 
-- The compat stream is in the same order as today's stdout. It includes host-originated lines (`queue_updated`, `idle`, `user_message_dequeued`, errors), heartbeats, `ready`, `host_service_request`, `permission_needed` and MCP events.
-- Commands that only exist in AG-UI mode produce the same compat lines as their legacy equivalents (§7.2):
+- **Same content and order as today.** Compat carries exactly today's stdout content and order. The one extra fd-mode `compat.hello` preamble is consumed by main's read loop before the unchanged pipeline.
+- **AG-UI-only commands map to their legacy equivalents** (§7.2):
 
-  | AG-UI command | Legacy equivalent |
-  |---|---|
-  | `run` | `send`, preceded by `set_mode` / `set_model` when `forwardedProps` differ |
-  | `cancel` | `stop` |
-  | `permission.respond` | `permission_response` |
-  | `sync` | nothing |
+  | AG-UI command | Legacy equivalent | Compat lines |
+  |---|---|---|
+  | `run` | `send`, preceded by `set_mode`/`set_model` when `forwardedProps` differ | same as the legacy equivalent |
+  | `cancel` | `stop` | same as the legacy equivalent |
+  | `permission.respond` | `permission_response` | same as the legacy equivalent |
+  | rejected, duplicate or ignored commands | — | none |
+- **Ordering.** In fd mode, main must not assume any ordering between stdout and fd 3.
 
-  Rejected or duplicate `run`s produce no compat line.
-- Main must not assume any ordering *between* stdout and fd 3. Each channel is ordered on its own.
-- Backpressure and EPIPE on fd 3 are handled like stdout today: buffered, and a write error is logged once. `canReachUser()` (`session.ts:2758`) keeps checking stdout only.
-
-**What main does.** In AG-UI mode main reads fd 3 with the existing `handleStdout` pipeline (`cli-manager-service.ts:851-966`) and sends every compat line through the existing `emitNdjson` fan-out (`service-host.ts:1181-1263`) unchanged. It relays stdout (AG-UI) to the renderer's chat stream. The old renderer, if still mounted, keeps receiving `local-cli-ndjson` from compat.
+**What main does.** Compat lines go through the existing `handleStdout` pipeline (`cli-manager-service.ts:851-966`) and `emitNdjson` fan-out (`service-host.ts:1181-1263`) unchanged. AG-UI lines go to main's AG-UI relay (§5).
 
 ---
 
@@ -359,34 +406,52 @@ export type DecisionKind =
 
 ### 3.1 Runs
 
-#### 3.1.1 Admission (finding 2)
+#### 3.1.1 Admission: one synchronous guard for every turn starter (findings 2, r2-10, r2-11)
 
-Admission is **synchronous**. The host decides before any `await`, and records the outcome in `run.ack` immediately:
+Every command that can start a turn goes through `admission.request(source, text, prep?)` in `agui/queue.ts`. The sources are:
 
-1. **Duplicate check.** If `input.runId` is already in this incarnation's `seenRunIds`, the result is `run.ack {status:"duplicate"}` and nothing else happens. This covers transport retries (finding 14).
-2. **Unsupported resume.** A non-empty `resume` gets `run.ack {status:"rejected", reason:"resume_unsupported"}`. No run opens.
-3. **Text.** Extract the newest `role:"user"` message's text:
-   - UIMessage: the `parts[type=text].content` values joined with `"\n"`;
-   - ModelMessage: string `content`, or the joined text parts.
+- `run`;
+- legacy `send`, `enqueue`, `dequeue`;
+- queue drains;
+- `runAfterStop`.
 
-   Empty or whitespace-only text gets `run.ack {status:"rejected", reason:"empty"}`, matching `isPrompt` (`host.ts:152`).
-4. **Regenerate** (§3.1.4) is decided next.
-5. **Busy.** If `busy || reserved`, this is today's send-while-busy: `admit(text)` runs unchanged. It steers the message, parks it behind a permission, or holds it for the next turn. The result is `run.ack {status:"queued", entryId, waitingFor}`. **No run opens** and no `RUN_STARTED` is written. The client's adapter must resolve its send from the ack (§5.2). If admission lands in the reservation window, while `forwardedProps` are still being applied, the entry is queued with `waitingFor:"turn"`, the same rule as the `stopping` window (`host.ts:388-392`). Steering before a prompt exists would be meaningless.
-6. **Otherwise:**
-   - set `reserved = true` synchronously;
-   - `run.ack {status:"started"}`;
-   - `RUN_STARTED {threadId, runId, parentRunId?}`;
-   - apply `forwardedProps.mode`, then `await` `forwardedProps.model`, when they differ. These go through the same `setMode` / `setModel` paths as the legacy commands, and failures are non-terminal (§3.2);
-   - `runTurn(text, token)`, which sets `busy` exactly as today; clear `reserved`.
+The function runs its decision **synchronously**:
+
+1. **`run` only.**
+   - A duplicate `runId` in `seenRunIds` gets `run.ack {duplicate}`.
+   - A non-empty `resume` gets `run.ack {rejected, resume_unsupported}`.
+   - Empty text gets `run.ack {rejected, empty}`, as `isPrompt` does (`host.ts:152`).
+   - Regenerate is decided per §3.1.4.
+2. **If `busy`**: today's send-while-busy.
+   - `admit(text)` runs unchanged: it steers, parks behind a permission, or holds for the next turn.
+   - While `preparing` (step 3) or `stopping`, the entry gets `waitingFor:"turn"`. This is the existing `stopping` rule (`host.ts:388-392`), extended to preparation, because steering before a prompt exists is meaningless.
+   - Legacy sources behave exactly as today.
+   - A `run` additionally gets `run.ack {queued, entryId, waitingFor}` and **no run opens**. That only happens in the race described in §3.1.6.
+3. **Otherwise, acquire:**
+   - `busy = true` and `preparing = true`, synchronously, **before any await**;
+   - `gen = ++admissionGen`;
+   - the token is `{seq, runId}`.
+
+   A `run` then gets `run.ack {started}`, and `RUN_STARTED` is written (server runs: §3.1.3). This single `busy` flag is what every source checks, so a legacy `send` arriving while a `run` is preparing is queued, not started (finding r2-10).
+4. **Preparation** is `run` only: `setMode` when `forwardedProps.mode` differs, then `await setModel` when `.model` differs. Failures are non-terminal (§3.2). **After every await**, the host checks `gen === admissionGen && !token.cancelling && turn === capturedTurn`. If any check fails, preparation stops:
+   - the prompt is **not** sent;
+   - `preparing = false`;
+   - the run has already been closed `cancelled` by the Stop or reset that intervened (§3.8).
+
+   A stopped or reset turn therefore never prompts, and never prompts into the reset conversation (finding r2-11).
+5. **Prompt.** `preparing = false`, then `runTurn(text, token)` (the existing body, with `busy` already held).
+
+For legacy sources the NDJSON behaviour is unchanged. They have no preparation step, so `preparing` is never observed and the compat bytes stay identical (§7.2).
 
 #### 3.1.2 Turn tokens (finding 12)
 
-Every `session.send()` call the host makes is owned by an immutable `TurnToken {seq, runId}`. Only the owner of the open run can settle it.
+Every `session.send()` the host makes is owned by an immutable `TurnToken {seq, runId?}`.
 
-- `session.send(text, { settled: () => runs.settle(token) })` gains an optional second parameter. The session calls `settled()` once, at the end of the user-visible turn (§3.1.5), which replaces rev 1's `turn_settled` event.
+- `session.send(text, { settled: () => runs.settle(token) })` gains an optional second parameter. The session calls `settled()` once, at the end of the user-visible turn (§3.1.5).
 - The host also calls `runs.settle(token)` in the `finally` around `session.send`.
-- `runs.settle(token)` is a no-op unless `token.seq` equals the open run's token. A superseded `send` that finishes after Stop, while a newer run is open, cannot settle the newer run.
-- `cancel` calls `runs.markCancelling(token)` **synchronously, before** `await session.stop()`. A `settled()` callback that fires during the abort then closes the run as `cancelled`, not `success`.
+- `runs.settle(token)` is a no-op unless `token.seq` equals the open run's token.
+- `cancel` / `stop` / `reset` call `runs.markCancelling(currentToken)` **synchronously, before** awaiting the abort.
+- The host keeps `currentToken` set until `send()` resolves, including through bot housekeeping. That is what permission lineage binds to (§3.5.3).
 
 #### 3.1.3 Server-initiated runs
 
@@ -438,7 +503,34 @@ Closing order (finding 11):
 
    `usage` is the last `turn_complete.usage`, converted per §3.3.8, plus `metadata.abacus.turnUsage` (raw), `stopReason`, `metadata.tanstack.finishReason` and `model`.
 
+   `finishReason` is always final-turn: `"stop"`, `"length"` or `null`, and never `"tool_calls"`. ChatClient's `isIntermediateToolTurn()` (`chat-client.ts:190-198`) would otherwise skip `resolveProcessing` (finding r2-16).
+
 After a cancel or reset closes a run, run-scoped AG-UI events from the superseded pi turn are dropped until the next `RUN_STARTED`. The compat stream is **not** filtered: it carries them exactly as today, and main's own post-Stop suppression applies (`session-turn-state-service.ts:129-141`).
+
+#### 3.1.6 Input while a run is busy: the host queue, outside ChatClient's send (findings r2-1, r2-2)
+
+ChatClient's `streamResponse()` awaits `connection.send()` and then its own `processingComplete`, which only a terminal for that request's run resolves (`chat-client.ts:2557`, `:2625`). ChatClient's default busy handling also queues locally, so the message could neither steer the current turn nor survive Stop. The rule is therefore:
+
+- **The composer never calls `sendMessage()` while the thread is busy.** "Busy" means main's turn-state phase for the thread, which main derives from compat (`streaming` / `waiting_permission` / `pending`) and publishes to every window. The composer's submit handler branches:
+  - **idle**: `chat.sendMessage(text)`, which sends `run`;
+  - **busy**: the `ai.queue.enqueue({threadId, message})` procedure, which writes the legacy `enqueue {message, hidden:false}`. The host's authoritative queue (`admit`) steers it, parks it behind a permission, or holds it. Nothing enters ChatClient's lifecycle.
+- **The queue slot is the host queue.** It renders from `CUSTOM queue.updated`. Edit, remove, clear and "send now" map to the legacy commands:
+
+  | Action | Command |
+  |---|---|
+  | edit | `update_queue_item` |
+  | remove | `remove_from_queue` |
+  | clear | `clear_queue` |
+  | send now | `dequeue` |
+
+  Queued messages survive Stop exactly as today (`host.ts:164`, `runAfterStop`). ChatClient is configured with `whenBusy: "error"`, so an accidental busy `sendMessage` fails loudly instead of queueing locally.
+- **The race.** If a `run` still arrives while the host is busy (another window started a turn between the check and the send), the host queues the text and emits `run.ack {queued}` (§3.1.1). Main's `ai.send` procedure sees that ack for its own request and **injects into that requesting subscription only** a terminal:
+
+  ```
+  RUN_ERROR {code:"queued", message:"Queued behind the running reply.", metadata.tanstack:{threadId, runId}}
+  ```
+
+  That resolves ChatClient's `processingComplete` for this run id at once, well before the other run ends. The terminal is not written to the ring or to other windows. The renderer's `onError` for `code:"queued"` removes the optimistic user message, which now appears in the queue slot. §7.5 tests settlement before the running turn ends.
 
 ### 3.2 Failure classification by producing operation (finding 13)
 
@@ -555,7 +647,7 @@ Emitter bookkeeping is keyed by `(subagentRunId ?? "", toolCallId)` (finding 18)
 - `TOOL_CALL_ARGS` carries the streamed deltas. If none were streamed, a single `ARGS` carries `JSON.stringify(input)`.
 - `TOOL_CALL_END` goes out once, with `metadata.tanstack.input`.
 - The order is `START < ARGS* < END < RESULT`, with `RESULT` at most once.
-- Title and kind are **not** sent as updatable metadata (finding 25). The chat kit computes them at render time from `part.name` + `part.input` using the vendored helpers, which the agent package exports as `@abacus-ai/agent/tool-display`. So they always reflect the final input.
+- Title and kind are **not** sent as updatable metadata (finding 25). The chat kit computes them at render time from `part.name` + `part.input` using the vendored helpers, which the agent package exports as `@abacus-ai/agent/tool-display`, a dedicated browser-safe build entry (§6.1, finding r2-18). So they always reflect the final input.
 
 #### 3.3.6 Tool results (finding 10)
 
@@ -589,11 +681,14 @@ A processor probe must render these as `state:"error"` with the text as the erro
 `TurnUsage` maps to:
 
 ```
-usage: [{model, inputTokens: input, outputTokens: output, cachedInputTokens: cacheRead,
-         cacheWriteInputTokens: cacheWrite, totalTokens: input + output + cacheRead + cacheWrite}]
+usage: [{ ...(model != null ? { model } : {}),
+          inputTokens: input + cacheRead + cacheWrite,
+          cachedInputTokens: cacheRead, cacheWriteInputTokens: cacheWrite,
+          outputTokens: output,
+          totalTokens: input + cacheRead + cacheWrite + output }]
 ```
 
-The raw value is also kept in `metadata.abacus.turnUsage`. When several land in one run, the last wins.
+This follows `@ag-ui/core@1.0.0`'s accounting: `inputTokens` is the total, and the cache fields are parts of it. A null `TurnUsage.model` is omitted (finding r2-17). The raw value is also kept in `metadata.abacus.turnUsage`, and main's cache-miss logger reads compat anyway. When several land in one run, the last wins.
 
 #### 3.3.9 Declared, never produced
 
@@ -650,31 +745,32 @@ The renderer sends `permission.respond {lineage, decision}`. `decision` is exact
 
 PLAN.md's `resolveInterrupt(approved, {payload})` is superseded. The chat-kit widgets call the renderer's `respondPermission(descriptor, decision)`, which forwards to main's procedure and on to this command.
 
-#### 3.5.3 Lineage, stale and invalid answers (findings 3, 4)
+#### 3.5.3 Lineage, stale and invalid answers (findings 3, 4, r2-9, r2-13)
 
-A `permission.respond` is applied **only if all** of these hold:
+**Owner.** When `permission_needed` arrives, the host records that permission's owner as `{turnSeq: currentToken.seq, runId: openRun?.runId}`. `currentToken` stays set until `send()` resolves, so a permission raised in bot housekeeping or in a late sandbox ask, after the user's run has settled, still has an owning turn. Its lineage has no `runId`.
 
-- `lineage.incarnation` equals this process's incarnation. It is a `randomUUID()` minted at start and carried in `session.ready`, `AgentState` and every descriptor.
-- `lineage.threadId` equals `--thread-id`.
-- `lineage.permissionId` is in the session's pending map.
-- `lineage.runId` equals the run that permission was raised in.
+**Checks.** A `permission.respond` is applied **only if all** of these hold:
 
-The decision must also be valid and allowed.
+- `lineage.incarnation` equals this process's incarnation, minted at start and carried in `wire.hello`, `session.ready`, `AgentState` and every descriptor;
+- `lineage.threadId` equals `--thread-id`;
+- `lineage.permissionId` is pending;
+- `lineage.turnSeq` equals that permission's recorded owner `turnSeq`;
+- the decision is valid and allowed for the kind (§3.5.2).
 
-**Otherwise nothing is answered:**
+**On failure** nothing is answered:
 
-- The host emits `CUSTOM permission.response_rejected {lineage, reason}` followed by `CUSTOM permission.pending`, the authoritative current set.
-- A pending permission that happens to share the id keeps waiting, and its card stays up.
-- An answer is never reported as success unless a waiter was released.
-- The compat stream gets **no** line. Nothing reached the session.
+- the host emits `CUSTOM permission.response_rejected {lineage, reason: incarnation | thread | turn | not_pending | invalid_decision | decision_not_allowed}` followed by the authoritative `permission.pending`;
+- a pending permission that happens to share the id keeps waiting;
+- no compat line is written;
+- no answer is ever reported as success unless a waiter was released.
 
 **On success:**
 
-1. `session.respondPermission(id, decision)`.
-2. `awaitingPermission = false` and `releaseParked()`, identical to `host.ts:199-205`.
-3. `CUSTOM permission.resolved {permissionId, decisionKind, source:"respond"}`, then `permission.pending`.
+1. `session.respondPermission(id, decision)`;
+2. `awaitingPermission = false` and `releaseParked()` (`host.ts:199-205`);
+3. `permission.resolved {source:"respond"}` + `permission.pending`.
 
-The legacy `permission_response` keeps today's semantics exactly (`respondPermission` ignores unknown ids). It is trusted without lineage: only main writes it, and main reads this process's own compat stream under its ownership guard (`cli-manager-service.ts:640-646`). If it released a waiter, the host emits `permission.resolved {source:"legacy_response"}` and `permission.pending`.
+**Legacy `permission_response`.** Its semantics are unchanged. In an agui runtime its only writer is main's browser auto-allow (§3.5.6). The old renderer never talks to agui runtimes (§2.1), so an old window's delayed `perm-1` can never reach a replacement process (finding r2-9). Auto-allow is bound to the exact runtime that produced the request (§3.5.6). If it releases a waiter, the host emits `permission.resolved {source:"legacy_response"}` + `permission.pending`.
 
 #### 3.5.4 Attaching to a tool call (finding 6)
 
@@ -685,35 +781,43 @@ The legacy `permission_response` keeps today's semantics exactly (`respondPermis
 | `askNetworkHost` (`session.ts:2900`), or `askDenials` with no match | The single running `bash`-kind call, if exactly one | its | `sole-running` |
 | otherwise | none | none | `none` |
 
-**The join is explicit and ours.** The chat kit's tool widget looks up the descriptor store by `(subagentRunId ?? "", toolCallId)` and renders the approval inline. Descriptors with no `toolCallId`, or whose tool part is not mounted, render in the Interrupts slot. TanStack's `selectChatUI` join (`selectors.ts:100-138`, `tool-approval` only) is not relied on.
+**The join is explicit and ours.** The chat kit's tool widget looks up the descriptor store by `(subagentRunId ?? "", toolCallId)` and renders the approval inline. Descriptors with no `toolCallId`, or whose tool part is not mounted, render in the application-owned `PermissionList` (§3.5.5), not the kit's Interrupts slot. TanStack's `selectChatUI` join (`selectors.ts:100-138`, `tool-approval` only) is not relied on.
 
-#### 3.5.5 Expiry, stop, reset, reload (finding 8)
+#### 3.5.5 Rendering, expiry, stop, reset, reload (findings 8, r2-3)
 
-- **Expiry** (`session.ts:2777`, `bot-session.ts:1443`):
-  - `CUSTOM permission.cleared {reason:"expired"}` + `permission.pending`;
-  - `tool_blocked {cause:"expired"}` for gate-attached calls.
+**Application-owned permission list.** The kit's Interrupts slot reads `chat.interrupts` only (`create-ui.tsx:818`), which stays empty. So the layout and the notch each mount an application-owned `PermissionList`, subscribed directly to the descriptor store:
 
-  The turn continues with today's rejection text inside the same open run. Nothing is reconciled against a ChatClient batch because none exists. The descriptor store removes exactly the expired item, and the other cards stay actionable.
-- **Stop and reset** (`rejectAllPending`, `session.ts:3188`, `bot-session.ts:1550`): `permission.cleared {reason:"stopped" | "reset"}` for each, then `permission.pending {items: []}`.
-- **Reload, second window, ring eviction.** The store is rebuilt from `session.sync` (§5.3), which carries the pending descriptors.
+- it renders every descriptor that has no mounted tool widget: unattached `sandbox_denied`/`network_host` requests, housekeeping permissions, and requests whose tool part is not in view;
+- the same component renders inline in tool widgets through the `(subagentRunId, toolCallId)` join (§3.5.4);
+- its controls call `respondPermission(descriptor, decision)` with the descriptor's lineage.
 
-#### 3.5.6 Browser auto-allow (finding 1)
+A test mounts the real `createChatUI` layout with an unattached request and answers it (§7.5).
 
-Browser auto-allow stays in main, unchanged:
+**Lifecycle:**
+
+- **Expiry** (`session.ts:2777`, `bot-session.ts:1443`): `permission.cleared {reason:"expired"}` + `permission.pending`, plus `tool_blocked {cause:"expired"}` for gate-attached calls. The turn continues inside the same run. Only the expired item leaves the store.
+- **Stop and reset** (`rejectAllPending`, `session.ts:3188`, `bot-session.ts:1550`): `permission.cleared {reason:"stopped" | "reset"}` each, then `permission.pending {items: []}`.
+- **Reload or second window:** the store is hydrated from main's copy of the latest `permission.pending` (§5.3). Descriptors from a dead incarnation are dropped.
+
+#### 3.5.6 Browser auto-allow (findings 1, r2-9)
+
+Browser auto-allow stays in main:
 
 1. `AgentCommunicationService.handleDesktopEvent` sees `permission_needed` on compat.
 2. It returns `autoAllowDecision` for `browser_navigate` / `browser_snapshot` (`cli-communication-service.ts:38-41`).
 3. `service-host.ts:1231-1238` writes the legacy `permission_response`.
 
-The answer crosses two pipes, so it always arrives after the waiter is registered, as today. The post-Stop suppression (`service-host.ts:1222-1228`) is preserved.
+The answer crosses two pipes, so it arrives after the waiter is registered, as today. The post-Stop suppression (`service-host.ts:1222-1228`) is kept.
 
-Rev 1's agent-side `--auto-allow` flag is removed. It would have answered before `awaitDecision` registered the waiter (`session.ts:2734` vs `:2768`; `bot-session.ts:1428` vs the promise below it) and lost the answer.
+**One main-side guard** is required for agui runtimes: the auto-allow write must go to the runtime object that emitted that `permission_needed`, not to whichever runtime currently owns the session id. This is main's slice. In the normal case it changes nothing; it only drops an answer when the runtime was replaced in between.
 
-On AG-UI the renderer sees `permission.requested` followed shortly by `permission.resolved {source:"legacy_response"}`. Main's renderer relay may suppress `permission.requested` for the two auto-allowed tool names, since it holds that list.
+Rev 1's agent-side `--auto-allow` stays removed: it would have answered before `awaitDecision` registered the waiter (`session.ts:2734` vs `:2768`).
 
-### 3.6 Sub-agents
+On AG-UI the renderer sees `permission.requested` followed by `permission.resolved {legacy_response}`. Main's relay may suppress the request for those two tool names.
 
-- **Stop from a card** (`SubagentHandle.stop()`) sends `cancel`, which is today's Stop.
+### 3.6 Sub-agents (finding r2-4)
+
+- **Stop from a card is application-owned.** ChatClient's `stopSubagent()` only aborts a request controller, and a client that is merely subscribed, or hydrated into a server-initiated run, has none. So the sub-agent card's Stop calls `ai.cancel({threadId, runId: <the parent run that owns the card>})`, which writes `cancel {runId}`. That is today's Stop, which ends the whole turn, from any window and from a restored card. `SubagentHandle.stop()` is not used.
 - **pi 0.99's `parentToolCallId`** on session events is not used.
 - **Nested scopes** set `parentSubagentRunId`. None exist today.
 
@@ -729,25 +833,26 @@ Nothing is emitted on AG-UI, so there is nothing for main to filter, and no payl
 
 ### 3.8 Cancel, reset, exit: the abort path and "always a terminal"
 
-- **`cancel`** runs `host.ts:160-182` verbatim, with the queue entries set to `"turn"` and `queue_updated`. The steps are:
-  1. `turn += 1`, `stopping = true`.
-  2. **`runs.markCancelling(token)`** (synchronous).
-  3. `await session.stop()`.
-  4. `stopping = false`, `busy = false`.
-  5. Settle `cancelled` (`stopReason:"aborted"`).
-  6. `agent.status idle`.
-  7. `runAfterStop()`.
-- **`reset_conversation`** follows `host.ts:207-218`. It marks the run cancelling and settles it cancelled. `session.ready` (new pi session id and file, same incarnation), `STATE_SNAPSHOT`, `session.cleared` and `agent.status idle` follow.
+- **`cancel {runId?}`** (finding r2-12):
+  - **Stale id.** If `runId` is given and names neither the open run nor the run whose admission is preparing, it is ignored: `CUSTOM agent.notification` is not emitted, only a stderr line is logged, and nothing is stopped.
+  - **Otherwise** it runs `host.ts:160-182` with one change in order:
+    1. queue entries → `"turn"`, then `queue_updated`;
+    2. `turn += 1`, `stopping = true`;
+    3. **`runs.markCancelling(currentToken)`** and `admissionGen += 1`, synchronously;
+    4. `await session.stop()`;
+    5. `stopping = false`, `busy = false`, `preparing = false`;
+    6. settle `cancelled` (`stopReason:"aborted"`);
+    7. `agent.status idle`;
+    8. `runAfterStop()`.
+
+    A preparation still awaiting `setModel` sees the bumped generation and never prompts (§3.1.1).
+  - Legacy `stop` is the same, without the `runId` check.
+- **`reset_conversation`** follows `host.ts:207-218`, including `markCancelling`, the `admissionGen` bump and the cancelled settle. After that: `session.ready` (new pi session id and file, same incarnation), `STATE_SNAPSHOT`, `session.cleared` and `agent.status idle`.
 - **stdin EOF.** After in-flight commands settle (`host.ts:138-145`), an open run gets `RUN_ERROR {code:"agent_exit"}`.
-- **Crash.** In `main.ts:18-29` and `process.on("exit")`, `host.emergencyClose(code)` writes `RUN_ERROR {agent_crashed | agent_exit}` for an open run with `fs.writeSync(1, …)`. It is idempotent. The compat stream gets nothing extra: today's crash writes nothing either.
-- **Structural guarantee.**
-  - `RUN_STARTED` is written only by `runs.open(token)`, which throws when a run is open.
-  - Every `session.send` is wrapped in a token-owned `try/finally` settle.
-  - For every `RUN_STARTED{runId}` there is exactly one terminal before the next `RUN_STARTED` and before exit. The one exception is SIGKILL, for which main synthesizes a terminal (main slice).
-- **No agent-side watchdog** (finding 22).
-  - Main's inactivity watchdog keeps reading compat and sends `stop` exactly as today (`service-host.ts:1463-1488`). That produces the `cancelled` terminal on AG-UI.
-  - Main additionally emits its own `RUN_ERROR {code:"inactivity_timeout"}` to the renderer, and the first terminal per `runId` wins (main slice).
-  - A standalone watchdog is a separately authorised change and not part of this slice.
+- **Crash.** `host.emergencyClose(code)` runs in `main.ts:18-29` and `process.on("exit")`. It writes `RUN_ERROR {agent_crashed | agent_exit}` for an open run with `fs.writeSync(1, …)`. It is idempotent, and compat gets nothing extra.
+- **Compat loss** is handled as in §2.4 (`RUN_ERROR {compat_lost}`, then exit 75).
+- **Structural guarantee.** `RUN_STARTED` is written only by `runs.open(token)`, which throws when a run is open. Every `session.send` has a token-owned `try/finally` settle. So every `RUN_STARTED` gets exactly one terminal before the next `RUN_STARTED` and before exit; for SIGKILL, main synthesizes it. The only terminal ever written without a `RUN_STARTED` is main's per-subscription `RUN_ERROR {queued}` (§3.1.6). The agent never writes one.
+- **No agent-side watchdog** (finding 22). Main's inactivity watchdog keeps reading compat and sends `stop`. Main's own `RUN_ERROR {inactivity_timeout}` to the renderer follows the first-terminal-wins rule (main slice).
 
 ---
 
@@ -757,7 +862,7 @@ Nothing is emitted on AG-UI, so there is nothing for main to filter, and no payl
   - `runHiddenTurn` (`bot-session.ts:587-608`) brackets `sendCustomMessage` with the internal `hidden_turn {phase:"start" | "end"}`.
   - Between them the emitter drops every run-scoped event plus `agent.status`, `agent.retry` and `agent.heartbeat`.
   - Hidden-turn usage is logged to stderr: `[usage] housekeeping <customType> <json>`.
-  - A permission raised in a hidden turn still produces `permission.requested`, so it can be answered, as today's card could be.
+  - A permission raised in a hidden turn still produces `permission.requested`, so it can be answered, as today's card could be. Its lineage is bound to the still-current `turnSeq` and carries no `runId` (§3.5.3). It renders in the `PermissionList` (§3.5.5).
   - **The compat stream is unchanged:** it still carries the lines the bot leaks today (`:1098`, `:1323`, `:1369-1374`, `:217`), so main's turn state behaves exactly as before.
 - **The user's run settles before housekeeping.** The `settled()` callback fires before `runMemoryMaintenance()` (§3.1.5). `busy` stays true until `send()` resolves, as today. That keeps today's quirk that a message sent during a housekeeping turn is steered into it (§8.3).
 - **Sanitiser first.** The only inputs are the `text_delta` / `thinking_delta` events the bot emits after `BotOutputSanitizer.push/flush` and `tidyBotText` (`bot-session.ts:1126`, `:1159-1160`, `:1179-1182`). The emitter never subscribes to pi directly, so every bot `TEXT_MESSAGE_CONTENT` is post-sanitiser, and `<think>` content becomes `REASONING_*`.
@@ -771,14 +876,13 @@ Nothing is emitted on AG-UI, so there is nothing for main to filter, and no payl
 
 Main's taps consume compat unchanged:
 
-- `recordAgentSession` from `ready` (`service-host.ts:1184-1190`), so the thread ↔ pi session file mapping is unchanged;
+- `recordAgentSession` from `ready` (`service-host.ts:1184-1190`), so the thread ↔ pi file mapping is unchanged;
 - turn state and watchdog;
 - messaging;
 - artifacts;
-- routine settle;
-- turn waiter;
+- routine settle and the turn waiter;
 - state patch;
-- auto-allow;
+- auto-allow (plus the runtime binding in §3.5.6);
 - skills and MCP;
 - host services;
 - usage log.
@@ -787,59 +891,38 @@ The `health-check.ts` ready probe keeps spawning `--wire ndjson` until cut-over.
 
 ### 5.2 New, for the renderer (main slice)
 
-- **`ai.send`** writes `run` and resolves from the synchronous `run.ack`:
-  - `started`: the client awaits the run's events;
-  - `queued`: the adapter settles the client-side send without awaiting a run, and the chat kit shows the entry in the queue slot from `queue.updated`;
-  - `duplicate` / `rejected`: the adapter settles with an error for `rejected`, and does nothing for `duplicate`.
-- **Main's ring** holds the AG-UI stdout. The first terminal per `runId` is authoritative.
-- **The descriptor store** is built from `permission.pending`, which replaces the store's content wholesale.
-- **The permission procedure** is `ai.respondPermission(lineage, decision)`, which writes `permission.respond`.
+- **`ai.send`** writes `run`:
+  - on `run.ack {started}` the client follows the run;
+  - on `queued` it injects the per-subscription `RUN_ERROR {queued}` (§3.1.6);
+  - on `rejected` it injects a per-subscription `RUN_ERROR {code:"rejected", message: reason}`;
+  - on `duplicate` it does nothing, because the original run's events are already in the log.
+- **Other procedures:**
+  - `ai.queue.*` → legacy queue commands;
+  - `ai.cancel({threadId, runId})` → `cancel`;
+  - `ai.respondPermission(lineage, decision)` → `permission.respond`.
+- **Turn-state phase** per thread (from compat) is published to every window. The composer uses it (§3.1.6).
+- **The descriptor store** (latest `permission.pending`) and the **queue** (latest `queue.updated`) are kept per thread and exposed for hydration.
 
-### 5.3 Authoritative hydration and the replay-gap protocol (finding 23)
+### 5.3 Hydration through TanStack's own contract (findings 23, r2-5 to r2-8)
 
-The agent keeps no transcript. It provides a snapshot of **live** state on demand:
+The agent keeps no transcript and exposes no snapshot command (rev 2's `sync` is removed). Recovery uses `SubscribeConnectionAdapter.hydrate(threadId)` → `ChatHydrationResult {messages: UIMessage[], activeRun, interrupts}` and `joinRun(runId)` (`connection-adapters.ts:963-994`, `:1043-1056`). Both are backed by main's relay, which is single-threaded and applies each stdout line to every structure below before relaying it:
 
-```ts
-export interface SessionSync {
-  incarnation: string;
-  state: AgentState;
-  queue: { messages: QueueEntry[] };
-  pendingPermissions: PermissionDescriptor[];
-  run: null | {
-    runId: string;
-    threadId: string;
-    parentRunId?: string;
-    serverInitiated: boolean;
-    openMessage?: { messageId: string; role: "assistant" | "user"; subagentRunId?: string };
-    openReasoning?: { messageId: string };
-    /** Announced, unresolved calls: enough to re-announce START/ARGS/END. */
-    openToolCalls: Array<{ toolCallId: string; toolCallName: string; rawName: string; input: Record<string, unknown>; subagentRunId?: string; parentMessageId?: string }>;
-    /** Open subagents, outermost first: enough to re-announce SUBAGENT_STARTED. */
-    openSubagents: Array<{ subagentRunId: string; name: string; description?: string; parentToolCallId?: string; parentMessageId?: string; parentSubagentRunId?: string }>;
-  };
-}
-```
+1. **Transcript.** A per-thread TanStack `StreamProcessor`, fed every AG-UI event in order. At each terminal, main persists `processor.getMessages()` (UIMessage[]) as the thread's transcript. `UIMessage[]` is exactly what `hydrate` returns, so no AG-UI message conversion is needed. `MESSAGES_SNAPSHOT` is not used (finding r2-8).
+2. **Run log.** For the **active** run, main keeps its complete event list from `RUN_STARTED`, with no eviction until the terminal. It is capped at 200k events; past the cap only `tool.output` is coalesced to the latest per call. Completed runs are covered by the transcript, so the bounded ring applies only to completed runs' events.
+3. **Checkpoint.** `hydrate(threadId)` is computed synchronously in one relay turn:
+   - `messages` = the transcript as of the last terminal, i.e. excluding the active run;
+   - `activeRun` = `{runId}` of the active run, or `null`;
+   - `interrupts: null`;
+   - a cursor, the relay sequence number `N` at that instant.
 
-`sync` is answered at once, while a run is open too, with `CUSTOM session.sync`. It writes no compat line.
+   The store snapshot (descriptors, queue, turn phase) is taken in the same turn. `joinRun(runId)` replays the active run's log **from its `RUN_STARTED`** up to `N`, then streams live events with sequence `> N`. Because both reads happen in the same synchronous relay turn, nothing can fall between them (finding r2-6):
+   - a run that ends is either in the transcript (terminal ≤ N) or in the log;
+   - a permission change is either in the store snapshot or after `N`.
+4. **Replaying real events** means already-streamed text, reasoning, finished tools, finished children and the run's user input are all restored (finding r2-5). A call whose arguments are still streaming is replayed as the original `START` + the `ARGS` so far, with **no** `END`. The real `END` arrives live with the canonical input (finding r2-7). No synthetic re-announcement exists.
+5. **In-ring resume** (`lastEventId` within the retained log) replays from it as before.
+6. **Dead incarnation.** Stored descriptors whose `incarnation` differs from the live `wire.hello.incarnation` are dropped at hydrate.
 
-**Protocol (implemented in main; the agent's part is `sync` and its correctness):**
-
-1. **Main's persisted transcript.** Main keeps an authoritative per-thread transcript of *completed* runs. It is built by running the AG-UI stream through TanStack's `StreamProcessor` in main and persisted at each terminal. This is the source of `MESSAGES_SNAPSHOT` for a fresh client.
-2. **Fresh attach** (reload, second window) or a **gap** (`lastEventId` older than the ring's start):
-   1. Main sends `MESSAGES_SNAPSHOT` from the persisted transcript.
-   2. Main issues `sync`.
-   3. If `run` is non-null, main replays a synthetic prefix for the live run:
-      - `RUN_STARTED`;
-      - `SUBAGENT_STARTED` for each open subagent (outermost first);
-      - `TOOL_CALL_START/ARGS/END` for each open call;
-      - `TEXT_MESSAGE_START` for the open message;
-      - `REASONING_START` + `REASONING_MESSAGE_START` for open reasoning.
-   4. Main switches to live events after the sync point.
-   5. Main loads the descriptor store from `pendingPermissions` and the queue from `queue`.
-
-   This fixes the two failures the review found: a tool result needs its tool part, and a tagged child event needs its subagent card.
-3. **In-ring resume** (`lastEventId` within the ring) replays from the ring as before.
-4. **Descriptors for a dead incarnation.** When the stored descriptors' `incarnation` ≠ the live `session.ready.incarnation`, main drops them. They cannot be answered (§3.5.3).
+The agent's contract for all of this: stdout is complete and self-describing; every event needed to rebuild state is on it, and nothing depends on hidden agent state. The §7.8 tests prove it.
 
 ---
 
@@ -854,15 +937,15 @@ export interface SessionSync {
 | `emit.ts` | `AguiEmitter`: a pure, synchronous translator from `DesktopEvent` + internal events to `AguiEvent[]`. State: open message/reasoning (with role), tool bookkeeping keyed by `(subagentRunId, toolCallId)`, merged display/output, blocked causes, open subagents, pre-ready state, hidden depth. |
 | `runs.ts` | `RunController`: tokens, `open` / `settle` / `markCancelling` / `emergencyClose`, the closing order (§3.1.5), terminal recording by origin. |
 | `sink.ts` | `HostSink`: one `emit()` feeding `toNdjsonWire` → compat (or stdout under `ndjson`) and `AguiEmitter` → stdout (§2.4). Opens the compat channel. |
-| `queue.ts` | Queue and turn logic extracted verbatim from `host.ts:28-485` (`runTurn`, `admit`, `runAfterStop`, `releaseParked`, `resyncSteers`, `onSessionEvent`, `echoed`, `stopping`, `awaitingPermission`, `turn`), plus the synchronous `reserved` flag. Both hosts use it. |
-| `host.ts` | `AguiHost`: the stdin loop (`host.ts:90-145`), the legacy command table, `run` / `cancel` / `permission.respond` / `sync`. |
+| `queue.ts` | Queue and turn logic extracted verbatim from `host.ts:28-485` (`runTurn`, `admit`, `runAfterStop`, `releaseParked`, `resyncSteers`, `onSessionEvent`, `echoed`, `stopping`, `awaitingPermission`, `turn`), plus the single synchronous admission guard (`busy`, `preparing`, `admissionGen`; §3.1.1) used by every turn starter. Both hosts use it. |
+| `host.ts` | `AguiHost`: the stdin loop (`host.ts:90-145`), the legacy command table, `run` / `cancel` / `permission.respond`, and the `wire.hello` preflight hand-off. |
 | `permissions.ts` | `toDescriptor`, `allowedDecisions(kind)`, `isPermissionDecision`, `validateLineage`, `attachToolCall`, the pending map mirror. |
 | `ids.ts` | Id helpers (§3.3.7) and `incarnation`. |
 | `scope.ts` | `scopeEmit`. |
 | `vendor/pi-acp/` | §6.2, with the MIT `LICENSE` and the source commit in a header comment. |
 | `__fixtures__/`, `*.test.ts` | §7 |
 
-The agent package also adds the export `./tool-display` (`buildToolTitle`, `toToolKind`, `formatToolContent`) for the chat kit.
+**`src/tool-display.ts`** (new, finding r2-18) is a browser-safe entry that re-exports only `vendor/pi-acp` `buildToolTitle`, `toToolKind` and `formatToolContent`, with no `node:` or pi imports (enforced by a lint rule). It gets a new `tsdown.config.ts` entry (`:23-40`) and the package export `"./tool-display": {types: "./dist/tool-display.d.ts", default: "./dist/tool-display.js"}`.
 
 ### 6.2 Vendored from pi-acp (MIT)
 
@@ -871,7 +954,7 @@ The agent package also adds the export `./tool-display` (`buildToolTitle`, `toTo
 | `buildToolTitle` | `pi-acp/src/acp/session.ts:92-149` | `vendor/pi-acp/tool-title.ts` | Keep `read` / `write` / `edit` / `bash` and the 80-char truncation. Add our tools (`grep`, `find`/`glob`, `ls`, `web_fetch`, `web_search`, `delegate_task`, `browser_task`, `ast_edit`, `batch_edit`, `batch_file_read`, `todo`, `memory`, `document`/`pdf`/`ppt`/`design`/`app`). Drop `lsp` / `tmux` / `context_*` / `claudemon`. |
 | `toToolKind` | `:57-72` | `vendor/pi-acp/tool-kind.ts` | Extended mapping: read (`read`, `batch_file_read`, `ls`), edit (`write`, `edit`, `ast_edit`, `batch_edit`), execute (`bash`), search (`grep`, `find`/`glob`, `web_search`), fetch (`web_fetch`), think (`delegate_task`), switch_mode (`exit_plan_mode`), else other |
 | `formatToolContent` + extractors | `translate/tool-content.ts:57-300` | `vendor/pi-acp/tool-content.ts` | Returns a markdown string, used for `ToolResultContent.formatted` only |
-| `mapPiStopReason` | `session.ts:151-170` | `vendor/pi-acp/stop-reason.ts` | Kept as `toAcpStopReason`. Adds `toFinishReason`: stop → `"stop"`, length → `"length"`, toolUse → `"tool_calls"`, deferred → `"stop"`, else `null`. |
+| `mapPiStopReason` | `session.ts:151-170` | `vendor/pi-acp/stop-reason.ts` | Kept as `toAcpStopReason`. Adds `toFinishReason`: stop → `"stop"`, length → `"length"`, toolUse → `"stop"` (a settled run is final; `"tool_calls"` would make ChatClient treat it as an intermediate hand-off, finding r2-16), deferred → `"stop"`, else `null`. |
 
 ### 6.3 Change
 
@@ -879,7 +962,8 @@ The agent package also adds the export `./tool-display` (`buildToolTitle`, `toTo
 |---|---|
 | `protocol.ts` | Add `InternalAgentEvent`: `message_open`, `message_close`, `tool_call_start` / `tool_call_delta` / `tool_call_stop` (the existing producer-less shapes at `:126-133`), `tool_blocked`, `plan_changed`, `hidden_turn`. Add optional internal fields: `origin` on `error`, `subagentRunId` on every `AgentEvent`, `parentToolCallId` on `subtask_start`. `DesktopEvent` / `DesktopCommand` are unchanged. |
 | `host.ts` (`NdjsonHost`) | Becomes `queue.ts` + `HostSink` with the compat writer = stdout and no AG-UI emitter. Output is byte-identical (§7.2). `ABACUSAI_BOT_WIRE_RECORD=<path>` records stdin plus pre-strip events for fixtures. |
-| `main.ts` | Parse `--wire`, `--thread-id`, `--compat-fd`, `--compat-pipe`. Exit with code 78 when the compat channel fails. Wire `emergencyClose` into `:18-29` and `exit`. |
+| `main.ts` | Parse `--wire`, `--thread-id`, `--compat-fd`. Run the synchronous compat preflight and write `wire.hello` before constructing the session (§2.4). Wire `emergencyClose` into `:18-29` and `exit`. |
+| `tsdown.config.ts` | Add the `src/tool-display.ts` entry. |
 | `index.ts` | Export `AguiHost` and the wire types; keep `NdjsonHost`. |
 | `session.ts` | Emit internal `message_open` / `message_close` (`:2374`, `:2389`) and `tool_call_*` (`:2599`, extracted per §3.3.5). The gate emits `tool_call_start` at entry (`:2650`) and `tool_blocked` at its block returns. Add `origin` at the error sites in §3.2. Emit `plan_changed` on a successful `todo` end (`:2477`). `send(text, turn?)` calls `turn.settled()` per §3.1.5. No logic change. |
 | `bot/bot-session.ts` | The same internals (suppressed in hidden turns), `origin`, `send(text, turn?)`, `settled()` at `:537` / `:540` / `:508`, and `hidden_turn` at `:595` / `:605`. |
@@ -975,11 +1059,18 @@ For every §7.1 scenario:
 2. Run `--wire agui` with the equivalent script (the AG-UI command → legacy mapping in §2.4, or the same legacy commands for main-originated ones), and capture fd-3 bytes **C**.
 3. Assert `C === B`, **byte for byte**, with no normalisation.
 4. Assert that **B** equals the checked-in baseline `__fixtures__/<scenario>.ndjson`, recorded from the pre-change build (`git stash` baseline). This proves `--wire ndjson` itself is unchanged.
-5. Assert that rejected, duplicate and invalid AG-UI commands (`run.ack rejected/duplicate`, `permission.response_rejected`, `sync`) add **no** bytes to **C**.
+5. Assert that rejected, duplicate and invalid AG-UI commands (`run.ack rejected/duplicate`, `permission.response_rejected`, a stale `cancel {runId}`) add **no** bytes to **C**.
 
-**Spawned-process check.** Run `dist/main.js --wire agui --compat-fd 3` against `dist/main.js --wire ndjson` for three scenarios on macOS, Linux and Windows CI. Compare with only the pi session id, `ts` fields and `Date.now()`-derived subtask ids masked. This proves fd 3 works across platforms.
+**Spawned-process check.** Run `dist/main.js --wire agui --compat-fd 3` against `dist/main.js --wire ndjson` for three scenarios on macOS, Linux and Windows CI. Mask only the pi session id, the `ts` fields and the `Date.now()`-derived subtask ids, and drop the single fd-mode `compat.hello` preamble. This proves fd 3 works across platforms.
 
-**Fallback check.** With `--compat-pipe` in place of fd 3, run the same comparison. With an unopenable channel, assert exit code 78 and empty stdout.
+**Handshake and loss checks** (findings r2-14, r2-15):
+
+- **fd 3 closed before spawn:** `wire.hello.compat === "inline"`, and the RS-prefixed lines, stripped, equal **B** byte for byte.
+- **Asynchronous first-write failure:** simulate a writable fd whose first async write errors.
+  - The preflight's synchronous write catches it and chooses inline.
+  - If the preflight passes but a later async write fails, stdout carries `wire.compat_lost` and the open run's `RUN_ERROR {compat_lost}`, and the process exits with 75.
+  - No AG-UI line is written after the failure, apart from those two.
+- **Real `AgentManagerService`:** it reads `wire.hello` and routes compat for both modes, driving the unchanged taps and the new ChatClient end to end.
 
 ### 7.3 Porting `transport-bridge.test.ts`
 
@@ -1025,6 +1116,21 @@ Spawned `--wire agui` with the fake provider:
 - **Auto-allow.** Main's unchanged `AgentCommunicationService` reads fd 3 and writes `permission_response`. The browser tool runs without waiting for the timeout, and the AG-UI stream shows `requested` → `resolved{legacy_response}`.
 - **Sibling artifact.** A sibling `write` finishes, then Stop lands during another permission. The compat stream has its `tool_execution_complete` before the stop, and main's artifact extractor records it. The AG-UI stream has its `TOOL_CALL_RESULT`.
 
+
+- **Busy input, round 2** (findings r2-1, r2-2):
+  - During streaming, during a permission wait, and while stopping, a composer submission goes through `ai.queue.enqueue` and never through `sendMessage`. It steers the current turn, or parks behind the permission, exactly as legacy `enqueue` does. It survives Stop (it runs next), and an error does not drop it.
+  - Edit, remove and clear reach the host queue.
+  - **Race:** two windows; window B's `run` lands while A's run streams. B's `sendMessage()` promise resolves with the injected `RUN_ERROR {queued}` **before** A's run ends. The text appears in the queue slot and runs next.
+- **Admission races** (findings r2-10, r2-11):
+  - A `run` with a delayed `forwardedProps.model`, followed by a legacy `send` / `enqueue` / `dequeue` while it prepares: exactly one turn runs, and the others are queued with `waitingFor:"turn"`.
+  - The same delayed preparation followed by Stop: no prompt reaches pi, and the run closes `cancelled`.
+  - Followed by reset: no prompt reaches the new conversation.
+- **Late cancel** (finding r2-12): `cancel {runId: A}` arrives after A settled and B was admitted. B keeps running.
+- **Card Stop** (finding r2-4): the sub-agent card's Stop in a second window, and in a window restored by `hydrate` + `joinRun`, stops the owning run.
+- **Unattached permission** (finding r2-3): a `network_host` request with no running bash renders in the real `createChatUI` layout's `PermissionList` and in the notch, and can be answered.
+- **Housekeeping permission** (finding r2-13): a permission raised in a bot flush turn after the user's run settled carries a lineage with `turnSeq` and no `runId`. It hydrates into a fresh window, its answer validates and releases the waiter, and its expiry clears it.
+- **Old-window answer** (finding r2-9): an ndjson-runtime renderer window cannot address an agui runtime (§2.1). Auto-allow bound to runtime A does not reach runtime B after a respawn (main slice test).
+
 ### 7.6 TanStack conformance (findings 10, 11, 24, 25)
 
 - **Types.** `wire.ts` compiles against `@ag-ui/core@1.0.0` and `@tanstack/ai`'s `StreamChunk` with **no casts**: `expectTypeOf<AguiEvent>().toMatchTypeOf<StreamChunk>()`.
@@ -1037,8 +1143,12 @@ Spawned `--wire agui` with the fake provider:
 - **Title and kind.** The rendered title and kind equal `buildToolTitle` / `toToolKind` of the **final** input, asserted through the chat kit's helper (finding 25).
 - **ChatClient.** Over a fake `SubscribeConnectionAdapter`:
   - `interrupts` stays empty;
-  - a `queued` ack does not hang `send`;
+  - a raced `run` settles via the injected `RUN_ERROR {queued}` (§3.1.6);
   - a run with a permission stays loading until the answer, then completes.
+
+- **Final-turn finish reason** (finding r2-16): a run whose last assistant `stopReason` is `toolUse` (e.g. a budget stop after a tool round) settles with `finishReason` `"stop"`. ChatClient's `sendMessage()` resolves and the processor finalises.
+- **Usage** (finding r2-17): `inputTokens = input + cacheRead + cacheWrite`, `totalTokens = inputTokens + outputTokens`, the cache fields are parts of `inputTokens`, and a null `TurnUsage.model` produces no `model` key. Validated against `@ag-ui/core`'s documented accounting.
+- **`tool-display` entry** (finding r2-18): `import { buildToolTitle } from "@abacus-ai/agent/tool-display"` builds in the renderer's Vite bundle and resolves in the packaged app. A lint rule forbids `node:` imports and pi imports in `src/tool-display.ts` and its closure.
 
 ### 7.7 Bot sanitiser and hidden turns
 
@@ -1046,16 +1156,19 @@ Spawned `--wire agui` with the fake provider:
 - The flush and consolidation turns add zero AG-UI lines apart from `permission.*`, and the compat lines are unchanged.
 - The user's run terminal precedes the hidden turn's first pi event.
 
-### 7.8 Hydration (finding 23)
+### 7.8 Hydration (findings 23, r2-5 to r2-8)
 
-In-process with a ring of size 50:
+These run in-process, with main's relay (transcript processor, run log and store) driven from recorded AG-UI:
 
-- `sync` mid-run with an open child, an open tool call and a pending permission.
-- A fresh `ChatClient` fed `MESSAGES_SNAPSHOT` (from main's transcript fixture) + the synthetic prefix + the live tail:
-  - renders the child card with its later tool results;
-  - renders the parent tool result on its part;
-  - rebuilds the descriptor store.
-- Repeat after ring eviction, and for a second window attached mid-run.
+- **Reload mid-run:**
+  - after a tool finished and a child finished;
+  - with 5 KB of text already streamed;
+  - with a call halfway through its arguments.
+
+  In each case `hydrate` + `joinRun` into a fresh `ChatClient` produces exactly the parts of a client that watched live: the partial text, the finished tool with its output, the child card with its results, and the streaming call finishing with the real canonical input.
+- **Atomic checkpoint:** a terminal and a permission resolution are injected between the start of `hydrate` and the first `joinRun` event. Neither is lost or duplicated.
+- **Transcript round trip:** `processor.getMessages()` of a completed thread → `hydrate` → a fresh processor fed the next run yields the same messages as a single continuous processor.
+- **Second window** attached mid-run, and **completed-run eviction** from the bounded ring: the transcript covers the evicted runs.
 
 ---
 
@@ -1064,19 +1177,20 @@ In-process with a ring of size 50:
 ### 8.1 Acceptance checklist
 
 - [ ] `--wire ndjson` stdout equals the pre-change baselines for every scenario (§7.2 step 4). The existing agent suites pass unchanged.
-- [ ] `--wire agui` fd-3 output equals `--wire ndjson` stdout byte for byte for every scenario (§7.2). This holds on three OSes in the spawned check, and for the `--compat-pipe` fallback.
-- [ ] Main runs its taps from fd 3 with **zero** code changes to the taps.
-- [ ] The AG-UI goldens (§7.1), the transport-bridge ports (§7.3) and the properties (§7.4) pass.
-- [ ] Permission independence, lineage, envelope, expiry, auto-allow and sibling-artifact tests (§7.5) pass.
-- [ ] TanStack conformance (§7.6) passes with no casts, and the processor parts are correct.
-- [ ] The bot tests (§7.7) and hydration tests (§7.8) pass.
-- [ ] No behaviour-bearing logic changed beyond §6.3. `queue.ts` is a pure extraction, and the session changes are emit-only plus the optional `send` callback.
-- [ ] `typecheck` and `test` are green. The bundle adds only `@ag-ui/core` at runtime.
+- [ ] `--wire agui` compat equals `--wire ndjson` stdout byte for byte for every scenario, in fd and inline modes. This holds on three OSes in the spawned check. The handshake and loss checks pass (§7.2).
+- [ ] Main runs its taps from compat with **zero** tap-logic changes. The only main additions are the hello router and the auto-allow runtime binding.
+- [ ] The goldens (§7.1), transport-bridge ports (§7.3) and properties (§7.4) pass.
+- [ ] Every §7.5 test passes: independence, lineage, envelope, expiry, auto-allow, sibling artifact, busy input and race, admission races, late cancel, card Stop, unattached and housekeeping permissions.
+- [ ] Conformance (§7.6) passes, including the finish reason, usage and the `tool-display` entry. The bot tests (§7.7) and hydration tests (§7.8) pass.
+- [ ] No behaviour-bearing logic changed beyond §6.3.
+- [ ] `typecheck` and `test` are green, and the runtime adds only `@ag-ui/core`.
 - [ ] PLAN.md is amended:
   - no `bot.reply`;
-  - no native interrupts for permissions (a descriptor store plus `permission.respond`);
+  - no native interrupts; permissions use the descriptor store, `permission.respond` and the `PermissionList`;
+  - busy input goes to the host queue via `ai.queue.enqueue`, and `whenBusy` is `"error"`;
+  - hydration uses `hydrate` + `joinRun` over main's processor transcript and run log;
   - host services stay on compat;
-  - the compat stream feeds main's taps.
+  - compat feeds main's taps.
 
 ### 8.2 pi 0.85.1 → 0.99.x verification
 
@@ -1097,27 +1211,30 @@ These are unchanged from rev 1:
 
 | Risk | Mitigation |
 |---|---|
-| fd 3 behaves differently on Windows. | Tested on three OSes (§7.2). Fallback to `--compat-pipe`. Exit code 78 leads main to respawn with `--wire ndjson`. |
-| The two channels drift (a line on compat with no AG-UI counterpart, or the reverse). | Both come from one `HostSink.emit`. The §7.2 byte test and the §7.1 goldens cover both. |
-| A long-open run while a permission waits: the client shows loading for up to 15 minutes. | This is today's UX (the busy status). The queue slot stays usable via the `queued` ack. |
-| The regenerate restriction: `reload()` after success is rejected. | Explicit ack. The chat kit hides it. Branching is specified in a later slice. |
-| Command-match attachment picks the wrong call when two running calls share a command. | Most-recent wins. Only placement is affected; the answer is keyed by `permissionId`. |
-| Hidden-turn usage no longer reaches the renderer. | The compat stream still carries it to main's usage log, exactly as today. |
-| Pre-existing: a message sent during a bot housekeeping turn is steered into it. | Unchanged; logged for the bots slice. |
-| `@ag-ui/core` evolves the `EventType` or `Interrupt` shapes. | Pinned at 1.0.0, and the no-cast conformance test fails loudly. |
+| fd 3 behaves differently on Windows. | The synchronous preflight chooses inline mode. Tested on three OSes. |
+| The channels drift. | One `HostSink.emit`. The byte test and the goldens cover both. |
+| A run stays open while a permission waits (up to 15 minutes). | This is today's busy UX. Input goes to the host queue (§3.1.6). |
+| The two-window race produces a `queued` terminal that belongs to no run. | Per-subscription only. It never enters the ring or other windows. The renderer treats `code:"queued"` as "moved to queue". |
+| Run-log memory for very long runs. | 200k-event cap, with `tool.output` coalescing past it. Completed runs move to the transcript. |
+| The regenerate restriction. | Explicit rejection ack. `reload()` is hidden. Branching is a later slice. |
+| Command-match attaches to the wrong call. | Most recent wins. Placement only. |
+| Pre-existing quirk: a message sent during bot housekeeping is steered into it. | Unchanged; logged for the bots slice. |
+| `@ag-ui/core` or TanStack drift. | Pinned. The no-cast conformance and ChatClient tests fail loudly. |
 
 ---
 
-## 9. Review responses (`reviews/00-agent-agui.codex-r1.md`)
+## 9. Review responses
+
+### Round 1 (`reviews/00-agent-agui.codex-r1.md`)
 
 | # | Finding | Resolution | Where |
 |---|---|---|---|
 | 1 | Auto-allow answered before the waiter registered | Auto-allow stays in main and reads compat. It answers via the legacy `permission_response`, which arrives asynchronously after registration. The agent-side `--auto-allow` is removed. Round-trip test added. | §3.5.6, §7.5 |
-| 2 | Zero-length run overlapping the open run; admission race | Synchronous admission with a `reserved` flag. Busy input is acked `run.ack {queued}` without a run. Reservation-window input is queued `waitingFor:"turn"`. Concurrency property test. | §3.1.1, §7.4 |
+| 2 | Zero-length run overlapping the open run; admission race | Synchronous admission; busy input is acked `run.ack {queued}` without a run. Refined in round 2: see r2-1, r2-10, r2-11. | §3.1.1, §7.4 |
 | 3 | Resume lineage; ids restart per process | `permission.respond` carries a lineage of thread, incarnation, run and permission id. Everything is validated before any session call, and a mismatch releases nothing. | §3.5.3, §7.5 |
 | 4 | Unmatched resume closed with success | There is no resume path. A stale or invalid answer gets `permission.response_rejected` plus the authoritative `permission.pending`. A pause is never reported as finished. | §3.5.3 |
 | 5 | All-or-nothing batches change timing | No batching and no native interrupts. Each permission is its own descriptor, answered independently, and the run stays open. Independence test. | §3.5, §7.5 |
-| 6 | Generic interrupts do not join tool widgets | An explicit join: the chat kit's descriptor store is keyed by `(subagentRunId, toolCallId)`. The Interrupts slot is the fallback. `selectChatUI` is not relied on. | §3.5.4 |
+| 6 | Generic interrupts do not join tool widgets | An explicit join: the chat kit's descriptor store is keyed by `(subagentRunId, toolCallId)`. The fallback is the application-owned `PermissionList` (r2-3). `selectChatUI` is not relied on. | §3.5.4 |
 | 7 | Resolve envelope undefined | Exactly one `PermissionDecision` per answer, with an allowed-decision table per kind. Strict validation, no coercion. PLAN wording superseded. | §3.5.2, §7.5 |
 | 8 | `approval.cleared` does not retire client items | The descriptor store is ours. `permission.cleared` plus the authoritative `permission.pending` after every change. One expiry leaves the others actionable. | §3.5.5, §7.5 |
 | 9 | Sibling events buffered, then discarded on Stop | No buffering. Siblings stream immediately on AG-UI, and compat delivers them to the taps as today. Sibling-artifact test. | §3.5.1, §7.5 |
@@ -1134,6 +1251,29 @@ These are unchanged from rev 1:
 | 20 | Host-service filtering by name leaks args | Host services stay on compat plus the legacy response. Nothing on AG-UI. | §3.7 |
 | 21 | Wrong pi streaming shapes | Extract from `partial.content[contentIndex]`, defer until the id is known, and read `toolCall` only on end. Tested with real shapes. | §3.3.5, §7.1 |
 | 22 | The agent watchdog adds an abort policy | Removed. Main's watchdog is unchanged. | §3.8 |
-| 23 | Hydration conditional and incomplete | `sync` → `session.sync` live snapshot. Main keeps an authoritative transcript. The replay-gap protocol re-announces open subagents, tools and messages. Reload, second-window and eviction tests. | §5.3, §7.8 |
+| 23 | Hydration conditional and incomplete | Superseded in round 2 by `hydrate` + `joinRun` over main's processor transcript and complete active-run log (r2-5 to r2-8). | §5.3, §7.8 |
 | 24 | String literals not assignable; missing client dep | Built on `@ag-ui/core` `EventType` via the checked `aguiEvent()`. `@tanstack/ai-client` is a devDependency. No-cast conformance. | §2.3, §6.3, §7.6 |
 | 25 | END metadata updates ignored | START carries only immutable facts. Title and kind are computed at render time from the final input with exported helpers. Rendered-value test. | §3.3.5, §7.6 |
+
+### Round 2 (`reviews/00-agent-agui.codex-r2.md`)
+
+| # | Finding | Resolution | Where |
+|---|---|---|---|
+| r2-1 | A queued ack cannot settle ChatClient's `send` (`streamResponse` awaits `processingComplete`) | Busy input never calls `sendMessage`: the composer routes it to `ai.queue.enqueue`. In the two-window race, main injects a per-subscription `RUN_ERROR {queued}` for that run id, which resolves `processingComplete`. Tested before the other run ends. | §3.1.6, §5.2, §7.5 |
+| r2-2 | ChatClient's local busy queue cannot steer and is cleared by Stop | The host queue is authoritative. Composer, edit, remove, clear and send-now map to the legacy queue commands. `whenBusy:"error"`. Tested during streaming, permission, Stop and error. | §3.1.6, §7.5 |
+| r2-3 | The Interrupts slot reads only `chat.interrupts` | An application-owned `PermissionList` in the layout and the notch, subscribed to the descriptor store. Tested with the real `createChatUI` layout. | §3.5.5, §7.5 |
+| r2-4 | `SubagentHandle.stop()` only aborts a local controller | The card's Stop calls `ai.cancel({threadId, runId})`. Tested from a second window and a restored card. | §3.6, §7.5 |
+| r2-5 | Sync lost already-emitted content of the active run | Main keeps the active run's complete event log. `joinRun` replays it from `RUN_STARTED`. The transcript is main's processor output. | §5.3, §7.8 |
+| r2-6 | No atomic recovery boundary | The checkpoint (transcript, active run, store, cursor N) is computed in one synchronous relay turn, and replay is ≤ N followed by live > N. Race test. | §5.3, §7.8 |
+| r2-7 | Re-announcing with END broke streaming arguments | No synthetic re-announcement. The real `START`/`ARGS` are replayed, and the real `END` arrives live. | §5.3, §7.8 |
+| r2-8 | The UIMessage → `MESSAGES_SNAPSHOT` conversion was unspecified | Not needed: `hydrate` returns `UIMessage[]` straight from `StreamProcessor`. Round-trip test. | §5.3, §7.8 |
+| r2-9 | The legacy `permission_response` was exempt from lineage (old-window answers) | Agui runtimes serve only the new renderer. The old renderer uses ndjson runtimes. The auto-allow write is bound to the emitting runtime (main guard). Renderer answers always carry lineage. | §2.1, §3.5.3, §3.5.6 |
+| r2-10 | Admission was reserved only for `run` | One synchronous `busy` acquisition for every turn starter (legacy `send`, `enqueue`, `dequeue`, drains, `runAfterStop`). `preparing` queues with `waitingFor:"turn"`. Mixed-concurrency tests. | §3.1.1, §7.5 |
+| r2-11 | Stop or reset during model preparation still prompted | `admissionGen` plus cancelling and turn checks after every preparation await. A failed check never prompts. Tested for Stop and reset. | §3.1.1, §3.8, §7.5 |
+| r2-12 | A stale `cancel.runId` stopped an unrelated run | `cancel {runId}` is applied only if that run or its preparing admission is current. Legacy `stop` stays unconditional. Late-cancel test. | §2.2, §3.8, §7.5 |
+| r2-13 | Housekeeping permissions had no owning run | Lineage binds to `turnSeq` (the `TurnToken` that survives into housekeeping). `runId` is informational. Tested through hydrate, answer and expiry. | §2.2, §3.5.3, §7.5 |
+| r2-14 | Exit-78 fallback published a failure and broke the new renderer | Removed. A synchronous preflight negotiates fd versus inline compat before startup, and `wire.hello` tells main. The renderer is always AG-UI. There is no respawn. | §2.4, §7.2 |
+| r2-15 | Asynchronous write errors versus "exit before stdout"; silent tap loss | The preflight uses `writeSync`, so errors are synchronous. Loss after the handshake produces `wire.compat_lost`, `RUN_ERROR {compat_lost}` and exit 75, never silent. Tested. | §2.4, §3.8, §7.2 |
+| r2-16 | `finishReason:"tool_calls"` on a final terminal skips completion | Final terminals only use `stop`, `length` or `null`, and `toolUse` maps to `"stop"`. `tool_calls` is reserved for a future continuation protocol. Tested. | §3.1.5, §6.2, §7.6 |
+| r2-17 | Cache accounting | `inputTokens = input + cacheRead + cacheWrite`, cache fields as parts, `totalTokens = in + out`, and a null model is omitted. Tested. | §3.3.8, §7.6 |
+| r2-18 | The `tool-display` export had no build entry | A dedicated browser-safe `src/tool-display.ts`, a tsdown entry and a package export. A lint rule bans node and pi imports. The renderer bundle and packaged app are checked. | §6.1, §6.3, §7.6 |
