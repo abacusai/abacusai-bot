@@ -27,9 +27,11 @@ export const workspacesRouter = impl.workspaces.router({
   ),
   relocate: impl.workspaces.relocate.handler(async ({ input, context }) => {
     unwrapResult(
+      // A tombstoned workspace is restored at its new folder (§26.4 d).
       await context.deps.serviceHost.relocateWorkspace(
         input.workspaceId,
-        input.newPath
+        input.newPath,
+        { restore: true }
       ),
       workspaceFailure(input.workspaceId)
     );

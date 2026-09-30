@@ -80,6 +80,12 @@ const TABLE_HOOKS = {
   onBotsWritten: noHook,
   onRoutinesWritten: noHook,
   onWorkspacesChanged: noHook,
+  // Checkouts (spec 04 §26.4): none watched, no fingerprints.
+  onCheckoutRowsChanged: noHook,
+  checkoutRows: () => [],
+  wantGitFingerprints: noHook,
+  activeCheckoutKey: () => null,
+  checkouts: stub("serviceHost.checkouts", { onTreeChanged: noHook }),
 };
 
 export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {

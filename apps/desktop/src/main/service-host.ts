@@ -10,7 +10,11 @@ import path from "path";
 import { connectorById } from "@abacus-ai/connectors/registry";
 import { app } from "electron";
 
-import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
+import {
+  AgentStatus,
+  type AgentMode,
+  type DesktopEvent,
+} from "#shared/agent-types";
 import type {
   BotChangeNotice,
   Bot,
@@ -19,6 +23,8 @@ import type {
   BotUpdateInput,
 } from "#shared/bots";
 import { ConflictError } from "#shared/conflict";
+import { checkoutKey, type GitDiffResult } from "#shared/contract/checkout";
+import type { GitStateRow } from "#shared/contract/rows";
 import type {
   TranscriptSegment,
   TurnFeedbackInput,
@@ -337,6 +343,7 @@ import { ArtifactResolverService } from "./services/session/artifact-resolver-se
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
 import { AgentManagerService } from "./services/session/cli-manager-service";
 import { deliverMessage } from "./services/session/message-delivery";
+import { ModelSwitchWaiters } from "./services/session/model-switch";
 import { SessionArtifactsService } from "./services/session/session-artifacts-service";
 import {
   INACTIVITY_TIMEOUT_MINUTES,
@@ -345,6 +352,7 @@ import {
 import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
+import { CheckoutService } from "./services/workspace/checkout-service";
 import {
   FileSearchService,
   type FileSearchResult,
@@ -360,6 +368,7 @@ import {
 } from "./services/workspace/terminal-shells";
 import { WorkspaceRuntimeService } from "./services/workspace/workspace-runtime-service";
 import { WorkspaceService } from "./services/workspace/workspace-service";
+import { WorktreeMaterializer } from "./services/workspace/worktree-materialize";
 
 type EventDispatcher = (event: IpcEvent) => void;
 
@@ -988,6 +997,70 @@ export class ServiceHost {
   private readonly fileSearchService = new FileSearchService();
   private readonly gitService = new GitService();
 
+  /**
+   * Checkout-aware file and git operations (spec 04 §26.4): the procedures
+   * with a `checkout` call these; the ones without keep the legacy active
+   * workspace methods below.
+   */
+  readonly checkouts = new CheckoutService({
+    workspace: (workspaceId) =>
+      this.workspaceService
+        .getWorkspaces()
+        .find((entry) => entry.id === workspaceId) ?? null,
+    session: (sessionId) => this.agentSessionManagerService.get(sessionId),
+    git: this.gitService,
+    files: new FileTreeService(),
+    search: (root, query) => this.fileSearchService.search(root, query),
+    trash: async (absolutePath) => {
+      const { shell } = await import("electron");
+      await shell.trashItem(absolutePath);
+    },
+  });
+
+  /** The active workspace's primary checkout key (legacy tree events). */
+  activeCheckoutKey(): string | null {
+    const active = this.workspaceService.getActiveWorkspaceId();
+    return active == null ? null : checkoutKey(active, null);
+  }
+
+  /** `git.diff` without a checkout: the legacy active workspace, typed. */
+  async getActiveGitDiff(
+    filePath: string,
+    scope: GitDiffScope = "unstaged"
+  ): Promise<GitDiffResult> {
+    const workspace = this.workspaceService.getActiveWorkspace();
+    if (workspace?.path == null || workspace.isRemote) return { kind: "none" };
+    return this.checkouts.diff({ workspaceId: workspace.id }, filePath, scope);
+  }
+
+  /** Re-reads the active workspace's state (a `gitState` echo). */
+  refreshGitState(): Promise<void> {
+    return this.workspaceRuntimeService.refreshAndEmit();
+  }
+
+  #fingerprintReaders = 0;
+  /** The gitState table's readers want fingerprints (spec 04 §26.4 b). */
+  wantGitFingerprints(): () => void {
+    this.#fingerprintReaders += 1;
+    this.workspaceRuntimeService.setFingerprints(true);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.#fingerprintReaders -= 1;
+      if (this.#fingerprintReaders === 0)
+        this.workspaceRuntimeService.setFingerprints(false);
+    };
+  }
+
+  checkoutRows(): GitStateRow[] {
+    return this.checkouts.rows();
+  }
+
+  onCheckoutRowsChanged(listener: () => void): () => void {
+    return this.checkouts.onRowsChanged(listener);
+  }
+
   private managedWorktreeRoot(workspaceId: string): string {
     return path.join(abacusBotHome(), "worktrees", workspaceId);
   }
@@ -1270,6 +1343,8 @@ export class ServiceHost {
           payload.agentSessionFile ?? null
         );
       }
+      // `agent.setModel`'s answer, whatever the turn filter decides below.
+      this.modelSwitches.feed(sessionId, payload);
       // Post-Stop sessions drop everything but terminal events, so a stale
       // tail cannot leak into the renderer.
       const passedFilter = this.sessionTurnStateService.filterDesktopEvent(
@@ -1709,11 +1784,14 @@ export class ServiceHost {
 
   async relocateWorkspace(
     workspaceId: string,
-    newPath: string
+    newPath: string,
+    /** `restore` clears a tombstone (the RPC procedure; spec 04 §26.4 d). */
+    options: { restore?: boolean } = {}
   ): Promise<RelocateWorkspaceResult> {
     const result = await this.workspaceService.relocateWorkspace(
       workspaceId,
-      newPath
+      newPath,
+      options
     );
     if (!result.success) {
       return result;
@@ -2065,7 +2143,9 @@ export class ServiceHost {
     routineId: string | null = null,
     owner: SessionOwner | null = null,
     /** The caller's own id (an optimistic insert); a taken one is `ConflictError`. */
-    id?: string
+    id?: string,
+    /** `db.sessions.insert`'s model and mode, persisted at creation. */
+    initial: { model?: string | null; mode?: AgentMode | null } = {}
   ): AgentSessionListItem {
     if (this.isWorkspaceDeleted(workspaceId)) {
       throw new Error(
@@ -2077,7 +2157,8 @@ export class ServiceHost {
       routineId,
       owner,
       null,
-      id
+      id,
+      initial
     );
     this.emitEvent({
       type: "local-cli-session-created",
@@ -2770,6 +2851,19 @@ export class ServiceHost {
     this.agentCommunicationService.setModel(request);
   }
 
+  private readonly modelSwitches = new ModelSwitchWaiters();
+
+  /**
+   * `agent.setModel` (spec 04 §26.4 d): the same command, then the agent's
+   * answer. Rejects with `ModelUnavailableError` when the agent refuses; no
+   * running agent, or no answer in time, resolves.
+   */
+  setAgentModelChecked(request: AgentSetModelRequest): Promise<void> {
+    return this.modelSwitches.wait(request.sessionId, () =>
+      this.agentCommunicationService.setModel(request)
+    );
+  }
+
   stopAgentTurn(request: AgentSessionCommandRequest): void {
     this.markTurnStopped(request.workspaceId, request.sessionId);
     this.agentCommunicationService.stopTurn(request);
@@ -2912,7 +3006,10 @@ export class ServiceHost {
   }
 
   async setSessionWorktree(
-    request: SetSessionWorktreeRequest
+    request: SetSessionWorktreeRequest & {
+      /** A materialize's id, recorded with the attach (spec 04 §26.4 g). */
+      operationId?: string;
+    }
   ): Promise<SetSessionWorktreeResult> {
     const session = this.agentSessionManagerService.get(request.sessionId);
     if (session == null || session.workspaceId !== request.workspaceId) {
@@ -2957,7 +3054,10 @@ export class ServiceHost {
             id: worktree.id,
             path: worktree.path,
             branch: worktree.branch,
-          }
+          },
+      request.operationId == null
+        ? undefined
+        : { operationId: request.operationId, worktree }
     );
     return attached
       ? {
@@ -2967,37 +3067,29 @@ export class ServiceHost {
       : { success: false, error: "Unable to attach worktree to session." };
   }
 
-  async materializeSessionWorktree(
+  /** Idempotent per `(sessionId, operationId)` when given one (§26.4 g). */
+  materializeSessionWorktree(
     request: MaterializeSessionWorktreeRequest
   ): Promise<MaterializeSessionWorktreeResult> {
-    const created = await this.createWorktree(request);
-    if (!created.success || created.worktree == null) return created;
-
-    const attached = await this.setSessionWorktree({
-      workspaceId: request.workspaceId,
-      sessionId: request.sessionId,
-      worktreeId: created.worktree.id,
-    });
-    if (!attached.success || attached.session == null) {
-      const workspacePath = this.localWorkspacePath(request.workspaceId);
-      if (workspacePath != null) {
-        await this.gitService.removeManagedWorktree(
-          workspacePath,
-          this.managedWorktreeRoot(request.workspaceId),
-          created.worktree.path
-        );
-      }
-      return {
-        success: false,
-        error: attached.error ?? "Unable to attach the new worktree.",
-      };
-    }
-    return {
-      success: true,
-      worktree: created.worktree,
-      session: attached.session,
-    };
+    return this.worktreeMaterializer.materialize(request);
   }
+
+  private readonly worktreeMaterializer = new WorktreeMaterializer({
+    session: (sessionId) => this.agentSessionManagerService.get(sessionId),
+    recorded: (sessionId) =>
+      this.agentSessionManagerService.worktreeOperation(sessionId),
+    create: (request) => this.createWorktree(request),
+    attach: (request) => this.setSessionWorktree(request),
+    remove: async (workspaceId, worktreePath) => {
+      const workspacePath = this.localWorkspacePath(workspaceId);
+      if (workspacePath == null) return;
+      await this.gitService.removeManagedWorktree(
+        workspacePath,
+        this.managedWorktreeRoot(workspaceId),
+        worktreePath
+      );
+    },
+  });
 
   async getGitCurrentBranch(
     context?: WorkspaceGitContext

@@ -73,6 +73,8 @@ describe("delivery classes (A-T9)", () => {
       "localModels.progress": "coalescing",
       "voice.whisper.progress": "coalescing",
       "files.events": "coalescing",
+      // Spec 04 §26.4 b: one yield; the rows are gitState's.
+      "git.watch": "coalescing",
     });
   });
 
