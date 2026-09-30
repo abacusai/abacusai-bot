@@ -133,7 +133,10 @@ export function maskVolatile(bytes: string, port: number): string {
 
   out = out.split(GOLDEN_ROOT).join("<ROOT>");
   out = out.split(`127.0.0.1:${port}`).join("127.0.0.1:<PORT>");
-  out = out.replace(/(delegate|document|deck|design|browser)-\d{13}-/g, "$1-<T>-");
+  out = out.replace(
+    /(delegate|document|deck|design|browser)-\d{13}-/g,
+    "$1-<T>-"
+  );
 
   return out;
 }
@@ -299,7 +302,8 @@ export function ndjsonDriver(
     write: (line) => stdin.write(`${line}\n`),
     end: () => stdin.end(),
     done,
-    legacy: () => parseLegacy(captured.slice(0, captured.lastIndexOf("\n") + 1)),
+    legacy: () =>
+      parseLegacy(captured.slice(0, captured.lastIndexOf("\n") + 1)),
     bytes: () => captured,
   };
 }
@@ -327,7 +331,12 @@ export function injectedStreams(): {
 }
 
 export const fixturePath = (name: string): string =>
-  path.join(path.dirname(new URL(import.meta.url).pathname), "..", "__fixtures__", name);
+  path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    "..",
+    "__fixtures__",
+    name
+  );
 
 /** Compare with a checked-in fixture, or write it when UPDATE_GOLDENS=1. */
 export function golden(name: string, actual: string): string | null {
