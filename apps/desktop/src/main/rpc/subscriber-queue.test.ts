@@ -7,6 +7,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { TerminalOutputChunk } from "#shared/contract";
 import type { IpcEvent } from "#shared/contracts";
 import {
   conversationKey,
@@ -23,6 +24,7 @@ import { DELIVERY } from "./delivery";
 import { MainEventBus } from "./event-bus";
 import { browserCoalesceKey } from "./procedures/browser";
 import { stream } from "./procedures/impl";
+import { terminalChunkSize } from "./procedures/terminal";
 import {
   LOSSLESS_ACTIONABLE_MAX_EVENTS,
   SubscriberQueue,
@@ -202,6 +204,14 @@ const terminalHarness = (maxScrollbackBytes?: number) => {
         exitCode: event.exitCode,
         signal: event.signal,
         emittedAt: at,
+      }),
+    // As service-host wires it: bus-only, no legacy event.
+    onRetire: (event) =>
+      bus.dispatchChannel("terminal-retired", {
+        terminalId: event.terminalId,
+        conversationKey: event.key,
+        generation: event.generation,
+        reason: event.reason,
       }),
   });
   const deps = fakeDeps({
@@ -384,6 +394,160 @@ describe("terminal output by offset (A-T9)", () => {
       { type: "data", data: "a", offset: 1 },
       { type: "exit", exitCode: 0, signal: null },
     ]);
+  });
+
+  describe("a generation that ends without its own exit (impl-r1)", () => {
+    const scope = { kind: "draft" as const, workspaceId: "w1" };
+
+    const openLive = async (harness: ReturnType<typeof terminalHarness>) => {
+      const { generation } = await harness.registry.start({
+        terminalId: "t1",
+        scope,
+        cols: 80,
+        rows: 24,
+      });
+      const baseline = harness.bus.listenerCount();
+      const { client } = connect(harness.deps);
+      const output = await client.terminal.output({
+        conversationKey: harness.key,
+        terminalId: "t1",
+        generation,
+      });
+      await output.next(); // snapshot
+      return { client, output, generation, baseline };
+    };
+
+    const drain = async (
+      output: AsyncIterable<unknown>
+    ): Promise<unknown[]> => {
+      const rest: unknown[] = [];
+      for await (const chunk of output) rest.push(chunk);
+      return rest;
+    };
+
+    for (const [name, retire] of [
+      [
+        "an explicit close",
+        (h: ReturnType<typeof terminalHarness>, generation: number) =>
+          h.registry.close(h.key, generation, "t1"),
+      ],
+      [
+        "its scope being disposed",
+        (h: ReturnType<typeof terminalHarness>) =>
+          h.registry.disposeScope(h.key),
+      ],
+      [
+        "its workspace being disposed",
+        (h: ReturnType<typeof terminalHarness>) =>
+          h.registry.disposeWorkspace("w1"),
+      ],
+      [
+        "every terminal being disposed",
+        (h: ReturnType<typeof terminalHarness>) => h.registry.disposeAll(),
+      ],
+    ] as const) {
+      it(`ends a live reader with retired: closed on ${name}`, async () => {
+        const harness = terminalHarness();
+        const { output, generation, baseline } = await openLive(harness);
+        const listening = harness.bus.listenerCount();
+        expect(listening).toBeGreaterThan(baseline);
+
+        harness.ptys[0]!.data("x");
+        retire(harness, generation);
+        // The suppressed PTY exit must not produce a second ending.
+        harness.ptys[0]!.exit(0);
+
+        expect(await drain(output)).toEqual([
+          { type: "data", data: "x", offset: 1 },
+          { type: "retired", reason: "closed" },
+        ]);
+        await vi.waitFor(() =>
+          expect(harness.bus.listenerCount()).toBe(baseline)
+        );
+      });
+    }
+
+    it("ends a draft reader with retired: superseded when promoted", async () => {
+      const harness = terminalHarness();
+      const { output, baseline } = await openLive(harness);
+
+      const promoted = await harness.registry.promoteDraftToSession(scope, {
+        kind: "session",
+        workspaceId: "w1",
+        sessionId: "s1",
+      });
+      expect(promoted.status).toBe("promoted");
+
+      expect(await drain(output)).toEqual([
+        { type: "retired", reason: "superseded" },
+      ]);
+      await vi.waitFor(() =>
+        expect(harness.bus.listenerCount()).toBe(baseline)
+      );
+    });
+
+    it("gives a reader that arrives after a close the output and the retirement", async () => {
+      const harness = terminalHarness();
+      const { generation } = await harness.registry.start({
+        terminalId: "t1",
+        scope,
+        cols: 80,
+        rows: 24,
+      });
+      harness.ptys[0]!.data("bye");
+      harness.registry.close(harness.key, generation, "t1");
+
+      const { client } = connect(harness.deps);
+      const output = await client.terminal.output({
+        conversationKey: harness.key,
+        terminalId: "t1",
+        generation,
+      });
+      expect(await drain(output)).toEqual([
+        { type: "snapshot", data: "bye", from: 0, offset: 3 },
+        { type: "retired", reason: "closed" },
+      ]);
+    });
+
+    it("keeps the retired draft's output frozen while the promoted shell writes on", async () => {
+      const harness = terminalHarness();
+      const { generation } = await harness.registry.start({
+        terminalId: "t1",
+        scope,
+        cols: 80,
+        rows: 24,
+      });
+      harness.ptys[0]!.data("draft");
+      await harness.registry.promoteDraftToSession(scope, {
+        kind: "session",
+        workspaceId: "w1",
+        sessionId: "s1",
+      });
+      harness.ptys[0]!.data("-session");
+
+      expect(
+        harness.registry.outputState(harness.key, generation, "t1")
+      ).toMatchObject({ data: "draft", retired: "superseded", exit: null });
+    });
+  });
+
+  it("caps pending terminal output by UTF-8 bytes, not UTF-16 units", async () => {
+    const euros = "\u20ac\u20ac\u20ac";
+    // Three 3-byte characters: 3 UTF-16 units but 9 bytes.
+    expect(terminalChunkSize({ type: "data", data: euros, offset: 9 })).toBe(9);
+    expect(terminalChunkSize({ type: "exit", exitCode: 0, signal: null })).toBe(
+      0
+    );
+    const queue = new SubscriberQueue<TerminalOutputChunk>({
+      stream: "terminal.output",
+      delivery: "lossless-replayable",
+      sizeOf: terminalChunkSize,
+      maxBytes: 8,
+    });
+    queue.push({ type: "data", data: euros, offset: 9 });
+    await expect(queue.next()).rejects.toMatchObject({
+      code: "RESYNC_REQUIRED",
+    });
   });
 
   it("is NOT_FOUND for a terminal main never ran", async () => {

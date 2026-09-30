@@ -92,7 +92,7 @@ import {
   legacyProfileKeyFor,
   profileKeyFor,
 } from "./profile-home";
-import { emitIpcEvent } from "./rpc/emit";
+import { emitBusChannel, emitIpcEvent } from "./rpc/emit";
 import { ServiceHost } from "./service-host";
 import {
   addPromptToHistory,
@@ -472,6 +472,8 @@ export const registerIpcHandlers = (
 ): HostOperations => {
   // One function feeds both the legacy renderer and the oRPC event bus.
   serviceHost.setEventDispatcher(emitIpcEvent);
+  // Bus-only pushes (no legacy event), such as a retired terminal generation.
+  serviceHost.setBusDispatcher(emitBusChannel);
 
   const ops = createHostOperations(serviceHost, emitIpcEvent);
 

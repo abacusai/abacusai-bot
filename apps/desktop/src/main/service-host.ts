@@ -172,6 +172,7 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
+import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
 import {
@@ -355,6 +356,12 @@ import { WorkspaceService } from "./services/workspace/workspace-service";
 
 type EventDispatcher = (event: IpcEvent) => void;
 
+/** The oRPC bus's own channels: pushes the legacy renderer never had. */
+type BusDispatcher = <C extends BusChannel>(
+  channel: C,
+  payload: BusChannels[C]
+) => void;
+
 /** Assistant prose, as opposed to tool cards, status and errors. */
 const isAgentText = (payload: DesktopEvent): boolean =>
   payload.type === "event" &&
@@ -434,6 +441,7 @@ export class ServiceHost {
   private initializedAt: string | null = null;
   private startedAt: string | null = null;
   private eventDispatcher: EventDispatcher | null = null;
+  private busDispatcher: BusDispatcher | null = null;
 
   readonly mcpConfigService = new McpConfigService();
   private readonly transcriptService = new TranscriptService();
@@ -944,6 +952,9 @@ export class ServiceHost {
         workspaceId: event.conversation.workspaceId,
         emittedAt: new Date().toISOString(),
       });
+    },
+    emitTerminalRetired: (event) => {
+      this.busDispatcher?.("terminal-retired", event);
     },
     emitTerminalState: (state) => {
       this.emitEvent({
@@ -1575,6 +1586,10 @@ export class ServiceHost {
 
   setEventDispatcher(dispatcher: EventDispatcher): void {
     this.eventDispatcher = dispatcher;
+  }
+
+  setBusDispatcher(dispatcher: BusDispatcher): void {
+    this.busDispatcher = dispatcher;
   }
 
   async addWorkspace(
