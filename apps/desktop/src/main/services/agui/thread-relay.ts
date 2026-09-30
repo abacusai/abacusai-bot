@@ -186,9 +186,24 @@ export class SeqClock {
   }
 }
 
+/**
+ * Why the history is not all there (the thread store's `ThreadNotice`): a
+ * v1 transcript too large to read. Served as the session-scoped notice
+ * `abacus.notice` (spec 02 §4.1), keyed so it appears once.
+ */
+export type ThreadHistoryNotice = {
+  kind: "too-large";
+  size: number;
+  limit: number;
+};
+
+/** The notice key of a thread-history notice. */
+export const HISTORY_NOTICE_KEY = "abacus.history";
+
 export interface ThreadHistory {
   messages: UIMessage[];
   runs: RunOutcomeRecord[];
+  notice?: ThreadHistoryNotice;
   migratedFrom?: { updatedAt: string };
   /**
    * The messages come from a v1 transcript (not an `agui` file): the legacy
@@ -364,6 +379,13 @@ export class ThreadRelay {
     this.#floor = this.#clock.current;
     this.#lastSeq = this.#floor;
     this.lastUsed = this.#now();
+    if (options.history.notice != null)
+      this.#apply(
+        this.#custom("abacus.notice", {
+          ...options.history.notice,
+          notificationKey: HISTORY_NOTICE_KEY,
+        })
+      );
   }
 
   get activeRunId(): string | null {
@@ -1282,7 +1304,8 @@ export class ThreadRelay {
           };
         return;
       case "agent.notification":
-      case "agent.error": {
+      case "agent.error":
+      case "abacus.notice": {
         const key =
           typeof value.notificationKey === "string"
             ? value.notificationKey

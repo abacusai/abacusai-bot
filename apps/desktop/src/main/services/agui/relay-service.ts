@@ -71,6 +71,7 @@ import {
   type RelayEvent,
   type RunFinishedInfo,
   type ThreadHistory,
+  type ThreadHistoryNotice,
 } from "./thread-relay";
 
 /** What the relay needs from the rest of main. */
@@ -113,6 +114,14 @@ export interface AguiRelayHost {
 /** The thread files (`ThreadStore`). */
 export interface AguiThreadFiles {
   readCurrentFile(threadId: string): ThreadFileV2 | null;
+  /**
+   * `readCurrentFile` plus why a thread shows no history although its v1
+   * file exists (too large to read); the relay surfaces it as a notice.
+   */
+  readCurrentWithNotice?(threadId: string): {
+    file: ThreadFileV2 | null;
+    notice?: ThreadHistoryNotice;
+  };
   writeAgui(
     threadId: string,
     thread: {
@@ -225,8 +234,12 @@ const trim = (collection: Map<string, unknown> | Set<string>, max: number) => {
     collection.delete(collection.keys().next().value!);
 };
 
-const toHistory = (file: ThreadFileV2 | null): ThreadHistory => {
-  if (file == null) return { messages: [], runs: [] };
+const toHistory = (
+  file: ThreadFileV2 | null,
+  notice?: ThreadHistoryNotice
+): ThreadHistory => {
+  if (file == null)
+    return { messages: [], runs: [], ...(notice != null && { notice }) };
   if (file.source.kind === "agui")
     return {
       messages: file.messages,
@@ -915,21 +928,27 @@ export class AguiRelayService implements AguiSource {
     const existing = this.#threads.get(threadId);
     if (existing != null) return existing;
 
-    const read = (): ThreadFileV2 | null => {
+    const read = (): {
+      file: ThreadFileV2 | null;
+      notice?: ThreadHistoryNotice;
+    } => {
       try {
-        return this.#files.readCurrentFile(threadId);
+        return this.#files.readCurrentWithNotice != null
+          ? this.#files.readCurrentWithNotice(threadId)
+          : { file: this.#files.readCurrentFile(threadId) };
       } catch (error) {
         this.#log(
           `${threadId}: reading the thread file failed: ${String(error)}`
         );
-        return null;
+        return { file: null };
       }
     };
+    const initial = read();
     const thread = new ThreadRelay({
       threadId,
       clock: this.#clock,
       epoch: this.epoch,
-      history: toHistory(read()),
+      history: toHistory(initial.file, initial.notice),
       persist: (history) =>
         this.#files.writeAgui(threadId, {
           messages: history.messages,
@@ -940,8 +959,8 @@ export class AguiRelayService implements AguiSource {
         }),
       remove: () => this.#files.remove(threadId),
       reload: () => {
-        const file = read();
-        return file == null ? null : toHistory(file);
+        const { file, notice } = read();
+        return file == null ? null : toHistory(file, notice);
       },
       onRunForgotten: (runId) => {
         if (this.#runOwners.get(runId) === threadId)
