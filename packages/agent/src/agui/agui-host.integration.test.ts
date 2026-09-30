@@ -551,6 +551,71 @@ describe("ChatClient", () => {
   });
 });
 
+describe("queue edits by incarnation and entry id (spec 02 §14.6)", () => {
+  type Entry = { id: string; message: string };
+  const latestQueue = (l: Live): Entry[] =>
+    l.custom<{ messages: Entry[] }>("queue.updated").at(-1)?.messages ?? [];
+
+  it("finds the entry by id wherever a drain moved it; a stale incarnation or a gone id changes nothing", async () => {
+    const l = await start({
+      reply: (index, gates) =>
+        index === 0
+          ? gates.wait("hold").then(() => ({ say: "done" }))
+          : { say: "next" },
+    });
+
+    l.send(runInput("a", "first"));
+    await l.waitFor(() => l.providerCalls() === 1, "first request");
+    l.send({ type: "enqueue", message: "one" });
+    l.send({ type: "enqueue", message: "two" });
+    await l.waitFor(() => latestQueue(l).length === 2, "two queued");
+    const [one, two] = latestQueue(l);
+
+    // "one" leaves first (a drain, here the legacy index path): "two" moves
+    // from index 1 to 0. The id still names it.
+    l.send({ type: "remove_from_queue", index: 0 });
+    await l.waitFor(() => latestQueue(l).length === 1, "one removed");
+    l.send({
+      type: "queue.update",
+      incarnation: "inc-1",
+      entryId: two!.id,
+      message: "two, edited",
+    });
+    await l.waitFor(
+      () => latestQueue(l)[0]?.message === "two, edited",
+      "edited by id"
+    );
+    expect(latestQueue(l).map((entry) => entry.id)).toEqual([two!.id]);
+
+    const compat = l.compatBytes();
+    l.send({ type: "queue.remove", incarnation: "inc-0", entryId: two!.id });
+    l.send({ type: "queue.remove", incarnation: "inc-1", entryId: one!.id });
+    await l.waitFor(hasCustom("queue.command_rejected", 2), "rejections");
+    expect(l.custom("queue.command_rejected")).toEqual([
+      {
+        incarnation: "inc-1",
+        entryId: two!.id,
+        command: "remove",
+        reason: "incarnation",
+      },
+      {
+        incarnation: "inc-1",
+        entryId: one!.id,
+        command: "remove",
+        reason: "not_found",
+      },
+    ]);
+    // Refusals are AG-UI only, each followed by the authoritative queue.
+    expect(l.compatBytes()).toBe(compat);
+    expect(latestQueue(l).map((entry) => entry.id)).toEqual([two!.id]);
+
+    l.send({ type: "queue.remove", incarnation: "inc-1", entryId: two!.id });
+    await l.waitFor(() => latestQueue(l).length === 0, "removed by id");
+    expect(l.compatBytes()).toContain('"type":"queue_updated"');
+    l.gates.open("hold");
+  });
+});
+
 describe("sub-agents", () => {
   it("tags a delegate's events and closes its card before the parent's result", async () => {
     const l = await start({
@@ -677,12 +742,19 @@ describe("compat channel loss", () => {
     expect(exits).toEqual([]);
     flush?.();
     expect(exits).toEqual([75]);
-    const tail = events().slice(after - 2);
+    const tail = events().slice(after - 4);
 
+    // The run had no assistant message yet: the error anchor precedes the
+    // terminal (no StreamProcessor is left with a pending message).
     expect(
       tail.map((event) => (event.type === "CUSTOM" ? event.name : event.type))
-    ).toEqual(["wire.compat_lost", "RUN_ERROR"]);
-    expect((tail[1] as { code?: string }).code).toBe("compat_lost");
+    ).toEqual([
+      "wire.compat_lost",
+      "TEXT_MESSAGE_START",
+      "TEXT_MESSAGE_END",
+      "RUN_ERROR",
+    ]);
+    expect((tail[3] as { code?: string }).code).toBe("compat_lost");
 
     // Nothing more reaches stdout afterwards.
     gates.open("hold");
@@ -712,11 +784,18 @@ describe("last words", () => {
     l.host.emergencyClose("agent_crashed");
     l.host.emergencyClose("agent_exit");
 
+    // One write: the run's open parts closed, an assistant message for a run
+    // that has none (the error anchor), then the terminal.
     expect(written).toHaveLength(1);
-    expect(JSON.parse(written[0]!)).toMatchObject({
-      type: "RUN_ERROR",
-      code: "agent_crashed",
-    });
+    const events = written[0]!
+      .split("\n")
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(events).toMatchObject([
+      { type: "TEXT_MESSAGE_START", messageId: "r:error", role: "assistant" },
+      { type: "TEXT_MESSAGE_END", messageId: "r:error" },
+      { type: "RUN_ERROR", code: "agent_crashed" },
+    ]);
   });
 
   it("writes nothing synchronously while earlier stdout is still queued in-process", async () => {
