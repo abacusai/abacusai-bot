@@ -161,9 +161,17 @@ const Identity = ({
   </div>
 );
 
-const Actions = ({ folded }: { folded: boolean }) => {
+const Actions = ({
+  folded,
+  tabs = [],
+}: {
+  folded: boolean;
+  tabs?: readonly SidePanelTabId[];
+}) => {
   const { t } = useTranslation();
-  const actions = useTopBarActionList();
+  const actions = useTopBarActionList().filter(
+    (action) => !tabs.includes(action.id as SidePanelTabId)
+  );
   if (actions.length === 0) return null;
   if (folded)
     return (

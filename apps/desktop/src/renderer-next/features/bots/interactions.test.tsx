@@ -72,6 +72,9 @@ describe("bots interactions", () => {
   );
   it("the four model locations have at most one value", async () => {
     app = await renderApp("/bots/chief-of-staff?tab=details");
+    expect(
+      document.querySelector('[data-slot="topbar-actions"]')?.textContent ?? ""
+    ).not.toContain("Details");
     await screen.findByTestId("bot-chat");
     const count = () =>
       document.querySelectorAll(
