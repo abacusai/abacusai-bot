@@ -43,6 +43,50 @@ it("waits for configured default mode before mounting a sendable composer", asyn
   };
   expect(sent.forwardedProps.mode).toBe("DEFAULT");
 });
+it("recovers from a configured-mode rejection through Retry before allowing sends", async () => {
+  let resolve!: (mode: never) => void;
+  const defaultMode = vi
+    .fn<() => Promise<never>>()
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        })
+    );
+  app = await renderApp("/bots/chief-of-staff", { defaultMode });
+  await screen.findByTestId("bot-chat");
+  const retry = await screen.findByRole("button", { name: "Retry" });
+  expect(screen.getByRole("alert").textContent).toContain(
+    "Could not open the bot's chat."
+  );
+  expect(
+    screen.queryByRole("textbox", { name: /Message Chief of Staff/ })
+  ).toBeNull();
+  expect(app.calls.some(([name]) => name === "ai.send")).toBe(false);
+  fireEvent.click(retry);
+  await waitFor(() => expect(defaultMode).toHaveBeenCalledTimes(2));
+  expect(
+    screen.queryByRole("textbox", { name: /Message Chief of Staff/ })
+  ).toBeNull();
+  expect(app.calls.some(([name]) => name === "ai.send")).toBe(false);
+  await act(async () => {
+    resolve("DEFAULT" as never);
+  });
+  const input = await screen.findByRole("textbox", {
+    name: /Message Chief of Staff/,
+  });
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  fireEvent.change(input, { target: { value: "Hello after retry" } });
+  fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+  await waitFor(() =>
+    expect(app!.calls.some(([name]) => name === "ai.send")).toBe(true)
+  );
+  const sent = app.calls.find(([name]) => name === "ai.send")![1] as {
+    forwardedProps: { mode: string };
+  };
+  expect(sent.forwardedProps.mode).toBe("DEFAULT");
+});
 it("buffers completion notices until both mounted watcher snapshots are ready", async () => {
   let releaseBots!: () => void, releaseRoutines!: () => void;
   app = await renderApp("/settings/general", {

@@ -255,7 +255,22 @@ export const useBotChatSlots = (
       ...(readOnly
         ? { readOnly }
         : mode.data == null
-          ? { readOnly: { reason: t("common.loading") } }
+          ? {
+              readOnly: mode.isError
+                ? {
+                    reason: <span role="alert">{t("bots.openError")}</span>,
+                    action: (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void mode.refetch()}
+                      >
+                        {t("chat.error.retry")}
+                      </Button>
+                    ),
+                  }
+                : { reason: t("common.loading") },
+            }
           : {}),
     },
   };
