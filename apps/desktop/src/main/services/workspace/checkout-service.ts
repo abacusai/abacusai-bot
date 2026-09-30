@@ -40,6 +40,7 @@ import {
 import { ForbiddenError } from "#shared/forbidden";
 import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 
+import { isMigrationWriteBlockedTree } from "../../migrations/write-block";
 import { isInsideWorkspace, type FileTreeService } from "./file-tree-service";
 import type { GitService } from "./git-service";
 import {
@@ -74,6 +75,8 @@ export interface CheckoutServiceDeps {
   search(root: string, query: string): Promise<FileSearchResult>;
   /** The OS Trash (`shell.trashItem`). */
   trash(absolutePath: string): Promise<void>;
+  /** Defaults to the migration runner's `isMigrationWriteBlockedTree`. */
+  isWriteBlocked?: (absolutePath: string) => boolean;
   /** `fs.watch` by default; null disables watching (tests drive `refresh`). */
   watch?: CheckoutWatchFactory | null;
   /** Backstop re-read period of a watched checkout; null disables. */
@@ -83,6 +86,8 @@ export interface CheckoutServiceDeps {
 }
 
 interface WatchedCheckout {
+  /** What the watcher asked for: re-resolved on every read (a relocation). */
+  ref: CheckoutRef;
   target: ResolvedCheckout;
   count: number;
   row: GitStateRow | null;
@@ -186,10 +191,9 @@ export class CheckoutService {
     candidate: string,
     options: { allowRoot?: boolean } = {}
   ): Promise<string> {
-    const absolute = path.resolve(
-      checkout.path,
-      candidate.replace(/[\\/]/g, path.sep)
-    );
+    // `path` treats a backslash as a separator only on Windows; elsewhere
+    // it is a legal filename character (`a\b` and `a/b` are two files).
+    const absolute = path.resolve(checkout.path, candidate);
     if (
       !(await isInsideWorkspace(absolute, checkout.path, {
         allowRoot: options.allowRoot === true,
@@ -283,7 +287,11 @@ export class CheckoutService {
     );
   }
 
-  /** Every path is checked before anything changes; then the entries run. */
+  /**
+   * Every path is checked before anything changes; then the entries run
+   * (see `GitService.discard`: only changes git reports at exactly the
+   * named checkout-relative path, never a held migration destination).
+   */
   async discard(
     ref: CheckoutRef,
     entries: GitDiscardEntry[]
@@ -305,7 +313,13 @@ export class CheckoutService {
     const result = await this.#deps.git.discard(
       checkout.path,
       relative,
-      this.#deps.trash
+      this.#deps.trash,
+      {
+        // A worktree is always its own top level; a primary may be a
+        // subfolder of a repository.
+        requireTopLevel: checkout.kind === "worktree",
+        isBlocked: this.#deps.isWriteBlocked ?? isMigrationWriteBlockedTree,
+      }
     );
     // Report what the caller named, not the normalised form.
     const named = new Map(
@@ -370,8 +384,16 @@ export class CheckoutService {
   watch(ref: CheckoutRef): { key: CheckoutKey; release: () => void } {
     const target = this.resolve(ref);
     let entry = this.#watched.get(target.key);
+    if (entry != null && entry.target.path !== target.path) {
+      this.#retarget(entry, target);
+      void this.refresh(target.key);
+    }
     if (entry == null) {
       entry = {
+        ref: {
+          workspaceId: ref.workspaceId,
+          ...(ref.sessionId != null && { sessionId: ref.sessionId }),
+        },
         target,
         count: 0,
         row: null,
@@ -458,13 +480,40 @@ export class CheckoutService {
   async #changes(checkout: ResolvedCheckout): Promise<GitChangeItem[]> {
     const watched = this.#watched.get(checkout.key)?.row;
     if (watched != null) return watched.gitChanges;
-    return (await this.#deps.git.readGitChanges(checkout.path)).changes;
+    return (
+      await this.#deps.git.readGitChanges(checkout.path, {
+        checkoutRelative: true,
+      })
+    ).changes;
+  }
+
+  /**
+   * The folder moved (a relocated workspace, a re-created worktree) under
+   * the same key: watch the new one and publish its path.
+   */
+  #retarget(entry: WatchedCheckout, target: ResolvedCheckout): void {
+    entry.stop();
+    entry.target = target;
+    entry.signature = null;
+    entry.stop = this.#startWatching(entry);
+    this.#touched(target.key);
   }
 
   async #read(entry: WatchedCheckout): Promise<void> {
+    try {
+      const current = this.resolve(entry.ref);
+      if (
+        current.key === entry.target.key &&
+        current.path !== entry.target.path
+      )
+        this.#retarget(entry, current);
+    } catch {
+      // Gone or pathless: keep the last target until the watcher releases.
+    }
     const { target } = entry;
     const status = await this.#deps.git.readGitChanges(target.path, {
       fingerprints: true,
+      checkoutRelative: true,
     });
     if (this.#watched.get(target.key) !== entry) return;
     const row: GitStateRow = {

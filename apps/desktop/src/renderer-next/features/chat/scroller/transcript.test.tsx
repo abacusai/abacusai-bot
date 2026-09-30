@@ -100,6 +100,22 @@ describe("R2-T16 window (pure)", () => {
 });
 
 describe("R2-T16 transcript", () => {
+  it("filters hidden bot messages before allocating transcript rows", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([...b.sessionReady(), ...turns(2)]);
+    current = await renderRelay(
+      relay,
+      "bot",
+      {},
+      {
+        slots: { isMessageHidden: (message) => message.id === "a0" },
+      }
+    );
+    await screen.findByText("answer 1");
+    expect(document.querySelector('[data-message-id="a0"]')).toBeNull();
+    expect(document.querySelector('[data-message-id="a1"]')).not.toBeNull();
+  });
+
   it("rows carry message ids, users anchor, the log is busy while a run is active", async () => {
     const relay = new FakeRelay();
     relay.emitAll([

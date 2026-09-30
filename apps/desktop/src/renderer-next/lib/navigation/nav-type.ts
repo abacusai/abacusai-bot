@@ -38,6 +38,8 @@ export const ROUTE_RANK: Readonly<
   "/bots/new": { area: "bots", rank: 0 },
   "/bots/$botId": { area: "bots", rank: 1 },
   "/bots/$botId/details": { area: "bots", rank: 1 },
+  "/bots/$botId/check-in": { area: "bots", rank: 1 },
+  "/bots/$botId/chats/$sessionId": { area: "bots", rank: 2 },
   "/bots/$botId/edit": { area: "bots", rank: 2 },
   "/sessions": { area: "sessions", rank: 0 },
   "/sessions/new": { area: "sessions", rank: 0 },

@@ -30,6 +30,12 @@ export interface InstalledExperience {
 
 const DIGEST = /^[\da-f]{64}$/u;
 
+interface Rejection extends ActivePointer {
+  /** The app (foundation) version the candidate failed on. */
+  appVersion: string;
+  at: number;
+}
+
 const parsePointer = (raw: unknown): ActivePointer | undefined => {
   if (typeof raw !== "object" || raw === null) return undefined;
 
@@ -108,6 +114,8 @@ export class ExperienceStore {
   );
   /** An activation not yet persisted (waiting on the renderer's readiness). */
   #pending: ActivePointer | undefined;
+  /** Activation mutations, one at a time. */
+  #mutations: Promise<void> = Promise.resolve();
   /** What `active.json` names, in memory, while an activation is pending. */
   #committed:
     | { directory: string; manifest: ExperienceManifest }
@@ -192,6 +200,21 @@ export class ExperienceStore {
     return this.#active?.manifest.rendererVersion ?? null;
   }
 
+  /**
+   * The renderer `active.json` names (the one a relaunch boots): while an
+   * activation is pending this is not `rendererVersion`, the candidate's.
+   */
+  get committedRendererVersion(): string | null {
+    const committed =
+      this.#pending === undefined ? this.#active : this.#committed;
+    return committed?.manifest.rendererVersion ?? null;
+  }
+
+  /** The version of an activation not yet committed nor abandoned. */
+  get pendingVersion(): string | null {
+    return this.#pending?.version ?? null;
+  }
+
   get agentVersion(): string | null {
     return this.#active?.manifest.agentVersion ?? null;
   }
@@ -246,26 +269,53 @@ export class ExperienceStore {
    * `commitActivation`: a relaunch before that, or after
    * `abandonActivation`, boots the committed experience, never a candidate
    * that was not seen ready (spec 07 review r1 #9).
+   *
+   * Activations, commits and abandons run one at a time, in call order: a
+   * commit's file writes never interleave with a newer activation, so the
+   * newer one keeps its rollback state and `active.json` never names an
+   * older candidate than memory does.
    */
-  async activate(
+  activate(
     candidate: InstalledExperience,
     { commit = true }: { commit?: boolean } = {}
   ): Promise<void> {
-    const { manifest, manifestSha256 } = candidate;
+    return this.#serialize(async () => {
+      const { manifest, manifestSha256 } = candidate;
 
-    await this.linkRuntime(candidate.directory);
-    const pointer = { manifestSha256, version: manifest.experienceVersion };
-    // The first pending activation remembers what is committed.
-    if (this.#pending === undefined) this.#committed = this.#active;
-    this.#active = { directory: candidate.directory, manifest };
-    this.#staged.delete(manifest.experienceVersion);
-    this.#pending = pointer;
+      await this.linkRuntime(candidate.directory);
+      const pointer = { manifestSha256, version: manifest.experienceVersion };
+      // The first pending activation remembers what is committed.
+      if (this.#pending === undefined) this.#committed = this.#active;
+      this.#active = { directory: candidate.directory, manifest };
+      this.#staged.delete(manifest.experienceVersion);
+      this.#pending = pointer;
 
-    if (commit) await this.commitActivation(manifest.experienceVersion);
+      if (commit) await this.#commit(manifest.experienceVersion);
+    });
   }
 
   /** The candidate became ready (or nothing had to): persist its pointer. */
-  async commitActivation(version: string): Promise<void> {
+  commitActivation(version: string): Promise<void> {
+    return this.#serialize(() => this.#commit(version));
+  }
+
+  /**
+   * The candidate never became ready: this process goes back to the
+   * committed experience, the candidate is remembered as rejected (for this
+   * app version, for REJECTION_TTL_MS) so the updater does not install it
+   * again, and its tree is deleted unless a pointer still names it.
+   */
+  abandonActivation(version: string): Promise<void> {
+    return this.#serialize(() => this.#abandon(version));
+  }
+
+  #serialize(task: () => Promise<void>): Promise<void> {
+    const run = this.#mutations.then(task, task);
+    this.#mutations = run.catch(() => undefined);
+    return run;
+  }
+
+  async #commit(version: string): Promise<void> {
     const pending = this.#pending;
     if (pending?.version !== version) return;
     const current = await readPointer(this.#activeFile);
@@ -279,38 +329,56 @@ export class ExperienceStore {
     this.#committed = undefined;
   }
 
-  /**
-   * The candidate never became ready: this process goes back to the
-   * committed experience, and the candidate is remembered as rejected so the
-   * updater does not install it again (this launch or the next).
-   */
-  async abandonActivation(version: string): Promise<void> {
+  async #abandon(version: string): Promise<void> {
     const pending = this.#pending;
     if (pending?.version !== version) return;
     this.#pending = undefined;
     this.#active = this.#committed ?? null;
     this.#committed = undefined;
-    const rejected = await this.#readRejected();
-    if (
-      !rejected.some(
-        (entry) =>
+    const now = Date.now();
+    const rejected = (await this.#readRejected()).filter(
+      (entry) =>
+        !(
           entry.version === pending.version &&
           entry.manifestSha256 === pending.manifestSha256
-      )
-    ) {
-      rejected.push(pending);
-      await writeFileAtomic(
-        this.#rejectedFile,
-        JSON.stringify(rejected.slice(-REJECTED_KEPT)),
-        { restrict: true }
-      );
-    }
+        )
+    );
+    rejected.push({ ...pending, appVersion: app.getVersion(), at: now });
+    await writeFileAtomic(
+      this.#rejectedFile,
+      JSON.stringify(rejected.slice(-REJECTED_KEPT)),
+      { restrict: true }
+    );
     console.warn(
       `[experience] ${version} never became ready; staying on ${this.version ?? "the baseline"}`
     );
+    // Its tree is kept only while a pointer names it.
+    const kept = new Set(
+      [
+        this.version,
+        (await readPointer(this.#activeFile))?.version,
+        (await readPointer(this.#previousFile))?.version,
+      ].filter((entry): entry is string => entry != null)
+    );
+    if (!kept.has(version)) {
+      await fs
+        .rm(path.join(this.experiencesDirectory, version), {
+          force: true,
+          recursive: true,
+        })
+        .catch((error: unknown) => {
+          console.error(
+            `[experience] removing rejected ${version} failed`,
+            error
+          );
+        });
+    }
   }
 
-  /** A candidate a previous readiness failure rejected. */
+  /**
+   * A candidate a readiness failure rejected on this app version within
+   * REJECTION_TTL_MS: a new app version, or time, gives it another chance.
+   */
   async isRejected(version: string, manifestSha256: string): Promise<boolean> {
     return (await this.#readRejected()).some(
       (entry) =>
@@ -318,7 +386,10 @@ export class ExperienceStore {
     );
   }
 
-  async #readRejected(): Promise<ActivePointer[]> {
+  /** The rejections that still apply; stale ones are dropped. */
+  async #readRejected(): Promise<Rejection[]> {
+    const appVersion = app.getVersion();
+    const now = Date.now();
     try {
       const raw: unknown = JSON.parse(
         await fs.readFile(this.#rejectedFile, "utf-8")
@@ -326,7 +397,19 @@ export class ExperienceStore {
       return Array.isArray(raw)
         ? raw.flatMap((entry) => {
             const pointer = parsePointer(entry);
-            return pointer === undefined ? [] : [pointer];
+            if (pointer === undefined) return [];
+            const { appVersion: rejectedOn, at } = entry as Record<
+              string,
+              unknown
+            >;
+            // Entries from before these fields, another app version, or
+            // older than the TTL no longer apply.
+            return rejectedOn === appVersion &&
+              typeof at === "number" &&
+              // Either direction: a clock set back does not pin it forever.
+              Math.abs(now - at) < REJECTION_TTL_MS
+              ? [{ ...pointer, appVersion, at }]
+              : [];
           })
         : [];
     } catch {
@@ -337,3 +420,6 @@ export class ExperienceStore {
 
 /** Rejected candidates remembered (newest kept). */
 const REJECTED_KEPT = 20;
+
+/** How long a readiness rejection keeps a candidate out (per app version). */
+export const REJECTION_TTL_MS = 7 * 24 * 60 * 60 * 1000;

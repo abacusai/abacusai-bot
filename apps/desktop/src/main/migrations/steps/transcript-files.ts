@@ -44,7 +44,7 @@ export const threadsDir = (home: string): string =>
  */
 const listJsonFiles = (
   dir: string,
-  options: { symlinks: boolean }
+  options: { symlinks: boolean; strict?: boolean }
 ): string[] => {
   let entries: fs.Dirent[];
   try {
@@ -53,7 +53,11 @@ const listJsonFiles = (
     // Only a folder that is not there is empty. Anything else (EACCES, EIO)
     // stops the step: an unlisted transcript would make its twin look
     // orphaned.
-    if ((error as { code?: unknown })?.code === "ENOENT") return [];
+    if (
+      options.strict !== true ||
+      (error as { code?: unknown })?.code === "ENOENT"
+    )
+      return [];
     throw error;
   }
   return entries
@@ -67,11 +71,13 @@ const listJsonFiles = (
 };
 
 /** The v1 files, symlinked ones included (reading follows the link). */
-export const listTranscriptFiles = (home: string): string[] =>
-  listJsonFiles(transcriptsDir(home), { symlinks: true });
+export const listTranscriptFiles = (
+  home: string,
+  { strict = true } = {}
+): string[] => listJsonFiles(transcriptsDir(home), { symlinks: true, strict });
 
 export const listThreadFiles = (home: string): string[] =>
-  listJsonFiles(threadsDir(home), { symlinks: false });
+  listJsonFiles(threadsDir(home), { symlinks: false, strict: true });
 
 /**
  * Whether nothing at all is at `transcripts/<id>.json` (not a file, a

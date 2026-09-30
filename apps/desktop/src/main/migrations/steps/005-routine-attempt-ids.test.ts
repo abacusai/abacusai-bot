@@ -52,7 +52,8 @@ const runRecord = (
   dir: string,
   sessionId: string,
   startedAt: number,
-  endedAt: number
+  endedAt: number,
+  outcome = "completed"
 ) => {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
@@ -60,7 +61,7 @@ const runRecord = (
     [
       `# Run at ${iso(startedAt)}`,
       "",
-      "- Outcome: completed",
+      `- Outcome: ${outcome}`,
       `- Ended: ${iso(endedAt)}`,
       `- Session: ${sessionId}`,
       "",
@@ -109,7 +110,8 @@ const legacyHome = () => {
     path.join(home, "routines", "job-a", "runs"),
     "s-stuck",
     T0 + 100_000,
-    T0 + 1_900_000 + 500
+    T0 + 1_900_000 + 500,
+    "failed"
   );
   // job-b's records live inside its project.
   runRecord(
@@ -282,6 +284,119 @@ describe("R5-T41 step 5 routine-attempt-ids", () => {
     await run({ rerun: [5] });
     expect(fs.readFileSync(cronjobs(), "utf8")).toBe("{corrupt");
     expect(fs.existsSync(backupsRoot(home))).toBe(false);
+  });
+
+  // Claude r1 #6 / Codex r1 #17: the step did not run (an earlier step
+  // failed), so cron-store's read fallback derived the ids without the run
+  // records and a routine write persisted them. The step still recovers
+  // every session and link, and keeps those ids.
+  it("recovers sessions after a cron write persisted the fallback's ids", async () => {
+    legacyHome();
+    process.env.ABACUSAI_BOT_HOME = home;
+    const store = await import("../../services/agent-tools/cron-store");
+    const added = store.recordRun("job-a", "no workspace to run in");
+    const persisted = stored()[0]!.runs;
+    expect(persisted.every((entry) => typeof entry.id === "string")).toBe(true);
+    expect(persisted.filter((entry) => entry.sessionId != null)).toEqual([
+      expect.objectContaining({ kind: "started", sessionId: "s-stuck" }),
+    ]);
+
+    await expect(run()).resolves.toMatchObject({ applied: [5] });
+    const runs = stored()[0]!.runs;
+    expect(runs.map((entry) => entry.id)).toEqual(
+      persisted.map((entry) => entry.id)
+    );
+    expect(runs[0]).toMatchObject({ id: added!.id, sessionId: null });
+    expect(
+      runs.slice(1).map(({ kind, sessionId }) => ({ kind, sessionId }))
+    ).toEqual([
+      { kind: "timed-out", sessionId: "s-stuck" },
+      { kind: "paused", sessionId: null },
+      { kind: "no-workspace", sessionId: null },
+      { kind: "skipped", sessionId: null },
+      { kind: "start-failed", sessionId: null },
+      { kind: "started", sessionId: "s-stuck" },
+      { kind: "unknown", sessionId: "s-rec" },
+      { kind: "unknown", sessionId: null },
+    ]);
+    expect(runs[1]!.attemptId).toBe(runs[6]!.id);
+    expect(stored()[1]!.runs[0]).toMatchObject({ sessionId: "s-proj" });
+  });
+
+  // Claude r1 #22: an entry of another shape stays where it is, whether or
+  // not its job had anything to migrate.
+  it("keeps malformed entries in place in every job", async () => {
+    const odd = [null, { at: "yesterday" }, 7];
+    fs.writeFileSync(
+      cronjobs(),
+      JSON.stringify([
+        job("job-x", [
+          { at: T0, trigger: "manual", result: "no workspace to run in" },
+          ...odd,
+        ]),
+        job("job-y", [
+          ...odd,
+          {
+            id: "attempt-kept",
+            at: T0,
+            trigger: "manual",
+            result: "no workspace to run in",
+            kind: "no-workspace",
+            sessionId: null,
+            attemptId: null,
+          },
+        ]),
+      ])
+    );
+    await run();
+    const [x, y] = stored() as unknown as Array<{ runs: unknown[] }>;
+    expect(x!.runs.slice(1)).toEqual(odd);
+    expect(x!.runs[0]).toMatchObject({ kind: "no-workspace" });
+    expect(y!.runs.slice(0, 3)).toEqual(odd);
+  });
+
+  // Claude r1 #23: a legacy start failure names no session, but the session
+  // store has the one it made.
+  it("links a legacy start failure to the session the store holds", async () => {
+    fs.writeFileSync(
+      path.join(home, "local-code.json"),
+      JSON.stringify({
+        localCode: {
+          workspaces: [],
+          agentSessions: [
+            {
+              id: "s-failed",
+              routineId: "job-f",
+              createdAt: iso(T0 - 3_000),
+              runOutcome: "failed",
+            },
+            {
+              id: "s-editor",
+              routineId: "job-f",
+              editorFor: "job-f",
+              createdAt: iso(T0 - 1_000),
+            },
+          ],
+        },
+      })
+    );
+    fs.writeFileSync(
+      cronjobs(),
+      JSON.stringify([
+        job("job-f", [
+          {
+            at: T0,
+            trigger: "manual",
+            result: "session failed to start: no model",
+          },
+        ]),
+      ])
+    );
+    await run();
+    expect(stored()[0]!.runs[0]).toMatchObject({
+      kind: "start-failed",
+      sessionId: "s-failed",
+    });
   });
 });
 

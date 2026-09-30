@@ -7,6 +7,7 @@ import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
 import { base, mutation, query, subscription } from "./base";
+import { AvatarAccessorySchema } from "./bots";
 import {
   AgentModeSchema,
   BotId,
@@ -50,6 +51,7 @@ export const BotCreateInputSchema = v.object({
   persona: v.optional(v.string()),
   avatarColor: v.optional(v.string()),
   avatarShape: v.optional(v.string()),
+  avatarAccessory: AvatarAccessorySchema,
   workspaceId: v.optional(v.nullable(v.string())),
   model: v.optional(v.nullable(v.string())),
   channel: v.optional(v.nullable(v.string())),
@@ -62,6 +64,7 @@ export const BotUpdateInputSchema = v.object({
   persona: v.optional(v.string()),
   avatarColor: v.optional(v.string()),
   avatarShape: v.optional(v.string()),
+  avatarAccessory: AvatarAccessorySchema,
   model: v.optional(v.nullable(v.string())),
   channel: v.optional(v.nullable(v.string())),
 });

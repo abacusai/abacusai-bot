@@ -144,7 +144,23 @@ describe("inferNavType", () => {
 describe("the router's document view transition", () => {
   it("starts none while a slow navigation shows its pending screen, then one with the intent on commit", async () => {
     harness = await renderApp("/sessions/new");
-    const release = harness.db.routines.holdSnapshot();
+    // BotsGlobals already preloads routines for cross-area Needs you.
+    // Hold this navigation's loader rather than a snapshot consumed at boot.
+    const route = harness.router.routesById["/_shell/(routines)/routines"];
+    const original = route.options.loader;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = () => {
+        route.options.loader = original;
+        resolve();
+      };
+    });
+    route.options.loader = async (args) => {
+      await gate;
+      return typeof original === "function"
+        ? original(args)
+        : original?.handler(args);
+    };
     const navigation = harness.router.navigate({
       to: "/routines",
       ...withIntent("nav-forward"),
@@ -167,7 +183,23 @@ describe("the router's document view transition", () => {
 
   it("types the committing location, not router.latestLocation (Claude impl r1 #2)", async () => {
     harness = await renderApp("/sessions/new");
-    const release = harness.db.routines.holdSnapshot();
+    // BotsGlobals already preloads routines for cross-area Needs you.
+    // Hold this navigation's loader rather than a snapshot consumed at boot.
+    const route = harness.router.routesById["/_shell/(routines)/routines"];
+    const original = route.options.loader;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = () => {
+        route.options.loader = original;
+        resolve();
+      };
+    });
+    route.options.loader = async (args) => {
+      await gate;
+      return typeof original === "function"
+        ? original(args)
+        : original?.handler(args);
+    };
     const navigation = harness.router.navigate({
       to: "/routines",
       ...withIntent("nav-forward"),

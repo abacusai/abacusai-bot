@@ -8,6 +8,7 @@
 import {
   act,
   fireEvent,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -18,6 +19,7 @@ import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario, renderWithDb } from "../testing";
 import { ModeChip } from "./chips";
+import { useComposerExpanded } from "./composer";
 import { clearDraft, updateDraft } from "./draft-store";
 
 let current: { cleanup(): Promise<void> } | null = null;
@@ -33,6 +35,25 @@ const composer = () =>
 const field = () => within(composer()).getByRole("textbox");
 
 describe("R2-T25 composer", () => {
+  it("exports focus-or-draft expansion and clears focus on unmount", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const rendered = await renderRelay(relay, "bot");
+    current = rendered;
+    await waitFor(() => expect(composer()).toBeTruthy());
+    const probe = renderHook(() => useComposerExpanded("t-1"));
+    expect(probe.result.current).toBe(false);
+    fireEvent.focus(field());
+    expect(probe.result.current).toBe(true);
+    fireEvent.blur(field());
+    expect(probe.result.current).toBe(false);
+    fireEvent.change(field(), { target: { value: "draft" } });
+    expect(probe.result.current).toBe(true);
+    act(() => clearDraft("t-1"));
+    expect(probe.result.current).toBe(false);
+    probe.unmount();
+  });
+
   it("bot: a pill at rest, a box with text; Send tinted only with text", async () => {
     const relay = new FakeRelay();
     relay.emitAll(b.sessionReady());
@@ -198,29 +219,33 @@ describe("R2-T25 composer", () => {
     expect(savePasted.mock.calls[0]![0]).toBe("/repo");
     expect(savePasted.mock.calls[0]![1][0]!.name).toMatch(/\.png$/);
   });
-  it("a late rejected admission preserves newer typing", async () => {
-    let reject!: () => void;
-    const relay = new FakeRelay({
-      onSend: (input) =>
-        new Promise((resolve) => {
-          reject = () =>
-            resolve({
-              runId: input.runId,
-              status: "rejected",
-              reason: "empty",
-            });
-        }),
-    });
-    relay.emitAll(b.sessionReady());
-    current = await renderRelay(relay, "session");
-    fireEvent.change(field(), { target: { value: "first" } });
-    fireEvent.keyDown(field(), { key: "Enter" });
-    await waitFor(() => expect(reject).toBeTypeOf("function"));
-    fireEvent.change(field(), { target: { value: "new typing" } });
-    await act(async () => reject());
-    expect((field() as HTMLTextAreaElement).value).toBe("new typing");
-    expect(screen.getByText(/didn.t accept/)).toBeTruthy();
-  });
+  it.each(["new typing", ""])(
+    "a late rejected admission preserves a newer draft %j",
+    async (newText) => {
+      let reject!: () => void;
+      const relay = new FakeRelay({
+        onSend: (input) =>
+          new Promise((resolve) => {
+            reject = () =>
+              resolve({
+                runId: input.runId,
+                status: "rejected",
+                reason: "empty",
+              });
+          }),
+      });
+      relay.emitAll(b.sessionReady());
+      current = await renderRelay(relay, "session");
+      fireEvent.change(field(), { target: { value: "first" } });
+      fireEvent.keyDown(field(), { key: "Enter" });
+      await waitFor(() => expect(reject).toBeTypeOf("function"));
+      fireEvent.change(field(), { target: { value: "new typing" } });
+      if (newText === "") fireEvent.change(field(), { target: { value: "" } });
+      await act(async () => reject());
+      expect((field() as HTMLTextAreaElement).value).toBe(newText);
+      expect(screen.getByText(/didn.t accept/)).toBeTruthy();
+    }
+  );
 
   it("the turn column blocks new-run admission before RUN_STARTED", async () => {
     const relay = new FakeRelay();

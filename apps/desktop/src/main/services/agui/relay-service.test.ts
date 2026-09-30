@@ -1252,3 +1252,94 @@ describe("v1-derived baseline (step-1 review r2 #11)", () => {
     }
   });
 });
+
+it("a deleted session cannot regain attention from buffered child output", async () => {
+  const { agent, relay } = setup();
+  agent.boot();
+  const pending = {
+    type: "CUSTOM",
+    name: "permission.pending",
+    value: {
+      incarnation: "inc-1",
+      items: [
+        {
+          id: "p",
+          message: "permission",
+          metadata: { abacus: { lineage: { incarnation: "inc-1" } } },
+        },
+      ],
+    },
+  };
+  agent.emit("s1", pending);
+  relay.forgetThread("s1");
+  agent.sessions.delete("s1");
+  agent.emit("s1", pending);
+  agent.emit("s1", { type: "RUN_STARTED", threadId: "s1", runId: "late" });
+  const signal = new AbortController();
+  const stream = relay.attention(signal.signal)[Symbol.asyncIterator]();
+  expect((await stream.next()).value).toMatchObject({
+    type: "snapshot",
+    items: [],
+  });
+  expect(relay.busy).toBe(false);
+  signal.abort();
+  await stream.return?.();
+});
+
+it("an acked run belongs to the process that acknowledged it, even if its exit arrives after a replacement hello", async () => {
+  const { agent, relay } = setup();
+  agent.boot();
+  const old = agent.runtime;
+  agent.emit("s1", ack("old-run", "started"));
+  expect(relay.busy).toBe(true);
+  agent.boot("s1", "inc-2");
+  expect(relay.busy).toBe(false);
+  agent.emit("s1", ack("new-run", "started"));
+  relay.runtimeExited("s1", {
+    origin: { wire: "agui", runtime: old },
+    code: 1,
+    signal: null,
+    requested: false,
+  });
+  expect(relay.busy).toBe(true);
+  relay.runtimeExited("s1", {
+    origin: { wire: "agui", runtime: agent.runtime },
+    code: 1,
+    signal: null,
+    requested: false,
+  });
+  expect(relay.busy).toBe(false);
+});
+
+it("invalid native ids and mismatched conversation ids do not claim the thread's next spawn", async () => {
+  const { relay } = setup();
+  for (const input of [
+    { threadId: "s1", runId: "bad#run", messages: [] },
+    {
+      threadId: "s1",
+      runId: "good",
+      messages: [],
+      forwardedProps: { conversationId: "other" },
+    },
+  ]) {
+    await expect(relay.send(input)).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+    expect(relay.wireFor("s1")).toBe("ndjson");
+  }
+});
+
+it("run-finished cursors older than retention require resync, including a cursor in a seq gap", () => {
+  const { agent, relay } = setup();
+  agent.boot();
+  for (let i = 0; i < 1002; i++) {
+    agent.emit("s1", { type: "RUN_STARTED", threadId: "s1", runId: `r${i}` });
+    agent.emit("s1", finished(`r${i}`));
+  }
+  expect(() => relay.runFinished(0, new AbortController().signal)).toThrow(
+    expect.objectContaining({ code: "RESYNC_REQUIRED" })
+  );
+  expect(() => relay.runFinished(1, new AbortController().signal)).toThrow(
+    expect.objectContaining({ code: "RESYNC_REQUIRED" })
+  );
+});

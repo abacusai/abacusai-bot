@@ -1,11 +1,13 @@
 /**
- * Sound cues (spec 01 §7.8). No audio in phase 1: the gating rules are real
- * and tested; `synth` is a no-op until phase 3 fills it. One AudioContext,
- * created lazily on `unlock()` (the first pointerdown).
+ * Sound cues (spec 01 §7.8; synthesis spec 03 §17, gates spec 05 §23.1).
+ * One AudioContext, created lazily on `unlock()` (the first pointerdown);
+ * nothing plays before it. The values are provisional and live only here.
  */
 import type { PrefsRow } from "#shared/contract";
 
-type Cue =
+import { allowed } from "./notify";
+
+export type Cue =
   | "sent"
   | "received"
   | "needs-you"
@@ -18,14 +20,16 @@ export interface SoundContext {
   isWindowFocused(): boolean;
   prefs(): PrefsRow["sounds"];
   now(): number;
-  /** For tests; phase 3 synthesises here. */
+  /** For tests; the default synthesises into the unlocked AudioContext. */
   synth?(cue: Cue): void;
+  /** For tests (quiet hours); defaults to `new Date(now())`. */
+  date?(): Date;
   /** For tests; the real one is `new AudioContext()`. */
   createAudioContext?(): unknown;
 }
 
 export interface SoundPlayer {
-  play(cue: Cue, options?: { threadId?: string }): void;
+  play(cue: Cue, options?: { threadId?: string; botId?: string | null }): void;
   unlock(): void;
   dispose(): void;
 }
@@ -38,7 +42,11 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
   let audio: unknown = null;
   let disposed = false;
 
-  const synth = ctx.synth ?? ((_cue: Cue) => undefined);
+  const synth =
+    ctx.synth ??
+    ((cue: Cue) => {
+      if (audio != null) synthCue(audio as AudioContextLike, cue);
+    });
 
   return {
     play(cue, options = {}) {
@@ -46,6 +54,14 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       const prefs = ctx.prefs();
       if (!prefs.enabled) return;
       if (prefs.perEvent[cue] === false) return;
+      if (
+        !allowed(cue, {
+          botId: options.botId ?? null,
+          now: ctx.date?.() ?? new Date(ctx.now()),
+          sounds: prefs,
+        })
+      )
+        return;
       if (
         options.threadId !== undefined &&
         ctx.isWindowFocused() &&
@@ -72,4 +88,70 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       audio = null;
     },
   };
+};
+
+/** What synthesis needs of an (Offline)AudioContext. */
+export type AudioContextLike = Pick<
+  BaseAudioContext,
+  "currentTime" | "destination" | "createOscillator" | "createGain"
+>;
+
+interface Tone {
+  /** Seconds after the cue starts. */
+  at: number;
+  duration: number;
+  from: number;
+  to?: number;
+  gain: number;
+  type?: OscillatorType;
+}
+
+/** 03 §17 (and 05 §23.1 for `routine-fired`); `done` is provisional (06 §14.1). */
+export const CUE_TONES: Readonly<Record<Cue, readonly Tone[]>> = {
+  sent: [{ at: 0, duration: 0.09, from: 660, to: 880, gain: 0.08 }],
+  received: [
+    { at: 0, duration: 0.07, from: 880, gain: 0.07 },
+    { at: 0.11, duration: 0.07, from: 1175, gain: 0.07 },
+  ],
+  "needs-you": [0, 0.14, 0.28].map((at) => ({
+    at,
+    duration: 0.06,
+    from: 740,
+    gain: 0.09,
+    type: "triangle" as const,
+  })),
+  done: [
+    { at: 0, duration: 0.08, from: 659, gain: 0.07 },
+    { at: 0.09, duration: 0.12, from: 988, gain: 0.07 },
+  ],
+  failed: [{ at: 0, duration: 0.18, from: 440, to: 294, gain: 0.08 }],
+  "routine-fired": [
+    { at: 0, duration: 0.05, from: 587, gain: 0.06 },
+    { at: 0.11, duration: 0.05, from: 784, gain: 0.06 },
+  ],
+};
+
+/** Schedules one cue's tones: sine by default, exponential release. */
+export const synthCue = (
+  audio: AudioContextLike,
+  cue: Cue,
+  start: number = audio.currentTime
+): void => {
+  for (const tone of CUE_TONES[cue]) {
+    const t0 = start + tone.at;
+    const t1 = t0 + tone.duration;
+    const oscillator = audio.createOscillator();
+    oscillator.type = tone.type ?? "sine";
+    oscillator.frequency.setValueAtTime(tone.from, t0);
+    if (tone.to != null)
+      oscillator.frequency.exponentialRampToValueAtTime(tone.to, t1);
+    const envelope = audio.createGain();
+    envelope.gain.setValueAtTime(0.0001, t0);
+    envelope.gain.exponentialRampToValueAtTime(tone.gain, t0 + 0.005);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, t1);
+    oscillator.connect(envelope);
+    envelope.connect(audio.destination);
+    oscillator.start(t0);
+    oscillator.stop(t1 + 0.02);
+  }
 };

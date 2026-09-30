@@ -19,13 +19,38 @@ export const LOCAL_PREVIEW_EXTENSIONS: ReadonlySet<string> = new Set([
 
 export type LocalPreviewCheck =
   | { ok: true; file: string; root: string }
-  /** `openHostFile`'s codes, and `unsupported-type`. */
+  /** `openHostFile`'s codes, `root-not-allowed` and `unsupported-type`. */
   | { ok: false; error: string };
 
+const realPath = async (target: string): Promise<string | null> => {
+  try {
+    return await fs.realpath(target);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * `allowedRoots` are main's own answer for the conversation (its checkout,
+ * its artifact folders): the caller's `hostRoot` must be one of them or lie
+ * inside one, compared as real paths, or it is `root-not-allowed`.
+ */
 export async function checkLocalPreviewFile(
   filePath: string,
-  hostRoot: string
+  hostRoot: string,
+  allowedRoots: readonly string[]
 ): Promise<LocalPreviewCheck> {
+  const requested = await realPath(hostRoot);
+  if (requested == null) return { ok: false, error: "root-not-allowed" };
+  let allowed = false;
+  for (const root of allowedRoots) {
+    const real = await realPath(root);
+    if (real != null && isInsideRoot(real, requested)) {
+      allowed = true;
+      break;
+    }
+  }
+  if (!allowed) return { ok: false, error: "root-not-allowed" };
   const opened = await openHostFile(filePath, hostRoot);
   if (opened.ok === false) return { ok: false, error: opened.error };
   const extension = path.extname(opened.realFile).slice(1).toLowerCase();

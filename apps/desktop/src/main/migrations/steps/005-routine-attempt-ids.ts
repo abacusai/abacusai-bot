@@ -9,12 +9,17 @@
  *   start time is within 2 s of the entry;
  * - `kind` from main's exact result strings, `unknown` otherwise;
  * - a legacy timeout joins the attempt with the same session (its record
- *   ended when the timeout was written).
+ *   ended when the timeout was written);
+ * - a legacy start failure takes the session the session store holds for
+ *   the routine, made just before the entry.
  *
- * The ids are persisted, so prepending new runs never changes one. Entries
- * that already have an id are untouched, which makes the step idempotent:
- * a re-run plans no write. The file is written `replace-user` (it holds the
- * user's routines), so the runner backs it up first.
+ * The ids are persisted, so prepending new runs never changes one. An entry
+ * with a derived id `cron-store`'s read fallback already persisted (the step
+ * had not run yet) keeps it and gets only its missing session and link; any
+ * other entry with an id is untouched, and an entry of another shape keeps
+ * its place. So the step is idempotent: a re-run plans no write. The file is
+ * written `replace-user` (it holds the user's routines), so the runner
+ * backs it up first.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -23,7 +28,8 @@ import {
   classifyLegacyRuns,
   parseRunRecord,
   type RunRecordRef,
-  type StoredRun,
+  isStoredRun,
+  type RoutineSessionRef,
 } from "../../services/agent-tools/routine-attempts";
 import type { MigrationStep } from "../types";
 
@@ -33,9 +39,18 @@ const WORKSPACES_FILE_NAME = "local-code.json";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value != null && typeof value === "object" && !Array.isArray(value);
 
-/** Workspace id → path, from the workspace store (`localCode.workspaces`). */
-const readWorkspacePaths = (home: string): Map<string, string> => {
+/**
+ * From the workspace store: workspace id → path (`localCode.workspaces`),
+ * and each routine's sessions (`localCode.agentSessions`).
+ */
+const readWorkspaceStore = (
+  home: string
+): {
+  paths: Map<string, string>;
+  sessions: Map<string, RoutineSessionRef[]>;
+} => {
   const paths = new Map<string, string>();
+  const sessions = new Map<string, RoutineSessionRef[]>();
   try {
     const parsed: unknown = JSON.parse(
       fs.readFileSync(path.join(home, WORKSPACES_FILE_NAME), "utf8")
@@ -49,10 +64,31 @@ const readWorkspacePaths = (home: string): Map<string, string> => {
         typeof entry.path === "string"
       )
         paths.set(entry.id, entry.path);
+    const records = isRecord(localCode) ? localCode.agentSessions : undefined;
+    for (const entry of Array.isArray(records) ? records : []) {
+      if (
+        !isRecord(entry) ||
+        typeof entry.id !== "string" ||
+        typeof entry.routineId !== "string" ||
+        typeof entry.createdAt !== "string" ||
+        entry.editorFor != null
+      )
+        continue;
+      const createdAt = Date.parse(entry.createdAt);
+      if (!Number.isFinite(createdAt)) continue;
+      const list = sessions.get(entry.routineId) ?? [];
+      list.push({
+        sessionId: entry.id,
+        createdAt,
+        runOutcome:
+          typeof entry.runOutcome === "string" ? entry.runOutcome : null,
+      });
+      sessions.set(entry.routineId, list);
+    }
   } catch {
     // No store: only the app's own routine folders are read.
   }
-  return paths;
+  return { paths, sessions };
 };
 
 /** Every run record of a routine, from each folder its records can be in. */
@@ -101,7 +137,7 @@ export const routineAttemptIds = (): MigrationStep => ({
     if (!Array.isArray(jobs))
       return { writes: [], removals: [], stats: { corrupt: 1 } };
 
-    const workspaces = readWorkspacePaths(ctx.home);
+    const store = readWorkspaceStore(ctx.home);
     const stats = {
       routines: jobs.length,
       entries: 0,
@@ -118,18 +154,14 @@ export const routineAttemptIds = (): MigrationStep => ({
         !Array.isArray(job.runs)
       )
         return job;
-      const runs = (job.runs as unknown[]).filter(
-        (run): run is StoredRun =>
-          isRecord(run) &&
-          typeof run.at === "number" &&
-          typeof run.result === "string" &&
-          typeof run.trigger === "string"
-      );
+      // An entry of another shape is not main's to read: it keeps its place
+      // and its content, in every job alike.
+      const all = job.runs as unknown[];
+      const runs = all.filter(isStoredRun);
       stats.entries += runs.length;
-      if (runs.every((run) => typeof run.id === "string")) return job;
       const project =
         typeof job.workspaceId === "string"
-          ? workspaces.get(job.workspaceId)
+          ? store.paths.get(job.workspaceId)
           : undefined;
       const records = readRunRecords([
         path.join(ctx.home, "routines", job.id, "runs"),
@@ -137,19 +169,26 @@ export const routineAttemptIds = (): MigrationStep => ({
           ? []
           : [path.join(project, ".abacusai-bot", "routines", job.id, "runs")]),
       ]);
-      const before = new Set(
-        runs.flatMap((run) => (typeof run.id === "string" ? [run.id] : []))
+      const classified = classifyLegacyRuns(
+        job.id,
+        runs,
+        records,
+        store.sessions.get(job.id) ?? []
       );
-      const classified = classifyLegacyRuns(job.id, runs, records);
+      if (classified.changed === 0) return job;
       stats.migrated += classified.changed;
       for (const run of classified.runs) {
-        if (before.has(run.id)) continue;
+        if (!classified.changedIds.has(run.id)) continue;
         if (run.sessionId != null) stats.withSession += 1;
         if (run.kind === "unknown") stats.unknown += 1;
         if (run.kind === "timed-out" && run.attemptId != null)
           stats.linkedTimeouts += 1;
       }
-      return { ...job, runs: classified.runs };
+      const queue = [...classified.runs];
+      return {
+        ...job,
+        runs: all.map((run) => (isStoredRun(run) ? queue.shift()! : run)),
+      };
     });
     ctx.progress(jobs.length, jobs.length, "Routine history");
 

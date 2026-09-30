@@ -38,7 +38,8 @@ export const botDir = (botId: string): string =>
 export const personaPath = (botId: string): string =>
   path.join(botDir(botId), "persona.md");
 
-const read = (): Bot[] => {
+// Mutations read raw accessories so unrelated edits do not backfill old rows.
+const read = (normalizeAccessory = true): Bot[] => {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(FILE(), "utf8"));
     if (!Array.isArray(parsed)) return [];
@@ -48,6 +49,9 @@ const read = (): Bot[] => {
       const { connectorIds: _dropped, ...rest } = bot;
       return {
         ...rest,
+        ...(normalizeAccessory
+          ? { avatarAccessory: rest.avatarAccessory ?? "none" }
+          : {}),
         model: rest.model ?? null,
         persona: rest.persona ?? "",
         avatarShape: rest.avatarShape ?? defaultAvatarShape(rest.name),
@@ -100,7 +104,7 @@ export const createBot = (input: BotCreateInput, id?: string): Bot => {
       "A bot needs a description. It is the bot's mission."
     );
 
-  const bots = read();
+  const bots = read(false);
   if (bots.length >= MAX_BOTS)
     throw new PreconditionError(
       "bot-limit",
@@ -124,6 +128,9 @@ export const createBot = (input: BotCreateInput, id?: string): Bot => {
     avatarColor: input.avatarColor ?? defaultAvatarColor(name),
     channel: input.channel ?? null,
     avatarShape: input.avatarShape ?? defaultAvatarShape(name),
+    ...(input.avatarAccessory !== undefined
+      ? { avatarAccessory: input.avatarAccessory }
+      : {}),
     workspaceId: input.workspaceId ?? null,
     sessionId: null,
     model: input.model ?? null,
@@ -133,11 +140,11 @@ export const createBot = (input: BotCreateInput, id?: string): Bot => {
 
   write([...bots, bot]);
 
-  return bot;
+  return { ...bot, avatarAccessory: bot.avatarAccessory ?? "none" };
 };
 
 export const updateBot = (id: string, changes: BotUpdateInput): Bot => {
-  const bots = read();
+  const bots = read(false);
   const index = bots.findIndex((bot) => bot.id === id);
 
   if (index < 0)
@@ -159,7 +166,7 @@ export const updateBot = (id: string, changes: BotUpdateInput): Bot => {
   bots[index] = merged;
   write(bots);
 
-  return merged;
+  return { ...merged, avatarAccessory: merged.avatarAccessory ?? "none" };
 };
 
 /** Record where the bot's forever chat lives (or that it no longer does). */
@@ -168,7 +175,7 @@ export const recordBotSession = (
   workspaceId: string | null,
   sessionId: string | null
 ): Bot | null => {
-  const bots = read();
+  const bots = read(false);
   const index = bots.findIndex((bot) => bot.id === id);
 
   if (index < 0) return null;
@@ -176,11 +183,14 @@ export const recordBotSession = (
   bots[index] = { ...bots[index], workspaceId, sessionId };
   write(bots);
 
-  return bots[index];
+  return {
+    ...bots[index],
+    avatarAccessory: bots[index].avatarAccessory ?? "none",
+  };
 };
 
 export const removeBot = (id: string): Bot => {
-  const bots = read();
+  const bots = read(false);
   const removed = bots.find((bot) => bot.id === id);
 
   if (removed == null)

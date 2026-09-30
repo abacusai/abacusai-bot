@@ -13,14 +13,16 @@ import type { PrefsPatch, PrefsRow } from "#shared/contract/rows";
 import { useCollections, useDb, type Db } from "./index";
 
 /** What the shell renders with before the row arrives (main's defaults). */
-export const DEFAULT_PREFS: PrefsRow = {
+export const DEFAULT_PREFS: Required<PrefsRow> & {
+  sounds: Required<PrefsRow["sounds"]>;
+} = {
   id: "app",
   theme: "system",
   language: "system",
   sidebar: { pinned: true, openSection: null },
   pinned: { sessionIds: [], botIds: [] },
   models: { selectedModelId: null, favoriteModelIds: [], perWorkspace: {} },
-  defaultMode: "DEFAULT" as PrefsRow["defaultMode"],
+  defaultMode: "YOLO" as PrefsRow["defaultMode"],
   workspaceExpanded: {},
   lastPickedWorkspaceId: null,
   recentFolders: [],
@@ -30,7 +32,25 @@ export const DEFAULT_PREFS: PrefsRow = {
   dismissals: { referralCardUntil: null, upsell: false },
   panes: {},
   motion: { reduce: "system" },
-  sounds: { enabled: true, perEvent: {} },
+  sounds: {
+    enabled: true,
+    perEvent: {},
+    perBot: {},
+    quietHours: { enabled: false, start: "22:00", end: "08:00" },
+  },
+  keymap: {},
+  appearance: { textSize: 14, bubbleTint: true },
+  notch: {
+    enabled: true,
+    haptics: true,
+    idleVisible: true,
+    extraDisplays: false,
+    showInNotch: true,
+  },
+  tour: { status: "unseen", at: null },
+  onboardingFlow: null,
+  onboardingExit: null,
+  onboardingPairing: [],
   updatedAt: new Date(0).toISOString(),
 };
 

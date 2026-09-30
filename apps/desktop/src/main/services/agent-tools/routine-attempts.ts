@@ -83,13 +83,29 @@ export interface RunRecordRef {
   sessionId: string;
   startedAt: number;
   endedAt: number | null;
+  /** The record's `- Outcome:` line; null when it has none. */
+  outcome?: "completed" | "failed" | null;
+}
+
+/**
+ * A routine's session from the session store (`localCode.agentSessions`).
+ * A legacy `session failed to start: …` entry names none, but the session
+ * it made was stored just before the start was tried.
+ */
+export interface RoutineSessionRef {
+  sessionId: string;
+  createdAt: number;
+  runOutcome: string | null;
 }
 
 /** Within this, a record and a history entry are the same fire. */
 export const RECORD_MATCH_MS = 2_000;
 
-/** A timeout shares its session with its attempt: nothing is off limits. */
-const NONE: ReadonlySet<string> = new Set();
+/**
+ * The longest a start may take between its session being stored and the
+ * `session failed to start` entry being written.
+ */
+export const START_FAILURE_MATCH_MS = 5 * 60_000;
 
 /** A stored entry that predates ids, as read from `cronjobs.json`. */
 export type StoredRun = Partial<RoutineRun> & {
@@ -97,6 +113,19 @@ export type StoredRun = Partial<RoutineRun> & {
   trigger: RoutineRun["trigger"];
   result: string;
 };
+
+/**
+ * The shape an entry must have to be classified (migration step 5's guard,
+ * shared with `cron-store`'s read). Anything else is not a history entry
+ * main can read, and is never given an id.
+ */
+export const isStoredRun = (run: unknown): run is StoredRun =>
+  run != null &&
+  typeof run === "object" &&
+  !Array.isArray(run) &&
+  typeof (run as { at?: unknown }).at === "number" &&
+  typeof (run as { result?: unknown }).result === "string" &&
+  typeof (run as { trigger?: unknown }).trigger === "string";
 
 const closest = (
   records: readonly RunRecordRef[],
@@ -117,75 +146,188 @@ const closest = (
 };
 
 /**
+ * The run a legacy timeout stopped. The reaper writes a `failed` record and
+ * the timeout together, so a failed record ending within 2 s wins over one
+ * that finished normally, and a record another timeout holds is never
+ * reused.
+ */
+const timedOutSession = (
+  records: readonly RunRecordRef[],
+  at: number,
+  claimed: ReadonlySet<string>
+): string | null =>
+  closest(
+    records.filter((record) => record.outcome === "failed"),
+    at,
+    (record) => record.endedAt,
+    claimed
+  ) ??
+  closest(
+    records.filter((record) => record.outcome == null),
+    at,
+    (record) => record.endedAt,
+    claimed
+  );
+
+/**
+ * The session a legacy start failure made: the newest unclaimed one of the
+ * routine stored before the entry (within `START_FAILURE_MATCH_MS`) that
+ * did not complete.
+ */
+const startFailedSession = (
+  sessions: readonly RoutineSessionRef[],
+  at: number,
+  taken: ReadonlySet<string>
+): string | null => {
+  let best: RoutineSessionRef | null = null;
+  for (const session of sessions) {
+    if (taken.has(session.sessionId)) continue;
+    if (session.runOutcome === "completed") continue;
+    if (session.createdAt > at + RECORD_MATCH_MS) continue;
+    if (at - session.createdAt > START_FAILURE_MATCH_MS) continue;
+    if (best == null || session.createdAt > best.createdAt) best = session;
+  }
+  return best?.sessionId ?? null;
+};
+
+const contentKey = (run: StoredRun): string =>
+  [run.at, run.trigger, run.result].join("\u0000");
+
+const hasId = (run: StoredRun): run is StoredRun & { id: string } =>
+  typeof run.id === "string" && run.id.length > 0;
+
+/**
  * Gives every entry without an id its id, kind and links (spec 05 §31.5 f):
  * a `started session <id>` result names its session; a started or unknown
  * entry without one takes the run record that started within 2 s of it; a
- * legacy timeout takes the record that ended within 2 s of it (the reaper
- * writes both together) and links to the `started` attempt with that
- * session. Entries that already have an id are returned unchanged. Pure.
+ * legacy timeout takes the (preferably failed) record that ended within 2 s
+ * of it, one record per timeout, and links to the `started` attempt with
+ * that session; a legacy start failure takes the session it stored just
+ * before.
+ *
+ * The id is derived from the entry's content and its ordinal among every
+ * identical entry, with an id or not, counted from the oldest (prepends
+ * never move it); an id another entry already holds is skipped. An entry
+ * whose id is such a derived id (the read fallback persisted it before the
+ * run records were read) keeps it and gets only its missing session and
+ * link filled. Any other entry with an id is returned unchanged. Pure.
  */
 export const classifyLegacyRuns = (
   routineId: string,
   runs: readonly StoredRun[],
-  records: readonly RunRecordRef[] = []
-): { runs: RoutineRun[]; changed: number } => {
-  let changed = 0;
-  const seen = new Map<string, number>();
+  records: readonly RunRecordRef[] = [],
+  sessions: readonly RoutineSessionRef[] = []
+): { runs: RoutineRun[]; changed: number; changedIds: Set<string> } => {
   // Sessions an entry already names (a field, or main's own `started
-  // session <id>`), so a record is never claimed by a second entry.
+  // session <id>`), so a record is never claimed by a second entry. A
+  // timeout shares its session with its attempt, so it takes none.
   const taken = new Set<string>(
     runs.flatMap((run) => {
+      if (run.kind === "timed-out") return [];
       if (typeof run.sessionId === "string") return [run.sessionId];
       const named = namedSession(run.result);
       return named == null ? [] : [named];
     })
   );
+  // Records that already serve a timeout.
+  const claimedByTimeouts = new Set<string>(
+    runs.flatMap((run) =>
+      run.kind === "timed-out" && typeof run.sessionId === "string"
+        ? [run.sessionId]
+        : []
+    )
+  );
+  const ids = new Set<string>(runs.filter(hasId).map((run) => run.id));
+  const identical = new Map<string, number>();
+  for (const run of runs)
+    identical.set(contentKey(run), (identical.get(contentKey(run)) ?? 0) + 1);
+  /** Whether `id` is one `legacyAttemptId` gives this entry's content. */
+  const isDerived = (run: StoredRun, id: string): boolean => {
+    // An ordinal is skipped only for an identical entry holding it, so no
+    // ordinal given reaches twice the identical count.
+    const bound = 2 * (identical.get(contentKey(run)) ?? 1);
+    for (let ordinal = 0; ordinal < bound; ordinal += 1)
+      if (legacyAttemptId(routineId, run, ordinal) === id) return true;
+    return false;
+  };
+
+  const changedIds = new Set<string>();
+  const seen = new Map<string, number>();
   const out: RoutineRun[] = Array.from({ length: runs.length });
+  const legacy: number[] = [];
   // Oldest first: ordinals count from the oldest identical entry.
   for (let index = runs.length - 1; index >= 0; index -= 1) {
     const run = runs[index]!;
-    if (typeof run.id === "string" && run.id.length > 0) {
-      out[index] = {
-        ...run,
-        id: run.id,
-        kind: run.kind ?? "unknown",
-        sessionId: run.sessionId ?? null,
-        attemptId: run.attemptId ?? null,
-      };
-      continue;
-    }
-    changed += 1;
-    const key = [run.at, run.trigger, run.result].join("\u0000");
-    const ordinal = seen.get(key) ?? 0;
+    const key = contentKey(run);
+    let ordinal = seen.get(key) ?? 0;
     seen.set(key, ordinal + 1);
-    const kind = legacyKind(run.result);
-    let sessionId = kind === "started" ? namedSession(run.result) : null;
+    const attemptId = run.attemptId ?? null;
+    let id: string;
+    let kind: RoutineRunKind;
+    let sessionId: string | null;
+    if (hasId(run)) {
+      if (!isDerived(run, run.id)) {
+        out[index] = {
+          ...run,
+          id: run.id,
+          kind: run.kind ?? "unknown",
+          sessionId: run.sessionId ?? null,
+          attemptId,
+        };
+        continue;
+      }
+      id = run.id;
+      kind = run.kind ?? legacyKind(run.result);
+      sessionId = run.sessionId ?? null;
+    } else {
+      id = legacyAttemptId(routineId, run, ordinal);
+      while (ids.has(id)) {
+        ordinal += 1;
+        id = legacyAttemptId(routineId, run, ordinal);
+      }
+      ids.add(id);
+      changedIds.add(id);
+      kind = legacyKind(run.result);
+      sessionId = null;
+    }
+    legacy.push(index);
+    const before = sessionId;
+    if (sessionId == null && kind === "started")
+      sessionId = namedSession(run.result);
     if (sessionId == null && (kind === "started" || kind === "unknown"))
       sessionId = closest(records, run.at, (record) => record.startedAt, taken);
-    if (sessionId == null && kind === "timed-out")
-      sessionId = closest(records, run.at, (record) => record.endedAt, NONE);
+    if (sessionId == null && kind === "start-failed")
+      sessionId = startFailedSession(sessions, run.at, taken);
+    if (sessionId == null && kind === "timed-out") {
+      sessionId = timedOutSession(records, run.at, claimedByTimeouts);
+      if (sessionId != null) claimedByTimeouts.add(sessionId);
+    }
     if (sessionId != null && kind !== "timed-out") taken.add(sessionId);
+    if (sessionId !== before) changedIds.add(id);
     out[index] = {
-      id: legacyAttemptId(routineId, run, ordinal),
+      id,
       at: run.at,
       trigger: run.trigger,
       result: run.result,
       kind,
       sessionId,
-      attemptId: null,
+      attemptId,
     };
   }
   // A legacy timeout joins the attempt that started its session.
-  for (const run of out) {
+  for (const index of legacy) {
+    const run = out[index]!;
     if (run.kind !== "timed-out" || run.attemptId != null) continue;
     if (run.sessionId == null) continue;
     const attempt = out.find(
       (candidate) =>
         isAttempt(candidate) && candidate.sessionId === run.sessionId
     );
-    if (attempt != null) run.attemptId = attempt.id;
+    if (attempt == null) continue;
+    run.attemptId = attempt.id;
+    changedIds.add(run.id);
   }
-  return { runs: out, changed };
+  return { runs: out, changed: changedIds.size, changedIds };
 };
 
 /**
@@ -215,6 +357,7 @@ export const parseRunRecord = (text: string): RunRecordRef | null => {
   const heading = /^# Run at (.+)$/m.exec(text)?.[1]?.trim();
   const session = /^- Session: (.+)$/m.exec(text)?.[1]?.trim();
   const ended = /^- Ended: (.+)$/m.exec(text)?.[1]?.trim();
+  const outcome = /^- Outcome: (.+)$/m.exec(text)?.[1]?.trim();
   if (heading == null || session == null || session.length === 0) return null;
   const startedAt = Date.parse(heading);
   if (!Number.isFinite(startedAt)) return null;
@@ -223,5 +366,6 @@ export const parseRunRecord = (text: string): RunRecordRef | null => {
     sessionId: session,
     startedAt,
     endedAt: Number.isFinite(endedAt) ? endedAt : null,
+    outcome: outcome === "failed" || outcome === "completed" ? outcome : null,
   };
 };

@@ -45,7 +45,11 @@ interface Live {
 }
 
 interface LiveModule {
-  live(options: { reply: ReplyScript; incarnation?: string }): Promise<Live>;
+  live(options: {
+    reply: ReplyScript;
+    incarnation?: string;
+    isolated?: boolean;
+  }): Promise<Live>;
 }
 
 /** Main's `AguiRelayService`, as used here. */
@@ -161,6 +165,7 @@ export const startRealHost = async (options: {
     agentProcess = runtime;
     runtime.live = await live({
       reply: options.reply,
+      isolated: true,
       incarnation: `inc-${incarnations}`,
     });
     attach(runtime);

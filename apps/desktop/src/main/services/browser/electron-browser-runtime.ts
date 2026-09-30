@@ -44,6 +44,9 @@ import { isInsideRoot } from "./local-preview-file";
 type LocalFile = { file: string; root: string };
 type MaterializeOptions = { profileId?: string; localFile?: LocalFile };
 
+const localFileIdentity = (localFile: LocalFile): string =>
+  `${localFile.file}\0${localFile.root}`;
+
 /** What the local-file view's session lets through (spec 04 §12.8). */
 export const localFileRequestAllowed = (
   localFile: LocalFile,
@@ -305,7 +308,10 @@ export class ElectronBrowserRuntime {
     WebContentsView,
     LocalFile & { url: string }
   >();
-  /** runtime key → the local file its view shows. */
+  /**
+   * runtime key → the local file its view shows and the root its
+   * sub-resources are locked to (`localFileIdentity`).
+   */
   private readonly localKeys = new Map<string, string>();
 
   constructor(
@@ -377,7 +383,10 @@ export class ElectronBrowserRuntime {
     const conversationKey = checkedConversationKey(request.conversationKey);
     const resourceId = browserResourceId(request.resourceId);
     const key = runtimeMapKey(conversationKey, resourceId);
-    if (this.leases.has(key) && this.localKeys.get(key) !== request.file)
+    // The view's lock is fixed when it is built: another file, or the same
+    // file under another root (a narrower one included), needs a new view.
+    const identity = localFileIdentity(request);
+    if (this.leases.has(key) && this.localKeys.get(key) !== identity)
       this.replace(key);
     const fresh = !this.leases.has(key);
     const lease = this.registry.materialize(conversationKey, resourceId, {
@@ -385,7 +394,7 @@ export class ElectronBrowserRuntime {
     });
     this.leases.set(key, lease);
     this.profiles.set(key, undefined);
-    this.localKeys.set(key, request.file);
+    this.localKeys.set(key, identity);
     if (fresh) {
       const view = this.registry.nativeView(lease);
       try {

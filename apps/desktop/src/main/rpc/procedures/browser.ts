@@ -107,12 +107,16 @@ export const browserRouter = impl.browser.router({
         requireMainRenderer(context);
         const checked = await checkLocalPreviewFile(
           input.filePath,
-          input.hostRoot
+          input.hostRoot,
+          context.deps.serviceHost.localPreviewRoots(input.conversationKey)
         );
-        // Outside the root: FORBIDDEN {outside-root}, as `files.readText`;
-        // a type the view does not show: FORBIDDEN {unsupported-type}.
+        // A root that is not the conversation's checkout or an artifact
+        // folder: FORBIDDEN {root-not-allowed}; outside the root: FORBIDDEN
+        // {outside-root}, as `files.readText`; a type the view does not
+        // show: FORBIDDEN {unsupported-type}.
         if (checked.ok === false)
-          throw checked.error === "unsupported-type"
+          throw checked.error === "unsupported-type" ||
+            checked.error === "root-not-allowed"
             ? forbidden(checked.error)
             : hostFileError(input.filePath)(checked.error);
         return context.deps.browserRuntime.materializeFile({

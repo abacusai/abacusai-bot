@@ -12,6 +12,9 @@ import { navigateAndSettle } from "./settle";
 
 interface AbacusDev {
   navigateAndSettle(href: string): Promise<void>;
+  navigate(href: string): Promise<void>;
+  /** Invoke real main procedures in dev-only acceptance builds. */
+  call(path: string, input?: unknown): Promise<unknown>;
   setPinned(pinned: boolean): Promise<void>;
   setTheme(theme: "system" | "light" | "dark"): Promise<void>;
   setMotion(reduce: "system" | "on" | "off"): Promise<void>;
@@ -63,6 +66,21 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
   const delay = { ms: 0 };
   installLoaderDelay(router, delay);
   const dev: AbacusDev = {
+    navigate: async (href) => {
+      await router.navigate({ href } as never);
+    },
+    call: (path, input = {}) => {
+      const transport = (
+        router.options.context as { transport: { client: unknown } }
+      ).transport;
+      const procedure = path
+        .split(".")
+        .reduce<unknown>(
+          (value, key) => (value as Record<string, unknown>)[key],
+          transport.client
+        );
+      return (procedure as (input: unknown) => Promise<unknown>)(input);
+    },
     navigateAndSettle: (href) =>
       navigateAndSettle(href, {
         router,

@@ -1,23 +1,50 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { BotsNewPage } from "#next/features/bots";
+import {
+  BotStartPage,
+  BotSetupForm,
+  NewBotSearch,
+  NEW_BOT_DEFAULTS,
+  botsQueries,
+  selectTemplate,
+  getDraft,
+} from "#next/features/bots";
 import { TopBarSlot } from "#next/features/shell";
-
-const BotsNewRoute = () => {
+const NewRoute = () => {
   const { t } = useTranslation();
+  const search = Route.useSearch();
+  const { chat } = Route.useRouteContext();
   return (
     <>
-      <TopBarSlot>
-        <span className="text-sidebar-foreground truncate font-medium">
-          {t("bots.page.newTitle")}
-        </span>
-      </TopBarSlot>
-      <BotsNewPage />
+      <TopBarSlot>{t("bots.page.newTitle")}</TopBarSlot>
+      {search.step === "setup" ? (
+        <BotSetupForm load={(id) => chat.session(id).load()} />
+      ) : (
+        <BotStartPage category={search.category} />
+      )}
     </>
   );
 };
-
 export const Route = createFileRoute("/_shell/(bots)/bots/new")({
-  component: BotsNewRoute,
+  validateSearch: NewBotSearch,
+  search: { middlewares: [stripSearchParams(NEW_BOT_DEFAULTS)] },
+  loaderDeps: ({ search }) => ({
+    step: search.step,
+    template: search.template,
+  }),
+  loader: async ({ context, deps }) => {
+    await context.db.collections.bots.preload();
+    const queries = botsQueries(context.transport.orpc);
+    await context.queryClient.ensureQueryData(queries.connectorStatuses());
+    if (deps.step === "setup") {
+      await context.queryClient.ensureQueryData(queries.models());
+      if (deps.template && getDraft().templateId !== deps.template)
+        selectTemplate(
+          deps.template,
+          context.t(`bots.templates.${deps.template}.name`)
+        );
+    }
+  },
+  component: NewRoute,
 });

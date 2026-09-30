@@ -117,6 +117,104 @@ describe("classifyLegacyRuns", () => {
     );
     expect(runs[1]).toMatchObject({ kind: "unknown", sessionId: null });
   });
+
+  // Codex r1 #16: an id-less entry identical to an older one that already
+  // has its derived id (an older build prepended it after the migration).
+  it("never gives an id-less entry the id an identical entry already holds", () => {
+    const skipped = "skipped: the previous run is still going";
+    const migrated = classifyLegacyRuns("job-1", [legacy(2_000, skipped)]);
+    const runs = [legacy(2_000, skipped), ...migrated.runs];
+    const { runs: out, changed } = classifyLegacyRuns("job-1", runs);
+    expect(changed).toBe(1);
+    expect(out[1]).toEqual(migrated.runs[0]);
+    expect(new Set(out.map((run) => run.id)).size).toBe(2);
+    // And the order an entry has among identical ones stays stable.
+    expect(classifyLegacyRuns("job-1", out).runs).toEqual(out);
+  });
+
+  // Codex r1 #17 / Claude r1 #6: the read fallback persisted derived ids
+  // without run records; the step, with records, fills only what is missing.
+  it("fills the missing links of an entry the fallback gave a derived id", () => {
+    const history = [
+      legacy(1_830_000, "failed: the run was stopped after 30 minutes"),
+      legacy(30_000, "an older build's text"),
+    ];
+    const fallback = classifyLegacyRuns("job-1", history).runs;
+    expect(fallback.map((run) => run.sessionId)).toEqual([null, null]);
+    const records = [
+      {
+        sessionId: "s-b",
+        startedAt: 30_500,
+        endedAt: 1_830_000 + 400,
+        outcome: "failed" as const,
+      },
+    ];
+    const enriched = classifyLegacyRuns("job-1", fallback, records);
+    expect(enriched.changed).toBe(2);
+    expect(enriched.runs.map((run) => run.id)).toEqual(
+      fallback.map((run) => run.id)
+    );
+    expect(enriched.runs[1]).toMatchObject({ sessionId: "s-b" });
+    expect(enriched.runs[0]).toMatchObject({
+      sessionId: "s-b",
+      attemptId: fallback[1]!.id,
+    });
+    // An entry minted with its own id is never touched.
+    const minted: RoutineRun = {
+      ...fallback[1]!,
+      id: mintAttemptId(),
+      sessionId: null,
+    };
+    expect(classifyLegacyRuns("job-1", [minted], records).runs).toEqual([
+      minted,
+    ]);
+  });
+
+  // Claude r1 #23.
+  it("gives each record to one timeout, preferring the run the reaper failed", () => {
+    const timedOut = "failed: the run was stopped after 30 minutes";
+    const { runs } = classifyLegacyRuns(
+      "job-1",
+      [legacy(100_000, timedOut), legacy(100_500, timedOut)].reverse(),
+      [
+        // A run that finished normally at the same moment.
+        {
+          sessionId: "s-done",
+          startedAt: 1_000,
+          endedAt: 100_100,
+          outcome: "completed",
+        },
+        {
+          sessionId: "s-hung",
+          startedAt: 2_000,
+          endedAt: 100_400,
+          outcome: "failed",
+        },
+      ]
+    );
+    // Oldest first: the first timeout takes the failed record even though
+    // the completed one ended closer to it; the second stays unlinked.
+    expect(runs.map((run) => run.sessionId)).toEqual([null, "s-hung"]);
+  });
+
+  it("links a legacy start failure to the session it stored just before", () => {
+    const { runs } = classifyLegacyRuns(
+      "job-1",
+      [
+        legacy(200_000, "session failed to start: no model"),
+        legacy(100_000, "session failed to start: no model"),
+      ],
+      [],
+      [
+        { sessionId: "s-1", createdAt: 99_000, runOutcome: "failed" },
+        { sessionId: "s-ok", createdAt: 150_000, runOutcome: "completed" },
+        { sessionId: "s-2", createdAt: 190_000, runOutcome: "failed" },
+        // Made after the entry: not its session.
+        { sessionId: "s-3", createdAt: 250_000, runOutcome: "failed" },
+      ]
+    );
+    expect(runs.map((run) => run.sessionId)).toEqual(["s-2", "s-1"]);
+  });
 });
 
 describe("ids and the run-row join", () => {
@@ -180,6 +278,7 @@ describe("ids and the run-row join", () => {
       sessionId: "s-9",
       startedAt: Date.parse("2026-09-01T09:00:00.000Z"),
       endedAt: Date.parse("2026-09-01T09:05:00.000Z"),
+      outcome: "completed",
     });
     expect(parseRunRecord("# Run at nonsense\n- Session: s")).toBeNull();
     expect(parseRunRecord("no heading")).toBeNull();

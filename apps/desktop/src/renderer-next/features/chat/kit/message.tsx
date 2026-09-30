@@ -13,7 +13,13 @@ import type {
 } from "@tanstack/ai-client";
 import type { MessageProps } from "@tanstack/ai-react/ui";
 import { ChevronRight, FileText, ListChecks } from "lucide-react";
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
@@ -43,7 +49,11 @@ import {
 import { Markdown } from "../markdown/markdown";
 import { useToolWindow } from "../scroller/row-context";
 import { useHost, useThreadStore } from "../store/selectors";
-import { useChatView, useSubagentScope } from "./context";
+import {
+  useChatView,
+  useSubagentScope,
+  type MessageDecoration,
+} from "./context";
 import { useKitParts, useMessageScope, MessageScope } from "./message-scope";
 import { ToolLine } from "./tools/tool-line";
 
@@ -221,9 +231,11 @@ export const userView = (
 const UserMessage = ({
   message,
   tint,
+  badge,
 }: {
   message: UIMessage;
   tint: boolean;
+  badge?: ReactNode;
 }) => {
   const { workspaceRoot } = useChatView();
   const { hidden, body, paths } = userView(message);
@@ -233,13 +245,14 @@ const UserMessage = ({
       {body !== "" ? (
         <div
           className={cn(
-            "w-fit max-w-[min(520px,85%)] px-3 py-2",
+            "relative w-fit max-w-[min(520px,85%)] px-3 py-2",
             tint
               ? "rounded-[20px] rounded-br-md bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]"
               : "rounded-2xl bg-[var(--chat-user-bubble)]"
           )}
         >
           <Markdown content={body} role="user" workspaceRoot={workspaceRoot} />
+          {badge}
         </div>
       ) : null}
       {paths.length > 0 ? (
@@ -423,19 +436,43 @@ const WorkedThrough = ({ message }: { message: UIMessage }) => {
 const isEmptyAssistant = (message: UIMessage): boolean =>
   message.role === "assistant" && message.parts.length === 0;
 
+/** The route's decoration of one message (03-bots §11.3), or none. */
+const useDecoration = (message: UIMessage): MessageDecoration | null => {
+  const { session, slots } = useChatView();
+  const messages = useHost(session, (state) => state.messages);
+  const runActive = useThreadStore(
+    session,
+    (state) => state.runs.active != null
+  );
+  const decorate = slots.decorateMessage;
+  if (decorate == null) return null;
+  const index = messages.findIndex((item) => item.id === message.id);
+  return decorate(message, { messages, index, runActive });
+};
+
 export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
   const streaming = useStreaming(message);
-  if (isEmptyAssistant(message)) return null;
-  if (message.role === "user") return <UserMessage message={message} tint />;
+  const decoration = useDecoration(message);
+  if (isEmptyAssistant(message) || decoration?.hidden === true) return null;
+  if (message.role === "user")
+    return (
+      <>
+        {decoration?.before}
+        <UserMessage message={message} tint badge={decoration?.badge} />
+        {decoration?.after}
+      </>
+    );
   const PartsView = Parts as ComponentType;
   return (
     <MessageScope
       value={{ id: message.id, role: "assistant", streaming, message }}
     >
       <div className="flex flex-col items-start gap-1.5" data-role="assistant">
+        {decoration?.before}
         <PartsView />
         <WorkedThrough message={message} />
         <Credits message={message} />
+        {decoration?.after}
       </div>
     </MessageScope>
   );

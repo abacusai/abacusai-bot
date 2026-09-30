@@ -77,6 +77,8 @@ function manager(script: string, wire: AgentWire) {
   workspace = fs.mkdtempSync(path.join(os.tmpdir(), "cli-taps-"));
   const ndjson: DesktopEvent[] = [];
   const agui: Array<Record<string, unknown>> = [];
+  /** Everything either wire delivered, in delivery order. */
+  const log: string[] = [];
   const service = new AgentManagerService({
     resolveWorkspacePath: () => workspace,
     resolveArtifact: () => ({
@@ -90,12 +92,17 @@ function manager(script: string, wire: AgentWire) {
     emitStateUpdated: () => {},
     emitNdjson: (_w, _s, event) => {
       ndjson.push(event);
+      const [text] = probes([event as unknown as Record<string, unknown>]);
+      if (text != null) log.push(`compat:${text}`);
     },
     emitAgui: (_w, _s, event) => {
       agui.push(event);
+      const [text] = probes([event]);
+      if (text != null) log.push(`agui:${text}`);
     },
     emitAguiExit: () => {
       agui.push({ type: "exit" });
+      log.push("exit");
     },
     emitSystemReady: () => {},
     emitSessionClosed: () => {},
@@ -105,7 +112,7 @@ function manager(script: string, wire: AgentWire) {
     emitMcpRuntimeError: () => {},
     runHostService: async () => null,
   });
-  return { service, ndjson, agui };
+  return { service, ndjson, agui, log };
 }
 
 const probes = (events: ReadonlyArray<Record<string, unknown>>): string[] =>
@@ -126,7 +133,7 @@ const probes = (events: ReadonlyArray<Record<string, unknown>>): string[] =>
 describe("the taps through the manager", () => {
   it("agui over fd 3: split characters, long lines and unterminated last lines arrive intact, before the exit", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const { service, ndjson, agui } = manager(FRAGMENTED, "agui");
+    const { service, ndjson, agui, log } = manager(FRAGMENTED, "agui");
     try {
       await service.startSession({
         workspaceId: "w",
@@ -140,6 +147,14 @@ describe("the taps through the manager", () => {
         probes(ndjson as unknown as Array<Record<string, unknown>>)
       ).toEqual(["héllo 🙂 ✓", LONG, "last compat 🙂"]);
       expect(probes(agui)).toEqual(["ünï 🙂", "last agui 🙂"]);
+      // One ordered log: fd 3's last (unterminated) line, and stdout's,
+      // reach the taps before the exit marker, and nothing follows it.
+      const exitAt = log.indexOf("exit");
+      expect(exitAt).toBe(log.length - 1);
+      expect(log.indexOf("compat:last compat 🙂")).toBeGreaterThan(-1);
+      expect(log.indexOf("compat:last compat 🙂")).toBeLessThan(exitAt);
+      expect(log.indexOf("agui:last agui 🙂")).toBeGreaterThan(-1);
+      expect(log.indexOf("agui:last agui 🙂")).toBeLessThan(exitAt);
       // No replacement character anywhere.
       expect(JSON.stringify([ndjson, agui])).not.toContain("�");
     } finally {
@@ -212,6 +227,25 @@ describe("LineSplitter", () => {
     expect(splitter.push("0123456789")).toEqual([]);
     expect(splitter.end()).toEqual([]);
     expect(splitter.push("late\n")).toEqual([]);
+  });
+
+  it("applies one limit to a line whatever the chunking, delivered or dropped alike", () => {
+    const input = "ok\n0123456789\n12345678\n1234567\r\nabcdefghij";
+    const expected = ["ok", "12345678", "1234567"];
+    for (let size = 1; size <= input.length; size += 1) {
+      const overflows: number[] = [];
+      const splitter = new LineSplitter({
+        maxLineChars: 8,
+        onOverflow: (chars) => overflows.push(chars),
+      });
+      const out: string[] = [];
+      for (let at = 0; at < input.length; at += size)
+        out.push(...splitter.push(input.slice(at, at + size)));
+      out.push(...splitter.end());
+      expect({ size, out }).toEqual({ size, out: expected });
+      // Each oversize line is reported exactly once.
+      expect({ size, count: overflows.length }).toEqual({ size, count: 2 });
+    }
   });
 
   it("delivers a last line without its newline at the end, and an incomplete character as a replacement", () => {

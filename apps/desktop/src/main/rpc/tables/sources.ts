@@ -13,7 +13,7 @@ import type {
   SessionTurnStateSnapshot,
   WorkspaceMetadataSnapshot,
 } from "#shared/contracts";
-import type { RoutineListItem } from "#shared/routines";
+import type { Routine, RoutineListItem } from "#shared/routines";
 
 export type Unhook = () => void;
 
@@ -26,6 +26,7 @@ export interface TableSources {
   /** Fired after every write of `bots.json`. */
   onBotsWritten(listener: () => void): Unhook;
   listRoutines(): RoutineListItem[];
+  listRoutineHistories?(): Array<Pick<Routine, "id" | "runs">>;
   /** Fired after every write of `cronjobs.json`. */
   onRoutinesWritten(listener: () => void): Unhook;
   listSessionArtifacts(): SessionArtifact[];
