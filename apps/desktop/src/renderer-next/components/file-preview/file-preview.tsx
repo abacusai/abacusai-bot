@@ -5,7 +5,7 @@ import { ExternalLink, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { highlightFile } from "#next/lib/file-highlight";
+import { highlightFile, toFileUrl } from "#next/lib/file-highlight";
 import { Button } from "#next/ui/button";
 import { Skeleton } from "#next/ui/skeleton";
 import type { PptxDeck } from "#shared/pptx";
@@ -71,7 +71,15 @@ export const FilePreview = ({
       if (kind === "pdf" || kind === "html") {
         if (!read.localUrl)
           throw new Error("Host file URL resolver unavailable");
-        return { state: "local", url: await read.localUrl(path, hostRoot) };
+        const url = new URL(await read.localUrl(path, hostRoot));
+        if (url.protocol !== "file:")
+          throw new Error("Expected a host file URL");
+        return {
+          state: "local",
+          url: url.hostname
+            ? url.href
+            : toFileUrl(decodeURIComponent(url.pathname)),
+        };
       }
       if (kind === "image")
         return { state: "image", src: await read.image(path, hostRoot) };

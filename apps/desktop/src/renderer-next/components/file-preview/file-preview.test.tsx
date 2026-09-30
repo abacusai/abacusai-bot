@@ -171,6 +171,21 @@ describe("FilePreview", () => {
     }
   );
 
+  it("rejects a non-file URL returned by the local host resolver", async () => {
+    const read = reads();
+    read.localUrl.mockResolvedValue("https://example.com/report.pdf");
+    const { container } = render(
+      <FilePreview
+        path="/workspace/report.pdf"
+        hostRoot="/host/w"
+        read={read}
+        onOpenExternally={() => {}}
+      />
+    );
+    await screen.findByRole("status");
+    expect(container.querySelector("webview")).toBeNull();
+  });
+
   it("offers the OS app for office documents without reading them", () => {
     const read = reads();
     const external = vi.fn();
