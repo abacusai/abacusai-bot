@@ -287,7 +287,7 @@ export const ArtifactsPage = ({
                     set({ q: undefined, type: undefined, from: undefined })
                   }
                 >
-                  {t("search.clear")}
+                  {t("phase5.clearSearch")}
                 </Button>
               ) : undefined
             }

@@ -3429,6 +3429,10 @@
     },
     "rememberedByBots": "Remembered by bots",
     "botMemoryCount": "{{name}} · {{count}} things",
-    "showMemory": "Show memories"
+    "showMemory": "Show memories",
+    "pairingPending": "Finish linking your messaging apps.",
+    "finishPairing": "Link {{platform}}",
+    "clearSearch": "Borrar búsqueda",
+    "unbind": "Unbind"
   }
 }

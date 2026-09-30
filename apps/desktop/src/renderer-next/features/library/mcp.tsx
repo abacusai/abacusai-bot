@@ -2,7 +2,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -49,13 +49,14 @@ export const useMcpRuntimeScope = () => {
     );
   const [picked, setPicked] = useState<string | null>(null);
   const session = candidates.find((s) => s.id === picked) ?? candidates[0];
+  const scope = session
+    ? { workspaceId: session.workspaceId, sessionId: session.id }
+    : null;
   return {
     candidates,
     session,
     setPicked,
-    scope: session
-      ? { workspaceId: session.workspaceId, sessionId: session.id }
-      : null,
+    scope,
   };
 };
 export const McpPage = () => {
@@ -71,17 +72,24 @@ export const McpPage = () => {
     transport.orpc.mcp.list.queryOptions({ input: { mode: "code" } })
   );
   const { scope, candidates, session, setPicked } = useMcpRuntimeScope();
+  const sessionId = scope?.sessionId;
+  const workspaceId = scope?.workspaceId;
   const [runtime, setRuntime] = useState<AgentMcpServer[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [prefill, setPrefill] = useState<McpServerInfo | null>(null);
   useEffect(() => {
-    if (!scope) {
-      return;
-    }
+    // Selecting a different external runtime retires the previous snapshot.
+    // eslint-disable-next-line react/set-state-in-effect
+    setRuntime([]);
+    setLogs([]);
+    if (!sessionId || !workspaceId) return;
+    const scope = { sessionId, workspaceId };
     const abort = new AbortController();
     void transport.client.mcp.runtime
       .servers(scope)
-      .then(setRuntime)
+      .then((rows) => {
+        if (!abort.signal.aborted) setRuntime(rows);
+      })
       .catch(() => undefined);
     void followNotices(
       transport,
@@ -112,13 +120,22 @@ export const McpPage = () => {
       abort.signal
     );
     return () => abort.abort();
-  }, [transport, scope, search.logs]);
+  }, [transport, sessionId, workspaceId, search.logs]);
   useEffect(() => {
-    if (scope && search.logs)
+    let live = true;
+    if (sessionId && workspaceId && search.logs)
       void transport.client.mcp.runtime
-        .logs({ ...scope, serverId: search.logs })
-        .then((entries) => setLogs(entries.slice(-200).map((e) => e.line)));
-  }, [transport, scope, search.logs]);
+        .logs({ sessionId, workspaceId, serverId: search.logs })
+        .then((entries) => {
+          if (live) setLogs(entries.slice(-200).map((entry) => entry.line));
+        })
+        .catch(() => {
+          if (live) showError(t("phase5.failed"));
+        });
+    return () => {
+      live = false;
+    };
+  }, [transport, sessionId, workspaceId, search.logs, t]);
   const mutate = async (
     call: Promise<{ success: boolean; error?: string }>
   ) => {
@@ -425,6 +442,29 @@ export const configFromForm = (
             }
           : {}),
       };
+const formValuesFor = (entry: McpServerInfo | undefined | null) => {
+  const config = entry?.config;
+  return {
+    name: entry?.name ?? "",
+    transport: config?.url ? ("http" as const) : ("stdio" as const),
+    command: config?.command ?? "",
+    url: config?.url ?? "",
+    args: config?.args?.join("\n") ?? "",
+    env: Object.entries(config?.env ?? {})
+      .map(([k, v]) => `${k}=${v}`)
+      .join("\n"),
+    headers: Object.entries(config?.headers ?? {})
+      .map(([k, v]) => `${k}=${v}`)
+      .join("\n"),
+    clientId:
+      typeof config?.oauth === "object" ? (config.oauth.clientId ?? "") : "",
+    clientSecret:
+      typeof config?.oauth === "object"
+        ? (config.oauth.clientSecret ?? "")
+        : "",
+    scope: typeof config?.oauth === "object" ? (config.oauth.scope ?? "") : "",
+  };
+};
 export const McpServerDialog = ({
   name,
   servers,
@@ -439,7 +479,6 @@ export const McpServerDialog = ({
   const cache = useQueryClient();
   const navigate = useAppNavigate();
   const entry = name === "new" ? prefill : servers.find((s) => s.name === name);
-  const config = entry?.config;
   const [error, setError] = useState<string | null>(null);
   const close = () =>
     void navigate({
@@ -447,28 +486,11 @@ export const McpServerDialog = ({
       search: { server: undefined },
       transition: "none",
     });
+  const incoming = formValuesFor(entry);
+  const baseline = useRef(incoming);
+  const [remoteChanged, setRemoteChanged] = useState(false);
   const form = useAppForm({
-    defaultValues: {
-      name: entry?.name ?? "",
-      transport: config?.url ? ("http" as const) : ("stdio" as const),
-      command: config?.command ?? "",
-      url: config?.url ?? "",
-      args: config?.args?.join("\n") ?? "",
-      env: Object.entries(config?.env ?? {})
-        .map(([k, v]) => `${k}=${v}`)
-        .join("\n"),
-      headers: Object.entries(config?.headers ?? {})
-        .map(([k, v]) => `${k}=${v}`)
-        .join("\n"),
-      clientId:
-        typeof config?.oauth === "object" ? (config.oauth.clientId ?? "") : "",
-      clientSecret:
-        typeof config?.oauth === "object"
-          ? (config.oauth.clientSecret ?? "")
-          : "",
-      scope:
-        typeof config?.oauth === "object" ? (config.oauth.scope ?? "") : "",
-    },
+    defaultValues: incoming,
     validationLogic: revalidateLogic({
       mode: "blur",
       modeAfterSubmission: "change",
@@ -495,6 +517,21 @@ export const McpServerDialog = ({
       }
     },
   });
+  useEffect(() => {
+    if (!entry) return;
+    const incoming = formValuesFor(entry);
+    for (const key of Object.keys(incoming) as Array<keyof typeof incoming>) {
+      if (incoming[key] === baseline.current[key]) continue;
+      if (form.state.values[key] === baseline.current[key])
+        form.setFieldValue(key, incoming[key], {
+          dontUpdateMeta: true,
+          dontValidate: true,
+          dontRunListeners: true,
+        });
+      else setRemoteChanged(true);
+    }
+    baseline.current = incoming;
+  }, [entry, form]);
   return (
     <Dialog
       open
@@ -507,6 +544,7 @@ export const McpServerDialog = ({
           <DialogTitle>{t("phase5.customMcp")}</DialogTitle>
           <DialogDescription>{t("phase5.mcpLive")}</DialogDescription>
         </DialogHeader>
+        {remoteChanged && <p role="status">{t("phase5.remoteChanged")}</p>}
         {name !== "new" && !entry ? (
           <p>{t("phase5.serverGone")}</p>
         ) : (

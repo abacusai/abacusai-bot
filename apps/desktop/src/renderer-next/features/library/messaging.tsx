@@ -1,10 +1,13 @@
 import { useLiveQuery } from "@tanstack/react-db";
+import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import * as v from "valibot";
 
 import { ConnectorMark } from "#next/components/connector-mark";
+import { useAppForm } from "#next/components/form-kit";
 import { ConfirmAction } from "#next/components/form-kit/confirm";
 import { SettingSwitch, Choice } from "#next/components/form-kit/controls";
 import {
@@ -18,6 +21,8 @@ import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { showError } from "#next/lib/toast";
 import { useAppContext } from "#next/lib/use-app-context";
 import { Button } from "#next/ui/button";
+import { Field, FieldGroup, FieldLabel, FieldError } from "#next/ui/field";
+import { Input } from "#next/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -29,6 +34,7 @@ import {
   SHARED_BOT_PLATFORM_OF,
   SHARED_LINK_REQUIRED,
   type MessagingPlatformId,
+  type MessagingPlatformInfo,
   type UpdateMessagingSettingsRequest,
 } from "#shared/messaging";
 
@@ -260,6 +266,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
           >
             {t("phase5.openLogin")}
           </Button>
+          {p && p.fields.length > 0 && <PlatformCredentials platform={p} />}
           {shared?.sharedLink && (
             <>
               {shared.sharedLink.qrDataUrl && (
@@ -391,5 +398,100 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
         </div>
       </SheetContent>
     </Sheet>
+  );
+};
+
+const PlatformCredentials = ({
+  platform,
+}: {
+  platform: MessagingPlatformInfo;
+}) => {
+  const { t } = useTranslation();
+  const { transport } = useAppContext();
+  const cache = useQueryClient();
+  const schema = v.object(
+    Object.fromEntries(
+      platform.fields.map((field) => [
+        field.key,
+        v.pipe(
+          v.string(),
+          v.trim(),
+          v.check(
+            (value) => !field.required || field.isSet || value.length > 0,
+            "required"
+          )
+        ),
+      ])
+    )
+  );
+  const form = useAppForm({
+    defaultValues: Object.fromEntries(
+      platform.fields.map((field) => [field.key, ""])
+    ),
+    validationLogic: revalidateLogic({
+      mode: "blur",
+      modeAfterSubmission: "change",
+    }),
+    validators: { onDynamic: schema },
+    onSubmit: async ({ value }) => {
+      try {
+        const values = Object.fromEntries(
+          Object.entries(v.parse(schema, value)).filter(
+            ([, value]) => value !== ""
+          )
+        );
+        const snapshot = await transport.client.messaging.updatePlatform({
+          platformId: platform.id,
+          values,
+        });
+        cache.setQueryData(
+          transport.orpc.messaging.snapshot.queryKey({ input: {} }),
+          snapshot
+        );
+        form.reset();
+      } catch {
+        showError(t("phase5.saveFailed"));
+      }
+    },
+  });
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.handleSubmit();
+      }}
+    >
+      <FieldGroup>
+        {platform.fields.map((field) => (
+          <form.Field key={field.key} name={field.key}>
+            {(f) => (
+              <Field data-invalid={f.state.meta.errors.length > 0}>
+                <FieldLabel htmlFor={`messaging-${field.key}`}>
+                  {t(`messaging.fields.${field.labelKey}`, {
+                    defaultValue: field.key,
+                  })}
+                </FieldLabel>
+                <Input
+                  id={`messaging-${field.key}`}
+                  type={field.secret ? "password" : "text"}
+                  value={f.state.value}
+                  placeholder={field.redactedValue ?? ""}
+                  disabled={field.fromEnv}
+                  aria-invalid={f.state.meta.errors.length > 0}
+                  onChange={(event) => f.handleChange(event.target.value)}
+                  onBlur={f.handleBlur}
+                />
+                {f.state.meta.errors.length > 0 && (
+                  <FieldError>{t("messaging.required")}</FieldError>
+                )}
+              </Field>
+            )}
+          </form.Field>
+        ))}
+        <form.AppForm>
+          <form.SubmitButton label={t("phase5.save")} />
+        </form.AppForm>
+      </FieldGroup>
+    </form>
   );
 };
