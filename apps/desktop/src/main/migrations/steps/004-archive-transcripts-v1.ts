@@ -42,7 +42,7 @@ import {
 import {
   ARCHIVE_INDEX_NAME,
   isSafeSessionId,
-  readArchiveIndex,
+  readArchiveIndexStrict,
   type ArchiveIndex,
 } from "../../services/session/thread-store";
 import { quarantineRoot } from "../backup";
@@ -90,7 +90,8 @@ export const archiveTranscriptsV1 = (
     // What earlier commits of this step archived, and what this one adds:
     // committed with the removals, so a later run (or the transition thread
     // store) tells a twin whose v1 this step archived from an orphan.
-    const index = readArchiveIndex(threadsDir(ctx.home));
+    // Throws (the plan fails, nothing is removed) unless absent or valid.
+    const index = readArchiveIndexStrict(threadsDir(ctx.home));
     const added: ArchiveIndex["archived"] = {};
     const total = names.length + threadNames.length;
     const label = "Archiving old chat history";

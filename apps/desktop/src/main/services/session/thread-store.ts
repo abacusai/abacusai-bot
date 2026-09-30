@@ -135,6 +135,16 @@ export const readThreadTwin = (file: string): ThreadTwin =>
   twinOf(readTextChecked(file));
 
 /**
+ * The exact header this build's v1-derived writer produces
+ * (`v1ToThreadFile` keys in order, compact `JSON.stringify`): the top-level
+ * `source` is recognised only in that position, never a nested one.
+ */
+const JSON_STRING = String.raw`"(?:[^"\\]|\\.)*"`;
+const DERIVED_HEADER = new RegExp(
+  String.raw`^\{"version":2,"threadId":${JSON_STRING},"updatedAt":${JSON_STRING},"source":\{"kind":"transcript-v1","updatedAt":${JSON_STRING},"segments":\d+[,}]`
+);
+
+/**
  * True when a thread file's first 4 KB say it is a version-2 v1-derived
  * file, as this build writes it (`JSON.stringify` keeps `version` first and
  * `source` before `messages`), so the dual-write can replace it without
@@ -147,10 +157,7 @@ export const peeksAsDerivedV2 = (file: string): boolean => {
     const head = Buffer.alloc(4096);
     const bytes = fs.readSync(fd, head, 0, head.length, 0);
     const text = head.subarray(0, bytes).toString("utf8");
-    return (
-      text.startsWith('{"version":2,') &&
-      /"source":\{"kind":"transcript-v1"/.test(text)
-    );
+    return DERIVED_HEADER.test(text);
   } catch {
     return false;
   } finally {
@@ -204,17 +211,54 @@ export interface ArchiveIndex {
   archived: Record<string, { fingerprint: string; updatedAt: string }>;
 }
 
+const isArchiveIndex = (value: unknown): value is ArchiveIndex => {
+  const index = value as ArchiveIndex | null;
+  if (
+    typeof index !== "object" ||
+    index === null ||
+    index.version !== 1 ||
+    typeof index.archived !== "object" ||
+    index.archived === null ||
+    Array.isArray(index.archived)
+  )
+    return false;
+  return Object.values(index.archived).every(
+    (entry) =>
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof entry.fingerprint === "string" &&
+      typeof entry.updatedAt === "string"
+  );
+};
+
+/**
+ * The archive index; empty only when the file does not exist. A file that
+ * cannot be read or validated throws: step 4 must not guess which twins
+ * it archived (it would take them for orphans).
+ */
+export const readArchiveIndexStrict = (threadsDir: string): ArchiveIndex => {
+  const file = path.join(threadsDir, ARCHIVE_INDEX_NAME);
+  const read = readTextChecked(file);
+  if (read.status === "missing") return { version: 1, archived: {} };
+  if (read.status !== "ok")
+    throw new Error(`cannot read ${file}: ${read.status}`);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(read.text);
+  } catch {
+    throw new Error(`${file} is not JSON`);
+  }
+  if (!isArchiveIndex(parsed)) throw new Error(`${file} is not an index`);
+  return parsed;
+};
+
+/** For reads: a damaged index serves nothing from it (nothing is removed). */
 export const readArchiveIndex = (threadsDir: string): ArchiveIndex => {
-  const read = readTextChecked(path.join(threadsDir, ARCHIVE_INDEX_NAME));
-  if (read.status === "ok")
-    try {
-      const parsed = JSON.parse(read.text) as ArchiveIndex;
-      if (parsed?.version === 1 && typeof parsed.archived === "object")
-        return parsed;
-    } catch {
-      // Unparseable: treated as empty, so nothing is served from it.
-    }
-  return { version: 1, archived: {} };
+  try {
+    return readArchiveIndexStrict(threadsDir);
+  } catch {
+    return { version: 1, archived: {} };
+  }
 };
 
 /** Thrown by `writeAgui` for a thread file it must not replace. */
