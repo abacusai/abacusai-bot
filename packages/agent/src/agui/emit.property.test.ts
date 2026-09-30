@@ -6,11 +6,8 @@
 import { describe, expect, it } from "vitest";
 
 import { tagEvent } from "../event-meta.js";
-import type {
-  AgentEvent,
-  DesktopEvent,
-  InternalAgentEvent,
-} from "../protocol.js";
+import type { InternalAgentEvent } from "../internal-events.js";
+import type { AgentEvent, DesktopEvent } from "../protocol.js";
 import { violations } from "./__tests__/invariants.js";
 import { noCompat } from "./channel.js";
 import { AguiEmitter } from "./emit.js";
