@@ -4,6 +4,7 @@
  * dispatches (`createChatUI` binds them once at module scope) read what they
  * need here instead of through props.
  */
+import type { UIMessage } from "@tanstack/ai-client";
 import { createContext, use, type ReactNode } from "react";
 
 import type { AgentMode } from "#shared/agent-types";
@@ -68,7 +69,33 @@ interface Activity {
   runningTools: number;
 }
 
+/** What `decorateMessage` sees besides the message (03-bots §11.3). */
+export interface MessageDecorationContext {
+  /** The thread's messages, in order (the host's list). */
+  messages: readonly UIMessage[];
+  index: number;
+  /** A run is active on the thread. */
+  runActive: boolean;
+}
+
+/**
+ * A bot-skin message's route-provided additions (03-bots §11.3: silent
+ * turns, reactions, deliverables, gap stamps, feedback). `hidden` drops the
+ * message; `badge` sits on a user bubble's corner.
+ */
+export interface MessageDecoration {
+  hidden?: boolean;
+  before?: ReactNode;
+  after?: ReactNode;
+  badge?: ReactNode;
+}
+
 export interface ChatViewSlots {
+  /** Bot skin only: called for every message while it renders. */
+  decorateMessage?: (
+    message: UIMessage,
+    context: MessageDecorationContext
+  ) => MessageDecoration | null;
   empty?: ReactNode;
   banner?: ReactNode;
   /** 03-bots §24.2: scrolls with the transcript, above the first message. */

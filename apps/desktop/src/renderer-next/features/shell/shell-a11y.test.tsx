@@ -176,9 +176,9 @@ describe("panelToggleTarget", () => {
     expect(
       panelToggleTarget("sessions", undefined, { sessions: "files" })
     ).toBe("files");
-    // A tab from another area is never reused.
+    // A tab from another area is never reused; bots open on Details.
     expect(panelToggleTarget("bots", undefined, { sessions: "changes" })).toBe(
-      "memory"
+      "details"
     );
   });
 });

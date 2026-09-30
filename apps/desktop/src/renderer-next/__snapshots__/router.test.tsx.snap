@@ -51,8 +51,16 @@ exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
     "id": "/_shell/(bots)/bots/$botId",
   },
   {
+    "fullPath": "/bots/$botId/chats/$sessionId",
+    "id": "/_shell/(bots)/bots/$botId_/chats/$sessionId",
+  },
+  {
     "fullPath": "/bots/$botId/edit",
     "id": "/_shell/(bots)/bots/$botId_/edit",
+  },
+  {
+    "fullPath": "/bots/$botId/check-in",
+    "id": "/_shell/(bots)/bots/$botId/check-in",
   },
   {
     "fullPath": "/bots/$botId/details",
