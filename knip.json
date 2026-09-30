@@ -4,6 +4,8 @@
     "apps/desktop": {
       "entry": [
         "src/renderer-next/main.tsx",
+        "src/renderer-next/notch.tsx",
+        "src/renderer-next/notch-routes/**/*.tsx",
         "src/renderer-next/routes/**/*.tsx",
         "src/renderer-next/features/*/index.ts",
         "src/renderer-next/**/*.test.{ts,tsx}",
@@ -14,6 +16,7 @@
       "project": ["src/renderer-next/**/*.{ts,tsx}"],
       "ignore": [
         "src/renderer-next/routeTree.gen.ts",
+        "src/renderer-next/notchRouteTree.gen.ts",
         "src/renderer-next/ui/**"
       ],
       "ignoreExportsUsedInFile": true
