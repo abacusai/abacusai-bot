@@ -10,7 +10,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { getEventMeta } from "@orpc/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSessionStatus } from "#shared/contracts";
 
@@ -528,6 +528,23 @@ describe("ai.subscribe, ai.hydrate, ai.joinRun", () => {
       event: { name: "abacus.resync" },
     });
     await lost.return?.(undefined);
+  });
+
+  it("a closed port releases every stream's listener, read or not", async () => {
+    const { agent, relay, client, connection } = setup();
+    agent.boot();
+    for (const event of started("run-1")) agent.emit("s1", event);
+
+    const read = await client.ai.subscribe({ threadId: "s1" });
+    await take(read, 1);
+    await client.ai.subscribe({ threadId: "s1" });
+    const joined = await client.ai.joinRun({ runId: "run-1" });
+    await take(joined, 1);
+    await vi.waitFor(() => expect(relay.listenerCount("s1")).toBe(3));
+
+    // A reload: the renderer's end closes, oRPC aborts every iterator.
+    connection.closeClient();
+    await vi.waitFor(() => expect(relay.listenerCount("s1")).toBe(0));
   });
 
   it("hydrate: completed transcript without the active run, its checkpoint, and pages with their outcomes", async () => {

@@ -275,6 +275,11 @@ export class AguiRelayService implements AguiSource {
     this.#threads.get(threadId)?.clearHistory();
   }
 
+  /** Open `subscribe`/`joinRun` streams on a thread (leak checks, diagnostics). */
+  listenerCount(threadId: string): number {
+    return this.#threads.get(threadId)?.listenerCount ?? 0;
+  }
+
   /** The session is gone: forget everything about the thread. */
   forgetThread(threadId: string): void {
     const thread = this.#threads.get(threadId);
@@ -300,6 +305,9 @@ export class AguiRelayService implements AguiSource {
     const { replay, unsubscribe } = thread.subscribe(afterSeq, (chunk) =>
       queue.push(chunk)
     );
+    // A port that closes before the first read never runs the generator's
+    // `finally`: the listener must still go.
+    signal.addEventListener("abort", unsubscribe, { once: true });
     const head = this.#clock.current;
     const control = (name: string, value: object): SequencedChunk => ({
       seq: null,
@@ -349,6 +357,7 @@ export class AguiRelayService implements AguiSource {
       if (isOwnTerminal(chunk)) queue.end();
     });
     if (joined == null) return (async function* () {})();
+    signal.addEventListener("abort", joined.unsubscribe, { once: true });
 
     return (async function* () {
       try {
