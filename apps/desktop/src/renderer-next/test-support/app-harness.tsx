@@ -143,7 +143,35 @@ const shellRouter = (
     },
     browser: {
       events: os.browser.events.handler(quiet as never),
+      profiles: { list: os.browser.profiles.list.handler(() => []) },
       runtime: {
+        materialize: os.browser.runtime.materialize.handler(
+          ({ input, context }) => {
+            context.calls.push(["browser.runtime.materialize", input]);
+            return {
+              lease: {
+                conversationKey: input.conversationKey,
+                resourceId: input.resourceId,
+                generation: 1,
+              },
+              url: input.url ?? "about:blank",
+              loading: false,
+              canGoBack: false,
+              canGoForward: false,
+            } as BrowserRuntimeState;
+          }
+        ),
+        present: os.browser.runtime.present.handler(({ input, context }) => {
+          context.calls.push(["browser.runtime.present", input]);
+          return {
+            lease: input.lease,
+            url: "about:blank",
+          } as BrowserRuntimeState;
+        }),
+        hide: os.browser.runtime.hide.handler(() => {}),
+        capture: os.browser.runtime.capture.handler(
+          () => ({ dataUrl: null }) as never
+        ),
         materializeFile: os.browser.runtime.materializeFile.handler(
           ({ input }) => {
             if (!options.materializeFile)

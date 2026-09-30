@@ -28,6 +28,9 @@ export const requestBrowserOpen = (request: BrowserOpenRequest): void => {
   }));
   handler?.(request);
 };
+export const useBrowserOpenUrl = (sessionId: string): string | undefined =>
+  useStore(requests, (state) => state[sessionId]);
+
 export const BrowserOpenPlaceholder = ({
   sessionId,
 }: {

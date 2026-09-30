@@ -1924,7 +1924,14 @@
       "allow": "Allow",
       "deny": "Deny",
       "session": "Allow until quit",
-      "always": "Never ask"
+      "always": "Never ask",
+      "profile": "Browser profile",
+      "defaultProfile": "Default profile",
+      "zoom-in": "Zoom in",
+      "zoom-out": "Zoom out",
+      "zoom-reset": "Reset zoom",
+      "open-devtools": "Developer tools",
+      "clear-site-data": "Clear site data"
     },
     "files": {
       "filter": "Filter files…",
