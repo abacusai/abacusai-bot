@@ -8,13 +8,13 @@
 const GUEST_WORKSPACE_PREFIX = "/workspace";
 
 /** Absolute on POSIX (`/x`) or Windows (`C:\x`, `\\server\x`). */
-export const isAbsoluteFilePath = (value: string): boolean =>
+const isAbsoluteFilePath = (value: string): boolean =>
   value.startsWith("/") ||
   /^[a-zA-Z]:[\\/]/.test(value) ||
   value.startsWith("\\\\");
 
 /** Directory holding `filePath`, for both separator conventions. */
-export const parentDirectory = (filePath: string): string => {
+const parentDirectory = (filePath: string): string => {
   const lastSlash = Math.max(
     filePath.lastIndexOf("/"),
     filePath.lastIndexOf("\\")

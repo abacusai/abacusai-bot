@@ -373,7 +373,9 @@
       "pinned": "Pinned",
       "edit": "बॉट संपादित करें",
       "delete": "बॉट हटाएँ",
-      "emptyTitle": "अभी कोई बॉट नहीं"
+      "emptyTitle": "अभी कोई बॉट नहीं",
+      "waiting": "{{count}} waiting on you",
+      "moreWaiting": "{{count}} more"
     },
     "avatar": {
       "shapes": {
@@ -595,7 +597,8 @@
         "required": "Enter a name",
         "too-long": "This is too long",
         "color": "Choose a valid colour"
-      }
+      },
+      "accessoryUnavailable": "Accessories need the bot storage update."
     },
     "panel": {
       "detailsTitle": "Details",

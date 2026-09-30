@@ -24,6 +24,7 @@ import { useBotsTransport } from "./data/transport";
 import { botsUnreadStore } from "./data/unread-store";
 import {
   handleRunFinished,
+  handleConnectorAsk,
   handleWaiting,
   newlyWaiting,
   type BotsWatcherDeps,
@@ -42,6 +43,12 @@ const soundPlayer = (): SoundPlayer => {
   });
   return player;
 };
+
+export const playBotCue = (
+  cue: Parameters<SoundPlayer["play"]>[0],
+  threadId: string,
+  botId: string
+): void => soundPlayer().play(cue, { threadId, botId });
 
 export const BotsGlobals = () => {
   const { t } = useTranslation();
@@ -92,7 +99,16 @@ export const BotsGlobals = () => {
   useEffect(() => {
     const abort = new AbortController();
     followBotsSources(
-      { transport, queryClient, collections: db.collections },
+      {
+        transport,
+        queryClient,
+        collections: db.collections,
+        onConnectorAsk: (sessionId, requestId) => {
+          const session = db.collections.sessions.get(sessionId);
+          if (session && deps.current)
+            handleConnectorAsk(deps.current, session, requestId);
+        },
+      },
       abort.signal
     );
     let lastEventId: string | undefined;

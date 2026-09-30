@@ -9,6 +9,7 @@ import type { BotFormValues } from "./schema";
 export interface BotDraft {
   id: string;
   templateId: string | null;
+  lookPicked?: boolean;
   values: BotFormValues;
   stages: { bot: boolean; checkIn: "none" | "persisted" | "failed" };
 }
@@ -37,6 +38,7 @@ export const getDraft = (): BotDraft => {
   const draft: BotDraft = {
     id: newBotId(),
     templateId: null,
+    lookPicked: false,
     stages: { bot: false, checkIn: "none" },
     values: {
       name: "",
@@ -66,6 +68,7 @@ export const selectTemplate = (
   if (!template) return;
   updateDraft({
     templateId,
+    lookPicked: true,
     values: {
       ...getDraft().values,
       name: translatedName,

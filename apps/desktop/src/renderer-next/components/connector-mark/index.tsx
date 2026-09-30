@@ -323,12 +323,6 @@ const MARKS: Record<ConnectorMarkId, { bg: string; parts: Part[] }> = {
   },
 };
 
-/** The dot colour a platform shows beside "on {App}" (the tile's own colour). */
-export const markColor = (id: ConnectorMarkId): string => {
-  const { bg, parts } = MARKS[id];
-  return bg !== "#ffffff" ? bg : (parts[0]?.fill ?? parts[0]?.stroke ?? bg);
-};
-
 const PLATFORM_MARKS: Record<string, ConnectorMarkId> = {
   whatsapp: "whatsapp",
   telegram: "telegram",

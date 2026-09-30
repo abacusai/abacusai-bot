@@ -33,11 +33,6 @@ export type UnreadStore = ReturnType<typeof createUnreadStore>;
 /** The document's store (module scope: one per document). */
 export const botsUnreadStore: UnreadStore = createUnreadStore();
 
-export const useBotUnread = (
-  botId: string,
-  unread: UnreadStore = botsUnreadStore
-): boolean => useSelector(unread.store, (state) => state.ids.has(botId));
-
 export const useUnreadIds = (
   unread: UnreadStore = botsUnreadStore
 ): ReadonlySet<string> => useSelector(unread.store, (state) => state.ids);

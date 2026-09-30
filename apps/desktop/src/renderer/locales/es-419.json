@@ -373,7 +373,9 @@
       "pinned": "Pinned",
       "edit": "Editar bot",
       "delete": "Eliminar bot",
-      "emptyTitle": "Aún no hay bots"
+      "emptyTitle": "Aún no hay bots",
+      "waiting": "{{count}} waiting on you",
+      "moreWaiting": "{{count}} more"
     },
     "avatar": {
       "shapes": {
@@ -595,7 +597,8 @@
         "required": "Enter a name",
         "too-long": "This is too long",
         "color": "Choose a valid colour"
-      }
+      },
+      "accessoryUnavailable": "Accessories need the bot storage update."
     },
     "panel": {
       "detailsTitle": "Details",

@@ -24,7 +24,7 @@ export interface BotModelGroup {
 /** The kit's id for the App default item (`onChange(null)`). */
 export const APP_DEFAULT_ITEM_ID = "";
 
-export type FreeProvider = "openrouter" | "gemini";
+type FreeProvider = "openrouter" | "gemini";
 
 export interface BotModelLabels {
   /** "Default" */
@@ -47,13 +47,10 @@ const PROVIDER_LABELS = new Map(
 );
 
 /** abacus and openllm share one group, as in the old picker. */
-export const modelProviderGroup = (provider: string): string =>
+const modelProviderGroup = (provider: string): string =>
   provider === "openllm" || provider === "abacus" ? "abacus" : provider;
 
-export const modelProviderLabel = (
-  provider: string,
-  localLabel: string
-): string => {
+const modelProviderLabel = (provider: string, localLabel: string): string => {
   if (provider === LOCAL_PROVIDER_ID) return localLabel;
   if (provider === "abacus") return "Abacus.AI";
   return (

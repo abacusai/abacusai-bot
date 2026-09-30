@@ -15,6 +15,7 @@ import type { Transport } from "#next/data/transport";
 import type { AttentionEvent } from "#shared/contract/ai";
 import {
   conversationRefFromKey,
+  sessionConversationKey,
   type ConversationKey,
 } from "#shared/conversation-scope";
 
@@ -23,9 +24,9 @@ import { botsQueries } from "./queries";
 
 // ── ai.attention ─────────────────────────────────────────────────────────
 
-export const permissionsStore = new Store<Record<string, ThreadAttention>>({});
+const permissionsStore = new Store<Record<string, ThreadAttention>>({});
 
-export const applyAttentionEvent = (
+const applyAttentionEvent = (
   state: Record<string, ThreadAttention>,
   event: AttentionEvent
 ): Record<string, ThreadAttention> => {
@@ -57,12 +58,12 @@ export const usePermissions = (): Record<string, ThreadAttention> =>
 /** Pending asks: request id → session id (sessions only; drafts ignored). */
 export const connectorAsksStore = new Store<Record<string, string>>({});
 
-export const sessionOfKey = (key: ConversationKey): string | null => {
+const sessionOfKey = (key: ConversationKey): string | null => {
   const ref = conversationRefFromKey(key);
   return ref?.kind === "session" ? ref.sessionId : null;
 };
 
-export const asksBySession = (
+const asksBySession = (
   asks: Readonly<Record<string, string>>
 ): Record<string, number> => {
   const out: Record<string, number> = {};
@@ -85,6 +86,7 @@ export const followBotsSources = (
     transport: Transport;
     queryClient: Pick<QueryClient, "invalidateQueries">;
     collections: Pick<Collections, "sessions" | "bots">;
+    onConnectorAsk?(sessionId: string, requestId: string): void;
   },
   signal: AbortSignal
 ): void => {
@@ -101,13 +103,44 @@ export const followBotsSources = (
     signal
   );
 
+  const cleared = new Set<string>();
   void followNotices(
     transport,
     ({ signal: s }) => {
-      // A reopened stream has no snapshot: asks made while it was down
-      // show when their conversation opens (its keyed snapshot).
+      cleared.clear();
       connectorAsksStore.setState(() => ({}));
-      return transport.client.connectors.events({}, { signal: s });
+      const stream = transport.client.connectors.events({}, { signal: s });
+      // Keyless events do not snapshot. Restore every known session's asks,
+      // including bots whose transcripts have never been mounted.
+      void collections.sessions
+        .preload()
+        .then(async () => {
+          await Promise.all(
+            collections.sessions.toArray.map(async (session) => {
+              if (s.aborted) return;
+              const requests = await transport.client.connectors.requests(
+                {
+                  conversationKey: sessionConversationKey(
+                    session.workspaceId,
+                    session.id
+                  ),
+                },
+                { signal: s }
+              );
+              if (s.aborted) return;
+              connectorAsksStore.setState((state) => ({
+                ...state,
+                ...Object.fromEntries(
+                  requests
+                    .filter((request) => !cleared.has(request.requestId))
+                    .map((request) => [request.requestId, session.id])
+                ),
+              }));
+            })
+          );
+        })
+        .catch(() => undefined);
+      return stream;
     },
     (event) => {
       if (event.type === "status-changed") {
@@ -116,19 +149,23 @@ export const followBotsSources = (
       }
       if (event.type === "request") {
         const sessionId = sessionOfKey(event.request.conversationKey);
-        if (sessionId != null)
+        if (sessionId != null) {
+          deps.onConnectorAsk?.(sessionId, event.request.requestId);
           connectorAsksStore.setState((state) => ({
             ...state,
             [event.request.requestId]: sessionId,
           }));
+        }
         return;
       }
-      if (event.type === "cleared")
+      if (event.type === "cleared") {
+        cleared.add(event.requestId);
         connectorAsksStore.setState((state) => {
           if (!(event.requestId in state)) return state;
           const { [event.requestId]: _gone, ...rest } = state;
           return rest;
         });
+      }
     },
     signal
   );

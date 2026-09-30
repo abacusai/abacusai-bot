@@ -1,6 +1,6 @@
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { useBlocker } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -21,6 +21,12 @@ import {
 import { Button } from "#next/ui/button";
 import { Field, FieldLabel, FieldGroup } from "#next/ui/field";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverTitle,
+} from "#next/ui/popover";
+import {
   MAX_BOT_NAME,
   MAX_BOT_PERSONA,
   MAX_BOT_DESCRIPTION,
@@ -32,7 +38,7 @@ import type { BotRow } from "#shared/contract/rows";
 import { BotFace } from "../avatar";
 import { BotGone } from "../chat/identity";
 import { CheckInFields } from "../check-in/fields";
-import { codeOf } from "../data/bot-actions";
+import { saveErrorOf } from "../data/bot-actions";
 import { useBot, useCheckIn } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { ModelPicker, useBotModelBinding } from "../model/picker";
@@ -45,13 +51,21 @@ import {
   type BotFormValues,
 } from "./schema";
 import { submitCreate, submitEdit } from "./submit";
-export interface BotFormProps {
+const wideQuery = "(min-width: 1000px)";
+const subscribeWidth = (notify: () => void) => {
+  const query = window.matchMedia(wideQuery);
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
+};
+const setupWide = () => window.matchMedia(wideQuery).matches;
+interface BotFormProps {
   bot?: BotRow;
   initial: BotFormValues;
   load(sessionId: string): Promise<unknown>;
 }
-export const BotForm = ({ bot, initial, load }: BotFormProps) => {
+const BotForm = ({ bot, initial, load }: BotFormProps) => {
   const { t } = useTranslation();
+  const wide = useSyncExternalStore(subscribeWidth, setupWide, () => true);
   const db = useDb();
   const transport = useBotsTransport();
   const navigate = useAppNavigate();
@@ -108,14 +122,17 @@ export const BotForm = ({ bot, initial, load }: BotFormProps) => {
         else await submitCreate(deps, getDraft(), parsed, updateDraft);
       } catch (cause) {
         saving.current = false;
-        if (codeOf(cause) === "NOT_FOUND") {
+        const failure = saveErrorOf(cause);
+        if (failure.kind === "not-found") {
           await navigate({ to: "/bots/new", replace: true });
           return;
         }
         setError(
-          codeOf(cause) === "PRECONDITION_FAILED"
+          failure.kind === "limit"
             ? t("bots.errors.limit")
-            : t("bots.form.saveError")
+            : failure.kind === "bad-request" && failure.field === "name"
+              ? t("bots.form.validation.required")
+              : t("bots.form.saveError")
         );
       }
     },
@@ -170,19 +187,38 @@ export const BotForm = ({ bot, initial, load }: BotFormProps) => {
       <div className="bot-form-columns flex flex-1">
         <aside className="bg-muted/40 flex w-[300px] shrink-0 flex-col items-center gap-3 px-6 pt-10">
           <div style={shared}>
-            <BotFace look={look} size={96} mood="happy" />
+            <BotFace look={look} size={wide ? 96 : 72} mood="happy" />
           </div>
           <h2 className="text-base font-semibold">{name}</h2>
           <p className="text-muted-foreground text-center text-xs">
             {description}
           </p>
           <form.AppField name="look">
-            {(field) => (
-              <LookPicker
-                value={field.state.value}
-                onChange={field.handleChange}
-              />
-            )}
+            {(field) =>
+              wide ? (
+                <LookPicker
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                />
+              ) : (
+                <Popover>
+                  <PopoverTrigger
+                    render={<Button variant="secondary" size="sm" />}
+                  >
+                    {t("bots.form.shape")} / {t("bots.form.colour")}
+                  </PopoverTrigger>
+                  <PopoverContent className="max-h-80 overflow-y-auto">
+                    <PopoverTitle>
+                      {t("bots.form.shape")} / {t("bots.form.colour")}
+                    </PopoverTitle>
+                    <LookPicker
+                      value={field.state.value}
+                      onChange={field.handleChange}
+                    />
+                  </PopoverContent>
+                </Popover>
+              )
+            }
           </form.AppField>
         </aside>
         <div className="flex-1 p-8 lg:px-10">

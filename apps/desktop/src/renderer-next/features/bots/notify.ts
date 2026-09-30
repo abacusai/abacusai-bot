@@ -31,7 +31,7 @@ export interface BotsWatcherDeps {
 }
 
 /** Which bot a thread belongs to, and whether it is a check-in run. */
-export const botOfThread = (
+const botOfThread = (
   owner: { kind: "bot"; botId: string } | null | undefined,
   routineId: string | null,
   routines: readonly RoutineRow[]
@@ -111,6 +111,28 @@ export const handleWaiting = (
     botId: bot.id,
     title: copy.title,
     body: copy.body,
+    metadata: { sessionId: session.id, workspaceId: session.workspaceId },
+  });
+};
+
+/** Connector requests are actionable even while the turn still streams. */
+export const handleConnectorAsk = (
+  deps: BotsWatcherDeps,
+  session: SessionRow,
+  requestId: string
+): void => {
+  const target = botOfThread(session.owner, session.routineId, deps.routines());
+  if (!target) return;
+  const bot = deps.bots().find((row) => row.id === target.botId);
+  if (!bot) return;
+  if (deps.seen(session.id)) react(bot.id, "surprised");
+  deps.play("needs-you", { threadId: session.id, botId: bot.id });
+  const copy = deps.labels.needsYou(bot.name);
+  deps.notifier.notify({
+    kind: "needs-you",
+    dedupeKey: requestId,
+    botId: bot.id,
+    ...copy,
     metadata: { sessionId: session.id, workspaceId: session.workspaceId },
   });
 };

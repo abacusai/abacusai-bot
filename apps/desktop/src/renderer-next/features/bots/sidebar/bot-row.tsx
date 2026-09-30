@@ -88,7 +88,7 @@ const TONE_CLASS = {
   muted: "text-muted-foreground",
 } as const;
 
-export const MenuItems = ({
+const MenuItems = ({
   items,
   onSelect,
   kind,
@@ -154,11 +154,11 @@ export const BotRowView = ({
           <AppLink
             to="/bots/$botId"
             params={{ botId: bot.id }}
-            transition="nav-lateral"
             aria-current={active ? "page" : undefined}
             aria-label={label}
+            data-slot="item"
             data-active={active || undefined}
-            className="text-sidebar-foreground hover:bg-sidebar-accent/60 data-active:bg-sidebar-accent focus-visible:ring-ring/50 flex h-14 items-center gap-2.5 rounded-[10px] px-2 outline-none focus-visible:ring-2"
+            className="text-sidebar-foreground hover:bg-sidebar-accent/60 data-active:bg-sidebar-accent focus-visible:ring-ring/50 flex h-[var(--bots-row-h,56px)] items-center gap-2.5 rounded-[10px] px-2 outline-none focus-visible:ring-2"
           >
             <BotFace
               bot={bot}

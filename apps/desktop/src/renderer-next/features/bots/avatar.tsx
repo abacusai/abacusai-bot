@@ -17,7 +17,7 @@ import {
 } from "#next/lib/bots/avatar";
 import { useMotionPreference } from "#next/lib/motion";
 
-export const REACTION_MS = 600;
+const REACTION_MS = 600;
 
 interface Reaction {
   mood: ReactionMood;

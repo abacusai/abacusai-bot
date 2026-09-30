@@ -24,6 +24,7 @@ export const useBotModelBinding = (
   layoutId?: string
 ) => {
   const { t } = useTranslation();
+  const motion = useMotionPreference();
   const transport = useBotsTransport();
   const prefs = usePrefs();
   const navigate = useAppNavigate();
@@ -31,11 +32,12 @@ export const useBotModelBinding = (
   const models = useQuery(queries.models());
   const settings = useQuery(queries.settings());
   const catalog = models.data ?? [];
+  const account = useQuery(queries.account());
   const groups = botModelGroups({
     models: catalog,
     favorites: prefs.models.favoriteModelIds,
     defaultModel: settings.data?.defaultModel,
-    freeTier: true,
+    freeTier: account.data?.plan?.toLowerCase() === "free",
     labels: {
       defaultGroup: t("bots.model.default"),
       appDefault: t("bots.form.modelDefault"),
@@ -59,7 +61,7 @@ export const useBotModelBinding = (
       t("bots.form.modelDefault"),
     onChange,
     groups,
-    ...(layoutId ? { layoutId } : {}),
+    ...(layoutId && motion === "full" ? { layoutId } : {}),
   };
 };
 export const ModelPicker = ({

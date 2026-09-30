@@ -120,7 +120,6 @@ export const AVATAR_PALETTE = [
   { id: "indigo", hex: "#818cf8" },
   { id: "stone", hex: "#a8a29e" },
 ] as const;
-export type AvatarColorId = (typeof AVATAR_PALETTE)[number]["id"];
 
 const PALETTE_HEXES: readonly string[] = AVATAR_PALETTE.map((c) => c.hex);
 
@@ -149,7 +148,7 @@ export const LEGACY_COLORS = {
  * Not a swatch: the look of a bot with no name yet (empty states, the start
  * page). Rendered through CSS; never stored.
  */
-export const NEUTRAL_COLOR = "var(--muted-foreground)";
+const NEUTRAL_COLOR = "var(--muted-foreground)";
 
 export interface Look {
   shape: AvatarShape;

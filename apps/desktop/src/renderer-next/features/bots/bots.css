@@ -46,7 +46,12 @@ html[data-reduce-motion="on"] .bots-pop {
 @media (max-width: 999px) {
   .bot-form-columns { flex-direction: column; }
   .bot-form-columns > aside { width: 100%; padding: 16px 24px; }
-  .bot-form-columns > aside > div:last-child { max-height: 160px; overflow-y: auto; }
 }
 @media (prefers-reduced-motion: reduce) { [data-slot="bot-docked-identity"] { transition: none !important; } }
 html[data-reduce-motion="on"] [data-slot="bot-docked-identity"] { transition: none !important; }
+
+/* Muted text on the selected row needs a stronger token than page text. */
+html:not(.dark) [data-bot-row] [data-active] .text-muted-foreground { color: oklch(0.50 0 0); }
+html[data-density="compact"] { --bots-row-h: 24px; }
+html[data-density="compact"] [data-bot-row] [data-slot="item"] > :first-child { width: 20px; height: 20px; }
+html[data-density="compact"] [data-bot-row] [data-slot="item"] > span > span:last-child { display: none; }

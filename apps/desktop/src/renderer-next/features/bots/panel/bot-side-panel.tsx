@@ -2,14 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BotMemoryList } from "#next/components/bot-memory-list";
 import { ConnectorMark } from "#next/components/connector-mark";
 import { FilePreview, containmentRootFor } from "#next/components/file-preview";
 import { useDb } from "#next/data/db";
 import { usePrefs } from "#next/data/db/prefs";
 import { checkInFromRoutine } from "#next/lib/bots/check-in";
 import { weekdayName } from "#next/lib/bots/schedule";
+import { formatWhen } from "#next/lib/format-time";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { showError, showInfo } from "#next/lib/toast";
+import { useNow } from "#next/lib/use-now";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -20,7 +23,12 @@ import {
   AlertDialogCancel,
 } from "#next/ui/alert-dialog";
 import { Button } from "#next/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "#next/ui/tooltip";
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+} from "#next/ui/context-menu";
 import type { BotRow } from "#shared/contract/rows";
 
 import { BotFace } from "../avatar";
@@ -257,47 +265,16 @@ export const MemoryTab = ({ bot }: { bot: BotRow }) => {
       <p className="text-muted-foreground text-xs">
         {t("bots.panel.memoryIntro", { name: bot.name })}
       </p>
-      {entries.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          {t("bots.panel.memory.empty")}
-        </p>
-      ) : (
-        entries.map((row) => (
-          <div
-            key={row.id}
-            className="flex min-h-11 items-center gap-2 border-b"
-          >
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span
-                    tabIndex={0}
-                    className="min-w-0 flex-1 truncate text-[13px]"
-                  />
-                }
-              >
-                {row.entry}
-              </TooltipTrigger>
-              <TooltipContent>{row.entry}</TooltipContent>
-            </Tooltip>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={t("bots.panel.forgetEntry", { entry: row.entry })}
-              onClick={() =>
-                void forgetMemory(db.collections.memories, row)
-                  .then((result) => {
-                    if (result === "stale")
-                      showInfo(t("bots.errors.memoryConflict"));
-                  })
-                  .catch(() => showError(t("bots.errors.memory")))
-              }
-            >
-              {t("bots.panel.memory.forget")}
-            </Button>
-          </div>
-        ))
-      )}
+      <BotMemoryList
+        entries={entries}
+        onForget={(row) =>
+          void forgetMemory(db.collections.memories, row)
+            .then((result) => {
+              if (result === "stale") showInfo(t("bots.errors.memoryConflict"));
+            })
+            .catch(() => showError(t("bots.errors.memory")))
+        }
+      />
       {noteDays > 0 && (
         <p className="text-muted-foreground text-xs">
           {t("bots.panel.memory.notes", { count: noteDays })}
@@ -356,11 +333,12 @@ export const FilesTab = ({
   workspaceRoot: string | null;
   onClosePreview(): void;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const db = useDb();
   const transport = useBotsTransport();
   const sessions = useBotSessions(bot.id);
   const files = useBotFiles(sessions.map((s) => s.id));
+  const now = useNow();
   useEffect(() => {
     void db.collections.artifacts.preload();
   }, [db]);
@@ -406,18 +384,45 @@ export const FilesTab = ({
         </p>
       )}
       {files.map((file) => (
-        <Button
-          key={file.id}
-          variant="ghost"
-          className="h-12 justify-start"
-          onClick={() =>
-            void (file.kind === "link"
-              ? transport.client.system.openExternal({ url: file.location })
-              : transport.client.system.openPath({ path: file.location }))
-          }
-        >
-          {file.title || file.location}
-        </Button>
+        <ContextMenu key={file.id}>
+          <ContextMenuTrigger render={<div />}>
+            <Button
+              variant="ghost"
+              className="h-12 w-full justify-start"
+              onClick={() =>
+                void (file.kind === "link"
+                  ? transport.client.system.openExternal({ url: file.location })
+                  : transport.client.system.openPath({ path: file.location }))
+              }
+            >
+              <span
+                aria-hidden
+                className="bg-muted size-[26px] shrink-0 rounded-md"
+              />
+              <span className="flex min-w-0 flex-col items-start">
+                <span className="max-w-full truncate">
+                  {file.title || file.location}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {formatWhen(file.createdAt, now, i18n.language)}
+                </span>
+              </span>
+            </Button>
+          </ContextMenuTrigger>
+          {file.kind !== "link" && (
+            <ContextMenuContent>
+              <ContextMenuItem
+                onClick={() =>
+                  void transport.client.system.showItemInFolder({
+                    path: file.location,
+                  })
+                }
+              >
+                {t("artifacts.revealInFolder")}
+              </ContextMenuItem>
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
       ))}
     </div>
   );
