@@ -3,8 +3,9 @@
  *
  * `ABACUSAI_BOT_ABACUS_HOST` is a developer override for preprod. The value
  * feeds `shell.openExternal` and the request carrying `ABACUS_API_KEY`, so it
- * is honored only in an unpackaged build, over https, for an `*.abacus.ai`
- * host; anything else silently falls back to production.
+ * is honored only in an unpackaged build or a test build (a `-test.` version),
+ * over https, for an `*.abacus.ai` host; anything else silently falls back to
+ * production.
  */
 import { app } from "electron";
 
@@ -29,12 +30,17 @@ export const abacusUserAgent = (): string => {
 };
 const DEFAULT_ROUTELLM_V1 = "https://routellm.abacus.ai/v1";
 
+/** Test builds carry a `-test.<run>` version; releases never do. */
+export const isTestBuild = (version: string = app.getVersion()): boolean =>
+  /-test\./.test(version);
+
 const overrideHost = (): URL | null => {
   const raw = (process.env.ABACUSAI_BOT_ABACUS_HOST ?? "").trim();
 
   // Powerless in a released build: an env var an attacker can set must not
-  // redirect a signed app's sign-in or key-bearing requests.
-  if (raw.length === 0 || app.isPackaged) return null;
+  // redirect a signed app's sign-in or key-bearing requests. A test build is
+  // packaged too, but exists to be pointed at preprod, so it may read it.
+  if (raw.length === 0 || (app.isPackaged && !isTestBuild())) return null;
 
   try {
     const url = new URL(raw);
