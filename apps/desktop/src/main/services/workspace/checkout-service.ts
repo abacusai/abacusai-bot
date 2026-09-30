@@ -480,7 +480,11 @@ export class CheckoutService {
   async #changes(checkout: ResolvedCheckout): Promise<GitChangeItem[]> {
     const watched = this.#watched.get(checkout.key)?.row;
     if (watched != null) return watched.gitChanges;
-    return (await this.#deps.git.readGitChanges(checkout.path)).changes;
+    return (
+      await this.#deps.git.readGitChanges(checkout.path, {
+        checkoutRelative: true,
+      })
+    ).changes;
   }
 
   /**
@@ -509,6 +513,7 @@ export class CheckoutService {
     const { target } = entry;
     const status = await this.#deps.git.readGitChanges(target.path, {
       fingerprints: true,
+      checkoutRelative: true,
     });
     if (this.#watched.get(target.key) !== entry) return;
     const row: GitStateRow = {

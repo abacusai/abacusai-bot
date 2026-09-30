@@ -243,6 +243,12 @@ it("a subfolder checkout restores mixed-case tracked paths and renames from the 
   await git(repo, "add", ".");
   await git(repo, "commit", "-m", "mixed");
   await fs.writeFile(path.join(primary, "Mixed Name.txt"), "changed");
+  const watch = service.watch({ workspaceId: WS });
+  await service.refresh(watch.key);
+  expect(service.rows()[0]?.gitChanges).toMatchObject([
+    { path: "Mixed Name.txt" },
+  ]);
+  watch.release();
   const ref = { workspaceId: WS };
   expect(
     await client.git.discard({
@@ -393,4 +399,18 @@ it("refresh retargets a watched primary checkout after relocation", async () => 
     gitChanges: [expect.objectContaining({ path: "keep.txt" })],
   });
   watched.release();
+});
+
+it("a directory replacing a tracked file retains every new file", async () => {
+  await fs.rm(path.join(worktree, "keep.txt"));
+  await fs.mkdir(path.join(worktree, "keep.txt"));
+  await fs.writeFile(path.join(worktree, "keep.txt/new.txt"), "precious");
+  const result = await client.git.discard({
+    checkout,
+    entries: [{ path: "keep.txt" }],
+  });
+  expect(result.failed).toMatchObject([{ reason: "not-changed" }]);
+  expect(
+    await fs.readFile(path.join(worktree, "keep.txt/new.txt"), "utf8")
+  ).toBe("precious");
 });

@@ -649,7 +649,7 @@ export class GitService {
    */
   async readGitChanges(
     workspacePath: string,
-    options: { fingerprints?: boolean } = {}
+    options: { fingerprints?: boolean; checkoutRelative?: boolean } = {}
   ): Promise<GitStatusResult> {
     if (!(await this.isInsideWorkTree(workspacePath))) {
       return {
@@ -668,9 +668,27 @@ export class GitService {
         "-uall",
         "-z",
       ]);
-      const changes: GitChangeItem[] = parseStatusZ(statusOutput.stdout).sort(
-        (a, b) => a.path.localeCompare(b.path)
-      );
+      let changes: GitChangeItem[] = parseStatusZ(statusOutput.stdout);
+      if (options.checkoutRelative === true) {
+        const location = await this.repositoryLocation(workspacePath);
+        const prefix = location?.prefix ?? "";
+        changes = changes
+          .filter((change) => change.path.startsWith(prefix))
+          .map((change) => ({
+            ...change,
+            path: change.path.slice(prefix.length),
+            ...(change.origPath != null && {
+              origPath: path
+                .relative(
+                  workspacePath,
+                  path.join(location!.top, change.origPath)
+                )
+                .split(path.sep)
+                .join("/"),
+            }),
+          }));
+      }
+      changes.sort((a, b) => a.path.localeCompare(b.path));
       if (options.fingerprints === true)
         await this.addFingerprints(workspacePath, changes);
 
@@ -1237,6 +1255,13 @@ export class GitService {
       }
       let changed = false;
       try {
+        if ((await fs.lstat(absolute).catch(() => null))?.isDirectory()) {
+          fail(
+            "not-changed",
+            "Discard files individually; directories may hold new files."
+          );
+          continue;
+        }
         // The rename's source must be free (or already HEAD's content)
         // before anything moves: restoring it overwrites what is there.
         if (origin != null) {
