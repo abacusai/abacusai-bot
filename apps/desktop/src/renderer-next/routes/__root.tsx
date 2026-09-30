@@ -18,9 +18,9 @@ const Devtools =
     : null;
 
 const RootComponent = () => {
-  const { transport, collections, system } = Route.useRouteContext();
+  const { transport, db, system } = Route.useRouteContext();
   return (
-    <AppRoot transport={transport} collections={collections} system={system}>
+    <AppRoot transport={transport} db={db} system={system}>
       <Outlet />
       {Devtools != null && (
         <Suspense fallback={null}>

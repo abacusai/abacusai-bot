@@ -7,7 +7,7 @@
  */
 import { useEffect } from "react";
 
-import type { Collections } from "#next/data/collections";
+import type { Collections } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
 
 const REPORTED = Symbol.for("abacus.readinessReported");

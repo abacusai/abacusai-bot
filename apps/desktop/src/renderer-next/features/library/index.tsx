@@ -19,7 +19,7 @@ export const LibrarySidebar = () => {
   return (
     <NavList.Root label={t("library.sidebar.label")}>
       <NavList.Header title={t("library.sidebar.label")} />
-      <div role="list" className="flex flex-col gap-0.5 pt-1">
+      <NavList.Rows>
         {LIBRARY_PAGES.map((page) => (
           <NavList.Item
             key={page}
@@ -31,7 +31,7 @@ export const LibrarySidebar = () => {
             title={t(`library.pages.${page}`)}
           />
         ))}
-      </div>
+      </NavList.Rows>
     </NavList.Root>
   );
 };

@@ -3,7 +3,14 @@
  * controllable matchMedia. Real geometry (rects, env(), CSS.supports) is the
  * Electron screenshot run's (scripts/screenshots-next.mjs).
  */
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fixturePrefs } from "#next/data/fixture-db/rows";
@@ -13,6 +20,9 @@ import {
   type AppHarness,
 } from "#next/test-support/app-harness";
 import { setViewportWidth } from "#next/test-support/media";
+
+import { HOVER_INTENT_MS, shellStore } from "./shell-store";
+import { useTopBarStatusText } from "./top-bar-slots";
 
 vi.mock("#next/ui/resizable", async (importOriginal) => {
   const actual = await importOriginal<typeof import("#next/ui/resizable")>();
@@ -161,11 +171,28 @@ describe("ShellLayout", () => {
     await waitFor(() => expect(shell().dataset.sidebar).toBe("pinned"));
   });
 
+  it("shows no status unless a route sets one (V4)", async () => {
+    await at(1280, "/bots/new");
+    expect(document.querySelector('[data-slot="topbar-status"]')).toBeNull();
+    await act(async () => {
+      await harness!.router.navigate({ to: "/bots/chief-of-staff" } as never);
+    });
+    expect(document.querySelector('[data-slot="topbar-status"]')).toBeNull();
+    expect(screen.queryByText("Ready")).toBeNull();
+  });
+
   it("hides the status text at md and folds actions into ⋯ at sm", async () => {
     await at(1280, "/bots/chief-of-staff");
-    expect(
-      document.querySelector('[data-slot="topbar-status"]')
-    ).not.toBeNull();
+    const Status = () => {
+      useTopBarStatusText("Running");
+      return null;
+    };
+    const status = render(<Status />);
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="topbar-status"]')?.textContent
+      ).toBe("Running")
+    );
     expect(
       document.querySelector('[data-slot="topbar-actions"]')
     ).not.toBeNull();
@@ -176,6 +203,7 @@ describe("ShellLayout", () => {
     act(() => setViewportWidth(850));
     await waitFor(() => expect(screen.getByTestId("topbar-more")).toBeTruthy());
     expect(document.querySelector('[data-slot="topbar-actions"]')).toBeNull();
+    status.unmount();
   });
 
   it("shows the app name only while pinned; ⌘B-equivalent toggle writes prefs", async () => {
@@ -190,5 +218,220 @@ describe("ShellLayout", () => {
     await waitFor(() =>
       expect(document.querySelector('[data-slot="topbar-app-name"]')).toBeNull()
     );
+  });
+});
+
+const paneScroll = () =>
+  document.querySelector<HTMLElement>('[data-slot="pane-scroll"]')!;
+const navigate = async (options: Record<string, unknown>) => {
+  await act(async () => {
+    await harness!.router.navigate(options as never);
+  });
+};
+const rail = () => document.querySelector<HTMLElement>('[data-slot="rail"]')!;
+const railLink = (area: string) =>
+  rail().querySelector<HTMLAnchorElement>(`a[data-area="${area}"]`)!;
+
+describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
+  it("across panel open/close at xl and crossing 1100 with a tab open", async () => {
+    await at(1280, "/sessions/review-prs");
+    const node = paneScroll();
+    const content = node.firstElementChild;
+    node.scrollTop = 120;
+    const check = () => {
+      expect(paneScroll()).toBe(node);
+      expect(paneScroll().firstElementChild).toBe(content);
+      expect(paneScroll().scrollTop).toBe(120);
+    };
+    await navigate({ to: ".", search: { tab: "terminal" } });
+    expect(
+      document.querySelector('[data-slot="side-panel"][data-mode="layout"]')
+    ).not.toBeNull();
+    check();
+    act(() => setViewportWidth(1000));
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="drawer-popup"]')
+      ).not.toBeNull()
+    );
+    check();
+    act(() => setViewportWidth(1280));
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="side-panel"][data-mode="layout"]')
+      ).not.toBeNull()
+    );
+    check();
+    await navigate({ to: ".", search: {} });
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="side-panel"]')).toBeNull()
+    );
+    check();
+  });
+});
+
+describe("the floating sidebar", () => {
+  it("opens from the keyboard where the band forces floating, with focus inside (Codex #7)", async () => {
+    await at(820, "/sessions/new");
+    expect(shell().dataset.sidebar).toBe("floating");
+    const toggle = screen.getByTestId("sidebar-toggle");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    toggle.focus();
+    fireEvent.click(toggle);
+    const floating = await waitFor(() => {
+      const node = document.querySelector<HTMLElement>(
+        '[data-slot="sidebar-floating"]'
+      );
+      expect(node).not.toBeNull();
+      return node!;
+    });
+    await waitFor(() =>
+      expect(floating.contains(document.activeElement)).toBe(true)
+    );
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    // The preference is untouched: growing the window restores the user's.
+    expect(harness!.db.prefs.rows.get("app")?.sidebar.pinned).toBe(true);
+    // Focus inside keeps it open past the pointer grace.
+    fireEvent.pointerLeave(floating);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    expect(shellStore.state.floating.open).toBe(true);
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(shellStore.state.floating.open).toBe(false));
+    await waitFor(() => expect(document.activeElement).toBe(toggle));
+  });
+
+  it("a hover followed at once by navigation never reopens it on the next page (Codex #8)", async () => {
+    const seed = defaultSeed();
+    seed.prefs = fixturePrefs({
+      sidebar: { pinned: false, openSection: null },
+    });
+    await at(1280, "/bots/new", seed);
+    expect(shell().dataset.sidebar).toBe("floating");
+    fireEvent.pointerOver(rail());
+    await navigate({ to: "/sessions/new" });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, HOVER_INTENT_MS + 80));
+    });
+    expect(shellStore.state.floating.open).toBe(false);
+  });
+
+  it("a hover pending when the rail unmounts never opens it later (Claude #15)", async () => {
+    const seed = defaultSeed();
+    seed.prefs = fixturePrefs({
+      sidebar: { pinned: false, openSection: null },
+    });
+    await at(1280, "/bots/new", seed);
+    fireEvent.pointerOver(rail());
+    await navigate({ to: "/onboarding" });
+    expect(document.querySelector('[data-slot="rail"]')).toBeNull();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, HOVER_INTENT_MS + 80));
+    });
+    expect(shellStore.state.floating.open).toBe(false);
+  });
+});
+
+describe("the rail's last location (Claude #6)", () => {
+  it("is a route location: pathname + search, never an href in `to`", async () => {
+    await at(1280, "/sessions/review-prs?tab=terminal");
+    await navigate({ to: "/bots/new" });
+    const link = railLink("sessions");
+    expect(link.getAttribute("href")).toBe("/sessions/review-prs?tab=terminal");
+    const stored = shellStore.state.lastLocationByArea.sessions!;
+    expect(stored).toEqual({
+      pathname: "/sessions/review-prs",
+      search: { tab: "terminal" },
+    });
+    const built = harness!.router.buildLocation({
+      to: stored.pathname,
+      search: stored.search,
+    } as never);
+    expect(built.pathname).toBe("/sessions/review-prs");
+    expect(harness!.router.getMatchedRoutes(built.pathname)[2]?.id).toBe(
+      "/_shell/(sessions)/sessions/$sessionId"
+    );
+    fireEvent.click(link);
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe(
+        "/sessions/review-prs"
+      )
+    );
+    expect(harness!.router.state.location.search).toEqual({ tab: "terminal" });
+  });
+
+  it("remembers the background of a masked pop-up, not the pop-up", async () => {
+    await at(1280, "/routines");
+    await navigate({ to: "/routines/new" });
+    await navigate({ to: "/bots/new" });
+    expect(railLink("routines").getAttribute("href")).toBe("/routines");
+    fireEvent.click(railLink("routines"));
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe("/routines")
+    );
+    expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+  });
+});
+
+describe("the title bar", () => {
+  it("enables Forward only when history has an entry ahead (Claude #16)", async () => {
+    await at(1280, "/bots/new");
+    const forward = () => screen.getByRole("button", { name: "Forward" });
+    expect(forward()).toHaveProperty("disabled", true);
+    await navigate({ to: "/sessions/new" });
+    expect(forward()).toHaveProperty("disabled", true);
+    await act(async () => {
+      harness!.router.history.back();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    await waitFor(() => expect(forward()).toHaveProperty("disabled", false));
+    await navigate({ to: "/routines" });
+    await waitFor(() => expect(forward()).toHaveProperty("disabled", true));
+  });
+
+  it("the panel toggle (and ⌘⌥B) reopens the area's last tab (Claude #19)", async () => {
+    await at(1280, "/sessions/review-prs");
+    await navigate({ to: ".", search: { tab: "files" } });
+    const toggle = screen.getByTestId("panel-toggle");
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(harness!.router.state.location.search).not.toHaveProperty("tab")
+    );
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(harness!.router.state.location.search).toEqual({ tab: "files" })
+    );
+  });
+
+  it("panel tabs are borderless chips at the bar's control height (V7)", async () => {
+    await at(1280, "/sessions/review-prs?tab=terminal");
+    const tabs = within(
+      document.querySelector<HTMLElement>('[data-slot="topbar"]')!
+    ).getAllByRole("tab");
+    for (const tab of tabs) {
+      expect(tab.className).toContain("h-7");
+      expect(tab.className).toContain("border-0");
+    }
+  });
+});
+
+describe("loading", () => {
+  it("a bot route whose table failed to load shows the sidebar's Retry, not Not found (Claude #20)", async () => {
+    setViewportWidth(1280);
+    harness = await renderApp("/bots/chief-of-staff", {
+      beforeRender: (db) => {
+        db.bots.failSnapshot = new Error("UNAVAILABLE");
+      },
+    });
+    await screen.findByRole("button", { name: "Retry" });
+    expect(screen.queryByText("Not found")).toBeNull();
+    expect(harness.router.state.location.pathname).toBe("/bots/chief-of-staff");
+  });
+
+  it("the closed command menu never starts the lazy bots table (Claude #21)", async () => {
+    await at(1280, "/sessions/new");
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(harness!.collections.bots.status).toBe("idle");
   });
 });

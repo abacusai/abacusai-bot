@@ -2,17 +2,31 @@
 /**
  * Screenshots of renderer-next in the real Electron window (spec 01 §10.2):
  * every route at each width, light and dark, plus the gallery's overlay
- * examples, with axe (WCAG 2 A/AA) on each capture. No Playwright: Electron
- * with an isolated profile and the Chrome DevTools Protocol.
+ * examples, with axe (WCAG 2 A/AA) on each capture once it has settled. No
+ * Playwright: Electron with an isolated profile and the Chrome DevTools
+ * Protocol.
  *
  *   node scripts/screenshots-next.mjs [--no-build] [--widths 1280,900]
  *        [--routes /bots/new,/__ui?section=shell] [--no-overlays]
  *
  * Output: .build/screenshots/<git-sha>/<route-slug>@<W>-<theme>.png,
- * axe.json, and index.html (a contact sheet, light and dark side by side).
+ * axe.json, shots.json (every capture's geometry, the checks that failed
+ * and the run's exit status) and index.html (a contact sheet).
  *
- * Until spec 00 sub-slice B serves the db.* tables, the build uses the dev
- * fixture tables (VITE_NEXT_DB_FIXTURES=1): the canvas home as rows.
+ * The gate (Codex impl r1 #13) programs and asserts, besides the routes:
+ * - collapsed (sidebar unpinned) and hover (the floating sidebar) states,
+ *   their geometry asserted before capture;
+ * - the side panel in layout at the 1100 minimum: pane and panel ≥ 360 px,
+ *   an 8 px gutter;
+ * - compact density (a second launch with the stored setting): a 32 px
+ *   title bar and 24 px rows;
+ * - full screen: no traffic-light reservation, the bar still whole; the
+ *   native-frame probe runs on Linux only (macOS and Windows have none);
+ * - axe: any serious or critical violation fails the run.
+ *
+ * This is the visual run: the build reads the dev fixture tables
+ * (VITE_NEXT_DB_FIXTURES=1), the canvas home as rows. Acceptance against
+ * main's real db.* is the Electron suite (src/main/dev/renderer-next.electron.test.ts).
  */
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -74,6 +88,85 @@ const OVERLAYS = [
   "command",
   "select",
 ];
+
+/** Which axe impacts fail the run (Claude impl r1 #9/#10). */
+export const FAILING_IMPACTS = new Set(["serious", "critical"]);
+
+export const axeFailures = (name, violations) =>
+  violations
+    .filter((violation) => FAILING_IMPACTS.has(violation.impact))
+    .map(
+      (violation) =>
+        `${name}: axe ${violation.impact} ${violation.id} ${violation.nodes.join(", ")}`
+    );
+
+const near = (a, b, tolerance = 1) => Math.abs(a - b) <= tolerance;
+
+/** The in-layout split at 1100: both sides ≥ 360, an 8 px gutter. */
+export const panelSplitProblems = (name, split) => {
+  const problems = [];
+  if (split?.pane == null || split?.panel == null)
+    return [`${name}: side panel not in layout`];
+  if (split.pane.width < 360 - 0.5)
+    problems.push(`${name}: pane ${split.pane.width} < 360`);
+  if (split.panel.width < 360 - 0.5)
+    problems.push(`${name}: panel ${split.panel.width} < 360`);
+  const gutter = split.panel.left - split.pane.right;
+  if (!near(gutter, 8))
+    problems.push(`${name}: pane/panel gutter ${gutter} (want 8)`);
+  if (!near(split.panel.right, split.innerWidth - 8))
+    problems.push(`${name}: panel right ${split.panel.right} (want inset 8)`);
+  return problems;
+};
+
+/** The floating sidebar over the content, which does not reflow (canvas `HoverSidebar`). */
+export const floatingProblems = (name, floating) => {
+  const problems = [];
+  if (floating?.rect == null) return [`${name}: no floating sidebar on hover`];
+  const want = {
+    left: floating.railW + 4,
+    width: 280,
+    top: floating.toolbar + 4,
+  };
+  for (const key of Object.keys(want))
+    if (!near(floating.rect[key], want[key]))
+      problems.push(
+        `${name}: floating ${key} ${floating.rect[key]} (want ${want[key]})`
+      );
+  if (floating.paneBefore != null && floating.paneAfter != null)
+    if (!near(floating.paneBefore, floating.paneAfter))
+      problems.push(
+        `${name}: the pane reflowed (${floating.paneBefore} → ${floating.paneAfter})`
+      );
+  return problems;
+};
+
+/** Compact density: a 32 px bar, 24 px rows. */
+export const compactProblems = (name, compact) => {
+  const problems = [];
+  if (!near(compact.toolbar, 32))
+    problems.push(`${name}: --toolbar-h ${compact.toolbar} (want 32)`);
+  if (!near(compact.topbar, 32))
+    problems.push(`${name}: title bar ${compact.topbar} (want 32)`);
+  for (const row of compact.rows)
+    if (!near(row, 24)) problems.push(`${name}: row ${row} (want 24)`);
+  if (compact.rows.length === 0) problems.push(`${name}: no sidebar rows`);
+  return problems;
+};
+
+/** Full screen: no traffic-light reservation, the bar still its height. */
+export const fullScreenProblems = (name, probe) => {
+  const problems = [];
+  if (!probe.fullScreen)
+    problems.push(`${name}: the window is not full screen`);
+  if (!near(probe.paddingLeft, 0))
+    problems.push(
+      `${name}: title bar keeps a ${probe.paddingLeft} px reservation`
+    );
+  if (!near(probe.topbar, probe.toolbar))
+    problems.push(`${name}: title bar ${probe.topbar} (want ${probe.toolbar})`);
+  return problems;
+};
 
 const slug = (route) =>
   route
@@ -137,21 +230,22 @@ const connect = async (port) => {
   return { send, evaluate, close: () => ws.close() };
 };
 
-const launch = (width, scratch) => {
+const launch = (width, scratch, home, tag = `${width}`) => {
   const electron = join(
     repo,
     "node_modules/electron/dist",
     readFileSync(join(repo, "node_modules/electron/path.txt"), "utf8").trim()
   );
-  const log = join(scratch, `electron-${width}.log`);
+  const log = join(scratch, `electron-${tag}.log`);
   const child = spawn(electron, [".", `--remote-debugging-port=${PORT}`], {
     cwd: desktop,
     env: {
       ...process.env,
-      ABACUSAI_BOT_HOME: join(scratch, "home"),
-      ABACUSAI_BOT_USERDATA: join(scratch, `ud-${width}`),
+      ABACUSAI_BOT_HOME: home,
+      ABACUSAI_BOT_USERDATA: join(scratch, `ud-${tag}`),
       ABACUSBOT_RENDERER_GENERATION: "wco",
       ABACUSBOT_DEV_CONTENT_SIZE: `${width}x${HEIGHT}`,
+      ABACUSBOT_DEV_HARNESS: "1",
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -159,11 +253,37 @@ const launch = (width, scratch) => {
   child.stdout.on("data", (chunk) => lines.push(String(chunk)));
   child.stderr.on("data", (chunk) => lines.push(String(chunk)));
   child.on("exit", () => writeFileSync(log, lines.join("")));
+  child.harness = (op, input) =>
+    child.stdin.write(`${JSON.stringify({ op, input })}\n`);
   return child;
 };
 
 const settle = (cdp, href) =>
   cdp.evaluate(`window.__abacusDev.navigateAndSettle(${JSON.stringify(href)})`);
+
+/** Every finite animation done (dialogs fade in; axe must see the end state). */
+const animationsDone = (cdp) =>
+  cdp.evaluate(`(async () => {
+    for (let round = 0; round < 10; round += 1) {
+      const running = document.getAnimations().filter((a) =>
+        a.playState === "running" && a.effect?.getComputedTiming().endTime !== Infinity);
+      if (running.length === 0) return true;
+      await Promise.all(running.map((a) => a.finished.catch(() => undefined)));
+    }
+    return true;
+  })()`);
+
+const waitFor = async (cdp, expression, timeoutMs = 5_000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await cdp.evaluate(expression)) return true;
+    await sleep(100);
+  }
+  return false;
+};
+
+const rect = (selector) =>
+  `(() => { const r = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect(); return r && { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; })()`;
 
 const main = async () => {
   if (!flag("--no-build")) {
@@ -180,7 +300,8 @@ const main = async () => {
   const out = join(repo, ".build/screenshots", sha);
   mkdirSync(out, { recursive: true });
   const scratch = mkdtempSync(join(tmpdir(), "screenshots-next-"));
-  mkdirSync(join(scratch, "home"), { recursive: true });
+  const home = join(scratch, "home");
+  mkdirSync(home, { recursive: true });
   const axeSource = readFileSync(
     require.resolve("axe-core/axe.min.js"),
     "utf8"
@@ -189,13 +310,26 @@ const main = async () => {
   const shots = [];
   const axeReport = [];
   const failures = [];
+  const probes = {};
+
+  /** Capture the current state as `name`, after axe on the settled page. */
+  const capture = async (cdp, name, extra = {}) => {
+    await animationsDone(cdp);
+    const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(join(out, name), Buffer.from(shot.data, "base64"));
+    const axe = await cdp.evaluate(
+      `axe.run(document, { runOnly: ["wcag2a", "wcag2aa"] }).then((r) => r.violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.slice(0, 5).map((n) => n.target.join(" ")), html: v.nodes.slice(0, 2).map((n) => n.html.slice(0, 160)) })))`
+    );
+    axeReport.push({ file: name, violations: axe });
+    failures.push(...axeFailures(name, axe));
+    shots.push({ file: name, ...extra });
+  };
 
   for (const width of WIDTHS) {
-    const child = launch(width, scratch);
+    const child = launch(width, scratch, home);
     try {
       const cdp = await connect(PORT);
       await cdp.send("Page.enable");
-      // Wait for boot: the dev hooks exist once the router is mounted.
       for (let i = 0; i < 60; i += 1) {
         if (await cdp.evaluate("typeof window.__abacusDev === 'object'")) break;
         await sleep(500);
@@ -261,11 +395,6 @@ const main = async () => {
             };
           })()`);
           const name = `${slug(route)}@${width}-${theme}.png`;
-          const shot = await cdp.send("Page.captureScreenshot", {
-            format: "png",
-          });
-          writeFileSync(join(out, name), Buffer.from(shot.data, "base64"));
-          shots.push({ route, width, theme, file: name, geometry });
 
           if (geometry.dark !== (theme === "dark"))
             failures.push(`${name}: wrong theme`);
@@ -307,14 +436,206 @@ const main = async () => {
                 `${name}: scrim top ${geometry.scrim.top} (want ${geometry.toolbar})`
               );
           }
+          // The 1100 minimum with the panel in layout (Codex impl r1 #13).
+          if (width === 1100 && route.includes("tab=")) {
+            const split = await cdp.evaluate(`({
+              pane: ${rect('[data-slot="pane"]')},
+              panel: ${rect('[data-slot="side-panel"][data-mode="layout"]')},
+              innerWidth,
+            })`);
+            failures.push(...panelSplitProblems(name, split));
+            geometry.split = split;
+          }
+          await capture(cdp, name, { route, width, theme, geometry });
+        }
 
-          const axe = await cdp.evaluate(
-            `axe.run(document, { runOnly: ["wcag2a", "wcag2aa"] }).then((r) => r.violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.slice(0, 5).map((n) => n.target.join(" ")) })))`
+        // Collapsed, then the floating sidebar on rail hover (V9).
+        if (width >= 900) {
+          await cdp.evaluate("window.__abacusDev.setPinned(false)");
+          await settle(cdp, "/bots/chief-of-staff");
+          await waitFor(
+            cdp,
+            `document.querySelector('[data-slot="shell"]')?.dataset.sidebar === "floating"`
           );
-          axeReport.push({ file: name, violations: axe });
-          for (const violation of axe)
-            if (violation.id === "color-contrast")
-              failures.push(`${name}: contrast ${violation.nodes.join(", ")}`);
+          const collapsed = `collapsed@${width}-${theme}.png`;
+          const paneBefore = await cdp.evaluate(rect('[data-slot="pane"]'));
+          await capture(cdp, collapsed, { state: "collapsed", width, theme });
+          const rail = await cdp.evaluate(rect('[data-slot="rail"]'));
+          await cdp.send("Input.dispatchMouseEvent", {
+            type: "mouseMoved",
+            x: rail.left + rail.width / 2,
+            y: rail.top + 120,
+          });
+          const opened = await waitFor(
+            cdp,
+            `document.querySelector('[data-slot="sidebar-floating"]') != null`
+          );
+          // Its spring runs on frames, not the Animations API: wait until
+          // the rect holds still.
+          let last = "";
+          for (let i = 0; i < 40; i += 1) {
+            await sleep(50);
+            const now = JSON.stringify(
+              await cdp.evaluate(rect('[data-slot="sidebar-floating"]'))
+            );
+            if (now === last) break;
+            last = now;
+          }
+          const floating = await cdp.evaluate(`({
+            rect: ${rect('[data-slot="sidebar-floating"]')},
+            railW: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')),
+            toolbar: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')),
+          })`);
+          const paneAfter = await cdp.evaluate(rect('[data-slot="pane"]'));
+          const name = `floating@${width}-${theme}.png`;
+          failures.push(
+            ...floatingProblems(name, {
+              ...floating,
+              rect: opened ? floating.rect : null,
+              paneBefore: paneBefore?.left,
+              paneAfter: paneAfter?.left,
+            })
+          );
+          await capture(cdp, name, {
+            state: "floating",
+            width,
+            theme,
+            floating,
+          });
+          await cdp.send("Input.dispatchMouseEvent", {
+            type: "mouseMoved",
+            x: width - 40,
+            y: HEIGHT - 40,
+          });
+          await cdp.evaluate("window.__abacusDev.setPinned(true)");
+          await waitFor(
+            cdp,
+            `document.querySelector('[data-slot="sidebar-floating"]') == null`
+          );
+        }
+      }
+
+      // The frosted chrome (V1) exists only in the composited window: the
+      // page capture above has no vibrancy behind it. On macOS, capture the
+      // window from the screen as well (needs Screen Recording permission;
+      // recorded as skipped when the capture fails).
+      if (width === WIDTHS[0] && process.platform === "darwin") {
+        probes.vibrancy = [];
+        for (const theme of THEMES) {
+          await cdp.send("Emulation.setEmulatedMedia", {
+            features: [{ name: "prefers-color-scheme", value: theme }],
+          });
+          await settle(cdp, "/bots/new");
+          const name = `os-window-bots-new@${width}-${theme}.png`;
+          try {
+            child.harness("window.focus", {});
+            const bounds = await cdp.evaluate(
+              "({ left: screenX, top: screenY, width: outerWidth, height: outerHeight })"
+            );
+            await sleep(800);
+            execFileSync("screencapture", [
+              "-x",
+              "-o",
+              "-R",
+              `${bounds.left},${bounds.top},${bounds.width},${bounds.height}`,
+              join(out, name),
+            ]);
+            const surface = await cdp.evaluate(`({
+              html: getComputedStyle(document.documentElement).backgroundColor,
+              shell: getComputedStyle(document.querySelector('[data-slot="shell"]')).backgroundColor,
+              platform: document.documentElement.dataset.platform,
+              titlebar: document.documentElement.dataset.titlebar,
+            })`);
+            probes.vibrancy.push({ theme, file: name, bounds, surface });
+            if (!/rgba\(0, 0, 0, 0\)|transparent/.test(surface.html))
+              failures.push(
+                `${name}: html is opaque (${surface.html}) under vibrancy`
+              );
+            shots.push({ file: name, state: "os-window", width, theme });
+          } catch (error) {
+            probes.vibrancy.push({ theme, skipped: String(error) });
+          }
+        }
+      }
+
+      // Full screen (the first width only): no traffic-light reservation.
+      if (width === WIDTHS[0]) {
+        await cdp.send("Emulation.setEmulatedMedia", {
+          features: [{ name: "prefers-color-scheme", value: "light" }],
+        });
+        await settle(cdp, "/bots/new");
+        child.harness("window.fullScreen", { on: true });
+        const entered = await waitFor(
+          cdp,
+          `innerHeight > ${HEIGHT} && document.documentElement.dataset.titlebar !== undefined`,
+          8_000
+        );
+        await sleep(1_200);
+        const probe = await cdp.evaluate(`({
+          fullScreen: ${entered} && innerHeight > ${HEIGHT},
+          paddingLeft: parseFloat(getComputedStyle(document.querySelector('[data-slot="topbar"]')).paddingLeft),
+          topbar: document.querySelector('[data-slot="topbar"]').getBoundingClientRect().height,
+          toolbar: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')),
+          overlayVisible: navigator.windowControlsOverlay?.visible ?? null,
+        })`);
+        probes.fullScreen = probe;
+        const name = `fullscreen@${width}-light.png`;
+        failures.push(...fullScreenProblems(name, probe));
+        await capture(cdp, name, { state: "fullscreen", width, probe });
+        child.harness("window.fullScreen", { on: false });
+        await waitFor(cdp, `innerHeight === ${HEIGHT}`, 8_000);
+        await sleep(800);
+      }
+      cdp.close();
+    } finally {
+      child.kill("SIGKILL");
+      await sleep(800);
+    }
+  }
+
+  // Compact density: a launch with the stored setting (main reads it at
+  // window creation).
+  {
+    const compactHome = join(scratch, "home-compact");
+    mkdirSync(compactHome, { recursive: true });
+    writeFileSync(
+      join(compactHome, "settings.json"),
+      JSON.stringify({ titlebarDensity: "compact" })
+    );
+    const width = WIDTHS[0];
+    const child = launch(width, scratch, compactHome, `${width}-compact`);
+    try {
+      const cdp = await connect(PORT);
+      await cdp.send("Page.enable");
+      for (let i = 0; i < 60; i += 1) {
+        if (await cdp.evaluate("typeof window.__abacusDev === 'object'")) break;
+        await sleep(500);
+      }
+      await cdp.evaluate(axeSource);
+      for (const theme of THEMES) {
+        await cdp.send("Emulation.setEmulatedMedia", {
+          features: [{ name: "prefers-color-scheme", value: theme }],
+        });
+        for (const route of ["/sessions/new", "/bots/new"]) {
+          await settle(cdp, route);
+          await waitFor(
+            cdp,
+            `document.documentElement.dataset.density === "compact"`
+          );
+          const compact = await cdp.evaluate(`({
+            toolbar: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')),
+            topbar: document.querySelector('[data-slot="topbar"]').getBoundingClientRect().height,
+            rows: [...document.querySelectorAll('[data-slot="nav-list"] a[data-slot="item"]')].slice(0, 4).map((a) => a.getBoundingClientRect().height),
+          })`);
+          const name = `compact-${slug(route)}@${width}-${theme}.png`;
+          failures.push(...compactProblems(name, compact));
+          await capture(cdp, name, {
+            state: "compact",
+            route,
+            width,
+            theme,
+            compact,
+          });
         }
       }
       cdp.close();
@@ -324,35 +645,35 @@ const main = async () => {
     }
   }
 
+  probes.nativeFrame =
+    process.platform === "linux"
+      ? "run with ABACUSBOT_LINUX_CHROME=native-frame (not automated here)"
+      : `n/a on ${process.platform}: no native-frame mode`;
+
+  const status = failures.length > 0 ? 1 : 0;
   writeFileSync(
     join(out, "axe.json"),
     `${JSON.stringify(axeReport, null, 2)}\n`
   );
-  writeFileSync(join(out, "shots.json"), `${JSON.stringify(shots, null, 2)}\n`);
-  const rows = [
-    ...new Set(shots.map((shot) => `${shot.route}|${shot.width}`)),
-  ].map((key) => {
-    const [route, width] = key.split("|");
-    const cell = (theme) => {
-      const shot = shots.find(
-        (s) =>
-          s.route === route && String(s.width) === width && s.theme === theme
-      );
-      return shot
-        ? `<td><img src="${shot.file}" loading="lazy"><br>${theme}</td>`
-        : "<td></td>";
-    };
-    return `<tr><th>${route}<br>${width}px</th>${cell("light")}${cell("dark")}</tr>`;
-  });
+  writeFileSync(
+    join(out, "shots.json"),
+    `${JSON.stringify({ sha, exitStatus: status, failures, probes, shots }, null, 2)}\n`
+  );
+  const cells = shots
+    .map(
+      (shot) =>
+        `<figure><img src="${shot.file}" loading="lazy"><figcaption>${shot.file}</figcaption></figure>`
+    )
+    .join("");
   writeFileSync(
     join(out, "index.html"),
-    `<!doctype html><meta charset="utf-8"><title>renderer-next ${sha}</title><style>body{font:13px system-ui;margin:16px}img{width:640px;border:1px solid #8884}th{text-align:left;vertical-align:top;padding-right:12px}</style><h1>renderer-next ${sha}</h1><table>${rows.join("")}</table>\n`
+    `<!doctype html><meta charset="utf-8"><title>renderer-next ${sha}</title><style>body{font:13px system-ui;margin:16px}figure{display:inline-block;margin:0 12px 16px 0}img{width:420px;border:1px solid #8884;display:block}</style><h1>renderer-next ${sha} — exit ${status}</h1>${cells}\n`
   );
   console.log(`screenshots-next: ${shots.length} captures in ${out}`);
-  if (failures.length > 0) {
+  if (status !== 0) {
     console.error(`screenshots-next: ${failures.length} check(s) failed:`);
     for (const failure of failures) console.error(`  ${failure}`);
-    process.exit(1);
+    process.exit(status);
   }
 };
 

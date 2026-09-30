@@ -13,10 +13,10 @@ import {
 } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
 
-import { createCollections, type Collections } from "#next/data/collections";
+import { createDb, type Collections, type Db } from "#next/data/db";
 import {
   FixtureDb,
-  directDbSource,
+  fixtureTransport,
   type FixtureSeed,
 } from "#next/data/fixture-db/fixture-db";
 import {
@@ -108,6 +108,8 @@ export interface AppHarness {
   router: AppRouter;
   history: RouterHistory;
   db: FixtureDb;
+  /** The app's collections and prefs writer over `db`. */
+  appDb: Db;
   collections: Collections;
   transport: MemoryTransport;
   calls: Array<[string, unknown]>;
@@ -126,7 +128,8 @@ export const createHarness = async (
   const transport = createMemoryTransport(shellRouter(), { calls });
   const db = new FixtureDb(options.seed ?? defaultSeed());
   options.beforeRender?.(db);
-  const collections = createCollections(directDbSource(db), { backoffMs: [5] });
+  const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
+  const { collections } = appDb;
   await collections.prefs.preload();
   const queryClient = createQueryClient();
   const history =
@@ -137,7 +140,7 @@ export const createHarness = async (
       queryClient,
       transport,
       system: SYSTEM_INFO,
-      collections,
+      db: appDb,
       t: i18n.getFixedT(null, "translation") as never,
     },
   });
@@ -147,10 +150,12 @@ export const createHarness = async (
     router,
     history,
     db,
+    appDb,
     collections,
     transport,
     calls,
     cleanup: async () => {
+      appDb.stop();
       for (const collection of Object.values(collections))
         await collection.cleanup().catch(() => undefined);
       transport.close();

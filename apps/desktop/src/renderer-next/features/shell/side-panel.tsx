@@ -132,7 +132,7 @@ export const SidePanelDrawer = ({
               <Tabs
                 value={tab}
                 onValueChange={(next) => onTabChange(next as SidePanelTabId)}
-                className="px-3 pt-3"
+                data-side-panel-tabs=""
               >
                 <TabsList aria-label={t("shell.topBar.panelTabs")}>
                   {tabs.map((item) => (

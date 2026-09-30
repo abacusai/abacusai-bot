@@ -4,3 +4,12 @@
  * preload lets the route render.
  */
 export const ignoreLoadError = (): undefined => undefined;
+
+/**
+ * The row is known not to exist: its table loaded and does not have it. A
+ * table still loading or in error says nothing (Claude impl r1 #20).
+ */
+export const isMissing = (
+  collection: { readonly status: string; has(key: string): boolean },
+  key: string
+): boolean => collection.status === "ready" && !collection.has(key);

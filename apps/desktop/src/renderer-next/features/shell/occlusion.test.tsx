@@ -132,6 +132,32 @@ describe("createOcclusionWatcher", () => {
     }
   });
 
+  it("never re-queries the document for style or class flips outside the overlays", async () => {
+    const { last } = watch();
+    const dialog = add("dialog-content", rect(0, 0, 100, 100));
+    await flush();
+    const unrelated = add("sidebar-slot");
+    await flush();
+    const query = vi.spyOn(document.body, "querySelectorAll");
+    for (let i = 0; i < 20; i += 1) {
+      unrelated.style.width = `${i}px`;
+      unrelated.className = `w-${i}`;
+    }
+    await flush();
+    expect(query).not.toHaveBeenCalled();
+    // A change on the candidate itself still re-measures, without a query.
+    boxes.set(dialog, rect(0, 0, 150, 100));
+    dialog.style.opacity = "0.5";
+    await flush();
+    expect(last()[0]?.width).toBe(150);
+    expect(query).not.toHaveBeenCalled();
+    // A new overlay is still picked up.
+    add("popover-content");
+    await flush();
+    expect(query).toHaveBeenCalled();
+    expect(last()).toHaveLength(2);
+  });
+
   it("runs a frame loop while animations run, and stops after", async () => {
     const frames: Array<() => void> = [];
     const requestFrame = vi.fn((callback: () => void) => {
