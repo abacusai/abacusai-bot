@@ -1,6 +1,6 @@
 # 02 — Chat kit (phase 2)
 
-Status: draft spec **r2** (no code). r2 answers Codex round 1 (`reviews/02-chat-kit.codex-r1.md`, 22 findings); responses at the end. Branch `rewrite/renderer`. It implements the "Chat kit" phase of `docs/rewrite/PLAN.md` (§Chat UI, §Motion system, §Phases 2, and the "Amendments after phase-0 spec reviews"), on top of:
+Status: draft spec **r3** (no code; final spec round before implementation). r2 answered Codex round 1 (`reviews/02-chat-kit.codex-r1.md`, 22 findings), r3 answers round 2 (`…codex-r2.md`, 13 items); responses at the end. Branch `rewrite/renderer`. It implements the "Chat kit" phase of `docs/rewrite/PLAN.md` (§Chat UI, §Motion system, §Phases 2, and the "Amendments after phase-0 spec reviews"), on top of:
 
 - `00-agent-agui.md` **r3**: the AG-UI wire the chat consumes (§2.3 events, §3.1.6 busy input, §3.5 permissions, §3.6 sub-agents, §5.3 hydration);
 - `00-transport-db-migration.md` **r2**, sub-slice A as implemented (`cfb550aa`): the `ai.*` procedures behind `AguiSource` (A.3), event iterators and `lastEventId` (A.4.3), the renderer `Transport` (A.7);
@@ -34,18 +34,18 @@ Each was checked against source. Every one is carried into the sections below, a
 
 | # | Brief / plan / earlier spec says | Verified fact | Consequence here |
 |---|---|---|---|
-| F1 | Agent spec §3.1.6: "ChatClient is configured with `whenBusy: "error"`" | `WhenBusy = 'queue' \| 'drop' \| 'interrupt'` (`types.ts:430`). There is no `"error"`. `QueueConfig.onOverflow: 'reject'` also discards **silently** (`types.ts:468-474`). | The client gets a `QueueStrategy` function (`types.ts:487`) that **throws** (`ChatBusyError`); `decideWhenBusy` runs synchronously inside `sendMessage` before any claim (`chat-client.ts:2276-2279`), so an accidental busy send rejects loudly (§3.6). The composer never calls `sendMessage` while busy (§8.3). PLAN amendment added. |
+| F1 | Agent spec §3.1.6: "ChatClient is configured with `whenBusy: "error"`" | `WhenBusy = 'queue' \| 'drop' \| 'interrupt'` (`types.ts:430`). There is no `"error"`, and `onOverflow: 'reject'` discards **silently** (`types.ts:468-474`). | The client gets a `QueueStrategy` that **throws** (`ChatBusyError`; `decideWhenBusy` runs synchronously in `sendMessage`, `chat-client.ts:2276-2279`). The kit never calls `sendMessage` at all (admission is `session.submit`, §3.7), so the guard only catches bugs. PLAN amendment added. |
 | F2 | Agent spec §5.3 (hydrate excludes the active run) combined with TanStack's own rejoin | `resumeInFlightRun` drops only the **last** assistant message on the first rebuild chunk (`chat-client.ts:2016-2018`, `:2080-2086`), so with the active run excluded it would delete the previous reply, and with it included it would duplicate earlier active-run messages (review r1-4). | The kit does not use TanStack's rejoin at all: the client is ephemeral and each generation is built from the completed transcript plus a from-start replay of the active run in a **fresh** client (§3.3, §3.4). Agent spec §5.3's "excluding the active run" stands (§14.1). |
 | F3 | (r1) main must echo client-run user messages | **Withdrawn.** `AguiHost.onRun` already echoes the user message with the client's id (`packages/agent/src/agui/host.ts:327-331`, `emit.ts:359-372`); a second echo concatenates (review r1-3). | §3.4 relies on the agent's single echo; R2-T6. |
 | F4 | PLAN: "loader: `chatClient.hydrate(threadId)`" | `ChatClient` has no public hydrate; it hydrates itself in `attach()` only with `persistence === true` (`chat-client.ts:1017-1039`). | The kit hydrates itself: loaders await `session.load()` (§3.2) and the client is constructed with the snapshot's messages (§3.3). |
 | F5 | Transport A.3: `ai.subscribe` and `ai.joinRun` are independent iterators | Two independent loops in `ChatClient` would duplicate and reorder the active run's events (`consumeSubscription` `:1942`, `resumeInFlightRun` `:1982`). | One pump per generation reads `joinRun` then `subscribe` in order and feeds one wakeable dispatcher, the client's only source (§3.4); a reconstruction cursor decides recovery (§3.3). |
-| F6 | Agent spec §3.1.6 / §5.2: main injects `RUN_ERROR {queued}` into "the requesting subscription" | A terminal through the shared processor affects any run in flight (`chat-client.ts:1296-1380`, `processor.ts:2260-2306`; review r1-6). | `ai.send` returns the ack; on `queued`/`rejected` the adapter's `send` throws an `AbortError`, which `streamResponse` handles without touching the processor (`chat-client.ts:2656-2666`) (§3.4, §4.6). Main injects nothing (§14.5). |
+| F6 | Agent spec §3.1.6 / §5.2: main injects `RUN_ERROR {queued}` into "the requesting subscription" | A terminal through the shared processor affects any run in flight (`chat-client.ts:1296-1380`, `processor.ts:2260-2306`), and any `ChatClient` request path resets the shared processor first (`streamResponse` → `prepareAssistantMessage()`, `:2551`; reviews r1-6, r2-2). | Admission is outside `ChatClient`: `session.submit` calls `ai.send` directly and keeps the pending message in an outbox (§3.7); `ai.send` returns the ack; main injects nothing (§14.5). |
 | F7 | PLAN: `createChatUI` dispatchers render every tool and sub-agent | Missing `toolsComponents[name]` warns once and renders **nothing** (`create-ui.tsx:725-731`); missing `subagentsComponents[name]` **throws** (`:743-748`, `:951-955`). Tool names are open (MCP tools, extensions). | The tool and sub-agent maps are `Proxy` objects that resolve any name to the generic widget (§5.2). Nested `SubagentMessages` overrides would spread the proxy into a plain object (`withWidgets`, `:339-348`), so cards never pass override maps. R2-T12. |
 | F8 | PLAN: gallery fixtures via `@shadcn/helpers/tanstack-ai` | `@shadcn/helpers@0.2.0` peers `@tanstack/ai >=0.40.0 <0.41.0` and `@tanstack/ai-client >=0.20.0 <0.21.0` (clone `packages/helpers/package.json`); its writer has no permissions, sub-agents, `STATE_*` or `CUSTOM`. | Not used. Fixtures are recorded AG-UI streams replayed through the **real** adapter over a fake `AppClient` (§11). |
 | F9 | PLAN: math via `temml` in TanStack `TextPart` | `@tanstack/markdown` has no math node; the inline parser consumes `\(`, `\)`, `\[`, `\]` as escapes before any extension sees them (`dist/inline.js:28-39`), and the React renderer ignores extension `renderHtml` (only `html.js` calls it). `temml.mjs` exports **only a default** although `temml.d.ts` declares named exports (`dist/temml.mjs:14755`). | Math is rewritten in a **pre-pass on the raw string** into forms the Markdown React renderer already has hooks for: display math becomes a fenced block with language `math` that the synchronous `highlighter` renders to MathML; inline math becomes inline code with a sentinel prefix that a custom `code` component renders (§7.3). `import temml from "temml"` only. R2-T19. |
-| F10 | PLAN: virtualise the transcript on the viewport ref past ~200 parts | The registry scroller's anchoring, `scrollToMessage`, visibility and prepend preservation need `MessageScrollerItem` rows with `messageId` (clone `use-message-scroller-controller.ts:260-309, 424-461`); the docs' virtualisation example renders plain divs (`message-scroller.mdx:527-594`). The scroller's `PERFORMANCE.md` excludes Markdown cost. | No `@tanstack/react-virtual` in phase 2, **conditional** on the R2-T31 gate: paging plus bounded retention (`MAX_MOUNTED = 300`, §10); if the gate fails, lower the bound, then a virtualisation slice. |
+| F10 | PLAN: virtualise the transcript on the viewport ref past ~200 parts | The registry scroller's anchoring, `scrollToMessage`, visibility and prepend preservation need `MessageScrollerItem` rows with `messageId` (clone `use-message-scroller-controller.ts:260-309, 424-461`); the docs' virtualisation example renders plain divs (`message-scroller.mdx:527-594`). The scroller's `PERFORMANCE.md` excludes Markdown cost. | No `@tanstack/react-virtual` in phase 2, **conditional** on the R2-T31 gate: paging plus a mounted-row budget and processor retention (`MAX_ROWS = 400`, `MAX_MESSAGES = 300`, §10); if the gate fails, lower `MAX_ROWS`, then a virtualisation slice. |
 | F11 | PLAN: "Stop" and sub-agent `stop()` | `ChatClient.stop()` aborts only the local request ("A durable server run keeps going", `:2825-2842`); `SubagentHandle.stop` likewise (`:3194-3211`). | Stop is `ai.cancel({ threadId, runId })` everywhere (agent spec §3.6). `useChat().stop` and `handle.stop` are never called (§4.5). |
-| F12 | — | A `RUN_ERROR` with no active assistant message **creates an empty assistant message** (`processor.ts:913-928` via `handleRunErrorEvent` `:2270`). | Message widgets render nothing for an empty assistant message; `queued`/`rejected` cleanup removes it (§4.6). |
+| F12 | — | A `RUN_ERROR` with no active assistant message **creates an empty assistant message** (`processor.ts:913-928` via `handleRunErrorEvent` `:2270`). | Message widgets render nothing for an empty assistant message; the run's outcome renders from its record (§5.1). |
 | F13 | PLAN: Interrupts slot for approvals | Agent spec r3 already superseded native interrupts; confirmed: the kit's `Interrupts` reads only `chat.interrupts` (`create-ui.tsx:818-837`). | `interruptsComponents` is not configured; permissions render from the kit's own descriptor store (§6). |
 | F14 | — | `useChat` subscribes only with `live: true` (`use-chat.ts:361-375`). | Moot: the kit owns the client and calls `subscribe()` for every generation (§3.3 step 5). |
 | F15 | Foundation §3.1 pins `@shadcn/react ^0.3.1` | Installed is 0.3.0, which never sets `data-pending-scroll` (0.3.1 changelog), so the registry viewport's `data-pending-scroll:invisible` is a no-op and a reload flashes the top of the transcript. | The 0.3.1 pin is a phase-2 prerequisite; R2-T16 asserts the attribute. |
@@ -89,7 +89,8 @@ src/renderer-next/features/chat/
 │  ├─ runtime.ts                 createChatRuntime(transport): ChatRuntime (router context member)
 │  ├─ session.ts                 ThreadSession: generations, cursors, load(), recovery (§3.1–§3.3)
 │  ├─ dispatcher.ts              the wakeable dispatcher and the pump (§3.4)
-│  ├─ adapter.ts                 SubscribeConnectionAdapter { subscribe, send } (§3.4)
+│  ├─ adapter.ts                 SubscribeConnectionAdapter { subscribe } over the dispatcher (§3.4)
+│  ├─ admission.ts               submit() / retry() via ai.send, the outbox (§3.7)
 │  ├─ host.ts                    useThreadHost(): UseChatReturn over the owned ChatClient (§3.5)
 │  ├─ send.ts                    routeSubmit(): send | enqueue | blocked (§8.3), deriveSessionTitle (port)
 │  └─ errors.ts                  run-error classification (§4.6)
@@ -176,163 +177,167 @@ export interface ChatRuntime {
 
 `runtime.session(threadId)` returns a cached `ThreadSession` (an LRU of 8 threads; a session with a mounted view is pinned; the cache lives on `globalThis[Symbol.for("abacus.chat.sessions")]` so Fast Refresh keeps streams, as the transport does, foundation §8.1). A session owns:
 
-- the **`ChatClient`** of the current generation (the kit constructs it; `useChat` is **not** used, finding r1-1);
-- the **host store**: a TanStack `Store` mirroring the client's observable state for React (§3.5);
-- the **thread store** (§4) and the **dispatcher** (§3.4);
-- a **generation token** `gen` and the two cursors of §3.3.
+- the **`ChatClient`** of the current generation, constructed by the kit and used **only as a receive-side processor**: it is fed exclusively by the pump (§3.4) and the kit never calls a method that starts a request (§3.6; `useChat` is not used, review r1-1);
+- the **admission path** `session.submit()` / `session.retry()`, which calls `ai.send` directly and keeps pending user messages in an **outbox** (§3.7), outside `ChatClient` (review r2-2);
+- the **host store**: a TanStack `Store` that the React host reads (§3.5);
+- the **thread store** (§4), the **dispatcher** and the **pump** (§3.4);
+- a **generation token** `gen`, a **reset revision** `rev` (bumped by `session.cleared`), and the positions of §3.3;
+- the **connection state** `connection: "connecting" | "connected" | "reconnecting" | "error"`, owned by the pump (§3.4, review r2-13).
 
 Keeping this per document (not per component) means a Strict Mode remount, a route re-render or a second consumer in the same window share one client and one stream.
 
-### 3.2 Loading: `load()` and loader priming
+### 3.2 Loading and readiness
 
 ```ts
 interface ThreadSession {
-  load(): Promise<void>;          // resolves when generation `gen` has its snapshot applied and its client constructed
+  load(): Promise<void>;   // the current generation's readiness promise (below); the same promise for every caller
   readonly ready: boolean;
-  retire(): void;                 // LRU eviction / thread deleted: unsubscribe + dispose, abort the pump
+  retire(): void;          // LRU eviction / thread deleted: abort the pump, unsubscribe + dispose the client
 }
 ```
 
-- Route loaders (phases 3–4) **await** `context.chat.session(threadId).load()` (finding r1-11). The router shows its pending UI after `defaultPendingMs` (150 ms, foundation §6.4), and the navigation, including its view transition, commits only once the transcript content exists. A `load()` already in flight or a generation already `ready` returns at once; there is no time-based prime to expire.
+- `load()` returns the **in-flight readiness promise** of the current generation, creating a generation only when none exists or the last one failed (review r2-3). Every caller waits on the same promise; none bypasses it.
+- **Readiness** resolves when the generation's client has been constructed **and** its consumer has *applied* (§3.3) every event up to the checkpoint `N`. With no active run that is immediately after construction; with an active run it is after replay through `N`, so the transcript contains the active run's user echo and everything it streamed so far (review r2-3). A replay that has not reached `N` within 5 s resolves readiness anyway with `session.partial = true`; the view then shows what it has plus a `Skeleton` row at the end, and the rest arrives as it streams (a hung `joinRun` never hangs navigation).
+- Route loaders (phases 3–4) **await** `context.chat.session(threadId).load()` (review r1-11). The router shows its pending UI after `defaultPendingMs` (150 ms, foundation §6.4), and the navigation, including its view transition, commits only after readiness.
 - `ChatView` renders the transcript only when `session.ready`; before that (a direct mount without a loader, e.g. the gallery) it renders the registry `Skeleton` rows, never an empty log.
-- The opening scroll position is applied by the registry scroller while `data-pending-scroll` hides the viewport (`@shadcn/react ≥ 0.3.1`, F15); because content is present at mount, that hold covers the first paint. R2-T16 tests a slow hydrate (2 s) and a direct mount.
+- The opening scroll position is applied by the registry scroller while `data-pending-scroll` hides the viewport (`@shadcn/react ≥ 0.3.1`, F15); because content is present at mount, that hold covers the first paint. R2-T16 tests a slow hydrate, a slow `joinRun` with an empty completed transcript, and a direct mount.
 
-### 3.3 Generations and cursors (recovery)
+### 3.3 Generations, positions and recovery
 
-Every (re)construction of the thread view is a **generation** `g`. Starting a generation:
+Every (re)construction of the thread view is a **generation** `g`:
 
-1. `g = ++session.gen`; the previous generation's pump is aborted and its client, if any, is `unsubscribe()`d and `dispose()`d after the new one is ready (so the UI never flashes empty).
+1. `g = ++session.gen`. The new generation's client, host fields and positions are **staged** privately; the previous generation keeps rendering until the swap in step 7.
 2. `snap = await client.ai.hydrate({ threadId, limit: PAGE_SIZE })` → `ChatHydrationResult & { abacus: ThreadSnapshot }` (§14.1). If `session.gen !== g` on return, the result is dropped.
-3. **Messages** = `snap.messages`: the completed transcript only. Every message produced inside the active run (its user echo, steers, assistant text, tools, sub-agents) is **excluded** and is rebuilt from replay (finding r1-4, coordinator decision 5). An empty array is authoritative and replaces whatever the previous generation showed (finding r1-9).
-4. **Thread store** = `reset(snap.abacus)`: session-scoped slices (permissions, queue, agent state, skills, incarnation, run outcomes) from the snapshot, with `sessionCursor = snap.abacus.cursor` (`N`). Run-scoped slices (`tools.output`, `tools.display`, `activity`, `runs.active`) start **empty** and are rebuilt from replay (finding r1-10).
-5. A new `ChatClient` is constructed with `initialMessages = messages` (`types.ts:974`), the adapter of §3.4 bound to `g`, and the callbacks of §3.5; the kit then calls `client.subscribe()` (`chat-client.ts:2760`), which starts the client's single subscription loop over the dispatcher.
-6. The **pump** for `g` starts (§3.4).
+3. **Messages** = `snap.messages`: the completed transcript only. Every message produced inside the active run is **excluded** and rebuilt from replay (review r1-4). An empty array is authoritative (review r1-9).
+4. **Thread store** = `reset(snap.abacus)`: the session-scoped slices from the snapshot (§4.1, §14.1); run-scoped slices empty; `runs.active` seeded from `snap.abacus.activeRun` so the thread is busy and Stop has a target **before** any replayed content (review r2-1).
+5. A new `ChatClient` (§3.6) is constructed with `initialMessages = messages`; every callback is bound to `g` (§3.5); the kit calls `client.subscribe()` (`chat-client.ts:2760`), starting the client's single consumer loop over the dispatcher.
+6. The pump for `g` starts (§3.4).
+7. **Swap** at readiness (§3.2): in one host-store `setState`, the staged client and fields replace the previous generation's; then the previous client is `unsubscribe()`d and `dispose()`d. Its callbacks are already inert (they check `g`), so its teardown notifications (`unsubscribe` emits loading, subscription, generation and connection changes synchronously, `chat-client.ts:2779-2791`) cannot touch the new binding (review r2-6).
 
-Two cursors, both owned by the session:
+**Positions** (all per generation):
 
-| Cursor | Starts at | Guards |
+| Position | Starts at | Meaning |
 |---|---|---|
-| `sessionCursor` | `N` | session-scoped store slices: an event with `seq ≤ N` was already folded into the snapshot and is skipped for those slices |
-| `reconstructCursor` | the active run's `startSeq` (from `snap.abacus.activeRun.startSeq`) or `N` when no run is active | what the client has been fed; the pump yields each seq once, in order, and `seq ≤ reconstructCursor` is dropped |
+| `sessionCursor` | `N` (`snap.abacus.cursor`) | session-scoped store slices skip events with `seq ≤ N` (already in the snapshot) |
+| `receivedSeq` | `activeRun ? activeRun.startSeq − 1 : N` | the last seq the pump accepted from the server; the pump drops `seq ≤ receivedSeq`, so replay is the **inclusive** interval `[startSeq, …]` and `RUN_STARTED` is replayed (review r2-1) |
+| `appliedSeq` | same as `receivedSeq` | the last seq whose chunk the client has **processed** (§3.4) |
 
-A generation is **reconstructed** when `reconstructCursor ≥ N`. Recovery rules:
+A generation is **reconstructed** when `appliedSeq ≥ N`. Recovery:
 
 | Event | Before reconstructed | After reconstructed |
 |---|---|---|
-| `ai.joinRun` iterator errors or ends early (no terminal) | start a **new generation** (rehydrate). Never switch to `ai.subscribe` at `N` (finding r1-7) | switch to `ai.subscribe({ lastEventId: reconstructCursor })` |
-| `ai.subscribe` iterator errors (`RESYNC_REQUIRED`, transient) | — | reopen from `reconstructCursor` after 250 ms, 1 s, 4 s; the third failure sets the connection error (§3.5) |
-| `CUSTOM abacus.resync` (resume point fell out of the ring, transport A.3) | new generation | new generation |
-| `session.cleared` | handled in-band (§4.2) | handled in-band |
-| Retry button on the connection error, or `NOT_FOUND` then the row reappears | new generation | new generation |
+| `ai.joinRun` errors or ends without a terminal | a **new generation** (never switch to `ai.subscribe` at `N`, review r1-7) | switch to `ai.subscribe({ lastEventId: receivedSeq })` |
+| `ai.subscribe` errors (`RESYNC_REQUIRED`, transient) | — | `connection = "reconnecting"`; reopen from `receivedSeq` after 250 ms, 1 s, 4 s; the third failure sets `connection = "error"` |
+| `CUSTOM abacus.resync` | new generation | new generation |
+| Retry on the connection error; `NOT_FOUND` then the row reappears | new generation | new generation |
 
-A new generation constructs a fresh `ChatClient`, so the processor's per-message and per-tool stream state from the previous generation can never absorb replayed events (the processor keeps tool and message state that `setMessages` does not clear, `processor.ts:283-286` vs `resetStreamState` `:3048-3062`, which is private). This replaces r1's `detach(); attach()` resync, which neither restarted the subscription (`detach` does not abort it, `:1056-1065`) nor cleared messages on an empty hydrate (`:1186-1190`) (findings r1-8, r1-9).
+A new generation always gets a fresh `ChatClient`, so no per-message or per-tool processor state (`processor.ts:3048-3062` `resetStreamState` is private) can absorb replayed events (reviews r1-8, r1-9).
 
-### 3.4 The adapter and the dispatcher
+### 3.4 The adapter, the dispatcher and the pump
 
-The client is built in **ephemeral mode** (no `persistence`, no `history`), and the adapter implements only `subscribe` and `send` (`connection-adapters.ts:1023-1041`). Without `persistence: true` and without `joinRun`/`hydrate` on the connection, `attach()` never hydrates and `maybeRejoinInFlight` never runs (`chat-client.ts:1017-1039`, `:1120-1144`), so TanStack's own rejoin path, including `dropTrailingInFlightAssistant`, is not in play (F2). Hydration, joining and paging are the session's (§3.3, §10).
+The client is built in **ephemeral mode** (no `persistence`, no `history`) and its adapter implements only `subscribe` and `send` (`connection-adapters.ts:1023-1041`), so `attach()` never hydrates and TanStack's rejoin path, including `dropTrailingInFlightAssistant`, never runs (F2).
 
-**The dispatcher** is one wakeable queue per generation (findings r1-5, r1-6):
+**The pump** (one per generation) is the only reader of the server: `ai.joinRun({ runId })` when `snap.abacus.activeRun` is set (from `RUN_STARTED`, then live until the terminal, every event with its seq, §14.3), then `ai.subscribe({ threadId, lastEventId: String(receivedSeq) })`. Per server event: `abacus.subscribed` → `connection = "connected"` and nothing else (review r2-13; the first `joinRun` event also sets it); `abacus.resync` → new generation; `seq ≤ receivedSeq` → drop; otherwise `receivedSeq = seq` and `dispatcher.push({ seq, event })`. The pump never touches the store or the client.
 
-```ts
-interface Dispatcher {
-  push(item: { seq?: number; event: StreamChunk } | { local: LocalItem }): void;   // server pump, local items
-  close(reason: "generation" | "retired"): void;
-  stream(signal: AbortSignal): AsyncIterable<StreamChunk>;                          // the adapter's subscribe()
-}
+**The dispatcher** (review r1-5) is one wakeable queue per generation: `push`, `close` and the abort signal each resolve a single `Deferred` that `stream()` awaits, so nothing waits behind an idle server read. `stream(signal)` is the adapter's `subscribe()`:
+
+```
+for each queued item, in push order:
+  resume point from the previous yield ⇒ the client has processed the previous chunk:
+      appliedSeq = previous.seq; run post-apply hooks for it (below)
+  applyEvent(store, item.seq, item.event)          // pre-apply slices (§4.2)
+  yield item.event                                  // the client processes it synchronously on resume
 ```
 
-- `stream()` awaits a single `Deferred` that every `push`, every `close` and the abort signal resolve, then drains everything queued, in push order. A local item never waits behind an idle server read, because the server iterator runs in the **pump** (a separate async loop that only pushes), never inside `stream()`.
-- The pump for generation `g`: if `snap.abacus.activeRun`, iterate `client.ai.joinRun({ runId })` (events from `RUN_STARTED`, then live until the terminal, each with its seq, §14.3); then iterate `client.ai.subscribe({ threadId, lastEventId: String(reconstructCursor) })`. For each server event: skip `abacus.subscribed`; on `abacus.resync` start a new generation; skip `seq ≤ reconstructCursor`; apply to the thread store under the cursor rules of §3.3; set `reconstructCursor = seq`; `push`.
-- `subscribe(signal)` (adapter) returns `dispatcher.stream(signal)` of the adapter's generation. A stale generation's stream ends immediately.
+`consumeSubscription` calls `processIncomingChunk` synchronously for each chunk before pulling the next (`chat-client.ts:1942-1956`; it only yields to the host *between* chunks), so "the generator resumed" is exactly "the previous chunk was processed". **Post-apply hooks** therefore run in consumer order (review r2-5): recording a terminal's `RunOutcomeRecord` (its `steps` and `afterMessageId` read `client.getMessages()`, which now include that run's final parts), advancing `appliedSeq`, flipping `reconstructed`, and resolving readiness. A consumer that has not yet processed a chunk never sees its dependent store state.
 
-**`send(messages, _data, signal, runContext)`**:
+**`send`** is never called: the kit never calls `sendMessage`, `append`, `reload`, `addToolResult`, `addToolApprovalResponse` or the interrupt resume methods, which are the only callers of `streamResponse()` (`chat-client.ts:1620, 2345, 2452-2457, 2819, 3091`). `streamResponse()` resets the shared processor's stream state before calling `send` (`processor.prepareAssistantMessage()`, `:2551`, → `resetStreamState`, `processor.ts:378-381, 3048-3062`), which would drop another run's in-flight tool arguments and reasoning (review r2-2). The adapter's `send` therefore throws `Error("chat: send is not used")`, and R2-T30 bans those calls.
 
-```ts
-const user = lastUserMessage(messages);                       // UIMessage { id, role: "user", parts }
-const ack = await client.ai.send({ threadId, runId: runContext.runId, messages: [user],
-                                   forwardedProps: runContext.forwardedProps });   // { mode?, model? } only pre-start (§8.2)
-// ack: { runId, status: "started" | "queued" | "rejected" | "duplicate", reason?, entryId? }   (§14.5)
-session.recordAck(user.id, ack);
-if (ack.status === "queued" || ack.status === "rejected") throw new DOMException("admission " + ack.status, "AbortError");
-```
-
-- `started` / `duplicate`: resolve; the run's events, starting with the agent's own echo of this user message with the same id (`packages/agent/src/agui/host.ts:327-331`), arrive through the dispatcher. The processor finds the optimistic message already present and, with no stream state for it yet (`addUserMessage` creates none, `processor.ts:343-370`), the echo's single `CONTENT` replaces its text part with the same text (dedup Case 2, `:1288-1312`; `updateTextPart`, `message-updaters.ts:26-49`). The main echo proposed in r1 (F3) is withdrawn: two echoes would concatenate (finding r1-3).
-- `queued` / `rejected` settle **outside the shared processor** (finding r1-6): throwing an `AbortError` makes `streamResponse` return from its `catch` without awaiting `processingComplete` and without any chunk reaching the processor (`chat-client.ts:2656-2666`); the `finally` clears `isLoading` (`:2695-2705`). No synthetic `RUN_ERROR` exists, so a real run A in flight is untouched. The submit handler then reads `session.ackFor(userId)` and cleans up (§4.6).
-- The message is sent as a **UIMessage** (the contract's `UIMessageLoose`, `shared/contract/ai.ts`). The agent reads `content` (`host.ts:64-98`), so the conversion to the AG-UI wire happens at the main boundary with `uiMessagesToWire` (§14.2, finding r1-2).
-- The abort signal is ignored: `ChatClient` aborts on `unsubscribe()`/`stop()`/`dispose()`, which the kit only calls when retiring a generation; the run keeps going (Stop is `ai.cancel`, §4.5).
-- Thrown oRPC errors (`UNAVAILABLE`, `NOT_FOUND`, `CONFLICT`, `TIMEOUT`) propagate; `streamResponse` reports them through `onError` (`:2656-2690`); §4.6 handles them.
-
-**Why the order is total.** One pump per generation reads the server in seq order and is the only producer of server items; `stream()` is the only consumer; a new generation gets a new client, dispatcher and pump. Local items no longer exist (queued/rejected settle by `AbortError`), so the only ordering is the server's. R2-T3 checks this by property test, R2-T5 checks the "blocked read" case.
+**Why the order is total.** One pump per generation reads the server in seq order and is the only producer; `stream()` is the only consumer; admission never goes through the client; a new generation gets a new client, dispatcher and pump. R2-T3 checks this by property test, R2-T5 the idle-read and budget-crossing cases.
 
 ### 3.5 The React host (`useThreadHost`)
 
-`createChatUI`'s `ChatUIHost` is `UseChatReturn` (`create-ui.tsx:47-51`). The kit builds that object itself from the owned client:
+`createChatUI`'s `ChatUIHost` is `UseChatReturn` (`create-ui.tsx:47-51`). The kit builds it from the session:
 
 ```ts
-// runtime/host.ts
 import type { UseChatReturn } from "@tanstack/ai-react";                // exported type (ai-react src/index.ts:17-29)
 export function useThreadHost(session: ThreadSession): UseChatReturn {
-  const s = useStore(session.hostStore);                                 // @tanstack/react-store
-  const client = s.client;                                               // the current generation's ChatClient
+  const s = useStore(session.hostStore);
   return {
-    messages: s.messages, subagents: s.subagents, queue: s.queue, runId: s.runId,
-    isLoading: s.isLoading, status: s.status, error: s.error, isSubscribed: s.isSubscribed,
-    connectionStatus: s.connectionStatus, sessionGenerating: s.sessionGenerating,
-    interrupts: s.interrupts, pendingInterrupts: s.interrupts, interruptErrors: s.interruptErrors, resuming: s.resuming,
+    messages: withOutbox(s.messages, s.outbox),                          // §3.7
+    subagents: s.subagents, queue: [], runId: s.pendingRunId ?? s.activeRunId,
+    isLoading: s.outbox.length > 0, status: s.status, error: undefined,
+    isSubscribed: s.connection !== "error", connectionStatus: toConnectionStatus(s.connection),   // from the pump (§3.4)
+    sessionGenerating: s.activeRunId !== null,
+    interrupts: [], pendingInterrupts: [], interruptErrors: [], resuming: false,
     hasOlderMessages: s.hasOlderMessages,
-    sendMessage: (content, options) => client.sendMessage(content, undefined, options),
-    cancelQueued: (id) => client.cancelQueued(id),
-    append: (m) => client.append(m),
-    addToolResult: (r) => client.addToolResult(r),
-    addToolApprovalResponse: (r) => client.addToolApprovalResponse(r),
-    resolveInterrupts: ((r: never) => client.resolveInterrupts(r)) as UseChatReturn["resolveInterrupts"],
-    cancelInterrupts: () => client.cancelInterrupts(), retryInterrupts: () => client.retryInterrupts(),
-    resumeInterrupts: (r, st) => client.resumeInterrupts(r, st), resumeInterruptsUnsafe: (r, st) => client.resumeInterruptsUnsafe(r, st),
-    reload: () => client.reload(),
-    stop: () => session.cancel(),                                        // never client.stop() (F11)
+    sendMessage: (content) => session.submit(toText(content)),         // admission, §3.7
+    reload: () => session.retry(),                                       // admission, §4.6
+    stop: () => session.cancel(),                                        // ai.cancel, §4.5
     loadOlderMessages: () => session.loadOlder(),                        // §10
-    setMessages: (m) => client.setMessagesManually(m),
-    clear: () => client.clear(),
+    setMessages: () => { throw unsupported("setMessages") },
+    append: unsupported, addToolResult: unsupported, addToolApprovalResponse: unsupported,
+    cancelQueued: () => {}, clear: unsupported,
+    resolveInterrupts: unsupported as UseChatReturn["resolveInterrupts"], cancelInterrupts: () => {}, retryInterrupts: () => {},
+    resumeInterrupts: unsupported, resumeInterruptsUnsafe: unsupported,
   } satisfies UseChatReturn;
 }
 ```
 
-- The client's callbacks (`onMessagesChange`, `onLoadingChange`, `onStatusChange`, `onErrorChange`, `onSubscriptionChange`, `onConnectionStatusChange`, `onSessionGeneratingChange`, `onQueueChange`, `onRunIdChange`, `onInterruptStateChange`, `onError`; `ChatClientOptions`, `types.ts:1042-1135`) write into `hostStore`; `subagents` is read with `client.getSubagents()` in `onMessagesChange` (`chat-client.ts:3144`). A new generation swaps `client` and all fields in one `setState`.
-- `interrupts` is always empty (F13); the interrupt methods exist only to satisfy the type.
-- R2-T2 type-checks the returned object with `satisfies UseChatReturn` against `@tanstack/ai-react@0.29.3` (the pinned install, §14.9; the same version as the clone read here) and runs it through the real `createChatUI` `Provider`.
+- The generation-`g` client's callbacks (`onMessagesChange`, `onStatusChange`, `onRunIdChange`, `onSessionGeneratingChange`; `types.ts:1042-1135`) each start with `if (g !== session.gen) return` and write into the staged fields until the swap, then into the live ones (review r2-6). `subagents` is read with `client.getSubagents()` in `onMessagesChange` (`chat-client.ts:3144`). `activeRunId` comes from `store.runs.active`, not from the client.
+- The host's `sendMessage` maps to admission, so the kit's own components (and nothing else) can send. The stubbed methods exist only to satisfy the type; R2-T30 forbids calling them.
+- R2-T2 type-checks the object with `satisfies UseChatReturn` against `@tanstack/ai-react@0.29.3` (§14.9), renders it through the real `createChatUI`, and tears down an old generation, and delivers a late ack and a late page, after a swap, asserting the new binding is untouched.
 
 ### 3.6 Client options
 
 ```ts
 new ChatClient({
-  connection: adapter,                     // { subscribe, send } only (§3.4)
+  connection: { subscribe: (signal) => dispatcher.stream(signal), send: () => { throw new Error("chat: send is not used"); } },
   threadId,
-  initialMessages: snap.messages,
-  queue: throwWhenBusy,                    // F1 (below)
-  onError: (e) => session.onClientError(e),
-  …callbacks of §3.5,
+  initialMessages: snap.messages,          // types.ts:974
+  queue: throwWhenBusy,                    // F1: a request path is a bug
+  onError: guarded(g, (e) => session.onClientError(e)),
+  …guarded callbacks of §3.5,
 });
-const throwWhenBusy: QueueStrategy = ({ busyReason }) => {
-  throw new ChatBusyError(busyReason);     // "chat.send-while-busy"
-};
+const throwWhenBusy: QueueStrategy = ({ busyReason }) => { throw new ChatBusyError(busyReason); };
 ```
 
-`decideWhenBusy` runs synchronously inside `sendMessage` before any claim is taken (`chat-client.ts:2276-2279`), so the throw rejects `sendMessage()` without touching state. The composer never calls `sendMessage` while busy (§8.3); if a bug does, the rejection is caught by the submit handler, logged, and the text is re-routed to `ai.queue.enqueue` (coordinator decision 2; PLAN amendment added).
+`throwWhenBusy` is the loud guard the PLAN amendment records (F1): `decideWhenBusy` runs synchronously inside `sendMessage` before any claim (`chat-client.ts:2276-2279`). Since the kit never calls `sendMessage`, it can only fire through a bug, and then it rejects instead of queueing.
 
-### 3.7 TanStack AI APIs used (verified signatures)
+### 3.7 Admission (`session.submit`, `session.retry`)
+
+```ts
+async submit(text: string, forwardedProps?: { mode?: AgentMode; model?: string }): Promise<AdmissionResult> {
+  const g = this.gen, rev = this.rev;
+  const id = "u-" + crypto.randomUUID(), runId = "run-" + crypto.randomUUID();
+  outbox.add({ id, runId, text, createdAt: now });                          // renders as a pending user message
+  const ack = await client.ai.send({ threadId, runId,
+    messages: [{ id, role: "user", parts: [{ type: "text", content: text }] }], forwardedProps });
+  if (g !== this.gen || rev !== this.rev) { outbox.remove(id); return { kind: "stale" }; }   // review r2-6
+  // ack: { runId, status: "started" | "queued" | "rejected" | "duplicate", reason?, entryId? }   (§14.5)
+  if (ack.status !== "started" && ack.status !== "duplicate") outbox.remove(id);
+  return { kind: ack.status, reason: ack.reason };
+}
+```
+
+- **Outbox.** Pending user messages live in the host store, never in the processor. `withOutbox(messages, outbox)` appends each outbox entry whose `id` is not yet among the client's messages as a `UIMessage { id, role: "user", parts: [text], metadata: { abacus: { pending: true } } }`. When the agent's echo of that message (same id, `packages/agent/src/agui/host.ts:327-331`) is processed, the id appears in the client's messages and the entry is dropped from the outbox. No processor state is ever created or reset by admission, so a run already streaming, including its partial tool arguments and reasoning, is untouched (review r2-2).
+- **Acks.** `queued` → the entry leaves the outbox and the text appears in the queue slot from `queue.updated` (the agent queued it). `rejected` → the entry leaves and the draft is restored with an inline error (§4.6). `duplicate` → wait for the echo as for `started`. A thrown oRPC error → the entry leaves and §4.6 applies.
+- **Retry** (`session.retry()`, ErrorCard "Retry" and after `cancelled`): the same `ai.send` with a **new** run id and the **last user message's id and text** from the transcript; the agent admits it as a retry because the previous run for that message ended in `RUN_ERROR` or `cancelled` (agent spec §3.1.4). Never offered after a successful run.
+- **Stop before `RUN_STARTED`**: the outbox entry's `runId` is the Stop target (§4.5).
+- **Conversion.** The UIMessage goes to main as `UIMessageLoose`; main converts it with `uiMessagesToWire` at the relay boundary, keeping the id (§14.2).
+
+### 3.8 TanStack AI APIs used (verified signatures)
 
 | API | Signature (as used) | Source |
 |---|---|---|
-| `new ChatClient(options)` | `ChatClientOptions`: `connection`, `threadId`, `initialMessages`, `queue`, `onError` and the change callbacks | `chat-client.ts:589`, `types.ts:974-1135` |
+| `new ChatClient(options)` | `ChatClientOptions`: `connection`, `threadId`, `initialMessages`, `queue`, `onError` and change callbacks | `chat-client.ts:589`, `types.ts:974-1135` |
 | `subscribe()` / `unsubscribe()` / `dispose()` | `(options?: { restart?: boolean }): void` / `(): void` / `(): void` | `:2760`, `:2779`, `:3600` |
-| `sendMessage(content, body?, sendOptions?)` | `content: string \| MultimodalContent` (`{ content, id?, metadata? }`, `types.ts:395-410`) | `:2258` |
-| `QueueStrategy` | `(ctx: { pending, busyReason, queued }) => { action: WhenBusy }` | `types.ts:487-491` |
-| `reload()` | re-sends from the last user message | `:2793` |
-| `setMessagesManually(messages)` | replaces the processor's messages | `:3483-3486` |
-| `getMessages()`, `getSubagents()`, `getCurrentRunId()` | read accessors | `:3140`, `:3144`, `:1516` |
-| `SubscribeConnectionAdapter` | `{ subscribe(signal?), send(messages, data?, signal?, runContext?) }` | `connection-adapters.ts:1023-1041` |
+| `getMessages()`, `getSubagents()` | read accessors | `:3140`, `:3144` |
+| `setMessagesManually(messages)` | replaces the processor's message array (paging and retention only, §10) | `:3483-3486` |
+| `QueueStrategy` | `(ctx) => { action: WhenBusy }`; ours throws | `types.ts:487-491` |
+| `SubscribeConnectionAdapter` | `{ subscribe(signal?), send(...) }` | `connection-adapters.ts:1023-1041` |
 | `UseChatReturn` (type only) | the `ChatUIHost` shape | ai-react `src/types.ts:135-313`, `create-ui.tsx:47-51` |
-| `createChatUI(options, config)` | returns `{ Chat, Provider, Messages, Message, Part, Interrupts, Interrupt, Queue, Subagents, SubagentMessages, useChatContext, Input }` | `create-ui.tsx:371-1003` |
+| `createChatUI(options, config)` | `{ Chat, Provider, Messages, Message, Part, Interrupts, Interrupt, Queue, Subagents, SubagentMessages, useChatContext, Input }` | `create-ui.tsx:371-1003` |
 | `LayoutProps` / `MessageProps` / `PartProps` / `ToolProps` / `SubagentProps` | `{ Messages, Interrupts, Queue, Subagents, Input }` / `{ message, Parts }` / `{ part }` / `{ part, result?, interrupt? }` / `{ subagent, Parts }` | `create-ui.tsx:57-127` |
 | `TextPart` | `{ content, role?, className?, userClassName?, assistantClassName?, extensions?, highlighter?, components? }` | `chat-ui/text-part.tsx:10-34` |
 | `parsePartialJSON` | streaming tool-argument parse | `@tanstack/ai/client` (`src/client.ts:299`) |
@@ -358,8 +363,8 @@ export interface ThreadStoreState {
   queue: QueueEntry[];                                 // { id, message, waitingFor: "step" | "permission" | "turn" }
   runs: { active: ActiveRun | null; outcomes: RunOutcomeRecord[] };   // outcomes: from the snapshot (§14.7), then live terminals
   tools: { output: Record<ToolKey, string>; display: Record<ToolKey, ToolDisplayData> };   // live CUSTOM tool.output / tool.display
-  activity: { status: AgentStatus; runningTools: number; retry: RetryInfo | null };        // agent.status / heartbeat / retry
-  notices: Notice[];                                   // agent.notification, non-terminal agent.error
+  activity: { status: AgentStatus; runningTools: number; retry: RetryInfo | null };        // status, runningTools: snapshot + S events; retry: run-scoped (replay)
+  notices: Notice[];                                   // snapshot + S agent.notification / non-terminal agent.error
   skills: SkillMetadata[];                             // skills.loaded, for the `/` menu
 }
 type ToolKey = `${string}\u0000${string}`;             // (subagentRunId ?? "", toolCallId), agent spec §3.5.4
@@ -372,14 +377,14 @@ Types `PermissionDescriptor`, `AgentState`, `AgentErrorPayload`, `QueueEntry`, `
 
 ### 4.2 Event → store → component mapping
 
-`applyEvent(state, seq, chunk, cursors)` is pure. Session-scoped rows (marked *S* in agent spec §2.3, and `STATE_*`) apply only when `seq > sessionCursor`; run-scoped rows always apply, because the pump never delivers a seq twice within a generation (§3.3). `ChatClient` handles message parts independently from the same chunk. Columns: what the agent emits (agent spec §2.3/§3), what `StreamProcessor` makes of it (verified in `processor.ts`), what the store records, and which component renders it.
+`applyEvent(state, seq, chunk, positions)` is pure and runs in the dispatcher just before the chunk is yielded (§3.4). Rows are **session-scoped** (agent spec §2.3 *S*, and `STATE_*`: skipped when `seq ≤ sessionCursor`, because the snapshot already holds them, §14.1) or **run-scoped** (*R* names and all `RUN_*`/`TEXT_*`/`REASONING_*`/`TOOL_*`/`SUBAGENT_*`: always applied; replay is inclusive from `startSeq`). Terminal records (`RunOutcomeRecord`) are written by the **post-apply hook**, after the client processed the terminal (§3.4). `ChatClient` handles message parts independently from the same chunk.
 
 | AG-UI event (agent spec) | `StreamProcessor` → `UIMessage` part | Store | Component |
 |---|---|---|---|
-| `RUN_STARTED {runId, metadata.abacus.serverInitiated?}` | `activeRuns.add` (`:2115`); client `sessionGenerating` | `runs.active = { runId, startedAt: event timestamp, serverInitiated }`; clear `tools.*` of finished runs | `BusyLine` (sessions: "Working 12.4s"), `Typing` bubble (bots), Stop button |
-| `RUN_FINISHED {outcome: success}` + `usage[]`, `metadata.abacus.{turnUsage, stopReason}` | finalize (`:2131-2161`) | append a `RunOutcomeRecord { kind: "success", usage, steps, afterMessageId }`; `active = null` | `RunMarker` "Done in 48s, 7 steps" (sessions), usage in its hover card; nothing for bots |
+| `RUN_STARTED {runId, metadata.abacus.serverInitiated?}` | `activeRuns.add` (`:2115`); client `sessionGenerating` | `runs.active = { runId, startedAt: event timestamp, serverInitiated }` (also seeded from the snapshot at load, §3.3); clear `tools.*` of finished runs | `BusyLine` (sessions: "Working 12.4s"), `Typing` bubble (bots), Stop button |
+| `RUN_FINISHED {outcome: success}` + `usage[]`, `metadata.abacus.{turnUsage, stopReason}` | finalize (`:2131-2161`) | post-apply: append a `RunOutcomeRecord { kind: "success", usage, steps, afterMessageId }`; `active = null` | `RunMarker` "Done in 48s, 7 steps" (sessions), usage in its hover card; nothing for bots |
 | `RUN_FINISHED {outcome: cancelled}` | finalize | `kind: "cancelled"` | `RunMarker` "Stopped" (muted) |
-| `RUN_ERROR {code, message, metadata.abacus.error}` | empty assistant message if none active (F12); `onError(Error{code})` | append a `RunOutcomeRecord { kind: "error", error }` | `ErrorCard` with actions (§5.6); `queued`/`rejected`/`agent_*` handled per §4.6 |
+| `RUN_ERROR {code, message, metadata.abacus.error}` | empty assistant message if none active (F12); `onError(Error{code})` | post-apply: append a `RunOutcomeRecord { kind: "error", error }` | `ErrorCard` with actions (§5.6); `queued`/`rejected`/`agent_*` handled per §4.6 |
 | `TEXT_MESSAGE_START/CONTENT/END {role: "assistant"}` | `text` part (`:1221-1350`, `:1772-1848`) | — | `TextPart` via `Markdown` (§7) inside `BotMessage` bubble or `SessionMessage` prose |
 | `TEXT_MESSAGE_* {role: "user"}` (`runId:user`, `steer-N`) | user message with a `text` part (role kept from `START`, `:1228-1231`) | — | user bubble (bot tint) / right-aligned muted bubble (sessions); `@path` lines → attachment chips (§8.6) |
 | `REASONING_START … REASONING_END` | `thinking` part (`:2375-2412`) | — | `ThinkingPart`: registry `Marker` + `Collapsible`, shimmer while it is the message's last part and the run is active (§5.3) |
@@ -402,7 +407,7 @@ Types `PermissionDescriptor`, `AgentState`, `AgentErrorPayload`, `QueueEntry`, `
 | `CUSTOM agent.retry {attempt, maxAttempts, delayMs, isNetworkError}` (R) | forwarded | `activity.retry` (cleared on the next text/tool event or terminal) | `BusyLine` "Retrying, 2 of 5" |
 | `CUSTOM agent.error` (S, non-terminal) / `agent.notification` (S) | forwarded | `notices.push` (deduplicated by `notificationKey`) | `Notice` rows above the composer (actions as buttons, §5.6) |
 | `CUSTOM session.ready {incarnation, …}` (S) | forwarded | `incarnation`; drop descriptors of another incarnation | — |
-| `CUSTOM session.cleared` (S) | forwarded | reset store except `agent`, `skills` | `client.setMessagesManually([])` |
+| `CUSTOM session.cleared` (S) | forwarded | `rev += 1` (post-apply) | a **new generation** (§3.3): fresh snapshot and client, so the transcript is replaced authoritatively and pending pages and acks from before the reset are discarded |
 | `CUSTOM skills.loaded {skills}` (S) | forwarded | `skills` | `/` menu |
 | `CUSTOM run.ack`, `wire.hello`, `wire.compat_lost`, `mcp.*` | forwarded | ignored (main or Library consume them) | — |
 | `CUSTOM abacus.subscribed` / `abacus.resync` (main, transport A.3) | never reach the client | — | the pump (§3.4) |
@@ -421,33 +426,32 @@ The agent emits `replace /mode`, `replace /modeSource`, `replace /model` and `ad
 ```ts
 busy(threadId) = sessionsRow.turn?.isBusy === true        // db.sessions turn column (transport A.2.3, B.2): pending | streaming | waiting_permission
               || store.runs.active !== null                // RUN_STARTED seen, terminal not yet
-              || host.isLoading                            // a local send in flight before RUN_STARTED
+              || outbox.length > 0                         // an admission in flight or awaiting its echo (§3.7)
 ```
 
 Any one of them makes the composer busy. The turn column is main's own view derived from compat (agent spec §3.1.6); the other two close the window before the turn column's change batch arrives (§8.3).
 
 ### 4.5 Stop
 
-`runtime.cancel(threadId)` calls `ai.cancel({ threadId, runId })` with `runId = store.runs.active?.runId ?? client.getCurrentRunId()` (the client-generated id of a send that has not yet seen `RUN_STARTED`, `chat-client.ts:2481`; the agent applies `cancel {runId}` to a run whose admission is still preparing, agent spec §3.8). The UI never calls `ChatClient.stop` or `SubagentHandle.stop` (F11); the host's `stop` is `session.cancel()` (§3.5). The run settles with `RUN_FINISHED {cancelled}`, which resolves `processingComplete` normally. Stop is shown only while busy; a second press while cancelling is ignored until the terminal (button shows a spinner). The sub-agent card's Stop calls the same function (agent spec §3.6: it stops the whole turn, as today).
+`runtime.cancel(threadId)` calls `ai.cancel({ threadId, runId })` with `runId = store.runs.active?.runId ?? outbox.last?.runId` (the kit-generated id of an admission that has not yet seen `RUN_STARTED`, §3.7; the agent applies `cancel {runId}` to a run whose admission is still preparing, agent spec §3.8). The UI never calls `ChatClient.stop` or `SubagentHandle.stop` (F11); the host's `stop` is `session.cancel()` (§3.5). The run settles with `RUN_FINISHED {cancelled}`, which resolves `processingComplete` normally. Stop is shown only while busy; a second press while cancelling is ignored until the terminal (button shows a spinner). The sub-agent card's Stop calls the same function (agent spec §3.6: it stops the whole turn, as today).
 
-### 4.6 Run errors and send failures
+### 4.6 Run errors and admission failures
 
-`session.onClientError(error)` receives the `Error` built by `runErrorEventToError` (`code` copied from a real `RUN_ERROR`, `@tanstack/ai/src/utilities/errors.ts:80-94`) or an error thrown by `send`. Admission outcomes are not errors: they come from `session.ackFor(userMessageId)` after `sendMessage()` settles (§3.4).
+Real run failures arrive as `RUN_ERROR` through the pump; admission outcomes come from `session.submit()`'s result (§3.7). Neither path touches the other.
 
 | Case | Detect | Handling |
 |---|---|---|
-| ack `queued` (two-window race) | `ackFor(id).status === "queued"` | Remove the optimistic user message: `client.setMessagesManually(client.getMessages().filter(m => m.id !== id))`. The processor saw no chunk, so no empty assistant message exists. The text is already in the host queue (the agent queued it, `host.ts` busy branch) and shows through `queue.updated`. No error card. |
-| ack `rejected` (`empty`, `resume_unsupported`, `regenerate_unsupported`) | `status === "rejected"` | Same removal; restore the draft; inline composer error "The agent didn't accept that message." None of these reasons is reachable from the kit's own controls; the path exists for robustness. |
-| ack `duplicate` | — | nothing (the original run's events are in the log) |
-| a real `RUN_ERROR` (`turn_failed`, out of credits, `stall`, `compat_lost`, `agent_exit`, `agent_crashed`, `inactivity_timeout`) | `onError` with `code` | The run outcome record (§4.1) drives the `ErrorCard` (§5.6). The processor may have created an empty assistant message (F12); it renders nothing. `agent_exit`/`agent_crashed`: title "The agent stopped unexpectedly" plus Retry. |
-| `ai.send` throws `UNAVAILABLE` / `TIMEOUT` | `onError`, no ack | Remove the optimistic message, restore the draft, composer error "The agent isn't ready. Try again." with Retry. |
-| `ai.send` throws `NOT_FOUND {entity: "thread" \| "session"}` | same | The thread is gone: composer turns read-only "This conversation no longer exists." (§12.5). |
-| `ai.send` throws `CONFLICT` | same | Remove the optimistic message and route the text through `ai.queue.enqueue`. |
-| `sendMessage` rejects with `ChatBusyError` (F1 backstop) | caught in the submit handler | Log `chat.send-while-busy`; route the text through `ai.queue.enqueue`. |
+| ack `queued` (two-window race) | `submit()` → `{ kind: "queued" }` | The outbox entry is removed; the text shows in the queue slot through `queue.updated` (the agent queued it). No processor change, no error card. |
+| ack `rejected` (`empty`, `resume_unsupported`, `regenerate_unsupported`) | `{ kind: "rejected", reason }` | Outbox entry removed; draft restored; inline composer error "The agent didn't accept that message." |
+| ack `duplicate` | `{ kind: "duplicate" }` | Wait for the echo, as for `started`. |
+| `ai.send` throws `UNAVAILABLE` / `TIMEOUT` | rejected promise | Outbox entry removed, draft restored, "The agent isn't ready. Try again." with Retry. |
+| `ai.send` throws `NOT_FOUND {entity: "thread" \| "session"}` | same | The composer turns read-only "This conversation no longer exists." (§12.5). |
+| `ai.send` throws `CONFLICT` | same | Outbox entry removed; the text is sent with `ai.queue.enqueue`. |
+| `{ kind: "stale" }` (a new generation or a reset happened meanwhile) | — | Nothing (the entry was removed); if the draft was cleared optimistically it is restored. |
+| a real `RUN_ERROR` (`turn_failed`, out of credits, `stall`, `compat_lost`, `agent_exit`, `agent_crashed`, `inactivity_timeout`) | pump → post-apply hook | `RunOutcomeRecord { kind: "error" }` drives the `ErrorCard` (§5.6); an empty assistant message the processor may create (F12) renders nothing. `agent_exit`/`agent_crashed`: "The agent stopped unexpectedly" plus Retry. |
+| `ChatBusyError` / `"chat: send is not used"` | would only come from a forbidden call | A bug: logged; R2-T30 prevents it statically. |
 
-The client's own `status: "error"` and `error` are not rendered directly; errors render from run outcome records and the composer error state.
-
-**Retry** (ErrorCard action `retry`, and after `cancelled`): `client.reload()`, which removes messages after the last user message and re-sends it (`chat-client.ts:2793-2823`); the agent admits it as a retry because the previous run for that message ended in `RUN_ERROR` or `cancelled` (agent spec §3.1.4). `reload()` is never offered after a successful run.
+The client's own `status`/`error` are not rendered. **Retry** is `session.retry()` (§3.7).
 
 ---
 
@@ -459,7 +463,7 @@ The client's own `status: "error"` and `error` are not rendered directly; errors
 const options = { /* type-only: no tools or interrupts are declared */ } as const;
 export const SessionUI = createChatUI(options, {
   components: { layout: ChatLayout, message: SessionMessage, input: ComposerSlot },   // `queue` not set: QueueSlot reads the store (§8.5)
-  partsComponents: { text: TextPartView, thinking: ThinkingView, image: ImageView, document: DocumentView, fallback: UnknownPart },
+  partsComponents: { text: TextPartDispatch, thinking: ThinkingView, image: ImageView, video: VideoView, document: DocumentView, fallback: UnknownPart },
   toolsComponents: toolWidgets,             // Proxy (§5.2)
   subagentsComponents: subagentWidgets,     // Proxy (§5.2)
 });
@@ -567,8 +571,8 @@ normalizeTool(call: ToolCallPart, result: ToolResultPart | undefined, live: { ou
 
 | Source | Detect | Mapping |
 |---|---|---|
-| **Live** (agent spec §3.3.6) | `call.output` is an object with a string `text` (the parsed `ToolResultContent`) | `text`, `error`, `formatted`; `diff` from `output.display` merged over `live.display` (`originalContent`, `newContent`/`finalContent`, `additions`, `deletions`, `isNewFile`); `terminal` from `output.terminal.output` or `live.output` while running, `command` from `call.input.command`; `read.lineCount` from `display.lineCount` |
-| **Migrated** (transport C.3) | `call.metadata.abacus.segmentId` present, or `result.metadata.abacus.data` present | `text` = `call.output` (legacy `ToolResult.output`, a string) or `result.content`; `error` = `result.error`; by `result.metadata.abacus.data.type` (legacy `ToolResultData`, `renderer/conversation/agent-types.ts:273-322`): `read` → `read`; `file_mutation` → `diff` (`originalContent`, `finalContent`, `diff`, `additions`, `deletions`, `isNewFile`); `bash` → `terminal` (`command`, `output`, `exitCode`, `timedOut`, `background`); `mcp`/`generic` → `text` |
+| **Live** (agent spec §3.3.6) | origin = live unless the migrated test below matches; decided from the call alone, so it holds **before** any result exists (review r2-9). Before the result: `status: "running"`, `terminal.output = live.output`, `diff` from `live.display` (merged patches, §4.2). After: `call.output` is the parsed `ToolResultContent` | `text`, `error`, `formatted`; `diff` from `output.display` merged over `live.display` (`originalContent`, `newContent`/`finalContent`, `additions`, `deletions`, `isNewFile`); `terminal` from `output.terminal.output` or `live.output` while running, `command` from `call.input.command`; `read.lineCount` from `display.lineCount` |
+| **Migrated** (transport C.3) | `call.metadata?.abacus?.segmentId` is a string (every C.3 tool-call part has it) | `text` = `call.output` (legacy `ToolResult.output`, a string) or `result.content`; `error` = `result.error`; by `result.metadata.abacus.data.type` (legacy `ToolResultData`, `renderer/conversation/agent-types.ts:273-322`): `read` → `read`; `file_mutation` → `diff` (`originalContent`, `finalContent`, `diff`, `additions`, `deletions`, `isNewFile`); `bash` → `terminal` (`command`, `output`, `exitCode`, `timedOut`, `background`); `mcp`/`generic` → `text` |
 | **Status** (both) | — | the §5.4 status table, using C.3's result `state`/`outcome` for migrated history (denied → "refused", cancelled → "stopped") |
 
 R2-T13 covers live and migrated successful, denied, cancelled, edit and terminal cases.
@@ -589,7 +593,7 @@ R2-T13 covers live and migrated successful, denied, cancelled, edit and terminal
 
   | `action.type` | Button | Effect |
   |---|---|---|
-  | `retry` | "Retry" | `client.reload()` (§4.6) |
+  | `retry` | "Retry" | `session.retry()` (§3.7) |
   | `switch-model` with `model` | "Continue on {label ?? model}" (today's `workspace.premiumUpgrade.continueOn`) | `composer.model.onChange(model)` |
   | `switch-model` without `model` | "Switch model" | opens the model picker |
   | `upgrade-abacus`, `free-pool-out` | the **upgrade variant** of the card | ported from `components/chat/premium-upgrade-card.tsx`: `wantsUpgradeCard`, `exhaustedScope` ("abacus" vs "pool" title) and `freeModelSwitches` (`:186-212`) verbatim, and its top-up CTA opening `ABACUS_BUY_CREDITS_URL` or `ABACUS_PLAN_URL` by account tier (`:113-122`, tier from the `account.*` query) |
@@ -681,7 +685,7 @@ export function Markdown({ content, role, streaming }: { content: string; role: 
 ```
 
 - `TextPart` adds `streamingMarkdownExtension()` (trims trailing empty headings, list items and blockquotes) and passes `frontmatter={false} headingIds={false}` (`text-part.tsx:78-93`). Raw HTML stays escaped (`allowHtml` is never set) and `sanitizeUrl` keeps only relative, `#`, `http(s):`, `mailto:`, `tel:` URLs.
-- `@tanstack/markdown` re-parses the whole string on every render (`dist/react.js:6-8`). r1's stable-prefix split is **removed** (review r1-18): reference links and footnotes need document-wide context. Each message renders as one document; R2-T31 measures the cost.
+- `@tanstack/markdown` re-parses the whole string on every render (`dist/react.js:6-8`). Each message is parsed as one document, because reference links and footnotes need document-wide context (review r1-18); R2-T31 measures the cost.
 - `MARKDOWN_COMPONENTS` (tag-name map, `dist/react.js:166-169`): `a` → `ChatLink` (§7.5); `pre` → `CodeBlock` (§7.4); `code` → `InlineCode` (§7.3); `table` → wrapped in a horizontally scrolling `div` with `scroll-fade-x`; `img` → lazy, max-width 100%, click to open in a dialog.
 - Streamed text gets no per-token motion; the last block fades in over 80 ms via CSS on `.chat-prose > :last-child` while `streaming` (PLAN motion table).
 
@@ -791,11 +795,10 @@ type SubmitRoute =
 routeSubmit({ text, attachments, busy, readOnly, questionPending, preStart, hydrated }): SubmitRoute
 ```
 
-- `send`: `host.sendMessage({ content: finalText, id: "u-" + crypto.randomUUID() }, preStart ? { body: forwardedProps } : undefined)`. The known id lets §4.6 remove exactly this message on an ack of `queued`/`rejected` (read with `session.ackFor(id)` after `sendMessage()` settles) or on a thrown send error. The draft clears optimistically and is restored on those failures.
+- `send`: `session.submit(finalText, preStart ? { mode, model } : undefined)` (§3.7). The draft clears optimistically and is restored on `rejected`, a thrown error or `stale`; `queued` clears it for good (the text is in the queue slot).
 - `enqueue`: `runtime.queue.enqueue(threadId, finalText)` → `ai.queue.enqueue`. The draft clears when the procedure resolves; on error it stays with an inline error. The queued text appears through `queue.updated` (never from local state), so a second window sees it too.
 - `blocked`: `question-pending` when an `ask_user_question` descriptor is pending (its card owns the slot); `uploading` while an attachment is still saving; `loading` while the session has no ready generation (§3.2).
-- A send that reaches the `QueueStrategy` backstop (F1) makes `sendMessage()` reject with `ChatBusyError` before any state changes; the handler logs it, keeps the draft's text and re-routes it through `enqueue`.
-- `busy` is §4.4. The composer never calls `sendMessage` while busy (agent spec §3.1.6); the `QueueStrategy` backstop (F1) only catches bugs.
+- `busy` is §4.4. The composer never admits while busy (agent spec §3.1.6); a busy submit is an `enqueue`.
 - **Session titling** (ported from `conversation/transport.ts:94, 497-525` and its tests, transport-bridge "naming a session from its first message"): on the first `send` of a session whose `collections.sessions` row label is `"Untitled"` or blank, `deriveSessionTitle(text)` (copied verbatim) is written with `collections.sessions.update(id, { label })`; empty titles (e.g. a code-only message) are skipped; failures are swallowed and never block the send.
 
 ### 8.4 Keyboard
@@ -870,8 +873,11 @@ Reserved for phase 3/4 (not built here): `bot-identity-{botId}` (foundation §6.
 - **Stick to bottom**: `autoScroll` follows the end while streaming; a user scroll up releases it (clone controller `:148-177`, `:632-643`). New user turns anchor to the top of the viewport with a 64 px peek of the previous message (`:437-461`).
 - **Scroll button**: `MessageScrollerButton direction="end"` bottom-centre above the composer (PLAN "jump-to").
 - **New-message marker** (the registry has none, clone docs `message-scroller.mdx:40`): `NewMessagesMarker` tracks the id of the first message that arrived while `useMessageScrollerScrollable().end === true`; it renders a registry `Marker variant="separator"` "{n} new" before that message (canvas BotChannel "2 new"), and the scroll button shows the count. It clears when that message becomes visible (`useMessageScrollerVisibility().visibleMessageIds`) or when the user sends.
-- **History paging** (the client is ephemeral, so paging is the session's): when the viewport reaches the start and `snap.page.truncated`, `session.loadOlder()` calls `ai.hydrate({ threadId, limit: PAGE_SIZE, before: cursor })` and prepends with `client.setMessagesManually([...older, ...client.getMessages()])` in one synchronous step (older ids never collide with streaming ones; `setMessages` only replaces the array, `processor.ts:283-286`). Prepend preservation keeps the viewport stable. A `Skeleton` row shows while loading; a failure shows "Couldn't load earlier messages" + Retry.
-- **Bounded retention** (finding r1-22): at most `MAX_MOUNTED = 300` messages stay in the client. When a prepend or a long run pushes past it while the user is at the end, the oldest messages beyond the limit are dropped (same `setMessagesManually` step) and `hasOlderMessages` becomes true again with the cursor of the new first message; when the user is reading history, trimming is deferred until they return to the end. Active-run replay is never trimmed. R2-T31 is a **gate** (§13).
+- **History paging** (the client is ephemeral, so paging is the session's): when the viewport reaches the start and the snapshot's `page.truncated`, `session.loadOlder()` captures `{ gen, rev, client }`, calls `ai.hydrate({ threadId, limit: PAGE_SIZE, before: cursor })`, and on return **discards** the page if `gen`, `rev` or the client changed (a recovery or a `session.cleared` happened meanwhile, review r2-7). Otherwise it prepends in one synchronous step: messages deduplicated by id, `client.setMessagesManually([...older, ...client.getMessages()])` (`setMessages` only replaces the array, `processor.ts:283-286`), and the page's `abacus.runOutcomes` merged into `store.runs.outcomes` by `runId` (review r2-8). Prepend preservation keeps the viewport stable. A `Skeleton` row shows while loading; a failure shows "Couldn't load earlier messages" + Retry.
+- **Bounded rendering and retention** (reviews r1-22, r2-12). Two budgets, independent of each other:
+  - **Mounted rows** (`MAX_ROWS = 400`, counting messages, tool rows and sub-agent rows as the transcript renders them): the transcript mounts only the newest rows within the budget; everything older is a single "Show earlier" row that mounts the next 100 on activation or when scrolled into view. This bounds a replayed active run of any length and a single message with thousands of tool calls, because within one message tool rows past the first 50 collapse into "{n} more steps" (expanded in batches of 100). Rows are unmounted only while the user is at the end, so reading history never shifts.
+  - **Processor retention** (`MAX_MESSAGES = 300`): when a prepend pushes the client past it while the user is at the end, the oldest completed messages (never the active run's) are dropped with `setMessagesManually` together with their outcome records, and the paging cursor is moved to the new first message, so `hasOlderMessages` is true again.
+  R2-T31 is a **gate** over both (§13).
 - **Timestamps** (finding r1-20): `messageTime(m) = m.createdAt ?? parseIso(m.metadata?.tanstack?.createdAt) ?? null` (C.3 keeps time in `metadata.tanstack.createdAt`). Day separators (BotChat "Today") are placed before the first message of each local day with a known time; messages without a time never start a new day.
 - **Scroll fade at the top** (BotChatScrolled): the viewport's `scroll-fade-t` when scrolled.
 
@@ -953,7 +959,7 @@ Covered in §6.3 (second window, notch, auto-allow, expiry). R2-T22.
 
 ### 12.6 Queue while busy
 
-§8.3/§8.5. The two-window race (`queued` ack) is §3.4 + §4.6. R2-T21.
+§8.3/§8.5. The two-window race (`queued` ack) is §3.7 + §4.6. R2-T21.
 
 ### 12.7 Other cases
 
@@ -974,27 +980,27 @@ Projects: **jsdom** = vitest project `renderer-next` (foundation §3.7); **Elect
 
 | Id | File | Runs in | What it proves |
 |---|---|---|---|
-| R2-T1 | `runtime/cursors.test.ts` | jsdom | §3.3 table: `sessionCursor`/`reconstructCursor` initial values with and without an active run; `reconstructed` flips at `N`; join failure before `N` starts a new generation, after `N` switches to `subscribe` at `reconstructCursor`; `abacus.resync` always starts a new generation; a stale generation's hydrate result is dropped. |
-| R2-T2 | `runtime/host.test.tsx` + `host.types.test.ts` | type + jsdom | `useThreadHost` output `satisfies UseChatReturn` from `@tanstack/ai-react@0.29.3`; rendered through the real `createChatUI` `Provider`/`Chat`; every host field tracks the client's callbacks; a generation swap replaces `client` and all fields in one commit; `stop` calls `ai.cancel`, never `ChatClient.stop` (finding r1-1). |
+| R2-T1 | `runtime/positions.test.ts` | jsdom | §3.3: `receivedSeq`/`appliedSeq` start at `startSeq − 1` with an active run (so `RUN_STARTED` is replayed; inclusive interval) and at `N` without one; before any replayed content the store's `runs.active`, `busy`, the Stop target and the client's `sessionGenerating` are set (review r2-1); `reconstructed` flips only when `appliedSeq ≥ N`; recovery table rows; a stale generation's hydrate is dropped. |
+| R2-T2 | `runtime/host.test.tsx` + `host.types.test.ts` | type + jsdom | `useThreadHost` output `satisfies UseChatReturn` from `@tanstack/ai-react@0.29.3`; rendered through the real `createChatUI`; `sendMessage`/`reload`/`stop` map to `submit`/`retry`/`cancel`; after a generation swap, the old client's `unsubscribe()`/`dispose()` notifications, a late `submit` ack and a late older page from the old generation leave the new binding unchanged (reviews r1-1, r2-6). |
 | R2-T3 | `runtime/ordering.test.ts` | jsdom | Seeded property test (2,000 sequences) over hydrate at `N`, join replay, live events, iterator failures at every position and generation restarts: the client of the final generation processes every seq in `(startSeq, max]` exactly once, in order, and its `getMessages()` equals a fresh `StreamProcessor` fed the completed transcript then the same events. |
 | R2-T4 | `runtime/recovery.test.ts` | jsdom (memory transport) | Join failure after each individual replay chunk before `N` → new generation, final messages identical to an uninterrupted client (finding r1-7); failure after `N` → seamless switch; `abacus.resync` with a subscription open and with a join open → new generation, one subscription afterwards, old client disposed (finding r1-8); ring eviction with a `session.cleared` during the gap → the new generation shows `[]` (finding r1-9). |
-| R2-T5 | `runtime/dispatcher.test.ts` | jsdom | The dispatcher wakes for a push while the pump's server read is idle and for an abort; items keep push order; a closed generation's stream ends (finding r1-5). A `queued` ack while an open subscription has no further server event settles `sendMessage()` immediately. |
+| R2-T5 | `runtime/dispatcher.test.ts` | jsdom | The dispatcher wakes for a push while the pump's server read is idle and for an abort; items keep push order; a closed generation's stream ends (review r1-5). With a replay larger than the client's 8 ms processing budget (`chat-client.ts:92`), `appliedSeq` trails `receivedSeq` and every terminal's `RunOutcomeRecord` (steps, `afterMessageId`) and readiness are computed only after the client processed that terminal (review r2-5). |
 | R2-T6 | `runtime/user-echo.test.ts` | jsdom (memory transport + real host) | The agent's own echo (`host.ts:327-331`) with the client id leaves exactly one user message with unchanged text in the sending window (single-line, multi-line, 20 KB), and the same message in a second window and in a later hydrate; no main-side echo exists (finding r1-3). |
 | R2-T7 | `runtime/unmounted.test.ts` | jsdom | A run finishes while the view is unmounted; remount (same session within the LRU, or a retired one) shows the finished transcript and its outcome record, no busy state, no leaked iterator (the fake counts open iterators: 0 after `retire`). |
-| R2-T8 | `store/apply.test.ts` | jsdom | The §4.2 table row by row; session slices skip `seq ≤ sessionCursor` while run-scoped slices rebuild from replay: a reload during live bash output restores the output so far, a reload after `tool.display` but before the result restores the diff (finding r1-10); `tool.display` patches merge (finding r1-17); `permission.pending` authoritative; incarnation change drops old descriptors; `session.cleared` resets. |
+| R2-T8 | `store/apply.test.ts` | jsdom | The §4.2 table row by row; session slices from the snapshot (permissions, queue, agent, skills, activity, notices, outcomes) with no further events arriving after hydrate (review r2-4); run-scoped slices rebuilt from inclusive replay: a reload during live bash output restores the output so far, a reload after `tool.display` but before the result restores the diff (review r1-10); successive disjoint `tool.display` patches merge (review r1-17); `permission.pending` authoritative; incarnation change drops old descriptors; `session.cleared` resets. |
 | R2-T9 | `store/json-patch.test.ts` | jsdom | `add`/`replace`/`remove`, pointer escaping, `add /plan` when absent (agent spec finding 19), idempotent re-application, unsupported op → `agent = null` until the next snapshot. |
-| R2-T10 | `store/busy.test.ts` | jsdom | `busy` is true from submit to terminal across: the turn column arriving before and after `RUN_STARTED`, a send before `RUN_STARTED`, a server-initiated run, a permission wait. (busy reads `host.isLoading`.) |
-| R2-T11 | `kit/parts.test.tsx` | jsdom | Real `createChatUI` over live and **C.3-migrated** fixtures: plain text, every `metadata.abacus.kind` (notification with actions, collapsible, web_search_results, feature_limit, compaction, unknown), image, video, credits footer, tool groups; empty assistant message renders nothing (finding r1-12). |
+| R2-T10 | `store/busy.test.ts` | jsdom | `busy` is true from submit to terminal across: the turn column arriving before and after `RUN_STARTED`, an admission before `RUN_STARTED` (outbox), a server-initiated run, a permission wait, and a restored active run before any replayed content. |
+| R2-T11 | `kit/parts.test.tsx` | jsdom | The exported `SessionUI` and `BotUI` configurations (not test-local ones) over live and C.3-migrated fixtures: plain text, every `metadata.abacus.kind`, image, **video** (registered, review r2-10), credits footer, tool groups; empty assistant message renders nothing (review r1-12). |
 | R2-T12 | `kit/widget-maps.test.tsx` | jsdom | F7: an MCP tool name and an unknown sub-agent name render `ToolLine` and `SubagentCard`; no `console.warn`, no throw; a card's nested `<Parts/>` still resolves unknown tool names (proxy not spread). |
-| R2-T13 | `kit/tool-line.test.tsx` + `tools/normalize.test.ts` | jsdom | `normalizeTool` for live and migrated successful, denied, cancelled, edit (diff) and terminal results (finding r1-13); status words; title equals `buildToolTitle(name, finalInput)` after `TOOL_CALL_END` and uses `parsePartialJSON` before; expanders render from `NormalizedTool` only. |
+| R2-T13 | `kit/tool-line.test.tsx` + `tools/normalize.test.ts` | jsdom | `normalizeTool` on recorded emitter calls with `output === undefined` (running), streamed `tool.output`, successive `tool.display` patches, then the result (review r2-9); migrated successful, denied, cancelled, edit and terminal results (review r1-13); status words; title equals `buildToolTitle(name, finalInput)` after `TOOL_CALL_END` and uses `parsePartialJSON` before. |
 | R2-T14 | `kit/subagents.test.tsx` | jsdom | Parallel delegates with colliding legacy ids stay apart; child results render before the error status (agent spec §3.1.5 order); status sub-lines; Stop calls `ai.cancel({ threadId, runId: parentRun })`, never `handle.stop` (F11); Open calls `onOpenSubagent`. |
 | R2-T15 | `kit/status.test.tsx` | jsdom | `BusyLine` labels (one tool, several tools, sub-agents, retry, needs you); `RunMarker` duration and steps; `ErrorCard` action table incl. unknown actions and the upgrade variant; `Notice` dedup by `notificationKey`. Also: outcome records rendering at `afterMessageId` for a pre-output cancellation and a message-free failure after reload (finding r1-21) |
-| R2-T16 | `scroller/transcript.test.tsx` | jsdom + Electron | jsdom: `messageId`/`scrollAnchor` per message, `aria-busy` while active, new-message marker count and clearing, `session.loadOlder()` on reaching the start, bounded retention (trim at 300 only at the end, deferred while reading history) and timestamps with and without `metadata.tanstack.createdAt` (finding r1-20). Electron: `data-pending-scroll` is present before the first paint (F15); prepend keeps the first visible message at the same offset (±1 px); a navigation whose loader waits on a 2 s hydrate commits only after the transcript exists, and the first captured frame of the new pane shows the transcript end (finding r1-11). |
+| R2-T16 | `scroller/transcript.test.tsx` | jsdom + Electron | jsdom: `messageId`/`scrollAnchor` per message, `aria-busy` while active, new-message marker, timestamps with and without `metadata.tanstack.createdAt` (review r1-20); paging: a page returned after a recovery or a `session.cleared` is discarded, ids are deduplicated, and an older page's failed and cancelled runs get their markers (reviews r2-7, r2-8). Electron: `data-pending-scroll` before the first paint (F15); prepend keeps the first visible message at the same offset (±1 px); loaders awaiting `load()` with a 2 s hydrate and with a 2 s `joinRun` on a thread whose only run is active commit only after the active run's echo and streamed content are in the transcript, and the first captured frame shows the transcript end; two concurrent `load()` callers get the same promise (reviews r1-11, r2-3). |
 | R2-T17 | `markdown/markdown.test.tsx` | jsdom | Headings, lists, tables (scroll wrapper), code blocks with header and Copy, links routed by §7.5 (http → `openExternal`, abs path → `onOpenFile`), raw HTML escaped, `javascript:` link rendered as text, an unclosed fence renders as a block without Copy while streaming. Also: the §7.5 link table (finding r1-19) |
 | R2-T18 | `markdown/references.test.tsx` | jsdom | Reference links and footnotes whose definitions are far from their use render correctly in long streaming messages (whole-document rendering, finding r1-18). |
 | R2-T19 | `markdown/math.test.ts` | jsdom | Pre-pass table (§7.3): closed vs unclosed for all four delimiters, streaming prefixes of each, `$5 and $6` stays text, math inside code fences and inline code untouched; display math → `math` fence → MathML with `display="block"`; inline → sentinel inline code → MathML; parse errors render `.temml-error`; `import temml from "temml"` works and named imports are not used (a lint-level grep); 200 hostile inputs produce no `<script`, `on*=`, or `javascript:`. |
-| R2-T20 | `runtime/route-submit.test.ts` | jsdom | `routeSubmit` truth table: noop, blocked (read-only, question pending, uploading), send (with `forwardedProps` only pre-start), enqueue when busy; IME `isComposing` never submits; `deriveSessionTitle` ported cases (placeholder renamed, user title kept, failure does not block, code-only skipped). Also: `ChatBusyError` from the throwing strategy re-routes to `enqueue`; ack `queued`/`rejected` cleanup removes exactly the optimistic message and touches no other message or run (finding r1-6: run A with text and a running tool keeps streaming unaffected). |
-| R2-T21 | `runtime/queue.test.ts` | jsdom (memory transport + real host) | Busy submit calls `ai.queue.enqueue`, never `sendMessage`; rows appear only from `queue.updated`; edit/remove carry `incarnation` + `entryId`; an edit after a respawn (new incarnation, same `q-1`) and an edit racing a drain are rejected by the agent and change nothing (finding r1-14); the two-window race settles B's `sendMessage()` before A ends. |
+| R2-T20 | `runtime/admission.test.ts` | jsdom (memory transport) | `routeSubmit` truth table (noop, blocked: read-only, question pending, uploading, loading; send with `forwardedProps` only pre-start; enqueue when busy; IME never submits; `deriveSessionTitle` ported cases). Admission isolation (review r2-2): while run A streams **partial tool arguments and reasoning**, admission B gets `queued`, then `rejected`, then a thrown `UNAVAILABLE`; A's tool arguments, reasoning and text continue into the same parts and its final `getMessages()` equals an undisturbed run's; the outbox entry for B appears and disappears without any processor change; `started` removes the entry exactly when the echo is processed. |
+| R2-T21 | `runtime/queue.test.ts` | jsdom (memory transport + real host) | Busy submit calls `ai.queue.enqueue`; rows appear only from `queue.updated`; edit/remove carry `incarnation` + `entryId`; an edit after a respawn (new incarnation, same `q-1`) and an edit racing a drain are rejected by the agent and change nothing (review r1-14); the two-window race: window B's admission is acked `queued` before A ends and its text is in the queue slot. |
 | R2-T22 | `kit/permissions.test.tsx` | jsdom | Through rendered controls only: two pending descriptors, the second answered first, in both skins (finding r1-15); placement; answered elsewhere; `response_rejected` messages; timeout; expiry. |
 | R2-T23 | `kit/permission-presenters.test.tsx` | jsdom | For every `request.type` variant, from real descriptors: title, path field (`filePath`, `notebookPath`, `resolvedPath`/`deducedDirectory`), diff body (`newContent` for edits, `content` for writes incl. existing-file writes, notebook cells) and exactly the allowed decisions (finding r1-16). |
 | R2-T24 | `kit/question.test.tsx` | jsdom | The questionnaire encodes answers byte for byte like `chat-composer.tsx:1018-1037` (single, multi, note, skipped question) (F19); letters shortcuts and `Mod+Enter` work; "Skip all" sends `"reject"`. |
@@ -1003,9 +1009,11 @@ Projects: **jsdom** = vitest project `renderer-next` (foundation §3.7); **Elect
 | R2-T27 | `motion.types.test.ts` + `motion.test.tsx` | type + jsdom | `motion/react` exports used here type-check against the pinned `motion`; with reduced motion, layout animations are cuts and fades are 120 ms; the composer's children delay equals `durations.layout - durations.childFade`. |
 | R2-T28 | `e2e/chat-transitions.mjs` | Electron | A `nav-lateral` switch between two long threads starts one view transition whose new snapshot shows the transcript end; a streaming update never starts a view transition (`document.activeViewTransition` stays null during a replayed stream). |
 | R2-T29 | `fixtures/fixtures.test.ts` | jsdom | Copied agent goldens equal their sources; builder scenarios type-check as `AguiEvent`; every canvas board in `canvas-map.ts` has a scenario; every scenario replays to completion with no warnings. Also: C.3 fixtures produced by running the real `shared/transcript/v1-to-ui-messages.ts` mapper over recorded v1 transcripts (one per segment type) |
-| R2-T30 | `guards.test.ts` (extends R1-T15) | jsdom | AST scan: renderer-next never calls `agent.respondPermission`, `agent.queue.*`, `.stop()` on a `SubagentHandle`, or imports `temml` by name; `features/chat` imports no other feature; only `features/chat/index.ts` is imported from routes. Also: renderer-next never imports `useChat` and never calls `ChatClient.stop`, `attach` or `detach` |
-| R2-T31 | `perf/transcript.bench.test.tsx` | Electron | **Gate** (finding r1-22): a fully mounted 300-message thread with rich Markdown (code, tables, math), 1,500 tool rows and 5 sub-agent cards reaches first paint in < 600 ms and scrolls at ≥ 50 fps median on the reference M-series Mac; a replayed active run of 800 events rebuilds in < 400 ms; streaming 20 KB of Markdown keeps main-thread tasks < 50 ms at p95. A failure blocks the phase gate; the documented fallback is lowering `MAX_MOUNTED` (§10) until it passes, then a virtualisation slice. |
+| R2-T30 | `guards.test.ts` (extends R1-T15) | jsdom | AST scan of renderer-next: no calls to `agent.respondPermission`, `agent.queue.*`, `.stop()` on a `SubagentHandle`, or any `ChatClient` request method (`sendMessage`, `append`, `reload`, `addToolResult`, `addToolApprovalResponse`, `resumeInterrupts*`, `resolveInterrupts`, `stop`, `attach`, `detach`) outside `runtime/`, and none inside it except `subscribe`/`unsubscribe`/`dispose`/`getMessages`/`getSubagents`/`setMessagesManually`; no `useChat` import; no named `temml` import; `features/chat` imports no other feature; routes import only `features/chat/index.ts`. |
+| R2-T31 | `perf/transcript.bench.test.tsx` | Electron | **Gate** (reviews r1-22, r2-12) on the reference M-series Mac: (a) a 1,000-message thread with rich Markdown (code, tables, math), 1,500 tool rows and 5 sub-agent cards: first paint < 600 ms, scroll ≥ 50 fps median, mounted rows ≤ `MAX_ROWS`; (b) a replayed active run of 800 events producing 350 messages: readiness < 800 ms, mounted rows ≤ `MAX_ROWS`; (c) one message with 3,000 tool calls: first paint < 400 ms; (d) streaming 20 KB of Markdown: main-thread tasks < 50 ms at p95. A failure blocks the phase gate; the fallback is lowering `MAX_ROWS` until it passes, then a virtualisation slice. |
 | R2-T32 | `e2e/chat-real-session.mjs` | Electron (real agent, fake provider) | The phase gate (§15): a real session streams text, a `bash` tool with live output, an `edit` that raises a permission answered with "Allow once", the tool result, and `RUN_FINISHED`; a reload mid-stream resumes without loss or duplicates; Stop mid-run ends with "Stopped"; a busy submit steers the turn. Also: an attachment-only submission (text is only `@path` lines) reaching the agent as a non-empty prompt through `uiMessagesToWire` (finding r1-2) |
+| R2-T33 | `runtime/steer-ids.test.ts` | jsdom (memory transport + real host) | A persisted transcript containing a steer from process 1, then a replacement process that steers again: both steers are separate messages with their original texts after live delivery, a new generation and a later hydrate (review r2-11; relies on the agent slice's incarnation-scoped ids, §14.11). |
+| R2-T34 | `runtime/connection.test.ts` | jsdom (memory transport) | `connection` is `"connected"` after `abacus.subscribed` on an idle thread with no further AG-UI event; `"reconnecting"` during a pump retry with no following event; `"error"` after three failures; `connectionStatus` on the host follows it, not the client's chunk-driven state (review r2-13). |
 
 ---
 
@@ -1022,11 +1030,13 @@ Projects: **jsdom** = vitest project `renderer-next` (foundation §3.7); **Elect
      queue: QueueEntry[];
      agent: AgentState | null;
      skills: SkillMetadata[];
+     activity: { status: AgentStatus; runningTools: number };  // latest agent.status / agent.heartbeat
+     notices: Notice[];                                         // live agent.notification / non-terminal agent.error, deduplicated by notificationKey
      runOutcomes: RunOutcomeRecord[];                           // item 7, for the returned message window
    }
    ```
 
-   Only session-scoped state is in the snapshot; run-scoped state (live tool output, tool display, activity, retry) is rebuilt by the kit from `joinRun` (finding r1-10). All fields are read in one synchronous relay turn (agent spec §5.3 point 3). `page` applies to `messages` and to `runOutcomes` together.
+   Every session-scoped slice the kit keeps is in the snapshot (review r2-4), including activity and notices raised outside the active run; run-scoped state (live tool output, tool display, retry) is rebuilt by the kit from the inclusive `joinRun` replay (review r1-10). Notices are cleared from main's copy when a later event supersedes them (same `notificationKey`) or at `session.cleared`. All fields are read in one synchronous relay turn (agent spec §5.3 point 3). `page` applies to `messages` and to `runOutcomes` together.
 2. **UIMessage → AG-UI input conversion at the main boundary** ("main AG-UI relay" slice; coordinator decision 4, finding r1-2). `ai.send` accepts `messages: UIMessageLoose[]` (parts); before writing the `run` command, main converts them with `uiMessagesToWire` from `@tanstack/ai` (`src/index.ts:522`), keeping each message's `id`, so the agent's `newestUserMessage` (`packages/agent/src/agui/host.ts:64-98`, which reads `content`) sees the text and the agent's echo carries the client id. A test in that slice sends a text message, a multi-line message and an attachment-only message (`@path` lines) through the real contract and host and asserts `run.ack {started}` and the echo id.
 3. **`ai.joinRun`** (transport A.3): yields **every** relay event of the thread whose seq lies in `[RUN_STARTED.seq, terminal.seq]`, session-scoped ones included, each with `withEventMeta(event, { id: String(seq) })`, starting at `activeRun.startSeq`.
 4. **`ai.subscribe`** (transport A.3): `lastEventId` means "events with seq greater than this"; the first yield stays `abacus.subscribed`.
@@ -1046,7 +1056,7 @@ Projects: **jsdom** = vitest project `renderer-next` (foundation §3.7); **Elect
 8. **Foundation spec**: `createAppRouter` adds `chat: ChatRuntime` to `RouterContext` (§6.4); thread route loaders await `session.load()` (§3.2); the gallery accepts extra sections from the `[__ui].tsx` route; R1-T15 gains the R2-T30 checks; `@shadcn/react ^0.3.1` is a phase-2 prerequisite (F15).
 9. **Dependencies** (desktop `devDependencies`): add `@tanstack/ai-react` **0.29.3** exact (used for `createChatUI` and the `UseChatReturn` type; `useChat` is not called); add `temml` **0.13.5** exact; keep `@tanstack/ai` 0.63.0, `@tanstack/ai-client` 0.36.0, `@tanstack/markdown` 0.0.13, `@tanstack/highlight` 0.0.10. Not added: `@shadcn/helpers` (F8), `@tanstack/react-virtual` (F10, pending the R2-T31 gate). `@tanstack/react-ai-devtools` is left out (peer range against ai-client 0.36 unchecked).
 10. **PLAN.md**: the busy-input amendment line was added under "Amendments" (F1, coordinator decision 2). Still to amend when the plan is next revised: virtualisation replaced by paging plus bounded retention (F10); fixtures by replaying agent goldens (F8); the chat kit lives in `features/chat` composed by routes; math via a pre-pass (F9).
-11. **Agent spec**: none for the user echo (F3 withdrawn: `AguiHost.onRun` already echoes the user message with the client id; the agent-side fix for Stop races is in progress in that slice).
+11. **Agent spec**: none for the user echo (F3 withdrawn: `AguiHost.onRun` already echoes the user message with the client id; the agent-side fix for Stop races is in progress in that slice). **Steering and fallback message ids are scoped by incarnation in the agent slice** (done there, from `reviews/00-agent-agui.impl-claude-r1.md` item 3: `steer-N` restarted at 0 per process, `agui/ids.ts:15`, `emit.ts:523`, so a new process's `steer-1` rewrote the persisted `steer-1`); the kit relies on replayed ids never colliding with completed history (review r2-11) and R2-T33 checks it end to end.
 
 ---
 
@@ -1074,14 +1084,14 @@ Projects: **jsdom** = vitest project `renderer-next` (foundation §3.7); **Elect
 
 | Risk | Mitigation |
 |---|---|
-| TanStack AI internals the kit depends on (ephemeral `ChatClient` construction with `initialMessages`, the `AbortError` path of `streamResponse`, the synchronous `QueueStrategy` call, property-get widget lookup, `UseChatReturn`) change in a minor release. | Exact pins (0.29.3 / 0.36.0 / 0.63.0); R2-T2, R2-T5, R2-T12 and R2-T20 exercise each assumption and fail loudly on a bump. |
+| TanStack AI internals the kit depends on (ephemeral `ChatClient` with `initialMessages`, synchronous per-chunk processing in `consumeSubscription`, the synchronous `QueueStrategy` call, property-get widget lookup, `UseChatReturn`) change in a minor release. | Exact pins (0.29.3 / 0.36.0 / 0.63.0); R2-T2, R2-T5, R2-T12 and R2-T20 exercise each assumption and fail loudly on a bump. |
 | Generations and the reconstruction cursor are subtle. | Pure cursor rules with their own tests (R2-T1), a seeded property test over failures at every replay position (R2-T3, R2-T4). |
 | Main- and agent-side amendments (§14.1–§14.7) land in other slices. | The kit's tests run against a main relay fake implementing exactly §14; the real-session gate (R2-T32) cannot pass until they land, which makes the dependency explicit. |
 | Queue edits race drains and respawns. | Incarnation + entry id validated and applied atomically in the agent (§14.6); R2-T21. |
 | Math fonts in Chromium: temml's README warns about rendering bugs with system fonts. | r1 ships `Temml-Local.css` + `Temml.woff2`; the screenshot run includes a math scenario on macOS and Windows; if glyphs are wrong, bundle Latin Modern (380 KB, lazy with the math chunk) in a follow-up. |
-| No virtualisation (F10) for very long threads. | Paging, bounded retention (`MAX_MOUNTED = 300`), and R2-T31 as a gate with a defined fallback. |
+| No virtualisation (F10) for very long threads. | Paging, the mounted-row budget (`MAX_ROWS = 400`, bounding active replay and single huge messages) and processor retention (`MAX_MESSAGES = 300`), with R2-T31 as a gate and a defined fallback (§10). |
 | The highlight grammar gap (F17). | Plaintext fallback with full chrome; bumping `@tanstack/highlight` is a separate reviewed change. |
-| Busy detection from three sources can disagree for a frame. | Any one being true means busy (§4.4). A send that slips through makes `sendMessage()` reject with `ChatBusyError` (the throwing strategy); the handler re-routes the text to `ai.queue.enqueue` and logs it. |
+| Busy detection from three sources can disagree for a frame. | Any one being true means busy (§4.4). An admission that races another window's run is acked `queued` by the agent and lands in the host queue; it never touches the processor (§3.7). |
 | `@tanstack/markdown` re-parses whole messages per render. | One document per message (the split was removed for correctness); the cost is inside the R2-T31 gate. |
 
 ---
@@ -1116,3 +1126,25 @@ Source: `docs/rewrite/specs/reviews/02-chat-kit.codex-r1.md` (22 findings, 5 blo
 | 22 | Minor | **Accepted** | The scroller's `PERFORMANCE.md` excludes Markdown cost; paging accumulates. | §10 bounded retention (`MAX_MOUNTED = 300`); R2-T31 is a gate over fully mounted rich transcripts and active-run replay, with a defined fallback. |
 
 **Verdicts on F1–F17.** F1: kept, now a throwing strategy (coordinator decision 2). F2: diagnosis kept, remedy replaced (#4). F3: withdrawn (#3). F5, F6: redesigned (#5–#7). F9: rendering approach kept for math; links added to the pre-pass (#19). F10: conditional on the R2-T31 gate (#22). F12: now relevant only to real `RUN_ERROR`s (#6). F15: first paint gated on load (#11). F16: queue identity extended (#14). The others stand as written.
+
+## Review responses (r2)
+
+Source: `docs/rewrite/specs/reviews/02-chat-kit.codex-r2.md` (13 items, 2 blockers). All accepted; each re-checked against the installed `@tanstack/ai-client` 0.36.0 / `@tanstack/ai` 0.63.0 sources and `packages/agent/src/agui/`.
+
+| # | Sev. | Verdict | Evidence checked | What changed |
+|---|---|---|---|---|
+| 1 | Blocker | **Accepted** | r2 dropped `seq ≤ startSeq`, skipping `RUN_STARTED`, and left `runs.active` empty. | §3.3: `receivedSeq`/`appliedSeq` start at `startSeq − 1` (inclusive replay); `runs.active` seeded from the snapshot; R2-T1 asserts busy, Stop target and `sessionGenerating` before any content. |
+| 2 | Blocker | **Accepted** | `streamResponse()` calls `processor.prepareAssistantMessage()` → `resetStreamState()` before `send` (`chat-client.ts:2551`, `processor.ts:378-381, 3048-3062`); `isSendBusy()` excludes `sessionGenerating` (`:2311-2313`). The only callers of `streamResponse` are `sendMessage`, `append`, `reload`, interrupt resume and tool continuations (`:1620, 2345, 2452-2457, 2819, 3091`). | Admission moved out of `ChatClient`: `session.submit`/`retry` call `ai.send` directly with an outbox for pending user messages (§3.7); the client is receive-only and its adapter `send` throws; R2-T30 bans every request method; R2-T20 checks partial tool arguments and reasoning of a concurrent run. |
+| 3 | Major | **Accepted** | r2's `load()` resolved before replay; its "returns at once" rule let callers bypass it. | §3.2: one readiness promise per generation, resolved when `appliedSeq ≥ N` (5 s cap with `partial`); R2-T16 delayed `joinRun` with an empty completed transcript and concurrent callers. |
+| 4 | Major | **Accepted** | `agent.status`, `agent.heartbeat`, `agent.notification`, `agent.error` are session-scoped (agent spec §2.3) and were skipped at `seq ≤ N` without being in the snapshot. | `ThreadSnapshot` gains `activity` and `notices` (§14.1); §4.1/§4.2 partition rules; R2-T8 hydrates with no further events. |
+| 5 | Major | **Accepted** | `consumeSubscription` yields to the host between chunks after an 8 ms budget (`chat-client.ts:92, 1942-1956`) but processes each chunk synchronously. | §3.4: the pump only receives (`receivedSeq`); the dispatcher applies pre-apply slices before yielding and runs post-apply hooks (terminal records, `appliedSeq`, readiness) when it resumes, i.e. after the client processed the chunk; R2-T5. |
+| 6 | Major | **Accepted** | `unsubscribe()` emits loading/subscription/generation/connection changes synchronously (`chat-client.ts:2779-2791`). | §3.3 staging and atomic swap; every callback, ack and page result is guarded by `gen` (and `rev`); R2-T2. |
+| 7 | Major | **Accepted** | r2's `loadOlder` had no guard. | §10: page discarded if `gen`, `rev` or the client changed; ids deduplicated; R2-T16. |
+| 8 | Major | **Accepted** | §14.1 pages outcomes with messages. | §10 merges page `runOutcomes` by `runId`; R2-T16. |
+| 9 | Major | **Accepted** | A running tool has `output === undefined`. | §5.4a: origin decided from the call (`metadata.abacus.segmentId` ⇒ migrated, else live) before any result; running state from live output/display; R2-T13. |
+| 10 | Minor | **Accepted** | `partsComponents` lacked `video`. | §5.1 registers `video: VideoView`; R2-T11 uses the exported configurations. |
+| 11 | Major | **Accepted (fixed in the agent slice)** | `steerMessageId(n) = "steer-" + n` restarts per process (`agui/ids.ts:19`); the same defect is `reviews/00-agent-agui.impl-claude-r1.md` item 3, which the agent slice is fixing by scoping steering and fallback ids by incarnation. | §14.11 records the dependency; R2-T33 checks persisted steers across a respawn. |
+| 12 | Minor | **Accepted** | Retention deferred while reading, replay untrimmed, one message could hold thousands of tools. | §10: a mounted-row budget (`MAX_ROWS = 400`, per-message tool collapse past 50) independent of processor retention (`MAX_MESSAGES = 300`); R2-T31 benchmarks > 300-message replay and a 3,000-tool message. |
+| 13 | Minor | **Accepted** | `connectionStatus` becomes `"connected"` only when the client processes a chunk (`chat-client.ts:2099-2101`). | §3.1/§3.4: `connection` owned by the pump (`abacus.subscribed`, retries, failures); the host exposes it; R2-T34. |
+
+**Self-consistency pass (r3).** Every `§n`/`§n.m` reference to this spec and every `R2-T*` id in the text resolves; the tests are numbered R2-T1…R2-T34 without gaps; superseded r1/r2 mechanisms (the cursor gate, `localQueue`, synthetic terminals, the `AbortError` admission path, `detach`/`attach` recovery, the Markdown split, `MAX_MOUNTED`) remain only in the review tables.
