@@ -119,6 +119,13 @@ describe("R2-T30 chat guards", () => {
 
   it("never calls a ChatClient request method, or stop on a handle", () => {
     const hits = calls()
+      // AppClient lifecycle procedures are not ChatClient request methods.
+      .filter(
+        ({ path }) =>
+          !/(?:^|\.)client\.(?:agent|devices\.stream)\.stop$/.test(
+            path.join(".")
+          )
+      )
       // Receivers that can be a ChatClient, a UseChatReturn or a SubagentHandle.
       .filter(({ path }) =>
         path
