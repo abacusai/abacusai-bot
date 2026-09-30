@@ -2,8 +2,8 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createCollections, type Collections } from "#next/data/collections";
-import { directDbSource, FixtureDb } from "#next/data/fixture-db/fixture-db";
+import { createDb, type Db } from "#next/data/db";
+import { fixtureTransport, FixtureDb } from "#next/data/fixture-db/fixture-db";
 import {
   fixturePrefs,
   fixtureSessions,
@@ -13,11 +13,12 @@ import { renderInRouter } from "#next/test-support/render-in-router";
 
 import { groupSessions, SessionsSidebar } from "./sessions-sidebar";
 
-let collections: Collections | null = null;
+let appDb: Db | null = null;
 afterEach(async () => {
-  for (const collection of Object.values(collections ?? {}))
+  appDb?.stop();
+  for (const collection of Object.values(appDb?.collections ?? {}))
     await collection.cleanup().catch(() => undefined);
-  collections = null;
+  appDb = null;
 });
 
 const NOW = 1_800_000_000_000;
@@ -52,8 +53,8 @@ describe("SessionsSidebar", () => {
       sessions: fixtureSessions(NOW),
       workspaces: fixtureWorkspaces(),
     });
-    collections = createCollections(directDbSource(db), { backoffMs: [5] });
-    await renderInRouter(<SessionsSidebar />, collections);
+    appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
+    await renderInRouter(<SessionsSidebar />, appDb);
     await screen.findByText("Review my pull requests");
     expect(screen.getByText("Pinned")).toBeTruthy();
     expect(screen.getByText("Default workspace")).toBeTruthy();

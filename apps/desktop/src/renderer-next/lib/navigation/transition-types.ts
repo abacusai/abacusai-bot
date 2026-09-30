@@ -1,19 +1,34 @@
 /**
- * The router seam that adds React view-transition types (spec 01 §6.7, F7).
+ * Route-level view transitions (spec 01 §6.7 as amended, PLAN "Amendments").
  *
- * The router commits matches inside its own `React.startTransition`, which
- * `Transitioner` assigns to `router.startTransition` on every render. It is
- * called twice for a slow navigation: once to offer pending matches (one match
- * `status: "pending"`) and once to commit. A superseded navigation returns
- * before its commit. So the seam wraps the assigned function and adds types
- * only on a commit call, only once per history entry key, for the location
- * that is actually committing; the types go in *inside* React's transition.
+ * The router commits matches through store subscriptions, which React
+ * renders synchronously (`useSyncExternalStore`) even inside
+ * `startTransition`, so React never starts a view transition for a route
+ * change: `addTransitionType` in the commit would be inert. Route-level
+ * transitions are therefore the router's own document-level
+ * `document.startViewTransition`, which this module configures through
+ * `defaultViewTransition.types`:
  *
- * Intent travels in the history entry's state (`navIntent`), so a cancelled,
- * blocked or superseded navigation never commits it.
+ * - The types are computed for the location that is **committing**: the
+ *   router's current transaction location (`stores.location`, set with the
+ *   transaction that owns the commit), never `latestLocation`, which a newer
+ *   navigation may already have moved (Claude impl r1 #2).
+ * - A commit with no type (a masked pop-up opening or closing, a
+ *   search-only change, an `invalidate()` of the same entry, a pending
+ *   screen) returns `false`: the router then starts **no** transition.
+ * - Each history entry animates at most once: a second commit of the same
+ *   entry key (a reload, an invalidate) is untyped.
+ *
+ * React `<ViewTransition>` is used only for in-route state changes React
+ * commits itself; cross-route shared elements (bot identity) take a CSS
+ * `view-transition-name` from `useSharedElementName` so they join this
+ * document transition. Never two transitions in one commit
+ * (`guardSingleViewTransition`, R1-T11b).
+ *
+ * Intent travels in the history entry's state (`navIntent`), so a
+ * cancelled, blocked or superseded navigation never commits it.
  */
 import type { AnyRouter, ParsedLocation } from "@tanstack/react-router";
-import { addTransitionType } from "react";
 
 import type { NavType } from "#next/lib/motion";
 
@@ -24,14 +39,9 @@ import {
 } from "./nav-type";
 import { paneKey } from "./pane-key";
 
-type StartTransitionFn = AnyRouter["startTransition"];
-
-/** Indirection so tests can observe what the seam adds. */
+/** Indirection so tests and the dev hooks can observe the chosen types. */
 export const transitionTypeSink = {
-  add: (type: NavType): void => addTransitionType(type),
-  /** Each router transition the seam saw: a pending offer or a commit. */
-  observe: (_kind: "offer" | "commit"): void => undefined,
-  /** Each type the document-level view transition starts with. */
+  /** Each type a document-level view transition starts with. */
   document: (_type: NavType): void => undefined,
 };
 
@@ -90,74 +100,30 @@ const navTypesFor = (
   return type == null ? [] : [type];
 };
 
+/** The location the router's current transaction commits. */
+const committingLocation = (router: AnyRouter): ParsedLocation =>
+  router.stores.location.get();
+
 export const installTransitionTypes = (router: AnyRouter): void => {
   const target = router as AnyRouter & { [INSTALLED]?: true };
   if (target[INSTALLED]) return;
   target[INSTALLED] = true;
 
-  // The document's view transition (spec 01 §6.7, implementation note): the
-  // router commits matches through store subscriptions, which React renders
-  // synchronously even inside startTransition, so React never starts a view
-  // transition for a route change. The router's own document-level view
-  // transition carries the same types instead; an untyped change (`false`)
-  // commits with none. The pane and sidebar are named in tokens.css.
-  const documentKeys = new Set<string>();
-  let documentLastKey: string | undefined;
+  const committedKeys = new Set<string>();
+  let lastKey: string | undefined;
   (
     router.options as { defaultViewTransition?: unknown }
   ).defaultViewTransition = {
-    types: ({
-      fromLocation,
-      toLocation,
-    }: {
-      fromLocation?: ParsedLocation;
-      toLocation: ParsedLocation;
-    }) => {
-      const key = (toLocation.state as NavState).__TSR_key;
-      if (key !== undefined && key === documentLastKey) return false;
-      const types = navTypesFor(router, fromLocation, toLocation, documentKeys);
-      documentLastKey = key;
-      if (key !== undefined) documentKeys.add(key);
+    // `toLocation` here is the router's `latestLocation`; ignored on purpose.
+    types: ({ fromLocation }: { fromLocation?: ParsedLocation }) => {
+      const next = committingLocation(router);
+      const key = (next.state as NavState).__TSR_key;
+      if (key !== undefined && key === lastKey) return false;
+      const types = navTypesFor(router, fromLocation, next, committedKeys);
+      lastKey = key;
+      if (key !== undefined) committedKeys.add(key);
       for (const type of types) transitionTypeSink.document(type);
       return types.length > 0 ? types : false;
     },
   };
-
-  let inner: StartTransitionFn = router.startTransition;
-  let lastCommittedKey: string | undefined;
-  const seenKeys = new Set<string>();
-
-  const wrapped: StartTransitionFn = (fn, expected) => {
-    // offerPending passes one "pending" match; a commit has none.
-    const isCommit = expected.every((match) => match.status !== "pending");
-    transitionTypeSink.observe(isCommit ? "commit" : "offer");
-    const next = router.latestLocation;
-    const key = (next.state as NavState).__TSR_key;
-    let types: NavType[] = [];
-    if (isCommit && key !== lastCommittedKey) {
-      types = navTypesFor(
-        router,
-        router.stores.resolvedLocation.get(),
-        next,
-        seenKeys
-      );
-    }
-    if (isCommit) {
-      lastCommittedKey = key;
-      if (key !== undefined) seenKeys.add(key);
-    }
-    return inner(() => {
-      for (const type of types) transitionTypeSink.add(type);
-      fn();
-    }, expected);
-  };
-
-  Object.defineProperty(router, "startTransition", {
-    configurable: true,
-    get: () => wrapped,
-    // Transitioner reassigns on every render.
-    set: (next: StartTransitionFn) => {
-      inner = next;
-    },
-  });
 };

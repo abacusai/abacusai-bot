@@ -17,12 +17,13 @@ type Notice =
   | { source: "window"; event: WindowEvent }
   | { source: "settings"; event: SettingsEvent };
 
-/** The keys a notice invalidates. Pure; tested as a table. */
-const keysFor = (orpc: AppQueryUtils, notice: Notice): QueryKey[] => {
-  if (notice.source === "window")
-    return notice.event.type === "chrome"
-      ? [windowChromeQuery(orpc).queryKey]
-      : [];
+/**
+ * The keys a notice invalidates. Pure; tested as a table. A `chrome` notice
+ * carries the whole state, written straight into the query: invalidating it
+ * too would refetch `window.chrome` for nothing (Claude impl r1 #22).
+ */
+export const keysFor = (orpc: AppQueryUtils, notice: Notice): QueryKey[] => {
+  if (notice.source === "window") return [];
   if (notice.event.type === "credentials-changed") {
     const keys = settingsKeys(orpc);
     return [keys.providers, keys.account, keys.models];

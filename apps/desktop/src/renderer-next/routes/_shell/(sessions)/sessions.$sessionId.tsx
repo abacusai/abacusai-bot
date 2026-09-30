@@ -7,7 +7,7 @@ import * as v from "valibot";
 
 import { SessionIdentity, SessionPage } from "#next/features/sessions";
 import { TopBarSlot } from "#next/features/shell";
-import { ignoreLoadError } from "#next/lib/navigation/loaders";
+import { ignoreLoadError, isMissing } from "#next/lib/navigation/loaders";
 import { SESSION_DEFAULTS, SessionSearch } from "#next/lib/navigation/search";
 import { SessionId } from "#shared/contract/ids";
 
@@ -29,8 +29,10 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/$sessionId")({
   search: { middlewares: [stripSearchParams(SESSION_DEFAULTS)] },
   loaderDeps: ({ search }) => ({ view: search.view }),
   loader: async ({ context, params }) => {
-    await context.collections.sessions.preload().catch(ignoreLoadError);
-    if (!context.collections.sessions.has(params.sessionId)) throw notFound();
+    const { sessions } = context.db.collections;
+    await sessions.preload().catch(ignoreLoadError);
+    // Only a loaded table can say the session is gone (see bots.$botId).
+    if (isMissing(sessions, params.sessionId)) throw notFound();
   },
   component: SessionRoute,
 });

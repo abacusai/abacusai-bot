@@ -4,27 +4,25 @@
  * Toaster, the icon sprite, the theme/chrome/readiness/invalidation effects,
  * the occlusion watcher, the app's shortcut handler and the command menu.
  */
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useStore } from "@tanstack/react-store";
 import { useEffect, type ReactNode } from "react";
 
 import { AppIconSprite } from "#next/components/app-icon";
-import { CollectionsProvider, type Collections } from "#next/data/collections";
-import { useUpdatePrefs } from "#next/data/collections/prefs";
+import { DbProvider, type Db } from "#next/data/db";
 import { useInvalidationBridge } from "#next/data/queries/invalidation";
 import type { Transport } from "#next/data/transport";
-import {
-  AREA_PANEL_TABS,
-  type SidePanelTabId,
-} from "#next/lib/navigation/search";
+import { inertWhileHidden } from "#next/lib/inert-hidden";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { toHotkeyPlatform } from "#next/lib/platform";
 import { ThemeEffect } from "#next/lib/theme-effect";
-import { ChromeEffect } from "#next/lib/window-chrome/chrome-state";
-import { Toaster } from "#next/ui/toast";
+import {
+  ChromeEffect,
+  useChromeState,
+} from "#next/lib/window-chrome/chrome-state";
 import { TooltipProvider } from "#next/ui/tooltip";
 import type { SystemInfo } from "#shared/contract";
 
+import { AppToaster } from "./app-toaster";
 import { CommandMenu } from "./command-menu";
 import { AppHotkeys, AppHotkeysProvider, type ShellActions } from "./hotkeys";
 import { createOcclusionWatcher } from "./occlusion";
@@ -35,10 +33,28 @@ import {
   setOcclusion,
   shellStore,
 } from "./shell-store";
+import { usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
+import { useSidebarToggle } from "./use-sidebar-toggle";
 
 const InvalidationBridge = ({ transport }: { transport: Transport }): null => {
   useInvalidationBridge(transport);
+  return null;
+};
+
+/**
+ * `html[data-platform]`: where the window's vibrancy (macOS) or mica
+ * (Windows) sits behind a transparent chrome (tokens.css, V1).
+ */
+const PlatformEffect = ({ platform }: { platform: string }): null => {
+  useEffect(() => {
+    document.documentElement.dataset.platform = platform;
+  }, [platform]);
+  return null;
+};
+
+const InertHiddenEffect = (): null => {
+  useEffect(() => inertWhileHidden(), []);
   return null;
 };
 
@@ -53,13 +69,10 @@ const OcclusionEffect = (): null => {
 /** What the app shortcuts do, from wherever the user is. */
 const useShellActions = (): ShellActions => {
   const navigate = useAppNavigate();
-  const plainNavigate = useNavigate();
-  const updatePrefs = useUpdatePrefs();
   const { area } = useShellMatch();
-  const search = useSearch({ strict: false }) as { tab?: SidePanelTabId };
+  const panel = usePanel(area);
+  const sidebar = useSidebarToggle();
   const floatingOpen = useStore(shellStore, (state) => state.floating.open);
-  const tabs: readonly SidePanelTabId[] =
-    area == null ? [] : AREA_PANEL_TABS[area];
 
   return {
     floatingOpen,
@@ -76,22 +89,9 @@ const useShellActions = (): ShellActions => {
         transition: area === "routines" ? "none" : "nav-lateral",
       } as never);
     },
-    togglePinned: () =>
-      void updatePrefs((draft) => {
-        draft.sidebar = { ...draft.sidebar, pinned: !draft.sidebar.pinned };
-      }).catch(() => undefined),
-    togglePanel: () => {
-      if (area == null) return;
-      const next = search.tab == null ? (tabs[0] ?? "details") : undefined;
-      void plainNavigate({
-        to: ".",
-        search: (previous: Record<string, unknown>) => ({
-          ...previous,
-          tab: next,
-        }),
-        replace: true,
-      } as never);
-    },
+    togglePinned: sidebar.toggle,
+    // Reopens the tab last shown in this area (§7.9).
+    togglePanel: panel.toggle,
     openSettings: () =>
       void navigate({
         href: "/settings/general",
@@ -108,30 +108,38 @@ const ShortcutHandler = () => {
 
 export const AppRoot = ({
   transport,
-  collections,
+  db,
   system,
   children,
 }: {
   transport: Transport;
-  collections: Collections;
+  db: Db;
   system: SystemInfo;
   children: ReactNode;
-}) => (
-  <CollectionsProvider value={collections}>
-    <AppHotkeysProvider platform={toHotkeyPlatform(system.platform)}>
-      <TooltipProvider>
-        <Toaster>
-          <AppIconSprite />
-          <ThemeEffect />
-          <ChromeEffect transport={transport} />
-          <ReadinessReporter transport={transport} collections={collections} />
-          <InvalidationBridge transport={transport} />
-          <OcclusionEffect />
-          <ShortcutHandler />
-          <CommandMenu />
-          {children}
-        </Toaster>
-      </TooltipProvider>
-    </AppHotkeysProvider>
-  </CollectionsProvider>
-);
+}) => {
+  const chrome = useChromeState(transport);
+  return (
+    <DbProvider value={db}>
+      <AppHotkeysProvider platform={toHotkeyPlatform(system.platform)}>
+        <TooltipProvider>
+          <AppToaster toolbarHeight={chrome.toolbarHeight}>
+            <AppIconSprite />
+            <ThemeEffect />
+            <PlatformEffect platform={system.platform} />
+            <ChromeEffect transport={transport} />
+            <ReadinessReporter
+              transport={transport}
+              collections={db.collections}
+            />
+            <InvalidationBridge transport={transport} />
+            <OcclusionEffect />
+            <InertHiddenEffect />
+            <ShortcutHandler />
+            <CommandMenu />
+            {children}
+          </AppToaster>
+        </TooltipProvider>
+      </AppHotkeysProvider>
+    </DbProvider>
+  );
+};

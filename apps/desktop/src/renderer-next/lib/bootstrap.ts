@@ -11,7 +11,7 @@
  */
 import type { QueryClient } from "@tanstack/react-query";
 
-import type { Collections } from "#next/data/collections";
+import type { Db } from "#next/data/db";
 import { systemInfoQuery } from "#next/data/queries/system";
 import type { CloseReason, Transport } from "#next/data/transport";
 import type { SystemInfo } from "#shared/contract";
@@ -49,7 +49,7 @@ interface Boot {
   transport: Transport;
   system: SystemInfo;
   queryClient: QueryClient;
-  collections: Collections;
+  db: Db;
 }
 
 export type BootResult =
@@ -78,21 +78,57 @@ const within = <T>(
 export interface BootstrapDeps {
   getTransport: () => Promise<Transport>;
   queryClient: QueryClient;
-  /** Called once the transport exists; the collections sync over it. */
-  getCollections: () => Collections;
+  /**
+   * Called once the transport exists and system facts are in: the
+   * collections are created over that transport, so none syncs earlier.
+   */
+  getDb: (transport: Transport) => Db;
   onTransportLost: (reason: CloseReason) => void;
   timeouts?: Partial<typeof BOOT_TIMEOUTS>;
+  /** Bound on the `failed` readiness report (tests shorten it). */
+  readyTimeoutMs?: number;
 }
+
+/** How long a failed boot waits for main to take its `failed` barrier. */
+const READY_REPORT_TIMEOUT_MS = 1_000;
+
+/**
+ * Tell main the boot failed, best effort and bounded: a main that stopped
+ * answering (the port still open) must not keep the failure screen from
+ * rendering. Never rejects.
+ */
+export const reportFailedBoot = (
+  transport: Transport | null,
+  reason: string,
+  timeoutMs = READY_REPORT_TIMEOUT_MS
+): Promise<void> => {
+  if (transport === null || transport.state !== "open")
+    return Promise.resolve();
+  const abort = new AbortController();
+  const call = transport.client.window
+    .ready({ barrier: "failed", reason }, { signal: abort.signal })
+    .then(
+      () => undefined,
+      () => undefined
+    );
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      abort.abort();
+      resolve();
+    }, timeoutMs);
+  });
+  return Promise.race([call, timeout]).finally(() => clearTimeout(timer));
+};
 
 export const bootstrap = async (deps: BootstrapDeps): Promise<BootResult> => {
   const timeouts = { ...BOOT_TIMEOUTS, ...deps.timeouts };
   let transport: Transport | null = null;
-  const fail = async (step: BootStep, cause: unknown): Promise<BootResult> => {
+  // Returns at once: the caller renders the failure while the bounded
+  // readiness report is still in flight (Codex impl r1 #1).
+  const fail = (step: BootStep, cause: unknown): BootResult => {
     const error = new BootError(step, cause);
-    if (transport !== null && transport.state === "open")
-      await transport.client.window
-        .ready({ barrier: "failed", reason: error.message })
-        .catch(() => undefined);
+    void reportFailedBoot(transport, error.message, deps.readyTimeoutMs);
     return { ok: false, error, transport };
   };
 
@@ -119,18 +155,18 @@ export const bootstrap = async (deps: BootstrapDeps): Promise<BootResult> => {
     return fail("system", error);
   }
 
-  const collections = deps.getCollections();
+  const db = deps.getDb(transport);
+  const { prefs } = db.collections;
   try {
-    await within(collections.prefs.preload(), timeouts.prefs, "prefs");
-    if (collections.prefs.status === "error")
-      throw new Error("prefs snapshot failed");
+    await within(prefs.preload(), timeouts.prefs, "prefs");
+    if (prefs.status === "error") throw new Error("prefs snapshot failed");
   } catch (error) {
     return fail("prefs", error);
   }
 
   return {
     ok: true,
-    boot: { transport, system, queryClient: deps.queryClient, collections },
+    boot: { transport, system, queryClient: deps.queryClient, db },
   };
 };
 

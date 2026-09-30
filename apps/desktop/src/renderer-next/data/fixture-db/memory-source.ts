@@ -10,7 +10,7 @@ import { implement, type Router } from "@orpc/server";
 
 import { contract } from "#shared/contract";
 
-import type { DbSource } from "../collections/table-source";
+import type { LazyTransport } from "../db/tables";
 import { createMemoryTransport } from "../transport/memory";
 import { FixtureDb, fixtureDbClient, type FixtureSeed } from "./fixture-db";
 import type { FixtureTable } from "./fixture-table";
@@ -66,10 +66,14 @@ const defaultFixtureSeed = (): FixtureSeed => ({
   routines: fixtureRoutines(),
 });
 
-export const createMemoryDbSource = (
+/**
+ * The fixture tables over a real oRPC memory transport. Only its `db.*`
+ * exists; `createDb(transport)` reads nothing else.
+ */
+export const createMemoryDbTransport = (
   seed: FixtureSeed = defaultFixtureSeed()
-): { db: FixtureDb; source: DbSource } => {
+): { db: FixtureDb; transport: LazyTransport } => {
   const db = new FixtureDb(seed);
   const transport = createMemoryTransport(buildRouter(db), {});
-  return { db, source: async () => transport.client.db };
+  return { db, transport: async () => transport };
 };

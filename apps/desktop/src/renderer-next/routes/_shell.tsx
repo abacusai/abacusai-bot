@@ -27,8 +27,8 @@ export const Route = createFileRoute("/_shell")({
   search: { middlewares: [stripSearchParams(SHELL_DEFAULTS)] },
   loader: ({ context }) =>
     Promise.all([
-      context.collections.sessions.preload().catch(ignoreLoadError),
-      context.collections.workspaces.preload().catch(ignoreLoadError),
+      context.db.collections.sessions.preload().catch(ignoreLoadError),
+      context.db.collections.workspaces.preload().catch(ignoreLoadError),
     ]),
   component: ShellRoute,
 });
