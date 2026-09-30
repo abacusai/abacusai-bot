@@ -4,6 +4,10 @@ import { useTranslation } from "react-i18next";
 
 import { useDb } from "#next/data/db";
 import { usePrefs } from "#next/data/db/prefs";
+import {
+  documentSoundPlayer as soundPlayer,
+  setDocumentSoundPrefs,
+} from "#next/lib/document-sound";
 import { isThreadSeen } from "#next/lib/navigation/visible-thread";
 import { createNotifier } from "#next/lib/notify";
 /**
@@ -14,8 +18,7 @@ import { createNotifier } from "#next/lib/notify";
  * level for needs-you.
  */
 import { subscribeRunFinished } from "#next/lib/run-finished";
-import { createSoundPlayer, type SoundPlayer } from "#next/lib/sound";
-import type { PrefsRow } from "#shared/contract/rows";
+import type { SoundPlayer } from "#next/lib/sound";
 
 import { followBotsSources } from "./data/live";
 import { useAllSessions } from "./data/queries";
@@ -28,20 +31,6 @@ import {
   newlyWaiting,
   type BotsWatcherDeps,
 } from "./notify";
-
-let player: SoundPlayer | null = null;
-let soundPrefs: PrefsRow["sounds"] = { enabled: true, perEvent: {} };
-
-/** The document's player (one AudioContext, unlocked on first pointerdown). */
-const soundPlayer = (): SoundPlayer => {
-  player ??= createSoundPlayer({
-    isThreadVisible: (threadId) => isThreadSeen(threadId, () => true),
-    isWindowFocused: () => document.hasFocus(),
-    prefs: () => soundPrefs,
-    now: () => Date.now(),
-  });
-  return player;
-};
 
 export const playBotCue = (
   cue: Parameters<SoundPlayer["play"]>[0],
@@ -60,7 +49,7 @@ export const BotsGlobals = () => {
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
   useEffect(() => {
-    soundPrefs = prefs.sounds;
+    setDocumentSoundPrefs(prefs.sounds);
   }, [prefs.sounds]);
   const notificationsOn = useRef(true);
   useEffect(() => {
@@ -78,7 +67,7 @@ export const BotsGlobals = () => {
       notifier: createNotifier({
         isWindowFocused: () => document.hasFocus(),
         notificationsEnabled: () => notificationsOn.current,
-        sounds: () => soundPrefs,
+        sounds: () => prefs.sounds,
         now: () => new Date(),
         send: (input) => transport.client.system.notify(input),
       }),
