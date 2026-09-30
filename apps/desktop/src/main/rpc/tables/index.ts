@@ -21,7 +21,7 @@ import type { IpcEvent } from "#shared/contracts";
 import type { PrefsStore } from "../../services/config/prefs-store";
 import type { MainEventBus } from "../event-bus";
 import { readGitStateRows, sameGitState } from "./git-state";
-import { MemoryWatchers, readMemoryRows } from "./memories";
+import { MemoryWatchers, readMemoryRows, type WatchFactory } from "./memories";
 import { readRoutineRunRows } from "./routine-runs";
 import { readRoutineRows, ROUTINES_CLOCK_MS } from "./routines";
 import { readSessionRows, SESSION_EVENTS } from "./sessions";
@@ -65,6 +65,8 @@ export interface CreateTablesOptions {
   prefsStore: PrefsStore;
   /** Watch the memory files the agent child writes (off for fakes). */
   watchMemories?: boolean;
+  /** The directory-watch primitive for `memories`; `fs.watch` by default. */
+  watch?: WatchFactory;
   /** `routines` re-diff period for `nextRunAt`; null disables (tests). */
   routinesClockMs?: number | null;
   /**
@@ -215,6 +217,7 @@ export const createTables = (options: CreateTablesOptions): Tables => {
     const watchers = new MemoryWatchers({
       home: sources.botHome(),
       onChange: memoryChanged,
+      watch: options.watch,
     });
     return () => {
       watchers.close();

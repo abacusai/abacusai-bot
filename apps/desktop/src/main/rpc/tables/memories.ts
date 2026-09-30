@@ -80,40 +80,76 @@ export const readMemoryRows = (sources: TableSources): MemoryRow[] => {
 };
 
 export const MEMORY_DEBOUNCE_MS = 150;
+/** Retry delays after a watcher could not be created on an existing directory. */
+const ARM_RETRY_MS = [250, 1_000, 4_000];
+
+/** What the watchers need of a directory watch: a way to stop it. */
+export interface WatchHandle {
+  close(): void;
+}
+
+/** The watch primitive; `fs.watch` by default, injectable so tests drive events. */
+export type WatchFactory = (
+  dir: string,
+  listener: (event: string, name: string | null) => void,
+  onError: (error: unknown) => void
+) => WatchHandle;
+
+export const fsWatchFactory: WatchFactory = (dir, listener, onError) => {
+  const watcher = fs.watch(dir, { persistent: false }, (event, name) =>
+    listener(event, name == null ? null : String(name))
+  );
+  watcher.on("error", onError);
+  return watcher;
+};
+
+interface Armed {
+  handle: WatchHandle;
+  identity: string;
+}
 
 /**
- * Flat `fs.watch`ers (no recursive watch on Linux) over every directory whose
- * files feed `memories` or `memory.bots`: the home (for `memories/` and
+ * Flat directory watchers (no recursive watch on Linux) over every directory
+ * whose files feed `memories` or `memory.bots`: the home (for `memories/` and
  * `bots/` appearing), `memories/`, `bots/`, each `bots/<id>/` (its
  * `MEMORY.md`) and each `bots/<id>/memory/` (daily notes). Every event
  * re-reconciles the set, so a bot directory created or removed adds or drops
  * its watchers, and an editor's rename-replace re-arms.
  *
- * A watcher follows an inode, not a path, so each is kept with the identity
- * (`dev:ino`) of the directory it was armed on: a directory replaced at the
- * same path (removed and recreated inside one debounce) is re-armed. A home
- * that does not exist yet is waited for from its parent. Changes are
- * debounced into one `onChange`.
+ * A watcher follows an inode, not a path, and APFS reuses inodes, so identity
+ * (`dev:ino`) alone cannot tell a replaced directory from the original: a
+ * `rename` event naming a watched child of a watched directory also forces
+ * that child to be re-armed. A watcher only sees changes after it starts, so
+ * whenever a reconcile armed something new one more settle pass runs, which
+ * re-reads and notifies, to cover writes that landed between the directory
+ * appearing and its watcher going live. A directory that exists but cannot be
+ * watched (EPERM, ENOENT race) is retried with a bounded backoff. A home that
+ * does not exist yet is waited for from its parent. Changes are debounced
+ * into one `onChange`.
  */
 export class MemoryWatchers {
   readonly #home: string;
   readonly #onChange: () => void;
   readonly #debounceMs: number;
-  readonly #watchers = new Map<
-    string,
-    { watcher: fs.FSWatcher; identity: string }
-  >();
+  readonly #watch: WatchFactory;
+  readonly #watchers = new Map<string, Armed>();
+  /** Directories whose `rename` was seen by their parent: re-arm them. */
+  readonly #stale = new Set<string>();
   #timer: ReturnType<typeof setTimeout> | null = null;
+  #retryTimer: ReturnType<typeof setTimeout> | null = null;
+  #retries = 0;
   #closed = false;
 
   constructor(options: {
     home: string;
     onChange: () => void;
     debounceMs?: number;
+    watch?: WatchFactory;
   }) {
     this.#home = options.home;
     this.#onChange = options.onChange;
     this.#debounceMs = options.debounceMs ?? MEMORY_DEBOUNCE_MS;
+    this.#watch = options.watch ?? fsWatchFactory;
     this.#reconcile();
   }
 
@@ -125,8 +161,10 @@ export class MemoryWatchers {
   close(): void {
     this.#closed = true;
     if (this.#timer != null) clearTimeout(this.#timer);
+    if (this.#retryTimer != null) clearTimeout(this.#retryTimer);
     this.#timer = null;
-    for (const { watcher } of this.#watchers.values()) watcher.close();
+    this.#retryTimer = null;
+    for (const { handle } of this.#watchers.values()) handle.close();
     this.#watchers.clear();
   }
 
@@ -167,41 +205,70 @@ export class MemoryWatchers {
     return present;
   }
 
-  #reconcile(): void {
-    if (this.#closed) return;
+  /** Returns whether a watcher was newly armed. */
+  #reconcile(): boolean {
+    if (this.#closed) return false;
     const wanted = this.#desired();
     for (const [dir, armed] of this.#watchers) {
-      // Gone, or another directory now at the same path.
-      if (wanted.get(dir)?.identity !== armed.identity) {
-        armed.watcher.close();
+      // Gone, another directory at the path, or renamed under its parent.
+      if (
+        this.#stale.has(dir) ||
+        wanted.get(dir)?.identity !== armed.identity
+      ) {
+        armed.handle.close();
         this.#watchers.delete(dir);
       }
     }
+    this.#stale.clear();
+    let armedNew = false;
+    let failed = false;
     for (const [dir, { relevant, identity }] of wanted) {
       if (this.#watchers.has(dir)) continue;
       try {
-        const watcher = fs.watch(dir, { persistent: false }, (_event, name) => {
-          if (relevant(name == null ? null : String(name))) this.#changed();
-        });
-        watcher.on("error", () => {
-          watcher.close();
-          if (this.#watchers.get(dir)?.watcher === watcher)
-            this.#watchers.delete(dir);
-          this.#changed();
-        });
-        this.#watchers.set(dir, { watcher, identity });
+        const handle: WatchHandle = this.#watch(
+          dir,
+          (event, name) => {
+            if (event === "rename" && name != null)
+              this.#stale.add(path.join(dir, name));
+            if (relevant(name)) this.#changed();
+          },
+          () => {
+            handle.close();
+            if (this.#watchers.get(dir)?.handle === handle)
+              this.#watchers.delete(dir);
+            this.#changed();
+          }
+        );
+        this.#watchers.set(dir, { handle, identity });
+        armedNew = true;
       } catch {
-        // Gone between the check and the watch; the next event re-arms.
+        // EPERM, or gone between the check and the watch.
+        failed = true;
       }
     }
+    if (failed) this.#scheduleRetry();
+    else this.#retries = 0;
+    return armedNew;
+  }
+
+  #scheduleRetry(): void {
+    if (this.#retryTimer != null || this.#retries >= ARM_RETRY_MS.length)
+      return;
+    const delay = ARM_RETRY_MS[this.#retries++]!;
+    this.#retryTimer = setTimeout(() => {
+      this.#retryTimer = null;
+      if (this.#reconcile()) this.#changed();
+    }, delay);
   }
 
   #changed(): void {
     if (this.#closed || this.#timer != null) return;
     this.#timer = setTimeout(() => {
       this.#timer = null;
-      this.#reconcile();
+      const armedNew = this.#reconcile();
       this.#onChange();
+      // Cover what landed before the new watchers went live.
+      if (armedNew) this.#changed();
     }, this.#debounceMs);
   }
 }
