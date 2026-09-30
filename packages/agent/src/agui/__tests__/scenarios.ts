@@ -45,6 +45,12 @@ export const queueLines = (count: number): Step => ({
   label: `${count} × queue_updated`,
 });
 
+/** Under agui: pi has opened the assistant message the Stop will cut. */
+const assistantStarted: Step = {
+  aguiUntil: (stdout) => stdout.includes('"role":"assistant"'),
+  label: "assistant message started",
+};
+
 export interface GoldenScenario extends Scenario {
   /** Under --wire agui: the script to run instead of `steps`. */
   aguiSteps?: Step[];
@@ -195,6 +201,7 @@ export const SCENARIOS: GoldenScenario[] = [
       { send: { type: "send", message: "long answer" } },
       { calls: 1 },
       seen("status_changed", 2),
+      assistantStarted,
       { send: { type: "stop" } },
       idle(2),
     ],
@@ -245,6 +252,7 @@ export const SCENARIOS: GoldenScenario[] = [
     steps: [
       { send: { type: "send", message: "slow" } },
       { calls: 1 },
+      assistantStarted,
       { send: { type: "stop" } },
       { send: { type: "send", message: "again" } },
       { calls: 2 },
@@ -291,6 +299,7 @@ export const SCENARIOS: GoldenScenario[] = [
     steps: [
       { send: { type: "send", message: "slow" } },
       { calls: 1 },
+      assistantStarted,
       { send: { type: "stop" } },
       idle(2),
       { send: { type: "dequeue" } },

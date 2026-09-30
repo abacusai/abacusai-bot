@@ -12,25 +12,33 @@ import type { AguiEvent } from "../wire.js";
 import { runInput, type Live } from "./live.js";
 
 type Message = {
+  id?: string;
   role?: string;
   parts?: Array<{ type: string; content?: string }>;
   content?: unknown;
 };
 
-function newestUserText(messages: readonly unknown[]): string {
+function newestUser(messages: readonly unknown[]): {
+  id?: string;
+  text: string;
+} {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index] as Message;
 
     if (message.role !== "user") continue;
-    if (typeof message.content === "string") return message.content;
 
-    return (message.parts ?? [])
-      .filter((part) => part.type === "text")
-      .map((part) => part.content ?? "")
-      .join("");
+    const text =
+      typeof message.content === "string"
+        ? message.content
+        : (message.parts ?? [])
+            .filter((part) => part.type === "text")
+            .map((part) => part.content ?? "")
+            .join("");
+
+    return { ...(message.id != null ? { id: message.id } : {}), text };
   }
 
-  return "";
+  return { text: "" };
 }
 
 export function hostAdapter(
@@ -81,7 +89,19 @@ export function hostAdapter(
     send: async (messages, _data, _signal, context) => {
       const runId = context?.runId ?? "run-x";
 
-      l.send(runInput(runId, newestUserText(messages)));
+      const newest = newestUser(messages);
+
+      l.send(
+        runInput(runId, newest.text, {
+          messages: [
+            {
+              id: newest.id ?? `u-${runId}`,
+              role: "user",
+              content: newest.text,
+            },
+          ],
+        })
+      );
 
       // main's ai.send: follow the ack for this request.
       await l.waitFor(

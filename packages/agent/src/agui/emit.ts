@@ -349,18 +349,24 @@ export class AguiEmitter {
   }
 
   /**
-   * Called by the host right after RUN_STARTED for a run that carries user
-   * input on AG-UI: a server run's dequeued entry or legacy send (§3.1.3).
+   * Called by the host right after RUN_STARTED for the run's user input: a
+   * server run's dequeued entry or legacy send (§3.1.3), and a client run's
+   * newest user message under the client's own id. The sending client already
+   * holds that message (StreamProcessor keeps one message per id), but every
+   * other reader of stdout (main's transcript processor, `joinRun` replay, a
+   * second window) learns the run's input only from here (finding r2-5).
    */
   userInput(
     runId: string,
     content: string,
-    options: { dequeued: boolean }
+    options: { dequeued: boolean; messageId?: string }
   ): AguiEvent[] {
     const out: AguiEvent[] = [];
 
     if (options.dequeued) out.push(custom("queue.dequeued", { content }));
-    out.push(...this.userMessage(userMessageId(runId), content));
+    out.push(
+      ...this.userMessage(options.messageId ?? userMessageId(runId), content)
+    );
 
     return out;
   }
@@ -527,6 +533,17 @@ export class AguiEmitter {
     }
 
     if (!this.runActive()) return [];
+
+    // A child that is not open in this run (it ended, or a stopped turn's
+    // child is still unwinding into the next run): its events have no card
+    // to land on, and StreamProcessor would drop them anyway.
+    if (
+      subagentRunId != null &&
+      event.type !== "subtask_start" &&
+      !this.children.has(subagentRunId)
+    ) {
+      return [];
+    }
 
     switch (event.type) {
       case "text_delta":

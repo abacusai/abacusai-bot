@@ -447,6 +447,10 @@ describe("ChatClient", () => {
 
     expect(chat.getIsLoading()).toBe(false);
     expect(customs).toContain("permission.requested");
+    // The run's user message on stdout reuses the client's id: no duplicate.
+    expect(
+      chat.getMessages().filter((message) => message.role === "user")
+    ).toHaveLength(1);
     const assistant = chat
       .getMessages()
       .filter((message) => message.role === "assistant");
