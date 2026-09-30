@@ -16,14 +16,13 @@ import { BotDot } from "./bots-sidebar";
 
 export const useBot = (botId: string) => {
   const collections = useCollections();
-  const { data } = useLiveQuery(
-    (q) =>
+  const { data } = useLiveQuery({
+    query: (q) =>
       q
         .from({ b: collections.bots })
         .where(({ b }) => eq(b.id, botId))
         .findOne(),
-    [collections, botId]
-  );
+  });
   return data;
 };
 

@@ -8,14 +8,13 @@ import { useCollections } from "#next/data/collections";
 
 export const useSession = (sessionId: string) => {
   const collections = useCollections();
-  const { data } = useLiveQuery(
-    (q) =>
+  const { data } = useLiveQuery({
+    query: (q) =>
       q
         .from({ s: collections.sessions })
         .where(({ s }) => eq(s.id, sessionId))
         .findOne(),
-    [collections, sessionId]
-  );
+  });
   return data;
 };
 

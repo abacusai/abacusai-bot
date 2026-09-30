@@ -15,9 +15,20 @@ import type { TFunction } from "i18next";
 import type { Collections } from "#next/data/collections";
 import type { Transport } from "#next/data/transport";
 import type { NavType } from "#next/lib/motion";
+import { Spinner } from "#next/ui/spinner";
 import type { SystemInfo } from "#shared/contract";
 
 import { routeTree } from "./routeTree.gen";
+
+/** Shown after 150 ms of loading, for at least 200 ms. */
+const PendingPane = () => (
+  <div
+    data-testid="pending-pane"
+    className="text-muted-foreground flex size-full items-center justify-center"
+  >
+    <Spinner />
+  </div>
+);
 
 export type Area =
   | "bots"
@@ -72,6 +83,7 @@ export const createAppRouter = ({ context, history }: AppRouterOptions) =>
     defaultPreload: "intent",
     // Query and DB own staleness (PLAN "Route tree").
     defaultPreloadStaleTime: 0,
+    defaultPendingComponent: PendingPane,
     defaultPendingMs: 150,
     defaultPendingMinMs: 200,
     scrollRestoration: true,

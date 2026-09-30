@@ -175,6 +175,7 @@ const Action = ({
   <Button
     variant="ghost"
     size="icon-sm"
+    nativeButton={props.render == null}
     aria-label={label}
     title={label}
     className="text-muted-foreground hover:text-sidebar-foreground"

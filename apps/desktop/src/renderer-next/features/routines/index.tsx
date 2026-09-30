@@ -19,11 +19,10 @@ import { Button } from "#next/ui/button";
 export const RoutinesSidebar = () => {
   const { t } = useTranslation();
   const collections = useCollections();
-  const { data } = useLiveQuery(
-    (q) =>
+  const { data } = useLiveQuery({
+    query: (q) =>
       q.from({ r: collections.routines }).orderBy(({ r }) => r.name, "asc"),
-    [collections]
-  );
+  });
   const status = useCollectionStatus(collections.routines);
   const params = useParams({ strict: false }) as { routineId?: string };
 
@@ -82,6 +81,7 @@ export const RoutinesListBody = () => {
         action={
           <Button
             size="sm"
+            nativeButton={false}
             render={<AppLink to="/routines/new" transition="none" />}
           >
             {t("routines.sidebar.new")}

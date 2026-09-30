@@ -48,11 +48,10 @@ export const BotDot = ({
 const useBots = () => {
   const collections = useCollections();
   const prefs = usePrefs();
-  const { data } = useLiveQuery(
-    (q) =>
+  const { data } = useLiveQuery({
+    query: (q) =>
       q.from({ b: collections.bots }).orderBy(({ b }) => b.updatedAt, "desc"),
-    [collections]
-  );
+  });
   const status = useCollectionStatus(collections.bots);
   return {
     bots: orderBots(data ?? [], prefs.pinned.botIds),
