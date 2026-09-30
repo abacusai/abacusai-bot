@@ -6,6 +6,7 @@
 export const FUNNEL_STEPS = [
   // Main process.
   "app_opened",
+  "auto_signin",
   "signup_clicked",
   "browser_returned",
   "signin_result",

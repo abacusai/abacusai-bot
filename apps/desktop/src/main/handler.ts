@@ -122,6 +122,7 @@ import {
   sendReferralEmailInvites,
   sendReferralWhatsappInvites,
 } from "./services/providers/abacus-referral-service";
+import { shouldAutoSignIn } from "./services/providers/abacus-signin-config";
 import { signOut as clearLocalAccount } from "./services/providers/account-service";
 import { listAvailableModels } from "./services/providers/models";
 import { clearOpenRouterCache } from "./services/providers/openrouter";
@@ -751,6 +752,8 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(IpcChannels.ListBrowserSignInProfiles, () =>
     listBrowserSignInProfiles()
   );
+
+  ipcMain.handle(IpcChannels.ShouldAutoSignIn, () => shouldAutoSignIn());
 
   ipcMain.handle(IpcChannels.CancelOpenRouterAuth, () => {
     cancelOpenRouterAuth();

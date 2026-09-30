@@ -1596,6 +1596,8 @@ export interface AbacusAccountInfo {
   subscription_tier: string | null;
   credits_used: number | null;
   credits_granted: number | null;
+  /** The account was created on the website, before the app was installed. */
+  web_signup?: boolean;
 }
 
 /** The invite-friends loop as the platform reports it for this account. */
@@ -1814,6 +1816,8 @@ export interface AgentApi {
   ) => Promise<AbacusAuthOutcome>;
   /** Chromium profiles to offer as "Continue with …" (in-app arm only). */
   listBrowserSignInProfiles: () => Promise<BrowserSignInProfile[]>;
+  /** The account was just made on the website: sign in without waiting for a click. */
+  shouldAutoSignIn: () => Promise<boolean>;
   /**
    * Stash this account's sessions, delete the Abacus key and its connector
    * gateway, and every other stored key too unless `keepOtherApiKeys`.
