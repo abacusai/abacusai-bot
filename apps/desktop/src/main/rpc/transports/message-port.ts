@@ -96,6 +96,8 @@ export interface MessagePortTransport {
   livePorts(): number;
   /** Whether `webContentsId` is registered. */
   isRegistered(webContentsId: number): boolean;
+  /** Every registered webContents id: the live view and any swap candidate. */
+  registeredIds(): number[];
   dispose(): void;
 }
 
@@ -200,6 +202,10 @@ export const installMessagePortTransport = ({
 
     isRegistered(webContentsId) {
       return registry.has(webContentsId);
+    },
+
+    registeredIds() {
+      return [...registry.keys()];
     },
 
     dispose() {
