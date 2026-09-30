@@ -258,7 +258,7 @@ export const UsagePage = () => {
           size="sm"
           onClick={() => {
             void query.refetch();
-            void transport.client.account.abacus({ refresh: true });
+            void account.refetch();
           }}
         >
           {t("phase5.refresh")}
@@ -271,6 +271,7 @@ export const UsagePage = () => {
         <p role="status">{t("phase5.usageLoading")}</p>
       ) : (
         <>
+          {snapshot.totals.requests === 0 && <p>{t("usage.empty")}</p>}
           <div className="grid grid-cols-3 gap-3">
             <GroupCard>
               <SettingRow

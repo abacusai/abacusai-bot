@@ -179,7 +179,10 @@ export const CriticalUpdateDialog = () => {
     !!update.status.downloaded &&
     !update.status.installStalled;
   const paused =
-    !!update.status?.error || !!update.installError || update.clicked;
+    !!update.status?.error ||
+    !!update.installError ||
+    update.clicked ||
+    !!update.status?.installing;
   useEffect(() => {
     if (!open || paused) return;
     const timer = setInterval(
