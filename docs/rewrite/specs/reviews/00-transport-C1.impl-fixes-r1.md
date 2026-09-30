@@ -136,3 +136,33 @@ Commits (on top of `bc74e973`, which merges `rewrite/renderer`):
 - `vitest --project main --project shared`: 2,545 passed, 2 failed, 7 todo, across 244 files (1 skipped). The 2 failures are the known `agent-runtime-deps.test.ts` environment issue.
 - `tsc -b`: clean apart from the untouched `vitest.config.ts:78`.
 - `oxlint`: 0 errors on the touched folders.
+
+## r3: oversized history (cut-over r2 #8, #9) and Codex r3
+
+Sources:
+- `07-cut-over.codex-r2.md` #8 (an oversized v1 file with no twin shows no history) and #9 (the fallback must not bring cleared history back);
+- `00-transport-C1.impl-codex-r3.md` items 1–3.
+
+Every item started with a test that failed first.
+
+Commits (on top of `1365c472`, which merges `rewrite/renderer` at `8dc67139` or later):
+
+1. `ef56754d` Thread store: bounded streaming read of oversized v1 history, clear rules first
+2. `8bee9588` Thread store and step 4: strict archive index, one `HeldFiles`, strict writer header
+3. (docs) this section
+
+| Item | Fix | Failing-first test |
+|---|---|---|
+| cut-over #8 | `services/session/stream-v1.ts` `streamTranscriptV1` reads a v1 file in 1 MB chunks and hashes it along the way. The digest equals `fingerprintV1` of the whole text. It parses the `segments` array one element at a time, so no string is ever larger than one segment. Multi-byte characters split across chunks are handled with a `StringDecoder`. It checks the result: `version: 1` and a closed `segments` array, otherwise `invalid`.<br>`ThreadStore.readV1` then picks a path by size:<br>• up to 64 MB: whole-file read, as before;<br>• 64 MB–512 MB (`MAX_STREAMED_TRANSCRIPT_BYTES`): streamed, then converted **in memory only**. The repair never persists a twin for it, and the dual-write already skips it.<br>• above 512 MB: `readCurrentWithNotice(id)` returns `{ file: null, notice: { kind: "too-large", size, limit } }` when no clear marker applies and there is no twin. `readCurrentFile`/`readCurrent` are unchanged wrappers.<br>`TranscriptService.read` (the old renderer's path) is unchanged: it reads the whole file, as the old renderer always has. | `stream-v1.test.ts`: the same segments and fingerprint as a whole-file parse with 1-, 2-, 3-, 7-, 64-byte and 1 MB chunks, on JSON with brackets inside strings, escapes, emoji, primitive segments and nested extra fields; plus the invalid shapes. C-T7 r3 "serves an oversized v1 file with no twin, read-only" (no twin written; the fingerprint is the file's). C-T7 r3 "past the streaming bound, answers with a typed too-large notice". |
+| cut-over #9 | The streamed read happens inside `readV1`, before any decision, so the clear-marker rules apply unchanged. A v1 file under `<id>.cleared` counts only when a later save proved it (`savedAfterClear`), compared against the streamed fingerprint. Otherwise the result is `null`, with no notice. | C-T7 r3 "an oversized cleared thread whose v1 removal failed stays cleared across a restart": an oversized save, a clear with the v1 file left in place, two relaunches (still empty), then a save after the clear (served). |
+| Codex r3 #1 | `readArchiveIndexStrict` returns empty only when the file is absent. If the file can't be read, isn't JSON, or doesn't validate (version 1, every entry with string `fingerprint` and `updatedAt`), it throws. Step 4 uses it, so the plan fails, `lastFailure` is recorded, and nothing is removed. Reads (`ThreadStore`) use the lenient form: a damaged index serves nothing from it and removes nothing. | C-T9 "r3 #1: an archive index it cannot read or validate stops the step" (a damaged file, and a wrong version). |
+| Codex r3 #2 | `TranscriptService` now uses the thread store's `HeldFiles` instance, including its memory fallback, when it has one. `HeldFiles.write` takes a per-call writer, so each service keeps its own write seam. | C-T7 r3 "#2: a v1 save held in memory is what the thread store converts": v1 and the journal are held, the twin is writable. |
+| Codex r3 #3 | The fast path now matches the exact header this build's v1-derived writer produces, anchored at the start: `{"version":2,"threadId":<string>,"updatedAt":<string>,"source":{"kind":"transcript-v1","updatedAt":<string>,"segments":<n>`. Anything else takes the full ownership parse. | C-T7 r3 "#3: the fast path never trusts a nested source before / inside the top-level one"; plus a positive check that `v1ToThreadFile` output, with and without a fingerprint, still takes the fast path. |
+
+**Handed over (r3):**
+- The relay should read through `readCurrentWithNotice` and show the `too-large` notice (for example as a hydrate notice). I can edit `relay-service.ts` only for r2 #11.
+
+**Tests (r3):**
+- `vitest --project main --project shared`: 2,560 passed, 2 failed, 7 todo, across 245 files (1 skipped). The 2 failures are the known `agent-runtime-deps.test.ts` pnpm environment issue.
+- `tsc -b`: clean apart from the untouched `vitest.config.ts:78`.
+- `oxlint`: 0 errors on the touched folders.

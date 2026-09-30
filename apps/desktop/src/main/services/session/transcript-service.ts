@@ -56,18 +56,25 @@ export class TranscriptService {
   private onPersist?: (sessionId: string) => void;
   private readonly threads?: ThreadStore;
   private readonly now: () => Date;
-  /** Shares its journal folder with the thread store's. */
+  /**
+   * The thread store's instance when there is one, memory fallback included,
+   * so the store converts exactly the v1 save this service holds.
+   */
   private readonly held: HeldFiles;
+  private readonly writeFile: (file: string, text: string) => void;
 
   constructor(options: TranscriptServiceOptions = {}) {
     this.threads = options.threads;
     this.now = options.now ?? (() => new Date());
-    this.held = new HeldFiles({
-      dir: () => path.join(abacusBotHome(), THREADS_DIR_NAME, ".pending"),
-      isWriteBlocked: options.isWriteBlocked ?? isMigrationWriteBlocked,
-      writeFile: options.writeFile ?? writeFileAtomicSync,
-      log: (message) => console.error(`[transcripts] ${message}`),
-    });
+    this.writeFile = options.writeFile ?? writeFileAtomicSync;
+    this.held =
+      options.threads?.held ??
+      new HeldFiles({
+        dir: () => path.join(abacusBotHome(), THREADS_DIR_NAME, ".pending"),
+        isWriteBlocked: options.isWriteBlocked ?? isMigrationWriteBlocked,
+        writeFile: options.writeFile ?? writeFileAtomicSync,
+        log: (message) => console.error(`[transcripts] ${message}`),
+      });
   }
 
   setOnPersist(callback: (sessionId: string) => void): void {
@@ -104,7 +111,7 @@ export class TranscriptService {
     };
     const text = JSON.stringify(payload);
     try {
-      this.held.write(filePath, text);
+      this.held.write(filePath, text, this.writeFile);
     } catch (error) {
       console.error("[transcripts] failed to write transcript", error);
       return;
