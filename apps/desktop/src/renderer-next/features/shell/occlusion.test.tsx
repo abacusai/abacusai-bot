@@ -158,6 +158,40 @@ describe("createOcclusionWatcher", () => {
     expect(last()).toHaveLength(2);
   });
 
+  it("re-measures when an ancestor of a tracked overlay moves it without a resize or scroll (Codex impl r2 #3)", async () => {
+    const OriginalRO = globalThis.ResizeObserver;
+    // No ResizeObserver callback fires: the popup's size never changes.
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      const { last } = watch();
+      const positioner = document.createElement("div");
+      positioner.dataset.slot = "popover-positioner";
+      const popup = document.createElement("div");
+      popup.dataset.slot = "popover-content";
+      boxes.set(popup, rect(10, 20, 100, 40));
+      positioner.append(popup);
+      document.body.append(positioner);
+      added.push(positioner);
+      await flush();
+      expect(last()).toEqual([{ x: 10, y: 20, width: 100, height: 40 }]);
+      const query = vi.spyOn(document.body, "querySelectorAll");
+      query.mockClear();
+      // Base UI's positioner writes the new position as an inline transform.
+      boxes.set(popup, rect(210, 120, 100, 40));
+      positioner.style.transform = "translate(210px, 120px)";
+      await flush();
+      expect(last()).toEqual([{ x: 210, y: 120, width: 100, height: 40 }]);
+      // A re-measure, not a re-query.
+      expect(query).not.toHaveBeenCalled();
+    } finally {
+      globalThis.ResizeObserver = OriginalRO;
+    }
+  });
+
   it("runs a frame loop while animations run, and stops after", async () => {
     const frames: Array<() => void> = [];
     const requestFrame = vi.fn((callback: () => void) => {
