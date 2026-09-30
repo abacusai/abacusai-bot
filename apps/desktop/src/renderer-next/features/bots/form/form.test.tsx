@@ -58,6 +58,20 @@ describe("schema and real TanStack Form", () => {
     expect(parsed.description).toBe("Role");
     expect(parsed.look.color).toBe("#123456");
   });
+  it("ignores inactive time values but rejects an empty active time", () => {
+    expect(
+      v.safeParse(BotFormSchema, {
+        ...values(),
+        checkIn: { ...values().checkIn, time: "" },
+      }).success
+    ).toBe(true);
+    expect(
+      v.safeParse(BotFormSchema, {
+        ...values(),
+        checkIn: { ...values().checkIn, preset: "daily", time: "" },
+      }).success
+    ).toBe(false);
+  });
   it("runs only dynamic validation on blur, then on change after submission", async () => {
     const initial = { ...values(), name: "" };
     const submitted = vi.fn();
@@ -204,6 +218,81 @@ describe("draft and staged creation", () => {
       "15 10 * * *"
     );
     expect(db.collections.routines.get(before.id)?.enabled).toBe(true);
+  });
+  it("round-trips accessories through create and update collections", async () => {
+    const db = await setup();
+    const draft = getDraft();
+    const deps = {
+      db,
+      transport: {
+        client: {
+          bots: {
+            openChat: vi.fn(async () => {
+              throw new Error("offline");
+            }),
+            announceChange: vi.fn(),
+          },
+        },
+      } as never,
+      load: vi.fn(),
+      navigate: vi.fn(),
+      routineName: "Check",
+      checkInFailed: vi.fn(),
+    };
+    const parsed = v.parse(BotFormSchema, {
+      ...values(),
+      look: { ...values().look, accessory: "glasses" },
+    });
+    await submitCreate(deps, draft, parsed, () => {});
+    const bot = db.collections.bots.get(draft.id)!;
+    expect(bot.avatarAccessory).toBe("glasses");
+    const baseline = valuesForBot(bot, null);
+    await submitEdit(
+      deps,
+      bot,
+      null,
+      { ...baseline, look: { ...baseline.look, accessory: "none" } },
+      baseline
+    );
+    expect(db.collections.bots.get(bot.id)?.avatarAccessory).toBe("none");
+  });
+  it("pause-only edit preserves another window's schedule", async () => {
+    const db = await setup();
+    const bot = fixtureBots()[0]!;
+    await persistCheckIn(
+      db,
+      bot,
+      null,
+      { ...values().checkIn, preset: "daily" },
+      "Check"
+    );
+    const routine = db.collections.routines.toArray[0]!;
+    const baseline = valuesForBot(bot, routine);
+    await persistCheckIn(
+      db,
+      bot,
+      routine,
+      { ...baseline.checkIn, time: "10:00" },
+      "Check"
+    );
+    await submitEdit(
+      {
+        db,
+        transport: { client: { bots: { announceChange: vi.fn() } } } as never,
+        load: vi.fn(),
+        navigate: vi.fn(),
+        routineName: "Check",
+        checkInFailed: vi.fn(),
+      },
+      bot,
+      db.collections.routines.get(routine.id)!,
+      { ...baseline, checkIn: { ...baseline.checkIn, enabled: false } },
+      baseline
+    );
+    expect(db.collections.routines.get(routine.id)?.schedule).toBe(
+      "0 10 * * *"
+    );
+    expect(db.collections.routines.get(routine.id)?.enabled).toBe(false);
   });
   it("edit announces mission only, and stores NAME_ONLY_MISSION for whitespace instructions", async () => {
     const db = await setup();

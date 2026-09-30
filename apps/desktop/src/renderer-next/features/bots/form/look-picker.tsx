@@ -76,16 +76,12 @@ export const LookPicker = ({
           <ToggleGroupItem
             key={accessory}
             value={accessory}
-            disabled={accessory !== "none"}
             className="h-7 rounded-full text-xs"
           >
             {t(`bots.avatar.accessories.${accessory}`)}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <p className="text-muted-foreground text-center text-xs">
-        {t("bots.form.accessoryUnavailable")}
-      </p>
     </div>
   );
 };

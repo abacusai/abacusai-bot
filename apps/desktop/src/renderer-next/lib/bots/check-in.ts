@@ -69,13 +69,25 @@ export const DEFAULT_CHECK_IN: CheckInDraft = {
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-export const CheckInDraftSchema = v.object({
-  preset: v.picklist([...CHECK_IN_PRESETS, "custom"]),
-  time: v.pipe(v.string(), v.regex(TIME, "time")),
-  weekday: v.picklist([0, 1, 2, 3, 4, 5, 6] as const),
-  custom: v.nullable(v.string()),
-  enabled: v.boolean(),
-});
+export const CheckInDraftSchema = v.pipe(
+  v.object({
+    preset: v.picklist([...CHECK_IN_PRESETS, "custom"]),
+    time: v.string(),
+    weekday: v.picklist([0, 1, 2, 3, 4, 5, 6] as const),
+    custom: v.nullable(v.string()),
+    enabled: v.boolean(),
+  }),
+  v.forward(
+    v.check(
+      (draft) =>
+        draft.preset === "off" ||
+        draft.preset === "custom" ||
+        TIME.test(draft.time),
+      "time"
+    ),
+    ["time"]
+  )
+);
 
 /** `HH:MM` with the minute replaced (hourly's "At minute" field). */
 export const withMinute = (time: string, minute: number): string => {

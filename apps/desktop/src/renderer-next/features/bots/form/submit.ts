@@ -5,6 +5,7 @@ import {
   findCheckIn,
   NAME_ONLY_MISSION,
   checkInPersistence,
+  checkInFromRoutine,
   describeCheckIn,
   type CheckInDraft,
 } from "#next/lib/bots/check-in";
@@ -105,6 +106,7 @@ export const submitCreate = async (
     persona: values.persona,
     avatarShape: values.look.shape,
     avatarColor: values.look.color,
+    avatarAccessory: values.look.accessory,
 
     model: values.model,
     channel: null,
@@ -163,12 +165,24 @@ export const submitEdit = async (
   if (patch.description === "") patch.description = NAME_ONLY_MISSION;
   await updateBot(deps.db.collections.bots, bot.id, patch);
   const checkInChanged = !equalValue(values.checkIn, baseline.checkIn);
+  const liveCheckIn = checkInFromRoutine(before);
+  const scheduleEdited = !equalValue(
+    { ...values.checkIn, enabled: baseline.checkIn.enabled },
+    baseline.checkIn
+  );
+  const mergedCheckIn = {
+    ...(scheduleEdited ? values.checkIn : liveCheckIn),
+    enabled:
+      values.checkIn.enabled !== baseline.checkIn.enabled
+        ? values.checkIn.enabled
+        : liveCheckIn.enabled,
+  };
   if (checkInChanged)
     await persistCheckIn(
       deps.db,
       { id: bot.id, name: values.name },
       before,
-      values.checkIn,
+      mergedCheckIn,
       deps.routineName
     );
   const scheduleChanged = !equalValue(
