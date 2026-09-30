@@ -877,6 +877,12 @@ export const ChatPanel = (): JSX.Element => {
   const isSenderChat = senderChatForSession != null;
   /** A routine fire's session: a report, not a conversation to reply into. */
   const isRoutineRun = activeSession?.routineId != null;
+  /**
+   * Retry, resume and the model switch belong only where the composer is:
+   * a retry is a message, and in a sender's chat it would go to the sender;
+   * the switch points at a picker that a run or a channel bot's chat lacks.
+   */
+  const turnActions = !isSenderChat && !isRoutineRun && channelBotChat == null;
   // A bot runs in the Profile page's default and never reads or writes the
   // session mode. Every session shares one sticky mode, so the welcome
   // screen's picker shows what the send spawns with.
@@ -2184,9 +2190,18 @@ export const ChatPanel = (): JSX.Element => {
                           }
                           isWorking={isScopeBusy}
                           onOpenSubtask={setSubtaskScope}
-                          onSwitchModel={handleSwitchModel}
+                          onRetry={
+                            turnActions && !isAgentBusy
+                              ? handleRetry
+                              : undefined
+                          }
+                          onSwitchModel={
+                            turnActions ? handleSwitchModel : undefined
+                          }
                           onResume={
-                            isAgentBusy ? undefined : handleResumeOnPool
+                            turnActions && !isAgentBusy
+                              ? handleResumeOnPool
+                              : undefined
                           }
                         />
                       ) : (

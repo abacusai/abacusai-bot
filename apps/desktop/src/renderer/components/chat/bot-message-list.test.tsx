@@ -517,3 +517,42 @@ describe("bot message feedback", () => {
     ).toBeNull();
   });
 });
+
+describe("a turn that failed in a bot's thread", () => {
+  const failed = (): ChatRenderItem[] => [
+    { kind: "user", id: "u1", text: "go" },
+    {
+      kind: "agent",
+      id: "a1",
+      items: [
+        {
+          kind: "notification",
+          id: "n1",
+          message: "The model stopped answering.",
+          severity: "error",
+        },
+      ] as never,
+    },
+  ];
+
+  it("offers a retry where the chat has a composer to send it from", () => {
+    const onRetry = vi.fn();
+    render(
+      (<BotMessageList chatItems={failed()} onRetry={onRetry} />) as JSX.Element
+    );
+    fireEvent.click(
+      document.querySelector('[data-id="notification-retry-btn"]')!
+    );
+
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("offers nothing where a retry would be a message to someone else", () => {
+    // A sender's chat, a routine run, a channel bot's chat: no handler, no button.
+    render((<BotMessageList chatItems={failed()} />) as JSX.Element);
+
+    expect(
+      document.querySelector('[data-id="notification-retry-btn"]')
+    ).toBeNull();
+  });
+});
