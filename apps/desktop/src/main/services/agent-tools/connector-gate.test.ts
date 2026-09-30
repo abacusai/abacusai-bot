@@ -161,6 +161,25 @@ describe("the conversation an ask belongs to", () => {
     expect(gate.listPending(otherChat)).toHaveLength(0);
   });
 
+  it("lists every conversation's asks when no conversation is named", () => {
+    const gate = new ConnectorGate(() => undefined);
+    void gate.ask({
+      connectorId: "telegram",
+      label: "Telegram",
+      conversationKey: botThread,
+    });
+    void gate.ask({
+      connectorId: "gmailuser",
+      label: "Gmail",
+      conversationKey: otherChat,
+    });
+
+    expect(gate.listPending().map((request) => request.connectorId)).toEqual([
+      "telegram",
+      "gmailuser",
+    ]);
+  });
+
   it("refuses an answer from another conversation", async () => {
     const { gate, ask, requestId } = gateWith();
     const pending = ask();

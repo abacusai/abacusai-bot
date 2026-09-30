@@ -11,6 +11,7 @@ import type { WindowChromeState, WindowState } from "#shared/contract";
 import type {
   BrowserRuntimeLease,
   DeviceBuildPhase,
+  DeviceStreamChunk,
   HideBrowserRuntimeRequest,
   MaterializeBrowserRuntimeRequest,
   NavigateBrowserRuntimeRequest,
@@ -137,6 +138,11 @@ export interface RpcWindows {
 /** State the event iterators snapshot on (re)open that no service keeps. */
 export interface EventTrackers {
   deviceBuild(): { phase: DeviceBuildPhase; error?: string } | null;
+  /**
+   * A device stream's current group of pictures: its last key frame and
+   * every chunk since, oldest first; empty before the first key frame.
+   */
+  deviceStreamReplay(streamId: number): DeviceStreamChunk[];
 }
 
 export interface RpcDeps {

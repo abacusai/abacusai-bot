@@ -213,59 +213,59 @@ handler stays until the cut-over).
 
 | # | Legacy | Defined at | Procedure | Kind | Notes |
 |---|---|---|---|---|---|
-| 1 | `openFolderDialog` | preload/index.ts:53 | `system.dialog.openFolder` | M |  |
-| 2 | `openFilesDialog` | preload/index.ts:55 | `system.dialog.openFiles` | M | data: Buffer → Uint8Array (custom serializer) |
-| 3 | `readClipboardImage` | preload/index.ts:64 | — | R | no renderer caller; composer paste uses the DOM clipboard |
-| 4 | `fetchUrlAttachment` | preload/index.ts:70 | — | R | no renderer caller |
-| 5 | `openExternal` | preload/index.ts:78 | `system.openExternal` | M | same isSafeExternalUrl guard |
-| 6 | `openFilePath` | preload/index.ts:82 | `system.openPath` | M | same local-open-guard |
-| 7 | `showItemInFolder` | preload/index.ts:85 | `system.showItemInFolder` | M |  |
-| 8 | `getAppVersion` | preload/index.ts:88 | `system.info` | Q | appVersion |
-| 9 | `showAboutPanel` | preload/index.ts:89 | `window.showAbout` | M |  |
-| 10 | `isFullScreen` | preload/index.ts:90 | `window.state` | Q | { fullScreen, focused, maximized } |
-| 11 | `onFullScreenChange` | preload/index.ts:92 | `window.events` | S | { type: "state", state } |
-| 12 | `getWindowChrome` | preload/index.ts:101 | `window.chrome` | Q |  |
-| 13 | `onWindowChromeChange` | preload/index.ts:103 | `window.events` | S | { type: "chrome", chrome } |
-| 14 | `recreateMainWindow` | preload/index.ts:113 | — | R | main-only plumbing for the Linux native-frame fallback (spec 00-window-chrome); the new renderer never asks for it |
-| 15 | `restartApp` | preload/index.ts:115 | `system.restart` | M |  |
-| 16 | `getHomeDir` | preload/index.ts:117 | `system.info` | Q | homeDir |
-| 17 | `hasGoogleChrome` | preload/index.ts:118 | `browser.hasGoogleChrome` | Q |  |
-| 18 | `setThemeSource` | preload/index.ts:120 | `db.prefs.update` | T | the prefs row's theme drives nativeTheme.themeSource in main |
-| 19 | `platform` | preload/index.ts:122 | `system.info` | Q | platform (was a sync preload value) |
-| 20 | `reportFunnelStep` | preload/index.ts:125 | `system.funnelStep` | M | fire-and-forget |
-| 21 | `getAccountState` | preload/index.ts:130 | `account.state` | Q |  |
-| 22 | `skipAccountOnboarding` | preload/index.ts:132 | `account.skipOnboarding` | M |  |
-| 23 | `signOutAccount` | preload/index.ts:134 | `account.signOut` | M |  |
-| 24 | `forgetAccount` | preload/index.ts:136 | `account.forget` | M |  |
-| 25 | `savePastedTempFiles` | preload/index.ts:140 | `files.savePastedTemp` | M | Uint8Array payloads |
-| 26 | `saveLogs` | preload/index.ts:151 | `system.logs.save` | M |  |
-| 27 | `appendLogs` | preload/index.ts:157 | `system.logs.append` | M | fire-and-forget; batched client-side |
-| 28 | `showNotification` | preload/index.ts:161 | `system.notify` | M |  |
-| 29 | `onNotificationClicked` | preload/index.ts:167 | `system.events` | S | { type: "notification-clicked", metadata } |
-| 30 | `power.getKeepAwake` | preload/index.ts:179 | — | R | no renderer caller |
-| 31 | `power.setKeepAwake` | preload/index.ts:181 | — | R | no renderer caller |
-| 32 | `power.setAgentBusy` | preload/index.ts:184 | — | R | main derives busy from run state (AG-UI RUN_STARTED/RUN_FINISHED) instead of trusting a renderer edge |
-| 33 | `update.check` | preload/index.ts:189 | `update.check` | M |  |
-| 34 | `update.install` | preload/index.ts:192 | `update.install` | M |  |
-| 35 | `update.getStatus` | preload/index.ts:195 | `update.status` | Q |  |
-| 36 | `update.onStatusChange` | preload/index.ts:198 | `update.events` | S | UpdateStatus iterator; the first yield is the current status |
-| 37 | `skills.listInstalled` | preload/index.ts:209 | `skills.listInstalled` | Q |  |
-| 38 | `skills.searchMarketplace` | preload/index.ts:211 | `skills.search` | Q |  |
-| 39 | `skills.install` | preload/index.ts:213 | `skills.install` | M |  |
-| 40 | `skills.remove` | preload/index.ts:215 | `skills.remove` | M |  |
-| 41 | `skills.openFile` | preload/index.ts:216 | `skills.openFile` | M |  |
-| 42 | `skills.importLocal` | preload/index.ts:218 | `skills.importLocal` | M |  |
-| 43 | `files.readImageAsDataUrl` | preload/index.ts:222 | `files.readImageAsDataUrl` | Q |  |
-| 44 | `files.readFileAsText` | preload/index.ts:233 | `files.readText` | Q |  |
-| 45 | `files.readPptx` | preload/index.ts:245 | `files.readPptx` | Q |  |
-| 46 | `versions` | preload/index.ts:252 | `system.info` | Q | versions |
-| 47 | `durableState.snapshot` | preload/index.ts:256 | `durableState.snapshot` | Q | old renderer only; the new renderer uses db.prefs; the sync sendSync read stays in the legacy preload |
-| 48 | `durableState.set` | preload/index.ts:257 | `durableState.set` | M | old renderer only |
-| 49 | `durableState.remove` | preload/index.ts:260 | `durableState.set` | M | value: null (old renderer only) |
-| 50 | `durableState.clear` | preload/index.ts:263 | `durableState.clear` | M | old renderer only |
-| 51 | `reportUiActivity` | preload/index.ts:269 | `window.activity` | M | fire-and-forget; feeds the swap deferral |
-| 52 | `signalRendererReady` | preload/index.ts:275 | `window.ready` | M | renderer-host also accepts this, per webContents, as the swap-ready signal |
-| 53 | `getPathForFile` | preload/index.ts:281 | `(preload) window.abacusHost.getPathForFile` | M | needs webUtils in the preload; the only non-port preload export |
+| 1 | `openFolderDialog` | preload/index.ts:50 | `system.dialog.openFolder` | M |  |
+| 2 | `openFilesDialog` | preload/index.ts:52 | `system.dialog.openFiles` | M | data: Buffer → Uint8Array (custom serializer) |
+| 3 | `readClipboardImage` | preload/index.ts:61 | — | R | no renderer caller; composer paste uses the DOM clipboard |
+| 4 | `fetchUrlAttachment` | preload/index.ts:67 | — | R | no renderer caller |
+| 5 | `openExternal` | preload/index.ts:75 | `system.openExternal` | M | same isSafeExternalUrl guard |
+| 6 | `openFilePath` | preload/index.ts:79 | `system.openPath` | M | same local-open-guard |
+| 7 | `showItemInFolder` | preload/index.ts:82 | `system.showItemInFolder` | M |  |
+| 8 | `getAppVersion` | preload/index.ts:85 | `system.info` | Q | appVersion |
+| 9 | `showAboutPanel` | preload/index.ts:86 | `window.showAbout` | M |  |
+| 10 | `isFullScreen` | preload/index.ts:87 | `window.state` | Q | { fullScreen, focused, maximized } |
+| 11 | `onFullScreenChange` | preload/index.ts:89 | `window.events` | S | { type: "state", state } |
+| 12 | `getWindowChrome` | preload/index.ts:98 | `window.chrome` | Q |  |
+| 13 | `onWindowChromeChange` | preload/index.ts:100 | `window.events` | S | { type: "chrome", chrome } |
+| 14 | `recreateMainWindow` | preload/index.ts:110 | — | R | main-only plumbing for the Linux native-frame fallback (spec 00-window-chrome); the new renderer never asks for it |
+| 15 | `restartApp` | preload/index.ts:112 | `system.restart` | M |  |
+| 16 | `getHomeDir` | preload/index.ts:114 | `system.info` | Q | homeDir |
+| 17 | `hasGoogleChrome` | preload/index.ts:115 | `browser.hasGoogleChrome` | Q |  |
+| 18 | `setThemeSource` | preload/index.ts:117 | `db.prefs.update` | T | the prefs row's theme drives nativeTheme.themeSource in main |
+| 19 | `platform` | preload/index.ts:119 | `system.info` | Q | platform (was a sync preload value) |
+| 20 | `reportFunnelStep` | preload/index.ts:122 | `system.funnelStep` | M | fire-and-forget |
+| 21 | `getAccountState` | preload/index.ts:127 | `account.state` | Q |  |
+| 22 | `skipAccountOnboarding` | preload/index.ts:129 | `account.skipOnboarding` | M |  |
+| 23 | `signOutAccount` | preload/index.ts:131 | `account.signOut` | M |  |
+| 24 | `forgetAccount` | preload/index.ts:133 | `account.forget` | M |  |
+| 25 | `savePastedTempFiles` | preload/index.ts:137 | `files.savePastedTemp` | M | Uint8Array payloads |
+| 26 | `saveLogs` | preload/index.ts:148 | `system.logs.save` | M |  |
+| 27 | `appendLogs` | preload/index.ts:154 | `system.logs.append` | M | fire-and-forget; batched client-side |
+| 28 | `showNotification` | preload/index.ts:158 | `system.notify` | M |  |
+| 29 | `onNotificationClicked` | preload/index.ts:164 | `system.events` | S | { type: "notification-clicked", metadata } |
+| 30 | `power.getKeepAwake` | preload/index.ts:176 | — | R | no renderer caller |
+| 31 | `power.setKeepAwake` | preload/index.ts:178 | — | R | no renderer caller |
+| 32 | `power.setAgentBusy` | preload/index.ts:181 | — | R | main derives busy from run state (AG-UI RUN_STARTED/RUN_FINISHED) instead of trusting a renderer edge |
+| 33 | `update.check` | preload/index.ts:186 | `update.check` | M |  |
+| 34 | `update.install` | preload/index.ts:189 | `update.install` | M |  |
+| 35 | `update.getStatus` | preload/index.ts:192 | `update.status` | Q |  |
+| 36 | `update.onStatusChange` | preload/index.ts:195 | `update.events` | S | UpdateStatus iterator; the first yield is the current status |
+| 37 | `skills.listInstalled` | preload/index.ts:206 | `skills.listInstalled` | Q |  |
+| 38 | `skills.searchMarketplace` | preload/index.ts:208 | `skills.search` | Q |  |
+| 39 | `skills.install` | preload/index.ts:210 | `skills.install` | M |  |
+| 40 | `skills.remove` | preload/index.ts:212 | `skills.remove` | M |  |
+| 41 | `skills.openFile` | preload/index.ts:213 | `skills.openFile` | M |  |
+| 42 | `skills.importLocal` | preload/index.ts:215 | `skills.importLocal` | M |  |
+| 43 | `files.readImageAsDataUrl` | preload/index.ts:219 | `files.readImageAsDataUrl` | Q |  |
+| 44 | `files.readFileAsText` | preload/index.ts:230 | `files.readText` | Q |  |
+| 45 | `files.readPptx` | preload/index.ts:242 | `files.readPptx` | Q |  |
+| 46 | `versions` | preload/index.ts:249 | `system.info` | Q | versions |
+| 47 | `durableState.snapshot` | preload/index.ts:253 | `durableState.snapshot` | Q | old renderer only; the new renderer uses db.prefs; the sync sendSync read stays in the legacy preload |
+| 48 | `durableState.set` | preload/index.ts:254 | `durableState.set` | M | old renderer only |
+| 49 | `durableState.remove` | preload/index.ts:257 | `durableState.set` | M | value: null (old renderer only) |
+| 50 | `durableState.clear` | preload/index.ts:260 | `durableState.clear` | M | old renderer only |
+| 51 | `reportUiActivity` | preload/index.ts:266 | `window.activity` | M | fire-and-forget; feeds the swap deferral |
+| 52 | `signalRendererReady` | preload/index.ts:272 | `window.ready` | M | renderer-host also accepts this, per webContents, as the swap-ready signal |
+| 53 | `getPathForFile` | preload/index.ts:278 | `(preload) window.abacusHost.getPathForFile` | M | needs webUtils in the preload; the only non-port preload export |
 
 ## `IpcEvent` variants (46)
 

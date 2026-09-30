@@ -77,6 +77,35 @@ const draftRequest = () => {
 };
 
 describe("conversation terminal session service", () => {
+  it("announces a closed generation as retired, since its exit is suppressed", async () => {
+    const retired = vi.fn();
+    const exited = vi.fn();
+    const terminals = new TerminalSessionService({
+      resolveWorkspacePath: () => workspace,
+      emitTerminalOutput: () => {},
+      emitTerminalExit: exited,
+      emitTerminalState: () => {},
+      emitTerminalRetired: retired,
+    });
+    const request = draftRequest();
+    const { state } = await terminals.startSession(request);
+
+    terminals.hideSession({
+      conversationKey: request.conversationKey,
+      conversation: request.conversation,
+      generation: state.generation,
+      close: true,
+    } as Parameters<TerminalSessionService["hideSession"]>[0]);
+
+    expect(retired).toHaveBeenCalledExactlyOnceWith({
+      terminalId: "terminal-1",
+      conversationKey: request.conversationKey,
+      generation: state.generation,
+      reason: "closed",
+    });
+    expect(exited).not.toHaveBeenCalled();
+  });
+
   it("opens the shell the request names", async () => {
     const terminals = service();
 

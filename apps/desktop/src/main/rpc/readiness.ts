@@ -55,9 +55,22 @@ export class RendererReadiness {
     });
   }
 
-  /** A reload or a destroyed contents starts over. */
+  /** A reload starts over; a waiter keeps waiting for the new document. */
   forget(webContentsId: number): void {
     this.#reports.delete(webContentsId);
+  }
+
+  /**
+   * The contents is gone: forget its report, and fail its waiters now
+   * rather than at their timeout.
+   */
+  discard(webContentsId: number): void {
+    this.#reports.delete(webContentsId);
+    for (const waiter of this.#waiters.get(webContentsId) ?? []) {
+      clearTimeout(waiter.timer);
+      waiter.resolve("failed");
+    }
+    this.#waiters.delete(webContentsId);
   }
 }
 

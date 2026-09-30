@@ -1,5 +1,6 @@
 import type { SystemEvent, WindowEvent } from "#shared/contract";
 import type { DeviceStreamChunk, IpcEvent } from "#shared/contracts";
+import type { ConversationKey } from "#shared/conversation-scope";
 import type { UpdateStatus } from "#shared/update";
 
 /** Pushes that never went through the `IpcEvent` catch-all. */
@@ -11,6 +12,16 @@ export interface BusChannels {
   "device-chunk": DeviceStreamChunk;
   /** A memory file changed (published by sub-slice B's watchers). */
   memory: { type: "changed" };
+  /**
+   * A terminal generation closed or superseded without its own exit; its
+   * `terminal.output` readers end. Bus-only: no legacy event exists for it.
+   */
+  "terminal-retired": {
+    terminalId: string;
+    conversationKey: ConversationKey;
+    generation: number;
+    reason: "closed" | "superseded";
+  };
 }
 
 export type BusChannel = keyof BusChannels;

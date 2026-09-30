@@ -13,20 +13,17 @@ import type { UpdateStatus } from "#shared/update";
 import type { WindowChromeState } from "#shared/window-chrome-state";
 
 import { createBridge } from "./bridge";
-import {
-  handshakeDelayFromEnv,
-  installRpcPortHandshake,
-  type HandshakeWindow,
-} from "./rpc-port";
+import { installRpcPortHandshake, type HandshakeWindow } from "./rpc-port";
 
 // The oRPC port handshake (spec 00 A.4.4). Its listener is in place before any
 // page script runs, so a page's first request cannot be missed. Additive: the
-// legacy `window.api` below is unchanged.
+// legacy `window.api` below is unchanged. No test delay here: the shipped
+// preload never reads ABACUS_TEST_HANDSHAKE_DELAY_MS; the real-Electron
+// handshake test builds its own preload entry that passes one.
 installRpcPortHandshake(
   ipcRenderer,
   (globalThis as unknown as { window: HandshakeWindow }).window,
-  "main",
-  { delayMs: handshakeDelayFromEnv(process.env) }
+  "main"
 );
 
 // Read synchronously so the state exists before the first renderer module

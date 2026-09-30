@@ -7,6 +7,12 @@
 import type { Context, Router } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/message-port";
 
+import {
+  FLOW_CONTEXT_KEY,
+  FlowRegistry,
+  flowControlHandlerInterceptor,
+  withFlowAcks,
+} from "#shared/contract/flow-control";
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 
 import { createTransport } from "./create-transport";
@@ -25,10 +31,16 @@ export const createMemoryTransport = <TContext extends Context>(
   const { port1: serverPort, port2: clientPort } = new MessageChannel();
   const handler = new RPCHandler<TContext>(router, {
     customJsonSerializers: CUSTOM_JSON_SERIALIZERS,
+    interceptors: [flowControlHandlerInterceptor],
   });
+  // As main's port: iterators are gated on the link's acknowledgements.
+  const flows = new FlowRegistry();
   // Widened: the options type is conditional on the context and does not
   // resolve for a generic one.
-  (handler as unknown as RPCHandler<Context>).upgrade(serverPort, { context });
+  (handler as unknown as RPCHandler<Context>).upgrade(
+    withFlowAcks(serverPort, flows),
+    { context: { ...context, [FLOW_CONTEXT_KEY]: flows } }
+  );
   serverPort.start();
 
   const transport = createTransport(clientPort, {
@@ -39,7 +51,7 @@ export const createMemoryTransport = <TContext extends Context>(
     ...transport,
     serverPort,
     close: () => {
-      clientPort.close();
+      transport.close();
       serverPort.close();
     },
   };

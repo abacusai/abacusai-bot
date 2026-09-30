@@ -103,11 +103,9 @@ import { rendererCspHeaders } from "./renderer-csp";
 import { RENDERER_GENERATION } from "./renderer-generation";
 import {
   RendererHost,
+  RendererSwapScheduler,
   rendererWebContents,
   setActiveRendererHost,
-  SwapAborted,
-  SwapNotReady,
-  SwapRetryBudget,
 } from "./renderer-host";
 import { agentEntry, resourcePath, resourcesRoot } from "./resources";
 import { UnavailableAguiSource } from "./rpc/ai/source";
@@ -121,6 +119,7 @@ import {
   installMessagePortTransport,
   type MessagePortTransport,
 } from "./rpc/transports/message-port";
+import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
@@ -376,7 +375,6 @@ let mainWindowRef: BaseWindow | null = null;
 let rendererHost: RendererHost | null = null;
 /** Null until whenReady; wherever it stays null the packaged baseline runs. */
 let experienceRuntime: ExperienceRuntime | null = null;
-let rendererSwapTimer: NodeJS.Timeout | null = null;
 
 // Throttled input reports from renderer/lib/activity-beacon; a swap defers
 // while input is recent.
@@ -391,84 +389,22 @@ ipcMain.on("renderer-activity", () => {
  * gates: an agent mid-turn would lose a reply that exists nowhere else yet, a
  * terminal's scrollback lives in the renderer, and recent input defers it.
  */
-const swapRetryBudget = new SwapRetryBudget();
+const rendererSwaps = new RendererSwapScheduler({
+  // Development stays on the Vite server.
+  disabled: () => Boolean(process.env.VITE_DEV_SERVER_URL),
+  target: () => experienceRuntime?.activeRendererUrl(),
+  host: () => rendererHost,
+  busy: () =>
+    workspaceServiceHost.hasActiveAgentTurn() ||
+    workspaceServiceHost.hasLiveTerminalSessions() ||
+    Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
+  // The integrity check admits only experiences built for this shell's
+  // FOUNDATION_API, so this is also the candidate's contract.
+  barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
+});
 
 function scheduleRendererSwap(version: string): void {
-  const attempt = (): boolean => {
-    // Development stays on the Vite server.
-    if (process.env.VITE_DEV_SERVER_URL) return true;
-
-    const url = experienceRuntime?.activeRendererUrl();
-
-    if (!url) return true;
-
-    const host = rendererHost;
-
-    if (host === null) return true;
-
-    if (
-      workspaceServiceHost.hasActiveAgentTurn() ||
-      workspaceServiceHost.hasLiveTerminalSessions() ||
-      Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS
-    ) {
-      return false;
-    }
-
-    host
-      .swap(url, {
-        shouldAbort: () =>
-          workspaceServiceHost.hasActiveAgentTurn() ||
-          workspaceServiceHost.hasLiveTerminalSessions() ||
-          Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
-        // The integrity check admits only experiences built for this shell's
-        // FOUNDATION_API, so this is also the candidate's contract.
-        barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
-      })
-      .then(
-        (swapped) => {
-          if (swapped) {
-            console.log(`[experience] renderer swapped to ${version}`);
-          }
-        },
-        (error: unknown) => {
-          if (error instanceof SwapAborted) {
-            scheduleRendererSwap(version);
-
-            return;
-          }
-
-          if (error instanceof SwapNotReady) {
-            if (swapRetryBudget.fail(version)) {
-              scheduleRendererSwap(version);
-            } else {
-              console.warn(
-                `[experience] ${version} never became ready; no more swaps until relaunch`
-              );
-            }
-            return;
-          }
-
-          console.error("[experience] renderer swap failed", error);
-        }
-      );
-
-    return true;
-  };
-
-  if (rendererSwapTimer !== null) {
-    clearInterval(rendererSwapTimer);
-    rendererSwapTimer = null;
-  }
-
-  if (attempt()) return;
-
-  rendererSwapTimer = setInterval(() => {
-    if (attempt() && rendererSwapTimer !== null) {
-      clearInterval(rendererSwapTimer);
-      rendererSwapTimer = null;
-    }
-  }, 5000);
-  rendererSwapTimer.unref();
+  rendererSwaps.schedule(version);
 }
 // webContents resolves through the host so it stays current across swaps.
 const browserRuntimeWindow = (): BrowserRuntimeWindow | null => {
@@ -674,15 +610,17 @@ async function createWindow(restored?: RecreatedWindowState) {
     publishWindowState();
     publishChromeState();
   };
-  // `window.events` for the oRPC renderer: the whole state, to the live view.
+  // `window.events` for the oRPC renderer: the whole state, to every view
+  // in the window (a swap candidate too, so it flips in current).
   const publishWindowState = (): void => {
-    const contents = rendererWebContents();
     const state = mainWindowState();
-    if (contents == null || state == null) return;
-    emitBusChannel("window", {
-      webContentsId: contents.id,
-      event: { type: "state", state },
-    });
+    if (state == null) return;
+    publishToWindowViews(
+      emitBusChannel,
+      rpcTransport?.registeredIds() ?? [],
+      rendererWebContents()?.id ?? null,
+      { type: "state", state }
+    );
   };
   mainWindow.on("enter-full-screen", publishFullScreenState);
   mainWindow.on("leave-full-screen", publishFullScreenState);
@@ -1592,12 +1530,16 @@ function publishChromeState(): void {
   const contents = rendererWebContents();
   if (contents == null) return;
   const chrome: WindowChromeState = chromeState();
+  // The legacy renderer: the live view only, as before.
   if (RENDERER_GENERATION === "wco")
     contents.send("window:chrome-changed", chrome);
-  emitBusChannel("window", {
-    webContentsId: contents.id,
-    event: { type: "chrome", chrome },
-  });
+  // Every view in the window, a swap candidate included.
+  publishToWindowViews(
+    emitBusChannel,
+    rpcTransport?.registeredIds() ?? [],
+    contents.id,
+    { type: "chrome", chrome }
+  );
 }
 
 /** Null until whenReady has registered the IPC handlers. */

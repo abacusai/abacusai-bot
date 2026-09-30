@@ -177,25 +177,27 @@ describe("the router over a MessagePort (A-T2)", () => {
 
   it("runs the iterator's cleanup when the client aborts it", async () => {
     const bus = new MainEventBus();
+    const deps = fakeDeps({ bus });
+    // After the trackers' permanent listeners.
     const baseline = bus.listenerCount();
-    const { client } = connect(fakeDeps({ bus }));
+    const { client } = connect(deps);
     const controller = new AbortController();
 
     const iterator = await client.settings.events(undefined, {
       signal: controller.signal,
     });
     const pending = iterator.next();
-    await vi.waitFor(() => expect(bus.listenerCount()).toBe(baseline + 1 + 1));
+    await vi.waitFor(() => expect(bus.listenerCount()).toBe(baseline + 1));
 
     controller.abort();
     await pending.catch(() => undefined);
-    await vi.waitFor(() => expect(bus.listenerCount()).toBe(baseline + 1));
+    await vi.waitFor(() => expect(bus.listenerCount()).toBe(baseline));
   });
 
   it("ends every open iterator when the port closes", async () => {
     const bus = new MainEventBus();
     const deps = fakeDeps({ bus });
-    // The device-build tracker is one permanent listener.
+    // The trackers are permanent listeners.
     const baseline = bus.listenerCount();
     const connection = connect(deps);
 

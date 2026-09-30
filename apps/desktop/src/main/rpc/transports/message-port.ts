@@ -22,6 +22,12 @@ import type {
   WebContents,
 } from "electron";
 
+import {
+  FLOW_CONTEXT_KEY,
+  FlowRegistry,
+  withFlowAcks,
+} from "#shared/contract/flow-control";
+
 import type { RpcContext, RpcWindowKind } from "../context";
 import type { RpcDeps } from "../deps";
 import { rpcHandlerOptions } from "../handler-options";
@@ -35,6 +41,8 @@ export type RendererKind = Exclude<RpcWindowKind, "dev">;
 interface Entry {
   kind: RendererKind;
   port: TrackedPort | null;
+  /** Removes the webContents listeners registration installed. */
+  teardown: () => void;
 }
 
 /**
@@ -90,6 +98,8 @@ export interface MessagePortTransport {
   livePorts(): number;
   /** Whether `webContentsId` is registered. */
   isRegistered(webContentsId: number): boolean;
+  /** Every registered webContents id: the live view and any swap candidate. */
+  registeredIds(): number[];
   dispose(): void;
 }
 
@@ -98,7 +108,7 @@ export interface MessagePortTransportOptions {
   router: AppRouter;
   deps: RpcDeps;
   /** A reload or a destroyed contents forgets its readiness report. */
-  readiness?: Pick<RendererReadiness, "forget">;
+  readiness?: Pick<RendererReadiness, "forget" | "discard">;
 }
 
 export const installMessagePortTransport = ({
@@ -142,12 +152,15 @@ export const installMessagePortTransport = ({
     tracked.peer.on("close", () => {
       if (entry.port === tracked) entry.port = null;
     });
-    handler.upgrade(tracked.peer, {
+    // The renderer's acknowledgements gate this port's iterators.
+    const flows = new FlowRegistry();
+    handler.upgrade(withFlowAcks(tracked.peer, flows), {
       context: {
         transport: "message-port",
         webContentsId: sender.id,
         windowKind: entry.kind,
         deps,
+        [FLOW_CONTEXT_KEY]: flows,
       },
     });
     port.start();
@@ -159,28 +172,52 @@ export const installMessagePortTransport = ({
     registerRendererContents(contents, kind) {
       if (registry.has(contents.id)) return;
       const id = contents.id;
-      registry.set(id, { kind, port: null });
 
-      const onNavigation = (
+      // The port the document had when a main-frame, cross-document
+      // navigation started. It is closed only once that navigation commits
+      // (`did-navigate`): one that never commits (a download, a 204, an
+      // abort) leaves the document, and its port, in place. And only if it
+      // is still the active one: a new document that already connected has
+      // replaced it (closing it then), and its own port must stay.
+      let portAtNavigationStart: TrackedPort | null | undefined;
+      const onNavigationStart = (
         _event: unknown,
         _url: string,
         isSameDocument: boolean,
         isMainFrame: boolean
       ): void => {
         if (!isMainFrame || isSameDocument) return;
-        // A reload: the old document's iterators end with its port.
+        portAtNavigationStart = registry.get(id)?.port ?? null;
+      };
+      const onNavigationCommit = (): void => {
+        // `did-navigate` fires only for a main-frame, cross-document commit.
+        const entry = registry.get(id);
+        if (entry == null || portAtNavigationStart === undefined) return;
+        const previous = portAtNavigationStart;
+        portAtNavigationStart = undefined;
+        if (entry.port !== previous) return;
+        // The old document's iterators end with its port.
         closeActivePort(id);
         readiness?.forget(id);
       };
-
-      contents.on("did-start-navigation", onNavigation);
-      contents.once("destroyed", () => {
+      const onDestroyed = (): void => {
         closeActivePort(id);
-        contents.off("did-start-navigation", onNavigation);
+        teardown();
         // Unregistered: a later connect from this id is refused.
         registry.delete(id);
-        readiness?.forget(id);
-      });
+        // A candidate destroyed while its swap waits fails at once.
+        readiness?.discard(id);
+      };
+      const teardown = (): void => {
+        contents.off("did-start-navigation", onNavigationStart);
+        contents.off("did-navigate", onNavigationCommit);
+        contents.off("destroyed", onDestroyed);
+      };
+
+      registry.set(id, { kind, port: null, teardown });
+      contents.on("did-start-navigation", onNavigationStart);
+      contents.on("did-navigate", onNavigationCommit);
+      contents.once("destroyed", onDestroyed);
     },
 
     livePorts() {
@@ -193,9 +230,17 @@ export const installMessagePortTransport = ({
       return registry.has(webContentsId);
     },
 
+    registeredIds() {
+      return [...registry.keys()];
+    },
+
     dispose() {
       ipcMain.removeListener(RPC_CONNECT_CHANNEL, onConnect);
-      for (const id of registry.keys()) closeActivePort(id);
+      for (const [id, entry] of registry) {
+        closeActivePort(id);
+        // Surviving contents keep nothing that points at this transport.
+        entry.teardown();
+      }
       registry.clear();
     },
   };

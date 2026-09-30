@@ -183,10 +183,9 @@ export const browserRouter = impl.browser.router({
       initial: () => [
         {
           type: "snapshot",
+          // Keyless: every pending ask, as the live filter passes them all.
           permissionRequests:
-            key == null
-              ? []
-              : context.deps.serviceHost.listBrowserPermissionRequests(key),
+            context.deps.serviceHost.listBrowserPermissionRequests(key),
         },
       ],
       coalesceKey: browserCoalesceKey,
