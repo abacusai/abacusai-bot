@@ -31,13 +31,13 @@
       "role": "user"
     },
     {
-      "id": "sub-u",
+      "id": "sub-a",
       "metadata": {
         "abacus": {
           "segments": [
             {
               "at": 1788256801000,
-              "id": "sub-u",
+              "id": "sub-a",
               "partIndex": 0,
               "status": "created",
               "type": "subtask"
@@ -51,17 +51,20 @@
       "parts": [
         {
           "subagent": {
-            "description": "Interrupted by the user",
-            "id": "sub-u",
+            "description": "Closed late as interrupted",
+            "error": {
+              "message": "interrupted"
+            },
+            "id": "sub-a",
             "messages": [
               {
-                "id": "sub-u#0",
+                "id": "sub-a#0",
                 "metadata": {
                   "abacus": {
                     "segments": [
                       {
                         "at": 1788256802000,
-                        "id": "su-text",
+                        "id": "sa-text",
                         "partIndex": 0,
                         "type": "text"
                       }
@@ -76,7 +79,7 @@
                     "content": "Working...",
                     "metadata": {
                       "abacus": {
-                        "segmentId": "su-text"
+                        "segmentId": "sa-text"
                       }
                     },
                     "type": "text"
@@ -87,11 +90,12 @@
             ],
             "metadata": {
               "abacus": {
+                "endTime": 1788256804500,
                 "segments": [
                   {
                     "at": 1788256804000,
-                    "id": "sub-u",
-                    "outcome": "completed",
+                    "id": "sub-a",
+                    "outcome": "interrupted",
                     "partIndex": null,
                     "status": "completed",
                     "type": "subtask"
@@ -100,7 +104,7 @@
               }
             },
             "name": "delegate",
-            "status": "finished"
+            "status": "error"
           },
           "type": "subagent"
         }
@@ -126,7 +130,7 @@
       },
       "parts": [
         {
-          "content": "Stop and do something else",
+          "content": "Stop",
           "metadata": {
             "abacus": {
               "segmentId": "u2"
@@ -151,6 +155,13 @@
               "id": "b1",
               "partIndex": 0,
               "type": "text"
+            },
+            {
+              "at": 1788256806000,
+              "id": "sub-b",
+              "partIndex": 1,
+              "status": "created",
+              "type": "subtask"
             }
           ]
         },
@@ -160,24 +171,101 @@
       },
       "parts": [
         {
-          "content": "Okay.",
+          "content": "Stopped.",
           "metadata": {
             "abacus": {
               "segmentId": "b1"
             }
           },
           "type": "text"
+        },
+        {
+          "subagent": {
+            "description": "Open when a user text came, never closed",
+            "error": {
+              "message": "interrupted"
+            },
+            "id": "sub-b",
+            "messages": [
+              {
+                "id": "sub-b#0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256807000,
+                        "id": "sb-text",
+                        "partIndex": 0,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:07.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "Looking...",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "sb-text"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {}
+            },
+            "name": "delegate",
+            "status": "error"
+          },
+          "type": "subagent"
         }
       ],
       "role": "assistant"
+    },
+    {
+      "id": "u3",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256808000,
+              "id": "u3",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:08.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Anything?",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u3"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
     }
   ],
   "source": {
     "kind": "transcript-v1",
-    "segments": 6,
+    "segments": 9,
     "updatedAt": "2026-09-01T10:30:00.000Z"
   },
-  "threadId": "sess-user-inside-bracket",
+  "threadId": "sess-late-close-interrupted",
   "updatedAt": "2026-09-01T10:30:00.000Z",
   "version": 2
 }

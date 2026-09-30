@@ -34,6 +34,10 @@
       "id": "g1",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b1"
+          },
           "segments": [
             {
               "at": 1788256801000,
@@ -80,9 +84,6 @@
         {
           "arguments": "{\"file_path\":\"README.md\"}",
           "id": "ga",
-          "input": {
-            "file_path": "README.md"
-          },
           "metadata": {
             "abacus": {
               "segmentId": "g1-a",
@@ -90,17 +91,16 @@
             }
           },
           "name": "read",
-          "output": "# Readme",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "# Readme",
-          "id": "g1-a:result",
+          "id": "g1-a#result",
           "metadata": {
             "abacus": {
               "data": {
-                "content": "# Readme",
+                "fromContent": ["content"],
                 "lineCount": 1,
                 "type": "read"
               }
@@ -113,9 +113,6 @@
         {
           "arguments": "{\"file_path\":\"package.json\"}",
           "id": "gb",
-          "input": {
-            "file_path": "package.json"
-          },
           "metadata": {
             "abacus": {
               "segmentId": "g1-b",
@@ -123,17 +120,16 @@
             }
           },
           "name": "read",
-          "output": "{}",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "{}",
-          "id": "g1-b:result",
+          "id": "g1-b#result",
           "metadata": {
             "abacus": {
               "data": {
-                "content": "{}",
+                "fromContent": ["content"],
                 "lineCount": 1,
                 "type": "read"
               }
@@ -146,9 +142,6 @@
         {
           "arguments": "{\"pattern\":\"TODO\"}",
           "id": "gc",
-          "input": {
-            "pattern": "TODO"
-          },
           "metadata": {
             "abacus": {
               "segmentId": "g1-c",
@@ -156,17 +149,16 @@
             }
           },
           "name": "grep",
-          "output": "3 matches",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "3 matches",
-          "id": "g1-c:result",
+          "id": "g1-c#result",
           "metadata": {
             "abacus": {
               "data": {
-                "output": "3 matches",
+                "fromContent": ["output"],
                 "type": "generic"
               }
             }
