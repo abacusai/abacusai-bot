@@ -18,6 +18,8 @@ interface AbacusDev {
   /** What the collections hold now, for the live-data acceptance checks. */
   rows(table: string): unknown[];
   syncStatus(table: string): unknown;
+  /** Whether the collection syncs were stopped for good (a lost port). */
+  stopped(): boolean;
   /** Types of the document view transitions started since the last call. */
   navTypes(): string[];
   /**
@@ -70,6 +72,7 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
     band: () => document.documentElement.dataset.band,
     rows: (table) => [...(tables[table]?.toArray ?? [])],
     syncStatus: (table) => tables[table]?.utils.status() ?? null,
+    stopped: () => db.stopped,
     navTypes: () => navTypes.splice(0),
     setLoaderDelay: (ms) => {
       delay.ms = ms;

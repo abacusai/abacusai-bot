@@ -21,6 +21,7 @@ import {
   bootstrap,
   createTransportLostHandler,
   LOOP_WINDOW_MS,
+  mountWhenOpen,
   RELOAD_DELAY_MS,
   reportFailedBoot,
 } from "./bootstrap";
@@ -162,6 +163,33 @@ describe("bootstrap", () => {
     expect(order).toEqual(["transport", "db"]);
   });
 
+  it("a getDb() that throws fails boot and reports failed readiness through the open transport (Codex impl r2 #1)", async () => {
+    const s = setup();
+    const result = await bootstrap({
+      getTransport: async () => s.transport,
+      queryClient: createQueryClient(),
+      getDb: () => {
+        throw new Error("collections failed");
+      },
+      onTransportLost: s.lost,
+      readyTimeoutMs: 200,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.step).toBe("prefs");
+      expect(result.error.message).toContain("collections failed");
+      expect(result.transport).toBe(s.transport);
+    }
+    await vi.waitFor(() =>
+      expect(s.ready).toEqual([
+        expect.objectContaining({
+          barrier: "failed",
+          reason: expect.stringContaining("collections failed"),
+        }),
+      ])
+    );
+  });
+
   it("fails when the prefs snapshot rejects", async () => {
     const db = new FixtureDb();
     db.prefs.failSnapshot = new Error("UNAVAILABLE");
@@ -284,5 +312,105 @@ describe("createTransportLostHandler", () => {
     const { deps: d } = deps();
     createTransportLostHandler(d)("explicit");
     expect(d.stopSyncs).not.toHaveBeenCalled();
+  });
+});
+
+describe("mountWhenOpen (Codex impl r2 #2)", () => {
+  /** A held dev-hooks import: resolves only when released. */
+  const held = () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { prepare: () => gate, release };
+  };
+
+  const lostHandler = (storage: Map<string, string>, now: number) => {
+    const screens: string[] = [];
+    const onLost = createTransportLostHandler({
+      stopSyncs: vi.fn(),
+      // No Toaster before the mount: the connection-lost screen renders.
+      notify: () => screens.push("connection-lost"),
+      reload: vi.fn(),
+      showError: () => screens.push("error"),
+      now: () => now,
+      storage: {
+        getItem: (key) => storage.get(key) ?? null,
+        setItem: (key, value) => void storage.set(key, value),
+      },
+      schedule: () => undefined,
+    });
+    return { screens, onLost };
+  };
+
+  it("mounts when the transport stays open", async () => {
+    const s = setup();
+    const mount = vi.fn();
+    const gate = held();
+    const mounting = mountWhenOpen({
+      transport: s.transport,
+      prepare: gate.prepare,
+      mount,
+    });
+    gate.release();
+    await expect(mounting).resolves.toBe(true);
+    expect(mount).toHaveBeenCalledOnce();
+  });
+
+  it("never mounts over the connection-lost screen when the port dies during the held import", async () => {
+    const s = setup();
+    const { screens, onLost } = lostHandler(new Map(), 200_000);
+    s.transport.onClose(onLost);
+    const mount = vi.fn(() => screens.push("app"));
+    const gate = held();
+    const mounting = mountWhenOpen({
+      transport: s.transport,
+      prepare: gate.prepare,
+      mount,
+    });
+    s.transport.serverPort.close();
+    await vi.waitFor(() => expect(screens).toEqual(["connection-lost"]));
+    gate.release();
+    await expect(mounting).resolves.toBe(false);
+    expect(mount).not.toHaveBeenCalled();
+    expect(screens).toEqual(["connection-lost"]);
+  });
+
+  it("never mounts over the error screen on a second loss within the window during the held import", async () => {
+    const storage = new Map<string, string>();
+    // The first document lost its port and reloaded.
+    lostHandler(storage, 300_000).onLost("port-closed");
+    const s = setup();
+    const { screens, onLost } = lostHandler(
+      storage,
+      300_000 + LOOP_WINDOW_MS - 1
+    );
+    s.transport.onClose(onLost);
+    const mount = vi.fn(() => screens.push("app"));
+    const gate = held();
+    const mounting = mountWhenOpen({
+      transport: s.transport,
+      prepare: gate.prepare,
+      mount,
+    });
+    s.transport.serverPort.close();
+    await vi.waitFor(() => expect(screens).toEqual(["error"]));
+    gate.release();
+    await expect(mounting).resolves.toBe(false);
+    expect(mount).not.toHaveBeenCalled();
+    expect(screens).toEqual(["error"]);
+  });
+
+  it("does not start the import on an already closed transport", async () => {
+    const s = setup();
+    s.transport.serverPort.close();
+    await vi.waitFor(() => expect(s.transport.state).toBe("closed"));
+    const prepare = vi.fn(async () => undefined);
+    const mount = vi.fn();
+    await expect(
+      mountWhenOpen({ transport: s.transport, prepare, mount })
+    ).resolves.toBe(false);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(mount).not.toHaveBeenCalled();
   });
 });

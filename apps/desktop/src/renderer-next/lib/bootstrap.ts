@@ -155,9 +155,12 @@ export const bootstrap = async (deps: BootstrapDeps): Promise<BootResult> => {
     return fail("system", error);
   }
 
-  const db = deps.getDb(transport);
-  const { prefs } = db.collections;
+  // Inside the failure handling (Codex impl r2 #1): a getDb() that throws
+  // reports failed readiness through the transport that already exists.
+  let db: Db;
   try {
+    db = deps.getDb(transport);
+    const { prefs } = db.collections;
     await within(prefs.preload(), timeouts.prefs, "prefs");
     if (prefs.status === "error") throw new Error("prefs snapshot failed");
   } catch (error) {
@@ -168,6 +171,30 @@ export const bootstrap = async (deps: BootstrapDeps): Promise<BootResult> => {
     ok: true,
     boot: { transport, system, queryClient: deps.queryClient, db },
   };
+};
+
+export interface MountDeps {
+  transport: Transport;
+  /** Awaited work between the router and the mount (the dev hooks import). */
+  prepare?: () => Promise<void>;
+  mount: () => void;
+}
+
+/**
+ * The mount guard (spec 01 §8.6), checked on both sides of every await
+ * before the mount (Codex impl r2 #2): a port that dies while `prepare` is
+ * held already rendered the connection-lost or error screen through the
+ * transport-lost handler, and mounting afterwards would overwrite it with an
+ * app on a dead transport. Resolves whether the app was mounted.
+ */
+export const mountWhenOpen = async (deps: MountDeps): Promise<boolean> => {
+  // A call, not a property read: the state changes across the await.
+  const closed = (): boolean => deps.transport.state === "closed";
+  if (closed()) return false;
+  await deps.prepare?.();
+  if (closed()) return false;
+  deps.mount();
+  return true;
 };
 
 /** How recently a reload for a lost port happened, across the reload. */
