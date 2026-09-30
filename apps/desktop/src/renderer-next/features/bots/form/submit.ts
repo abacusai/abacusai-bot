@@ -157,42 +157,40 @@ export const submitCreate = async (
 export const submitEdit = async (
   deps: SubmitDeps,
   bot: BotRow,
-  before: RoutineRow | null,
+  _before: RoutineRow | null,
   values: BotFormValues,
   baseline: BotFormValues
 ): Promise<void> => {
   const patch = editedPatch(values, baseline);
   if (patch.description === "") patch.description = NAME_ONLY_MISSION;
-  await updateBot(deps.db.collections.bots, bot.id, patch);
   const checkInChanged = !equalValue(values.checkIn, baseline.checkIn);
-  const liveCheckIn = checkInFromRoutine(before);
   const scheduleEdited = !equalValue(
     { ...values.checkIn, enabled: baseline.checkIn.enabled },
     baseline.checkIn
   );
+  const enabledEdited = values.checkIn.enabled !== baseline.checkIn.enabled;
+  await updateBot(deps.db.collections.bots, bot.id, patch);
+  const currentRoutine = findCheckIn(
+    deps.db.collections.routines.toArray,
+    bot.id
+  );
+  const liveCheckIn = checkInFromRoutine(currentRoutine);
   const mergedCheckIn = {
     ...(scheduleEdited ? values.checkIn : liveCheckIn),
-    enabled:
-      values.checkIn.enabled !== baseline.checkIn.enabled
-        ? values.checkIn.enabled
-        : liveCheckIn.enabled,
+    enabled: enabledEdited ? values.checkIn.enabled : liveCheckIn.enabled,
   };
   if (checkInChanged)
     await persistCheckIn(
       deps.db,
       { id: bot.id, name: values.name },
-      before,
+      currentRoutine,
       mergedCheckIn,
       deps.routineName
     );
-  const scheduleChanged = !equalValue(
-    { ...values.checkIn, enabled: baseline.checkIn.enabled },
-    baseline.checkIn
-  );
   announceChange(deps.transport, bot.id, {
     ...(patch.description !== undefined ? { mission: true } : {}),
     ...(patch.persona !== undefined ? { persona: true } : {}),
-    ...(scheduleChanged && values.checkIn.preset !== "custom"
+    ...(scheduleEdited && values.checkIn.preset !== "custom"
       ? {
           checkIn: describeCheckIn({
             ...values.checkIn,
