@@ -41,6 +41,8 @@ export interface HeldFilesOptions {
   isWriteBlocked: (file: string) => boolean;
   writeFile: (file: string, text: string) => void;
   log: (message: string) => void;
+  /** Refuse a blocked change unless its journal write succeeds. */
+  requireDurableHolding?: boolean;
 }
 
 export class HeldFiles {
@@ -155,11 +157,16 @@ export class HeldFiles {
         this.memory.delete(key);
         return;
       } catch (error) {
+        if (this.options.requireDurableHolding) throw error;
         this.options.log(
           `cannot journal the held change to ${path.basename(file)}: ${String(error)}; kept in memory`
         );
       }
     } else {
+      if (this.options.requireDurableHolding)
+        throw new Error(
+          `${path.basename(file)} and its journal are held; the change cannot be saved durably`
+        );
       this.options.log(
         `${path.basename(file)} and its journal are held; the change is kept in memory for this launch only`
       );

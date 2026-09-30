@@ -1394,6 +1394,8 @@ export class ServiceHost {
     resolveAdditionalConfigEnv: async (sessionId: string) =>
       this.buildAdditionalConfigEnv("code", sessionId),
     emitStateUpdated: (workspaceId, sessionId, state) => {
+      if (state.status === "starting" || state.pid == null)
+        this.modelSwitches.invalidate(sessionId);
       this.agentSessionManagerService.updateFromCliState(state);
       this.emitEvent({
         type: "local-cli-state-updated",
