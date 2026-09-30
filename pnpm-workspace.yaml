@@ -5,6 +5,8 @@ packages:
   - packages/connectors
   - packages/test-support
 
+pmOnFail: warn
+
 catalog:
   "@types/node": ^26.2.0
   "@types/react": ^19.2.18
