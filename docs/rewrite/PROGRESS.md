@@ -11,11 +11,11 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 0 | DB tables (snapshot + change events) | same spec, notes (sub-slice B) | merged 6aca10c1; fixes merged bab36146 (27/27, leaf provenance); watcher deflake ed2f2f04 | Codex r1 + Claude r1 fixed | done |
 | 0 | migration runner | section C + notes (two parts) | merged 70a3ec36; step 1 d4652ce6; runner rewrite 69f12a5d; runner r2 fixes ce06e642 (journal v2, ~4,460 kill points) | runner: Codex r1+r2 + Claude r1 fixed; step 1: Codex r1 + Claude r1 (27) → fixing | fixing (step 1) |
 | 0 | Window Controls Overlay + Electron 44 | r2 | a059a113 + cba4ca8a (Codex) | Claude r1 + re-review MERGEABLE; smoke on E44 OK; 2 low items deferred to wco switch | done (legacy default) |
-| 1 | renderer foundation (shell, router, theme, gallery) | r4 + impl amendments | merged 6847de01 (15 commits, 459 tests, 144 screenshots) | Codex r1 (15) + Claude r1 (25 + visual) → fix agent in worktree | fixing |
-| 2 | chat kit | r4 (Codex r1–r3 applied) | ready to start once phase-1 fixes and relay reviews land | | spec done |
+| 1 | renderer foundation (shell, router, theme, gallery) | r4 + impl amendments (router-owned route transitions) | merged 6847de01; fixes merged 8acc0ebb (40/40, data/db switch, real-db acceptance, 167 captures) | Codex r1 + Claude r1 fixed; Codex r2 (9) → fixing | fixing (r2) |
+| 2 | chat kit | r4 (Codex r1–r3 applied; final) | Opus agent in worktree | | implementing |
 | — | main AG-UI relay (`ai.*` behind AguiSource, wire selection, ring, hydrate/joinRun, thread persistence) | 00-agent-agui §8 + notes (main relay) | merged b4da2b2f (35 tests incl. spawned e2e) | Codex r1 (13) + Claude r1 (20) → fix agent in worktree | fixing |
 | 3 | bots | r3 (4a854154, Codex r1–r2 applied; final) | waits on phase 2 | | spec done |
-| 4 | sessions | r2 (3746756a) → Codex r2 running | | | spec |
-| 5 | routines, artifacts, library, settings | r1 (3746756a) → Codex r1 running | | | spec |
-| 6 | onboarding, tour, notch | r1 in progress (Opus) | | | spec |
-| 7 | cut-over | | | | todo |
+| 4 | sessions | r3 (b8997551, Codex r1–r2 applied; final) | waits on phases 2–3 | | spec done |
+| 5 | routines, artifacts, library, settings | r3 (Codex r1–r2 applied; final) | waits on phases 2–4 | | spec done |
+| 6 | onboarding, tour, notch | r1 (de55f0ae) → Codex r1 running | | | spec |
+| 7 | cut-over | r1 in progress (Opus) | | | spec |
