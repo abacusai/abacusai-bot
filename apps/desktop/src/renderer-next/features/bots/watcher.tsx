@@ -31,6 +31,10 @@ import {
 } from "./notify";
 
 let player: SoundPlayer | null = null;
+let claim: (
+  cueId: string,
+  threadId: string | null
+) => Promise<boolean> = async () => false;
 let soundPrefs: PrefsRow["sounds"] = { enabled: true, perEvent: {} };
 
 /** The document's player (one AudioContext, unlocked on first pointerdown). */
@@ -40,6 +44,7 @@ const soundPlayer = (): SoundPlayer => {
     isWindowFocused: () => document.hasFocus(),
     prefs: () => soundPrefs,
     now: () => Date.now(),
+    claim: (cueId, threadId) => claim(cueId, threadId),
   });
   return player;
 };
@@ -53,6 +58,12 @@ export const playBotCue = (
 export const BotsGlobals = () => {
   const { t } = useTranslation();
   const transport = useBotsTransport();
+  useEffect(() => {
+    claim = (cueId, threadId) =>
+      transport.client.window
+        .claimCue({ cueId, threadId })
+        .then((result) => result.play);
+  }, [transport]);
   const queryClient = useQueryClient();
   const db = useDb();
   const prefs = usePrefs();
