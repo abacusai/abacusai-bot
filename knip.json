@@ -5,6 +5,7 @@
       "entry": [
         "src/renderer-next/main.tsx",
         "src/renderer-next/routes/**/*.tsx",
+        "src/renderer-next/features/*/index.ts",
         "src/renderer-next/**/*.test.{ts,tsx}"
       ],
       "project": ["src/renderer-next/**/*.{ts,tsx}"],

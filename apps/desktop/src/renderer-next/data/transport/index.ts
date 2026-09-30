@@ -17,9 +17,13 @@ export const getTransport = (): Promise<Transport> => {
   return store[GLOBAL_KEY];
 };
 
-// The factory itself, for tests that build a transport over their own port
-// (the Electron handshake test, spec 00 A-T12).
+/**
+ * The factory itself, for tests that build a transport over their own port:
+ * the Electron handshake test (spec 00 A-T12, `src/main/rpc/transports/
+ * rpc-handshake.electron.test.ts`) imports this file by path inside the
+ * renderer it spawns, which knip (scoped to renderer-next) cannot see.
+ * @public
+ */
 export { createTransport } from "./create-transport";
-export type { CreateTransportOptions, TransportPort } from "./create-transport";
 export type { CloseReason } from "./close-signal";
 export type { AppQueryUtils, Transport } from "./types";
