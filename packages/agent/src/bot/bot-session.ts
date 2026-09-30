@@ -43,14 +43,12 @@ import toolTimeouts from "../extensions/tool-timeouts.js";
 import { githubPrompt } from "../github-prompt.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
 import { buildMcpToolDefinitions } from "../mcp/tools.js";
-import { fileCooldownStore } from "../openllm-cooldowns.js";
 import {
-  isOpenLlmReference,
-  isOutOfCredits,
-  openLlmCandidates,
-  OPENLLM_ID,
-  OpenLlmRotation,
-} from "../openllm.js";
+  OPENLLM_CONTINUATION_PROMPT,
+  OPENLLM_CONTINUATION_TYPE,
+  OpenLlmRouter,
+} from "../openllm-router.js";
+import { isOpenLlmReference, isOutOfCredits, OPENLLM_ID } from "../openllm.js";
 import { refreshOpenRouterLive } from "../openrouter-live.js";
 import {
   gateToolCall,
@@ -87,6 +85,7 @@ import {
 } from "../reply-language.js";
 import { conversationSessionManager } from "../session-file.js";
 import {
+  endedOnProviderError,
   mcpPrompt,
   mcpRosterFingerprint,
   reserveContextHeadroom,
@@ -180,6 +179,14 @@ export class BotSession {
   private readonly pendingSteers: string[] = [];
   /** True while the router is what the user picked. See currentModelReference. */
   private openLlmActive = false;
+  /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
+  private readonly router = new OpenLlmRouter();
+  /**
+   * Set at `agent_end` when the turn died on its provider and another pool
+   * model takes it over; carried out by continuePastRecoverableFailures.
+   */
+  private pendingOpenLlmRotation: { failure: string; nextId: string } | null =
+    null;
   private session: AgentSession | undefined;
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
   private modelRuntime: ModelRuntime | undefined;
@@ -468,9 +475,7 @@ export class BotSession {
     this.openLlmActive = isOpenLlmReference(requested);
 
     const reference = this.openLlmActive
-      ? new OpenLlmRotation(Date.now, fileCooldownStore()).pick(
-          openLlmCandidates(listModels(registry))
-        )?.id
+      ? this.router.pick(registry)?.id
       : requested;
 
     if (reference == null) {
@@ -519,6 +524,9 @@ export class BotSession {
     this.malformedContinuations = 0;
     this.contextCompactions = 0;
     this.pendingContextCompaction = null;
+    // A rotation left over from a stopped turn must not fire here.
+    this.pendingOpenLlmRotation = null;
+    this.router.beginTurn();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
     this.toolsArrivedThisTurn = [];
@@ -637,17 +645,25 @@ export class BotSession {
     while (
       this.continuingPastMalformedToolCall ||
       this.pendingContextCompaction != null ||
+      this.pendingOpenLlmRotation != null ||
       this.pendingLanguageRepair != null ||
       this.pendingToolArrival != null
     ) {
       if (this.interrupted) {
         this.continuingPastMalformedToolCall = false;
         this.pendingContextCompaction = null;
+        this.pendingOpenLlmRotation = null;
         this.pendingLanguageRepair = null;
         this.pendingToolArrival = null;
         this.finishTurn();
 
         return;
+      }
+
+      if (this.pendingOpenLlmRotation != null) {
+        await this.rotateOpenLlmModel();
+
+        continue;
       }
 
       if (this.pendingToolArrival != null) {
@@ -702,6 +718,96 @@ export class BotSession {
 
       await this.compactAndRetry();
     }
+  }
+
+  /**
+   * Whether the turn that just ended continues on another pool model, and
+   * which. Decided at `agent_end`, where the idle event it suppresses would
+   * be emitted; the router picks the candidate here so that promise is never
+   * made for a fallback that does not exist.
+   */
+  private shouldRotateOpenLlm(
+    messages: readonly unknown[]
+  ): { failure: string; nextId: string } | null {
+    if (!this.openLlmActive || this.interrupted) return null;
+
+    const failure = endedOnProviderError(messages);
+    const registry = this.registry;
+    const current = this.session?.model;
+
+    if (failure == null) {
+      // The model answered: proof it works, else its failure count only climbs.
+      if (current != null)
+        this.router.succeeded(`${current.provider}/${current.id}`);
+      return null;
+    }
+    if (registry == null) return null;
+
+    const next = this.router.failed(registry, failure, current);
+
+    if (next == null) {
+      process.stderr.write(
+        `[abacusai-bot-agent] bot pool not rotating after "${failure.slice(0, 80)}": no other candidate\n`
+      );
+    }
+
+    return next == null ? null : { failure, nextId: next.nextId };
+  }
+
+  /**
+   * Move the pool to its next model and run the turn on, with a custom
+   * message for the same reasons as the malformed-call continuation. The
+   * thread stays quiet about it: a bot is not supervised, and the model it
+   * lands on is a detail of the router the user chose.
+   */
+  private async rotateOpenLlmModel(): Promise<void> {
+    const rotation = this.pendingOpenLlmRotation;
+    this.pendingOpenLlmRotation = null;
+
+    const runtime = this.modelRuntime;
+    const session = this.session;
+    if (rotation == null || runtime == null || session == null) return;
+
+    const resolved = resolveModel(
+      runtime,
+      rotation.nextId,
+      this.maxOutputTokens
+    );
+
+    if (resolved.model == null) {
+      // The candidate came off the live registry a moment ago; should not
+      // happen. The idle event was withheld for this rotation, so end the turn.
+      this.emitAgentEvent({
+        type: "error",
+        error: {
+          message: compactFailure(rotation.failure),
+          code: "turn_failed",
+          ...this.upgradeActionsFor(rotation.failure),
+        },
+      });
+      this.finishTurn();
+      return;
+    }
+
+    await session.setModel(resolved.model);
+
+    if (this.interrupted) {
+      this.finishTurn();
+      return;
+    }
+
+    this.emitAgentEvent({
+      type: "model_changed",
+      model: this.currentModelReference(),
+    });
+    await session.sendCustomMessage(
+      {
+        customType: OPENLLM_CONTINUATION_TYPE,
+        content: OPENLLM_CONTINUATION_PROMPT,
+        display: false,
+      },
+      { triggerTurn: true }
+    );
   }
 
   /** Same shape as the coding loop's recovery: compact once, retry once. */
@@ -814,19 +920,31 @@ export class BotSession {
   private upgradeActionsFor(
     raw: string
   ):
-    | { actions: Array<{ type: string; link: string }> }
+    | { actions: Array<{ type: string; link?: string }> }
     | Record<string, never> {
     const provider = this.session?.model?.provider;
     const abacusServed = provider === "abacus" || this.openLlmActive;
-    if (!abacusServed || !isOutOfCredits(raw)) return {};
-    return {
-      actions: [
-        {
-          type: "upgrade-abacus",
-          link: "https://apps.abacus.ai/chatllm/choose-plan/",
-        },
-      ],
-    };
+    const actions: Array<{ type: string; link?: string }> = [];
+
+    if (abacusServed && isOutOfCredits(raw)) {
+      actions.push({
+        type: "upgrade-abacus",
+        link: "https://apps.abacus.ai/chatllm/choose-plan/",
+      });
+    }
+    // The router with every source used up: the card that connects another
+    // free source is the way out, whichever provider spoke last.
+    const registry = this.registry;
+    if (
+      this.openLlmActive &&
+      registry != null &&
+      this.router.poolShut(registry) &&
+      !actions.some((action) => action.type === "upgrade-abacus")
+    ) {
+      actions.push({ type: "free-pool-out" });
+    }
+
+    return actions.length > 0 ? { actions } : {};
   }
 
   setMode(raw: string): void {
@@ -927,11 +1045,7 @@ export class BotSession {
     if (runtime == null || registry == null) return;
 
     const toRouter = isOpenLlmReference(reference);
-    const concrete = toRouter
-      ? new OpenLlmRotation(Date.now, fileCooldownStore()).pick(
-          openLlmCandidates(listModels(registry))
-        )?.id
-      : reference;
+    const concrete = toRouter ? this.router.pick(registry)?.id : reference;
 
     const resolved =
       concrete != null
@@ -1283,12 +1397,20 @@ export class BotSession {
         this.pendingContextCompaction = this.continuingPastMalformedToolCall
           ? null
           : this.shouldCompactAndRetry(event.messages);
+        // A malformed call is retried on the same model, not rotated, and an
+        // outgrown transcript does not fit the next model either.
+        this.pendingOpenLlmRotation =
+          this.continuingPastMalformedToolCall ||
+          this.pendingContextCompaction != null
+            ? null
+            : this.shouldRotateOpenLlm(event.messages);
         // Only a turn that ended cleanly is judged on its language; a hidden
         // housekeeping turn has no reader.
         this.pendingLanguageRepair =
           this.hiddenTurn ||
           this.continuingPastMalformedToolCall ||
           this.pendingContextCompaction != null ||
+          this.pendingOpenLlmRotation != null ||
           this.languageRepairsThisTurn > 0
             ? null
             : replyLanguageMismatch(event.messages);
@@ -1299,6 +1421,7 @@ export class BotSession {
           this.hiddenTurn ||
           this.continuingPastMalformedToolCall ||
           this.pendingContextCompaction != null ||
+          this.pendingOpenLlmRotation != null ||
           this.pendingLanguageRepair != null ||
           this.toolArrivalsThisTurn > 0 ||
           this.toolsArrivedThisTurn.length === 0
@@ -1310,6 +1433,7 @@ export class BotSession {
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&
           this.pendingContextCompaction == null &&
+          this.pendingOpenLlmRotation == null &&
           this.pendingLanguageRepair == null &&
           this.pendingToolArrival == null
         ) {
