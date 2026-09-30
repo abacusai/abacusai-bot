@@ -154,7 +154,7 @@ export const ChatView = (props: ChatViewProps) => {
           data-thread={threadId}
         >
           {ready ? (
-            <Kit skin={skin} />
+            <Kit key={threadId} skin={skin} />
           ) : phase === "error" ? (
             <Failed
               skin={skin}

@@ -82,7 +82,7 @@ describe("R2-T16 window (pure)", () => {
       )
     ).toEqual({
       start: 60,
-      end: 250,
+      end: Math.min(250, 60 + MAX_ROWS),
       ranges: {},
     });
   });
@@ -165,5 +165,47 @@ describe("R2-T16 transcript", () => {
     await page;
     await second.load();
     expect(second.hostStore.state.messages).toEqual([]);
+  });
+});
+
+describe("group rows share the tool budget", () => {
+  it("hundreds of separate migrated groups cannot become fixed, unbounded rows", async () => {
+    const { toolRows } = await import("./row-context");
+    const parts = Array.from({ length: 300 }, (_, i) => ({
+      type: "tool-call" as const,
+      id: `tool-${i}`,
+      name: "bash",
+      arguments: "{}",
+      state: "complete" as const,
+    }));
+    const message = {
+      id: "grouped",
+      role: "assistant" as const,
+      parts,
+      metadata: {
+        abacus: {
+          segments: parts.map((_, i) => ({
+            type: "tool_call",
+            id: `segment-${i}`,
+            partIndex: i,
+            groupId: `group-${i}`,
+          })),
+        },
+      },
+    };
+    const units = toolRows(message);
+    expect(units).toHaveLength(600);
+    expect(units.slice(0, 4)).toEqual([
+      "group\0\0grouped\0group-0",
+      "\0tool-0",
+      "group\0\0grouped\0group-1",
+      "\0tool-1",
+    ]);
+    const items = [{ id: message.id, fixed: 1, units: units.length }];
+    let window = newestWindow(items);
+    for (let i = 0; i < 10; i++) {
+      window = moreSteps(items, window, message.id);
+      expect(mountedRows(items, window)).toBeLessThanOrEqual(MAX_ROWS);
+    }
   });
 });

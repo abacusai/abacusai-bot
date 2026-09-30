@@ -324,12 +324,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       1 +
       message.parts.filter((p) => p.type === "subagent").length +
       outcomes.filter((outcome) => outcome.afterMessageId === message.id)
-        .length +
-      ((
-        message.metadata?.abacus?.segments as
-          | Array<{ type?: string }>
-          | undefined
-      )?.filter((s) => s.type === "tool_group").length ?? 0),
+        .length,
     units: toolRows(message).length,
   }));
   const [measured, setMeasured] = useState<ReadonlyMap<string, number>>(

@@ -43,6 +43,8 @@ export interface MentionSource {
 
 export interface ComposerConfig {
   mode: "full" | "mini";
+  /** Host-owned dictation preview; recording is a later slice. */
+  dictating?: boolean;
   readOnly?: { reason: ReactNode; action?: ReactNode };
   placeholder: string;
   /** Folder for pasted files; null disables paste-to-file. */
