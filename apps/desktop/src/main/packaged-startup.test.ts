@@ -1,7 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import { builtinModules } from "node:module";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -38,9 +44,46 @@ const RUNTIME_PROVIDED = new Set([
 
 const BUNDLES = ["dist/main/index.js", "dist/preload/index.cjs"];
 
-const buildIfNeeded = (): void => {
-  if (BUNDLES.every((bundle) => existsSync(resolve(DESKTOP, bundle)))) return;
-  execFileSync("pnpm", ["exec", "vite", "build"], {
+/** What the main and preload bundles are built from. */
+const SOURCES = [
+  "src/main",
+  "src/preload",
+  "src/shared",
+  "vite.config.ts",
+  "package.json",
+];
+
+/** The newest modification time under `path` (a file or a directory). */
+const newestMtime = (path: string): number => {
+  if (!existsSync(path)) return 0;
+  const stat = statSync(path);
+  if (!stat.isDirectory()) return stat.mtimeMs;
+  let newest = stat.mtimeMs;
+  for (const entry of readdirSync(path))
+    newest = Math.max(newest, newestMtime(join(path, entry)));
+  return newest;
+};
+
+const sourcesMtime = (): number =>
+  Math.max(...SOURCES.map((source) => newestMtime(resolve(DESKTOP, source))));
+
+const bundlesMtime = (): number =>
+  Math.min(
+    ...BUNDLES.map((bundle) => {
+      const file = resolve(DESKTOP, bundle);
+      return existsSync(file) ? statSync(file).mtimeMs : 0;
+    })
+  );
+
+/**
+ * Builds when a bundle is missing or older than any source: a `dist` left
+ * from before a change proves nothing about that change.
+ */
+const buildIfStale = (): void => {
+  if (bundlesMtime() > sourcesMtime()) return;
+  const vite = resolvePackage("vite", DESKTOP);
+  if (vite == null) throw new Error("vite is not installed");
+  execFileSync(process.execPath, [resolve(vite, "bin/vite.js"), "build"], {
     cwd: DESKTOP,
     stdio: "inherit",
   });
@@ -133,7 +176,9 @@ const bareImports = (source: string): string[] => {
 
 describe("the packaged bundles", () => {
   it("import nothing the packaged app does not contain", () => {
-    buildIfNeeded();
+    buildIfStale();
+    // The bundles checked are the ones these sources produce.
+    expect(bundlesMtime()).toBeGreaterThan(sourcesMtime());
 
     // electron-builder packages `files` plus production dependencies and
     // everything they depend on. A devDependency is a build-time thing and is
@@ -153,7 +198,8 @@ describe("the packaged bundles", () => {
     );
 
     expect(unresolvable).toEqual([]);
-  });
+    // A build takes longer than a unit test's default budget.
+  }, 600_000);
 });
 
 describe("the smoke test that launches it", () => {

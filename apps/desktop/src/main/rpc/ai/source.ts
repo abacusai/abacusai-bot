@@ -35,16 +35,24 @@ export interface AiRespondPermissionInput {
 }
 
 export interface AguiSource {
-  /** Events with seq `> afterSeq` (null: the ring's start), then live. */
+  /**
+   * Events with seq `> afterSeq` (null: the ring's start), then live. A
+   * resume point from another relay `epoch` starts with `abacus.resync`.
+   * `NOT_FOUND` for a thread main does not know.
+   */
   subscribe(
     threadId: string,
     afterSeq: number | null,
-    signal: AbortSignal
+    signal: AbortSignal,
+    epoch?: string
   ): AsyncIterable<SequencedChunk>;
   /** From `RUN_STARTED` through the terminal, then returns. */
   joinRun(runId: string, signal: AbortSignal): AsyncIterable<SequencedChunk>;
   send(input: AiSendInput): Promise<AiSendAck>;
-  /** The whole completed transcript plus the checkpoint; the procedure pages it. */
+  /**
+   * The whole completed transcript plus the checkpoint; the procedure pages
+   * it. `NOT_FOUND` for a thread main does not know.
+   */
   hydrate(threadId: string): Promise<AiHydration>;
   cancel(threadId: string, runId?: string): Promise<void>;
   respondPermission(input: AiRespondPermissionInput): Promise<void>;
