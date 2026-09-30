@@ -318,6 +318,25 @@ describe("swap readiness (A-T10)", () => {
     await events.return();
   });
 
+  it("fails at once, not at the timeout, when the candidate is destroyed", async () => {
+    vi.useFakeTimers();
+    const { host } = makeHost();
+    const first = host.webContents;
+    const swapping = host.swap(new URL("app://bundle.new/"), {
+      barrier: "subscriptions",
+    });
+    const rejected = expect(swapping).rejects.toMatchObject({
+      name: "SwapNotReady",
+      outcome: "failed",
+    });
+    const next = await candidate();
+    next.close();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await rejected;
+    expect(host.webContents).toBe(first);
+  });
+
   it("keeps the legacy first-commit barrier unless asked", async () => {
     const { host } = makeHost();
     const first = host.webContents;
