@@ -1,8 +1,11 @@
 import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
+import type { WindowChromeState } from "../window-chrome-state";
 import { mutation, query, subscription } from "./base";
 import { NoInput } from "./ids";
+
+export type { WindowChromeState };
 
 export interface WindowState {
   fullScreen: boolean;
@@ -10,7 +13,10 @@ export interface WindowState {
   maximized: boolean;
 }
 
-export type WindowEvent = { type: "state"; state: WindowState };
+export type WindowEvent =
+  | { type: "state"; state: WindowState }
+  /** The native chrome changed: capability, full screen or density. */
+  | { type: "chrome"; chrome: WindowChromeState };
 
 /**
  * The caller's own window, found through the port it called on. Over a
@@ -19,6 +25,11 @@ export type WindowEvent = { type: "state"; state: WindowState };
 export const window = {
   showAbout: mutation.input(NoInput).output(type<void>()),
   state: query.input(NoInput).output(type<WindowState>()),
+  /**
+   * The window chrome state main serves the legacy renderer on
+   * `window:chrome` (spec 00-window-chrome; spec 01 §15.3).
+   */
+  chrome: query.input(NoInput).output(type<WindowChromeState>()),
   events: subscription
     .input(NoInput)
     .output(eventIterator(type<WindowEvent>())),

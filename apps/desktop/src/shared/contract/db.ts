@@ -14,6 +14,7 @@ import {
   SessionId,
   WorkspaceId,
 } from "./ids";
+import { SUPPORTED_LANGUAGES } from "./rows";
 import type {
   ArtifactRow,
   BotRow,
@@ -91,7 +92,7 @@ const NullableTimestamp = v.nullable(v.number());
 /** Every field optional, unknown keys refused (B.2 `prefs`). */
 export const PrefsPatchSchema = v.strictObject({
   theme: v.optional(v.picklist(["system", "light", "dark"])),
-  language: v.optional(v.string()),
+  language: v.optional(v.picklist(["system", ...SUPPORTED_LANGUAGES])),
   sidebar: v.optional(
     v.object({
       pinned: v.boolean(),

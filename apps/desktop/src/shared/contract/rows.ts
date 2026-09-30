@@ -77,11 +77,35 @@ export type WorkspaceRow = WorkspaceListItem & { isActive: boolean };
 
 export type GitStateRow = GitStateSnapshot & { workspaceId: string };
 
+/**
+ * The locales the app ships (renderer/locales/*.json; a shared test keeps the
+ * two in step), in the order the old renderer's i18n lists them.
+ */
+export const SUPPORTED_LANGUAGES = [
+  "en-US",
+  "de-DE",
+  "es-ES",
+  "es-419",
+  "fr-FR",
+  "hi-IN",
+  "id-ID",
+  "it-IT",
+  "ja-JP",
+  "ko-KR",
+  "pt-BR",
+] as const;
+
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
 export interface PrefsRow {
   id: "app";
   theme: "system" | "light" | "dark";
-  /** BCP-47, default "en-US". */
-  language: string;
+  /**
+   * `"system"` (the default) follows the OS through `navigator.languages`;
+   * an explicit code is the user's pick and stays, whatever the OS says
+   * (spec 01 §9.2, §15.4).
+   */
+  language: "system" | SupportedLanguage;
   sidebar: {
     pinned: boolean;
     openSection: "bots" | "routines" | "sessions" | null;

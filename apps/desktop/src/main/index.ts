@@ -71,7 +71,8 @@ export function hasGoogleChrome(
     }
   });
 }
-import type { WindowState } from "#shared/contract";
+import type { WindowChromeState, WindowState } from "#shared/contract";
+import { FOUNDATION_API } from "#shared/experience";
 import { funnelDetail, isFunnelStep } from "#shared/funnel";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 import type {
@@ -104,6 +105,8 @@ import {
   rendererWebContents,
   setActiveRendererHost,
   SwapAborted,
+  SwapNotReady,
+  SwapRetryBudget,
 } from "./renderer-host";
 import { agentEntry, resourcePath, resourcesRoot } from "./resources";
 import { UnavailableAguiSource } from "./rpc/ai/source";
@@ -386,6 +389,8 @@ ipcMain.on("renderer-activity", () => {
  * gates: an agent mid-turn would lose a reply that exists nowhere else yet, a
  * terminal's scrollback lives in the renderer, and recent input defers it.
  */
+const swapRetryBudget = new SwapRetryBudget();
+
 function scheduleRendererSwap(version: string): void {
   const attempt = (): boolean => {
     // Development stays on the Vite server.
@@ -413,6 +418,9 @@ function scheduleRendererSwap(version: string): void {
           workspaceServiceHost.hasActiveAgentTurn() ||
           workspaceServiceHost.hasLiveTerminalSessions() ||
           Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
+        // The integrity check admits only experiences built for this shell's
+        // FOUNDATION_API, so this is also the candidate's contract.
+        barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
       })
       .then(
         (swapped) => {
@@ -424,6 +432,17 @@ function scheduleRendererSwap(version: string): void {
           if (error instanceof SwapAborted) {
             scheduleRendererSwap(version);
 
+            return;
+          }
+
+          if (error instanceof SwapNotReady) {
+            if (swapRetryBudget.fail(version)) {
+              scheduleRendererSwap(version);
+            } else {
+              console.warn(
+                `[experience] ${version} never became ready; no more swaps until relaunch`
+              );
+            }
             return;
           }
 
@@ -597,13 +616,17 @@ async function createWindow(restored?: RecreatedWindowState) {
       mainWindow.isFullScreen()
     );
     publishWindowState();
+    publishChromeState();
   };
   // `window.events` for the oRPC renderer: the whole state, to the live view.
   const publishWindowState = (): void => {
     const contents = rendererWebContents();
     const state = mainWindowState();
     if (contents == null || state == null) return;
-    emitBusChannel("window", { webContentsId: contents.id, state });
+    emitBusChannel("window", {
+      webContentsId: contents.id,
+      event: { type: "state", state },
+    });
   };
   mainWindow.on("enter-full-screen", publishFullScreenState);
   mainWindow.on("leave-full-screen", publishFullScreenState);
@@ -807,6 +830,7 @@ async function createWindow(restored?: RecreatedWindowState) {
                 return;
               }
               chromeCapability = available ? "overlay" : "overlay-unavailable";
+              publishChromeState();
               if (available) return;
               console.warn("[window-chrome] overlay-unavailable", {
                 sessionType: process.env.XDG_SESSION_TYPE,
@@ -1007,6 +1031,7 @@ async function createWindow(restored?: RecreatedWindowState) {
     },
     window: mainWindow,
     wire: wireRendererContents,
+    readiness: rendererReadiness,
   });
   rendererHost = host;
   setActiveRendererHost(host);
@@ -1497,6 +1522,26 @@ function mainWindowState(): WindowState | null {
   };
 }
 
+/** The native chrome, as `window:chrome` and `window.chrome` report it. */
+function currentChromeState(): WindowChromeState {
+  return {
+    mode: chromeCapability,
+    fullScreen: aliveMainWindow()?.isFullScreen() ?? false,
+    density: getTitlebarDensity(),
+    toolbarHeight: toolbarHeight(getTitlebarDensity()),
+  };
+}
+
+/** `window.events` `{ type: "chrome" }`: capability, full screen or density moved. */
+function publishChromeState(): void {
+  const contents = rendererWebContents();
+  if (contents == null) return;
+  emitBusChannel("window", {
+    webContentsId: contents.id,
+    event: { type: "chrome", chrome: currentChromeState() },
+  });
+}
+
 /** Null until whenReady has registered the IPC handlers. */
 let rpcTransport: MessagePortTransport | null = null;
 
@@ -1525,6 +1570,8 @@ function installRpc(
       // (the live view or a swap candidate); the notch comes later.
       state: (id) =>
         rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+      chrome: (id) =>
+        rpcTransport?.isRegistered(id) === true ? currentChromeState() : null,
       reportReady: (id, report) => rendererReadiness.report(id, report),
     },
     bus: mainEventBus,
@@ -1746,19 +1793,15 @@ app
       }
     );
 
-    // Main-only plumbing until the new renderer adds its typed procedures.
-    ipcMain.handle("window:chrome", () => ({
-      mode: chromeCapability,
-      fullScreen: aliveMainWindow()?.isFullScreen() ?? false,
-      density: getTitlebarDensity(),
-      toolbarHeight: toolbarHeight(getTitlebarDensity()),
-    }));
+    // The same state the oRPC renderer reads through `window.chrome`.
+    ipcMain.handle("window:chrome", () => currentChromeState());
     ipcMain.handle(
       "settings:set-titlebar-density",
       (_event, value: unknown) => {
         const density = setTitlebarDensity(value);
         // Legacy geometry stays fixed. macOS applies native height at recreation.
         if (RENDERER_GENERATION === "wco") refreshWindowChrome();
+        publishChromeState();
         return { density, appliesOnRestart: process.platform === "darwin" };
       }
     );
