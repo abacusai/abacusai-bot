@@ -32,3 +32,5 @@ export type {
 
 export type { SubmissionEnvelope } from "./runtime/admission";
 export { updateDraft, clearDraft, draftStore } from "./composer/draft-store";
+
+export { StartComposer } from "./composer/start-composer";
