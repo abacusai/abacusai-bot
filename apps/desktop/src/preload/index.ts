@@ -10,6 +10,7 @@ import type { OpenFilePathResult } from "#shared/contracts";
 import type { FunnelStep } from "#shared/funnel";
 import type { PptxReadResult } from "#shared/pptx";
 import type { UpdateStatus } from "#shared/update";
+import type { WindowChromeState } from "#shared/window-chrome-state";
 
 import { createBridge } from "./bridge";
 
@@ -82,6 +83,20 @@ const api = {
     return () =>
       ipcRenderer.removeListener("window:full-screen-changed", listener);
   },
+  getWindowChrome: (): Promise<WindowChromeState> =>
+    ipcRenderer.invoke("window:chrome"),
+  onWindowChromeChange: (
+    callback: (state: WindowChromeState) => void
+  ): (() => void) => {
+    const listener = (
+      _event: IpcRendererEvent,
+      state: WindowChromeState
+    ): void => callback(state);
+    ipcRenderer.on("window:chrome-changed", listener);
+    return () => ipcRenderer.removeListener("window:chrome-changed", listener);
+  },
+  recreateMainWindow: (): Promise<void> =>
+    ipcRenderer.invoke("window:recreate"),
   restartApp: (): Promise<void> => ipcRenderer.invoke("restart-app"),
 
   getHomeDir: (): Promise<string> => ipcRenderer.invoke("get-home-dir"),

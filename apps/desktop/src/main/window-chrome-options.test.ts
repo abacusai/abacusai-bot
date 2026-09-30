@@ -11,6 +11,7 @@ import {
   subscribeWindowChromeTheme,
   toolbarHeight,
   windowChromeOptions,
+  windowChromeState,
   type WindowChromeInput,
 } from "./window-chrome-options";
 
@@ -87,7 +88,7 @@ describe.each([false, true])("dark=%s options matrix", (dark) => {
       expect(windowChromeOptions({ ...options, platform: "linux" })).toEqual({
         titleBarStyle: "hidden",
         titleBarOverlay: { ...overlayColors(dark), color, height: 32 },
-        backgroundColor: color,
+        backgroundColor: "#2a2a28",
       });
       expect(
         windowChromeOptions({
@@ -194,7 +195,7 @@ it.each(["win32", "linux"])(
       expect.objectContaining({ height: 32, symbolColor: "#171717" })
     );
     if (platform === "linux")
-      expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#ffffff");
+      expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#2a2a28");
     theme.emit("updated");
     dispose();
     await vi.runAllTimersAsync();
@@ -214,4 +215,36 @@ it("does not change native-frame Linux or destroyed windows", () => {
   window.isDestroyed.mockReturnValue(true);
   applyWindowChrome(window, input);
   expect(window.setTitleBarOverlay).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["darwin", "overlay", 40],
+  ["win32", "overlay", 32],
+  ["linux", "native-frame", 40],
+] as const)(
+  "reports the actual legacy chrome on %s",
+  (platform, mode, height) => {
+    expect(
+      windowChromeState(
+        { ...input, mode: "legacy", platform, overlayHeight: 64 },
+        "native-frame",
+        false
+      )
+    ).toEqual({
+      mode,
+      fullScreen: false,
+      density: "comfortable",
+      toolbarHeight: height,
+    });
+  }
+);
+
+it("updates the Linux host background together with native chrome", () => {
+  const window = fakeWindow();
+  const host = { setBackgroundColor: vi.fn() };
+  applyWindowChrome(window, { ...input, platform: "linux" }, host);
+  expect(window.setBackgroundColor).toHaveBeenCalledWith("#2a2a28");
+  expect(host.setBackgroundColor).toHaveBeenCalledWith("#2a2a28");
+  applyWindowChrome(window, { ...input, platform: "linux", dark: false }, host);
+  expect(host.setBackgroundColor).toHaveBeenLastCalledWith("#2a2a28");
 });

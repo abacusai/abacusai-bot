@@ -211,7 +211,7 @@ If step 2 must land before the shell rewrite, it is done against the current lay
 - [ ] Linux native-frame fallback: on each allow-list candidate configuration and on SSD and Wayland, the fallback (`frame: true`) provides working close, minimize (where offered), maximize/restore, window move and resize; the overlay path is enabled for a DE only after this and the overlay checks both pass.
 - [ ] Startup probe: forcing missing geometry triggers recreation into native-frame and persists the choice.
 - [ ] Compact density: comfortable and compact both keep toolbar height in fullscreen, Toaster clears the toolbar; macOS density applies on window recreation.
-- [ ] Clipboard "Paste image" works with image, empty and text clipboards on 44.
+- [ ] Clipboard "Paste image" works with image, empty and text clipboards on 44, including TIFF copied from macOS Preview.
 - [ ] Popups/dialogs over the bar are clickable and dismissable, including on `_bare` routes.
 - [ ] Browser view aligned at non-1 zoom and after translation-only transitions.
 - [ ] Electron integration test passes on macOS, Windows and Linux CI.

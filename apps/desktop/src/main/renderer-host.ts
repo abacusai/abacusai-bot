@@ -133,6 +133,11 @@ export class RendererHost {
     return this.#view.webContents;
   }
 
+  setBackgroundColor(color: string): void {
+    this.#options.backgroundColor = color;
+    this.#view.setBackgroundColor(color);
+  }
+
   dispose(): void {
     discard(this.#view);
   }
@@ -251,6 +256,7 @@ export class RendererHost {
       throw new SwapAborted();
     }
 
+    next.setBackgroundColor(this.#options.backgroundColor);
     const focused = current.webContents.isFocused();
 
     this.#view = next;

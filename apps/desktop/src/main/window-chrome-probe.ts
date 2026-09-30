@@ -20,42 +20,46 @@ export function hasOverlayGeometry(value: OverlayGeometry | null): boolean {
   );
 }
 
-// One executeJavaScript call, no IPC surface. Wait for first geometry rather
-// than interpreting an unpainted view as an unsupported compositor.
-export const OVERLAY_PROBE_SCRIPT = `(() => new Promise(resolve => {
-  const deadline = performance.now() + 1500;
-  const check = () => {
-    const overlay = navigator.windowControlsOverlay;
-    const rect = overlay?.getTitlebarAreaRect();
-    const geometry = rect ? {
-      visible: overlay.visible, x: rect.x, width: rect.width,
-      height: rect.height, windowWidth: innerWidth
-    } : null;
-    if ((geometry?.visible && rect.width > 0 && rect.height > 0 &&
-         rect.width < innerWidth) || performance.now() >= deadline) {
-      resolve(geometry);
-    } else {
-      requestAnimationFrame(check);
-    }
-  };
-  check();
-}))()`;
+// Each poll executes on the host's current webContents, including after a swap.
+export const OVERLAY_PROBE_SCRIPT = `(() => {
+  const overlay = navigator.windowControlsOverlay;
+  const rect = overlay?.getTitlebarAreaRect();
+  return rect ? {
+    visible: overlay.visible, x: rect.x, width: rect.width,
+    height: rect.height, windowWidth: innerWidth
+  } : null;
+})()`;
+
+export type ChromeProbeResult = "available" | "unavailable" | "retry-later";
 
 export async function probeWindowChrome(
-  read: () => Promise<OverlayGeometry | null>
-): Promise<boolean> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    const result = await Promise.race([
-      read(),
-      new Promise<null>((resolve) => {
-        timer = setTimeout(() => resolve(null), 1500);
-      }),
-    ]);
-    return hasOverlayGeometry(result);
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
+  read: () => Promise<OverlayGeometry | null>,
+  retryLater: () => boolean = () => false
+): Promise<ChromeProbeResult> {
+  const deadline = Date.now() + 1500;
+  while (true) {
+    if (retryLater()) return "retry-later";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race([
+        read(),
+        new Promise<undefined>((resolve) => {
+          timer = setTimeout(
+            () => resolve(undefined),
+            Math.max(0, deadline - Date.now())
+          );
+        }),
+      ]);
+      if (retryLater() || result === undefined) return "retry-later";
+      if (hasOverlayGeometry(result)) return "available";
+    } catch {
+      return "retry-later";
+    } finally {
+      clearTimeout(timer);
+    }
+    if (Date.now() >= deadline) return "unavailable";
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, Math.min(50, deadline - Date.now()))
+    );
   }
 }
