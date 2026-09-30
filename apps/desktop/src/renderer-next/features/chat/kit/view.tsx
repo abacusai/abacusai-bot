@@ -5,6 +5,7 @@
  */
 import "../chat.css";
 import type { UIMessage } from "@tanstack/ai-client";
+import { useSelector } from "@tanstack/react-store";
 import { useEffect, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +13,7 @@ import { EmptyState } from "#next/components/empty-state";
 import { Button } from "#next/ui/button";
 import { Skeleton } from "#next/ui/skeleton";
 
+import { draftStore, updateDraft } from "../composer/draft-store";
 import { CODE_THEME_CSS } from "../markdown/highlighter";
 import { MarkdownLinksProvider } from "../markdown/markdown";
 import { prefetchMath } from "../markdown/math";
@@ -109,6 +111,11 @@ export const ChatView = (props: ChatViewProps) => {
   const { threadId, skin, runtime } = props;
   const session = runtime.session(threadId);
   const [inline] = useState(createInlineRegistry);
+  const pending = useSelector(
+    draftStore,
+    (state) => state[threadId]?.pendingSubmit
+  );
+  const admitting = useState(() => new Set<string>())[0];
   const ready = useHost(session, (state) => state.ready);
   const phase = useHost(session, (state) => state.phase);
   const notFound = useHost(session, (state) => state.notFound);
@@ -118,6 +125,24 @@ export const ChatView = (props: ChatViewProps) => {
     prefetchMath();
     session.load().catch(() => {});
   }, [session]);
+  useEffect(() => {
+    if (!ready || !pending || admitting.has(pending.runId)) return;
+    admitting.add(pending.runId);
+    void session
+      .admitEnvelope(pending)
+      .then((result) => {
+        if (
+          ["started", "queued", "rejected", "duplicate"].includes(result.kind)
+        )
+          updateDraft(threadId, (draft) => {
+            if (draft.pendingSubmit?.runId !== pending.runId) return draft;
+            const { pendingSubmit: _pending, ...rest } = draft;
+            return rest;
+          });
+      })
+      .catch(() => {})
+      .finally(() => admitting.delete(pending.runId));
+  }, [ready, pending, session, threadId, admitting]);
   const value: ChatViewContextValue = {
     threadId,
     skin,

@@ -29,3 +29,6 @@ export type {
   ThreadSkin,
   ThreadStoreState,
 } from "./store/thread-store";
+
+export type { SubmissionEnvelope } from "./runtime/admission";
+export { updateDraft, clearDraft, draftStore } from "./composer/draft-store";

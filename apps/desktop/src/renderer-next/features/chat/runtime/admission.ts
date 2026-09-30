@@ -11,12 +11,20 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { isDefinitive, type AiClient } from "#next/data/ai";
 import type { AiSendAck } from "#shared/contract/ai";
 
+export interface SubmissionEnvelope {
+  runId: string;
+  messageId: string;
+  parts: UIMessage["parts"];
+  forwardedProps?: Record<string, unknown>;
+}
+
 type OutboxState = "sending" | "accepted" | "unconfirmed" | "failed";
 
 export interface OutboxEntry {
   id: string;
   runId: string;
   text: string;
+  parts?: UIMessage["parts"];
   createdAt: number;
   state: OutboxState;
   attempts: number;
@@ -57,7 +65,7 @@ export const RECONCILE_DELAYS_MS = [1000, 3000] as const;
 const userMessage = (entry: OutboxEntry) => ({
   id: entry.id,
   role: "user" as const,
-  parts: [{ type: "text", content: entry.text }],
+  parts: entry.parts ?? [{ type: "text", content: entry.text }],
 });
 
 const patch = (
@@ -101,7 +109,9 @@ const admit = async (
     ack = await host.ai.send({
       threadId: host.threadId,
       runId: entry.runId,
-      messages: [userMessage(entry)],
+      messages: [userMessage(entry)] as Parameters<
+        AiClient["send"]
+      >[0]["messages"],
       ...(entry.forwardedProps != null
         ? { forwardedProps: entry.forwardedProps }
         : {}),
@@ -210,11 +220,38 @@ export const withOutbox = (
     .map((entry): UIMessage => ({
       id: entry.id,
       role: "user",
-      parts: [{ type: "text", content: entry.text }],
+      parts: entry.parts ?? [{ type: "text", content: entry.text }],
       createdAt: new Date(entry.createdAt),
       metadata: { abacus: { pending: true, state: entry.state } },
     }));
   return pending.length === 0
     ? (messages as UIMessage[])
     : [...messages, ...pending];
+};
+
+/** A durable route hand-off reuses both identities, including after reload. */
+export const admitEnvelope = (
+  host: AdmissionHost,
+  envelope: SubmissionEnvelope
+): Promise<AdmissionResult> => {
+  if (!find(host, envelope.messageId)) {
+    host.setOutbox((outbox) => [
+      ...outbox,
+      {
+        id: envelope.messageId,
+        runId: envelope.runId,
+        parts: envelope.parts,
+        text: envelope.parts
+          .flatMap((p) => (p.type === "text" ? [p.content] : []))
+          .join("\n"),
+        createdAt: Date.now(),
+        state: "sending",
+        attempts: 0,
+        ...(envelope.forwardedProps
+          ? { forwardedProps: envelope.forwardedProps }
+          : {}),
+      },
+    ]);
+  }
+  return admit(host, envelope.messageId);
 };
