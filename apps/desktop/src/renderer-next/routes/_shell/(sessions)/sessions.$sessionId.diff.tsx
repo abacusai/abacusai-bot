@@ -9,11 +9,10 @@ import {
 import { DiffSearch } from "#next/lib/navigation/search";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 
-import { sessionRuntime } from "./-runtime";
 const SessionDiffRoute = () => {
   const { sessionId } = Route.useParams();
   const search = Route.useSearch();
-  const { transport } = Route.useRouteContext();
+  const { chat } = Route.useRouteContext();
   const row = useSession(sessionId);
   const workspace = useWorkspace(row?.workspaceId ?? "");
   const navigate = useAppNavigate();
@@ -45,10 +44,7 @@ const SessionDiffRoute = () => {
       mode={search.mode}
       resolveTool={() =>
         search.toolKey
-          ? resolveToolDiff(
-              sessionRuntime(transport, sessionId).session(sessionId),
-              search.toolKey
-            )
+          ? resolveToolDiff(chat.session(sessionId), search.toolKey)
           : Promise.resolve({ state: "unavailable" })
       }
       onClose={close}

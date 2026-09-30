@@ -28,6 +28,13 @@ const keymap = JSON.parse(
 
 const keys = flatten(enUS as unknown as Tree);
 
+/** i18next's plural suffixes (CLDR categories); `t(key, { count })` reads them. */
+const PLURAL_SUFFIXES = ["zero", "one", "two", "few", "many", "other"];
+
+/** A key `t()` can resolve: itself, or a plural family with `_other`. */
+const resolves = (key: string): boolean =>
+  keys.has(key) || keys.has(`${key}_other`);
+
 // Every source file of renderer-next, as text, for the key scan.
 const sources = import.meta.glob<string>(
   [
@@ -79,8 +86,37 @@ describe("keys", () => {
     expect(unread).toEqual([]);
     for (const [file, source] of Object.entries(sources))
       for (const [, key] of source.matchAll(/\bt\(\s*"([\w.-]+)"/g))
-        if (!keys.has(key!)) missing.push(`${file}: ${key}`);
+        if (!resolves(key!)) missing.push(`${file}: ${key}`);
     expect(missing).toEqual([]);
+  });
+
+  it("a plural family has no base key and an `_other` form", () => {
+    const families = new Set<string>();
+    for (const key of keys.keys()) {
+      const match = /^(.+)_([a-z]+)$/.exec(key);
+      if (match != null && PLURAL_SUFFIXES.includes(match[2]!))
+        families.add(match[1]!);
+    }
+    const problems: string[] = [];
+    for (const family of families) {
+      if (!keys.has(`${family}_other`)) problems.push(`${family}: no _other`);
+      // The old renderer's `workspace.preview.pptxWarnings` predates this rule.
+      if (keys.has(family) && !family.startsWith("workspace."))
+        problems.push(`${family}: base key beside its plural forms`);
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it("resolves a counted key to its plural forms", async () => {
+    const { default: i18next } = await import("i18next");
+    const instance = i18next.createInstance();
+    await instance.init({
+      lng: "en-US",
+      resources: { "en-US": { translation: enUS } },
+      interpolation: { escapeValue: false },
+    });
+    expect(instance.t("chat.busy.tools", { count: 1 })).toBe("Running 1 tool");
+    expect(instance.t("chat.busy.tools", { count: 3 })).toBe("Running 3 tools");
   });
 
   it("has a rail label per area, the settings page titles and every panel tab", () => {

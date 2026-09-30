@@ -103,11 +103,40 @@ export const BotsGlobals = () => {
       },
       abort.signal
     );
+    const ready = async (): Promise<void> => {
+      while (!abort.signal.aborted) {
+        try {
+          await Promise.all([
+            db.collections.bots.preload(),
+            db.collections.routines.preload(),
+          ]);
+          return;
+        } catch {
+          await new Promise<void>((resolve) => {
+            const done = () => {
+              clearTimeout(timer);
+              abort.signal.removeEventListener("abort", done);
+              resolve();
+            };
+            const timer = setTimeout(done, 250);
+            abort.signal.addEventListener("abort", done, { once: true });
+          });
+        }
+      }
+    };
+    let delivery = ready();
+    const queued = new Set<string>();
     const unsubscribeFinished = subscribeRunFinished(transport, (notice) => {
-      if (deps.current != null) handleRunFinished(deps.current, notice);
+      if (queued.has(notice.runId)) return;
+      queued.add(notice.runId);
+      if (queued.size > 10_000) queued.delete(queued.values().next().value!);
+      delivery = delivery.then(() => {
+        if (!abort.signal.aborted && deps.current != null)
+          handleRunFinished(deps.current, notice);
+      });
+      void delivery.catch(() => undefined);
     });
     abort.signal.addEventListener("abort", unsubscribeFinished, { once: true });
-    void db.collections.routines.preload().catch(() => undefined);
     const unlock = (): void => soundPlayer().unlock();
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => {

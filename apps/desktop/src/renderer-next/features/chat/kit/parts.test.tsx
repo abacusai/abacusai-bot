@@ -73,6 +73,93 @@ describe("R2-T11 parts", () => {
     expect(document.querySelector('[data-slot="feature-limit"]')).toBeTruthy();
   });
 
+  it.each(["session", "bot"] as const)(
+    "tool groups have a summary and the %s default expansion",
+    async (skin) => {
+      await migrated("tool-group", skin);
+      if (skin === "bot") {
+        expect(screen.queryByText(/Worked through/)).toBeNull();
+        expect(
+          screen.queryByRole("button", {
+            name: "Read 2 files, searched 1 pattern",
+          })
+        ).toBeNull();
+        expect(document.querySelectorAll("[data-tool]")).toHaveLength(0);
+        return;
+      }
+      const summary = await screen.findByRole("button", {
+        name: "Read 2 files, searched 1 pattern",
+      });
+      expect(summary.getAttribute("aria-expanded")).toBe("true");
+      expect(document.querySelectorAll("[data-tool]")).toHaveLength(3);
+    }
+  );
+
+  it.each(["session", "bot"] as const)(
+    "%s renders web search and unknown migrated parts",
+    async (skin) => {
+      await migrated("display-segments", skin);
+      expect(await screen.findByText("Done.")).toBeTruthy();
+      expect(
+        document.querySelector('[data-slot="feature-limit"]')
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: /Top up|Upgrade/ })
+      ).toBeTruthy();
+    }
+  );
+
+  it.each(["session", "bot"] as const)(
+    "%s renders migrated search results and preserves unknown data",
+    async (skin) => {
+      await migrated("web-search", skin);
+      expect(
+        document.querySelectorAll('[data-slot="search-results"]')
+      ).toHaveLength(skin === "session" ? 2 : 0);
+      const links = document.querySelectorAll(
+        '[data-slot="search-results"] button'
+      );
+      expect(links.length > 0).toBe(skin === "session");
+      await current!.cleanup();
+      current = null;
+      await migrated("unknown-segments", skin);
+      if (skin === "session")
+        expect(
+          (await screen.findAllByText("[unknown]")).length
+        ).toBeGreaterThan(0);
+      else expect(screen.queryByText("[unknown]")).toBeNull();
+    }
+  );
+
+  it.each(["session", "bot"] as const)(
+    "%s handles a document part through the default kit map",
+    async (skin) => {
+      current = await renderRelay(
+        new FakeRelay({
+          history: [
+            {
+              id: "doc",
+              role: "assistant",
+              parts: [
+                {
+                  type: "document",
+                  source: {
+                    type: "url",
+                    value: "https://example.com/report.pdf",
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+        skin
+      );
+      if (skin === "session")
+        expect(await screen.findByText(/report.pdf|document/i)).toBeTruthy();
+      else expect(screen.queryByText(/report.pdf|document/i)).toBeNull();
+    }
+  );
+
   it("live: reminders stripped, routine fires hidden, attachments as chips, empty assistant renders nothing", async () => {
     const relay = new FakeRelay();
     relay.emitAll([

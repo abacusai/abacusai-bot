@@ -5,12 +5,13 @@
  * Copy while streaming. R2-T18: reference links and footnotes far from
  * their use render in one long streaming message.
  */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#next/lib/i18n";
 
 import { Markdown, MarkdownLinksProvider } from "./markdown";
+import { loadMath } from "./math";
 import { fileTarget, prepass } from "./prepass";
 
 beforeAll(async () => {
@@ -37,6 +38,19 @@ const renderMd = (
 };
 
 describe("R2-T17 markdown", () => {
+  // First in the file: temml is not loaded yet.
+  it("math rendered before temml loads updates once it has", async () => {
+    const { container } = renderMd("inline $x^2$ and\n\n$$y$$");
+    expect(container.querySelector(".chat-math-pending")).toBeTruthy();
+    expect(container.querySelector("math")).toBeNull();
+    await act(async () => {
+      await loadMath();
+    });
+    expect(container.querySelector(".chat-math-inline math")).toBeTruthy();
+    expect(container.querySelector(".chat-math math")).toBeTruthy();
+    expect(container.querySelector(".chat-math-pending")).toBeNull();
+  });
+
   it("renders blocks, tables in a scroller and code with chrome", () => {
     const { container } = renderMd(
       "# Title\n\n- one\n- two\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n```ts\nconst a = 1;\n```"
@@ -80,6 +94,45 @@ describe("R2-T17 markdown", () => {
     expect(links.openFile).toHaveBeenLastCalledWith("/repo/src/a.ts");
     fireEvent.click(screen.getByText("enc"));
     expect(links.openFile).toHaveBeenLastCalledWith("/Users/me/My Docs/a.md");
+  });
+
+  it("no link navigates the window (hash router); anchors scroll in place", () => {
+    const before = window.location.href;
+    const scrolled = vi.fn();
+    const { container, links } = renderMd(
+      "A note[^1] and [section](#part) and [bare](a.ts).\n\n[^1]: The footnote.",
+      { root: null }
+    );
+    for (const target of container.querySelectorAll("[id]"))
+      (target as HTMLElement).scrollIntoView = scrolled;
+    for (const anchor of container.querySelectorAll("a")) {
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      });
+      anchor.dispatchEvent(event);
+      expect(event.defaultPrevented, anchor.getAttribute("href") ?? "").toBe(
+        true
+      );
+    }
+    expect(window.location.href).toBe(before);
+    expect(scrolled).toHaveBeenCalled();
+    // A scheme-less relative target is a workspace file (§7.5).
+    expect(links.openFile).toHaveBeenCalledWith("/repo/a.ts");
+    expect(links.openExternal).not.toHaveBeenCalled();
+  });
+
+  it("reference definitions naming files open them", () => {
+    const { links } = renderMd("See [the file][f].\n\n[f]: /abs/My%20File.md");
+    fireEvent.click(screen.getByText("the file"));
+    expect(links.openFile).toHaveBeenCalledWith("/abs/My File.md");
+  });
+
+  it("display math stays inside a quote and a list item", async () => {
+    await loadMath();
+    const { container } = renderMd("> $$x$$\n\n- item\n\n  $$\n  y\n  $$");
+    expect(container.querySelector("blockquote .chat-math")).toBeTruthy();
+    expect(container.querySelector("li .chat-math")).toBeTruthy();
   });
 
   it("the §7.5 table", () => {

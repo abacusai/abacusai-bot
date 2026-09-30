@@ -9,7 +9,7 @@ import { botsGallerySections, isBotsGalleryFixture } from "#next/features/bots";
 import {
   useComposerExpanded,
   ChatView,
-  fixtureRuntime,
+  loadFixtureRuntime,
 } from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
@@ -18,7 +18,14 @@ import {
   isSessionsGalleryFixture,
 } from "#next/features/sessions";
 
-const replay = fixtureRuntime("bot-golden-plain", {}, "bots-gallery");
+type Replay = ReturnType<Awaited<ReturnType<typeof loadFixtureRuntime>>>;
+let replay: Replay = null;
+const replayReady =
+  import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
+    ? loadFixtureRuntime().then((create) => {
+        replay = create("bot-golden-plain", {}, "bots-gallery");
+      })
+    : null;
 const BotChatGallery = () => {
   const bot = useBot("chief-of-staff");
   return bot ? <GalleryChat bot={bot} /> : null;
@@ -85,6 +92,9 @@ const GalleryRoute = () => {
 export const Route = createFileRoute("/_bare/__ui")({
   beforeLoad: () => {
     if (!galleryEnabled()) throw notFound();
+  },
+  loader: async () => {
+    if (replayReady != null) await replayReady;
   },
   validateSearch: GallerySearch,
   component: GalleryRoute,

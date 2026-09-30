@@ -42,11 +42,13 @@ const QueueRow = ({
   command,
   editing,
   onEdit,
+  ghost = false,
 }: {
   entry: QueueEntry;
   command: QueueCommandState | undefined;
   editing: boolean;
   onEdit(open: boolean): void;
+  ghost?: boolean;
 }) => {
   const { t } = useTranslation();
   const { session } = useChatView();
@@ -101,25 +103,30 @@ const QueueRow = ({
         </span>
       )}
       {pending ? <Spinner aria-hidden /> : null}
-      {editing ? null : (
+      {editing || ghost ? null : (
         <Button
           variant="ghost"
           size="sm"
           disabled={pending}
-          onClick={() => onEdit(true)}
+          onClick={() => {
+            setDraft(entry.message);
+            onEdit(true);
+          }}
         >
           {t("chat.queue.edit")}
         </Button>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        disabled={pending}
-        aria-label={t("chat.queue.remove")}
-        onClick={() => void session.removeQueued(entry.id)}
-      >
-        <X aria-hidden />
-      </Button>
+      {ghost ? null : (
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={pending}
+          aria-label={t("chat.queue.remove")}
+          onClick={() => void session.removeQueued(entry.id)}
+        >
+          <X aria-hidden />
+        </Button>
+      )}
     </div>
   );
 };
@@ -177,6 +184,7 @@ export const QueueSlot = ({
           >
             <QueueRow
               entry={entry}
+              ghost={!queue.some((item) => item.id === entry.id)}
               command={commands[entry.id]}
               editing={editingId === entry.id}
               onEdit={(open) => onEditingChange(open ? entry.id : null)}

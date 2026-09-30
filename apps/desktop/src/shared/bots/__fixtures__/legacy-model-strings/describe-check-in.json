@@ -1,0 +1,178 @@
+[
+  {
+    "input": {
+      "preset": "off",
+      "time": "09:00",
+      "weekday": 1
+    },
+    "output": "off"
+  },
+  {
+    "input": {
+      "preset": "off",
+      "time": "17:30",
+      "weekday": 1
+    },
+    "output": "off"
+  },
+  {
+    "input": {
+      "preset": "hourly",
+      "time": "09:00",
+      "weekday": 1
+    },
+    "output": "every hour"
+  },
+  {
+    "input": {
+      "preset": "hourly",
+      "time": "17:30",
+      "weekday": 1
+    },
+    "output": "every hour"
+  },
+  {
+    "input": {
+      "preset": "daily",
+      "time": "09:00",
+      "weekday": 1
+    },
+    "output": "every day at 09:00"
+  },
+  {
+    "input": {
+      "preset": "daily",
+      "time": "17:30",
+      "weekday": 1
+    },
+    "output": "every day at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekdays",
+      "time": "09:00",
+      "weekday": 1
+    },
+    "output": "weekdays at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekdays",
+      "time": "17:30",
+      "weekday": 1
+    },
+    "output": "weekdays at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "09:00",
+      "weekday": 0
+    },
+    "output": "weekly on Sunday at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "09:00",
+      "weekday": 1
+    },
+    "output": "weekly on Monday at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "09:00",
+      "weekday": 2
+    },
+    "output": "weekly on Tuesday at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "09:00",
+      "weekday": 3
+    },
+    "output": "weekly on Wednesday at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "09:00",
+      "weekday": 4
+    },
+    "output": "weekly on Thursday at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "09:00",
+      "weekday": 5
+    },
+    "output": "weekly on Friday at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "09:00",
+      "weekday": 6
+    },
+    "output": "weekly on Saturday at 09:00"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "17:30",
+      "weekday": 0
+    },
+    "output": "weekly on Sunday at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "17:30",
+      "weekday": 1
+    },
+    "output": "weekly on Monday at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "17:30",
+      "weekday": 2
+    },
+    "output": "weekly on Tuesday at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "17:30",
+      "weekday": 3
+    },
+    "output": "weekly on Wednesday at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "17:30",
+      "weekday": 4
+    },
+    "output": "weekly on Thursday at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "17:30",
+      "weekday": 5
+    },
+    "output": "weekly on Friday at 17:30"
+  },
+  {
+    "input": {
+      "preset": "weekly",
+      "time": "17:30",
+      "weekday": 6
+    },
+    "output": "weekly on Saturday at 17:30"
+  }
+]

@@ -7,11 +7,17 @@ import {
   BotChatIdentity,
   useBot,
   useBotChatSlots,
+  useBotChatActivity,
   loadSenderChat,
   FilesTab,
 } from "#next/features/bots";
-import { chatRuntimeFor, ChatView } from "#next/features/chat";
-import { TopBarSlot, SidePanelContent } from "#next/features/shell";
+import { ChatView, useThreadHost } from "#next/features/chat";
+import {
+  TopBarSlot,
+  SidePanelContent,
+  requestBrowserOpen,
+  BrowserOpenPlaceholder,
+} from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { BotId, SessionId } from "#shared/contract/ids";
@@ -27,8 +33,12 @@ const Sender = ({
   bot: NonNullable<ReturnType<typeof useBot>>;
   sessionId: string;
 }) => {
-  const { transport } = Route.useRouteContext();
-  const slots = useBotChatSlots(bot, sessionId, false, true);
+  const { chat } = Route.useRouteContext();
+  const host = useThreadHost(chat.session(sessionId));
+  useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
+  const slots = useBotChatSlots(bot, sessionId, false, true, (url) =>
+    requestBrowserOpen({ sessionId, url })
+  );
   const search = Route.useSearch();
   if (!slots.session) return <BotGone chat />;
   return (
@@ -43,14 +53,18 @@ const Sender = ({
       <ChatView
         threadId={sessionId}
         skin="bot"
-        runtime={chatRuntimeFor(transport)}
+        runtime={chat}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}
         slots={slots.chat}
         composer={slots.composer}
       />
+      <SidePanelContent tab="browser">
+        <BrowserOpenPlaceholder sessionId={sessionId} />
+      </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab
+          sessionId={sessionId}
           bot={bot}
           preview={search.preview}
           workspaceRoot={slots.workspaceRoot}
@@ -71,7 +85,7 @@ export const Route = createFileRoute(
       loadSenderChat(
         {
           db: context.db,
-          load: (id) => chatRuntimeFor(context.transport).session(id).load(),
+          load: (id) => context.chat.session(id).load(),
         },
         params.botId,
         params.sessionId,

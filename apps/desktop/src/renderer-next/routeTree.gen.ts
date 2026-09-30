@@ -53,7 +53,7 @@ import { Route as ShelllibraryLibraryToolsToolsetIdRouteImport } from "./routes/
 import { Route as ShellroutinesRoutinesListIndexRouteImport } from "./routes/_shell/(routines)/routines._list.index"
 import { Route as ShellroutinesRoutinesListNewRouteImport } from "./routes/_shell/(routines)/routines._list.new"
 import { Route as ShellsessionsSessionsSessionIdDiffRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId.diff"
-import { Route as ShellsessionsSessionsSessionIdReviewRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId.review"
+import { Route as ShellsessionsSessionsSessionIdReviewRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId_.review"
 import { Route as ShellbotsBotsBotIdChatsSessionIdRouteImport } from "./routes/_shell/(bots)/bots.$botId_.chats.$sessionId"
 
 const BareRoute = BareRouteImport.update({
@@ -294,9 +294,9 @@ const ShellsessionsSessionsSessionIdDiffRoute =
   } as any)
 const ShellsessionsSessionsSessionIdReviewRoute =
   ShellsessionsSessionsSessionIdReviewRouteImport.update({
-    id: "/review",
-    path: "/review",
-    getParentRoute: () => ShellsessionsSessionsSessionIdRoute,
+    id: "/$sessionId_/review",
+    path: "/$sessionId/review",
+    getParentRoute: () => ShellsessionsSessionsRoute,
   } as any)
 const ShellbotsBotsBotIdChatsSessionIdRoute =
   ShellbotsBotsBotIdChatsSessionIdRouteImport.update({
@@ -433,7 +433,7 @@ export interface FileRoutesById {
   "/_shell/(library)/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/_shell/(routines)/routines/_list/new": typeof ShellroutinesRoutinesListNewRoute
   "/_shell/(sessions)/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
-  "/_shell/(sessions)/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
+  "/_shell/(sessions)/sessions/$sessionId_/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/_shell/(library)/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
   "/_shell/(routines)/routines/_list/": typeof ShellroutinesRoutinesListIndexRoute
   "/_shell/(bots)/bots/$botId_/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
@@ -567,7 +567,7 @@ export interface FileRouteTypes {
     | "/_shell/(library)/library/tools/$toolsetId"
     | "/_shell/(routines)/routines/_list/new"
     | "/_shell/(sessions)/sessions/$sessionId/diff"
-    | "/_shell/(sessions)/sessions/$sessionId/review"
+    | "/_shell/(sessions)/sessions/$sessionId_/review"
     | "/_shell/(library)/library/tools/"
     | "/_shell/(routines)/routines/_list/"
     | "/_shell/(bots)/bots/$botId_/chats/$sessionId"
@@ -888,12 +888,12 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShellsessionsSessionsSessionIdDiffRouteImport
       parentRoute: typeof ShellsessionsSessionsSessionIdRoute
     }
-    "/_shell/(sessions)/sessions/$sessionId/review": {
-      id: "/_shell/(sessions)/sessions/$sessionId/review"
-      path: "/review"
+    "/_shell/(sessions)/sessions/$sessionId_/review": {
+      id: "/_shell/(sessions)/sessions/$sessionId_/review"
+      path: "/$sessionId/review"
       fullPath: "/sessions/$sessionId/review"
       preLoaderRoute: typeof ShellsessionsSessionsSessionIdReviewRouteImport
-      parentRoute: typeof ShellsessionsSessionsSessionIdRoute
+      parentRoute: typeof ShellsessionsSessionsRoute
     }
     "/_shell/(bots)/bots/$botId_/chats/$sessionId": {
       id: "/_shell/(bots)/bots/$botId_/chats/$sessionId"
@@ -1053,15 +1053,12 @@ const ShellroutinesRoutinesRouteWithChildren =
 
 interface ShellsessionsSessionsSessionIdRouteChildren {
   ShellsessionsSessionsSessionIdDiffRoute: typeof ShellsessionsSessionsSessionIdDiffRoute
-  ShellsessionsSessionsSessionIdReviewRoute: typeof ShellsessionsSessionsSessionIdReviewRoute
 }
 
 const ShellsessionsSessionsSessionIdRouteChildren: ShellsessionsSessionsSessionIdRouteChildren =
   {
     ShellsessionsSessionsSessionIdDiffRoute:
       ShellsessionsSessionsSessionIdDiffRoute,
-    ShellsessionsSessionsSessionIdReviewRoute:
-      ShellsessionsSessionsSessionIdReviewRoute,
   }
 
 const ShellsessionsSessionsSessionIdRouteWithChildren =
@@ -1073,6 +1070,7 @@ interface ShellsessionsSessionsRouteChildren {
   ShellsessionsSessionsSessionIdRoute: typeof ShellsessionsSessionsSessionIdRouteWithChildren
   ShellsessionsSessionsNewRoute: typeof ShellsessionsSessionsNewRoute
   ShellsessionsSessionsIndexRoute: typeof ShellsessionsSessionsIndexRoute
+  ShellsessionsSessionsSessionIdReviewRoute: typeof ShellsessionsSessionsSessionIdReviewRoute
 }
 
 const ShellsessionsSessionsRouteChildren: ShellsessionsSessionsRouteChildren = {
@@ -1080,6 +1078,8 @@ const ShellsessionsSessionsRouteChildren: ShellsessionsSessionsRouteChildren = {
     ShellsessionsSessionsSessionIdRouteWithChildren,
   ShellsessionsSessionsNewRoute: ShellsessionsSessionsNewRoute,
   ShellsessionsSessionsIndexRoute: ShellsessionsSessionsIndexRoute,
+  ShellsessionsSessionsSessionIdReviewRoute:
+    ShellsessionsSessionsSessionIdReviewRoute,
 }
 
 const ShellsessionsSessionsRouteWithChildren =

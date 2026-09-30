@@ -47,7 +47,6 @@ import type { AgentMode } from "#shared/agent-types";
 import { SessionId } from "#shared/contract/ids";
 import { sessionConversationKey } from "#shared/conversation-scope";
 
-import { sessionRuntime } from "./-runtime";
 const SessionAgents = ({
   runtime,
   threadId,
@@ -168,14 +167,13 @@ const SessionGone = () => {
 };
 const SessionRoute = () => {
   const { sessionId } = Route.useParams();
-  const { transport } = Route.useRouteContext();
+  const { transport, chat: runtime } = Route.useRouteContext();
   const { t } = useTranslation();
   const navigate = useAppNavigate();
   const collections = useCollections();
   const row = useSession(sessionId);
   const workspace = useWorkspace(row?.workspaceId ?? "");
   const model = useSessionComposerModel(row);
-  const runtime = sessionRuntime(transport, sessionId);
   const session = runtime.session(sessionId);
   const host = useSelector(session.hostStore, (s) => s);
   const incarnation = useSelector(host.store, (s) => s.incarnation);
@@ -352,9 +350,7 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/$sessionId")({
         replace: true,
       });
     if (!preload && cause !== "stay")
-      await sessionRuntime(context.transport, params.sessionId)
-        .session(params.sessionId)
-        .load();
+      await context.chat.session(params.sessionId).load();
   },
   notFoundComponent: SessionGone,
   component: SessionRoute,

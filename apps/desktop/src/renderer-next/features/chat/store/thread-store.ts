@@ -86,6 +86,7 @@ export interface QueueCommandState {
 export interface ThreadStoreState {
   /** Session slices skip `seq ≤ sessionCursor` (§3.3). */
   sessionCursor: number;
+  subagentTimes: Record<string, { start: number; end?: number }>;
   incarnation: string | null;
   agent: AgentState | null;
   permissions: {
@@ -112,6 +113,7 @@ export interface ThreadStoreState {
 
 export const emptyThreadState = (cursor = 0): ThreadStoreState => ({
   sessionCursor: cursor,
+  subagentTimes: {},
   incarnation: null,
   agent: null,
   permissions: { items: [], answering: {} },

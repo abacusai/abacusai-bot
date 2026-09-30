@@ -114,3 +114,79 @@ No main, shared or agent source changed. The only chat edits made while continui
 | 52–53 | `features/bots/form/submit.ts`, check-in dialog and `data/open-chat.ts` |
 | 155, 158, 160–162 | `features/bots/data/queries.ts`, `panel/bot-side-panel.tsx`, presentational `components/bot-memory-list` |
 | 156–157, 159 | Global instructions and global Forget all belong to phase 5 Settings; bot memory does not consume these procedures. |
+
+
+## Fix pass against spec r3 — 2026-10-01
+
+This section supersedes the earlier limits and acceptance statuses above. Started by fast-forward merging `rewrite/renderer` to `2beb2583` from the main checkout; persisted `Bot.avatarAccessory` support was available before any fixes. All 16 review findings and the title-bar/shared-migration extras are addressed. Per-finding changes, failing-without-fix evidence and commits are in [03-bots.impl-fixes-r1.md](../specs/reviews/03-bots.impl-fixes-r1.md).
+
+### Validation
+
+- Targeted bots/helper/preview run: 21 files, 194 tests passed before the final host-URL guard; the final preview suite passes 12 tests, including that guard. The activity stream test additionally verifies the sidebar running-tool caption.
+- Unchanged legacy helper suites: 3 files, 27 tests passed.
+- Shared immutable oracle and renderer guards follow-up: 3 files, 25 tests passed.
+- Final `vitest run --project renderer-next --project main --project shared --maxWorkers=4`: **352 files / 3,733 tests passed; 1 failed, 1 skipped file, 7 TODOs**. The sole failure is `src/main/dev/legacy-diff.test.ts:185`, which hardcodes `a79707f6` for every allow-list entry. New authorized shim pins use `42612382`; the actual legacy-diff gate passes. Main tests were left untouched under the ownership rule. Initial run also caught a renderer import-guard violation in a migration test; relocating that check to the shared project removed it. Logs: `.build/bots-full-vitest-final.log`, `.build/bots-main-serial.log`.
+- `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1 vitest run --project main-serial`: 8 files, **281 tests passed**, no Electron suite skipped. Migration kill-point matrix, filesystem watcher, MessagePort handshake and renderer-next native suite ran.
+- Real-main/fake-provider Electron driver: **13 checks at 1280**, **12 at 1000**. `.build/bots-real-1280.json`, `.build/bots-real-1000.json`; native model recordings in `.build/bots-model-morph` (23 frames per width), composited styles in `.build/bots-boundaries.json`.
+- Each fix for findings 1–14 and 16 and the title duplication was temporarily removed independently: all 16 regression runs failed. Source restored. `.build/bots-regression-mutations.json` and `.build/bots-mutations/*.log`. Finding 15's native test measures settled computed styles and confirms removing the border rules fails its requirement.
+- `pnpm install --pm-on-fail=ignore`, connectors/agent/updater builds, desktop real renderer build, `tsc -b`, root `oxlint .`, root `oxfmt .`, `check:ui-registry`, `check:legacy-diff`, `check:knip-next`, i18n and locale checks completed. Lint has inherited legacy hook warnings and no errors. Knip has two inherited configuration hints and no unused exports. Final formatting/check evidence is under `.build/bots-*.log`.
+
+### R3-T1…T33 execution and remaining gaps
+
+The full project runs execute the available matrix tests, including foundation equivalents where the spec's proposed filenames differ. A passing suite does not certify unimplemented variants listed below.
+
+| ID | Evidence | Result / remaining gap |
+|---|---|---|
+| T1 | renderer-next `router.test.tsx`, shell tests; typecheck | Generated route snapshot, boundaries, mask/background identity and redirects pass. Bot-specific reload/draft/scroll assertions are partial. |
+| T2 | renderer-next navigation transition tests; main-serial renderer Electron test | Foundation transition rules and actual new→bot forward transition pass. |
+| T3 | cold `data/data.test.ts` + mounted `readiness.test.tsx` | Cold bots/sessions/routines snapshots block lookup/open/hydration; routed hover-then-click cannot mount the preload result. Concurrent opens deduplicate. Full routed Retry and exact 1 s delay variants remain gaps. |
+| T4 | renderer-next data + interactions | Unknown/retained sender guards, navigate-before-delete, live BotGone pass. |
+| T5 | renderer-next `data/invalidation.test.ts` | Real collections and memory transport exercise derived invalidation sources, including rename/session insert. |
+| T6 | renderer-next `data/data.test.ts` | Forever/sender and ownerless routine join pass. Exhaustive live memory/files mutation matrix is partial. |
+| T7 | renderer-next data + form tests | Collection echoes, equal patch, delete idempotency, duplicate naming, staged persistence pass. Every typed error/rollback variant is partial. |
+| T8 | avatar/theme units + Electron `bots-real.mjs` | All colour/hash/mapping units pass. 26 actual boundaries measured (13 per theme): dots, selected shape, ten swatches and Create bot. Minimum light contrast 4.58:1, dark fill contrast 6.13:1. Removing borders breaks the native assertion. |
+| T9 | shared `bots/check-in.test.ts`, next helper suites, unchanged legacy helper suites | Shared model strings and both describe signatures equal immutable fixture bytes; old shim wiring checked. The three unchanged legacy suites pass 27 tests through the re-exports. Cron cases run through the shared schedule module. |
+| T10 | form units + mounted `form/editor.test.tsx` | Successive remote updates, blurred untouched fields, preserved local persona, outgoing patch and Off-after-invalid-time are exercised in the actual editor. Complete routed leave-prompt matrix remains a gap. |
+| T11 | renderer-next `structure.test.ts`, existing guards | AST import boundaries, no forbidden avatar deps and no error-message branching pass. |
+| T12 | renderer-next data + notify tests | Per-session attention and ownerless routine cases pass. Full precedence-pair and sidebar/avatar rendering table is partial. |
+| T13 | renderer-next interactions + shell tests | Actual row DOM identity survives pinning and needs-you group moves. All search/strip/order/stamp variants and animation recording are partial. |
+| T14 | renderer-next interactions; Electron real-main driver | Context and dropdown actions match; focused-row contextmenu, native ContextMenu and Shift+F10 open the menu. An explicit row keyboard handler fixes the macOS native path. Channel menu and pause variants remain partial. |
+| T15 | notify/data + mounted delayed watcher | Readiness buffering retains terminal notices until bots/routines snapshots exist; last-event resume advances after delivery. Existing interval/resync/focus/ephemeral cases pass. |
+| T16 | renderer-next form tests and routed start/gallery | Stable draft ID, template replacement and prefill pass. Connector/category ordering is unit-tested in template helpers; complete Back/Enter UI matrix is partial. |
+| T17 | form units + mounted editor + real-main driver | Independently edited schedule/enabled leaves merge with the current routine; accessory create/update round-trips and picker saving pass. Existing staging/announcements pass. Complete typed conflict/recovery matrix remains partial. |
+| T18 | renderer-next form tests and check-in gallery axe | Field and draft semantics are exercised. Full dialog keyboard/save/custom-preservation matrix is partial. |
+| T19 | actual `ChatView` transcript, bot-turns/decorations + main feedback suites | Bot spoken whitelist applied to the actual transcript; tool permission scaffolding retained. Per-part reaction suppression/streaming hold tested for live and migrated parts; turn-level derivations and main feedback pass. Complete DOM feedback-click matrix remains a gap. |
+| T20 | renderer-next interactions/data/preview; real-main smoke | Channel readonly/model, deleted bot, ownerless check-in, workspace path routing pass. Full sender banner/pairing/root matrix is partial. |
+| T21 | renderer-next structure/i18n keys; locale scripts | English keys and all 11 keymap sources pass. |
+| T22 | renderer-next gallery `a11y.test.tsx`; screenshot accessibility checks | 15 pages/sections plus identity exclusivity pass. jsdom axe disables contrast; browser screenshots run contrast. Every open-overlay permutation is partial. |
+| T23 | renderer-next `notify.test.ts` | Completion and gate tables, burst throttling and synthesis scheduling pass. OfflineAudioContext audible-output assertion remains unimplemented. |
+| T24 | renderer-next model groups/interactions; typecheck; real-main smoke | Nullable binding, four model locations, open-popover stability, provider groups and real next-provider request pass. Complete favourite/default-with-missing-credentials UI matrix is partial. |
+| T25 | four-state jsdom model DOM + Electron at 1280/1000 | Both actual model-value nodes marked in tests; one value asserted before/after focus in all panel/expanded cases. 23 native screencast frames recorded at each width. Native reduced-motion cut verification remains a gap. |
+| T26 | readiness routing tests + Electron driver at both widths | Shared identity group on create/save passes; mounted router blocks while open/hydration are held. Exact native 1 s delayed-start/hydrate identity and every negative-group variant remain gaps. |
+| T27 | renderer-next BotAvatar/notify tests; `tsc -b` | All shapes/moods/accessories render, 600 ms reaction reset and pinned motion types pass. |
+| T28 | inherited main bots/model/errors/relay/feedback suites | Main accessory contract/store/table support merged first; main and renderer round-trip coverage pass. No main source edited. One foundation allow-list test fails because it hardcodes a79707f6 for every entry, including the newly authorized migration pins. |
+| T29 | renderer-next `structure.test.ts` | AST feature/molecule boundary checks pass. |
+| T30 | renderer-next `structure.test.ts` | All 73 ordered IDs have existing destinations and explicit statuses. Partial statuses remain visible. |
+| T31 | Electron real-main driver | Template/routine, provider models, restart/default, run attention/Details/readonly, forget and delete provenance pass. Connector-resume and legacy-generation roundtrip remain. |
+| T32 | renderer-next `chat/connector-requests.test.tsx` | Snapshot/live/cleared/reopen, conversation scoping, fields, MCP-before-respond, failed refresh and stopped-agent behavior pass. Native fake-MCP next-tool case remains. |
+| T33 | preview units + actual routed PDF/HTML/URL tests | Guest PDF/HTML go through browser.runtime.materializeFile with the viewed session key and hostRoot; local viewer accepts only host file URLs. PPTX renders visual slide geometry and image-only slides. Session URL registry retains destination; placeholder shows it and opens externally. Phase-4 embedded browser surface remains deferred. |
+
+### Screenshots and remaining verification limits
+
+Foundation `screenshots-next.mjs` captured **99 images**, **zero failures**, at **1280/1000/900/800**, light and dark, under `.build/screenshots/02399ff7`. Ten bots routes/gallery fixtures per theme/width plus foundation geometry/window probes. `shots.json`, `axe.json` and `index.html` are the manifest, accessibility results and contact sheet. Initial run sampled an unset band during 800-width startup; unchanged-script retry passed all probes. Original manifest retained at `.build/bots-screenshots-first-shots.json`.
+
+Representative paths:
+
+- `.build/screenshots/02399ff7/bots-chief-of-staff-tab-details@1280-light.png`
+- `.build/screenshots/02399ff7/bots-chief-of-staff-tab-details@1280-dark.png`
+- `.build/screenshots/02399ff7/bots-chief-of-staff-tab-details@1000-light.png`
+- `.build/screenshots/02399ff7/bots-chief-of-staff@900-dark.png`
+- `.build/screenshots/02399ff7/bots-new-step-setup-template-chief-of-staff@800-light.png`
+
+Command: `node apps/desktop/scripts/screenshots-next.mjs --widths 1280,1000,900,800 --port 9438 --routes '/bots/new,/bots/new?step=setup&template=chief-of-staff,/bots/chief-of-staff,/bots/chief-of-staff?tab=details,/bots/chief-of-staff?tab=memory,/bots/chief-of-staff?tab=files,/bots/chief-of-staff/edit,/bots/chief-of-staff/check-in,/__ui?fixture=bots-sidebar,/__ui?fixture=bots-chat' --no-overlays`; retry adds `--no-build`. Linux native-frame probe records skipped on macOS; it was not required.
+
+The title-bar capture now has one Details/Memory/Files strip without the extra Details action. Visual spot checks cover the 1280 light/dark Details views and the responsive bands. These fixture captures and native recordings are generated artifacts under `.build`, not tracked application source.
+
+Remaining verification gaps: exact native delayed identity transitions and all negative identity cases (T26), native reduced-motion model cuts (T25), OfflineAudioContext audible output (T23), native fake-MCP next-tool continuation and legacy-generation roundtrip (T31/T32), every typed rollback and overlay variant, complete sender/check-in Markdown root matrix, and manual demonstration of every parity row against every canvas board. Translation review of new English fallback copy remains. These gaps are not reported as passing.
+
+The phase-4 browser surface is intentionally represented by a shell-owned session registry and URL placeholder now; its destination and external action work. P53 remains partial only for the future embedded surface. Legacy edits are exactly the three §24.9 helper shims pinned by the foundation allow-list. No main or agent source changed; the one chat filtering change and both shell changes have separate commits.

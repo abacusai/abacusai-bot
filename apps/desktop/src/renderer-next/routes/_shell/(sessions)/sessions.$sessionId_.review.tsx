@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+
 export const Route = createFileRoute(
-  "/_shell/(sessions)/sessions/$sessionId/review"
+  "/_shell/(sessions)/sessions/$sessionId_/review"
 )({
   beforeLoad: ({ params }) => {
     throw redirect({
