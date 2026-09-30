@@ -67,15 +67,24 @@ export const LibraryGlobals = () => {
       },
       abort.signal
     );
-    void followNotices(transport,
-      ({signal}) => transport.client.settings.events({}, {signal}),
-      (event) => {if (event.type === "credentials-changed") {
-        invalidate(transport.orpc.connectors.statuses.key());
-        invalidate(transport.orpc.models.list.key());
-        invalidate(transport.orpc.settings.keys.listProviders.key());
-      }}, abort.signal);
-    void followNotices(transport,
-      ({signal}) => transport.client.bots.events({}, {signal}), messaging, abort.signal);
+    void followNotices(
+      transport,
+      ({ signal }) => transport.client.settings.events({}, { signal }),
+      (event) => {
+        if (event.type === "credentials-changed") {
+          invalidate(transport.orpc.connectors.statuses.key());
+          invalidate(transport.orpc.models.list.key());
+          invalidate(transport.orpc.settings.keys.listProviders.key());
+        }
+      },
+      abort.signal
+    );
+    void followNotices(
+      transport,
+      ({ signal }) => transport.client.bots.events({}, { signal }),
+      messaging,
+      abort.signal
+    );
     const sessions = db.collections.sessions.subscribeChanges(messaging);
     const unsubscribe = db.collections.bots.subscribeChanges(() =>
       invalidate(transport.orpc.memory.bots.queryKey({ input: {} }))

@@ -89,6 +89,7 @@ export const SkillsPage = () => {
           </Button>
         }
       >
+        <SettingRow id="skillsWorkspace" title={t("phase5.workspace")}>
         <Choice
           id="skillsWorkspace"
           value={workspace?.id ?? ""}
@@ -106,6 +107,7 @@ export const SkillsPage = () => {
             })
           }
         />
+        </SettingRow>
         <div className="flex gap-2">
           {(["folder", "file"] as const).map((kind) => (
             <Button
