@@ -399,3 +399,29 @@ describe("C-T4 step 1 transcripts-v2", () => {
     expect(midway.length).toBeGreaterThan(0);
   });
 });
+
+it("step 1 treats a non-directory transcripts path as empty so later steps can run", async () => {
+  fs.writeFileSync(transcripts(), "keep this non-directory");
+  const result = await run();
+  expect(result.failed).toBeNull();
+  expect(result.applied).toContain(1);
+  expect(fs.readFileSync(transcripts(), "utf8")).toBe(
+    "keep this non-directory"
+  );
+});
+
+it("step 1 leaves bytes without proof of a post-clear save hidden", async () => {
+  put(transcripts(), "clear-race.json", v1("clear-race"));
+  put(threads(), "clear-race.cleared", {
+    version: 1,
+    token: "clear-token",
+    clearedAt: "2026-09-02T00:00:00Z",
+    v1Fingerprint: "different-pre-clear-bytes",
+  });
+  await run();
+  expect(fs.existsSync(path.join(threads(), "clear-race.json"))).toBe(false);
+  expect(
+    readRecord(home).applied.find((step) => step.id === 1)?.stats.cleared
+  ).toBe(1);
+  expect(fs.existsSync(path.join(transcripts(), "clear-race.json"))).toBe(true);
+});

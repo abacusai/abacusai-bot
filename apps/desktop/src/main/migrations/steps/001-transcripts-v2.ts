@@ -49,7 +49,7 @@ export const transcriptsV2 = (
   id: 1,
   name: "transcripts-v2",
   plan: async (ctx) => {
-    const names = listTranscriptFiles(ctx.home);
+    const names = listTranscriptFiles(ctx.home, { strict: false });
     const stats = {
       files: names.length,
       converted: 0,
