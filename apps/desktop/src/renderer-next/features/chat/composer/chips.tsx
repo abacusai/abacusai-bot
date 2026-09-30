@@ -38,9 +38,11 @@ export interface ModeChipProps {
   setMode?: (mode: AgentMode) => Promise<void>;
   onOpenChange?: (open: boolean) => void;
   onRevert?: () => void;
+  /** Opens with the menu shown (gallery "permission mode open"). */
+  defaultOpen?: boolean;
 }
 
-export const ModeChip = ({ value, draft, live, onDraft, setMode, onOpenChange, onRevert }: ModeChipProps) => {
+export const ModeChip = ({ value, draft, live, onDraft, setMode, onOpenChange, onRevert, defaultOpen = false }: ModeChipProps) => {
   const { t } = useTranslation();
   const [optimistic, setOptimistic] = useState<AgentMode | null>(null);
   const shown = optimistic ?? (live ? value : draft) ?? value ?? AgentMode.Normal;
@@ -71,7 +73,7 @@ export const ModeChip = ({ value, draft, live, onDraft, setMode, onOpenChange, o
     });
   };
   return (
-    <DropdownMenu onOpenChange={onOpenChange}>
+    <DropdownMenu defaultOpen={defaultOpen} {...(onOpenChange != null ? { onOpenChange } : {})}>
       <DropdownMenuTrigger
         render={
           <Button
