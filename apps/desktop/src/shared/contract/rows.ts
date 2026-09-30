@@ -47,8 +47,14 @@ export interface TablePosition<Key = string> {
   key: Key;
 }
 
-export type SessionRow = AgentSessionListItem & {
+export type SessionRow = Omit<AgentSessionListItem, "worktreeOperationId"> & {
   turn: { phase: SessionTurnPhase; isBusy: boolean; updatedAt: string } | null;
+  /**
+   * The `operationId` of the `git.worktrees.materialize` that attached this
+   * session's worktree (spec 04 §26.4 g), so a start page can reconcile
+   * after a reload. Main always sets it (null when none); not writable.
+   */
+  worktreeOperationId?: string | null;
 };
 
 export type BotRow = Bot;
@@ -58,7 +64,17 @@ export type RoutineRow = Omit<RoutineListItem, "runs"> & {
   recentRuns: RoutineRun[];
 };
 
-export type RoutineRunRow = RoutineRunItem & { routineId: string };
+/**
+ * A run session. `attemptId`: the `started`/`start-failed` history entry
+ * with this session (null: none recorded). `result`: the latest follow-up's
+ * result for that attempt (a timeout), else the attempt's own (spec 05
+ * §31.5 f).
+ */
+export type RoutineRunRow = RoutineRunItem & {
+  routineId: string;
+  attemptId: string | null;
+  result: string | null;
+};
 
 export type ArtifactRow = SessionArtifact;
 
@@ -81,7 +97,17 @@ export interface MemoryRow {
 
 export type WorkspaceRow = WorkspaceListItem & { isActive: boolean };
 
-export type GitStateRow = GitStateSnapshot & { workspaceId: string };
+/**
+ * One checkout's git state (spec 04 §26.4 b), keyed by `checkoutKey`
+ * (`shared/contract/checkout.ts`): the active workspace's primary checkout,
+ * and every checkout with a live `git.watch`.
+ */
+export type GitStateRow = GitStateSnapshot & {
+  workspaceId: string;
+  checkoutKey: string;
+  /** The directory the state was computed in (null: none, remote). */
+  checkoutPath: string | null;
+};
 
 /**
  * The locales the app ships (renderer/locales/*.json; a shared test keeps the
@@ -134,9 +160,58 @@ export interface PrefsRow {
   /** Panel widths. */
   panes: Record<string, number>;
   motion: { reduce: "system" | "on" | "off" };
-  sounds: { enabled: boolean; perEvent: Record<string, boolean> };
+  sounds: {
+    enabled: boolean;
+    perEvent: Record<string, boolean>;
+    /** Per-bot level (spec 05 §31.5 a); a bot not listed is `"all"`. */
+    perBot?: Record<string, BotSoundLevel>;
+    /** Local wall-clock `HH:MM`; `start > end` spans midnight. */
+    quietHours?: QuietHours;
+  };
+  // ── Added by specs 05 (§31.5 a) and 06 (§23.5 b). Main's rows always carry
+  // them (its defaults fill every leaf); they are optional in the type only
+  // until renderer-next's `DEFAULT_PREFS` literal lists them (phase 5/6 own
+  // that file).
+  /** Binding id (`<action>` or `<action>@terminal`) → chord, null = unbound. */
+  keymap?: Record<string, string | null>;
+  appearance?: { textSize: PrefsTextSize; bubbleTint: boolean };
+  notch?: {
+    enabled: boolean;
+    haptics: boolean;
+    idleVisible: boolean;
+    extraDisplays: boolean;
+    showInNotch: boolean;
+  };
+  tour?: { status: "unseen" | "done" | "skipped"; at: number | null };
+  /**
+   * `2`: `onboardingStep` is in the new renderer's vocabulary (spec 06 F10);
+   * anything else resumes at `welcome`.
+   */
+  onboardingFlow?: number | null;
+  onboardingExit?: OnboardingExit | null;
+  /** Platforms whose pairing was deferred during onboarding, deduplicated. */
+  onboardingPairing?: PrefsMessagingPlatform[];
   updatedAt: string;
 }
+
+export type BotSoundLevel = "all" | "needs-me" | "nothing";
+
+export interface QuietHours {
+  enabled: boolean;
+  start: string;
+  end: string;
+}
+
+export type PrefsTextSize = 13 | 14 | 15;
+
+export type PrefsMessagingPlatform = "whatsapp" | "telegram" | "discord";
+
+/** Where onboarding's completion lands (spec 06 §6.5). */
+export type OnboardingExit =
+  | { to: "bot"; botId: string; edit?: true }
+  | { to: "new-session" }
+  | { to: "new-bot" }
+  | { to: "bot-tour"; botId: string };
 
 export type PrefsField = Exclude<keyof PrefsRow, "id" | "updatedAt">;
 
@@ -147,7 +222,10 @@ export type PrefsGroup =
   | "models"
   | "dismissals"
   | "motion"
-  | "sounds";
+  | "sounds"
+  | "appearance"
+  | "notch"
+  | "tour";
 
 /**
  * One provenance-tracked value (spec 00 B.2, C.4): a scalar field
@@ -158,10 +236,14 @@ export type PrefsGroup =
 export type PrefsLeaf =
   | Exclude<PrefsField, PrefsGroup>
   | {
-      [G in PrefsGroup]: `${G}.${Extract<keyof PrefsRow[G], string>}`;
+      [
+        G in PrefsGroup
+      ]: `${G}.${Extract<keyof NonNullable<PrefsRow[G]>, string>}`;
     }[PrefsGroup];
 
 /** Every field optional; a group carries only the leaves it sets. */
 export type PrefsPatch = {
-  [F in PrefsField]?: F extends PrefsGroup ? Partial<PrefsRow[F]> : PrefsRow[F];
+  [F in PrefsField]?: F extends PrefsGroup
+    ? Partial<NonNullable<PrefsRow[F]>>
+    : PrefsRow[F];
 };

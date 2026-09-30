@@ -8,6 +8,8 @@
 
 export interface ParsedStatusEntry {
   path: string;
+  /** A rename's or copy's source. */
+  origPath?: string;
   status: string;
   stagedStatus: string | null;
   unstagedStatus: string | null;
@@ -39,13 +41,16 @@ export function parseStatusZ(stdout: string): ParsedStatusEntry[] {
     const unstagedCode = record[1] ?? " ";
     const path = record.slice(3);
 
-    // Step over the origin path or it reads as a change of its own.
+    // Step over the origin path or it reads as a change of its own; it is
+    // the rename's (or copy's) source.
+    let origPath: string | undefined;
     if (
       stagedCode === "R" ||
       stagedCode === "C" ||
       unstagedCode === "R" ||
       unstagedCode === "C"
     ) {
+      origPath = fields[i + 1] || undefined;
       i += 1;
     }
 
@@ -55,6 +60,7 @@ export function parseStatusZ(stdout: string): ParsedStatusEntry[] {
 
     entries.push({
       path,
+      ...(origPath != null && { origPath }),
       status: `${stagedCode}${unstagedCode}`.trim() || "?",
       stagedStatus: isUntracked
         ? null

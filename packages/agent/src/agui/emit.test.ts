@@ -911,3 +911,49 @@ describe("implementation review r1", () => {
     );
   });
 });
+
+describe("the # id reservation (desktop spec 00 C.3)", () => {
+  it("encodes a provider tool id, a pi message id and a run id holding # or %, and leaves plain ids alone", () => {
+    const r = rig();
+    const token = r.open("run#7");
+
+    r.internal({ type: "message_open", key: "msg-1", messageId: "s#1" });
+    r.internal({
+      type: "tool_call_start",
+      toolCallId: "call#9%",
+      toolName: "bash",
+      rawName: "bash",
+    });
+    r.internal({
+      type: "tool_call_stop",
+      toolCallId: "call#9%",
+      toolName: "bash",
+      arguments: '{"command":"ls"}',
+    });
+    r.internal({ type: "message_close", key: "msg-1", stopReason: "toolUse" });
+    r.agent({
+      type: "tool_execution_complete",
+      tool: tool("call#9%", "bash", { command: "ls" }),
+      result: { id: "call#9%", content: "ok", rejected: false },
+    });
+    r.internal({ type: "message_open", key: "msg-2", messageId: "plain:2" });
+    r.runs.settle(token);
+
+    const ids = r.out.flatMap((event) => {
+      const record = event as unknown as {
+        messageId?: string;
+        toolCallId?: string;
+      };
+      return [record.messageId, record.toolCallId].filter(
+        (id): id is string => typeof id === "string"
+      );
+    });
+    expect(ids.some((id) => id.includes("#"))).toBe(false);
+    expect(ids).toContain("s%231");
+    expect(ids).toContain("call%239%25");
+    expect(ids).toContain("call%239%25:result");
+    expect(ids).toContain("plain:2");
+    // The legacy compat stream keeps the provider's own id.
+    expect(r.legacy.join("\n")).toContain("call#9%");
+  });
+});
