@@ -12,7 +12,13 @@ export const serverRunId = (): string => `srv-${randomUUID()}`;
 
 export const userMessageId = (runId: string): string => `${runId}:user`;
 
-export const steerMessageId = (n: number): string => `steer-${n}`;
+/**
+ * A steered user message. Scoped by incarnation: the counter restarts in
+ * every process, while main keeps one transcript per thread across respawns,
+ * and a bare `steer-1` would overwrite the previous process's `steer-1`.
+ */
+export const steerMessageId = (incarnation: string, n: number): string =>
+  `steer-${incarnation}-${n}`;
 
 export const resultMessageId = (toolCallId: string): string =>
   `${toolCallId}:result`;

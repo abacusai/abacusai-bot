@@ -1,0 +1,12 @@
+{"type":"event","event":{"type":"mode_changed","mode":"YOLO","source":"startup"}}
+{"type":"ready","model":"openllm/auto","mode":"YOLO","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"status_changed","status":"submitted"}}
+{"type":"event","event":{"type":"status_changed","status":"streaming"}}
+{"type":"event","event":{"type":"model_changed","model":"openllm/auto"}}
+{"type":"event","event":{"type":"status_changed","status":"streaming"}}
+{"type":"event","event":{"type":"text_delta","content":"recovered on the second model","messageId":"msg-2"}}
+{"type":"event","event":{"type":"turn_complete","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":1,"model":"small:free"}}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}

@@ -1,0 +1,6 @@
+{"type":"ready","model":"unknown/unknown","mode":"DEFAULT","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"event","event":{"type":"error","error":{"message":"No model provider is configured. Add an API key in Settings.","code":"model_unavailable"}}}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"error","error":{"message":"No model provider is configured. Add an API key in Settings.","code":"model_unavailable"}}}
+{"type":"event","event":{"type":"status_changed","status":"idle"}}
