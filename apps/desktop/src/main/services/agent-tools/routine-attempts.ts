@@ -140,7 +140,7 @@ export const classifyLegacyRuns = (
       return named == null ? [] : [named];
     })
   );
-  const out: RoutineRun[] = new Array(runs.length);
+  const out: RoutineRun[] = Array.from({ length: runs.length });
   // Oldest first: ordinals count from the oldest identical entry.
   for (let index = runs.length - 1; index >= 0; index -= 1) {
     const run = runs[index]!;
