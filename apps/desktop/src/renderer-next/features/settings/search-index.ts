@@ -1,6 +1,7 @@
 import { APP_ACTIONS } from "#next/lib/keyboard/actions";
 import type { SettingsPageId } from "#next/lib/navigation/areas";
 import { foldSearch } from "#next/lib/use-app-context";
+import { EXEC_BACKENDS } from "#shared/exec-backends";
 import { LOCAL_MODEL_CATALOG } from "#shared/local-models";
 import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 export interface SettingEntry {
@@ -9,6 +10,39 @@ export interface SettingEntry {
   labelKey: string;
   label?: string;
 }
+const labelKeys: Record<string, string> = {
+  ...Object.fromEntries(
+    ["AUTO", "DEFAULT", "ACCEPTEDITS", "PLAN", "YOLO"].map((id) => [
+      `mode-${id}`,
+      `chat.mode.${id}`,
+    ])
+  ),
+  ...Object.fromEntries(
+    EXEC_BACKENDS.map((backend) => [
+      `backend-${backend.id}`,
+      `execBackends.${backend.labelKey}.label`,
+    ])
+  ),
+  ...Object.fromEntries(
+    ["ios", "android", "maestro"].map((id) => [
+      `device-${id}`,
+      `phase5.deviceTools.${id}`,
+    ])
+  ),
+  identity: "phase5.signOut",
+  plan: "phase5.managePlan",
+  credits: "phase5.credits",
+  organization: "phase5.settings.organization",
+  inviteLink: "phase5.inviteLink",
+  forgetAccount: "phase5.forgetComputer",
+  abacusCredits: "phase5.credits",
+  openrouterUsage: "phase5.openrouterBrand",
+  weekUsage: "phase5.thisWeek",
+  appVersion: "onboarding.welcomeTitle",
+  updates: "phase5.settings.updates",
+  logs: "phase5.saveLogs",
+  changelog: "phase5.whatsNew",
+};
 const groups: Partial<Record<SettingsPageId, string[]>> = {
   general: [
     "launchAtLogin",
@@ -62,7 +96,7 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     ids.map((id) => ({
       id,
       page: page as SettingsPageId,
-      labelKey: `phase5.settings.${id}`,
+      labelKey: labelKeys[id] ?? `phase5.settings.${id}`,
     }))
   ),
   ...PROVIDER_KEY_FIELDS.filter((p) => p.kind === "model").map((p) => ({
