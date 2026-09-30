@@ -28,13 +28,14 @@ import {
   useTopBarActions,
   SidePanelContent,
   requestBrowserOpen,
-  BrowserOpenPlaceholder,
 } from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Button } from "#next/ui/button";
 import { BotId } from "#shared/contract/ids";
+
+import { BotBrowser } from "./-browser";
 /**
  * The dev fixture build (`VITE_NEXT_DB_FIXTURES=1`, gallery and visual
  * screenshots only): a bot with no forever session yet shows a recorded
@@ -163,7 +164,7 @@ const ComposedChat = ({
         <MemoryTab bot={bot} />
       </SidePanelContent>
       <SidePanelContent tab="browser">
-        <BrowserOpenPlaceholder sessionId={sessionId} />
+        <BotBrowser sessionId={sessionId} />
       </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab

@@ -16,11 +16,12 @@ import {
   TopBarSlot,
   SidePanelContent,
   requestBrowserOpen,
-  BrowserOpenPlaceholder,
 } from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { BotId, SessionId } from "#shared/contract/ids";
+
+import { BotBrowser } from "./-browser";
 const ReadySender = () => {
   const { botId, sessionId } = Route.useParams();
   const bot = useBot(botId);
@@ -60,7 +61,7 @@ const Sender = ({
         composer={slots.composer}
       />
       <SidePanelContent tab="browser">
-        <BrowserOpenPlaceholder sessionId={sessionId} />
+        <BotBrowser sessionId={sessionId} />
       </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab

@@ -153,21 +153,32 @@ it("automatic URL deliverables retain their destination through the routed sessi
       },
       openExternal: external,
     });
-    await screen.findByText("https://example.test/report");
+    await screen.findByDisplayValue("https://example.test/report");
     expect(handoff).toHaveBeenCalledWith({
       sessionId: "bot-test",
       url: "https://example.test/report",
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Open in external browser" })
-    );
     await waitFor(() =>
-      expect(external).toHaveBeenCalledWith("https://example.test/report")
+      expect(app!.calls).toContainEqual([
+        "browser.runtime.materialize",
+        expect.objectContaining({
+          resourceId: "bot-browser",
+          url: "https://example.test/report",
+          conversationKey: JSON.stringify([
+            "conversation",
+            1,
+            "default",
+            "session",
+            "bot-test",
+          ]),
+        }),
+      ])
     );
+    expect(external).not.toHaveBeenCalled();
     await act(async () => {
       requestBrowserOpen({ sessionId: "other", url: "https://other.test" });
     });
-    expect(screen.queryByText("https://other.test")).toBeNull();
+    expect(screen.queryByDisplayValue("https://other.test")).toBeNull();
   } finally {
     unregister();
   }
