@@ -73,7 +73,7 @@ const GMAIL_CONNECTOR_ID = "abacus-gmailuser";
 const GMAIL_HOP_KEY = "onboarding.gmailHop";
 
 const CARD_WIDTH: Record<Exclude<OnboardingStep, "explainer">, string> = {
-  auth: "max-w-lg",
+  auth: "max-w-2xl",
   welcome: "max-w-2xl",
   connectors: "max-w-3xl",
   models: "max-w-2xl",
@@ -311,9 +311,16 @@ export const OnboardingFlow = (): React.ReactElement | null => {
       data-id="onboarding-overlay"
     >
       <WindowDragRegion />
-      {/* Each screen is the window, not a card in it: content sits on the
-          app's own backdrop, centred, at a width that reads well. */}
-      <div className={cn("m-auto w-full", CARD_WIDTH[step])}>
+      {/* The wall is a card, as it always was; every later screen is the
+          window, its content on the app's own backdrop at a width that reads. */}
+      <div
+        className={cn(
+          "m-auto w-full",
+          step === "auth" &&
+            "bg-card/85 border-border rounded-2xl border p-8 shadow-2xl backdrop-blur-xl",
+          CARD_WIDTH[step]
+        )}
+      >
         {step === "auth" && (
           <SignInStep
             busy={busy || factsPending}

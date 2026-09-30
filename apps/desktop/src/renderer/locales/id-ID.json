@@ -1190,8 +1190,7 @@
   "onboarding": {
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "Browser Anda terbuka untuk masuk atau membuat akun. Aplikasi mendapat kunci API-nya sendiri; kata sandi Anda tidak pernah menyentuhnya.",
-    "connectCta": "Masuk dengan Google",
-    "playTourCta": "Tonton tur",
+    "connectCta": "Daftar / Masuk",
     "openInBrowserCta": "Gunakan browser saya",
     "haveAccountCta": "Saya sudah punya akun",
     "connectTitle": "Hubungkan Abacus.AI",
@@ -1209,8 +1208,8 @@
     "setupSignInCta": "Sign in / Create Free Account",
     "signInCta": "Masuk ke Abacus.AI",
     "skipCta": "Not now",
-    "welcomeTagline": "Rekan kerja AI sumber terbuka yang tinggal di komputer Anda.",
-    "welcomeTitle": "Selamat datang di AbacusAI Bot.",
+    "welcomeTagline": "Rekan kerja AI open-source pribadimu dengan memori persisten",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
     "connectedPromiseModels": "Access to free models",
     "connectedPromiseWork": "Gets your work done, and connects to all your services",
@@ -1249,7 +1248,11 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "Lanjutkan dengan {{browser}} · {{profile}}",
-    "signInAnotherWay": "Masuk dengan cara lain"
+    "signInAnotherWay": "Masuk dengan cara lain",
+    "welcomeFreeBadge": "Free to start",
+    "welcomeCapabilityModels": "Access",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors"
   },
   "openFile": {
     "failed": "Tidak dapat membuka berkas itu.",

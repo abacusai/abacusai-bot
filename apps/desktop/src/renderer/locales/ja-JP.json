@@ -1190,8 +1190,7 @@
   "onboarding": {
     "abacusConnected": "Abacus.AI is successfully connected",
     "connectBody": "ブラウザが開き、サインイン（またはアカウント作成）します。アプリは専用のAPIキーを受け取り、パスワードがアプリに渡ることはありません。",
-    "connectCta": "Google でサインイン",
-    "playTourCta": "ツアーを見る",
+    "connectCta": "サインアップ / サインイン",
     "openInBrowserCta": "ブラウザーを使う",
     "haveAccountCta": "アカウントをお持ちの方",
     "connectTitle": "Abacus.AIを接続",
@@ -1209,8 +1208,8 @@
     "setupSignInCta": "Sign in / Create Free Account",
     "signInCta": "Abacus.AIにサインイン",
     "skipCta": "Not now",
-    "welcomeTagline": "あなたのコンピューターに住む、オープンソースの AI 同僚。",
-    "welcomeTitle": "AbacusAI Bot へようこそ。",
+    "welcomeTagline": "永続メモリを備えた、あなた専用のオープンソースAIコワーカー",
+    "welcomeTitle": "Welcome to AbacusAI Bot",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
     "connectedPromiseModels": "Access to free models",
     "connectedPromiseWork": "Gets your work done, and connects to all your services",
@@ -1249,7 +1248,11 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "{{browser}} · {{profile}} で続行",
-    "signInAnotherWay": "別の方法でサインイン"
+    "signInAnotherWay": "別の方法でサインイン",
+    "welcomeFreeBadge": "Free to start",
+    "welcomeCapabilityModels": "Access",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors"
   },
   "openFile": {
     "failed": "そのファイルを開けませんでした。",
