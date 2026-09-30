@@ -26,7 +26,9 @@ import {
   it,
 } from "vitest";
 
+import { currentMode } from "../current-mode.js";
 import { type DesktopEvent } from "../protocol.js";
+import { AgentMode } from "../protocol.js";
 import { BotSession } from "./bot-session.js";
 
 let provider: FakeProvider;
@@ -374,5 +376,18 @@ describe("a bot whose model fails mid-turn", () => {
       agentEvents(events).filter((event) => event.type === "turn_complete")
     ).toHaveLength(1);
     provider.script(() => ({ say: "ok" }));
+  });
+});
+
+describe("a bot's mode", () => {
+  it("reaches the sandbox, which reads the mode on its own", async () => {
+    // A bot moved off YOLO from the picker kept running commands unconfined:
+    // the loop changed its own field and never told the module the sandbox reads.
+    const { session } = botSession();
+    await session.start();
+    session.setMode("yolo");
+    expect(currentMode()).toBe(AgentMode.Yolo);
+    session.setMode("normal");
+    expect(currentMode()).toBe(AgentMode.Normal);
   });
 });

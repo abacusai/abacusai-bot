@@ -19,6 +19,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { Allowances } from "../allowances.js";
 import { backendOperations } from "../backends.js";
 import { withBackgroundOption } from "../background-bash.js";
 import {
@@ -55,7 +56,6 @@ import {
   MODE_NAMES,
   parseMode,
   parseModeStrict,
-  shellSegments,
 } from "../permissions.js";
 import { identityPrompt, personaPrompt, readPersona } from "../persona.js";
 import { windowsShellPrompt } from "../posix-shell.js";
@@ -70,7 +70,6 @@ import {
 } from "../protocol.js";
 import {
   createModelRuntime,
-  listModels,
   registerAbacusProvider,
   registerCustomProviders,
   registerGeminiProvider,
@@ -210,8 +209,8 @@ export class BotSession {
   // Approval flow.
   private readonly pending = new Map<string, PendingPermission>();
   private permissionCounter = 0;
-  private readonly sessionAllowedCommands: string[] = [];
-  private readonly sessionAllowedTools = new Set<string>();
+  /** What the user chose to always allow, for this process's lifetime. See allowances.ts. */
+  private readonly allowances = new Allowances();
 
   // Streaming state.
   private readonly sanitizer = new BotOutputSanitizer();
@@ -966,6 +965,9 @@ export class BotSession {
     }
 
     this.mode = next;
+    // The sandbox reads the mode from here; without it a bot moved off YOLO
+    // kept running commands unconfined.
+    setCurrentMode(next);
     this.emitAgentEvent({ type: "mode_changed", mode: next, source: "bot" });
   }
 
@@ -1513,14 +1515,11 @@ export class BotSession {
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
-        allowedCommands: [
-          ...(this.config.allowedCommands ?? []),
-          ...this.sessionAllowedCommands,
-        ],
-        allowedTools: [BOT_REACTION_TOOL_NAME, ...this.sessionAllowedTools],
-        allowedReadPaths: this.config.allowedReadPaths ?? [],
-        allowedWritePaths: [],
-        allowedOrigins: [],
+        ...this.allowances.gateOptions({
+          commands: this.config.allowedCommands,
+          tools: [BOT_REACTION_TOOL_NAME],
+          readPaths: this.config.allowedReadPaths,
+        }),
       });
 
       if (gate.kind === "allow") return;
@@ -1591,7 +1590,7 @@ export class BotSession {
   private applyDecision(
     decision: PermissionDecision,
     tool: ToolRequest,
-    _request: PermissionRequest
+    request: PermissionRequest
   ): { block: true; reason: string } | undefined {
     if (typeof decision === "string") {
       switch (decision) {
@@ -1611,7 +1610,7 @@ export class BotSession {
           return undefined;
 
         case "allowAlways":
-          this.rememberAllowance(tool);
+          this.allowances.remember(tool, request);
 
           return undefined;
 
@@ -1633,12 +1632,12 @@ export class BotSession {
         };
 
       case "allow_always_with_rule":
-        this.sessionAllowedCommands.push(decision.rule);
+        this.allowances.allowCommandRules([decision.rule]);
 
         return undefined;
 
       case "allow_always_with_rules":
-        this.sessionAllowedCommands.push(...decision.rules);
+        this.allowances.allowCommandRules(decision.rules);
 
         return undefined;
 
@@ -1651,23 +1650,6 @@ export class BotSession {
 
       default:
         return { block: true, reason: "The user rejected this tool call." };
-    }
-  }
-
-  private rememberAllowance(tool: ToolRequest): void {
-    if (tool.name !== "bash") {
-      this.sessionAllowedTools.add(tool.name);
-
-      return;
-    }
-
-    for (const segment of shellSegments(String(tool.input.command ?? ""))) {
-      const head = segment
-        .split(/\s+/)
-        .find((word) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(word));
-
-      if (head != null && !this.sessionAllowedCommands.includes(head))
-        this.sessionAllowedCommands.push(head);
     }
   }
 

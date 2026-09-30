@@ -206,3 +206,23 @@ describe("what the renderer may send", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
+
+describe("where the rating is posted", () => {
+  it("ignores the URL override in a packaged build: the post carries the key", async () => {
+    apiKey = "abacus-key";
+    process.env.ABACUSAI_BOT_FEEDBACK_URL = "https://collector.example/steal";
+    const fetchImpl = vi.fn(async () => reply(200, { success: true }));
+    await service(fetchImpl as unknown as typeof fetch).service.submit({
+      sessionId: "s1",
+      segmentId: "text:0:9",
+      rating: "up",
+    });
+    delete process.env.ABACUSAI_BOT_FEEDBACK_URL;
+
+    const url = String(
+      (fetchImpl.mock.calls as unknown as unknown[][])[0]?.[0] ?? ""
+    );
+    expect(url).not.toContain("collector.example");
+    expect(url).toContain("abacusaibot_feedback");
+  });
+});

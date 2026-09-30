@@ -13,6 +13,7 @@ import {
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
 import { backendOperations } from "./backends.js";
 import { notifyConversationQueueCleared } from "./background-processes.js";
@@ -86,7 +87,6 @@ import {
   MODE_NAMES,
   parseMode,
   parseModeStrict,
-  shellSegments,
 } from "./permissions.js";
 import { identityPrompt, personaPrompt, readPersona } from "./persona.js";
 import { windowsShellPrompt } from "./posix-shell.js";
@@ -569,21 +569,17 @@ export class AbacusBotSession {
     this.config.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
   private mode: AgentMode;
   private readonly pending = new Map<string, PendingPermission>();
-  /** Commands the user chose to always allow, for this process's lifetime. */
-  private readonly sessionAllowedCommands: string[] = [];
-  /** Non-bash tools the user chose to always allow, for this process's lifetime. */
-  private readonly sessionAllowedTools = new Set<string>();
-  /** Origins the user chose to always allow web_fetch for, this session. */
-  private readonly sessionAllowedOrigins: string[] = [];
+  /**
+   * What the user chose to always allow, for this process's lifetime. Reads
+   * and writes outside the workspace are seeded with what the host
+   * pre-allowed (a routine's own folder). See allowances.ts.
+   */
+  private readonly allowances = new Allowances({
+    readPaths: allowedPathsFromEnv(),
+    writePaths: allowedPathsFromEnv(),
+  });
   /** What the user let commands do beyond the sandbox, once or for the session. */
   private readonly sandboxApprovals = new SandboxApprovals();
-  /** Directories outside the workspace the user allowed reads from, this session. */
-  private readonly sessionAllowedReadPaths: string[] = allowedPathsFromEnv();
-  /**
-   * Directories outside the workspace the user allowed writes to, this
-   * session. Seeded with what the host pre-allowed (a routine's own folder).
-   */
-  private readonly sessionAllowedWritePaths: string[] = allowedPathsFromEnv();
   private permissionCounter = 0;
   /**
    * Extension handle for audit lines. Undefined until the permission gate is
@@ -2613,17 +2609,10 @@ export class AbacusBotSession {
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
-        allowedCommands: [
-          ...(this.config.allowedCommands ?? []),
-          ...this.sessionAllowedCommands,
-        ],
-        allowedTools: [...this.sessionAllowedTools],
-        allowedReadPaths: [
-          ...(this.config.allowedReadPaths ?? []),
-          ...this.sessionAllowedReadPaths,
-        ],
-        allowedWritePaths: [...this.sessionAllowedWritePaths],
-        allowedOrigins: [...this.sessionAllowedOrigins],
+        ...this.allowances.gateOptions({
+          commands: this.config.allowedCommands,
+          readPaths: this.config.allowedReadPaths,
+        }),
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
         allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
       });
@@ -3028,7 +3017,7 @@ export class AbacusBotSession {
           return undefined;
 
         case "allowAlways":
-          this.rememberAllowance(tool, request);
+          this.allowances.remember(tool, request);
 
           return undefined;
 
@@ -3051,12 +3040,12 @@ export class AbacusBotSession {
         };
 
       case "allow_always_with_rule":
-        this.sessionAllowedCommands.push(decision.rule);
+        this.allowances.allowCommandRules([decision.rule]);
 
         return undefined;
 
       case "allow_always_with_rules":
-        this.sessionAllowedCommands.push(...decision.rules);
+        this.allowances.allowCommandRules(decision.rules);
 
         return undefined;
 
@@ -3080,65 +3069,6 @@ export class AbacusBotSession {
     if (sandboxEnforcement() === "off" || backendName() === null) return [];
 
     return resolveSecretPaths({ workspaceRoot: cwd }).promptable;
-  }
-
-  /**
-   * "Always allow" is scoped to what was actually approved: the command's
-   * first word for a shell call (`npm test` must not approve `npm publish`),
-   * the origin for a fetch, the tool as a whole for file tools.
-   */
-  private rememberAllowance(
-    tool: ToolRequest,
-    request: PermissionRequest
-  ): void {
-    // Scoped to the directory the card named; the tool-level fallback below
-    // would grant `write` everywhere.
-    switch (request.type) {
-      case "read_outside_directory":
-        addPath(this.sessionAllowedReadPaths, request.deducedDirectory);
-
-        return;
-
-      case "write_outside_directory":
-      case "edit_outside_directory":
-      case "notebook_edit_outside_directory":
-        addPath(this.sessionAllowedWritePaths, request.deducedDirectory);
-
-        return;
-
-      default:
-        break;
-    }
-
-    if (tool.name === "web_fetch") {
-      try {
-        const origin = new URL(String(tool.input.url ?? "")).origin;
-        if (!this.sessionAllowedOrigins.includes(origin))
-          this.sessionAllowedOrigins.push(origin);
-      } catch {
-        // Unparseable never reached the network; nothing to remember.
-      }
-
-      return;
-    }
-
-    if (tool.name !== "bash") {
-      this.sessionAllowedTools.add(tool.name);
-
-      return;
-    }
-
-    // Every segment of `cd repo && git pull`, or the `git` half asks again.
-    for (const segment of shellSegments(String(tool.input.command ?? ""))) {
-      // Skip leading VAR=val tokens so `FOO=1 npm test` remembers `npm`.
-      const head = segment
-        .split(/\s+/)
-        .find((word) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(word));
-
-      if (head != null && !this.sessionAllowedCommands.includes(head)) {
-        this.sessionAllowedCommands.push(head);
-      }
-    }
   }
 
   private rejectAllPending(reason: string): void {
@@ -3665,10 +3595,6 @@ function componentSubtaskDescription(
 }
 
 /** Remember a directory once, ignoring an empty one. */
-function addPath(store: string[], directory: string): void {
-  if (directory.length > 0 && !store.includes(directory)) store.push(directory);
-}
-
 function isAssistantMessage(message: unknown): boolean {
   return (message as { role?: unknown } | undefined)?.role === "assistant";
 }

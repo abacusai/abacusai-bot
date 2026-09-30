@@ -4,6 +4,8 @@
  * transcript is flushed first and the rated segment is named by the sequence
  * it was uploaded under.
  */
+import { app } from "electron";
+
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 
 import { readSettings } from "../config/settings";
@@ -84,10 +86,14 @@ export class FeedbackService {
     }
   ) {}
 
-  /** `<routellm base>/abacusaibot_feedback`, with a dev-only override. */
+  /**
+   * `<routellm base>/abacusaibot_feedback`, with a dev-only override. Never
+   * in a packaged build: the post carries the Abacus key, and an env var an
+   * attacker set must not redirect a signed app to their collector.
+   */
   private url(): string {
     const override = (process.env.ABACUSAI_BOT_FEEDBACK_URL ?? "").trim();
-    if (override.length > 0) return override;
+    if (override.length > 0 && !app.isPackaged) return override;
     return `${abacusRoutellmV1()}/abacusaibot_feedback`;
   }
 

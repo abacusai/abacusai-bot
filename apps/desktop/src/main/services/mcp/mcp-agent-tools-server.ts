@@ -883,6 +883,22 @@ export class McpAgentToolsServer {
           `"${action}" needs an id. Use action "list" to see them.`
         );
 
+      // A bot may change or fire only its own routines: `list` hides the
+      // rest, but an id read off the Routines panel or an earlier turn must
+      // not reach them either.
+      const callerBot =
+        callerSession != null
+          ? (this.options.botIdForSession?.(callerSession) ?? null)
+          : null;
+      if (callerBot != null) {
+        const job = listJobs().find((entry) => entry.id === id);
+        if (job == null) return this.err(`No job with id "${id}".`);
+        if (job.botId !== callerBot)
+          return this.err(
+            `Routine ${id} is not yours to ${action}; it belongs to the user or another bot.`
+          );
+      }
+
       if (action === "remove") {
         removeJob(id);
         this.options.onCronChanged?.();

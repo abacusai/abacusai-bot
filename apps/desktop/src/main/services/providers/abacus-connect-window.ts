@@ -91,6 +91,16 @@ export const openConnectWindow = ({
     return { action: "deny" };
   });
 
+  // A provider popup's own links open in the browser, as the sign-in window's do.
+  win.webContents.on("did-create-window", (popup) => {
+    popup.webContents.on("will-navigate", (event) => guard(event, event.url));
+    popup.webContents.on("will-redirect", (event) => guard(event, event.url));
+    popup.webContents.setWindowOpenHandler(({ url: target }) => {
+      if (isSafeExternalUrl(target)) void shell.openExternal(target);
+      return { action: "deny" };
+    });
+  });
+
   win.on("closed", () => {
     if (released) return;
     released = true;
