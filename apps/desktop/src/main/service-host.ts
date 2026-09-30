@@ -2789,7 +2789,7 @@ export class ServiceHost {
     // The new agent sees the environment as it stands; nothing owed until then.
     environmentNoticeService.markSessionStarted(request.sessionId);
 
-    return this.agentManagerService.startSession(withModel);
+    return this.agentManagerService.startSessionReady(withModel);
   }
 
   stopAgentSession(
