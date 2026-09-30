@@ -103,3 +103,45 @@ first full run as green. Every failure passed its final targeted rerun. No
 runtime finding in this slice remains unresolved. The suggested shared-row type
 migration and no-model-runtime producer acknowledgment have the compatibility
 and ownership dispositions recorded above.
+
+## r2
+
+This pass fixes all five majors in `00-main-requirements.impl-codex-r2.md` on
+`codex-mainreq-r2`, based on `rewrite/renderer`. Changes are confined to
+`apps/desktop/src/main/**` and this log.
+
+| Finding | Change | Regression evidence |
+|---|---|---|
+| 1 | Rename-source checks use `lstat` before any Trash operation. An occupied source qualifies as already restored only when it is a regular file, HEAD has a regular-file mode, and the content hash matches. Symlinks, including dangling links, cannot pass through a target-content hash. | `git.discard.test.ts` creates a source symlink to the renamed destination, whose bytes match HEAD. Discard must report `occupied`, leave the symlink and index intact, and never call Trash. The new test failed on the original implementation. All 16 file tests pass with the fix. |
+| 2 | A scheduled swap's abort predicate checks the outstanding version and current target URL as well as busy state. The real host checks it before the flip, including after continuity restoration. | `experience-activation.test.ts` lets v2 pass readiness in the real serialized host, schedules v3 during its hidden settle interval, then exhausts v3's failing loads. Both the store and displayed renderer must remain v1. `renderer-host.test.ts` also changes the target without scheduling another version. Both tests failed on the original implementation. |
+| 3 | Initial readiness returns a deferred result when the window or contents is destroyed. Each adoption has an identity; previous hosts' readiness results cannot settle a replacement's activation. Adoption remains pending until readiness settles. | The activation test closes a silent adopted window, opens a replacement before the old deadline, and commits only the replacement's readiness. A separate scheduler test rejects the previous adoption after the replacement opens. Both tests failed on the original implementation. Renderer-host and activation suites pass all 31 tests. |
+| 4 | The caller deadline resolves its promise while retaining the outstanding command. The next command waits for that command's response. Process startup or a state with no live PID invalidates retained and queued switches without sending stale commands; stored pins apply on the next start. A runtime that sends no response holds subsequent commands until invalidation. | `model-switch.test.ts` extends the timeout case with A's late anonymous refusal while B waits, then verifies B resolves only from its own model change. It also tests invalidation after a deadline. The late-refusal test failed on the original implementation. All seven waiter tests pass; the waiter, bot-model and model/RPC suites pass all 21 tests. The old RPC timeout assertion now checks retention followed by invalidation. |
+| 5 | Cron's shared held-file instance requires a successful journal write. Journal I/O errors propagate before any memory fallback or success notification. Other held-file users retain their existing fallback behavior. | `cron-store.test.ts` injects journal `EACCES` and `ENOSPC` for edits and run history. Calls must throw, notify no listeners, preserve the previous journal and visible state, and replay only the last durable edit when the block lifts. Both parameterized cases failed on the original implementation. All 20 cron tests pass; cron, model-switch and thread-store suites pass all 61 tests. |
+
+Commits:
+
+- `13bfa976` rejects rename-source type collisions before discard.
+- `38dbdf2d` aborts superseded renderer swaps and defers closed adoptions.
+- `6cbb6ce0` retains model commands after caller deadlines.
+- `916be898` requires durable holding for blocked cron writes.
+- `a5226873` updates the model RPC deadline assertion for retained commands.
+
+Dependencies were installed with `pnpm install --pm-on-fail=ignore`, using the
+installed pnpm 12.8.1 despite the 12.6.0 pin. Connectors, agent and updater were
+built with the direct tsdown binaries first; the agent runtime package script
+also ran. Test and TypeScript commands used the direct binaries.
+
+Final verification:
+
+| Gate | Result |
+|---|---|
+| Main/shared | Final full run passed 271 files and 2,764 tests, with one skipped file and seven todo tests. The first full run passed 2,763 tests and failed only the old model RPC timeout assertion; after updating it, the targeted 21 tests and final full run both passed. |
+| Required main-serial | `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1`: all eight files and 281 tests passed, with no skips. The Electron acceptance suite built its required desktop bundle. |
+| TypeScript | Direct `tsc -b` passed after implementation and again after the RPC assertion update. |
+| Root oxlint | Exit 0, no errors; seven existing legacy-renderer hook warnings. |
+| Root oxfmt | Applied to the root; `oxfmt --check .` passed for all 1,782 files. |
+| Ownership | Diff from starting commit `5e1f66a4` contains only `apps/desktop/src/main/**` and this log. |
+
+No r2 major remains unresolved. Retaining a model command after its caller
+resolves is intentional: sending another anonymous command before the first
+response would reintroduce finding 4.
