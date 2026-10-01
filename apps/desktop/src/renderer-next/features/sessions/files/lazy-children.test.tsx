@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import type { FileTreeNode } from "#shared/contracts";
 
 import { MAX_LOADED_DIRECTORIES, useLazyChildren } from "./lazy-children";
-it("lazy children replace invalidated directories, drop old root revisions and isolate checkouts", async () => {
+it("lazy children replace invalidated directories, refresh roots without dropping open directories and isolate checkouts", async () => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -42,20 +42,21 @@ it("lazy children replace invalidated directories, drop old root revisions and i
         "dir/new.txt",
       ])
     );
+    name = "after-root.txt";
     hook.rerender({ identity: "A", revision: 2 });
     expect(
-      client
-        .getQueryCache()
-        .find({ queryKey: ["children", "A", "dir", 2], exact: true })
-    ).toBeUndefined();
-    expect(hook.result.current.children).toEqual([]);
-    act(() => hook.result.current.load("dir"));
-    await waitFor(() => expect(hook.result.current.children).toHaveLength(1));
+      hook.result.current.children.map((node) => node.relativePath)
+    ).toEqual(["dir/new.txt"]);
+    await waitFor(() =>
+      expect(
+        hook.result.current.children.map((node) => node.relativePath)
+      ).toEqual(["dir/after-root.txt"])
+    );
     hook.rerender({ identity: "B", revision: 2 });
     expect(
       client
         .getQueryCache()
-        .find({ queryKey: ["children", "B", "dir", 2], exact: true })
+        .find({ queryKey: ["children", "B", "dir"], exact: true })
     ).toBeUndefined();
     expect(hook.result.current.children).toEqual([]);
     for (let i = 0; i < MAX_LOADED_DIRECTORIES + 5; i++)

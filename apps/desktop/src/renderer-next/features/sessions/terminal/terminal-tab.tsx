@@ -54,10 +54,11 @@ export const TerminalTab = ({
     void getTerminalView(`${key}:${id}`)
       .then(async (view) => {
         if (abort.signal.aborted) return;
-        const host = container.current;
-        host?.append(view.element);
+        const containerElement = container.current;
+        containerElement?.append(view.element);
         disposers.push(() => {
-          if (view.element.parentElement === host) view.element.remove();
+          if (view.element.parentElement === containerElement)
+            view.element.remove();
         });
         const initialSize = view.fit.proposeDimensions();
         if (initialSize) view.term.resize(initialSize.cols, initialSize.rows);
