@@ -45,21 +45,30 @@ export const NotchPermissionList = ({
   const lines = safe?.ok ? safe.lines : [];
   useLayoutEffect(() => {
     const node = measure.current;
-    setFits(
-      !!node &&
-        node.clientWidth > 0 &&
-        node.scrollWidth <= node.clientWidth &&
-        (questions
-          ? [...node.children].every(
-              (child) => (child as HTMLElement).scrollHeight + 70 <= maxHeight
-            )
-          : node.scrollHeight + 70 <= maxHeight) &&
-        [...node.querySelectorAll<HTMLElement>("[data-fit]")].every(
-          (line) =>
-            line.scrollWidth <= line.clientWidth &&
-            line.scrollHeight <= (Number(line.dataset.lines) || 2) * 16
-        )
-    );
+    const check = () =>
+      setFits(
+        !!node &&
+          node.clientWidth > 0 &&
+          node.scrollWidth <= node.clientWidth &&
+          (questions
+            ? [...node.children].every(
+                (child) => (child as HTMLElement).scrollHeight + 70 <= maxHeight
+              )
+            : node.scrollHeight + 70 <= maxHeight) &&
+          [...node.querySelectorAll<HTMLElement>("[data-fit]")].every(
+            (line) =>
+              line.scrollWidth <= line.clientWidth &&
+              [...line.querySelectorAll<HTMLElement>("button")].every(
+                (button) => button.scrollWidth <= button.clientWidth
+              ) &&
+              line.scrollHeight <= (Number(line.dataset.lines) || 2) * 16
+          )
+      );
+    check();
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(check);
+    observer.observe(node);
+    return () => observer.disconnect();
   }, [descriptor, maxHeight, step, questions]);
   useEffect(() => {
     if (!descriptor) return;
@@ -182,7 +191,21 @@ export const NotchPermissionList = ({
   return (
     <div>
       <h2>{descriptor.message}</h2>
-      <div ref={measure}>
+      <div ref={measure} className="relative">
+        <div
+          aria-hidden="true"
+          data-fit
+          data-lines="3"
+          className="flex gap-2"
+          style={{ position: "absolute", visibility: "hidden", width: "100%" }}
+        >
+          <Button>{t("chat.permission.action.allow")}</Button>
+          <Button variant="secondary">
+            {t("chat.permission.action.deny")}
+          </Button>
+          <Button variant="ghost">{t("notch.approval.review")}</Button>
+          <Button variant="ghost">{t("notch.approval.notNow")}</Button>
+        </div>
         {lines.map((line, i) => (
           <p
             key={i}
