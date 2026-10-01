@@ -83,3 +83,23 @@ describe("keysFor", () => {
     transport.close();
   });
 });
+
+it("exec-backend events invalidate the query shared by the context tray and picker", () => {
+  const transport = createMemoryTransport({} as never, {});
+  try {
+    expect(
+      keysFor(transport.orpc, {
+        source: "settings",
+        event: {
+          type: "exec-backend",
+          backend: { selected: "docker", effective: "docker", statuses: [] },
+        } as never,
+      })
+    ).toEqual([
+      transport.orpc.settings.execBackend.get.queryOptions({ input: {} })
+        .queryKey,
+    ]);
+  } finally {
+    transport.close();
+  }
+});

@@ -24,6 +24,8 @@ type Notice =
  */
 export const keysFor = (orpc: AppQueryUtils, notice: Notice): QueryKey[] => {
   if (notice.source === "window") return [];
+  if (notice.event.type === "exec-backend")
+    return [orpc.settings.execBackend.get.queryOptions({ input: {} }).queryKey];
   if (notice.event.type === "credentials-changed") {
     const keys = settingsKeys(orpc);
     return [keys.providers, keys.account, keys.models];
