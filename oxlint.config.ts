@@ -3,7 +3,7 @@ import node from "@abacus-ai/config/oxlint/node";
 import { defineConfig } from "oxlint";
 
 /** The old renderer's stack, removed at cut-over; never imported by the rewrite. */
-const RENDERER_NEXT_BANNED_PACKAGES = [
+const RENDERER_BANNED_PACKAGES = [
   "electron",
   "framer-motion",
   "zustand",
@@ -24,7 +24,7 @@ export default defineConfig({
   extends: [base, node],
   ignorePatterns: [
     ...(base.ignorePatterns ?? []),
-    "apps/desktop/src/renderer-next/notchRouteTree.gen.ts",
+    "apps/desktop/src/renderer/notchRouteTree.gen.ts",
   ],
   // Repeated at the entry config: `plugins` in an extended config is additive,
   // so without this the unicorn and react-perf correctness rules come back.
@@ -34,7 +34,7 @@ export default defineConfig({
     // The rewrite (spec 01 §3.4): the React Compiler is on, so its rules are
     // errors, and the legacy stack is banned by import.
     {
-      files: ["apps/desktop/src/renderer-next/**/*.{ts,tsx}"],
+      files: ["apps/desktop/src/renderer/**/*.{ts,tsx}"],
       env: { browser: true, node: false },
       plugins: ["react", "import"],
       rules: {
@@ -52,9 +52,9 @@ export default defineConfig({
           "error",
           {
             paths: [
-              ...RENDERER_NEXT_BANNED_PACKAGES.map((name) => ({
+              ...RENDERER_BANNED_PACKAGES.map((name) => ({
                 name,
-                message: "Not in renderer-next (spec 01 §3.4).",
+                message: "Not in renderer (spec 01 §3.4).",
               })),
               {
                 name: "react",
@@ -66,8 +66,6 @@ export default defineConfig({
             patterns: [
               {
                 group: [
-                  "#renderer/*",
-                  "**/renderer/**",
                   "!#locales/*",
                   "@dicebear/*",
                   "@tsparticles/*",
@@ -75,7 +73,7 @@ export default defineConfig({
                   "@base-ui/react/*",
                 ],
                 message:
-                  "renderer-next reaches the old tree only through #locales/*; Base UI only inside ui/.",
+                  "renderer reaches the old tree only through #locales/*; Base UI only inside ui/.",
               },
             ],
           },
@@ -85,20 +83,20 @@ export default defineConfig({
     // Registry output: Base UI is imported here and nowhere else, and the
     // registry may memoise (it is never edited).
     {
-      files: ["apps/desktop/src/renderer-next/ui/**/*.{ts,tsx}"],
+      files: ["apps/desktop/src/renderer/ui/**/*.{ts,tsx}"],
       rules: {
         "react/preserve-manual-memoization": "off",
         "no-restricted-imports": [
           "error",
           {
-            paths: RENDERER_NEXT_BANNED_PACKAGES.map((name) => ({
+            paths: RENDERER_BANNED_PACKAGES.map((name) => ({
               name,
-              message: "Not in renderer-next (spec 01 §3.4).",
+              message: "Not in renderer (spec 01 §3.4).",
             })),
             patterns: [
               {
-                group: ["#renderer/*", "**/renderer/**"],
-                message: "renderer-next does not import the old tree.",
+                group: ["@base-ui/react/*"],
+                message: "renderer does not import the old tree.",
               },
             ],
           },
@@ -108,7 +106,7 @@ export default defineConfig({
     // File routes export `Route`; the router plugin reads them by name, and
     // these are the only files that may default-export at all.
     {
-      files: ["apps/desktop/src/renderer-next/routes/**/*.tsx"],
+      files: ["apps/desktop/src/renderer/routes/**/*.tsx"],
       rules: { "import/no-default-export": "off" },
     },
   ],

@@ -128,7 +128,7 @@ describe.skipIf(!availability.usable)(
       writeFileSync(
         join(dir, "page-entry.ts"),
         [
-          `import { createTransport, getTransport } from ${JSON.stringify(join(SRC, "renderer-next/data/transport/index.ts"))};`,
+          `import { createTransport, getTransport } from ${JSON.stringify(join(SRC, "renderer/data/transport/index.ts"))};`,
           "(window as any).__captureUiContinuity = () => ({ capturedAt: Date.now() });",
           "(window as any).__restoreUiContinuity = async (snapshot: any) => { await new Promise(r => setTimeout(r, 100)); (window as any).__restored = { ...snapshot, restoredAt: Date.now(), stage1At: (window as any).__stage1At }; };",
           "const report = (value: unknown) => { (window as any).__rpc = value; };",

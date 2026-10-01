@@ -326,12 +326,12 @@ export const LEGACY_BRIDGE_MAP: Record<keyof AgentApi, LegacyDestination> = {
   installMaestro: m("devices.installMaestro"),
   fetchWhisperFile: m(
     "voice.whisper.fetch",
-    "renderer-next lib/voice/whisper; progress via voice.whisper.progress"
+    "renderer lib/voice/whisper; progress via voice.whisper.progress"
   ),
   isWhisperCached: r(NO_CALLER),
   requestMicrophoneAccess: m(
     "voice.requestMicrophone",
-    "renderer-next lib/voice/use-dictation"
+    "renderer lib/voice/use-dictation"
   ),
   streamDeviceTouch: m(
     "devices.stream.touch",
@@ -406,7 +406,7 @@ export const LEGACY_TOP_LEVEL_MAP: Record<string, LegacyDestination> = {
   getAccountState: q("account.state"),
   skipAccountOnboarding: m(
     "account.skipOnboarding",
-    "renderer-next features/onboarding/actions: persisted exit first"
+    "renderer features/onboarding/actions: persisted exit first"
   ),
   signOutAccount: m("account.signOut"),
   forgetAccount: m("account.forget"),
@@ -415,7 +415,7 @@ export const LEGACY_TOP_LEVEL_MAP: Record<string, LegacyDestination> = {
   appendLogs: m("system.logs.append", "fire-and-forget; batched client-side"),
   showNotification: m(
     "system.notify",
-    "renderer-next lib/notify: kind + dedupeKey; main/notch/notifications"
+    "renderer lib/notify: kind + dedupeKey; main/notch/notifications"
   ),
   onNotificationClicked: s(
     "system.events",

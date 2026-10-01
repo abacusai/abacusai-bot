@@ -146,7 +146,7 @@ describe("mapLegacyKey", () => {
       onboardingFlow: 2,
     });
 
-    // renderer-next writes its own "welcome" as a user patch; a later legacy
+    // renderer writes its own "welcome" as a user patch; a later legacy
     // write cannot move it.
     prefs.update({ onboardingStep: "welcome", onboardingFlow: 2 });
     importLegacyPrefs(prefs, reader({ "onboarding.step": "explainer" }));

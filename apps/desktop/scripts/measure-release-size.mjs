@@ -37,9 +37,7 @@ const entries = [
   {
     name: "Main initial",
     path: initial(
-      fs.existsSync(path.join(dist, "index.html"))
-        ? "index.html"
-        : "index.html"
+      fs.existsSync(path.join(dist, "index.html")) ? "index.html" : "index.html"
     ),
   },
   { name: "Notch initial", path: initial("notch.html") },

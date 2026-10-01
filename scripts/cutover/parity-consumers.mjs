@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { declaredSymbols } from "./parsed-source.mjs";
-export const resolveConsumer = (consumer, desktop, tree = "renderer-next") => {
+export const resolveConsumer = (consumer, desktop, tree = "renderer") => {
   if (typeof consumer !== "string" || !consumer)
     throw new Error("Empty parity consumer");
   if (consumer.startsWith("retired: ")) {

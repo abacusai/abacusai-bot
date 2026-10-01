@@ -9,7 +9,7 @@ export const releaseBuildPlugin = (root, release, flags) => ({
     if (
       release &&
       id.split("?")[0] ===
-        path.join(root, "src/renderer-next/routes/_bare/[__ui].tsx")
+        path.join(root, "src/renderer/routes/_bare/[__ui].tsx")
     )
       return 'import { createFileRoute, notFound } from "@tanstack/react-router"; export const Route = createFileRoute("/_bare/__ui")({ beforeLoad: () => { throw notFound(); } });';
   },

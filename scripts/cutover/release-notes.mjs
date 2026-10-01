@@ -28,8 +28,8 @@ export const visibleNotes = (files) =>
     return rows;
   });
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const tree = fs.existsSync("apps/desktop/src/renderer-next/features")
-    ? "renderer-next"
+  const tree = fs.existsSync("apps/desktop/src/renderer/features")
+    ? "renderer"
     : "renderer";
   const base = `apps/desktop/src/${tree}/features`;
   const files = fs

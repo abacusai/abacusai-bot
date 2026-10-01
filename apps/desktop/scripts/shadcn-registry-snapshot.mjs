@@ -5,7 +5,7 @@
  *   node scripts/shadcn-registry-snapshot.mjs --record
  *     Dry-runs the §5.2 `add` through the proxy in record mode, storing every
  *     response under shadcn-registry/<today>/ with a manifest. (Run
- *     shadcn-next-init.mjs --snapshot <same dir> first, so init's fetches are
+ *     shadcn-init.mjs --snapshot <same dir> first, so init's fetches are
  *     in it too.) Commit the directory on its own.
  *
  *   node scripts/shadcn-registry-snapshot.mjs --check        (check:ui-registry)
@@ -26,11 +26,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { registryContent } from "./registry-content.mjs";
-import {
-  addFromSnapshot,
-  INITIAL_ITEMS,
-  latestSnapshot,
-} from "./shadcn-next.mjs";
+import { addFromSnapshot, INITIAL_ITEMS, latestSnapshot } from "./shadcn.mjs";
 
 const desktop = join(import.meta.dirname, "..");
 const repo = join(desktop, "../..");
@@ -55,11 +51,11 @@ const check = async () => {
   try {
     for (const file of ["package.json", "components.json", "tsconfig.json"])
       cpSync(join(desktop, file), join(temp, file));
-    mkdirSync(join(temp, "src/renderer-next"), { recursive: true });
+    mkdirSync(join(temp, "src/renderer"), { recursive: true });
     for (const dir of ["styles", "lib"])
       cpSync(
-        join(desktop, "src/renderer-next", dir),
-        join(temp, "src/renderer-next", dir),
+        join(desktop, "src/renderer", dir),
+        join(temp, "src/renderer", dir),
         {
           recursive: true,
         }
@@ -81,7 +77,7 @@ const check = async () => {
       [
         "--config",
         join(repo, "oxfmt.config.ts"),
-        join(temp, "src/renderer-next/ui"),
+        join(temp, "src/renderer/ui"),
       ],
       {
         cwd: repo,
@@ -89,8 +85,8 @@ const check = async () => {
       }
     );
 
-    const committed = join(desktop, "src/renderer-next/ui");
-    const replayed = join(temp, "src/renderer-next/ui");
+    const committed = join(desktop, "src/renderer/ui");
+    const replayed = join(temp, "src/renderer/ui");
     const names = new Set([
       ...readdirSync(committed),
       ...readdirSync(replayed),

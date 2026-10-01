@@ -11,9 +11,9 @@ import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
 import {
   alias,
-  NEXT_MODULES,
-  NEXT_APP_SRC,
-  NEXT_REGISTRY_SRC,
+  RENDERER_MODULES,
+  RENDERER_APP_SRC,
+  RENDERER_REGISTRY_SRC,
   NODE_MODULES,
 } from "./vite.shared.ts";
 
@@ -94,16 +94,16 @@ export default defineConfig(({ command }) => {
       // Before the React transform: it rewrites route files into split chunks.
       tanstackRouter({
         target: "react",
-        routesDirectory: "./src/renderer-next/routes",
-        generatedRouteTree: "./src/renderer-next/routeTree.gen.ts",
+        routesDirectory: "./src/renderer/routes",
+        generatedRouteTree: "./src/renderer/routeTree.gen.ts",
         routeFileIgnorePrefix: "-",
         autoCodeSplitting: true,
         quoteStyle: "double",
       }),
       tanstackRouter({
         target: "react",
-        routesDirectory: "./src/renderer-next/notch-routes",
-        generatedRouteTree: "./src/renderer-next/notchRouteTree.gen.ts",
+        routesDirectory: "./src/renderer/notch-routes",
+        generatedRouteTree: "./src/renderer/notchRouteTree.gen.ts",
         routeFileIgnorePrefix: "-",
         autoCodeSplitting: false,
         quoteStyle: "double",
@@ -114,11 +114,11 @@ export default defineConfig(({ command }) => {
       // last one wins, so reversed, the old renderer loses Fast Refresh. The
       // compiler instance does its own refresh for the files it compiles.
       react({
-        include: NEXT_MODULES,
-        exclude: NEXT_REGISTRY_SRC,
+        include: RENDERER_MODULES,
+        exclude: RENDERER_REGISTRY_SRC,
         compiler: { logDiagnostics: true },
       }),
-      react({ exclude: [NODE_MODULES, NEXT_APP_SRC] }),
+      react({ exclude: [NODE_MODULES, RENDERER_APP_SRC] }),
       ...electron(
         simpleOptions({
           main: {

@@ -1,5 +1,5 @@
 {
-  "$comment": "newKey -> oldKey: strings renderer-next reuses. sync-locales --apply-keymap copies each locale's oldKey translation into a missing newKey (spec 01 §9.3). Old keys are deleted only at cut-over.",
+  "$comment": "newKey -> oldKey: strings renderer reuses. sync-locales --apply-keymap copies each locale's oldKey translation into a missing newKey (spec 01 §9.3). Old keys are deleted only at cut-over.",
   "shell.rail.bots": "bots.title",
   "shell.rail.sessions": "sessions.title",
   "shell.rail.routines": "routines.title",

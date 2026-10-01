@@ -20,7 +20,7 @@ await build({
           if (item.type !== "chunk") continue;
           chunks += 1;
           for (const id of Object.keys(item.modules))
-            if (/renderer-next\/features\/chat\/(fixtures|gallery)\//.test(id))
+            if (/renderer\/features\/chat\/(fixtures|gallery)\//.test(id))
               forbidden.add(id);
         }
         if (forbidden.size > 0)
