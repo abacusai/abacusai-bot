@@ -460,6 +460,7 @@ describe.skipIf(!runnable)("renderer-next acceptance (Electron)", () => {
       await evaluate(
         `window.__abacusDev.call('db.prefs.update', { patch: { appearance: ${JSON.stringify(original)} } })`
       );
+      await go("/bots/new");
     }
   });
 
