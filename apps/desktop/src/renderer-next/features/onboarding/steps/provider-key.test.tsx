@@ -28,6 +28,7 @@ it.each(["save", "refresh"])(
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Try again");
+    expect(alert.textContent).toContain("Couldn't save that setting");
     expect(alert.textContent).not.toMatch(/invalid/i);
     expect(input.getAttribute("aria-invalid")).toBe("false");
     expect((input as HTMLInputElement).value).toBe(key);
