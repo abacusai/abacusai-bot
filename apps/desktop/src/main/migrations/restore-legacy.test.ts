@@ -248,3 +248,38 @@ it("keeps renderer retirement and canonical evidence until a conflict is resolve
   expect(fs.readFileSync(destination, "utf8")).toBe("original");
   expect(fs.existsSync(marker)).toBe(false);
 });
+it("R18 preserves a corrupt archive index and reconstructs completed archive evidence", async () => {
+  seed(base);
+  await migrate(base);
+  write(path.join(base, "threads/.archive-index.json"), "{");
+  const result = await restoreLegacyHome(base);
+  expect(result.skipped).toEqual([]);
+  expect(fs.readFileSync(path.join(base, "transcripts/s1.json"), "utf8")).toBe(
+    "original"
+  );
+  const names = fs.readdirSync(path.join(base, "threads"));
+  const preserved = names.find((name) =>
+    name.startsWith(".archive-index.json.corrupt-")
+  );
+  expect(preserved).toBeDefined();
+  expect(fs.readFileSync(path.join(base, "threads", preserved!), "utf8")).toBe(
+    "{"
+  );
+  expect(
+    JSON.parse(
+      fs.readFileSync(path.join(base, "threads/.archive-index.json"), "utf8")
+    ).archived.s1
+  ).toBeUndefined();
+});
+it("R18 reconstruction does not re-archive destinations consumed by an earlier restore", async () => {
+  seed(base);
+  await migrate(base);
+  await restoreLegacyHome(base);
+  write(path.join(base, "threads/.archive-index.json"), "{");
+  expect((await restoreLegacyHome(base)).restored).toEqual([]);
+  expect(
+    JSON.parse(
+      fs.readFileSync(path.join(base, "threads/.archive-index.json"), "utf8")
+    ).archived.s1
+  ).toBeUndefined();
+});
