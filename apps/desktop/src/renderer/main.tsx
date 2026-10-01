@@ -14,6 +14,7 @@ import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
 import { getTransport, type Transport } from "#renderer/data/transport";
+import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { isToasterMounted } from "#renderer/features/shell/app-toaster";
 import { BootFailure } from "#renderer/features/shell/screens";
 import { installActivity } from "#renderer/lib/activity";
@@ -144,6 +145,9 @@ const start = async (): Promise<void> => {
       return;
     }
     const { boot } = result;
+    await importLegacyDrafts(boot.system.legacyComposerDrafts ?? {}, (keys) =>
+      boot.transport.client.system.acknowledgeLegacyDrafts({ keys })
+    );
     installActivity(boot.transport);
     installUiContinuity();
     installLogRing(boot.transport);

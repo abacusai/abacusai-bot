@@ -112,3 +112,24 @@ bindContinuityStore(KEY, {
   read: () => draftStore.state,
   write: (value) => draftStore.setState(() => value as Record<string, Draft>),
 });
+
+/** Import durable pre-cutover text before composers mount; current drafts win. */
+export const importLegacyDrafts = async (
+  legacy: Record<string, string>,
+  acknowledge: (keys: string[]) => Promise<void>
+): Promise<void> => {
+  const keys = Object.keys(legacy);
+  if (!keys.length) return;
+  draftStore.setState((state) => ({
+    ...Object.fromEntries(
+      Object.entries(legacy).map(([key, text]) => [
+        key,
+        { text, attachments: [] },
+      ])
+    ),
+    ...state,
+  }));
+  // Do not consume durable evidence when session storage is unavailable/full.
+  globalThis.sessionStorage.setItem(KEY, JSON.stringify(draftStore.state));
+  await acknowledge(keys);
+};
