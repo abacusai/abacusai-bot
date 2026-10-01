@@ -93,6 +93,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
     platform?: MessagingPlatformId;
     resolve(outcome: ConnectorOutcome): void;
     timer?: ReturnType<typeof setTimeout>;
+    ready?: Promise<void>;
   } | null = null;
   let serial = 0;
   const finish = (id: number, result: ConnectorOutcome) => {
@@ -149,6 +150,28 @@ export const createConnectFlow = (deps: FlowDeps) => {
     if (a.platform) await disablePlatform(deps, a.platform);
     else await deps.transport.client.connectors.cancelConnect({});
   };
+  // Direct routes and catalogue flows share one settlement owner.
+  const registerPairing = (
+    platform: MessagingPlatformId,
+    setup: () => Promise<void>
+  ) => {
+    if (active?.platform !== platform) {
+      const id = ++serial;
+      active = {
+        id,
+        connectorId: platform,
+        platform,
+        resolve: () => {},
+        timer: setTimeout(() => {
+          void cancel().catch(() => undefined);
+        }, CONNECT_WATCHDOG_MS),
+      };
+      store.setState(() => ({ connectorId: platform, phase: "pairing" }));
+    }
+    const ready = setup();
+    active.ready = ready;
+    return ready;
+  };
   const settlePairing = async (platform: MessagingPlatformId) => {
     const a = active;
     if (a?.platform !== platform) {
@@ -167,6 +190,8 @@ export const createConnectFlow = (deps: FlowDeps) => {
     }
     const id = a.id;
     try {
+      await a.ready;
+      if (active?.id !== id) return;
       const fresh = await deps.queryClient.fetchQuery({
         ...deps.transport.orpc.messaging.snapshot.queryOptions({ input: {} }),
         staleTime: 0,
@@ -180,7 +205,9 @@ export const createConnectFlow = (deps: FlowDeps) => {
       if (ok) await refresh();
       else await disablePlatform(deps, platform);
     } catch (e) {
+      if (active?.id !== id) return;
       finish(id, { ok: false, error: errorText(e) });
+      await disablePlatform(deps, platform);
     }
   };
   const start = async (
@@ -279,7 +306,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
       finish(a.id, { ok: false, error: errorText(e) });
     }
   };
-  return { store, start, cancel, submit, settlePairing };
+  return { store, start, cancel, submit, settlePairing, registerPairing };
 };
 type Flow = ReturnType<typeof createConnectFlow>;
 let documentFlow: Flow | null = null;

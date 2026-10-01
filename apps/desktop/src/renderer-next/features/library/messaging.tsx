@@ -211,25 +211,24 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   };
   useEffect(() => {
     let live = true;
-    void (async () => {
-      try {
-        await connectPlatform({ transport, queryClient: cache }, platform);
-        if (!live) return;
-        await transport.client.messaging.showLogin({ platformId: platform });
-        if (sharedId && SHARED_LINK_REQUIRED.has(platform)) {
-          await connectPlatform({ transport, queryClient: cache }, sharedId);
-          const next = await transport.client.messaging.pairShared({
-            platformId: sharedId,
-          });
-          cache.setQueryData(
-            transport.orpc.messaging.snapshot.queryKey({ input: {} }),
-            next
-          );
-        }
-      } catch (e) {
-        if (live) setError(e instanceof Error ? e.message : t("phase5.failed"));
+    const ready = flowRef.current.registerPairing(platform, async () => {
+      await connectPlatform({ transport, queryClient: cache }, platform);
+      if (!live) return;
+      await transport.client.messaging.showLogin({ platformId: platform });
+      if (sharedId && SHARED_LINK_REQUIRED.has(platform)) {
+        await connectPlatform({ transport, queryClient: cache }, sharedId);
+        const next = await transport.client.messaging.pairShared({
+          platformId: sharedId,
+        });
+        cache.setQueryData(
+          transport.orpc.messaging.snapshot.queryKey({ input: {} }),
+          next
+        );
       }
-    })();
+    });
+    void ready.catch((e) => {
+      if (live) setError(e instanceof Error ? e.message : t("phase5.failed"));
+    });
     return () => {
       live = false;
       void flowRef.current.settlePairing(platform);
@@ -388,9 +387,18 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
             title={t("phase5.unlinkTitle")}
             description={t("phase5.unlinkDescription")}
             label={t("phase5.unlink")}
-            onConfirm={() =>
-              disablePlatform({ transport, queryClient: cache }, platform)
-            }
+            onConfirm={async () => {
+              if (sharedId)
+                await apply(
+                  transport.client.messaging.unlinkShared({
+                    platformId: sharedId,
+                  })
+                );
+              await disablePlatform(
+                { transport, queryClient: cache },
+                platform
+              );
+            }}
           />
           <Button variant="secondary" onClick={() => void close()}>
             {t("phase5.done")}

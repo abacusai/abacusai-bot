@@ -11,10 +11,10 @@ The rows below distinguish new repairs from repairs already present in the conti
 | 3 | Present, regression added | `EditorChat` already has `key={row.id}`. Navigation test checks distinct stored histories and a cleared draft. Removal check pending. |
 | 4 | Fixed | Failed connector hops, thrown hops, and unsuccessful MCP refresh settle the tool request with its error. Three rendered request-card tests failed without the repair and passed with it. |
 | 5 | Fixed | Global routine and session subscriptions retain collections; readiness buffers events through hydration. Cold Settings test holds the routine snapshot, checks fire/completion delivery, subscription count and subsequent live updates. Subscription-count assertion failed before repair. |
-| 6 | Pending | Direct messaging setup registration and closure settlement. |
-| 7 | Pending | Remote shared-channel unlink. |
-| 8 | Present, regression pending | Scope disappearance clears runtime/logs; obsolete snapshot requests are guarded by abort and log requests by lifetime. |
-| 9 | Pending | MCP refresh, OAuth and restart outcomes. |
+| 6 | Fixed | Direct setup registers with the shared flow and settles after setup completes. Escape, Done and navigation each disable an unfinished WhatsApp setup exactly once. All three tests failed before repair. |
+| 7 | Fixed | Remote shared unlink precedes local disable and updates the snapshot. Failure leaves activation intact and appears in the confirmation. Both tests failed before repair. |
+| 8 | Present, regression added | Scope disappearance clears runtime/logs; obsolete snapshot requests are guarded by abort and log requests by lifetime. Rendered two-session test checks late server response and scope loss. Removal check pending. |
+| 9 | Fixed | Refresh and restart inspect unsuccessful outcomes; OAuth skips refresh on cancellation/failure. Rendered operation tests check error versus success notices and refresh counts. Removal checks pending. |
 | 10 | Pending | Credit-counter request freshness. |
 | 11 | Pending | Installing retry event sequence. |
 | 12 | Pending | Chat appearance consumers. |
