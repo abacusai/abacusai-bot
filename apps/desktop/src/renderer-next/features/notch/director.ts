@@ -74,6 +74,7 @@ export class NotchDirector {
         latest.p.route !== "/idle" &&
         latest.p.queue.some(
           (item) =>
+            !item.snoozed &&
             item.sessionId === next.p.sessionId &&
             (item.descriptorId ?? item.runId) ===
               (next.p.attention?.descriptorId ?? next.p.attention?.runId)

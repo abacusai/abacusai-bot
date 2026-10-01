@@ -100,7 +100,8 @@ export const presentNotch = (
     const summary = inputs.summaries.get(session.id);
     if (summary || session.turn?.phase === "waiting_permission") {
       const key = summary
-        ? `${session.id}:${summary.incarnation}:${summary.oldestAt}`
+        ? (summary.firstDescriptorId ??
+          `${session.id}:${summary.incarnation}:${summary.oldestAt}`)
         : session.id;
       add({
         snoozed: inputs.snoozed.has(key),

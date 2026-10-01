@@ -11,12 +11,13 @@ import type { NotchEvent, RunFinishedNotice } from "#shared/contract";
 import { conversationRefFromKey } from "#shared/conversation-scope";
 
 import type { NotchInputs } from "./presenter";
+import { activeSnoozes, type Snooze } from "./snooze";
 export const useNotchInputs = (
   transport: Transport,
   app: { mainFocused: boolean },
   hovered: boolean,
   acks: ReadonlySet<string>,
-  snoozed: ReadonlySet<string>
+  snoozed: ReadonlyMap<string, Snooze>
 ): NotchInputs => {
   const db = useDb();
   const prefs = usePrefs();
@@ -136,7 +137,11 @@ export const useNotchInputs = (
     mainFocused: app.mainFocused,
     hovered,
     acks,
-    snoozed,
+    snoozed: activeSnoozes(
+      snoozed,
+      now,
+      (id) => attention.items.get(id)?.firstDescriptorId
+    ),
   };
 };
 export const followNotchEvents = (
