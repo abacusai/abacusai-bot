@@ -48,34 +48,36 @@ export const DeleteBotDialog = ({
     if (bot == null) return;
     setPending(true);
     setError(false);
-    try {
-      await deleteBot(
-        {
-          bots: db.collections.bots,
-          leave: () =>
-            params.botId === bot.id
-              ? nextBotId != null
-                ? navigate({
-                    to: "/bots/$botId",
-                    params: { botId: nextBotId },
-                    replace: true,
-                    transition: "nav-lateral",
-                  })
-                : navigate({
-                    to: "/bots/new",
-                    replace: true,
-                    transition: "nav-lateral",
-                  })
-              : undefined,
-        },
-        bot.id
-      );
-      onClose();
-    } catch {
-      setError(true);
-    } finally {
+    await (async () => {
+      try {
+        await deleteBot(
+          {
+            bots: db.collections.bots,
+            leave: () =>
+              params.botId === bot.id
+                ? nextBotId != null
+                  ? navigate({
+                      to: "/bots/$botId",
+                      params: { botId: nextBotId },
+                      replace: true,
+                      transition: "nav-lateral",
+                    })
+                  : navigate({
+                      to: "/bots/new",
+                      replace: true,
+                      transition: "nav-lateral",
+                    })
+                : undefined,
+          },
+          bot.id
+        );
+        onClose();
+      } catch {
+        setError(true);
+      }
+    })().finally(() => {
       setPending(false);
-    }
+    });
   };
 
   return (

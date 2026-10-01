@@ -64,32 +64,34 @@ export const RunRequests = ({
   ) => {
     setBusy(request.requestId);
     setError(null);
-    try {
-      const result = await connect(request.connectorId, values);
-      if (result.ok) {
-        const refreshed = await transport.client.mcp.refresh({
-          workspaceId,
-          sessionId,
-        });
-        if (!refreshed.success) {
-          const error = refreshed.error ?? "Refresh failed";
-          setError(error);
-          await respond(request, "failed", error);
-          return;
+    await (async () => {
+      try {
+        const result = await connect(request.connectorId, values);
+        if (result.ok) {
+          const refreshed = await transport.client.mcp.refresh({
+            workspaceId,
+            sessionId,
+          });
+          if (!refreshed.success) {
+            const error = refreshed.error ?? "Refresh failed";
+            setError(error);
+            await respond(request, "failed", error);
+            return;
+          }
+          await respond(request, "connected");
+        } else if (result.cancelled) await respond(request, "declined");
+        else {
+          setError(result.error);
+          await respond(request, "failed", result.error);
         }
-        await respond(request, "connected");
-      } else if (result.cancelled) await respond(request, "declined");
-      else {
-        setError(result.error);
-        await respond(request, "failed", result.error);
+      } catch (e) {
+        const error = errorText(e);
+        setError(error);
+        await respond(request, "failed", error).catch(() => undefined);
       }
-    } catch (e) {
-      const error = errorText(e);
-      setError(error);
-      await respond(request, "failed", error).catch(() => undefined);
-    } finally {
+    })().finally(() => {
       setBusy(null);
-    }
+    });
   };
   return (
     <>

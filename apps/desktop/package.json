@@ -47,6 +47,7 @@
     "check:i18n": "node scripts/check-jsx-i18n.js",
     "check:legacy-diff": "node scripts/check-legacy-renderer-diff.mjs",
     "check:locales": "node scripts/sync-locales.js --check",
+    "check:react-compiler": "node scripts/check-react-compiler.mjs",
     "check:packaged": "node scripts/check-packaged-resources.js",
     "check:ui-registry": "node scripts/shadcn-registry-snapshot.mjs --check",
     "dev": "vite",

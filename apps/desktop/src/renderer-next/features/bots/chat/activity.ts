@@ -11,6 +11,12 @@ const activities = new Store<Record<string, BotActivity>>({});
 export const useAllBotActivity = () => useSelector(activities);
 export const useBotActivity = (botId: string) =>
   useSelector(activities, (state) => state[botId] ?? idle);
+const clearBotActivity = (botId: string) =>
+  activities.setState((state) => {
+    const { [botId]: _old, ...rest } = state;
+    return rest;
+  });
+
 export const useBotChatActivity = (
   botId: string,
   messages: readonly UIMessage[],
@@ -29,10 +35,6 @@ export const useBotChatActivity = (
       runningTool: last?.type === "tool-call" ? last.name : null,
     };
     activities.setState((state) => ({ ...state, [botId]: activity }));
-    return () =>
-      activities.setState((state) => {
-        const { [botId]: _old, ...rest } = state;
-        return rest;
-      });
+    return () => clearBotActivity(botId);
   }, [botId, messages, active]);
 };

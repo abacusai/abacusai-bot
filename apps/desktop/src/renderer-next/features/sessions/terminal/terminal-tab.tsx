@@ -18,8 +18,24 @@ import { installMouseReporting } from "#shared/terminal/mouse-compat";
 
 import { useSessionsTransport } from "../data/queries";
 import { retainTerminalStart } from "../dock/panel-tabs-store";
-import { pumpOutput } from "./output-pump";
-import { getTerminalView } from "./terminal-registry";
+import { pumpOutput, type OutputView } from "./output-pump";
+import { getTerminalView, type TerminalView } from "./terminal-registry";
+const outputView = (
+  view: TerminalView,
+  write: OutputView["write"]
+): OutputView => ({
+  get offset() {
+    return view.offset;
+  },
+  set offset(n) {
+    view.offset = n;
+  },
+  write,
+  reset: () => {
+    if (view.offset !== undefined) view.term.reset();
+  },
+});
+
 export const TerminalTab = ({
   row,
   id,
@@ -139,21 +155,10 @@ export const TerminalTab = ({
           outputAbort?.abort();
           outputAbort = new AbortController();
           void pumpOutput(
-            {
-              get offset() {
-                return view.offset;
-              },
-              set offset(n) {
-                view.offset = n;
-              },
-              write: async (data) => {
-                view.received += data.length;
-                await writeTerminalData(view.term, data, outputAbort!.signal);
-              },
-              reset: () => {
-                if (view.offset !== undefined) view.term.reset();
-              },
-            },
+            outputView(view, async (data) => {
+              view.received += data.length;
+              await writeTerminalData(view.term, data, outputAbort!.signal);
+            }),
             (offset, signal) =>
               transport.client.terminal.output(
                 {

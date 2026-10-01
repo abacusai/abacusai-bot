@@ -4,14 +4,15 @@
  */
 import { resolve } from "node:path";
 
-/** The whole new renderer tree: kept out of the old renderer's transform. */
-export const NEXT_SRC = /[\\/]src[\\/]renderer-next[\\/]/;
-
 /**
  * JS/TS modules of the new renderer only: the React Compiler instance's
  * `include`. A directory-only filter would hand it CSS ("Unexpected token").
  */
 export const NEXT_MODULES = /[\\/]src[\\/]renderer-next[\\/].*\.[cm]?[jt]sx?$/;
+
+/** Registry output stays byte-identical; the plain React instance refreshes it. */
+export const NEXT_REGISTRY_SRC = /[\\/]src[\\/]renderer-next[\\/]ui[\\/]/;
+export const NEXT_APP_SRC = /[\\/]src[\\/]renderer-next[\\/](?!ui[\\/])/;
 
 export const NODE_MODULES = /[\\/]node_modules[\\/]/;
 

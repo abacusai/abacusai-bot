@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 
-import { alias, NEXT_MODULES } from "./vite.shared.ts";
+import { alias, NEXT_MODULES, NEXT_REGISTRY_SRC } from "./vite.shared.ts";
 
 /**
  * Three surfaces, three environments. The renderer is browser code and needs a
@@ -82,7 +82,13 @@ export default defineConfig({
       },
       {
         // The rewrite's renderer (spec 01 §3.7): compiled as it ships.
-        plugins: [react({ include: NEXT_MODULES, compiler: true })],
+        plugins: [
+          react({
+            include: NEXT_MODULES,
+            exclude: NEXT_REGISTRY_SRC,
+            compiler: true,
+          }),
+        ],
         resolve: { alias },
         test: {
           name: "renderer-next",
