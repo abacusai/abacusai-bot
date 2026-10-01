@@ -11,6 +11,7 @@ export interface NotchRouterContext {
   db: Db;
   queryClient: QueryClient;
   chat: ChatRuntime;
+  prepareChat?(): Promise<void>;
   layout: NotchLayout;
 }
 export interface NotchViewContext extends NotchRouterContext {

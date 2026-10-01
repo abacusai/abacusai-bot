@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario, renderWithDb } from "../testing";
-import { ModeChip } from "./chips";
+import { ModeChip, ModelChip } from "./chips";
 import { useComposerExpanded } from "./composer";
 import {
   clearDraft,
@@ -40,6 +40,49 @@ const composer = () =>
 const field = () => within(composer()).getByRole("textbox");
 
 describe("R2-T25 composer", () => {
+  it("does not materialize the closed model catalog, then searches and selects it on open", async () => {
+    const reads = vi.fn(() => "Catalog model");
+    const onChange = vi.fn();
+    current = await renderWithDb(
+      <ModelChip
+        binding={{
+          value: null,
+          label: "Choose model",
+          onChange,
+          groups: [
+            {
+              id: "provider",
+              label: "Provider",
+              items: [
+                {
+                  id: "model-id",
+                  get label() {
+                    return reads();
+                  },
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+    expect(reads).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Choose model" }));
+    await screen.findByRole("option", { name: "Catalog model" });
+    expect(reads).toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "absent" },
+    });
+    expect(screen.queryByRole("option", { name: "Catalog model" })).toBeNull();
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Catalog" },
+    });
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Catalog model" })
+    );
+    expect(onChange).toHaveBeenCalledWith("model-id");
+  });
+
   it("exports focus-or-draft expansion and clears focus on unmount", async () => {
     const relay = new FakeRelay();
     relay.emitAll(b.sessionReady());

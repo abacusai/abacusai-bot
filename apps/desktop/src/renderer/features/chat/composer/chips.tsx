@@ -160,20 +160,6 @@ export const ModelChip = ({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const pref = useMotionPreference();
-  const q = query.trim().toLowerCase();
-  const groups = binding.groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter(
-        (item) =>
-          q === "" ||
-          item.label.toLowerCase().includes(q) ||
-          item.id.toLowerCase().includes(q)
-      ),
-    }))
-    .filter(
-      (group) => group.items.length > 0 || (q === "" && group.connect != null)
-    );
   const label = binding.label;
   const trigger = (
     <Button
@@ -220,87 +206,125 @@ export const ModelChip = ({
         {compact ? null : <ChevronDown aria-hidden className="opacity-60" />}
       </PopoverTrigger>
       <PopoverContent className="w-[340px] p-1.5" side="top" align="end">
-        <Input
-          autoFocus
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("chat.composer.searchModels")}
-          aria-label={t("chat.composer.searchModels")}
-          className="mb-1 h-8"
+        <ModelOptions
+          binding={binding}
+          query={query}
+          setQuery={setQuery}
+          onUseLocalModel={onUseLocalModel}
+          close={() => setOpen(false)}
         />
-        <div
-          role="listbox"
-          aria-label={t("chat.composer.models")}
-          className="flex max-h-80 flex-col overflow-y-auto"
-        >
-          {onUseLocalModel != null && q === "" ? (
-            <button
-              type="button"
-              role="option"
-              aria-selected={false}
-              className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
-              onClick={() => {
-                onUseLocalModel();
-                setOpen(false);
-              }}
-            >
-              {t("localModels.useLocal")}
-            </button>
-          ) : null}
-          {groups.map((group) => (
-            <div
-              key={group.id}
-              role="group"
-              aria-label={group.label}
-              className="flex flex-col"
-            >
-              <div className="text-muted-foreground px-2.5 pt-1.5 pb-1 text-xs">
-                {group.label}
-              </div>
-              {group.items.map((item) => {
-                const selected = (binding.value ?? "") === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    className="hover:bg-secondary focus-visible:bg-secondary flex h-8 items-center gap-2 rounded-md px-2.5 text-start text-[13px] outline-none"
-                    onClick={() => {
-                      binding.onChange(item.id === "" ? null : item.id);
-                      setOpen(false);
-                    }}
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      {item.label}
-                    </span>
-                    {item.description != null ? (
-                      <span className="text-muted-foreground">
-                        {item.description}
-                      </span>
-                    ) : null}
-                    {selected ? (
-                      <Check aria-hidden className="size-3.5" />
-                    ) : null}
-                  </button>
-                );
-              })}
-              {group.connect != null && q === "" ? (
-                <button
-                  type="button"
-                  className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
-                  onClick={() => {
-                    group.connect!.onSelect();
-                    setOpen(false);
-                  }}
-                >
-                  {group.connect.label}
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </div>
       </PopoverContent>
     </Popover>
+  );
+};
+
+/** The portal mounts this only while the picker is shown, including its exit. */
+const ModelOptions = ({
+  binding,
+  query,
+  setQuery,
+  onUseLocalModel,
+  close,
+}: {
+  binding: ModelChipBinding;
+  query: string;
+  setQuery(value: string): void;
+  onUseLocalModel?: (() => void) | undefined;
+  close(): void;
+}) => {
+  const { t } = useTranslation();
+  const q = query.trim().toLowerCase();
+  const groups = binding.groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) =>
+          q === "" ||
+          item.label.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q)
+      ),
+    }))
+    .filter(
+      (group) => group.items.length > 0 || (q === "" && group.connect != null)
+    );
+  return (
+    <>
+      <Input
+        autoFocus
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={t("chat.composer.searchModels")}
+        aria-label={t("chat.composer.searchModels")}
+        className="mb-1 h-8"
+      />
+      <div
+        role="listbox"
+        aria-label={t("chat.composer.models")}
+        className="flex max-h-80 flex-col overflow-y-auto"
+      >
+        {onUseLocalModel != null && q === "" ? (
+          <button
+            type="button"
+            role="option"
+            aria-selected={false}
+            className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
+            onClick={() => {
+              onUseLocalModel();
+              close();
+            }}
+          >
+            {t("localModels.useLocal")}
+          </button>
+        ) : null}
+        {groups.map((group) => (
+          <div
+            key={group.id}
+            role="group"
+            aria-label={group.label}
+            className="flex flex-col"
+          >
+            <div className="text-muted-foreground px-2.5 pt-1.5 pb-1 text-xs">
+              {group.label}
+            </div>
+            {group.items.map((item) => {
+              const selected = (binding.value ?? "") === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  className="hover:bg-secondary focus-visible:bg-secondary flex h-8 items-center gap-2 rounded-md px-2.5 text-start text-[13px] outline-none"
+                  onClick={() => {
+                    binding.onChange(item.id === "" ? null : item.id);
+                    close();
+                  }}
+                >
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.description != null ? (
+                    <span className="text-muted-foreground">
+                      {item.description}
+                    </span>
+                  ) : null}
+                  {selected ? <Check aria-hidden className="size-3.5" /> : null}
+                </button>
+              );
+            })}
+            {group.connect != null && q === "" ? (
+              <button
+                type="button"
+                className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
+                onClick={() => {
+                  group.connect!.onSelect();
+                  close();
+                }}
+              >
+                {group.connect.label}
+              </button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </>
   );
 };

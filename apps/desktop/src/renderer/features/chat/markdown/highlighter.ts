@@ -1,35 +1,55 @@
 /**
  * Code highlighting (spec 02 §7.4): `@tanstack/highlight` with all 26
- * grammars it ships behind TanStack Markdown's synchronous `highlighter`,
- * plus the `math` branch (display math from the pre-pass). Languages without
- * a grammar fall back to escaped plaintext (F17). The theme CSS targets the
+ * grammars loaded on the first rendered code block. Subscribers replace
+ * escaped plaintext with token HTML once the synchronous highlighter is ready.
+ * Languages without a grammar fall back to escaped plaintext (F17).
+ * The theme CSS targets the
  * markdown renderer's `pre.tm-code`.
  */
-import { createHighlighter } from "@tanstack/highlight/core";
-import * as languages from "@tanstack/highlight/languages";
-import { createTanStackMarkdownHighlighter } from "@tanstack/highlight/markdown";
 import { createThemeCss } from "@tanstack/highlight/theme";
 import { githubDarkTheme as githubDark } from "@tanstack/highlight/themes/github-dark";
 import { githubLightTheme as githubLight } from "@tanstack/highlight/themes/github-light";
 import type { CodeHighlighter } from "@tanstack/markdown";
+import { useSyncExternalStore } from "react";
 
-import { renderMath } from "./math";
+const listeners = new Set<() => void>();
+let loading: Promise<void> | undefined;
+const plaintext: CodeHighlighter = (code) => {
+  loading ??= import("./syntax")
+    .then(({ highlightCode }) => {
+      current = highlightCode;
+      for (const notify of listeners) notify();
+    })
+    .catch(() => {
+      loading = undefined;
+    });
+  return code.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      default:
+        return "&#39;";
+    }
+  });
+};
+let current: CodeHighlighter = plaintext;
+const subscribe = (notify: () => void) => {
+  listeners.add(notify);
+  return () => {
+    listeners.delete(notify);
+  };
+};
+const snapshot = () => current;
 
-const core = createHighlighter({
-  languages: Object.values(languages),
-  fallbackLanguage: "plaintext",
-});
-
-const markdownHighlight = createTanStackMarkdownHighlighter(core);
-
-/** Plain code, highlighted (the diff and read expanders use it too). */
-export const highlightCode = (code: string, lang: string): string =>
-  markdownHighlight(code, lang);
-
-export const highlight: CodeHighlighter = (code, lang, options) =>
-  lang === "math"
-    ? renderMath(code, true)
-    : markdownHighlight(code, lang, options);
+/** Load grammars only when a rendered block needs code highlighting. */
+export const useCodeHighlighter = (): CodeHighlighter =>
+  useSyncExternalStore(subscribe, snapshot, snapshot);
 
 export const CODE_THEME_CSS = createThemeCss({
   light: githubLight,

@@ -7,7 +7,7 @@ import { createDb, DbProvider } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
 import { getTransport } from "#renderer/data/transport";
-import { createChatRuntime } from "#renderer/features/chat/runtime/runtime";
+import { createLazyChatRuntime } from "#renderer/features/chat/runtime/lazy-runtime";
 import { createTransportLostHandler } from "#renderer/lib/bootstrap";
 import {
   initI18n,
@@ -48,12 +48,15 @@ const start = async () => {
   );
   const queryClient = createQueryClient();
   const layout = await transport.client.notch.layout({});
-  const chat = createChatRuntime(transport.client.ai, { maxSessions: 2 });
+  const { chat, prepareChat } = createLazyChatRuntime(transport.client.ai, {
+    maxSessions: 2,
+  });
   const router = createNotchRouter({
     transport,
     db,
     queryClient,
     chat,
+    prepareChat,
     layout,
   });
   await router.load();

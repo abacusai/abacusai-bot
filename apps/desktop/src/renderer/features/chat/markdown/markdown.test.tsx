@@ -5,7 +5,13 @@
  * Copy while streaming. R2-T18: reference links and footnotes far from
  * their use render in one long streaming message.
  */
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#renderer/lib/i18n";
@@ -38,6 +44,17 @@ const renderMd = (
 };
 
 describe("R2-T17 markdown", () => {
+  it("escapes code immediately and adds grammar tokens when syntax loads", async () => {
+    const { container } = renderMd('```ts\nconst value = "<script>&";\n```');
+    const code = container.querySelector("pre code");
+    expect(code?.textContent).toContain('const value = "<script>&";');
+    expect(code?.querySelector("script")).toBeNull();
+    expect(code?.querySelector("span")).toBeNull();
+    await waitFor(() => expect(code?.querySelector("span")).toBeTruthy());
+    expect(code?.textContent).toContain('const value = "<script>&";');
+    expect(code?.querySelector("script")).toBeNull();
+  });
+
   // First in the file: temml is not loaded yet.
   it("math rendered before temml loads updates once it has", async () => {
     const { container } = renderMd("inline $x^2$ and\n\n$$y$$");
