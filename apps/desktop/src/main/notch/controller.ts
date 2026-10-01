@@ -77,6 +77,7 @@ export class NotchController {
   #timer: ReturnType<typeof setTimeout> | null = null;
   #retryTimer: ReturnType<typeof setTimeout> | null = null;
   #space: number | null = null;
+  #spaceEpoch = 0;
   #started = false;
   #disposed = false;
   #metricsFailed = false;
@@ -116,8 +117,14 @@ export class NotchController {
       this.#space = systemPreferences.subscribeWorkspaceNotification(
         "NSWorkspaceActiveSpaceDidChangeNotification",
         () => {
-          for (const entry of this.#entries.values())
+          ++this.#spaceEpoch;
+          for (const entry of this.#entries.values()) {
             entry.documentVisible = false;
+            this.#o.publish(entry.active.webContents.id, {
+              type: "visibility-request",
+              epoch: this.#spaceEpoch,
+            });
+          }
         }
       );
     void this.reconcile();
@@ -434,6 +441,7 @@ export class NotchController {
     return [
       { type: "layout", layout: this.layout(id) },
       { type: "app", mainVisible: app.visible, mainFocused: app.focused },
+      { type: "visibility-request", epoch: this.#spaceEpoch },
     ];
   }
   #apply(e: Entry, shape: NotchShape): void {
@@ -460,8 +468,9 @@ export class NotchController {
     else this.#apply(e, shape);
     return e.placement.layout;
   }
-  visibility(id: number, visible: boolean): void {
-    this.#entry(id).documentVisible = visible;
+  visibility(id: number, visible: boolean, epoch = 0): void {
+    const entry = this.#entry(id);
+    if (epoch === this.#spaceEpoch) entry.documentVisible = visible;
   }
   interactive(id: number, interactive: boolean): void {
     const e = this.#entry(id);

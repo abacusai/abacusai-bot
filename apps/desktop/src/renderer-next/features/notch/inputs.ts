@@ -95,15 +95,26 @@ export const useNotchInputs = (
         );
     };
     let timer: ReturnType<typeof setInterval> | null = null;
+    let epoch = 0;
     const visibility = () => {
       tick();
       clock.current.visible = document.visibilityState === "visible";
       if (timer) clearInterval(timer);
       timer = clock.current.visible ? setInterval(tick, 1000) : null;
       void transport.client.notch
-        .visibility({ documentVisible: clock.current.visible })
+        .visibility({ documentVisible: clock.current.visible, epoch })
         .catch(() => undefined);
     };
+    void followNotchEvents(
+      transport,
+      (event) => {
+        if (event.type === "visibility-request") {
+          epoch = event.epoch;
+          visibility();
+        }
+      },
+      abort.signal
+    );
     document.addEventListener("visibilitychange", visibility);
     visibility();
     return () => {
