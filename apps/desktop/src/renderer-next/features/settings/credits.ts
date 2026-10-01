@@ -20,7 +20,11 @@ export const creditsTier = (
   if (tier === "free") return "free";
   if (tier === "basic") return "basic";
 
-  return "paid";
+  return ["paid", "pro", "premium", "team", "enterprise", "business"].includes(
+    tier
+  )
+    ? "paid"
+    : "unknown";
 };
 
 export const CREDITS_EXHAUSTED_TTL_MS = 24 * 60 * 60 * 1000;

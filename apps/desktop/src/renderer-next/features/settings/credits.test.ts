@@ -14,6 +14,10 @@ describe("R5-T23 credits guards", () => {
     expect(creditMarkState(undefined, 1, 2, false)).toBe("hide");
     expect(creditMarkState(account("free"), 1, 2, false)).toBe("show");
     expect(creditMarkState(account("basic"), 1, 2, false)).toBe("hide");
+    expect(creditMarkState(account("unknown"), 1, 2, false)).toBe("hide");
+    expect(creditMarkState(account("unrecognized-tier"), 1, 2, false)).toBe(
+      "hide"
+    );
   });
   it("clears paid, expired and fresh headroom marks", () => {
     expect(creditMarkState(account("pro"), 1, 2, false)).toBe("clear");

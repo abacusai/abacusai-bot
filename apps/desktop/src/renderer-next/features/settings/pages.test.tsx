@@ -99,3 +99,39 @@ it.each(["free", "basic", "pro", "unknown"])(
       );
   }
 );
+it("R5-T27 critical countdown installs exactly at five minutes", async () => {
+  const { act } = await import("@testing-library/react");
+  const install = vi.fn(async () => undefined);
+  app = await renderApp("/settings/about", {
+    procedures: {
+      update: {
+        status: os.update.status.handler(() => idle),
+        install: os.update.install.handler(install),
+      },
+    },
+  });
+  vi.useFakeTimers();
+  try {
+    await act(async () => {
+      const { queryClient, transport } = app!.router.options.context!;
+      queryClient.setQueryData(
+        transport.orpc.update.status.queryKey({ input: {} }),
+        { ...idle, downloaded: true, criticalUpdate: true }
+      );
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(screen.getByRole("alertdialog")).not.toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(299000);
+    });
+    expect(install).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(install).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});

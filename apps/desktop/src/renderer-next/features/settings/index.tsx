@@ -153,7 +153,7 @@ export {
 export { ModelsPage } from "./models";
 export { AccountPage, UsagePage } from "./account-usage";
 export { EnvironmentPage, BrowserPage, DevicesPage } from "./environment";
-export { AboutPage, CriticalUpdateDialog } from "./updates";
+export { AboutPage, CriticalUpdateDialog, UpdatePill } from "./updates";
 export { KeyboardPage } from "./keyboard";
 export { SettingsSearch, ModelsSearch, AccountSearch } from "./search";
 export { ChangelogPage } from "./changelog";

@@ -231,11 +231,82 @@ export const CriticalUpdateDialog = () => {
             onClick={() => void update.install()}
           >
             {t(
-              update.clicked ? "phase5.updates.installing" : "phase5.restartNow"
+              update.clicked
+                ? "phase5.updates.installing"
+                : update.phase === "installFailed"
+                  ? "phase5.tryAgain"
+                  : "phase5.restartNow"
             )}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+};
+
+/** Public shell-end-slot consumer; shell owns placement and compact overflow. */
+export const UpdatePill = () => {
+  const update = useUpdateStatus();
+  return (
+    <UpdatePillButton
+      status={update.status}
+      clicked={update.clicked}
+      installError={update.installError}
+      onInstall={update.install}
+      onCheck={update.check}
+    />
+  );
+};
+export const UpdatePillButton = ({
+  status,
+  clicked = false,
+  installError = null,
+  onInstall,
+  onCheck,
+}: {
+  status: UpdateStatus | undefined;
+  clicked?: boolean;
+  installError?: string | null;
+  onInstall(): Promise<unknown>;
+  onCheck(): Promise<unknown>;
+}) => {
+  const { t } = useTranslation();
+  const phase = installError ? "installFailed" : updatePhase(status, clicked);
+  if (
+    !status ||
+    status.criticalUpdate ||
+    status.installStalled ||
+    ["loading", "latest", "checking", "checkFailed"].includes(phase)
+  )
+    return null;
+  const retry = phase === "downloadFailed";
+  const install = phase === "downloaded" || phase === "installFailed";
+  const label = retry
+    ? "phase5.retry"
+    : install
+      ? phase === "installFailed"
+        ? "phase5.tryAgain"
+        : "phase5.relaunch"
+      : `phase5.updates.${phase}`;
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      disabled={!retry && !install}
+      title={
+        install
+          ? t("phase5.updates.downloaded", {
+              version: status.updateInfo?.version,
+            })
+          : undefined
+      }
+      onClick={() => {
+        if (retry) void onCheck();
+        else if (install) void onInstall();
+      }}
+    >
+      {retry && <span>{t("phase5.updates.downloadFailed")}</span>}
+      {t(label, { percent: Math.round(status.progress?.percent ?? 0) })}
+    </Button>
   );
 };
