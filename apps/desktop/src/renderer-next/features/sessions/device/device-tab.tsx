@@ -32,6 +32,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
   useEffect(() => {
     if (!device || !active) return;
     const abort = new AbortController();
+    const streamAbort = new AbortController();
     const frame = canvas.current!;
     let streamId: number | undefined;
     let player: DeviceStreamPlayer | undefined;
@@ -78,12 +79,14 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
     const fallback = async (reason: unknown) => {
       if (fallbackStarted || abort.signal.aborted) return;
       fallbackStarted = true;
+      streamAbort.abort();
       player?.dispose();
       setError(String(reason));
       if (streamId !== undefined)
         await transport.client.devices.stream
           .stop({ streamId })
           .catch(() => {});
+      streamId = undefined;
       if (device.platform === "ios") {
         try {
           await transport.client.devices.boot({
@@ -189,7 +192,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
             player.resetBarrier();
             for await (const chunk of await transport.client.devices.stream.chunks(
               { streamId },
-              { signal: abort.signal }
+              { signal: streamAbort.signal }
             )) {
               if (abort.signal.aborted || fallbackStarted) break;
               if (chunk.streamId === streamId) await player.push(chunk);
@@ -208,6 +211,7 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
     })();
     return () => {
       abort.abort();
+      streamAbort.abort();
       player?.dispose();
       cancelAnimationFrame(animation);
       media?.getTracks().forEach((track) => track.stop());
