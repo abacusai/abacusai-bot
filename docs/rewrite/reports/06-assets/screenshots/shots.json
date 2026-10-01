@@ -1,0 +1,4554 @@
+{
+  "sha": "49f7bb4e",
+  "exitStatus": 0,
+  "failures": [],
+  "probes": {
+    "nativeFrame": "skipped: not linux"
+  },
+  "shots": [
+    {
+      "file": "-ui-fixture-onboarding-welcome@1280-light.png",
+      "route": "/__ui?fixture=onboarding-welcome",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-connect@1280-light.png",
+      "route": "/__ui?fixture=onboarding-connect",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-connected@1280-light.png",
+      "route": "/__ui?fixture=onboarding-connected",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-models@1280-light.png",
+      "route": "/__ui?fixture=onboarding-models",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-connectors@1280-light.png",
+      "route": "/__ui?fixture=onboarding-connectors",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-first-bot@1280-light.png",
+      "route": "/__ui?fixture=onboarding-first-bot",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-done@1280-light.png",
+      "route": "/__ui?fixture=onboarding-done",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-welcome@1280-light.png",
+      "route": "/__ui?fixture=tour-welcome",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-rail@1280-light.png",
+      "route": "/__ui?fixture=tour-rail",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-make-bot@1280-light.png",
+      "route": "/__ui?fixture=tour-make-bot",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-workspaces@1280-light.png",
+      "route": "/__ui?fixture=tour-workspaces",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-start-session@1280-light.png",
+      "route": "/__ui?fixture=tour-start-session",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-connectors@1280-light.png",
+      "route": "/__ui?fixture=tour-connectors",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-talk@1280-light.png",
+      "route": "/__ui?fixture=tour-talk",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-changes@1280-light.png",
+      "route": "/__ui?fixture=tour-changes",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-preview-terminal@1280-light.png",
+      "route": "/__ui?fixture=tour-preview-terminal",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-memory@1280-light.png",
+      "route": "/__ui?fixture=tour-memory",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-artifacts@1280-light.png",
+      "route": "/__ui?fixture=tour-artifacts",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-notch@1280-light.png",
+      "route": "/__ui?fixture=tour-notch",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-notch-hidden@1280-light.png",
+      "route": "/__ui?fixture=notch-hidden",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-idle@1280-light.png",
+      "route": "/__ui?fixture=notch-idle",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-working@1280-light.png",
+      "route": "/__ui?fixture=notch-working",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Working on it",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-approval@1280-light.png",
+      "route": "/__ui?fixture=notch-approval",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Allow",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-question@1280-light.png",
+      "route": "/__ui?fixture=notch-question",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Answer in app",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Answer in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-truncated@1280-light.png",
+      "route": "/__ui?fixture=notch-truncated",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Review this request in the app.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-reply@1280-light.png",
+      "route": "/__ui?fixture=notch-reply",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-reply-readonly@1280-light.png",
+      "route": "/__ui?fixture=notch-reply-readonly",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "This chat lives in your messaging app. Reply there.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-call@1280-light.png",
+      "route": "/__ui?fixture=notch-call",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Listening…",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-done@1280-light.png",
+      "route": "/__ui?fixture=notch-done",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "All done",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-failed@1280-light.png",
+      "route": "/__ui?fixture=notch-failed",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "That did not work",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-several@1280-light.png",
+      "route": "/__ui?fixture=notch-several",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-hovered@1280-light.png",
+      "route": "/__ui?fixture=notch-hovered",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Message",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Call",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Pause check-ins",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-quiet@1280-light.png",
+      "route": "/__ui?fixture=notch-quiet",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Quiet until 08:00",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-reaction@1280-light.png",
+      "route": "/__ui?fixture=notch-reaction",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-hidden@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-hidden",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-idle@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-idle",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-working@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-working",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Working on it",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-approval@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-approval",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Allow",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-question@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-question",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Answer in app",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Answer in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-truncated@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-truncated",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Review this request in the app.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-reply@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-reply",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-reply-readonly@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-reply-readonly",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "This chat lives in your messaging app. Reply there.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-call@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-call",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Listening…",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-done@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-done",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "All done",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-failed@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-failed",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "That did not work",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-several@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-several",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-hovered@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-hovered",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Message",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Call",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Pause check-ins",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-quiet@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-quiet",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Quiet until 08:00",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-reaction@1280-light.png",
+      "route": "/__ui?fixture=notch-notch-reaction",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-hidden@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-hidden",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-idle@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-idle",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-working@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-working",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Working on it",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-approval@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-approval",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Allow",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-question@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-question",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Answer in app",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Answer in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-truncated@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-truncated",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Review this request in the app.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-reply@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-reply",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-reply-readonly@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-reply-readonly",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "This chat lives in your messaging app. Reply there.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-call@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-call",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Listening…",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-done@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-done",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "All done",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-failed@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-failed",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "That did not work",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-several@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-several",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-hovered@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-hovered",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Message",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Call",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Pause check-ins",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-quiet@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-quiet",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Quiet until 08:00",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-reaction@1280-light.png",
+      "route": "/__ui?fixture=notch-capsule-reaction",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-onboarding-welcome@1280-dark.png",
+      "route": "/__ui?fixture=onboarding-welcome",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-connect@1280-dark.png",
+      "route": "/__ui?fixture=onboarding-connect",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-connected@1280-dark.png",
+      "route": "/__ui?fixture=onboarding-connected",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-models@1280-dark.png",
+      "route": "/__ui?fixture=onboarding-models",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-connectors@1280-dark.png",
+      "route": "/__ui?fixture=onboarding-connectors",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-first-bot@1280-dark.png",
+      "route": "/__ui?fixture=onboarding-first-bot",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-onboarding-done@1280-dark.png",
+      "route": "/__ui?fixture=onboarding-done",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-welcome@1280-dark.png",
+      "route": "/__ui?fixture=tour-welcome",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-rail@1280-dark.png",
+      "route": "/__ui?fixture=tour-rail",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-make-bot@1280-dark.png",
+      "route": "/__ui?fixture=tour-make-bot",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-workspaces@1280-dark.png",
+      "route": "/__ui?fixture=tour-workspaces",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-start-session@1280-dark.png",
+      "route": "/__ui?fixture=tour-start-session",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-connectors@1280-dark.png",
+      "route": "/__ui?fixture=tour-connectors",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-talk@1280-dark.png",
+      "route": "/__ui?fixture=tour-talk",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-changes@1280-dark.png",
+      "route": "/__ui?fixture=tour-changes",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-preview-terminal@1280-dark.png",
+      "route": "/__ui?fixture=tour-preview-terminal",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-memory@1280-dark.png",
+      "route": "/__ui?fixture=tour-memory",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-artifacts@1280-dark.png",
+      "route": "/__ui?fixture=tour-artifacts",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-tour-notch@1280-dark.png",
+      "route": "/__ui?fixture=tour-notch",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-notch-hidden@1280-dark.png",
+      "route": "/__ui?fixture=notch-hidden",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-idle@1280-dark.png",
+      "route": "/__ui?fixture=notch-idle",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-working@1280-dark.png",
+      "route": "/__ui?fixture=notch-working",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Working on it",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-approval@1280-dark.png",
+      "route": "/__ui?fixture=notch-approval",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Allow",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-question@1280-dark.png",
+      "route": "/__ui?fixture=notch-question",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Answer in app",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Answer in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-truncated@1280-dark.png",
+      "route": "/__ui?fixture=notch-truncated",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Review this request in the app.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-reply@1280-dark.png",
+      "route": "/__ui?fixture=notch-reply",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-reply-readonly@1280-dark.png",
+      "route": "/__ui?fixture=notch-reply-readonly",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "This chat lives in your messaging app. Reply there.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-call@1280-dark.png",
+      "route": "/__ui?fixture=notch-call",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Listening…",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-done@1280-dark.png",
+      "route": "/__ui?fixture=notch-done",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "All done",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-failed@1280-dark.png",
+      "route": "/__ui?fixture=notch-failed",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "That did not work",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-several@1280-dark.png",
+      "route": "/__ui?fixture=notch-several",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-hovered@1280-dark.png",
+      "route": "/__ui?fixture=notch-hovered",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Message",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Call",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Pause check-ins",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-quiet@1280-dark.png",
+      "route": "/__ui?fixture=notch-quiet",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Quiet until 08:00",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-reaction@1280-dark.png",
+      "route": "/__ui?fixture=notch-reaction",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-hidden@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-hidden",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-idle@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-idle",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-working@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-working",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Working on it",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-approval@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-approval",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Allow",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-question@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-question",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Answer in app",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Answer in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-truncated@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-truncated",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Review this request in the app.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-reply@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-reply",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-reply-readonly@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-reply-readonly",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "This chat lives in your messaging app. Reply there.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-call@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-call",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Listening…",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-done@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-done",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "All done",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-failed@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-failed",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "That did not work",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-several@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-several",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-hovered@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-hovered",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Message",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Call",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Pause check-ins",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-quiet@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-quiet",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Quiet until 08:00",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-notch-reaction@1280-dark.png",
+      "route": "/__ui?fixture=notch-notch-reaction",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-hidden@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-hidden",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-idle@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-idle",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-working@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-working",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Working on it",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-approval@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-approval",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Allow",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-question@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-question",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A quick question",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Answer in app",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Answer in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-truncated@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-truncated",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Needs you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "git status/workspace/project",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "Review this request in the app.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Review",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-reply@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-reply",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-reply-readonly@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-reply-readonly",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "P",
+          "text": "This chat lives in your messaging app. Reply there.",
+          "color": "rgb(184, 184, 189)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-call@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-call",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "A reply for you",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Listening…",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "End",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-done@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-done",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "All done",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-failed@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-failed",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "That did not work",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-several@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-several",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-hovered@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-hovered",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "H2",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Message",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Call",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Pause check-ins",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-quiet@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-quiet",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Quiet until 08:00",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    },
+    {
+      "file": "-ui-fixture-notch-capsule-reaction@1280-dark.png",
+      "route": "/__ui?fixture=notch-capsule-reaction",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      },
+      "notchText": [
+        {
+          "tag": "SPAN",
+          "text": "Ready when you are",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgba(0, 0, 0, 0)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Open in app",
+          "color": "rgb(242, 242, 243)",
+          "background": "rgb(42, 42, 46)",
+          "opacity": "1",
+          "visibility": "visible",
+          "mix": "normal"
+        }
+      ]
+    }
+  ]
+}
