@@ -1,8 +1,10 @@
 import { EventEmitter } from "node:events";
 
+import { screen } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PrefsRow } from "../../shared/contract/rows";
+import * as metrics from "./metrics";
 const DEFAULT_PREFS = {
   notch: { enabled: true, haptics: false, extraDisplays: false },
 } as PrefsRow;
@@ -348,4 +350,16 @@ it("discards a superseded standby before promotion and boots the latest base", a
   await x.ready(3);
   expect(x.controller.owns(3)).toBe(true);
   expect(x.controller.owns(1)).toBe(false);
+});
+
+it("reprobes a display event even when its dimensions and scale are unchanged", async () => {
+  vi.useFakeTimers();
+  const probe = vi.spyOn(metrics, "probeNotchMetrics");
+  const x = await setup({ platform: "darwin" });
+  const count = probe.mock.calls.length;
+  (screen as unknown as EventEmitter).emit("display-metrics-changed");
+  await vi.advanceTimersByTimeAsync(250);
+  await x.controller.reconcile();
+  expect(probe.mock.calls.length).toBeGreaterThan(count);
+  probe.mockRestore();
 });

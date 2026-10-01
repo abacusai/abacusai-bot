@@ -24,4 +24,5 @@ it("R6-T1 companion router has seven memory routes and replacement navigation", 
     });
   expect(router.history.length).toBe(1);
   expect(router.options.defaultPreload).toBe(false);
+  expect(router.options.defaultViewTransition).toBe(false);
 });
