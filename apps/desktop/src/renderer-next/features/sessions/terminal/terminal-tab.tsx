@@ -17,6 +17,7 @@ import {
 import { installMouseReporting } from "#shared/terminal/mouse-compat";
 
 import { useSessionsTransport } from "../data/queries";
+import { retainTerminalStart } from "../dock/panel-tabs-store";
 import { pumpOutput } from "./output-pump";
 import { getTerminalView } from "./terminal-registry";
 export const TerminalTab = ({
@@ -54,6 +55,8 @@ export const TerminalTab = ({
   const close = useEffectEvent(onClose);
   useEffect(() => {
     const abort = new AbortController();
+    const finishStart = retainTerminalStart(key, id);
+    let starting = false;
     const disposers: (() => void)[] = [];
     const cleanup = () => {
       for (const dispose of disposers.splice(0).reverse()) dispose();
@@ -70,6 +73,7 @@ export const TerminalTab = ({
         });
         const initialSize = view.fit.proposeDimensions();
         if (initialSize) view.term.resize(initialSize.cols, initialSize.rows);
+        starting = true;
         const start = await transport.client.terminal.start({
           terminalId: id,
           conversationKey: key,
@@ -233,9 +237,11 @@ export const TerminalTab = ({
       .catch((e) => {
         cleanup();
         if (!abort.signal.aborted) setError(String(e));
-      });
+      })
+      .finally(finishStart);
     return () => {
       abort.abort();
+      if (!starting) finishStart();
       cleanup();
       if (exitTimer) clearTimeout(exitTimer);
     };
