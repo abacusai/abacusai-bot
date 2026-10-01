@@ -113,6 +113,7 @@ export const RoutineDialog = ({
             Object.assign(d, dirtyPatch(parsed, baseline.current))
           ).isPersisted.promise;
           baseline.current = parsed;
+          form.reset(parsed);
           close();
           return;
         }
@@ -141,6 +142,7 @@ export const RoutineDialog = ({
         const savedId = await insertWithConflictRetry(insert, id);
         if (savedId !== id) setId(savedId);
         baseline.current = parsed;
+        form.reset(parsed);
         if (parsed.testRun)
           void transport.client.routines
             .run({ id: savedId, trigger: "create" })

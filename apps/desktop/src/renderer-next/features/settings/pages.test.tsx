@@ -135,3 +135,36 @@ it("R5-T27 critical countdown installs exactly at five minutes", async () => {
     vi.useRealTimers();
   }
 });
+
+it.each([
+  {},
+  { OPENAI_API_KEY: "stored-other-key" },
+  { ABACUS_API_KEY: "stored-abacus-key" },
+])("sign-out requires a stored Abacus key: %j", async (apiKeys) => {
+  app = await renderApp("/settings/account", {
+    procedures: {
+      settings: { get: os.settings.get.handler(() => ({ apiKeys }) as never) },
+      referrals: {
+        summary: os.referrals.summary.handler(
+          () => ({ inviteLink: "https://example.com/invite" }) as never
+        ),
+      },
+      account: {
+        abacus: os.account.abacus.handler(
+          () => ({ name: "Ada", email: "ada@example.com" }) as never
+        ),
+      },
+    },
+  });
+  await screen.findByText("ada@example.com");
+  if ("ABACUS_API_KEY" in apiKeys)
+    expect(
+      await screen.findByRole("button", { name: enUS.phase5.signOut })
+    ).not.toBeNull();
+  else {
+    expect(
+      screen.queryByRole("button", { name: enUS.phase5.signOut })
+    ).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  }
+});

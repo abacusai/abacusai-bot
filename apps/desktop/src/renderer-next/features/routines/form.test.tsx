@@ -73,6 +73,9 @@ it("R5-T8 successive remote values refresh untouched fields and save only the ed
         prompt: "My instruction",
       })
     );
+    await waitFor(() =>
+      expect(app.router.state.location.pathname).toBe(`/routines/${row.id}`)
+    );
   } finally {
     app.view.unmount();
     await app.cleanup();
@@ -91,6 +94,26 @@ it("R5-T4 a deleted routine exits its edit controls", async () => {
     });
     expect(await screen.findByText("This routine is gone.")).not.toBeNull();
     expect(screen.queryByRole("textbox", { name: "Instruction" })).toBeNull();
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("successful create with whitespace navigates without a discard blocker", async () => {
+  const app = await renderApp("/routines/new");
+  try {
+    fireEvent.change(await screen.findByRole("textbox", { name: /^Name/ }), {
+      target: { value: " Brief " },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Instruction" }), {
+      target: { value: " Summarize today " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(app.router.state.location.pathname).not.toBe("/routines/new")
+    );
+    expect(screen.queryByRole("alertdialog")).toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();
