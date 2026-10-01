@@ -1,0 +1,14 @@
+{
+  "version": "v1.0.85",
+  "method": "Static HTML entry scripts and module-preload/style links, not CDP first-paint resources",
+  "files": [
+    "dist/renderer/assets/index-q-sg76TU.js",
+    "dist/renderer/assets/rolldown-runtime-C0FnF6B9.js",
+    "dist/renderer/assets/jsx-runtime-CKeovgl0.js",
+    "dist/renderer/assets/query-keys-Hj7P2HG3.js",
+    "dist/renderer/assets/use-theme-CGAJ02li.js",
+    "dist/renderer/assets/preload-helper-HclGiUj8.js",
+    "dist/renderer/assets/index-D9jQnvzF.css"
+  ],
+  "gzipBytes": 1001567
+}

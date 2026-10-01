@@ -39,6 +39,8 @@ import {
 import { Textarea } from "#next/ui/textarea";
 import { AgentMode } from "#shared/agent-types";
 import { SUPPORTED_LANGUAGES, type PrefsRow } from "#shared/contract/rows";
+
+import { CompanionSettings } from "./companion";
 const modes = [
   "AUTO",
   "DEFAULT",
@@ -68,6 +70,7 @@ export const GeneralPage = () => {
   const fail = () => showError(t("phase5.saveFailed"));
   return (
     <AreaPage title={t("settings.pages.general")}>
+      <CompanionSettings />
       <GroupCard>
         {info.data?.platform !== "linux" && (
           <SettingRow
@@ -584,6 +587,7 @@ export const NotificationsPage = () => {
       description={t("phase5.settings.notificationDetail")}
     >
       <GroupCard>
+        <CompanionSettings notifications />
         <SettingRow
           id="notify"
           title={t("phase5.settings.notify")}

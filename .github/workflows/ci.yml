@@ -201,6 +201,12 @@ jobs:
       # The desktop app spawns the agent and speaks NDJSON to it. This asserts
       # the host still answers on stdout in the protocol, whatever it has to
       # say: a stack trace on stderr and silence on stdout is a dead app.
+      - name: The agent speaks AG-UI with a compat stream
+        shell: bash
+        run: |
+          cd packages/agent
+          ../../node_modules/.bin/vitest run --project e2e src/agui/agui-spawn.e2e.test.ts --testNamePattern 'same bytes on fd 3'
+
       - name: The desktop entry still speaks NDJSON
         shell: bash
         run: |

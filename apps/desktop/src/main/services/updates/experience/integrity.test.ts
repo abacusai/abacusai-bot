@@ -153,7 +153,9 @@ it.each(["foundationApi", "commit", "generation"])(
       const stamp = JSON.parse(await fs.readFile(file, "utf8"));
       stamp[field] =
         field === "foundationApi"
-          ? FOUNDATION_API + 1
+          ? FOUNDATION_API === 2
+            ? 1
+            : 2
           : field === "commit"
             ? "b".repeat(40)
             : "obsolete";
@@ -175,3 +177,19 @@ it.each(["foundationApi", "commit", "generation"])(
     }
   }
 );
+
+it("R7-T2 API 2 refuses a hand-authenticated tree without notch.html", async () => {
+  const { root, current } = await buildFixture();
+  try {
+    await fs.rm(path.join(current, "renderer", "notch.html"));
+    const file = path.join(current, "manifest.json");
+    const manifest = JSON.parse(await fs.readFile(file, "utf8"));
+    delete manifest.files["renderer/notch.html"];
+    await fs.writeFile(file, JSON.stringify(manifest));
+    await expect(verifyExperience(current, FOUNDATION)).rejects.toThrow(
+      /entry point/
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

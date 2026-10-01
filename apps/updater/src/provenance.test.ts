@@ -36,7 +36,9 @@ it.each(["missing", "commit", "foundationApi", "protocol", "generation"])(
               field === "commit"
                 ? "b".repeat(40)
                 : field === "foundationApi"
-                  ? FOUNDATION_API + 1
+                  ? FOUNDATION_API === 2
+                    ? 1
+                    : 2
                   : field === "generation"
                     ? "other"
                     : "other/1",

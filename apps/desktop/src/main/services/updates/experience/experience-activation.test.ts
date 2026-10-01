@@ -7,7 +7,7 @@
  * becomes ready is committed with the old one as `previous`.
  *
  * The swaps here go through the real `RendererHost` with the barrier this
- * shell ships (`first-commit` at FOUNDATION_API 1): only its webContents are
+ * shell ships (`subscriptions` at FOUNDATION_API 2): only its webContents are
  * fakes.
  */
 import fs from "node:fs";
@@ -53,8 +53,13 @@ const fakes = vi.hoisted(() => {
       if (behaviour.failing.some((prefix) => url.startsWith(prefix)))
         throw new Error("ERR_FILE_NOT_FOUND");
       this.url = url;
-      if (!behaviour.silent.some((prefix) => url.startsWith(prefix)))
-        queueMicrotask(() => this.emit("ipc-message", {}, "renderer-ready"));
+      if (!behaviour.silent.some((prefix) => url.startsWith(prefix))) {
+        const { rendererReadiness } = await import("../../../rpc/readiness");
+        queueMicrotask(() => {
+          this.emit("ipc-message", {}, "renderer-ready");
+          rendererReadiness.report(this.id, { barrier: "subscriptions" });
+        });
+      }
     }
     on(event: string, listener: (...args: unknown[]) => void): void {
       this.listeners.set(event, [
@@ -132,6 +137,7 @@ const { ExperienceStore, REJECTION_TTL_MS } =
 const { rendererChangeNeedsReadiness } = await import("./experience-updater");
 const { rendererUrl } = await import("./app-protocol");
 const { FOUNDATION_API } = await import("#shared/experience");
+const { rendererReadiness } = await import("../../../rpc/readiness");
 const {
   MAX_SWAP_READINESS_ATTEMPTS,
   RendererHost,
@@ -196,6 +202,7 @@ const makeHost = () =>
     webPreferences: {},
     window: new fakes.FakeWindow() as never,
     wire: () => undefined,
+    readiness: rendererReadiness,
   });
 
 /** index.ts's wiring: the store settles on the scheduler's outcomes. */
@@ -393,6 +400,7 @@ describe("experience activation is transactional with renderer readiness", () =>
       typeof fakes.FakeWebContentsView
     >["webContents"];
     replacement.emit("ipc-message", {}, "renderer-ready");
+    rendererReadiness.report(replacement.id, { barrier: "subscriptions" });
     await vi.advanceTimersByTimeAsync(0);
     expect(outcomes).toEqual([{ version: VERSION(2), outcome: "swapped" }]);
     await settle();

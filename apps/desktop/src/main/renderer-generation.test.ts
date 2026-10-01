@@ -10,16 +10,16 @@ import {
 } from "./renderer-generation";
 
 describe("resolveRendererGeneration", () => {
-  it("defaults to legacy", () => {
-    expect(DEFAULT_RENDERER_GENERATION).toBe("legacy");
-    expect(resolveRendererGeneration({}, false)).toBe("legacy");
-    expect(resolveRendererGeneration({}, true)).toBe("legacy");
+  it("defaults to wco", () => {
+    expect(DEFAULT_RENDERER_GENERATION).toBe("wco");
+    expect(resolveRendererGeneration({}, false)).toBe("wco");
+    expect(resolveRendererGeneration({}, true)).toBe("wco");
   });
 
-  it("honours ABACUSBOT_RENDERER_GENERATION=wco only when unpackaged", () => {
-    const env = { ABACUSBOT_RENDERER_GENERATION: "wco" };
-    expect(resolveRendererGeneration(env, false)).toBe("wco");
-    expect(resolveRendererGeneration(env, true)).toBe("legacy");
+  it("honours ABACUSBOT_RENDERER_GENERATION=legacy only when unpackaged", () => {
+    const env = { ABACUSBOT_RENDERER_GENERATION: "legacy" };
+    expect(resolveRendererGeneration(env, false)).toBe("legacy");
+    expect(resolveRendererGeneration(env, true)).toBe("wco");
   });
 
   it("ignores any other value", () => {
@@ -28,7 +28,7 @@ describe("resolveRendererGeneration", () => {
         { ABACUSBOT_RENDERER_GENERATION: "next" },
         false
       )
-    ).toBe("legacy");
+    ).toBe("wco");
   });
 
   it("is wco whatever the environment once the default says so", () => {
@@ -36,7 +36,7 @@ describe("resolveRendererGeneration", () => {
   });
 
   it("computes the process constant from the packaged flag", () => {
-    // electron is mocked as packaged: the constant stays legacy.
-    expect(RENDERER_GENERATION).toBe("legacy");
+    // electron is mocked as packaged: the constant stays wco.
+    expect(RENDERER_GENERATION).toBe("wco");
   });
 });

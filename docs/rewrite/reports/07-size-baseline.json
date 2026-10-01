@@ -198,16 +198,12 @@
     },
     {
       "name": "Largest lazy chunk",
-      "path": [
-        "assets/ts.worker-Dm2WTuyv.js"
-      ],
+      "path": ["assets/ts.worker-Dm2WTuyv.js"],
       "gzipBytes": 1483496
     },
     {
       "name": "Math lazy chunk",
-      "path": [
-        "assets/temml-CiP_lRsR.js"
-      ],
+      "path": ["assets/temml-CiP_lRsR.js"],
       "gzipBytes": 59838
     }
   ]
