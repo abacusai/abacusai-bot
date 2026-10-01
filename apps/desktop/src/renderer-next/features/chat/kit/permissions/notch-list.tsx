@@ -16,7 +16,22 @@ export interface NotchPermissionProps {
   focused?: boolean;
   onHaptic?(key: string): void;
 }
-export const NotchPermissionList = ({
+export const NotchPermissionList = (props: NotchPermissionProps) => {
+  const session = props.runtime.session(props.threadId);
+  const descriptor = useThreadStore(
+    session,
+    (state) => state.permissions.items[0]
+  );
+  if (!descriptor) return null;
+  const lineage = descriptor.metadata.abacus.lineage;
+  return (
+    <NotchPermissionBody
+      key={`${lineage.threadId}:${lineage.incarnation}:${lineage.turnSeq}:${lineage.permissionId}`}
+      {...props}
+    />
+  );
+};
+const NotchPermissionBody = ({
   runtime,
   threadId,
   onReview,
@@ -191,34 +206,56 @@ export const NotchPermissionList = ({
   return (
     <div>
       <h2>{descriptor.message}</h2>
-      <div ref={measure} className="relative">
+      <div className="relative">
         <div
+          ref={measure}
           aria-hidden="true"
-          data-fit
-          data-lines="3"
-          className="flex gap-2"
-          style={{ position: "absolute", visibility: "hidden", width: "100%" }}
+          style={{
+            position: "absolute",
+            visibility: "hidden",
+            width: "100%",
+            pointerEvents: "none",
+          }}
         >
-          <Button>{t("chat.permission.action.allow")}</Button>
-          <Button variant="secondary">
-            {t("chat.permission.action.deny")}
-          </Button>
-          <Button variant="ghost">{t("notch.approval.review")}</Button>
-          <Button variant="ghost">{t("notch.approval.notNow")}</Button>
-        </div>
-        {lines.map((line, i) => (
-          <p
-            key={i}
+          <div
+            aria-hidden="true"
             data-fit
-            data-lines="2"
-            className="break-all whitespace-pre-wrap"
+            data-lines="3"
+            className="flex gap-2"
+            style={{
+              position: "absolute",
+              visibility: "hidden",
+              width: "100%",
+            }}
           >
-            {line}
-          </p>
-        ))}
+            <Button>{t("chat.permission.action.allow")}</Button>
+            <Button variant="secondary">
+              {t("chat.permission.action.deny")}
+            </Button>
+            <Button variant="ghost">{t("notch.approval.review")}</Button>
+            <Button variant="ghost">{t("notch.approval.notNow")}</Button>
+          </div>
+          {lines.map((line, i) => (
+            <p
+              key={i}
+              data-fit
+              data-lines="2"
+              className="break-all whitespace-pre-wrap"
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+        {safe?.ok &&
+          fits &&
+          lines.map((line, i) => (
+            <p key={i} className="break-all whitespace-pre-wrap">
+              {line}
+            </p>
+          ))}
       </div>
       {(!safe?.ok || !fits) && <p>{t("notch.approval.reviewOnly")}</p>}
-      <div className="flex gap-2">
+      <div className="flex gap-2" style={{ flexWrap: "wrap" }}>
         {safe?.ok &&
           fits &&
           descriptor.metadata.abacus.allowed.includes("accept") && (
