@@ -1,0 +1,3419 @@
+{
+  "about.checkFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "about.upToDate": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.configured": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.connectAbacus": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.connectOpenRouter": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.connecting": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.getKey": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.invalidKey": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.noMatches": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.notVerifiedHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.remove": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.removeDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.replacePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.saveChanges": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "apiKeys.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.columns.location": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.columns.session": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.columns.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.copyPath": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.copyUrl": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.emptyTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.filters.files": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.filters.images": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.filters.links": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.itemCount_one": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.itemCount_other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.missingFile": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.noMatchesDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.openedFolder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.refresh": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.searchPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.sidebar.sources.bots": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.sidebar.sources.sessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.sidebar.types.deck": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.sidebar.types.document": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.sidebar.types.image": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.sidebar.types.other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "artifacts.unknownSession": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.avatarColor": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.avatarLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.botOptions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.changeAvatar": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.chat.connector.failed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.chat.connector.refreshFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.chat.preview.slide": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.descriptionLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.descriptionPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.descriptionRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.editTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.form.accessoryUnavailable": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.form.validation.color": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.form.validation.too-long": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.home.categoriesLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.home.createCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.home.getStarted": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.home.heading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.home.headingAccent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.home.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.home.suggestions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.model.appDefault": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.model.defaultGroup": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.model.localProvider": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.model.tierFree": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.model.tierLocal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.modelHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.namePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.nameRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.newDialog.checkInHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.newDialog.descriptionPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.newDialog.instructionsPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.newDialog.moreOptions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.newDialog.namePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.newDialog.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.page.chatDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.page.chatTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.page.detailsDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.page.detailsTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.page.editDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.page.editTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.page.newDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.personaPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.senderChat": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.sidebar.label": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.titleLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.titlePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.viewBots": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "bots.viewSessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserPermission.never": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserPermission.session": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserPermission.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.approval.always": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.approval.ask": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.approvalSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.connect": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.connected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.connecting": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.extensionMissing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.notFound": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.ready": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.tokenHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.tokenPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.tokenSave": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.chrome.tokenSaved": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.clearAction": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.clearSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.done": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.engine.builtin": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.engine.chrome": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.engineSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.engineTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.homepageSave": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.homepageSaved": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.masterTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.permissionsSection": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "browserSettings.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.skills.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.skills.emptyTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tabs.connectors": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tabs.label": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tabs.mcp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tabs.skills": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tabs.tools": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.disabledDetail": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.enabledDetail": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.mcpNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.noMatches": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.noModelTools": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.planned": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.plannedDetail": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.resizePanels": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.restartNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.searchPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.toolCount_one": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "capabilities.tools.toolCount_other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "changelog.empty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "changelog.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.composer.botPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.composer.channelBot": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.message.workedThrough_one": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.message.workedThrough_other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.permission.problem.earlierTurn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.permission.problem.incarnation": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.permission.problem.invalid": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.permission.problem.noResponse": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "chat.permission.problem.notPending": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "common.mobileSidebarDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "common.sidebar": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusConnectCancelled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusConnectFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusConnected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusConnecting": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusDisconnectFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusDisconnected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusSignInFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.abacusSigningIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.addFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.added": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.adding": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.agentKeyHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.auth.abacus": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.auth.oauth": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.auth.oauth-client": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.auth.token": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.cancel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.categories.abacus-connectors": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.categories.data": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.categories.support": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.categories.web": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.clientSecret": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.connect": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.connectAction": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.credentialHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.docs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.mcpSignInFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.noMatches": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.noneInstalled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.notInstalled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.oauthClientHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.redirectUrlLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.removeFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.removed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.signInAction": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.signInFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.signedIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.signingIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.signingInAction": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.token": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.whereToGet": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "connectors.yours": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.connectBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.cta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.inviteCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.localBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.or": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.pickBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.switchBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.switchTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "creditsCard.upsellTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deepAgentCard.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deepAgentCard.cta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deepAgentCard.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deliverables.showMore": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.axPermissionNeeded": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.boot": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.bootFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.buildDone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.buildFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.buildRun": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.buildRunHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.buildRunUnavailable": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.captureFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.createDevice": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.createDeviceFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.creatingDevice": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.deviceCreated": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.grantAccess": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.howToAddDevice": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.installingMaestro": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.interactMaestroHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.keyBack": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.keyHome": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.keyRecents": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.maestroInstallFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.maestroInstalled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.modeLive": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.modePoll": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.noDevices": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.noPlatformDevices": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.notBooted": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.openNative": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.phase.booting": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.phase.building": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.phase.installing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.phase.launching": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.refresh": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.screenAlt": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.screenPermissionNeeded": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.selectDevice": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.stateShutdown": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePanel.typeHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "devicePermission.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.approvalSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.maestroHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.masterSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.toolchainIos": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.toolchainMaestro": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSettings.toolchainSection": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSetup.androidAvdDesc": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSetup.androidDesc": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSetup.androidTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSetup.iosDesc": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSetup.iosRuntimeDesc": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSetup.iosTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "deviceSetup.recheck": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "diff.noChanges": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "error.keepsCrashing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "error.ouch": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "error.reloadApp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "error.resetLocalData": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "error.somethingWrong": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "error.tryAgain": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "error.unexpected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.daytona.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.docker.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.local.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.modal.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.singularity.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.ssh.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "execBackends.unsupportedPlatform": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "firstBot.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.afternoon.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.afternoon.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.afternoon.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.afternoon.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.afternoon.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.dawn.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.dawn.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.dawn.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.dawn.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.dawn.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyEvening.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyEvening.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyEvening.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyEvening.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyEvening.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyMorning.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyMorning.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyMorning.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyMorning.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.earlyMorning.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.evening.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.evening.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.evening.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.evening.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.evening.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lateNight.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lateNight.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lateNight.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lateNight.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lateNight.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lunch.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lunch.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lunch.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lunch.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.lunch.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.midMorning.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.midMorning.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.midMorning.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.midMorning.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.midMorning.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.night.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.night.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.night.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.night.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.preDawn.1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.preDawn.2": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.preDawn.3": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.preDawn.4": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "greeting.preDawn.5": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "jobs.empty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "jobs.enabled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "jobs.lastRun": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "jobs.nextRun": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "jobs.startFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "jobs.started": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "library.connectorDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "library.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.download": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.downloading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.installed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.machine": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.recommended": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.remove": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.sectionHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.stopDownload": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.tight": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "localModels.unavailable": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "logs.saveFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.abacusConnectors.loading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.abacusConnectors.none": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.abacusConnectors.title_one": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.abacusConnectors.title_other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.abacusConnectors.unavailable": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.add": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.addFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.addServer": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.authRequiredHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.cancel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.commandRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.done": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.edit": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.addArgument": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.addEnv": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.addHeader": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.argumentPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.arguments": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.clientIdPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.clientSecretPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.command": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.commandPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.env": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.headers": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.kvKey": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.kvValue": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.oauthHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.oauthSection": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.scopePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.titleAdd": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.titleEdit": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.transportHttp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.transportStdio": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.form.urlPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.hideLogs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.import.button": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.import.claude": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.import.file": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.import.paste": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.import.success": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.namePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.nameRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.noLogs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.noServers": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.refresh": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.refreshDone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.refreshFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.refreshHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.refreshNoSession": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.remove": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.removeFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.restartFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.runtimeStatus.authRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.runtimeStatus.connected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.runtimeStatus.connecting": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.runtimeStatus.error": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.save": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.signIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.signInDone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.signInFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.signingIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.toggleFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.toolCount": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "mcpManagement.urlRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.clearNo": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.clearYes": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.instructions.applies": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.instructions.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.instructions.placeholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.instructions.save": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.instructions.saveFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.instructions.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.instructions.unsaved": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.sections.bots": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.sections.sessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.storeEmpty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.stores.memory.help": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.stores.memory.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.stores.remember.help": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.stores.user.help": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "memory.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.advanced": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.approvedUsers": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.cancelConnect": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.clearField": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.descriptions.discord": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.descriptions.telegram": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.descriptions.whatsapp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.discordConnected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.discordOpenLogin": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.discordScan": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.doneConnect": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.enablePlatform": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.finishLinkFirst": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.fromEnvironment": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.getCredentials": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.needsSetup": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.openSetupGuide": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.pendingRequests": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.saveChanges": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.saving": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.autoApprove": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.autoApproveHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.deliverToBot": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.deliverToBotHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.deliverToBotNone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.gatewayEnabledHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.respondToInbound": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.respondToInboundHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.workspaceActive": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.settings.workspaceHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.setup.discord": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.setup.telegram": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.setup.whatsapp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.addToDiscord": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.copied": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.copy": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.intro": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.link": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.linked": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.linkedAs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.openDm": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.preparing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.requiredIntro": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.retry": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.step1": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.step2Copy": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.step3Dm": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.stepLink": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.telegramStep": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.waiting": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.sharedLink.waitingTelegram": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.stepSignIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.telegramConnected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.telegramOpenLogin": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.telegramScan": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.twoStepSetup": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.unsavedChanges": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.whatsappConnected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.whatsappOpenLogin": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.whatsappScan": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "messaging.whatsappSyncing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notificationSettings.enableSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notificationSettings.soundSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notificationSettings.soundTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notificationSettings.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notificationSettings.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notifications.codeSessionFallback": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notifications.permissionRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notifications.taskCompleted": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notifications.toolFallback": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "notifications.waitingForApproval": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.abacusConnected": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.abacusUnidentified": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseAgent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseAgentLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseLocal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseLocalLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseModels": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseModelsLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseWork": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedPromiseWorkLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedTitleLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectedTitleName": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsConnectCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsConnectedCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsContinueCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsMore": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsSkipCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsTitleAccent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.connectorsTitleLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.continueWithBrowser": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.haveAccountContinueWith": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.haveAccountCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.openInBrowserCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupAbacusGrant": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupAbacusNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupBlurbAbacusAccent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupBlurbAbacusLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupBlurbGeminiAccent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupBlurbGeminiLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupBlurbOpenrouterAccent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupBlurbOpenrouterLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupBlurbOpenrouterTail": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupConnectorsBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupConnectorsCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupConnectorsTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupDoneCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupExistingBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupExistingLater": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupExistingTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupKeyDialogBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupKeyPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupSaveCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupSignInCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupTitleAccent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.setupTitleLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.signInAnotherWay": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.signInCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.signInOptions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.skipCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.usesBrowserSessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.welcomeCapabilityConnectors": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.welcomeCapabilityMemory": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.welcomeCapabilityModels": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.welcomeFreeBadge": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "onboarding.welcomeTagline": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "openFile.failed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "openFile.refusedInvalid": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "openFile.refusedMissing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "openFile.refusedOutside": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "openFile.revealed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.credentialAlways": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.credentialRead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.networkHost": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.networkHostAlways": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.sandboxDenied": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.sandboxDeniedHost": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.sandboxDeniedRead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "permissions.sandboxDeniedWrite": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.backend-daytona": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.backend-docker": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.backend-local": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.backend-modal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.backend-singularity": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.backend-ssh": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.sound-done": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.sound-failed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.sound-needs-you": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.sound-received": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.sound-routine-fired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.sound-sent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.settings.terminalShell": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.connectedAccount": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.dangerZone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.members": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.notSignedIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.notSignedInShort": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.permissionsAuto": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.permissionsAutoWarning": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.permissionsDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.permissionsFullAccess": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "profile.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "reactions.feedback": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referralCard.cta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referralCard.dismiss": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referralCard.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addEmails": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addEmailsEmpty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addEmailsHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addEmailsInvalid": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addEmailsPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addPhones": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addPhonesEmpty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addPhonesInvalid": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.addPhonesPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.friendsJoined": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.gmailBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.gmailTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.lead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.leadWithNumbers": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.linkCopied": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.linkWhatsapp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.messageLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.milestoneToast": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.noGmailContacts": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.noWhatsappContacts": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.progressGranted": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.progressTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.selectAll": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.selectNone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.selectedCount": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.sendInvites": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.sending": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.sentToast": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.sentToastDetail": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.whatsappBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "referrals.whatsappTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.autoRepliesLeadSidebar": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.autoReplyLine": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.autoReplyOn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.autoReplyPaused": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.autoReplyRowTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.cancel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.copyWebhook": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.delete": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.deleteBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.deleteError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.editorPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.editorSend": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.empty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.enabled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.firedByCreate": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.firedByManual": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.firedBySchedule": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.firedByWebhook": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.lastRun": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.lead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.madeBy": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.nameLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.namePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.nextRun": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.page.createDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.page.createTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.page.routineDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.page.routineTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.pausedTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.promptPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.promptRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.runAtPast": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.runAtRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.runHistory": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.runNow": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.runsEmpty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.runsIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.runsInHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.saveError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.scheduleHourly": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.scheduleManual": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.scheduleManualHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.scheduleOnce": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.scheduleOnceHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.scheduleRequired": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.sidebar.empty": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.statActive": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.statFiredToday": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.statPaused": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templateWorksWith": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templates.dependency-watch.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templates.failing-tests.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templates.inbox-triage.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templates.morning-brief.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templates.pr-digest.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templates.week-in-review.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.templatesLead": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.testRunHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.testRunLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.updateError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.webhookCopied": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.webhookHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.webhookPublicPending": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.workspaceHelp": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "routines.workspaceMissing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.daysAgo": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.delete": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.deleteBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.deleteError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.deleteTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.pin": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.sessionOptions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sessions.unpin": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "settings.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "shell.status.ready": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sidebarNav.app": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sidebarNav.capabilities": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sidebarNav.newSession": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sidebarNav.routines": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "sidebarNav.whatsNew": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.appliesToBoth": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.back": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.browseMarketplace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.cancel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.edit": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.installFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.installGlobalTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.installs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.marketplaceTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.noResults": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.noSkills": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.openFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.poweredBy": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.removeFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.restartBanner": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.restartNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.searchError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.searchPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.searchPrompt": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.sources.project": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.uninstallConfirm": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.upload": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.uploadFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.uploadFromFile": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.uploadFromFolder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "skills.uploadTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.busybox.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.cmd.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.fellBack": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.inUse": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.notInstalled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.powershell.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.pwsh.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "terminalShells.system.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.finish": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.optional": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.progress": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.replay": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.skip": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.artifacts.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.artifacts.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.bots.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.bots.bulletBots": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.bots.bulletSessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.bots.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.capabilities.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.capabilities.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.changes.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.changes.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.connectors.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.connectors.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.makeBot.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.makeBot.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.memory.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.memory.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.messaging.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.messaging.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.newSession.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.newSession.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.preview.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.preview.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.sidebar.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.sidebar.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.terminal.audience": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.terminal.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.terminal.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.usage.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.usage.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.welcome.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "tour.steps.welcome.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updateBanner.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updateBanner.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updateBanner.whatsChanged": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updateCritical.body": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updateCritical.bodyWithVersion": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updateCritical.restartNow": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updateCritical.restarting": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updatePill.failed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "updatePill.retrying": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.abacusCredits": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.abacusPlan": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.cardDetail": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.errorCount": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.errorsHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.notBilled": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.openrouterCard": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.openrouterFreeTier": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.paidTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.poolSubtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.poolTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.priceUnknown": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.requestCount": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.subtitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.today": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.unpricedHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "usage.window": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.about": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.browserSettings": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.deviceSettings": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.dumpLogs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.keepAwake": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.language": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.mcpManagement": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.notificationSettings": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.settings": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.signOut": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.signedOutRunningSessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "userMenu.skillsManagement": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "visualizer.loading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.addWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.ageDays": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.ageHours": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.ageMinutes": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.ageNow": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.agents.emptyHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.agents.emptyTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.agents.kind.browser": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.agents.kind.delegate": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.agents.mainAgent": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.allPinned": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.cancel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.done": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.files": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.folder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.mentionTip": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.noWorkspacePath": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.readFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.saveFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.attach.unknownError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.autoWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.create": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.createFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.createdAndSwitched": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.loading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.noResults": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.searchOrCreate": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.showing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.stopAgentFirst": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.switchFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.branch.switched": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.cancel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.chat.continueBelow": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.chat.historyLoadFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.chat.scrollToBottom": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.chatDeleted": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.chatRenamed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.cliStartFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.cliStartRetry": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerNeedsModel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerNeedsWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerPlaceholderBusy": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerTasks.dismiss": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerTasks.now": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerTasks.progressLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.composerTasks.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.confirmDelete": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.createBotToSend": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.credits.thisTurn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.credits.total": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.credits.used": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.currentCheckout": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteChat": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteChatDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteWorkspaceConfirmLabel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteWorkspaceConfirmPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteWorkspaceDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteWorkspaceNameMismatch": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteWorkspacePermanently": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deleteWorkspacePermanentlyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deletedWorkspaceBadge": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deliverable.delivered": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deliverable.delivering": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deliverable.itemCount_one": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.deliverable.itemCount_other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.dropFilesHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.explorer.loadFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.explorer.noFiles": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.explorer.noWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.feedback.skip": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fewerModels": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fileEditor.edit": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fileEditor.loading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fileEditor.readOnly": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fileEditor.save": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fileEditor.saveError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fileEditor.saveSuccess": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.fileEditor.unsavedChanges": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.hideRightPanel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.hideSidebar": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.hideTerminal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.inspectorDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.inspectorTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.addFavorite": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.compact": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.configure": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.configureBeforeSending": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.configureProviders": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.connectGoogleAiNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.connectModels": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.connectOpenRouterNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.noFavorites": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.noResults": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.onThisMachine": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.removeFavorite": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.search": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPicker.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelProviderLocked": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelSwitchFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelTier.default": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelTier.fast": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelTier.free": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelTier.local": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.modelTier.strong": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.moreModels": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.navigationDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.navigationTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.newBot": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.newChat": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.noChats": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.noSessionsMatch": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.noWorkspaces": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.noWorkspacesDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.openPathInPreview": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.pendingSteer.permission": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.pendingSteer.remove": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.pendingSteer.step": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.pendingSteer.turn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.perm.addContext": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.perm.allowWithContext": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.perm.denyReason": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.perm.denyWithReason": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.perm.noQuestions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.perm.optionalContext": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.perm.readyToImplement": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.pinChat": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.pinHint": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.pinnedSessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.approved": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.changes_requested": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.checksSummary": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.closed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.draft": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.label": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.merged": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.none": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.noneDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.open": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.openAction": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.pending": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.prStatus.reviews": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.premiumUpgrade.connectNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.premiumUpgrade.localNote": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.addSurface": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.address": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.addressPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.back": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.browserProfile": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.browserProfileClear": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.browserProfileCleared": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.browserProfileImportError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.browserProfileImported": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.browserProfileNone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.browserProfileRefresh": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.clearSiteData": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.closeSurface": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.developerTools": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.emptyTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.forward": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.hardReload": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.htmlShowRendered": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.htmlShowSource": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.imageError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.imageOutsideWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.loading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.mdShowRendered": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.moreActions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.noProfiles": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.openBrowser": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.openExternal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pageUnavailable": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxMoreWarnings": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxNoNotes": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxNotes": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxSlideCount": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxSlidesFailed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxWarnings": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.pptxWarnings_other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.refresh": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.reload": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.sectionFileCount": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.sourceError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.split": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.stop": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.toggleTooltip": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.truncatedFile": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.unified": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.zoom": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.zoomIn": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.zoomOut": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.preview.zoomReset": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.refreshModels": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.renameChat": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.renameChatPlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.renameEmptyName": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.renameError": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.renameWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.renameWorkspacePlaceholder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.resizeInspector": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.resizeSidebar": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.resizeTerminal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.results": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.retryMessage": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.revealInFinder": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.agentsDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.browser": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.browserDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.close": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.deviceDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.emptyDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.emptyTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.explorerDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.tabs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.terminal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightPanel.terminalDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightTab.agents": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightTab.device": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightTab.explorer": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.rightTab.preview": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.runtimeMode.acceptEditsDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.runtimeMode.autoDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.runtimeMode.fullAccessDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.runtimeMode.planDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.runtimeMode.supervisedDescription": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.save": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.searchSessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.selectWorkspaceToSend": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendGate.modelBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendGate.modelCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendGate.modelTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendGate.workspaceBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendGate.workspaceCta": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendGate.workspaceTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendMessage": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sendUndeliverable": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sessionOptions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.sessions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.showRightPanel": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.showSidebar": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.showTerminal": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.startSessionToSend": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.steerMessage": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.backToMain": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.budget": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.didNotFinish": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.hitLimit": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.main": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.needsYou": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.toolCount_one": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.toolCount_other": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.viewTranscript": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.subtask.working": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.terminal.closeTab": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.terminal.hide": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.terminal.newTab": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.terminal.pickShell": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.terminal.tabs": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.thinking.hide": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.thinking.inProgress": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.thinking.show": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.unpinChat": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.downloading": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.errors.microphone-in-use": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.errors.no-microphone": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.errors.permission-denied": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.errors.transcription-failed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.errors.unsupported": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.stop": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.voice.transcribing": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.addWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.letsBuild": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.noWorkspacesFound": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.searchWorkspaces": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.selectWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.build-a-store.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.build-a-store.name": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.design-an-infographic.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.design-an-infographic.name": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.find-flights.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.find-flights.name": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.process-a-spreadsheet.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.process-a-spreadsheet.name": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.restyle-a-repo.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.restyle-a-repo.name": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.review-pull-requests.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.starters.review-pull-requests.name": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.switchWorkspace": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.whatShouldWeBuild": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.welcome.whatShouldWeBuildPrefix": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceDeleted": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.delete": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.deleteBody": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.deleteTitle": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.relocate": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.relocated": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.sendBlocked": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceMissing.title": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceOptions": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaceRenamed": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.workspaces": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.worktree.create": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.worktree.currentCheckout": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.worktree.description": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.worktree.error": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.worktree.select": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "workspace.yesterday": {
+    "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  }
+}
