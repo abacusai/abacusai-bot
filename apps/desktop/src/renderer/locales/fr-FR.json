@@ -1833,7 +1833,8 @@
       "deleteBody": "This session and its transcript will be deleted. This cannot be undone.",
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
-      "newWorktree": "New worktree from here"
+      "newWorktree": "New worktree from here",
+      "emptyDescription": "Start one with {{key}}, or drop a folder here."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -1946,7 +1947,8 @@
       "openEditor": "Open in editor",
       "copyPath": "Copy path",
       "trashFolder": "Move folder to Trash?",
-      "trashFolderBody": "Move {{path}} and all its contents to Trash?"
+      "trashFolderBody": "Move {{path}} and all its contents to Trash?",
+      "rename": "Rename"
     },
     "changes": {
       "staged": "Staged",
@@ -2040,6 +2042,9 @@
       "researchAgent": "Research · completed",
       "testAgent": "Tests · running",
       "agentDetail": "Research found the checkout isolation issue and supplied a patch."
+    },
+    "permission": {
+      "openTerminal": "Open in Terminal"
     }
   },
   "sidebarNav": {

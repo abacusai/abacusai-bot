@@ -1,24 +1,21 @@
 /** R1-T4 (sessions): filtering, workspace grouping, pinned group, live updates. */
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createDb, type Db } from "#next/data/db";
-import { fixtureTransport, FixtureDb } from "#next/data/fixture-db/fixture-db";
 import {
   fixturePrefs,
   fixtureSessions,
   fixtureWorkspaces,
 } from "#next/data/fixture-db/rows";
-import { renderInRouter } from "#next/test-support/render-in-router";
+import { renderApp } from "#next/test-support/app-harness";
 
-import { groupSessions, SessionsSidebar } from "./sessions-sidebar";
+import { groupSessions } from "./sessions-sidebar";
 
-let appDb: Db | null = null;
+let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
-  appDb?.stop();
-  for (const collection of Object.values(appDb?.collections ?? {}))
-    await collection.cleanup().catch(() => undefined);
-  appDb = null;
+  app?.view.unmount();
+  await app?.cleanup();
+  app = undefined;
 });
 
 const NOW = 1_800_000_000_000;
@@ -48,40 +45,34 @@ describe("groupSessions", () => {
 
 describe("SessionsSidebar", () => {
   it("renders groups live and never shows filtered sessions", async () => {
-    const db = new FixtureDb({
-      prefs: fixturePrefs(),
-      sessions: fixtureSessions(NOW),
-      workspaces: fixtureWorkspaces(),
-    });
-    appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
-    await renderInRouter(<SessionsSidebar />, appDb, "/", {
-      transport: {
-        client: {
-          connectors: {
-            events: async function* () {
-              yield { type: "snapshot", requests: [] };
-            },
-          },
-        },
+    app = await renderApp("/sessions/new", {
+      seed: {
+        prefs: fixturePrefs(),
+        sessions: fixtureSessions(NOW),
+        workspaces: fixtureWorkspaces(),
       },
     });
-    await screen.findByText("Review my pull requests");
-    expect(screen.getByText("Pinned")).toBeTruthy();
-    expect(screen.getByText("Default workspace")).toBeTruthy();
-    expect(screen.queryByText("Morning digest run")).toBeNull();
-    expect(screen.queryByText("Editing a routine")).toBeNull();
+    const db = app.db;
+    const sidebar = within(
+      screen.getByRole("navigation", { name: "Sessions" })
+    );
+    await sidebar.findByText("Review my pull requests");
+    expect(sidebar.getByText("Pinned")).toBeTruthy();
+    expect(sidebar.getByText(/^Default workspace/)).toBeTruthy();
+    expect(sidebar.queryByText("Morning digest run")).toBeNull();
+    expect(sidebar.queryByText("Editing a routine")).toBeNull();
     act(() => {
       db.sessions.upsert({
         ...db.sessions.rows.get("flights")!,
         label: "Find cheaper flights",
       });
     });
-    await screen.findByText("Find cheaper flights");
+    await sidebar.findByText("Find cheaper flights");
     act(() => {
       db.sessions.remove("spreadsheet");
     });
     await waitFor(() =>
-      expect(screen.queryByText("Clean up a spreadsheet")).toBeNull()
+      expect(sidebar.queryByText("Clean up a spreadsheet")).toBeNull()
     );
   });
 });

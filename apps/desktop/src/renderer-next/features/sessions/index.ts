@@ -19,3 +19,5 @@ export { BrowserTab } from "./browser/browser-tab";
 export { SessionTasks } from "./context/tasks";
 
 export { SessionChangesCard } from "./changes/changes-card";
+
+export { SessionPermissionAction } from "./context/permission-terminal-action";
