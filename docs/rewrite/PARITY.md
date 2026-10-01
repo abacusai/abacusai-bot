@@ -191,9 +191,9 @@ handler stays until the cut-over).
 | 177 | `stopDeviceStream` | preload/bridge.ts:991 | `devices.stream.stop` | M |  |
 | 178 | `getSimulatorWindowSource` | preload/bridge.ts:996 | `devices.simulatorWindowSource` | Q |  |
 | 179 | `installMaestro` | preload/bridge.ts:1001 | `devices.installMaestro` | M |  |
-| 180 | `fetchWhisperFile` | preload/bridge.ts:1005 | `voice.whisper.fetch` | M | progress via the voice.whisper.progress iterator |
+| 180 | `fetchWhisperFile` | preload/bridge.ts:1005 | `voice.whisper.fetch` | M | renderer-next lib/voice/whisper; progress via voice.whisper.progress |
 | 181 | `isWhisperCached` | preload/bridge.ts:1010 | — | R | no renderer caller |
-| 182 | `requestMicrophoneAccess` | preload/bridge.ts:1012 | `voice.requestMicrophone` | M |  |
+| 182 | `requestMicrophoneAccess` | preload/bridge.ts:1012 | `voice.requestMicrophone` | M | renderer-next lib/voice/use-dictation |
 | 183 | `streamDeviceTouch` | preload/bridge.ts:1016 | `devices.stream.touch` | M | was ipcRenderer.send; call without await |
 | 184 | `streamDeviceKey` | preload/bridge.ts:1018 | `devices.stream.key` | M | was ipcRenderer.send; call without await |
 | 185 | `openScreenRecordingSettings` | preload/bridge.ts:1020 | `system.openPrivacyPane` | M | input { pane: "screen-recording" } |
@@ -234,13 +234,13 @@ handler stays until the cut-over).
 | 19 | `platform` | preload/index.ts | `system.info` | Q | platform (was a sync preload value) |
 | 20 | `reportFunnelStep` | preload/index.ts | `system.funnelStep` | M | fire-and-forget |
 | 21 | `getAccountState` | preload/index.ts | `account.state` | Q |  |
-| 22 | `skipAccountOnboarding` | preload/index.ts | `account.skipOnboarding` | M |  |
+| 22 | `skipAccountOnboarding` | preload/index.ts | `account.skipOnboarding` | M | renderer-next features/onboarding/actions: persisted exit first |
 | 23 | `signOutAccount` | preload/index.ts | `account.signOut` | M |  |
 | 24 | `forgetAccount` | preload/index.ts | `account.forget` | M |  |
 | 25 | `savePastedTempFiles` | preload/index.ts | `files.savePastedTemp` | M | Uint8Array payloads |
 | 26 | `saveLogs` | preload/index.ts | `system.logs.save` | M |  |
 | 27 | `appendLogs` | preload/index.ts | `system.logs.append` | M | fire-and-forget; batched client-side |
-| 28 | `showNotification` | preload/index.ts | `system.notify` | M |  |
+| 28 | `showNotification` | preload/index.ts | `system.notify` | M | renderer-next lib/notify: kind + dedupeKey; main/notch/notifications |
 | 29 | `onNotificationClicked` | preload/index.ts | `system.events` | S | { type: "notification-clicked", metadata } |
 | 30 | `power.getKeepAwake` | preload/index.ts | — | R | no renderer caller |
 | 31 | `power.setKeepAwake` | preload/index.ts | — | R | no renderer caller |
