@@ -32,7 +32,8 @@ const HEALTH_ENV_NAMES = [
 ];
 
 export const checkAgentBundle = async (
-  candidateRoot: string
+  candidateRoot: string,
+  options: { wire: "ndjson" | "agui" } = { wire: "ndjson" }
 ): Promise<void> => {
   const entry = path.join(candidateRoot, "agent", "main.js");
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "abacus-health-"));
@@ -49,7 +50,11 @@ export const checkAgentBundle = async (
     if (value !== undefined) env[name] = value;
   }
 
-  const child = spawn(process.execPath, [entry], {
+  const args =
+    options.wire === "agui"
+      ? [entry, "--wire", "agui", "--thread-id", "health-check"]
+      : [entry, "--wire", "ndjson"];
+  const child = spawn(process.execPath, args, {
     cwd: home,
     env,
     stdio: ["pipe", "pipe", "pipe"],
@@ -72,10 +77,19 @@ export const checkAgentBundle = async (
           if (
             typeof parsed === "object" &&
             parsed !== null &&
-            (parsed as { type?: unknown }).type === "ready"
+            (options.wire === "agui"
+              ? (parsed as { type?: unknown; name?: unknown }).type ===
+                  "CUSTOM" &&
+                (parsed as { name?: unknown }).name === "session.ready"
+              : (parsed as { type?: unknown }).type === "ready")
           ) {
             clearTimeout(timer);
             resolve();
+          } else if (
+            (parsed as { type?: unknown } | null)?.type === "RUN_ERROR"
+          ) {
+            clearTimeout(timer);
+            reject(new Error("Candidate reported RUN_ERROR"));
           }
         } catch {
           // Not a protocol line; keep reading.

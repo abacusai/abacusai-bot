@@ -14,11 +14,14 @@ import { app } from "electron";
 import extract from "extract-zip";
 import { Updater } from "tuf-js";
 
+import { RENDERER_GENERATION } from "#main/renderer-generation";
 import { resourcePath } from "#main/resources";
+import { defaultWire } from "#main/services/agui/relay-service";
 
 import type { ExperienceStore } from "./experience-store";
 import { checkAgentBundle } from "./health-check";
 import { verifyExperience } from "./integrity";
+import { RefusedTargets } from "./refused-targets";
 
 const TARGET = "experience/latest.zip";
 const MAX_FILES = 10_000;
@@ -90,6 +93,7 @@ export const rendererChangeNeedsReadiness = (
 export class ExperienceUpdater {
   #checking: Promise<void> | undefined;
   #target: string | undefined;
+  #refused = new RefusedTargets();
   #timer: NodeJS.Timeout | undefined;
   #warnedNoRoot = false;
   readonly #deps: ExperienceUpdaterDeps;
@@ -201,7 +205,8 @@ export class ExperienceUpdater {
 
     const targetHash = target.hashes.sha256;
 
-    if (targetHash === this.#target) return this.#target;
+    if (targetHash === this.#target || this.#refused.has(targetHash))
+      return targetHash;
 
     const archive =
       (await updater.findCachedTarget(target)) ??
@@ -233,7 +238,9 @@ export class ExperienceUpdater {
       });
       // TUF verified the archive; this re-verifies the extracted tree against
       // the manifest, whose protocol/foundationApi literals gate compatibility.
-      const manifest = await verifyExperience(temporary, app.getVersion());
+      const manifest = await this.#refused.verify(targetHash, () =>
+        verifyExperience(temporary, app.getVersion())
+      );
 
       if (manifest.experienceVersion === store.version) {
         return targetHash;
@@ -250,7 +257,15 @@ export class ExperienceUpdater {
       // The candidate's agent resolves native imports through the linked
       // runtime, so the link must exist before the health check.
       await store.linkRuntime(temporary);
-      await checkAgentBundle(temporary);
+      await checkAgentBundle(temporary, {
+        wire: defaultWire({
+          generation: RENDERER_GENERATION,
+          isPackaged: app.isPackaged,
+          env: process.env,
+        })
+          ? "agui"
+          : "ndjson",
+      });
 
       const installed = path.join(
         store.experiencesDirectory,

@@ -123,7 +123,7 @@ describe("a feed that no longer offers the downloaded build", () => {
     autoUpdater.emit("update-not-available", { version: "1.0.18" });
 
     expect(service.getStatus().downloaded).toBe(true);
-    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
   });
 
   it("drops the pulled release on the second consecutive answer", () => {
@@ -156,7 +156,7 @@ describe("electron-updater's switches, kept in step with the pending build", () 
     withDownloadedBuild();
 
     expect(autoUpdater.autoDownload).toBe(false);
-    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
   });
 
   it("resumes downloading, and parks install-on-quit, when superseded", () => {
@@ -170,6 +170,50 @@ describe("electron-updater's switches, kept in step with the pending build", () 
     autoUpdater.emit("update-downloaded", { version: "1.0.20" });
 
     expect(autoUpdater.autoDownload).toBe(false);
-    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
   });
+});
+
+it("R7-T33: an install rechecks admission; withdrawn and staging-excluded offers never reach quitAndInstall", async () => {
+  const quit = vi.fn();
+  autoUpdater.quitAndInstall = quit;
+  const service = withDownloadedBuild();
+  checkForUpdates.mockResolvedValueOnce({
+    isUpdateAvailable: false,
+    updateInfo: { version: "1.0.19" },
+  } as never);
+  expect((await service.installUpdate()).success).toBe(false);
+  expect(quit).not.toHaveBeenCalled();
+  expect(service.getStatus().downloaded).toBe(false);
+  expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
+});
+it("R7-T33: halt during download cancels it and ignores a late completion", async () => {
+  const token = { cancel: vi.fn() };
+  const service = new UpdateService();
+  autoUpdater.emit("update-available", { version: "1.0.19" });
+  checkForUpdates.mockResolvedValueOnce({
+    cancellationToken: token,
+    downloadPromise: new Promise(() => {}),
+  } as never);
+  await service.checkForUpdates();
+  autoUpdater.emit("update-not-available", { version: "1.0.18" });
+  expect(token.cancel).toHaveBeenCalledOnce();
+  autoUpdater.emit("update-downloaded", { version: "1.0.19" });
+  expect(service.getStatus()).toMatchObject({
+    downloading: false,
+    downloaded: false,
+    progress: null,
+  });
+});
+it("R7-T33: the same fresh offer can install", async () => {
+  vi.useFakeTimers();
+  const quit = vi.fn();
+  autoUpdater.quitAndInstall = quit;
+  const service = withDownloadedBuild();
+  checkForUpdates.mockResolvedValueOnce({
+    isUpdateAvailable: true,
+    updateInfo: { version: "1.0.19" },
+  } as never);
+  expect((await service.installUpdate()).success).toBe(true);
+  expect(quit).toHaveBeenCalledOnce();
 });

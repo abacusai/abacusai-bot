@@ -208,6 +208,7 @@ import {
 import {
   OVERLAY_PROBE_SCRIPT,
   probeWindowChrome,
+  waitForChromeProbeWindow,
   type OverlayGeometry,
 } from "./window-chrome-probe";
 import {
@@ -925,14 +926,7 @@ async function createWindow(restored?: RecreatedWindowState) {
         mainWindow.once("closed", () => clearTimeout(retryTimer));
         const probeAfterShow = (): void => {
           if (mainWindow.isDestroyed() || mainWindowRef !== mainWindow) return;
-          if (mainWindow.isFullScreen()) {
-            mainWindow.once("leave-full-screen", probeAfterShow);
-            return;
-          }
-          if (mainWindow.isMinimized()) {
-            mainWindow.once("restore", probeAfterShow);
-            return;
-          }
+          if (waitForChromeProbeWindow(mainWindow, probeAfterShow)) return;
           void probeWindowChrome(
             async () => {
               const current = host.webContents;
@@ -958,7 +952,8 @@ async function createWindow(restored?: RecreatedWindowState) {
                 mainWindow.isFullScreen() ||
                 !mainWindow.isVisible()
               ) {
-                retryTimer = setTimeout(probeAfterShow, 250);
+                if (!waitForChromeProbeWindow(mainWindow, probeAfterShow))
+                  retryTimer = setTimeout(probeAfterShow, 250);
                 return;
               }
               publishChromeCapability(
@@ -2048,7 +2043,8 @@ app
 
     // The same state the oRPC renderer reads through `window.chrome`.
     ipcMain.handle("window:chrome", () => chromeState());
-    ipcMain.handle("window:recreate", () => recreateMainWindow());
+    if (RENDERER_GENERATION === "wco")
+      ipcMain.handle("window:recreate", () => recreateMainWindow());
     ipcMain.handle("settings:set-titlebar-density", (_event, value: unknown) =>
       appOperations.setTitlebarDensity(value)
     );
@@ -2311,7 +2307,20 @@ nativeAutoUpdater.on("before-quit-for-update", () => {
 });
 
 let quitGracefulInProgress = false;
+let quitUpdateChecked = false;
 app.on("before-quit", (event) => {
+  if (
+    !quitUpdateChecked &&
+    updateService.getStatus().downloaded &&
+    !updateService.getStatus().installing
+  ) {
+    event.preventDefault();
+    quitUpdateChecked = true;
+    void updateService.installUpdate({ silent: true }).then((result) => {
+      if (!result.success) app.quit();
+    });
+    return;
+  }
   // So the window 'close' handler stops intercepting.
   markQuitting();
   notchController?.dispose();
