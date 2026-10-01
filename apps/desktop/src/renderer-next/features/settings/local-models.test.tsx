@@ -9,11 +9,25 @@ import {
   type LocalModelState,
 } from "#shared/local-models";
 const os = implement(contract);
-it.each([false, true])(
-  "R5-T23 %s installed local model adopts into a session and returns",
-  async (installed) => {
+it.each([
+  { installed: false, bot: false },
+  { installed: true, bot: false },
+  { installed: false, bot: true },
+  { installed: true, bot: true },
+])(
+  "R5-T23 installed=$installed bot=$bot adopts and returns to its thread",
+  async ({ installed, bot }) => {
     const seed = defaultSeed();
     const session = seed.sessions!.find((s) => !s.owner && !s.routineId)!;
+    if (bot) {
+      session.owner = {
+        kind: "bot",
+        key: null,
+        botId: seed.bots![0]!.id,
+        role: "forever",
+      };
+      seed.bots![0]!.sessionId = session.id;
+    }
     const model = LOCAL_MODEL_CATALOG[0]!;
     const state: LocalModelState = {
       runtimeAvailable: true,
@@ -47,13 +61,15 @@ it.each([false, true])(
         })
       );
       await waitFor(() =>
-        expect(app.collections.sessions.get(session.id)?.model).toBe(
-          `local/${model.id}`
-        )
+        expect(
+          bot
+            ? app.collections.bots.get(session.owner!.botId)?.model
+            : app.collections.sessions.get(session.id)?.model
+        ).toBe(`local/${model.id}`)
       );
       await waitFor(() =>
         expect(app.router.state.location.pathname).toBe(
-          `/sessions/${session.id}`
+          bot ? `/bots/${session.owner!.botId}` : `/sessions/${session.id}`
         )
       );
     } finally {

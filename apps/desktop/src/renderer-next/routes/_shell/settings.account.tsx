@@ -23,6 +23,7 @@ const AccountSettingsRoute = () => {
       <AccountPage />
       {invite && (
         <InviteDialog
+          key={invite}
           channel={invite}
           connectGmail={() => flow.start("abacus-gmailuser")}
         />
