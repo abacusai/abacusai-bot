@@ -134,3 +134,133 @@ window.__phase6ListeningFit = async (mode, language) => {
     }),
   };
 };
+
+import { NotchHeader, NotchSurface } from "#renderer/features/notch/frame";
+import { IdleView } from "#renderer/features/notch/idle";
+import { NotchContext, type NotchViewContext } from "#renderer/notch-context";
+import { Button } from "#renderer/ui/button";
+
+declare global {
+  interface Window {
+    __notchGeometryFit(): Promise<unknown[]>;
+  }
+}
+window.__notchGeometryFit = async () => {
+  await initI18n();
+  await changeLanguage("en-US");
+  await document.fonts.ready;
+  const rows = [];
+  for (const height of [24, 33, 40]) {
+    const layout: NotchLayout = {
+      displayId: 1,
+      mode: "notch",
+      growth: "down",
+      notch: { x: 763, width: 185, height },
+      maxShape: { width: 560, height: 220 },
+    };
+    for (const route of [
+      "/idle",
+      "/working",
+      "/call",
+      "/reply/$id",
+      "/approval/$id",
+    ]) {
+      for (const expanded of [false, true]) {
+        const shape = shapeFor({ route, expanded } as never, layout);
+        root.render(
+          <NotchContext
+            value={
+              {
+                db: {
+                  collections: {
+                    bots: {
+                      toArray: [
+                        { id: "audit", name: "Notch audit", channel: null },
+                      ],
+                    },
+                    routines: { toArray: [] },
+                  },
+                },
+              } as unknown as NotchViewContext
+            }
+          >
+            <NotchSurface
+              layout={layout}
+              shape={shape}
+              expanded={expanded}
+              reduced
+            >
+              <NotchHeader
+                layout={layout}
+                left={
+                  <div className="notch-wing">
+                    <i style={{ width: 20, flexShrink: 0 }} />
+                    <span className="notch-label truncate">
+                      {i18n.t("notch.wings.idle")}
+                    </span>
+                  </div>
+                }
+                right={
+                  <div className="notch-wing">
+                    {expanded && (
+                      <Button>{i18n.t("notch.actions.open")}</Button>
+                    )}
+                  </div>
+                }
+              />
+              {expanded && (
+                <div className="notch-body">
+                  <IdleView />
+                </div>
+              )}
+            </NotchSurface>
+          </NotchContext>
+        );
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const surface = node.querySelector<HTMLElement>(".notch-shape")!;
+        const bounds = surface.getBoundingClientRect();
+        const label = node.querySelector<HTMLElement>(".notch-wing span")!;
+        const wings = [
+          ...node.querySelectorAll<HTMLElement>(".notch-wing"),
+        ].map((wing) => wing.getBoundingClientRect());
+        const cameraLeft = bounds.left + (bounds.width - 185) / 2;
+        const buttons = [...node.querySelectorAll(".notch-body button")].map(
+          (button) => button.getBoundingClientRect()
+        );
+        const inside = (x: number, y: number) =>
+          surface.contains(
+            document.elementFromPoint(bounds.left + x, bounds.top + y)
+          );
+        rows.push({
+          height,
+          route,
+          expanded,
+          actualHeight: bounds.height,
+          headerFits: label.scrollWidth <= label.clientWidth,
+          cameraClear:
+            wings[0]!.right <= cameraLeft &&
+            wings[1]!.left >= cameraLeft + 185 &&
+            buttons.every((r) => r.top >= bounds.top + height),
+          bodyFits: buttons.every(
+            (r) =>
+              r.left >= bounds.left + 20 &&
+              r.right <= bounds.right - 20 &&
+              r.bottom <= bounds.bottom - 12
+          ),
+          actionsCentered:
+            !buttons.length ||
+            Math.abs(
+              (buttons[0]!.left + buttons.at(-1)!.right) / 2 -
+                (bounds.left + bounds.right) / 2
+            ) < 1,
+          shoulder: inside(8, 0.1) && !inside(8, 8),
+          bottomCurve:
+            !inside(13, bounds.height - 1) &&
+            inside(bounds.width / 2, bounds.height - 0.5),
+          belowClear: !inside(bounds.width / 2, bounds.height + 0.5),
+        });
+      }
+    }
+  }
+  return rows;
+};

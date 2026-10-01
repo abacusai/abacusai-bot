@@ -2,7 +2,7 @@
 export const notchOutline = (
   width: number | string = "100%",
   height: number | string = "100%",
-  top = 6,
+  top = 12,
   bottom = 20
 ): string => {
   const w = typeof width === "number" ? `${Math.max(0, width)}px` : width;
@@ -24,13 +24,15 @@ export const notchOutline = (
     )
   );
   const right = `calc(${w} - ${t}px)`;
-  const floor = `calc(${h} - ${b}px)`;
+  const radius =
+    typeof height === "number" ? `${b}px` : `min(${b}px, calc(${h} - ${t}px))`;
+  const floor = `calc(${h} - ${radius})`;
   // Coincident corner controls give zero curvature at the straight joins.
   return `shape(from 0px 0px, line to ${w} 0px,
     curve to ${right} ${t}px with ${right} 0px / ${right} 0px,
     line to ${right} ${floor},
-    curve to calc(${w} - ${t + b}px) ${h} with ${right} ${h} / ${right} ${h},
-    line to ${t + b}px ${h},
+    curve to calc(${w} - ${t}px - ${radius}) ${h} with ${right} ${h} / ${right} ${h},
+    line to calc(${t}px + ${radius}) ${h},
     curve to ${t}px ${floor} with ${t}px ${h} / ${t}px ${h},
     line to ${t}px ${t}px,
     curve to 0px 0px with ${t}px 0px / ${t}px 0px, close)`;

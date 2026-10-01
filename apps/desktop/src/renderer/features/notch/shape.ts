@@ -11,7 +11,7 @@ export const SHAPES = {
   approval: [120, 76],
   reply: [130, 132],
   call: [130, 132],
-  hovered: [130, 68],
+  hovered: [180, 76],
 } as const;
 export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
   const key = p.quietUntil
@@ -27,14 +27,11 @@ export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
     : compactWing;
   const gap = layout.notch?.width ?? 0;
   return {
-    compactHeight: Math.max(
-      layout.notch?.height ?? 0,
-      layout.mode === "capsule" ? 36 : 32
-    ),
+    compactHeight: layout.notch?.height ?? 36,
     width: Math.min(layout.maxShape.width, gap + wing * 2),
     height: Math.min(
       layout.maxShape.height,
-      Math.max(layout.notch?.height ?? 0, layout.mode === "capsule" ? 36 : 32) +
+      (layout.notch?.height ?? 36) +
         (p.expanded
           ? key === "approval"
             ? layout.maxShape.height
