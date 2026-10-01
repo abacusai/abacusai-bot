@@ -386,6 +386,22 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
         category?: string;
       }>
     | undefined;
+  const partIndexes = new Map<UIMessage["parts"][number], number>();
+  message.parts.forEach((part, index) => {
+    if (!partIndexes.has(part)) partIndexes.set(part, index);
+  });
+  const segmentGroups = new Map<number | null, string | undefined>();
+  const groups = new Map<string, NonNullable<typeof segments>[number]>();
+  for (const segment of segments ?? []) {
+    if (!segmentGroups.has(segment.partIndex))
+      segmentGroups.set(segment.partIndex, segment.groupId);
+    if (segment.type === "tool_group" && !groups.has(segment.id))
+      groups.set(segment.id, segment);
+  }
+  const unitIndexes = new Map<string, number>();
+  window?.ids.forEach((id, index) => {
+    if (!unitIndexes.has(id)) unitIndexes.set(id, index);
+  });
   const visibleUnits =
     window == null
       ? null
@@ -402,10 +418,8 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             !visibleUnits.has(`${scope}\0${part.part.id}`)
           )
             continue;
-          const index = message.parts.indexOf(part.part);
-          const id =
-            segments?.find((segment) => segment.partIndex === index)?.groupId ??
-            null;
+          const index = partIndexes.get(part.part) ?? -1;
+          const id = segmentGroups.get(index) ?? null;
           const previous = blocks.at(-1);
           if (id != null && previous?.id === id) previous.parts.push(part);
           else blocks.push({ id, parts: [part] });
@@ -413,20 +427,19 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
         return blocks.map((block) => {
           const content = block.parts.map((part) => (
             <SessionUI.Part
-              key={message.parts.indexOf(part.part)}
+              key={partIndexes.get(part.part) ?? -1}
               part={part}
             />
           ));
           if (block.id == null)
             return (
-              <div key={message.parts.indexOf(block.parts[0]!.part)}>
+              <div key={partIndexes.get(block.parts[0]!.part) ?? -1}>
                 {content}
               </div>
             );
           const header =
-            window?.ids.indexOf(
-              `group\0${scope}\0${message.id}\0${block.id}`
-            ) ?? -1;
+            unitIndexes.get(`group\0${scope}\0${message.id}\0${block.id}`) ??
+            -1;
           const headerVisible =
             window == null ||
             (header >= window.range.start && header < window.range.end);
@@ -436,7 +449,7 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
               (p) =>
                 p.part.type === "tool-call" &&
                 (() => {
-                  const index = window.ids.indexOf(`${scope}\0${p.part.id}`);
+                  const index = unitIndexes.get(`${scope}\0${p.part.id}`) ?? -1;
                   return (
                     index >= window.range.start && index < window.range.end
                   );
@@ -444,10 +457,7 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             );
           if (!headerVisible && !childVisible) return null;
           if (!headerVisible) return <div key={block.id}>{content}</div>;
-          const group = segments?.find(
-            (segment) =>
-              segment.id === block.id && segment.type === "tool_group"
-          );
+          const group = groups.get(block.id);
           return (
             <Collapsible key={block.id} defaultOpen data-slot="tool-group">
               <CollapsibleTrigger

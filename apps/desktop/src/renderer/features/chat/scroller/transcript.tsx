@@ -9,6 +9,7 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { ArrowDown } from "lucide-react";
 import {
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useRef,
   useState,
@@ -280,6 +281,7 @@ const TranscriptMessage = ({
   more,
   earlier,
   fresh,
+  toolIds,
 }: {
   message: UIMessage;
   Message: TranscriptProps["Message"];
@@ -288,6 +290,7 @@ const TranscriptMessage = ({
   more(id: string): void;
   earlier(id: string): void;
   fresh: boolean;
+  toolIds: string[];
 }) => (
   <MessageScrollerItem
     className="[content-visibility:visible]"
@@ -297,7 +300,7 @@ const TranscriptMessage = ({
   >
     <ToolWindowProvider
       value={{
-        ids: toolRows(message),
+        ids: toolIds,
         range: { start, end },
         more: () => more(message.id),
         earlier: () => earlier(message.id),
@@ -330,14 +333,21 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       }) !== true
     );
   });
+  const outcomeCounts = new Map<string | null, number>();
+  for (const outcome of outcomes)
+    outcomeCounts.set(
+      outcome.afterMessageId,
+      (outcomeCounts.get(outcome.afterMessageId) ?? 0) + 1
+    );
+  const toolIds = new Map(
+    visible.map((message) => [message.id, toolRows(message)])
+  );
   const items: RowItem[] = visible.map((message) => ({
     id: message.id,
-    fixed:
-      1 +
-      outcomes.filter((outcome) => outcome.afterMessageId === message.id)
-        .length,
-    units: toolRows(message).length,
+    fixed: 1 + (outcomeCounts.get(message.id) ?? 0),
+    units: toolIds.get(message.id)!.length,
   }));
+  const itemsById = new Map(items.map((item) => [item.id, item]));
   const [measured, setMeasured] = useState<ReadonlyMap<string, number>>(
     new Map()
   );
@@ -376,38 +386,40 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     const viewport = viewportRef.current;
     if (viewport != null) {
       const box = viewport.getBoundingClientRect();
-      const candidate = [
-        ...viewport.querySelectorAll(
-          '[data-slot="message-scroller-item"], [data-tool], [data-slot="subagent-row"]'
-        ),
-      ]
-        .map((el) => ({ el, rect: el.getBoundingClientRect() }))
-        .filter(
-          ({ rect }) =>
-            rect.height > 0 && rect.top >= box.top && rect.bottom <= box.bottom
-        )
-        .sort((a, b) => a.rect.top - b.rect.top)[0];
-      if (candidate != null)
-        anchor.current = {
-          el: candidate.el,
-          top: candidate.rect.top,
-          viewport,
-        };
+      // Rows follow document order, including nested tools. Stop at the
+      // first fully visible row instead of measuring and sorting every row.
+      for (const el of viewport.querySelectorAll(
+        '[data-slot="message-scroller-item"], [data-tool], [data-slot="subagent-row"]'
+      )) {
+        const rect = el.getBoundingClientRect();
+        if (
+          rect.height > 0 &&
+          rect.top >= box.top &&
+          rect.bottom <= box.bottom
+        ) {
+          anchor.current = { el, top: rect.top, viewport };
+          break;
+        }
+      }
     }
     change();
   };
-  useEffect(() => session.onPrepend(() => preserve(() => {})), [session]);
+  const onPrepend = useEffectEvent(() => preserve(() => {}));
+  useEffect(() => session.onPrepend(onPrepend), [session]);
   const observed = useRef<typeof anchor.current>(null);
   const lastMessages = useRef(messages);
+  const messageIds = messages.map((item) => item.id).join("\0");
   useEffect(() => {
     if (typeof ResizeObserver === "undefined") return;
-    const ids = new Set(messages.map((item) => item.id));
+    const ids = new Set(messageIds.split("\0"));
     const observer = new ResizeObserver((entries) => {
       setMeasured((previous) => {
         const next = new Map([...previous].filter(([id]) => ids.has(id)));
         for (const entry of entries) {
           const el = entry.target as HTMLElement;
-          const height = el.getBoundingClientRect().height;
+          const height =
+            entry.borderBoxSize?.[0]?.blockSize ??
+            el.getBoundingClientRect().height;
           if (height > 0) next.set(el.dataset.messageId!, height + 12);
         }
         return next.size !== previous.size ||
@@ -421,7 +433,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     ))
       observer.observe(el);
     return () => observer.disconnect();
-  }, [messages, window.start, window.end]);
+  }, [messageIds, window.start, window.end]);
   useLayoutEffect(() => {
     const saved =
       anchor.current ??
@@ -529,10 +541,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           </MarkerContent>
         </Marker>
       );
-    const range = rangeOf(
-      items.find((item) => item.id === message.id)!,
-      window.ranges
-    );
+    const range = rangeOf(itemsById.get(message.id)!, window.ranges);
     rows.push(
       <TranscriptMessage
         key={message.id}
@@ -543,6 +552,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         more={more}
         earlier={earlier}
         fresh={fresh[message.id] === true}
+        toolIds={toolIds.get(message.id)!}
       />
     );
     for (const outcome of byAnchor.get(message.id) ?? [])

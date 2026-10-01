@@ -18,9 +18,14 @@ export const toolRows = (message: UIMessage, scope = ""): string[] => {
   const segments = message.metadata?.abacus?.segments as
     | Array<{ partIndex?: number; groupId?: string }>
     | undefined;
+  const groups = new Map<number | undefined, string | undefined>();
+  for (const segment of segments ?? []) {
+    if (!groups.has(segment.partIndex))
+      groups.set(segment.partIndex, segment.groupId);
+  }
   let previous: string | undefined;
   return message.parts.flatMap((part, index) => {
-    const group = segments?.find((s) => s.partIndex === index)?.groupId;
+    const group = groups.get(index);
     const header =
       group != null && group !== previous
         ? [`group\0${scope}\0${message.id}\0${group}`]

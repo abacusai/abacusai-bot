@@ -414,3 +414,46 @@ Validation: notch/runtime, model-picker, PPTX, Markdown and chat-view focused
 tests, desktop typecheck, affected lint/format and production build/package
 pass. Both deferred grammar and math rendering retain their update tests.
 Final broad gates follow the remaining goals.
+
+### Performance pass: goal 4, transcript hot paths
+
+Tool grouping repeatedly searched part, segment and window arrays inside
+per-part loops. They now build indexes once, preserving the first match when
+entries repeat. The transcript computes tool IDs once per message/render and
+indexes row/outcome data. It does not assume streamed messages are immutable.
+The resize observer follows row IDs and window bounds rather than reconnecting
+on each text delta, and uses the observer's supplied border-box height.
+Anchor capture stops at the first fully visible row in document order.
+Completed code fences reuse syntax HTML in a bounded cache (128 entries,
+512 Ki retained source/output characters; large blocks bypass it).
+
+The fresh gallery build passes all nine required Electron chat-kit tests.
+[Timing samples](07-timing-goal4.json) record 171 streaming deltas and 20
+activations for each expansion case. Thresholds remain unchanged.
+
+| Required timing | Before, ms | After, ms | Required |
+| --- | ---: | ---: | ---: |
+| Streaming busy-task p95 | 60.404 | 4.19 | <50 |
+| History expansion maximum | 60.9 | 23.5 | <50 |
+| 3,000-tool expansion maximum | 50.5 | 16.8 | <50 |
+
+History/tool peaks remain 100 mounted rows. Maximum anchor drift is
+0.1328125 px (cap 1 px); prepend drift is zero.
+The suite also passes rich-thread first paint, scroll FPS, replay readiness,
+loader readiness and bounded-row checks.
+
+[Packaged goal-4 samples](07-perf-goal4-final.json) remeasure M1–M6 with four
+alternating pairs and the warm-up discarded.
+
+| Metric | Shipped median | Candidate median / p90 |
+| --- | ---: | ---: |
+| M1, ms | 1338.9 | 1187.4 / 1205.4 |
+| M2, ms | 947.9 | 742.7 / 743.5 |
+| M3, bytes | 864632832.0 | 810582016.0 / 853524480.0 |
+| M4, bytes | 22507556.0 | 24744940.0 / 24834044.0 |
+| M5, ms | 510.7 | 55.8 / 56.4 |
+| M6, bytes | 1001567.0 | 752459.0 / 752459.0 |
+
+Focused transcript/parts/Markdown tests (35), typecheck, affected lint/format,
+production build/package and release checks pass. Final broad gates follow
+dependency remediation.
