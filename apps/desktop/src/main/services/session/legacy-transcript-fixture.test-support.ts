@@ -8,7 +8,6 @@ import type { HeldFiles } from "./held-files";
 import { isSafeSessionId } from "./thread-store";
 import type { ThreadStore } from "./thread-store";
 import { TranscriptService, type StoredTranscript } from "./transcript-service";
-export type { TranscriptServiceOptions } from "./transcript-service";
 const transcriptPath = (id: string) =>
   isSafeSessionId(id)
     ? path.join(abacusBotHome(), "transcripts", `${id}.json`)

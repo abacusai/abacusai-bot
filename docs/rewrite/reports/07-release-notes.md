@@ -1,11 +1,12 @@
 # User-visible parity changes
 
-- AR6: Retired (live data)
-- P8: Retired (F15)
-- P9: Retired (canvas)
-- P26: Retired (F15)
-- LB21: Retired (PLAN "Nuked")
-- OB13: Parity; workspace switch Retired (PLAN "no state in two places")
-- OB16: Retired (structure)
-- RT19: Retired (PLAN "no state in two places")
-- RT26: Retired (PLAN "Nuked: `?view=` redirects"; new entry HTML)
+- Artifacts refresh automatically; the Refresh button is removed.
+- The rail opens the Bots sidebar directly.
+- Start a bot chat from its bot page; the start page no longer has a composer.
+- Each rail item has its own sidebar.
+- Legacy ?view=capabilities and ?view=messaging links are retired.
+- The companion shows ongoing work; the background Task still running notification is removed.
+- Finishing setup opens the saved destination without switching a workspace.
+- Setup no longer resets an open tour.
+- Opening a routine run keeps your current workspace.
+- Legacy /settings/jobs and /routines/chat links are retired; open Routines from the rail.

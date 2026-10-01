@@ -99,7 +99,8 @@ export const PHASE6_ONBOARDING_PARITY = [
   {
     id: "OB13",
     status: "retired",
-    reason: 'Parity; workspace switch Retired (PLAN "no state in two places")',
+    reason:
+      "Finishing setup opens the saved destination without switching a workspace.",
     visible: true,
     consumer: "src/renderer/features/onboarding/actions.ts#completeOnboarding",
     owner: "phase-6",
@@ -123,7 +124,7 @@ export const PHASE6_ONBOARDING_PARITY = [
   {
     id: "OB16",
     status: "retired",
-    reason: "Retired (structure)",
+    reason: "Setup no longer resets an open tour.",
     visible: true,
     consumer:
       "retired: The tour host lives only under the shell, so onboarding no longer resets an open tour.",

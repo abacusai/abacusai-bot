@@ -73,7 +73,7 @@ export const BOT_PARITY = [
   {
     id: "P8",
     status: "retired",
-    reason: "Retired (F15)",
+    reason: "The rail opens the Bots sidebar directly.",
     visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (F15)",
@@ -82,7 +82,8 @@ export const BOT_PARITY = [
   {
     id: "P9",
     status: "retired",
-    reason: "Retired (canvas)",
+    reason:
+      "Start a bot chat from its bot page; the start page no longer has a composer.",
     visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (canvas)",
@@ -251,7 +252,7 @@ export const BOT_PARITY = [
   {
     id: "P26",
     status: "retired",
-    reason: "Retired (F15)",
+    reason: "Each rail item has its own sidebar.",
     visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (F15)",

@@ -171,7 +171,7 @@ export const launch = async (options: {
         webSocketDebuggerUrl: string;
       }>;
       url =
-        targets.find((t) => t.type === "page" && t.url.includes("index-next"))
+        targets.find((t) => t.type === "page" && t.url.includes("index.html"))
           ?.webSocketDebuggerUrl ?? null;
     } catch {
       // not yet

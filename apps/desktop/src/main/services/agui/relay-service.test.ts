@@ -18,7 +18,7 @@ import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import type { AgentWire } from "../session/cli-manager-service";
 import { LegacyTranscriptFixture as TranscriptService } from "../session/legacy-transcript-fixture.test-support";
 import { ThreadStore } from "../session/thread-store";
-import { AguiRelayService } from "./relay-service";
+import { AguiRelayService, type AguiRelayHost } from "./relay-service";
 
 type Command = { type: string } & Record<string, unknown>;
 
@@ -89,6 +89,15 @@ class ScriptedAgent {
 // The host the relay sees. `runtime` there is the method; on the agent it is
 // the process identity.
 
+const host = (agent: ScriptedAgent): AguiRelayHost => ({
+  workspaceOf: (id) => agent.workspaceOf(id),
+  runtime: () => agent.runtimeState,
+  start: (id) => agent.start(id),
+  send: (id, command) => agent.send(id, command),
+  markSent: () => agent.markSent(),
+  markStopped: () => agent.markStopped(),
+});
+
 const ack = (runId: string, status: string, extra: object = {}) => ({
   type: "CUSTOM",
   name: "run.ack",
@@ -121,6 +130,13 @@ const setup = (options: { ackTimeoutMs?: number } = {}) => {
   const agent = new ScriptedAgent();
   const store = new ThreadStore({ home: () => home, log: () => undefined });
 
+  const relay = new AguiRelayService({
+    host: host(agent),
+    files: store,
+    startTimeoutMs: 2_000,
+    ackTimeoutMs: options.ackTimeoutMs ?? 2_000,
+    log: () => undefined,
+  });
   agent.relay = relay;
   const connection = connectInProcess(fakeDeps({ ai: relay }));
   return { agent, relay, store, client: connection.client, connection };
@@ -152,7 +168,7 @@ const take = async (
 
 describe("ai.send", () => {
   it("starts an agui runtime, converts the UIMessages keeping their ids, and answers with the ack", async () => {
-    const { agent, relay, client } = setup();
+    const { agent, client } = setup();
     agent.answer = (command) =>
       command.type === "run"
         ? started((command.input as { runId: string }).runId)

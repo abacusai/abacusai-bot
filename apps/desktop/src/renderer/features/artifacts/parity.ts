@@ -54,7 +54,7 @@ export const PHASE5_PARITY = [
   {
     id: "AR6",
     status: "retired",
-    reason: "Retired (live data)",
+    reason: "Artifacts refresh automatically; the Refresh button is removed.",
     visible: true,
     target: "features/artifacts/index.tsx",
     specStatus: "Retired (live data)",

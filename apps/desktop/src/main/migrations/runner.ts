@@ -428,7 +428,11 @@ export const runMigrations = async (
   }
 
   // ── Steps ────────────────────────────────────────────────────────────
-  const appliedIds = new Set(current.applied.map((entry) => entry.id));
+  const appliedIds = new Set(
+    current.applied
+      .filter((entry) => !entry.restoredAt)
+      .map((entry) => entry.id)
+  );
   const pending = [...options.steps]
     .sort((a, b) => a.id - b.id)
     .filter((step) => !appliedIds.has(step.id));
@@ -617,7 +621,10 @@ export const runMigrations = async (
           attempt,
           backup: backupName,
         };
-        next.applied = [...current.applied, entry];
+        next.applied = [
+          ...current.applied.filter((old) => old.id !== entry.id),
+          entry,
+        ];
         if (others.length > 0) next.partial = others;
         else delete next.partial;
       }

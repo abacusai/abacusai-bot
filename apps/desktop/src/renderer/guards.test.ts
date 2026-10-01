@@ -105,7 +105,7 @@ describe("renderer guards", () => {
     for (const file of files) {
       const own = /^features\/([^/]+)\//.exec(file.path)?.[1];
       for (const specifier of importsOf(file.ast)) {
-        const target = /^#next\/features\/([^/]+)(\/.*)?$/.exec(specifier);
+        const target = /^#renderer\/features\/([^/]+)(\/.*)?$/.exec(specifier);
         if (target == null) continue;
         const [, feature, rest] = target;
         if (feature === own) continue;

@@ -21,24 +21,27 @@ test(
     try {
       const config = JSON.parse(fs.readFileSync("knip.json", "utf8"));
       const workspace = config.workspaces["apps/desktop"];
-      // Structural test globs intentionally read every source, which makes a planted file used.
-      // Check the same project scope without structural test readers. Production mode
-      // intentionally excludes untagged project globs, so it cannot test this scope.
-      workspace.entry = workspace.entry.filter(
-        (entry) => !entry.includes("test.")
-      );
+      // Check the production project globs without test readers and entry scripts
+      // that inspect all source files. Production mode excludes these untagged globs.
+      workspace.entry = [];
+      workspace.node = false;
       workspace.vitest = false;
       workspace.vite = false;
       workspace.typescript = false;
+      workspace.oxlint = false;
+      workspace.oxfmt = false;
       config.workspaces["."] = {
         entry: [],
         project: [],
+        node: false,
         vitest: false,
         typescript: false,
         vite: false,
         "github-actions": false,
         pnpm: false,
         turbo: false,
+        oxlint: false,
+        oxfmt: false,
       };
       fs.writeFileSync(configFile, JSON.stringify(config));
       for (const file of files) {

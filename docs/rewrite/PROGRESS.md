@@ -21,3 +21,7 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 6 | onboarding, tour, notch | r4 (final) | merged 4a32dc07 (Codex; ~65 commits incl. two cross-phase merges) | Codex r1 (17) + r2 (3) fixed; tree green (4,327 unit + 272 serial) | done (hardware runs: notched Mac, external display, Windows capsule pending) |
 | — | main requirements from specs 3–6 (+ cut-over defects #9/#10/#11, step-1 handovers, Bot.avatarAccessory) | specs 03 §24, 04 §26, 05 §31, 06 §23 + notes | merged 0ab59029; fixes 8eaec2b1; r2 fixes e75cb79d; accessory a868db96 (all Codex) | Codex r1 + Claude r1 + Codex r2 fixed; tree green (3,528 tests) | done |
 | 7 | cut-over | r3 (final; D1–D9 followed as written, §19 open questions pending user) | Codex task in worktree codex-cutover (release N: C1–C14) | | implementing |
+
+## Cutover release N implementation, 1 October 2026
+
+C5 completion and C6–C14 are implemented in ordered commits on codex-cutover. See [the cutover report](reports/07-cutover.md) for focused checks and final gates. Release acceptance remains pending hardware, signed RC, comparative performance and §19 decisions. N keeps migration steps 1, 2 and 5 registered. Steps 3 and 4 remain reserved for N+1. Restore tooling is shipped early so support can exercise its synthetic two-profile and two-cycle checks before retirement.

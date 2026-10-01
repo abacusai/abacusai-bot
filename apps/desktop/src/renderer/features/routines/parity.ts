@@ -190,7 +190,7 @@ export const PHASE5_PARITY = [
   {
     id: "RT19",
     status: "retired",
-    reason: 'Retired (PLAN "no state in two places")',
+    reason: "Opening a routine run keeps your current workspace.",
     visible: true,
     target: "features/routines/index.tsx",
     specStatus: 'Retired (PLAN "no state in two places")',
@@ -263,7 +263,8 @@ export const PHASE5_PARITY = [
   {
     id: "RT26",
     status: "retired",
-    reason: 'Retired (PLAN "Nuked: `?view=` redirects"; new entry HTML)',
+    reason:
+      "Legacy /settings/jobs and /routines/chat links are retired; open Routines from the rail.",
     visible: true,
     target: "features/routines/index.tsx",
     specStatus: 'Retired (PLAN "Nuked: `?view=` redirects"; new entry HTML)',

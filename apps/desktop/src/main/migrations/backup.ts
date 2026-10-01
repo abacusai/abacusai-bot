@@ -200,7 +200,7 @@ export const copyFileAtomic = (
 /** Writes `data` through a temp name and a rename. */
 export const writeFileAtomic = (
   file: string,
-  data: string,
+  data: string | Buffer,
   io: MigrationIo = nodeIo
 ): void => {
   io.mkdirSync(path.dirname(file));

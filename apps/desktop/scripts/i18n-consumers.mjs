@@ -24,16 +24,20 @@ export const consumers = (keys, sources, dynamic = []) => {
     walk(parseSync(file, source).program, (node) => {
       if (node.type === "Literal" && typeof node.value === "string")
         literals.add(node.value);
+      // Keys may be built in catalogues before they reach t(), including labelKey.
+      if (node.type === "TemplateLiteral") {
+        const prefix = node.quasis[0].value.cooked;
+        if (prefix && keys.some((key) => key.startsWith(prefix)))
+          templates.add(prefix);
+      }
       if (
         node.type === "CallExpression" &&
         (node.callee?.name === "t" || node.callee?.property?.name === "t") &&
-        node.arguments[0]?.type === "TemplateLiteral"
-      ) {
-        const prefix = node.arguments[0].quasis[0].value.cooked;
-        if (prefix) templates.add(prefix);
-        else if (!dynamic.some((row) => row.prefix === ""))
-          throw new Error(`Unbounded translation template in ${file}`);
-      }
+        node.arguments[0]?.type === "TemplateLiteral" &&
+        !node.arguments[0].quasis[0].value.cooked &&
+        !dynamic.some((row) => row.prefix === "")
+      )
+        throw new Error(`Unbounded translation template in ${file}`);
     });
   for (const key of keys)
     if (

@@ -32,20 +32,4 @@ describe("R3-T9 shared migration immutable oracle", () => {
       );
     }
   });
-  it("the legacy dialog exports the shared bytes and calls the shared description helper", () => {
-    const source = readFileSync(
-      new URL(
-        "../../renderer/components/bots/new-bot-dialog.tsx",
-        import.meta.url
-      ),
-      "utf8"
-    );
-    expect(source).toContain(
-      'export { NAME_ONLY_MISSION, CHECK_IN_PROMPT } from "#shared/bots/check-in";'
-    );
-    expect(source).toMatch(
-      /import\s*\{\s*NAME_ONLY_MISSION,\s*CHECK_IN_PROMPT,\s*describeCheckIn,?\s*\} from "#shared\/bots\/check-in";/
-    );
-    expect(source).not.toContain("function describeCheckIn");
-  });
 });

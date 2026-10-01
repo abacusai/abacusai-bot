@@ -38,7 +38,8 @@ describe("detached Electron dev resolution", () => {
         "#renderer/data/db": "src/renderer/data/db/index.ts",
         "#renderer/features/sessions/device/device-tab":
           "src/renderer/features/sessions/device/device-tab.tsx",
-        "#renderer/components/ui": "src/renderer/components/ui/index.ts",
+        "#renderer/components/bot-avatar":
+          "src/renderer/components/bot-avatar/index.tsx",
         "#main/rpc/procedures/impl": "src/main/rpc/procedures/impl.ts",
         "#preload/index": "src/preload/index.ts",
       };

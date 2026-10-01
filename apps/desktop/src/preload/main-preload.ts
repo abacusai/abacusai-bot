@@ -1,11 +1,11 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 
 import { installRpcPortHandshake, type HandshakeWindow } from "./rpc-port";
-export function installMainPreload(): void {
+export function installMainPreload(kind: "main" | "notch" = "main"): void {
   installRpcPortHandshake(
     ipcRenderer,
     (globalThis as unknown as { window: HandshakeWindow }).window,
-    "main"
+    kind
   );
   const abacusHost = {
     getPathForFile: (file: File): string => webUtils.getPathForFile(file),

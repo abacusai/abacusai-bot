@@ -136,8 +136,6 @@ import {
   RendererHost,
   restoreContinuity,
   RendererSwapScheduler,
-  rendererWebContents,
-  sendToRenderer,
   setActiveRendererHost,
 } from "./renderer-host";
 import type { RendererHostOptions } from "./renderer-host";
@@ -292,24 +290,6 @@ describe("RendererHost", () => {
       x: 0,
       y: 0,
     });
-  });
-});
-
-describe("sendToRenderer", () => {
-  it("does nothing without an active host", () => {
-    expect(rendererWebContents()).toBeNull();
-    sendToRenderer("channel", { some: "payload" });
-  });
-
-  it("reaches the active host's live renderer, across swaps", async () => {
-    const { host } = makeHost();
-
-    setActiveRendererHost(host);
-    await host.swap(new URL("app://bundle.new/"));
-    sendToRenderer("channel", "payload");
-
-    expect(rendererWebContents()).toBe(host.webContents);
-    expect(contentsOf(host).send).toHaveBeenCalledWith("channel", "payload");
   });
 });
 

@@ -43,10 +43,7 @@ const setup = () => {
     log: () => undefined,
   });
   const turnState = new SessionTurnStateService(() => undefined);
-  const wires = new Map<string, AgentWire>([
-    ["agui-1", "agui"],
-    ["nd-1", "ndjson"],
-  ]);
+  const wires = new Map<string, AgentWire>([["agui-1", "agui"]]);
   const changes: boolean[] = [];
   relay.onBusyChange((busy) => changes.push(busy));
   const busy = () =>
@@ -105,7 +102,7 @@ describe("agent busy follows the relay for agui runtimes (both pipe orderings)",
     expect(changes).toEqual([true, false]);
   });
 
-  it("an ndjson runtime still counts through main's turn state", () => {
+  it("a runtime not yet registered counts through main's turn state", () => {
     const { busy, compat } = setup();
     compat("nd-1", AgentStatus.Streaming);
     expect(busy()).toBe(true);

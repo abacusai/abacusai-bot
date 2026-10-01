@@ -134,7 +134,7 @@ beforeEach(() => {
     host as unknown as Parameters<typeof wireHostEvents>[0]
   );
   handlers.set("auth", (_event, ...args) =>
-    operations.startAbacusAuth(...(args as []))
+    operations.startAbacusAuth(...(args as [boolean, boolean]))
   );
   handlers.set("save", (_event, ...args) =>
     operations.saveApiKey(...(args as [string, string]))

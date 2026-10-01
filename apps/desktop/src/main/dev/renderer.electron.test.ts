@@ -238,7 +238,7 @@ beforeAll(async () => {
         webSocketDebuggerUrl: string;
       }>;
       url =
-        targets.find((t) => t.type === "page" && t.url.includes("index-next"))
+        targets.find((t) => t.type === "page" && t.url.includes("index.html"))
           ?.webSocketDebuggerUrl ?? null;
     } catch {
       // not yet
@@ -534,7 +534,7 @@ describe.skipIf(!runnable)("renderer acceptance (Electron)", () => {
     await sleep(3_000);
     const reloads = navigations.slice(before);
     expect(reloads, JSON.stringify(reloads)).toHaveLength(1);
-    expect(reloads[0]!.url).toContain("index-next");
+    expect(reloads[0]!.url).toContain("index.html");
     expect(await evaluate<number>("performance.timeOrigin")).toBe(second);
 
     harness("renderer.dropPort", {});

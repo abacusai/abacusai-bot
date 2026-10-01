@@ -18,10 +18,12 @@ export const PHASE6_NOTCH_PARITY = [
   },
   {
     id: "NT3",
-    status: "green",
-    evidence: "R6-T40 located consumer; packaged acceptance remains open.",
-    visible: false,
-    consumer: "src/main/index.ts#notifyTaskRunningInBackground",
+    status: "retired",
+    reason:
+      "The companion shows ongoing work; the background Task still running notification is removed.",
+    visible: true,
+    consumer:
+      "retired: The companion shows ongoing work instead of a background system notification.",
     owner: "phase-6",
   },
   {

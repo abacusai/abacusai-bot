@@ -196,7 +196,7 @@ describe("R2-T30 chat guards", () => {
           hits.push(`${file.path}: named temml import`);
         if (
           file.path.startsWith("features/chat/") &&
-          /^#next\/features\/(?!chat)/.test(source)
+          /^#renderer\/features\/(?!chat)/.test(source)
         )
           hits.push(`${file.path}: ${source}`);
       }

@@ -65,7 +65,7 @@ describe("bots architecture", () => {
     for (const [path, source] of Object.entries(sources))
       for (const specifier of imports(source, path)) {
         expect(specifier, path).not.toMatch(
-          /^#next\/features\/(?!bots(?:\/|$))/u
+          /^#renderer\/features\/(?!bots(?:\/|$))/u
         );
         expect(specifier, path).not.toMatch(/@dicebear|@lobehub|^uuid$/u);
       }
@@ -73,7 +73,7 @@ describe("bots architecture", () => {
   it("molecules import no collections or features", () => {
     for (const [path, source] of Object.entries(molecules))
       for (const specifier of imports(source, path))
-        expect(specifier, path).not.toMatch(/^#next\/(?:features|data)\//u);
+        expect(specifier, path).not.toMatch(/^#renderer\/(?:features|data)\//u);
   });
   it("bot actions branch on codes rather than error message strings", () => {
     for (const [path, source] of Object.entries(sources))
