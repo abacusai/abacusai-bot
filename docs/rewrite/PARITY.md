@@ -193,9 +193,9 @@ handler stays until the cut-over).
 | 177 | `stopDeviceStream` | preload/bridge.ts:991 | `devices.stream.stop` | M |  | `src/main/rpc/procedures/devices.ts#devicesRouter` |
 | 178 | `getSimulatorWindowSource` | preload/bridge.ts:996 | `devices.simulatorWindowSource` | Q |  | `src/main/rpc/procedures/devices.ts#devicesRouter` |
 | 179 | `installMaestro` | preload/bridge.ts:1001 | `devices.installMaestro` | M |  | `src/main/rpc/procedures/devices.ts#devicesRouter` |
-| 180 | `fetchWhisperFile` | preload/bridge.ts:1005 | `voice.whisper.fetch` | M | renderer-next lib/voice/whisper; progress via voice.whisper.progress | `src/main/rpc/procedures/voice.ts#voiceRouter` |
+| 180 | `fetchWhisperFile` | preload/bridge.ts:1005 | `voice.whisper.fetch` | M | renderer lib/voice/whisper; progress via voice.whisper.progress | `src/main/rpc/procedures/voice.ts#voiceRouter` |
 | 181 | `isWhisperCached` | preload/bridge.ts:1010 | — | R | no renderer caller | `retired: no renderer caller.` |
-| 182 | `requestMicrophoneAccess` | preload/bridge.ts:1012 | `voice.requestMicrophone` | M | renderer-next lib/voice/use-dictation | `src/main/rpc/procedures/voice.ts#voiceRouter` |
+| 182 | `requestMicrophoneAccess` | preload/bridge.ts:1012 | `voice.requestMicrophone` | M | renderer lib/voice/use-dictation | `src/main/rpc/procedures/voice.ts#voiceRouter` |
 | 183 | `streamDeviceTouch` | preload/bridge.ts:1016 | `devices.stream.touch` | M | was ipcRenderer.send; call without await | `src/main/rpc/procedures/devices.ts#devicesRouter` |
 | 184 | `streamDeviceKey` | preload/bridge.ts:1018 | `devices.stream.key` | M | was ipcRenderer.send; call without await | `src/main/rpc/procedures/devices.ts#devicesRouter` |
 | 185 | `openScreenRecordingSettings` | preload/bridge.ts:1020 | `system.openPrivacyPane` | M | input { pane: "screen-recording" } | `src/main/rpc/procedures/system.ts#systemRouter` |
@@ -236,13 +236,13 @@ handler stays until the cut-over).
 | 19 | `platform` | preload/index.ts | `system.info` | Q | platform (was a sync preload value) | `src/main/rpc/procedures/system.ts#systemRouter` |
 | 20 | `reportFunnelStep` | preload/index.ts | `system.funnelStep` | M | fire-and-forget | `src/main/rpc/procedures/system.ts#systemRouter` |
 | 21 | `getAccountState` | preload/index.ts | `account.state` | Q |  | `src/main/rpc/procedures/account.ts#accountRouter` |
-| 22 | `skipAccountOnboarding` | preload/index.ts | `account.skipOnboarding` | M | renderer-next features/onboarding/actions: persisted exit first | `src/main/rpc/procedures/account.ts#accountRouter` |
+| 22 | `skipAccountOnboarding` | preload/index.ts | `account.skipOnboarding` | M | renderer features/onboarding/actions: persisted exit first | `src/main/rpc/procedures/account.ts#accountRouter` |
 | 23 | `signOutAccount` | preload/index.ts | `account.signOut` | M |  | `src/main/rpc/procedures/account.ts#accountRouter` |
 | 24 | `forgetAccount` | preload/index.ts | `account.forget` | M |  | `src/main/rpc/procedures/account.ts#accountRouter` |
 | 25 | `savePastedTempFiles` | preload/index.ts | `files.savePastedTemp` | M | Uint8Array payloads | `src/main/rpc/procedures/files.ts#filesRouter` |
 | 26 | `saveLogs` | preload/index.ts | `system.logs.save` | M |  | `src/main/rpc/procedures/system.ts#systemRouter` |
 | 27 | `appendLogs` | preload/index.ts | `system.logs.append` | M | fire-and-forget; batched client-side | `src/main/rpc/procedures/system.ts#systemRouter` |
-| 28 | `showNotification` | preload/index.ts | `system.notify` | M | renderer-next lib/notify: kind + dedupeKey; main/notch/notifications | `src/main/rpc/procedures/system.ts#systemRouter` |
+| 28 | `showNotification` | preload/index.ts | `system.notify` | M | renderer lib/notify: kind + dedupeKey; main/notch/notifications | `src/main/rpc/procedures/system.ts#systemRouter` |
 | 29 | `onNotificationClicked` | preload/index.ts | `system.events` | S | { type: "notification-clicked", metadata } | `src/main/rpc/procedures/system.ts#systemRouter` |
 | 30 | `power.getKeepAwake` | preload/index.ts | — | R | no renderer caller | `retired: no renderer caller.` |
 | 31 | `power.setKeepAwake` | preload/index.ts | — | R | no renderer caller | `retired: no renderer caller.` |

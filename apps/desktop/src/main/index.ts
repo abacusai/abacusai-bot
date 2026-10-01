@@ -444,9 +444,7 @@ const rendererSwaps = new RendererSwapScheduler({
   // version has nothing to swap to (the newer one's schedule settles).
   target: (version) =>
     experienceRuntime?.store.version === version
-      ? experienceEntryUrl(
-          experienceRuntime.activeRendererUrl()
-        )
+      ? experienceEntryUrl(experienceRuntime.activeRendererUrl())
       : null,
   host: () => rendererHost,
   busy: () =>

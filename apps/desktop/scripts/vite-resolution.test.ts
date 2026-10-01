@@ -35,9 +35,9 @@ describe("detached Electron dev resolution", () => {
       const paths = {
         "#shared/contract": "src/shared/contract/index.ts",
         "#shared/conversation-scope": "src/shared/conversation-scope.ts",
-        "#next/data/db": "src/renderer-next/data/db/index.ts",
-        "#next/features/sessions/device/device-tab":
-          "src/renderer-next/features/sessions/device/device-tab.tsx",
+        "#renderer/data/db": "src/renderer/data/db/index.ts",
+        "#renderer/features/sessions/device/device-tab":
+          "src/renderer/features/sessions/device/device-tab.tsx",
         "#renderer/components/ui": "src/renderer/components/ui/index.ts",
         "#main/rpc/procedures/impl": "src/main/rpc/procedures/impl.ts",
         "#preload/index": "src/preload/index.ts",

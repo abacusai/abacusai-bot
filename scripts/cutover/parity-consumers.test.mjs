@@ -7,13 +7,13 @@ import { specifiers } from "./parsed-source.mjs";
 const desktop = path.resolve("apps/desktop");
 test("parsed consumer rejects legacy paths, missing symbols and empty retirements", () => {
   resolveConsumer(
-    "src/renderer-next/features/settings/companion.tsx#CompanionSettings",
+    "src/renderer/features/settings/companion.tsx#CompanionSettings",
     desktop
   );
   for (const value of [
     "",
     "src/renderer/app.tsx#App",
-    "src/renderer-next/features/settings/companion.tsx#Missing",
+    "src/renderer/features/settings/companion.tsx#Missing",
     "retired: ",
   ])
     assert.throws(() => resolveConsumer(value, desktop));

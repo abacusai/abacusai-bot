@@ -224,13 +224,13 @@ jobs:
             })
           '
 
-  # renderer-next's screenshot gate (spec 01 §10.2) in the real Electron
+  # renderer's screenshot gate (spec 01 §10.2) in the real Electron
   # window: every route and band, the collapsed, floating, split, compact and
   # full-screen states, axe, and the Linux native-frame probe. The probe runs
   # only on Linux, so this job requires it: a run that skipped it fails
   # (ABACUSBOT_REQUIRE_NATIVE_FRAME). macOS runs record it as skipped.
-  screenshots-next:
-    name: renderer-next screenshots (Linux)
+  screenshots:
+    name: renderer screenshots (Linux)
     needs: [check]
     runs-on: ubuntu-latest
     steps:
@@ -260,7 +260,7 @@ jobs:
         working-directory: apps/desktop
         env:
           ABACUSBOT_REQUIRE_NATIVE_FRAME: "1"
-        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" node scripts/screenshots-next.mjs --require-native-frame
+        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" node scripts/screenshots.mjs --require-native-frame
 
   package:
     name: Package (${{ matrix.os }})

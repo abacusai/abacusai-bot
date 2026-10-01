@@ -22,7 +22,7 @@ export const checkReleaseBuild = (dist = path.join(desktop, "dist")) => {
     );
   const forbidden = [
     /__abacusDev/,
-    /renderer-next fixture-db: dev fixture tables/,
+    /renderer fixture-db: dev fixture tables/,
     /TanStackDevtools/,
     /ReactQueryDevtools/,
     /TanStackRouterDevtools/,

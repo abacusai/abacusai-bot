@@ -1,5 +1,5 @@
 /**
- * The screenshot gate's checks (scripts/screenshots-next.mjs; Codex impl
+ * The screenshot gate's checks (scripts/screenshots.mjs; Codex impl
  * r1 #13, Claude impl r1 #9/#10): each one fails on the geometry or the
  * axe result it guards, so a green run means the states were asserted.
  */
@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const script = pathToFileURL(
-  resolve(import.meta.dirname, "../../../scripts/screenshots-next.mjs")
+  resolve(import.meta.dirname, "../../../scripts/screenshots.mjs")
 ).href;
 
 type Checks = {

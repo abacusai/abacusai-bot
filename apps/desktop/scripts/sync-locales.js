@@ -19,7 +19,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const LOCALE_DIR = path.join(ROOT, "src/renderer/locales");
 const BASE_LOCALE = "en-US.json";
 const checkOnly = process.argv.includes("--check");
-// renderer-next reuses old strings under new keys (spec 01 §9.3): with this
+// renderer reuses old strings under new keys (spec 01 §9.3): with this
 // flag a missing newKey takes the same locale's oldKey translation.
 const applyKeymap = process.argv.includes("--apply-keymap");
 const KEYMAP_PATH = path.join(ROOT, "scripts/locale-keymap.json");
@@ -100,7 +100,7 @@ function flattenKeys(obj, prefix = "") {
 // Both renderers' t() calls resolve against the one set of locale files.
 const SOURCE_DIRS = [
   path.join(ROOT, "src/renderer"),
-  path.join(ROOT, "src/renderer-next"),
+  path.join(ROOT, "src/renderer"),
 ];
 
 // CLDR plural categories i18next appends to a plural key.

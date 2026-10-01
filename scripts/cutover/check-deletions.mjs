@@ -14,7 +14,7 @@ export const resolveLocal = (specifier, importer, desktop) => {
     "#shared/": "shared",
     "#preload/": "preload",
     "#renderer/": "renderer",
-    "#next/": "renderer-next",
+    "#renderer/": "renderer",
     "#locales/": "renderer/locales",
   };
   let target;
@@ -41,9 +41,18 @@ export const checkDeletions = (repo) => {
       path.join(repo, "scripts/cutover/legacy-renderer-inventory.json")
     )
   );
+  const moved = JSON.parse(
+    fs.readFileSync(
+      path.join(repo, "scripts/cutover/renderer-move-inventory.json")
+    )
+  );
   for (const { path: file, blob } of inventory.files) {
     const target = path.join(repo, file);
-    if (fs.existsSync(target) && gitBlob(fs.readFileSync(target)) === blob)
+    if (
+      fs.existsSync(target) &&
+      gitBlob(fs.readFileSync(target)) === blob &&
+      !moved.files.some((entry) => entry.path === file && entry.blob === blob)
+    )
       throw new Error(`Legacy blob remains: ${file}`);
   }
   const visit = (directory) => {

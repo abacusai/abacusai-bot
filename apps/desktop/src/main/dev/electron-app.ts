@@ -2,7 +2,7 @@
  * The Electron acceptance harness the chat gates share (spec 02 §13, the
  * foundation's R1-T11b pattern): the real app from `dist/` built with
  * `VITE_UI_GALLERY=1` (dev hooks, no fixture tables), an isolated profile,
- * the dev mutation harness on stdin, and CDP on the renderer-next page.
+ * the dev mutation harness on stdin, and CDP on the renderer page.
  *
  * Without a display or a usable build a suite skips locally, and fails loudly
  * where it is required (`CI`, or `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1`); a
@@ -26,7 +26,7 @@ import { harnessAvailability } from "../services/browser/browser-snapshot-harnes
 
 export const DESKTOP = resolve(import.meta.dirname, "../../..");
 export const REPO = resolve(DESKTOP, "../..");
-const FIXTURE_MARKER = "renderer-next fixture-db: dev fixture tables";
+const FIXTURE_MARKER = "renderer fixture-db: dev fixture tables";
 
 export const REQUIRED =
   process.env.ABACUSBOT_REQUIRE_ELECTRON_SUITES === "1" ||
@@ -43,7 +43,7 @@ const assets = (): string[] => {
 /** "ok", or why the current dist/ cannot serve an acceptance run. */
 const buildState = (): string => {
   if (!existsSync(join(DESKTOP, "dist/renderer/index.html")))
-    return "no renderer-next build";
+    return "no renderer build";
   if (!existsSync(join(DESKTOP, "dist/main/index.js"))) return "no main build";
   const sources = assets();
   if (!sources.some((source) => source.includes("__abacusDev")))
@@ -97,7 +97,7 @@ export interface App {
   readonly home: string;
   readonly output: string[];
   send(method: string, params?: object): Promise<any>;
-  /** Evaluates in the renderer-next page, awaiting promises, by value. */
+  /** Evaluates in the renderer page, awaiting promises, by value. */
   evaluate<T>(expression: string): Promise<T>;
   until(expression: string, timeoutMs?: number, what?: string): Promise<void>;
   /** A dev mutation harness op (`src/main/dev/mutation-harness.ts`). */
@@ -181,7 +181,7 @@ export const launch = async (options: {
   if (url == null) {
     close();
     throw new Error(
-      `renderer-next page never appeared\n${output.join("").slice(-4000)}`
+      `renderer page never appeared\n${output.join("").slice(-4000)}`
     );
   }
   const ws = new WebSocket(url);

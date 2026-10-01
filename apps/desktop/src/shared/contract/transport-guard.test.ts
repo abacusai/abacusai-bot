@@ -5,7 +5,7 @@
  * legacy map has to); code may not.
  *
  * Here rather than beside the transport: it reads the file system, and the
- * renderer-next project compiles without Node's types.
+ * renderer project compiles without Node's types.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -13,7 +13,7 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const SRC = join(import.meta.dirname, "../..");
-const SCANNED = ["renderer-next/data", "shared/contract"];
+const SCANNED = ["renderer/data", "shared/contract"];
 
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
@@ -80,7 +80,7 @@ describe("the transport guard (A-T7)", () => {
   const files = SCANNED.flatMap((dir) => walk(join(SRC, dir)));
 
   it("scans the data layer and the contract", () => {
-    expect(files.some((file) => file.includes("renderer-next"))).toBe(true);
+    expect(files.some((file) => file.includes("renderer"))).toBe(true);
     expect(files.length).toBeGreaterThan(20);
   });
 

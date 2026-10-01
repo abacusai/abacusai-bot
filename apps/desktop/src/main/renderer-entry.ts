@@ -1,6 +1,6 @@
 /**
  * Which document the main window loads (spec 01 §3.6): `index.html` for
- * the `wco` generation (renderer-next), else `index.html`. The legacy entry
+ * the `wco` generation (renderer), else `index.html`. The legacy entry
  * keeps exactly the URL it always had (the base itself), so nothing about the
  * shipped renderer's location changes.
  */

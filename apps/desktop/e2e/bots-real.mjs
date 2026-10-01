@@ -104,7 +104,7 @@ try {
     } catch {}
     if (!page) await sleep(100);
   }
-  assert(page, "renderer-next appeared");
+  assert(page, "renderer appeared");
   ws = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => {
     ws.onopen = resolve;

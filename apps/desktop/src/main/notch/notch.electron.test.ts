@@ -45,7 +45,7 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
     execFileSync(
       esbuild,
       [
-        "src/renderer-next/lib/sound.ts",
+        "src/renderer/lib/sound.ts",
         "--bundle",
         "--platform=browser",
         "--format=iife",
@@ -58,12 +58,12 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
     execFileSync(
       esbuild,
       [
-        "src/renderer-next/test-support/notch-fit.tsx",
+        "src/renderer/test-support/notch-fit.tsx",
         "--bundle",
         "--platform=browser",
         "--format=iife",
         "--jsx=automatic",
-        "--alias:#next=./src/renderer-next",
+        "--alias:#next=./src/renderer",
         "--alias:#shared=./src/shared",
         "--alias:#locales=./src/renderer/locales",
         `--outfile=${join(scratch, "fit.js")}`,

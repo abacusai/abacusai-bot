@@ -5,7 +5,7 @@
  * than silently widening a procedure to `any`.
  * Sub-slice B adds `@tanstack/db` and `@tanstack/react-db`. (That the real
  * `db.*` client satisfies the collections' table client is checked where the
- * renderer builds them: renderer-next/data/db/tables.ts takes it uncast.)
+ * renderer builds them: renderer/data/db/tables.ts takes it uncast.)
  */
 import type {
   AgentErrorPayload,

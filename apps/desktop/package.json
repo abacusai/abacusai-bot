@@ -31,13 +31,6 @@
       "./src/shared/*/index.ts",
       "./src/shared/*"
     ],
-    "#next/*": [
-      "./src/renderer-next/*.tsx",
-      "./src/renderer-next/*.ts",
-      "./src/renderer-next/*/index.tsx",
-      "./src/renderer-next/*/index.ts",
-      "./src/renderer-next/*"
-    ],
     "#locales/*": [
       "./src/renderer/locales/*"
     ]
@@ -56,16 +49,16 @@
     "package:linux": "electron-builder --config electron-builder.yml --linux",
     "package:mac": "electron-builder --config electron-builder.yml --mac",
     "package:win": "electron-builder --config electron-builder.yml --win",
-    "screenshots:next": "node scripts/screenshots-next.mjs",
     "start": "electron .",
     "sync:locales": "node scripts/sync-locales.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:unit": "vitest run --project shared --project main --project renderer-next",
+    "test:unit": "vitest run --project shared --project main --project renderer",
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "vendor": "node scripts/download-scrcpy.js && node scripts/download-wa-js.js && node scripts/download-llama-server.js",
-    "dev:fixtures": "VITE_NEXT_DB_FIXTURES=1 vite"
+    "dev:fixtures": "VITE_NEXT_DB_FIXTURES=1 vite",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
     "@ff-labs/fff-node": "^0.9.6",
