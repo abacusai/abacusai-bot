@@ -72,8 +72,10 @@ export const createNotchWindow = (
     view = createNotchView(preload);
     win.contentView.addChildView(view);
     fitView(win, view);
-    const child = view;
-    win.on("resize", () => fitView(win, child));
+    win.on("resize", () => {
+      for (const child of win.contentView.children)
+        if (child instanceof WebContentsView) fitView(win, child);
+    });
     return { win, view };
   } catch (error) {
     if (view && !view.webContents.isDestroyed()) view.webContents.close();
