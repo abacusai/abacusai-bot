@@ -1,0 +1,40 @@
+6dba29c7 test(notch): cover reused permission ids across incarnations
+1e68ec17 fix(chat): keep notch review reachable and key question state by lineage
+50cc1b43 test(shell): isolate pending-hover cleanup from gallery loading
+afd2dc33 test(notch): assert inline questions only when measured content fits
+fb8b4dd3 test(shell): await rail unmount before checking hover cleanup
+da1d0a52 test(onboarding): wait for committed enabled step controls
+3803a7dd fix(onboarding): wait for hatch completion in route acceptance test
+b48c0d71 test(phase6): verify no-model completion and native notch fit
+c7849efd fix(chat): remeasure notch approval controls throughout resize
+49f7bb4e fix(onboarding): reset shown telemetry when leaving first-bot step
+df8a666c fix(onboarding): report keeping the tour bot and finish hatch settling
+879a8066 Merge branch 'rewrite/renderer' into codex-phase6
+06a04bed fix(notch): clip the cut-out on an opaque paint surface
+e1a84c53 Merge branch 'rewrite/renderer' into codex-phase6
+96f00678 fix(phase6): resolve full-suite compatibility and gate checks
+16d23fd3 feat(avatar): expose the canvas egg hatch animation
+678bd18e test(shell): use unrestricted bare route for unmount assertion
+dd824102 fix(chat): preserve shared readiness for signal-free load callers
+2783d8f6 feat(phase6): localize companion and expand visual coverage
+01217375 test(onboarding): exercise real routes and resumable completion
+20bd4781 fix(notch): cancel stale actions and cover runtime budget and shared feeds
+bde7a3ae test(notch): measure native fitting audio and lifecycle disposal
+7f0e2779 fix(main): exclude companion windows from app window audits
+10e727ee test(chat): verify caller abort and expose shared error copy
+b4b318ed feat(phase6): complete loader readiness hatch replay and companion interactions
+742ab15e test(notch): exercise standby ownership visibility and native teardown
+34869953 fix(chat): keep companion decisions focused and show option descriptions
+fc298e7f Merge rewrite/renderer into phase 6, preserve shared attention feed and notification lineage
+3d40ccef fix(notifications): pass attention lineage to the main policy
+3c7e4891 feat(notch): add companion renderer, priority director and gallery states
+12ff671f feat(onboarding): render resumable setup, first bot and spotlight tour
+674fc714 feat(shell): register phase-6 spotlight anchors
+8e42dc91 feat(notch): wire notification policy, reactions and native lifecycle checks
+672eefc1 fix(gallery): keep bot replay state mutable across route splitting
+7538477a feat(bots): claim attention sounds with shared cue lineage
+5b45fdc4 feat(chat): add bounded notch permissions and cancellable session loading
+a8d516b4 feat(voice): add cancellable dictation operations and attention cue claims
+2b1c7f11 feat(bots): expose phase-6 template creation and shared notice feed
+6dba85a4 feat(onboarding): add step machine and resumable completion protocol
+c115c169 feat(notch): add typed companion window lifecycle and commands

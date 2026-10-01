@@ -1,0 +1,1177 @@
+
+ RUN  v4.1.11 /Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop
+
+ ❯ |main| src/main/rpc/subscriber-queue.test.ts (24 tests | 1 failed) 118ms
+     × declares, per iterator, the class the spec's table gives it 6ms
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/notch-router.test.ts" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/-notch-router.test.ts" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/phase6.routes.test.tsx" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/-phase6.routes.test.tsx" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/notch-router.test.ts" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/-notch-router.test.ts" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/phase6.routes.test.tsx" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/-phase6.routes.test.tsx" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/notch-router.test.ts" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/-notch-router.test.ts" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/phase6.routes.test.tsx" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/-phase6.routes.test.tsx" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/notch-router.test.ts" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/notch-routes/-notch-router.test.ts" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+Warning: Route file "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/phase6.routes.test.tsx" does not export a Route. This file will not be included in the route tree.
+
+If this file is not intended to be a route, you can exclude it using one of these options:
+  1. Rename the file to "/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/routes/-phase6.routes.test.tsx" (prefix with "-")
+  2. Use 'routeFileIgnorePattern' in your config to match this file
+
+Current configuration:
+  routeFileIgnorePrefix: "-"
+  routeFileIgnorePattern: undefined
+vite v8.2.1 building client environment for production...
+[2Ktransforming...[plugin vite:react-compiler] (BuildHIR::node.lowerReorderableExpression) Expression type `JSXElement` cannot be safely reordered
+
+  ! react-compiler(Todo): (BuildHIR::node.lowerReorderableExpression)
+  | Expression type `JSXElement` cannot be safely reordered
+     ,-[/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/ui/toast.tsx:105:12]
+ 104 |   className,
+ 105 |   render = <Button variant="outline" size="sm" />,
+     :            ^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^
+     :                               `-- `JSXElement` cannot be safely reordered
+ 106 |   ...props
+     `----
+  help: Rewrite the highlighted code using syntax supported by React
+        Compiler
+  note: React Compiler skipped optimizing this component or hook
+
+[plugin vite:react-compiler] (BuildHIR::node.lowerReorderableExpression) Expression type `JSXElement` cannot be safely reordered
+
+  ! react-compiler(Todo): (BuildHIR::node.lowerReorderableExpression)
+  | Expression type `JSXElement` cannot be safely reordered
+     ,-[/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/ui/toast.tsx:121:12]
+ 120 |   children,
+ 121 |   render = <Button variant="ghost" size="icon-sm" />,
+     :            ^^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^^
+     :                                `-- `JSXElement` cannot be safely reordered
+ 122 |   ...props
+     `----
+  help: Rewrite the highlighted code using syntax supported by React
+        Compiler
+  note: React Compiler skipped optimizing this component or hook
+
+[plugin vite:react-compiler] `try`/`finally` without `catch` is not supported by React Compiler
+
+  ! react-compiler(Todo): `try`/`finally` without `catch` is not supported by
+  | React Compiler
+     ,-[/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/features/notch/index.tsx:309:5]
+ 308 |     };
+ 309 |     try {
+     :     ^|^
+     :      `-- Unsupported `try` starts here
+ 310 |       const handle = await transport.client.bots.openChat(
+ 311 |         { botId },
+ 312 |         { signal: abort.signal }
+ 313 |       );
+ 314 |       check();
+ 315 |       await chat.session(handle.sessionId).load({ signal: abort.signal });
+ 316 |       check();
+ 317 |       const attention = {
+ 318 |         kind: "reply" as const,
+ 319 |         sessionId: handle.sessionId,
+ 320 |         since: Date.now(),
+ 321 |         botId,
+ 322 |         canReply: true,
+ 323 |       };
+ 324 |       setManual({
+ 325 |         ...current.current.shown,
+ 326 |         route: call ? "/call" : "/reply/$id",
+ 327 |         sessionId: handle.sessionId,
+ 328 |         identity: `manual:${handle.sessionId}:${call}`,
+ 329 |         expanded: true,
+ 330 |         hidden: false,
+ 331 |         attention,
+ 332 |         queue: [attention],
+ 333 |       });
+ 334 |       setHovered(true);
+ 335 |       await transport.client.notch.focus(
+ 336 |         { focus: true },
+ 337 |         { signal: abort.signal }
+ 338 |       );
+ 339 |       check();
+ 340 |     } finally {
+     :      ^^^^|^^^^
+     :          `-- This `finally` clause requires unsupported control flow
+ 341 |       clearTimeout(timer);
+     `----
+  help: React Compiler cannot analyze this control flow. Refactor the
+        cleanup to avoid `finally`, or suppress this warning if this
+        function should remain uncompiled
+  note: React Compiler skipped optimizing this component or hook
+
+[plugin vite:react-compiler] (BuildHIR::lowerAssignment) Handle computed properties in ObjectPattern
+
+  ! react-compiler(Todo): (BuildHIR::lowerAssignment) Handle computed
+  | properties in ObjectPattern
+    ,-[/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/features/bots/chat/activity.ts:34:17]
+ 33 |       activities.setState((state) => {
+ 34 |         const { [botId]: _old, ...rest } = state;
+    :                 ^^^^^^^^^^^^^
+ 35 |         return rest;
+    `----
+  help: Rewrite the highlighted code using syntax supported by React
+        Compiler
+  note: React Compiler skipped optimizing this component or hook
+
+[plugin vite:react-compiler] (BuildHIR::lowerStatement) Handle TryStatement with a finalizer ('finally') clause
+
+  ! react-compiler(Todo): (BuildHIR::lowerStatement) Handle TryStatement with
+  | a finalizer ('finally') clause
+    ,-[/Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop/src/renderer-next/features/bots/sidebar/delete-dialog.tsx:76:6]
+ 75 |       setError(true);
+ 76 |     } finally {
+    :      ^^^^^^^^^
+ 77 |       setPending(false);
+    `----
+  help: Rewrite the highlighted code using syntax supported by React
+        Compiler
+  note: React Compiler skipped optimizing this component or hook
+
+✓ 6445 modules transformed.
+rendering chunks...
+[rpc] window.state FORBIDDEN This procedure needs a window; this transport has none
+computing gzip size...
+dist/renderer/index.html                                                        4.37 kB │ gzip:     1.06 kB
+dist/renderer/assets/KaTeX_Size3-Regular-CTq5MqoE.woff                          4.42 kB
+dist/renderer/assets/KaTeX_Size4-Regular-Dl5lxZxV.woff2                         4.92 kB
+dist/renderer/assets/KaTeX_Size2-Regular-Dy4dx90m.woff2                         5.20 kB
+dist/renderer/assets/KaTeX_Size1-Regular-mCD8mA8B.woff2                         5.46 kB
+dist/renderer/notch.html                                                        5.64 kB │ gzip:     1.28 kB
+dist/renderer/assets/KaTeX_Size4-Regular-BF-4gkZK.woff                          5.98 kB
+dist/renderer/assets/KaTeX_Size2-Regular-oD1tc_U0.woff                          6.18 kB
+dist/renderer/assets/KaTeX_Size1-Regular-C195tn64.woff                          6.49 kB
+dist/renderer/assets/KaTeX_Caligraphic-Regular-Di6jR-x-.woff2                   6.90 kB
+dist/renderer/assets/KaTeX_Caligraphic-Bold-Dq_IR9rO.woff2                      6.91 kB
+dist/renderer/assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2       7.50 kB
+dist/renderer/assets/figma-CmWwieur.webp                                        7.55 kB
+dist/renderer/assets/KaTeX_Size3-Regular-DgpXs0kz.ttf                           7.58 kB
+dist/renderer/assets/KaTeX_Caligraphic-Regular-CTRA-rTL.woff                    7.65 kB
+dist/renderer/assets/KaTeX_Caligraphic-Bold-BEiXGLvX.woff                       7.71 kB
+dist/renderer/assets/gmail-DSpKh0D1.png                                         8.03 kB
+dist/renderer/index-next.html                                                   8.46 kB │ gzip:     1.76 kB
+dist/renderer/assets/jetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2            9.00 kB
+dist/renderer/assets/KaTeX_Script-Regular-D3wIWfF6.woff2                        9.64 kB
+dist/renderer/assets/github-DvICSxMq.webp                                       9.68 kB
+dist/renderer/assets/outlook-BjqFt4_b.webp                                      9.77 kB
+dist/renderer/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2               10.25 kB
+dist/renderer/assets/KaTeX_SansSerif-Regular-DDBCnlJ7.woff2                    10.34 kB
+dist/renderer/assets/KaTeX_Size4-Regular-DWFBv043.ttf                          10.36 kB
+dist/renderer/assets/KaTeX_Script-Regular-D5yQViql.woff                        10.58 kB
+dist/renderer/assets/jira-D5NrWGPo.webp                                        10.91 kB
+dist/renderer/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2                11.23 kB
+dist/renderer/assets/KaTeX_Fraktur-Regular-CTYiF6lA.woff2                      11.31 kB
+dist/renderer/assets/KaTeX_Fraktur-Bold-CL6g_b3V.woff2                         11.34 kB
+dist/renderer/assets/KaTeX_Size2-Regular-B7gKUWhC.ttf                          11.50 kB
+dist/renderer/assets/KaTeX_SansSerif-Italic-C3H0VqGB.woff2                     12.02 kB
+dist/renderer/assets/jetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2        12.10 kB
+dist/renderer/assets/KaTeX_SansSerif-Bold-D1sUS0GD.woff2                       12.21 kB
+dist/renderer/assets/KaTeX_Size1-Regular-Dbsnue_I.ttf                          12.22 kB
+dist/renderer/assets/KaTeX_SansSerif-Regular-CS6fqUqJ.woff                     12.31 kB
+dist/renderer/assets/KaTeX_Caligraphic-Regular-wX97UBjC.ttf                    12.34 kB
+dist/renderer/assets/KaTeX_Caligraphic-Bold-ATXxdsX0.ttf                       12.36 kB
+dist/renderer/assets/KaTeX_Fraktur-Regular-Dxdc4cR9.woff                       13.20 kB
+dist/renderer/assets/KaTeX_Fraktur-Bold-BsDP51OF.woff                          13.29 kB
+dist/renderer/assets/KaTeX_Typewriter-Regular-CO6r4hn1.woff2                   13.56 kB
+dist/renderer/assets/KaTeX_SansSerif-Italic-DN2j7dab.woff                      14.11 kB
+dist/renderer/assets/KaTeX_SansSerif-Bold-DbIhKOiC.woff                        14.40 kB
+dist/renderer/assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2       15.19 kB
+dist/renderer/assets/KaTeX_Typewriter-Regular-C0xS9mPB.woff                    16.02 kB
+dist/renderer/assets/KaTeX_Math-BoldItalic-CZnvNsCZ.woff2                      16.40 kB
+dist/renderer/assets/KaTeX_Math-Italic-t53AETM-.woff2                          16.44 kB
+dist/renderer/assets/KaTeX_Script-Regular-C5JkGWo-.ttf                         16.64 kB
+dist/renderer/assets/KaTeX_Main-BoldItalic-DxDJ3AOS.woff2                      16.78 kB
+dist/renderer/assets/KaTeX_Main-Italic-NWA7e6Wa.woff2                          16.98 kB
+dist/renderer/assets/onedrive-BlhNRxxz.webp                                    17.02 kB
+dist/renderer/assets/x-CZbGYprn.webp                                           17.49 kB
+dist/renderer/assets/KaTeX_Math-BoldItalic-iY-2wyZ7.woff                       18.66 kB
+dist/renderer/assets/KaTeX_Math-Italic-DA0__PXp.woff                           18.74 kB
+dist/renderer/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2                 18.74 kB
+dist/renderer/assets/inter-greek-wght-normal-CkhJZR-_.woff2                    18.99 kB
+dist/renderer/assets/KaTeX_Main-BoldItalic-SpSLRI95.woff                       19.41 kB
+dist/renderer/assets/KaTeX_SansSerif-Regular-BNo7hRIc.ttf                      19.43 kB
+dist/renderer/assets/KaTeX_Fraktur-Regular-CB_wures.ttf                        19.57 kB
+dist/renderer/assets/KaTeX_Fraktur-Bold-BdnERNNW.ttf                           19.58 kB
+dist/renderer/assets/google_calendar-DmxKB6kd.webp                             19.59 kB
+dist/renderer/assets/KaTeX_Main-Italic-BMLOBm91.woff                           19.67 kB
+dist/renderer/assets/zoom-N0FL5dVG.webp                                        20.56 kB
+dist/renderer/assets/dropbox-BIqcApJB.png                                      21.49 kB
+dist/renderer/assets/KaTeX_SansSerif-Italic-YYjJ1zSn.ttf                       22.36 kB
+dist/renderer/assets/gcs-QHnuyzWv.png                                          22.74 kB
+dist/renderer/assets/KaTeX_SansSerif-Bold-CFMepnvq.ttf                         24.50 kB
+dist/renderer/assets/KaTeX_Main-Bold-Cx986IdX.woff2                            25.32 kB
+dist/renderer/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2             25.96 kB
+dist/renderer/assets/KaTeX_Main-Regular-B22Nviop.woff2                         26.27 kB
+dist/renderer/assets/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf                     27.55 kB
+dist/renderer/assets/KaTeX_AMS-Regular-BQhdFMY1.woff2                          28.07 kB
+dist/renderer/assets/KaTeX_Main-Bold-Jm3AIy58.woff                             29.91 kB
+dist/renderer/assets/KaTeX_Main-Regular-Dr94JaBh.woff                          30.77 kB
+dist/renderer/assets/KaTeX_Math-BoldItalic-B3XSjfu4.ttf                        31.19 kB
+dist/renderer/assets/KaTeX_Math-Italic-flOr_0UB.ttf                            31.30 kB
+dist/renderer/assets/KaTeX_Main-BoldItalic-DzxPMmG6.ttf                        32.96 kB
+dist/renderer/assets/KaTeX_AMS-Regular-DMm9YOAa.woff                           33.51 kB
+dist/renderer/assets/KaTeX_Main-Italic-3WenGoN9.ttf                            33.58 kB
+dist/renderer/assets/confluence-C5NFNdZR.png                                   35.30 kB
+dist/renderer/assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2           40.40 kB
+dist/renderer/assets/inter-latin-wght-normal-Dx4kXJAl.woff2                    48.25 kB
+dist/renderer/assets/KaTeX_Main-Bold-waoOVXN0.ttf                              51.33 kB
+dist/renderer/assets/KaTeX_Main-Regular-ypZvNtVU.ttf                           53.58 kB
+dist/renderer/assets/slack-DNyH0_IY.png                                        57.32 kB
+dist/renderer/assets/KaTeX_AMS-Regular-DRggAlZN.ttf                            63.63 kB
+dist/renderer/assets/Inter-latin-BwkfbSeq-BwkfbSeq.woff2                       72.92 kB
+dist/renderer/assets/BricolageGrotesque-Bold-BIJrwikb-BIJrwikb.ttf             82.20 kB
+dist/renderer/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2                85.06 kB
+dist/renderer/assets/codicon-ngg6Pgfi.ttf                                     121.97 kB
+dist/renderer/assets/google_drive-CQHh7hjw.webp                               136.01 kB
+dist/renderer/assets/editor.worker-D9LTT52e.js                                279.99 kB
+dist/renderer/assets/json.worker-BQjvpvLl.js                                  409.22 kB
+dist/renderer/assets/icon2-D1GwO0yH.png                                       625.54 kB
+dist/renderer/assets/html.worker-CAO3krAG.js                                  719.57 kB
+dist/renderer/assets/error-img-back2-BbwLcYBb.webp                            939.29 kB
+dist/renderer/assets/css.worker-CWjsUI3z.js                                 1,054.54 kB
+dist/renderer/assets/ts.worker-Dm2WTuyv.js                                  6,893.46 kB
+dist/renderer/assets/ort-wasm-simd-threaded.asyncify-CxOG5pUO.wasm         26,861.77 kB │ gzip: 6,762.79 kB
+dist/renderer/assets/bots-D_YvtmJ6.css                                          1.38 kB │ gzip:     0.54 kB
+dist/renderer/assets/notch-Ce-XPGCJ.css                                         1.59 kB │ gzip:     0.65 kB
+dist/renderer/assets/onboarding-CghTNAii.css                                    3.07 kB │ gzip:     0.97 kB
+dist/renderer/assets/view-DId50OC-.css                                          5.78 kB │ gzip:     1.62 kB
+dist/renderer/assets/shared-element-Zw7lNu9j.css                                9.84 kB │ gzip:     2.30 kB
+dist/renderer/assets/editor-CGi5ri4_.css                                      145.98 kB │ gzip:    22.60 kB
+dist/renderer/assets/transition-types-B3nzcthK.css                            180.79 kB │ gzip:    28.40 kB
+dist/renderer/assets/main-CGo-LjVz.css                                        306.69 kB │ gzip:    52.61 kB
+dist/renderer/assets/__vite-browser-external-2447137e-BvRk9kiK.js               0.00 kB │ gzip:     0.02 kB
+dist/renderer/assets/root-DLTE-HSj.js                                           0.03 kB │ gzip:     0.05 kB │ map:      0.40 kB
+dist/renderer/assets/pptx-BMo_D7zr.js                                           0.03 kB │ gzip:     0.05 kB │ map:      3.79 kB
+dist/renderer/assets/routines._list.index-DJ7LAi8J.js                           0.03 kB │ gzip:     0.05 kB │ map:      0.47 kB
+dist/renderer/assets/_bare-xSdOb43j.js                                          0.07 kB │ gzip:     0.08 kB │ map:      0.50 kB
+dist/renderer/assets/artifacts-8f75MSAi.js                                      0.07 kB │ gzip:     0.08 kB │ map:      0.48 kB
+dist/renderer/assets/library-8f75MSAi.js                                        0.07 kB │ gzip:     0.08 kB │ map:      0.47 kB
+dist/renderer/assets/routines-8f75MSAi.js                                       0.07 kB │ gzip:     0.08 kB │ map:      0.64 kB
+dist/renderer/assets/sessions-8f75MSAi.js                                       0.07 kB │ gzip:     0.08 kB │ map:      0.58 kB
+dist/renderer/assets/settings-8f75MSAi.js                                       0.07 kB │ gzip:     0.08 kB │ map:      0.52 kB
+dist/renderer/assets/routines._list.new-DU6PF5HF.js                             0.07 kB │ gzip:     0.08 kB │ map:      0.58 kB
+dist/renderer/assets/sections-BXBVVi0Q.js                                       0.07 kB │ gzip:     0.08 kB
+dist/renderer/assets/loaders-D-LJ9NIc.js                                        0.07 kB │ gzip:     0.09 kB │ map:      0.83 kB
+dist/renderer/assets/typescript-DM2JiFyp.js                                     0.07 kB │ gzip:     0.09 kB
+dist/renderer/assets/useStore-By27tMX5.js                                       0.09 kB │ gzip:     0.11 kB │ map:      0.71 kB
+dist/renderer/assets/fileRoute-DTOCQHP_.js                                      0.10 kB │ gzip:     0.11 kB │ map:      5.25 kB
+dist/renderer/assets/not-found-i5RsCZif.js                                      0.11 kB │ gzip:     0.11 kB │ map:      1.25 kB
+dist/renderer/assets/utils-DzVCuxFH.js                                          0.18 kB │ gzip:     0.16 kB │ map:      0.76 kB
+dist/renderer/assets/useSearch-M0gOiQ5f.js                                      0.21 kB │ gzip:     0.16 kB │ map:      1.39 kB
+dist/renderer/assets/VN5QTPB3-DEglULg0.js                                       0.24 kB │ gzip:     0.20 kB │ map:      1.00 kB
+dist/renderer/assets/redirect-B4OxYbs2.js                                       0.31 kB │ gzip:     0.20 kB │ map:      2.46 kB
+dist/renderer/assets/useRouter-BZaHI6AS.js                                      0.31 kB │ gzip:     0.24 kB │ map:      1.58 kB
+dist/renderer/assets/triangle-alert-BJNPeVl7.js                                 0.32 kB │ gzip:     0.24 kB │ map:      1.26 kB
+dist/renderer/assets/folder-CfxTJ6Ml.js                                         0.35 kB │ gzip:     0.24 kB │ map:      1.73 kB
+dist/renderer/assets/status-c_aOJsse.js                                         0.36 kB │ gzip:     0.27 kB │ map:      1.00 kB
+dist/renderer/assets/clsx-DB0hHKMi.js                                           0.36 kB │ gzip:     0.23 kB │ map:      1.06 kB
+dist/renderer/assets/useNavigate-DzTRH6G8.js                                    0.41 kB │ gzip:     0.28 kB │ map:      2.30 kB
+dist/renderer/assets/QueryClientProvider-Y0v9pIVy.js                            0.45 kB │ gzip:     0.30 kB │ map:      2.60 kB
+dist/renderer/assets/areas-Cj9ZPL1U.js                                          0.47 kB │ gzip:     0.26 kB │ map:      1.94 kB
+dist/renderer/assets/bots._botId-CM96NmIt.js                                    0.50 kB │ gzip:     0.37 kB │ map:      7.70 kB
+dist/renderer/assets/bots2._botId_.edit-DlDyuzUd.js                             0.50 kB │ gzip:     0.38 kB │ map:      1.39 kB
+dist/renderer/assets/bots._botId_.chats._sessionId-BlMP_9c5.js                  0.52 kB │ gzip:     0.39 kB │ map:      3.43 kB
+dist/renderer/assets/messaging-CBOV8sHT.js                                      0.54 kB │ gzip:     0.29 kB │ map:     12.51 kB
+dist/renderer/assets/bots._botId.check-in-CQHl3mdl.js                           0.56 kB │ gzip:     0.39 kB │ map:      0.96 kB
+dist/renderer/assets/3SOQGNRR-CFmVgpt0.js                                       0.66 kB │ gzip:     0.40 kB │ map:      1.71 kB
+dist/renderer/assets/bots._botId_.edit-CMPqujEp.js                              0.66 kB │ gzip:     0.45 kB │ map:      1.70 kB
+dist/renderer/assets/javascript-Df8nF24M.js                                     0.67 kB │ gzip:     0.40 kB │ map:      1.90 kB
+dist/renderer/assets/lazyRouteComponent-BG5gDGQ2.js                             0.68 kB │ gzip:     0.43 kB │ map:      2.85 kB
+dist/renderer/assets/azcli-Bc_sGQ0U.js                                          0.70 kB │ gzip:     0.28 kB │ map:      2.32 kB
+dist/renderer/assets/useSelector-BX2d_mgx.js                                    0.73 kB │ gzip:     0.43 kB │ map:      3.81 kB
+dist/renderer/assets/theme-Bc4Xhsgp.js                                          0.73 kB │ gzip:     0.49 kB │ map:      3.75 kB
+dist/renderer/assets/compiler-runtime-MXpPHbZn.js                               0.74 kB │ gzip:     0.50 kB │ map:      2.01 kB
+dist/renderer/assets/event-client-Dr2Rvjx9.js                                   0.75 kB │ gzip:     0.42 kB │ map:      5.13 kB
+dist/renderer/assets/onboarding-5K_MB5gm2.js                                    0.79 kB │ gzip:     0.50 kB │ map:      1.62 kB
+dist/renderer/assets/header-Bowu173s.js                                         0.91 kB │ gzip:     0.53 kB │ map:      3.03 kB
+dist/renderer/assets/ini-sBoK_t0W.js                                            0.96 kB │ gzip:     0.49 kB │ map:      3.03 kB
+dist/renderer/assets/sessions._sessionId_.review-BvSuf5Xt.js                    0.97 kB │ gzip:     0.52 kB │ map:      1.37 kB
+dist/renderer/assets/actions-DU5EvDXc.js                                        1.01 kB │ gzip:     0.53 kB │ map:      4.01 kB
+dist/renderer/assets/searchMiddleware-DumIDhfh.js                               1.03 kB │ gzip:     0.50 kB │ map:      4.85 kB
+dist/renderer/assets/settings.appearance-B7HnvVnK.js                            1.04 kB │ gzip:     0.58 kB │ map:      1.47 kB
+dist/renderer/assets/sessions.new-90DK3gv2.js                                   1.04 kB │ gzip:     0.59 kB │ map:      1.55 kB
+dist/renderer/assets/settings.about-B24HTIr2.js                                 1.04 kB │ gzip:     0.58 kB │ map:      1.47 kB
+dist/renderer/assets/settings.usage-K1P3Mp-C.js                                 1.04 kB │ gzip:     0.58 kB │ map:      1.47 kB
+dist/renderer/assets/artifacts.index-C4MTnDgZ.js                                1.04 kB │ gzip:     0.58 kB │ map:      1.82 kB
+dist/renderer/assets/library.mcp-Q5WqatJD.js                                    1.04 kB │ gzip:     0.59 kB │ map:      1.44 kB
+dist/renderer/assets/settings.memory-B6-vDGKd.js                                1.04 kB │ gzip:     0.58 kB │ map:      1.48 kB
+dist/renderer/assets/settings.models-LGDYpMB8.js                                1.04 kB │ gzip:     0.58 kB │ map:      1.48 kB
+dist/renderer/assets/settings.account-BE4HV5K1.js                               1.05 kB │ gzip:     0.59 kB │ map:      1.48 kB
+dist/renderer/assets/settings.general-B6YtY187.js                               1.05 kB │ gzip:     0.59 kB │ map:      1.48 kB
+dist/renderer/assets/library.skills-C5KRkeJo.js                                 1.05 kB │ gzip:     0.59 kB │ map:      1.46 kB
+dist/renderer/assets/library.tools.index-Byt96ixx.js                            1.05 kB │ gzip:     0.59 kB │ map:      1.47 kB
+dist/renderer/assets/settings.environment-hfzOJ6rq.js                           1.06 kB │ gzip:     0.59 kB │ map:      1.52 kB
+dist/renderer/assets/library.messaging-C_akRnvl.js                              1.06 kB │ gzip:     0.59 kB │ map:      1.49 kB
+dist/renderer/assets/settings.notifications-Cfo_ur9_.js                         1.06 kB │ gzip:     0.59 kB │ map:      1.53 kB
+dist/renderer/assets/routines._routineId-Dq_duR8D.js                            1.08 kB │ gzip:     0.60 kB │ map:      1.54 kB
+dist/renderer/assets/library.tools._toolsetId-BEf09p7B.js                       1.17 kB │ gzip:     0.64 kB │ map:      2.10 kB
+dist/renderer/assets/bots.new-Djxv0VAL.js                                       1.20 kB │ gzip:     0.66 kB │ map:      2.78 kB
+dist/renderer/assets/preload-helper-HclGiUj8.js                                 1.21 kB │ gzip:     0.67 kB
+dist/renderer/assets/routines._list-DRtbeTJe.js                                 1.22 kB │ gzip:     0.64 kB │ map:      1.72 kB
+dist/renderer/assets/workers-CaLRNWg9.js                                        1.22 kB │ gzip:     0.56 kB │ map:      8.46 kB
+dist/renderer/assets/bots-CGCO_IiY.js                                           1.27 kB │ gzip:     0.72 kB │ map:      2.28 kB
+dist/renderer/assets/csp-bTuwJoIa.js                                            1.27 kB │ gzip:     0.48 kB │ map:      2.89 kB
+dist/renderer/assets/rolldown-runtime-C0FnF6B9.js                               1.29 kB │ gzip:     0.71 kB
+dist/renderer/assets/library.connectors-DdRT2WhV.js                             1.31 kB │ gzip:     0.69 kB │ map:      2.03 kB
+dist/renderer/assets/with-selector-DaBHJLXA.js                                  1.33 kB │ gzip:     0.62 kB │ map:      5.65 kB
+dist/renderer/assets/bots-ySDrcm6l.js                                           1.49 kB │ gzip:     0.81 kB │ map:      2.94 kB
+dist/renderer/assets/pla-CopQ2nXW.js                                            1.54 kB │ gzip:     0.60 kB │ map:      4.94 kB
+dist/renderer/assets/frame-CwFvz9Vb.js                                          1.56 kB │ gzip:     0.81 kB │ map:     10.33 kB
+dist/renderer/assets/skeleton-CKQINtFA.js                                       1.57 kB │ gzip:     0.66 kB │ map:      2.84 kB
+dist/renderer/assets/bots2._botId-BwXp9z2P.js                                   1.60 kB │ gzip:     0.89 kB │ map:      8.85 kB
+dist/renderer/assets/shim-COCkOjML.js                                           1.62 kB │ gzip:     0.76 kB │ map:      5.53 kB
+dist/renderer/assets/scheme-BeGwcela.js                                         1.62 kB │ gzip:     0.77 kB │ map:      4.36 kB
+dist/renderer/assets/bots-DxBtvZ9E.js                                           1.66 kB │ gzip:     0.92 kB │ map:      7.85 kB
+dist/renderer/assets/flow9-C5_-GSwl.js                                          1.66 kB │ gzip:     0.80 kB │ map:      4.93 kB
+dist/renderer/assets/sb-CcwsVR0C.js                                             1.68 kB │ gzip:     0.78 kB │ map:      4.84 kB
+dist/renderer/assets/bat-i0X4ZdIN.js                                            1.69 kB │ gzip:     0.82 kB │ map:      4.58 kB
+dist/renderer/assets/dockerfile-DZFCIeNp.js                                     1.72 kB │ gzip:     0.63 kB │ map:      5.38 kB
+dist/renderer/assets/pascaligo-D-ptJ9y-.js                                      1.85 kB │ gzip:     0.86 kB │ map:      5.73 kB
+dist/renderer/assets/use-theme-DGVL3ZXl.js                                      1.86 kB │ gzip:     0.91 kB │ map:      8.41 kB
+dist/renderer/assets/xml-BPZkCE9g.js                                            1.92 kB │ gzip:     0.73 kB │ map:     10.20 kB
+dist/renderer/assets/cameligo-DMUM7wLl.js                                       1.97 kB │ gzip:     0.91 kB │ map:      6.03 kB
+dist/renderer/assets/bots._botId.check-in-gj7Ur3yg.js                           1.98 kB │ gzip:     1.15 kB │ map:      1.06 kB
+dist/renderer/assets/lua-CsQS60Ue.js                                            1.98 kB │ gzip:     0.88 kB │ map:      5.92 kB
+dist/renderer/assets/hotkeys-DkQ1uuZ-.js                                        2.04 kB │ gzip:     0.94 kB │ map:     10.21 kB
+dist/renderer/assets/chat-CNLtFuLA.js                                           2.06 kB │ gzip:     1.02 kB │ map:      3.00 kB
+dist/renderer/assets/objective-c-FvmIjYaQ.js                                    2.10 kB │ gzip:     1.01 kB │ map:      5.73 kB
+dist/renderer/assets/graphql-fmXr3nnJ.js                                        2.11 kB │ gzip:     0.99 kB │ map:      6.21 kB
+dist/renderer/assets/extension-6yBjzuDR.js                                      2.20 kB │ gzip:     1.18 kB │ map:      1.33 kB
+dist/renderer/assets/sparql-D_Lu-MrJ.js                                         2.21 kB │ gzip:     1.10 kB │ map:      6.09 kB
+dist/renderer/assets/sessions._sessionId_.review-W_LryUEy.js                    2.24 kB │ gzip:     1.29 kB │ map:      0.91 kB
+dist/renderer/assets/library.connectors-BHoymsOy.js                             2.27 kB │ gzip:     1.30 kB │ map:      1.35 kB
+dist/renderer/assets/lexon-CfSJPG6W.js                                          2.28 kB │ gzip:     0.88 kB │ map:      6.48 kB
+dist/renderer/assets/mips-CIPQ_RoX.js                                           2.32 kB │ gzip:     1.02 kB │ map:      6.66 kB
+dist/renderer/assets/go-C-y9NEjX.js                                             2.35 kB │ gzip:     1.11 kB │ map:      7.13 kB
+dist/renderer/assets/bicep-B5-_aFwp.js                                          2.36 kB │ gzip:     0.91 kB │ map:      6.25 kB
+dist/renderer/assets/library.tools._toolsetId-BttD6w62.js                       2.42 kB │ gzip:     1.37 kB │ map:      1.54 kB
+dist/renderer/assets/sophia-CRfGWb83.js                                         2.48 kB │ gzip:     1.15 kB │ map:      6.78 kB
+dist/renderer/assets/m3-D-oSqn_W.js                                             2.52 kB │ gzip:     1.29 kB │ map:      6.79 kB
+dist/renderer/assets/bots._botId_.edit-CHQVo9dI.js                              2.57 kB │ gzip:     1.32 kB │ map:      1.97 kB
+dist/renderer/assets/typespec-B8J7ngcE.js                                       2.62 kB │ gzip:     1.01 kB │ map:      6.97 kB
+dist/renderer/assets/pascal-DrH0SRf2.js                                         2.63 kB │ gzip:     1.35 kB │ map:      7.44 kB
+dist/renderer/assets/fsharp-C8Ef5oNN.js                                         2.65 kB │ gzip:     1.27 kB │ map:      7.11 kB
+dist/renderer/assets/qsharp-DkqhCAOL.js                                         2.72 kB │ gzip:     1.37 kB │ map:      7.81 kB
+dist/renderer/assets/bots.new-jnoiWun5.js                                       2.73 kB │ gzip:     1.54 kB │ map:      2.71 kB
+dist/renderer/assets/shell-CC2rA5mh.js                                          2.81 kB │ gzip:     1.16 kB │ map:      7.51 kB
+dist/renderer/assets/r-BwWrilGY.js                                              2.83 kB │ gzip:     1.25 kB │ map:      7.65 kB
+dist/renderer/assets/java-BEtHBSE6.js                                           2.90 kB │ gzip:     1.34 kB │ map:      7.98 kB
+dist/renderer/assets/sessions._sessionId-NbvdGD9D.js                            2.90 kB │ gzip:     1.44 kB │ map:      8.03 kB
+dist/renderer/assets/cssMode-cdRPVycr.js                                        2.97 kB │ gzip:     1.13 kB │ map:     14.10 kB
+dist/renderer/assets/redis-ClamHrr6.js                                          3.03 kB │ gzip:     1.41 kB │ map:      7.80 kB
+dist/renderer/assets/kotlin-BOotOW0E.js                                         3.04 kB │ gzip:     1.41 kB │ map:      8.12 kB
+dist/renderer/assets/sessions._sessionId-82zzsJVw.js                            3.04 kB │ gzip:     1.64 kB │ map:      5.27 kB
+dist/renderer/assets/cypher-CVaqCwHa.js                                         3.04 kB │ gzip:     1.40 kB │ map:      8.26 kB
+dist/renderer/assets/powershell-DmHpPYUd.js                                     3.05 kB │ gzip:     1.33 kB │ map:      8.63 kB
+dist/renderer/assets/route-eZ3x9rG5.js                                          3.09 kB │ gzip:     1.12 kB │ map:     16.01 kB
+dist/renderer/assets/___ui_-DVTkrZLR.js                                         3.10 kB │ gzip:     1.23 kB │ map:     11.51 kB
+dist/renderer/assets/bots._botId_.chats._sessionId-CGrmn668.js                  3.15 kB │ gzip:     1.61 kB │ map:      3.94 kB
+dist/renderer/assets/_shell-BHuWw3Ip.js                                         3.15 kB │ gzip:     1.55 kB │ map:      9.71 kB
+dist/renderer/assets/_shell-BnhDx-bx.js                                         3.20 kB │ gzip:     1.74 kB │ map:      4.82 kB
+dist/renderer/assets/tcl-DISqw1ZD.js                                            3.27 kB │ gzip:     1.32 kB │ map:      8.36 kB
+dist/renderer/assets/liquid-CoFAWM4n.js                                         3.34 kB │ gzip:     1.42 kB │ map:     13.55 kB
+dist/renderer/assets/coffee-Ba7i2nA0.js                                         3.36 kB │ gzip:     1.24 kB │ map:      9.33 kB
+dist/renderer/assets/bots._botId_.chats._sessionId-0p-Soj1s.js                  3.37 kB │ gzip:     1.43 kB │ map:      6.73 kB
+dist/renderer/assets/htmlMode-Bg3HWcw9.js                                       3.43 kB │ gzip:     1.25 kB │ map:     15.30 kB
+dist/renderer/assets/onboarding._step-ClLJJvcR.js                               3.43 kB │ gzip:     1.74 kB │ map:     11.63 kB
+dist/renderer/assets/hcl-CpzslTdj.js                                            3.44 kB │ gzip:     1.45 kB │ map:      8.13 kB
+dist/renderer/assets/python-DaEe155v.js                                         3.45 kB │ gzip:     1.42 kB │ map:     15.18 kB
+dist/renderer/assets/apex-BWPQTe0t.js                                           3.46 kB │ gzip:     1.70 kB │ map:      9.60 kB
+dist/renderer/assets/bots._botId-07odmDIA.js                                    3.54 kB │ gzip:     1.74 kB │ map:     15.86 kB
+dist/renderer/assets/yaml-C7LRKiPv.js                                           3.54 kB │ gzip:     1.29 kB │ map:     14.61 kB
+dist/renderer/assets/onboarding._step-CCea_jLU.js                               3.54 kB │ gzip:     1.71 kB │ map:      9.60 kB
+dist/renderer/assets/cues-yPSe2UOG.js                                           3.55 kB │ gzip:     1.70 kB │ map:     17.10 kB
+dist/renderer/assets/separator-B1QNK_bM.js                                      3.60 kB │ gzip:     1.83 kB │ map:      9.35 kB
+dist/renderer/assets/markdown-Cimd5fb3.js                                       3.63 kB │ gzip:     1.34 kB │ map:     10.48 kB
+dist/renderer/assets/rust-DdL9SqIa.js                                           3.66 kB │ gzip:     1.80 kB │ map:      9.61 kB
+dist/renderer/assets/restructuredtext-BYgofb2h.js                               3.74 kB │ gzip:     1.32 kB │ map:      9.01 kB
+dist/renderer/assets/less-B9JPFI3C.js                                           3.74 kB │ gzip:     1.36 kB │ map:      8.79 kB
+dist/renderer/assets/dart-onAF5SnQ.js                                           3.93 kB │ gzip:     1.60 kB │ map:     10.30 kB
+dist/renderer/assets/csharp-BKxtCVv1.js                                         4.11 kB │ gzip:     1.66 kB │ map:     11.19 kB
+dist/renderer/assets/store-CRrwwSJH.js                                          4.24 kB │ gzip:     1.61 kB │ map:     18.64 kB
+dist/renderer/assets/msdax-DauUninz.js                                          4.27 kB │ gzip:     1.87 kB │ map:     10.16 kB
+dist/renderer/assets/mdx-CG6rTB8y.js                                            4.32 kB │ gzip:     1.21 kB │ map:     15.73 kB
+dist/renderer/assets/css-DIMkf-bt.js                                            4.36 kB │ gzip:     1.33 kB │ map:     10.79 kB
+dist/renderer/assets/loader-circle-DjcGd8qf.js                                  4.36 kB │ gzip:     1.91 kB │ map:     22.14 kB
+dist/renderer/assets/pug-Z5eAx3Zn.js                                            4.46 kB │ gzip:     1.60 kB │ map:     13.20 kB
+dist/renderer/assets/swift-Bxkupp3x.js                                          4.48 kB │ gzip:     1.99 kB │ map:     10.77 kB
+dist/renderer/assets/html-Cu4uDesf.js                                           4.51 kB │ gzip:     1.15 kB │ map:     17.60 kB
+dist/renderer/assets/check-in-DS1JFD4U.js                                       4.56 kB │ gzip:     1.95 kB │ map:     18.94 kB
+dist/renderer/assets/ecl-D05T4iGw.js                                            4.62 kB │ gzip:     2.19 kB │ map:     11.67 kB
+dist/renderer/assets/BRS44MK7-nwUEaB3Q.js                                       4.63 kB │ gzip:     1.81 kB │ map:     12.51 kB
+dist/renderer/assets/typescript-B0cblwgJ.js                                     4.65 kB │ gzip:     1.92 kB │ map:     17.29 kB
+dist/renderer/assets/semantic-theme-BqqR5kVm.js                                 4.70 kB │ gzip:     1.70 kB │ map:     12.00 kB
+dist/renderer/assets/monaco.contribution-ZdBNPODc.js                            4.74 kB │ gzip:     1.62 kB │ map:     18.05 kB
+dist/renderer/assets/cpp-C7h46wYY.js                                            4.74 kB │ gzip:     2.02 kB │ map:     12.11 kB
+dist/renderer/assets/toolsets-DVBsPawo.js                                       4.90 kB │ gzip:     1.13 kB │ map:     20.49 kB
+dist/renderer/assets/link-C5KUZb7f.js                                           5.21 kB │ gzip:     2.53 kB │ map:     21.74 kB
+dist/renderer/assets/vb-DV3o63ZY.js                                             5.30 kB │ gzip:     2.01 kB │ map:     12.81 kB
+dist/renderer/assets/jsx-dev-runtime-k56J9QS1.js                                5.43 kB │ gzip:     2.32 kB │ map:     18.50 kB
+dist/renderer/assets/bots._botId-D8GCKoFd.js                                    5.47 kB │ gzip:     2.25 kB │ map:     13.58 kB
+dist/renderer/assets/jsx-runtime-CnYUhj2h.js                                    5.65 kB │ gzip:     2.34 kB │ map:     19.38 kB
+dist/renderer/assets/useMatch-BEYb6SDz.js                                       5.71 kB │ gzip:     2.57 kB │ map:     28.79 kB
+dist/renderer/assets/twig-De2hgUGE.js                                           5.78 kB │ gzip:     1.48 kB │ map:     16.00 kB
+dist/renderer/assets/dev-D0rbTapJ.js                                            5.99 kB │ gzip:     2.39 kB │ map:     27.14 kB
+dist/renderer/assets/notch-D5Pwv8ks.js                                          6.12 kB │ gzip:     2.50 kB │ map:     25.74 kB
+dist/renderer/assets/scss-gp-XZpBa.js                                           6.26 kB │ gzip:     1.70 kB │ map:     15.76 kB
+dist/renderer/assets/handlebars-KYGLtzRk.js                                     6.28 kB │ gzip:     1.37 kB │ map:     21.59 kB
+dist/renderer/assets/Match-BGuV1Bn0.js                                          6.38 kB │ gzip:     2.41 kB │ map:     24.94 kB
+dist/renderer/assets/julia-Bri6UV-V.js                                          6.50 kB │ gzip:     2.64 kB │ map:     16.23 kB
+dist/renderer/assets/systemverilog-Bz4Y3fRF.js                                  6.85 kB │ gzip:     2.72 kB │ map:     17.05 kB
+dist/renderer/assets/st-DbInun42.js                                             6.94 kB │ gzip:     2.24 kB │ map:     16.60 kB
+dist/renderer/assets/CollapsiblePanel-C78Xo4sT.js                               7.02 kB │ gzip:     2.99 kB │ map:     40.32 kB
+dist/renderer/assets/scala-DHpiXF5c.js                                          7.11 kB │ gzip:     2.07 kB │ map:     17.54 kB
+dist/renderer/assets/wgsl-DpFanUEy.js                                           7.18 kB │ gzip:     2.73 kB │ map:     13.63 kB
+dist/renderer/assets/perl-oz_6vUea.js                                           7.35 kB │ gzip:     3.10 kB │ map:     18.58 kB
+dist/renderer/assets/postiats-43DmfD33.js                                       7.36 kB │ gzip:     2.39 kB │ map:     26.25 kB
+dist/renderer/assets/DialogRoot-yXskvIyS.js                                     7.37 kB │ gzip:     2.83 kB │ map:     34.47 kB
+dist/renderer/assets/transition-types-BUAftgFG.js                               7.62 kB │ gzip:     3.08 kB │ map:     34.06 kB
+dist/renderer/assets/bench-yTNxlUnM.js                                          7.64 kB │ gzip:     3.68 kB │ map:     28.99 kB
+dist/renderer/assets/php-nr791fC2.js                                            7.74 kB │ gzip:     2.03 kB │ map:     19.43 kB
+dist/renderer/assets/empty-state-CCg05Tis.js                                    7.90 kB │ gzip:     2.49 kB │ map:     20.25 kB
+dist/renderer/assets/razor-Dj_Cv7SL.js                                          8.11 kB │ gzip:     2.05 kB │ map:     25.92 kB
+dist/renderer/assets/clojure-Cm7r79vr.js                                        8.21 kB │ gzip:     3.49 kB │ map:     17.85 kB
+dist/renderer/assets/ruby-DezsRK8O.js                                           8.21 kB │ gzip:     2.55 kB │ map:     22.89 kB
+dist/renderer/assets/useQuery-Cyv5C4QY.js                                       8.75 kB │ gzip:     3.32 kB │ map:     40.05 kB
+dist/renderer/assets/sql-NEE52Syq.js                                            8.84 kB │ gzip:     3.73 kB │ map:     20.58 kB
+dist/renderer/assets/protobuf-C531GsRP.js                                       8.89 kB │ gzip:     2.04 kB │ map:     21.61 kB
+dist/renderer/assets/devtools-RKUDE9qH.js                                       9.45 kB │ gzip:     3.37 kB │ map:     29.31 kB
+dist/renderer/assets/react-dom-Bh5Fsbp3.js                                      9.62 kB │ gzip:     2.99 kB │ map:     26.78 kB
+dist/renderer/assets/mysql-SOo6toE5.js                                          9.65 kB │ gzip:     3.98 kB │ map:     20.92 kB
+dist/renderer/assets/elixir-6RTg0lbw.js                                        10.11 kB │ gzip:     2.50 kB │ map:     27.29 kB
+dist/renderer/assets/UCKGINXI-Ckmims8f.js                                      10.17 kB │ gzip:     3.97 kB │ map:     40.27 kB
+dist/renderer/assets/redshift-DT7zqm-g.js                                      10.33 kB │ gzip:     4.24 kB │ map:     20.80 kB
+dist/renderer/assets/field-DyDTH5RJ.js                                         10.65 kB │ gzip:     3.06 kB │ map:     33.38 kB
+dist/renderer/assets/routines-C5EEN6cJ.js                                      11.15 kB │ gzip:     3.33 kB │ map:     30.62 kB
+dist/renderer/assets/query-CIexVugI.js                                         11.53 kB │ gzip:     3.99 kB │ map:     53.91 kB
+dist/renderer/assets/abap-08VXUWAP.js                                          11.69 kB │ gzip:     5.15 kB │ map:     28.57 kB
+dist/renderer/assets/pgsql-DTj74zXo.js                                         11.91 kB │ gzip:     4.42 kB │ map:     22.83 kB
+dist/renderer/assets/nav-list-BP1GTqqh.js                                      11.96 kB │ gzip:     3.80 kB │ map:     32.25 kB
+dist/renderer/assets/jsonMode-BicRnpVs.js                                      12.20 kB │ gzip:     4.45 kB │ map:     75.38 kB
+dist/renderer/assets/icons-D8jSzkFk.js                                         12.45 kB │ gzip:     3.65 kB │ map:     16.01 kB
+dist/renderer/assets/tour-i94h2UAi.js                                          12.56 kB │ gzip:     5.09 kB │ map:     41.81 kB
+dist/renderer/assets/shared-element-Bh083KBa.js                                12.61 kB │ gzip:     4.74 kB │ map:     50.62 kB
+dist/renderer/assets/pptx-viewer-B8gBzMv8.js                                   14.26 kB │ gzip:     4.55 kB │ map:     34.22 kB
+dist/renderer/assets/hotkey-manager-R3IGQv8Y.js                                14.55 kB │ gzip:     5.65 kB │ map:     83.59 kB
+dist/renderer/assets/powerquery-D3hlyOfw.js                                    15.34 kB │ gzip:     4.73 kB │ map:     26.36 kB
+dist/renderer/assets/freemarker2-CKZoEgBT.js                                   15.54 kB │ gzip:     3.98 kB │ map:     62.88 kB
+dist/renderer/assets/solidity-BEEn4gHE.js                                      15.99 kB │ gzip:     4.39 kB │ map:     32.04 kB
+dist/renderer/assets/dist-v-zBm64M.js                                          19.98 kB │ gzip:     8.42 kB │ map:     98.50 kB
+dist/renderer/assets/react-Cb2DYjVe.js                                         20.87 kB │ gzip:     7.50 kB │ map:     71.18 kB
+dist/renderer/assets/main-panel-CzTcIjVv.js                                    21.26 kB │ gzip:     4.79 kB │ map:     39.63 kB
+dist/renderer/assets/tsMode-BZIEZSy1.js                                        21.89 kB │ gzip:     6.16 kB │ map:     79.55 kB
+dist/renderer/assets/next-TYYAwbci.js                                          23.09 kB │ gzip:     6.23 kB │ map:     92.88 kB
+dist/renderer/assets/builders-CgctW7p7.js                                      23.15 kB │ gzip:     7.68 kB │ map:    100.39 kB
+dist/renderer/assets/dev-D91pRWeh.js                                           26.78 kB │ gzip:    10.36 kB │ map:    127.25 kB
+dist/renderer/assets/lspLanguageFeatures-DD85Nnb7.js                           28.23 kB │ gzip:     7.17 kB │ map:    132.15 kB
+dist/renderer/assets/ort-wasm-simd-threaded.asyncify-DxuQvE0j.js               32.06 kB │ gzip:    10.82 kB │ map:     96.92 kB
+dist/renderer/assets/query-keys-DiPg5I5W.js                                    33.61 kB │ gzip:    10.43 kB │ map:    156.79 kB
+dist/renderer/assets/notch-CmA71-nL.js                                         36.01 kB │ gzip:    11.87 kB │ map:    129.71 kB
+dist/renderer/assets/onboarding-BNXwzZ4j.js                                    36.92 kB │ gzip:    12.03 kB │ map:    140.86 kB
+dist/renderer/assets/turns-QstzqK_K.js                                         38.10 kB │ gzip:    13.47 kB │ map:    177.91 kB
+dist/renderer/assets/AvatarFallback-bTpuuR2p.js                                43.49 kB │ gzip:    14.38 kB │ map:    157.67 kB
+dist/renderer/assets/ContextMenuPositioner-6nc6He3-.js                         45.34 kB │ gzip:    15.90 kB │ map:    139.28 kB
+dist/renderer/assets/components-BwcTEJfm-He7RcIPc.js                           46.74 kB │ gzip:    13.72 kB │ map:    132.86 kB
+dist/renderer/assets/useOpenInteractionType-QksFtdAm.js                        56.98 kB │ gzip:    19.84 kB │ map:    298.35 kB
+dist/renderer/assets/ComboboxItemIndicator-DF7BuP8A.js                         65.40 kB │ gzip:    21.53 kB │ map:    319.98 kB
+dist/renderer/assets/Matches-J0a7v-Is.js                                       66.21 kB │ gzip:    22.56 kB │ map:    273.07 kB
+dist/renderer/assets/useForm--IbzdWJi.js                                       70.02 kB │ gzip:    18.02 kB │ map:    249.79 kB
+dist/renderer/assets/components-BY1RmgK0.js                                    70.34 kB │ gzip:    19.38 kB │ map:    234.81 kB
+dist/renderer/assets/MenuTrigger-BfzU-icR.js                                   82.67 kB │ gzip:    29.11 kB │ map:    416.99 kB
+dist/renderer/assets/message-reactions-CCR-gQqg.js                             84.03 kB │ gzip:    27.33 kB │ map:    556.36 kB
+dist/renderer/assets/___ui_-DAXxn80b.js                                       101.61 kB │ gzip:    23.62 kB │ map:    275.67 kB
+dist/renderer/assets/id-ID-6O07Cx5W.js                                        106.97 kB │ gzip:    37.59 kB │ map:    144.58 kB
+dist/renderer/assets/it-IT-0WbQbS5p.js                                        109.13 kB │ gzip:    38.45 kB │ map:    146.31 kB
+dist/renderer/assets/pt-BR-TNgQdvB3.js                                        109.14 kB │ gzip:    38.40 kB │ map:    146.32 kB
+dist/renderer/assets/es-419-g2IQ4692.js                                       109.62 kB │ gzip:    38.60 kB │ map:    146.80 kB
+dist/renderer/assets/es-ES-BlSb8j1O.js                                        109.76 kB │ gzip:    38.66 kB │ map:    146.95 kB
+dist/renderer/assets/de-DE-CyyjeUCP.js                                        110.45 kB │ gzip:    39.04 kB │ map:    147.63 kB
+dist/renderer/assets/fr-FR-plojl7lX.js                                        111.52 kB │ gzip:    39.10 kB │ map:    148.70 kB
+dist/renderer/assets/ko-KR-CoswiU4a.js                                        112.13 kB │ gzip:    40.00 kB │ map:    149.32 kB
+dist/renderer/assets/monaco-file-editor-DQ7ZBdyK.js                           115.14 kB │ gzip:    28.80 kB │ map:    357.04 kB
+dist/renderer/assets/ja-JP-DbsHURZ_.js                                        118.40 kB │ gzip:    40.82 kB │ map:    155.58 kB
+dist/renderer/assets/sections-ClmanWVL.js                                     124.90 kB │ gzip:    18.02 kB │ map:    114.08 kB
+dist/renderer/assets/spinner-U4w-K5NY.js                                      135.81 kB │ gzip:    45.07 kB │ map:    708.17 kB
+dist/renderer/assets/hi-IN-Dr2hr-6U.js                                        139.13 kB │ gzip:    41.82 kB │ map:    176.31 kB
+dist/renderer/assets/button-L9hLympW.js                                       143.62 kB │ gzip:    45.14 kB │ map:    525.85 kB
+dist/renderer/assets/DDOMPUKY-CiRyqz6y.js                                     176.54 kB │ gzip:    49.33 kB │ map:    563.48 kB
+dist/renderer/assets/db-DX-sKbjI.js                                           180.20 kB │ gzip:    50.45 kB │ map:    717.26 kB
+dist/renderer/assets/shell-IxyF2hGN.js                                        189.89 kB │ gzip:    59.43 kB │ map:    794.03 kB
+dist/renderer/assets/runtime-BVhoBINu.js                                      193.72 kB │ gzip:    52.66 kB │ map:    851.06 kB
+dist/renderer/assets/temml-CiP_lRsR.js                                        203.92 kB │ gzip:    60.23 kB │ map:    739.73 kB
+dist/renderer/assets/bots-DXNltO4t.js                                         243.63 kB │ gzip:    75.57 kB │ map:    977.92 kB
+dist/renderer/assets/view-DlTCYlV1.js                                         294.64 kB │ gzip:    91.45 kB │ map:  1,013.67 kB
+dist/renderer/assets/en-US-DZ_9OGd5.js                                        549.29 kB │ gzip:   171.12 kB │ map:  1,992.99 kB
+dist/renderer/assets/transformers.web-BC904fdA.js                             573.95 kB │ gzip:   163.76 kB │ map:  1,962.31 kB
+dist/renderer/assets/main-D2GjXB_S.js                                       2,593.51 kB │ gzip:   694.14 kB │ map:  6,898.36 kB
+dist/renderer/assets/editor.api2-DdadTTrJ.js                                3,625.06 kB │ gzip:   926.45 kB │ map: 13,523.56 kB
+
+✓ built in 5.30s
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[33m[PLUGIN_TIMINGS] [0mYour build spent 81% of 5.3s inside plugin hooks (4.3s).
+Not measurable — 8 hooks whose calls overlap, so elapsed time covers work other calls were doing. Profile with `node --cpu-prof`:
+  - vite:react-compiler transform (396 calls)
+  - vite:asset load (62 calls)
+  - vite:worker load (5 calls)
+  … and 5 more
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+vite v8.2.1 building electron_main environment for production...
+[2Ktransforming...✓ 486 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/main/index.js  2,826.45 kB │ gzip: 667.80 kB │ map: 5,673.93 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/main/rpc/transports/message-port.ts is dynamically imported by src/main/dev/mutation-harness.ts but also statically imported by src/main/index.ts, dynamic import will not move module into another chunk.
+
+✓ built in 203ms
+vite v8.2.1 building electron_preload environment for production...
+[2Ktransforming...✓ 6 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/preload/index.cjs  39.16 kB │ gzip: 7.29 kB │ map: 80.46 kB
+
+✓ built in 15ms
+ ❯ |main| src/main/packaged-startup.test.ts (4 tests | 1 failed) 6597ms
+     × import nothing the packaged app does not contain 6596ms
+ ❯ |main| src/main/rpc/notification-metadata.test.ts (4 tests | 3 failed) 22ms
+   × preserves session routing metadata through system.notify and click events 15ms
+   × preserves bot routing metadata through system.notify and click events 2ms
+   × preserves routine routing metadata through system.notify and click events 1ms
+stderr | src/renderer-next/features/shell/shell-layout.test.tsx > the floating sidebar > a hover pending when the rail unmounts never opens it later (Claude #15)
+[Live Query Error] Source collection 'sessions' was manually cleaned up while live query 'live-query-89' depends on it. Live queries prevent automatic GC, so this was likely a manual cleanup() call.
+
+stderr | src/renderer-next/features/shell/shell-layout.test.tsx > the floating sidebar > a hover pending when the rail unmounts never opens it later (Claude #15)
+[Live Query Error] Source collection 'bots' was manually cleaned up while live query 'live-query-88' depends on it. Live queries prevent automatic GC, so this was likely a manual cleanup() call.
+
+ ❯ |renderer-next| src/renderer-next/features/shell/shell-layout.test.tsx (20 tests | 1 failed) 2952ms
+     × a hover pending when the rail unmounts never opens it later (Claude #15) 75ms
+ ❯ |renderer-next| src/renderer-next/lib/navigation/transition-types.test.tsx (24 tests | 1 failed) 2316ms
+     × equal the durations and offsets tokens.css uses 3ms
+ ❯ |renderer-next| src/renderer-next/features/chat/runtime/recovery.test.ts (7 tests | 1 failed) 1045ms
+     × chains readiness across superseded generations; retire rejects every waiter 5ms
+ ❯ |renderer-next| src/renderer-next/lib/window-chrome/overlay-slots.test.ts (4 tests | 1 failed) 7ms
+     × (a) every occluder exists in the installed ui/ 5ms
+ ❯ |renderer-next| src/renderer-next/features/shell/readiness.test.tsx (7 tests | 4 failed) 11066ms
+     × waits for the sessions snapshot (Codex impl r1 #14) 5005ms
+     × a remount (HMR) in the same document never reports again 1012ms
+     × does not repeat on navigation 1004ms
+     × reports failed when one of the tables errors 1009ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |renderer-next| src/renderer-next/features/shell/readiness.test.tsx > ReadinessReporter > waits for the sessions snapshot (Codex impl r1 #14)
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/renderer-next/features/shell/readiness.test.tsx:38:3
+     36|   );
+     37|
+     38|   it("waits for the sessions snapshot (Codex impl r1 #14)", async () =…
+       |   ^
+     39|     let release: () => void = () => undefined;
+     40|     harness = await renderApp("/onboarding/welcome", {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  |renderer-next| src/renderer-next/features/shell/readiness.test.tsx > ReadinessReporter > a remount (HMR) in the same document never reports again
+AssertionError: expected [] to have a length of 1 but got +0
+
+Ignored nodes: comments, script, style
+[36m<html[39m
+  [33mdir[39m=[32m"ltr"[39m
+  [33mlang[39m=[32m"en-US"[39m
+[36m>[39m
+  [36m<head>[39m
+    [36m<title>[39m
+      [0mAbacusAI Bot[0m
+    [36m</title>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/renderer-next/features/shell/readiness.test.tsx:56:54
+     54|   it("a remount (HMR) in the same document never reports again", async…
+     55|     harness = await renderApp("/bots/new");
+     56|     await waitFor(() => expect(readyCalls(harness!)).toHaveLength(1));
+       |                                                      ^
+     57|     const again = render(
+     58|       <ReadinessReporter
+ ❯ runWithExpensiveErrorDiagnosticsDisabled ../../node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback ../../node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback ../../node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  |renderer-next| src/renderer-next/features/shell/readiness.test.tsx > ReadinessReporter > does not repeat on navigation
+AssertionError: expected [] to have a length of 1 but got +0
+
+Ignored nodes: comments, script, style
+[36m<html[39m
+  [33mdir[39m=[32m"ltr"[39m
+  [33mlang[39m=[32m"en-US"[39m
+[36m>[39m
+  [36m<head>[39m
+    [36m<title>[39m
+      [0mAbacusAI Bot[0m
+    [36m</title>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/renderer-next/features/shell/readiness.test.tsx:70:54
+     68|   it("does not repeat on navigation", async () => {
+     69|     harness = await renderApp("/bots/new");
+     70|     await waitFor(() => expect(readyCalls(harness!)).toHaveLength(1));
+       |                                                      ^
+     71|     await act(async () => {
+     72|       await harness!.router.navigate({ to: "/sessions/new" } as never);
+ ❯ runWithExpensiveErrorDiagnosticsDisabled ../../node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback ../../node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback ../../node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  |renderer-next| src/renderer-next/features/shell/readiness.test.tsx > ReadinessReporter > reports failed when one of the tables errors
+AssertionError: expected [] to have a length of 1 but got +0
+
+Ignored nodes: comments, script, style
+[36m<html[39m
+  [33mdir[39m=[32m"ltr"[39m
+  [33mlang[39m=[32m"en-US"[39m
+[36m>[39m
+  [36m<head>[39m
+    [36m<title>[39m
+      [0mAbacusAI Bot[0m
+    [36m</title>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/renderer-next/features/shell/readiness.test.tsx:86:54
+     84|       },
+     85|     });
+     86|     await waitFor(() => expect(readyCalls(harness!)).toHaveLength(1));
+       |                                                      ^
+     87|     expect(readyCalls(harness)[0]![1]).toMatchObject({ barrier: "faile…
+     88|   });
+ ❯ runWithExpensiveErrorDiagnosticsDisabled ../../node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback ../../node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback ../../node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  |renderer-next| src/renderer-next/features/shell/shell-layout.test.tsx > the floating sidebar > a hover pending when the rail unmounts never opens it later (Claude #15)
+AssertionError: expected <nav aria-label="Areas" …(3)>…(8)</nav> to be null
+
+- Expected:
+null
+
++ Received:
+<nav
+  aria-label="Areas"
+  class="flex w-(--rail-w) shrink-0 flex-col items-center pt-1 pb-3"
+  data-slot="rail"
+  data-tour="rail-bots-sessions"
+>
+  <a
+    aria-current="page"
+    class="titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2 text-sidebar-foreground active"
+    data-area="bots"
+    data-status="active"
+    href="/bots/new"
+  >
+    <span
+      class="flex h-[30px] w-9 items-center justify-center rounded-[10px] transition-colors bg-sidebar-accent"
+    >
+      <svg
+        aria-hidden="true"
+        height="20"
+        width="20"
+      >
+        <use
+          href="#icon-bots"
+        />
+      </svg>
+    </span>
+    <span>
+      Bots
+    </span>
+  </a>
+  <a
+    class="titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2 text-muted-foreground hover:text-sidebar-foreground"
+    data-area="sessions"
+    href="/sessions/new"
+  >
+    <span
+      class="flex h-[30px] w-9 items-center justify-center rounded-[10px] transition-colors group-hover/rail:bg-sidebar-accent/50"
+    >
+      <svg
+        aria-hidden="true"
+        height="20"
+        width="20"
+      >
+        <use
+          href="#icon-sessions"
+        />
+      </svg>
+    </span>
+    <span>
+      Sessions
+    </span>
+  </a>
+  <a
+    class="titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2 text-muted-foreground hover:text-sidebar-foreground"
+    data-area="routines"
+    href="/routines"
+  >
+    <span
+      class="flex h-[30px] w-9 items-center justify-center rounded-[10px] transition-colors group-hover/rail:bg-sidebar-accent/50"
+    >
+      <svg
+        aria-hidden="true"
+        height="20"
+        width="20"
+      >
+        <use
+          href="#icon-routines"
+        />
+      </svg>
+    </span>
+    <span>
+      Routines
+    </span>
+  </a>
+  <a
+    class="titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2 text-muted-foreground hover:text-sidebar-foreground"
+    data-area="artifacts"
+    data-tour="rail-artifacts"
+    href="/artifacts"
+  >
+    <span
+      class="flex h-[30px] w-9 items-center justify-center rounded-[10px] transition-colors group-hover/rail:bg-sidebar-accent/50"
+    >
+      <svg
+        aria-hidden="true"
+        height="20"
+        width="20"
+      >
+        <use
+          href="#icon-artifacts"
+        />
+      </svg>
+    </span>
+    <span>
+      Artifacts
+    </span>
+  </a>
+  <a
+    class="titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2 text-muted-foreground hover:text-sidebar-foreground"
+    data-area="library"
+    data-tour="rail-library"
+    href="/library/connectors?category=featured"
+  >
+    <span
+      class="flex h-[30px] w-9 items-center justify-center rounded-[10px] transition-colors group-hover/rail:bg-sidebar-accent/50"
+    >
+      <svg
+        aria-hidden="true"
+        height="20"
+        width="20"
+      >
+        <use
+          href="#icon-library"
+        />
+      </svg>
+    </span>
+    <span>
+      Library
+    </span>
+  </a>
+  <div
+    class="flex-1"
+  />
+  <a
+    aria-label="Settings"
+    class="titlebar-nodrag focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-[10px] outline-none focus-visible:ring-2 text-muted-foreground hover:text-sidebar-foreground"
+    href="/settings/general"
+    title="Settings"
+  >
+    <svg
+      aria-hidden="true"
+      height="18"
+      width="18"
+    >
+      <use
+        href="#icon-settings"
+      />
+    </svg>
+  </a>
+  <a
+    aria-label="Account"
+    class="titlebar-nodrag focus-visible:ring-ring/50 mt-2 rounded-full outline-none focus-visible:ring-2"
+    href="/settings/account"
+    title="Account"
+  >
+    <span
+      class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten"
+      data-size="sm"
+      data-slot="avatar"
+    >
+      <span
+        class="bg-muted flex size-full items-center justify-center rounded-full group-data-[size=sm]/avatar:text-xs text-foreground text-[11px] font-semibold"
+        data-slot="avatar-fallback"
+      >
+        AD
+      </span>
+    </span>
+  </a>
+</nav>
+
+ ❯ src/renderer-next/features/shell/shell-layout.test.tsx:339:58
+    337|     fireEvent.pointerOver(rail());
+    338|     await navigate({ to: "/onboarding" });
+    339|     expect(document.querySelector('[data-slot="rail"]')).toBeNull();
+       |                                                          ^
+    340|     await act(async () => {
+    341|       await new Promise((resolve) => setTimeout(resolve, HOVER_INTENT_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  |renderer-next| src/renderer-next/lib/navigation/transition-types.test.tsx > motion constants > equal the durations and offsets tokens.css uses
+AssertionError: expected Set{ 200, 120 } to deeply equal Set{ 200 }
+
+- Expected
++ Received
+
+  Set {
++   120,
+    200,
+  }
+
+ ❯ src/renderer-next/lib/navigation/transition-types.test.tsx:345:25
+    343|       ),
+    344|     ].map((m) => Number(m[1]));
+    345|     expect(new Set(ms)).toEqual(
+       |                         ^
+    346|       new Set([durations.crossFade, durations.drill])
+    347|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  |renderer-next| src/renderer-next/lib/window-chrome/overlay-slots.test.ts > overlay slots > (a) every occluder exists in the installed ui/
+AssertionError: tour-spotlight: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/renderer-next/lib/window-chrome/overlay-slots.test.ts:29:41
+     27|   it("(a) every occluder exists in the installed ui/", () => {
+     28|     for (const slot of OCCLUDER_SLOTS)
+     29|       expect(installed.has(slot), slot).toBe(true);
+       |                                         ^
+     30|   });
+     31|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  |renderer-next| src/renderer-next/features/chat/runtime/recovery.test.ts > R2-T4 recovery > chains readiness across superseded generations; retire rejects every waiter
+AssertionError: expected Promise{…} to be Promise{…} // Object.is equality
+
+If it should pass with deep equality, replace "toBe" with "toStrictEqual"
+
+Expected: Promise{…}
+Received: serializes to the same string
+
+
+Compared values have no visual difference.
+
+ ❯ src/renderer-next/features/chat/runtime/recovery.test.ts:173:15
+    171|     const a = session.load();
+    172|     const b = session.load();
+    173|     expect(a).toBe(b);
+       |               ^
+    174|     await expect(Promise.all([a, b])).resolves.toEqual([undefined, und…
+    175|     expect(session.gen).toBe(3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  |main| src/main/packaged-startup.test.ts > the packaged bundles > import nothing the packaged app does not contain
+AssertionError: expected [ 'dist/main/index.js → AppKit' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "dist/main/index.js → AppKit",
++ ]
+
+ ❯ src/main/packaged-startup.test.ts:200:26
+    198|     );
+    199|
+    200|     expect(unresolvable).toEqual([]);
+       |                          ^
+    201|     // A build takes longer than a unit test's default budget.
+    202|   }, 600_000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  |main| src/main/rpc/notification-metadata.test.ts > preserves session routing metadata through system.notify and click events
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'Title', 'Body', …(1) ]
+
+Received:
+
+  1st vi.fn() call:
+
+@@ -6,6 +6,10 @@
+      "kind": "session",
+      "routineId": "r",
+      "sessionId": "s",
+      "workspaceId": "w",
+    },
++   {
++     "dedupeKey": undefined,
++     "kind": undefined,
++   },
+  ]
+
+
+Number of calls: 1
+
+ ❯ src/main/rpc/notification-metadata.test.ts:24:32
+     22|         metadata,
+     23|       });
+     24|       expect(showNotification).toHaveBeenCalledWith("Title", "Body", m…
+       |                                ^
+     25|       const abort = new AbortController();
+     26|       const events = await connection.client.system.events(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  |main| src/main/rpc/notification-metadata.test.ts > preserves bot routing metadata through system.notify and click events
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'Title', 'Body', …(1) ]
+
+Received:
+
+  1st vi.fn() call:
+
+@@ -6,6 +6,10 @@
+      "kind": "bot",
+      "routineId": "r",
+      "sessionId": "s",
+      "workspaceId": "w",
+    },
++   {
++     "dedupeKey": undefined,
++     "kind": undefined,
++   },
+  ]
+
+
+Number of calls: 1
+
+ ❯ src/main/rpc/notification-metadata.test.ts:24:32
+     22|         metadata,
+     23|       });
+     24|       expect(showNotification).toHaveBeenCalledWith("Title", "Body", m…
+       |                                ^
+     25|       const abort = new AbortController();
+     26|       const events = await connection.client.system.events(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  |main| src/main/rpc/notification-metadata.test.ts > preserves routine routing metadata through system.notify and click events
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'Title', 'Body', …(1) ]
+
+Received:
+
+  1st vi.fn() call:
+
+@@ -6,6 +6,10 @@
+      "kind": "routine",
+      "routineId": "r",
+      "sessionId": "s",
+      "workspaceId": "w",
+    },
++   {
++     "dedupeKey": undefined,
++     "kind": undefined,
++   },
+  ]
+
+
+Number of calls: 1
+
+ ❯ src/main/rpc/notification-metadata.test.ts:24:32
+     22|         metadata,
+     23|       });
+     24|       expect(showNotification).toHaveBeenCalledWith("Title", "Body", m…
+       |                                ^
+     25|       const abort = new AbortController();
+     26|       const events = await connection.client.system.events(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  |main| src/main/rpc/subscriber-queue.test.ts > delivery classes (A-T9) > declares, per iterator, the class the spec's table gives it
+AssertionError: expected { …(25) } to deeply equal { …(23) }
+
+- Expected
++ Received
+
+@@ -12,10 +12,12 @@
+    "git.watch": "coalescing",
+    "localModels.progress": "coalescing",
+    "mcp.runtime.events": "coalescing",
+    "memory.events": "coalescing",
+    "messaging.events": "coalescing",
++   "notch.events": "coalescing",
++   "notch.openCommands": "lossless-actionable",
+    "routines.events": "lossless-actionable",
+    "settings.events": "coalescing",
+    "system.events": "coalescing",
+    "terminal.events": "lossless-actionable",
+    "terminal.output": "lossless-replayable",
+
+ ❯ src/main/rpc/subscriber-queue.test.ts:56:22
+     54| describe("delivery classes (A-T9)", () => {
+     55|   it("declares, per iterator, the class the spec's table gives it", ()…
+     56|     expect(DELIVERY).toEqual({
+       |                      ^
+     57|       "terminal.output": "lossless-replayable",
+     58|       "terminal.events": "lossless-actionable",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 2 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+ThreadRetiredError: chat: thread t-1 was retired
+ ❯ ThreadSession.retire src/renderer-next/features/chat/runtime/session.ts:307:19
+ ❯ src/renderer-next/features/chat/runtime/recovery.test.ts:33:53
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+ ❯ wrapper ../../node_modules/@vitest/runner/dist/chunk-artifact.js:750:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+ ❯ runWithTimeout ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2622:52
+ ❯ run ../../node_modules/@vitest/runner/dist/chunk-artifact.js:1150:20
+ ❯ limiterFn ../../node_modules/@vitest/runner/dist/chunk-artifact.js:1162:59
+
+This error originated in "src/renderer-next/features/chat/runtime/recovery.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "a failed hydrate rejects readiness; NOT_FOUND marks the thread gone". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+ThreadRetiredError: chat: thread t-1 was retired
+ ❯ ThreadSession.retire src/renderer-next/features/chat/runtime/session.ts:307:19
+ ❯ src/renderer-next/features/chat/runtime/recovery.test.ts:33:53
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+ ❯ wrapper ../../node_modules/@vitest/runner/dist/chunk-artifact.js:750:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+ ❯ runWithTimeout ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2622:52
+ ❯ run ../../node_modules/@vitest/runner/dist/chunk-artifact.js:1150:20
+ ❯ limiterFn ../../node_modules/@vitest/runner/dist/chunk-artifact.js:1162:59
+
+This error originated in "src/renderer-next/features/chat/runtime/recovery.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "a failed hydrate rejects readiness; NOT_FOUND marks the thread gone". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  8 failed | 386 passed | 1 skipped (395)
+      Tests  13 failed | 3963 passed | 7 todo (3983)
+     Errors  2 errors
+   Start at  08:00:25
+   Duration  85.26s (transform 30.16s, setup 20.83s, import 127.23s, tests 260.99s, environment 103.15s)
+

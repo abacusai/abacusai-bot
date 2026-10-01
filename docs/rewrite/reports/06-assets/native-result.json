@@ -1,0 +1,819 @@
+{
+  "base": 0,
+  "after": 0,
+  "samples": [
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    },
+    {
+      "grown": {
+        "x": 0,
+        "y": 0,
+        "width": 560,
+        "height": 220,
+        "viewport": {
+          "width": 560,
+          "height": 220
+        }
+      },
+      "shrunk": {
+        "width": 300,
+        "height": 100
+      }
+    }
+  ],
+  "audio": [
+    {
+      "cue": "sent",
+      "energy": 1.0358977547397512,
+      "durationMs": 109.95833333333333
+    },
+    {
+      "cue": "received",
+      "energy": 1.2548553439385473,
+      "durationMs": 199.97916666666666
+    },
+    {
+      "cue": "needs-you",
+      "energy": 1.7302660731637685,
+      "durationMs": 239.95833333333334
+    },
+    {
+      "cue": "done",
+      "energy": 2.067101989552704,
+      "durationMs": 229.95833333333334
+    },
+    {
+      "cue": "failed",
+      "energy": 2.0800204285716926,
+      "durationMs": 199.95833333333334
+    },
+    {
+      "cue": "routine-fired",
+      "energy": 0.6737785064581274,
+      "durationMs": 179.95833333333334
+    }
+  ],
+  "fit": [
+    {
+      "locale": "en-US",
+      "type": "terminal",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Allow", "Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "terminal",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "terminal",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "path",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Allow", "Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "path",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "path",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "url",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Allow", "Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "url",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "url",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "host",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Allow", "Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "host",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "host",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "sandbox",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Allow", "Deny", "Review", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "sandbox",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "sandbox",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Deny", "Review", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "question",
+      "size": "short",
+      "accept": false,
+      "buttons": ["OneFirst", "TwoSecond", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "en-US",
+      "type": "question",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Answer in app", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "terminal",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Zulassen", "Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "terminal",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "terminal",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "path",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Zulassen", "Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "path",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "path",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "url",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Zulassen", "Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "url",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "url",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "host",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Zulassen", "Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "host",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "host",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "sandbox",
+      "size": "short",
+      "accept": true,
+      "buttons": ["Zulassen", "Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "sandbox",
+      "size": "long",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "sandbox",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["Ablehnen", "Prüfen", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "question",
+      "size": "short",
+      "accept": false,
+      "buttons": ["OneFirst", "TwoSecond", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "de-DE",
+      "type": "question",
+      "size": "long",
+      "accept": false,
+      "buttons": ["In der App antworten", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "terminal",
+      "size": "short",
+      "accept": true,
+      "buttons": ["許可", "拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "terminal",
+      "size": "long",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "terminal",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "path",
+      "size": "short",
+      "accept": true,
+      "buttons": ["許可", "拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "path",
+      "size": "long",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "path",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "url",
+      "size": "short",
+      "accept": true,
+      "buttons": ["許可", "拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "url",
+      "size": "long",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "url",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "host",
+      "size": "short",
+      "accept": true,
+      "buttons": ["許可", "拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "host",
+      "size": "long",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "host",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "sandbox",
+      "size": "short",
+      "accept": true,
+      "buttons": ["許可", "拒否", "確認", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "sandbox",
+      "size": "long",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "sandbox",
+      "size": "narrow",
+      "accept": false,
+      "buttons": ["拒否", "確認", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "question",
+      "size": "short",
+      "accept": false,
+      "buttons": ["OneFirst", "TwoSecond", "Not now"],
+      "visibleOverflow": false,
+      "font": "\"Inter Variable\", sans-serif"
+    },
+    {
+      "locale": "ja-JP",
+      "type": "question",
+      "size": "long",
+      "accept": false,
+      "buttons": ["アプリで回答", "Not now"],
+      "visibleOverflow": true,
+      "font": "\"Inter Variable\", sans-serif"
+    }
+  ]
+}
