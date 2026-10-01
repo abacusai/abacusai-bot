@@ -79,7 +79,7 @@ export const ROUTES = option(
     "/library/connectors",
     "/settings/general",
     "/settings/models",
-    "/__ui?section=nav&fixture=routine-report",
+    "/__ui?fixture=routine-report",
     "/settings/appearance",
     "/onboarding/welcome",
     "/__ui?section=shell",
