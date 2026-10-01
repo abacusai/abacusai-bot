@@ -53,7 +53,7 @@ export const useUpdateStatus = () => {
       ({ signal }) => transport.client.update.events({}, { signal }),
       (status) => {
         setLive(
-          status.installing
+          status.installing && !status.installStalled
             ? {
                 ...status,
                 error: null,
@@ -63,7 +63,7 @@ export const useUpdateStatus = () => {
             : status
         );
         if (
-          !status.installing &&
+          (!status.installing || status.installStalled) &&
           (status.failedPhase === "install" || status.installStalled)
         ) {
           setClicked(false);
@@ -75,9 +75,10 @@ export const useUpdateStatus = () => {
     return () => abort.abort();
   }, [transport]);
   const incoming = live ?? seed.data;
-  const status = incoming?.installing
-    ? { ...incoming, error: null, failedPhase: null, installStalled: false }
-    : incoming;
+  const status =
+    incoming?.installing && !incoming.installStalled
+      ? { ...incoming, error: null, failedPhase: null, installStalled: false }
+      : incoming;
   const install = async () => {
     setClicked(true);
     setInstallError(null);

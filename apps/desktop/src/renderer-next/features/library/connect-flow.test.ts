@@ -6,7 +6,11 @@ import type { Db } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
 import type { MessagingSnapshot } from "#shared/messaging";
 
-import { connectPlatform, createConnectFlow } from "./connect-flow";
+import {
+  CONNECT_WATCHDOG_MS,
+  connectPlatform,
+  createConnectFlow,
+} from "./connect-flow";
 const snapshot = {
   gatewayEnabled: false,
   platforms: [],
@@ -121,6 +125,45 @@ it("R5-T16 pairing watchdog settles the pending caller and disables its platform
     expect(await pending).toMatchObject({ ok: false, cancelled: true });
     expect(d.calls).toContain("whatsapp:false");
     expect(flow.store.state.error).toBe("timeout");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("a two-platform route transition settles deferred setup without cancelling its replacement", async () => {
+  vi.useFakeTimers();
+  try {
+    const d = setup();
+    const flow = createConnectFlow(d);
+    const entry = CONNECTORS.find(
+      (e) => e.kind === "messaging" && e.platform === "whatsapp"
+    )!;
+    const pending = flow.start(entry.id);
+    const settled = vi.fn();
+    void pending.then(settled);
+    await vi.advanceTimersByTimeAsync(0);
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    void flow.registerPairing("whatsapp", () => ready);
+    await vi.advanceTimersByTimeAsync(CONNECT_WATCHDOG_MS - 1000);
+    const cleanup = flow.settlePairing("whatsapp");
+    await flow.registerPairing("telegram", async () => {});
+    release();
+    await cleanup;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(settled).toHaveBeenCalledTimes(1);
+    expect(await pending).toMatchObject({ ok: false, cancelled: true });
+    expect(d.calls.filter((call) => call === "whatsapp:false")).toHaveLength(1);
+    expect(d.calls).not.toContain("telegram:false");
+    expect(flow.store.state).toMatchObject({
+      connectorId: "telegram",
+      phase: "pairing",
+    });
+    await flow.settlePairing("telegram");
+    d.queryClient.clear();
+    expect(vi.getTimerCount()).toBe(0);
   } finally {
     vi.useRealTimers();
   }
