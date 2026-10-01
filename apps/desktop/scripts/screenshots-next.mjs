@@ -486,6 +486,9 @@ const main = async () => {
   /** Capture the current state as `name`, after axe on the settled page. */
   const capture = async (cdp, name, extra = {}) => {
     await animationsDone(cdp);
+    await cdp.evaluate(
+      `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))`
+    );
     const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
     writeFileSync(join(out, name), Buffer.from(shot.data, "base64"));
     const axe = await cdp.evaluate(
@@ -493,7 +496,17 @@ const main = async () => {
     );
     axeReport.push({ file: name, violations: axe });
     failures.push(...axeFailures(name, axe));
-    shots.push({ file: name, ...extra });
+    const notchText = flag("--phase6")
+      ? await cdp.evaluate(`(() => {
+      const region = document.querySelector('.notch-shape');
+      if (!region) return null;
+      return [...region.querySelectorAll('span,h2,p,button')].filter((node) => node.textContent).map((node) => {
+        const css = getComputedStyle(node);
+        return { tag: node.tagName, text: node.textContent.slice(0,80), color: css.color, background: css.backgroundColor, opacity: css.opacity, visibility: css.visibility, mix: css.mixBlendMode };
+      });
+    })()`)
+      : undefined;
+    shots.push({ file: name, ...extra, ...(notchText ? { notchText } : {}) });
   };
 
   for (const width of WIDTHS) {

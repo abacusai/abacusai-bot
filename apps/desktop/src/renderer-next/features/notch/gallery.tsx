@@ -48,6 +48,10 @@ export const NotchGallery = ({ state: fixture }: { state: string }) => {
           role="region"
           aria-label={t("notch.a11y.region")}
           style={{
+            clipPath:
+              mode === "notch"
+                ? "polygon(0 0, calc(50% - 100px) 0, calc(50% - 100px) 40px, calc(50% + 100px) 40px, calc(50% + 100px) 0, 100% 0, 100% 100%, 0 100%)"
+                : undefined,
             width:
               state === "hidden"
                 ? 0

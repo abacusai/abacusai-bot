@@ -395,6 +395,10 @@ export const NotchShell = ({
             aria-label={t("notch.a11y.region")}
             aria-live="off"
             style={{
+              clipPath:
+                layout.mode === "notch"
+                  ? `polygon(0 0, calc(50% - ${(layout.notch?.width ?? 0) / 2}px) 0, calc(50% - ${(layout.notch?.width ?? 0) / 2}px) ${Math.max(layout.notch?.height ?? 0, 32)}px, calc(50% + ${(layout.notch?.width ?? 0) / 2}px) ${Math.max(layout.notch?.height ?? 0, 32)}px, calc(50% + ${(layout.notch?.width ?? 0) / 2}px) 0, 100% 0, 100% 100%, 0 100%)`
+                  : undefined,
               width: shape.width,
               height: shape.height,
               visibility: shown.hidden ? "hidden" : "visible",
