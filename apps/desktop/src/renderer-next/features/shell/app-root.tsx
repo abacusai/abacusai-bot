@@ -28,6 +28,7 @@ import type { SystemInfo } from "#shared/contract";
 import { AppToaster } from "./app-toaster";
 import { CommandMenu } from "./command-menu";
 import { AppHotkeys, AppHotkeysProvider, type ShellActions } from "./hotkeys";
+import { NotificationClicks } from "./notification-clicks";
 import { createOcclusionWatcher } from "./occlusion";
 import { ReadinessReporter } from "./readiness";
 import {
@@ -147,6 +148,7 @@ export const AppRoot = ({
               collections={db.collections}
             />
             <InvalidationBridge transport={transport} />
+            <NotificationClicks transport={transport} />
             <OcclusionEffect />
             <InertHiddenEffect />
             <ShortcutHandler />
