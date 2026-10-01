@@ -168,3 +168,79 @@ it.each([
     expect(screen.queryByRole("checkbox")).toBeNull();
   }
 });
+it("a later exhaustion mark forces fresh counters and cannot be cleared by the previous response", async () => {
+  const { act } = await import("@testing-library/react");
+  const fresh = {
+    subscription_tier: "free",
+    credits_used: 1,
+    credits_granted: 10,
+  } as AbacusAccountInfo;
+  let release!: (value: AbacusAccountInfo) => void;
+  const fetch = vi.fn(async (_context: unknown): Promise<AbacusAccountInfo> =>
+    fetch.mock.calls.length === 1
+      ? fresh
+      : new Promise<AbacusAccountInfo>((resolve) => {
+          release = resolve;
+        })
+  );
+  app = await renderApp("/settings/models", {
+    procedures: { account: { abacus: os.account.abacus.handler(fetch) } },
+  });
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  await act(async () => {});
+  const mark = Date.now();
+  await act(async () => {
+    await app!.appDb.updatePrefs({ creditsExhaustedAt: mark });
+  });
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  expect(fetch.mock.calls[1]![0]).toMatchObject({ input: { refresh: true } });
+  expect(app.collections.prefs.get("app")?.creditsExhaustedAt).toBe(mark);
+  await act(async () => release(fresh));
+  await waitFor(() =>
+    expect(app!.collections.prefs.get("app")?.creditsExhaustedAt).toBeNull()
+  );
+});
+it("an install retry event carrying historical failure keeps the critical dialog installing", async () => {
+  let release!: () => void;
+  const retried = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const failed = {
+    ...idle,
+    downloaded: true,
+    criticalUpdate: true,
+    error: "old install failure",
+    failedPhase: "install" as const,
+  };
+  app = await renderApp("/settings/about", {
+    procedures: {
+      update: {
+        status: os.update.status.handler(() => failed),
+        install: os.update.install.handler(() => {
+          release();
+        }),
+        events: os.update.events.handler(async function* ({ signal }) {
+          await retried;
+          yield { ...failed, installing: true };
+          await new Promise<void>((resolve) =>
+            signal?.addEventListener("abort", () => resolve(), { once: true })
+          );
+        }),
+      },
+    },
+  });
+  const { within } = await import("@testing-library/react");
+  const dialog = await screen.findByRole("alertdialog");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Try again" }));
+  await waitFor(() =>
+    expect(
+      within(dialog)
+        .getByRole("button", { name: "Restarting…" })
+        .hasAttribute("disabled")
+    ).toBe(true)
+  );
+  expect(within(dialog).queryByText("old install failure")).toBeNull();
+  expect(
+    within(dialog).queryByRole("button", { name: "Try again" })
+  ).toBeNull();
+});

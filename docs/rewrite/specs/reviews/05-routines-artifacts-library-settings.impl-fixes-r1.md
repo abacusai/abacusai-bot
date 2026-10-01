@@ -15,8 +15,8 @@ The rows below distinguish new repairs from repairs already present in the conti
 | 7 | Fixed | Remote shared unlink precedes local disable and updates the snapshot. Failure leaves activation intact and appears in the confirmation. Both tests failed before repair. |
 | 8 | Present, regression added | Scope disappearance clears runtime/logs; obsolete snapshot requests are guarded by abort and log requests by lifetime. Rendered two-session test checks late server response and scope loss. Removal check pending. |
 | 9 | Fixed | Refresh and restart inspect unsuccessful outcomes; OAuth skips refresh on cancellation/failure. Rendered operation tests check error versus success notices and refresh counts. Removal checks pending. |
-| 10 | Pending | Credit-counter request freshness. |
-| 11 | Pending | Installing retry event sequence. |
+| 10 | Fixed | Account counter requests force `refresh: true`, key each exhaustion mark separately, and compare the response timestamp with the mark. A mounted-page test prevents old positive counters clearing a later mark, then releases the fresh response. Failed before repair. |
+| 11 | Fixed | Installing events discard historical failure fields; retry clears historical failure at the transition. The critical-dialog event test retains its disabled Restarting state and removes the old error. Failed before repair. |
 | 12 | Pending | Chat appearance consumers. |
 | 13 | Pending | Stop action binding consumer. |
 | 14 | Pending | Conflict checks in all affected contexts. |

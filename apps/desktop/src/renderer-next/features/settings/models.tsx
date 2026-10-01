@@ -56,7 +56,11 @@ export const ModelsPage = ({
     transport.orpc.settings.keys.listProviders.queryOptions({ input: {} })
   );
   const account = useQuery({
-    ...transport.orpc.account.abacus.queryOptions({ input: {} }),
+    ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
+    queryKey: [
+      ...transport.orpc.account.abacus.queryKey({ input: { refresh: true } }),
+      prefs.creditsExhaustedAt,
+    ],
     staleTime: 60000,
     refetchInterval: 300000,
   });
@@ -78,7 +82,7 @@ export const ModelsPage = ({
     account.data,
     prefs.creditsExhaustedAt,
     now,
-    account.isFetchedAfterMount
+    account.dataUpdatedAt >= (prefs.creditsExhaustedAt ?? Infinity)
   );
   useEffect(() => {
     if (mark === "clear")
