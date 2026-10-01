@@ -11,6 +11,9 @@ export const useDictation = (
   onTranscript: (text: string) => void
 ) => {
   const [state, setState] = useState<VoiceState>("idle");
+  const [error, setError] = useState<"microphone" | "transcription" | null>(
+    null
+  );
   const [level, setLevel] = useState(0);
   const callback = useRef(onTranscript);
   useEffect(() => {
@@ -26,7 +29,11 @@ export const useDictation = (
       transcribe: async (clip) =>
         transcribe(await decodeForWhisper(clip.audio)),
       transcript: (text) => callback.current(text),
-      state: setState,
+      state: (value) => {
+        if (value === "starting" || value === "idle") setError(null);
+        setState(value);
+      },
+      error: setError,
     });
     operation.current = value;
     return () => {
@@ -37,6 +44,7 @@ export const useDictation = (
   return {
     state,
     level,
+    error,
     start: () => operation.current?.start() ?? Promise.resolve(),
     end: () => operation.current?.end() ?? Promise.resolve(),
     cancel: () => operation.current?.cancel(),

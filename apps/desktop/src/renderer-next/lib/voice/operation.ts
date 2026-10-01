@@ -11,6 +11,7 @@ export interface VoiceDeps {
   transcribe(clip: Recording): Promise<string>;
   state(value: VoiceState): void;
   transcript(text: string): void;
+  error?(code: "microphone" | "transcription"): void;
 }
 /** End keeps the operation alive; cancellation invalidates every outstanding await. */
 export class VoiceOperation {
@@ -42,6 +43,7 @@ export class VoiceOperation {
       } catch {
         if (current()) {
           this.#busy = false;
+          this.deps.error?.("microphone");
           this.deps.state("error");
         }
       }
@@ -63,7 +65,10 @@ export class VoiceOperation {
         if (text) this.deps.transcript(text);
         this.deps.state("idle");
       } catch {
-        if (token === this.#token) this.deps.state("error");
+        if (token === this.#token) {
+          this.deps.error?.("transcription");
+          this.deps.state("error");
+        }
       } finally {
         if (token === this.#token) this.#busy = false;
       }

@@ -20,6 +20,7 @@ export interface Attention {
   sessionId: string;
   since: number;
   descriptorId?: string;
+  errorCode?: string;
   runId?: string;
   botId: string | null;
   canReply?: boolean;
@@ -154,6 +155,7 @@ export const presentNotch = (
       sessionId: s.id,
       since: notice.at,
       runId: notice.runId,
+      errorCode: notice.errorCode,
       botId: botForSession(s, inputs.routines),
       canReply: s.owner?.role === "forever",
     });

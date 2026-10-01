@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#next/components/bot-avatar";
 import { cueForNotice } from "#next/lib/attention/cues";
+import { runErrorCopy } from "#next/lib/attention/error-copy";
 import { resolveLook } from "#next/lib/bots/avatar";
 import { isCheckInRoutine } from "#next/lib/bots/check-in";
 import { useMotionPreference } from "#next/lib/motion";
@@ -64,6 +65,9 @@ export const NotchShell = ({
   const [app, setApp] = useState({ mainFocused: false });
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(document.hasFocus());
+  const [dictationError, setDictationError] = useState<
+    "microphone" | "transcription" | null
+  >(null);
   const [unlocked, setUnlocked] = useState(false);
   const [reaction, setReaction] = useState<{
     sessionId: string;
@@ -273,17 +277,43 @@ export const NotchShell = ({
         : { kind: "session", sessionId: session.id };
     void transport.client.notch.openInApp(target).then(() => {
       if (p.attention?.runId)
-        setAcks((state) => new Set([...state, p.attention!.runId!]));
+        setAcks(
+          (state) => new Set([...state, p.attention!.runId!].slice(-500))
+        );
       setHovered(false);
       setManual(null);
     });
   };
+  const messageOperation = useRef<{
+    generation: number;
+    abort: AbortController;
+  } | null>(null);
+  const messageGeneration = useRef(0);
+  useEffect(
+    () => () => {
+      messageGeneration.current++;
+      messageOperation.current?.abort.abort();
+    },
+    []
+  );
   const message = async (botId: string, call = false) => {
-    const handle = await transport.client.bots.openChat({ botId });
+    messageOperation.current?.abort.abort();
+    const generation = ++messageGeneration.current;
     const abort = new AbortController();
+    messageOperation.current = { generation, abort };
     const timer = setTimeout(() => abort.abort(), 8000);
+    const check = () => {
+      if (abort.signal.aborted || generation !== messageGeneration.current)
+        throw new DOMException("Superseded", "AbortError");
+    };
     try {
+      const handle = await transport.client.bots.openChat(
+        { botId },
+        { signal: abort.signal }
+      );
+      check();
       await chat.session(handle.sessionId).load({ signal: abort.signal });
+      check();
       const attention = {
         kind: "reply" as const,
         sessionId: handle.sessionId,
@@ -292,7 +322,7 @@ export const NotchShell = ({
         canReply: true,
       };
       setManual({
-        ...automatic,
+        ...current.current.shown,
         route: call ? "/call" : "/reply/$id",
         sessionId: handle.sessionId,
         identity: `manual:${handle.sessionId}:${call}`,
@@ -302,15 +332,23 @@ export const NotchShell = ({
         queue: [attention],
       });
       setHovered(true);
-      await transport.client.notch.focus({ focus: true });
-    } catch (error) {
+      await transport.client.notch.focus(
+        { focus: true },
+        { signal: abort.signal }
+      );
+      check();
+    } finally {
       clearTimeout(timer);
-      throw error;
+      if (messageOperation.current?.generation === generation)
+        messageOperation.current = null;
     }
-    clearTimeout(timer);
   };
-  const endCall = (text?: string) => {
-    if (text && manual?.sessionId) drafts.set(manual.sessionId, text);
+  const endCall = (text?: string, error?: "microphone" | "transcription") => {
+    setDictationError(error ?? null);
+    if (text && manual?.sessionId) {
+      const prior = drafts.get(manual.sessionId) ?? "";
+      drafts.set(manual.sessionId, `${prior}${prior ? " " : ""}${text}`);
+    }
     if (manual)
       setManual({
         ...manual,
@@ -320,7 +358,9 @@ export const NotchShell = ({
   };
   const snooze = () => {
     const key = current.current.shown.attention?.descriptorId;
-    if (key) setSnoozed((state) => new Set([...state, key]));
+    const runId = current.current.shown.attention?.runId;
+    if (runId) setAcks((state) => new Set([...state, runId].slice(-500)));
+    if (key) setSnoozed((state) => new Set([...state, key].slice(-500)));
     setHovered(false);
     void transport.client.notch.focus({ focus: false });
   };
@@ -335,6 +375,7 @@ export const NotchShell = ({
         focused,
         message,
         endCall,
+        dictationError,
       }}
     >
       <MotionConfig reducedMotion={reduced ? "always" : "user"}>
@@ -430,7 +471,11 @@ export const NotchShell = ({
                 <span className="truncate">
                   {shown.quietUntil
                     ? t("notch.quiet.until", { time: shown.quietUntil })
-                    : t(`notch.wings.${shown.attention?.kind ?? "idle"}`)}
+                    : t(
+                        shown.attention?.kind === "failed"
+                          ? runErrorCopy(shown.attention.errorCode)
+                          : `notch.wings.${shown.attention?.kind ?? "idle"}`
+                      )}
                 </span>
               </div>
               {layout.notch && (
@@ -444,12 +489,21 @@ export const NotchShell = ({
                 {shown.sessionId && (
                   <Button onClick={open}>{t("notch.actions.open")}</Button>
                 )}
+                {shown.attention?.kind === "failed" && (
+                  <Button aria-label={t("common.close")} onClick={snooze}>
+                    ×
+                  </Button>
+                )}
               </div>
             </div>
             {shown.expanded && <div className="notch-body">{children}</div>}
             <span className="sr-only" aria-live={focused ? "polite" : "off"}>
               {focused
-                ? t(`notch.wings.${shown.attention?.kind ?? "idle"}`)
+                ? t(
+                    shown.attention?.kind === "failed"
+                      ? runErrorCopy(shown.attention.errorCode)
+                      : `notch.wings.${shown.attention?.kind ?? "idle"}`
+                  )
                 : ""}
             </span>
           </div>
@@ -470,7 +524,7 @@ export const ReplyView = ({
   text: string;
   submit(text: string): Promise<{ kind: string }>;
 }) => {
-  const { presentation, transport, open } = useNotch();
+  const { presentation, transport, open, dictationError } = useNotch();
   const id = presentation.sessionId ?? "";
   const { t } = useTranslation();
   const [draft, setDraft] = useState(drafts.get(id) ?? "");
@@ -503,6 +557,15 @@ export const ReplyView = ({
   return (
     <div>
       <p className="line-clamp-3">{text}</p>
+      {dictationError && (
+        <p role="alert">
+          {t(
+            dictationError === "microphone"
+              ? "workspace.voice.errors.permission-denied"
+              : "workspace.voice.errors.transcription-failed"
+          )}
+        </p>
+      )}
       {presentation.attention?.canReply && (
         <Input
           aria-label={t("notch.reply.placeholder")}
@@ -633,6 +696,17 @@ export const CallView = () => {
   const voice = useDictation(transport, presentation.sessionId ?? "", (text) =>
     endCall(text)
   );
+  const previousVoiceState = useRef(voice.state);
+  useEffect(() => {
+    if (voice.state === "error")
+      endCall(undefined, voice.error ?? "transcription");
+    else if (
+      voice.state === "idle" &&
+      ["recording", "transcribing"].includes(previousVoiceState.current)
+    )
+      endCall();
+    previousVoiceState.current = voice.state;
+  }, [voice.state, voice.error, endCall]);
   const started = useRef(false);
   useEffect(() => {
     if (started.current) return;
@@ -655,7 +729,7 @@ export const CallView = () => {
       </div>
       <Button
         disabled={voice.state !== "recording"}
-        onClick={() => void voice.end().then(() => endCall())}
+        onClick={() => void voice.end()}
       >
         {t("notch.listening.end")}
       </Button>
@@ -690,3 +764,6 @@ export const ConnectorAskView = () => {
     </div>
   );
 };
+
+export { NotchGallery } from "./gallery";
+export type { NotchPresentation } from "./presenter";

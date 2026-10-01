@@ -7,7 +7,7 @@ import {
 import { useRef } from "react";
 
 import { NotchShell } from "#next/features/notch";
-import type { NotchPresentation } from "#next/features/notch/presenter";
+import type { NotchPresentation } from "#next/features/notch";
 import type { NotchRouterContext } from "#next/notch-context";
 const Root = () => {
   const router = useRouter();

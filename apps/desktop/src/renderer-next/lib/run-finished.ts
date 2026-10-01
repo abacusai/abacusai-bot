@@ -26,7 +26,13 @@ const createFeed = (transport: Transport) => {
             if (seen.has(notice.runId)) return;
             seen.add(notice.runId);
             if (seen.size > 500) seen.delete(seen.values().next().value!);
-            for (const receive of listeners) receive(notice);
+            for (const receive of listeners) {
+              try {
+                receive(notice);
+              } catch (error) {
+                console.warn("[run-finished] consumer failed", error);
+              }
+            }
           },
           abort.signal
         );

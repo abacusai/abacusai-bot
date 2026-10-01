@@ -4,7 +4,7 @@ import { createContext, use } from "react";
 import type { Db } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
 import type { ChatRuntime } from "#next/features/chat";
-import type { NotchPresentation } from "#next/features/notch/presenter";
+import type { NotchPresentation } from "#next/features/notch";
 import type { NotchLayout } from "#shared/contract";
 export interface NotchRouterContext {
   transport: Transport;
@@ -19,7 +19,8 @@ export interface NotchViewContext extends NotchRouterContext {
   snooze(): void;
   focused: boolean;
   message(botId: string, call?: boolean): Promise<void>;
-  endCall(text?: string): void;
+  endCall(text?: string, error?: "microphone" | "transcription"): void;
+  dictationError?: "microphone" | "transcription" | null;
 }
 export const NotchContext = createContext<NotchViewContext | null>(null);
 export const useNotch = (): NotchViewContext => {

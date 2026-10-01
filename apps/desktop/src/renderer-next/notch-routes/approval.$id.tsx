@@ -17,7 +17,8 @@ const Approval = () => {
       limit={1}
       maxHeight={
         context.layout.maxShape.height -
-        Math.max(context.layout.notch?.height ?? 32, 32) - 18
+        Math.max(context.layout.notch?.height ?? 32, 32) -
+        18
       }
       focused={context.focused}
       onHaptic={(key) =>

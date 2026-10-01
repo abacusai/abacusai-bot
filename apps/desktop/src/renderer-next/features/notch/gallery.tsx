@@ -6,9 +6,23 @@ import { resolveLook } from "#next/lib/bots/avatar";
 import { Button } from "#next/ui/button";
 import { Input } from "#next/ui/input";
 /** Canvas state specimens. Native behavior is verified separately in the Electron suite. */
-export const NotchGallery = ({ state }: { state: string }) => {
+export const NotchGallery = ({ state: fixture }: { state: string }) => {
+  const mode = fixture.startsWith("capsule-")
+    ? "capsule"
+    : fixture.startsWith("notch-")
+      ? "notch"
+      : "plain";
+  const state = mode === "plain" ? fixture : fixture.slice(mode.length + 1);
   const { t } = useTranslation();
-  const expanded = state !== "idle" && state !== "working";
+  const expanded = [
+    "approval",
+    "truncated",
+    "question",
+    "reply",
+    "reply-readonly",
+    "call",
+    "hovered",
+  ].includes(state);
   const kind =
     state === "approval"
       ? "approval"
@@ -16,14 +30,34 @@ export const NotchGallery = ({ state }: { state: string }) => {
         ? "question"
         : state === "call"
           ? "reply"
-          : state;
+          : ["hidden", "hovered", "quiet", "reaction", "several"].includes(
+                state
+              )
+            ? "idle"
+            : state === "truncated"
+              ? "approval"
+              : state === "reply-readonly"
+                ? "reply"
+                : state;
   return (
     <div className="grid min-h-[620px] place-items-center">
       <div>
         <div
           className="notch-shape"
-          data-mode="plain"
-          style={{ width: expanded ? 440 : 280, height: expanded ? 210 : 40 }}
+          data-mode={mode}
+          role="region"
+          aria-label={t("notch.a11y.region")}
+          style={{
+            width:
+              state === "hidden"
+                ? 0
+                : expanded
+                  ? 540
+                  : mode === "notch"
+                    ? 480
+                    : 280,
+            height: state === "hidden" ? 0 : expanded ? 210 : 40,
+          }}
         >
           <div className="notch-wings" style={{ height: 40 }}>
             <div className="notch-wing">
@@ -35,15 +69,36 @@ export const NotchGallery = ({ state }: { state: string }) => {
                   avatarColor: "blue",
                 })}
                 mood={
-                  state === "working"
-                    ? "working"
-                    : state === "approval"
-                      ? "waiting"
-                      : "idle"
+                  state === "reaction"
+                    ? "wink"
+                    : state === "working"
+                      ? "working"
+                      : state === "approval"
+                        ? "waiting"
+                        : "idle"
                 }
               />
-              <span>{t(`notch.wings.${kind}`)}</span>
+              {state === "several" &&
+                ["green", "purple"].map((color) => (
+                  <BotAvatar
+                    key={color}
+                    size={20}
+                    look={resolveLook({
+                      name: color,
+                      avatarShape: "mochi",
+                      avatarColor: color as "green",
+                    })}
+                  />
+                ))}
+              <span className="truncate">
+                {state === "quiet"
+                  ? t("notch.quiet.until", { time: "08:00" })
+                  : t(`notch.wings.${kind}`)}
+              </span>
             </div>
+            {mode === "notch" && (
+              <div style={{ width: 200, flexShrink: 0 }} aria-hidden="true" />
+            )}
             <div className="notch-wing justify-end">
               <Button variant="ghost">{t("notch.actions.open")}</Button>
             </div>
@@ -55,14 +110,19 @@ export const NotchGallery = ({ state }: { state: string }) => {
                   ? t("notch.listening.title")
                   : t(`notch.wings.${kind}`)}
               </h2>
-              {state === "approval" ? (
+              {state === "approval" || state === "truncated" ? (
                 <>
                   <p className="my-3 whitespace-pre-wrap">
                     git status
                     <br />
                     /workspace/project
                   </p>
-                  <Button>{t("chat.permission.action.allow")}</Button>
+                  {state === "approval" && (
+                    <Button>{t("chat.permission.action.allow")}</Button>
+                  )}
+                  {state === "truncated" && (
+                    <p>{t("notch.approval.reviewOnly")}</p>
+                  )}
                   <Button variant="ghost">{t("notch.approval.review")}</Button>
                 </>
               ) : state === "question" ? (
@@ -85,6 +145,14 @@ export const NotchGallery = ({ state }: { state: string }) => {
                   </div>
                   <Button>{t("notch.listening.end")}</Button>
                 </>
+              ) : state === "hovered" ? (
+                <div className="flex gap-2">
+                  <Button>{t("notch.actions.message")}</Button>
+                  <Button>{t("notch.actions.call")}</Button>
+                  <Button>{t("notch.actions.pause")}</Button>
+                </div>
+              ) : state === "reply-readonly" ? (
+                <p className="mt-4">{t("chat.composer.channelBot")}</p>
               ) : (
                 <p>{t(`notch.${state}.title`)}</p>
               )}
