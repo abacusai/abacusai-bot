@@ -184,7 +184,7 @@ export const FilesTab = ({
                       ? "added"
                       : "modified",
             }))}
-            renderMenu={(item, context) => (
+            renderMenu={(item, context, rename) => (
               <div
                 role="menu"
                 className="bg-popover flex flex-col rounded-lg border p-1 shadow-md"
@@ -201,6 +201,7 @@ export const FilesTab = ({
                         path: `${root}/${item.path}`,
                       }),
                   },
+                  { label: t("sessions.files.rename"), run: rename },
                   {
                     label: t("sessions.files.copyPath"),
                     run: () => void navigator.clipboard.writeText(item.path),

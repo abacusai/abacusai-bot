@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useDb } from "#next/data/db";
 import { isListedSession } from "#next/data/db/filters";
 import { usePrefs } from "#next/data/db/prefs";
+import { formatChatStamp } from "#next/lib/format/chat-stamp";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Button } from "#next/ui/button";
@@ -39,7 +40,7 @@ export const SessionStartPage = ({
   handoff: (id: string, envelope: SubmissionEnvelope) => void;
   prefill: (id: string, text: string) => void;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const db = useDb();
   const prefs = usePrefs();
   const { data: recent } = useLiveQuery(db.collections.sessions);
@@ -170,10 +171,12 @@ export const SessionStartPage = ({
                 >
                   <span>{s.label || t("sessions.untitled")}</span>
                   <time dateTime={s.updatedAt}>
-                    {new Intl.DateTimeFormat(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    }).format(new Date(s.updatedAt))}
+                    {formatChatStamp(
+                      Date.parse(s.updatedAt),
+                      Date.now(),
+                      i18n.language,
+                      t("sessions.yesterday")
+                    )}
                   </time>
                 </AppLink>
               ))}

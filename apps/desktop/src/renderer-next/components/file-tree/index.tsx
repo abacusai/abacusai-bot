@@ -16,7 +16,12 @@ export const FileTreeView = ({
   onOpen: (path: string) => void;
   onRename: (from: string, to: string) => void;
   gitStatus?: readonly GitStatusEntry[];
-  renderMenu?: FileTreeProps["renderContextMenu"];
+  renderMenu?: (
+    ...args: [
+      ...Parameters<NonNullable<FileTreeProps["renderContextMenu"]>>,
+      rename: () => void,
+    ]
+  ) => React.ReactNode;
 }) => {
   const { t } = useTranslation();
   const { model } = useFileTree({
@@ -50,7 +55,15 @@ export const FileTreeView = ({
   return (
     <FileTree
       model={model}
-      renderContextMenu={renderMenu}
+      renderContextMenu={
+        renderMenu
+          ? (item, context) =>
+              renderMenu(item, context, () => {
+                context.close({ restoreFocus: false });
+                model.startRenaming(item.path);
+              })
+          : undefined
+      }
       aria-label={t("sessions.dock.files")}
       className="min-h-0 flex-1"
       onDoubleClick={() => {
