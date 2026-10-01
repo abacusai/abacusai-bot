@@ -24,3 +24,31 @@ export const repaint = (terminal: Terminal): void => {
     terminal
   );
 };
+
+/** Ghostty accepts hex/rgb; CSS tokens are oklch, resolved by the browser. */
+export const terminalTheme = (): { background: string; foreground: string } => {
+  const css = getComputedStyle(document.documentElement);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 1;
+  const ctx = canvas.getContext("2d");
+  const dark = document.documentElement.classList.contains("dark");
+  const read = (key: string, fallback: string) => {
+    if (!ctx) return fallback;
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = fallback;
+    ctx.fillRect(0, 0, 1, 1);
+    ctx.fillStyle = css.getPropertyValue(key).trim() || fallback;
+    ctx.fillRect(0, 0, 1, 1);
+    return (
+      "#" +
+      [...ctx.getImageData(0, 0, 1, 1).data]
+        .slice(0, 3)
+        .map((value) => value.toString(16).padStart(2, "0"))
+        .join("")
+    );
+  };
+  return {
+    background: read("--background", dark ? "#0a0a0a" : "#ffffff"),
+    foreground: read("--foreground", dark ? "#fafafa" : "#0a0a0a"),
+  };
+};

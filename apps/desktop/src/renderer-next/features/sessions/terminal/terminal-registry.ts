@@ -2,6 +2,8 @@ import {
   ghosttyReady,
   Terminal,
   FitAddon,
+  terminalTheme,
+  repaint,
 } from "#next/components/terminal/ghostty";
 export interface TerminalView {
   term: Terminal;
@@ -11,6 +13,7 @@ export interface TerminalView {
   generation: number | null;
   received: number;
   reconnect?: () => void;
+  disposeTheme(): void;
 }
 const views = new Map<string, Promise<TerminalView>>();
 export const getTerminalView = (key: string): Promise<TerminalView> => {
@@ -28,18 +31,22 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         cursorStyle: "block",
         scrollback: 10000,
         convertEol: false,
-        theme: {
-          background: getComputedStyle(document.documentElement)
-            .getPropertyValue("--background")
-            .trim(),
-          foreground: getComputedStyle(document.documentElement)
-            .getPropertyValue("--foreground")
-            .trim(),
-        },
+        theme: terminalTheme(),
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
       term.open(element);
+      const updateTheme = () => {
+        const theme = terminalTheme();
+        term.options.theme = theme;
+        term.renderer?.setTheme(theme);
+        repaint(term);
+      };
+      const themeObserver = new MutationObserver(updateTheme);
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class", "data-theme"],
+      });
       return {
         term,
         fit,
@@ -47,6 +54,7 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         offset: undefined,
         generation: null,
         received: 0,
+        disposeTheme: () => themeObserver.disconnect(),
       };
     })();
     views.set(key, view);
@@ -57,6 +65,7 @@ export const disposeTerminalView = (key: string): void => {
   const view = views.get(key);
   views.delete(key);
   void view?.then((v) => {
+    v.disposeTheme();
     v.term.dispose();
     v.element.remove();
   });
@@ -71,6 +80,7 @@ if (import.meta.env.VITE_UI_GALLERY === "1") {
       if (!view) return null;
       const buffer = view.term.buffer.active;
       return {
+        theme: view.term.options.theme,
         offset: view.offset,
         received: view.received,
         generation: view.generation,
