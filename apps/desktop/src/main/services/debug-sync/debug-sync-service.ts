@@ -48,6 +48,8 @@ export class DebugSyncService {
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly pending = new Set<string>();
   private backgroundUploads = 0;
+  private readonly livePending = new Set<string>();
+  private liveUploads = 0;
   private swept = false;
   private readonly inFlight = new Set<string>();
   /** sessionId -> what the server holds; a bare count is an older marker. */
@@ -74,7 +76,8 @@ export class DebugSyncService {
       sessionId,
       setTimeout(() => {
         this.timers.delete(sessionId);
-        this.pending.add(sessionId);
+        this.pending.delete(sessionId);
+        this.livePending.add(sessionId);
         this.pump();
       }, DEBOUNCE_MS)
     );
@@ -98,23 +101,29 @@ export class DebugSyncService {
     this.pump();
   }
 
-  /** Bound startup uploads so thousands of histories cannot block IPC. */
+  /** Two catch-up slots and a reserved live slot; yield before reading histories. */
   private pump(): void {
-    if (this.backgroundUploads >= 2 || this.pending.size === 0) return;
     if (!this.enabled()) {
       this.pending.clear();
+      this.livePending.clear();
       return;
     }
-    const sessionId = this.pending.values().next().value!;
-    this.pending.delete(sessionId);
-    this.backgroundUploads++;
+    const live = this.liveUploads < 1 && this.livePending.size > 0;
+    const queue = live ? this.livePending : this.pending;
+    if (!live && this.backgroundUploads >= 2) return;
+    if (queue.size === 0) return;
+    const sessionId = queue.values().next().value!;
+    queue.delete(sessionId);
+    if (live) this.liveUploads++;
+    else this.backgroundUploads++;
     setImmediate(() => {
       void this.run(sessionId)
         .catch((error: unknown) =>
-          console.warn("[debug-sync] catch-up failed", error)
+          console.warn("[debug-sync] upload failed", error)
         )
         .finally(() => {
-          this.backgroundUploads--;
+          if (live) this.liveUploads--;
+          else this.backgroundUploads--;
           this.pump();
         });
     });
@@ -188,6 +197,7 @@ export class DebugSyncService {
       this.timers.delete(sessionId);
     }
     this.pending.delete(sessionId);
+    this.livePending.delete(sessionId);
     await this.run(sessionId);
   }
 
