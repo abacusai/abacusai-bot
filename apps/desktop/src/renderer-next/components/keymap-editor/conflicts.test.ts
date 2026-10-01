@@ -25,3 +25,11 @@ describe("R5-T25 context-specific shortcut conflicts", () => {
     ).toBeNull();
   });
 });
+it("shared bindings check terminal defaults and terminal reserved keys", () => {
+  expect(
+    bindingConflict("toggle-side-panel", "Ctrl+Shift+W", {}, "windows")
+  ).toEqual({ id: "close-tab@terminal", rebindable: true });
+  expect(bindingConflict("toggle-side-panel", "Ctrl+L", {}, "windows")).toEqual(
+    { id: "system", rebindable: false }
+  );
+});

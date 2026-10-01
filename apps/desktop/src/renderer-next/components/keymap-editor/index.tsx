@@ -45,24 +45,32 @@ export const bindingConflict = (
 ): { id: string; rebindable: boolean } | null => {
   const normalize = (value: string) => normalizeHotkey(value, platform);
   const chord = normalize(candidate);
+  const action = APP_ACTIONS.find((action) => action.id === id.split("@")[0]);
+  const contexts: Array<"window" | "terminal"> = id.endsWith("@terminal")
+    ? ["terminal"]
+    : action?.terminalDefault?.[platform] !== undefined
+      ? ["window"]
+      : ["window", "terminal"];
   if (
     SYSTEM_BINDINGS.some((x) => normalize(x) === chord) ||
-    (id.endsWith("@terminal") &&
+    (contexts.includes("terminal") &&
       platform !== "mac" &&
       TERMINAL_RESERVED.some((x) => normalize(x) === chord))
   )
     return { id: "system", rebindable: false };
-  const context = id.endsWith("@terminal") ? "terminal" : "window";
-  const resolved = resolveKeymap(overrides, platform)[context];
-  for (const action of APP_ACTIONS) {
-    const otherId =
-      context === "terminal" && action.terminalDefault?.[platform] !== undefined
-        ? `${action.id}@terminal`
-        : action.id;
-    if (otherId === id) continue;
-    const binding = resolved[action.id];
-    if (binding && normalize(binding) === chord)
-      return { id: otherId, rebindable: action.rebindable };
+  for (const context of contexts) {
+    const resolved = resolveKeymap(overrides, platform)[context];
+    for (const action of APP_ACTIONS) {
+      const otherId =
+        context === "terminal" &&
+        action.terminalDefault?.[platform] !== undefined
+          ? `${action.id}@terminal`
+          : action.id;
+      if (otherId === id) continue;
+      const binding = resolved[action.id];
+      if (binding && normalize(binding) === chord)
+        return { id: otherId, rebindable: action.rebindable };
+    }
   }
   return null;
 };

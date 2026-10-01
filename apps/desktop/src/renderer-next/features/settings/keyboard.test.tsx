@@ -127,3 +127,23 @@ it("R5-T25 a live sequence conflict cannot be stolen by Use anyway", async () =>
     handle.unregister();
   }
 });
+it("recording a shared action's current chord excludes its own live registration", async () => {
+  app = await renderApp("/settings/keyboard");
+  await screen.findByRole("heading", { name: "Keyboard" });
+  const row = document.querySelector<HTMLElement>(
+    '[data-setting-id="key-toggle-side-panel"]'
+  )!;
+  fireEvent.click(within(row).getByRole("button", { name: "Change" }));
+  fireEvent.keyDown(document.body, {
+    key: "b",
+    code: "KeyB",
+    metaKey: true,
+    altKey: true,
+  });
+  await waitFor(() =>
+    expect(
+      app!.collections.prefs.get("app")?.keymap?.["toggle-side-panel"]
+    ).toBe("Mod+Alt+B")
+  );
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
