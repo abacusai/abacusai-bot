@@ -129,6 +129,8 @@ describe.skipIf(!availability.usable)(
         join(dir, "page-entry.ts"),
         [
           `import { createTransport, getTransport } from ${JSON.stringify(join(SRC, "renderer-next/data/transport/index.ts"))};`,
+          "(window as any).__captureUiContinuity = () => ({ capturedAt: Date.now() });",
+          "(window as any).__restoreUiContinuity = async (snapshot: any) => { await new Promise(r => setTimeout(r, 100)); (window as any).__restored = { ...snapshot, restoredAt: Date.now(), stage1At: (window as any).__stage1At }; };",
           "const report = (value: unknown) => { (window as any).__rpc = value; };",
           "(async () => {",
           "  try {",
@@ -136,6 +138,7 @@ describe.skipIf(!availability.usable)(
           "    const info = await transport.client.system.info();",
           "    const events = await transport.client.bots.events();",
           "    void (async () => { try { for await (const _ of events) {} } catch {} })();",
+          "    await new Promise(r => setTimeout(r, 100)); (window as any).__stage1At = Date.now();",
           '    await transport.client.window.ready({ barrier: "subscriptions" });',
           // Chromium fires `close` only at the other end of a channel: a
           // transport closed locally must still settle its pending calls.
@@ -195,6 +198,12 @@ describe.skipIf(!availability.usable)(
         }>;
         afterSwap: {
           swapped: boolean;
+          flippedAt: number;
+          continuity: {
+            stage1At: number;
+            capturedAt: number;
+            restoredAt: number;
+          };
           replaced: boolean;
           oldDestroyed: boolean;
           page: Record<string, unknown>;
@@ -220,6 +229,15 @@ describe.skipIf(!availability.usable)(
           ports: 1,
           iterators: 1,
         });
+      expect(result.afterSwap.continuity.capturedAt).toBeGreaterThanOrEqual(
+        result.afterSwap.continuity.stage1At
+      );
+      expect(result.afterSwap.continuity.restoredAt).toBeGreaterThanOrEqual(
+        result.afterSwap.continuity.capturedAt + 90
+      );
+      expect(result.afterSwap.flippedAt).toBeGreaterThanOrEqual(
+        result.afterSwap.continuity.restoredAt
+      );
       expect(result.afterSwap).toMatchObject({
         swapped: true,
         replaced: true,

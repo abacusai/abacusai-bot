@@ -1,5 +1,6 @@
 import { Store } from "@tanstack/react-store";
 
+import { bindContinuityStore } from "#next/lib/continuity/registry";
 import type { TerminalSessionSnapshot } from "#shared/contracts";
 
 import { dockLeaves, dockReducer, type DockNode } from "./dock-store";
@@ -179,3 +180,9 @@ export const promoteTabs = (from: string, to: string): void =>
     delete next[from];
     return next;
   });
+
+bindContinuityStore(KEY, {
+  read: () => panelTabsStore.state,
+  write: (value) =>
+    panelTabsStore.setState(() => value as Record<string, PanelTabs>),
+});

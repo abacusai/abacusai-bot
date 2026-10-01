@@ -6,6 +6,7 @@ import { usePanelRef } from "react-resizable-panels";
 import { EmptyState } from "#next/components/empty-state";
 import { ConfirmAction } from "#next/components/form-kit/confirm";
 import { createPaneWidthWriter, usePrefs } from "#next/data/db/prefs";
+import { bindContinuityStore } from "#next/lib/continuity/registry";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { showInfo, showError } from "#next/lib/toast";
@@ -432,6 +433,14 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState(() => readLog(routineId));
   const [gone, setGone] = useState(false);
+  useEffect(
+    () =>
+      bindContinuityStore(`routine-editor:${routineId}`, {
+        read: () => log,
+        write: (value) => setLog(value as Exchange[]),
+      }),
+    [routineId, log]
+  );
   const send = async () => {
     const user = text.trim();
     if (!user || busy) return;
