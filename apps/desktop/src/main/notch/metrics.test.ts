@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import hardware from "./fixtures/notched-mac.json";
 import {
   devMetrics,
   matchScreens,
@@ -12,7 +13,7 @@ const screen = {
   left: 656,
   right: 656,
 };
-describe("R6-T24 parser contract, synthetic inputs pending R6-T31 hardware capture", () => {
+describe("R6-T24 parser contract, synthetic and recorded AppKit inputs", () => {
   it("uses measured AppKit areas only", () => {
     expect(parseProbe(JSON.stringify({ ok: true, screens: [screen] }))).toEqual(
       { kind: "ok", screens: [screen] }
@@ -44,4 +45,14 @@ describe("R6-T24 parser contract, synthetic inputs pending R6-T31 hardware captu
     expect(devMetrics("200x32", true)).toBeNull();
     expect(devMetrics("200x32", false)).toEqual({ width: 200, height: 32 });
   });
+});
+
+it("R6-T24 parses the physical MacBook probe captured for this implementation", () => {
+  const result = parseProbe(JSON.stringify(hardware.probe));
+  expect(result.kind).toBe("ok");
+  if (result.kind === "ok")
+    expect(metricsFromProbe(result.screens[0]!)).toEqual({
+      width: 185,
+      height: 33,
+    });
 });
