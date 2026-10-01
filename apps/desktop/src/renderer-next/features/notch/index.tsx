@@ -329,14 +329,15 @@ export const NotchShell = ({
     if (!automatic.quietUntil) return;
     ++messageGeneration.current;
     messageOperation.current?.abort.abort();
-    const clearManual = () => {
-      setManual(null);
-      setHovered(false);
-      setFocused(false);
-    };
-    void transport.client.notch
-      .focus({ focus: false })
-      .then(clearManual, clearManual);
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = undefined;
+    clearTimeout(leaveTimer.current);
+    // Quiet policy must clear the local view before native focus IPC settles.
+    // eslint-disable-next-line react/set-state-in-effect
+    setManual(null);
+    setHovered(false);
+    setFocused(false);
+    void transport.client.notch.focus({ focus: false }).catch(() => undefined);
   }, [automatic.quietUntil, transport]);
   const replyAccepted = (id: string, runId?: string) => {
     if (runId) setAcks((state) => new Set([...state, runId].slice(-500)));

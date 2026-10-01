@@ -87,6 +87,7 @@ const Controls = ({
   );
 };
 beforeEach(async () => {
+  vi.restoreAllMocks();
   await initI18n();
   f.inputs = {
     sessions: [
@@ -205,6 +206,81 @@ it("pointer re-entry restores native interaction during the collapse delay", asy
     vi.useRealTimers();
   }
 });
+it.each([false, true])(
+  "pending quiet-hours focus release cannot restore or erase manual views (replacement=%s)",
+  async (replacement) => {
+    const view = mount();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Launch reply" })
+    );
+    await screen.findByRole("textbox");
+    await waitFor(() =>
+      expect(view.notch.focus).toHaveBeenLastCalledWith(
+        { focus: true },
+        expect.anything()
+      )
+    );
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    fireEvent(window, new Event("focus"));
+    expect(document.querySelector('[aria-live="polite"]')).toBeTruthy();
+    let release!: () => void;
+    view.notch.focus.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        })
+    );
+    f.inputs = {
+      ...f.inputs,
+      prefs: {
+        ...DEFAULT_PREFS,
+        sounds: {
+          ...DEFAULT_PREFS.sounds,
+          quietHours: { enabled: true, start: "00:00", end: "23:59" },
+        },
+      },
+      now: new Date(2026, 9, 1, 12).getTime(),
+    };
+    view.rerenderInputs();
+    await waitFor(() =>
+      expect(view.navigate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ route: "/idle", quietUntil: "23:59" })
+      )
+    );
+    expect(document.querySelector('[aria-live="polite"]')).toBeNull();
+    f.inputs = { ...f.inputs, prefs: DEFAULT_PREFS };
+    view.rerenderInputs();
+    if (replacement) {
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Launch listening" })
+      );
+      await waitFor(() =>
+        expect(view.navigate).toHaveBeenLastCalledWith(
+          expect.objectContaining({ route: "/call" })
+        )
+      );
+    } else {
+      await waitFor(() =>
+        expect(view.navigate).toHaveBeenLastCalledWith(
+          expect.objectContaining({ route: "/approval/$id" })
+        )
+      );
+      expect(screen.queryByRole("textbox")).toBeNull();
+    }
+    if (replacement) {
+      fireEvent(window, new Event("focus"));
+    }
+    await act(async () => release());
+    expect(Boolean(document.querySelector('[aria-live="polite"]'))).toBe(
+      replacement
+    );
+    expect(view.navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        route: replacement ? "/call" : "/approval/$id",
+      })
+    );
+  }
+);
 it("expanded approval has one Needs you label", async () => {
   const view = mount();
   await waitFor(() => expect(view.navigate).toHaveBeenCalled());
