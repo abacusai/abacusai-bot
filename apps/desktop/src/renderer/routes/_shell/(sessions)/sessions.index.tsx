@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { isListedSession } from "#renderer/data/db/filters";
-import { shellStore } from "#renderer/features/shell";
+import { shellStore } from "#renderer/features/shell/shell-store";
 export const Route = createFileRoute("/_shell/(sessions)/sessions/")({
   loader: async ({ context, preload }) => {
     await Promise.all([

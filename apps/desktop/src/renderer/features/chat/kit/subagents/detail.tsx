@@ -1,4 +1,3 @@
-import { useSelector } from "@tanstack/react-store";
 import { useState } from "react";
 
 import { useThreadHost } from "../../runtime/host";
@@ -10,8 +9,6 @@ import {
 } from "../context";
 import { MessageScope } from "../message-scope";
 import { SessionUI } from "../ui";
-export const useSubagents = (runtime: ChatRuntime, threadId: string) =>
-  useSelector(runtime.session(threadId).hostStore, (s) => s.subagents);
 export const SubagentDetail = ({
   runtime,
   threadId,

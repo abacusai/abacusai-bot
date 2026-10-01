@@ -1,16 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import {
-  useConnectFlow,
-  ConnectorFieldsDialog,
-} from "#renderer/features/library";
-import {
-  AccountPage,
-  AccountSearch,
-  InviteDialog,
-} from "#renderer/features/settings";
-import { TopBarSlot } from "#renderer/features/shell";
+import { useConnectFlow } from "#renderer/features/library/connect-flow";
+import { ConnectorFieldsDialog } from "#renderer/features/library/connectors";
+import { AccountPage } from "#renderer/features/settings/account-usage";
+import { InviteDialog } from "#renderer/features/settings/invite";
+import { AccountSearch } from "#renderer/features/settings/search";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const AccountSettingsRoute = () => {
   const { t } = useTranslation();

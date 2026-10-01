@@ -2,18 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
-import { StartComposer, updateDraft } from "#renderer/features/chat";
-import {
-  SessionStartPage,
-  SessionStartResources,
-  useSessionComposerModel,
-} from "#renderer/features/sessions";
-import {
-  TopBarSlot,
-  registerPreviewConsumer,
-  nativePresenterFor,
-  shellStore,
-} from "#renderer/features/shell";
+import { updateDraft } from "#renderer/features/chat/composer/draft-store";
+import { StartComposer } from "#renderer/features/chat/composer/start-composer";
+import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
+import { SessionStartPage } from "#renderer/features/sessions/start/session-start-page";
+import { SessionStartResources } from "#renderer/features/sessions/start/start-resources";
+import { nativePresenterFor } from "#renderer/features/shell/native-presenter";
+import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
+import { shellStore } from "#renderer/features/shell/shell-store";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { Button } from "#renderer/ui/button";
 import { draftConversationKey } from "#shared/conversation-scope";

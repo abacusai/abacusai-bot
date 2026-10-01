@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { AppearanceTheme } from "#renderer/features/settings";
-import { TopBarSlot } from "#renderer/features/shell";
+import { AppearanceTheme } from "#renderer/features/settings/personal";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const AppearanceSettingsRoute = () => {
   const { t } = useTranslation();

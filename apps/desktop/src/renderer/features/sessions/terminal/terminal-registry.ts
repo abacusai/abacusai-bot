@@ -1,10 +1,4 @@
-import {
-  ghosttyReady,
-  Terminal,
-  FitAddon,
-  terminalTheme,
-  installTerminalTheme,
-} from "#renderer/components/terminal/ghostty";
+import type { Terminal, FitAddon } from "#renderer/components/terminal/ghostty";
 export interface TerminalView {
   term: Terminal;
   fit: FitAddon;
@@ -20,6 +14,13 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
   let view = views.get(key);
   if (!view) {
     view = (async () => {
+      const {
+        ghosttyReady,
+        Terminal,
+        FitAddon,
+        terminalTheme,
+        installTerminalTheme,
+      } = await import("#renderer/components/terminal/ghostty");
       await ghosttyReady();
       await document.fonts?.ready;
       const element = document.createElement("div");

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
+  lazy,
+  Suspense,
   useEffect,
   useState,
   type ReactNode,
@@ -17,8 +19,6 @@ import { Button } from "#renderer/ui/button";
 import type { SessionRow } from "#shared/contract/rows";
 import { sessionConversationKey } from "#shared/conversation-scope";
 
-import { BrowserTab } from "./browser/browser-tab";
-import { ChangesTab } from "./changes/changes-tab";
 import { WorkspaceMissing } from "./context/workspace-missing";
 import { useAgentLifecycle } from "./data/agent-start";
 import {
@@ -28,11 +28,26 @@ import {
   useCheckoutWatch,
   effectiveCheckoutIdentity,
 } from "./data/queries";
-import { DeviceTab } from "./device/device-tab";
 import { openTab } from "./dock/panel-tabs-store";
 import { SessionDock, type SessionDockProps } from "./dock/session-dock";
-import { FilesTab, SessionFilePreview } from "./files/files-tab";
-import { TerminalTab } from "./terminal/terminal-tab";
+const BrowserTab = lazy(() =>
+  import("./browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
+);
+const ChangesTab = lazy(() =>
+  import("./changes/changes-tab").then((m) => ({ default: m.ChangesTab }))
+);
+const DeviceTab = lazy(() =>
+  import("./device/device-tab").then((m) => ({ default: m.DeviceTab }))
+);
+const TerminalTab = lazy(() =>
+  import("./terminal/terminal-tab").then((m) => ({ default: m.TerminalTab }))
+);
+const FilesTab = lazy(() =>
+  import("./files/files-tab").then((m) => ({ default: m.FilesTab }))
+);
+const SessionFilePreview = lazy(() =>
+  import("./files/files-tab").then((m) => ({ default: m.SessionFilePreview }))
+);
 export const SessionWorkspace = ({
   row,
   chat,
@@ -185,63 +200,71 @@ export const SessionWorkspace = ({
         />
       ) : null}
       <div className="min-h-0 flex-1">
-        <SessionDock
-          row={row}
-          chat={chat}
-          registerHotkeys={registerHotkeys}
-          renderTab={(tab, visible, onClose) => {
-            if (tab.ref.startsWith("terminal:"))
-              return (
-                <TerminalTab
-                  row={row}
-                  id={tab.ref.slice(9)}
-                  shell={tab.shell}
-                  visible={visible}
-                  onClose={onClose}
-                  dispatch={dispatch}
-                  onUrl={(url) => {
-                    const ref = `browser:${crypto.randomUUID()}`;
-                    openTab(key, { ref, title: url, url });
-                    select(ref);
-                  }}
-                />
-              );
-            if (tab.ref.startsWith("browser:"))
-              return (
-                <BrowserTab
-                  row={row}
-                  id={tab.ref.slice(8)}
-                  url={tab.url}
-                  visible={visible}
-                  root={root}
-                  presenter={presenter}
-                  blocked={blocked}
-                />
-              );
-            if (tab.sessionId) return renderSession(tab.sessionId);
-            if (tab.ref.startsWith("preview:"))
-              return (
-                <SessionFilePreview
-                  path={tab.path ?? ""}
-                  root={root}
-                  renderLocal={(path) => local(path, tab.ref, visible)}
-                />
-              );
-            if (tab.ref === "files")
-              return (
-                <FilesTab
-                  row={row}
-                  root={root}
-                  onPreview={preview}
-                  renderLocal={(path) => local(path, tab.ref, visible)}
-                />
-              );
-            if (tab.ref === "changes")
-              return <ChangesTab row={row} root={root} onDiff={openDiff} />;
-            if (tab.ref === "agents") return renderAgent(search.agent);
-            return <DeviceTab visible={visible} />;
-          }}
-        />
+        <Suspense
+          fallback={
+            <div role="status" className="p-3">
+              {t("common.loading")}
+            </div>
+          }
+        >
+          <SessionDock
+            row={row}
+            chat={chat}
+            registerHotkeys={registerHotkeys}
+            renderTab={(tab, visible, onClose) => {
+              if (tab.ref.startsWith("terminal:"))
+                return (
+                  <TerminalTab
+                    row={row}
+                    id={tab.ref.slice(9)}
+                    shell={tab.shell}
+                    visible={visible}
+                    onClose={onClose}
+                    dispatch={dispatch}
+                    onUrl={(url) => {
+                      const ref = `browser:${crypto.randomUUID()}`;
+                      openTab(key, { ref, title: url, url });
+                      select(ref);
+                    }}
+                  />
+                );
+              if (tab.ref.startsWith("browser:"))
+                return (
+                  <BrowserTab
+                    row={row}
+                    id={tab.ref.slice(8)}
+                    url={tab.url}
+                    visible={visible}
+                    root={root}
+                    presenter={presenter}
+                    blocked={blocked}
+                  />
+                );
+              if (tab.sessionId) return renderSession(tab.sessionId);
+              if (tab.ref.startsWith("preview:"))
+                return (
+                  <SessionFilePreview
+                    path={tab.path ?? ""}
+                    root={root}
+                    renderLocal={(path) => local(path, tab.ref, visible)}
+                  />
+                );
+              if (tab.ref === "files")
+                return (
+                  <FilesTab
+                    row={row}
+                    root={root}
+                    onPreview={preview}
+                    renderLocal={(path) => local(path, tab.ref, visible)}
+                  />
+                );
+              if (tab.ref === "changes")
+                return <ChangesTab row={row} root={root} onDiff={openDiff} />;
+              if (tab.ref === "agents") return renderAgent(search.agent);
+              return <DeviceTab visible={visible} />;
+            }}
+          />
+        </Suspense>
       </div>
     </div>
   );

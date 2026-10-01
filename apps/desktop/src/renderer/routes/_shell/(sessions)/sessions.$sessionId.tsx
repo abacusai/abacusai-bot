@@ -6,42 +6,45 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
-import { useEffect, useEffectEvent } from "react";
+import { lazy, Suspense, useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { useCollections } from "#renderer/data/db";
+import { updateDraft } from "#renderer/features/chat/composer/draft-store";
+import { ChatView } from "#renderer/features/chat/kit/lazy-view";
+import { useSubagents } from "#renderer/features/chat/kit/subagents/use-subagents";
+const SubagentDetail = lazy(() =>
+  import("#renderer/features/chat/kit/subagents/detail").then((m) => ({
+    default: m.SubagentDetail,
+  }))
+);
+
+import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
+import { deriveSessionTitle } from "#renderer/features/chat/runtime/send";
+import { SessionChangesCard } from "#renderer/features/sessions/changes/changes-card";
+import { SessionContextTray } from "#renderer/features/sessions/context/context-tray";
+import { SessionPermissionAction } from "#renderer/features/sessions/context/permission-terminal-action";
+import { SessionTasks } from "#renderer/features/sessions/context/tasks";
+import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import {
-  ChatView,
-  deriveSessionTitle,
-  SubagentDetail,
-  useSubagents,
-  updateDraft,
-  type ChatRuntime,
-} from "#renderer/features/chat";
-import {
-  SessionIdentity,
-  SessionWorkspace,
   useSession,
   useWorkspace,
-  useSessionComposerModel,
-  SessionContextTray,
-  SessionTasks,
-  SessionPermissionAction,
-  SessionChangesCard,
-  openSessionOnce,
-  openTab,
-} from "#renderer/features/sessions";
+} from "#renderer/features/sessions/data/queries";
+import { openSessionOnce } from "#renderer/features/sessions/data/unread-store";
+import { openTab } from "#renderer/features/sessions/dock/panel-tabs-store";
+import { SessionWorkspace } from "#renderer/features/sessions/session-workspace";
+import { SessionIdentity } from "#renderer/features/sessions/sessions-pages";
 import {
   APP_HOTKEYS,
-  shellStore,
-  TopBarSlot,
-  SidePanelOverride,
   useAppHotkey,
   dispatchAppHotkey,
-  nativePresenterFor,
-  registerPreviewConsumer,
-} from "#renderer/features/shell";
+} from "#renderer/features/shell/hotkeys";
+import { nativePresenterFor } from "#renderer/features/shell/native-presenter";
+import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
+import { shellStore } from "#renderer/features/shell/shell-store";
+import { SidePanelOverride } from "#renderer/features/shell/side-panel-slot";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import {
   SESSION_DEFAULTS,
@@ -93,11 +96,13 @@ const SessionAgents = ({
       )}
       {selected ? (
         <>
-          <SubagentDetail
-            runtime={runtime}
-            threadId={threadId}
-            subagentRunId={selected}
-          />
+          <Suspense fallback={null}>
+            <SubagentDetail
+              runtime={runtime}
+              threadId={threadId}
+              subagentRunId={selected}
+            />
+          </Suspense>
           <Button
             onClick={() => {
               updateDraft(threadId, (d) => ({

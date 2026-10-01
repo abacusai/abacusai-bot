@@ -3,32 +3,32 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { useBotChatActivity } from "#renderer/features/bots/chat/activity";
 import {
-  BotChatIdentity,
+  BotIdentity as BotChatIdentity,
   BotTranscriptIdentity,
   BotGone,
   BotPending,
-  useBot,
-  useBotChatSlots,
-  useBotChatActivity,
+} from "#renderer/features/bots/chat/identity";
+import { useBotChatSlots } from "#renderer/features/bots/chat/slots";
+import { loadBotChat } from "#renderer/features/bots/data/loaders";
+import { forgetOpenChat } from "#renderer/features/bots/data/open-chat";
+import { useBot } from "#renderer/features/bots/data/queries";
+import {
   DetailsTab,
   MemoryTab,
   FilesTab,
-  loadBotChat,
-  forgetOpenChat,
-} from "#renderer/features/bots";
-import {
-  ChatView,
-  loadFixtureRuntime,
-  useThreadHost,
-  useComposerExpanded,
-} from "#renderer/features/chat";
+} from "#renderer/features/bots/panel/bot-side-panel";
+import { useComposerExpanded } from "#renderer/features/chat/composer/composer";
+import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
+import { ChatView } from "#renderer/features/chat/kit/lazy-view";
+import { useThreadHost } from "#renderer/features/chat/runtime/host";
+import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
+import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import {
   TopBarSlot,
   useTopBarActions,
-  SidePanelContent,
-  requestBrowserOpen,
-} from "#renderer/features/shell";
+} from "#renderer/features/shell/top-bar-slots";
 import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";

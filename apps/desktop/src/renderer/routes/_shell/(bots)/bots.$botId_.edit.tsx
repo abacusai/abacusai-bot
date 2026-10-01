@@ -1,12 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import * as v from "valibot";
 
-import {
-  BotEditorPage,
-  BotGone,
-  loadBot,
-  botsQueries,
-} from "#renderer/features/bots";
+import { BotGone } from "#renderer/features/bots/chat/identity";
+import { loadBot } from "#renderer/features/bots/data/loaders";
+import { botsQueries } from "#renderer/features/bots/data/queries";
+import { BotEditorPage } from "#renderer/features/bots/form/bot-form";
 import { BotId } from "#shared/contract/ids";
 const EditRoute = () => {
   const { botId } = Route.useParams();

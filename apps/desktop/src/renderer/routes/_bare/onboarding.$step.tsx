@@ -2,20 +2,23 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import * as v from "valibot";
 
-import { createBotFromTemplate } from "#renderer/features/bots";
+import { createBotFromTemplate } from "#renderer/features/bots/data/bot-actions";
+import { OnboardingStepPage } from "#renderer/features/onboarding";
+import { completeOnboarding } from "#renderer/features/onboarding/actions";
 import {
-  OnboardingStepPage,
-  connectOnboarding,
-  completeOnboarding,
-  guardStep,
+  enterStep,
+  type OnboardingExit,
+} from "#renderer/features/onboarding/actions";
+import { connectOnboarding } from "#renderer/features/onboarding/connect";
+import { guardStep } from "#renderer/features/onboarding/machine";
+import { OnboardingLocalModels } from "#renderer/features/onboarding/steps/local-models";
+import { OnboardingProviderKey } from "#renderer/features/onboarding/steps/provider-key";
+import {
   onboardingStore,
   startSignIn,
   cancelSignIn,
-} from "#renderer/features/onboarding";
-import { enterStep, type OnboardingExit } from "#renderer/features/onboarding";
-import { OnboardingLocalModels } from "#renderer/features/onboarding";
-import { OnboardingProviderKey } from "#renderer/features/onboarding";
-import { startTour } from "#renderer/features/tour";
+} from "#renderer/features/onboarding/store";
+import { startTour } from "#renderer/features/tour/store";
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,

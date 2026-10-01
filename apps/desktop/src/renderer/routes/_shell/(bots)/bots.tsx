@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { LayoutGroup } from "motion/react";
 import { useTranslation } from "react-i18next";
 
-import { botsQueries } from "#renderer/features/bots";
+import { botsQueries } from "#renderer/features/bots/data/queries";
 import { Button } from "#renderer/ui/button";
 const BotsLayout = () => (
   <LayoutGroup id="bots">

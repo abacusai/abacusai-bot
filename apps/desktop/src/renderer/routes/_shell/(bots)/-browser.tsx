@@ -1,19 +1,19 @@
 import { useSearch, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent } from "react";
 
+import { BrowserTab } from "#renderer/features/sessions/browser/browser-tab";
 import {
-  BrowserTab,
   useSession,
   useWorkspace,
-} from "#renderer/features/sessions";
+} from "#renderer/features/sessions/data/queries";
 import {
-  nativePresenterFor,
   registerBrowserOpen,
   useBrowserOpenUrl,
-  shellStore,
-  registerPreviewConsumer,
   requestBrowserOpen,
-} from "#renderer/features/shell";
+} from "#renderer/features/shell/browser-open";
+import { nativePresenterFor } from "#renderer/features/shell/native-presenter";
+import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
+import { shellStore } from "#renderer/features/shell/shell-store";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 
 export const BotBrowserRegistration = ({

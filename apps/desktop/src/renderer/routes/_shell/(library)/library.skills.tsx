@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { SkillsPage, SkillsSearch } from "#renderer/features/library";
-import { TopBarSlot } from "#renderer/features/shell";
+import { SkillsSearch } from "#renderer/features/library/search";
+import { SkillsPage } from "#renderer/features/library/skills-tools";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const SkillsRoute = () => {
   const { t } = useTranslation();

@@ -21,13 +21,13 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { NavList } from "#renderer/components/nav-list";
+import { Rail } from "#renderer/features/shell/rail";
+import { shellStore } from "#renderer/features/shell/shell-store";
 import {
-  Rail,
-  shellStore,
   SidePanelBody,
   SidePanelFrame,
-  TopBar,
-} from "#renderer/features/shell";
+} from "#renderer/features/shell/side-panel";
+import { TopBar } from "#renderer/features/shell/top-bar";
 import { cn } from "#renderer/lib/cn";
 import { NAV_TYPES, durations, type NavType } from "#renderer/lib/motion";
 import { AREA_HOME, RAIL_AREAS } from "#renderer/lib/navigation/areas";

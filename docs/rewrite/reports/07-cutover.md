@@ -321,3 +321,49 @@ next; M4 also remains above the comparable-run budget. M1 median meets the
 historical 1,983 ms ceiling, but p90 is 3,619.6 ms; shipped startup varied too.
 Focused lifecycle/chat tests, sampler tests, desktop typecheck, affected lint,
 and the production build/package passed before measurement.
+
+### Performance pass: goal 3, initial route split
+
+The interrupted draft had a conflicting type alias in the lazy chat wrapper.
+Compilation now passes. Feature barrels made route loaders pull presentation
+code into the boot graph. The fixture helper also lived in the chat barrel,
+and the new-session preview imported file rendering with no preview open.
+Routes now import their loaders and guards directly. Transcript views,
+workspace tabs, draft previews, subagent details, terminal initialization and
+optional sidebars load on demand. The notch router also splits its routes.
+The tour loads only while a tour is active. All features remain available.
+
+[Goal-3 samples](07-perf-goal3-final.json) contain four alternating pairs with
+the first discarded. CDP first-paint gzip is 769,261 bytes versus 1,207,159
+bytes after goal 1, a 36.3% reduction and below the 1,001,567-byte cap.
+Every candidate sample's pre-paint resources were checked against the packaged
+module graph. They contain no editor, terminal implementation, ghostty-web,
+markdown, syntax grammars, notch presentation, onboarding presentation, tour
+presentation or gallery code. They contain 26 named icons, not an icon catalog.
+Startup route guards and shared terminal/notch RPC contracts remain necessary.
+The release checker now enforces the static boot graph's presentation and
+icon exclusions, and the size limit uses the M6 cap. Static HTML resources are
+smaller than the observed route resources; CDP is the M6 evidence.
+
+| Metric | Shipped median | Goal-3 median / p90 |
+| --- | ---: | ---: |
+| M1, ms | 1,866.0 | 1,787.6 / 1,807.2 |
+| M2, ms | 1,422.7 | 1,225.8 / 1,237.2 |
+| M3 including agents, bytes | 866,516,992 | 859,373,568 / 866,467,840 |
+| M3 excluding agents, bytes | 692,617,216 | 859,373,568 |
+| M4, bytes | 22,519,688 | 25,717,552 / 25,762,228 |
+| M5, ms | 706.6 | 82.2 / 90.7 |
+| M6, bytes | 1,001,567 | 769,261 / 769,261 |
+
+M3 and M4 still exceed the fixed goal-1 budgets of 761,049,907 and 24,768,555
+bytes. Candidate process medians are main 277.0 MB, main renderer 277.4 MB,
+notch renderer 149.1 MB, GPU 107.9 MB and network 45.1 MB, with no agent.
+The temporary workload was lost at reboot and was recreated using the same
+shipped API procedure on a private copy of the original logged-in home.
+The discarded exploratory run was stopped before completion after discovering
+the eager preview import; it is not acceptance evidence.
+
+Validation: desktop typecheck, 93 focused renderer tests in nine files, nine
+Node bundle/probe/sampler tests, affected lint and format, production build,
+unsigned directory package and release checker pass. All 24 NDJSON goldens
+remain byte-identical to `c92812e7`. Final broad gates follow the other goals.

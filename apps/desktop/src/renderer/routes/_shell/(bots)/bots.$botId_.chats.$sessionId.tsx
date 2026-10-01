@@ -1,22 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import { useBotChatActivity } from "#renderer/features/bots/chat/activity";
 import {
   BotGone,
   BotPending,
-  BotChatIdentity,
-  useBot,
-  useBotChatSlots,
-  useBotChatActivity,
-  loadSenderChat,
-  FilesTab,
-} from "#renderer/features/bots";
-import { ChatView, useThreadHost } from "#renderer/features/chat";
-import {
-  TopBarSlot,
-  SidePanelContent,
-  requestBrowserOpen,
-} from "#renderer/features/shell";
+  BotIdentity as BotChatIdentity,
+} from "#renderer/features/bots/chat/identity";
+import { useBotChatSlots } from "#renderer/features/bots/chat/slots";
+import { loadSenderChat } from "#renderer/features/bots/data/loaders";
+import { useBot } from "#renderer/features/bots/data/queries";
+import { FilesTab } from "#renderer/features/bots/panel/bot-side-panel";
+import { ChatView } from "#renderer/features/chat/kit/lazy-view";
+import { useThreadHost } from "#renderer/features/chat/runtime/host";
+import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
+import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
 import { BotId, SessionId } from "#shared/contract/ids";
