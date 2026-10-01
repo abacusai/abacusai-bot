@@ -283,3 +283,41 @@ The RSS sampler also had an ancestor-filter bug: an unrelated parent command mat
 [Goal-1 numerical samples](07-perf-goal1.json) contain the build hashes, all eight runs and resource inventory. M1 also meets the requested historical 1,983.355 ms median cap. M2 is timing only; wrong-theme frame classification remains open. The route-corrected M4 baseline differs from the historical route, and its current +10% comparison is recorded without carrying forward the old pass.
 
 Validation: desktop `tsc -b`, seven focused main tests, seven Node probe/copy tests, and affected lint/format checks pass. Full gates are recorded after the remaining performance goals.
+
+### Performance pass: goal 2 — process attribution and agent demand
+
+The session reader no longer starts an agent simply by observing a stopped
+session. Editing warms it; sending starts it and restores the saved conversation
+before the relay admits the command. Notch runtime imports avoid the complete
+chat barrel. The idle notch remains enabled when the user's preferences require
+it; hiding an expected companion would remove behaviour.
+
+Four alternating pairs (one warm-up pair discarded) are recorded in
+[07-perf-goal2-attributed.json](07-perf-goal2-attributed.json). The sampler now
+includes **all** owned descendants. Earlier reports called M3 total RSS but
+excluded agent descendants. Do not compare those totals without noting scope.
+
+| Metric | Shipped median | Candidate median |
+| --- | ---: | ---: |
+| M1 interactive | 3,738.4 ms | 1,933.4 ms |
+| M2 paint | 2,771.1 ms | 1,288.7 ms |
+| M3 including agent | 868,155,392 B | 843,530,240 B |
+| M4 renderer heap after GC | 22,594,376 B | 25,925,200 B |
+| M5 long thread | 701.5 ms | 79.7 ms |
+| M6 initial gzip | 1,001,567 B | 1,207,321 B |
+
+| Process role | Shipped median MB | Candidate median MB |
+| --- | ---: | ---: |
+| Main | 276.3 | 276.2 |
+| Main renderer | 263.4 | 256.6 |
+| Notch/companion renderer | 0 | 152.3 |
+| Agent | 173.1 | 0 |
+| GPU | 109.1 | 112.9 |
+| Network | 46.3 | 45.1 |
+
+Role medians need not sum to the median process-tree total. The candidate
+remains above the historical 725 MB ceiling. Initial route code splitting is
+next; M4 also remains above the comparable-run budget. M1 median meets the
+historical 1,983 ms ceiling, but p90 is 3,619.6 ms; shipped startup varied too.
+Focused lifecycle/chat tests, sampler tests, desktop typecheck, affected lint,
+and the production build/package passed before measurement.

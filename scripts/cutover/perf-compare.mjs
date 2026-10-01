@@ -19,6 +19,7 @@ import {
   clickLongThreadSource,
   summarize,
 } from "./perf-probes.mjs";
+import { electronRendererRoles } from "./perf-process-roles.mjs";
 import { processTree } from "./perf-processes.mjs";
 
 const { values } = parseArgs({
@@ -89,7 +90,7 @@ const output = {
   gaps: [
     "Signed artifacts, Windows reference machine and packaged phase-budget checks are separate evidence.",
     "M2 wrong-theme frame classification is not yet implemented; no M2 acceptance is claimed.",
-    "M3 companion RSS attribution is not implemented; process-tree RSS includes the companion and cannot establish its separate cap.",
+    "M3 includes agents and attributes renderer/companion PIDs; a shared renderer PID cannot be divided by window.",
   ],
 };
 const hash = (file) =>
@@ -154,6 +155,7 @@ async function run(name, pair) {
       log,
       initScript: probeSource(fixture),
       directPage: true,
+      args: ["--inspect=9360"],
     });
     const source = probeSource(fixture);
     await app.cdp.send("Page.enable");
@@ -185,7 +187,7 @@ async function run(name, pair) {
       run.M1 = state.interactiveAt - app.spawnedAt;
       app.stopResourceTracking?.();
       await delay(Math.max(0, state.interactiveAt + 60_000 - Date.now()));
-      run.M3 = processTree(app.child.pid);
+      run.M3 = processTree(app.child.pid, await electronRendererRoles(9360));
       await app.cdp.send("HeapProfiler.enable");
       await app.cdp.send("HeapProfiler.collectGarbage");
       run.M4 = (await app.cdp.send("Runtime.getHeapUsage")).usedSize;
@@ -207,7 +209,7 @@ async function run(name, pair) {
     }
     output.runs.push(run);
     console.log(
-      `${name} pair ${pair + 1}: M6=${run.M6.gzipBytes} bytes${diagnostic ? "" : ` M1=${run.M1}ms M5=${run.M5}ms`}`
+      `${name} pair ${pair + 1}: M6=${run.M6.gzipBytes} bytes${diagnostic ? "" : ` M1=${run.M1}ms M3=${run.M3.rssBytes}B M5=${run.M5}ms`}`
     );
   } finally {
     try {

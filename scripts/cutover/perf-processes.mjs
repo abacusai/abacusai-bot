@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
 
-export const processTree = (pid) => {
+import { processRoles } from "./perf-process-roles.mjs";
+
+export const processTree = (pid, renderers = []) => {
   const rows =
     process.platform === "win32"
       ? JSON.parse(
@@ -38,16 +40,10 @@ export const processTree = (pid) => {
   for (let i = 0; i < rows.length; i++)
     for (const row of rows) if (included.has(row.parent)) included.add(row.pid);
   const descendants = rows.filter((row) => included.has(row.pid));
-  const excluded = new Set();
-  for (let i = 0; i < descendants.length; i++)
-    for (const row of descendants)
-      if (
-        row.pid !== pid &&
-        (excluded.has(row.parent) ||
-          /(?:[/\\]agent[/\\]|--thread-id)/.test(row.command))
-      )
-        excluded.add(row.pid);
-  const processes = descendants.filter((r) => !excluded.has(r.pid));
+  const processes = descendants.map((row) => ({
+    ...row,
+    roles: processRoles(row, pid, renderers),
+  }));
   if (
     !processes.some((r) => r.pid === pid) ||
     processes.some((r) => !Number.isFinite(r.rssBytes))
@@ -56,6 +52,20 @@ export const processTree = (pid) => {
   return {
     rssBytes: processes.reduce((sum, r) => sum + r.rssBytes, 0),
     processes,
-    companionRssBytes: null,
+    rssBytesWithoutAgents: processes
+      .filter((row) => !row.roles.includes("agent"))
+      .reduce((sum, row) => sum + row.rssBytes, 0),
+    companionRssBytes: processes
+      .filter(
+        (row) => row.roles.length === 1 && row.roles.includes("notch/companion")
+      )
+      .reduce((sum, row) => sum + row.rssBytes, 0),
+    sharedRendererRssBytes: processes
+      .filter(
+        (row) =>
+          row.roles.includes("renderer") &&
+          row.roles.includes("notch/companion")
+      )
+      .reduce((sum, row) => sum + row.rssBytes, 0),
   };
 };

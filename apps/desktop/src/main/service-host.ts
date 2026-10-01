@@ -500,6 +500,14 @@ export class ServiceHost {
           ...(session.model != null ? { model: session.model } : {}),
           ...(session.mode != null ? { mode: session.mode } : {}),
         });
+        // A first send can start an idle session without renderer warm-up.
+        // Put restoration on the same command pipe before the admitted run.
+        if (result.success && session.conversationId)
+          this.switchAgentConversation({
+            workspaceId: session.workspaceId,
+            sessionId: threadId,
+            conversationId: session.conversationId,
+          });
         return result.success;
       },
       send: (threadId, command) =>

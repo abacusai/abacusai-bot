@@ -14,7 +14,10 @@ import type { TFunction } from "i18next";
 
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import { chatRuntimeFor, type ChatRuntime } from "#renderer/features/chat";
+import {
+  chatRuntimeFor,
+  type ChatRuntime,
+} from "#renderer/features/chat/runtime/runtime";
 import type { NavType } from "#renderer/lib/motion";
 import { Spinner } from "#renderer/ui/spinner";
 import type { SystemInfo } from "#shared/contract";

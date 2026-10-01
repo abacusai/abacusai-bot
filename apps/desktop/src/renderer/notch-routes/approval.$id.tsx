@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { PermissionList } from "#renderer/features/chat";
+import { PermissionList } from "#renderer/features/chat/kit/permissions/permission-list";
 import { ConnectorAskView } from "#renderer/features/notch";
 import { useNotch } from "#renderer/notch-context";
 const Approval = () => {

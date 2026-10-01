@@ -114,3 +114,20 @@ it("joined start readiness gates restoration even when the ready relay arrives f
   await vi.waitFor(() => expect(switchConversation).toHaveBeenCalledOnce());
   lifecycle.dispose();
 });
+
+it("reading an idle session does not spawn; explicit intent still starts it", async () => {
+  const start = vi.fn().mockResolvedValue({ success: true });
+  const lifecycle = agentLifecycle(
+    { agent: { start } } as never,
+    vi.fn(),
+    "w:s",
+    false
+  );
+  lifecycle.observe(row, true, null);
+  await Promise.resolve();
+  expect(start).not.toHaveBeenCalled();
+  lifecycle.retry(row);
+  await Promise.resolve();
+  expect(start).toHaveBeenCalledOnce();
+  lifecycle.dispose();
+});

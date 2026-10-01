@@ -7,7 +7,7 @@ import { createDb, DbProvider } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
 import { getTransport } from "#renderer/data/transport";
-import { createChatRuntime } from "#renderer/features/chat";
+import { createChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import { createTransportLostHandler } from "#renderer/lib/bootstrap";
 import {
   initI18n,
