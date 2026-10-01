@@ -85,6 +85,7 @@ const shellRouter = (
   system: SystemInfo = SYSTEM_INFO,
   options: HarnessOptions = {}
 ) => {
+  let onboarded = options.onboarded ?? true;
   const relay = fixtureRuntime("bot-golden-plain", {}, "bot-test")!.relay;
   return {
     system: {
@@ -149,6 +150,7 @@ const shellRouter = (
     },
     models: { list: os.models.list.handler(() => []) },
     connectors: {
+      cancelConnect: os.connectors.cancelConnect.handler(() => {}),
       statuses: os.connectors.statuses.handler(() => ({})),
       events: os.connectors.events.handler(quiet as never),
     },
@@ -171,6 +173,7 @@ const shellRouter = (
       events: os.memory.events.handler(quiet as never),
     },
     auth: {
+      openRouter: { cancel: os.auth.openRouter.cancel.handler(() => {}) },
       abacus: {
         browserProfiles: os.auth.abacus.browserProfiles.handler(() => []),
         start: os.auth.abacus.start.handler(({ input, context }) => {
@@ -192,14 +195,25 @@ const shellRouter = (
       state: os.account.state.handler(() => ({
         account: null,
         apps: [],
-        onboarded: options.onboarded ?? true,
+        onboarded,
       })),
+      skipOnboarding: os.account.skipOnboarding.handler(({ context }) => {
+        onboarded = true;
+        context.calls.push(["account.skipOnboarding", {}]);
+        return { account: null, apps: [], onboarded };
+      }),
       abacus: os.account.abacus.handler(() => null),
     },
     localModels: {
-      state: os.localModels.state.handler(
-        () => ({ supported: false, installed: [], downloading: null }) as never
-      ),
+      state: os.localModels.state.handler(() => ({
+        runtimeAvailable: false,
+        totalMemoryBytes: 0,
+        recommendedId: "qwen3.5-4b",
+        catalog: [],
+        installedIds: [],
+        download: null,
+        servingId: null,
+      })),
     },
     files: {
       events: os.files.events.handler(options.filesEvents ?? (quiet as never)),

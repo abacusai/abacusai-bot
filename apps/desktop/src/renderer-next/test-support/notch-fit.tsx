@@ -50,10 +50,10 @@ window.__phase6Fit = async (request, width, language) => {
     </div>
   );
   // Chromium's layout effects must measure after the font and the new width commit.
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const buttons = [...node.querySelectorAll("button")].map(
-    (button) => button.textContent?.trim() ?? ""
-  );
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  const buttons = [...node.querySelectorAll("button")]
+    .filter((button) => getComputedStyle(button).visibility !== "hidden")
+    .map((button) => button.textContent?.trim() ?? "");
   const body = node.querySelector<HTMLElement>(".notch-body")!;
   return {
     accept: buttons.includes(i18n.t("chat.permission.action.allow")),
