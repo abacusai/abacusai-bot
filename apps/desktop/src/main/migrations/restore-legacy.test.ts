@@ -226,3 +226,25 @@ it("latest completed partial attempt wins per destination", async () => {
     fs.readFileSync(path.join(base, "electron/renderer-state.json"), "utf8")
   ).toBe("stripped 2");
 });
+it("keeps renderer retirement and canonical evidence until a conflict is resolved", async () => {
+  seed(base);
+  await migrate(base);
+  const destination = path.join(base, "electron/renderer-state.json");
+  const marker = path.join(base, "electron/renderer-state.retired.json");
+  write(destination, "unrelated retained state edit");
+  const result = await restoreLegacyHome(base);
+  expect(result.collisions).toHaveLength(1);
+  expect(fs.existsSync(marker)).toBe(true);
+  const journal = fs.readFileSync(
+    path.join(backupsRoot(base), "restorations.jsonl"),
+    "utf8"
+  );
+  expect(JSON.parse(journal.trim()).destinations).not.toContain(destination);
+  expect(
+    readRecord(base).applied.find((entry) => entry.id === 3)?.restoredAt
+  ).toBeUndefined();
+  fs.rmSync(destination);
+  expect((await restoreLegacyHome(base)).restored).toContain(destination);
+  expect(fs.readFileSync(destination, "utf8")).toBe("original");
+  expect(fs.existsSync(marker)).toBe(false);
+});
