@@ -172,7 +172,7 @@ export const ArtifactsPage = ({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [filtered.length > 0]);
   useEffect(() => {
     if (!search.item) return;
     const index = entries.findIndex(

@@ -102,7 +102,7 @@ export const SkillsPage = () => {
             onChange={(workspace) =>
               void navigate({
                 to: "/library/skills",
-                search: { workspace: workspace || undefined },
+                search: { workspace: workspace || "global" },
                 transition: "none",
               })
             }

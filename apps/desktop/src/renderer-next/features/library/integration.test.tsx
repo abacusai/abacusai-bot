@@ -98,3 +98,21 @@ it("R5-T20 MCP transport shows only its fields and rejects a non-HTTP URL", asyn
   ).not.toBeNull();
   expect(add).not.toHaveBeenCalled();
 });
+it("selecting Global skills overrides the remembered workspace in listInstalled", async () => {
+  const seed = defaultSeed();
+  seed.prefs!.lastPickedWorkspaceId = seed.workspaces![0]!.id;
+  const list = vi.fn(async (_context: unknown) => ({ skills: [] }));
+  app = await renderApp("/library/skills", {
+    seed,
+    procedures: {
+      skills: { listInstalled: os.skills.listInstalled.handler(list) },
+    },
+  });
+  const choice = await screen.findByRole("combobox", { name: "Workspace" });
+  await waitFor(() => expect(list).toHaveBeenCalled());
+  fireEvent.change(choice, { target: { value: "" } });
+  await waitFor(() =>
+    expect((list.mock.calls.at(-1)![0] as { input: unknown }).input).toEqual({})
+  );
+  expect((choice as HTMLSelectElement).value).toBe("");
+});
