@@ -1,12 +1,14 @@
+import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+
 /**
  * Recompute every digest of an experience tree from the builder's JSON canon
  * (`apps/updater/src/manifest.ts`: sorted keys, compact separators, ASCII
  * paths); change both together or digests diverge. Validation is by hand
  * because the shape is small and this runs before anything else can.
  */
-import { createHash } from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
+import { verifyProvenance } from "@abacus-ai/updater/provenance";
 
 import { EXPERIENCE_PROTOCOL, FOUNDATION_API } from "#shared/experience";
 
@@ -16,6 +18,7 @@ export interface ExperienceFileEntry {
 }
 
 export interface ExperienceManifest {
+  readonly commit: string;
   readonly agentVersion: string;
   readonly experienceVersion: string;
   readonly files: Record<string, ExperienceFileEntry>;
@@ -92,7 +95,13 @@ const parseManifest = (
     files[name] = { sha256, size };
   }
 
+  if (
+    typeof value.commit !== "string" ||
+    !/^[a-f0-9]{40,64}$/.test(value.commit)
+  )
+    throw new Error("Experience manifest lacks build provenance commit");
   return {
+    commit: value.commit,
     agentVersion: digestField("agentVersion"),
     experienceVersion: digestField("experienceVersion"),
     files,
@@ -192,6 +201,13 @@ export const verifyExperience = async (
   );
 
   await verifyTree(root, manifest);
+  const provenance = await verifyProvenance(
+    root,
+    FOUNDATION_API,
+    EXPERIENCE_PROTOCOL
+  );
+  if (provenance.commit !== manifest.commit)
+    throw new Error("Experience manifest and build provenance commits differ");
 
   if (
     manifest.files["agent/main.js"] === undefined ||

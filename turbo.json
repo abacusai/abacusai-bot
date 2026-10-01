@@ -69,6 +69,26 @@
     "vendor": {
       "outputs": ["vendor/**", "resources/vendor/**"]
     },
-    "//#typecheck:tools": {}
+    "//#typecheck:tools": {},
+    "@abacus-ai/desktop#build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": ["dist/**"],
+      "env": [
+        "ABACUS_BUILD_COMMIT",
+        "ABACUS_RELEASE",
+        "VITE_UI_GALLERY",
+        "VITE_NEXT_DB_FIXTURES"
+      ]
+    },
+    "@abacus-ai/agent#build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": ["dist/**"],
+      "env": [
+        "ABACUS_BUILD_COMMIT",
+        "ABACUS_RELEASE",
+        "VITE_UI_GALLERY",
+        "VITE_NEXT_DB_FIXTURES"
+      ]
+    }
   }
 }

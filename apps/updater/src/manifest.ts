@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { verifyProvenance } from "./provenance.ts";
+
 /**
  * Canonical experience manifest builder. The desktop verifier recomputes every
  * digest from the same canon: sorted keys, compact separators, ASCII paths.
@@ -74,6 +76,7 @@ export const buildManifest = async (
   root: string,
   foundation: string
 ): Promise<string> => {
+  const provenance = await verifyProvenance(root, FOUNDATION_API, PROTOCOL);
   const files: Record<string, FileEntry> = {};
   for (const relative of await listFiles(root)) {
     if (!/^[\u0020-\u007E]+$/u.test(relative)) {
@@ -95,6 +98,7 @@ export const buildManifest = async (
     protocol: PROTOCOL,
   });
   return JSON.stringify({
+    commit: provenance.commit,
     agentVersion: identity(sorted, "agent/"),
     experienceVersion: createHash("sha256")
       .update(experienceIdentity)

@@ -96,7 +96,6 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { readClipboardImage } from "./clipboard-image";
 import { installCrashGuard } from "./crash-guard";
-import { installMutationHarness } from "./dev/mutation-harness";
 import { isSafeExternalUrl } from "./external-links";
 import {
   disposeLocalModels,
@@ -190,6 +189,7 @@ import { consumeRelaunchHidden } from "./services/updates/relaunch-hidden";
 import { registerUpdateHandlers } from "./services/updates/update-handler";
 import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
+import { runSmoke } from "./smoke";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 import {
   applyThemedBackground,
@@ -407,6 +407,11 @@ function notifyTaskRunningInBackground(): void {
 
 const workspaceServiceHost = new ServiceHost();
 // A downloaded update restarts only when nothing user-visible is running.
+const legacySmokeReady = new Set<number>();
+if (process.env.ABACUSAI_BOT_SMOKE_TEST === "1")
+  ipcMain.on("renderer-ready", (event) =>
+    legacySmokeReady.add(event.sender.id)
+  );
 const updateService = new UpdateService({
   isSafeToRestart: () =>
     !workspaceServiceHost.hasActiveAgentTurn() &&
@@ -1903,10 +1908,13 @@ app
     // does for the legacy renderer.
     followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
     // Development acceptance runs only (spec 01 §12); inert when packaged.
-    installMutationHarness(workspaceServiceHost, {
-      env: process.env,
-      isPackaged: app.isPackaged,
-    });
+    if (import.meta.env.ABACUS_DEV_HARNESS) {
+      const { installMutationHarness } = await import("./dev/mutation-harness");
+      installMutationHarness(workspaceServiceHost, {
+        env: process.env,
+        isPackaged: app.isPackaged,
+      });
+    }
     registerBrowserRuntimeIpcHandlers(
       browserRuntime,
       () => rendererWebContents()?.id ?? null
@@ -2266,7 +2274,7 @@ app
     }
   })
   .then(() => createWindow())
-  .then(() => {
+  .then(async () => {
     updateService.checkForUpdatesOnStartup();
 
     app.on("activate", function () {
@@ -2287,8 +2295,33 @@ app
     // puts up Electron's error dialog and waits on it.
     if (process.env.ABACUSAI_BOT_SMOKE_TEST === "1") {
       console.log(SMOKE_TEST_READY);
-      // exit, not quit: the shutdown path can hold a probe process open.
-      app.exit(0);
+      const contents = rendererWebContents();
+      const exit = await runSmoke({
+        renderer: () =>
+          RENDERER_GENERATION === "wco"
+            ? contents == null
+              ? Promise.resolve("failed")
+              : rendererReadiness.wait(contents.id, 90_000)
+            : new Promise((resolve) => {
+                const poll = () => {
+                  if (contents && legacySmokeReady.has(contents.id))
+                    resolve("ready");
+                  else setTimeout(poll, 100);
+                };
+                poll();
+              }),
+        rendererReason: () =>
+          contents == null
+            ? "no main renderer"
+            : rendererReadiness.failureReason(contents.id),
+        companion: () =>
+          process.platform === "linux" || RENDERER_GENERATION === "legacy"
+            ? "n/a"
+            : (notchController?.smokeOutcome() ?? "pending"),
+        log: (line) => console.log(line),
+      });
+      notchController?.dispose();
+      app.exit(exit);
     }
   })
   // Once the main window exists, or when the chain failed before it did (the
