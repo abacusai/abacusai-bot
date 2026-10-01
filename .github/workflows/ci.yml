@@ -28,6 +28,7 @@ env:
   # symptom rather than a cause.
   NODE_OPTIONS: --max-old-space-size=4096
   TURBO_TELEMETRY_DISABLED: 1
+  ABACUS_BUILD_COMMIT: ${{ github.sha }}
 
 jobs:
   # Which release unit does this change touch? Renderer and agent source are
@@ -84,6 +85,9 @@ jobs:
       # not exist fails here rather than in six platform jobs several minutes
       # later.
       - run: pnpm run typecheck
+      - run: pnpm run check:knip-next
+      - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
+      - run: pnpm --filter @abacus-ai/desktop run check:legacy-diff
       - name: i18n and locale guards
         run: |
           pnpm --filter @abacus-ai/desktop run check:i18n
@@ -333,31 +337,26 @@ jobs:
 
           launch() { if [ "$RUNNER_OS" = "Linux" ]; then xvfb-run -a "$@"; else "$@"; fi; }
 
-          # ABACUSAI_BOT_SMOKE_TEST makes the app print the marker and exit 0 once
-          # it is fully up. The timeout is the backstop for an app that hangs
-          # before that point rather than crashing, which is also a failure to start.
-          ABACUSAI_BOT_SMOKE_TEST=1 launch "$app" > app.log 2>&1 &
+          # Smoke waits for renderer readiness and a resolved companion outcome.
+          scratch=$(mktemp -d)
+          trap 'rm -rf "$scratch"' EXIT
+          ABACUSAI_BOT_HOME="$scratch/home" ABACUSAI_BOT_SMOKE_TEST=1 launch "$app" > app.log 2>&1 &
           pid=$!
-
-          ready=""
-          for _ in $(seq 1 60); do
-            if grep -qF '[smoke] main process ready' app.log 2>/dev/null; then
-              ready=1
-              break
-            fi
+          for _ in $(seq 1 110); do
             if ! kill -0 "$pid" 2>/dev/null; then break; fi
             sleep 1
           done
-
-          kill "$pid" 2>/dev/null || true
-          wait "$pid" 2>/dev/null || true
-
-          cat app.log
-
-          if [ -z "$ready" ]; then
-            echo "::error::the packaged app never reported that it started (see the log above)"
+          if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+            echo "::error::packaged smoke exceeded its readiness bound"
+            cat app.log
             exit 1
           fi
+          wait "$pid"
+          cat app.log
+          grep -qF '[smoke] main process ready' app.log
+          grep -qF '[smoke] renderer ready' app.log
+          grep -qE '\[smoke\] notch (ready|n/a|disabled: (probe failed|no internal display|no cut-out|off by pref))$' app.log
 
           # Belt and braces: the marker says the ready chain finished, this checks
           # nothing blew up on the way. ERR_MODULE_NOT_FOUND and Electron's own

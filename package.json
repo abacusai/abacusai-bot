@@ -29,10 +29,12 @@
   },
   "devDependencies": {
     "@abacus-ai/config": "workspace:*",
+    "@size-limit/file": "^14.1.0",
     "@types/node": "catalog:",
     "knip": "6.38.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "size-limit": "^14.1.0",
     "turbo": "catalog:",
     "typescript": "catalog:"
   },

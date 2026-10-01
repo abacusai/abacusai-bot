@@ -1,6 +1,6 @@
 import type { ArtifactRow } from "#shared/contract/rows";
 
-export const artifactGalleryRows: ArtifactRow[] = [
+export const artifactGalleryRows: ArtifactRow[] = /* @__PURE__ */ [
   ["file", "Weekly briefing", "/gallery/briefing.md"],
   ["file", "Research notes", "/gallery/research.txt"],
   ["file", "Project budget", "/gallery/budget.xlsx"],
@@ -20,7 +20,7 @@ export const artifactGalleryRows: ArtifactRow[] = [
 }));
 
 /** Performance fixture: the same card/preview implementation, 300 lazy images. */
-export const artifactStressRows: ArtifactRow[] = Array.from(
+export const artifactStressRows: ArtifactRow[] = /* @__PURE__ */ Array.from(
   { length: 2000 },
   (_, index) => ({
     ...artifactGalleryRows[0]!,

@@ -7,6 +7,7 @@ export default defineConfig({
     "src/dev.ts",
     "src/experience.ts",
     "src/manifest.ts",
+    "src/provenance.ts",
     "src/publish.ts",
     "src/refresh.ts",
     "src/repository.ts",
