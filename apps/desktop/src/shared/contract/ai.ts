@@ -139,6 +139,8 @@ export interface AttentionSummary {
   oldestAt: number;
   /** The oldest one's message. */
   firstTitle: string | null;
+  /** Full lineage of the oldest descriptor, for local descriptor snoozes. */
+  firstDescriptorId?: string;
 }
 
 /**
