@@ -28,6 +28,6 @@ export const artifactStressRows: ArtifactRow[] = Array.from(
     title: `Artifact ${String(index).padStart(4, "0")}`,
     kind: index < 300 ? "image" : "file",
     location: `/gallery/${index < 300 ? "image.png" : "report.md"}`,
-    updatedAt: new Date(Date.UTC(2026, 9, 1, 0, 0, index)).toISOString(),
+    updatedAt: new Date(Date.UTC(2026, 9, 1, 0, 0, 2000 - index)).toISOString(),
   })
 );
