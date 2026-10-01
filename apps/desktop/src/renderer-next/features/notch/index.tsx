@@ -6,7 +6,9 @@ import { useTranslation } from "react-i18next";
 import { BotAvatar } from "#next/components/bot-avatar";
 import { cueForNotice } from "#next/lib/attention/cues";
 import { resolveLook } from "#next/lib/bots/avatar";
+import { isCheckInRoutine } from "#next/lib/bots/check-in";
 import { useMotionPreference } from "#next/lib/motion";
+import { useSharedElementName } from "#next/lib/navigation/shared-element";
 import { runFinishedFeed } from "#next/lib/run-finished";
 import { createSoundPlayer } from "#next/lib/sound";
 import { useDictation } from "#next/lib/voice/use-dictation";
@@ -20,6 +22,7 @@ import { Input } from "#next/ui/input";
 import type { OpenTarget } from "#shared/contract";
 
 import { NotchDirector, shapeSettled } from "./director";
+import { notchDrafts as drafts } from "./drafts";
 import { followNotchEvents, useNotchInputs } from "./inputs";
 import {
   presentNotch,
@@ -62,6 +65,18 @@ export const NotchShell = ({
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(document.hasFocus());
   const [unlocked, setUnlocked] = useState(false);
+  const [reaction, setReaction] = useState<{
+    sessionId: string;
+    until: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!reaction) return;
+    const timer = setTimeout(
+      () => setReaction(null),
+      Math.max(0, reaction.until - Date.now())
+    );
+    return () => clearTimeout(timer);
+  }, [reaction]);
   const [preview, setPreview] = useState(false);
   const previewTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined
@@ -145,6 +160,8 @@ export const NotchShell = ({
         if (event.type === "layout") setLayout(event.layout);
         else if (event.type === "app")
           setApp({ mainFocused: event.mainFocused });
+        else if (event.type === "reaction")
+          setReaction({ sessionId: event.sessionId, until: Date.now() + 600 });
         else if (event.type === "shortcut") setHovered(true);
         else if (event.type === "preview") {
           setPreview(true);
@@ -163,6 +180,10 @@ export const NotchShell = ({
       isWindowFocused: () => false,
       prefs: () => current.current.inputs.prefs.sounds,
       now: Date.now,
+      onUnlocked: () => {
+        audio.current = true;
+        setUnlocked(true);
+      },
       claim: (cueId, threadId) =>
         transport.client.window
           .claimCue({ cueId, threadId })
@@ -195,6 +216,23 @@ export const NotchShell = ({
     };
   }, [transport, director]);
   const previousWaiting = useRef<Map<string, string> | null>(null);
+  const previousAsks = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const next = new Set(inputs.asks.map((ask) => ask.id));
+    if (previousAsks.current)
+      for (const ask of inputs.asks)
+        if (!previousAsks.current.has(ask.id) && audio.current) {
+          const session = inputs.sessions.find(
+            (session) => session.id === ask.sessionId
+          );
+          player.current?.play("needs-you", {
+            threadId: ask.sessionId,
+            dedupeKey: ask.id,
+            botId: session ? botForSession(session, inputs.routines) : null,
+          });
+        }
+    previousAsks.current = next;
+  }, [inputs.asks, inputs.sessions, inputs.routines]);
   useEffect(() => {
     const next = new Map<string, string>();
     for (const session of inputs.sessions) {
@@ -213,6 +251,9 @@ export const NotchShell = ({
     }
     previousWaiting.current = next;
   }, [inputs.sessions]);
+  const faceStyle = useSharedElementName(
+    shown.faces[0]?.botId ? `bot-identity-${shown.faces[0].botId}` : null
+  );
   const open = () => {
     const p = current.current.shown;
     const session = db.collections.sessions.get(p.sessionId ?? "");
@@ -365,7 +406,7 @@ export const NotchShell = ({
                 ),
               }}
             >
-              <div className="notch-wing">
+              <div className="notch-wing" style={faceStyle}>
                 {shown.faces.map((face, i) => {
                   const bot = inputs.bots.find((b) => b.id === face.botId);
                   return (
@@ -377,7 +418,11 @@ export const NotchShell = ({
                         avatarShape: bot?.avatarShape ?? "mochi",
                         avatarColor: bot?.avatarColor ?? "blue",
                       })}
-                      mood={face.mood}
+                      mood={
+                        reaction && reaction.sessionId === shown.sessionId
+                          ? "wink"
+                          : face.mood
+                      }
                       label={bot?.name ?? "AbacusAI Bot"}
                     />
                   );
@@ -418,7 +463,6 @@ export const CompactView = () => {
   const { t } = useTranslation();
   return <h2>{t(`notch.wings.${presentation.attention?.kind ?? "idle"}`)}</h2>;
 };
-const drafts = new Map<string, string>();
 export const ReplyView = ({
   text,
   submit,
@@ -432,6 +476,7 @@ export const ReplyView = ({
   const [draft, setDraft] = useState(drafts.get(id) ?? "");
   const [error, setError] = useState(false);
   const [sending, setSending] = useState(false);
+  const inFlight = useRef(false);
   const voice = useDictation(transport, id, (text) => {
     setDraft((value) => {
       const next = `${value}${value ? " " : ""}${text}`;
@@ -440,7 +485,8 @@ export const ReplyView = ({
     });
   });
   const send = async () => {
-    if (!draft.trim() || sending) return;
+    if (!draft.trim() || inFlight.current) return;
+    inFlight.current = true;
     setSending(true);
     try {
       const outcome = await submit(draft);
@@ -451,6 +497,7 @@ export const ReplyView = ({
     } catch {
       setError(true);
     }
+    inFlight.current = false;
     setSending(false);
   };
   return (
@@ -513,6 +560,23 @@ export const IdleView = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const bot = db.collections.bots.toArray.find((bot) => bot.channel == null);
+  const routine = bot
+    ? db.collections.routines.toArray.find((routine) =>
+        isCheckInRoutine(routine, bot.id)
+      )
+    : null;
+  const toggle = async () => {
+    if (!routine || busy) return;
+    setBusy(true);
+    try {
+      await db.collections.routines.update(routine.id, (draft) => {
+        draft.enabled = !routine.enabled;
+      }).isPersisted.promise;
+    } catch {
+      setError(true);
+    }
+    setBusy(false);
+  };
   const launch = async (call: boolean) => {
     if (!bot || busy) return;
     setBusy(true);
@@ -535,6 +599,17 @@ export const IdleView = () => {
           <Button disabled={busy} onClick={() => void launch(true)}>
             {t("notch.actions.call")}
           </Button>
+          {routine && (
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void toggle()}
+            >
+              {t(
+                routine.enabled ? "notch.actions.pause" : "notch.actions.resume"
+              )}
+            </Button>
+          )}
           <Button
             variant="ghost"
             onClick={() =>
@@ -596,6 +671,22 @@ export const CallView = () => {
       {voice.state === "error" && (
         <p role="alert">{t("notch.listening.error")}</p>
       )}
+    </div>
+  );
+};
+
+export const ConnectorAskView = () => {
+  const { open, snooze } = useNotch();
+  const { t } = useTranslation();
+  return (
+    <div>
+      <h2>{t("notch.wings.connector-ask")}</h2>
+      <div className="mt-4 flex gap-2">
+        <Button onClick={open}>{t("notch.actions.open")}</Button>
+        <Button variant="ghost" onClick={snooze}>
+          {t("notch.approval.notNow")}
+        </Button>
+      </div>
     </div>
   );
 };

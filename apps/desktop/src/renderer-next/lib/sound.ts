@@ -27,6 +27,7 @@ export interface SoundContext {
   date?(): Date;
   /** For tests; the real one is `new AudioContext()`. */
   createAudioContext?(): unknown;
+  onUnlocked?(): void;
 }
 
 export interface SoundPlayer {
@@ -55,7 +56,7 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
 
   return {
     play(cue, options = {}) {
-      if (disposed) return;
+      if (disposed || (cue === "sent" && !ctx.isWindowFocused())) return;
       const prefs = ctx.prefs();
       if (!prefs.enabled) return;
       if (prefs.perEvent[cue] === false) return;
@@ -68,6 +69,7 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       )
         return;
       if (
+        cue !== "sent" &&
         options.threadId !== undefined &&
         ctx.isWindowFocused() &&
         ctx.isThreadVisible(options.threadId)
@@ -98,7 +100,15 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       try {
         audio = create();
         const context = audio as { resume?: () => Promise<void> } | null;
-        void context?.resume?.().catch(() => undefined);
+        void Promise.resolve(context?.resume?.())
+          .then(() => {
+            if (
+              !disposed &&
+              (audio as { state?: string } | null)?.state === "running"
+            )
+              ctx.onUnlocked?.();
+          })
+          .catch(() => undefined);
       } catch {
         audio = null;
       }

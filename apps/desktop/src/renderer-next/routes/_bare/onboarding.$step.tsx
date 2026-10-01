@@ -17,6 +17,7 @@ import {
   enterStep,
   type OnboardingExit,
 } from "#next/features/onboarding/actions";
+import { OnboardingLocalModels } from "#next/features/onboarding/steps/local-models";
 import { OnboardingProviderKey } from "#next/features/onboarding/steps/provider-key";
 import { startTour } from "#next/features/tour";
 import {
@@ -105,7 +106,8 @@ const OnboardingRoute = () => {
               });
             });
         },
-        startTour: () => startTour({ origin: router.state.location.href }),
+        startTour: () =>
+          startTour({ origin: router.state.location.href, onboarded: true }),
       },
       exit
     );
@@ -140,6 +142,12 @@ const OnboardingRoute = () => {
       complete={finish}
       createFirstBot={create}
       connect={connect}
+      localModel={
+        <OnboardingLocalModels
+          transport={transport}
+          saved={() => queryClient.invalidateQueries()}
+        />
+      }
       addKey={
         <OnboardingProviderKey
           transport={transport}
@@ -179,12 +187,33 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
         replace: true,
       });
   },
-  loader: async ({ context, params }) => {
+  loader: async ({ context, params, cause }) => {
+    if (cause === "preload") return { facts: await factsOf(context) };
     if (params.step === "welcome")
       await context.queryClient.ensureQueryData(
         context.transport.orpc.auth.abacus.browserProfiles.queryOptions({
           input: {},
         })
+      );
+    if (params.step === "connected")
+      await context.transport.client.account.abacus({ refresh: true });
+    if (params.step === "models")
+      await Promise.all([
+        context.queryClient.ensureQueryData(
+          context.transport.orpc.settings.keys.listProviders.queryOptions({
+            input: {},
+          })
+        ),
+        context.queryClient.ensureQueryData(
+          context.transport.orpc.models.list.queryOptions({ input: {} })
+        ),
+        context.queryClient.ensureQueryData(
+          context.transport.orpc.localModels.state.queryOptions({ input: {} })
+        ),
+      ]);
+    if (params.step === "connectors")
+      await context.queryClient.ensureQueryData(
+        context.transport.orpc.connectors.statuses.queryOptions({ input: {} })
       );
     if (params.step === "first-bot")
       await context.db.collections.routines.preload();

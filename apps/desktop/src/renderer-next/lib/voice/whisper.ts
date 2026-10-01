@@ -17,6 +17,7 @@ export type WhisperDevice = "webgpu" | "wasm";
 
 let transport: Transport;
 let inFlight = 0;
+const idleWaiters = new Set<() => void>();
 let disposal: ReturnType<typeof setTimeout> | undefined;
 export const configureVoice = (value: Transport): void => {
   transport = value;
@@ -127,6 +128,10 @@ export const transcribe = async (samples: Float32Array): Promise<string> => {
     return cleanTranscript(text);
   } finally {
     --inFlight;
+    if (!inFlight) {
+      for (const resolve of idleWaiters) resolve();
+      idleWaiters.clear();
+    }
     if (!inFlight)
       disposal = setTimeout(() => {
         void disposeWhisper();
@@ -135,7 +140,9 @@ export const transcribe = async (samples: Float32Array): Promise<string> => {
 };
 
 export const disposeWhisper = async (): Promise<void> => {
-  if (inFlight || !loading) return;
+  if (inFlight) await new Promise<void>((resolve) => idleWaiters.add(resolve));
+  clearTimeout(disposal);
+  if (!loading) return;
   const pending = loading;
   loading = null;
   try {

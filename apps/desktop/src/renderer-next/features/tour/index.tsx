@@ -11,7 +11,7 @@ import { Badge } from "#next/ui/badge";
 import { Button } from "#next/ui/button";
 
 import { TOUR_STOPS } from "./stops";
-import { tourStore, useTourState } from "./store";
+import { startTour, tourStore, useTourState } from "./store";
 export { startTour, tourSignedOut, useTourState } from "./store";
 export const TourHost = () => {
   const router = useRouter();
@@ -161,4 +161,18 @@ export const TourHost = () => {
       </div>
     </Spotlight>
   );
+};
+
+/** Settings/command-menu integration seam: replay is available only after account completion. */
+export const useStartTour = () => {
+  const router = useRouter();
+  const { transport } = router.options.context;
+  const account = useQuery(
+    transport.orpc.account.state.queryOptions({ input: {} })
+  );
+  return () =>
+    startTour({
+      origin: router.state.location.href,
+      onboarded: account.data?.onboarded === true,
+    });
 };

@@ -28,7 +28,11 @@ export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
     height: Math.min(
       layout.maxShape.height,
       Math.max(layout.notch?.height ?? 0, layout.mode === "capsule" ? 36 : 32) +
-        (p.expanded ? body || SHAPES.hovered[1] : 0)
+        (p.expanded
+          ? key === "approval"
+            ? layout.maxShape.height
+            : body || SHAPES.hovered[1]
+          : 0)
     ),
   };
 };

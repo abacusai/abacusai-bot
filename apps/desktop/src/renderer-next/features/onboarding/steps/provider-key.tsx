@@ -11,6 +11,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "#next/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "#next/ui/dropdown-menu";
 import { Field, FieldLabel, FieldDescription } from "#next/ui/field";
 import { Input } from "#next/ui/input";
 import { isPlausibleApiKey, PROVIDER_KEY_FIELDS } from "#shared/settings";
@@ -23,6 +29,7 @@ export const OnboardingProviderKey = ({
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [provider, setProvider] = useState("gemini");
   const [error, setError] = useState(false);
   const form = useForm({
     defaultValues: { key: "" },
@@ -33,7 +40,7 @@ export const OnboardingProviderKey = ({
       }
       try {
         await transport.client.settings.keys.save({
-          provider: "gemini",
+          provider,
           key: value.key.trim(),
         });
         await saved();
@@ -43,12 +50,31 @@ export const OnboardingProviderKey = ({
       }
     },
   });
-  const field = PROVIDER_KEY_FIELDS.find((f) => f.provider === "gemini");
+  const field = PROVIDER_KEY_FIELDS.find((f) => f.provider === provider);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        {t("onboarding.pages.addKey")}
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button />}>
+          {t("onboarding.pages.addKey")}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {PROVIDER_KEY_FIELDS.filter((entry) => entry.kind === "model").map(
+            (entry) => (
+              <DropdownMenuItem
+                key={entry.provider}
+                onClick={() => {
+                  setProvider(entry.provider);
+                  setError(false);
+                  form.reset();
+                  setOpen(true);
+                }}
+              >
+                {entry.label}
+              </DropdownMenuItem>
+            )
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -97,7 +123,7 @@ export const OnboardingProviderKey = ({
                   })
                 }
               >
-                {t("onboarding.pages.openGemini")}
+                {field.label}
               </Button>
             )}
             <Button type="submit">{t("bots.save")}</Button>
