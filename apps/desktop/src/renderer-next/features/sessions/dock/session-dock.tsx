@@ -61,6 +61,7 @@ import {
   closeTab,
   reconcileTerminals,
   updateTabs,
+  focusTab,
   type PanelTab,
 } from "./panel-tabs-store";
 export interface SessionDockProps {
@@ -100,7 +101,12 @@ export const SessionDock = ({
     width: window.innerWidth - 56,
     height: window.innerHeight - 48,
   });
-  const [full, setFull] = useState<string | null>(null);
+  const [full, setFull] = useState<{
+    key: string;
+    from: string | undefined;
+    view: string;
+  } | null>(null);
+  const [terminalSnapshot, setTerminalSnapshot] = useState<string | null>(null);
   const [drag, setDrag] = useState<string | null>(null);
   const git = useGitState({ workspaceId: row.workspaceId, sessionId: row.id });
   const device = useQuery(
@@ -111,9 +117,14 @@ export const SessionDock = ({
   );
   const split =
     size.width + 56 >= 1100 &&
-    (full ?? search.view) !== "full" &&
+    (full?.key === key && full.from === search.view
+      ? full.view
+      : search.view) !== "full" &&
     search.tab != null;
   const active = search.tab;
+  useEffect(() => {
+    if (active) focusTab(key, active);
+  }, [key, active, entries.tabs]);
   const showChat = active === "chat" || active == null || split;
   const tree: DockNode = entries.tree ?? {
     kind: "leaf",
@@ -197,10 +208,6 @@ export const SessionDock = ({
         .catch(() => {});
     }
     const next = closeTab(key, ref);
-    updateTabs(key, (s) => ({
-      ...s,
-      tree: dockReducer(tree, { type: "close", tab: ref }),
-    }));
     if (active === ref) select(next);
   };
   useEffect(() => {
@@ -218,8 +225,10 @@ export const SessionDock = ({
       ({ signal }) =>
         transport.client.terminal.events({ conversationKey: key }, { signal }),
       (event) => {
-        if (event.type === "snapshot") reconcileTerminals(key, event.states);
-        else
+        if (event.type === "snapshot") {
+          reconcileTerminals(key, event.states);
+          setTerminalSnapshot(key);
+        } else
           openTab(key, {
             ref: `terminal:${event.state.terminalId}`,
             title: event.state.terminalId,
@@ -251,7 +260,7 @@ export const SessionDock = ({
       active &&
       active !== "chat" &&
       !entries.tabs.some((tab) => tab.ref === active) &&
-      !active.startsWith("terminal:")
+      (!active.startsWith("terminal:") || terminalSnapshot === key)
     ) {
       if (
         ["files", "changes", "agents", "device"].includes(active) ||
@@ -265,7 +274,7 @@ export const SessionDock = ({
         });
       else normalizeSelection(entries.last ?? undefined);
     }
-  }, [active, split, key, entries.last, entries.tabs, t]);
+  }, [active, split, key, entries.last, entries.tabs, t, terminalSnapshot]);
   const cycle = (direction: number) => {
     const refs = [
       ...(split ? [] : ["chat"]),
@@ -590,16 +599,21 @@ export const SessionDock = ({
               aria-pressed={!split}
               onClick={() => {
                 const view = split ? "full" : "split";
+                const pending = { key, from: search.view, view };
                 startTransition(() => {
                   addTransitionType("session-view");
-                  setFull(view);
+                  setFull(pending);
                 });
                 void navigate({
                   to: ".",
                   search: (p: Record<string, unknown>) => ({ ...p, view }),
                   replace: true,
                   transition: "none",
-                } as never);
+                } as never)
+                  .finally(() =>
+                    setFull((current) => (current === pending ? null : current))
+                  )
+                  .catch(() => {});
               }}
             >
               {split ? <Maximize /> : <Minimize />}

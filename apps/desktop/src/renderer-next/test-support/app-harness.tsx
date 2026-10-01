@@ -40,6 +40,7 @@ import {
 import type { RunFinishedNotice } from "#shared/contract/ai";
 import type { MaterializeBrowserRuntimeFileRequest } from "#shared/contract/browser";
 import type { FilesEvent } from "#shared/contract/files";
+import type { TerminalEvent } from "#shared/contract/terminal";
 /**
  * The whole app over test doubles: a memory transport answering the handful
  * of procedures the shell calls (system.info, window.chrome, window.ready,
@@ -243,7 +244,11 @@ const shellRouter = (
       ),
       list: os.devices.list.handler(() => []),
     },
-    terminal: { events: os.terminal.events.handler(quiet as never) },
+    terminal: {
+      events: os.terminal.events.handler(
+        options.terminalEvents ?? (quiet as never)
+      ),
+    },
     agent: {
       start: os.agent.start.handler(({ context, input }) => {
         context.calls.push(["agent.start", input]);
@@ -302,6 +307,7 @@ export interface HarnessOptions {
   ai?: AiClient;
   runFinished?: () => AsyncGenerator<RunFinishedNotice>;
   filesEvents?: () => AsyncGenerator<FilesEvent>;
+  terminalEvents?: () => AsyncGenerator<TerminalEvent>;
   openExternal?: (url: string) => void;
 }
 
