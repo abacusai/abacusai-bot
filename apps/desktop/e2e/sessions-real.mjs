@@ -11,6 +11,7 @@ import {
   writeFileSync,
   realpathSync,
 } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -21,6 +22,14 @@ const port = 9437;
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "sessions-real-")));
 const home = join(scratch, "home");
 mkdirSync(home);
+const pageServer = createServer((_, response) => {
+  response.setHeader("Content-Type", "text/html");
+  response.end(
+    `<!doctype html><html><body style="margin:0;background:rgb(17,85,153);color:white">SESSION_NATIVE_PIXEL</body></html>`
+  );
+});
+await new Promise((resolve) => pageServer.listen(0, "127.0.0.1", resolve));
+const pageUrl = `http://127.0.0.1:${pageServer.address().port}`;
 const provider = await FakeProvider.start();
 const requests = [];
 provider.server.on("request", (request) => {
@@ -157,7 +166,15 @@ try {
   const wait = async (expression) => {
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
-      if (await evaluate(expression)) return;
+      try {
+        if (await evaluate(expression)) return;
+      } catch (error) {
+        if (
+          !String(error).includes("Inspected target navigated or closed") &&
+          !String(error).includes("Cannot find context")
+        )
+          throw error;
+      }
       await sleep(50);
     }
     writeFileSync(
@@ -308,7 +325,7 @@ try {
     terminalId: "acceptance",
     conversationKey: key,
     generation: terminal.state.generation,
-    data: 'node -e \'process.stdout.write("x".repeat(5*1024*1024)+"\\nHIDDEN_DONE\\n")\'\r',
+    data: 'node -e \'process.stdout.write("x".repeat(5*1024*1024)+"\\nHIDDEN_DONE\\n");setInterval(()=>{},1000)\'\r',
   });
   await wait(
     `window.__sessionsTerminalTest.snapshot(${JSON.stringify(viewKey)}).then(s=>s.received>${before.received}+5*1024*1024&&s.text.includes('HIDDEN_DONE'))`
@@ -336,10 +353,27 @@ try {
   await evaluate(
     "document.querySelector('[data-slot=session-dock] canvas').closest('[role=region]').querySelector('div[tabindex]')?.focus()"
   );
+  await sleep(1000);
+  const visibleBaseline = await evaluate(
+    `window.__sessionsTerminalTest.snapshot(${JSON.stringify(viewKey)}).then(({text,...s})=>s)`
+  );
+  await evaluate("window.__sessionsReloadMarker = true");
+  await send("Page.reload");
+  await wait(
+    `!window.__sessionsReloadMarker && !!window.__sessionsTerminalTest && window.__sessionsTerminalTest.snapshot(${JSON.stringify(viewKey)}).then(s=>s?.text.includes('HIDDEN_DONE'))`
+  );
+  const restored = await evaluate(
+    `window.__sessionsTerminalTest.snapshot(${JSON.stringify(viewKey)}).then(({text,...s})=>s)`
+  );
+  assert.equal(restored.generation, terminal.state.generation);
+  assert.equal(restored.offset, visibleBaseline.offset);
+  checks.push(
+    "document reload restores retained PTY tail with the same generation and offset"
+  );
   const browser = await call("browser.runtime.materialize", {
     conversationKey: key,
     resourceId: "acceptance-browser",
-    url: "https://example.com",
+    url: pageUrl,
   });
   await navigate(`/sessions/${session.id}?tab=browser:acceptance-browser`);
   await wait("!!document.querySelector('[aria-label=Browser]')");
@@ -347,7 +381,54 @@ try {
     "(()=>{const r=document.querySelector('[aria-label=Browser]').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()"
   );
   assert(browserRect.width > 200 && browserRect.height > 200);
-  checks.push("browser surface has a live native presentation placeholder");
+  const capturePixel = async (lease) => {
+    const capture = await call("browser.runtime.capture", lease);
+    return evaluate(
+      `(async()=>{const image=new Image();image.src=${JSON.stringify(capture.dataUrl)};await image.decode();const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);return {width:image.width,height:image.height,pixel:[...ctx.getImageData(Math.floor(image.width/2),Math.floor(image.height/2),1,1).data]};})()`
+    );
+  };
+  await sleep(700);
+  const pixels = await capturePixel(browser.lease);
+  assert(
+    pixels.pixel.every(
+      (value, index) => Math.abs(value - [17, 85, 153, 255][index]) <= 2
+    )
+  );
+  console.log("native bounds", JSON.stringify({ browserRect, pixels }));
+  const scale = await evaluate("window.devicePixelRatio");
+  assert(Math.abs(pixels.width - browserRect.width * scale) < 3);
+  assert(Math.abs(pixels.height - browserRect.height * scale) < 3);
+  checks.push(
+    "loopback browser capture has native viewport dimensions and expected center pixel"
+  );
+  writeFileSync(
+    join(session.worktreePath, "native.html"),
+    '<!doctype html><html><body style="margin:0;background:rgb(17,85,153)">LOCAL_CHECKOUT</body></html>'
+  );
+  const local = await call("browser.runtime.materializeFile", {
+    conversationKey: key,
+    resourceId: "acceptance-local",
+    filePath: "native.html",
+    hostRoot: session.worktreePath,
+  });
+  await call("browser.runtime.present", {
+    lease: local.lease,
+    presentationId: "acceptance-local-proof",
+    bounds: {
+      x: browserRect.x,
+      y: browserRect.y,
+      width: browserRect.width,
+      height: browserRect.height,
+    },
+  });
+  await sleep(400);
+  assert(
+    (await capturePixel(local.lease)).pixel.every(
+      (value, index) => Math.abs(value - [17, 85, 153, 255][index]) <= 2
+    )
+  );
+  await call("browser.runtime.close", local.lease);
+  checks.push("guarded checkout local HTML runtime paints native pixels");
   writeFileSync(
     join(session.worktreePath, "sample.txt"),
     "changed in worktree\n"
@@ -368,6 +449,12 @@ try {
   const screenshotRoot = join(repo, ".build/screenshots/sessions");
   mkdirSync(screenshotRoot, { recursive: true });
   const screenshots = [];
+  const accessibility = [];
+  const computedContrast = [];
+  const axeSource = readFileSync(
+    join(repo, "node_modules/axe-core/axe.min.js"),
+    "utf8"
+  );
   for (const width of [1280, 900]) {
     await send("Emulation.setDeviceMetricsOverride", {
       width,
@@ -389,6 +476,54 @@ try {
         if (name === "changes")
           await wait("!!document.querySelector('[data-slot=diff-view]')");
         await sleep(500);
+        if (name !== "terminal") {
+          await evaluate(axeSource);
+          const result = await evaluate(
+            "axe.run(document.body,{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}}).then(r=>({violations:r.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),contrast:r.passes.find(p=>p.id==='color-contrast')?.nodes.length??0}))"
+          );
+          accessibility.push({ name, width, theme, ...result });
+          if (name === "changes") {
+            const palette = await evaluate(`(()=>{
+              const style=getComputedStyle(document.documentElement);
+              const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const ctx=canvas.getContext('2d');
+              const read=(css,base)=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=base;ctx.fillRect(0,0,1,1);ctx.fillStyle=css;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3);};
+              const lum=rgb=>rgb.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+              const background=style.getPropertyValue('--background');
+              return [['terminal-default','--foreground','--background'],['diff-add','--chat-diff-add-fg','--chat-diff-add-bg'],['diff-delete','--chat-diff-del-fg','--chat-diff-del-bg']].map(([name,fg,bg])=>{const backdrop=read(style.getPropertyValue(bg),background);const foreground=read(style.getPropertyValue(fg),'rgb('+backdrop.join(',')+')');const a=lum(foreground),b=lum(backdrop);return {name,foreground,background:backdrop,ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};});
+            })()`);
+            computedContrast.push({ width, theme, palette });
+          }
+        }
+        if (name === "terminal") {
+          const actual = await evaluate(
+            `window.__sessionsTerminalTest.snapshot(${JSON.stringify(viewKey)}).then(s=>s.theme)`
+          );
+          const expected = computedContrast
+            .at(-1)
+            .palette.find((color) => color.name === "terminal-default");
+          const hex = (rgb) =>
+            "#" +
+            rgb.map((value) => value.toString(16).padStart(2, "0")).join("");
+          assert.equal(actual.background, hex(expected.background));
+          assert.equal(actual.foreground, hex(expected.foreground));
+          const backgroundPixel = await evaluate(
+            "(()=>{const canvas=document.querySelector('[data-slot=session-dock] canvas');return [...canvas.getContext('2d').getImageData(0,0,1,1).data].slice(0,3);})()"
+          );
+          assert(
+            backgroundPixel.every(
+              (value, index) =>
+                Math.abs(value - expected.background[index]) <= 2
+            ),
+            "native terminal canvas background matches scheme"
+          );
+          assert.equal(
+            await evaluate(
+              "/(?:RangeError|RuntimeError):/.test(document.body.textContent)"
+            ),
+            false,
+            "no retained-tail WASM error"
+          );
+        }
         const file = `${name}@${width}-${theme}.png`;
         const shot = await send("Page.captureScreenshot", { format: "png" });
         writeFileSync(
@@ -401,7 +536,7 @@ try {
   }
   writeFileSync(
     join(screenshotRoot, "manifest.json"),
-    JSON.stringify({ screenshots }, null, 2)
+    JSON.stringify({ screenshots, accessibility, computedContrast }, null, 2)
   );
   checks.push(
     "16 session route screenshots: sidebar/start/changes/terminal at 1280 and 900, light and dark"
@@ -424,7 +559,22 @@ try {
   mkdirSync(join(repo, ".build"), { recursive: true });
   writeFileSync(
     join(repo, ".build/sessions-real.json"),
-    JSON.stringify({ checks, scratch }, null, 2)
+    JSON.stringify(
+      { checks, scratch, accessibility, computedContrast },
+      null,
+      2
+    )
+  );
+  assert(
+    computedContrast.every((row) =>
+      row.palette.every((color) => color.ratio >= 4.5)
+    ),
+    "computed default terminal/diff contrast"
+  );
+  assert.equal(
+    accessibility.flatMap((row) => row.violations).length,
+    0,
+    "real-layout axe violations"
   );
   console.log(`sessions-real: ${checks.length} checks passed`);
 } catch (error) {
@@ -435,4 +585,5 @@ try {
   ws?.close();
   child.kill();
   await provider.close();
+  await new Promise((resolve) => pageServer.close(resolve));
 }

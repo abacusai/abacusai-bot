@@ -1,21 +1,15 @@
 {
-  "screenshots": [
-    "sidebar@1280-light.png",
-    "start@1280-light.png",
-    "changes@1280-light.png",
-    "terminal@1280-light.png",
-    "sidebar@1280-dark.png",
-    "start@1280-dark.png",
-    "changes@1280-dark.png",
-    "terminal@1280-dark.png",
-    "sidebar@900-light.png",
-    "start@900-light.png",
-    "changes@900-light.png",
-    "terminal@900-light.png",
-    "sidebar@900-dark.png",
-    "start@900-dark.png",
-    "changes@900-dark.png",
-    "terminal@900-dark.png"
+  "checks": [
+    "new worktree session persists one configured first admission",
+    "real PTY delivers 5 MB while the terminal tab is hidden",
+    "same-document output reconnect appends without replaying old bytes",
+    "document reload restores retained PTY tail with the same generation and offset",
+    "loopback browser capture has native viewport dimensions and expected center pixel",
+    "guarded checkout local HTML runtime paints native pixels",
+    "changes diff reads the sibling worktree and Keep preserves the primary checkout",
+    "masked diff keeps the session dock mounted",
+    "16 session route screenshots: sidebar/start/changes/terminal at 1280 and 900, light and dark",
+    "deleted live session renders its gone state"
   ],
   "accessibility": [
     {
@@ -202,5 +196,18 @@
     }
   ],
   "sourceCommit": "7ab67a86ad00a6ed52ef97ae80d39da28d0cba72",
-  "driverSha256": "d3a9d05135865864021832c51e97064fb0b2d69a3a8c1eeb0468aefc616f0755"
+  "driverSha256": "d3a9d05135865864021832c51e97064fb0b2d69a3a8c1eeb0468aefc616f0755",
+  "nativeBrowser": {
+    "browserRect": {
+      "x": 545,
+      "y": 184,
+      "width": 719,
+      "height": 600
+    },
+    "pixels": {
+      "width": 1438,
+      "height": 1200,
+      "pixel": [18, 85, 152, 255]
+    }
+  }
 }
