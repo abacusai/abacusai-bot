@@ -58,3 +58,59 @@ it("R4-T8 does not retry a missing checkout", async () => {
   expect(start).toHaveBeenCalledTimes(1);
   lifecycle.dispose();
 });
+it("Retry repeats failed restoration, and late failures cannot report after stop", async () => {
+  const report = vi.fn();
+  const switchConversation = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("restore failed"))
+    .mockResolvedValue(undefined);
+  const start = vi.fn().mockResolvedValue({ success: true });
+  const lifecycle = agentLifecycle(
+    { agent: { start, switchConversation } } as never,
+    report
+  );
+  const running = { ...row, status: "running" as const };
+  lifecycle.observe(running, true, "inc-1");
+  await vi.waitFor(() =>
+    expect(report).toHaveBeenCalledWith(expect.any(Error))
+  );
+  lifecycle.retry(running);
+  await vi.waitFor(() => expect(switchConversation).toHaveBeenCalledTimes(2));
+  lifecycle.observe(running, true, "inc-1");
+  expect(switchConversation).toHaveBeenCalledTimes(2);
+  let reject!: (error: unknown) => void;
+  switchConversation.mockImplementationOnce(
+    () =>
+      new Promise((_, no) => {
+        reject = no;
+      })
+  );
+  lifecycle.observe(running, true, "inc-2");
+  lifecycle.stop();
+  report.mockClear();
+  reject(new Error("stale"));
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(report).not.toHaveBeenCalled();
+  lifecycle.dispose();
+});
+it("joined start readiness gates restoration even when the ready relay arrives first", async () => {
+  let ready!: (result: unknown) => void;
+  const start = vi.fn(
+    () =>
+      new Promise((resolve) => {
+        ready = resolve;
+      })
+  );
+  const switchConversation = vi.fn(async () => {});
+  const lifecycle = agentLifecycle(
+    { agent: { start, switchConversation } } as never,
+    vi.fn()
+  );
+  lifecycle.observe(row, true, null);
+  lifecycle.observe({ ...row, status: "running" }, true, "ready-inc");
+  expect(switchConversation).not.toHaveBeenCalled();
+  ready({ success: true });
+  await vi.waitFor(() => expect(switchConversation).toHaveBeenCalledOnce());
+  lifecycle.dispose();
+});

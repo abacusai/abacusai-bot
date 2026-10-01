@@ -20,7 +20,7 @@ import { sessionConversationKey } from "#shared/conversation-scope";
 import { BrowserTab } from "./browser/browser-tab";
 import { ChangesTab } from "./changes/changes-tab";
 import { WorkspaceMissing } from "./context/workspace-missing";
-import { agentLifecycle } from "./data/agent-start";
+import { useAgentLifecycle } from "./data/agent-start";
 import {
   useWorkspace,
   useSessionsTransport,
@@ -65,13 +65,10 @@ export const SessionWorkspace = ({
   const search = useSearch({ strict: false }) as { agent?: string };
   const requests = useConnectorRequests(transport, key);
   const [error, setError] = useState<unknown>(null);
-  const [controller] = useState(() =>
-    agentLifecycle(transport.client, setError)
-  );
+  const controller = useAgentLifecycle(transport.client, row, setError);
   useEffect(() => {
     controller.observe(row, status.data?.exists === true, incarnation);
   }, [controller, row, status.data?.exists, incarnation]);
-  useEffect(() => () => controller.dispose(), [controller]);
   useEffect(() => {
     if (status.data?.exists === false) controller.unavailable();
   }, [status.data?.exists, controller]);
