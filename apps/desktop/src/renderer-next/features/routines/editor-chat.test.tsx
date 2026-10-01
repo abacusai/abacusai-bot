@@ -1,5 +1,5 @@
 import { implement, ORPCError } from "@orpc/server";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { fixtureRoutines } from "#next/data/fixture-db/rows";
@@ -83,3 +83,35 @@ it.each(["TIMEOUT", "NOT_FOUND", "INTERNAL_SERVER_ERROR"] as const)(
     ).toHaveLength(1);
   }
 );
+
+it("navigation between routines isolates editor history and drafts", async () => {
+  const other = fixtureRoutines()[1]!;
+  sessionStorage.setItem(
+    `routine-editor:${row.id}`,
+    JSON.stringify([{ user: "First routine request", reply: "First reply" }])
+  );
+  sessionStorage.setItem(
+    `routine-editor:${other.id}`,
+    JSON.stringify([{ user: "Second routine request", reply: "Second reply" }])
+  );
+  app = await renderApp(`/routines/${row.id}`);
+  const field = await screen.findByRole("textbox", {
+    name: "Tell the routine how to change",
+  });
+  fireEvent.change(field, { target: { value: "Unsaved first draft" } });
+  await act(async () => {
+    await app!.router.navigate({
+      to: "/routines/$routineId",
+      params: { routineId: other.id },
+    });
+  });
+  expect(await screen.findByText("Second routine request")).not.toBeNull();
+  expect(screen.queryByText("First routine request")).toBeNull();
+  expect(
+    (
+      screen.getByRole("textbox", {
+        name: "Tell the routine how to change",
+      }) as HTMLTextAreaElement
+    ).value
+  ).toBe("");
+});

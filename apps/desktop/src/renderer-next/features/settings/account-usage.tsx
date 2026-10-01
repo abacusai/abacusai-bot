@@ -13,6 +13,7 @@ import { showInfo } from "#next/lib/toast";
 import { useAppContext, errorText } from "#next/lib/use-app-context";
 import { Button } from "#next/ui/button";
 import { Checkbox } from "#next/ui/checkbox";
+import { canSignOutOfAbacus } from "#shared/settings";
 
 import { ABACUS_PLAN_URL, ABACUS_BUY_CREDITS_URL } from "./credits";
 export const AccountPage = () => {
@@ -31,6 +32,10 @@ export const AccountPage = () => {
   const referrals = useQuery(
     transport.orpc.referrals.summary.queryOptions({ input: {} })
   );
+  const settings = useQuery(
+    transport.orpc.settings.get.queryOptions({ input: {} })
+  );
+  const canSignOut = canSignOutOfAbacus(settings.data ?? null);
   const [pending, setPending] = useState(false);
   const [removeOthers, setRemoveOthers] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,26 +118,30 @@ export const AccountPage = () => {
           title={account.data.name ?? account.data.email ?? "Abacus.AI"}
           detail={account.data.email ?? undefined}
         >
-          <ConfirmAction
-            title={t("phase5.signOut")}
-            description={t("phase5.signOutDetail")}
-            label={t("phase5.signOut")}
-            onConfirm={async () => {
-              await transport.client.auth.abacus.signOut({
-                keepOtherApiKeys: !removeOthers,
-              });
-              await transport.client.account.signOut({});
-              void navigate({ to: "/bots/new", transition: "settings-out" });
-            }}
-          />
+          {canSignOut && (
+            <ConfirmAction
+              title={t("phase5.signOut")}
+              description={t("phase5.signOutDetail")}
+              label={t("phase5.signOut")}
+              onConfirm={async () => {
+                await transport.client.auth.abacus.signOut({
+                  keepOtherApiKeys: !removeOthers,
+                });
+                await transport.client.account.signOut({});
+                void navigate({ to: "/bots/new", transition: "settings-out" });
+              }}
+            />
+          )}
         </SettingRow>
-        <label className="flex items-center gap-2 p-3 text-xs">
-          <Checkbox
-            checked={removeOthers}
-            onCheckedChange={(value) => setRemoveOthers(value === true)}
-          />
-          {t("phase5.removeOtherKeys")}
-        </label>
+        {canSignOut && (
+          <label className="flex items-center gap-2 p-3 text-xs">
+            <Checkbox
+              checked={removeOthers}
+              onCheckedChange={(value) => setRemoveOthers(value === true)}
+            />
+            {t("phase5.removeOtherKeys")}
+          </label>
+        )}
         <SettingRow
           id="plan"
           title={account.data.plan ?? t("phase5.unknownPlan")}
