@@ -182,7 +182,6 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
-import { RENDERER_GENERATION } from "./renderer-generation";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
@@ -477,7 +476,7 @@ export class ServiceHost {
    */
   readonly aguiRelay: AguiRelayService = new AguiRelayService({
     aguiForEverySpawn: defaultWire({
-      generation: RENDERER_GENERATION,
+      generation: "wco",
       isPackaged: app.isPackaged,
       env: process.env,
       log: (message) => console.warn(`[agui] ${message}`),

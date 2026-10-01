@@ -680,7 +680,6 @@ describe("main's AG-UI relay with a spawned agent", () => {
   it("in the new-renderer build, a spawn no ai.* call asked for speaks AG-UI and the new UI drives it (review r1)", async () => {
     const { client, manager, relay } = build({
       aguiForEverySpawn: defaultWire({
-        generation: "wco",
         isPackaged: true,
         env: {},
       }),

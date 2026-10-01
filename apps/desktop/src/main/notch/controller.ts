@@ -50,7 +50,6 @@ interface Entry {
 }
 export interface NotchControllerOptions {
   platform: string;
-  generation: string;
   packaged: boolean;
   preload: string;
   prefs(): PrefsRow;
@@ -91,7 +90,7 @@ export class NotchController {
     if (
       this.#started ||
       this.#disposed ||
-      this.#o.generation !== "wco" ||
+      false ||
       !["darwin", "win32"].includes(this.#o.platform)
     )
       return;
@@ -613,19 +612,15 @@ export class NotchController {
     return "pending";
   }
   status(): NotchStatus {
-    const reason =
-      this.#o.generation !== "wco"
-        ? "generation"
-        : !["darwin", "win32"].includes(this.#o.platform)
-          ? "platform"
-          : !this.#o.prefs().notch?.enabled
-            ? "disabled"
-            : this.#failures.filter((at) => Date.now() - at < 600_000).length >=
-                3
-              ? "failed"
-              : this.#metricsFailed
-                ? "metrics-unavailable"
-                : undefined;
+    const reason = !["darwin", "win32"].includes(this.#o.platform)
+      ? "platform"
+      : !this.#o.prefs().notch?.enabled
+        ? "disabled"
+        : this.#failures.filter((at) => Date.now() - at < 600_000).length >= 3
+          ? "failed"
+          : this.#metricsFailed
+            ? "metrics-unavailable"
+            : undefined;
     return {
       available: !reason && [...this.#entries.values()].some((e) => e.ready),
       ...(reason ? { reason } : {}),

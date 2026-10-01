@@ -14,7 +14,6 @@ import { app } from "electron";
 import extract from "extract-zip";
 import { Updater } from "tuf-js";
 
-import { RENDERER_GENERATION } from "#main/renderer-generation";
 import { resourcePath } from "#main/resources";
 import { defaultWire } from "#main/services/agui/relay-service";
 
@@ -259,7 +258,7 @@ export class ExperienceUpdater {
       await store.linkRuntime(temporary);
       await checkAgentBundle(temporary, {
         wire: defaultWire({
-          generation: RENDERER_GENERATION,
+          generation: "wco",
           isPackaged: app.isPackaged,
           env: process.env,
         })

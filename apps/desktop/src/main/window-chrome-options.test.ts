@@ -16,7 +16,6 @@ import {
 } from "./window-chrome-options";
 
 const input: WindowChromeInput = {
-  mode: "wco",
   platform: "win32",
   dark: true,
   reducedTransparency: false,
@@ -35,34 +34,6 @@ const fakeWindow = () => ({
 afterEach(() => vi.useRealTimers());
 
 describe.each([false, true])("dark=%s options matrix", (dark) => {
-  it.each([false, true])(
-    "legacy options, reducedTransparency=%s",
-    (reducedTransparency) => {
-      const options = {
-        ...input,
-        mode: "legacy" as const,
-        dark,
-        reducedTransparency,
-        overlayHeight: 64,
-      };
-      expect(windowChromeOptions({ ...options, platform: "darwin" })).toEqual({
-        titleBarStyle: "hiddenInset",
-        trafficLightPosition: { x: 16, y: 13 },
-        ...(reducedTransparency
-          ? {}
-          : { vibrancy: "under-window", visualEffectState: "active" }),
-      });
-      expect(windowChromeOptions(options)).toEqual({
-        titleBarStyle: "hidden",
-        titleBarOverlay: { ...overlayColors(dark), height: 32 },
-        backgroundMaterial: reducedTransparency ? "none" : "mica",
-      });
-      expect(windowChromeOptions({ ...options, platform: "linux" })).toEqual({
-        frame: true,
-      });
-    }
-  );
-
   it.each([false, true])(
     "WCO options, reducedTransparency=%s",
     (reducedTransparency) => {
@@ -216,28 +187,6 @@ it("does not change native-frame Linux or destroyed windows", () => {
   applyWindowChrome(window, input);
   expect(window.setTitleBarOverlay).not.toHaveBeenCalled();
 });
-
-it.each([
-  ["darwin", "overlay", 40],
-  ["win32", "overlay", 32],
-  ["linux", "native-frame", 40],
-] as const)(
-  "reports the actual legacy chrome on %s",
-  (platform, mode, height) => {
-    expect(
-      windowChromeState(
-        { ...input, mode: "legacy", platform, overlayHeight: 64 },
-        "native-frame",
-        false
-      )
-    ).toEqual({
-      mode,
-      fullScreen: false,
-      density: "comfortable",
-      toolbarHeight: height,
-    });
-  }
-);
 
 it("updates the Linux host background together with native chrome", () => {
   const window = fakeWindow();

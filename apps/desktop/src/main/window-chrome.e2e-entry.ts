@@ -18,7 +18,6 @@ app.whenReady().then(async () => {
     height: 600,
     show: true,
     ...windowChromeOptions({
-      mode: "wco",
       platform: process.platform,
       dark: false,
       reducedTransparency: true,
@@ -137,7 +136,6 @@ app.whenReady().then(async () => {
       const replacement = new BaseWindow({
         ...bounds,
         ...windowChromeOptions({
-          mode: "wco",
           platform: "linux",
           dark: false,
           reducedTransparency: true,

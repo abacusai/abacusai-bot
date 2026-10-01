@@ -17,10 +17,8 @@ import {
 } from "./startup-theme";
 import {
   WINDOW_SURFACE,
-  windowChromeOptions,
   type LinuxChromeMode,
   type WindowChromeInput,
-  type WindowChromeMode,
 } from "./window-chrome-options";
 
 /** `nativeTheme` over an OS that is dark or light. */
@@ -49,7 +47,6 @@ const BASE = { width: 1200, height: 800, show: false, title: "App" };
 
 /** What `createWindow` passes: `currentChromeInput()` read at call time. */
 const windowFor = (options: {
-  generation: WindowChromeMode;
   platform: string;
   stored: "system" | "light" | "dark";
   osDark: boolean;
@@ -61,7 +58,6 @@ const windowFor = (options: {
   const chromeInput = (): WindowChromeInput => {
     seen.push(nativeTheme.themeSource);
     return {
-      mode: options.generation,
       platform: options.platform,
       dark: nativeTheme.shouldUseDarkColors,
       reducedTransparency: options.reducedTransparency ?? false,
@@ -70,7 +66,6 @@ const windowFor = (options: {
     };
   };
   const result = mainWindowOptions({
-    generation: options.generation,
     prefs: storedTheme(options.stored),
     nativeTheme,
     chromeInput,
@@ -82,7 +77,6 @@ const windowFor = (options: {
 describe("startup theme: the options new BaseWindow gets", () => {
   it("applies the stored theme before the chrome is computed", () => {
     const { nativeTheme, seen } = windowFor({
-      generation: "wco",
       platform: "darwin",
       stored: "dark",
       osDark: false,
@@ -98,7 +92,6 @@ describe("startup theme: the options new BaseWindow gets", () => {
     "Linux overlay, stored %s on the opposite OS: the resolved surface, not the overlay's fixed backdrop",
     (stored, osDark, surface) => {
       const { result } = windowFor({
-        generation: "wco",
         platform: "linux",
         stored,
         osDark,
@@ -113,7 +106,6 @@ describe("startup theme: the options new BaseWindow gets", () => {
 
   it("Linux native frame: the resolved surface", () => {
     const { result } = windowFor({
-      generation: "wco",
       platform: "linux",
       stored: "dark",
       osDark: false,
@@ -130,7 +122,6 @@ describe("startup theme: the options new BaseWindow gets", () => {
     "%s: transparent while vibrancy/mica paints the backdrop",
     (platform) => {
       const { result } = windowFor({
-        generation: "wco",
         platform,
         stored: "dark",
         osDark: false,
@@ -146,7 +137,6 @@ describe("startup theme: the options new BaseWindow gets", () => {
     "%s with reduced transparency: nothing paints the backdrop, so the resolved surface",
     (platform) => {
       const { result } = windowFor({
-        generation: "wco",
         platform,
         stored: "light",
         osDark: true,
@@ -156,41 +146,10 @@ describe("startup theme: the options new BaseWindow gets", () => {
       expect(result.vibrancy).toBeUndefined();
     }
   );
-
-  it.each([
-    ["darwin", "#00000000"],
-    ["win32", "#00000000"],
-    ["linux", "#2a2a28"],
-  ])(
-    "legacy on %s: no theme applied, the options as before",
-    (platform, background) => {
-      const { result, nativeTheme } = windowFor({
-        generation: "legacy",
-        platform,
-        stored: "dark",
-        osDark: false,
-      });
-      expect(nativeTheme.themeSource).toBe("system");
-      const chrome = windowChromeOptions({
-        mode: "legacy",
-        platform,
-        dark: false,
-        reducedTransparency: false,
-        overlayHeight: 40,
-        linuxMode: "overlay",
-      });
-      expect(result).toEqual({
-        ...BASE,
-        backgroundColor: background,
-        ...chrome,
-      });
-    }
-  );
 });
 
 describe("startup theme: live", () => {
   const input = (over: Partial<WindowChromeInput>): WindowChromeInput => ({
-    mode: "wco",
     platform: "linux",
     dark: false,
     reducedTransparency: false,
@@ -221,12 +180,6 @@ describe("startup theme: live", () => {
     expect(host.setBackgroundColor).toHaveBeenLastCalledWith(
       WINDOW_SURFACE.light
     );
-  });
-
-  it("leaves the legacy window alone", () => {
-    const window = fakeWindow();
-    applyThemedBackground(window, input({ mode: "legacy" }));
-    expect(window.setBackgroundColor).not.toHaveBeenCalled();
   });
 
   it("applyStartupTheme returns the resolved scheme", () => {
