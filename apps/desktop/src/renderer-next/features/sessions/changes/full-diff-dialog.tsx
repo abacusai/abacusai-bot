@@ -12,7 +12,11 @@ import {
   DialogDescription,
 } from "#next/ui/dialog";
 
-import { useSessionsTransport, useGitState } from "../data/queries";
+import {
+  useCheckoutIdentity,
+  useSessionsTransport,
+  useGitState,
+} from "../data/queries";
 import { readDiff } from "./diff-source";
 export const FullDiffDialog = ({
   sessionId,
@@ -43,11 +47,13 @@ export const FullDiffDialog = ({
   const { t } = useTranslation();
   const transport = useSessionsTransport();
   const git = useGitState({ workspaceId, sessionId });
+  const checkoutIdentity = useCheckoutIdentity({ workspaceId, sessionId });
   const fingerprint = git?.gitChanges.find((change) => change.path === path)
     ?.fingerprints?.[scope];
   const result = useQuery({
     queryKey: [
       "sessions.fullDiff",
+      checkoutIdentity,
       sessionId,
       path,
       scope,

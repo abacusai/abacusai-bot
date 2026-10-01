@@ -16,7 +16,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "#next/ui/popover";
 import {
   useSessionsTransport,
   usePickableWorkspaces,
-  sessionsQueries,
+  useCheckoutQueries,
   useWorkspace,
 } from "../data/queries";
 import type { StartDraft } from "../start/start-session";
@@ -42,7 +42,7 @@ export const SessionContextTray = ({
   const queryClient = useQueryClient();
   const db = useDb();
   const checkout = { workspaceId, ...(sessionId ? { sessionId } : {}) };
-  const options = sessionsQueries(transport.orpc);
+  const options = useCheckoutQueries(checkout);
   const branch = useQuery(options.branch(checkout));
   const pr = useQuery(options.pr(checkout));
   const exec = useQuery(options.exec());
@@ -296,7 +296,7 @@ const BranchList = ({
   const transport = useSessionsTransport();
   const qc = useQueryClient();
   const context = { workspaceId, ...(sessionId ? { sessionId } : {}) };
-  const branches = useQuery(sessionsQueries(transport.orpc).branches(context));
+  const branches = useQuery(useCheckoutQueries(context).branches(context));
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const switchTo = async (name: string, create = false) => {

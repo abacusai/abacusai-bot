@@ -20,7 +20,11 @@ import { Button } from "#next/ui/button";
 import type { SessionRow } from "#shared/contract/rows";
 import type { GitChangeItem } from "#shared/contracts";
 
-import { useGitState, useSessionsTransport } from "../data/queries";
+import {
+  useCheckoutIdentity,
+  useGitState,
+  useSessionsTransport,
+} from "../data/queries";
 import { readDiff } from "./diff-source";
 import { reviewStore, keepChange, isReviewed } from "./review-store";
 export interface ChangeSelection {
@@ -70,6 +74,7 @@ export const ChangesTab = ({
   const transport = useSessionsTransport();
   const checkout = { workspaceId: row.workspaceId, sessionId: row.id };
   const state = useGitState(checkout);
+  const checkoutIdentity = useCheckoutIdentity(checkout);
   const rows = changeRows(state);
   const search = useSearch({ strict: false }) as {
     file?: string;
@@ -89,6 +94,7 @@ export const ChangesTab = ({
   const diff = useQuery({
     queryKey: [
       "sessions.diff",
+      checkoutIdentity,
       state?.checkoutKey,
       selected?.change.path,
       selected?.scope,

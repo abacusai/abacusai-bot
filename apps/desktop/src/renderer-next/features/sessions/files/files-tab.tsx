@@ -26,9 +26,11 @@ import type { FileTreeNode } from "#shared/contracts";
 import {
   useSessionsTransport,
   useGitState,
-  sessionsQueries,
+  useCheckoutQueries,
+  useCheckoutIdentity,
 } from "../data/queries";
 import { isRelativePath } from "../data/search";
+import { useLazyChildren } from "./lazy-children";
 export const flattenFiles = (nodes: FileTreeNode[]): string[] =>
   nodes.flatMap((n) => [
     n.relativePath + (n.kind === "directory" ? "/" : ""),
@@ -90,14 +92,19 @@ export const FilesTab = ({
   const transport = useSessionsTransport();
   const navigate = useAppNavigate();
   const checkout = { workspaceId: row.workspaceId, sessionId: row.id };
-  const options = sessionsQueries(transport.orpc);
+  const options = useCheckoutQueries(checkout);
   const tree = useQuery(options.tree(checkout));
   const git = useGitState(checkout);
   const [trash, setTrash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [children, setChildren] = useState<FileTreeNode[]>([]);
+  const checkoutIdentity = useCheckoutIdentity(checkout);
+  const { children, load } = useLazyChildren(
+    checkoutIdentity,
+    tree.dataUpdatedAt,
+    (directory) => options.children(checkout, directory)
+  );
   const search = useQuery({
     ...options.search(checkout, debounced),
     enabled: debounced !== "",
@@ -114,11 +121,7 @@ export const FilesTab = ({
         replace: true,
         transition: "none",
       } as never);
-      const nodes = await transport.client.files.treeChildren({
-        checkout,
-        directoryPath: path.slice(0, -1),
-      });
-      setChildren((s) => [...s, ...nodes]);
+      load(path.slice(0, -1));
       return;
     }
     void navigate({
@@ -175,7 +178,7 @@ export const FilesTab = ({
           ))
         ) : (
           <FileTreeView
-            checkoutIdentity={`${row.workspaceId}:${row.id}:${row.worktreeId ?? "primary"}:${root}`}
+            checkoutIdentity={`${row.id}:${checkoutIdentity}`}
             paths={paths}
             gitStatus={git?.gitChanges.map((c) => ({
               path: c.path,

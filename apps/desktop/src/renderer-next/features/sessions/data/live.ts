@@ -50,14 +50,40 @@ export const followSessionsSources = (
           invalidate(query);
       }
   });
+  const invalidateCheckout = (checkout: {
+    workspaceId: string;
+    sessionId?: string;
+  }) => {
+    for (const query of [
+      options.checkoutStatus(checkout),
+      options.tree(checkout),
+      options.branches(checkout),
+      options.branch(checkout),
+      options.pr(checkout),
+    ])
+      invalidate(query);
+    for (const queryKey of [
+      transport.orpc.files.treeChildren.key(),
+      transport.orpc.files.search.key(),
+    ])
+      void qc.invalidateQueries({ queryKey });
+  };
   const sessions = collections.sessions.subscribeChanges((changes) => {
-    for (const change of changes)
-      invalidate(
-        options.checkoutStatus({
-          workspaceId: change.value.workspaceId,
-          sessionId: change.value.id,
-        })
-      );
+    for (const change of changes) {
+      const checkout = {
+        workspaceId: change.value.workspaceId,
+        sessionId: change.value.id,
+      };
+      invalidate(options.checkoutStatus(checkout));
+      const previous = change.previousValue;
+      if (
+        !previous ||
+        previous.workspaceId !== change.value.workspaceId ||
+        previous.worktreeId !== change.value.worktreeId ||
+        previous.worktreePath !== change.value.worktreePath
+      )
+        invalidateCheckout(checkout);
+    }
   });
   const workspaces = collections.workspaces.subscribeChanges((changes) => {
     for (const change of changes) {
@@ -68,7 +94,7 @@ export const followSessionsSources = (
       );
       for (const checkout of checkouts())
         if (checkout.workspaceId === change.value.id)
-          invalidate(options.checkoutStatus(checkout));
+          invalidateCheckout(checkout);
     }
   });
   void followNotices(
@@ -78,6 +104,9 @@ export const followSessionsSources = (
       if (event.type === "tree-root-changed")
         for (const checkout of checkouts(event.checkoutKey)) {
           invalidate(options.tree(checkout));
+          void qc.invalidateQueries({
+            queryKey: transport.orpc.files.search.key(),
+          });
           void qc.invalidateQueries({
             queryKey: transport.orpc.files.treeChildren.key(),
           });
