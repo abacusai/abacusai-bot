@@ -123,7 +123,20 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
 
         // The identifier has to appear on that line. A signature is built from
         // the source, so anything else means the position is invented.
-        if (head !== "" && !lines[symbol.line - 1]?.includes(head)) {
+        const claimedLine = lines[symbol.line - 1]?.trim() ?? "";
+        const located =
+          claimedLine.includes(head) ||
+          (file.endsWith(".css") &&
+            claimedLine !== "" &&
+            head.startsWith(claimedLine) &&
+            lines
+              .slice(symbol.line - 1)
+              .join("\n")
+              .split("{")[0]!
+              .replace(/\s+/g, " ")
+              .trim()
+              .startsWith(head));
+        if (head !== "" && !located) {
           failures.push(
             `${path.relative(REPO_ROOT, file)}:${symbol.line}: "${symbol.name}" not on that line`
           );

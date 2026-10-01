@@ -1,0 +1,12 @@
+{
+  "home": "/var/folders/ts/jzc606ns5ql0n3s56657cfgw0000gp/T/cutover-partial-upgrade-gcf7ky3s",
+  "exitCode": 0,
+  "wallSeconds": 3.205,
+  "sourceProducerStatus": "incomplete",
+  "limitation": "Partial source fixture and unsigned artifact; not full R7-T10/T32 acceptance.",
+  "changedSourceFiles": ["cronjobs.json", "logs/main-2026-10-01.log"],
+  "missingSourceFiles": [],
+  "inactiveProfileUnchanged": true,
+  "sourceTranscriptsUnchanged": true,
+  "migrationLog": "[migrations] 1 transcripts-v2: kept 5c97cfa3-fbc3-4533-8e58-4da96d7eb5e6.json: tooLarge\n[migrations] 1 transcripts-v2: kept 7b9a4036-cc64-4943-bbc3-7e26389dc23f.json: tooLarge\n[migrations] 1 transcripts-v2: kept a8941205-0641-44d0-9a54-e4d9b8ec21f1.json: tooLarge\n[migrations] 1 transcripts-v2: skipped fixture-corrupt.json: corrupt\n[migrations] 1 transcripts-v2: skipped fixture-unknown.json: not-v1\n[migrations] 1 transcripts-v2: {\"files\":2002,\"converted\":1997,\"created\":1997,\"replaced\":0,\"upToDate\":0,\"agui\":0,\"foreign\":0,\"twinUnreadable\":0,\"cleared\":0,\"skipped\":2,\"unsafe\":0,\"corrupt\":1,\"notV1\":1,\"unreadable\":0,\"tooLarge\":3,\"vanished\":0,\"failed\":0}\n[migrations] applied 1 transcripts-v2 in 1102 ms {\"files\":2002,\"converted\":1997,\"created\":1997,\"replaced\":0,\"upToDate\":0,\"agui\":0,\"foreign\":0,\"twinUnreadable\":0,\"cleared\":0,\"skipped\":2,\"unsafe\":0,\"corrupt\":1,\"notV1\":1,\"unreadable\":0,\"tooLarge\":3,\"vanished\":0,\"failed\":0}\n[migrations] 2 prefs-from-renderer-state: sound opt-out: none\n[migrations] 2 prefs-from-renderer-state: 11 legacy keys, 10 mapped: {\"keys\":10,\"imported\":9,\"keptUser\":0,\"invalid\":3,\"reset\":0}\n[migrations] applied 2 prefs-from-renderer-state in 6 ms {\"keys\":10,\"imported\":9,\"keptUser\":0,\"invalid\":3,\"reset\":0,\"written\":1}\n[migrations] 5 routine-attempt-ids: routine history: {\"routines\":6,\"entries\":120,\"migrated\":120,\"withSession\":6,\"unknown\":0,\"linkedTimeouts\":0}\n[migrations] applied 5 routine-attempt-ids in 8 ms {\"routines\":6,\"entries\":120,\"migrated\":120,\"withSession\":6,\"unknown\":0,\"linkedTimeouts\":0,\"written\":1}\n[funnel] app_opened signed_out\n[UpdateService] app-update.yml absent; updates disabled for this unpacked distribution\n[smoke] main process ready\n[smoke] renderer ready\n[smoke] notch ready\n"
+}

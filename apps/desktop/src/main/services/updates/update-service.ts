@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 // electron-updater is CommonJS; a named value import fails at load under ESM.
 import electronUpdater, { type UpdateInfo } from "electron-updater";
 
@@ -367,6 +370,15 @@ export class UpdateService {
   }
 
   async checkForUpdates(): Promise<{ success: boolean; error?: string }> {
+    if (
+      app.isPackaged &&
+      !existsSync(join(process.resourcesPath, "app-update.yml"))
+    ) {
+      console.log(
+        "[UpdateService] app-update.yml absent; updates disabled for this unpacked distribution"
+      );
+      return { success: true };
+    }
     try {
       this.status.error = null;
       this.status.failedPhase = null;
@@ -376,8 +388,15 @@ export class UpdateService {
       void this.refreshReleaseMetadata();
 
       const result = await this.checkFeed();
-      if (result?.downloadPromise != null)
+      if (result?.downloadPromise != null) {
         this.transferToken = result.cancellationToken;
+        // The check resolves before an automatic download. Observe its rejection too.
+        void result.downloadPromise.catch((error: unknown) => {
+          console.warn(
+            `[UpdateService] Download did not complete: ${error instanceof Error ? error.message : String(error)}`
+          );
+        });
+      }
       return { success: true };
     } catch (error) {
       const fullMsg = error instanceof Error ? error.message : String(error);

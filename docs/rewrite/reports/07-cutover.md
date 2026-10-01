@@ -25,7 +25,7 @@ Commit numbering follows the spec's C1–C14 headings. The task brings the resto
 | C2 | Hidden probes wait on native events; recreate IPC is wco-only; mode-matched health checks; compatibility refusal memo; fresh install admission and download cancellation; API coupling check; seven chrome cases now executable | 74 tests in ten files; real macOS Electron chrome: five pass, two Linux-only cases skipped; TypeScript and oxlint pass | Windows/Linux CI; chrome fixture uses real BaseWindow/RendererHost but does not prove every production popup, browser-runtime layout, pre-exposure geometry, persisted-route recreation or signed artifact. Private feed withdrawal/install-on-quit and already-shipped clients need release-pipeline evidence. |
 | C3 | Main-only activity beacon; versioned, validated complete draft registry with live-store hydration; full bot edits and baseline; anchored DOM continuity; 4 MB stand-down; awaited/logged stage 2 before exposure; log rings in both entries | 85 focused tests in 11 files; two real Electron MessagePort/readiness tests with delayed candidate stage 1 and stage 2, capture/restore/flip timestamps; TypeScript, oxlint and scoped knip pass | Packaged production-route draft demonstrations and virtualized off-window anchor restoration; Windows/Linux execution. |
 | C4 | Source-derived renderer and agent provenance; builder/install agreement checks; pinned Turbo environment; production-only graph and content checks; dev harness elimination; bounded renderer/companion smoke outcomes; CI exit-status checks; gzip baseline | Production Vite build and release checker pass; gallery build rejected; 55 desktop tests, 14 updater tests, two Node provenance/cache-configuration tests; desktop and script TypeScript and oxlint pass | Actual agent-only hotfix cache miss and same-commit cache hit have not been executed. Packaged smoke and signed pipeline still pending. Size baseline is a local build measurement, not M1–M6. |
-| C5 | **Partial implementation; release gate open.** Default wco with unpackaged legacy override; API 2 desktop/updater; API-2 notch-entry requirement; experience classifier; AG-UI spawn CI; exact 313 feature parity ids and parsed declaration checks; legacy blob inventory; notch Settings and tour replay handoff | 4,370 unit tests / 491 files; 11 integrity tests and four health-check tests after adding the missing-notch refusal case; 122 parity/bot tests after consumer corrections; 14 updater tests; four real agent spawn cases; four Node checks. Required Electron run: 301 pass / one performance failure / two Linux skips; isolated rerun passes all nine chat-kit cases, yielding passing evidence for 302 distinct cases. TypeScript, format, lint, registry, legacy-diff, scoped knip and locale checks pass. Production release checker and experience build pass. | Bridge map consumer column, frozen bridge enumerations/sign-off, final green/retired/deferred schema with evidence and PLAN anchors, release-note generation and packaged per-area demonstrations remain unfinished. Complete synthetic shipped homes and comparative M1–M6 probes are not implemented. Unsigned macOS smoke exits 0 with readiness markers but logs an updater fatal-pattern error; it is not a full T16 pass. |
+| C5 | **Partial implementation; release gate open.** Default wco with unpackaged legacy override; API 2 desktop/updater; API-2 notch-entry requirement; experience classifier; AG-UI spawn CI; exact 313 feature parity ids and parsed declaration checks; legacy blob inventory; notch Settings and tour replay handoff | 4,370 unit tests / 491 files; 11 integrity tests and four health-check tests after adding the missing-notch refusal case; 122 parity/bot tests after consumer corrections; 14 updater tests; four real agent spawn cases; four Node checks. Required Electron run: 301 pass / one performance failure / two Linux skips; isolated rerun passes all nine chat-kit cases, yielding passing evidence for 302 distinct cases. TypeScript, format, lint, registry, legacy-diff, scoped knip and locale checks pass. Production release checker and experience build pass. | Bridge map consumer column, frozen bridge enumerations/sign-off, final green/retired/deferred schema with evidence and PLAN anchors, release-note generation and packaged per-area demonstrations remain unfinished. Source-API fixture generation and a comparative CDP driver are now implemented in part, as detailed below. Source fixture completion, M1–M5, bridge consumers and packaged demonstrations remain open. The unsigned directory smoke now handles a missing updater configuration without a fatal-pattern error; three-OS T16 acceptance remains open. |
 | C6 | Not started; entry switch/deletion gate remains behind C5 | Not run | Legacy tree, entry and oracle moves remain. |
 | C7 | Not started | Not run | Renderer rename, complete project scope and canary checks remain. |
 | C8 | Not started | Not run | Legacy preload/window.api/raw IPC removal remains. |
@@ -98,7 +98,7 @@ All 24 NDJSON files compare byte-for-byte with starting commit `c92812e7`.
 | R7-T13 | Packaged N−1 downgrade and N re-upgrade on the same generated homes, including records whose newer fields were dropped, not implemented/run. |
 | R7-T14 | Local bounded fallback/recovery tests pass; original-shipped oversized/unreadable source fixtures and packaged demonstrations pending. |
 | R7-T15 | Durable attempt manifests/index exist, but executable restoration command and two-profile/two-cycle/conflict/recovery acceptance are pending C14. |
-| R7-T16 | Real unsigned macOS package exits 0 and prints readiness outcomes. Updater missing-config fatal pattern prevents full pass. Linux/Windows package runs, no-companion Linux and shortcut cleanup evidence remain pending. |
+| R7-T16 | Real unsigned macOS package exits 0 and prints main/renderer/notch readiness. Missing app-update.yml is explicitly logged before checks, and the new empty-home smoke has no fatal/unhandled-rejection pattern. Linux/Windows runs, no-companion Linux and shortcut cleanup remain pending; signed acceptance is separate. |
 | R7-T17 | Signed/notarized macOS acceptance, physical notch/external-display/haptics/TCC/mic checks, Windows signed upgrade/scaling/taskbar/uninstall and Linux artifacts require pipeline/hardware. |
 | R7-T18 | Production experience builds. Final asar/experience entry/provenance/CSP and removed-asset checks pending deletion and dependency steps. |
 | R7-T19 | Legacy window.api is still exposed. C8 removal and both-window handshake/exposure assertions pending. |
@@ -106,7 +106,7 @@ All 24 NDJSON files compare byte-for-byte with starting commit `c92812e7`.
 | R7-T21 | Parsed-specifier helper and negative consumer checks exist. Inventory import-resolution negative control and final grep gate are not implemented. |
 | R7-T22 | Current scoped knip passes. Main/shared/preload/script project widening, exact executable entries, five planted canaries and dependency checks pending. |
 | R7-T23 | Baseline/report measurements exist; final RC limits +5% and CI package budget enforcement pending. |
-| R7-T24 | Comparative M1–M6 driver and completed perf-home missing; no medians/p90 or +10% acceptance claimed. |
+| R7-T24 | Comparative CDP driver exists. Completed source perf-home remains blocked by source account admission; M1–M5 are unmeasured. The M6 onboarding diagnostic is 1,251,321 versus 1,001,567 bytes, +24.94%, and fails the numeric budget. No R7-T24 acceptance is claimed. |
 | R7-T25 | All 313 feature ids and parsed declarations pass. Bridge consumer mapping and frozen exact sets, final row status/evidence/owner anchors, notes and packaged per-area sign-off remain incomplete. |
 | R7-T26 | Current i18n and all 11 locale schemas pass. C13 final post-keymap used-key equality and dynamic-key enumeration/purge pending. |
 | R7-T27 | Main authoritative busy/keep-awake regression tests pass. |
@@ -114,9 +114,62 @@ All 24 NDJSON files compare byte-for-byte with starting commit `c92812e7`.
 | R7-T29 | macOS real Electron fixture: five pass; two Linux cases skip. Three-OS packaged production geometry/popup/browser-view/density/full-screen evidence pending. |
 | R7-T30 | 302 distinct local Electron cases have passing evidence after isolated rerun, with two platform-only skips. These run dev acceptance fixtures, not the packaged RC; the specified packaged area demonstrations are missing. |
 | R7-T31 | Gallery and stale-harness output were refused; production passes both admissions. Explicit fixture-flag rejection test and packaged env-override matrix remain incomplete. |
-| R7-T32 | Full synthetic source homes, packaged first-launch driver, progress responsiveness and 50 MB/200 MB/1 GB timings missing. |
+| R7-T32 | A partial original-source home has a packaged first-launch observation: 3.204 s overall, step 1 1.102 s. Complete fixtures, progress responsiveness and the 50 MB/200 MB/1 GB comparison remain missing. |
 | R7-T33 | Local fresh-install admission, withdrawal cancellation and late completion tests pass. Real generic-feed N−1→N installation/relaunch/halt matrix, shipped-client limitation and capsule file-lock evidence require remaining implementation and platform execution. |
 
 ## Per-area sign-off still required
 
 The bridge lacks its resolved consumer column and final frozen enumerations. Chrome needs three-OS packaged production geometry evidence. Agent wire needs the final frozen oracle/manager matrix. Foundation needs packaged screenshots/axe and hotkey checks; Chat needs packaged real approvals and reference performance; Bots/Sessions need packaged routes, terminal/device/browser and attachment cases; Routines/Artifacts/Library/Settings need packaged interaction and stress cases; Onboarding/Tour/Notifications need fresh install, settings/command-menu integration, dictation and hardware demonstrations. Static feature consumer resolution is not a substitute for these checks. Existing `partial` phase entries are deliberately not relabeled as accepted.
+
+
+## Continuation checkpoint, 1 October 2026
+
+The renderer merge is `19c8dd96`. The combined Vite configuration retains source provenance, release graph checks, production readiness definitions, main output cleanup and the updater bundle. It also retains detached main/preload aliases, registry compiler exclusions and route-test ignore prefixes. Production build output has zero React Compiler diagnostics. A bounded Vite dev launch on a fresh synthetic home built main/preload and opened the app without an unresolved `#shared/contract` import. Both detached resolver tests pass after adapting them to the config function.
+
+C5 remains partial. C6–C14 have not started. This checkpoint does not authorize a release or claim that C5's entry gate has passed. Spec 07 §13.3 and risk R15 require refusing a performance fixture when the original source build cannot reach its shell through the synthetic account stub. The source account fetch bypasses the loopback proxy environment and returns `unidentified-account`. A user decision about recorded main-debugger fetch instrumentation is pending. No instrumentation workaround has run. The disabled alternative is implemented and tested in `scripts/cutover/source-fetch-proxy.mjs`, with exact synthetic-home checks, loopback-only forwarding and a recorded script hash.
+
+### C5 continuation changes and checks
+
+| Change | Evidence | Limit |
+| --- | --- | --- |
+| Unsigned directory updater handling | Missing `app-update.yml` logs that updates are disabled before a check starts. Automatic download promises now have a rejection observer. Two new regression tests pass. Empty-home unsigned macOS smoke exits 0 and prints all readiness markers with no fatal or unhandled-rejection pattern. | This does not prove signed updater installation or three-OS T16 acceptance. |
+| Source fixture generator | Original v1.0.85 archive hash remains `e2ab8da004af1570ad6165bc009311b5badb5de1337f0d88d2f960641a2dd2df`. Own API writes create bots, sessions, 2,000 histories, preferences, geometry, memories and routine attempts. Oversized content is constructed from a seed inside the source renderer to avoid oversized CDP commands. The second profile follows the explicitly permitted registry construction. | The shipped pairing decision API cannot create an absent sender. The auto-reply grant is missing. Source-completed onboarding and final upgrade/downgrade assertions remain open. Partial archives cannot satisfy the complete fixture gates. |
+| Comparative probe driver | Same bot/composer and long-session probes for both builds; seven alternating pairs, first discarded; median/p90; parentage RSS sampler including Windows code; GC/heap sampling; observed CDP Network resources and per-resource gzip sizes. Manifest-verified home copies exclude incidental Chromium state. Full mode requires a completed source perf-home and a separately migrated candidate manifest. | M1–M5 have not run. Wrong-theme frame classification and companion RSS attribution remain unimplemented. Windows sampling has not run on hardware. This is a partial implementation of R7-T24, not a passing gate. |
+| Agent indexing integration | The merged multiline CSS `:is(...)` selector exposed a line-location assertion that assumed a selector's first component fit one line. The assertion now verifies both its starting line and normalized selector continuation. The complete agent unit project passes after the fix. | No production indexer behavior changed. Full agent typecheck also required adding the missing declaration for the existing build provenance helper. |
+
+The immutable partial source archives and their manifests are retained under `apps/desktop/src/main/migrations/__fixtures__/legacy-home-pre-rewrite-v1.0.85*.partial.*`. The second partial variant corrects the draft preference envelopes, uses the shared bot templates and includes a typed v1 tool call. Neither claims complete source-home acceptance.
+
+[Tool usage and limitations](../../../scripts/cutover/README.md) documents the commands and refusal behavior. The source archive is never read from a user home, and no content came from openbot.run.
+
+| Check | Current result |
+| --- | --- |
+| Desktop `tsc -b`; agent full typecheck; tools typecheck | Pass |
+| Desktop shared/main/renderer/renderer-next unit projects, `--maxWorkers=2` | 5,432 tests pass across 609 files; the added second updater test also passes in its focused two-test file |
+| Required Electron main-serial | 302 pass, two Linux-only skips across 12 files |
+| Agent unit project | 1,732 pass, two skips across 100 passing files and one skipped file |
+| Updater / connectors | 14 tests pass in each package |
+| Cut-over Node tooling checks | Eleven tests pass |
+| oxlint / oxfmt | No lint errors; inherited legacy warnings. Format check passes after formatting the new reports and scripts. |
+| UI registry / legacy diff / scoped knip / React Compiler | Pass; zero compiler diagnostics |
+| NDJSON frozen oracles | All 24 are byte-identical to `c92812e7` |
+| Release graph checker | Production passes; the final package is rebuilt from the checkpoint commit after acceptance builds |
+| Packaged macOS smoke | Unsigned local result only; all readiness outcomes and exit 0. Signed, Windows and Linux acceptance remain gaps. |
+
+### Measured observations
+
+| Measurement | Old | Candidate | Finding |
+| --- | --- | --- | --- |
+| M6 CDP onboarding diagnostic, median / p90 | 1,001,567 / 1,001,567 gzip bytes | 1,251,321 / 1,251,321 gzip bytes | +24.94%. The numeric M6 budget fails. Seven alternating pairs ran; first pair discarded. These fresh onboarding homes are not the required completed performance homes, so no R7-T24 acceptance is claimed. |
+| Partial source-home packaged first launch | Not a comparative run | 3.204 s overall; step 1 1.102 s; step 2 0.006 s; step 5 0.008 s | 2,002 files examined; 1,997 converted; three oversized files kept; one corrupt and one unknown-version file skipped. Six routines had 120 recorded attempts, six linked to sessions. This is a partial fixture observation, not T10/T32 acceptance. |
+| M1–M5 | Unmeasured | Unmeasured | Source shell admission remains blocked. No zero, inferred number or pass substitutes for the missing measurement. |
+
+[Actual CDP resources and run samples](07-cdp-m6-diagnostic.json) retain all 14 runs. [Partial upgrade observation](07-partial-upgrade.json) records the log and source-file hash comparison. The source transcript hashes and inactive-profile hashes are checked separately from intentionally changed migration records. The partial producer records its dirty generator provenance; it is not exact committed-generator fixture acceptance. The partial archive retains its seeded 30 MB history; the specified acceptance-time regeneration remains unfinished.
+
+### Decisions and remaining gates
+
+- The dormant-release version is still a coordinator question. No dormant or dormant-to-pre-rewrite fixture is inferred from an unshipped branch.
+- Recorded main-debugger proxy instrumentation for the original source account fetch needs the requested user decision. The current generator refuses the perf fixture under the strict source-proxy path.
+- The bridge consumer column, frozen exact bridge sets, final parity row schema, notes and packaged per-area demonstrations remain C5 work. Existing partial reports remain partial.
+- C6–C14 are unimplemented. Legacy deletion, renderer move, preload/raw IPC removal, generation collapse, wire cleanup, transition writer removal, dependency and locale cleanup, restore command, support article and release notes remain outstanding.
+- Spec 07 §19 still needs decisions about absolute performance caps, the proposed 150 MB companion RSS cap, rollout stages and the 14-day N+1 soak, and ownership of fallback-reader copy. The source proxy decision and the failed M6 number do not resolve those questions.
+- Signed/notarized macOS, physical notch/external-display/haptics/TCC/microphone checks, Windows signed upgrade/scaling/taskbar/uninstall and Linux packaged/native-frame checks need pipeline or hardware evidence. None passes by omission.
