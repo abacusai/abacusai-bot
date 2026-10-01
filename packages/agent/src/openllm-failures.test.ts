@@ -59,6 +59,16 @@ describe("what a failure means", () => {
     });
   });
 
+  it("a model that will not take tools sits out a day", () => {
+    expect(
+      classifyFailure(
+        "400 This model does not support tool calling",
+        "nvidia",
+        NOON
+      )
+    ).toEqual({ cooldownMs: 24 * 3_600_000 });
+  });
+
   it("a request that does not fit sits that model out for an hour", () => {
     expect(
       classifyFailure(

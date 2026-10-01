@@ -20,12 +20,20 @@ import { Button } from "../ui";
 import { ProviderMark } from "./provider-mark";
 
 const SOURCE_NAME: Record<FreeSource, string> = {
-  openrouter: "workspace.premiumUpgrade.sourceOpenrouter",
   gemini: "workspace.premiumUpgrade.sourceGemini",
+  openrouter: "workspace.premiumUpgrade.sourceOpenrouter",
+  mistral: "workspace.premiumUpgrade.sourceMistral",
+  nvidia: "workspace.premiumUpgrade.sourceNvidia",
+  cerebras: "workspace.premiumUpgrade.sourceCerebras",
+  groq: "workspace.premiumUpgrade.sourceGroq",
 };
 const SOURCE_META: Record<FreeSource, string> = {
-  openrouter: "workspace.premiumUpgrade.sourceOpenrouterMeta",
   gemini: "workspace.premiumUpgrade.sourceGeminiMeta",
+  openrouter: "workspace.premiumUpgrade.sourceOpenrouterMeta",
+  mistral: "workspace.premiumUpgrade.sourceMistralMeta",
+  nvidia: "workspace.premiumUpgrade.sourceNvidiaMeta",
+  cerebras: "workspace.premiumUpgrade.sourceCerebrasMeta",
+  groq: "workspace.premiumUpgrade.sourceGroqMeta",
 };
 
 /**

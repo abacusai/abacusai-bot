@@ -9,6 +9,8 @@ import type { AddressInfo } from "node:net";
 
 /** One request the agent made, as a test wants to read it. */
 export interface RecordedCall {
+  /** The model id the request named: which of several providers it went to. */
+  model: string;
   /** Tool names offered to the model: the roster the session built. */
   tools: string[];
   messages: Array<{ role: string; content: unknown }>;
@@ -62,6 +64,8 @@ export class FakeProvider {
   /** Responses left open by a `stall` reply, closed with the server. */
   private readonly stalled: http.ServerResponse[] = [];
   private responder: Responder = () => ({ say: "ok" });
+  /** What `GET /models` lists, for a provider that reads its catalog live. */
+  private catalog: unknown[] = [{ id: "fake-1" }];
 
   private constructor(
     private readonly server: http.Server,
@@ -97,6 +101,11 @@ export class FakeProvider {
     this.responder = responder;
   }
 
+  /** What `GET /models` answers with, as `{ data: entries }`. */
+  serveModels(entries: unknown[]): void {
+    this.catalog = entries;
+  }
+
   /** Plays a fixed list of replies, then stops talking. */
   scriptSequence(replies: Reply[]): void {
     this.script((_call, index) => replies[index] ?? { say: "done" });
@@ -120,17 +129,19 @@ export class FakeProvider {
   ): Promise<void> {
     if ((request.url ?? "").endsWith("/models")) {
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ data: [{ id: "fake-1" }] }));
+      response.end(JSON.stringify({ data: this.catalog }));
 
       return;
     }
 
     const parsed = JSON.parse(body || "{}") as {
+      model?: string;
       tools?: Array<{ function?: { name?: string }; name?: string }>;
       messages?: Array<{ role: string; content: unknown }>;
     };
     const messages = parsed.messages ?? [];
     const call: RecordedCall = {
+      model: parsed.model ?? "",
       tools: (parsed.tools ?? []).map(
         (tool) => tool.function?.name ?? tool.name ?? ""
       ),

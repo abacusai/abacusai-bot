@@ -2,27 +2,32 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useState, type JSX } from "react";
 
-import type { FreePoolProvider } from "#shared/free-pool";
+import { FREE_POOL_PROVIDERS, type FreePoolProvider } from "#shared/free-pool";
 import { PROVIDER_KEY_FIELDS, type ProviderKeyField } from "#shared/settings";
 
 import { ProviderKeyDialog } from "../components/settings/provider-key-dialog";
 import { settingsQueryKeys } from "../lib/settings-query-keys";
 
-/**
- * The two sources the out-of-credits cards offer. The model picker offers
- * every FREE_POOL_PROVIDERS entry.
- */
-export type FreeSource = Extract<FreePoolProvider, "openrouter" | "gemini">;
-export const FREE_SOURCES: FreeSource[] = ["openrouter", "gemini"];
+/** A source the pool can gain: what the cards and the picker offer. */
+export type FreeSource = FreePoolProvider;
+
+/** The out-of-credits cards offer the next two, never a wall of rows. */
+const CARD_SOURCES = 2;
 
 const keyField = (source: FreePoolProvider): ProviderKeyField | null =>
   PROVIDER_KEY_FIELDS.find((field) => field.provider === source) ?? null;
 
-/** The cards' free sources the pool could still gain, OpenRouter first. */
+/**
+ * The next sources the pool could gain, in the order it spends them: Gemini
+ * and OpenRouter first, then the rest two at a time as those are connected.
+ */
 export const missingFreeSources = (
   configured: Record<string, boolean> | undefined
 ): FreeSource[] =>
-  FREE_SOURCES.filter((source) => configured?.[source] !== true);
+  FREE_POOL_PROVIDERS.filter((source) => configured?.[source] !== true).slice(
+    0,
+    CARD_SOURCES
+  );
 
 /**
  * One way to connect a free source, shared by the model picker's rows and
