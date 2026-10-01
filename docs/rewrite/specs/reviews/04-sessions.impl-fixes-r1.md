@@ -10,14 +10,14 @@ Merged `rewrite/renderer` at `5ca86069` into `ad345ea0` as `8a699b21`. The reque
 
 | Review # | Status | Change and regression evidence |
 |---|---|---|
-| 1, blocker | Fixed | FileTreeView recreates its model on checkout identity and retained handlers read current committed props. Mounted router navigates A to B then invokes the retained rename callback. The tree UI is adapted for jsdom; the installed useFileTree and model are real. |
+| 1, blocker | Fixed | FileTreeView recreates its model on checkout identity and retained handlers read current committed props. Mounted production router navigates A to B then invokes the retained rename callback through real FilesTab and oRPC. It asserts files.rename receives only B's checkout. The tree UI is adapted for jsdom; the installed useFileTree and model are real. |
 | 2, major | Fixed | Controller identity is an input to its memoized factory, with disposal on navigation. A stopped A to stopped B hook regression starts B and cancels A retries, including under the React compiler. |
 | 3, major | Fixed | Restoration records success after switchConversation resolves; Retry repeats restoration; stale completions cannot report or mark success. Rejection, Retry and late rejection tests pass. |
-| Main joined readiness | Wired | Auto-start awaits main's joined readiness before restoring the relay incarnation. Test delays the joined promise while the ready relay arrives first. |
-| 4, major | Fixed | Created drafts retain the read-only envelope and checkout tray with workspace locked. Mounted app test selects No worktree even without a branch result; stage regression proves explicit detach and no duplicate insert/materialization. |
+| 4, major | Fixed | Created drafts retain the read-only envelope and checkout tray with workspace locked. Mounted app test selects No worktree after creation; stage regression proves explicit detach and no duplicate insert/materialization. |
 | 5, major | Fixed | Git watch is scoped to effective checkout key and path; hook test proves old iterator abort and replacement subscription under the same session ID. |
 | 6, major | Fixed | Status, root, children, search, branch list/current, PR and diffs carry effective checkout identity. Session/relocation notices invalidate checkout sources and file events invalidate search/children too. Key regression compares attach, detach and relocated paths for every query family. |
-| 8, major | Fixed | Lazy children use bounded query-cache entries per checkout/directory/root revision, replace results on invalidation and expire after 60 seconds unused. Hook regression covers replacement, root refresh, A/B isolation and the 50-directory limit. |
+| 7, major | Fixed | Files paths are memoized; equal topology skips reset; changed topology passes expanded directory paths to the installed reset API. Regression covers equal paths and added children without collapse. |
+| 8, major | Fixed | Lazy children use bounded query-cache entries per checkout/directory/root revision, replace results on invalidation and are removed when unused. Hook regression covers replacement, root refresh, A/B isolation and the 50-directory limit. |
 | 9, major | Fixed | URL selection dispatches focus and persists last. Mounted dock test navigates to another tab and asserts both values. |
 | 10, major | Fixed | Local transition state is tied to the source URL/session and cleared when navigation settles. Mounted dock test toggles full then navigates back to split. |
 | 11, minor | Fixed | A vertical root can contain only leaves; regression rejects successive bottom moves that would create three rows. |
@@ -29,11 +29,17 @@ Merged `rewrite/renderer` at `5ca86069` into `ad345ea0` as `8a699b21`. The reque
 | 17, major | Fixed | Surface effect already depended on lease fields at merge. Added equivalent serialized lease regression and made equivalent presenter re-registration retain desired ownership. Presenter regression selects A then updates B without stealing presentation. |
 | 18, major | Fixed | FullDiffDialog receives toolKey from the route and keys historical patches on it. Mounted dialog switches edits on the same path and renders the second patch. |
 | 19, major | Fixed | Session route passes starting/running state separately from turn busy; trigger and mutation handler both guard it. Open-picker regression locks on an idle running agent and allows mutation after stop. |
-| Main exec-backend event | Wired | Shared invalidation bridge invalidates settings.execBackend.get on the now-present event. Context tray and its picker share that query. Event-to-key regression passes. |
-| 7, major | Fixed | Files paths are memoized; equal topology skips reset; changed topology passes expanded directory paths to the installed reset API. Regression covers equal paths and added children without collapse. |
+| 20, major | Fixed | Fatal player callback already entered the once-only fallback at merge. Added a separate stream abort before disposal/fallback, stopped-stream cleanup, and an actual-player/mounted-device regression for unsupported decoder configuration. |
+| 21, minor | Fixed | Key-frame barrier test configures a decoder, resets the barrier, proves a delta is blocked, then proves a key frame resumes decoding. Removing the barrier now fails the test. |
+| Main joined readiness | Wired | Auto-start awaits main's joined readiness before restoring the relay incarnation. Test delays the joined promise while the ready relay arrives first. |
+| Main exec-backend event | Wired | Shared invalidation bridge invalidates settings.execBackend.get and sandboxSupport on the now-present event. Context tray and its picker share that query. Event-to-key regression passes. |
 
 Both file-tree tests fail against the pre-fix component and pass with the fixes. Typecheck passes.
 
-Further findings and final gates will be recorded as they complete. The R4 acceptance matrix remains partial until its entire stated scenario is exercised.
+All 21 findings are addressed. The R4 acceptance matrix remains partial until its entire stated scenario is exercised.
 
 Agent targeted checks: 6 tests pass; typecheck passes.
+
+## Regression failure checks
+
+Removed safeguards temporarily, ran their targeted tests, and restored each source in a finally block. All 25 mutation checks fail by assertion, covering findings 1–21, additional lazy-cache identity and native-owner cases, joined readiness and exec events. The extra lazy-cache identity mutant initially survived an immediate empty-data assertion; the strengthened test now checks that no query is created for the old directory after root/checkout changes and detects it. Both original file-tree tests also fail against the pre-fix component. No mutated code remains.

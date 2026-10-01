@@ -80,6 +80,12 @@ it("reopens an overflowing H264 decoder at the next keyframe", async () => {
   };
   try {
     await player.push(key);
+    expect(decoders[0]!.state).toBe("configured");
+    player.resetBarrier();
+    await player.push({ ...key, isKey: false });
+    expect(decoders[0]!.decode).toHaveBeenCalledTimes(1);
+    await player.push(key);
+    expect(decoders[0]!.decode).toHaveBeenCalledTimes(2);
     decoders[0]!.decodeQueueSize = 9;
     await player.push({ ...key, isKey: false });
     expect(decoders[0]!.close).toHaveBeenCalledTimes(1);
