@@ -39,3 +39,58 @@ it("falls back after five seconds without a decoded frame and cancels the watchd
   expect(fatal).toHaveBeenCalledTimes(1);
   vi.useRealTimers();
 });
+
+it("reopens an overflowing H264 decoder at the next keyframe", async () => {
+  const decoders: Array<{
+    state: string;
+    decodeQueueSize: number;
+    close: ReturnType<typeof vi.fn>;
+    decode: ReturnType<typeof vi.fn>;
+    configure: ReturnType<typeof vi.fn>;
+  }> = [];
+  vi.stubGlobal(
+    "VideoDecoder",
+    class {
+      state = "unconfigured";
+      decodeQueueSize = 0;
+      close = vi.fn(() => {
+        this.state = "closed";
+      });
+      decode = vi.fn();
+      configure = vi.fn(() => {
+        this.state = "configured";
+      });
+      constructor() {
+        decoders.push(this);
+      }
+    }
+  );
+  vi.stubGlobal(
+    "EncodedVideoChunk",
+    class {
+      constructor(public input: unknown) {}
+    }
+  );
+  const fatal = vi.fn();
+  const player = new DeviceStreamPlayer({} as never, fatal);
+  const key = {
+    streamId: 1,
+    isKey: true,
+    data: new Uint8Array([0, 0, 0, 1, 0x67, 0x42, 0, 0x1e]),
+  };
+  try {
+    await player.push(key);
+    decoders[0]!.decodeQueueSize = 9;
+    await player.push({ ...key, isKey: false });
+    expect(decoders[0]!.close).toHaveBeenCalledTimes(1);
+    await player.push({ ...key, isKey: false });
+    expect(decoders).toHaveLength(1);
+    await player.push(key);
+    expect(decoders).toHaveLength(2);
+    expect(decoders[1]!.decode).toHaveBeenCalledTimes(1);
+    expect(fatal).not.toHaveBeenCalled();
+  } finally {
+    player.dispose();
+    vi.unstubAllGlobals();
+  }
+});

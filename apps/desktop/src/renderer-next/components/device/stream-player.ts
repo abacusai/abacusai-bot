@@ -95,6 +95,9 @@ export class DeviceStreamPlayer {
       if (!this.decoder || this.decoder.state !== "configured") return;
       if (this.decoder.decodeQueueSize > 8 && !chunk.isKey) {
         this.barrier = true;
+        this.decoder.close();
+        this.decoder = null;
+        this.codec = null;
         return;
       }
       this.barrier = false;
