@@ -14,6 +14,7 @@ export const phase5FixtureIds = [
   "settings-models",
   "settings-notifications",
   "settings-keyboard",
+  "sound-synthesis",
 ] as const;
 export const Phase5GalleryNav = ({
   fixture,

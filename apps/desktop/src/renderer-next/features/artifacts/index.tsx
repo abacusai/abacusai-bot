@@ -41,6 +41,7 @@ import {
   cardWindow,
   artifactListEntries,
 } from "./data";
+import { artifactStressRows } from "./gallery";
 import { ArtifactThumbnail } from "./thumbnail";
 const useArtifacts = (fixtureRows?: readonly ArtifactRow[]) => {
   const c = useCollections();
@@ -496,3 +497,16 @@ export const ArtifactsPage = ({
 };
 
 export { artifactGalleryRows, artifactStressRows } from "./gallery";
+
+/** Native driver seeds gallery files inside its isolated application home. */
+export const ArtifactsStressGallery = () => {
+  const { system } = useAppContext();
+  return (
+    <ArtifactsPage
+      fixtureRows={artifactStressRows.map((row) => ({
+        ...row,
+        location: `${system.paths.botHome}${row.location}`,
+      }))}
+    />
+  );
+};
