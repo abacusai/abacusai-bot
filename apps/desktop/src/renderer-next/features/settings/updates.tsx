@@ -28,6 +28,7 @@ export const updatePhase = (
 ) => {
   if (!status) return "loading";
   if (status.installStalled) return "stalled";
+  if (status.installing) return "installing";
   if (status.error && status.failedPhase === "install") return "installFailed";
   if (clicked || status.installing) return "installing";
   if (status.checking) return "checking";
@@ -51,8 +52,20 @@ export const useUpdateStatus = () => {
       transport,
       ({ signal }) => transport.client.update.events({}, { signal }),
       (status) => {
-        setLive(status);
-        if (status.failedPhase === "install" || status.installStalled) {
+        setLive(
+          status.installing
+            ? {
+                ...status,
+                error: null,
+                failedPhase: null,
+                installStalled: false,
+              }
+            : status
+        );
+        if (
+          !status.installing &&
+          (status.failedPhase === "install" || status.installStalled)
+        ) {
           setClicked(false);
           setInstallError(null);
         }
@@ -61,10 +74,20 @@ export const useUpdateStatus = () => {
     );
     return () => abort.abort();
   }, [transport]);
-  const status = live ?? seed.data;
+  const incoming = live ?? seed.data;
+  const status = incoming?.installing
+    ? { ...incoming, error: null, failedPhase: null, installStalled: false }
+    : incoming;
   const install = async () => {
     setClicked(true);
     setInstallError(null);
+    if (status)
+      setLive({
+        ...status,
+        error: null,
+        failedPhase: null,
+        installStalled: false,
+      });
     try {
       await transport.client.update.install({});
     } catch (e) {
@@ -227,11 +250,11 @@ export const CriticalUpdateDialog = () => {
         )}
         <AlertDialogFooter>
           <Button
-            disabled={update.clicked}
+            disabled={update.phase === "installing"}
             onClick={() => void update.install()}
           >
             {t(
-              update.clicked
+              update.phase === "installing"
                 ? "phase5.updates.installing"
                 : update.phase === "installFailed"
                   ? "phase5.tryAgain"
