@@ -154,7 +154,7 @@ export { ModelsPage } from "./models";
 export { AccountPage, UsagePage } from "./account-usage";
 export { EnvironmentPage, BrowserPage, DevicesPage } from "./environment";
 export { AboutPage, CriticalUpdateDialog } from "./updates";
-export { KeymapEditor as KeyboardPage } from "#next/components/keymap-editor";
+export { KeyboardPage } from "./keyboard";
 export { SettingsSearch, ModelsSearch, AccountSearch } from "./search";
 export { ChangelogPage } from "./changelog";
 export { InviteDialog } from "./invite";
