@@ -1735,7 +1735,6 @@ export class ServiceHost {
     };
     // The relay's AG-UI threads have no v1 save (spec 03 §24.12 c).
     this.threadStore.onAguiPersist(persisted);
-    this.debugSyncService.sweepOnStartup();
     this.logSyncService.start();
     this.diagnosticsSyncService.start();
     this.workspaceRuntimeService.ensureWorkspaceWatchers();
@@ -1747,6 +1746,11 @@ export class ServiceHost {
       .catch((error: unknown) => {
         console.error("[messaging] failed to start connectors:", error);
       });
+  }
+
+  /** Startup catch-up starts after the main renderer is interactive. */
+  startBackgroundSync(): void {
+    this.debugSyncService.sweepOnStartup();
   }
 
   stop(): void {

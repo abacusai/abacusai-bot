@@ -14,21 +14,22 @@ export const probeSource = (fixture) => `(() => {
     const bot = candidates.find(node => node.getAttribute('data-id')?.startsWith('bot-item-') && matchesBot(node)) ?? candidates.find(node => node.tagName === 'A' && matchesBot(node)) ?? candidates.find(matchesBot);
     const name = !!bot;
     const composer = [...document.querySelectorAll('textarea,[contenteditable="true"]')].find(visible);
-    if (!state.interactiveAt && fixture.initialSessionName) {
-      if (!composer) {
-        const section = candidates.find(node => node.tagName !== 'A' && visible(node) && /^Sessions(?:[0-9]+)?$/.test(node.textContent.trim()));
-        if (section && section.getAttribute('aria-expanded') === 'false') section.click();
-        if (!section && bot && (!state.botSelectedAt || absoluteNow() - state.botSelectedAt > 2000)) { state.botSelectedAt = absoluteNow(); bot.click(); }
-        const session = candidates.find(node => visible(node) && node.textContent.includes(fixture.initialSessionName));
-        if (session && (!state.sessionSelectedAt || absoluteNow() - state.sessionSelectedAt > 2000)) { state.sessionSelectedAt = absoluteNow(); session.click(); }
-      } else {
-        const section = candidates.find(node => node.tagName !== 'A' && visible(node) && /^Bots(?:[0-9]+)?$/.test(node.textContent.trim()));
-        if (section && section.getAttribute('aria-expanded') === 'false') section.click();
+    if (!state.interactiveAt && fixture.initialSessionName && !state.sessionSelectedAt) {
+      const section = candidates.find(node => node.tagName !== 'A' && visible(node) && /^Sessions(?:[0-9]+)?$/.test(node.textContent.trim()));
+      if (section && section.getAttribute('aria-expanded') === 'false') section.click();
+      if (!section) {
+        const link = candidates.find(node => node.tagName === 'A' && visible(node) && ['/sessions','/sessions/','/sessions/new'].includes((node.getAttribute('href') ?? '').split('#')[1]));
+        if (link && !location.hash.startsWith('#/sessions')) link.click();
       }
-    } else if (!state.interactiveAt && !composer && bot && (!state.botSelectedAt || absoluteNow() - state.botSelectedAt > 2000)) { state.botSelectedAt = absoluteNow(); bot.click(); }
-    if (!state.interactiveAt && name && composer && !composer.disabled) {
+      const session = candidates.find(node => visible(node) && node.textContent.includes(fixture.initialSessionName));
+      if (session) { state.sessionSelectedAt = absoluteNow(); session.click(); }
+    } else if (!state.interactiveAt && !fixture.initialSessionName && !composer && bot && (!state.botSelectedAt || absoluteNow() - state.botSelectedAt > 2000)) { state.botSelectedAt = absoluteNow(); bot.click(); }
+    const initialMessage = fixture.initialSessionId ? 'Fixture final message ' + fixture.initialSessionId : null;
+    const initialVisible = !initialMessage || [...document.querySelectorAll('p,[data-message-id],.prose')].some(node => visible(node) && node.textContent.includes(initialMessage));
+    const initialReady = fixture.initialSessionName ? state.sessionSelectedAt && initialVisible && absoluteNow() - state.sessionSelectedAt > 100 : name;
+    if (!state.interactiveAt && initialReady && composer && !composer.disabled) {
       composer.focus({ preventScroll: true });
-      if (document.activeElement === composer) state.interactiveAt = absoluteNow();
+      if (document.activeElement === composer) { state.interactiveAt = absoluteNow(); state.initialRoute = location.hash; }
     }
     if (state.threadClickedAt && !state.longThreadAt) {
       const last = [...document.querySelectorAll('p,[data-message-id],.prose')].find(node => visible(node) && node.textContent.includes(fixture.lastMessage));

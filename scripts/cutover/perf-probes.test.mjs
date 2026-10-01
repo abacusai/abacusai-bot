@@ -45,6 +45,7 @@ test("the common probe requires a visible fixture bot and a composer that can ta
   };
   const context = {
     window: {},
+    location: { hash: "#/bots/test" },
     document,
     performance: {
       timeOrigin: 1000,
@@ -167,4 +168,96 @@ test("the driver refuses M1–M5 on an incomplete onboarding fixture before laun
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("home copies verify files and never change the source", async () => {
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const { copyPerfHome, homeManifest } = await import("./perf-home.mjs");
+  const source = fs.mkdtempSync(path.join(os.tmpdir(), "perf-source-"));
+  fs.writeFileSync(path.join(source, "account.json"), "private test fixture");
+  const manifest = homeManifest(source);
+  const copy = copyPerfHome(source, manifest);
+  try {
+    fs.writeFileSync(path.join(copy.home, "account.json"), "changed scratch");
+    assert.deepEqual(homeManifest(source), manifest);
+    assert.throws(
+      () => copyPerfHome(source, { "../account.json": "bad" }),
+      /Unsafe/
+    );
+    assert.throws(
+      () => copyPerfHome(source, { "account.json": "bad" }),
+      /hash mismatch/
+    );
+  } finally {
+    copy.dispose();
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
+test("a landing-page composer cannot satisfy the short-session probe", () => {
+  const callbacks = [];
+  let now = 0,
+    loaded = false;
+  const session = {
+    tagName: "A",
+    textContent: "Short session",
+    getClientRects: () => [1],
+    getAttribute: () => null,
+    click: () => {},
+  };
+  const document = {
+    activeElement: null,
+    querySelectorAll: (selector) =>
+      selector.includes("textarea")
+        ? [composer]
+        : selector.startsWith("p,")
+          ? loaded
+            ? [
+                {
+                  textContent: "Fixture final message s",
+                  getClientRects: () => [1],
+                },
+              ]
+            : []
+          : [session],
+  };
+  const composer = {
+    disabled: false,
+    getClientRects: () => [1],
+    focus: () => {
+      document.activeElement = composer;
+    },
+  };
+  const context = {
+    window: {},
+    document,
+    location: { hash: "#/sessions/s" },
+    performance: {
+      timeOrigin: 1000,
+      now: () => now,
+      getEntriesByType: () => [],
+    },
+    PerformanceObserver: class {
+      observe() {}
+    },
+    getComputedStyle: () => ({ visibility: "visible" }),
+    requestAnimationFrame: (cb) => callbacks.push(cb),
+  };
+  vm.runInNewContext(
+    probeSource({
+      initialSessionName: "Short session",
+      initialSessionId: "s",
+      botName: "Bot",
+    }),
+    context
+  );
+  callbacks.shift()();
+  now = 200;
+  callbacks.shift()();
+  assert.equal(context.window.__cutoverProbe.interactiveAt, null);
+  loaded = true;
+  callbacks.shift()();
+  assert.equal(context.window.__cutoverProbe.interactiveAt, 1200);
 });
