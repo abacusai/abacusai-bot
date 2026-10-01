@@ -3433,6 +3433,9 @@
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",
     "clearSearch": "Hapus pencarian",
-    "unbind": "Unbind"
+    "unbind": "Unbind",
+    "invalidMcp": "Masukkan nama dan perintah, atau URL HTTP(S) yang valid.",
+    "chooseRecipients": "Pilih setidaknya satu penerima.",
+    "authRequired": "Autentikasi diperlukan"
   }
 }

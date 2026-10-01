@@ -3433,6 +3433,9 @@
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",
     "clearSearch": "검색 지우기",
-    "unbind": "Unbind"
+    "unbind": "Unbind",
+    "invalidMcp": "이름과 명령 또는 유효한 HTTP(S) URL을 입력하세요.",
+    "chooseRecipients": "받는 사람을 한 명 이상 선택하세요.",
+    "authRequired": "인증이 필요합니다"
   }
 }
