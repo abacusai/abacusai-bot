@@ -76,3 +76,18 @@ The first full suite found one AST guard failure because the terminal element va
 - All 26 mutation checks detect removed safeguards. No mutations remain in source.
 - No main or agent source changes were authored; the only main edit is the merge's MessagePort test type correction. No new chat/bots amendments were needed.
 - Existing untracked `.build/` remains outside commits. The full R4 matrix remains partial as recorded in the implementation report.
+
+## r2
+
+Addressed both majors in `04-sessions.impl-codex-r2.md`.
+
+Merged `rewrite/renderer` at `68929470` into `a63ebf31` as `1c8001c9`. The only conflict was `docs/rewrite/PROGRESS.md`. Kept the sessions r1 fix status and the incoming phase-5 r2 completion and phase-6 progress. The route tree was untouched. Install with `pnpm install --pm-on-fail=ignore` completed using the installed pnpm 12.8.1. Desktop typecheck, root formatting and lint passed. All 35 tests in the five changed phase-5 test files passed with two workers.
+
+| Review # | Status | Change and regression evidence |
+|---|---|---|
+| 1, major | Fixed in `ae36ea19` | Local-file viewers share materialization and lease ownership per transport, conversation, resource, file and root. A pending lease remains available across remounts; the runtime closes only after its final owner releases. Deferred mounted regressions move the same resource between keyed dock leaves, both before and after materialization settles. They also mount a concurrent owner and prove releasing one viewer does not close the shared lease. |
+| 2, major | Fixed in `9a1bcd2e` | New terminal tabs register their pending starts before publishing the dock reference. Initializers retain that registration through adapter setup and terminal.start, then release it on success, failure or cancellation before start. Snapshot reconciliation exempts these registrations. They are not persisted, so stale restored terminals still reconcile away. Mounted app regressions open through the dock menu, deliver empty snapshots before adapter readiness and during terminal.start, then settle the start with success or failure. They assert the restored reference disappears, the new tab and URL survive, successful output attaches, and a later snapshot removes the reference after the pending start settles. |
+
+Restored the pre-fix BrowserTab and temporarily removed the pending-terminal reconciliation exemption. All four new regression cases failed by assertion: the preview runtime closed while a replacement owned it, and the new terminal disappeared during initialization. Both production sources were restored in a finally block. No mutations remain.
+
+Final focused validation used the direct binaries. All 12 tests across local-file, local-owners, terminal-pending, panel-tabs, session-dock and terminal-tab passed with two workers. Desktop `tsc -b`, root `oxfmt .`, root `oxlint .` and `git diff --check` passed. Lint reports the same seven legacy renderer hook warnings. Existing untracked `.build/` remains outside commits. The R4 acceptance matrix remains partial.
