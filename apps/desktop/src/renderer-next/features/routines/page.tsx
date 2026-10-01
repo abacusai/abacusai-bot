@@ -1,15 +1,23 @@
 import { useParams, useSearch } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { Activity, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { usePanelRef } from "react-resizable-panels";
 
 import { EmptyState } from "#next/components/empty-state";
 import { ConfirmAction } from "#next/components/form-kit/confirm";
+import { createPaneWidthWriter, usePrefs } from "#next/data/db/prefs";
 import { AppLink } from "#next/lib/navigation/app-link";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { showInfo, showError } from "#next/lib/toast";
 import { useAppContext, rpcError, errorText } from "#next/lib/use-app-context";
+import { useMediaQuery } from "#next/lib/use-media-query";
 import { Button } from "#next/ui/button";
 import { Input } from "#next/ui/input";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "#next/ui/resizable";
 import { Switch } from "#next/ui/switch";
 
 import { runsView, scheduleLabel, useRoutinesData } from "./data";
@@ -86,6 +94,54 @@ export const RunReportFrame = ({
     </section>
   );
 };
+const ReportLayout = ({
+  open,
+  report,
+  children,
+}: {
+  open: boolean;
+  report: ReactNode;
+  children: ReactNode;
+}) => {
+  const wide = useMediaQuery("(min-width: 1100px)");
+  const { db } = useAppContext();
+  const prefs = usePrefs();
+  const [writer] = useState(() => createPaneWidthWriter(db, "routines.run"));
+  const panelRef = usePanelRef();
+  useEffect(() => () => writer.flush(), [writer]);
+  useEffect(() => {
+    if (!wide) return;
+    if (open) panelRef.current?.expand();
+    else panelRef.current?.collapse();
+  }, [open, wide, panelRef]);
+  const body = <Activity mode={open ? "visible" : "hidden"}>{report}</Activity>;
+  if (!wide)
+    return (
+      <div className="flex size-full min-w-0">
+        {!open && children}
+        <aside className={open ? "size-full min-w-0" : "hidden"}>{body}</aside>
+      </div>
+    );
+  return (
+    <ResizablePanelGroup orientation="horizontal">
+      <ResizablePanel minSize={240}>{children}</ResizablePanel>
+      <ResizableHandle className={open ? "ml-2" : "hidden"} />
+      <ResizablePanel
+        panelRef={panelRef}
+        collapsible
+        collapsedSize={0}
+        defaultSize={open ? (prefs.panes["routines.run"] ?? 420) : 0}
+        minSize={360}
+        maxSize={560}
+        onResize={(size) => {
+          if (open && size.inPixels >= 360) writer.write(size.inPixels);
+        }}
+      >
+        <aside className="h-full min-w-0 border-l">{body}</aside>
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  );
+};
 export const RoutinePage = ({
   renderRunReport,
 }: {
@@ -96,6 +152,8 @@ export const RoutinePage = ({
   const { routineId } = useParams({ strict: false }) as { routineId: string };
   const { run } = useSearch({ strict: false }) as { run?: string };
   const navigate = useAppNavigate();
+  const [lastRun, setLastRun] = useState(run);
+  if (run && run !== lastRun) setLastRun(run);
   const { routines, runs, workspaces } = useRoutinesData();
   const row = routines.find((r) => r.id === routineId);
   const [limit, setLimit] = useState(50);
@@ -112,7 +170,20 @@ export const RoutinePage = ({
       .then(() => showInfo(t("phase5.routineStarted")))
       .catch(() => showError(t("phase5.runFailed")));
   return (
-    <div className="flex size-full min-w-0">
+    <ReportLayout
+      open={!!run}
+      report={
+        lastRun ? (
+          <RunReportFrame runId={lastRun} onClose={clear}>
+            {runs.some((r) => r.sessionId === lastRun) ? (
+              renderRunReport?.(lastRun)
+            ) : (
+              <p role="status">{t("phase5.runGone")}</p>
+            )}
+          </RunReportFrame>
+        ) : null
+      }
+    >
       <div
         className={
           run
@@ -296,18 +367,7 @@ export const RoutinePage = ({
           <EditorChat key={row.id} routineId={row.id} />
         </div>
       </div>
-      {run && (
-        <aside className="h-full min-w-0 flex-1 border-l xl:w-[420px] xl:flex-none">
-          <RunReportFrame runId={run} onClose={clear}>
-            {runs.some((r) => r.sessionId === run) ? (
-              renderRunReport?.(run)
-            ) : (
-              <p role="status">{t("phase5.runGone")}</p>
-            )}
-          </RunReportFrame>
-        </aside>
-      )}
-    </div>
+    </ReportLayout>
   );
 };
 type Exchange = { user: string; reply: string };
