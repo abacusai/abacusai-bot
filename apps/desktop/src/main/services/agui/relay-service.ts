@@ -661,6 +661,12 @@ export class AguiRelayService implements AguiSource {
       questions,
       approvals: items.length - questions,
       oldestAt: next.get(oldest.metadata.abacus.lineage.permissionId)!,
+      firstDescriptorId: JSON.stringify([
+        oldest.metadata.abacus.lineage.threadId,
+        oldest.metadata.abacus.lineage.incarnation,
+        oldest.metadata.abacus.lineage.turnSeq,
+        oldest.metadata.abacus.lineage.permissionId,
+      ]),
       firstTitle:
         typeof oldest.message === "string" && oldest.message !== ""
           ? oldest.message
