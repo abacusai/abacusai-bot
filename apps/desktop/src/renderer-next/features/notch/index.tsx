@@ -127,6 +127,7 @@ export const NotchShell = ({
   const [shown, setShown] = useState(target);
   const [shape, setShape] = useState(() => shapeFor(target, layout));
   const node = useRef<HTMLDivElement>(null);
+  const pointerInside = useRef(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined
   );
@@ -509,18 +510,23 @@ export const NotchShell = ({
                   event.clientX <= rect.right &&
                   event.clientY >= rect.top &&
                   event.clientY <= rect.bottom;
+                if (!inside) return;
                 clearTimeout(leaveTimer.current);
+                if (!pointerInside.current) {
+                  pointerInside.current = true;
+                  void transport.client.notch.setInteractive({
+                    interactive: true,
+                  });
+                }
                 if (inside && !hovered && !hoverTimer.current) {
                   hoverTimer.current = setTimeout(() => {
                     hoverTimer.current = undefined;
                     setHovered(true);
                   }, 120);
-                  void transport.client.notch.setInteractive({
-                    interactive: true,
-                  });
                 }
               }}
               onPointerLeave={() => {
+                pointerInside.current = false;
                 clearTimeout(hoverTimer.current);
                 hoverTimer.current = undefined;
                 clearTimeout(leaveTimer.current);

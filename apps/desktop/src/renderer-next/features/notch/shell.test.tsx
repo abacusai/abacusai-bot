@@ -179,6 +179,32 @@ it("pointer leave releases native click-through before the visual collapse delay
     interactive: false,
   });
 });
+it("pointer re-entry restores native interaction during the collapse delay", async () => {
+  const view = mount();
+  fireEvent.click(await screen.findByRole("button", { name: "Launch reply" }));
+  await screen.findByRole("textbox");
+  const region = screen.getByRole("region");
+  vi.useFakeTimers();
+  try {
+    fireEvent.pointerLeave(region);
+    expect(view.notch.setInteractive).toHaveBeenLastCalledWith({
+      interactive: false,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    fireEvent.pointerMove(region, { clientX: 0, clientY: 0 });
+    expect(view.notch.setInteractive).toHaveBeenLastCalledWith({
+      interactive: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  } finally {
+    vi.useRealTimers();
+  }
+});
 it("expanded approval has one Needs you label", async () => {
   const view = mount();
   await waitFor(() => expect(view.navigate).toHaveBeenCalled());
