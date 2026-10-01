@@ -39,5 +39,25 @@ The rows below distinguish new repairs from repairs already present in the conti
 - Merge: route generation, prerequisite builds, desktop TypeScript and 437 targeted tests passed.
 - Ten removal-check failures across eight files prove the already-present repairs and the final context fixes. All four MCP outcome tests failed with the old handling restored. The separate create/edit, connector request, messaging, credit/update, Stop and required Electron appearance checks also failed without their repairs.
 - Latest focused checks: 33 regressions, followed by 21 pre-commit tests and 16 final library/Stop/cross-API tests, all passed. These overlapping runs are not added into a total.
-- First full unit run: 403 files and 4,058 tests passed, one file skipped and seven todo. It exited with one unhandled Messaging cleanup rejection. The mask/closure correction passed 12 targeted tests and desktop TypeScript. Final full confirmation and required Electron suites pending.
+- First full unit run: 403 files and 4,058 tests passed, one file skipped and seven todo. It exited with one unhandled Messaging cleanup rejection. The mask/closure correction passed 12 targeted tests and desktop TypeScript. Final full unit confirmation passed with no unhandled errors: 403 files passed, one skipped; 4,058 tests passed, seven todo.
 
+
+- Required main-serial: the full run passed nine files and 293 tests; one reconnection test failed because the new appearance test left the shared app on the gallery route. The appearance test now restores the shell. The complete corrected file passed all 11 tests on retry. Combined evidence covers all 294 tests across ten files; no full second main-serial run is claimed.
+- Desktop TypeScript, route generation, production gallery build, root lint and format checks, registry, legacy-diff, knip, JSX i18n and locales passed. Lint retains seven legacy warnings; knip retains two configuration hints. Registry matches all 42 files; all 2,735 locale leaves synchronize.
+- Ownership audit compares the fix pass with merge `f6e671fd`. No chat, bots, sessions, agent or main implementation edits. Main changes are test-only. Tracked changes are committed; the pre-existing `.build/` directory is untracked.
+
+## Commits
+
+| Commit | Scope |
+|---|---|
+| `f6e671fd` | Merge renderer follow-ups, including requested `b243f40b`; incoming tip was the progress-only `a1c4f7f`. |
+| `0c091e96` | Stored-key sign-out, parsed form reset, editor navigation regression. |
+| `4df4b832` | Failed connector responses and retained global routine collections. |
+| `4d0845f4` | Direct pairing, remote unlink, scoped MCP regression and operation outcomes. |
+| `abc27ec2` | Fresh marked counters and installing retry events. |
+| `a37a3136` | Affected keymap contexts, explicit Global skills scope, late artifact observation and existing-repair regressions. |
+| `4a3569cb` | Global APIs, typed routine notifications, draft adoption, backend invalidation, appearance/Stop consumers, test-only deck expectation. |
+| `bb31c977` | Messaging settlement rejection handling. |
+| `989bc358` | Restore the shell after native appearance checks, preserving test isolation. |
+
+The final documentation commit updates this log, review disposition, implementation report and R5/progress tables.
