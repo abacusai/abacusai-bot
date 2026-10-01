@@ -76,10 +76,15 @@ export const DetailsTab = ({
   const memoryCount =
     memory.data?.find((row) => row.botId === bot.id)?.entries.length ?? 0;
   return (
-    <div className="flex flex-col gap-4 p-4" data-slot="bot-details">
+    <div
+      className="flex min-w-0 shrink-0 flex-col gap-4 p-4 pb-6"
+      data-slot="bot-details"
+    >
       <div className="flex flex-col items-center gap-1 py-2">
         <BotFace bot={bot} size={72} />
-        <h2 className="text-base font-semibold">{bot.name}</h2>
+        <h2 className="max-w-full text-center text-base font-semibold break-words">
+          {bot.name}
+        </h2>
         <p className="text-muted-foreground text-center text-xs">{bot.title}</p>
         {bot.channel == null && (
           <AppLink
@@ -220,7 +225,7 @@ export const DetailsTab = ({
             ))}
         </section>
       )}
-      <div className="flex gap-2">
+      <div className="bg-background sticky bottom-0 z-10 -mx-4 -mb-6 flex min-w-0 flex-wrap gap-2 border-t px-4 py-3">
         <Button
           variant="secondary"
           className="flex-1"

@@ -54,7 +54,10 @@ export const SidePanelOutlet = ({ className }: { className?: string }) => (
   <div
     ref={attachOutlet}
     data-slot="side-panel-outlet"
-    className={className ?? "flex min-h-0 flex-1 flex-col overflow-y-auto"}
+    className={
+      className ??
+      "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+    }
   />
 );
 

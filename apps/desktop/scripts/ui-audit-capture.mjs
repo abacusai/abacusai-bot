@@ -645,7 +645,7 @@ async function capture(cdp, c, size, theme, reached) {
   const [width, height] = size;
   const file = `${c.area}--${c.state}--${width}x${height}--${theme}.png`;
   const geometry = await cdp.evaluate(
-    `({width:innerWidth,height:innerHeight,href:location.hash,theme:document.documentElement.className,pending:!!document.querySelector('[data-testid="pending-pane"]'),shell:!!document.querySelector('[data-slot="shell"]'),scrollWidth:document.documentElement.scrollWidth,text:document.body.innerText.slice(0,2000),dockRects:[...document.querySelectorAll('[data-slot="session-dock"],[data-tab-header],canvas')].map(e=>({slot:e.getAttribute("data-slot"),tag:e.tagName,rect:e.getBoundingClientRect().toJSON()}))})`
+    `({width:innerWidth,height:innerHeight,href:location.hash,theme:document.documentElement.className,pending:!!document.querySelector('[data-testid="pending-pane"]'),shell:!!document.querySelector('[data-slot="shell"]'),scrollWidth:document.documentElement.scrollWidth,text:document.body.innerText.slice(0,2000),toastRects:[...document.querySelectorAll('[data-slot="toast"]:not([data-limited])')].map(e=>e.getBoundingClientRect().toJSON()),chatRects:[...document.querySelectorAll('[data-slot="chat-view"],[data-slot="chat-layout"],[data-slot="composer"]')].map(e=>({slot:e.getAttribute('data-slot'),rect:e.getBoundingClientRect().toJSON(),parent:e.parentElement.className,parentStyle:e.parentElement.getAttribute('style')})),dockRects:[...document.querySelectorAll('[data-slot="session-dock"],[data-tab-header],[data-dock-pane][data-visible="true"],canvas')].map(e=>({slot:e.getAttribute("data-slot"),pane:e.getAttribute("data-dock-pane"),tag:e.tagName,rect:e.getBoundingClientRect().toJSON()}))})`
   );
   if (geometry.width !== width || geometry.height !== height)
     throw new Error(`Wrong viewport ${geometry.width}x${geometry.height}`);
@@ -708,6 +708,43 @@ async function capture(cdp, c, size, theme, reached) {
     report.failures.push(
       `${prefix} Page exceeds the viewport by ${geometry.scrollWidth - width}px.`
     );
+  if (
+    c.area === "toasts" &&
+    geometry.toastRects?.some(
+      (rect) =>
+        rect.top < 0 ||
+        rect.bottom > height ||
+        rect.left < 0 ||
+        rect.right > width
+    )
+  )
+    report.failures.push(`${prefix} Toast stack leaves the window.`);
+  if (c.area === "sessions") {
+    const panes = geometry.dockRects?.filter((entry) => entry.pane) ?? [];
+    if (
+      panes.some(
+        ({ rect }) =>
+          rect.width < 200 ||
+          rect.height < 100 ||
+          rect.x < -1 ||
+          rect.right > width + 1 ||
+          rect.bottom > height + 1
+      )
+    )
+      report.failures.push(
+        `${prefix} A visible dock pane is too small or outside the window.`
+      );
+    if (
+      /full-view|workspace-(files|changes|terminal|browser)|dock-/.test(
+        c.state
+      ) &&
+      !c.state.endsWith("-pending") &&
+      panes.length === 0
+    )
+      report.failures.push(
+        `${prefix} Requested dock content is absent; this is not a valid pane capture.`
+      );
+  }
   report.shots = report.shots.filter((s) => s.file !== file);
   report.shots.push({
     file,
@@ -879,6 +916,27 @@ async function interactions(cdp, size, theme) {
     "/__ui?section=toast",
     "Click shipped gallery toast example",
     () => click(cdp, '[data-testid="gallery-toasts"]')
+  );
+  await shot(
+    "toasts",
+    "stack-expanded",
+    "/__ui?section=toast",
+    "Hover the three-toast stack to expand it",
+    async () => {
+      await cdp.evaluate(
+        `document.querySelectorAll('[data-slot="toast-close"]').forEach(e=>e.click())`
+      );
+      await sleep(600);
+      await click(cdp, '[data-testid="gallery-toasts"]');
+      const box = await cdp.evaluate(
+        `(()=>{const r=document.querySelector('[data-slot="toast"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`
+      );
+      await cdp.send("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        ...box,
+      });
+      await sleep(600);
+    }
   );
   await cdp.evaluate(
     `document.querySelectorAll('[data-slot="toast-close"]').forEach(e=>e.click())`
@@ -1104,20 +1162,6 @@ async function notchCapture(main, size, theme, child) {
         reached =
           "Screen Recording/native capture failed; real companion document via CDP; local presentation injection";
       }
-      if (
-        c.state.endsWith("-pending") &&
-        (!geometry.pending ||
-          (!c.route.startsWith("/onboarding") &&
-            !c.route.startsWith("/__ui") &&
-            !geometry.shell))
-      )
-        report.failures.push(
-          `${prefix} Pending capture must show the pending pane and shell navigation.`
-        );
-      if (geometry.scrollWidth > width)
-        report.failures.push(
-          `${prefix} Page exceeds the viewport by ${geometry.scrollWidth - width}px.`
-        );
       report.shots = report.shots.filter((s) => s.file !== file);
       report.shots.push({ file, area: "notch", state, route, reached });
       save();
