@@ -37,20 +37,12 @@
       "old": {
         "median": 3738.400146484375,
         "p90": 5698.699951171875,
-        "samples": [
-          3738.400146484375,
-          1977,
-          5698.699951171875
-        ]
+        "samples": [3738.400146484375, 1977, 5698.699951171875]
       },
       "new": {
         "median": 1933.39990234375,
         "p90": 3619.60009765625,
-        "samples": [
-          3619.60009765625,
-          1933.39990234375,
-          1524.39990234375
-        ]
+        "samples": [3619.60009765625, 1933.39990234375, 1524.39990234375]
       },
       "changePercent": -48.28269241959193,
       "budget": 4112.240161132813,
@@ -61,20 +53,12 @@
       "old": {
         "median": 2771.10009765625,
         "p90": 5377.800048828125,
-        "samples": [
-          2771.10009765625,
-          1501.199951171875,
-          5377.800048828125
-        ]
+        "samples": [2771.10009765625, 1501.199951171875, 5377.800048828125]
       },
       "new": {
         "median": 1288.699951171875,
         "p90": 3224.60009765625,
-        "samples": [
-          3224.60009765625,
-          1288.699951171875,
-          1261.699951171875
-        ]
+        "samples": [3224.60009765625, 1288.699951171875, 1261.699951171875]
       },
       "changePercent": -53.49500538570094,
       "budget": 3048.2101074218754,
@@ -85,20 +69,12 @@
       "old": {
         "median": 868155392,
         "p90": 940474368,
-        "samples": [
-          678871040,
-          868155392,
-          940474368
-        ]
+        "samples": [678871040, 868155392, 940474368]
       },
       "new": {
         "median": 843530240,
         "p90": 946241536,
-        "samples": [
-          946241536,
-          843415552,
-          843530240
-        ]
+        "samples": [946241536, 843415552, 843530240]
       },
       "changePercent": -2.836491281044762,
       "budget": 954970931.2,
@@ -109,20 +85,12 @@
       "old": {
         "median": 22594376,
         "p90": 22616292,
-        "samples": [
-          22562632,
-          22616292,
-          22594376
-        ]
+        "samples": [22562632, 22616292, 22594376]
       },
       "new": {
         "median": 25925200,
         "p90": 25943876,
-        "samples": [
-          25925200,
-          25943876,
-          25832368
-        ]
+        "samples": [25925200, 25943876, 25832368]
       },
       "changePercent": 14.741827789357842,
       "budget": 24853813.6,
@@ -133,20 +101,12 @@
       "old": {
         "median": 701.5,
         "p90": 784.400146484375,
-        "samples": [
-          784.400146484375,
-          701.5,
-          684.5
-        ]
+        "samples": [784.400146484375, 701.5, 684.5]
       },
       "new": {
         "median": 79.699951171875,
         "p90": 117,
-        "samples": [
-          117,
-          78.699951171875,
-          79.699951171875
-        ]
+        "samples": [117, 78.699951171875, 79.699951171875]
       },
       "changePercent": -88.63863846445118,
       "budget": 771.6500000000001,
@@ -157,20 +117,12 @@
       "old": {
         "median": 1001567,
         "p90": 1001567,
-        "samples": [
-          1001567,
-          1001567,
-          1001567
-        ]
+        "samples": [1001567, 1001567, 1001567]
       },
       "new": {
         "median": 1207321,
         "p90": 1207321,
-        "samples": [
-          1207321,
-          1207321,
-          1207321
-        ]
+        "samples": [1207321, 1207321, 1207321]
       },
       "changePercent": 20.543208791823208,
       "budget": 1001567,
@@ -198,41 +150,31 @@
             "pid": 67951,
             "parent": 67950,
             "rssBytes": 276545536,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 67956,
             "parent": 67951,
             "rssBytes": 115245056,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 67957,
             "parent": 67951,
             "rssBytes": 46219264,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 68016,
             "parent": 67951,
             "rssBytes": 269385728,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 68134,
             "parent": 67951,
             "rssBytes": 173916160,
-            "roles": [
-              "agent"
-            ]
+            "roles": ["agent"]
           }
         ]
       },
@@ -289,41 +231,31 @@
             "pid": 68415,
             "parent": 67950,
             "rssBytes": 272547840,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 68423,
             "parent": 68415,
             "rssBytes": 105218048,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 68424,
             "parent": 68415,
             "rssBytes": 45285376,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 68467,
             "parent": 68415,
             "rssBytes": 264552448,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 68565,
             "parent": 68415,
             "rssBytes": 153944064,
-            "roles": [
-              "notch/companion"
-            ]
+            "roles": ["notch/companion"]
           }
         ]
       },
@@ -668,41 +600,31 @@
             "pid": 68694,
             "parent": 67950,
             "rssBytes": 179961856,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 68700,
             "parent": 68694,
             "rssBytes": 78544896,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 68701,
             "parent": 68694,
             "rssBytes": 43204608,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 68763,
             "parent": 68694,
             "rssBytes": 261472256,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 68789,
             "parent": 68694,
             "rssBytes": 115687424,
-            "roles": [
-              "agent"
-            ]
+            "roles": ["agent"]
           }
         ]
       },
@@ -759,49 +681,37 @@
             "pid": 69052,
             "parent": 67950,
             "rssBytes": 278380544,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 69058,
             "parent": 69052,
             "rssBytes": 107626496,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 69059,
             "parent": 69052,
             "rssBytes": 45088768,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 69123,
             "parent": 69052,
             "rssBytes": 305430528,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 69175,
             "parent": 69052,
             "rssBytes": 152256512,
-            "roles": [
-              "notch/companion"
-            ]
+            "roles": ["notch/companion"]
           },
           {
             "pid": 69223,
             "parent": 69052,
             "rssBytes": 57458688,
-            "roles": [
-              "utility"
-            ]
+            "roles": ["utility"]
           }
         ]
       },
@@ -1146,41 +1056,31 @@
             "pid": 69297,
             "parent": 67950,
             "rssBytes": 276267008,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 69303,
             "parent": 69297,
             "rssBytes": 109133824,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 69304,
             "parent": 69297,
             "rssBytes": 46252032,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 69368,
             "parent": 69297,
             "rssBytes": 263438336,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 69428,
             "parent": 69297,
             "rssBytes": 173064192,
-            "roles": [
-              "agent"
-            ]
+            "roles": ["agent"]
           }
         ]
       },
@@ -1237,41 +1137,31 @@
             "pid": 69552,
             "parent": 67950,
             "rssBytes": 276201472,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 69558,
             "parent": 69552,
             "rssBytes": 112852992,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 69559,
             "parent": 69552,
             "rssBytes": 45137920,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 69622,
             "parent": 69552,
             "rssBytes": 256294912,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 69688,
             "parent": 69552,
             "rssBytes": 152928256,
-            "roles": [
-              "notch/companion"
-            ]
+            "roles": ["notch/companion"]
           }
         ]
       },
@@ -1616,41 +1506,31 @@
             "pid": 69832,
             "parent": 67950,
             "rssBytes": 319406080,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 69838,
             "parent": 69832,
             "rssBytes": 111837184,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 69839,
             "parent": 69832,
             "rssBytes": 46383104,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 69902,
             "parent": 69832,
             "rssBytes": 288882688,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 69932,
             "parent": 69832,
             "rssBytes": 173965312,
-            "roles": [
-              "agent"
-            ]
+            "roles": ["agent"]
           }
         ]
       },
@@ -1707,41 +1587,31 @@
             "pid": 70104,
             "parent": 67950,
             "rssBytes": 276168704,
-            "roles": [
-              "main"
-            ]
+            "roles": ["main"]
           },
           {
             "pid": 70110,
             "parent": 70104,
             "rssBytes": 113770496,
-            "roles": [
-              "GPU"
-            ]
+            "roles": ["GPU"]
           },
           {
             "pid": 70111,
             "parent": 70104,
             "rssBytes": 45088768,
-            "roles": [
-              "network"
-            ]
+            "roles": ["network"]
           },
           {
             "pid": 70174,
             "parent": 70104,
             "rssBytes": 256573440,
-            "roles": [
-              "renderer"
-            ]
+            "roles": ["renderer"]
           },
           {
             "pid": 70240,
             "parent": 70104,
             "rssBytes": 151928832,
-            "roles": [
-              "notch/companion"
-            ]
+            "roles": ["notch/companion"]
           }
         ]
       },

@@ -36,13 +36,8 @@ import {
 import { FirstBotHatch } from "./hatch";
 import { next, connectedProviders, type FlowFacts } from "./machine";
 import { onboardingStore } from "./store";
-export { needsOnboarding, onboardingTarget, guardStep } from "./machine";
-export {
-  accountStateQuery,
-  completeOnboarding,
-  finishCompletion,
-} from "./actions";
-export { onboardingStore, startSignIn, cancelSignIn } from "./store";
+
+export { onboardingStore } from "./store";
 export const OnboardingFrame = ({
   step,
   children,
@@ -602,10 +597,4 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   );
 };
 
-export { PairingQueueBanner } from "./pairing-banner";
-export { OnboardingLocalModels } from "./steps/local-models";
-export { OnboardingProviderKey } from "./steps/provider-key";
-export { OnboardingGallery } from "./gallery";
-export { enterStep, type OnboardingExit } from "./actions";
-
-export { connectOnboarding } from "./connect";
+export { type OnboardingExit } from "./actions";

@@ -1,20 +1,15 @@
 /**
- * The chat kit (spec 02): the only file routes import. Other features never
- * import it; cross-area pieces arrive through `ChatView`'s props and slots.
+ * Chat exports for fixtures and tests. Production routes import focused
+ * loaders and the lazy view directly to keep presentation out of the boot graph.
  */
 import { lazy } from "react";
 
-export {
-  chatRuntimeFor,
-  createChatRuntime,
-  type ChatRuntime,
-} from "./runtime/runtime";
+export { createChatRuntime, type ChatRuntime } from "./runtime/runtime";
 export { ChatView } from "./kit/view";
-export { useThreadHost } from "./runtime/host";
-export { deriveSessionTitle } from "./runtime/send";
+
 export { PermissionList } from "./kit/permissions/permission-list";
 export { adoptDraftModel } from "./composer/draft-store";
-export { useComposerExpanded } from "./composer/composer";
+
 /**
  * The fixture player, for the dev fixture build only: a dynamic import, so
  * the recorded goldens never reach the shipped bundle (a call behind
@@ -22,12 +17,6 @@ export { useComposerExpanded } from "./composer/composer";
  */
 export { loadFixtureRuntime } from "./fixture-runtime";
 
-export { updateDraft } from "./composer/draft-store";
-
-export { StartComposer } from "./composer/start-composer";
-export { resolveSessionToolDiff as resolveToolDiff } from "./runtime/tool-diff";
-export { SubagentDetail } from "./kit/subagents/detail";
-export { useSubagents } from "./kit/subagents/use-subagents";
 /**
  * The `/__ui` gallery entries (spec 02 §11.2), loaded on first render: the
  * gallery replays recorded scenarios, and a static import would put every

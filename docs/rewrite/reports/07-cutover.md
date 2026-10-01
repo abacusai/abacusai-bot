@@ -489,3 +489,104 @@ with the warm-up discarded.
 | M6, bytes | 1001567.0 | 750736.0 / 750736.0 |
 
 Final broad gates and the consolidated budget/process table follow below.
+
+### Final performance-pass results and validation
+
+The goal commits are 005d7d99 (initial routes), 4f64865a (retained memory),
+b602258d (transcript timing) and 0ac59801 (dependency overrides). Final
+validation found three stale test expectations: barrel-only routing, synchronous
+preview mounting, and observation starting an agent. The guard now retains
+feature-composition boundaries while permitting focused route imports. The
+resource-ownership test checks the lazy viewer's renderLocal contract. The
+lifecycle test checks editing demand and disposal of the previous session's
+retries. All three test files pass (nine tests). Timing thresholds are unchanged.
+
+Knip found 112 unused barrel re-exports after the route split. They are removed
+and the three empty barrels are deleted; component implementations remain
+available through their direct imports. Knip passes without adding exclusions.
+The older goal-2 report received format-only changes; its JSON values are
+unchanged. Because exports changed the lazy graph, the final production package
+was remeasured in [final comparison samples](07-perf-validation-final.json).
+Four alternating pairs use private home copies, with the first discarded.
+
+“Before” is the accepted goal-1 state before this resumed pass. The fixed
+goal-1 budgets below govern acceptance; the runner's fresh comparative
+agent-inclusive RSS budget is a different scope and does not replace them.
+M3 below excludes agents. The idle candidate has no agent process.
+
+| Metric | Before | Final median | Fixed budget | Result |
+| --- | ---: | ---: | ---: | --- |
+| M1, ms | 1719.9 | 1200.5 | ≤2222.9 | Pass |
+| M2, ms | 1294.6 | 771.1 | ≤1675.0 | Pass |
+| M3, bytes | 880,394,240 | 810,221,568 | ≤761,049,907 | Fail |
+| M4, bytes | 26,516,064 | 24,663,584 | ≤24,768,555 | Pass |
+| M5, ms | 85.4 | 52.7 | ≤803.9 | Pass |
+| M6, bytes | 1,207,159 | 750,321 | ≤1,001,567 | Pass |
+
+M1 also meets the 1,983.355 ms historical median cap; M5 is below its 600 ms absolute cap.
+M4 p90 is 24,692,484 bytes; heap headroom remains
+small. M2 is a paint-time comparison, not wrong-theme-frame classification.
+M6's observed pre-FCP resources have zero excluded presentation modules and
+26 named icons in every candidate sample. Editor, terminal, ghostty-web,
+Markdown, syntax, notch presentation, onboarding presentation, tour and gallery
+remain outside first paint. The static release checker independently enforces
+that policy.
+
+| Required Electron timing | Before, ms | Final full-suite result, ms | Cap |
+| --- | ---: | ---: | ---: |
+| Streaming busy-task p95 | 60.404 | 7.83 | <50 |
+| History expansion maximum | 60.9 | 43.9 | <50 |
+| 3,000-tool expansion maximum | 50.5 | 31.3 | <50 |
+
+[Full-suite timing evidence](07-timing-final.json) records 171 deltas, zero
+streaming tasks ≥50 ms, 20 activations per expansion, at most 100 mounted
+rows, zero history/prepend drift and 0.1328125 px tool drift.
+The nine chat gates pass in the required main-serial run as well as the
+standalone fresh-build check.
+
+| Process role | Fresh shipped median MB | Final candidate median MB |
+| --- | ---: | ---: |
+| Main | 274.2 | 273.9 |
+| Main renderer | 267.5 | 232.7 |
+| Notch renderer | 0.0 | 146.3 |
+| Agent | 173.6 | 0.0 |
+| GPU | 105.0 | 112.2 |
+| Network | 46.3 | 45.1 |
+
+M3 is still 810.222 MB, 49.172 MB
+over the fixed cap, down 70.173 MB from goal 1.
+The 146.3 MB separate notch renderer
+is the main additional process relative to shipped's agent-excluded tree.
+The required companion remains enabled. Main and service processes are of
+similar scale to shipped, and the main renderer is smaller. Further RSS
+reduction needs work on the companion/process architecture; removing the idle
+companion would change behavior. Role medians need not sum to the total median.
+This remaining RSS failure prevents claiming full performance acceptance.
+
+Root causes addressed: feature barrels eagerly connected heavy presentation
+to boot; observation eagerly started agents; idle UI built model options and
+loaded transcript/syntax/math/export code before use; per-part array searches,
+observer reconnects and forced layout reads repeated during streaming and
+window expansion. Focused imports, demand loading, linear indexes, supplied
+resize measurements and bounded highlight reuse remove that work. Major-aware
+overrides remove the vulnerable undici/brace-expansion versions.
+
+| Final gate | Evidence |
+| --- | --- |
+| Root tsc -b | Pass; desktop typecheck also passes after validation repairs. |
+| Desktop unit projects, maxWorkers=2 | One broad run: 4,316 passed, three stale failures; repaired files: nine passed. Full suite was not repeated, as requested. |
+| Agent / updater / connector unit projects | 1,733 passed (two skips) / 14 passed / 14 passed. |
+| Required main-serial | 302 passed, two platform skips, 12 files; ABACUSBOT_REQUIRE_ELECTRON_SUITES=1. |
+| Node tooling | 42 passed; three affected knip/deletion canaries also pass after cleanup. |
+| oxlint / oxfmt | Pass; affected lint and formatting rechecked after repairs. |
+| Tools typecheck, JSX i18n, locales, React Compiler, UI registry | Pass; all 11 locales and compiler checks retained. |
+| Knip / deletion inventory / removed dependencies | Pass after unused re-export cleanup; no new ignores. |
+| Audit checker | Pass with the existing four exceptions; no undici/brace-expansion advisories remain. Raw audit still has four accepted high findings and 10 moderate findings. |
+| Production release checker / gzip size limits | Pass on the final production build; test harness and gallery hooks absent. |
+| Chat fixture exclusion / packaged runtime resources | Pass across 292 chunks; all 10 required runtime paths present, bundled rg/fd execute. |
+| Logged-in source home / NDJSON goldens | Original manifest unchanged; all 24 NDJSON files byte-identical to c92812e7. Nothing under .build is committed. |
+
+[Validation evidence](07-validation-final.json) records the broad gate exit
+codes, scoped repairs, resource exclusions, budgets and process medians.
+Unsigned macOS implementation evidence does not close the separately recorded
+signing, platform or rollout gaps.

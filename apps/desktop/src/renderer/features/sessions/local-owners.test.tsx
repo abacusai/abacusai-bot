@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { expect, it, vi } from "vitest";
 
 import type { SessionRow } from "#shared/contract/rows";
@@ -26,23 +27,23 @@ vi.mock("#renderer/lib/navigation/use-app-navigate", () => ({
 }));
 vi.mock("@tanstack/react-router", () => ({ useSearch: () => ({}) }));
 vi.mock("./dock/session-dock", () => ({
+  // Exercise the viewer's renderLocal contract without resolving its lazy
+  // implementation: ownership belongs to the mounted workspace, not the viewer.
   SessionDock: ({ renderTab }: any) => (
     <>
-      {["preview:A", "preview:B", "files"].map((ref) => (
-        <div key={ref}>
-          {renderTab({ ref, path: `${ref.at(-1)}.pdf` }, true, () => {})}
-        </div>
-      ))}
+      {["preview:A", "preview:B", "files"].map((ref) => {
+        const pane = renderTab(
+          { ref, path: `${ref.at(-1)}.pdf` },
+          true,
+          () => {}
+        ) as ReactElement<{
+          renderLocal(path: string): ReactElement<{ id: string }>;
+        }>;
+        const local = pane.props.renderLocal("/repo/selected.pdf");
+        return <div key={ref} data-resource={local.props.id} />;
+      })}
     </>
   ),
-}));
-vi.mock("./files/files-tab", () => ({
-  SessionFilePreview: ({ path, root, renderLocal }: any) =>
-    renderLocal(`${root}/${path}`),
-  FilesTab: ({ renderLocal }: any) => renderLocal("/repo/selected.pdf"),
-}));
-vi.mock("./browser/browser-tab", () => ({
-  BrowserTab: ({ id }: { id: string }) => <div data-resource={id} />,
 }));
 import { SessionWorkspace } from "./session-workspace";
 it("mounted workspace gives each preview and Files viewer a stable distinct local resource", () => {

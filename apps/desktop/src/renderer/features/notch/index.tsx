@@ -870,5 +870,4 @@ export const ConnectorAskView = () => {
   );
 };
 
-export { NotchGallery } from "./gallery";
 export type { NotchPresentation } from "./presenter";

@@ -1,0 +1,198 @@
+{
+  "gates": [
+    {
+      "name": "node-tooling",
+      "code": 0
+    },
+    {
+      "name": "tsc",
+      "code": 0
+    },
+    {
+      "name": "desktop-unit",
+      "code": 1
+    },
+    {
+      "name": "agent-unit",
+      "code": 0
+    },
+    {
+      "name": "updater-unit",
+      "code": 0
+    },
+    {
+      "name": "connectors-unit",
+      "code": 0
+    },
+    {
+      "name": "main-serial",
+      "code": 0
+    },
+    {
+      "name": "oxlint",
+      "code": 0
+    },
+    {
+      "name": "oxfmt",
+      "code": 1
+    },
+    {
+      "name": "tools-tsc",
+      "code": 0
+    },
+    {
+      "name": "i18n",
+      "code": 0
+    },
+    {
+      "name": "locales",
+      "code": 0
+    },
+    {
+      "name": "react-compiler",
+      "code": 0
+    },
+    {
+      "name": "ui-registry",
+      "code": 0
+    },
+    {
+      "name": "audit",
+      "code": 0
+    },
+    {
+      "name": "knip",
+      "code": 1
+    },
+    {
+      "name": "deletions",
+      "code": 0
+    },
+    {
+      "name": "removed-deps",
+      "code": 0
+    },
+    {
+      "name": "release",
+      "code": 0
+    },
+    {
+      "name": "size-limit",
+      "code": 0
+    },
+    {
+      "name": "chat-bundle",
+      "code": 0,
+      "chunksChecked": 292
+    },
+    {
+      "name": "packaged-resources",
+      "code": 0,
+      "requiredPathsPresent": 10
+    }
+  ],
+  "repairs": [
+    {
+      "name": "desktop-unit",
+      "files": 3,
+      "testsPassed": 9,
+      "fullSuiteRepeated": false
+    },
+    {
+      "name": "oxfmt",
+      "result": "pass after formatting only old attributed report"
+    },
+    {
+      "name": "knip",
+      "result": "pass after pruning 112 unused re-exports"
+    },
+    {
+      "name": "node-tooling",
+      "affectedCanaryTestsPassed": 3
+    }
+  ],
+  "testCounts": {
+    "desktopBroad": {
+      "passed": 4316,
+      "failed": 3
+    },
+    "desktopRepairs": {
+      "passed": 9,
+      "failed": 0
+    },
+    "agent": {
+      "passed": 1733,
+      "skipped": 2
+    },
+    "updater": {
+      "passed": 14
+    },
+    "connectors": {
+      "passed": 14
+    },
+    "mainSerial": {
+      "passed": 302,
+      "skipped": 2
+    },
+    "nodeTooling": {
+      "passed": 42
+    }
+  },
+  "integrity": {
+    "originalPerfHomeUnchanged": true,
+    "byteIdenticalNdjsonFiles": 24,
+    "buildOutputStaged": false
+  },
+  "firstPaintResources": [
+    {
+      "pair": 0,
+      "initialGzipBytes": 750321,
+      "heavyPresentationModules": 0,
+      "namedIconModules": 26
+    },
+    {
+      "pair": 1,
+      "initialGzipBytes": 750321,
+      "heavyPresentationModules": 0,
+      "namedIconModules": 26
+    },
+    {
+      "pair": 2,
+      "initialGzipBytes": 750321,
+      "heavyPresentationModules": 0,
+      "namedIconModules": 26
+    },
+    {
+      "pair": 3,
+      "initialGzipBytes": 750321,
+      "heavyPresentationModules": 0,
+      "namedIconModules": 26
+    }
+  ],
+  "fixedBudgets": {
+    "M1": 2222.88,
+    "M2": 1674.97,
+    "M3": 761049907.2,
+    "M4": 24768554.8,
+    "M5": 803.88,
+    "M6": 1001567
+  },
+  "perProcessMedianBytes": {
+    "old": {
+      "main": 274169856,
+      "renderer": 267485184,
+      "notch/companion": 0,
+      "agent": 173621248,
+      "GPU": 104955904,
+      "network": 46317568
+    },
+    "new": {
+      "main": 273924096,
+      "renderer": 232718336,
+      "notch/companion": 146325504,
+      "agent": 0,
+      "GPU": 112246784,
+      "network": 45137920
+    }
+  }
+}
