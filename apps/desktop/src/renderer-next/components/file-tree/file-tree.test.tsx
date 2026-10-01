@@ -48,7 +48,7 @@ it("renames in B after A → B through a mounted router and recreates checkout m
   const route = createRoute({
     getParentRoute: () => root,
     path: "/sessions/$sessionId",
-    component: () => {
+    component: function SessionFiles() {
       const { sessionId } = useParams({ strict: false });
       return (
         <FileTreeView
