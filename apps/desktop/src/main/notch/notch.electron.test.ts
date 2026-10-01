@@ -73,15 +73,18 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
     const fitScript = readFileSync(join(scratch, "fit.js"), "utf8");
     const renderer = join(desktop, "dist/renderer");
     const css = [
-      ...readFileSync(join(renderer, "index-next.html"), "utf8").matchAll(
-        /href="([^"]+\.css)"/g
-      ),
+      ...[
+        readFileSync(join(renderer, "index-next.html"), "utf8"),
+        readFileSync(join(renderer, "notch.html"), "utf8"),
+      ]
+        .join("\n")
+        .matchAll(/href="([^"]+\.css)"/g),
     ].map((match) => match[1]);
     const html = `<html class="notch dark"><head>${css.map((file) => `<link rel="stylesheet" href="file://${join(renderer, file!.replace(/^\//, ""))}">`).join("")}</head><body></body></html>`;
     writeFileSync(join(scratch, "fit.html"), html);
     writeFileSync(
       join(scratch, "test.cjs"),
-      `const {app,webContents}=require('electron'); const {createNotchWindow,fitView}=require('./window.cjs'); const {disposeNotchWindow}=require('./dispose.cjs'); app.setPath('userData',${JSON.stringify(scratch)}); app.on('window-all-closed',()=>{}); app.whenReady().then(async()=>{ const base=webContents.getAllWebContents().length;const samples=[];for(let i=0;i<20;i++){const placement={bounds:{x:0,y:0,width:300,height:100}};const {win,view}=createNotchWindow(process.platform,placement,'');win.setContentBounds({x:0,y:0,width:560,height:220});fitView(win,view);const bounds=view.getBounds();if(bounds.width!==560||bounds.height!==220)throw Error('viewport mismatch');await view.webContents.loadURL('data:text/html,<body></body>');const viewport=await view.webContents.executeJavaScript('({width:innerWidth,height:innerHeight})');if(viewport.width!==560||viewport.height!==220)throw Error('rendered viewport mismatch');samples.push({...bounds,viewport});if(i===0){await view.webContents.executeJavaScript(${JSON.stringify(audioScript)});const energy=await view.webContents.executeJavaScript("(async()=>{const rows=[];for(const cue of Object.keys(Phase6Audio.CUE_TONES)){const ctx=new OfflineAudioContext(1,48000,48000);Phase6Audio.synthCue(ctx,cue,0);const data=(await ctx.startRendering()).getChannelData(0);let first=-1,last=-1,sum=0;for(let i=0;i<data.length;i++){sum+=data[i]*data[i];if(Math.abs(data[i])>0.00001){if(first<0)first=i;last=i;}}rows.push({cue,energy:sum,durationMs:(last-first+1)/48});}return rows})()");console.log('AUDIO_RESULT:'+JSON.stringify(energy));await view.webContents.loadFile(${JSON.stringify(join(scratch, "fit.html"))});await view.webContents.executeJavaScript(${JSON.stringify(fitScript)});win.showInactive();const fit=await view.webContents.executeJavaScript("(async()=>{const rows=[];for(const locale of ['en-US','de-DE','ja-JP']){for(const [type,request] of [['terminal',{type:'run_terminal',command:'git status',cwd:'/work'}],['path',{type:'delete',filePath:'/work/a'}],['url',{type:'fetch_url',url:'https://example.com/a'}],['host',{type:'network_host',host:'example.com',port:443}],['sandbox',{type:'sandbox_denied',command:'git status',denials:[{kind:'read',path:'/work/a'}],note:'Read this file'}]]){rows.push({locale,type,size:'short',...await window.__phase6Fit(request,560,locale)});const long={...request};if(type==='terminal')long.command='long '.repeat(150);if(type==='path')long.filePath='/'+ '長'.repeat(300);if(type==='url')long.url+='x'.repeat(500);if(type==='host')long.host+='x'.repeat(500);if(type==='sandbox')long.note='note '.repeat(150);rows.push({locale,type,size:'long',...await window.__phase6Fit(long,560,locale)});rows.push({locale,type,size:'narrow',...await window.__phase6Fit(request,160,locale)});}const q={type:'ask_user_question',questions:[{header:'Choice',question:'Which?',multiSelect:false,options:[{label:'One',description:'First'},{label:'Two',description:'Second'}]}]};rows.push({locale,type:'question',size:'short',...await window.__phase6Fit(q,560,locale)});q.questions[0].options[0].description='long '.repeat(200);rows.push({locale,type:'question',size:'long',...await window.__phase6Fit(q,560,locale)});}return rows;})()");console.log('FIT_RESULT:'+JSON.stringify(fit));}const entry={win,active:view,standby:null,disposed:false};disposeNotchWindow(entry,()=>{});disposeNotchWindow(entry,()=>{});await new Promise(r=>setTimeout(r,30));}console.log('NOTCH_RESULT:'+JSON.stringify({base,after:webContents.getAllWebContents().length,samples}));app.quit();}).catch(e=>{console.error(e);app.exit(1);});`
+      `const {app,webContents}=require('electron'); const {createNotchWindow,fitView}=require('./window.cjs'); const {disposeNotchWindow}=require('./dispose.cjs'); app.setPath('userData',${JSON.stringify(scratch)}); app.on('window-all-closed',()=>{}); app.whenReady().then(async()=>{ const base=webContents.getAllWebContents().length;const samples=[];for(let i=0;i<20;i++){const placement={bounds:{x:0,y:0,width:300,height:100}};const {win,view}=createNotchWindow(process.platform,placement,'');win.setContentBounds({x:0,y:0,width:560,height:220});fitView(win,view);const bounds=view.getBounds();if(bounds.width!==560||bounds.height!==220)throw Error('viewport mismatch');await view.webContents.loadURL('data:text/html,<body></body>');const viewport=await view.webContents.executeJavaScript('({width:innerWidth,height:innerHeight})');if(viewport.width!==560||viewport.height!==220)throw Error('rendered viewport mismatch');const grown={...bounds,viewport};win.setContentBounds({x:i%2?40:0,y:i%2?30:0,width:300,height:100});fitView(win,view);await new Promise(r=>setTimeout(r,50));const shrunk=await view.webContents.executeJavaScript('({width:innerWidth,height:innerHeight})');if(shrunk.width!==300||shrunk.height!==100)throw Error('shrunken viewport mismatch');win.setContentBounds({x:0,y:0,width:560,height:220});fitView(win,view);await new Promise(r=>setTimeout(r,50));samples.push({grown,shrunk});if(i===0){await view.webContents.executeJavaScript(${JSON.stringify(audioScript)});const energy=await view.webContents.executeJavaScript("(async()=>{const rows=[];for(const cue of Object.keys(Phase6Audio.CUE_TONES)){const ctx=new OfflineAudioContext(1,48000,48000);Phase6Audio.synthCue(ctx,cue,0);const data=(await ctx.startRendering()).getChannelData(0);let first=-1,last=-1,sum=0;for(let i=0;i<data.length;i++){sum+=data[i]*data[i];if(Math.abs(data[i])>0.00001){if(first<0)first=i;last=i;}}rows.push({cue,energy:sum,durationMs:(last-first+1)/48});}return rows})()");console.log('AUDIO_RESULT:'+JSON.stringify(energy));await view.webContents.loadFile(${JSON.stringify(join(scratch, "fit.html"))});await view.webContents.executeJavaScript(${JSON.stringify(fitScript)});win.showInactive();const fit=await view.webContents.executeJavaScript("(async()=>{const rows=[];for(const locale of ['en-US','de-DE','ja-JP']){for(const [type,request] of [['terminal',{type:'run_terminal',command:'git status',cwd:'/work'}],['path',{type:'delete',filePath:'/work/a'}],['url',{type:'fetch_url',url:'https://example.com/a'}],['host',{type:'network_host',host:'example.com',port:443}],['sandbox',{type:'sandbox_denied',command:'git status',denials:[{kind:'read',path:'/work/a'}],note:'Read this file'}]]){rows.push({locale,type,size:'short',...await window.__phase6Fit(request,560,locale)});const long={...request};if(type==='terminal')long.command='long '.repeat(150);if(type==='path')long.filePath='/'+ '長'.repeat(300);if(type==='url')long.url+='x'.repeat(500);if(type==='host')long.host+='x'.repeat(500);if(type==='sandbox')long.note='note '.repeat(150);rows.push({locale,type,size:'long',...await window.__phase6Fit(long,560,locale)});rows.push({locale,type,size:'narrow',...await window.__phase6Fit(request,160,locale)});}const q={type:'ask_user_question',questions:[{header:'Choice',question:'Which?',multiSelect:false,options:[{label:'One',description:'First'},{label:'Two',description:'Second'}]}]};rows.push({locale,type:'question',size:'short',...await window.__phase6Fit(q,560,locale)});q.questions[0].options[0].description='long '.repeat(200);rows.push({locale,type:'question',size:'long',...await window.__phase6Fit(q,560,locale)});}return rows;})()");console.log('FIT_RESULT:'+JSON.stringify(fit));}const entry={win,active:view,standby:null,disposed:false};disposeNotchWindow(entry,()=>{});disposeNotchWindow(entry,()=>{});await new Promise(r=>setTimeout(r,30));}console.log('NOTCH_RESULT:'+JSON.stringify({base,after:webContents.getAllWebContents().length,samples}));app.quit();}).catch(e=>{console.error(e);app.exit(1);});`
     );
     const output = await new Promise<string>((yes, no) => {
       const env = { ...process.env };
@@ -101,7 +104,7 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
       const timer = setTimeout(() => {
         child.kill("SIGKILL");
         no(new Error(`Electron deadline: ${out}`));
-      }, 15000);
+      }, 60000);
       child.on("error", no);
       child.on("exit", (code) => {
         clearTimeout(timer);
@@ -151,6 +154,7 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
       accept: boolean;
       buttons: string[];
       font: string;
+      visibleOverflow: boolean;
     }[];
     expect(fit).toHaveLength(51);
     for (const row of fit) {
@@ -158,6 +162,8 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
         expect(row.accept, JSON.stringify(row)).toBe(true);
       if (row.size === "long")
         expect(row.accept, JSON.stringify(row)).toBe(false);
+      if (row.accept)
+        expect(row.visibleOverflow, JSON.stringify(row)).toBe(false);
       expect(row.font).toContain("Inter");
     }
     result.fit = fit;
@@ -169,4 +175,4 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
-}, 30000);
+}, 90000);

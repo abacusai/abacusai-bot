@@ -3,7 +3,11 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { onboardingStore } from "#next/features/onboarding";
 import { firstBotStore } from "#next/features/onboarding/first-bot";
-import { renderApp, type AppHarness } from "#next/test-support/app-harness";
+import {
+  renderApp,
+  defaultSeed,
+  type AppHarness,
+} from "#next/test-support/app-harness";
 let harness: (AppHarness & { view: { unmount(): void } }) | undefined;
 afterEach(async () => {
   await harness?.cleanup();
@@ -60,4 +64,52 @@ it("R6-T7 real router preserves failed attempts and ignores cancellation's late 
     outcome({ ok: true });
   });
   expect(harness.router.state.location.pathname).toBe("/onboarding/welcome");
+});
+
+it("R6-T8 no-model path persists one weekday bot and completes into the shell", async () => {
+  const seed = defaultSeed();
+  seed.bots = [];
+  seed.routines = [];
+  harness = await renderApp("/onboarding/welcome", { onboarded: false, seed });
+  fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe("/onboarding/models")
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Continue" })
+  );
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe(
+      "/onboarding/connectors"
+    )
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Continue" })
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Say hello" }));
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe("/onboarding/done")
+  );
+  expect(harness.collections.bots.toArray).toHaveLength(1);
+  expect(harness.collections.routines.toArray).toHaveLength(1);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "New session" })
+  );
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe("/sessions/new")
+  );
+  expect(harness.collections.prefs.get("app")).toMatchObject({
+    onboardingStep: null,
+    onboardingExit: null,
+  });
+  expect(
+    harness.calls.filter(([name]) => name === "account.skipOnboarding")
+  ).toHaveLength(1);
+  expect(
+    harness.calls.filter(
+      ([name, input]) =>
+        name === "system.funnelStep" &&
+        (input as { step: string }).step === "onboarding_done"
+    )
+  ).toEqual([["system.funnelStep", { step: "onboarding_done", once: true }]]);
 });
