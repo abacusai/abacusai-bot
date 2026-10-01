@@ -33,12 +33,10 @@ export const flattenFiles = (nodes: FileTreeNode[]): string[] =>
     ...flattenFiles(n.children ?? []),
   ]);
 export const SessionFilePreview = ({
-  row: _row,
   root,
   path,
   renderLocal,
 }: {
-  row: SessionRow;
   root: string;
   path: string;
   renderLocal: (path: string) => ReactNode;
@@ -271,7 +269,6 @@ export const FilesTab = ({
             </div>
             {!selected.endsWith("/") ? (
               <SessionFilePreview
-                row={row}
                 root={root}
                 path={selected}
                 renderLocal={renderLocal}

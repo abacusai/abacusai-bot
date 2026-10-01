@@ -230,7 +230,6 @@ export const SessionWorkspace = ({
             if (tab.ref.startsWith("preview:"))
               return (
                 <SessionFilePreview
-                  row={row}
                   path={tab.path ?? ""}
                   root={root}
                   renderLocal={(path) => local(path, visible)}

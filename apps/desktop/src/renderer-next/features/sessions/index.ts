@@ -21,3 +21,5 @@ export { SessionTasks } from "./context/tasks";
 export { SessionChangesCard } from "./changes/changes-card";
 
 export { SessionPermissionAction } from "./context/permission-terminal-action";
+
+export { SessionStartResources } from "./start/start-resources";
