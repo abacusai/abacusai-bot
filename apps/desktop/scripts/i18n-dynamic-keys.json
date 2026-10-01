@@ -1,0 +1,1442 @@
+[
+  {
+    "prefix": "sessions.pr.",
+    "values": [
+      "approved",
+      "pending",
+      "changes_requested",
+      "draft",
+      "merged",
+      "closed",
+      "success",
+      "failure"
+    ],
+    "sources": ["features/sessions/context/context-tray.tsx"]
+  },
+  {
+    "prefix": "sessions.changes.",
+    "values": [
+      "staged",
+      "unstaged",
+      "merged",
+      "title",
+      "empty",
+      "diff",
+      "full",
+      "fullDiff",
+      "gitFallback",
+      "unavailable",
+      "keep",
+      "undo",
+      "undoTitle",
+      "undoBody",
+      "loading",
+      "binary",
+      "noSection",
+      "added",
+      "removed",
+      "keepAll",
+      "undoAll",
+      "summary",
+      "review"
+    ],
+    "sources": ["features/sessions/changes/changes-tab.tsx"]
+  },
+  {
+    "prefix": "sessions.browser.",
+    "values": [
+      "activate",
+      "title",
+      "address",
+      "back",
+      "forward",
+      "reload",
+      "external",
+      "unavailable",
+      "permission",
+      "allow",
+      "deny",
+      "session",
+      "always",
+      "profile",
+      "defaultProfile",
+      "zoom-in",
+      "zoom-out",
+      "zoom-reset",
+      "open-devtools",
+      "clear-site-data"
+    ],
+    "sources": [
+      "features/sessions/browser/browser-tab.tsx",
+      "features/sessions/browser/ask-host.tsx"
+    ]
+  },
+  {
+    "prefix": "sessions.dock.device",
+    "values": [""],
+    "sources": ["features/sessions/dock/session-dock.tsx"]
+  },
+  {
+    "prefix": "sessions.start.starters.",
+    "values": [
+      "build-a-store.name",
+      "design-an-infographic.name",
+      "find-flights.name",
+      "process-a-spreadsheet.name",
+      "restyle-a-repo.name",
+      "review-pull-requests.name"
+    ],
+    "sources": ["features/sessions/start/session-start-page.tsx"]
+  },
+  {
+    "prefix": "sessions.attention.",
+    "values": ["needs-you", "running", "error", "unread", "idle"],
+    "sources": ["features/sessions/sessions-sidebar.tsx"]
+  },
+  {
+    "prefix": "bots.avatar.accessories.",
+    "values": [
+      "none",
+      "glasses",
+      "shades",
+      "bow",
+      "cap",
+      "headphones",
+      "antenna",
+      "crown",
+      "monocle"
+    ],
+    "sources": ["features/bots/form/look-picker.tsx"]
+  },
+  {
+    "prefix": "bots.avatar.colors.",
+    "values": [
+      "green",
+      "blue",
+      "purple",
+      "pink",
+      "red",
+      "orange",
+      "yellow",
+      "teal",
+      "indigo",
+      "stone"
+    ],
+    "sources": ["features/bots/form/look-picker.tsx"]
+  },
+  {
+    "prefix": "bots.avatar.shapes.",
+    "values": [
+      "blob",
+      "round",
+      "squircle",
+      "pebble",
+      "leaf",
+      "drop",
+      "bean",
+      "slab",
+      "mochi",
+      "egg",
+      "pillow",
+      "jelly",
+      "star",
+      "flower",
+      "heart",
+      "cloud",
+      "hex",
+      "gem",
+      "clover",
+      "burst",
+      "bunny",
+      "cat",
+      "bear",
+      "ghost"
+    ],
+    "sources": [
+      "features/bots/form/look-picker.tsx",
+      "features/bots/gallery/sections.tsx",
+      "features/bots/start/bot-start-page.tsx"
+    ]
+  },
+  {
+    "prefix": "bots.checkIn.",
+    "values": [
+      "label",
+      "off",
+      "hourly",
+      "daily",
+      "weekdays",
+      "weekly",
+      "summary.off",
+      "summary.hourly",
+      "summary.daily",
+      "summary.weekdays",
+      "summary.weekly",
+      "summary.custom",
+      "summary.paused",
+      "time",
+      "day",
+      "minute",
+      "paused",
+      "custom",
+      "customLabel",
+      "editInRoutines",
+      "routineName",
+      "error",
+      "createFailed"
+    ],
+    "sources": [
+      "features/bots/panel/bot-side-panel.tsx",
+      "features/bots/check-in/fields.tsx"
+    ]
+  },
+  {
+    "prefix": "bots.start.categories.",
+    "values": [
+      "featured",
+      "finance",
+      "marketing",
+      "personal-assistant",
+      "productivity",
+      "recruiting",
+      "research",
+      "social-media"
+    ],
+    "sources": ["features/bots/start/bot-start-page.tsx"]
+  },
+  {
+    "prefix": "bots.status.",
+    "values": [
+      "needsYou",
+      "needsYouTitle",
+      "checkingIn",
+      "working",
+      "workingOn",
+      "error",
+      "paused",
+      "on",
+      "idle",
+      "needs-you",
+      "routine",
+      "unread"
+    ],
+    "sources": ["features/bots/chat/identity.tsx"]
+  },
+  {
+    "prefix": "bots.templates.",
+    "values": [
+      "appointment-assistant.name",
+      "bills-renewal-watch.name",
+      "calendar-concierge.name",
+      "campaign-performance-digest.name",
+      "candidate-follow-up.name",
+      "candidate-sourcer.name",
+      "chief-of-staff.name",
+      "comment-mention-assistant.name",
+      "competitor-campaign-watch.name",
+      "competitor-watch.name",
+      "content-calendar-manager.name",
+      "content-repurposer.name",
+      "customer-voice-miner.name",
+      "daily-focus-planner.name",
+      "daily-post-writer.name",
+      "daily-stock-recommender.name",
+      "decision-researcher.name",
+      "deep-researcher.name",
+      "discord-agent.name",
+      "earnings-watch.name",
+      "email-drafting.name",
+      "follow-up-tracker.name",
+      "hiring-manager-brief.name",
+      "inbox-to-calendar.name",
+      "interview-coordinator.name",
+      "knowledge-finder.name",
+      "launch-command-center.name",
+      "meeting-notes-actions.name",
+      "meeting-prep-bot.name",
+      "morning-brief.name",
+      "news-radar.name",
+      "personal-admin.name",
+      "portfolio-pulse.name",
+      "project-pulse.name",
+      "research-paper-scout.name",
+      "resume-review-assistant.name",
+      "social-inbox-manager.name",
+      "spending-digest.name",
+      "telegram-agent.name",
+      "travel-planner.name",
+      "trend-scout.name",
+      "weekly-review.name",
+      "whats-hot.name",
+      "whatsapp-agent.name"
+    ],
+    "sources": [
+      "features/bots/start/bot-start-page.tsx",
+      "routes/_shell/(bots)/bots.new.tsx"
+    ]
+  },
+  {
+    "prefix": "capabilities.toolDescriptions.",
+    "values": [
+      "ast_edit",
+      "bash",
+      "batch_edit",
+      "batch_file_read",
+      "bfl_flux3_get_result",
+      "bfl_flux3_image_to_video",
+      "bfl_flux3_keyframes_to_video",
+      "bfl_flux3_prompting_guide",
+      "bfl_flux3_text_to_video",
+      "bfl_flux3_video_continuation",
+      "browser_execute",
+      "browser_interact",
+      "browser_navigate",
+      "browser_snapshot",
+      "browser_task",
+      "code_map",
+      "connect_connector",
+      "cronjob",
+      "deck_export_pdf",
+      "delegate_task",
+      "design",
+      "device_app",
+      "device_boot",
+      "device_build",
+      "device_interact",
+      "device_list",
+      "device_logs",
+      "device_screenshot",
+      "device_shutdown",
+      "device_snapshot",
+      "disconnect_connector",
+      "discord_auto_reply",
+      "document",
+      "edit",
+      "exit_plan_mode",
+      "fetch_background_output",
+      "glob",
+      "grep",
+      "ha_call_service",
+      "ha_get_state",
+      "ha_list_entities",
+      "ha_list_services",
+      "image_generate",
+      "kill_process",
+      "list_discord_chats",
+      "list_telegram_chats",
+      "list_whatsapp_chats",
+      "ls",
+      "memory",
+      "pdf",
+      "ppt",
+      "present_deliverable",
+      "read",
+      "read_discord_messages",
+      "read_output",
+      "read_telegram_messages",
+      "read_whatsapp_messages",
+      "run_tests",
+      "send_discord_message",
+      "send_telegram_message",
+      "send_whatsapp_message",
+      "serve",
+      "session_search",
+      "skill_add",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "spotify_albums",
+      "spotify_devices",
+      "spotify_library",
+      "spotify_playback",
+      "spotify_playlists",
+      "spotify_queue",
+      "spotify_search",
+      "telegram_auto_reply",
+      "text_to_speech",
+      "todo",
+      "video_analyze",
+      "video_generate",
+      "vision_analyze",
+      "web_fetch",
+      "web_search",
+      "whatsapp_auto_reply",
+      "write",
+      "x_search",
+      "xai_video_edit",
+      "xai_video_extend"
+    ],
+    "sources": ["features/library/skills-tools.tsx"]
+  },
+  {
+    "prefix": "capabilities.toolsets.",
+    "values": [
+      "a2a.description",
+      "a2a.label",
+      "bfl.description",
+      "bfl.label",
+      "browser.description",
+      "browser.label",
+      "connectors.description",
+      "connectors.label",
+      "cronjob.description",
+      "cronjob.label",
+      "delegation.description",
+      "delegation.label",
+      "deliverables.description",
+      "deliverables.label",
+      "design.description",
+      "design.label",
+      "device.description",
+      "device.label",
+      "file.description",
+      "file.label",
+      "homeassistant.description",
+      "homeassistant.label",
+      "image_gen.description",
+      "image_gen.label",
+      "memory.description",
+      "memory.label",
+      "messaging.description",
+      "messaging.label",
+      "pdf.description",
+      "pdf.label",
+      "plan_mode.description",
+      "plan_mode.label",
+      "ppt.description",
+      "ppt.label",
+      "process.description",
+      "process.label",
+      "session_search.description",
+      "session_search.label",
+      "skills.description",
+      "skills.label",
+      "spotify.description",
+      "spotify.label",
+      "terminal.description",
+      "terminal.label",
+      "todo.description",
+      "todo.label",
+      "tts.description",
+      "tts.label",
+      "video.description",
+      "video.label",
+      "video_gen.description",
+      "video_gen.label",
+      "vision.description",
+      "vision.label",
+      "web.description",
+      "web.label",
+      "x_search.description",
+      "x_search.label"
+    ],
+    "sources": [
+      "features/library/skills-tools.tsx",
+      "routes/_shell/(library)/library.tools.$toolsetId.tsx"
+    ]
+  },
+  {
+    "prefix": "chat.mode.",
+    "values": [
+      "ACCEPTEDITS",
+      "AUTO",
+      "DEFAULT",
+      "PLAN",
+      "YOLO",
+      "description.ACCEPTEDITS",
+      "description.AUTO",
+      "description.DEFAULT",
+      "description.PLAN",
+      "description.YOLO"
+    ],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "chat.permission.action.",
+    "values": [
+      "allow",
+      "allowOnce",
+      "alwaysAcceptEdits",
+      "alwaysAllow",
+      "alwaysAllowFolder",
+      "alwaysAllowHost",
+      "alwaysAllowRule",
+      "alwaysAllowSite",
+      "alwaysAllowThese",
+      "deny",
+      "planAcceptAll",
+      "planApproveEach",
+      "planFullAccess",
+      "planKeepPlanning",
+      "runInBackground",
+      "skipAll"
+    ],
+    "sources": ["features/chat/kit/permissions/permission-card.tsx"]
+  },
+  {
+    "prefix": "chat.permission.chip.",
+    "values": [
+      "browser",
+      "connect",
+      "createFile",
+      "deleteFile",
+      "editFile",
+      "generic",
+      "outside",
+      "plan",
+      "question",
+      "runCommand"
+    ],
+    "sources": ["features/chat/kit/permissions/permission-list.tsx"]
+  },
+  {
+    "prefix": "chat.permission.title.",
+    "values": [
+      "browserAction",
+      "createFile",
+      "credentials",
+      "deleteFile",
+      "editFile",
+      "editOutside",
+      "exitPlan",
+      "fetchUrl",
+      "generic",
+      "networkHost",
+      "networkHostDescription",
+      "notebook.delete",
+      "notebook.insert",
+      "notebook.replace",
+      "notebookOutside",
+      "overwriteFile",
+      "question",
+      "readOutside",
+      "runCommand",
+      "sandboxDenied",
+      "sandboxDeniedDescription",
+      "writeOutside"
+    ],
+    "sources": [
+      "features/chat/kit/layout.tsx",
+      "features/chat/kit/permissions/permission-card.tsx"
+    ]
+  },
+  {
+    "prefix": "chat.permission.verb.",
+    "values": ["reach", "read", "write"],
+    "sources": ["features/chat/kit/permissions/permission-card.tsx"]
+  },
+  {
+    "prefix": "execBackends.",
+    "values": ["singularity.label", "ssh.label"],
+    "sources": ["features/settings/environment.tsx"]
+  },
+  {
+    "prefix": "library.pages.",
+    "values": ["connectors", "messaging", "mcp", "skills", "tools"],
+    "sources": ["features/library/index.tsx"]
+  },
+  {
+    "prefix": "messaging.fields.",
+    "values": ["discordBotToken"],
+    "sources": ["features/library/messaging.tsx"]
+  },
+  {
+    "prefix": "messaging.platforms.",
+    "values": ["discord", "telegram", "abacusDiscord", "abacusTelegram"],
+    "sources": ["features/library/index.tsx", "features/library/messaging.tsx"]
+  },
+  {
+    "prefix": "messaging.states.",
+    "values": [
+      "connecting",
+      "needs_link",
+      "needs_login",
+      "not_configured",
+      "pending_restart",
+      "rate_limited",
+      "syncing"
+    ],
+    "sources": ["features/library/messaging.tsx"]
+  },
+  {
+    "prefix": "onboardingFlow.steps.",
+    "values": [
+      "welcome",
+      "connected",
+      "models",
+      "connectors",
+      "first-bot",
+      "done"
+    ],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "phase5.always",
+    "values": [""],
+    "sources": ["features/settings/environment.tsx"]
+  },
+  {
+    "prefix": "phase5.ask",
+    "values": [""],
+    "sources": ["features/settings/environment.tsx"]
+  },
+  {
+    "prefix": "phase5.backendBlockers.",
+    "values": [
+      "unimplemented",
+      "unsupported-platform",
+      "missing-binary",
+      "missing-env"
+    ],
+    "sources": ["features/settings/environment.tsx"]
+  },
+  {
+    "prefix": "phase5.botSounds.",
+    "values": ["all", "needs-me", "nothing"],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.categories.",
+    "values": [
+      "featured",
+      "abacus",
+      "productivity",
+      "data",
+      "development",
+      "infrastructure",
+      "payments",
+      "support",
+      "web"
+    ],
+    "sources": ["features/library/connectors.tsx"]
+  },
+  {
+    "prefix": "phase5.comfortable",
+    "values": [""],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.compact",
+    "values": [""],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.cues.",
+    "values": [
+      "sent",
+      "received",
+      "needs-you",
+      "done",
+      "failed",
+      "routine-fired"
+    ],
+    "sources": [
+      "features/settings/personal.tsx",
+      "components/sound-preview/index.tsx"
+    ]
+  },
+  {
+    "prefix": "phase5.deviceTools.",
+    "values": ["ios", "android", "maestro"],
+    "sources": ["features/settings/environment.tsx"]
+  },
+  {
+    "prefix": "phase5.end",
+    "values": [""],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.formats.",
+    "values": [
+      "pdf",
+      "word",
+      "spreadsheet",
+      "slides",
+      "markdown",
+      "text",
+      "archive",
+      "audio",
+      "video",
+      "code",
+      "image",
+      "web"
+    ],
+    "sources": ["features/artifacts/index.tsx"]
+  },
+  {
+    "prefix": "phase5.imports.",
+    "values": ["claude", "cursor", "deepagent", "file", "json"],
+    "sources": ["features/library/mcp.tsx"]
+  },
+  {
+    "prefix": "phase5.inviteChannels.",
+    "values": ["link", "gmail", "whatsapp"],
+    "sources": [
+      "features/settings/invite.tsx",
+      "features/settings/account-usage.tsx"
+    ]
+  },
+  {
+    "prefix": "phase5.mcpFields.",
+    "values": [
+      "name",
+      "command",
+      "url",
+      "args",
+      "env",
+      "headers",
+      "clientId",
+      "clientSecret",
+      "scope"
+    ],
+    "sources": ["features/library/mcp.tsx"]
+  },
+  {
+    "prefix": "phase5.memoryTargets.",
+    "values": ["remember", "user", "memory"],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.modeDescriptions.",
+    "values": ["AUTO", "DEFAULT", "PLAN", "YOLO", "ACCEPTEDITS"],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.never",
+    "values": [""],
+    "sources": ["features/settings/environment.tsx"]
+  },
+  {
+    "prefix": "phase5.off",
+    "values": [""],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.on",
+    "values": [""],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.open.",
+    "values": ["directory", "revealed", "refused"],
+    "sources": ["features/artifacts/index.tsx"]
+  },
+  {
+    "prefix": "phase5.outcomes.",
+    "values": [
+      "running",
+      "completed",
+      "failed",
+      "skipped",
+      "unknown",
+      "paused"
+    ],
+    "sources": ["features/routines/page.tsx"]
+  },
+  {
+    "prefix": "phase5.presets.",
+    "values": [
+      "hourly",
+      "daily",
+      "weekdays",
+      "weekly",
+      "once",
+      "manual",
+      "custom"
+    ],
+    "sources": ["features/routines/form.tsx"]
+  },
+  {
+    "prefix": "phase5.schedule.",
+    "values": ["daily", "weekdays", "weekly"],
+    "sources": ["features/routines/data.ts"]
+  },
+  {
+    "prefix": "phase5.skillImport.",
+    "values": ["folder", "file", "zip", "github", "url"],
+    "sources": ["features/library/skills-tools.tsx"]
+  },
+  {
+    "prefix": "phase5.sorts.",
+    "values": ["newest", "oldest", "name"],
+    "sources": ["features/artifacts/index.tsx"]
+  },
+  {
+    "prefix": "phase5.start",
+    "values": [""],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.states.",
+    "values": [
+      "needs-you",
+      "running",
+      "failed",
+      "paused",
+      "once",
+      "webhook",
+      "manual",
+      "scheduled"
+    ],
+    "sources": ["features/routines/sidebar.tsx"]
+  },
+  {
+    "prefix": "phase5.system",
+    "values": [""],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.updates.",
+    "values": [
+      "loading",
+      "stalled",
+      "installFailed",
+      "installing",
+      "checking",
+      "downloading",
+      "downloaded",
+      "downloadFailed",
+      "checkFailed",
+      "latest"
+    ],
+    "sources": ["features/settings/updates.tsx"]
+  },
+  {
+    "prefix": "phase5.validation.",
+    "values": ["instruction-required", "too-long", "schedule-invalid"],
+    "sources": ["components/form-kit/index.tsx"]
+  },
+  {
+    "prefix": "referrals.errors.",
+    "values": ["gmail", "whatsapp", "signedOut", "unavailable"],
+    "sources": ["features/settings/invite.tsx"]
+  },
+  {
+    "prefix": "routines.templates.",
+    "values": [
+      "morning-brief.name",
+      "inbox-triage.name",
+      "pr-digest.name",
+      "failing-tests.name",
+      "dependency-watch.name",
+      "week-in-review.name"
+    ],
+    "sources": ["features/routines/form.tsx"]
+  },
+  {
+    "prefix": "settings.keyboard.actions.",
+    "values": [
+      "command-menu",
+      "new-in-area",
+      "new-bot",
+      "toggle-sidebar",
+      "toggle-side-panel",
+      "open-settings",
+      "new-terminal-tab",
+      "close-tab",
+      "next-tab",
+      "previous-tab",
+      "stop-run",
+      "send",
+      "notch-reply"
+    ],
+    "sources": ["lib/keyboard/actions.ts"]
+  },
+  {
+    "prefix": "settings.pages.",
+    "values": [
+      "general",
+      "appearance",
+      "notifications",
+      "memory",
+      "usage",
+      "account",
+      "models",
+      "environment",
+      "about",
+      "browser",
+      "devices",
+      "language",
+      "keyboard"
+    ],
+    "sources": [
+      "features/settings/index.tsx",
+      "features/settings/search-index.ts",
+      "features/shell/command-menu.tsx"
+    ]
+  },
+  {
+    "prefix": "shell.panel.tabs.",
+    "values": [
+      "changes",
+      "terminal",
+      "files",
+      "browser",
+      "memory",
+      "details",
+      "agent"
+    ],
+    "sources": ["features/shell/side-panel.tsx", "features/shell/top-bar.tsx"]
+  },
+  {
+    "prefix": "shell.rail.",
+    "values": [
+      "label",
+      "bots",
+      "sessions",
+      "routines",
+      "artifacts",
+      "library",
+      "settings",
+      "account"
+    ],
+    "sources": [
+      "features/shell/rail.tsx",
+      "features/shell/command-menu.tsx",
+      "features/gallery/gallery.tsx"
+    ]
+  },
+  {
+    "prefix": "terminalShells.",
+    "values": [
+      "busybox.label",
+      "cmd.label",
+      "powershell.label",
+      "pwsh.label",
+      "system.label"
+    ],
+    "sources": ["features/settings/environment.tsx"]
+  },
+  {
+    "prefix": "theme.",
+    "values": ["dark", "light"],
+    "sources": ["features/settings/personal.tsx"]
+  },
+  {
+    "prefix": "phase5.settings.launchAtLogin",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.defaultWorkspace",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.defaultMode",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.botMode",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.mode-AUTO",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.mode-DEFAULT",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.mode-ACCEPTEDITS",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.mode-PLAN",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.mode-YOLO",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.theme",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.density",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.textSize",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.reduceMotion",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.bubbleTint",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.notify",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.sounds",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.quietHours",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.customInstructions",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.language",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.browserEnabled",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.browserEngine",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.chromeExtension",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.browserHomepage",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.browserApproval",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.browserData",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.deviceEnabled",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.deviceApproval",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.device-ios",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.device-android",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.device-maestro",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.sandbox",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.identity",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.plan",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.credits",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.organization",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.inviteLink",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.forgetAccount",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.abacusCredits",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.openrouterUsage",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.weekUsage",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.appVersion",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.updates",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.logs",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "phase5.settings.changelog",
+    "values": [""],
+    "sources": ["features/settings/search-index.ts"]
+  },
+  {
+    "prefix": "onboarding.welcomeModels",
+    "values": [""],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "onboarding.welcomeConnectors",
+    "values": [""],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "onboarding.welcomeMemory",
+    "values": [""],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "onboarding.pages.",
+    "values": [
+      "connect.body",
+      "connected.body",
+      "models.body",
+      "connectors.body",
+      "first-bot.body",
+      "done.body"
+    ],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "onboarding.pages.connected.promise",
+    "values": ["1", "2", "3", "4"],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "onboarding.pages.models.abacus",
+    "values": [""],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "onboarding.pages.models.openrouter",
+    "values": [""],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "onboarding.pages.models.gemini",
+    "values": [""],
+    "sources": ["features/onboarding/index.tsx"]
+  },
+  {
+    "prefix": "tour.stops.",
+    "values": [
+      "rail.body",
+      "make-bot.body",
+      "workspaces.body",
+      "start-session.body",
+      "connectors.body",
+      "changes.body",
+      "preview-terminal.body",
+      "memory.body",
+      "artifacts.body",
+      "welcome.body",
+      "talk.body",
+      "notch.body"
+    ],
+    "sources": ["features/tour/index.tsx"]
+  },
+  {
+    "prefix": "notch.wings.",
+    "values": [
+      "idle",
+      "question",
+      "approval",
+      "connector-ask",
+      "failed",
+      "working",
+      "reply",
+      "done"
+    ],
+    "sources": ["features/notch/index.tsx"]
+  },
+  {
+    "prefix": "notch.",
+    "values": [
+      "wings.idle",
+      "wings.question",
+      "wings.approval",
+      "wings.connector-ask",
+      "wings.failed",
+      "wings.working",
+      "wings.reply",
+      "wings.done"
+    ],
+    "sources": ["runtime template with finite families"]
+  },
+  {
+    "prefix": "onboarding.",
+    "values": [
+      "welcomeModels",
+      "welcomeConnectors",
+      "welcomeMemory",
+      "pages.connect.body",
+      "pages.connected.body",
+      "pages.models.body",
+      "pages.connectors.body",
+      "pages.first-bot.body",
+      "pages.done.body",
+      "pages.connected.promise1",
+      "pages.connected.promise2",
+      "pages.connected.promise3",
+      "pages.connected.promise4",
+      "pages.models.abacus",
+      "pages.models.openrouter",
+      "pages.models.gemini"
+    ],
+    "sources": ["runtime template with finite families"]
+  },
+  {
+    "prefix": "onboarding.pages.models.",
+    "values": ["body", "abacus", "openrouter", "gemini"],
+    "sources": ["runtime template with finite families"]
+  },
+  {
+    "prefix": "sessions.dock.",
+    "values": ["device"],
+    "sources": ["runtime template with finite families"]
+  },
+  {
+    "prefix": "phase5.",
+    "values": [
+      "always",
+      "ask",
+      "backendBlockers.unimplemented",
+      "backendBlockers.unsupported-platform",
+      "backendBlockers.missing-binary",
+      "backendBlockers.missing-env",
+      "botSounds.all",
+      "botSounds.needs-me",
+      "botSounds.nothing",
+      "categories.featured",
+      "categories.abacus",
+      "categories.productivity",
+      "categories.data",
+      "categories.development",
+      "categories.infrastructure",
+      "categories.payments",
+      "categories.support",
+      "categories.web",
+      "comfortable",
+      "compact",
+      "cues.sent",
+      "cues.received",
+      "cues.needs-you",
+      "cues.done",
+      "cues.failed",
+      "cues.routine-fired",
+      "deviceTools.ios",
+      "deviceTools.android",
+      "deviceTools.maestro",
+      "end",
+      "formats.pdf",
+      "formats.word",
+      "formats.spreadsheet",
+      "formats.slides",
+      "formats.markdown",
+      "formats.text",
+      "formats.archive",
+      "formats.audio",
+      "formats.video",
+      "formats.code",
+      "formats.image",
+      "formats.web",
+      "imports.claude",
+      "imports.cursor",
+      "imports.deepagent",
+      "imports.file",
+      "imports.json",
+      "inviteChannels.link",
+      "inviteChannels.gmail",
+      "inviteChannels.whatsapp",
+      "mcpFields.name",
+      "mcpFields.command",
+      "mcpFields.url",
+      "mcpFields.args",
+      "mcpFields.env",
+      "mcpFields.headers",
+      "mcpFields.clientId",
+      "mcpFields.clientSecret",
+      "mcpFields.scope",
+      "memoryTargets.remember",
+      "memoryTargets.user",
+      "memoryTargets.memory",
+      "modeDescriptions.AUTO",
+      "modeDescriptions.DEFAULT",
+      "modeDescriptions.PLAN",
+      "modeDescriptions.YOLO",
+      "modeDescriptions.ACCEPTEDITS",
+      "never",
+      "off",
+      "on",
+      "open.directory",
+      "open.revealed",
+      "open.refused",
+      "outcomes.running",
+      "outcomes.completed",
+      "outcomes.failed",
+      "outcomes.skipped",
+      "outcomes.unknown",
+      "outcomes.paused",
+      "presets.hourly",
+      "presets.daily",
+      "presets.weekdays",
+      "presets.weekly",
+      "presets.once",
+      "presets.manual",
+      "presets.custom",
+      "schedule.daily",
+      "schedule.weekdays",
+      "schedule.weekly",
+      "skillImport.folder",
+      "skillImport.file",
+      "skillImport.zip",
+      "skillImport.github",
+      "skillImport.url",
+      "sorts.newest",
+      "sorts.oldest",
+      "sorts.name",
+      "start",
+      "states.needs-you",
+      "states.running",
+      "states.failed",
+      "states.paused",
+      "states.once",
+      "states.webhook",
+      "states.manual",
+      "states.scheduled",
+      "system",
+      "updates.loading",
+      "updates.stalled",
+      "updates.installFailed",
+      "updates.installing",
+      "updates.checking",
+      "updates.downloading",
+      "updates.downloaded",
+      "updates.downloadFailed",
+      "updates.checkFailed",
+      "updates.latest",
+      "validation.instruction-required",
+      "validation.too-long",
+      "validation.schedule-invalid",
+      "settings.launchAtLogin",
+      "settings.defaultWorkspace",
+      "settings.defaultMode",
+      "settings.botMode",
+      "settings.mode-AUTO",
+      "settings.mode-DEFAULT",
+      "settings.mode-ACCEPTEDITS",
+      "settings.mode-PLAN",
+      "settings.mode-YOLO",
+      "settings.theme",
+      "settings.density",
+      "settings.textSize",
+      "settings.reduceMotion",
+      "settings.bubbleTint",
+      "settings.notify",
+      "settings.sounds",
+      "settings.quietHours",
+      "settings.customInstructions",
+      "settings.language",
+      "settings.browserEnabled",
+      "settings.browserEngine",
+      "settings.chromeExtension",
+      "settings.browserHomepage",
+      "settings.browserApproval",
+      "settings.browserData",
+      "settings.deviceEnabled",
+      "settings.deviceApproval",
+      "settings.device-ios",
+      "settings.device-android",
+      "settings.device-maestro",
+      "settings.sandbox",
+      "settings.identity",
+      "settings.plan",
+      "settings.credits",
+      "settings.organization",
+      "settings.inviteLink",
+      "settings.forgetAccount",
+      "settings.abacusCredits",
+      "settings.openrouterUsage",
+      "settings.weekUsage",
+      "settings.appVersion",
+      "settings.updates",
+      "settings.logs",
+      "settings.changelog"
+    ],
+    "sources": ["runtime template with finite families"]
+  },
+  {
+    "prefix": "",
+    "values": [
+      "bots.form.validation.required",
+      "bots.form.validation.too-long",
+      "bots.form.validation.color",
+      "phase5.validation.instruction-required",
+      "phase5.validation.too-long",
+      "phase5.validation.schedule-invalid"
+    ],
+    "sources": ["components/form-kit/index.tsx"]
+  }
+]

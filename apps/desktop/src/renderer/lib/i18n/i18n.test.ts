@@ -16,16 +16,6 @@ const flatten = (tree: Tree, prefix = "", out = new Map<string, string>()) => {
   return out;
 };
 
-const keymap = JSON.parse(
-  Object.values(
-    import.meta.glob<string>("../../../../scripts/locale-keymap.json", {
-      query: "?raw",
-      import: "default",
-      eager: true,
-    })
-  )[0] ?? "{}"
-) as Record<string, string>;
-
 const keys = flatten(enUS as unknown as Tree);
 
 /** i18next's plural suffixes (CLDR categories); `t(key, { count })` reads them. */
@@ -151,13 +141,5 @@ describe("keys", () => {
       "agent",
     ])
       expect(keys.has(`shell.panel.tabs.${tab}`), tab).toBe(true);
-  });
-
-  it("keymap entries point from new keys to existing old keys", () => {
-    for (const [newKey, oldKey] of Object.entries(keymap)) {
-      if (newKey === "$comment") continue;
-      expect(keys.has(newKey), newKey).toBe(true);
-      expect(keys.has(oldKey), oldKey).toBe(true);
-    }
   });
 });
