@@ -307,6 +307,11 @@ export const RoutinePage = ({
               </Button>
             </div>
           )}
+          {row.webhookPublicPending && (
+            <p className="text-muted-foreground text-xs">
+              {t("routines.webhookPublicPending")}
+            </p>
+          )}
           <section>
             <h2 className="text-muted-foreground mb-2 text-xs">
               {t("phase5.instruction")}
@@ -323,10 +328,10 @@ export const RoutinePage = ({
                   render={<Button variant="ghost" size="sm" />}
                 >
                   <span className="group-data-[open]/instruction:hidden">
-                    {t("chat.approval.showAll")}
+                    {t("chat.permission.showAll")}
                   </span>
                   <span className="hidden group-data-[open]/instruction:inline">
-                    {t("phase5.showLess")}
+                    {t("chat.code.showLess")}
                   </span>
                 </CollapsibleTrigger>
               )}
