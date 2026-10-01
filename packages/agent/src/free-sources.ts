@@ -31,15 +31,22 @@ export interface FreeSource {
 }
 
 /**
- * Best first. Abacus is paid for and never free-tier limited; Gemini's daily
- * quota is generous; Mistral and NVIDIA carry strong models with room for a
- * whole agent turn. Cerebras is a short trial, OpenRouter's free models are
- * busy, and Groq's free tier allows 8K tokens a minute, under one agent
- * request, so it only helps a paid key. Local is the floor.
+ * The order the pool spends them: the account's own Abacus credits, then
+ * the two sources the app offers first (a Studio key's Gemini quota,
+ * OpenRouter's free models), then the rest. Mistral and NVIDIA carry strong
+ * models with room for a whole agent turn; Cerebras is a short trial; Groq's
+ * free tier allows 8K tokens a minute, under one agent request, so it only
+ * helps a paid key. Local is the floor.
  */
 export const FREE_SOURCES: readonly FreeSource[] = [
   { provider: "abacus" },
   { provider: "gemini" },
+  {
+    provider: "openrouter",
+    // Shared by every `:free` model on the key.
+    limits: { rpm: 20 },
+    accountWide: true,
+  },
   {
     provider: "mistral",
     models: [
@@ -68,12 +75,6 @@ export const FREE_SOURCES: readonly FreeSource[] = [
     provider: "cerebras",
     models: ["gpt-oss-120b", "qwen-3.8-27b"],
     limits: { rpm: 5, tpm: 90_000, tpd: 1_000_000 },
-  },
-  {
-    provider: "openrouter",
-    // Shared by every `:free` model on the key.
-    limits: { rpm: 20 },
-    accountWide: true,
   },
   {
     provider: "groq",
