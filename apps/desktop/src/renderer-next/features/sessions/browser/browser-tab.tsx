@@ -58,6 +58,13 @@ export const BrowserTab = ({
   const key = scope ?? sessionConversationKey(row.workspaceId, row.id);
   useEffect(() => {
     let live = true;
+    let owned: BrowserRuntimeState | null = null;
+    const closeOwned = (state: BrowserRuntimeState) => {
+      if (file)
+        void transport.client.browser.runtime
+          .close(state.lease)
+          .catch(() => {});
+    };
     const promise = file
       ? transport.client.browser.runtime.materializeFile({
           conversationKey: key,
@@ -73,15 +80,17 @@ export const BrowserTab = ({
         });
     void promise
       .then((s) => {
+        owned = s;
         if (live) {
           setError(null);
           setState(s);
           setAddress(s.url);
-        }
+        } else closeOwned(s);
       })
       .catch((e) => live && setError(String(e)));
     return () => {
       live = false;
+      if (owned) closeOwned(owned);
     };
   }, [transport, key, id, url, file, root, retry, profile]);
   useEffect(() => {

@@ -67,3 +67,27 @@ it("hides the old owner after the capture deadline even when capture never resol
   await cleanup;
   vi.useRealTimers();
 });
+it("equivalent background re-registration preserves the user's selected owner", async () => {
+  const presenter = createNativePresenter({
+    capture: async () => ({ dataUrl: null }),
+    hide: async () => {},
+    present: async () => ({}),
+  } as never);
+  const candidate = (id: string) => ({
+    id,
+    lease: { conversationKey: "k", resourceId: id, generation: 1 } as never,
+    visible: () => true,
+    blocked: () => false,
+    bounds: () => ({ x: 0, y: 0, width: 100, height: 100 }),
+  });
+  const a = presenter.register(candidate("A"));
+  const b = presenter.register(candidate("B"));
+  await presenter.activate("A");
+  const replacement = presenter.register(candidate("B"));
+  await presenter.refresh();
+  expect(presenter.owner.state).toBe("A");
+  a();
+  b();
+  replacement();
+  await presenter.refresh();
+});

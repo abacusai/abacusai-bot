@@ -120,8 +120,15 @@ export const createNativePresenter = (
       return refresh();
     },
     register(candidate: NativeCandidate) {
+      const previous = candidates.get(candidate.id);
+      const equivalent =
+        previous &&
+        previous.lease.conversationKey === candidate.lease.conversationKey &&
+        previous.lease.resourceId === candidate.lease.resourceId &&
+        previous.lease.generation === candidate.lease.generation;
       candidates.set(candidate.id, candidate);
-      desired = candidate.id;
+      if (!equivalent) desired = candidate.id;
+      if (equivalent && current === previous) current = candidate;
       void refresh();
       return () => {
         if (candidates.get(candidate.id) === candidate)

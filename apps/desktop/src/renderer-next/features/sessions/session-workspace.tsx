@@ -92,10 +92,11 @@ export const SessionWorkspace = ({
     openTab(key, { ref, title: path.split("/").at(-1) ?? path, path });
     select(ref);
   };
-  const local = (path: string, visible = true) => (
+  const local = (path: string, owner: string, visible = true) => (
     <BrowserTab
+      key={`${owner}:${checkoutIdentity}`}
       row={row}
-      id={`file-${row.id}`}
+      id={`file-${row.id}-${owner}`}
       root={root}
       file={path}
       visible={visible}
@@ -223,7 +224,7 @@ export const SessionWorkspace = ({
                 <SessionFilePreview
                   path={tab.path ?? ""}
                   root={root}
-                  renderLocal={(path) => local(path, visible)}
+                  renderLocal={(path) => local(path, tab.ref, visible)}
                 />
               );
             if (tab.ref === "files")
@@ -232,7 +233,7 @@ export const SessionWorkspace = ({
                   row={row}
                   root={root}
                   onPreview={preview}
-                  renderLocal={(path) => local(path, visible)}
+                  renderLocal={(path) => local(path, tab.ref, visible)}
                 />
               );
             if (tab.ref === "changes")
