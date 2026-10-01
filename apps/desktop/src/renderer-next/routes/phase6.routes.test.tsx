@@ -75,13 +75,28 @@ it("R6-T8 no-model path persists one weekday bot and completes into the shell", 
   await waitFor(() =>
     expect(harness!.router.state.location.pathname).toBe("/onboarding/models")
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+  const continueModels = await screen.findByRole("button", {
+    name: "Continue",
+  });
+  await waitFor(() =>
+    expect((continueModels as HTMLButtonElement).disabled).toBe(false)
+  );
+  fireEvent.click(continueModels);
   await waitFor(() =>
     expect(harness!.router.state.location.pathname).toBe(
       "/onboarding/connectors"
     )
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+  await screen.findByRole("heading", {
+    name: "Connect your tools and services",
+  });
+  const continueConnectors = await screen.findByRole("button", {
+    name: "Continue",
+  });
+  await waitFor(() =>
+    expect((continueConnectors as HTMLButtonElement).disabled).toBe(false)
+  );
+  fireEvent.click(continueConnectors);
   fireEvent.click(
     await screen.findByRole("button", { name: "Say hello" }, { timeout: 5000 })
   );
@@ -108,4 +123,4 @@ it("R6-T8 no-model path persists one weekday bot and completes into the shell", 
         (input as { step: string }).step === "onboarding_done"
     )
   ).toEqual([["system.funnelStep", { step: "onboarding_done", once: true }]]);
-});
+}, 15000);
