@@ -1,0 +1,62 @@
+{
+  "before": {
+    "info": 0,
+    "low": 7,
+    "moderate": 24,
+    "high": 16,
+    "critical": 0
+  },
+  "after": {
+    "info": 0,
+    "low": 0,
+    "moderate": 10,
+    "high": 4,
+    "critical": 0
+  },
+  "resolvedVersions": [
+    "brace-expansion@1.1.21",
+    "brace-expansion@2.1.7",
+    "brace-expansion@5.0.12",
+    "undici@6.29.0",
+    "undici@7.30.0",
+    "undici@8.11.2"
+  ],
+  "targetAdvisoriesAfter": [],
+  "remainingHigh": [
+    {
+      "name": "extract-zip",
+      "ghsa": "GHSA-jmr9-qjv8-65gv",
+      "title": "extract-zip unvalidated symlink path traversal"
+    },
+    {
+      "name": "extract-zip",
+      "ghsa": "GHSA-7pqw-9j4j-h8q3",
+      "title": "extract-zip allows arbitrary file writes through symlink archive entries"
+    },
+    {
+      "name": "image-size",
+      "ghsa": "GHSA-5p2g-fcmc-qvqq",
+      "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops"
+    },
+    {
+      "name": "image-size",
+      "ghsa": "GHSA-w3rx-r6r6-pgpr",
+      "title": "image-size: ICNS parser allows denial of service through an infinite loop"
+    }
+  ],
+  "overrides": {
+    "undici@^6": "^6.28.1",
+    "undici@^7": "^7.29.1",
+    "undici@^8": "^8.10.2",
+    "brace-expansion@^1": "^1.1.21",
+    "brace-expansion@^2": "^2.1.7",
+    "brace-expansion@^5": "^5.0.12",
+    "dompurify": "^3.4.13",
+    "deepmerge-ts": "^8.0.0",
+    "fast-uri": "^3.1.7",
+    "@xmldom/xmldom": "^0.8.15",
+    "js-yaml": "^4.3.2",
+    "onnxruntime-node": "-",
+    "sharp": "-"
+  }
+}
