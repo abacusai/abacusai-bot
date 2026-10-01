@@ -328,14 +328,14 @@ export const NotchShell = ({
     if (!automatic.quietUntil) return;
     ++messageGeneration.current;
     messageOperation.current?.abort.abort();
+    const clearManual = () => {
+      setManual(null);
+      setHovered(false);
+      setFocused(false);
+    };
     void transport.client.notch
       .focus({ focus: false })
-      .then(() => {
-        setManual(null);
-        setHovered(false);
-        setFocused(false);
-      })
-      .catch(() => undefined);
+      .then(clearManual, clearManual);
   }, [automatic.quietUntil, transport]);
   const replyAccepted = (id: string, runId?: string) => {
     if (runId) setAcks((state) => new Set([...state, runId].slice(-500)));

@@ -1,3 +1,5 @@
+import { EventEmitter } from "node:events";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PrefsRow } from "../../shared/contract/rows";
@@ -6,6 +8,7 @@ const DEFAULT_PREFS = {
 } as PrefsRow;
 import type { NotchShape } from "../../shared/contract/notch";
 import { NotchController, type NotchControllerOptions } from "./controller";
+import { wireMainNotchEvents } from "./main-events";
 
 const f = vi.hoisted(() => ({
   windows: [] as any[],
@@ -204,7 +207,25 @@ describe("R6-T25/T28 controller lifecycle and ownership", () => {
     }
   );
   it("waits for readiness, fits changes and closes every contents once", async () => {
-    const x = await setup();
+    const app = { visible: false, focused: false };
+    const main = new EventEmitter();
+    const x = await setup({ mainState: () => app });
+    wireMainNotchEvents(main, () => x.controller.appChanged());
+    for (const [event, visible, focused] of [
+      ["show", true, false],
+      ["focus", true, true],
+      ["blur", true, false],
+      ["hide", false, false],
+      ["closed", false, false],
+    ] as const) {
+      Object.assign(app, { visible, focused });
+      main.emit(event);
+      expect(x.options.publish).toHaveBeenLastCalledWith(1, {
+        type: "app",
+        mainVisible: visible,
+        mainFocused: focused,
+      });
+    }
     x.controller.setShape(1, shape);
     expect(f.windows[0].visible).toBe(false);
     await x.ready(1);

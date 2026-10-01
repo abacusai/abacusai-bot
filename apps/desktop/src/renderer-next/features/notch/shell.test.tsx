@@ -198,6 +198,9 @@ it.each(["reply", "listening"])(
         })
       )
     );
+    view.notch.focus.mockRejectedValueOnce(
+      new Error("native focus unavailable")
+    );
     f.inputs = {
       ...f.inputs,
       prefs: {
@@ -220,6 +223,14 @@ it.each(["reply", "listening"])(
       )
     );
     expect(view.notch.focus).toHaveBeenLastCalledWith({ focus: false });
+    f.inputs = { ...f.inputs, prefs: DEFAULT_PREFS };
+    view.rerenderInputs();
+    await waitFor(() =>
+      expect(view.navigate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ route: "/approval/$id" })
+      )
+    );
+    expect(screen.queryByRole("textbox")).toBeNull();
   }
 );
 it.each(["started", "queued"])(
