@@ -1,16 +1,10 @@
 import type { GitStatusEntry } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import type { FileTreeProps } from "@pierre/trees/react";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-export const FileTreeView = ({
-  paths,
-  onSelect,
-  onOpen,
-  onRename,
-  gitStatus,
-  renderMenu,
-}: {
+interface TreeProps {
+  checkoutIdentity?: string;
   paths: string[];
   onSelect: (path: string) => void;
   onOpen: (path: string) => void;
@@ -22,8 +16,24 @@ export const FileTreeView = ({
       rename: () => void,
     ]
   ) => React.ReactNode;
-}) => {
+}
+export const FileTreeView = (props: TreeProps) => (
+  <CheckoutTree key={props.checkoutIdentity} {...props} />
+);
+const CheckoutTree = ({
+  paths,
+  onSelect,
+  onOpen,
+  onRename,
+  gitStatus,
+  renderMenu,
+}: TreeProps) => {
   const { t } = useTranslation();
+  const current = useRef({ onRename, onSelect });
+  useLayoutEffect(() => {
+    current.current = { onRename, onSelect };
+  });
+  const previousPaths = useRef(paths);
   const { model } = useFileTree({
     paths,
     density: "compact",
@@ -38,19 +48,30 @@ export const FileTreeView = ({
             .filter(Boolean)
             .join("/");
           if (to !== from.replace(/\/$/, ""))
-            onRename(from.replace(/\/$/, ""), to);
+            current.current.onRename(from.replace(/\/$/, ""), to);
         }
       },
     },
     onSelectionChange: (selected) => {
-      if (selected[0]) onSelect(selected[0]);
+      if (selected[0]) current.current.onSelect(selected[0]);
     },
     renaming: {
-      onRename: (event) => onRename(event.sourcePath, event.destinationPath),
+      onRename: (event) =>
+        current.current.onRename(event.sourcePath, event.destinationPath),
     },
   });
   useEffect(() => {
-    model.resetPaths(paths);
+    if (
+      paths.length === previousPaths.current.length &&
+      paths.every((path, i) => path === previousPaths.current[i])
+    )
+      return;
+    const expanded = previousPaths.current.filter((path) => {
+      const item = model.getItem(path);
+      return item != null && "isExpanded" in item && item.isExpanded();
+    });
+    model.resetPaths(paths, { initialExpandedPaths: expanded });
+    previousPaths.current = paths;
   }, [model, paths]);
   return (
     <FileTree
