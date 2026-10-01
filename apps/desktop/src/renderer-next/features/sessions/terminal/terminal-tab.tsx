@@ -46,12 +46,19 @@ export const TerminalTab = ({
   const close = useEffectEvent(onClose);
   useEffect(() => {
     const abort = new AbortController();
-    let cleanup = () => {};
+    const disposers: (() => void)[] = [];
+    const cleanup = () => {
+      for (const dispose of disposers.splice(0).reverse()) dispose();
+    };
     let exitTimer: ReturnType<typeof setTimeout> | undefined;
     void getTerminalView(`${key}:${id}`)
       .then(async (view) => {
         if (abort.signal.aborted) return;
-        container.current?.append(view.element);
+        const host = container.current;
+        host?.append(view.element);
+        disposers.push(() => {
+          if (view.element.parentElement === host) view.element.remove();
+        });
         const initialSize = view.fit.proposeDimensions();
         if (initialSize) view.term.resize(initialSize.cols, initialSize.rows);
         const start = await transport.client.terminal.start({
@@ -67,7 +74,7 @@ export const TerminalTab = ({
           throw new Error(start.error ?? "Terminal failed");
         view.generation = start.state.generation;
         if (abort.signal.aborted) {
-          view.element.remove();
+          cleanup();
           return;
         }
         const input = view.term.onData((data) => {
@@ -80,6 +87,7 @@ export const TerminalTab = ({
             })
             .catch(() => {});
         });
+        disposers.push(() => input.dispose());
         const platform = document.documentElement.dataset.platform;
         view.term.attachCustomKeyEventHandler(
           terminalKeyHandler(
@@ -96,7 +104,8 @@ export const TerminalTab = ({
           new UrlRegexProvider(view.term),
           new OSC8LinkProvider(view.term),
         ];
-        for (const provider of links)
+        for (const provider of links) {
+          disposers.push(() => provider.dispose());
           view.term.registerLinkProvider({
             provideLinks(y, callback) {
               provider.provideLinks(y, (found) =>
@@ -109,7 +118,9 @@ export const TerminalTab = ({
               );
             },
           });
+        }
         const removeMouse = installMouseReporting(view.term, view.element);
+        disposers.push(removeMouse);
         let outputAbort: AbortController | undefined;
         const connectOutput = () => {
           outputAbort?.abort();
@@ -156,6 +167,10 @@ export const TerminalTab = ({
             (e) => setError(String(e))
           );
         };
+        disposers.push(() => {
+          outputAbort?.abort();
+          if (view.reconnect === connectOutput) view.reconnect = undefined;
+        });
         view.reconnect = connectOutput;
         connectOutput();
         void followNotices(
@@ -198,21 +213,18 @@ export const TerminalTab = ({
           }, 40);
         };
         const observer = new ResizeObserver(fit);
+        disposers.push(() => {
+          observer.disconnect();
+          if (timer) clearTimeout(timer);
+        });
         if (container.current) observer.observe(container.current);
         fit();
         view.term.focus();
-        cleanup = () => {
-          outputAbort?.abort();
-          view.reconnect = undefined;
-          observer.disconnect();
-          input.dispose();
-          removeMouse();
-          for (const provider of links) provider.dispose();
-          if (timer) clearTimeout(timer);
-          view.element.remove();
-        };
       })
-      .catch((e) => setError(String(e)));
+      .catch((e) => {
+        cleanup();
+        if (!abort.signal.aborted) setError(String(e));
+      });
     return () => {
       abort.abort();
       cleanup();
@@ -220,15 +232,19 @@ export const TerminalTab = ({
     };
   }, [transport, key, id, row.workspaceId, row.id, t, shell]);
   useEffect(() => {
+    let live = true;
     if (!visible)
       void getTerminalView(`${key}:${id}`).then((view) => {
-        if (view.generation != null)
+        if (live && view.generation != null)
           void transport.client.terminal.hide({
             conversationKey: key,
             terminalId: id,
             generation: view.generation,
           });
       });
+    return () => {
+      live = false;
+    };
   }, [visible, key, id, transport]);
   return (
     <div

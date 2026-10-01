@@ -23,6 +23,8 @@ Merged `rewrite/renderer` at `5ca86069` into `ad345ea0` as `8a699b21`. The reque
 | 11, minor | Fixed | A vertical root can contain only leaves; regression rejects successive bottom moves that would create three rows. |
 | 12, major | Fixed | Preview eviction closes the dock reference in the same store update; empty leaves and active/last references are repaired. A 51st preview regression evicts a sole-leaf active preview. |
 | 13, minor | Fixed | Terminal reconciliation repairs the tree/last references and missing URL terminals are normalized once the initial snapshot arrives. Mounted app regression supplies an empty snapshot. |
+| 14, major | Fixed | Post-start cancellation guard was already present at merge. Added cleanup as each initialization resource is installed, guarded element ownership and stale error reporting. Deferred-start unmount and partial key-handler failure regressions pass. |
+| 15, major | Fixed before this pass; regression added | Merged tree already resolves CSS colors through canvas to RGB hex in the shared Ghostty adapter. Added light/dark token conversion regression; native ANSI/pixel acceptance remains partial. |
 | 7, major | Fixed | Files paths are memoized; equal topology skips reset; changed topology passes expanded directory paths to the installed reset API. Regression covers equal paths and added children without collapse. |
 
 Both file-tree tests fail against the pre-fix component and pass with the fixes. Typecheck passes.
