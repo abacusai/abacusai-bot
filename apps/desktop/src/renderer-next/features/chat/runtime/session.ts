@@ -264,6 +264,13 @@ export class ThreadSession {
     const current = this.#pending ?? this.#live;
     const gen = current == null || current.failed ? this.#start() : current;
     this.#loadWaiters += 1;
+    if (!options.signal) {
+      const finished = () => {
+        this.#loadWaiters -= 1;
+      };
+      gen.ready.promise.then(finished, finished);
+      return gen.ready.promise;
+    }
     return new Promise<void>((resolve, reject) => {
       let settled = false;
       const done = (error?: unknown) => {
