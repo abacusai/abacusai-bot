@@ -1,6 +1,6 @@
 {
   "name": "abacusai-bot",
-  "version": "1.0.13",
+  "version": "1.0.86",
   "private": true,
   "description": "AbacusAI Bot: free, open-source personal agents for your messaging apps, tools and services.",
   "homepage": "https://github.com/abacusai/abacusai-bot",
