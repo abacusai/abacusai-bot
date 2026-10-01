@@ -58,6 +58,7 @@ import {
   panelTabsStore,
   EMPTY_TABS,
   openTab,
+  openTerminalTab,
   closeTab,
   reconcileTerminals,
   updateTabs,
@@ -291,7 +292,8 @@ export const SessionDock = ({
         : kind === "browser"
           ? `browser:browser-${crypto.randomUUID()}`
           : kind;
-    openTab(key, {
+    const open = kind === "terminal" ? openTerminalTab : openTab;
+    open(key, {
       ref,
       title: t(`sessions.dock.${kind}`),
       ...(shell ? { shell } : {}),

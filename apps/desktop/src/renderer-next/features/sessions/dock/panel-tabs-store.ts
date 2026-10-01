@@ -32,6 +32,44 @@ panelTabsStore.subscribe((s) => {
   } catch {}
 });
 export const EMPTY_TABS: PanelTabs = { tabs: [], last: null };
+// Kept out of sessionStorage: restored references have no pending start.
+const pendingTerminalStarts = new Map<
+  string,
+  Map<string, { owners: number }>
+>();
+
+export const openTerminalTab = (
+  key: string,
+  tab: Omit<PanelTab, "openedAt">
+): void => {
+  let pending = pendingTerminalStarts.get(key);
+  if (!pending) {
+    pending = new Map();
+    pendingTerminalStarts.set(key, pending);
+  }
+  pending.set(tab.ref, { owners: 0 });
+  openTab(key, tab);
+};
+
+/** Retain a new tab while its adapter and terminal.start are pending. */
+export const retainTerminalStart = (key: string, id: string): (() => void) => {
+  const pending = pendingTerminalStarts.get(key);
+  const ref = `terminal:${id}`;
+  const entry = pending?.get(ref);
+  if (!entry) return () => {};
+  entry.owners++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    entry.owners--;
+    queueMicrotask(() => {
+      if (entry.owners || pending?.get(ref) !== entry) return;
+      pending.delete(ref);
+      if (!pending.size) pendingTerminalStarts.delete(key);
+    });
+  };
+};
 export const updateTabs = (
   key: string,
   fn: (tabs: PanelTabs) => PanelTabs
@@ -99,6 +137,9 @@ export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
     return { ...s, tabs, tree, last: tab.ref };
   });
 export const closeTab = (key: string, ref: string): string | undefined => {
+  const pending = pendingTerminalStarts.get(key);
+  pending?.delete(ref);
+  if (pending && !pending.size) pendingTerminalStarts.delete(key);
   let next: string | undefined;
   updateTabs(key, (s) => {
     const repaired = removeRefs(s, [ref]);
@@ -118,6 +159,7 @@ export const reconcileTerminals = (
         .filter(
           (tab) =>
             tab.ref.startsWith("terminal:") &&
+            !pendingTerminalStarts.get(key)?.has(tab.ref) &&
             !states.some((state) => `terminal:${state.terminalId}` === tab.ref)
         )
         .map((tab) => tab.ref)
