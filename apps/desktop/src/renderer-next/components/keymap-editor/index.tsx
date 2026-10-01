@@ -134,10 +134,27 @@ export const KeymapEditor = ({
       }
       const live = findHotkeyConflicts(candidate, {
         platform,
-        exclude: (r) => r.options.meta?.actionId === editing.split("@")[0],
+        exclude: (r) => {
+          const id = r.options.meta?.actionId;
+          if (id === editing.split("@")[0]) return true;
+          if (!editing.endsWith("@terminal") || !id) return false;
+          const terminal = resolved.terminal[id];
+          return (
+            APP_ACTIONS.some((action) => action.id === id) &&
+            (!terminal || normalizeHotkey(terminal, platform) !== candidate)
+          );
+        },
       });
       if (live.length) {
-        const first = live[0]!;
+        const first =
+          live.find(
+            (conflict) =>
+              conflict.type !== "hotkey" ||
+              !APP_ACTIONS.find(
+                (action) =>
+                  action.id === conflict.registration.options.meta?.actionId
+              )?.rebindable
+          ) ?? live[0]!;
         const id = first.registration.options.meta?.actionId;
         const action = APP_ACTIONS.find((a) => a.id === id);
         setConflict({
