@@ -172,8 +172,8 @@ const setup = async (overrides: Partial<NotchControllerOptions> = {}) => {
     disable: () => {
       prefs = { ...prefs, notch: { ...prefs.notch, enabled: false } };
     },
-    swap: () => {
-      base = { kind: "file", directory: "/new" };
+    swap: (directory = "/new") => {
+      base = { kind: "file", directory };
     },
   };
 };
@@ -281,4 +281,37 @@ describe("R6-T25/T28 controller lifecycle and ownership", () => {
     f.space?.();
     expect(x.controller.seen(1)).toBe(false);
   });
+});
+
+it.each([0, -1000])(
+  "ack deletes by insertion order across clock delta %i",
+  async (delta) => {
+    vi.useFakeTimers();
+    const x = await setup();
+    const a = x.controller.open(1, { kind: "session", sessionId: "a" });
+    vi.setSystemTime(Date.now() + delta);
+    const b = x.controller.open(1, { kind: "session", sessionId: "b" });
+    x.controller.ack(a.id);
+    expect(x.controller.commands().map((c) => c.id)).toEqual([b.id]);
+    x.controller.ack(b.id);
+    expect(x.controller.commands()).toEqual([]);
+  }
+);
+it("discards a superseded standby before promotion and boots the latest base", async () => {
+  const x = await setup();
+  await x.ready(1);
+  x.swap();
+  await x.controller.reconcile();
+  await flush();
+  x.swap("/newest");
+  await x.controller.reconcile();
+  await x.ready(2);
+  await x.controller.reconcile();
+  await flush();
+  expect(f.views[1].webContents.close).toHaveBeenCalledOnce();
+  expect(f.views[0].webContents.close).not.toHaveBeenCalled();
+  expect(f.views).toHaveLength(3);
+  await x.ready(3);
+  expect(x.controller.owns(3)).toBe(true);
+  expect(x.controller.owns(1)).toBe(false);
 });

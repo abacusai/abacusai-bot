@@ -315,6 +315,13 @@ export class NotchController {
           return;
         }
         if (standby) {
+          if (JSON.stringify(base) !== JSON.stringify(this.#o.base())) {
+            e.standby = null;
+            e.staged = null;
+            disposeView(e.win, view, (id) => this.#forget(id));
+            void this.reconcile();
+            return;
+          }
           const old = e.active;
           e.active = view;
           e.standby = null;
@@ -326,6 +333,7 @@ export class NotchController {
           e.staged = null;
           view.setVisible(true);
           disposeView(e.win, old, (id) => this.#forget(id));
+          void this.reconcile();
         } else {
           e.ready = true;
           this.#apply(e, e.shape);
@@ -553,10 +561,11 @@ export class NotchController {
     return { id: command.id };
   }
   ack(id: string): void {
-    const command = this.#pending.get(id);
-    if (!command) return;
-    for (const [key, pending] of this.#pending)
-      if (pending.at <= command.at) this.#pending.delete(key);
+    if (!this.#pending.has(id)) return;
+    for (const key of this.#pending.keys()) {
+      this.#pending.delete(key);
+      if (key === id) break;
+    }
   }
   presented(id: number, key: string, visible: boolean): void {
     this.#entry(id);
