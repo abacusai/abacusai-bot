@@ -100,7 +100,7 @@ export default defineConfig({
           name: "main",
           environment: "node",
           ...ciTimeouts,
-          include: ["src/main/**/*.test.ts"],
+          include: ["src/main/**/*.test.ts", "scripts/vite-resolution.test.ts"],
           exclude: [...defaultExclude, ...CONTENDS_FOR_THE_MACHINE],
         },
       },
