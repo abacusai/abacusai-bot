@@ -308,7 +308,9 @@ export const ThreadComposer = () => {
   );
   const incarnation = useThreadStore(session, (state) => state.incarnation);
   const queue = useThreadStore(session, (state) => state.queue);
-  const skills = useThreadStore(session, (state) => state.skills);
+  const liveSkills = useThreadStore(session, (state) => state.skills);
+  const skills =
+    liveSkills.length > 0 ? liveSkills : (config.skillsBaseline ?? []);
   const focused = useSelector(focusedThreads, (state) => state.has(threadId));
   const setFocused = (value: boolean): void => setThreadFocus(threadId, value);
   const modelMenuOpen = useSelector(modelMenus, (state) => state.has(threadId));
@@ -567,6 +569,7 @@ export const ThreadComposer = () => {
     config.model != null ? (
       <ModelChip
         binding={config.model}
+        onUseLocalModel={config.onUseLocalModel}
         onOpenChange={(open) => setModelMenu(threadId, open)}
       />
     ) : null;
