@@ -41,7 +41,7 @@ Coding is one of the jobs a bot can do. AbacusAI Bot is built for personal assis
 
 ## Start free
 
-The desktop app is free and MIT-licensed. You do not need an existing paid model subscription. A free Abacus.AI account starts with 2,000 credits, includes a selection of free models, and enables the built-in connector flow. OpenRouter and Google AI Studio add other free options.
+The desktop app is free and MIT-licensed. You do not need an existing paid model subscription. A free Abacus.AI account starts with 2,000 credits, includes a selection of free models, and enables the built-in connector flow. OpenRouter, Google AI Studio, Mistral, NVIDIA, Cerebras and Groq keys add other free options.
 
 RouteLLM - Open selects from eligible free models and moves to another one when a model or provider is unavailable. You can also bring paid provider keys, subscriptions, or a local OpenAI-compatible model.
 

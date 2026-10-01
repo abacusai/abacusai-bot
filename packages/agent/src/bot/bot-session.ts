@@ -48,6 +48,7 @@ import toolTimeouts from "../extensions/tool-timeouts.js";
 import { githubPrompt } from "../github-prompt.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
 import { buildMcpToolDefinitions } from "../mcp/tools.js";
+import { endedOnLeakedToolCall } from "../openllm-failures.js";
 import {
   OPENLLM_CONTINUATION_PROMPT,
   OPENLLM_CONTINUATION_TYPE,
@@ -868,7 +869,8 @@ export class BotSession {
   ): { failure: string; nextId: string } | null {
     if (!this.openLlmActive || this.interrupted) return null;
 
-    const failure = endedOnProviderError(messages);
+    const failure =
+      endedOnProviderError(messages) ?? endedOnLeakedToolCall(messages);
     const registry = this.registry;
     const current = this.session?.model;
 
@@ -1558,6 +1560,7 @@ export class BotSession {
 
       case "message_end": {
         if (!isAssistantMessage(event.message)) return;
+        this.router.recordReply(event.message);
 
         const full = messageText(event.message);
 

@@ -141,3 +141,29 @@ describe("a Groq model the provider has retired", () => {
     expect(forProvider(models, "openai").length).toBeGreaterThan(10);
   });
 });
+
+describe("RouteLLM - Open", () => {
+  // Any key the pool can draw on makes it runnable, not only the first two.
+  it.each([
+    "MISTRAL_API_KEY",
+    "NVIDIA_API_KEY",
+    "CEREBRAS_API_KEY",
+    "GROQ_API_KEY",
+  ])("is usable with nothing but %s", async (key) => {
+    credentials.current = new Set([key]);
+    const pool = (await listAvailableModels()).find(
+      (model) => model.provider === "openllm"
+    );
+
+    expect(pool?.configured).toBe(true);
+  });
+
+  it("is not usable with no source at all", async () => {
+    credentials.current = new Set(["ANTHROPIC_API_KEY"]);
+    const pool = (await listAvailableModels()).find(
+      (model) => model.provider === "openllm"
+    );
+
+    expect(pool?.configured).toBe(false);
+  });
+});

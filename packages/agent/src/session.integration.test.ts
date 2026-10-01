@@ -205,6 +205,8 @@ afterEach(async () => {
   // failed on whichever test ran second. Each test gets a pool with nothing
   // held against it.
   fs.rmSync(path.join(home, "openllm-cooldowns.json"), { force: true });
+  // The quota ledger is shared the same way.
+  fs.rmSync(path.join(home, "openllm-quota.json"), { force: true });
 });
 
 describe("starting", () => {
@@ -1075,6 +1077,45 @@ describe("OpenLLM", () => {
     // The picker keeps highlighting the router, not the model of the day.
     expect(harness.agent("model_changed").at(-1)?.model).toBe("openllm/auto");
     log.restore();
+  });
+
+  // Output repair nudges the same model up to twice first; a model that
+  // still writes the call as text is not going to make it.
+  it("moves on when a model keeps writing its tool call as text", async () => {
+    const harness = session({ mode: "yolo" });
+    const log = captureLog();
+    const leaked = {
+      say: '<tool_call>{"name":"no_such_tool","arguments":{}}</tool_call>',
+    };
+
+    provider.scriptSequence([
+      leaked,
+      leaked,
+      leaked,
+      { say: "made the call properly" },
+    ]);
+    await harness.session.start();
+    await harness.session.send("hi");
+    await harness.until(() => harness.agent("turn_complete").length > 0);
+
+    expect(harness.text).toContain("made the call properly");
+    expect(log.lines.join("")).toMatch(/routing to openrouter\/small:free/);
+    log.restore();
+  });
+
+  it("counts each reply against its source's free quota", async () => {
+    const harness = session({ mode: "yolo" });
+
+    provider.scriptSequence([{ say: "one" }]);
+    await harness.session.start();
+    await harness.session.send("hi");
+    await harness.until(() => harness.agent("turn_complete").length > 0);
+
+    // OpenRouter's free limits are counted across the key.
+    const ledger = JSON.parse(
+      fs.readFileSync(path.join(home, "openllm-quota.json"), "utf8")
+    ) as Record<string, { minuteCalls: number }>;
+    expect(ledger.openrouter?.minuteCalls).toBe(1);
   });
 
   it("keeps the whole routing episode out of the chat", async () => {

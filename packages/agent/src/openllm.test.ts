@@ -610,3 +610,29 @@ describe("a pool whose account has closed a tier", () => {
     );
   });
 });
+
+describe("the sources a key adds to the pool", () => {
+  it("pools only the listed models, in each source's order and the sources' order", () => {
+    const pooled = openLlmCandidates([
+      choice({ id: "groq/llama-3.1-8b-instant", free: false }),
+      choice({ id: "groq/openai/gpt-oss-120b", free: false }),
+      choice({ id: "cerebras/gpt-oss-120b", free: false }),
+      choice({ id: "nvidia/moonshotai/kimi-k2.6" }),
+      choice({ id: "nvidia/z-ai/glm-5.3" }),
+      choice({ id: "mistral/mistral-small-latest", free: false }),
+      choice({ id: "mistral/devstral-latest", free: false }),
+      choice({ id: "mistral/pixtral-large-latest", free: false }),
+      choice({ id: "gemini/gemini-3.6-flash", free: false }),
+    ]).map((model) => model.id);
+
+    expect(pooled).toEqual([
+      "gemini/gemini-3.6-flash",
+      "mistral/devstral-latest",
+      "mistral/mistral-small-latest",
+      "nvidia/z-ai/glm-5.3",
+      "nvidia/moonshotai/kimi-k2.6",
+      "cerebras/gpt-oss-120b",
+      "groq/openai/gpt-oss-120b",
+    ]);
+  });
+});

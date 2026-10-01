@@ -11,6 +11,11 @@ import {
 import { useMemo, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  FREE_POOL_PROVIDERS,
+  isFreePoolProvider,
+  type FreePoolProvider,
+} from "#shared/free-pool";
 import { LOCAL_PROVIDER_ID } from "#shared/local-models";
 import type { ModelAvailability } from "#shared/models";
 import { PROVIDER_KEY_FIELDS } from "#shared/settings";
@@ -37,16 +42,50 @@ import { ProviderMark } from "./provider-mark";
 type RailValue = "favorites" | string;
 
 /**
- * The free-tier dropdown sells its two free upgrades in place: "Connect
- * OpenRouter" and "Connect Google AI Studio" rows under OpenLLM, each gone the
- * moment its provider is connected.
+ * The free-tier dropdown sells its free upgrades in place: a "Connect …" row
+ * under OpenLLM for each source RouteLLM - Open can pool, gone the moment its
+ * provider is connected.
  */
-const CONNECT_OPENROUTER_ID = "connect/openrouter";
-const CONNECT_GEMINI_ID = "connect/gemini";
-const CONNECT_RANK: Record<string, number> = {
-  [CONNECT_OPENROUTER_ID]: 0,
-  [CONNECT_GEMINI_ID]: 1,
+const CONNECT_PREFIX = "connect/";
+const connectRowId = (provider: FreePoolProvider): string =>
+  `${CONNECT_PREFIX}${provider}`;
+/** The provider a connect row stands for, or null for a model row. */
+const connectRowProvider = (id: string): FreePoolProvider | null => {
+  if (!id.startsWith(CONNECT_PREFIX)) return null;
+  const provider = id.slice(CONNECT_PREFIX.length);
+  return isFreePoolProvider(provider) ? provider : null;
 };
+const CONNECT_RANK: Record<string, number> = Object.fromEntries(
+  FREE_POOL_PROVIDERS.map((provider, rank) => [connectRowId(provider), rank])
+);
+/** What each row says it adds; OpenRouter and Google name themselves. */
+const CONNECT_COPY: Record<FreePoolProvider, { label: string; note: string }> =
+  {
+    openrouter: {
+      label: "workspace.modelPicker.connectOpenRouter",
+      note: "workspace.modelPicker.connectOpenRouterNote",
+    },
+    gemini: {
+      label: "workspace.modelPicker.connectGoogleAi",
+      note: "workspace.modelPicker.connectGoogleAiNote",
+    },
+    mistral: {
+      label: "workspace.modelPicker.connectProvider",
+      note: "workspace.modelPicker.connectMistralNote",
+    },
+    nvidia: {
+      label: "workspace.modelPicker.connectProvider",
+      note: "workspace.modelPicker.connectNvidiaNote",
+    },
+    cerebras: {
+      label: "workspace.modelPicker.connectProvider",
+      note: "workspace.modelPicker.connectCerebrasNote",
+    },
+    groq: {
+      label: "workspace.modelPicker.connectProvider",
+      note: "workspace.modelPicker.connectGroqNote",
+    },
+  };
 const EMPTY_MODELS: ModelAvailability[] = [];
 const PROVIDER_LABELS = new Map(
   PROVIDER_KEY_FIELDS.map((field) => [field.provider, field.label])
@@ -149,37 +188,27 @@ export const ModelPicker = ({
 
   const { data: abacusAccount } = useAbacusAccountQuery();
   const isFreeTier = abacusAccount?.subscription_tier === "free";
-  const openRouterConnected = options.some(
-    (option) => option.provider === "openrouter"
-  );
-  const geminiConnected = options.some(
-    (option) => option.provider === "gemini"
+  const connectedProviders = useMemo(
+    () => new Set(options.map((option) => option.provider)),
+    [options]
   );
   const connectRows = useMemo(() => {
     if (!isFreeTier) return [] as ModelAvailability[];
-    const rows: ModelAvailability[] = [];
-    if (!openRouterConnected)
-      rows.push({
-        id: CONNECT_OPENROUTER_ID,
-        label: t("workspace.modelPicker.connectOpenRouter"),
-        note: t("workspace.modelPicker.connectOpenRouterNote"),
-        // Grouped with Abacus so the row sits right under OpenLLM; the rendered
-        // mark is the real provider's.
-        provider: "abacus",
-        tier: "free",
-        configured: true,
-      });
-    if (!geminiConnected)
-      rows.push({
-        id: CONNECT_GEMINI_ID,
-        label: t("workspace.modelPicker.connectGoogleAi"),
-        note: t("workspace.modelPicker.connectGoogleAiNote"),
-        provider: "abacus",
-        tier: "free",
-        configured: true,
-      });
-    return rows;
-  }, [geminiConnected, isFreeTier, openRouterConnected, t]);
+    return FREE_POOL_PROVIDERS.filter(
+      (provider) => !connectedProviders.has(provider)
+    ).map((provider): ModelAvailability => ({
+      id: connectRowId(provider),
+      label: t(CONNECT_COPY[provider].label, {
+        provider: getProviderLabel(provider),
+      }),
+      note: t(CONNECT_COPY[provider].note),
+      // Grouped with Abacus so the row sits right under OpenLLM; the rendered
+      // mark is the real provider's.
+      provider: "abacus",
+      tier: "free",
+      configured: true,
+    }));
+  }, [connectedProviders, isFreeTier, t]);
 
   const visibleOptions = useMemo(() => {
     // Search crosses the whole catalog (it ignores the compact rail's provider
@@ -211,7 +240,7 @@ export const ModelPicker = ({
       const openLlmDelta =
         Number(right.provider === "openllm") -
         Number(left.provider === "openllm");
-      // Right under OpenLLM: the free plan's two connect rows, OpenRouter first.
+      // Right under OpenLLM: the free plan's connect rows, in the pool's order.
       const connectDelta =
         Number(right.id in CONNECT_RANK) - Number(left.id in CONNECT_RANK) ||
         (CONNECT_RANK[left.id] ?? 0) - (CONNECT_RANK[right.id] ?? 0);
@@ -293,16 +322,12 @@ export const ModelPicker = ({
         }}
         onValueChange={(option) => {
           if (option == null) return;
-          if (option.id === CONNECT_OPENROUTER_ID) {
+          const source = connectRowProvider(option.id);
+          if (source != null) {
             setOpen(false);
-            void connect("openrouter").then((connected) => {
+            void connect(source).then((connected) => {
               if (connected) onModelsRefreshed?.();
             });
-            return;
-          }
-          if (option.id === CONNECT_GEMINI_ID) {
-            setOpen(false);
-            void connect("gemini");
             return;
           }
           onSelectModel(activeWorkspaceId, option.id);
@@ -497,11 +522,7 @@ export const ModelPicker = ({
                         >
                           <ProviderMark
                             provider={
-                              option.id === CONNECT_OPENROUTER_ID
-                                ? "openrouter"
-                                : option.id === CONNECT_GEMINI_ID
-                                  ? "gemini"
-                                  : option.provider
+                              connectRowProvider(option.id) ?? option.provider
                             }
                             className="mt-0.5 size-4 shrink-0"
                           />

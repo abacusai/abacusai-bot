@@ -307,6 +307,80 @@ describe("ModelPicker", () => {
     );
   });
 
+  // Every source RouteLLM - Open can pool has a row; a connected one has none.
+  it.each(["mistral", "nvidia", "cerebras", "groq"])(
+    "offers Connect %s and opens its key dialog in place",
+    async (provider) => {
+      const saveApiKey = vi.fn(async () => ({}));
+      const listModels = vi.fn(async () => []);
+      (globalThis.window as unknown as { api: unknown }).api = {
+        agent: {
+          getAbacusAccount: async () => ({ subscription_tier: "free" }),
+          saveApiKey,
+          listModels,
+        },
+        openExternal,
+      };
+      renderPicker([configuredModel]);
+      fireEvent.click(screen.getByRole("combobox"));
+
+      const selector = `[data-id="local-code-model-option-connect/${provider}"]`;
+      await waitFor(() =>
+        expect(document.querySelector(selector)).toBeTruthy()
+      );
+      fireEvent.click(document.querySelector(selector)!);
+
+      await waitFor(() =>
+        expect(
+          document.querySelector('[data-id="provider-key-dialog"]')
+        ).toBeTruthy()
+      );
+      fireEvent.change(
+        document.querySelector('[data-id="provider-key-input"]')!,
+        { target: { value: "sk-a-real-looking-key-1234" } }
+      );
+      fireEvent.click(document.querySelector('[data-id="provider-key-save"]')!);
+      await waitFor(() =>
+        expect(saveApiKey).toHaveBeenCalledWith(
+          provider,
+          "sk-a-real-looking-key-1234"
+        )
+      );
+      expect(navigate).not.toHaveBeenCalled();
+    }
+  );
+
+  it("drops a source's connect row once its models are in the list", async () => {
+    (globalThis.window as unknown as { api: unknown }).api = {
+      agent: { getAbacusAccount: async () => ({ subscription_tier: "free" }) },
+      openExternal,
+    };
+    renderPicker([
+      configuredModel,
+      {
+        id: "mistral/devstral-latest",
+        label: "Devstral",
+        provider: "mistral",
+        tier: "strong",
+        configured: true,
+      },
+    ]);
+    fireEvent.click(screen.getByRole("combobox"));
+
+    await waitFor(() =>
+      expect(
+        document.querySelector(
+          '[data-id="local-code-model-option-connect/groq"]'
+        )
+      ).toBeTruthy()
+    );
+    expect(
+      document.querySelector(
+        '[data-id="local-code-model-option-connect/mistral"]'
+      )
+    ).toBeNull();
+  });
+
   it("shows no upgrade card off the free tier", async () => {
     (globalThis.window as unknown as { api: unknown }).api = {
       agent: {

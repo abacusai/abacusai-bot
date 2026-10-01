@@ -3,7 +3,9 @@ import path from "path";
 
 import { listBuiltinModels } from "@abacus-ai/agent/model-catalog";
 
+import { FREE_POOL_PROVIDERS } from "#shared/free-pool";
 import { MODEL_CATALOG, type ModelAvailability } from "#shared/models";
+import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 
 import { abacusBotHome } from "../../paths";
 import { hasCredential, hasOAuthCredential } from "../config/settings";
@@ -107,9 +109,13 @@ export const listAvailableModels = async (
   // OpenLLM pools every free-or-nearly-free source, so "configured" means any
   // of their keys exists; a single `requiresEnv` cannot say that.
   const openLlmConfigured =
-    hasCredential("OPENROUTER_API_KEY") ||
-    hasCredential("GEMINI_API_KEY") ||
-    hasCredential("ABACUS_API_KEY");
+    hasCredential("ABACUS_API_KEY") ||
+    FREE_POOL_PROVIDERS.some((provider) => {
+      const envVar = PROVIDER_KEY_FIELDS.find(
+        (field) => field.provider === provider
+      )?.envVar;
+      return envVar != null && hasCredential(envVar);
+    });
 
   const builtins: ModelAvailability[] = MODEL_CATALOG.map((model) => ({
     ...model,
