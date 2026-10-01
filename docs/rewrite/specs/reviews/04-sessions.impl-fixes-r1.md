@@ -45,3 +45,34 @@ Agent targeted checks: 6 tests pass; typecheck passes.
 Removed safeguards temporarily, ran their targeted tests, and restored each source in a finally block. All 26 mutation checks fail by assertion, covering findings 1–21, additional lazy-cache identity and native-owner cases, joined readiness and exec events. The extra lazy-cache identity mutant initially survived an immediate empty-data assertion; the strengthened test now checks that no query is created for the old directory after checkout changes; a further mutant proves root refresh invalidates children while retaining open directories and detects it. Both original file-tree tests also fail against the pre-fix component. No mutated code remains.
 
 The first full suite found one AST guard failure because the terminal element variable was named host. Renamed it to containerElement; the unchanged chat guard and terminal/lazy-cache targeted regressions pass. Root-refresh coverage also caught a usability gap during final inspection, so loaded directories now stay open while their child queries refetch.
+
+## Commits
+
+| Commit | Change |
+|---|---|
+| `8a699b21` | Merge rewrite/renderer contracts and cross-slice follow-ups |
+| `90855f22` | fix(sessions): scope file tree models and preserve expansion |
+| `b08a2004` | fix(sessions): scope agent lifecycle and retry restoration after readiness |
+| `59ac55a2` | fix(sessions): keep checkout recovery available after materialization fails |
+| `d4a0e36c` | fix(sessions): scope checkout queries and bound lazy directory cache |
+| `c7b2e411` | fix(sessions): repair dock focus eviction and URL view state |
+| `04c32133` | fix(sessions): clean up partial terminal initialization and test RGB themes |
+| `3098ed14` | fix(sessions): isolate local viewers and preserve native presentation ownership |
+| `86164e64` | fix(sessions): key historical diffs and lock backend changes while running |
+| `5d83d9cf` | fix(renderer): invalidate shared exec picker state on backend events |
+| `b6f2ae1c` | fix(sessions): abort fatal device streams and strengthen keyframe regression |
+| `709de07c` | test(sessions): verify production checkout rename and bounded cache eviction |
+| `b79c2e9e` | fix(renderer): refresh sandbox support with backend changes |
+| `377d35e2` | fix(sessions): retain open directories while child queries refresh |
+
+## Final validation
+
+- Install with `pnpm install --pm-on-fail=ignore`; connectors, agent/runtime package and updater built through the direct binaries.
+- Desktop `tsc -b` passes. Fresh WCO gallery build without fixtures passes.
+- Final renderer-next/main/shared run: 3,926 passed, seven existing TODOs; 405 passed files and one skipped file. Four workers limited contention on the shared machine.
+- Main-serial with `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1`: all 293 tests and 10 files pass. Total final tests: 4,219 passed, seven existing TODOs.
+- Root `oxfmt .` and `oxlint .` pass. Seven legacy renderer hook warnings remain unchanged.
+- UI registry: 41 files match. Legacy diff, i18n, locale sync and knip-next pass. Knip has three existing configuration hints.
+- All 26 mutation checks detect removed safeguards. No mutations remain in source.
+- No main or agent source changes were authored; the only main edit is the merge's MessagePort test type correction. No new chat/bots amendments were needed.
+- Existing untracked `.build/` remains outside commits. The full R4 matrix remains partial as recorded in the implementation report.

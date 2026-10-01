@@ -1,3 +1,5 @@
+Status after the fix pass: all 21 findings addressed. See [per-finding fixes and regression evidence](04-sessions.impl-fixes-r1.md). This resolves the implementation findings; the full R4 acceptance matrix remains partial. Original review follows.
+
 1. **blocker — `apps/desktop/src/renderer-next/components/file-tree/index.tsx:16`** — `useFileTree` constructs its model once, retaining the initial `onRename` callback. The router preserves components across session parameter changes, so opening session B after A can rename a file in A’s checkout. Use callbacks that read current props and recreate the model when checkout identity changes. Test A → B → rename through the mounted router.
 
 2. **major — `apps/desktop/src/renderer-next/features/sessions/session-workspace.tsx:65`** — The agent controller survives session changes but tracks only status and incarnation. Stopped A → stopped B skips B’s auto-start; pending retries can still start A. Recreate and dispose the controller per session identity.
