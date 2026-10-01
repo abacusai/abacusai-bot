@@ -335,7 +335,7 @@ describe("the floating sidebar", () => {
     });
     await at(1280, "/bots/new", seed);
     fireEvent.pointerOver(rail());
-    await navigate({ to: "/onboarding" });
+    await navigate({ to: "/__ui" });
     expect(document.querySelector('[data-slot="rail"]')).toBeNull();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, HOVER_INTENT_MS + 80));
