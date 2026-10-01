@@ -5,6 +5,7 @@
  * fallback they keep the agent working. The id is virtual: never sent
  * to pi's fuzzy-matching resolver, the session swaps in a concrete free model.
  */
+import { listedModelRank, sourceRank } from "./free-sources.js";
 import type { CooldownStore } from "./openllm-cooldowns.js";
 import { openRouterTakesTools } from "./openrouter-live.js";
 import type { ModelChoice } from "./providers.js";
@@ -119,19 +120,6 @@ export function accountWideFailure(
   return null;
 }
 
-/**
- * The pool's sources, in the order tried. Abacus first: paid for, tuned for
- * agent loops, and never free-tier rate-limited. Then a Studio key's Gemini
- * quota, then OpenRouter's `:free` models, and last the models the app serves
- * on this machine: never rate-limited, but slower than any of the above.
- */
-const SOURCE_RANK: Record<string, number> = {
-  abacus: 0,
-  gemini: 1,
-  openrouter: 2,
-  local: 3,
-};
-
 /** The custom provider the desktop registers its own local models under. */
 const LOCAL_PROVIDER = "local";
 
@@ -188,7 +176,11 @@ const inPool = (choice: ModelChoice): boolean => {
     );
   }
 
-  return choice.provider === "gemini" || choice.provider === LOCAL_PROVIDER;
+  if (choice.provider === "gemini" || choice.provider === LOCAL_PROVIDER)
+    return true;
+
+  // The rest pool the models their row in free-sources.ts lists.
+  return listedModelRank(choice.provider, choice.modelId) !== -1;
 };
 
 /**
@@ -196,6 +188,10 @@ const inPool = (choice: ModelChoice): boolean => {
  * `route-llm-open` entry (see providers.ts), so a reorder, a new $0 model or
  * a retired one never waits on an app release. Unranked members trail.
  */
+/** A listed source's own order (free-sources.ts); zero for the rest. */
+const listedRank = (choice: ModelChoice): number =>
+  Math.max(0, listedModelRank(choice.provider, choice.modelId));
+
 const abacusRank = (choice: ModelChoice): number => {
   if (choice.provider !== "abacus") return 0;
 
@@ -212,8 +208,9 @@ export function openLlmCandidates(models: ModelChoice[]): ModelChoice[] {
     .filter(inPool)
     .sort(
       (a, b) =>
-        (SOURCE_RANK[a.provider] ?? 99) - (SOURCE_RANK[b.provider] ?? 99) ||
+        sourceRank(a.provider) - sourceRank(b.provider) ||
         abacusRank(a) - abacusRank(b) ||
+        listedRank(a) - listedRank(b) ||
         familyRank(a) - familyRank(b) ||
         b.contextWindow - a.contextWindow ||
         a.label.localeCompare(b.label)
@@ -244,7 +241,10 @@ export class OpenLlmRotation {
    */
   constructor(
     private readonly now: () => number = Date.now,
-    private readonly store?: CooldownStore
+    private readonly store?: CooldownStore,
+    /** When a model's quota window reopens (openllm-quota.ts); 0 when open. */
+    private readonly quotaBlockedUntil: (choice: ModelChoice) => number = () =>
+      0
   ) {
     for (const [id, entry] of Object.entries(store?.read() ?? {})) {
       // A class the account refused is kept the same way, so a new chat
@@ -358,9 +358,13 @@ export class OpenLlmRotation {
       (choice) => !exclude?.has(choice.id) && !this.inRefusedScope(choice, now)
     );
 
-    const ready = eligible.find(
-      (choice) => (this.cooldownUntil.get(choice.id) ?? 0) <= now
-    );
+    // Out until its cooldown ends and its spent quota window reopens.
+    const readyAt = (choice: ModelChoice): number =>
+      Math.max(
+        this.cooldownUntil.get(choice.id) ?? 0,
+        this.quotaBlockedUntil(choice)
+      );
+    const ready = eligible.find((choice) => readyAt(choice) <= now);
 
     if (ready != null) return ready;
 
@@ -368,7 +372,7 @@ export class OpenLlmRotation {
     let soonestAt = Infinity;
 
     for (const choice of eligible) {
-      const at = this.cooldownUntil.get(choice.id) ?? 0;
+      const at = readyAt(choice);
 
       if (at < soonestAt) {
         soonest = choice;

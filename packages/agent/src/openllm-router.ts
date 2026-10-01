@@ -12,11 +12,13 @@
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 
 import { type CooldownStore, fileCooldownStore } from "./openllm-cooldowns.js";
+import { classifyFailure } from "./openllm-failures.js";
 import {
-  OpenLlmRotation,
-  accountWideFailure,
-  openLlmCandidates,
-} from "./openllm.js";
+  fileQuotaStore,
+  QuotaLedger,
+  type QuotaStore,
+} from "./openllm-quota.js";
+import { OpenLlmRotation, openLlmCandidates } from "./openllm.js";
 import { listModels, type ModelChoice } from "./providers.js";
 
 /** A model as the pool names it: provider and id. */
@@ -42,11 +44,44 @@ export class OpenLlmRouter {
    */
   private readonly failedThisTurn = new Set<string>();
 
+  private readonly quota: QuotaLedger;
+
   constructor(
-    now: () => number = Date.now,
-    store: CooldownStore | undefined = fileCooldownStore()
+    private readonly now: () => number = Date.now,
+    store: CooldownStore | undefined = fileCooldownStore(),
+    quotaStore: QuotaStore = fileQuotaStore()
   ) {
-    this.rotation = new OpenLlmRotation(now, store);
+    this.quota = new QuotaLedger(now, quotaStore);
+    this.rotation = new OpenLlmRotation(now, store, (choice) =>
+      this.quota.blockedUntil(choice.provider, choice.modelId)
+    );
+  }
+
+  /**
+   * A reply came back, pooled or from a model picked by hand: it spent the
+   * same free quota either way. A refused call spent none.
+   */
+  recordReply(message: unknown): void {
+    const reply = message as {
+      role?: unknown;
+      provider?: unknown;
+      model?: unknown;
+      stopReason?: unknown;
+      usage?: { totalTokens?: unknown };
+    };
+    if (
+      reply?.role !== "assistant" ||
+      reply.stopReason === "error" ||
+      typeof reply.provider !== "string" ||
+      typeof reply.model !== "string"
+    )
+      return;
+    const tokens = reply.usage?.totalTokens;
+    this.quota.record(
+      reply.provider,
+      reply.model,
+      typeof tokens === "number" ? tokens : 0
+    );
   }
 
   /** A new turn: the same model failing again is news again. */
@@ -83,14 +118,15 @@ export class OpenLlmRouter {
     const currentId =
       current != null ? `${current.provider}/${current.id}` : undefined;
 
+    const verdict = classifyFailure(failure, current?.provider, this.now());
+
     if (currentId != null) {
-      this.rotation.markFailed(currentId);
+      this.rotation.markFailed(currentId, verdict.cooldownMs);
       this.failedThisTurn.add(currentId);
     }
     // Before picking: a sibling sharing the allowance would fail the same way.
-    const scope = accountWideFailure(failure, current?.provider);
-
-    if (scope != null) this.rotation.markScopeFailed(scope);
+    if (verdict.scope != null)
+      this.rotation.markScopeFailed(verdict.scope, verdict.scopeMs);
 
     const next = this.rotation.pick(
       openLlmCandidates(listModels(registry)),

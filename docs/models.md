@@ -54,18 +54,39 @@ See [Privacy](privacy.md).
 ## RouteLLM - Open
 
 `RouteLLM - Open` is the picker label for `openllm/auto`. It builds a pool from
-eligible models available through your Google AI Studio, OpenRouter, and
-Abacus.AI keys. It retries a failed request once, then moves the conversation to
-another eligible model. A failed model waits on a cooldown before the router
-uses it again.
+eligible models available through your keys, tried in this order:
 
-Provider-wide quota errors pause that provider tier. Model-specific errors only
-pause the failed model. The pool never moves onto a premium model merely because
-a free model failed.
+| Source | What it adds |
+| --- | --- |
+| Abacus.AI | The platform's low-cost models |
+| Google AI Studio | Gemini on the key's daily free quota |
+| Mistral | Devstral, Mistral Medium, Codestral and Mistral Small (free tier: one request a second) |
+| NVIDIA | Kimi, GLM, DeepSeek and Nemotron models served free on build.nvidia.com |
+| Cerebras | GPT-OSS 120B and Qwen 3.8 (free trial) |
+| OpenRouter | Its `:free` models |
+| Groq | GPT-OSS and Qwen. The free tier allows 8K tokens a minute, less than one agent request, so this helps only on a paid Groq plan |
+| On this machine | Local models, last |
 
-This route needs at least one eligible Abacus.AI, OpenRouter, or Google AI
-Studio connection. Connect more than one provider for fallback across
-independent quotas.
+On the free plan the model picker offers a "Connect" row for each source not
+yet connected. Every source but OpenRouter (which signs in through the browser)
+takes a pasted API key.
+
+The router keeps count of each source's published free limits (calls and
+tokens per minute and per day) and skips a model whose window is spent instead
+of waiting for the provider to refuse it. A key that keeps answering past those
+limits is on a paid tier and is no longer held back. When a provider names a
+wait ("try again in 7m12s"), the model sits out exactly that long; a spent
+daily quota waits for UTC midnight; a rejected key pauses its whole provider
+until the key changes; a retired model sits out for a day.
+
+A failed request is retried once, then the conversation moves to another
+eligible model. A model that writes its tool call as text, after the app's own
+repair has failed, also hands the turn on. Provider-wide quota errors pause
+that provider tier. Model-specific errors only pause the failed model. The pool
+never moves onto a premium model merely because a free model failed.
+
+This route needs at least one of these connections. Connect more than one
+provider for fallback across independent quotas.
 
 ## Per-session selection
 
