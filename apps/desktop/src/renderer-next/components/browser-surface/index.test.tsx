@@ -2,6 +2,8 @@ import { Store } from "@tanstack/react-store";
 import { render } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
+import { sessionConversationKey } from "#shared/conversation-scope";
+
 import { BrowserSurface } from ".";
 
 it("runtime state refreshes keep the same native candidate until its generation changes", () => {
@@ -14,7 +16,7 @@ it("runtime state refreshes keep the same native candidate until its generation 
     register: vi.fn(() => unregister),
   };
   const lease = {
-    conversationKey: "session",
+    conversationKey: sessionConversationKey("workspace", "session"),
     resourceId: "browser",
     generation: 1,
   };
