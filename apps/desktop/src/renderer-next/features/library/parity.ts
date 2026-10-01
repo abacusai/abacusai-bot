@@ -1,0 +1,130 @@
+/** Spec §2 inventory. Partial rows are explained in the implementation report. */
+export const PHASE5_PARITY = [
+  {
+    id: "LB1",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: 'Changed (PLAN "Library vs Settings")',
+  },
+  {
+    id: "LB2",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB3",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB4",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Changed (canvas)",
+  },
+  {
+    id: "LB5",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Parity (canvas layout)",
+  },
+  {
+    id: "LB6",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus:
+      "Parity; a hop now survives leaving the page (Changed, \u00a712.4 item 8)",
+  },
+  {
+    id: "LB7",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB8",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Parity + confirm",
+  },
+  {
+    id: "LB9",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB10",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity (phase 3)",
+  },
+  {
+    id: "LB11",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity (own page, F7)",
+  },
+  {
+    id: "LB12",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB13",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB14",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB15",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Parity + confirm (gap fix)",
+  },
+  {
+    id: "LB16",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Parity + URL check (gap fix)",
+  },
+  {
+    id: "LB17",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB18",
+    status: "partial",
+    target: "features/library/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "LB19",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Parity + gap fix",
+  },
+  {
+    id: "LB20",
+    status: "implemented",
+    target: "features/library/index.tsx",
+    specStatus: "Changed (canvas `SettingsEnvironment`)",
+  },
+  {
+    id: "LB21",
+    status: "retired",
+    target: "features/library/index.tsx",
+    specStatus: 'Retired (PLAN "Nuked")',
+  },
+] as const;

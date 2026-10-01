@@ -1,5 +1,11 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
+import { SoundSynthesisProbe } from "#next/components/sound-preview/probe";
+import {
+  ArtifactsPage,
+  artifactGalleryRows,
+  ArtifactsStressGallery,
+} from "#next/features/artifacts";
 import {
   useBot,
   useBotChatSlots,
@@ -13,13 +19,28 @@ import {
 } from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
+import { ConnectorsPage } from "#next/features/library";
+import {
+  Phase5GalleryNav,
+  phase5FixtureIds,
+  RoutineSidebarGallery,
+  RunReportFrame,
+} from "#next/features/routines";
+import {
+  GeneralPage,
+  ModelsPage,
+  NotificationsPage,
+  KeyboardPage,
+} from "#next/features/settings";
 
 type Replay = ReturnType<Awaited<ReturnType<typeof loadFixtureRuntime>>>;
 let replay: Replay = null;
+let reportReplay: Replay = null;
 const replayReady =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
     ? loadFixtureRuntime().then((create) => {
         replay = create("bot-golden-plain", {}, "bots-gallery");
+        reportReplay = create("bot-golden-plain", {}, "routine-gallery-report");
       })
     : null;
 const BotChatGallery = () => {
@@ -59,6 +80,7 @@ const GalleryChat = ({
 const extension = {
   Nav: (props: { fixture: string | undefined }) => (
     <>
+      <Phase5GalleryNav {...props} />
       <botsGallerySections.Nav {...props} />
       <chatGallerySections.Nav {...props} />
     </>
@@ -68,7 +90,9 @@ const extension = {
     step: number | undefined;
     play: boolean;
   }) =>
-    props.fixture === "bots-chat" ? (
+    phase5FixtureIds.some((id) => id === props.fixture) ? (
+      <Phase5View fixture={props.fixture} />
+    ) : props.fixture === "bots-chat" ? (
       <BotChatGallery />
     ) : isBotsGalleryFixture(props.fixture) ? (
       <botsGallerySections.View {...props} />
@@ -92,3 +116,41 @@ export const Route = createFileRoute("/_bare/__ui")({
   validateSearch: GallerySearch,
   component: GalleryRoute,
 });
+
+function Phase5View({ fixture }: { fixture: string }) {
+  const components: Record<string, React.ReactNode> = {
+    "routines-sidebar": <RoutineSidebarGallery />,
+    "artifacts-grid": <ArtifactsPage fixtureRows={artifactGalleryRows} />,
+    "artifacts-stress": <ArtifactsStressGallery />,
+    "sound-synthesis": <SoundSynthesisProbe />,
+    "library-connectors": <ConnectorsPage />,
+    "settings-general": <GeneralPage />,
+    "settings-models": <ModelsPage />,
+    "settings-notifications": <NotificationsPage />,
+    "settings-keyboard": <KeyboardPage />,
+    "routine-report": reportReplay ? (
+      <RunReportFrame runId="routine-gallery-report" onClose={() => {}}>
+        <ChatView
+          threadId="routine-gallery-report"
+          runtime={reportReplay.runtime}
+          skin="bot"
+          workspaceRoot={null}
+          composer={{
+            mode: "full",
+            placeholder: "",
+            attachmentsBase: null,
+            showModeChip: false,
+            model: null,
+            readOnly: { reason: "This run is read-only" },
+          }}
+          slots={{
+            decorateMessage: (m, c) => ({
+              hidden: m.role === "user" && c.index === 0,
+            }),
+          }}
+        />
+      </RunReportFrame>
+    ) : null,
+  };
+  return <div className="h-[650px]">{components[fixture]}</div>;
+}

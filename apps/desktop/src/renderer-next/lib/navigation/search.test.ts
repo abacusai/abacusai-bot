@@ -33,16 +33,18 @@ describe("search schemas", () => {
     });
     expect(
       parse(ArtifactsSearch, {
-        type: "deck",
-        from: "bots",
+        type: "file",
+        from: "bot:b",
         q: "plan",
         item: "x",
       })
     ).toEqual({
-      type: "deck",
-      from: "bots",
+      type: "file",
+      from: "bot:b",
       q: "plan",
       item: "x",
+      view: "grid",
+      sort: "newest",
     });
     expect(parse(RoutineSearch, { run: "s-1" })).toEqual({ run: "s-1" });
     expect(parse(NewSessionSearch, { workspace: "w1" })).toEqual({
@@ -50,6 +52,7 @@ describe("search schemas", () => {
     });
     expect(parse(ConnectorsSearch, { connector: "gmail" })).toEqual({
       connector: "gmail",
+      category: "featured",
     });
   });
 

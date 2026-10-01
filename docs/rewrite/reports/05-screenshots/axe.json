@@ -1,0 +1,94 @@
+[
+  {
+    "file": "routines@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "routines-new@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "-ui-fixture-routine-report@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "-ui-fixture-artifacts-grid@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "library-connectors@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "settings-general@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "settings-models@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "collapsed@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "floating@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "routines@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "routines-new@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "-ui-fixture-routine-report@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "-ui-fixture-artifacts-grid@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "library-connectors@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "settings-general@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "settings-models@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "collapsed@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "floating@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "fullscreen@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "compact-sessions-new@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "compact-bots-new@1280-light.png",
+    "violations": []
+  },
+  {
+    "file": "compact-sessions-new@1280-dark.png",
+    "violations": []
+  },
+  {
+    "file": "compact-bots-new@1280-dark.png",
+    "violations": []
+  }
+]

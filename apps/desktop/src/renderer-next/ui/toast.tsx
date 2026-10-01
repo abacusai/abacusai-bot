@@ -1,5 +1,3 @@
-"use client";
-
 import { Toast as ToastPrimitive } from "@base-ui/react/toast";
 import { cn } from "cn";
 import {
