@@ -285,6 +285,8 @@ jobs:
       # electron-builder walks dist/ and extraResources. Calling package:dir on
       # its own does neither and produces an asar with no main entry.
       - run: pnpm run build
+      - name: Reject React Compiler bailouts
+        run: pnpm --filter @abacus-ai/desktop run check:react-compiler
 
       - name: Package unpacked app
         env:
