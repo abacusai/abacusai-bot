@@ -78,7 +78,9 @@ export const OnboardingProviderKey = ({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("onboarding.pages.keyTitle")}</DialogTitle>
+            <DialogTitle>
+              {t("onboarding.setupKeyDialogTitle", { provider: field?.label })}
+            </DialogTitle>
             <DialogDescription>
               {t("onboarding.pages.keyPrivate")}
             </DialogDescription>

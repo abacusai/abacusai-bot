@@ -15,6 +15,10 @@ exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
     "id": "/_bare/__ui",
   },
   {
+    "fullPath": "/onboarding",
+    "id": "/_bare/onboarding",
+  },
+  {
     "fullPath": "/onboarding/",
     "id": "/_bare/onboarding/",
   },

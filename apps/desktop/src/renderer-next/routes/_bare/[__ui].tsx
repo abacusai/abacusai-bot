@@ -13,9 +13,9 @@ import {
 } from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
-import { NotchGallery } from "#next/features/notch/gallery";
-import { OnboardingGallery } from "#next/features/onboarding/gallery";
-import { TourGallery } from "#next/features/tour/gallery";
+import { NotchGallery } from "#next/features/notch";
+import { OnboardingGallery } from "#next/features/onboarding";
+import { TourGallery } from "#next/features/tour";
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,
@@ -66,7 +66,9 @@ const GalleryChat = ({
 const extension = {
   Nav: (props: { fixture: string | undefined }) => (
     <>
-      <div className="my-3 font-semibold">{"Phase 6" /* i18n-ignore: dev-only gallery label */}</div>
+      <div className="my-3 font-semibold">
+        {"Phase 6" /* i18n-ignore: dev-only gallery label */}
+      </div>
       {[
         ...ONBOARDING_STEPS.map((step) => `onboarding-${step}`),
         "tour",
@@ -103,8 +105,8 @@ const extension = {
       <OnboardingGallery step={props.fixture.slice(11) as OnboardingStepId} />
     ) : props.fixture.startsWith("notch-") ? (
       <NotchGallery state={props.fixture.slice(6)} />
-    ) : props.fixture === "tour" ? (
-      <TourGallery />
+    ) : props.fixture.startsWith("tour") ? (
+      <TourGallery stop={props.fixture.slice(5) || "welcome"} />
     ) : props.fixture === "bots-chat" ? (
       <BotChatGallery />
     ) : isBotsGalleryFixture(props.fixture) ? (

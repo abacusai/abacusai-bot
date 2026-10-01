@@ -46,7 +46,11 @@ import type { FilesEvent } from "#shared/contract/files";
  * the notice streams), collections over a FixtureDb, and a router on memory
  * history. `renderApp("/bots/new")` mounts it; the returned handles drive it.
  */
-import type { DefaultAgentMode, BrowserRuntimeState } from "#shared/contracts";
+import type {
+  AbacusAuthOutcome,
+  DefaultAgentMode,
+  BrowserRuntimeState,
+} from "#shared/contracts";
 
 export const SYSTEM_INFO: SystemInfo = {
   appVersion: "1.0.0",
@@ -84,6 +88,9 @@ const shellRouter = (
   const relay = fixtureRuntime("bot-golden-plain", {}, "bot-test")!.relay;
   return {
     system: {
+      funnelStep: os.system.funnelStep.handler(({ input, context }) => {
+        context.calls.push(["system.funnelStep", input]);
+      }),
       openExternal: os.system.openExternal.handler(({ input }) => {
         options.openExternal?.(input.url);
       }),
@@ -100,6 +107,7 @@ const shellRouter = (
       events: os.window.events.handler(quiet as never),
     },
     settings: {
+      keys: { listProviders: os.settings.keys.listProviders.handler(() => []) },
       events: os.settings.events.handler(quiet as never),
       get: os.settings.get.handler(() => ({ defaultModel: null }) as never),
       defaultMode: {
@@ -162,7 +170,37 @@ const shellRouter = (
       bots: os.memory.bots.handler(() => []),
       events: os.memory.events.handler(quiet as never),
     },
-    account: { abacus: os.account.abacus.handler(() => null) },
+    auth: {
+      abacus: {
+        browserProfiles: os.auth.abacus.browserProfiles.handler(() => []),
+        start: os.auth.abacus.start.handler(({ input, context }) => {
+          context.calls.push(["auth.abacus.start", input]);
+          return (
+            options.authStart?.() ?? {
+              ok: false,
+              cancelled: true,
+              error: "cancelled",
+            }
+          );
+        }),
+        cancel: os.auth.abacus.cancel.handler(({ context }) => {
+          context.calls.push(["auth.abacus.cancel", {}]);
+        }),
+      },
+    },
+    account: {
+      state: os.account.state.handler(() => ({
+        account: null,
+        apps: [],
+        onboarded: options.onboarded ?? true,
+      })),
+      abacus: os.account.abacus.handler(() => null),
+    },
+    localModels: {
+      state: os.localModels.state.handler(
+        () => ({ supported: false, installed: [], downloading: null }) as never
+      ),
+    },
     files: {
       events: os.files.events.handler(options.filesEvents ?? (quiet as never)),
     },
@@ -196,6 +234,8 @@ export const defaultSeed = (): FixtureSeed => ({
 });
 
 export interface HarnessOptions {
+  onboarded?: boolean;
+  authStart?(): Promise<AbacusAuthOutcome>;
   seed?: FixtureSeed;
   history?: RouterHistory;
   /** Runs on the FixtureDb before any collection syncs. */

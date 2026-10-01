@@ -14,9 +14,9 @@ import {
   onboardingTarget,
   finishCompletion,
 } from "#next/features/onboarding";
-import { PairingQueueBanner } from "#next/features/onboarding/pairing-banner";
+import { PairingQueueBanner } from "#next/features/onboarding";
 import { ShellLayout } from "#next/features/shell";
-import { TourHost, startTour } from "#next/features/tour";
+import { TourHost, startTour, useTourState } from "#next/features/tour";
 import { OpenTargetBridge } from "#next/lib/attention/open-target";
 import { ignoreLoadError } from "#next/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#next/lib/navigation/search";
@@ -29,6 +29,7 @@ const initialsOf = (home: string): string =>
 const ShellRoute = () => {
   const { transport, system, db, queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const tour = useTourState();
   useEffect(() => {
     const exit = db.collections.prefs.get("app")?.onboardingExit;
     if (!exit) return;
@@ -56,7 +57,7 @@ const ShellRoute = () => {
       <BotsGlobals />
       <TourHost />
       <OpenTargetBridge />
-      <PairingQueueBanner />
+      <PairingQueueBanner suppressed={tour != null} />
     </>
   );
 };

@@ -12,7 +12,6 @@ export const FUNNEL_BY_STEP: Partial<Record<OnboardingStepId, FunnelStep>> = {
   connected: "screen_welcome",
   models: "screen_models",
   connectors: "screen_connectors",
-  "first-bot": "first_bot_shown",
 };
 export const enterStep = async (
   db: Db,
@@ -32,22 +31,38 @@ export interface CompletionDeps {
   navigate(exit: OnboardingExit): Promise<void>;
   startTour(): void;
 }
-export const finishCompletion = async (
+const tails = new WeakMap<Db, Map<string, Promise<void>>>();
+export const finishCompletion = (
   deps: CompletionDeps,
   exit: OnboardingExit
 ): Promise<void> => {
-  await deps.transport.client.system.funnelStep({
-    step: "onboarding_done",
-    once: true,
-  });
-  try {
-    await deps.db.updatePrefs({ onboardingStep: null });
-  } catch (error) {
-    console.warn("[onboarding] step cleanup deferred", error);
+  let runs = tails.get(deps.db);
+  if (!runs) {
+    runs = new Map();
+    tails.set(deps.db, runs);
   }
-  await deps.navigate(exit);
-  if (exit.to === "bot-tour") deps.startTour();
-  await deps.db.updatePrefs({ onboardingExit: null });
+  const key = JSON.stringify(exit);
+  const existing = runs.get(key);
+  if (existing) return existing;
+  const work = (async () => {
+    await deps.transport.client.system.funnelStep({
+      step: "onboarding_done",
+      once: true,
+    });
+    let cleaned = true;
+    try {
+      await deps.db.updatePrefs({ onboardingStep: null });
+    } catch (error) {
+      cleaned = false;
+      console.warn("[onboarding] step cleanup deferred", error);
+    }
+    await deps.navigate(exit);
+    if (exit.to === "bot-tour") deps.startTour();
+    if (cleaned) await deps.db.updatePrefs({ onboardingExit: null });
+  })();
+  runs.set(key, work);
+  void work.catch(() => runs.delete(key));
+  return work;
 };
 export const completeOnboarding = async (
   deps: CompletionDeps,

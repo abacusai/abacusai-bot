@@ -97,7 +97,9 @@ describe("redirects", () => {
     ["/settings", "/settings/general"],
     ["/onboarding", "/onboarding/welcome"],
   ])("%s lands on %s", async (from, to) => {
-    harness = await renderApp(from);
+    harness = await renderApp(from, {
+      onboarded: !from.startsWith("/onboarding"),
+    });
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toBe(to)
     );

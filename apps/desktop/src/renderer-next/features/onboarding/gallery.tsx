@@ -1,10 +1,13 @@
 import { useRouter } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 
 import { useDb } from "#next/data/db";
 import type { OnboardingStepId } from "#next/lib/navigation/areas";
+import { Button } from "#next/ui/button";
 
 import { OnboardingFrame, OnboardingStepPage } from "./index";
 export const OnboardingGallery = ({ step }: { step: OnboardingStepId }) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { transport } = router.options.context;
   const db = useDb();
@@ -20,6 +23,13 @@ export const OnboardingGallery = ({ step }: { step: OnboardingStepId }) => {
           ownsBot: false,
         }}
         preview={true}
+        addKey={<Button>{t("onboarding.pages.addKey")}</Button>}
+        localModel={
+          <div className="bg-muted flex items-center justify-between rounded-xl border p-4">
+            <span>{t("onboarding.pages.localModels")}</span>
+            <Button>{t("localModels.useLocal")}</Button>
+          </div>
+        }
         previewBot={bot ? { bot, checkInRoutineId: null } : undefined}
         navigate={async () => {}}
         signIn={() => {}}
