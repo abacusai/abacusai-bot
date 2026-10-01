@@ -1,5 +1,5 @@
 import { implement } from "@orpc/server";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
@@ -39,10 +39,14 @@ it("R5-T27 rejected install exposes Try again while downloaded and releases the 
       },
     },
   });
-  fireEvent.click(
-    await screen.findByRole("button", { name: enUS.phase5.relaunch })
+  await screen.findByRole("heading", { name: "About" });
+  const row = within(
+    document.querySelector<HTMLElement>('[data-setting-id="updates"]')!
   );
-  const retry = await screen.findByRole("button", { name: "Try again" });
+  fireEvent.click(
+    await row.findByRole("button", { name: enUS.phase5.relaunch })
+  );
+  const retry = await row.findByRole("button", { name: "Try again" });
   expect(retry.hasAttribute("disabled")).toBe(false);
   expect(screen.getByText("Couldn't install the update")).not.toBeNull();
   fireEvent.click(retry);

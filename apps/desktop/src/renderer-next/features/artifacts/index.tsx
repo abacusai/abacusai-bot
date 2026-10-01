@@ -163,6 +163,7 @@ export const ArtifactsPage = ({
     list ? 48 : 190,
     size.height
   );
+  const hasViewport = filtered.length > 0;
   useEffect(() => {
     const el = viewport.current;
     if (!el) return;
@@ -172,7 +173,7 @@ export const ArtifactsPage = ({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [filtered.length > 0]);
+  }, [hasViewport]);
   useEffect(() => {
     if (!search.item) return;
     const index = entries.findIndex(

@@ -71,6 +71,10 @@ export const LibraryGlobals = () => {
       transport,
       ({ signal }) => transport.client.settings.events({}, { signal }),
       (event) => {
+        if (event.type === "exec-backend") {
+          invalidate(transport.orpc.settings.execBackend.get.key());
+          invalidate(transport.orpc.settings.sandboxSupport.key());
+        }
         if (event.type === "credentials-changed") {
           invalidate(transport.orpc.connectors.statuses.key());
           invalidate(transport.orpc.models.list.key());

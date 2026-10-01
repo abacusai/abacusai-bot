@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
+import { adoptDraftModel } from "#next/features/chat";
 import { ModelsPage, ModelsSearch } from "#next/features/settings";
-import { TopBarSlot } from "#next/features/shell";
+import { TopBarSlot, shellStore } from "#next/features/shell";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 
 const ModelsSettingsRoute = () => {
@@ -10,6 +11,16 @@ const ModelsSettingsRoute = () => {
   const { db, transport } = Route.useRouteContext();
   const navigate = useAppNavigate();
   const adoptModel = async (target: string, model: string) => {
+    if (target.startsWith("draft:")) {
+      adoptDraftModel(target.slice(6), model);
+      const location = shellStore.state.lastLocationOutsideSettings;
+      await navigate({
+        ...location,
+        to: location.pathname,
+        transition: "settings-out",
+      } as Parameters<typeof navigate>[0]);
+      return;
+    }
     if (!target.startsWith("session:"))
       throw new Error(t("phase5.draftModelUnavailable"));
     const id = target.slice(8);

@@ -6,6 +6,8 @@
 import { useStore } from "@tanstack/react-store";
 import { useEffect, useSyncExternalStore } from "react";
 
+import "./chat-appearance.css";
+
 import { usePrefs } from "#next/data/db/prefs";
 
 import { applyTheme, DARK_QUERY, resolveTheme, themeOverride } from "./theme";

@@ -17,12 +17,22 @@ it("cold Settings buffers fires and completions until routines hydrate and retai
   const row = seed.routines![0]!;
   let release!: () => void;
   let sent = false;
+  const notify = vi.fn(async (_context: unknown) => {});
   const app = await renderApp("/settings/general", {
     seed,
     beforeRender(db) {
       release = db.routines.holdSnapshot();
     },
     procedures: {
+      settings: {
+        notifications: {
+          get: os.settings.notifications.get.handler(() => ({
+            enabled: true,
+            sound: false,
+          })),
+        },
+      },
+      system: { notify: os.system.notify.handler(notify) },
       routines: {
         events: os.routines.events.handler(async function* ({ signal }) {
           yield {
@@ -70,6 +80,19 @@ it("cold Settings buffers fires and completions until routines hydrate and retai
         threadId: "early-thread",
         botId: row.botId,
       })
+    );
+    await waitFor(() =>
+      expect(notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            metadata: {
+              kind: "routine",
+              routineId: row.id,
+              sessionId: "early-thread",
+            },
+          }),
+        })
+      )
     );
     expect(app.collections.routines.subscriberCount).toBeGreaterThan(0);
     await act(async () =>
