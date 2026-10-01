@@ -71,3 +71,5 @@ export { useThreadStore } from "./store/selectors";
 
 export { notchAcceptable } from "./kit/permissions/notch-acceptable";
 export { encodeAnswers as encodeQuestionAnswers } from "./kit/permissions/decisions";
+
+export { runErrorCopy } from "#next/lib/attention/error-copy";
