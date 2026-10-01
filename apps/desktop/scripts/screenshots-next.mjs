@@ -76,17 +76,42 @@ export const PHASE6_ROUTES = [
     "first-bot",
     "done",
   ].map((step) => `/__ui?fixture=onboarding-${step}`),
-  "/__ui?fixture=tour",
   ...[
-    "idle",
-    "working",
-    "approval",
-    "question",
-    "reply",
-    "call",
-    "done",
-    "failed",
-  ].map((state) => `/__ui?fixture=notch-${state}`),
+    "welcome",
+    "rail",
+    "make-bot",
+    "workspaces",
+    "start-session",
+    "connectors",
+    "talk",
+    "changes",
+    "preview-terminal",
+    "memory",
+    "artifacts",
+    "notch",
+  ].map((stop) => `/__ui?fixture=tour-${stop}`),
+  ...["plain", "notch", "capsule"].flatMap((mode) =>
+    [
+      "hidden",
+      "idle",
+      "working",
+      "approval",
+      "question",
+      "truncated",
+      "reply",
+      "reply-readonly",
+      "call",
+      "done",
+      "failed",
+      "several",
+      "hovered",
+      "quiet",
+      "reaction",
+    ].map(
+      (state) =>
+        `/__ui?fixture=notch-${mode === "plain" ? "" : mode + "-"}${state}`
+    )
+  ),
 ];
 export const ROUTES = option(
   "--routes",
@@ -444,6 +469,10 @@ const main = async () => {
   const scratch = mkdtempSync(join(tmpdir(), "screenshots-next-"));
   const home = join(scratch, "home");
   mkdirSync(home, { recursive: true });
+  writeFileSync(
+    join(home, "account.json"),
+    JSON.stringify({ account: null, apps: [], onboarded: true })
+  );
   const axeSource = readFileSync(
     require.resolve("axe-core/axe.min.js"),
     "utf8"
@@ -517,6 +546,23 @@ const main = async () => {
         });
         for (const route of routes) {
           await settle(cdp, route);
+          if (flag("--phase6")) {
+            const selector = route.includes("onboarding-")
+              ? `[data-onboarding-step="${route.split("onboarding-")[1]}"]`
+              : route.includes("fixture=tour")
+                ? '[data-slot="tour-spotlight"]'
+                : ".notch-shape";
+            if (
+              !(await waitFor(
+                cdp,
+                `!!document.querySelector(${JSON.stringify(selector)})`
+              ))
+            )
+              throw new Error(`phase-6 surface did not mount: ${route}`);
+            await cdp.evaluate("document.fonts.ready.then(() => true)");
+            await animationsDone(cdp);
+            await sleep(180);
+          }
           const geometry = await cdp.evaluate(`(() => {
             const pane = document.querySelector('[data-slot="pane"]')?.getBoundingClientRect();
             const identity = document.querySelector('[data-slot="topbar-identity"]')?.getBoundingClientRect();
@@ -682,7 +728,11 @@ const main = async () => {
       // page capture above has no vibrancy behind it. On macOS, capture the
       // window from the screen as well (needs Screen Recording permission;
       // recorded as skipped when the capture fails).
-      if (width === WIDTHS[0] && process.platform === "darwin") {
+      if (
+        !flag("--phase6") &&
+        width === WIDTHS[0] &&
+        process.platform === "darwin"
+      ) {
         probes.vibrancy = [];
         for (const theme of THEMES) {
           await cdp.send("Emulation.setEmulatedMedia", {
@@ -722,7 +772,7 @@ const main = async () => {
       }
 
       // Full screen (the first width only): no traffic-light reservation.
-      if (width === WIDTHS[0]) {
+      if (!flag("--phase6") && width === WIDTHS[0]) {
         await cdp.send("Emulation.setEmulatedMedia", {
           features: [{ name: "prefers-color-scheme", value: "light" }],
         });

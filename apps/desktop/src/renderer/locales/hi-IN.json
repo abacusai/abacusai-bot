@@ -1570,8 +1570,8 @@
     "welcomeConnectors": "100+ Connectors",
     "welcomeMemory": "Persistent Memory",
     "connectorsContinue": "Continue",
-    "frame.progress": "Step {{n}} of 5",
-    "frame.failed": "Something went wrong. Try again.",
+    "frame.progress": "5 में से चरण {{n}}",
+    "frame.failed": "कुछ गलत हुआ। फिर कोशिश करें।",
     "pages.connectedLabel": "Connected",
     "pages.connectLabel": "Connect",
     "pages.more": "{{count}}+ more in Settings",
@@ -1580,39 +1580,39 @@
     "pages.skip": "Not now",
     "pages.keyPrivate": "Stored on this machine only.",
     "pages.retry": "Try again",
-    "pages.connect.title": "Connecting your account",
-    "pages.connect.body": "Finish signing in in the browser window.",
-    "pages.connect.waiting": "Waiting for sign-in…",
-    "pages.connected.body": "Your account is ready. Your bot works across your models, files and tools.",
-    "pages.connected.promise1": "An open-source AI agent",
-    "pages.connected.promise2": "Powerful models, including free options",
-    "pages.connected.promise3": "Work across your tools and services",
-    "pages.connected.promise4": "Runs locally. Chat wherever you work.",
+    "pages.connect.title": "आपका खाता जोड़ा जा रहा है",
+    "pages.connect.body": "Finish signing in in your browser…",
+    "pages.connect.waiting": "Finish signing in in your browser…",
+    "pages.connected.body": "आपका खाता तैयार है। आपका बॉट आपके मॉडल, फ़ाइलों और टूल के साथ काम करता है।",
+    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
+    "pages.connected.promise2": "Access Access to free models",
+    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
+    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
     "pages.models.title": "Hook up your AI",
-    "pages.models.body": "Connect models to unlock more inside your bot.",
+    "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.title": "Connect your tools and services",
-    "pages.connectors.body": "Chat where you work.",
-    "pages.first-bot.title": "Meet your first bot",
-    "pages.first-bot.body": "A Chief of Staff to help you plan your day.",
-    "pages.done.title": "You're ready",
-    "pages.done.body": "Start a conversation or make something new.",
-    "pages.deferred": "Finish after setup",
-    "pages.removed": "This bot was removed",
-    "pages.checkIn": "Weekday check-ins at 08:00",
-    "pages.noCheckIn": "No check-ins",
-    "pages.hello": "Say hello",
-    "pages.scratch": "Start from scratch",
-    "pages.message": "Message {{name}}",
-    "pages.addKey": "Add API key",
-    "pages.keyTitle": "Connect Gemini",
-    "pages.openGemini": "Open Google AI Studio",
-    "pages.pairing": "Finish connecting {{platform}}",
-    "pages.finishPairing": "Finish connecting",
-    "pages.localModels": "Local models",
-    "pages.localDetails": "Use a model running on this machine."
+    "pages.connectors.title": "Connect with your tools & services",
+    "pages.connectors.body": "Chat where you work",
+    "pages.first-bot.title": "अपने पहले बॉट से मिलें",
+    "pages.first-bot.body": "मेल, कैलेंडर और Slack में आपका दिन संभालता है और फ़ैसलों के लिए आपसे पूछता है।",
+    "pages.done.title": "आप तैयार हैं",
+    "pages.done.body": "बातचीत शुरू करें या कुछ नया बनाएँ।",
+    "pages.deferred": "सेटअप के बाद पूरा करें",
+    "pages.removed": "यह बॉट हटा दिया गया है",
+    "pages.checkIn": "कामकाजी दिनों में 08:00 बजे अपडेट",
+    "pages.noCheckIn": "कोई तय अपडेट नहीं",
+    "pages.hello": "नमस्ते कहें",
+    "pages.scratch": "शुरुआत से बनाएँ",
+    "pages.message": "{{name}} को संदेश",
+    "pages.addKey": "API कुंजी जोड़ें",
+    "pages.keyTitle": "Go to {{provider}} and get your API key",
+    "pages.openGemini": "Open provider site",
+    "pages.pairing": "{{platform}} से कनेक्शन पूरा करें",
+    "pages.finishPairing": "कनेक्शन पूरा करें",
+    "pages.localModels": "Use a local model",
+    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out."
   },
   "openFile": {
     "failed": "वह फ़ाइल नहीं खोली जा सकी।",
@@ -2049,7 +2049,7 @@
         "body": "आपके वर्कस्पेस में असली शेल, उसी फ़ोल्डर में जिसमें एजेंट काम करता है। टाइटल बार का टर्मिनल बटन इसे दिखाता और छिपाता है।"
       },
       "memory": {
-        "title": "मेमोरी",
+        "title": "Memory",
         "body": "एजेंट सेशनों के बीच क्या याद रखता है और किन स्थायी निर्देशों पर चलता है। पढ़िए, बदलिए, और जो पुराना पड़ गया उसे हटाइए।"
       },
       "artifacts": {
@@ -2057,16 +2057,16 @@
         "body": "सेशन में बनी फ़ाइलें (दस्तावेज़, इमेज, रिपोर्ट) बातचीत में बिखरी रहने के बजाय एक जगह इकट्ठी।"
       },
       "welcome": {
-        "title": "Welcome to AbacusAI Bot",
-        "body": "A quick lap around the window. {{n}} stops; leave at any time."
+        "title": "AbacusAI Bot में आपका स्वागत है",
+        "body": "विंडो का छोटा परिचय। {{n}} पड़ाव; आप कभी भी बाहर निकल सकते हैं।"
       },
       "talk": {
-        "title": "Talk to your bot",
-        "body": "Give your bot a task here. It can ask questions and show its work."
+        "title": "अपने बॉट से बात करें",
+        "body": "यहाँ अपने बॉट को काम दें। वह सवाल पूछ सकता है और अपना काम दिखा सकता है।"
       },
       "notch": {
-        "title": "Your companion",
-        "body": "Replies and approvals can appear above your workspace. Open the app for the full conversation."
+        "title": "आपका साथी",
+        "body": "जवाब और मंज़ूरी के अनुरोध आपके कार्यक्षेत्र के ऊपर दिख सकते हैं। पूरी बातचीत के लिए ऐप खोलें।"
       }
     }
   },
@@ -2681,23 +2681,23 @@
     },
     "general": {
       "notch": {
-        "title": "Notch companion",
-        "description": "Live status, replies and approvals from the notch",
-        "windowsDescription": "Live status, replies and approvals from a capsule by the clock",
-        "failed": "The notch companion couldn't start.",
-        "metricsUnavailable": "The notch companion couldn't measure this screen.",
-        "retry": "Try again",
-        "idle": "Show when idle",
-        "displays": "On every display",
-        "haptics": "Haptics",
-        "shortcut": "Shortcut",
-        "shortcutUnavailable": "In use by another app"
+        "title": "नॉच साथी",
+        "description": "नॉच में स्थिति, जवाब और अनुमतियाँ",
+        "windowsDescription": "घड़ी के पास स्थिति, जवाब और अनुमतियाँ",
+        "failed": "साथी शुरू नहीं हो सका।",
+        "metricsUnavailable": "इस स्क्रीन का माप नहीं लिया जा सका।",
+        "retry": "फिर कोशिश करें",
+        "idle": "निष्क्रिय होने पर दिखाएँ",
+        "displays": "हर स्क्रीन पर",
+        "haptics": "हैप्टिक प्रतिक्रिया",
+        "shortcut": "शॉर्टकट",
+        "shortcutUnavailable": "दूसरा ऐप इस्तेमाल कर रहा है"
       }
     },
     "notifications": {
       "showInNotch": {
-        "title": "Show in the notch",
-        "description": "Replies and approvals appear in the notch companion"
+        "title": "नॉच में दिखाएँ",
+        "description": "जवाब और अनुमतियाँ नॉच साथी में दिखती हैं"
       }
     }
   },
@@ -2778,7 +2778,8 @@
       "label": "त्रुटि",
       "open": "Open",
       "retry": "पुनः प्रयास करें",
-      "switchModel": "Switch model"
+      "switchModel": "Switch model",
+      "rateLimited": "अनुरोध सीमा पूरी हो गई"
     },
     "message": {
       "credits_one": "Used {{count}} credit",
@@ -2986,51 +2987,51 @@
   },
   "notch": {
     "a11y": {
-      "region": "Companion"
+      "region": "साथी"
     },
     "actions": {
-      "open": "Open in app",
-      "message": "Message",
-      "call": "Call",
+      "open": "ऐप में खोलें",
+      "message": "संदेश",
+      "call": "बात करें",
       "pause": "Pause check-ins",
       "resume": "Resume check-ins"
     },
     "wings": {
-      "idle": "Ready when you are",
-      "question": "A quick question",
+      "idle": "आपके तैयार होते ही तैयार",
+      "question": "एक छोटा सवाल",
       "approval": "Needs you",
-      "connector-ask": "Connect a tool",
-      "failed": "That did not work",
-      "working": "Working on it",
-      "reply": "A reply for you",
-      "done": "All done"
+      "connector-ask": "टूल जोड़ें",
+      "failed": "कुछ गलत हो गया",
+      "working": "काम चल रहा है",
+      "reply": "आपके लिए जवाब",
+      "done": "सब पूरा"
     },
     "approval": {
-      "answerInApp": "Answer in app",
+      "answerInApp": "ऐप में जवाब दें",
       "notNow": "Not now",
-      "reviewOnly": "Review this request in the app.",
-      "review": "Review",
-      "noResponse": "Couldn't send your response. Try again."
+      "reviewOnly": "इस अनुरोध की ऐप में समीक्षा करें।",
+      "review": "समीक्षा",
+      "noResponse": "No response from the agent. Try again."
     },
     "reply": {
-      "placeholder": "Reply…",
-      "failed": "Couldn't send. Your reply is still here.",
-      "openFailed": "Couldn't open the chat"
+      "placeholder": "जवाब दें…",
+      "failed": "भेजा नहीं जा सका। आपका जवाब यहीं है।",
+      "openFailed": "चैट नहीं खोली जा सकी"
     },
     "quiet": {
-      "until": "Quiet until {{time}}"
+      "until": "{{time}} तक शांत"
     },
     "listening": {
-      "end": "End",
-      "title": "Listening…",
+      "end": "समाप्त करें",
+      "title": "सुन रहे हैं…",
       "transcribing": "Transcribing…",
-      "error": "Couldn't use the microphone. Check permission in System Settings → Privacy."
+      "error": "Microphone access was denied. Allow it in system settings."
     },
     "done": {
-      "title": "Finished"
+      "title": "पूरा"
     },
     "failed": {
-      "title": "Something went wrong"
+      "title": "कुछ गलत हो गया"
     }
   }
 }

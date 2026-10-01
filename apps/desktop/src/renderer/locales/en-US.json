@@ -2778,7 +2778,8 @@
       "label": "Error",
       "open": "Open",
       "retry": "Retry",
-      "switchModel": "Switch model"
+      "switchModel": "Switch model",
+      "rateLimited": "Rate limited"
     },
     "message": {
       "credits_one": "Used {{count}} credit",

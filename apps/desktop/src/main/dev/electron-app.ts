@@ -121,6 +121,10 @@ export const launch = async (options: {
   const scratch = mkdtempSync(join(tmpdir(), "chat-accept-"));
   const home = join(scratch, "home");
   mkdirSync(home, { recursive: true });
+  writeFileSync(
+    join(home, "account.json"),
+    JSON.stringify({ account: null, apps: [], onboarded: true })
+  );
   options.prepareHome?.(home);
   const electron = createRequire(import.meta.url)(
     "electron"

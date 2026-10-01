@@ -1570,8 +1570,8 @@
     "welcomeConnectors": "100+ Connectors",
     "welcomeMemory": "Persistent Memory",
     "connectorsContinue": "Continue",
-    "frame.progress": "Step {{n}} of 5",
-    "frame.failed": "Something went wrong. Try again.",
+    "frame.progress": "Etapa {{n}} de 5",
+    "frame.failed": "Algo deu errado. Tente novamente.",
     "pages.connectedLabel": "Connected",
     "pages.connectLabel": "Connect",
     "pages.more": "{{count}}+ more in Settings",
@@ -1580,39 +1580,39 @@
     "pages.skip": "Not now",
     "pages.keyPrivate": "Stored on this machine only.",
     "pages.retry": "Try again",
-    "pages.connect.title": "Connecting your account",
-    "pages.connect.body": "Finish signing in in the browser window.",
-    "pages.connect.waiting": "Waiting for sign-in…",
-    "pages.connected.body": "Your account is ready. Your bot works across your models, files and tools.",
-    "pages.connected.promise1": "An open-source AI agent",
-    "pages.connected.promise2": "Powerful models, including free options",
-    "pages.connected.promise3": "Work across your tools and services",
-    "pages.connected.promise4": "Runs locally. Chat wherever you work.",
+    "pages.connect.title": "Conectando sua conta",
+    "pages.connect.body": "Finish signing in in your browser…",
+    "pages.connect.waiting": "Finish signing in in your browser…",
+    "pages.connected.body": "Sua conta está pronta. Seu bot trabalha com seus modelos, arquivos e ferramentas.",
+    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
+    "pages.connected.promise2": "Access Access to free models",
+    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
+    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
     "pages.models.title": "Hook up your AI",
-    "pages.models.body": "Connect models to unlock more inside your bot.",
+    "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.title": "Connect your tools and services",
-    "pages.connectors.body": "Chat where you work.",
-    "pages.first-bot.title": "Meet your first bot",
-    "pages.first-bot.body": "A Chief of Staff to help you plan your day.",
-    "pages.done.title": "You're ready",
-    "pages.done.body": "Start a conversation or make something new.",
-    "pages.deferred": "Finish after setup",
-    "pages.removed": "This bot was removed",
-    "pages.checkIn": "Weekday check-ins at 08:00",
-    "pages.noCheckIn": "No check-ins",
-    "pages.hello": "Say hello",
-    "pages.scratch": "Start from scratch",
-    "pages.message": "Message {{name}}",
-    "pages.addKey": "Add API key",
-    "pages.keyTitle": "Connect Gemini",
-    "pages.openGemini": "Open Google AI Studio",
-    "pages.pairing": "Finish connecting {{platform}}",
-    "pages.finishPairing": "Finish connecting",
-    "pages.localModels": "Local models",
-    "pages.localDetails": "Use a model running on this machine."
+    "pages.connectors.title": "Connect with your tools & services",
+    "pages.connectors.body": "Chat where you work",
+    "pages.first-bot.title": "Conheça seu primeiro bot",
+    "pages.first-bot.body": "Organiza seu dia entre e-mail, agenda e Slack, e envolve você nas decisões.",
+    "pages.done.title": "Tudo pronto",
+    "pages.done.body": "Inicie uma conversa ou crie algo novo.",
+    "pages.deferred": "Concluir após a configuração",
+    "pages.removed": "Este bot foi removido",
+    "pages.checkIn": "Acompanhamentos em dias úteis às 08:00",
+    "pages.noCheckIn": "Sem acompanhamentos",
+    "pages.hello": "Diga olá",
+    "pages.scratch": "Começar do zero",
+    "pages.message": "Mensagem para {{name}}",
+    "pages.addKey": "Adicionar chave API",
+    "pages.keyTitle": "Go to {{provider}} and get your API key",
+    "pages.openGemini": "Open provider site",
+    "pages.pairing": "Concluir a conexão com {{platform}}",
+    "pages.finishPairing": "Concluir a conexão",
+    "pages.localModels": "Use a local model",
+    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out."
   },
   "openFile": {
     "failed": "Não foi possível abrir esse arquivo.",
@@ -2049,7 +2049,7 @@
         "body": "Um shell de verdade no seu workspace, na mesma pasta em que o agente trabalha. O botão de terminal na barra de título mostra e esconde."
       },
       "memory": {
-        "title": "Memória",
+        "title": "Memory",
         "body": "O que o agente leva de uma sessão para a outra e as instruções fixas que ele segue. Leia, edite e apague o que ficou velho."
       },
       "artifacts": {
@@ -2057,16 +2057,16 @@
         "body": "Os arquivos que uma sessão produziu (documentos, imagens, relatórios) reunidos num lugar só, em vez de espalhados pela conversa."
       },
       "welcome": {
-        "title": "Welcome to AbacusAI Bot",
-        "body": "A quick lap around the window. {{n}} stops; leave at any time."
+        "title": "Boas-vindas ao AbacusAI Bot",
+        "body": "Um passeio rápido pela janela. {{n}} paradas; saia quando quiser."
       },
       "talk": {
-        "title": "Talk to your bot",
-        "body": "Give your bot a task here. It can ask questions and show its work."
+        "title": "Fale com seu bot",
+        "body": "Dê uma tarefa ao seu bot aqui. Ele pode fazer perguntas e mostrar seu trabalho."
       },
       "notch": {
-        "title": "Your companion",
-        "body": "Replies and approvals can appear above your workspace. Open the app for the full conversation."
+        "title": "Seu companheiro",
+        "body": "Respostas e aprovações podem aparecer acima do seu espaço de trabalho. Abra o aplicativo para ver toda a conversa."
       }
     }
   },
@@ -2681,23 +2681,23 @@
     },
     "general": {
       "notch": {
-        "title": "Notch companion",
-        "description": "Live status, replies and approvals from the notch",
-        "windowsDescription": "Live status, replies and approvals from a capsule by the clock",
-        "failed": "The notch companion couldn't start.",
-        "metricsUnavailable": "The notch companion couldn't measure this screen.",
-        "retry": "Try again",
-        "idle": "Show when idle",
-        "displays": "On every display",
-        "haptics": "Haptics",
-        "shortcut": "Shortcut",
-        "shortcutUnavailable": "In use by another app"
+        "title": "Companheiro do recorte",
+        "description": "Status, respostas e aprovações no recorte",
+        "windowsDescription": "Status, respostas e aprovações ao lado do relógio",
+        "failed": "Não foi possível iniciar o companheiro.",
+        "metricsUnavailable": "Não foi possível medir esta tela.",
+        "retry": "Tentar novamente",
+        "idle": "Mostrar quando ocioso",
+        "displays": "Em todas as telas",
+        "haptics": "Resposta háptica",
+        "shortcut": "Atalho",
+        "shortcutUnavailable": "Em uso por outro aplicativo"
       }
     },
     "notifications": {
       "showInNotch": {
-        "title": "Show in the notch",
-        "description": "Replies and approvals appear in the notch companion"
+        "title": "Mostrar no recorte",
+        "description": "Respostas e aprovações aparecem no companheiro"
       }
     }
   },
@@ -2778,7 +2778,8 @@
       "label": "Erro",
       "open": "Open",
       "retry": "Tentar novamente",
-      "switchModel": "Switch model"
+      "switchModel": "Switch model",
+      "rateLimited": "Limite de solicitações atingido"
     },
     "message": {
       "credits_one": "Used {{count}} credit",
@@ -2986,51 +2987,51 @@
   },
   "notch": {
     "a11y": {
-      "region": "Companion"
+      "region": "Companheiro"
     },
     "actions": {
-      "open": "Open in app",
-      "message": "Message",
-      "call": "Call",
+      "open": "Abrir no aplicativo",
+      "message": "Mensagem",
+      "call": "Falar",
       "pause": "Pause check-ins",
       "resume": "Resume check-ins"
     },
     "wings": {
-      "idle": "Ready when you are",
-      "question": "A quick question",
+      "idle": "Pronto quando você estiver",
+      "question": "Uma pergunta rápida",
       "approval": "Needs you",
-      "connector-ask": "Connect a tool",
-      "failed": "That did not work",
-      "working": "Working on it",
-      "reply": "A reply for you",
-      "done": "All done"
+      "connector-ask": "Conectar uma ferramenta",
+      "failed": "Algo deu errado",
+      "working": "Trabalhando nisso",
+      "reply": "Uma resposta para você",
+      "done": "Tudo concluído"
     },
     "approval": {
-      "answerInApp": "Answer in app",
+      "answerInApp": "Responder no aplicativo",
       "notNow": "Not now",
-      "reviewOnly": "Review this request in the app.",
-      "review": "Review",
-      "noResponse": "Couldn't send your response. Try again."
+      "reviewOnly": "Revise esta solicitação no aplicativo.",
+      "review": "Revisar",
+      "noResponse": "No response from the agent. Try again."
     },
     "reply": {
-      "placeholder": "Reply…",
-      "failed": "Couldn't send. Your reply is still here.",
-      "openFailed": "Couldn't open the chat"
+      "placeholder": "Responder…",
+      "failed": "Não foi possível enviar. Sua resposta continua aqui.",
+      "openFailed": "Não foi possível abrir o chat"
     },
     "quiet": {
-      "until": "Quiet until {{time}}"
+      "until": "Silencioso até {{time}}"
     },
     "listening": {
-      "end": "End",
-      "title": "Listening…",
+      "end": "Encerrar",
+      "title": "Ouvindo…",
       "transcribing": "Transcribing…",
-      "error": "Couldn't use the microphone. Check permission in System Settings → Privacy."
+      "error": "Microphone access was denied. Allow it in system settings."
     },
     "done": {
-      "title": "Finished"
+      "title": "Concluído"
     },
     "failed": {
-      "title": "Something went wrong"
+      "title": "Algo deu errado"
     }
   }
 }
