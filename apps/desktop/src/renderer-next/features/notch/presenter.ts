@@ -24,6 +24,7 @@ export interface Attention {
   runId?: string;
   botId: string | null;
   canReply?: boolean;
+  snoozed?: boolean;
 }
 export interface NotchInputs {
   now?: number;
@@ -101,16 +102,15 @@ export const presentNotch = (
       const key = summary
         ? `${session.id}:${summary.incarnation}:${summary.oldestAt}`
         : session.id;
-      if (!inputs.snoozed.has(key))
-        add({
-          kind: summary?.questions ? "question" : "approval",
-          sessionId: session.id,
-          since:
-            summary?.oldestAt ??
-            (Date.parse(session.turn?.updatedAt ?? "") || 0),
-          botId,
-          descriptorId: key,
-        });
+      add({
+        snoozed: inputs.snoozed.has(key),
+        kind: summary?.questions ? "question" : "approval",
+        sessionId: session.id,
+        since:
+          summary?.oldestAt ?? (Date.parse(session.turn?.updatedAt ?? "") || 0),
+        botId,
+        descriptorId: key,
+      });
     } else if (session.turn?.isBusy)
       add({
         kind: "working",
@@ -121,9 +121,10 @@ export const presentNotch = (
   }
   for (const ask of inputs.asks) {
     const s = byId.get(ask.sessionId);
-    if (s && !inputs.snoozed.has(ask.id))
+    if (s)
       add({
         kind: "connector-ask",
+        snoozed: inputs.snoozed.has(ask.id),
         sessionId: s.id,
         since: ask.since,
         botId: botForSession(s, inputs.routines),
@@ -166,7 +167,7 @@ export const presentNotch = (
       a.since - b.since ||
       a.sessionId.localeCompare(b.sessionId)
   );
-  const attention = queue[0] ?? null;
+  const attention = queue.find((item) => !item.snoozed) ?? null;
   const quiet = isQuietNow(inputs.prefs.sounds.quietHours, new Date(now));
   const calm = inputs.mainFocused || quiet;
   const route =
@@ -218,7 +219,7 @@ export const presentNotch = (
     sessionId: attention?.sessionId ?? null,
     identity: `${route}:${attention?.sessionId ?? ""}:${attention?.descriptorId ?? attention?.runId ?? ""}`,
     faces,
-    remaining: Math.max(0, queue.length - 1),
+    remaining: Math.max(0, queue.length - (attention ? 1 : 0)),
     expanded,
     hidden:
       (!inputs.bots.length && !queue.length) ||
