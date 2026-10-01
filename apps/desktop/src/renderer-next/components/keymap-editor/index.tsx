@@ -6,7 +6,6 @@ import {
   validateHotkey,
 } from "@tanstack/hotkeys";
 import { useHotkeyRecorder } from "@tanstack/react-hotkeys";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,7 +14,6 @@ import {
   GroupCard,
   SettingRow,
 } from "#next/components/form-kit/page";
-import { usePrefs, useUpdatePrefs } from "#next/data/db/prefs";
 import {
   APP_ACTIONS,
   bindingIds,
@@ -23,9 +21,8 @@ import {
   SYSTEM_BINDINGS,
   TERMINAL_RESERVED,
 } from "#next/lib/keyboard/actions";
-import { toHotkeyPlatform, type HotkeyPlatform } from "#next/lib/platform";
+import { type HotkeyPlatform } from "#next/lib/platform";
 import { showError } from "#next/lib/toast";
-import { useAppContext } from "#next/lib/use-app-context";
 import { Button } from "#next/ui/button";
 import {
   Dialog,
@@ -69,13 +66,16 @@ export const bindingConflict = (
   }
   return null;
 };
-export const KeymapEditor = () => {
+export const KeymapEditor = ({
+  keymap,
+  platform,
+  onUpdate: update,
+}: {
+  keymap: Record<string, string | null>;
+  platform: HotkeyPlatform;
+  onUpdate(patch: { keymap: Record<string, string | null> }): Promise<unknown>;
+}) => {
   const { t } = useTranslation();
-  const { transport } = useAppContext();
-  const info = useQuery(transport.orpc.system.info.queryOptions({ input: {} }));
-  const platform = toHotkeyPlatform(info.data?.platform ?? "darwin");
-  const prefs = usePrefs();
-  const update = useUpdatePrefs();
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<{
@@ -84,10 +84,10 @@ export const KeymapEditor = () => {
     rebindable: boolean;
     description?: string;
   } | null>(null);
-  const resolved = resolveKeymap(prefs.keymap, platform);
+  const resolved = resolveKeymap(keymap, platform);
   const save = async (id: string, candidate: string, remove?: string) => {
     const map = {
-      ...prefs.keymap,
+      ...keymap,
       [id]: candidate,
       ...(remove ? { [remove]: null } : {}),
     };
@@ -121,7 +121,7 @@ export const KeymapEditor = () => {
       const conflict = bindingConflict(
         editing,
         candidate,
-        prefs.keymap ?? {},
+        keymap ?? {},
         platform
       );
       if (conflict) {
@@ -204,19 +204,19 @@ export const KeymapEditor = () => {
                       variant="ghost"
                       onClick={() =>
                         void update({
-                          keymap: { ...prefs.keymap, [id]: null },
+                          keymap: { ...keymap, [id]: null },
                         }).catch(() => showError(t("phase5.saveFailed")))
                       }
                     >
                       {t("phase5.unbind")}
                     </Button>
                   )}
-                  {Object.hasOwn(prefs.keymap ?? {}, id) && (
+                  {Object.hasOwn(keymap ?? {}, id) && (
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        const map = { ...prefs.keymap };
+                        const map = { ...keymap };
                         delete map[id];
                         void update({ keymap: map }).catch(() =>
                           showError(t("phase5.saveFailed"))
