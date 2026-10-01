@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -10,12 +9,17 @@ import { gzipSync } from "node:zlib";
 import { extractFile } from "@electron/asar";
 
 import { launch } from "./cdp.mjs";
-import { validatePerfProducer, publicProducer } from "./perf-home.mjs";
+import {
+  validatePerfProducer,
+  publicProducer,
+  copyPerfHome,
+} from "./perf-home.mjs";
 import {
   probeSource,
   clickLongThreadSource,
   summarize,
 } from "./perf-probes.mjs";
+import { processTree } from "./perf-processes.mjs";
 
 const { values } = parseArgs({
   options: {
@@ -26,6 +30,7 @@ const { values } = parseArgs({
     "new-home": { type: "string" },
     "new-producer": { type: "string" },
     out: { type: "string" },
+    pairs: { type: "string", default: "7" },
     "m6-diagnostic": { type: "boolean", default: false },
   },
 });
@@ -35,6 +40,11 @@ if (!values.old || !values.new || !values.out)
   );
 if (fs.existsSync(values.out))
   throw new Error("Measurement reports are immutable; choose a new --out");
+const pairs = Number(values.pairs);
+if (!Number.isInteger(pairs) || pairs < 4)
+  throw new Error(
+    "At least four pairs are required: one warm-up and three retained pairs"
+  );
 const diagnostic = values["m6-diagnostic"];
 const producer = values.producer
   ? JSON.parse(fs.readFileSync(values.producer, "utf8"))
@@ -121,98 +131,18 @@ const resourceBytes = (executable, resources, paintAt) => {
     throw new Error("M6 has no observed JS/CSS resources before FCP");
   return { gzipBytes: bytes, resources: files };
 };
-const processTree = (pid) => {
-  const rows =
-    process.platform === "win32"
-      ? JSON.parse(
-          execFileSync(
-            "powershell.exe",
-            [
-              "-NoProfile",
-              "-Command",
-              "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,WorkingSetSize,CommandLine | ConvertTo-Json -Compress",
-            ],
-            { encoding: "utf8" }
-          )
-        ).map((row) => ({
-          pid: row.ProcessId,
-          parent: row.ParentProcessId,
-          rssBytes: Number(row.WorkingSetSize),
-          command: row.CommandLine ?? "",
-        }))
-      : execFileSync("ps", ["-axo", "pid=,ppid=,rss=,command="], {
-          encoding: "utf8",
-        })
-          .trim()
-          .split("\n")
-          .map((line) => {
-            const [, pid, parent, rss, command] =
-              line.match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/) ?? [];
-            return {
-              pid: Number(pid),
-              parent: Number(parent),
-              rssBytes: Number(rss) * 1024,
-              command,
-            };
-          });
-  const included = new Set([pid]),
-    excluded = new Set();
-  for (let i = 0; i < rows.length; i++)
-    for (const row of rows) {
-      if (
-        excluded.has(row.parent) ||
-        /(?:[/\\]agent[/\\]|--thread-id)/.test(row.command)
-      )
-        excluded.add(row.pid);
-      else if (included.has(row.parent)) included.add(row.pid);
-    }
-  const processes = rows.filter(
-    (r) => included.has(r.pid) && !excluded.has(r.pid)
-  );
-  return {
-    rssBytes: processes.reduce((sum, r) => sum + r.rssBytes, 0),
-    processes,
-    companionRssBytes: null,
-  };
-};
 async function run(name, pair) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cutover-perf-"));
-  fs.chmodSync(root, 0o700);
-  const home = path.join(root, "home");
-  fs.mkdirSync(home);
+  const sourceHome = name === "new" ? values["new-home"] : values.home;
+  const manifest = name === "new" ? candidateProducer : producer;
+  const copy = copyPerfHome(
+    sourceHome,
+    manifest?.files ?? {},
+    producer?.provenance
+  );
+  const { home } = copy;
   let app;
   let run;
   try {
-    const sourceHome = name === "new" ? values["new-home"] : values.home;
-    const manifest = name === "new" ? candidateProducer : producer;
-    if (sourceHome) {
-      if (!manifest?.files)
-        throw new Error("A supplied home requires its file manifest");
-      for (const [relative, expectedHash] of Object.entries(manifest.files)) {
-        if (path.isAbsolute(relative) || relative.split(/[\\/]/).includes(".."))
-          throw new Error("Unsafe fixture path");
-        const source = path.resolve(sourceHome, relative);
-        if (
-          fs.lstatSync(source).isSymbolicLink() ||
-          hash(source) !== expectedHash
-        )
-          throw new Error(`Fixture hash mismatch: ${relative}`);
-        const target = path.join(home, relative);
-        fs.mkdirSync(path.dirname(target), { recursive: true });
-        fs.copyFileSync(source, target);
-      }
-    }
-    fs.writeFileSync(
-      path.join(
-        home,
-        producer?.provenance === "user-login"
-          ? ".user-login-cutover-copy"
-          : ".synthetic-cutover-home"
-      ),
-      producer?.provenance === "user-login"
-        ? "Private user-login scratch copy; not source-generated\n"
-        : "Synthetic comparative measurement\n"
-    );
     const log = path.resolve(
       path.dirname(values.out),
       `perf-${name}-${pair}.log`
@@ -241,6 +171,7 @@ async function run(name, pair) {
       build: name,
       pair,
       discarded: pair === 0,
+      initialRoute: state.initialRoute,
       M2: state.paintAt - app.spawnedAt,
       M6: resourceBytes(
         values[name],
@@ -283,13 +214,13 @@ async function run(name, pair) {
       app?.cdp.close();
       await app?.stop();
     } finally {
-      fs.rmSync(root, { recursive: true, force: true });
+      copy.dispose();
     }
   }
 }
 fs.mkdirSync(path.dirname(path.resolve(values.out)), { recursive: true });
 try {
-  for (let pair = 0; pair < 7; pair++)
+  for (let pair = 0; pair < pairs; pair++)
     for (const name of ["old", "new"]) await run(name, pair);
   for (const metric of diagnostic
     ? ["M6"]

@@ -20,7 +20,6 @@ import {
   emptySyncState,
   syncStateFromCount,
   syncTranscriptWithRetry,
-  shouldSync,
   type SyncDeps,
   type SyncState,
 } from "./debug-sync.core";
@@ -47,6 +46,9 @@ export class DebugSyncService {
   private readonly readTranscript: (id: string) => StoredTranscript | null;
   private readonly clientVersion: string;
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  private readonly pending = new Set<string>();
+  private backgroundUploads = 0;
+  private swept = false;
   private readonly inFlight = new Set<string>();
   /** sessionId -> what the server holds; a bare count is an older marker. */
   private markers: Record<string, SyncState | number> = {};
@@ -72,14 +74,16 @@ export class DebugSyncService {
       sessionId,
       setTimeout(() => {
         this.timers.delete(sessionId);
-        void this.run(sessionId);
+        this.pending.add(sessionId);
+        this.pump();
       }, DEBOUNCE_MS)
     );
   }
 
   /** Upload anything past its marker: offline turns, crashes. Best-effort. */
   sweepOnStartup(): void {
-    if (!this.enabled()) return;
+    if (this.swept || !this.enabled()) return;
+    this.swept = true;
     // v1 transcripts, and AG-UI threads that have none (spec 03 §24.12).
     const ids = new Set<string>();
     for (const dir of [TRANSCRIPTS_DIR(), THREADS_DIR()]) {
@@ -90,11 +94,31 @@ export class DebugSyncService {
         // No such directory yet.
       }
     }
-    for (const sessionId of ids) {
-      const transcript = this.readTranscript(sessionId);
-      if (shouldSync(transcript, this.syncState(sessionId)))
-        this.enqueue(sessionId);
+    for (const sessionId of ids) this.pending.add(sessionId);
+    this.pump();
+  }
+
+  /** Bound startup uploads so thousands of histories cannot block IPC. */
+  private pump(): void {
+    if (this.backgroundUploads >= 2 || this.pending.size === 0) return;
+    if (!this.enabled()) {
+      this.pending.clear();
+      return;
     }
+    const sessionId = this.pending.values().next().value!;
+    this.pending.delete(sessionId);
+    this.backgroundUploads++;
+    setImmediate(() => {
+      void this.run(sessionId)
+        .catch((error: unknown) =>
+          console.warn("[debug-sync] catch-up failed", error)
+        )
+        .finally(() => {
+          this.backgroundUploads--;
+          this.pump();
+        });
+    });
+    this.pump();
   }
 
   private enabled(): boolean {
@@ -163,6 +187,7 @@ export class DebugSyncService {
       clearTimeout(pending);
       this.timers.delete(sessionId);
     }
+    this.pending.delete(sessionId);
     await this.run(sessionId);
   }
 
@@ -172,8 +197,7 @@ export class DebugSyncService {
       this.enqueue(sessionId);
       return;
     }
-    const current = this.readTranscript(sessionId);
-    if (!shouldSync(current, this.syncState(sessionId))) return;
+    if (!this.enabled()) return;
 
     this.inFlight.add(sessionId);
     try {

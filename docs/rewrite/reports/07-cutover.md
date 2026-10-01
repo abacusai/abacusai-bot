@@ -255,3 +255,31 @@ Final validation repairs are included in C14: stale source aliases and transport
 5. Design ownership of the 512 MB fallback ceiling and the “too large” notice.
 
 Signed/notarized macOS, signed Windows upgrade/scaling/taskbar/uninstall, Linux packaged/native-frame checks, physical notch/external-display geometry, microphone/TCC and recorded R6-T31 haptics (<150 ms) remain gaps. Packaged fresh-install and feature demonstrations, complete immutable shipped-source migration fixtures, Windows reference and Linux performance evidence, wrong-theme frames and separate companion RSS remain gaps. The historical M1/M3/M6 numeric failures are unchanged. CSP narrowing and heap-limit reduction still need packaged evidence; webview removal remains conditional on replacing FilePreview's active consumer. The Electron timing and dependency-audit failures above prevent a green release gate. Release-manager go is still required.
+
+
+## Performance pass, 1 October 2026
+
+These observations supersede the historical route-mismatched M1 comparison. Each measurement uses one warm-up pair and three retained alternating pairs on hash-checked private copies of the logged-in source workload. The original home is never launched or modified. Both builds now open Fixture session 01, require its final synthetic message and focus its composer. The selected routes agree. The 1,000-message session remains the common M5 workload. Profiles, logs, private manifests and account files remain outside the repository.
+
+### Goal 1: startup and probe comparability
+
+The historical M1 comparison opened a regular short session in v1.0.85 and a new bot-owned chat in the candidate. Opening the bot includes session creation, model selection, agent readiness and kickstart. It was not the same startup workload. The corrected baseline measures 1,951.200 ms old versus 1,860.900 ms candidate, with a candidate p90 of 5,518.800 ms. [Comparable baseline samples](07-perf-comparable-valid.json) replace that M1 comparison; the historical 6,478.800 ms remains a record of the earlier probe.
+
+A main-process CPU profile taken before module evaluation found synchronous debug-sync history reads and an upload/retry burst. Of 4.666 seconds of sampled main work in a migrated-home diagnostic, `readFileUtf8` accounted for 1,225 ms. Its callers included the startup sweep and concurrent debug-sync attempts over the 2,000-history workload. The inspector perturbs timing, so these CPU samples explain work rather than establish M1 acceptance. Migration was measured in an untimed preparation launch. Repeat launches did not reconvert all histories. The copied archival manifests are path-bound and are rejected on scratch-home relocation; this is reported by the runner, not evidence of production migration failure.
+
+Catch-up now begins after renderer subscriptions are ready. It reads histories as needed, yields between uploads, and limits background uploads to two concurrent attempts instead of arming 2,000 simultaneous timers. Each persisted turn still enqueues sync, retries and markers remain intact, and explicit feedback flushes retain priority. Resolving the selected local execution backend no longer probes every other backend through a synchronous login-shell spawn. No collection, transcript or agent capability was removed.
+
+The RSS sampler also had an ancestor-filter bug: an unrelated parent command matching the agent pattern could exclude the entire app tree. It now builds the owned descendant tree first, validates a nonempty root sample, and applies the historical agent exclusion only inside that tree. One preliminary local run with zero RSS was discarded and is not acceptance evidence. Goal 2 adds complete agent-inclusive attribution.
+
+| Metric | Comparable old median | After goal 1 median / p90 | Fresh +10% budget, except M6 | Result |
+| --- | --- | --- | --- | --- |
+| M1, ms | 2020.800 | 1719.900 / 1931.600 | ≤ 2222.880 | Pass |
+| M2, ms | 1522.700 | 1294.600 / 1305.700 | ≤ 1674.970 | Pass |
+| M3, bytes, agents excluded | 691863552.000 | 880394240.000 / 886013952.000 | ≤ 761049907.200 | Fail |
+| M4, bytes | 22516868.000 | 26516064.000 / 26651544.000 | ≤ 24768554.800 | Fail |
+| M5, ms | 730.800 | 85.400 / 91.900 | ≤ 803.880 | Pass |
+| M6, bytes | 1001567.000 | 1207159.000 / 1207159.000 | ≤ 1001567.000 | Fail |
+
+[Goal-1 numerical samples](07-perf-goal1.json) contain the build hashes, all eight runs and resource inventory. M1 also meets the requested historical 1,983.355 ms median cap. M2 is timing only; wrong-theme frame classification remains open. The route-corrected M4 baseline differs from the historical route, and its current +10% comparison is recorded without carrying forward the old pass.
+
+Validation: desktop `tsc -b`, seven focused main tests, seven Node probe/copy tests, and affected lint/format checks pass. Full gates are recorded after the remaining performance goals.

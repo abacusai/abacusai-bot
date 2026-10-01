@@ -1694,8 +1694,10 @@ function installRpc(host: HostOperations): void {
         if (
           id === rendererWebContents()?.id &&
           report.barrier === "subscriptions"
-        )
+        ) {
+          workspaceServiceHost.startBackgroundSync();
           notchController?.start();
+        }
       },
     },
     bus: mainEventBus,
