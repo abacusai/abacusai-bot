@@ -18,9 +18,21 @@ const initial = (html) =>
       .readFileSync(path.join(dist, html), "utf8")
       .matchAll(/(?:src|href)="([^"?#]+\.(?:js|css))"/g),
   ].map((m) => m[1].replace(/^\//, ""));
-const largest = files.toSorted(
-  (a, b) => gzip(`assets/${b}`) - gzip(`assets/${a}`)
-)[0];
+const mainHtml = fs.existsSync(path.join(dist, "index-next.html"))
+  ? "index-next.html"
+  : "index.html";
+const entryResources = new Set(
+  [mainHtml, "index.html", "notch.html"]
+    .flatMap((file) => initial(file))
+    .map((file) => file.replace(/^\.\//, ""))
+);
+const largest = files
+  .filter(
+    (file) =>
+      !/worker|ort-wasm/.test(file) && !entryResources.has(`assets/${file}`)
+  )
+  .toSorted((a, b) => gzip(`assets/${b}`) - gzip(`assets/${a}`))[0];
+if (!largest) throw new Error("No lazy JavaScript chunk was emitted");
 const entries = [
   {
     name: "Main initial",
@@ -51,6 +63,7 @@ fs.writeFileSync(
   JSON.stringify(
     entries.map((e) => ({
       name: e.name,
+      gzip: true,
       path: e.path.map((f) =>
         path.relative(root, path.join(dist, f)).replaceAll("\\", "/")
       ),

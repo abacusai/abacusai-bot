@@ -211,7 +211,8 @@ export const verifyExperience = async (
 
   if (
     manifest.files["agent/main.js"] === undefined ||
-    manifest.files["renderer/index.html"] === undefined
+    manifest.files["renderer/index.html"] === undefined ||
+    (FOUNDATION_API >= 2 && manifest.files["renderer/notch.html"] === undefined)
   ) {
     throw new Error("Experience is missing an agent or renderer entry point");
   }

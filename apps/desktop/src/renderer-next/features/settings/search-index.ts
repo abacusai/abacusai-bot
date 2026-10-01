@@ -11,6 +11,13 @@ export interface SettingEntry {
   label?: string;
 }
 const labelKeys: Record<string, string> = {
+  notchCompanion: "settings.general.notch.title",
+  notchIdle: "settings.general.notch.idle",
+  notchDisplays: "settings.general.notch.displays",
+  notchHaptics: "settings.general.notch.haptics",
+  notchShortcut: "settings.general.notch.shortcut",
+  showInNotch: "settings.notifications.showInNotch.title",
+  tour: "tour.replay",
   ...Object.fromEntries(
     ["AUTO", "DEFAULT", "ACCEPTEDITS", "PLAN", "YOLO"].map((id) => [
       `mode-${id}`,
@@ -46,6 +53,12 @@ const labelKeys: Record<string, string> = {
 const groups: Partial<Record<SettingsPageId, string[]>> = {
   general: [
     "launchAtLogin",
+    "notchCompanion",
+    "notchIdle",
+    "notchDisplays",
+    "notchHaptics",
+    "notchShortcut",
+    "tour",
     "defaultWorkspace",
     "defaultMode",
     "botMode",
@@ -56,7 +69,7 @@ const groups: Partial<Record<SettingsPageId, string[]>> = {
     "mode-YOLO",
   ],
   appearance: ["theme", "density", "textSize", "reduceMotion", "bubbleTint"],
-  notifications: ["notify", "sounds", "quietHours"],
+  notifications: ["notify", "sounds", "quietHours", "showInNotch"],
   memory: ["customInstructions"],
   language: ["language"],
   browser: [

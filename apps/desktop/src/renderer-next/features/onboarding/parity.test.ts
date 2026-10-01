@@ -19,15 +19,7 @@ it("R6-T40 every spec parity row has a status and a located consumer or explicit
   expect(rows.map((row) => row.id)).toEqual(ids);
   for (const row of rows) {
     expect(row.status).not.toBe("");
-    if (row.consumer)
-      expect(
-        files[
-          row.consumer.startsWith("../main/")
-            ? `/src/${row.consumer.slice(3)}`
-            : `/src/renderer-next/${row.consumer}`
-        ],
-        row.id
-      ).toBeDefined();
-    else expect(row.owner).toBe("other-phase");
+    if (!row.consumer.startsWith("retired: "))
+      expect(files[`/${row.consumer.split("#")[0]}`], row.id).toBeDefined();
   }
 });

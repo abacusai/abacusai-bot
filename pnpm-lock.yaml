@@ -239,6 +239,9 @@ importers:
       knip:
         specifier: 6.38.0
         version: 6.38.0
+      oxc-parser:
+        specifier: 0.150.0
+        version: 0.150.0
       oxfmt:
         specifier: 'catalog:'
         version: 0.64.0

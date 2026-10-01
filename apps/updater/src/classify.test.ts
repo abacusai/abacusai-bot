@@ -8,6 +8,12 @@ void test("renderer and agent changes are experience releases", () => {
   assert.equal(classify(["apps/desktop/src/renderer/app.tsx"]), "experience");
   assert.equal(classify(["packages/agent/src/session.ts"]), "experience");
   assert.equal(classify(["apps/desktop/index.html"]), "experience");
+  for (const file of [
+    "index-next.html",
+    "notch.html",
+    "src/renderer-next/main.tsx",
+  ])
+    assert.equal(classify([`apps/desktop/${file}`]), "experience");
 });
 
 void test("unknown files fail toward the signed foundation release", () => {

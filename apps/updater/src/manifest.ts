@@ -9,7 +9,7 @@ import { verifyProvenance } from "./provenance.ts";
  * digest from the same canon: sorted keys, compact separators, ASCII paths.
  */
 
-export const FOUNDATION_API = 1;
+export const FOUNDATION_API = 2;
 export const PROTOCOL = "abacus.desktop/1";
 
 export interface FileEntry {

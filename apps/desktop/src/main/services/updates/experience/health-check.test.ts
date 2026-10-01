@@ -35,3 +35,20 @@ for (const wire of ["ndjson", "agui"] as const) {
     }
   });
 }
+
+it.each([
+  ["exits without readiness", "process.exit(77)"],
+  [
+    "only speaks NDJSON ready",
+    'console.log(JSON.stringify({type:"ready"}));setTimeout(()=>process.exit(0),20)',
+  ],
+])("R7-T8 AG-UI refuses a candidate that %s", async (_name, source) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "health-refusal-"));
+  try {
+    await fs.mkdir(path.join(root, "agent"));
+    await fs.writeFile(path.join(root, "agent", "main.js"), source);
+    await expect(checkAgentBundle(root, { wire: "agui" })).rejects.toThrow();
+  } finally {
+    await fs.rm(root, { force: true, recursive: true });
+  }
+});

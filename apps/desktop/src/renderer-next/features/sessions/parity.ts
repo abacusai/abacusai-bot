@@ -7,6 +7,8 @@ export const SESSION_PARITY = [
     decision: "Parity; intent and deselect retired (routes carry ids)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S2",
@@ -16,6 +18,8 @@ export const SESSION_PARITY = [
       "Changed: the workspace switch is retired (checkout-aware APIs, §26.4)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S3",
@@ -24,6 +28,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S4",
@@ -32,6 +38,8 @@ export const SESSION_PARITY = [
     decision: "Changed (gap fix)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S5",
@@ -41,6 +49,8 @@ export const SESSION_PARITY = [
       'Retired (PLAN "Nuked: `?view=` redirects"; "no state in two places")',
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S6",
@@ -48,6 +58,8 @@ export const SESSION_PARITY = [
     decision: "Changed: no switch (F5)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S7",
@@ -55,6 +67,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S8",
@@ -63,6 +77,8 @@ export const SESSION_PARITY = [
     decision: "New",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S9",
@@ -71,6 +87,8 @@ export const SESSION_PARITY = [
     decision: 'Changed (user decision "one sidebar per rail item")',
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S10",
@@ -79,6 +97,8 @@ export const SESSION_PARITY = [
     decision: "Changed (canvas, foundation)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S11",
@@ -87,6 +107,8 @@ export const SESSION_PARITY = [
     decision: "Changed (canvas has no buckets)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S12",
@@ -95,6 +117,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S13",
@@ -103,6 +127,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New (status)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S14",
@@ -110,6 +136,8 @@ export const SESSION_PARITY = [
     decision: "New (canvas; dead `workspace-tree.tsx` had dots)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S15",
@@ -117,6 +145,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S16",
@@ -124,6 +154,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S17",
@@ -132,6 +164,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S18",
@@ -140,6 +174,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S19",
@@ -148,6 +184,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New (drop)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S20",
@@ -156,6 +194,8 @@ export const SESSION_PARITY = [
     decision: "New",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S21",
@@ -164,6 +204,8 @@ export const SESSION_PARITY = [
     decision: "New in production (dead code had grouping)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S22",
@@ -172,6 +214,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S23",
@@ -179,6 +223,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S24",
@@ -187,6 +233,8 @@ export const SESSION_PARITY = [
     decision: "Parity (cancellation no longer marks unread)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S25",
@@ -195,6 +243,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S26",
@@ -202,6 +252,8 @@ export const SESSION_PARITY = [
     decision: "Parity (foundation)",
     target: "features/sessions/sessions-sidebar.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S27",
@@ -210,6 +262,8 @@ export const SESSION_PARITY = [
     decision: "Changed (canvas)",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S28",
@@ -218,6 +272,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S29",
@@ -226,6 +282,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S30",
@@ -234,6 +292,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S31",
@@ -242,6 +302,8 @@ export const SESSION_PARITY = [
     decision: "Parity (canvas geometry)",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S32",
@@ -250,6 +312,8 @@ export const SESSION_PARITY = [
     decision: "New",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S33",
@@ -258,6 +322,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S34",
@@ -266,6 +332,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S35",
@@ -275,6 +343,8 @@ export const SESSION_PARITY = [
       "Parity; Compact UI retired (density is a window-chrome setting now)",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S36",
@@ -283,6 +353,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S37",
@@ -291,6 +363,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S38",
@@ -299,6 +373,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S39",
@@ -307,6 +383,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/start/session-start-page.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S40",
@@ -315,6 +393,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New (rename)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S41",
@@ -323,6 +403,8 @@ export const SESSION_PARITY = [
     decision: "Parity; terminal toggle changed",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S42",
@@ -331,6 +413,8 @@ export const SESSION_PARITY = [
     decision: "Parity (banner instead of toast)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S43",
@@ -338,6 +422,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S44",
@@ -346,6 +432,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S45",
@@ -353,6 +441,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S46",
@@ -361,6 +451,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S47",
@@ -368,6 +460,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S48",
@@ -376,6 +470,8 @@ export const SESSION_PARITY = [
       "Changed: retraction and empty-session deletion retired (the agent echoes and persists the user message on admission, 02 F3; deleting is explicit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S49",
@@ -383,6 +479,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S50",
@@ -390,6 +488,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S51",
@@ -397,6 +497,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S52",
@@ -405,6 +507,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S53",
@@ -412,6 +516,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S54",
@@ -420,6 +526,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S55",
@@ -427,6 +535,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S56",
@@ -434,6 +544,8 @@ export const SESSION_PARITY = [
     decision: "Parity (canvas)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S57",
@@ -442,6 +554,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S58",
@@ -450,6 +564,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S59",
@@ -458,6 +574,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S60",
@@ -466,6 +584,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S61",
@@ -474,6 +594,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S62",
@@ -482,6 +604,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S63",
@@ -490,6 +614,8 @@ export const SESSION_PARITY = [
     decision: "Parity; dialog → inline",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S64",
@@ -498,6 +624,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S65",
@@ -506,6 +634,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S66",
@@ -514,6 +644,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S67",
@@ -522,6 +654,8 @@ export const SESSION_PARITY = [
     decision: "Parity (kit) + New (full diff)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S68",
@@ -529,6 +663,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S69",
@@ -537,6 +673,8 @@ export const SESSION_PARITY = [
     decision: "New",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S70",
@@ -545,6 +683,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S71",
@@ -553,6 +693,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New (Changes)",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S72",
@@ -561,6 +703,8 @@ export const SESSION_PARITY = [
     decision: "Changed (user decision)",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S73",
@@ -569,6 +713,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S74",
@@ -576,6 +722,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S75",
@@ -584,6 +732,8 @@ export const SESSION_PARITY = [
     decision: "Changed (canvas + foundation minimums)",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S76",
@@ -592,6 +742,8 @@ export const SESSION_PARITY = [
     decision: "Changed (canvas `W900`)",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S77",
@@ -599,6 +751,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S78",
@@ -606,6 +760,8 @@ export const SESSION_PARITY = [
     decision: 'Changed (PLAN "Editing / Nuked: monaco")',
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S79",
@@ -613,6 +769,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S80",
@@ -621,6 +779,8 @@ export const SESSION_PARITY = [
     decision: "Parity (mechanism changed)",
     target: "features/sessions/dock/session-dock.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S81",
@@ -629,6 +789,8 @@ export const SESSION_PARITY = [
     decision: "Parity + light theme",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S82",
@@ -636,6 +798,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S83",
@@ -643,6 +807,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S84",
@@ -650,6 +816,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S85",
@@ -658,6 +826,8 @@ export const SESSION_PARITY = [
     decision: "Changed (F16)",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S86",
@@ -665,6 +835,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S87",
@@ -673,6 +845,8 @@ export const SESSION_PARITY = [
     decision: "Parity + exit notice",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S88",
@@ -680,6 +854,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S89",
@@ -688,6 +864,8 @@ export const SESSION_PARITY = [
     decision: "Changed (lossless offsets)",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S90",
@@ -695,6 +873,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S91",
@@ -702,6 +882,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S92",
@@ -710,6 +892,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S93",
@@ -717,6 +901,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/terminal/terminal-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S94",
@@ -724,6 +910,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S95",
@@ -731,6 +919,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S96",
@@ -738,6 +928,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S97",
@@ -745,6 +937,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S98",
@@ -752,6 +946,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S99",
@@ -759,6 +955,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S100",
@@ -766,6 +964,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S101",
@@ -773,6 +973,8 @@ export const SESSION_PARITY = [
     decision: "Retired (unused)",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "retired",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S102",
@@ -782,6 +984,8 @@ export const SESSION_PARITY = [
       "Deferred: no take-over procedure (§27.3); the bar renders the status line only",
     target: "features/sessions/browser/browser-tab.tsx",
     implementation: "deferred",
+    consumer:
+      "src/renderer-next/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S103",
@@ -790,6 +994,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New (filter)",
     target: "features/sessions/files/files-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S104",
@@ -797,6 +1003,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/files/files-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S105",
@@ -804,6 +1012,8 @@ export const SESSION_PARITY = [
     decision: "Parity + New",
     target: "features/sessions/files/files-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S106",
@@ -811,6 +1021,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/files/files-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S107",
@@ -819,6 +1031,8 @@ export const SESSION_PARITY = [
     decision: "New",
     target: "features/sessions/changes/changes-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/changes/changes-tab.tsx#changeRows",
   },
   {
     id: "S108",
@@ -826,6 +1040,8 @@ export const SESSION_PARITY = [
     decision: "Parity (detail replaces transcript scoping)",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S109",
@@ -833,6 +1049,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/device/device-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/device/device-tab.tsx#DeviceTab",
   },
   {
     id: "S110",
@@ -840,6 +1058,8 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/device/device-tab.tsx",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/device/device-tab.tsx#DeviceTab",
   },
   {
     id: "S111",
@@ -847,5 +1067,7 @@ export const SESSION_PARITY = [
     decision: "Parity",
     target: "features/sessions/files/preview-bridge.ts",
     implementation: "partial",
+    consumer:
+      "src/renderer-next/features/sessions/files/preview-bridge.ts#recordBackgroundPreview",
   },
 ] as const;
