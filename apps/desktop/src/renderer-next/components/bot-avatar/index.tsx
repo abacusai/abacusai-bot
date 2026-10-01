@@ -8,7 +8,8 @@
  * pass the motion preference); reduced motion in CSS stops it regardless.
  */
 import "./moods.css";
-import { useId, type CSSProperties } from "react";
+import { motion } from "motion/react";
+import { useEffect, useId, useState, type CSSProperties } from "react";
 
 import type {
   AvatarAccessory,
@@ -17,6 +18,7 @@ import type {
   Look,
 } from "#next/lib/bots/avatar";
 import { cn } from "#next/lib/cn";
+import { hatch as hatchMotion, useMotionPreference } from "#next/lib/motion";
 
 /** Border-radius bodies (canvas `radii`). */
 const RADII: Partial<Record<AvatarShape, string>> = {
@@ -170,9 +172,10 @@ export interface BotAvatarProps {
   title?: string;
   className?: string;
   style?: CSSProperties;
+  hatch?: { from: "egg"; onDone(): void };
 }
 
-export const BotAvatar = ({
+const AvatarBody = ({
   look,
   mood = "idle",
   size,
@@ -281,6 +284,53 @@ export const BotAvatar = ({
     </span>
   );
 };
+
+const HatchingAvatar = ({
+  hatch,
+  ...props
+}: BotAvatarProps & {
+  hatch: NonNullable<BotAvatarProps["hatch"]>;
+}) => {
+  const reduced = useMotionPreference() === "reduced";
+  const [egg, setEgg] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setEgg(false),
+      reduced ? 120 : hatchMotion.wobbleCycles * hatchMotion.wobbleMs
+    );
+    return () => clearTimeout(timer);
+  }, [reduced]);
+  return (
+    <motion.span
+      className={egg && !reduced ? "bav-hatch-egg" : undefined}
+      data-animate={!reduced ? "" : undefined}
+      key={egg ? "egg" : "hatched"}
+      initial={
+        egg
+          ? { opacity: 1, scale: 1 }
+          : reduced
+            ? { opacity: 0 }
+            : { scale: hatchMotion.squash }
+      }
+      animate={{ opacity: 1, scale: 1 }}
+      transition={reduced ? { duration: 0.12 } : hatchMotion.settle}
+      onAnimationComplete={() => {
+        if (!egg) hatch.onDone();
+      }}
+    >
+      <AvatarBody
+        {...props}
+        look={egg ? { ...props.look, shape: "egg" } : props.look}
+      />
+    </motion.span>
+  );
+};
+export const BotAvatar = (props: BotAvatarProps) =>
+  props.hatch ? (
+    <HatchingAvatar {...props} hatch={props.hatch} />
+  ) : (
+    <AvatarBody {...props} />
+  );
 
 /**
  * §14.5: the class that gives an accent-filled control or dot its light-theme
