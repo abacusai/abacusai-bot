@@ -3,7 +3,6 @@ import path from "path";
 
 import {
   isMessagingPlatformId,
-  MESSAGING_PLATFORM_CATALOG,
   messagingPlatformSpec,
   type MessagingPairedUser,
   type MessagingPlatformId,
@@ -129,19 +128,6 @@ export const isFieldFromEnv = (key: string): boolean => {
 };
 
 /** Every field value for a platform, keyed by field key. Absent fields omitted. */
-export const readPlatformValues = (
-  platformId: MessagingPlatformId
-): Record<string, string> => {
-  const spec = messagingPlatformSpec(platformId);
-  if (spec == null) return {};
-
-  const values: Record<string, string> = {};
-  for (const field of spec.fields) {
-    const value = readFieldValue(platformId, field.key);
-    if (value != null) values[field.key] = value;
-  }
-  return values;
-};
 
 /** True when every required field has a value from somewhere. */
 export const isPlatformConfigured = (
@@ -463,7 +449,3 @@ export const approvedUserIds = (platform: MessagingPlatformId): Set<string> =>
   );
 
 /** Every platform in the catalog that is both enabled and has its credentials. */
-export const runnablePlatformIds = (): MessagingPlatformId[] =>
-  MESSAGING_PLATFORM_CATALOG.filter(
-    (entry) => isPlatformEnabled(entry.id) && isPlatformConfigured(entry.id)
-  ).map((entry) => entry.id);

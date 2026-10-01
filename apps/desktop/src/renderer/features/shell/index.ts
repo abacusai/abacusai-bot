@@ -6,7 +6,6 @@ export {
   TopBarSlot,
   useTopBarActions,
   useTopBarEndActions,
-  type TopBarAction,
 } from "./top-bar-slots";
 export { shellStore } from "./shell-store";
 export { TopBar } from "./top-bar";
@@ -20,7 +19,6 @@ export { nativePresenterFor } from "./native-presenter";
 export { registerPreviewConsumer, dispatchPreview } from "./preview-consumers";
 export {
   requestBrowserOpen,
-  BrowserOpenPlaceholder,
   registerBrowserOpen,
   useBrowserOpenUrl,
 } from "./browser-open";

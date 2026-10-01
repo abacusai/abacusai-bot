@@ -156,7 +156,6 @@ export { EnvironmentPage, BrowserPage, DevicesPage } from "./environment";
 export {
   AboutPage,
   CriticalUpdateDialog,
-  UpdatePill,
   useUpdatePillAction,
 } from "./updates";
 export { KeyboardPage } from "./keyboard";

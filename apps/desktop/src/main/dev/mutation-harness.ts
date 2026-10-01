@@ -33,23 +33,6 @@ export interface HarnessHost {
   removeAgentSession(workspaceId: string, sessionId: string): unknown;
 }
 
-export type HarnessOp =
-  | { op: "bots.create"; input: BotCreateInput }
-  | { op: "bots.update"; input: { id: string; changes: BotUpdateInput } }
-  | { op: "bots.delete"; input: { id: string } }
-  | { op: "sessions.create"; input: { workspaceId: string } }
-  | {
-      op: "sessions.rename";
-      input: { workspaceId: string; sessionId: string; label: string };
-    }
-  | {
-      op: "sessions.remove";
-      input: { workspaceId: string; sessionId: string };
-    }
-  | { op: "renderer.dropPort"; input: Record<string, never> }
-  | { op: "window.fullScreen"; input: { on: boolean } }
-  | { op: "window.focus"; input: Record<string, never> };
-
 /** What the harness does outside the ServiceHost. */
 export interface HarnessExtras {
   /** Main closes renderer's active port; resolves with its id. */

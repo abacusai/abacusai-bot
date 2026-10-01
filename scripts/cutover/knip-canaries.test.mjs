@@ -15,14 +15,15 @@ test(
       "scripts/lib",
     ].map(
       (area) =>
-        `apps/desktop/${area}/__cutover_knip_canary.${area.startsWith("scripts") ? "mjs" : "ts"}`
+        `apps/desktop/${area}/__cutover_knip_canary/unused.${area.startsWith("scripts") ? "mjs" : "ts"}`
     );
     const configFile = "cutover-knip-canaries.json";
     try {
       const config = JSON.parse(fs.readFileSync("knip.json", "utf8"));
       const workspace = config.workspaces["apps/desktop"];
       // Structural test globs intentionally read every source, which makes a planted file used.
-      // Check the same production project scope without those test readers.
+      // Check the same project scope without structural test readers. Production mode
+      // intentionally excludes untagged project globs, so it cannot test this scope.
       workspace.entry = workspace.entry.filter(
         (entry) => !entry.includes("test.")
       );
@@ -35,6 +36,9 @@ test(
         vitest: false,
         typescript: false,
         vite: false,
+        "github-actions": false,
+        pnpm: false,
+        turbo: false,
       };
       fs.writeFileSync(configFile, JSON.stringify(config));
       for (const file of files) {
@@ -53,7 +57,6 @@ test(
           "apps/desktop",
           "--include",
           "files",
-          "--production",
           "--no-gitignore",
           "--reporter",
           "json",
@@ -61,6 +64,7 @@ test(
         { encoding: "utf8", timeout: 55000 }
       );
       assert.equal(result.error, undefined);
+      assert.ok(result.stdout.trim(), result.stderr);
       const output = JSON.parse(result.stdout);
       for (const file of files)
         assert.ok(
@@ -69,7 +73,8 @@ test(
         );
     } finally {
       fs.rmSync(configFile, { force: true });
-      for (const file of files) fs.rmSync(file, { force: true });
+      for (const file of files)
+        fs.rmSync(path.dirname(file), { force: true, recursive: true });
     }
   }
 );

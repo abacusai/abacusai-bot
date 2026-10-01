@@ -125,7 +125,8 @@
       "apps/desktop/dist/renderer/assets/chat-DId50OC-.css",
       "apps/desktop/dist/renderer/assets/transition-types-B8Ger0ke.css",
       "apps/desktop/dist/renderer/assets/onboarding-CghTNAii.css"
-    ]
+    ],
+    "limit": "1310269 B"
   },
   {
     "name": "Notch initial",
@@ -192,16 +193,19 @@
       "apps/desktop/dist/renderer/assets/transition-types-B8Ger0ke.css",
       "apps/desktop/dist/renderer/assets/bot-avatar-tazUtPIO.css",
       "apps/desktop/dist/renderer/assets/notch-DNnXb795.css"
-    ]
+    ],
+    "limit": "653292 B"
   },
   {
     "name": "Largest lazy chunk",
     "gzip": true,
-    "path": ["apps/desktop/dist/renderer/assets/editor.api2-DdadTTrJ.js"]
+    "path": ["apps/desktop/dist/renderer/assets/editor.api2-DdadTTrJ.js"],
+    "limit": "1557671 B"
   },
   {
     "name": "Math lazy chunk",
     "gzip": true,
-    "path": ["apps/desktop/dist/renderer/assets/temml-CiP_lRsR.js"]
+    "path": ["apps/desktop/dist/renderer/assets/temml-CiP_lRsR.js"],
+    "limit": "62830 B"
   }
 ]

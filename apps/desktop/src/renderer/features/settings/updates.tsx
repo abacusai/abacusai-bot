@@ -269,18 +269,7 @@ export const CriticalUpdateDialog = () => {
 };
 
 /** Public shell-end-slot consumer; shell owns placement and compact overflow. */
-export const UpdatePill = () => {
-  const update = useUpdateStatus();
-  return (
-    <UpdatePillButton
-      status={update.status}
-      clicked={update.clicked}
-      installError={update.installError}
-      onInstall={update.install}
-      onCheck={update.check}
-    />
-  );
-};
+
 export const UpdatePillButton = ({
   status,
   clicked = false,

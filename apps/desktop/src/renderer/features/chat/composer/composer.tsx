@@ -723,10 +723,3 @@ export const ThreadComposer = () => {
 };
 
 /** Compound parts for pages that compose their own composer (§8.1). */
-export const Composer = {
-  Thread: ThreadComposer,
-  Attachments,
-  Attach,
-  Dictate,
-  SendOrStop,
-};

@@ -130,7 +130,7 @@ const build = (_options: { unused?: boolean } = {}): Stack => {
   const compat: DesktopEvent[] = [];
   const marks: string[] = [];
   const store = new ThreadStore({ home: () => home, log: () => undefined });
-  let relay!: AguiRelayService;
+
   const manager = new AgentManagerService({
     resolveWorkspacePath: () => workspace,
     resolveArtifact: () => ({

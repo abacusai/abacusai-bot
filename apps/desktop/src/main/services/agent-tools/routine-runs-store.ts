@@ -36,9 +36,6 @@ export const routineDirInWorkspace = (
 
 export const routineRunsDir = (home: string): string => path.join(home, "runs");
 
-export const routineNotesPath = (home: string): string =>
-  path.join(home, "notes.md");
-
 const LAST_RUN = "last-run.json";
 
 /**

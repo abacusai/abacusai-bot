@@ -257,9 +257,6 @@ export const launch = async (options: {
 };
 
 /** Writes a file under the app home before launch. */
-export const writeHomeFile = (home: string, name: string, text: string) => {
-  writeFileSync(join(home, name), text);
-};
 
 /** Median and p95 of a list of numbers. */
 export const stats = (values: readonly number[]) => {

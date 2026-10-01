@@ -516,7 +516,7 @@ export const ArtifactsPage = ({
   );
 };
 
-export { artifactGalleryRows, artifactStressRows } from "./gallery";
+export { artifactGalleryRows } from "./gallery";
 
 /** Native driver seeds gallery files inside its isolated application home. */
 export const ArtifactsStressGallery = () => {

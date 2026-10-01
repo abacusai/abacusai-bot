@@ -310,5 +310,3 @@ export const db = {
       .output(type<TablePosition<"app">>()),
   },
 };
-
-export const DB_TABLES = Object.keys(db) as (keyof typeof db)[];

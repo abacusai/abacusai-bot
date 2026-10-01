@@ -19,11 +19,6 @@ export type MessagingPlatformId = (typeof MESSAGING_PLATFORM_IDS)[number];
 
 // Slack is deliberately absent: it is the account connector, like Gmail, and
 // a second local Slack put contradictory statements in one transcript.
-export const AGENT_LINKABLE_CHAT_APPS: readonly MessagingPlatformId[] = [
-  "telegram",
-  "discord",
-  "whatsapp",
-];
 
 /** Platforms rendered as a section of another platform's card. */
 export const SHARED_BOT_PLATFORM_OF: Partial<
@@ -45,10 +40,6 @@ export const describePlatformForAgent = (id: MessagingPlatformId): string => {
 
 // The account API's names for the shared bots. Reported under abacus_*; listed
 // again as "telegram" they would read as the user's own Telegram.
-export const SHARED_BOT_ACCOUNT_SERVICES: ReadonlySet<string> = new Set([
-  "telegram",
-  "discord",
-]);
 
 // The live lanes a conversation is told about. A shared bot lane counts only
 // while the user's own account on that app is linked; the lane still works

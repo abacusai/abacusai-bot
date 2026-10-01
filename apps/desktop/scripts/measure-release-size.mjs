@@ -18,11 +18,9 @@ const initial = (html) =>
       .readFileSync(path.join(dist, html), "utf8")
       .matchAll(/(?:src|href)="([^"?#]+\.(?:js|css))"/g),
   ].map((m) => m[1].replace(/^\//, ""));
-const mainHtml = fs.existsSync(path.join(dist, "index.html"))
-  ? "index.html"
-  : "index.html";
+const mainHtml = "index.html";
 const entryResources = new Set(
-  [mainHtml, "index.html", "notch.html"]
+  [mainHtml, "notch.html"]
     .flatMap((file) => initial(file))
     .map((file) => file.replace(/^\.\//, ""))
 );
@@ -36,9 +34,7 @@ if (!largest) throw new Error("No lazy JavaScript chunk was emitted");
 const entries = [
   {
     name: "Main initial",
-    path: initial(
-      fs.existsSync(path.join(dist, "index.html")) ? "index.html" : "index.html"
-    ),
+    path: initial("index.html"),
   },
   { name: "Notch initial", path: initial("notch.html") },
   { name: "Largest lazy chunk", path: [`assets/${largest}`] },
@@ -54,7 +50,7 @@ const report = {
 };
 const target =
   process.argv[2] ??
-  path.join(root, "docs/rewrite/reports/07-size-baseline.json");
+  path.join(root, "docs/rewrite/reports/07-size-current.json");
 fs.writeFileSync(target, JSON.stringify(report, null, 2) + "\n");
 fs.writeFileSync(
   path.join(root, ".size-limit.json"),
@@ -62,6 +58,9 @@ fs.writeFileSync(
     entries.map((e) => ({
       name: e.name,
       gzip: true,
+      limit: JSON.parse(
+        fs.readFileSync(path.join(root, ".size-limit.json"))
+      ).find((limit) => limit.name === e.name)?.limit,
       path: e.path.map((f) =>
         path.relative(root, path.join(dist, f)).replaceAll("\\", "/")
       ),
