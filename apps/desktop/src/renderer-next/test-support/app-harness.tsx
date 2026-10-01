@@ -26,6 +26,7 @@ import {
   createMemoryTransport,
   type MemoryTransport,
 } from "#next/data/transport/memory";
+import type { AppClient } from "#next/data/transport/types";
 import { fixtureRuntime } from "#next/features/chat/fixtures/player";
 import { resetReadinessForTests } from "#next/features/shell/readiness";
 import { resetShellStore } from "#next/features/shell/shell-store";
@@ -47,7 +48,11 @@ import type { TerminalEvent } from "#shared/contract/terminal";
  * the notice streams), collections over a FixtureDb, and a router on memory
  * history. `renderApp("/bots/new")` mounts it; the returned handles drive it.
  */
-import type { DefaultAgentMode, BrowserRuntimeState } from "#shared/contracts";
+import type {
+  FileTreeNode,
+  DefaultAgentMode,
+  BrowserRuntimeState,
+} from "#shared/contracts";
 
 export const SYSTEM_INFO: SystemInfo = {
   appVersion: "1.0.0",
@@ -259,10 +264,14 @@ const shellRouter = (
     files: {
       events: os.files.events.handler(options.filesEvents ?? (quiet as never)),
       treeRoot: os.files.treeRoot.handler(() => ({
-        fileTree: [],
+        fileTree: options.fileTree ?? [],
         lastUpdatedAt: "now",
       })),
       search: os.files.search.handler(() => ({ items: [] })),
+      rename: os.files.rename.handler(async ({ input, context }) => {
+        context.calls.push(["files.rename", input]);
+        await options.renameFile?.(input);
+      }),
     },
     ai: {
       send: os.ai.send.handler(({ input, context }) => {
@@ -308,6 +317,10 @@ export interface HarnessOptions {
   runFinished?: () => AsyncGenerator<RunFinishedNotice>;
   filesEvents?: () => AsyncGenerator<FilesEvent>;
   terminalEvents?: () => AsyncGenerator<TerminalEvent>;
+  fileTree?: FileTreeNode[];
+  renameFile?: (
+    input: Parameters<AppClient["files"]["rename"]>[0]
+  ) => Promise<void>;
   openExternal?: (url: string) => void;
 }
 
