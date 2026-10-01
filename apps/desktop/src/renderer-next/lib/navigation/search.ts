@@ -55,23 +55,42 @@ export const RoutineSearch = v.object({
   run: optionalField(SessionId),
 });
 
-export const ARTIFACT_TYPES = [
-  "document",
-  "deck",
-  "image",
-  "code",
-  "other",
-] as const;
-export const ARTIFACT_SOURCES = ["bots", "sessions"] as const;
+export const ARTIFACT_TYPES = ["file", "image", "link"] as const;
 export const ArtifactsSearch = v.object({
   type: optionalField(v.picklist(ARTIFACT_TYPES)),
-  from: optionalField(v.picklist(ARTIFACT_SOURCES)),
+  from: optionalField(
+    v.union([
+      v.literal("routines"),
+      v.pipe(v.string(), v.regex(/^(bot|workspace):[A-Za-z0-9._-]{1,120}$/)),
+    ])
+  ),
   q: optionalField(v.pipe(v.string(), v.maxLength(200))),
-  item: optionalField(v.string()),
+  item: optionalField(v.pipe(v.string(), v.maxLength(4200))),
+  view: v.optional(v.fallback(v.picklist(["grid", "list"]), "grid"), "grid"),
+  sort: v.optional(
+    v.fallback(v.picklist(["newest", "oldest", "name"]), "newest"),
+    "newest"
+  ),
 });
 
+export const CONNECTOR_CATEGORY_TABS = [
+  "featured",
+  "abacus",
+  "productivity",
+  "data",
+  "development",
+  "infrastructure",
+  "payments",
+  "support",
+  "web",
+] as const;
 export const ConnectorsSearch = v.object({
-  connector: optionalField(v.string()),
+  connector: optionalField(v.pipe(v.string(), v.maxLength(120))),
+  category: v.optional(
+    v.fallback(v.picklist(CONNECTOR_CATEGORY_TABS), "featured"),
+    "featured"
+  ),
+  q: optionalField(v.pipe(v.string(), v.maxLength(120))),
 });
 
 /** The side-panel tabs each area offers (title-bar tabs, ⌘⌥B). */
@@ -79,8 +98,8 @@ export const AREA_PANEL_TABS = {
   // `browser` is accepted in the URL but has no bots surface until phase 4.
   bots: ["details", "memory", "files"],
   sessions: ["changes", "terminal", "files", "browser"],
-  routines: ["details"],
-  artifacts: ["details"],
-  library: ["details"],
+  routines: [],
+  artifacts: [],
+  library: [],
   settings: [],
 } as const satisfies Record<string, readonly SidePanelTabId[]>;

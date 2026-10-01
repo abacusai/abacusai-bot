@@ -1,5 +1,3 @@
-"use client";
-
 import { Questionnaire as QuestionnairePrimitive } from "@shadcn/react/questionnaire";
 import { cn } from "cn";
 import { CheckIcon } from "lucide-react";
