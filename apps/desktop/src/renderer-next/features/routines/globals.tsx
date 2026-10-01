@@ -61,6 +61,8 @@ export const RoutinesGlobals = () => {
       seenFor(seenNotices, transport)
     );
     const abort = new AbortController();
+    const routines = db.collections.routines.subscribeChanges(() => {});
+    const sessions = db.collections.sessions.subscribeChanges(() => {});
     const readiness = createReadinessQueue(
       () =>
         Promise.all([
@@ -184,6 +186,8 @@ export const RoutinesGlobals = () => {
     );
     return () => {
       abort.abort();
+      routines.unsubscribe();
+      sessions.unsubscribe();
       unsubscribe();
       document.removeEventListener("pointerdown", unlock);
       player.dispose();

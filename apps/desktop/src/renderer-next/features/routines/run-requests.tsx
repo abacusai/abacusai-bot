@@ -49,12 +49,14 @@ export const RunRequests = ({
   }, [transport, conversationKey]);
   const respond = async (
     request: ConnectorRequest,
-    outcome: "connected" | "declined"
+    outcome: "connected" | "declined" | "failed",
+    error?: string
   ) =>
     transport.client.connectors.respond({
       requestId: request.requestId,
       conversationKey,
       outcome,
+      ...(error ? { error } : {}),
     });
   const accept = async (
     request: ConnectorRequest,
@@ -69,18 +71,25 @@ export const RunRequests = ({
           workspaceId,
           sessionId,
         });
-        if (!refreshed.success && refreshed.error) {
-          setError(refreshed.error);
-          setBusy(null);
+        if (!refreshed.success) {
+          const error = refreshed.error ?? "Refresh failed";
+          setError(error);
+          await respond(request, "failed", error);
           return;
         }
         await respond(request, "connected");
       } else if (result.cancelled) await respond(request, "declined");
-      else setError(result.error);
+      else {
+        setError(result.error);
+        await respond(request, "failed", result.error);
+      }
     } catch (e) {
-      setError(errorText(e));
+      const error = errorText(e);
+      setError(error);
+      await respond(request, "failed", error).catch(() => undefined);
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
   };
   return (
     <>
