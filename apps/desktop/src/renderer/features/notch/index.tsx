@@ -33,6 +33,7 @@ import { NotchDirector, shapeSettled } from "./director";
 import { notchDrafts as drafts } from "./drafts";
 import { followNotchEvents, useNotchInputs } from "./inputs";
 import { ListeningControls } from "./listening";
+import { notchOutline } from "./outline";
 import {
   presentNotch,
   botForSession,
@@ -125,7 +126,9 @@ export const NotchShell = ({
     app.mainFocused
   );
   const [shown, setShown] = useState(target);
-  const [shape, setShape] = useState(() => shapeFor(target, layout));
+  const [shape, setShape] = useState<{ width: number; height: number }>(() =>
+    shapeFor(target, layout)
+  );
   const node = useRef<HTMLDivElement>(null);
   const pointerInside = useRef(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -182,7 +185,7 @@ export const NotchShell = ({
       director.current = null;
     };
   }, [chat, transport, prepareChat]);
-  const signature = `${target.identity}:${target.expanded}:${target.hidden}:${target.remaining}:${target.quietUntil}:${layout.mode}:${layout.notch?.width}:${unlocked}:${target.queue.map((item) => item.descriptorId ?? item.runId ?? item.sessionId).join(",")}`;
+  const signature = `${target.identity}:${target.expanded}:${target.hidden}:${target.remaining}:${target.quietUntil}:${layout.mode}:${layout.notch?.width}:${layout.notch?.height}:${layout.notch?.x}:${unlocked}:${target.queue.map((item) => item.descriptorId ?? item.runId ?? item.sessionId).join(",")}`;
   const lastSignature = useRef<string | null>(null);
   useEffect(() => {
     if (lastSignature.current === signature) return;
@@ -491,7 +494,10 @@ export const NotchShell = ({
             style={
               layout.growth === "up"
                 ? { position: "absolute", bottom: 32, left: 24, right: 24 }
-                : { paddingInline: 24 }
+                : {
+                    paddingInline: 24,
+                    transform: `translateX(${layout.offsetX ?? 0}px)`,
+                  }
             }
           >
             <div
@@ -503,10 +509,7 @@ export const NotchShell = ({
               aria-label={t("notch.a11y.region")}
               aria-live="off"
               style={{
-                clipPath:
-                  layout.mode === "notch"
-                    ? `polygon(0 0, calc(50% - ${(layout.notch?.width ?? 0) / 2}px) 0, calc(50% - ${(layout.notch?.width ?? 0) / 2}px) ${Math.max(layout.notch?.height ?? 0, 32)}px, calc(50% + ${(layout.notch?.width ?? 0) / 2}px) ${Math.max(layout.notch?.height ?? 0, 32)}px, calc(50% + ${(layout.notch?.width ?? 0) / 2}px) 0, 100% 0, 100% 100%, 0 100%)`
-                    : undefined,
+                clipPath: layout.mode === "notch" ? notchOutline() : undefined,
                 width: shape.width,
                 height: shape.height,
                 visibility: shown.hidden ? "hidden" : "visible",
