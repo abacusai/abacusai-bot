@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DiffView } from "#next/components/diff-view";
+import type { Transport } from "#next/data/transport";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import {
   AlertDialog,
@@ -17,6 +18,7 @@ import {
   AlertDialogAction,
 } from "#next/ui/alert-dialog";
 import { Button } from "#next/ui/button";
+import type { CheckoutRef } from "#shared/contract/checkout";
 import type { SessionRow } from "#shared/contract/rows";
 import type { GitChangeItem } from "#shared/contracts";
 
@@ -61,6 +63,31 @@ export const changeRows = (
         group: "unstaged",
       }));
 };
+const discardChanges = async (
+  transport: Transport,
+  checkout: CheckoutRef,
+  selection: ChangeSelection[]
+) => {
+  const untracked = selection.filter((r) => r.change.status === "??");
+  for (const item of untracked)
+    await transport.client.files.trash({
+      checkout,
+      filePath: item.change.path,
+    });
+  const tracked = selection.filter((r) => r.change.status !== "??");
+  if (tracked.length) {
+    const result = await transport.client.git.discard({
+      checkout,
+      entries: tracked.map((r) => ({
+        path: r.change.path,
+        ...(r.change.origPath ? { origPath: r.change.origPath } : {}),
+      })),
+    });
+    if (result.failed.length)
+      throw new Error(result.failed.map((f) => f.detail).join("\n"));
+  }
+};
+
 export const ChangesTab = ({
   row,
   root,
@@ -131,24 +158,7 @@ export const ChangesTab = ({
   const discard = async () => {
     if (!undo) return;
     try {
-      const untracked = undo.filter((r) => r.change.status === "??");
-      for (const item of untracked)
-        await transport.client.files.trash({
-          checkout,
-          filePath: item.change.path,
-        });
-      const tracked = undo.filter((r) => r.change.status !== "??");
-      if (tracked.length) {
-        const result = await transport.client.git.discard({
-          checkout,
-          entries: tracked.map((r) => ({
-            path: r.change.path,
-            ...(r.change.origPath ? { origPath: r.change.origPath } : {}),
-          })),
-        });
-        if (result.failed.length)
-          throw new Error(result.failed.map((f) => f.detail).join("\n"));
-      }
+      await discardChanges(transport, checkout, undo);
       setUndo(null);
     } catch (e) {
       setError(String(e));

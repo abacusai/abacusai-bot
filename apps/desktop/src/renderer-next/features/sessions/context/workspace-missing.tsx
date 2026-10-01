@@ -40,14 +40,16 @@ export const WorkspaceMissing = ({
   };
   const remove = async () => {
     setBusy(true);
-    try {
-      await db.collections.workspaces.delete(workspaceId).isPersisted.promise;
-      removed();
-    } catch (e) {
-      setError(String(e));
-    } finally {
+    await (async () => {
+      try {
+        await db.collections.workspaces.delete(workspaceId).isPersisted.promise;
+        removed();
+      } catch (e) {
+        setError(String(e));
+      }
+    })().finally(() => {
       setBusy(false);
-    }
+    });
   };
   return (
     <div className="flex flex-wrap items-center gap-2">

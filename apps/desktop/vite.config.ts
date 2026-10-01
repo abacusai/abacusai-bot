@@ -9,12 +9,42 @@ import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 
 import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
-import { alias, NEXT_MODULES, NEXT_SRC, NODE_MODULES } from "./vite.shared.ts";
+import {
+  alias,
+  NEXT_MODULES,
+  NEXT_APP_SRC,
+  NEXT_REGISTRY_SRC,
+  NODE_MODULES,
+} from "./vite.shared.ts";
 
 /** Loaded against Electron's own ABI, so never bundled. */
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
 
 const root = import.meta.dirname;
+
+// multi-env's dev builder has configFile:false and no top-level resolve.alias.
+// Vite aliases are global-only, so options.resolve.alias would be discarded.
+// Rolldown plugins are retained in both modes; delegate extension/index lookup
+// back to Vite after applying exactly the shared alias map.
+const electronAliases = {
+  name: "abacus:electron-aliases",
+  resolveId: {
+    order: "pre" as const,
+    async handler(
+      this: import("vite").Rolldown.PluginContext,
+      id: string,
+      importer: string | undefined
+    ) {
+      for (const [find, replacement] of Object.entries(alias)) {
+        if (id === find || id.startsWith(`${find}/`))
+          return this.resolve(replacement + id.slice(find.length), importer, {
+            skipSelf: true,
+          });
+      }
+      return null;
+    },
+  },
+};
 
 // The dev server, for the relaunch check below.
 let devServer: ViteDevServer | null = null;
@@ -84,12 +114,17 @@ export default defineConfig(({ command }) => {
       // instance last. Each sets oxc's refresh flag in its `config` hook and the
       // last one wins, so reversed, the old renderer loses Fast Refresh. The
       // compiler instance does its own refresh for the files it compiles.
-      react({ include: NEXT_MODULES, compiler: { logDiagnostics: true } }),
-      react({ exclude: [NODE_MODULES, NEXT_SRC] }),
+      react({
+        include: NEXT_MODULES,
+        exclude: NEXT_REGISTRY_SRC,
+        compiler: { logDiagnostics: true },
+      }),
+      react({ exclude: [NODE_MODULES, NEXT_APP_SRC] }),
       ...electron(
         simpleOptions({
           main: {
             input: "src/main/index.ts",
+            plugins: [electronAliases],
             onstart: async ({ startup }) => {
               await startup();
               // Mounted by the plugin's startup(); not in Node's own Process type.
@@ -158,6 +193,7 @@ export default defineConfig(({ command }) => {
           },
           preload: {
             input: "src/preload/index.ts",
+            plugins: [electronAliases],
             bundleDeps: { both: { exclude: ELECTRON_NATIVE } },
             // `.cjs`, not the plugin's default `.mjs`: the content it emits is
             // CommonJS, and Electron decides how to load a preload from the

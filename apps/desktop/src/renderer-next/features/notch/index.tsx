@@ -385,7 +385,7 @@ export const NotchShell = ({
       if (abort.signal.aborted || generation !== messageGeneration.current)
         throw new DOMException("Superseded", "AbortError");
     };
-    try {
+    await (async () => {
       const handle = await transport.client.bots.openChat(
         { botId },
         { signal: abort.signal }
@@ -417,11 +417,11 @@ export const NotchShell = ({
         { signal: abort.signal }
       );
       check();
-    } finally {
+    })().finally(() => {
       clearTimeout(timer);
       if (messageOperation.current?.generation === generation)
         messageOperation.current = null;
-    }
+    });
   };
   const endCall = (text?: string, error?: "microphone" | "transcription") => {
     setDictationError(error ?? null);
