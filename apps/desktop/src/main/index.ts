@@ -38,7 +38,10 @@ import type {
 } from "#shared/contracts";
 
 import { NotchController } from "./notch/controller";
-import { NotchNotificationPolicy } from "./notch/notifications";
+import {
+  NOTCH_BANNER_SUPPRESSION,
+  NotchNotificationPolicy,
+} from "./notch/notifications";
 
 /**
  * Where Playwright's default `chrome` channel looks for Google Chrome (stable
@@ -377,7 +380,13 @@ setBringToFront(() => {
 // English: i18n is renderer-only.
 let backgroundTaskNotified = false;
 function notifyTaskRunningInBackground(): void {
-  if (backgroundTaskNotified) return;
+  if (
+    backgroundTaskNotified ||
+    (RENDERER_GENERATION === "wco" &&
+      NOTCH_BANNER_SUPPRESSION &&
+      notchController?.hasSeen())
+  )
+    return;
   const prefs = readNotificationSettings();
   if (!prefs.enabled) return;
   backgroundTaskNotified = true;

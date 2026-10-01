@@ -1,6 +1,7 @@
 import { BaseWindow, WebContentsView } from "electron";
 
 import type { Placement } from "./geometry";
+import { rememberNotchWindow } from "./registry";
 export const fitView = (win: BaseWindow, view: WebContentsView): void => {
   if (win.isDestroyed() || view.webContents.isDestroyed()) return;
   const [width, height] = win.getContentSize();
@@ -18,11 +19,18 @@ export const createNotchView = (preload: string): WebContentsView => {
       webviewTag: false,
     },
   });
-  view.setBackgroundColor("#00000000");
-  view.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-  view.webContents.on("will-navigate", (event) => event.preventDefault());
-  view.webContents.on("will-attach-webview", (event) => event.preventDefault());
-  return view;
+  try {
+    view.setBackgroundColor("#00000000");
+    view.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    view.webContents.on("will-navigate", (event) => event.preventDefault());
+    view.webContents.on("will-attach-webview", (event) =>
+      event.preventDefault()
+    );
+    return view;
+  } catch (error) {
+    if (!view.webContents.isDestroyed()) view.webContents.close();
+    throw error;
+  }
 };
 export const createNotchWindow = (
   platform: string,
@@ -53,14 +61,23 @@ export const createNotchWindow = (
       : {}),
     ...placement.bounds,
   });
-  win.excludedFromShownWindowsMenu = true;
-  win.setAlwaysOnTop(true, platform === "darwin" ? "status" : "pop-up-menu");
-  if (platform === "darwin")
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
-  win.setIgnoreMouseEvents(true, { forward: true });
-  const view = createNotchView(preload);
-  win.contentView.addChildView(view);
-  fitView(win, view);
-  win.on("resize", () => fitView(win, view));
-  return { win, view };
+  rememberNotchWindow(win);
+  let view: WebContentsView | null = null;
+  try {
+    win.excludedFromShownWindowsMenu = true;
+    win.setAlwaysOnTop(true, platform === "darwin" ? "status" : "pop-up-menu");
+    if (platform === "darwin")
+      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
+    win.setIgnoreMouseEvents(true, { forward: true });
+    view = createNotchView(preload);
+    win.contentView.addChildView(view);
+    fitView(win, view);
+    const child = view;
+    win.on("resize", () => fitView(win, child));
+    return { win, view };
+  } catch (error) {
+    if (view && !view.webContents.isDestroyed()) view.webContents.close();
+    if (!win.isDestroyed()) win.destroy();
+    throw error;
+  }
 };

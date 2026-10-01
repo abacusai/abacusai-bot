@@ -22,9 +22,10 @@ const MAIN = 1;
 const NOTCH_A = 2;
 const NOTCH_B = 3;
 const LOCKED = 4;
+const NOTCH_C = 5;
 
 const makeWindows = () => {
-  const eligible = new Set([MAIN, NOTCH_A, NOTCH_B]);
+  const eligible = new Set([MAIN, NOTCH_A, NOTCH_B, NOTCH_C]);
   const facts = {
     focused: true,
     audible: MAIN as number | null,
@@ -121,7 +122,7 @@ describe("CueArbiter (spec 06 §14.2)", () => {
       facts.audible = seed % 3 === 0 ? NOTCH_B : MAIN;
       const arbiter = new CueArbiter({ windows });
       const claims = shuffle(
-        [MAIN, NOTCH_A, NOTCH_B, LOCKED].flatMap((id) =>
+        [MAIN, NOTCH_A, NOTCH_B, NOTCH_C, LOCKED].flatMap((id) =>
           ["done:a", "done:b", "needs-you:c"].map((cue) => ({ id, cue }))
         ),
         seed
