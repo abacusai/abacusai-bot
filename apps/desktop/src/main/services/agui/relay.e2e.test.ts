@@ -44,7 +44,7 @@ import {
 } from "../../rpc/testing";
 import { AgentManagerService } from "../session/cli-manager-service";
 import { ThreadStore } from "../session/thread-store";
-import { AguiRelayService, defaultWire } from "./relay-service";
+import { AguiRelayService } from "./relay-service";
 
 const AGENT = path.join(
   import.meta.dirname,
@@ -107,7 +107,7 @@ afterEach(async () => {
 });
 
 /** The real manager and relay, as ServiceHost wires them. */
-const build = (options: { aguiForEverySpawn?: boolean } = {}): Stack => {
+const build = (_options: { unused?: boolean } = {}): Stack => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agui-e2e-"));
   const home = path.join(root, "home");
   const user = path.join(root, "user");
@@ -140,7 +140,6 @@ const build = (options: { aguiForEverySpawn?: boolean } = {}): Stack => {
     }),
     resolveAuthEnv: () => ({}),
     resolveAdditionalConfigEnv: async () => ({}),
-    resolveWire: (sessionId) => relay.wireFor(sessionId),
     emitAgui: (_w, sessionId, event, origin) =>
       relay.ingest(sessionId, event, origin),
     emitAguiExit: (_w, sessionId, exit) => relay.runtimeExited(sessionId, exit),
@@ -158,7 +157,6 @@ const build = (options: { aguiForEverySpawn?: boolean } = {}): Stack => {
   });
   relay = new AguiRelayService({
     files: store,
-    aguiForEverySpawn: options.aguiForEverySpawn ?? false,
     startTimeoutMs: 45_000,
     ackTimeoutMs: 20_000,
     log: () => undefined,
@@ -344,7 +342,6 @@ describe("main's AG-UI relay with a spawned agent", () => {
     const { client, relay, store, compat, marks } = build();
     replies = writeThenReply;
     const window = await Window.open(client);
-    expect(relay.wireFor(THREAD)).toBe("agui");
 
     await expect(
       client.ai.send({
@@ -574,7 +571,7 @@ describe("main's AG-UI relay with a spawned agent", () => {
       );
       expect(echo.map((event) => event.delta).join("")).toBe(text);
     }
-    expect(relay.wireFor(THREAD)).toBe("agui");
+
     const users = (
       await client.ai.hydrate({ threadId: THREAD })
     ).messages.filter((message) => message.role === "user");
@@ -678,12 +675,7 @@ describe("main's AG-UI relay with a spawned agent", () => {
   }, 90_000);
 
   it("in the new-renderer build, a spawn no ai.* call asked for speaks AG-UI and the new UI drives it (review r1)", async () => {
-    const { client, manager, relay } = build({
-      aguiForEverySpawn: defaultWire({
-        isPackaged: true,
-        env: {},
-      }),
-    });
+    const { client, manager, relay } = build({});
     replies = () => ({ say: "ok" });
 
     // A routine, a bot reply or a restored session: started by main itself.
@@ -696,7 +688,6 @@ describe("main's AG-UI relay with a spawned agent", () => {
       })
     ).resolves.toMatchObject({ success: true });
     expect(manager.getRuntimeInfo(THREAD)?.wire).toBe("agui");
-    expect(relay.wireFor("another-thread")).toBe("agui");
 
     const window = await Window.open(client);
     await expect(

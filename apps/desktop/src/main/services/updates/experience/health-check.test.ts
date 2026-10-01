@@ -5,14 +5,14 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { checkAgentBundle } from "./health-check";
-for (const wire of ["ndjson", "agui"] as const) {
+for (const wire of ["agui"] as const) {
   it(`R7-T8: health check uses ${wire} readiness and exact arguments in an isolated home`, async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "health-fixture-"));
     try {
       await fs.mkdir(path.join(root, "agent"));
       const args =
         wire === "agui"
-          ? ["--wire", "agui", "--thread-id", "health-check"]
+          ? ["--thread-id", "health-check"]
           : ["--wire", "ndjson"];
       const ready =
         wire === "agui"
@@ -22,14 +22,12 @@ for (const wire of ["ndjson", "agui"] as const) {
         path.join(root, "agent", "main.js"),
         `if(JSON.stringify(process.argv.slice(2))!==${JSON.stringify(JSON.stringify(args))})process.exit(64); console.log(${JSON.stringify(JSON.stringify(ready))});setInterval(()=>{},1000);`
       );
-      await expect(checkAgentBundle(root, { wire })).resolves.toBeUndefined();
+      await expect(checkAgentBundle(root)).resolves.toBeUndefined();
       await fs.writeFile(
         path.join(root, "agent", "main.js"),
         'console.log(JSON.stringify({type:"RUN_ERROR"}));setInterval(()=>{},1000);'
       );
-      await expect(checkAgentBundle(root, { wire })).rejects.toThrow(
-        "RUN_ERROR"
-      );
+      await expect(checkAgentBundle(root)).rejects.toThrow("RUN_ERROR");
     } finally {
       await fs.rm(root, { force: true, recursive: true });
     }
@@ -47,7 +45,7 @@ it.each([
   try {
     await fs.mkdir(path.join(root, "agent"));
     await fs.writeFile(path.join(root, "agent", "main.js"), source);
-    await expect(checkAgentBundle(root, { wire: "agui" })).rejects.toThrow();
+    await expect(checkAgentBundle(root)).rejects.toThrow();
   } finally {
     await fs.rm(root, { force: true, recursive: true });
   }

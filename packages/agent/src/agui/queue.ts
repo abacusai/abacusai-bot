@@ -72,16 +72,6 @@ export interface TurnHooks {
   ): void;
 }
 
-export interface HostCoreOptions {
-  /**
-   * `--wire agui` only: Stop and reset hold the admission guard until they
-   * have landed, so no turn starter can prompt the session being aborted or
-   * replaced; whatever arrives meanwhile waits for the turn and runs after.
-   * Off under `--wire ndjson`, whose behaviour is the legacy host's.
-   */
-  reserveDuringAbort?: boolean;
-}
-
 export interface HostIo {
   stdin: Readable;
   /** Everything the host writes goes through its sink; this is for EOF handling. */
@@ -141,8 +131,7 @@ export class HostCore {
   constructor(
     readonly session: HostSession,
     private readonly emitEvent: (event: DesktopEvent) => void,
-    private readonly hooks: TurnHooks = {},
-    private readonly options: HostCoreOptions = {}
+    private readonly hooks: TurnHooks = {}
   ) {}
 
   /** Starts the session; a failure is reported as today and rethrown. */
@@ -477,7 +466,6 @@ export class HostCore {
    * abort's sequence number, or null under the legacy (ndjson) behaviour.
    */
   private reserveAbort(): number | null {
-    if (this.options.reserveDuringAbort !== true) return null;
     this.busy = true;
 
     return ++this.aborts;

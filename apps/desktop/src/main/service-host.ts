@@ -247,7 +247,7 @@ import {
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
-import { AguiRelayService, defaultWire } from "./services/agui/relay-service";
+import { AguiRelayService } from "./services/agui/relay-service";
 import { botChatPreview } from "./services/bots/bot-chat-preview";
 import {
   clearBotMemory,
@@ -472,15 +472,9 @@ export class ServiceHost {
    * Main's AG-UI relay (agent spec §5.2): the renderer's `ai.*` procedures,
    * and the wire each session's agent is spawned with: `--wire agui` for
    * every spawn in the new-renderer build, `--wire ndjson` in the legacy
-   * build until the new renderer asks for a thread (`defaultWire`).
+   * build until the new renderer asks for a thread (`unconditional AG-UI`).
    */
   readonly aguiRelay: AguiRelayService = new AguiRelayService({
-    aguiForEverySpawn: defaultWire({
-      generation: "wco",
-      isPackaged: app.isPackaged,
-      env: process.env,
-      log: (message) => console.warn(`[agui] ${message}`),
-    }),
     files: this.threadStore,
     host: {
       workspaceOf: (threadId) => {
@@ -1397,14 +1391,13 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
-    resolveWire: (sessionId) => this.aguiRelay.wireFor(sessionId),
     emitAgui: (_workspaceId, sessionId, event, origin) => {
       this.aguiRelay.ingest(sessionId, event, origin);
     },
     emitAguiExit: (_workspaceId, sessionId, exit) => {
       this.aguiRelay.runtimeExited(sessionId, exit);
     },
-    emitNdjson: (workspaceId, sessionId, payload) => {
+    emitNdjson: (workspaceId, sessionId, payload, origin) => {
       // An agui runtime serves only the new renderer (spec 00-agent-agui
       // §2.1): its compat lines feed main's taps below, never the old
       // renderer's `local-cli-ndjson` stream.
@@ -1450,7 +1443,7 @@ export class ServiceHost {
       const communicationUpdate =
         this.agentCommunicationService.handleDesktopEvent(payload);
       if (communicationUpdate.autoAllowDecision != null) {
-        if (origin?.wire === "agui") {
+        if (origin != null) {
           // Bound to the runtime that asked: a replacement process that now
           // owns the session id never receives another process's answer.
           this.agentManagerService.sendCommandToRuntime(
@@ -1463,13 +1456,6 @@ export class ServiceHost {
               decision: communicationUpdate.autoAllowDecision.decision,
             }
           );
-        } else {
-          this.agentCommunicationService.respondPermission({
-            workspaceId,
-            sessionId,
-            permissionId: communicationUpdate.autoAllowDecision.permissionId,
-            decision: communicationUpdate.autoAllowDecision.decision,
-          });
         }
       }
       if (communicationUpdate.statePatch != null) {

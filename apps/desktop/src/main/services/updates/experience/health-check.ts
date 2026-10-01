@@ -32,8 +32,7 @@ const HEALTH_ENV_NAMES = [
 ];
 
 export const checkAgentBundle = async (
-  candidateRoot: string,
-  options: { wire: "ndjson" | "agui" } = { wire: "ndjson" }
+  candidateRoot: string
 ): Promise<void> => {
   const entry = path.join(candidateRoot, "agent", "main.js");
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "abacus-health-"));
@@ -50,10 +49,7 @@ export const checkAgentBundle = async (
     if (value !== undefined) env[name] = value;
   }
 
-  const args =
-    options.wire === "agui"
-      ? [entry, "--wire", "agui", "--thread-id", "health-check"]
-      : [entry, "--wire", "ndjson"];
+  const args = [entry, "--thread-id", "health-check"];
   const child = spawn(process.execPath, args, {
     cwd: home,
     env,
@@ -77,11 +73,8 @@ export const checkAgentBundle = async (
           if (
             typeof parsed === "object" &&
             parsed !== null &&
-            (options.wire === "agui"
-              ? (parsed as { type?: unknown; name?: unknown }).type ===
-                  "CUSTOM" &&
-                (parsed as { name?: unknown }).name === "session.ready"
-              : (parsed as { type?: unknown }).type === "ready")
+            (parsed as { type?: unknown }).type === "CUSTOM" &&
+            (parsed as { name?: unknown }).name === "session.ready"
           ) {
             clearTimeout(timer);
             resolve();

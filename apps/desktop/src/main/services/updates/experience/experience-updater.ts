@@ -15,7 +15,6 @@ import extract from "extract-zip";
 import { Updater } from "tuf-js";
 
 import { resourcePath } from "#main/resources";
-import { defaultWire } from "#main/services/agui/relay-service";
 
 import type { ExperienceStore } from "./experience-store";
 import { checkAgentBundle } from "./health-check";
@@ -256,15 +255,7 @@ export class ExperienceUpdater {
       // The candidate's agent resolves native imports through the linked
       // runtime, so the link must exist before the health check.
       await store.linkRuntime(temporary);
-      await checkAgentBundle(temporary, {
-        wire: defaultWire({
-          generation: "wco",
-          isPackaged: app.isPackaged,
-          env: process.env,
-        })
-          ? "agui"
-          : "ndjson",
-      });
+      await checkAgentBundle(temporary);
 
       const installed = path.join(
         store.experiencesDirectory,

@@ -9,7 +9,7 @@
  *   (a routine, a bot reply, a restored session) must be drivable from it.
  *   In the legacy build every spawn stays `--wire ndjson` (its renderer never
  *   calls `ai.*`), except a thread the new renderer has asked for and, in an
- *   unpackaged app only, `ABACUSAI_BOT_AGENT_WIRE=agui` (`defaultWire`).
+ *   unpackaged app only, `removed wire override=agui` (`unconditional AG-UI`).
  * - **The relay.** Every AG-UI line goes to its thread's `ThreadRelay`
  *   (transcript, ring, run log, session state), which fans it out to the
  *   subscribers.
@@ -88,7 +88,7 @@ export interface AguiRelayHost {
   runtime(
     threadId: string
   ): { wire: AgentWire; status: AgentSessionStatus } | null;
-  /** Start the thread's agent (its wire comes from `wireFor`). */
+  /** Start the thread's agent (its wire comes from `unconditional AG-UI`). */
   start(threadId: string): Promise<boolean>;
   /**
    * One command on the live runtime's stdin. Returns the process it was
@@ -144,8 +144,7 @@ export interface AguiThreadFiles {
 export interface AguiRelayOptions {
   host: AguiRelayHost;
   files: AguiThreadFiles;
-  /** Every spawn speaks AG-UI (`defaultWire`). Defaults to false. */
-  aguiForEverySpawn?: boolean;
+  /** Every spawn speaks AG-UI (`unconditional AG-UI`). Defaults to false. */
   /** How long `ai.send` waits for the runtime to be ready. */
   startTimeoutMs?: number;
   /** How long `ai.send` waits for `run.ack` after writing `run`. */
@@ -154,30 +153,6 @@ export interface AguiRelayOptions {
   maxIdleThreads?: number;
   log?: (message: string) => void;
 }
-
-/**
- * Whether every spawn speaks AG-UI: always in the new-renderer build; in
- * the legacy build only with `ABACUSAI_BOT_AGENT_WIRE=agui` in an unpackaged
- * app (tests, dogfooding). A packaged legacy app ignores the variable: its
- * renderer could not show an AG-UI turn, and the compat stream it needs is
- * withheld from it for agui runtimes.
- */
-export const defaultWire = (options: {
-  generation: "legacy" | "wco";
-  isPackaged: boolean;
-  env: NodeJS.ProcessEnv;
-  log?: (message: string) => void;
-}): boolean => {
-  if (options.generation === "wco") return true;
-  const requested = options.env.ABACUSAI_BOT_AGENT_WIRE === "agui";
-  if (requested && options.isPackaged) {
-    options.log?.(
-      "ABACUSAI_BOT_AGENT_WIRE=agui is ignored in a packaged legacy build"
-    );
-    return false;
-  }
-  return requested;
-};
 
 type AckStatus = "started" | "queued" | "rejected";
 
@@ -281,7 +256,6 @@ export class AguiRelayService implements AguiSource {
   readonly #clock = new SeqClock();
   readonly #host: AguiRelayHost;
   readonly #files: AguiThreadFiles;
-  readonly #aguiForEverySpawn: boolean;
   readonly #startTimeoutMs: number;
   readonly #ackTimeoutMs: number;
   readonly #maxIdleThreads: number;
@@ -289,7 +263,6 @@ export class AguiRelayService implements AguiSource {
 
   readonly #threads = new Map<string, ThreadRelay>();
   /** Threads the new renderer has asked for: their spawns speak AG-UI. */
-  readonly #claimed = new Set<string>();
   /** runId → threadId, while the run's log is joinable (`joinRun`). */
   readonly #runOwners = new Map<string, string>();
   /** `thread\0run` of runs seen starting: not new for `ai.send`. Bounded. */
@@ -321,7 +294,6 @@ export class AguiRelayService implements AguiSource {
   constructor(options: AguiRelayOptions) {
     this.#host = options.host;
     this.#files = options.files;
-    this.#aguiForEverySpawn = options.aguiForEverySpawn ?? false;
     this.#startTimeoutMs = options.startTimeoutMs ?? 60_000;
     this.#ackTimeoutMs = options.ackTimeoutMs ?? 30_000;
     this.#maxIdleThreads = options.maxIdleThreads ?? 16;
@@ -330,13 +302,6 @@ export class AguiRelayService implements AguiSource {
   }
 
   // ─── wiring from AgentManagerService ──────────────────────────────────
-
-  /** `AgentManagerService.resolveWire`. */
-  wireFor(threadId: string): AgentWire {
-    return this.#aguiForEverySpawn || this.#claimed.has(threadId)
-      ? "agui"
-      : "ndjson";
-  }
 
   /** `AgentManagerService.emitAgui`: one stdout line of an agui runtime. */
   ingest(
@@ -493,7 +458,6 @@ export class AguiRelayService implements AguiSource {
     const thread = this.#threads.get(threadId);
     thread?.clearByMain();
     if (thread != null && thread.listenerCount === 0) this.#evict(threadId);
-    this.#claimed.delete(threadId);
     const prefix = runKey(threadId, "");
     for (const key of this.#acks.keys())
       if (key.startsWith(prefix)) this.#acks.delete(key);
@@ -764,7 +728,6 @@ export class AguiRelayService implements AguiSource {
     });
     if (joined == null) return (async function* () {})();
     unsubscribe = joined.unsubscribe;
-    this.#claimed.add(thread.threadId);
     signal.addEventListener("abort", unsubscribe, { once: true });
 
     return (async function* () {
@@ -815,7 +778,6 @@ export class AguiRelayService implements AguiSource {
       );
     }
 
-    this.#claimed.add(threadId);
     // The duplicate check and the reservation are one synchronous step: a
     // simultaneous send of the same run id finds this reservation.
     const repeat = this.#repeatOf(threadId, runId);
@@ -959,7 +921,6 @@ export class AguiRelayService implements AguiSource {
   #known(threadId: string): ThreadRelay {
     if (this.#host.workspaceOf(threadId) == null)
       throw notFound("session", threadId);
-    this.#claimed.add(threadId);
     return this.#thread(threadId);
   }
 
@@ -1192,15 +1153,6 @@ export class AguiRelayService implements AguiSource {
     for (;;) {
       const runtime = this.#host.runtime(threadId);
       const status = runtime?.status ?? "stopped";
-      if (
-        runtime != null &&
-        runtime.wire !== "agui" &&
-        status !== "stopped" &&
-        status !== "error"
-      )
-        throw unavailable(
-          "This session's agent speaks the legacy protocol; stop it and send again"
-        );
       if (status === "running") return;
       if (status === "stopped" || status === "error") {
         if (started) throw unavailable("The agent did not start", 1_000);
@@ -1226,8 +1178,6 @@ export class AguiRelayService implements AguiSource {
       (runtime.status !== "running" && runtime.status !== "starting")
     )
       throw unavailable("The agent is not running", 1_000);
-    if (runtime.wire !== "agui")
-      throw unavailable("This session's agent speaks the legacy protocol");
   }
 
   #write(threadId: string, command: object): void {

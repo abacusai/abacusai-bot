@@ -40,7 +40,6 @@ const setup = () => {
       markStopped: () => undefined,
     },
     files: new ThreadStore({ home: () => home, log: () => undefined }),
-    aguiForEverySpawn: true,
     log: () => undefined,
   });
   const turnState = new SessionTurnStateService(() => undefined);

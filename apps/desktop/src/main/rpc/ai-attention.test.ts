@@ -39,7 +39,6 @@ const setup = () => {
       markStopped: () => undefined,
     },
     files: new ThreadStore({ home: () => home, log: () => undefined }),
-    aguiForEverySpawn: true,
     log: () => undefined,
   });
   const emit = (threadId: string, event: Record<string, unknown>): void =>
