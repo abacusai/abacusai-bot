@@ -64,6 +64,13 @@ export const ModelsPage = ({
     transport.orpc.localModels.state.queryOptions({ input: {} })
   );
   const [q, setQ] = useState("");
+  const installGeneration = useRef(0);
+  useEffect(
+    () => () => {
+      installGeneration.current++;
+    },
+    [search.for]
+  );
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const now = useNow();
@@ -114,12 +121,14 @@ export const ModelsPage = ({
       await adoptModel(search.for, localModelReference(id));
   };
   const install = async (id: string) => {
+    const generation = ++installGeneration.current;
     setBusy(id);
     setError(null);
     try {
       const result = await transport.client.localModels.install({
         modelId: id,
       });
+      if (generation !== installGeneration.current) return;
       if (result.ok) {
         await cache.invalidateQueries({
           queryKey: transport.orpc.localModels.state.queryKey({ input: {} }),
@@ -331,7 +340,9 @@ export const ModelsPage = ({
                         size="sm"
                         disabled={
                           busy !== null ||
-                          state.data!.download?.phase === "downloading"
+                          ["downloading", "verifying"].includes(
+                            state.data!.download?.phase ?? ""
+                          )
                         }
                         onClick={() => void install(model.id)}
                       >

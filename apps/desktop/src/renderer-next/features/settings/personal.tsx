@@ -445,7 +445,12 @@ export const MemoryPage = () => {
           >
             {([text, busy]) => (
               <Button
-                disabled={busy || text.trim() === (query.data ?? "").trim()}
+                disabled={
+                  query.isPending ||
+                  query.isError ||
+                  busy ||
+                  text.trim() === (query.data ?? "").trim()
+                }
                 type="submit"
               >
                 {t("phase5.save")}
