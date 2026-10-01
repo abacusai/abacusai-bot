@@ -598,7 +598,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         ) : null}
         <MessageScrollerContent
           aria-busy={active}
-          className="mx-auto w-full max-w-[720px] gap-3 px-4 pt-6 pb-4"
+          className="mx-auto w-full max-w-[720px] min-w-0 gap-3 px-4 pt-6 pb-4"
         >
           {orphans.map((outcome) => (
             <MessageScrollerItem key={`outcome-${outcome.runId}`}>

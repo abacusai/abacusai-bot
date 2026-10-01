@@ -21,6 +21,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Spinner } from "#renderer/components/spinner";
 import { isNotFound, rpcCode } from "#renderer/data/ai";
 import { cn } from "#renderer/lib/cn";
 import { useMotionPreference } from "#renderer/lib/motion";
@@ -41,7 +42,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import { Spinner } from "#renderer/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 import type { AgentMode } from "#shared/agent-types";
 

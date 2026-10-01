@@ -19,7 +19,11 @@ import {
 import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
 import { SessionsGlobals } from "#renderer/features/sessions/globals";
 import { dispatchPreview } from "#renderer/features/shell/preview-consumers";
-import { ShellLayout } from "#renderer/features/shell/shell-layout";
+import {
+  ShellLayout,
+  ShellPending,
+  ShellFailure,
+} from "#renderer/features/shell/shell-layout";
 import { startTour, useTourState } from "#renderer/features/tour/store";
 const TourHost = lazy(() =>
   import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
@@ -104,4 +108,6 @@ export const Route = createFileRoute("/_shell")({
       context.db.collections.workspaces.preload().catch(ignoreLoadError),
     ]),
   component: ShellRoute,
+  pendingComponent: ShellPending,
+  errorComponent: ShellFailure,
 });

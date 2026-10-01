@@ -99,6 +99,7 @@ export const SettingsSidebar = () => {
       <NavList.Header title={t("settings.sidebar.label")} />
       <Input
         aria-label={t("phase5.searchSettings")}
+        placeholder={t("phase5.searchSettings")}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />

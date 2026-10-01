@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { ConnectorMark } from "#renderer/components/connector-mark";
+import { Spinner } from "#renderer/components/spinner";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
@@ -24,7 +25,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "#renderer/ui/dropdown-menu";
-import { Spinner } from "#renderer/ui/spinner";
 
 import type { OnboardingExit } from "./actions";
 import {

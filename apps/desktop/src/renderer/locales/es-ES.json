@@ -1067,10 +1067,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "Tu cuenta está lista. Tu bot trabaja con tus modelos, archivos y herramientas.",
-    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
-    "pages.connected.promise2": "Access Access to free models",
-    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
-    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
+    "pages.connected.promise1": "Where requests go. RouteLLM chooses unless you pick a model in the composer.",
+    "pages.connected.promise2": "Read, write, and edit files, and search the workspace by name or contents.",
+    "pages.connected.promise3": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
+    "pages.connected.promise4": "What the agent has chosen to remember across sessions, and what you tell every session.",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1095,7 +1095,8 @@
     "pages.pairing": "Terminar de conectar {{platform}}",
     "pages.finishPairing": "Terminar la conexión",
     "pages.localModels": "Use a local model",
-    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out."
+    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
+    "welcomeFreeBadge": "Empieza gratis"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1276,7 +1277,7 @@
       "emptyTitle": "No routines yet",
       "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
       "routineTitle": "Routine",
-      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "routineDescription": "Revisa la programación, las instrucciones y el historial de esta rutina.",
       "createTitle": "Nueva rutina",
       "createDescription": "Say what it should do and when."
     },
@@ -1339,22 +1340,28 @@
       "try": "Try one of these",
       "starters": {
         "build-a-store": {
-          "name": "Build an online store"
+          "name": "Build an online store",
+          "detail": "Crea una tienda con carrito de compra."
         },
         "design-an-infographic": {
-          "name": "Turn a repo into an infographic"
+          "name": "Turn a repo into an infographic",
+          "detail": "Explica una base de código con una vista general visual."
         },
         "find-flights": {
-          "name": "Find me flights"
+          "name": "Find me flights",
+          "detail": "Compara rutas, fechas y precios."
         },
         "process-a-spreadsheet": {
-          "name": "Clean up a spreadsheet"
+          "name": "Clean up a spreadsheet",
+          "detail": "Limpia los datos y resume los resultados."
         },
         "restyle-a-repo": {
-          "name": "Restyle Excalidraw"
+          "name": "Restyle Excalidraw",
+          "detail": "Renueva la interfaz de una aplicación existente."
         },
         "review-pull-requests": {
-          "name": "Review my pull requests"
+          "name": "Review my pull requests",
+          "detail": "Revisa los cambios en busca de errores y pruebas que falten."
         }
       },
       "recent": "Pick up where you left off in {{workspace}}"
@@ -1536,7 +1543,8 @@
   },
   "theme": {
     "dark": "Oscuro",
-    "light": "Claro"
+    "light": "Claro",
+    "system": "Sistema"
   },
   "tour": {
     "finish": "Empezar",
@@ -1547,40 +1555,52 @@
     "skip": "Omitir el tour",
     "stops": {
       "rail": {
-        "body": "Agentes permanentes con sus propias instrucciones, horarios y chats. Crea uno para el trabajo que delegas más de una vez."
+        "body": "Agentes permanentes con sus propias instrucciones, horarios y chats. Crea uno para el trabajo que delegas más de una vez.",
+        "title": "Bots"
       },
       "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
+        "title": "Who do you need?"
       },
       "workspaces": {
-        "body": "Cada carpeta que has abierto y cada conversación que contiene. Aquí cambias de espacio o vuelves a abrir una sesión de la semana pasada."
+        "body": "Cada carpeta que has abierto y cada conversación que contiene. Aquí cambias de espacio o vuelves a abrir una sesión de la semana pasada.",
+        "title": "Sesiones"
       },
       "start-session": {
-        "body": "Abre un campo vacío en el espacio actual. Una sesión por tarea mantiene el contexto pegado al trabajo al que pertenece."
+        "body": "Abre un campo vacío en el espacio actual. Una sesión por tarea mantiene el contexto pegado al trabajo al que pertenece.",
+        "title": "Nueva sesión"
       },
       "connectors": {
-        "body": "Conecta las herramientas con las que ya trabajas. Una cuenta gratuita de Abacus.AI engancha un conjunto entero en un clic."
+        "body": "Conecta las herramientas con las que ya trabajas. Una cuenta gratuita de Abacus.AI engancha un conjunto entero en un clic.",
+        "title": "Conectores"
       },
       "changes": {
-        "body": "Cada edición del agente, como un diff que puedes leer antes de que vaya a ninguna parte. Al lado están tus archivos y los subagentes en marcha."
+        "body": "Cada edición del agente, como un diff que puedes leer antes de que vaya a ninguna parte. Al lado están tus archivos y los subagentes en marcha.",
+        "title": "Changes"
       },
       "preview-terminal": {
-        "body": "Una shell real en tu espacio, en la misma carpeta en la que trabaja el agente. El botón de terminal de la barra de título la muestra y la oculta."
+        "body": "Una shell real en tu espacio, en la misma carpeta en la que trabaja el agente. El botón de terminal de la barra de título la muestra y la oculta.",
+        "title": "Terminal"
       },
       "memory": {
-        "body": "Lo que el agente conserva entre sesiones y las instrucciones fijas que sigue. Léelo, edítalo y borra lo que se haya quedado viejo."
+        "body": "Lo que el agente conserva entre sesiones y las instrucciones fijas que sigue. Léelo, edítalo y borra lo que se haya quedado viejo.",
+        "title": "Memory"
       },
       "artifacts": {
-        "body": "Los archivos que produjo una sesión (documentos, imágenes, informes) reunidos en un sitio en vez de repartidos por la conversación."
+        "body": "Los archivos que produjo una sesión (documentos, imágenes, informes) reunidos en un sitio en vez de repartidos por la conversación.",
+        "title": "Artefactos"
       },
       "welcome": {
-        "body": "Un breve recorrido por la ventana. {{n}} paradas; puedes salir cuando quieras."
+        "body": "Un breve recorrido por la ventana. {{n}} paradas; puedes salir cuando quieras.",
+        "title": "Welcome to AbacusAI Bot"
       },
       "talk": {
-        "body": "Dale una tarea a tu bot aquí. Puede hacer preguntas y mostrar su trabajo."
+        "body": "Dale una tarea a tu bot aquí. Puede hacer preguntas y mostrar su trabajo.",
+        "title": "What should we build?"
       },
       "notch": {
-        "body": "Las respuestas y aprobaciones pueden aparecer encima de tu espacio de trabajo. Abre la aplicación para ver toda la conversación."
+        "body": "Las respuestas y aprobaciones pueden aparecer encima de tu espacio de trabajo. Abre la aplicación para ver toda la conversación.",
+        "title": "Compañero"
       }
     }
   },
@@ -1699,7 +1719,7 @@
     },
     "panel": {
       "label": "Side panel",
-      "emptyDescription": "This panel fills in with a later update.",
+      "emptyDescription": "Selecciona un elemento para ver sus detalles aquí.",
       "tabs": {
         "changes": "Changes",
         "terminal": "Terminal",
@@ -2542,36 +2562,36 @@
     "allTools": "All tools",
     "alwaysOn": "Always on",
     "approve": "Aprobar",
-    "artifactGone": "Artifact gone",
+    "artifactGone": "This file is no longer on disk.",
     "artifactPreview": "Artifact preview",
     "artifactView": "Artifact view",
     "auto": "Auto",
     "category": "Category",
     "closePreview": "Close preview",
-    "connectName": "Connect name",
-    "connectWaiting": "Connect waiting",
-    "connectorsDescription": "Connectors description",
-    "credentialsLocal": "Credentials local",
+    "connectName": "Conectar {{name}}",
+    "connectWaiting": "Termina de iniciar sesión para conectar este servicio.",
+    "connectorsDescription": "Conecta los servicios que tu agente puede usar para completar tareas.",
+    "credentialsLocal": "Las credenciales se guardan en este ordenador.",
     "defaultWorkspace": "Default workspace",
     "deliverToBot": "Deliver to bot",
     "details": "Details",
-    "disconnectDescription": "Disconnect description",
-    "disconnectTitle": "Disconnect title",
+    "disconnectDescription": "Tu agente perderá el acceso a este servicio. Podrás conectarlo de nuevo más tarde.",
+    "disconnectTitle": "¿Desconectar {{name}}?",
     "documentation": "Documentation",
     "done": "Listo",
     "editSkill": "Edit skill",
     "executionShell": "Execution shell",
-    "fileMissing": "File missing",
+    "fileMissing": "This file is no longer on disk.",
     "followWorkspace": "Follow workspace",
     "fullAccess": "Full access",
     "global": "Global",
-    "goSession": "Go session",
+    "goSession": "Open as a session",
     "grid": "Grid",
-    "items": "Items",
-    "linkQr": "Link qr",
+    "items": "{{count}} elementos",
+    "linkQr": "Código QR para vincular tu cuenta",
     "list": "List",
     "marketplace": "Marketplace",
-    "messagingDescription": "Messaging description",
+    "messagingDescription": "Elige dónde reciben y envían mensajes tus bots.",
     "messagingEnabled": "Mensajería activada",
     "noBot": "No bot",
     "nothingMatches": "Sin resultados",
@@ -2580,26 +2600,26 @@
     "openLogin": "Open login",
     "openSharedChat": "Open shared chat",
     "planned": "Planned",
-    "poweredSkills": "Powered skills",
+    "poweredSkills": "Explorar skills.sh",
     "reject": "Rechazar",
-    "remoteUnattended": "Remote unattended",
-    "remoteWarning": "Remote warning",
-    "respondInbound": "Respond inbound",
-    "restartSkills": "Restart skills",
+    "remoteUnattended": "Permitir tareas remotas sin supervisión",
+    "remoteWarning": "Las solicitudes remotas pueden ejecutar comandos y cambiar archivos sin preguntarte.",
+    "respondInbound": "Responder a los mensajes entrantes",
+    "restartSkills": "Reinicia la aplicación para cargar las habilidades actualizadas.",
     "reveal": "Reveal",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search conectores",
     "searchSkills": "Search skills",
     "searchTools": "Search tools",
-    "skillsDescription": "Skills description",
+    "skillsDescription": "Instala instrucciones reutilizables para tu agente, globalmente o para un espacio de trabajo.",
     "sort": "Sort",
-    "toolsDescription": "Tools description",
+    "toolsDescription": "Elige qué herramientas puede usar el agente.",
     "uninstall": "Uninstall",
     "uninstallSkill": "Desinstalar skill",
-    "uninstallSkillDescription": "Uninstall skill description",
+    "uninstallSkillDescription": "¿Eliminar /{{id}} de este ordenador? Podrás instalarlo de nuevo más tarde.",
     "unlink": "Unlink",
-    "unlinkDescription": "Unlink description",
-    "unlinkTitle": "Unlink title",
+    "unlinkDescription": "Los mensajes de esta cuenta dejarán de llegar a tu bot.",
+    "unlinkTitle": "¿Desvincular esta cuenta?",
     "whatItCanDo": "What it can do",
     "workspace": "Espacio de trabajo",
     "connectGmail": "Connect Gmail",
@@ -2628,7 +2648,7 @@
     "terminalShell": "Terminal shell",
     "thisVersion": "This version",
     "whatsNew": "What's new",
-    "draftModelUnavailable": "The chat kit has not exposed draft model adoption yet.",
+    "draftModelUnavailable": "Vuelve a elegir el modelo en la conversación.",
     "threadGone": "This thread was removed.",
     "inviteChannels": {
       "link": "Invite link",
@@ -2647,7 +2667,7 @@
       "web": "Web"
     },
     "formats": {
-      "pdf": "Pdf",
+      "pdf": "PDF",
       "word": "Word",
       "spreadsheet": "Spreadsheet",
       "slides": "Slides",
@@ -2691,6 +2711,12 @@
     "unbind": "Unbind",
     "invalidMcp": "Introduce un nombre y un comando, o una URL HTTP(S) válida.",
     "chooseRecipients": "Selecciona al menos un destinatario.",
-    "authRequired": "Autenticación necesaria"
+    "authRequired": "Autenticación necesaria",
+    "artifactTypes": {
+      "file": "Archivos",
+      "image": "Imágenes",
+      "link": "Enlaces"
+    },
+    "connecting": "Loading"
   }
 }

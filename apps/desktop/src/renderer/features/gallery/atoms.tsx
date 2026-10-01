@@ -6,6 +6,7 @@
 import { ChevronRight, File, Info, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Spinner } from "#renderer/components/spinner";
 import {
   Attachment,
   AttachmentContent,
@@ -91,7 +92,6 @@ import {
 import { ScrollArea } from "#renderer/ui/scroll-area";
 import { Separator } from "#renderer/ui/separator";
 import { Skeleton } from "#renderer/ui/skeleton";
-import { Spinner } from "#renderer/ui/spinner";
 import { Switch } from "#renderer/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 import { Textarea } from "#renderer/ui/textarea";

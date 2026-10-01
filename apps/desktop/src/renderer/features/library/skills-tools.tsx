@@ -313,6 +313,7 @@ export const ToolsPage = () => {
     >
       <Input
         aria-label={t("phase5.searchTools")}
+        placeholder={t("phase5.searchTools")}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
@@ -321,7 +322,7 @@ export const ToolsPage = () => {
           foldSearch(
             s.id +
               " " +
-              t(`capabilities.toolsets.${s.labelKey}`) +
+              t(`capabilities.toolsets.${s.labelKey}.label`) +
               " " +
               s.tools.map((t) => t.name).join(" ")
           ).includes(foldSearch(q))
@@ -329,7 +330,7 @@ export const ToolsPage = () => {
           <SettingRow
             key={s.id}
             id={s.id}
-            title={t(`capabilities.toolsets.${s.labelKey}`)}
+            title={t(`capabilities.toolsets.${s.labelKey}.label`)}
             detail={s.tools.map((tool) => tool.name).join(", ")}
           >
             <AppLink
@@ -360,7 +361,9 @@ export const ToolsetPage = ({ toolsetName }: { toolsetName: string }) => {
   const set = TOOLSETS_FOR_DISPLAY.find((s) => s.id === toolsetName);
   return (
     <AreaPage
-      title={set ? t(`capabilities.toolsets.${set.labelKey}`) : toolsetName}
+      title={
+        set ? t(`capabilities.toolsets.${set.labelKey}.label`) : toolsetName
+      }
     >
       <AppLink to="/library/tools">{t("phase5.allTools")}</AppLink>
       {set?.tools.map((tool) => (

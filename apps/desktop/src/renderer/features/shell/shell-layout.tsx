@@ -16,9 +16,15 @@ import {
   useLocation,
   useRouter,
   type AnyRouter,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
+import {
+  PaneBoundary,
+  PaneError,
+  RoutePending,
+} from "#renderer/components/page-state";
 import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import {
@@ -58,16 +64,16 @@ import { usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
 import { useSidebarToggle } from "./use-sidebar-toggle";
 
-const Pane = () => (
+const Pane = ({ children }: { children?: ReactNode }) => (
   <main
     data-slot="pane"
     className="pane bg-background text-foreground relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
   >
     <div
       data-slot="pane-scroll"
-      className="flex min-h-0 flex-1 flex-col overflow-auto"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto"
     >
-      <Outlet />
+      {children ?? <Outlet />}
     </div>
   </main>
 );
@@ -97,11 +103,13 @@ export interface ShellLayoutProps {
   /** Dev only: the chrome reported overlay-unavailable. */
   geometryMissing?: boolean;
   initials?: string;
+  children?: ReactNode;
 }
 
 export const ShellLayout = ({
   geometryMissing = false,
   initials = "",
+  children,
 }: ShellLayoutProps) => {
   const band = useShellBand();
   const prefs = usePrefs();
@@ -177,7 +185,7 @@ export const ShellLayout = ({
         data-slot="shell"
         data-band={band}
         data-sidebar={layout.sidebar}
-        className="shell-surface text-sidebar-foreground grid h-dvh grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden"
+        className="shell-surface text-sidebar-foreground grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden"
         style={
           {
             "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
@@ -214,21 +222,27 @@ export const ShellLayout = ({
             onToggle={panel.toggle}
           />
         </TopBar.Root>
-        <div className="relative flex min-h-0">
+        <div className="relative flex min-h-0 min-w-0">
           <Rail
             area={area}
             floatingEnabled={floatingEnabled}
             initials={initials}
           />
-          <SidebarSlot
-            mode={layout.sidebar}
-            sidebarId={sidebar}
-            onEscape={() => closeFloating()}
-          />
+          <PaneBoundary resetKey={area}>
+            <SidebarSlot
+              mode={layout.sidebar}
+              sidebarId={sidebar}
+              onEscape={() => closeFloating()}
+            />
+          </PaneBoundary>
           <div className="flex min-h-0 min-w-0 flex-1 pr-(--pane-inset) pb-(--pane-inset)">
             <ResizablePanelGroup orientation="horizontal" className="gap-0">
               <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
-                <Pane />
+                <Pane>
+                  <PaneBoundary resetKey={location.pathname}>
+                    {children ?? <Outlet />}
+                  </PaneBoundary>
+                </Pane>
               </ResizablePanel>
               {panelInLayout && panel.tab != null && (
                 <>
@@ -243,7 +257,9 @@ export const ShellLayout = ({
                     onResize={(size) => paneWidth.write(size.inPixels)}
                   >
                     <SidePanelFrame>
-                      <SidePanelBody tab={panel.tab} />
+                      <PaneBoundary resetKey={panel.tab}>
+                        <SidePanelBody tab={panel.tab} />
+                      </PaneBoundary>
                     </SidePanelFrame>
                   </ResizablePanel>
                 </>
@@ -264,3 +280,14 @@ export const ShellLayout = ({
     </FloatingIntentContext>
   );
 };
+
+export const ShellPending = () => (
+  <ShellLayout>
+    <RoutePending />
+  </ShellLayout>
+);
+export const ShellFailure = (props: ErrorComponentProps) => (
+  <ShellLayout>
+    <PaneError {...props} />
+  </ShellLayout>
+);

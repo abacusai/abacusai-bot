@@ -1554,5 +1554,63 @@
       "notPending"
     ],
     "sources": ["features/chat/kit/permissions/permission-card.tsx"]
+  },
+  {
+    "prefix": "theme.",
+    "values": ["system", "light", "dark"]
+  },
+  {
+    "prefix": "phase5.artifactTypes.",
+    "values": ["file", "image", "link"]
+  },
+  {
+    "prefix": "sessions.start.starters.",
+    "values": [
+      "build-a-store.name",
+      "build-a-store.detail",
+      "design-an-infographic.name",
+      "design-an-infographic.detail",
+      "find-flights.name",
+      "find-flights.detail",
+      "process-a-spreadsheet.name",
+      "process-a-spreadsheet.detail",
+      "restyle-a-repo.name",
+      "restyle-a-repo.detail",
+      "review-pull-requests.name",
+      "review-pull-requests.detail"
+    ]
+  },
+  {
+    "prefix": "onboarding.welcomeFreeBadge",
+    "values": [""]
+  },
+  {
+    "prefix": "tour.stops.",
+    "values": [
+      "rail.title",
+      "rail.body",
+      "make-bot.title",
+      "make-bot.body",
+      "workspaces.title",
+      "workspaces.body",
+      "start-session.title",
+      "start-session.body",
+      "connectors.title",
+      "connectors.body",
+      "changes.title",
+      "changes.body",
+      "preview-terminal.title",
+      "preview-terminal.body",
+      "memory.title",
+      "memory.body",
+      "artifacts.title",
+      "artifacts.body",
+      "welcome.title",
+      "welcome.body",
+      "talk.title",
+      "talk.body",
+      "notch.title",
+      "notch.body"
+    ]
   }
 ]

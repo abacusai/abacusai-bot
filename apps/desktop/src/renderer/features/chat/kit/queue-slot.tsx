@@ -9,10 +9,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Spinner } from "#renderer/components/spinner";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import { Spinner } from "#renderer/ui/spinner";
 
 import { queueRow } from "../motion";
 import { useThreadStore } from "../store/selectors";

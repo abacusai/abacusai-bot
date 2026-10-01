@@ -9,7 +9,9 @@ const ToolsetRoute = () => {
   const { t } = useTranslation();
   const { toolsetId } = Route.useParams();
   const toolset = TOOLSETS_BY_ID.get(toolsetId);
-  const name = t(`capabilities.toolsets.${toolset?.labelKey ?? toolsetId}`);
+  const name = toolset
+    ? t(`capabilities.toolsets.${toolset.labelKey}.label`)
+    : t("library.pages.tools");
   return (
     <>
       <TopBarSlot>

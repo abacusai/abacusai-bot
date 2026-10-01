@@ -5,9 +5,9 @@ import { useTranslation } from "react-i18next";
 import { DiffView } from "#renderer/components/diff-view";
 import { FilePreview } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
+import { Spinner } from "#renderer/components/spinner";
 import { repaint } from "#renderer/components/terminal/ghostty";
 import { Button } from "#renderer/ui/button";
-import { Spinner } from "#renderer/ui/spinner";
 
 import { SessionContextTray } from "../context/context-tray";
 import { useSession } from "../data/queries";
