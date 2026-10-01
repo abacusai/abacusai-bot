@@ -9,7 +9,10 @@ import { Button } from "#next/ui/button";
 import { Input } from "#next/ui/input";
 import type { SessionRow } from "#shared/contract/rows";
 import type { BrowserRuntimeState } from "#shared/contracts";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import {
+  sessionConversationKey,
+  type ConversationKey,
+} from "#shared/conversation-scope";
 
 import { useSessionsTransport } from "../data/queries";
 export const normalizeAddress = (raw: string): string => {
@@ -30,8 +33,10 @@ export const BrowserTab = ({
   visible,
   presenter,
   blocked,
+  scope,
 }: {
-  row: SessionRow;
+  row: Pick<SessionRow, "workspaceId" | "id">;
+  scope?: ConversationKey;
   id: string;
   url?: string;
   file?: string;
@@ -50,7 +55,7 @@ export const BrowserTab = ({
   const [state, setState] = useState<BrowserRuntimeState | null>(null);
   const [address, setAddress] = useState(url ?? "about:blank");
   const [error, setError] = useState<string | null>(null);
-  const key = sessionConversationKey(row.workspaceId, row.id);
+  const key = scope ?? sessionConversationKey(row.workspaceId, row.id);
   useEffect(() => {
     let live = true;
     const promise = file

@@ -55,6 +55,7 @@ export const SessionStartPage = ({
     enabled: !!(draft.workspaceId ?? workspaceId),
     refetchOnWindowFocus: true,
   });
+  const [now] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (draft.stage === "draft" && draft.workspaceId === null && workspaceId)
@@ -173,7 +174,7 @@ export const SessionStartPage = ({
                   <time dateTime={s.updatedAt}>
                     {formatChatStamp(
                       Date.parse(s.updatedAt),
-                      Date.now(),
+                      now,
                       i18n.language,
                       t("sessions.yesterday")
                     )}
