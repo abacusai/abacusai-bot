@@ -1,13 +1,13 @@
 html.notch, html.notch body, html.notch #root { background: transparent !important; overflow: hidden; }
-.notch-shape { margin: 0 auto; color: #f2f2f3; background: #000; border-radius: 0 0 22px 22px; box-shadow: 0 8px 24px rgb(0 0 0 / .45); font-size: 12px; line-height: 16px; transition: width 350ms cubic-bezier(.2,.8,.2,1), height 350ms cubic-bezier(.2,.8,.2,1); overflow: hidden; }
+.notch-shape { margin: 0 auto; color: #f2f2f3; background: #000; border-radius: 0 0 22px 22px; box-shadow: 0 8px 24px rgb(0 0 0 / .45); font-size: 12px; line-height: 16px; transition: width 250ms cubic-bezier(.23,1,.32,1), height 250ms cubic-bezier(.23,1,.32,1); overflow: hidden; }
 .notch-shape[data-mode=capsule] { border-radius: 24px; }
 .notch-shape[data-reduced=true] { transition: none; }
-.notch-shape[data-mode=notch] { box-shadow: none; }
+.notch-shape[data-mode=notch] { box-shadow: none; border-radius: 0; }
 .notch-wings { display: flex; justify-content: space-between; align-items: stretch; }
-.notch-wing { background: #000; display: flex; align-items: center; gap: 6px; flex: 1; padding: 0 12px; min-width: 0; }
-.notch-wing:first-child { border-radius: 0 0 0 18px; }
-.notch-wing:last-child { border-radius: 0 0 18px 0; justify-content: flex-end; }
-.notch-body { position: relative; background: #000; border-radius: 0 0 22px 22px; padding: 6px 14px 12px; }
+.notch-wing { background: #000; display: flex; align-items: center; gap: 6px; flex: 1 1 0; padding: 0 14px; min-width: 0; overflow: hidden; }
+
+.notch-wing:last-child { justify-content: flex-end; }
+.notch-body { position: relative; background: #000; padding: 6px 20px 12px; min-width: 0; }
 .notch-shape button { border-radius: 999px; min-height: 26px; color: #f2f2f3; background: #2a2a2e; }
 .notch-shape p { color: #b8b8bd; }
 .notch-shape h2 { color: #f2f2f3; font-size: 12px; font-weight: 600; }
@@ -20,3 +20,8 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 .notch-shape[data-reduced=true] .notch-wave span { animation: none; }
 
 .notch-listening { display: flex; flex-direction: column; gap: 4px; }
+
+.notch-wing > * { min-width: 0; }
+.notch-wing button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
+.notch-body h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notch-body p { overflow-wrap: anywhere; }
