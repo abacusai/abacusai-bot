@@ -30,6 +30,7 @@ import {
 import { Input } from "#next/ui/input";
 import { NativeSelect, NativeSelectOption } from "#next/ui/native-select";
 import type { ArtifactRow } from "#shared/contract/rows";
+import { sessionConversationKey } from "#shared/conversation-scope";
 
 import {
   sourceFor,
@@ -460,6 +461,24 @@ export const ArtifactsPage = ({
                       path={selected.location}
                       hostRoot={dirname(selected.location)}
                       read={{
+                        localUrl: async (filePath, hostRoot) => {
+                          const state =
+                            await transport.client.browser.runtime.materializeFile(
+                              {
+                                filePath,
+                                hostRoot,
+                                conversationKey: sessionConversationKey(
+                                  selected.workspaceId,
+                                  selected.sessionId
+                                ),
+                                resourceId: `artifact-preview:${selected.id}`,
+                              }
+                            );
+                          await transport.client.browser.runtime.close(
+                            state.lease
+                          );
+                          return state.url;
+                        },
                         text: (filePath, hostRoot) =>
                           transport.client.files.readText({
                             filePath,
