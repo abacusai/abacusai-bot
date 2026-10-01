@@ -1,3 +1,5 @@
+// Explicit memoization owns an imperative controller, including its disposal.
+// eslint-disable-next-line no-restricted-imports
 import { useEffect, useMemo } from "react";
 
 import type { AppClient } from "#next/data/transport/types";

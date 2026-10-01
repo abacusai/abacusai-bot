@@ -14,6 +14,7 @@ Merged `rewrite/renderer` at `5ca86069` into `ad345ea0` as `8a699b21`. The reque
 | 2, major | Fixed | Controller identity is an input to its memoized factory, with disposal on navigation. A stopped A to stopped B hook regression starts B and cancels A retries, including under the React compiler. |
 | 3, major | Fixed | Restoration records success after switchConversation resolves; Retry repeats restoration; stale completions cannot report or mark success. Rejection, Retry and late rejection tests pass. |
 | Main joined readiness | Wired | Auto-start awaits main's joined readiness before restoring the relay incarnation. Test delays the joined promise while the ready relay arrives first. |
+| 4, major | Fixed | Created drafts retain the read-only envelope and checkout tray with workspace locked. Mounted app test selects No worktree even without a branch result; stage regression proves explicit detach and no duplicate insert/materialization. |
 | 7, major | Fixed | Files paths are memoized; equal topology skips reset; changed topology passes expanded directory paths to the installed reset API. Regression covers equal paths and added children without collapse. |
 
 Both file-tree tests fail against the pre-fix component and pass with the fixes. Typecheck passes.

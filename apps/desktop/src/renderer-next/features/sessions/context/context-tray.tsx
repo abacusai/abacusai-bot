@@ -138,7 +138,7 @@ export const SessionContextTray = ({
             </PopoverContent>
           </Popover>
         ) : null}
-        {onWorktree && branch.data?.currentBranch ? (
+        {onWorktree ? (
           <Popover>
             <PopoverTrigger render={<Button variant="ghost" size="sm" />}>
               {worktree?.kind === "new"
@@ -165,6 +165,7 @@ export const SessionContextTray = ({
               ))}
               <Button
                 variant="ghost"
+                disabled={!branch.data?.currentBranch}
                 onClick={() =>
                   onWorktree({
                     kind: "new",

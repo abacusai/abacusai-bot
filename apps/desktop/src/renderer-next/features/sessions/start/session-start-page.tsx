@@ -89,8 +89,11 @@ export const SessionStartPage = ({
     <SessionContextTray
       workspaceId={draft.workspaceId}
       worktree={draft.worktree}
-      onWorkspace={(workspaceId) =>
-        startDraftStore.setState((s) => ({ ...s, workspaceId }))
+      onWorkspace={
+        draft.stage === "draft"
+          ? (workspaceId) =>
+              startDraftStore.setState((s) => ({ ...s, workspaceId }))
+          : undefined
       }
       onWorktree={(worktree) =>
         startDraftStore.setState((s) => ({ ...s, worktree }))
@@ -109,7 +112,14 @@ export const SessionStartPage = ({
         {draft.stage !== "draft" ? (
           <div role="status" className="bg-muted rounded-xl p-4">
             <p>{t("sessions.start.finishing")}</p>
-            <Button onClick={() => void submit()}>
+            <p className="whitespace-pre-wrap">
+              {draft.envelope?.parts
+                .filter((part) => part.type === "text")
+                .map((part) => part.content)
+                .join("\n")}
+            </p>
+            {draft.stage === "created" ? context : null}
+            <Button onClick={() => void submit().catch(() => {})}>
               {t("sessions.start.continue")}
             </Button>
             <Button

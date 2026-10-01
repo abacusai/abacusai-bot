@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
+// The tree adapter treats paths identity as a topology update.
+// eslint-disable-next-line no-restricted-imports
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
