@@ -37,12 +37,12 @@ declare module "@tanstack/hotkeys" {
     actionId?: string;
   }
 }
-export const bindingConflict = (
+export const bindingConflicts = (
   id: string,
   candidate: string,
   overrides: Record<string, string | null>,
   platform: HotkeyPlatform
-): { id: string; rebindable: boolean } | null => {
+): Array<{ id: string; rebindable: boolean }> => {
   const normalize = (value: string) => normalizeHotkey(value, platform);
   const chord = normalize(candidate);
   const action = APP_ACTIONS.find((action) => action.id === id.split("@")[0]);
@@ -57,7 +57,8 @@ export const bindingConflict = (
       platform !== "mac" &&
       TERMINAL_RESERVED.some((x) => normalize(x) === chord))
   )
-    return { id: "system", rebindable: false };
+    return [{ id: "system", rebindable: false }];
+  const conflicts = new Map<string, { id: string; rebindable: boolean }>();
   for (const context of contexts) {
     const resolved = resolveKeymap(overrides, platform)[context];
     for (const action of APP_ACTIONS) {
@@ -69,10 +70,18 @@ export const bindingConflict = (
       if (otherId === id) continue;
       const binding = resolved[action.id];
       if (binding && normalize(binding) === chord)
-        return { id: otherId, rebindable: action.rebindable };
+        conflicts.set(otherId, { id: otherId, rebindable: action.rebindable });
     }
   }
-  return null;
+  return [...conflicts.values()];
+};
+export const bindingConflict = (
+  ...args: Parameters<typeof bindingConflicts>
+) => {
+  const conflicts = bindingConflicts(...args);
+  return (
+    conflicts.find((conflict) => !conflict.rebindable) ?? conflicts[0] ?? null
+  );
 };
 export const KeymapEditor = ({
   keymap,
@@ -91,13 +100,14 @@ export const KeymapEditor = ({
     id: string;
     rebindable: boolean;
     description?: string;
+    displaced: string[];
   } | null>(null);
   const resolved = resolveKeymap(keymap, platform);
-  const save = async (id: string, candidate: string, remove?: string) => {
+  const save = async (id: string, candidate: string, remove: string[] = []) => {
     const map = {
       ...keymap,
       [id]: candidate,
-      ...(remove ? { [remove]: null } : {}),
+      ...Object.fromEntries(remove.map((id) => [id, null])),
     };
     try {
       await update({ keymap: map });
@@ -126,18 +136,13 @@ export const KeymapEditor = ({
         setError(t("phase5.shortcutNeedsModifier"));
         return;
       }
-      const conflict = bindingConflict(
-        editing,
-        candidate,
-        keymap ?? {},
-        platform
-      );
-      if (conflict) {
-        if (conflict.id === "system") {
-          setError(t("phase5.systemShortcut"));
-          return;
-        }
-        setConflict({ ...conflict, candidate });
+      const conflicts: Array<{
+        id: string;
+        rebindable: boolean;
+        description?: string;
+      }> = bindingConflicts(editing, candidate, keymap ?? {}, platform);
+      if (conflicts.some((conflict) => conflict.id === "system")) {
+        setError(t("phase5.systemShortcut"));
         return;
       }
       const live = findHotkeyConflicts(candidate, {
@@ -153,23 +158,33 @@ export const KeymapEditor = ({
           );
         },
       });
-      if (live.length) {
-        const first =
-          live.find(
-            (conflict) =>
-              conflict.type !== "hotkey" ||
-              !APP_ACTIONS.find(
-                (action) =>
-                  action.id === conflict.registration.options.meta?.actionId
-              )?.rebindable
-          ) ?? live[0]!;
-        const id = first.registration.options.meta?.actionId;
+      for (const conflict of live) {
+        const id = conflict.registration.options.meta?.actionId;
         const action = APP_ACTIONS.find((a) => a.id === id);
+        if (
+          conflict.type === "hotkey" &&
+          conflicts.some((stored) => stored.id.split("@")[0] === id)
+        )
+          continue;
+        const bindingId =
+          editing.endsWith("@terminal") &&
+          action?.terminalDefault?.[platform] !== undefined
+            ? `${id}@terminal`
+            : id;
+        conflicts.push({
+          id: bindingId ?? "unknown",
+          rebindable: conflict.type === "hotkey" && !!action?.rebindable,
+          description: conflict.registration.options.meta?.description,
+        });
+      }
+      if (conflicts.length) {
+        const first =
+          conflicts.find((conflict) => !conflict.rebindable) ?? conflicts[0]!;
         setConflict({
+          ...first,
           candidate,
-          id: id ?? "unknown",
-          rebindable: first.type === "hotkey" && !!action?.rebindable,
-          description: first.registration.options.meta?.description,
+          rebindable: conflicts.every((conflict) => conflict.rebindable),
+          displaced: [...new Set(conflicts.map((conflict) => conflict.id))],
         });
         return;
       }
@@ -319,7 +334,8 @@ export const KeymapEditor = ({
             {conflict?.rebindable && (
               <Button
                 onClick={() =>
-                  editing && void save(editing, conflict.candidate, conflict.id)
+                  editing &&
+                  void save(editing, conflict.candidate, conflict.displaced)
                 }
               >
                 {t("phase5.useAnyway")}

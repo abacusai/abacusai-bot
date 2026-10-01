@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import { renderApp } from "#next/test-support/app-harness";
@@ -140,3 +140,63 @@ it.each([false, true])(
     }
   }
 );
+
+it("changing the Messaging route settles delayed WhatsApp setup and preserves the new watchdog", async () => {
+  const d = setup();
+  let release!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const snapshot = {
+    gatewayEnabled: true,
+    autoApproveTools: false,
+    respondToInbound: false,
+    workspaceId: null,
+    botId: null,
+    platforms: [],
+    autoReplies: [],
+    pending: [],
+    approved: [],
+  } as unknown as MessagingSnapshot;
+  d.procedures.messaging.updatePlatform = os.messaging.updatePlatform.handler(
+    async (context) => {
+      if (context.input.platformId === "whatsapp" && context.input.enabled)
+        await ready;
+      d.calls.push(`${context.input.platformId}:${context.input.enabled}`);
+      return snapshot;
+    }
+  );
+  const app = await renderApp("/library/messaging?platform=whatsapp", {
+    procedures: d.procedures,
+  });
+  try {
+    await screen.findByRole("dialog");
+    vi.useFakeTimers();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(179000);
+    });
+    await act(async () => {
+      await app.router.navigate({
+        to: "/library/messaging",
+        search: { platform: "telegram" },
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      release();
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(d.calls.filter((call) => call === "whatsapp:false")).toHaveLength(1);
+    expect(d.calls).toContain("telegram:true");
+    expect(d.calls).not.toContain("telegram:false");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(179000);
+    });
+    expect(d.calls.filter((call) => call === "telegram:false")).toHaveLength(1);
+  } finally {
+    release();
+    vi.useRealTimers();
+    app.view.unmount();
+    await app.cleanup();
+  }
+});

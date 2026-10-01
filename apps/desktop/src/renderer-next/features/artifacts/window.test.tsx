@@ -1,7 +1,10 @@
+import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { defaultSeed, renderApp } from "#next/test-support/app-harness";
+import { contract } from "#shared/contract";
+import { sessionConversationKey } from "#shared/conversation-scope";
 
 import { artifactStressRows } from "./gallery";
 beforeEach(() => {
@@ -84,3 +87,64 @@ it("a grid appearing after an empty snapshot observes later viewport resizes", a
     expect(grid.style.gridTemplateColumns).toBe("repeat(5,minmax(0,1fr))")
   );
 });
+
+it.each(["pdf", "html"])(
+  "Artifacts %s uses the real host reader and releases its lease",
+  async (extension) => {
+    const seed = defaultSeed();
+    const artifact = {
+      ...artifactStressRows[400]!,
+      id: "host-preview",
+      workspaceId: "artifact-workspace",
+      sessionId: "artifact-session",
+      location: `/guest/report.${extension}`,
+    };
+    seed.artifacts = [artifact];
+    const lease = {
+      conversationKey: sessionConversationKey(
+        artifact.workspaceId,
+        artifact.sessionId
+      ),
+      resourceId: `artifact-preview:${artifact.id}`,
+      generation: 1,
+    };
+    const close = vi.fn();
+    const materializeFile = vi.fn(async () => ({
+      lease,
+      url: `file:///host/report.${extension}`,
+      title: "report",
+      loading: false,
+      canGoBack: false,
+      canGoForward: false,
+      focused: false,
+      crashed: false,
+      devToolsOpen: false,
+      zoomFactor: 1,
+    }));
+    app = await renderApp("/artifacts?item=host-preview", {
+      seed,
+      materializeFile,
+      procedures: {
+        browser: {
+          runtime: {
+            close: implement(contract).browser.runtime.close.handler(
+              ({ input }) => close(input)
+            ),
+          },
+        },
+      },
+    });
+    await waitFor(() =>
+      expect(document.querySelector("webview")?.getAttribute("src")).toBe(
+        `file:///host/report.${extension}`
+      )
+    );
+    expect(materializeFile).toHaveBeenCalledWith({
+      filePath: artifact.location,
+      hostRoot: "/guest",
+      conversationKey: lease.conversationKey,
+      resourceId: lease.resourceId,
+    });
+    expect(close).toHaveBeenCalledWith(lease);
+  }
+);
