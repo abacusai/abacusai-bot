@@ -177,3 +177,75 @@ describe("R6-T17 / T19 / T42 presentation generations", () => {
     await fallback;
   });
 });
+
+it("immediate calm clears old queued attention before unlocking", async () => {
+  const d = deps();
+  const director = new NotchDirector(d);
+  await director.present(p("a"), { width: 200, height: 200 });
+  director.lock(true);
+  const b = p("b");
+  b.queue.push(p("a").attention!);
+  await director.present(b, { width: 200, height: 200 });
+  await director.present(
+    { ...p("a"), route: "/idle", identity: "calm", expanded: false },
+    { width: 200, height: 32 }
+  );
+  director.lock(false);
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(d.navigate).toHaveBeenLastCalledWith(
+    expect.objectContaining({ identity: "calm" })
+  );
+  director.dispose();
+});
+it.each(["load", "envelope", "navigate", "settle", "final"])(
+  "the total deadline bounds stalled %s and retires both threads",
+  async (stage) => {
+    vi.useFakeTimers();
+    const d = deps();
+    const never = () => new Promise<void>(() => {});
+    if (stage === "load") d.load = vi.fn(never);
+    if (stage === "navigate") d.navigate = vi.fn(never);
+    if (stage === "settle") d.settle = vi.fn(never);
+    if (stage === "envelope" || stage === "final")
+      d.setShape = vi.fn((s) =>
+        s.phase === stage ? never() : Promise.resolve()
+      );
+    const director = new NotchDirector(d);
+    const item = p("a");
+    item.queue.push(p("b").attention!);
+    let done = false;
+    const pending = director
+      .present(item, { width: 200, height: 200 })
+      .then(() => {
+        done = true;
+      });
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(done).toBe(true);
+    await pending;
+    expect(d.retire).toHaveBeenCalledWith("a");
+    expect(d.retire).toHaveBeenCalledWith("b");
+    expect(d.commit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ expanded: false }),
+      { width: 200, height: 32 }
+    );
+    director.dispose();
+  }
+);
+
+it("unlock revalidates the proposed attention against the latest queue", async () => {
+  const d = deps();
+  const director = new NotchDirector(d);
+  await director.present(p("a"), { width: 200, height: 200 });
+  director.lock(true);
+  await director.present(
+    { ...p("b"), queue: p("a").queue },
+    { width: 200, height: 200 }
+  );
+  director.lock(false);
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(d.navigate).toHaveBeenCalledTimes(1);
+  director.dispose();
+});

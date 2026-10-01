@@ -44,7 +44,7 @@ export const shapeSettled = (
 export interface DirectorDeps {
   load(id: string, signal: AbortSignal): Promise<void>;
   retire(id: string): void;
-  setShape(shape: NotchShape): Promise<unknown>;
+  setShape(shape: NotchShape, signal?: AbortSignal): Promise<unknown>;
   navigate(presentation: NotchPresentation): Promise<void>;
   settle(from: Shape, to: Shape, signal: AbortSignal): Promise<void>;
   renderedSize(): Shape;
@@ -59,16 +59,31 @@ export class NotchDirector {
   #current: NotchPresentation | null = null;
   #queued: { p: NotchPresentation; shape: Shape } | null = null;
   #locked = false;
+  #latest: { p: NotchPresentation; shape: Shape } | null = null;
   constructor(readonly deps: DirectorDeps) {}
   lock(locked: boolean): void {
     this.#locked = locked;
     if (!locked && this.#queued) {
       const next = this.#queued;
       this.#queued = null;
-      void this.present(next.p, next.shape);
+      const latest = this.#latest;
+      if (
+        latest &&
+        latest.p.identity === next.p.identity &&
+        !latest.p.quietUntil &&
+        latest.p.route !== "/idle" &&
+        latest.p.queue.some(
+          (item) =>
+            item.sessionId === next.p.sessionId &&
+            (item.descriptorId ?? item.runId) ===
+              (next.p.attention?.descriptorId ?? next.p.attention?.runId)
+        )
+      )
+        void this.present(latest.p, latest.shape).catch(() => undefined);
     }
   }
   async present(p: NotchPresentation, shape: Shape): Promise<void> {
+    this.#latest = { p, shape };
     const valid =
       this.#current &&
       p.queue.some(
@@ -90,11 +105,29 @@ export class NotchDirector {
       this.#queued = { p, shape };
       return;
     }
+    this.#queued = null;
     const gen = ++this.#gen;
     this.#abort?.abort();
     const abort = new AbortController();
     this.#abort = abort;
-    const deadline = setTimeout(() => abort.abort(), 8000);
+    let timedOut = false;
+    const deadline = setTimeout(() => {
+      timedOut = true;
+      abort.abort();
+    }, 8000);
+    const bounded = <T>(work: Promise<T>): Promise<T> =>
+      new Promise((resolve, reject) => {
+        const cancelled = () =>
+          reject(new DOMException("Presentation cancelled", "AbortError"));
+        if (abort.signal.aborted) {
+          cancelled();
+          return;
+        }
+        abort.signal.addEventListener("abort", cancelled, { once: true });
+        work
+          .then(resolve, reject)
+          .finally(() => abort.signal.removeEventListener("abort", cancelled));
+      });
     const current = () => gen === this.#gen && !abort.signal.aborted;
     const held = new Set<string>();
     if (
@@ -117,9 +150,10 @@ export class NotchDirector {
           p = { ...p, expanded: false };
         else {
           try {
-            await this.deps.load(p.sessionId, abort.signal);
+            await bounded(this.deps.load(p.sessionId, abort.signal));
           } catch {
             if (gen !== this.#gen) return;
+            if (timedOut) throw new DOMException("Deadline", "AbortError");
             this.#unavailable.set(p.sessionId, Date.now() + 30_000);
             this.deps.retire(p.sessionId);
             held.delete(p.sessionId);
@@ -128,60 +162,82 @@ export class NotchDirector {
           if (gen !== this.#gen) return;
         }
       }
-      if (abort.signal.aborted && gen === this.#gen) {
-        // Deadline: retain an actionable compact wing, using a new shape-only generation.
-        clearTimeout(deadline);
-        this.#abort = null;
-        await this.deps.setShape({
-          phase: "final",
-          ...shape,
-          height: 32,
-          visible: !p.hidden,
-          audio: this.deps.audio(),
-        });
-        if (gen === this.#gen)
-          this.deps.commit({ ...p, expanded: false }, { ...shape, height: 32 });
-        return;
-      }
       if (!current()) return;
       const from = this.deps.renderedSize();
       const target = p.expanded
         ? shape
         : { ...shape, height: Math.min(shape.height, 36) };
-      await this.deps.setShape({
-        phase: "envelope",
-        width: Math.max(from.width, target.width),
-        height: Math.max(from.height, target.height),
-        visible: !p.hidden,
-        audio: this.deps.audio(),
-      });
+      await bounded(
+        this.deps.setShape(
+          {
+            phase: "envelope",
+            width: Math.max(from.width, target.width),
+            height: Math.max(from.height, target.height),
+            visible: !p.hidden,
+            audio: this.deps.audio(),
+          },
+          abort.signal
+        )
+      );
       if (!current()) return;
       this.deps.commit(p, target);
-      await this.deps.navigate(p);
+      await bounded(this.deps.navigate(p));
       if (!current()) return;
-      await this.deps.settle(from, target, abort.signal);
+      await bounded(this.deps.settle(from, target, abort.signal));
       if (!current()) return;
-      await this.deps.setShape({
-        phase: "final",
-        ...target,
-        visible: !p.hidden,
-        audio: this.deps.audio(),
-      });
+      await bounded(
+        this.deps.setShape(
+          {
+            phase: "final",
+            ...target,
+            visible: !p.hidden,
+            audio: this.deps.audio(),
+          },
+          abort.signal
+        )
+      );
       if (!current()) return;
       this.#current = p;
-      if (next && held.has(next.sessionId))
-        void this.deps.load(next.sessionId, abort.signal).catch(() => {
-          if (gen === this.#gen) {
-            this.deps.retire(next.sessionId);
-            this.#held.delete(next.sessionId);
-          }
-        });
+      if (next && held.has(next.sessionId)) {
+        const timer = setTimeout(() => abort.abort(), 8000);
+        void bounded(this.deps.load(next.sessionId, abort.signal))
+          .catch(() => {
+            if (gen === this.#gen) {
+              this.deps.retire(next.sessionId);
+              this.#held.delete(next.sessionId);
+            }
+          })
+          .finally(() => clearTimeout(timer));
+      }
+    } catch (error) {
+      if (gen !== this.#gen) return;
+      for (const id of this.#held) {
+        this.deps.retire(id);
+        this.#unavailable.set(id, Date.now() + 30_000);
+      }
+      this.#held.clear();
+      const compact = { ...shape, height: 32 };
+      const fallback = { ...p, expanded: false };
+      this.#current = fallback;
+      this.deps.commit(fallback, compact);
+      // Recovery must finish even when native shape IPC itself is stalled.
+      void this.deps
+        .setShape({
+          phase: "final",
+          ...compact,
+          visible: !p.hidden,
+          audio: this.deps.audio(),
+        })
+        .catch(() => undefined);
+      if (!timedOut) throw error;
     } finally {
       clearTimeout(deadline);
     }
   }
   dispose(): void {
     ++this.#gen;
+    this.#queued = null;
+    this.#latest = null;
     this.#abort?.abort();
     for (const id of this.#held) this.deps.retire(id);
     this.#held.clear();
