@@ -60,6 +60,7 @@ it("R5-T27 a critical stalled update has a reachable banner and no blocking dial
           ...idle,
           downloaded: true,
           criticalUpdate: true,
+          installing: true,
           installStalled: true,
         })),
       },
@@ -247,4 +248,37 @@ it("an install retry event carrying historical failure keeps the critical dialog
   expect(
     within(dialog).queryByRole("button", { name: "Try again" })
   ).toBeNull();
+});
+
+it("the quit watchdog event replaces the critical dialog with a stalled banner", async () => {
+  let release!: () => void;
+  const watchdog = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const installing = {
+    ...idle,
+    downloaded: true,
+    criticalUpdate: true,
+    installing: true,
+  };
+  app = await renderApp("/settings/about", {
+    procedures: {
+      update: {
+        status: os.update.status.handler(() => installing),
+        events: os.update.events.handler(async function* ({ signal }) {
+          await watchdog;
+          yield { ...installing, installStalled: true };
+          await new Promise<void>((resolve) =>
+            signal?.addEventListener("abort", () => resolve(), { once: true })
+          );
+        }),
+      },
+    },
+  });
+  await screen.findByRole("alertdialog");
+  release();
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(
+    await screen.findAllByText(enUS.phase5.updates.stalled)
+  ).not.toHaveLength(0);
 });
