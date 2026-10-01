@@ -9,6 +9,7 @@ import { emitBusChannel } from "#main/rpc/emit";
 import type { UpdateFailedPhase, UpdateStatus } from "#shared/update";
 
 import { markQuitting, clearQuitting } from "../../app-quit-state";
+import { isNotchWindow } from "../../notch/registry";
 import { markRelaunchHidden, clearRelaunchHidden } from "./relaunch-hidden";
 
 // Static CDN feed: one YAML naming immutable per-version artifacts. The feed
@@ -285,7 +286,7 @@ export class UpdateService {
     // macOS can relaunch hidden through the Dock. A hidden Windows window has
     // no tray entry here, so restart it visibly instead of stranding the update.
     const windowVisible = BaseWindow.getAllWindows().some(
-      (win) => !win.isDestroyed() && win.isVisible()
+      (win) => !isNotchWindow(win) && !win.isDestroyed() && win.isVisible()
     );
     let relaunchHidden = false;
     if (!windowVisible) {

@@ -17,6 +17,8 @@ import type { Readable } from "node:stream";
 
 import type { BotCreateInput, BotUpdateInput } from "#shared/bots";
 
+import { isNotchWindow } from "../notch/registry";
+
 /** The slice of ServiceHost the harness drives. */
 export interface HarnessHost {
   createBot(input: BotCreateInput): unknown;
@@ -61,13 +63,17 @@ export interface HarnessExtras {
 const focusMainWindow = async (): Promise<unknown> => {
   const electron = await import("electron");
   electron.app.focus({ steal: true });
-  electron.BaseWindow.getAllWindows()[0]?.focus();
+  electron.BaseWindow.getAllWindows()
+    .find((window) => !isNotchWindow(window))
+    ?.focus();
   return { focused: true };
 };
 
 const setMainWindowFullScreen = async (on: boolean): Promise<unknown> => {
   const electron = await import("electron");
-  const window = electron.BaseWindow.getAllWindows()[0];
+  const window = electron.BaseWindow.getAllWindows().find(
+    (window) => !isNotchWindow(window)
+  );
   if (window == null) throw new Error("no window");
   window.setFullScreen(on);
   return { fullScreen: on };
