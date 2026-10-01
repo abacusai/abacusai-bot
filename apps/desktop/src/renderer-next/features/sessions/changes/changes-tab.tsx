@@ -177,7 +177,7 @@ export const ChangesTab = ({
             </p>
             <Button
               variant={selected === r ? "secondary" : "ghost"}
-              className="h-12 w-full flex-col items-start gap-0.5"
+              className="text-foreground/75 h-12 w-full flex-col items-start gap-0.5"
               style={
                 isReviewed(
                   row.id,

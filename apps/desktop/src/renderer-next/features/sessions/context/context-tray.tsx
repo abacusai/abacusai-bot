@@ -89,7 +89,7 @@ export const SessionContextTray = ({
               onChange={(e) => setQuery(e.target.value)}
             />
             {!onWorkspace ? (
-              <p className="text-muted-foreground py-2 text-xs">
+              <p className="text-foreground/75 py-2 text-xs">
                 {t("sessions.tray.fixedWorkspace")}
               </p>
             ) : (
@@ -222,9 +222,7 @@ export const SessionContextTray = ({
             </HoverCardContent>
           </HoverCard>
         ) : sessionId ? (
-          <span className="text-muted-foreground">
-            {t("sessions.tray.noPr")}
-          </span>
+          <span className="text-foreground/75">{t("sessions.tray.noPr")}</span>
         ) : null}
       </div>
       <Popover>
