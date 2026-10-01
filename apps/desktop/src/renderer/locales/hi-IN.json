@@ -3433,6 +3433,9 @@
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",
     "clearSearch": "खोज हटाएँ",
-    "unbind": "Unbind"
+    "unbind": "Unbind",
+    "invalidMcp": "नाम और कमांड या मान्य HTTP(S) URL दर्ज करें।",
+    "chooseRecipients": "कम से कम एक प्राप्तकर्ता चुनें।",
+    "authRequired": "प्रमाणीकरण आवश्यक है"
   }
 }

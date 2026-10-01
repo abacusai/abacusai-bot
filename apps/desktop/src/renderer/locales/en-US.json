@@ -3433,6 +3433,9 @@
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",
     "clearSearch": "Clear search",
-    "unbind": "Unbind"
+    "unbind": "Unbind",
+    "invalidMcp": "Enter a name and a command, or a valid HTTP(S) URL.",
+    "chooseRecipients": "Choose at least one recipient.",
+    "authRequired": "Authentication required"
   }
 }

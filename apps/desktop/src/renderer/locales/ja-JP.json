@@ -3433,6 +3433,9 @@
     "pairingPending": "Finish linking your messaging apps.",
     "finishPairing": "Link {{platform}}",
     "clearSearch": "検索をクリア",
-    "unbind": "Unbind"
+    "unbind": "Unbind",
+    "invalidMcp": "名前とコマンド、または有効なHTTP(S) URLを入力してください。",
+    "chooseRecipients": "宛先を少なくとも1つ選択してください。",
+    "authRequired": "認証が必要です"
   }
 }
