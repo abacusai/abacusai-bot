@@ -4,6 +4,12 @@
 
 Continuation base `fa80344a`, branch `codex-sessions`. Merge `96dd016d` includes the chat-kit and bots fixes through `d68076ce` and the subsequent incoming progress update. Continuation edits do not change main or agent source; the merge carries the incoming branch’s existing changes. The authorized main B-T4 amendment is test-only. Terminal protocol helpers now live in shared code; two legacy adapters are pinned compatibility shims.
 
+## Round 1 implementation review fixes
+
+All 21 findings in `specs/reviews/04-sessions.impl-codex-r1.md` are addressed, with the per-finding evidence in [04-sessions.impl-fixes-r1.md](../specs/reviews/04-sessions.impl-fixes-r1.md). The fix pass first merged `rewrite/renderer` at `5ca86069` through `8a699b21`, retaining both chat type imports and incoming cross-slice progress. Route generation and a Node MessagePort test-only correction completed the merge. No main or agent source was authored in this pass.
+
+Every finding has a regression that fails with its safeguard removed. Three safeguards were already present in the merged implementation: post-start terminal cancellation, resolved Ghostty colors, and lease-field surface dependencies. The device fatal callback also already entered fallback; this pass tests it with the actual decoder and adds stream cancellation. Broader R4 rows remain partial where native, reload, platform or complete scenario evidence is missing.
+
 ## Implemented behavior
 
 The original route, persisted creation stage machine, checkout-scoped chat/diffs, dock, terminal output pump, native browser presenter, files and agents remain. This continuation adds:
@@ -42,8 +48,8 @@ The native driver uses an isolated canonical-path profile, real main and PTY, a 
 ## Change requests and unfinished work
 
 1. **Done:** B-T4 expects checkout identity `ws-1:primary`; main test-only amendment.
-2. **Other owner / absent contract:** joined concurrent `agent.start` readiness. The renderer uses the existing contract; no assumption that the follow-up has landed.
-3. **Other owner / absent contract:** settings exec-backend event. Picker applies returned state; no invented event for cross-window invalidation.
+2. **Wired and regression tested:** main joins concurrent `agent.start` callers and shares readiness. The session controller awaits that promise before conversation restoration; identity, Retry and generation guards are tested.
+3. **Wired and regression tested:** `settings.events` publishes `{ type: "exec-backend", backend }`. The shared bridge invalidates backend and sandbox queries; the tray/picker guards starting and running agents independently of turn busy state.
 4. **Done implementation:** shared terminal key/mouse helpers and one-line legacy wrappers with exact-commit allow-list pins. Native platform-byte coverage remains partial.
 5. **Implemented:** session action menus, title rename, collapsed recent list, no-model CTA, workspace recovery pane, PR hover/checks, tasks, ChangesCard and routine navigation. Workspace menus, search highlighting and folder drop are now implemented. The separately committed kit permission-action slot links only to an identified terminal already in this dock. ChangesCard now joins the latest outcome’s written paths to git stats; regression tests exclude unrelated files, cleared changes, failed runs and unavailable history fences. **Remaining:** complete UI proof.
 6. **Implemented:** drop/reorder zones, shell picker, URL links, DEC mouse, generation reattach. Native retained-tail reload has the same generation/offset and retained marker. **Remaining:** exact full-buffer comparison, real pointer-drag/menu-equivalence matrix, multiple PTY/promotion cases, Windows/ConPTY key-byte proof and repaint-disabled checksum control.
@@ -62,23 +68,23 @@ Partial evidence does not mean the entire acceptance row passed. Browser placeho
 | R4-T2 | Partial / not fully covered: Existing nav-type suite runs; dedicated session matrix pending. |
 | R4-T3 | Partial / not fully covered: Loaders await tables and avoid hydrate on preload; delayed-snapshot/error Retry tests pending. |
 | R4-T4 | Partial / not fully covered: Native live deletion; delayed unknown/editor/owned redirect tests pending. |
-| R4-T5 | Partial / not fully covered: Source invalidation implemented; per-source tests pending; exec event missing from contract. |
+| R4-T5 | Partial / not fully covered: Effective-checkout query keys and git-watch replacement tested; exec-backend event invalidation tested. Complete per-source rendered matrix remains pending. |
 | R4-T6 | Partial / not fully covered: Checkout selectors implemented; three-checkout chip/decoration test pending. |
 | R4-T7 | Partial / not fully covered: Real creation exercised; complete actions/prefs rollback matrix pending. |
-| R4-T8 | Partial / not fully covered: Three lifecycle tests; readiness-joined start proof outside renderer scope. |
+| R4-T8 | Partial / not fully covered: Six lifecycle/identity regressions cover backoff, missing checkout, restoration Retry, stale completion, session navigation and joined-start readiness ordering. Complete real crash/restart matrix remains pending. |
 | R4-T9 | Partial / not fully covered: Attention precedence test; unread/run integration matrix pending. |
 | R4-T10 | Partial / not fully covered: Common seven-action row/context menu, merged needs-you and relative stamps; Workspace menus/recovery, highlighted search and folder drop implemented; complete action/prefs rollback matrix pending. |
 | R4-T11 | Partial / not fully covered: Structure and traversal guards; full AST forbidden-error-pattern checks pending. |
-| R4-T12 | Partial / not fully covered: Stage reconciliation unit test and native new worktree; picker/reload/detach cases pending. |
+| R4-T12 | Partial / not fully covered: Stage reconciliation, explicit detach after failure and mounted created-envelope picker recovery tested; native new worktree evidence retained. Full response-loss/reload matrix remains pending. |
 | R4-T13 | Partial / not fully covered: Caller IDs and one native first admission; acceptance-before-clear reload not exercised. |
-| R4-T14 | Partial / not fully covered: Tray uses main APIs; Docker/local actual first-command test not run. |
-| R4-T15 | Partial / not fully covered: Reducer/bands tests; pixel restore/back-forward matrix pending. |
-| R4-T16 | Partial / not fully covered: Tab persistence exists; promotion/existence/eviction dedicated tests pending. |
-| R4-T17 | Partial / not fully covered: Output append/replacement test; resync/retired/exit UI matrix pending. |
-| R4-T18 | Partial / not fully covered: Capture deadline and equivalent-lease candidate regression pass; bots URL integration covered; delayed stale/profile/overlay matrix pending. |
-| R4-T19 | Partial / not fully covered: Folder confirmation, inline/menu rename, drag moves and git marks; complete file mutation matrix pending. |
-| R4-T20 | Partial / not fully covered: Actual canvas background pixels match both themes; computed terminal-default/diff-add/diff-delete contrast passes at two widths. ANSI/explicit-color matrix and repaint-disabled checksum control remain pending. |
-| R4-T21 | Partial / not fully covered: Four-edge/reorder reducer tests and semantic dock toolbar; real pointer drag/menu equivalence pending. |
+| R4-T14 | Partial / not fully covered: Tray/picker use the main APIs and exec event; idle-running trigger/open-menu mutation guard tested. Docker/local actual first-command test not run. |
+| R4-T15 | Partial / not fully covered: Reducer/bands and rendered toggle-to-navigation regressions pass; URL selection persists leaf focus/last. Pixel restore and full history/resizing matrix remain pending. |
+| R4-T16 | Partial / not fully covered: Preview eviction atomically repairs tabs/tree/last; empty-leaf pruning and terminal snapshot reconciliation tested. Full promotion/reload matrix remains pending. |
+| R4-T17 | Partial / not fully covered: Output append/replacement, unmount during start and partial initialization cleanup tests pass; resync/retired/exit UI matrix pending. |
+| R4-T18 | Partial / not fully covered: Capture deadline, equivalent serialized surface leases and background re-registration ownership regressions pass; bots URL integration covered; delayed stale/profile/overlay matrix pending. |
+| R4-T19 | Partial / not fully covered: Mounted production session router A-to-B rename sends only B checkout; current callbacks, expansion, bounded/replaced lazy children tested. Folder confirmation, menus, drag moves and git marks implemented; complete file mutation matrix pending. |
+| R4-T20 | Partial / not fully covered: Actual canvas background pixels match both themes; computed terminal-default/diff-add/diff-delete contrast passes at two widths. CSS token-to-RGB regression passes. ANSI/explicit-color matrix and repaint-disabled checksum control remain pending. |
+| R4-T21 | Partial / not fully covered: Four-edge/reorder reducer tests, rejection of three stacked rows and semantic dock toolbar; real pointer drag/menu equivalence pending. |
 | R4-T22 | Partial / not fully covered: 53-entry translation keymap, locale guard and existing starter byte identity; full copy audit pending. |
 | R4-T23 | Partial / not fully covered: Four jsdom axe cases plus native-layout contrast/axe across two widths and schemes; all gallery states/overlays pending. |
 | R4-T24 | Partial / not fully covered: Incoming PPTX deck viewer reused through FilePreview; full actual-deck session acceptance pending. |
@@ -87,14 +93,14 @@ Partial evidence does not mean the entire acceptance row passed. Browser placeho
 | R4-T27 | Partial / not fully covered: Reduced-motion global rules; dedicated motion tests absent. |
 | R4-T28 | Partial / not fully covered: Import structure scan passes; stronger complete AST checks pending. |
 | R4-T29 | Partial / not fully covered: macOS hidden unbroken 5 MB, no-replay reconnect and quiet retained-tail document reload pass (generation/offset/marker). Exact full-buffer equality, multiple PTYs/promotion/resize/Windows remain pending. |
-| R4-T30 | Partial / not fully covered: Real native loopback pixels and scaled viewport dimensions, guarded checkout HTML pixels; zoom/occlusion/two-owner/escape matrix pending. |
+| R4-T30 | Partial / not fully covered: Real native loopback pixels and scaled viewport dimensions, guarded checkout HTML pixels; separate stable local-viewer IDs and owned runtime cleanup regression tested; native zoom/occlusion/two-owner/escape matrix pending. |
 | R4-T31 | Pass inventory: Inventory test: all 111 rows with targets and explicit statuses. Does not claim green parity. |
-| R4-T32 | Partial / not fully covered: SPS/keyframe, first-frame watchdog/disposal, queue-overflow decoder reopen and crop tests; physical-device lifecycle matrix pending. |
+| R4-T32 | Partial / not fully covered: Configured-decoder key-frame barrier, unsupported-codec Simulator fallback/stream disposal, SPS, first-frame watchdog, queue-overflow decoder reopen and crop tests; physical-device lifecycle matrix pending. |
 | R4-T33 | Partial / not fully covered: Checkout suites and native worktree Keep pass; B-T4 expectation corrected. Renderer mutation isolation matrix pending. |
 | R4-T34 | Partial / not fully covered: Native first admission/PTY/browser/local HTML/Keep/masked diff/delete; supervised permissions/ChangesCard/legacy comparison pending. |
 | R4-T35 | Partial / not fully covered: Shared refresh-before-respond connector sequence reused; session suspended-turn case missing. |
 | R4-T36 | Partial / not fully covered: Bots embedded URL registry integration, keyless active session/bot and duplicate labels; Start draft-scope URL regression passes; background full matrix pending. |
-| R4-T37 | Partial / not fully covered: Bounded historical resolver exists; migrated/paging/reload dedicated tests missing. |
+| R4-T37 | Partial / not fully covered: Mounted dialog switches two tool edits to the same path using toolKey; bounded historical resolver exists. Migrated/paging/reload dedicated tests remain missing. |
 | R4-T38 | Partial / not fully covered: Authoritative main outcome suites run; sessions-specific complete scenario test absent. |
 | R4-T39 | Partial / not fully covered: Shared key/mouse helpers and pinned compatibility wrappers; existing legacy mouse tests pass. Native Electron key-byte/Windows matrix pending. |
 
@@ -308,3 +314,7 @@ ed1c3371 feat(sessions): compose start, dock and checkout-aware resource views
 64f6cdce test(sessions): scan forbidden dependency imports without matching parity prose
 e4634221 test(sessions): record native worktree and hidden PTY smoke with screenshots
 ```
+
+## Round 1 fix-pass validation
+
+The final renderer-next/main/shared run passed 3,926 tests across 405 files, with seven existing TODOs and one skipped file. All 26 removed-safeguard checks detect regressions. Typecheck, fresh WCO gallery build, formatter, lint, registry, legacy-diff, i18n, locales and knip pass. Required main-serial/Electron suites passed all 293 tests across 10 files with `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1`, for 4,219 passing tests in total. These gates resolve the review findings and do not replace the broader R4 native/platform acceptance matrix above.
