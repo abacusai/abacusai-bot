@@ -144,7 +144,7 @@ describe("masked pop-ups", () => {
       name: "connector sheet",
       to: "/library/connectors?connector=gmail",
       masked: "/library/connectors",
-      background: "empty-state",
+      background: "connectors-page",
     },
   ])(
     "$name masks the URL, keeps its background and closes with back",
@@ -169,7 +169,9 @@ describe("masked pop-ups", () => {
       expect(harness.router.state.location.maskedLocation?.pathname).toBe(
         masked
       );
-      await screen.findByTestId(/route-sheet|connector-sheet|check-in-dialog/);
+      await screen.findByTestId(
+        /routine-dialog|connector-sheet|check-in-dialog/
+      );
       // The background instance survived the pop-up opening.
       expect(screen.getAllByTestId(background)[0]).toBe(before);
 
@@ -177,7 +179,7 @@ describe("masked pop-ups", () => {
         harness!.router.history.back();
       });
       await waitFor(() =>
-        expect(screen.queryByTestId("route-sheet")).toBeNull()
+        expect(screen.queryByTestId("routine-dialog")).toBeNull()
       );
       expect(screen.getAllByTestId(background)[0]).toBe(before);
       expect(start).toBe("/bots/new");
@@ -195,7 +197,7 @@ describe("masked pop-ups", () => {
     await first.cleanup();
     harness = await renderApp("/routines", { history });
     expect(harness.router.state.location.pathname).toBe("/routines/new");
-    expect(await screen.findByTestId("route-sheet")).toBeTruthy();
+    expect(await screen.findByTestId("routine-dialog")).toBeTruthy();
     expect(screen.getByTestId("routines-list-body")).toBeTruthy();
   });
 

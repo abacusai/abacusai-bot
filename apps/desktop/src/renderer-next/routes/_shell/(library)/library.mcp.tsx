@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { LibraryPageEmpty } from "#next/features/library";
+import { McpPage, McpSearch } from "#next/features/library";
 import { TopBarSlot } from "#next/features/shell";
 
 const McpRoute = () => {
@@ -13,11 +13,12 @@ const McpRoute = () => {
           {t("library.pages.mcp")}
         </span>
       </TopBarSlot>
-      <LibraryPageEmpty page="mcp" />
+      <McpPage />
     </>
   );
 };
 
 export const Route = createFileRoute("/_shell/(library)/library/mcp")({
+  validateSearch: McpSearch,
   component: McpRoute,
 });

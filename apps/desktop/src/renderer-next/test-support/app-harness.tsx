@@ -251,6 +251,9 @@ export interface HarnessOptions {
   onboarded?: boolean;
   authStart?(): Promise<AbacusAuthOutcome>;
   seed?: FixtureSeed;
+  system?: SystemInfo;
+  /** Feature-owned procedures exercise the real contract and memory transport. */
+  procedures?: Record<string, unknown>;
   history?: RouterHistory;
   /** Runs on the FixtureDb before any collection syncs. */
   beforeRender?: (db: FixtureDb) => void;
@@ -287,14 +290,31 @@ export const createHarness = async (
   resetShellStore();
   resetReadinessForTests();
   const calls: Array<[string, unknown]> = [];
+  const system = options.system ?? SYSTEM_INFO;
+  const mergeProcedures = (
+    base: Record<string, unknown>,
+    extra: Record<string, unknown>
+  ): Record<string, unknown> => {
+    const result = { ...base };
+    for (const [key, value] of Object.entries(extra))
+      result[key] =
+        value && typeof value === "object" && !("~orpc" in value)
+          ? mergeProcedures(
+              (base[key] ?? {}) as Record<string, unknown>,
+              value as Record<string, unknown>
+            )
+          : value;
+    return result;
+  };
   const transport = createMemoryTransport(
-    shellRouter(SYSTEM_INFO, {
-      onboarded: !path.startsWith("/onboarding"),
-      ...options,
-    }),
-    {
-      calls,
-    }
+    mergeProcedures(
+      shellRouter(system, {
+        onboarded: !path.startsWith("/onboarding"),
+        ...options,
+      }) as Record<string, unknown>,
+      options.procedures ?? {}
+    ) as ReturnType<typeof shellRouter>,
+    { calls }
   );
   const db = new FixtureDb(options.seed ?? defaultSeed());
   options.beforeRender?.(db);
@@ -309,7 +329,7 @@ export const createHarness = async (
     context: {
       queryClient,
       transport,
-      system: SYSTEM_INFO,
+      system,
       db: appDb,
       t: i18n.getFixedT(null, "translation") as never,
     },

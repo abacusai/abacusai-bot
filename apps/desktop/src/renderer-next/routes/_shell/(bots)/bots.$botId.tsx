@@ -43,7 +43,7 @@ import { BotId } from "#shared/contract/ids";
 type Fixture = ReturnType<
   Awaited<ReturnType<typeof loadFixtureRuntime>>
 > | null;
-const fixtureState = { current: null as Fixture };
+const fixtureState: { current: Fixture } = { current: null };
 const fixtureReady: Promise<void> | null =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
     ? loadFixtureRuntime().then((fixtureRuntime) => {
