@@ -8,7 +8,7 @@ export const PHASE5_PARITY = [
   },
   {
     id: "RT2",
-    status: "partial",
+    status: "implemented",
     target: "features/routines/index.tsx",
     specStatus: "Parity + New (states)",
   },

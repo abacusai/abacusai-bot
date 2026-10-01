@@ -208,8 +208,12 @@ export const RoutinePage = ({
               <h1 className="text-lg font-semibold">{row.name}</h1>
               <p className="text-muted-foreground text-xs">
                 {scheduleLabel(row, t, i18n.language)} ·{" "}
-                {workspaces.find((w) => w.id === row.workspaceId)?.label ??
-                  t("phase5.ownFolder")}
+                {workspaces.find(
+                  (w) =>
+                    w.id === row.workspaceId &&
+                    w.kind !== "routine" &&
+                    w.kind !== "bot"
+                )?.label ?? t("phase5.ownFolder")}
                 {row.botName &&
                   ` · ${t("phase5.madeBy", { name: row.botName })}`}
               </p>
@@ -317,13 +321,16 @@ export const RoutinePage = ({
               {t("phase5.instruction")}
             </h2>
             <Collapsible className="bg-card group/instruction rounded-xl p-4 text-[13px]">
-              <div className="line-clamp-4 whitespace-pre-wrap group-data-[open]/instruction:hidden">
+              <div
+                className={`${row.prompt.length > 240 || row.prompt.split("\n").length > 4 ? "line-clamp-4" : ""} whitespace-pre-wrap group-data-[open]/instruction:hidden`}
+              >
                 {row.prompt}
               </div>
               <CollapsibleContent className="whitespace-pre-wrap">
                 {row.prompt}
               </CollapsibleContent>
-              {row.prompt.length > 240 && (
+              {(row.prompt.length > 240 ||
+                row.prompt.split("\n").length > 4) && (
                 <CollapsibleTrigger
                   render={<Button variant="ghost" size="sm" />}
                 >

@@ -74,13 +74,13 @@ export const PHASE5_PARITY = [
   },
   {
     id: "AR13",
-    status: "partial",
+    status: "implemented",
     target: "features/artifacts/index.tsx",
     specStatus: "Parity",
   },
   {
     id: "AR14",
-    status: "partial",
+    status: "implemented",
     target: "features/artifacts/index.tsx",
     specStatus: "New",
   },
