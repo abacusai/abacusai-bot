@@ -43,7 +43,11 @@ export const notchRouter = impl.notch.router({
     controller(context).setShape(requireNotch(context, false), input)
   ),
   visibility: impl.notch.visibility.handler(({ context, input }) =>
-    controller(context).visibility(requireNotch(context), input.documentVisible)
+    controller(context).visibility(
+      requireNotch(context),
+      input.documentVisible,
+      input.epoch
+    )
   ),
   setInteractive: impl.notch.setInteractive.handler(({ context, input }) =>
     controller(context).interactive(requireNotch(context), input.interactive)
