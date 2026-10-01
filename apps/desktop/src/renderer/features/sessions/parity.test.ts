@@ -1,7 +1,12 @@
 import { expect, it } from "vitest";
 
+import { readSourceFiles } from "#renderer/test-support/source-files";
+
 import { SESSION_PARITY } from "./parity";
-const targets = import.meta.glob("/src/renderer/**/*.{ts,tsx}");
+const targets = readSourceFiles(
+  "/src/renderer/**/*.{ts,tsx}",
+  import.meta.dirname
+);
 it("R4-T31 inventories all 111 spec rows with an existing target and an explicit status", () => {
   expect(SESSION_PARITY.map((row) => row.id)).toEqual(
     Array.from({ length: 111 }, (_, i) => `S${i + 1}`)

@@ -1,12 +1,14 @@
 import { parseAst } from "rolldown/parseAst";
 import { expect, it } from "vitest";
-const features = import.meta.glob<string>(
+
+import { readSourceFiles } from "#renderer/test-support/source-files";
+const features = readSourceFiles(
   ["../{routines,artifacts,library,settings}/**/*.{ts,tsx}", "!../**/*.test.*"],
-  { query: "?raw", import: "default", eager: true }
+  import.meta.dirname
 );
-const components = import.meta.glob<string>(
+const components = readSourceFiles(
   "../../components/{form-kit,keymap-editor,sound-preview,artifact-kind,settings-rows,usage-chart}/**/*.{ts,tsx}",
-  { query: "?raw", import: "default", eager: true }
+  import.meta.dirname
 );
 it("R5-T11,T37 owned feature and molecule imports preserve the dependency boundaries", () => {
   const failures: string[] = [];

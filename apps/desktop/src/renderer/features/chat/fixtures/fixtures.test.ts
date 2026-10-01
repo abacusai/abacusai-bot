@@ -7,17 +7,15 @@ import type { AguiEvent } from "@abacus-ai/agent";
  */
 import { describe, expect, it } from "vitest";
 
+import { readSourceFiles } from "#renderer/test-support/source-files";
+
 import { GOLDEN_NAMES, goldenText } from "./goldens";
 import { fixtureRuntime } from "./player";
 import { SCENARIOS } from "./scenarios";
 
-const SOURCES = import.meta.glob<string>(
+const SOURCES = readSourceFiles(
   "../../../../../../../packages/agent/src/agui/__fixtures__/*.agui.jsonl",
-  {
-    query: "?raw",
-    import: "default",
-    eager: true,
-  }
+  import.meta.dirname
 );
 
 const withSeqs = (text: string): string =>

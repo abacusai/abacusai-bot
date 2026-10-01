@@ -7,6 +7,8 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { readSourceFiles } from "#renderer/test-support/source-files";
+
 import { loadMath, renderMath } from "./math";
 import { MATH_SENTINEL, prepass } from "./prepass";
 
@@ -145,11 +147,7 @@ describe("R2-T19 rendering", () => {
   });
 
   it("imports temml by default export only", async () => {
-    const sources = import.meta.glob<string>("../**/*.{ts,tsx}", {
-      query: "?raw",
-      import: "default",
-      eager: true,
-    });
+    const sources = readSourceFiles("../**/*.{ts,tsx}", import.meta.dirname);
     for (const [path, source] of Object.entries(sources))
       expect(source, path).not.toMatch(
         /import\s*\{[^}]*\}\s*from\s*["']temml["']/

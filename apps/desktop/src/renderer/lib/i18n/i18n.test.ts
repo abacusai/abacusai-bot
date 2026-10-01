@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import enUS from "#locales/en-US.json";
+import { readSourceFiles } from "#renderer/test-support/source-files";
 
 import { matchSupportedLanguage, resolveLanguage } from "./languages";
 
@@ -26,18 +27,14 @@ const resolves = (key: string): boolean =>
   keys.has(key) || keys.has(`${key}_other`);
 
 // Every source file of renderer, as text, for the key scan.
-const sources = import.meta.glob<string>(
+const sources = readSourceFiles(
   [
     "../../**/*.{ts,tsx}",
     "!../../**/*.test.*",
     "!../../ui/**",
     "!../../**/*.d.ts",
   ],
-  {
-    query: "?raw",
-    import: "default",
-    eager: true,
-  }
+  import.meta.dirname
 );
 
 describe("matchSupportedLanguage", () => {

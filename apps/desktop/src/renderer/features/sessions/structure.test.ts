@@ -1,12 +1,10 @@
 import { expect, it } from "vitest";
-const sessions = import.meta.glob<string>("./**/*.{ts,tsx}", {
-  eager: true,
-  query: "?raw",
-  import: "default",
-});
-const components = import.meta.glob<string>(
+
+import { readSourceFiles } from "#renderer/test-support/source-files";
+const sessions = readSourceFiles("./**/*.{ts,tsx}", import.meta.dirname);
+const components = readSourceFiles(
   "../../components/{terminal,browser-surface,device,diff-view,file-tree}/**/*.{ts,tsx}",
-  { eager: true, query: "?raw", import: "default" }
+  import.meta.dirname
 );
 it("R4-T11/R4-T28 session feature and component imports respect ownership", () => {
   for (const [file, source] of Object.entries(sessions)) {
