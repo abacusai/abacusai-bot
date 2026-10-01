@@ -192,7 +192,8 @@ export const restoreLegacyHome = async (
       writeFileAtomic(target, fs.readFileSync(backup), nodeIo);
     }
     // Keep backup evidence for the rollback window and retry after interrupted metadata writes.
-    result.restored.push(destination);
+    result.restored.push(target);
+    if (target !== destination) continue;
     destinations.push(destination);
     for (const op of allByDestination.get(destination) ?? [])
       consumed.add(op.attempt);
@@ -216,12 +217,21 @@ export const restoreLegacyHome = async (
     );
     const record = recordState.record;
     record.applied = record.applied.map((entry) =>
-      [3, 4].includes(entry.id)
+      [3, 4].includes(entry.id) &&
+      ![...latest].some(
+        ([destination, op]) =>
+          op.step === entry.id && !destinations.includes(destination)
+      )
         ? { ...entry, restoredAt: now.toISOString() }
         : entry
     );
     record.partial = record.partial?.filter(
-      (entry) => ![3, 4].includes(entry.id)
+      (entry) =>
+        ![3, 4].includes(entry.id) ||
+        [...latest].some(
+          ([destination, op]) =>
+            op.step === entry.id && !destinations.includes(destination)
+        )
     );
     writeRecord(home, record);
     const generation: Generation = {
