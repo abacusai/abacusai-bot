@@ -107,25 +107,6 @@ afterAll(async () => {
 });
 
 describe("dist/main.js", () => {
-  it("--wire ndjson still writes the plain-text golden", async () => {
-    const { context, provider, restore } = await prepare({
-      name: "spawn-ndjson",
-      reply: () => ({ say: "Hello there." }),
-      steps: [],
-    });
-
-    try {
-      const run = await runAgent([], context.cwd, false);
-
-      expect(run.code).toBe(0);
-      expect(maskVolatile(run.stdout, provider.port)).toBe(
-        readGolden("plain-text.ndjson")
-      );
-    } finally {
-      restore();
-    }
-  });
-
   it("--wire agui --compat-fd 3 writes the same bytes on fd 3 after the preamble", async () => {
     const { context, provider, restore } = await prepare({
       name: "spawn-fd",

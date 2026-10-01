@@ -18,11 +18,7 @@ import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import type { AgentWire } from "../session/cli-manager-service";
 import { ThreadStore } from "../session/thread-store";
 import { TranscriptService } from "../session/transcript-service";
-import {
-  AguiRelayService,
-  defaultWire,
-  type AguiRelayHost,
-} from "./relay-service";
+import { AguiRelayService, type AguiRelayHost } from "./relay-service";
 
 type Command = { type: string } & Record<string, unknown>;
 
@@ -45,7 +41,7 @@ class ScriptedAgent {
   /** As `AgentManagerService.startSession`: the wire comes from the relay. */
   async start(threadId: string): Promise<boolean> {
     this.starts += 1;
-    this.boot(threadId, this.incarnation, this.relay.wireFor(threadId));
+    this.boot(threadId, this.incarnation, "agui");
     return true;
   }
 
@@ -135,7 +131,6 @@ const setup = (options: { ackTimeoutMs?: number } = {}) => {
   const relay = new AguiRelayService({
     host: host(agent),
     files: store,
-    aguiForEverySpawn: false,
     startTimeoutMs: 2_000,
     ackTimeoutMs: options.ackTimeoutMs ?? 2_000,
     log: () => undefined,
@@ -176,7 +171,6 @@ describe("ai.send", () => {
       command.type === "run"
         ? started((command.input as { runId: string }).runId)
         : [];
-    expect(relay.wireFor("s1")).toBe("ndjson");
 
     const answer = await client.ai.send({
       threadId: "s1",
@@ -188,7 +182,7 @@ describe("ai.send", () => {
     expect(answer).toEqual({ runId: "run-1", status: "started" });
     expect(agent.starts).toBe(1);
     // Claimed by the call: the spawn it caused speaks AG-UI.
-    expect(relay.wireFor("s1")).toBe("agui");
+
     expect(agent.marks).toEqual(["sent"]);
     expect(agent.commands).toEqual([
       {
@@ -286,20 +280,6 @@ describe("ai.send", () => {
       original: "queued",
       entryId: "q-1",
     });
-  });
-
-  it("raises NOT_FOUND and UNAVAILABLE before writing run", async () => {
-    const { agent, client } = setup();
-    await expect(
-      client.ai.send({ threadId: "gone", runId: "r", messages: [] })
-    ).rejects.toMatchObject({ code: "NOT_FOUND", data: { entity: "session" } });
-
-    // A runtime already running the legacy protocol for this thread.
-    agent.runtimeState = { wire: "ndjson", status: "running" };
-    await expect(
-      client.ai.send({ threadId: "s1", runId: "r", messages: [] })
-    ).rejects.toMatchObject({ code: "UNAVAILABLE", defined: true });
-    expect(agent.commands).toEqual([]);
   });
 
   it("times out without an ack (uncertain), and records a late ack for the retry", async () => {
@@ -906,7 +886,7 @@ describe("ai.send admission (review r1)", () => {
     agent.start = async (threadId: string) => {
       agent.starts += 1;
       await sleep(20);
-      agent.boot(threadId, agent.incarnation, relay.wireFor(threadId));
+      agent.boot(threadId, agent.incarnation, "agui");
       return true;
     };
     agent.answer = (command) =>
@@ -1176,42 +1156,6 @@ describe("streams, checkpoints and cancel (review r1)", () => {
   });
 });
 
-describe("wire selection (review r1)", () => {
-  it("every spawn speaks AG-UI in the new-renderer build; the env flag counts only unpackaged", () => {
-    const env = { ABACUSAI_BOT_AGENT_WIRE: "agui" };
-    expect(defaultWire({ generation: "wco", isPackaged: true, env: {} })).toBe(
-      true
-    );
-    expect(
-      defaultWire({ generation: "legacy", isPackaged: false, env: {} })
-    ).toBe(false);
-    expect(defaultWire({ generation: "legacy", isPackaged: false, env })).toBe(
-      true
-    );
-    const log: string[] = [];
-    expect(
-      defaultWire({
-        generation: "legacy",
-        isPackaged: true,
-        env,
-        log: (line) => log.push(line),
-      })
-    ).toBe(false);
-    expect(log).toHaveLength(1);
-
-    const relay = new AguiRelayService({
-      host: host(new ScriptedAgent()),
-      files: new ThreadStore({ home: () => home, log: () => undefined }),
-      aguiForEverySpawn: defaultWire({
-        isPackaged: true,
-        env: {},
-      }),
-    });
-    // No ai.* call has named the thread.
-    expect(relay.wireFor("never-asked")).toBe("agui");
-  });
-});
-
 describe("v1-derived baseline (step-1 review r2 #11)", () => {
   it("a same-millisecond legacy save reaches the relay's baseline through the fingerprint", async () => {
     const previous = process.env.ABACUSAI_BOT_HOME;
@@ -1324,7 +1268,6 @@ it("invalid native ids and mismatched conversation ids do not claim the thread's
     await expect(relay.send(input)).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
-    expect(relay.wireFor("s1")).toBe("ndjson");
   }
 });
 

@@ -88,7 +88,6 @@ interface RelayModule {
       ): void;
       remove(threadId: string): void;
     };
-    aguiForEverySpawn?: boolean;
     log?: (message: string) => void;
   }) => RelayService;
 }
@@ -219,7 +218,6 @@ export const startRealHost = async (options: {
           file = null;
         },
       },
-      aguiForEverySpawn: true,
       log: () => undefined,
     });
 

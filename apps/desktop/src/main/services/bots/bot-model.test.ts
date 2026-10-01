@@ -188,7 +188,6 @@ const makeMain = () => {
       },
     },
     files: new ThreadStore({ home: () => home, log: () => undefined }),
-    aguiForEverySpawn: true,
     startTimeoutMs: 1_000,
     ackTimeoutMs: 1_000,
     log: () => undefined,

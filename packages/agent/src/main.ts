@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
  * The agent as a process, one per session. cwd is the workspace; stdio is the
- * protocol. `--wire ndjson` (the default) is the NDJSON protocol (host.ts);
- * `--wire agui` speaks AG-UI on stdout with the NDJSON lines on a
+ * protocol. AG-UI is the default on stdout with NDJSON lines on a
  * compatibility channel (agui/host.ts). Runs standalone too:
  *   echo '{"type":"send","message":"list the files here"}' | node dist/main.js
  */
@@ -15,12 +14,12 @@ import {
   preflightCompat,
   type CompatWriter,
 } from "./agui/channel.js";
+import { wireRefusal } from "./agui/cli-wire.js";
 import { helloEvent, serialize } from "./agui/event.js";
 import { AguiHost } from "./agui/host.js";
 import { newIncarnation } from "./agui/ids.js";
 import { useBundledTools } from "./bundled-tools.js";
 import { applyStoredApiKeys } from "./config.js";
-import { NdjsonHost } from "./host.js";
 import { sandboxAvailability } from "./sandbox/index.js";
 
 /** The AG-UI host, once there is one: its open run gets last words at exit. */
@@ -79,22 +78,13 @@ async function main(): Promise<void> {
 
   const model = readFlag(argv, "--model");
   const mode = readFlag(argv, "--permission-mode");
-  const wire = readFlag(argv, "--wire") ?? "ndjson";
+  const wire = readFlag(argv, "--wire") ?? "agui";
 
-  if (wire === "ndjson") {
-    const host = new NdjsonHost({
-      cwd: process.cwd(),
-      ...(model != null ? { model } : {}),
-      ...(mode != null ? { mode } : {}),
-    });
-
-    await host.run();
-
+  const refusal = wireRefusal(wire);
+  if (refusal != null) {
+    process.stderr.write(JSON.stringify(refusal) + "\n");
+    process.exitCode = 64;
     return;
-  }
-
-  if (wire !== "agui") {
-    throw new Error(`unknown --wire ${wire}; expected ndjson or agui`);
   }
 
   const threadId = readFlag(argv, "--thread-id");

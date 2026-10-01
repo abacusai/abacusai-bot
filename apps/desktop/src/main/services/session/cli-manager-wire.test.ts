@@ -13,11 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DesktopEvent } from "#shared/agent-types";
 
-import {
-  AgentManagerService,
-  type AgentWire,
-  type NdjsonOrigin,
-} from "./cli-manager-service";
+import { AgentManagerService, type NdjsonOrigin } from "./cli-manager-service";
 
 let workspace: string | null = null;
 
@@ -54,7 +50,7 @@ const SCRIPTS = {
   lastLine: `process.stdout.write(${JSON.stringify(`${HELLO("inline")}\n\u001e${READY}\n${AGUI_LINE}`)}, () => setTimeout(() => process.exit(0), 300));`,
 };
 
-function manager(script: string, wire: AgentWire) {
+function manager(script: string) {
   workspace = fs.mkdtempSync(path.join(os.tmpdir(), "cli-wire-"));
   const ndjson: Array<{ event: DesktopEvent; origin?: NdjsonOrigin }> = [];
   const agui: Array<Record<string, unknown>> = [];
@@ -68,7 +64,6 @@ function manager(script: string, wire: AgentWire) {
     }),
     resolveAuthEnv: () => ({}),
     resolveAdditionalConfigEnv: async () => ({}),
-    resolveWire: () => wire,
     emitStateUpdated: () => {},
     emitNdjson: (_w, _s, event, origin) => {
       ndjson.push({ event, ...(origin != null ? { origin } : {}) });
@@ -99,8 +94,8 @@ const runtimeOf = (service: AgentManagerService) =>
   ).runtimes.get("session-1")!;
 
 describe("spawning with a wire", () => {
-  it("keeps today's spawn by default: three pipes, no --wire, compat is stdout", async () => {
-    const { service, ndjson, agui } = manager(SCRIPTS.ndjson, "ndjson");
+  it("always spawns AG-UI with four pipes and separate compat", async () => {
+    const { service, ndjson, agui } = manager(SCRIPTS.fd);
 
     try {
       await service.startSession({
@@ -112,17 +107,17 @@ describe("spawning with a wire", () => {
         expect(ndjson.map((entry) => entry.event.type)).toContain("ready")
       );
 
-      expect(runtimeOf(service).process.stdio).toHaveLength(3);
+      expect(runtimeOf(service).process.stdio).toHaveLength(4);
       expect(service.getSessionState("w", "session-1").status).toBe("running");
-      expect(ndjson[0]?.origin?.wire).toBe("ndjson");
-      expect(agui).toEqual([]);
+      expect(ndjson[0]?.origin?.wire).toBe("agui");
+      expect(agui.length).toBeGreaterThan(0);
     } finally {
       await service.dispose();
     }
   }, 30_000);
 
   it("agui over fd 3: hello routes compat from fd 3, the preamble is dropped, AG-UI goes to the relay", async () => {
-    const { service, ndjson, agui } = manager(SCRIPTS.fd, "agui");
+    const { service, ndjson, agui } = manager(SCRIPTS.fd);
 
     try {
       await service.startSession({
@@ -156,7 +151,7 @@ describe("spawning with a wire", () => {
   }, 30_000);
 
   it("agui inline: RS-prefixed stdout lines are compat, the rest AG-UI", async () => {
-    const { service, ndjson, agui } = manager(SCRIPTS.inline, "agui");
+    const { service, ndjson, agui } = manager(SCRIPTS.inline);
 
     try {
       await service.startSession({
@@ -201,7 +196,7 @@ describe("spawning with a wire", () => {
 
 describe("answering a runtime", () => {
   it("reaches only the runtime that asked, never a replacement", async () => {
-    const { service, ndjson } = manager(SCRIPTS.ndjson, "ndjson");
+    const { service, ndjson } = manager(SCRIPTS.fd);
 
     try {
       await service.startSession({

@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DesktopEvent } from "#shared/agent-types";
 
-import { AgentManagerService, type AgentWire } from "./cli-manager-service";
+import { AgentManagerService } from "./cli-manager-service";
 import { LineSplitter } from "./line-splitter";
 
 let workspace: string | null = null;
@@ -64,16 +64,7 @@ const FRAGMENTED = [
   `})();`,
 ].join("\n");
 
-const NDJSON_LAST = [
-  `const fs = require("fs");`,
-  `fs.writeSync(1, ${JSON.stringify(`${READY}\n`)});`,
-  `const bytes = Buffer.from(${JSON.stringify(JSON.stringify({ type: "probe", text: "bye 🙂" }))}, "utf8");`,
-  `const at = bytes.indexOf(Buffer.from("🙂", "utf8")) + 1;`,
-  `fs.writeSync(1, bytes.subarray(0, at));`,
-  `setTimeout(() => { fs.writeSync(1, bytes.subarray(at)); setTimeout(() => process.exit(0), 150); }, 60);`,
-].join("\n");
-
-function manager(script: string, wire: AgentWire) {
+function manager(script: string) {
   workspace = fs.mkdtempSync(path.join(os.tmpdir(), "cli-taps-"));
   const ndjson: DesktopEvent[] = [];
   const agui: Array<Record<string, unknown>> = [];
@@ -88,7 +79,6 @@ function manager(script: string, wire: AgentWire) {
     }),
     resolveAuthEnv: () => ({}),
     resolveAdditionalConfigEnv: async () => ({}),
-    resolveWire: () => wire,
     emitStateUpdated: () => {},
     emitNdjson: (_w, _s, event) => {
       ndjson.push(event);
@@ -133,7 +123,7 @@ const probes = (events: ReadonlyArray<Record<string, unknown>>): string[] =>
 describe("the taps through the manager", () => {
   it("agui over fd 3: split characters, long lines and unterminated last lines arrive intact, before the exit", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const { service, ndjson, agui, log } = manager(FRAGMENTED, "agui");
+    const { service, ndjson, agui, log } = manager(FRAGMENTED);
     try {
       await service.startSession({
         workspaceId: "w",
@@ -157,26 +147,6 @@ describe("the taps through the manager", () => {
       expect(log.indexOf("agui:last agui 🙂")).toBeLessThan(exitAt);
       // No replacement character anywhere.
       expect(JSON.stringify([ndjson, agui])).not.toContain("�");
-    } finally {
-      await service.dispose();
-    }
-  }, 30_000);
-
-  it("ndjson: a split character and a last line without its newline arrive", async () => {
-    const { service, ndjson } = manager(NDJSON_LAST, "ndjson");
-    try {
-      await service.startSession({
-        workspaceId: "w",
-        sessionId: "session-1",
-        startupTimeoutMs: 20_000,
-      });
-      await vi.waitFor(
-        () =>
-          expect(
-            probes(ndjson as unknown as Array<Record<string, unknown>>)
-          ).toEqual(["bye 🙂"]),
-        { timeout: 15_000 }
-      );
     } finally {
       await service.dispose();
     }
@@ -256,3 +226,56 @@ describe("LineSplitter", () => {
     expect(splitter.end()).toEqual(["two�"]);
   });
 });
+
+for (const scenario of ["plain-text", "tool-bash", "permission-accept"]) {
+  for (const mode of ["fd", "inline"] as const) {
+    it(`R7-T7 ${scenario} frozen bytes survive fragmented ${mode} manager input`, async () => {
+      const expected = fs.readFileSync(
+        path.resolve(
+          "../../packages/agent/src/agui/__fixtures__",
+          `${scenario}.ndjson`
+        ),
+        "utf8"
+      );
+      const hello = JSON.stringify({
+        type: "CUSTOM",
+        name: "wire.hello",
+        value: {
+          protocol: 1,
+          wire: "agui",
+          compat: mode,
+          incarnation: "inc-1",
+        },
+      });
+      const compat =
+        mode === "fd"
+          ? JSON.stringify({ type: "compat.hello" }) + "\n" + expected
+          : expected;
+      const bytes =
+        mode === "fd"
+          ? compat
+          : compat
+              .split("\n")
+              .filter(Boolean)
+              .map((line) => "\u001e" + line + "\n")
+              .join("");
+      const script = `const fs=require('fs');fs.writeSync(1,${JSON.stringify(hello + "\n")});const data=Buffer.from(${JSON.stringify(bytes)});let at=0;function write(){if(at===data.length){fs.writeSync(1,JSON.stringify({type:'CUSTOM',name:'session.ready',value:{}})+'\\n');setTimeout(()=>process.exit(0),40);return;}const next=Math.min(data.length,at+7);fs.writeSync(${mode === "fd" ? 3 : 1},data.subarray(at,next));at=next;setImmediate(write);}write();`;
+      const { service, ndjson, agui } = manager(script);
+      try {
+        await service.startSession({
+          workspaceId: "w",
+          sessionId: "session-1",
+          startupTimeoutMs: 10000,
+        });
+        await vi.waitFor(() => expect(agui.at(-1)).toEqual({ type: "exit" }), {
+          timeout: 10000,
+        });
+        expect(
+          ndjson.map((event) => JSON.stringify(event) + "\n").join("")
+        ).toBe(expected);
+      } finally {
+        await service.dispose();
+      }
+    }, 15000);
+  }
+}
