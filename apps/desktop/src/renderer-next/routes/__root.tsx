@@ -7,8 +7,17 @@ import { lazy, Suspense, useEffect } from "react";
 
 import { LibraryGlobals } from "#next/features/library";
 import { RoutinesGlobals } from "#next/features/routines";
-import { CriticalUpdateDialog } from "#next/features/settings";
-import { AppRoot, NotFound, RootError } from "#next/features/shell";
+import {
+  CriticalUpdateDialog,
+  useUpdatePillAction,
+} from "#next/features/settings";
+import {
+  AppRoot,
+  NotFound,
+  RootError,
+  useTopBarEndActions,
+} from "#next/features/shell";
+import { ActionBindingsProvider } from "#next/lib/keyboard/action-bindings";
 import { installLogRing } from "#next/lib/log-ring";
 import type { RouterContext } from "#next/router";
 
@@ -21,6 +30,11 @@ const Devtools =
       )
     : null;
 
+const UpdateEndAction = () => {
+  useTopBarEndActions(useUpdatePillAction());
+  return null;
+};
+
 const RootComponent = () => {
   const { transport, db, system } = Route.useRouteContext();
   useEffect(() => {
@@ -28,10 +42,13 @@ const RootComponent = () => {
   }, [transport]);
   return (
     <AppRoot transport={transport} db={db} system={system}>
-      <Outlet />
-      <RoutinesGlobals />
-      <LibraryGlobals />
-      <CriticalUpdateDialog />
+      <ActionBindingsProvider>
+        <Outlet />
+        <RoutinesGlobals />
+        <LibraryGlobals />
+        <CriticalUpdateDialog />
+        <UpdateEndAction />
+      </ActionBindingsProvider>
       {Devtools != null && (
         <Suspense fallback={null}>
           <Devtools />

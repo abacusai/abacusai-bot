@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 
 import { DEFAULT_PREFS } from "#next/data/db/prefs";
 import { followNotices } from "#next/data/queries/live";
-import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { createNotifier, notifyAttention } from "#next/lib/notify";
 import { createReadinessQueue } from "#next/lib/readiness-queue";
 import { subscribeRunFinished } from "#next/lib/run-finished";
@@ -29,7 +28,6 @@ const seenFor = (map: WeakMap<object, Set<string>>, key: object) => {
 export const RoutinesGlobals = () => {
   const { transport, db } = useAppContext();
   const { t } = useTranslation();
-  const navigate = useAppNavigate();
   const settings = useQuery(
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
@@ -82,25 +80,6 @@ export const RoutinesGlobals = () => {
       (event) => readiness.run(() => fire(event)),
       abort.signal
     );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.system.events({}, { signal }),
-      (event) =>
-        readiness.run(() => {
-          const session = db.collections.sessions.get(
-            event.metadata.sessionId ?? ""
-          );
-          const routine = db.collections.routines.get(session?.routineId ?? "");
-          if (session && routineOwns(routine) && routine)
-            void navigate({
-              to: "/routines/$routineId",
-              params: { routineId: routine.id },
-              search: { run: session.id },
-              transition: "nav-forward",
-            });
-        }),
-      abort.signal
-    );
     const waiting = new Set<string>();
     const attention = (threadId: string, key: string) => {
       const session = db.collections.sessions.get(threadId);
@@ -113,7 +92,11 @@ export const RoutinesGlobals = () => {
         botId: routine.botId ?? null,
         title: routine.name,
         body: t("phase5.routineNeedsYou", { name: routine.name }),
-        metadata: { sessionId: threadId },
+        metadata: {
+          kind: "routine",
+          routineId: routine.id,
+          sessionId: threadId,
+        },
       });
     };
     void followNotices(
@@ -180,7 +163,11 @@ export const RoutinesGlobals = () => {
               ? "phase5.routineFailed"
               : "phase5.routineDone"
           ),
-          metadata: { sessionId: notice.threadId },
+          metadata: {
+            kind: "routine",
+            routineId: target.routine.id,
+            sessionId: notice.threadId,
+          },
         });
       })
     );
@@ -192,6 +179,6 @@ export const RoutinesGlobals = () => {
       document.removeEventListener("pointerdown", unlock);
       player.dispose();
     };
-  }, [transport, db, t, cache, navigate]);
+  }, [transport, db, t, cache]);
   return null;
 };

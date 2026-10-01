@@ -333,3 +333,47 @@ export const UpdatePillButton = ({
     </Button>
   );
 };
+
+/** Global title-bar action, consumed by the root route through the shell API. */
+export const useUpdatePillAction = () => {
+  const { t } = useTranslation();
+  const update = useUpdateStatus();
+  const phase = update.phase;
+  const visible =
+    update.status &&
+    !update.status.criticalUpdate &&
+    !update.status.installStalled &&
+    !["loading", "latest", "checking", "checkFailed"].includes(phase);
+  const retry = phase === "downloadFailed";
+  const install = phase === "downloaded" || phase === "installFailed";
+  const label = retry
+    ? "phase5.retry"
+    : install
+      ? phase === "installFailed"
+        ? "phase5.tryAgain"
+        : "phase5.relaunch"
+      : `phase5.updates.${phase}`;
+  return visible
+    ? [
+        {
+          id: "update",
+          label: t(label, {
+            percent: Math.round(update.status?.progress?.percent ?? 0),
+          }),
+          render: (
+            <UpdatePillButton
+              status={update.status}
+              clicked={update.clicked}
+              installError={update.installError}
+              onInstall={update.install}
+              onCheck={update.check}
+            />
+          ),
+          onSelect: () => {
+            if (retry) void update.check();
+            else if (install) void update.install();
+          },
+        },
+      ]
+    : [];
+};

@@ -105,7 +105,9 @@ it.each(["refresh", "restart", "oauth", "cancel"])(
       })
     );
     if (operation === "cancel") {
-      await act(async () => {});
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
       expect(notices.error).not.toHaveBeenCalled();
     } else
       await waitFor(() =>

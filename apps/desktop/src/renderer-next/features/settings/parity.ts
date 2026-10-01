@@ -105,7 +105,7 @@ export const PHASE5_PARITY = [
   },
   {
     id: "ST18",
-    status: "partial",
+    status: "implemented",
     target: "features/settings/index.tsx",
     specStatus:
       "Parity + New (manual check, About); composer strip and home banner Retired (canvas: pill + About cover them)",

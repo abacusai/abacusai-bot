@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import { renderApp } from "#next/test-support/app-harness";
