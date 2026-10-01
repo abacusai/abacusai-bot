@@ -268,6 +268,7 @@ export class NotchController {
       (_event, _url, _inPlace, mainFrame) => {
         if (mainFrame && e.active === view) {
           e.documentVisible = false;
+          e.audio = false;
           e.ready = false;
         }
       }
