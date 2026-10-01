@@ -18,22 +18,30 @@ export const ConfirmAction = ({
   label,
   children,
   onConfirm,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   title: string;
   description: string;
   label: string;
   children?: ReactNode;
+  open?: boolean;
+  onOpenChange?(open: boolean): void;
   onConfirm(): Promise<unknown>;
 }) => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        {children ?? label}
-      </Button>
+      {controlledOpen === undefined && (
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+          {children ?? label}
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

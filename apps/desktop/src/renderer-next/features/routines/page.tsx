@@ -12,6 +12,11 @@ import { showInfo, showError } from "#next/lib/toast";
 import { useAppContext, rpcError, errorText } from "#next/lib/use-app-context";
 import { useMediaQuery } from "#next/lib/use-media-query";
 import { Button } from "#next/ui/button";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "#next/ui/collapsible";
 import { Input } from "#next/ui/input";
 import {
   ResizableHandle,
@@ -20,7 +25,8 @@ import {
 } from "#next/ui/resizable";
 import { Switch } from "#next/ui/switch";
 
-import { runsView, scheduleLabel, useRoutinesData } from "./data";
+import { runsView, scheduleLabel, routineState, useRoutinesData } from "./data";
+import { RoutineIdentity } from "./row";
 export const RoutinesListBody = () => {
   const { t } = useTranslation();
   const { routines } = useRoutinesData();
@@ -154,7 +160,7 @@ export const RoutinePage = ({
   const navigate = useAppNavigate();
   const [lastRun, setLastRun] = useState(run);
   if (run && run !== lastRun) setLastRun(run);
-  const { routines, runs, workspaces } = useRoutinesData();
+  const { routines, runs, workspaces, sessions, bots } = useRoutinesData();
   const row = routines.find((r) => r.id === routineId);
   const [limit, setLimit] = useState(50);
   if (!row) return <RoutineGone />;
@@ -193,6 +199,11 @@ export const RoutinePage = ({
       >
         <div className="flex flex-col gap-5 p-6">
           <header className="flex flex-wrap items-center gap-3">
+            <RoutineIdentity
+              bot={bots.find((b) => b.id === row.botId)}
+              state={routineState(row, runs, sessions)}
+              size={40}
+            />
             <div className="mr-auto">
               <h1 className="text-lg font-semibold">{row.name}</h1>
               <p className="text-muted-foreground text-xs">
@@ -242,8 +253,13 @@ export const RoutinePage = ({
               label={t("phase5.delete")}
               onConfirm={async () => {
                 await navigate({ to: "/routines", replace: true });
-                await db.collections.routines.delete(row.id).isPersisted
-                  .promise;
+                try {
+                  await db.collections.routines.delete(row.id).isPersisted
+                    .promise;
+                } catch (error) {
+                  showError(t("phase5.failed"));
+                  throw error;
+                }
               }}
             />
           </header>
@@ -295,9 +311,26 @@ export const RoutinePage = ({
             <h2 className="text-muted-foreground mb-2 text-xs">
               {t("phase5.instruction")}
             </h2>
-            <div className="bg-card rounded-xl p-4 text-[13px] whitespace-pre-wrap">
-              {row.prompt}
-            </div>
+            <Collapsible className="bg-card group/instruction rounded-xl p-4 text-[13px]">
+              <div className="line-clamp-4 whitespace-pre-wrap group-data-[open]/instruction:hidden">
+                {row.prompt}
+              </div>
+              <CollapsibleContent className="whitespace-pre-wrap">
+                {row.prompt}
+              </CollapsibleContent>
+              {row.prompt.length > 240 && (
+                <CollapsibleTrigger
+                  render={<Button variant="ghost" size="sm" />}
+                >
+                  <span className="group-data-[open]/instruction:hidden">
+                    {t("chat.approval.showAll")}
+                  </span>
+                  <span className="hidden group-data-[open]/instruction:inline">
+                    {t("phase5.showLess")}
+                  </span>
+                </CollapsibleTrigger>
+              )}
+            </Collapsible>
           </section>
           <section>
             <h2 className="mb-2 text-sm font-semibold">{t("phase5.runs")}</h2>
@@ -355,7 +388,7 @@ export const RoutinePage = ({
             </div>
             {attempts.length === 0 && (
               <p className="text-muted-foreground text-xs">
-                {t("phase5.noRuns")}
+                {t("routines.noRunsYet")}
               </p>
             )}
             {attempts.length > limit && (

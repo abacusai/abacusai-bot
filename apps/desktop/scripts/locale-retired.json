@@ -3415,5 +3415,8 @@
   },
   "workspace.yesterday": {
     "reason": "Unused compatibility locale leaf; no current renderer-next consumer. Retained through cut-over."
+  },
+  "phase5.noRuns": {
+    "reason": "Replaced by the existing translated routines.noRunsYet empty-state copy."
   }
 }

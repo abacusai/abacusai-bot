@@ -17,6 +17,7 @@ import { Input } from "#next/ui/input";
 import { routineConnectorThreads } from "./attention";
 import { stats, routineState, scheduleLabel, useRoutinesData } from "./data";
 import { routineOwns } from "./notify";
+import { RoutineSidebarRow } from "./row";
 export const RoutinesSidebar = () => {
   const { t, i18n } = useTranslation();
   const connectorThreads = useStore(routineConnectorThreads, (state) => state);
@@ -89,13 +90,13 @@ export const RoutinesSidebar = () => {
           {ordered.map((r) => {
             const state = routineState(r, runs, sessions, asks);
             return (
-              <NavList.Item
+              <RoutineSidebarRow
                 key={r.id}
-                to="/routines/$routineId"
-                params={{ routineId: r.id }}
+                row={r}
+                bot={bots.find((b) => b.id === r.botId)}
+                state={state}
                 active={routineId === r.id}
-                title={r.name}
-                meta={
+                label={
                   state === "scheduled"
                     ? scheduleLabel(r, t, i18n.language)
                     : t(`phase5.states.${state}`)
