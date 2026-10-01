@@ -75,7 +75,8 @@ export interface SessionDockProps {
   registerHotkeys: (
     next: () => void,
     previous: () => void,
-    close: () => void
+    close: () => void,
+    newTerminal: () => void
   ) => ReactNode;
 }
 const terminalId = () => `terminal:terminal-${crypto.randomUUID()}`;
@@ -538,7 +539,8 @@ export const SessionDock = ({
         {registerHotkeys(
           () => cycle(1),
           () => cycle(-1),
-          () => active && active !== "chat" && close(active)
+          () => active && active !== "chat" && close(active),
+          () => add("terminal")
         )}
         {active ? (
           <div className="flex h-9 shrink-0 items-center justify-end gap-1 border-b px-2">

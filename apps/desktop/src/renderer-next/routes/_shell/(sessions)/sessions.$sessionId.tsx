@@ -122,20 +122,17 @@ const DockHotkeys = ({
   next,
   previous,
   close,
+  newTerminal,
 }: {
   next: () => void;
   previous: () => void;
   close: () => void;
+  newTerminal: () => void;
 }) => {
-  useAppHotkey(APP_HOTKEYS.nextTab, next);
-  useAppHotkey(APP_HOTKEYS.previousTab, previous);
-  useAppHotkey(
-    document.documentElement.dataset.platform === "darwin"
-      ? APP_HOTKEYS.closeTab
-      : "Control+Shift+W",
-    close,
-    { actionId: "closeTab" }
-  );
+  useAppHotkey("Mod+`", newTerminal, { actionId: "new-terminal-tab" });
+  useAppHotkey(APP_HOTKEYS.nextTab, next, { actionId: "next-tab" });
+  useAppHotkey(APP_HOTKEYS.previousTab, previous, { actionId: "previous-tab" });
+  useAppHotkey(APP_HOTKEYS.closeTab, close, { actionId: "close-tab" });
   return null;
 };
 const PreviewRegistration = ({
@@ -286,8 +283,13 @@ const SessionRoute = () => {
           )
         }
         dispatch={dispatchAppHotkey}
-        registerHotkeys={(next, previous, close) => (
-          <DockHotkeys next={next} previous={previous} close={close} />
+        registerHotkeys={(next, previous, close, newTerminal) => (
+          <DockHotkeys
+            next={next}
+            previous={previous}
+            close={close}
+            newTerminal={newTerminal}
+          />
         )}
         renderSession={(id) => <SessionBeside id={id} />}
         renderAgent={(id) => (

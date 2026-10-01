@@ -43,12 +43,28 @@ export const AppHotkeysProvider = ({
 
 /** Re-exported: the one registration path for app shortcuts (§7.9). */
 export { useAppHotkey };
-export const dispatchAppHotkey = (id: keyof typeof APP_HOTKEYS): void =>
-  dispatchHotkeyAction(id === "closeTab" ? id : APP_HOTKEYS[id]);
+export const dispatchAppHotkey = (
+  id: keyof typeof APP_HOTKEYS | "newTerminalTab"
+): void =>
+  dispatchHotkeyAction(
+    {
+      command: "command-menu",
+      new: "new-in-area",
+      toggleSidebar: "toggle-sidebar",
+      togglePanel: "toggle-side-panel",
+      settings: "open-settings",
+      escape: APP_HOTKEYS.escape,
+      closeTab: "close-tab",
+      nextTab: "next-tab",
+      previousTab: "previous-tab",
+      newTerminalTab: "new-terminal-tab",
+    }[id]
+  );
 
 export interface ShellActions {
   openCommand(): void;
   newInArea(): void;
+  newBot?(): void;
   togglePinned(): void;
   togglePanel(): void;
   openSettings(): void;
@@ -56,16 +72,48 @@ export interface ShellActions {
   floatingOpen: boolean;
 }
 
-export const AppHotkeys = ({ actions }: { actions: ShellActions }): null => {
-  useAppHotkey(APP_HOTKEYS.command, actions.openCommand);
-  useAppHotkey(APP_HOTKEYS.new, actions.newInArea);
-  useAppHotkey(APP_HOTKEYS.toggleSidebar, actions.togglePinned, {
-    guardRichText: true,
+export const AppHotkeys = ({
+  actions,
+  bindings = {},
+}: {
+  actions: ShellActions;
+  bindings?: Record<string, string | null>;
+}): null => {
+  const binding = (id: string, fallback: string) =>
+    Object.hasOwn(bindings, id) ? bindings[id]! : fallback;
+  useAppHotkey(
+    binding("command-menu", APP_HOTKEYS.command),
+    actions.openCommand,
+    { actionId: "command-menu" }
+  );
+  useAppHotkey(binding("new-bot", "Mod+Shift+N"), () => actions.newBot?.(), {
+    enabled: !!actions.newBot,
+    actionId: "new-bot",
   });
-  useAppHotkey(APP_HOTKEYS.togglePanel, actions.togglePanel, {
-    guardRichText: true,
+  useAppHotkey(binding("new-in-area", APP_HOTKEYS.new), actions.newInArea, {
+    actionId: "new-in-area",
   });
-  useAppHotkey(APP_HOTKEYS.settings, actions.openSettings);
+  useAppHotkey(
+    binding("toggle-sidebar", APP_HOTKEYS.toggleSidebar),
+    actions.togglePinned,
+    {
+      guardRichText: true,
+      actionId: "toggle-sidebar",
+    }
+  );
+  useAppHotkey(
+    binding("toggle-side-panel", APP_HOTKEYS.togglePanel),
+    actions.togglePanel,
+    {
+      guardRichText: true,
+      actionId: "toggle-side-panel",
+    }
+  );
+  useAppHotkey(
+    binding("open-settings", APP_HOTKEYS.settings),
+    actions.openSettings,
+    { actionId: "open-settings" }
+  );
   useAppHotkey(APP_HOTKEYS.escape, actions.closeFloating, {
     enabled: actions.floatingOpen,
   });

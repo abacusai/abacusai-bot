@@ -27,6 +27,7 @@ export interface AreaLocation {
 export interface ShellState {
   floating: { open: boolean; reason: null | "hover" | "peek" };
   commandOpen: boolean;
+  lastLocationOutsideSettings: AreaLocation;
   lastLocationByArea: Partial<Record<ShellArea, AreaLocation>>;
   /** The side-panel tab last shown per area (⌘⌥B reopens it). */
   lastTabByArea: Partial<Record<ShellArea, SidePanelTabId>>;
@@ -36,6 +37,7 @@ export interface ShellState {
 const initialShellState = (): ShellState => ({
   floating: { open: false, reason: null },
   commandOpen: false,
+  lastLocationOutsideSettings: { pathname: "/bots/new", search: {} },
   lastLocationByArea: {},
   lastTabByArea: {},
   occlusion: { any: false, rects: [] },
@@ -75,6 +77,8 @@ export const rememberLocation = (
       : {
           ...state,
           lastLocationByArea: { ...state.lastLocationByArea, [area]: location },
+          lastLocationOutsideSettings:
+            area === "settings" ? state.lastLocationOutsideSettings : location,
         }
   );
 

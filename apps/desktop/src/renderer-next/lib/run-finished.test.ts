@@ -47,3 +47,38 @@ it("shares one resumed stream and advances its cursor only after buffered delive
   await vi.advanceTimersByTimeAsync(1000);
   vi.useRealTimers();
 });
+
+it("keeps the settled resume cursor when bots, sessions and routines resubscribe", async () => {
+  vi.useFakeTimers();
+  const notice = withEventMeta(
+    {
+      threadId: "s",
+      runId: "r",
+      outcome: "success",
+      hasVisibleAssistantText: true,
+      owner: null,
+      routineId: null,
+      at: 1,
+    },
+    { id: "9" }
+  );
+  const open = vi.fn(async function* (_input: { lastEventId?: string }) {
+    yield notice;
+  });
+  const transport = {
+    state: "open",
+    client: { ai: { runFinished: open } },
+  } as never;
+  const listeners = [vi.fn(), vi.fn(async () => {}), vi.fn()];
+  const stops = listeners.map((fn) => subscribeRunFinished(transport, fn));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(open).toHaveBeenCalledOnce();
+  for (const fn of listeners) expect(fn).toHaveBeenCalledOnce();
+  for (const stop of stops) stop();
+  const stop = subscribeRunFinished(transport, vi.fn());
+  await vi.advanceTimersByTimeAsync(0);
+  expect(open.mock.calls[1]![0]).toEqual({ lastEventId: "9" });
+  stop();
+  await vi.advanceTimersByTimeAsync(1000);
+  vi.useRealTimers();
+});

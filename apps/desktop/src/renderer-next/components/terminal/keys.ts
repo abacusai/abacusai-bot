@@ -1,5 +1,26 @@
-import { terminalAction, type TerminalAction } from "#shared/terminal/keys";
-export type { TerminalAction } from "#shared/terminal/keys";
+import { matchesKeyboardEvent } from "@tanstack/react-hotkeys";
+
+import {
+  terminalAction,
+  type TerminalAction as SharedTerminalAction,
+} from "#shared/terminal/keys";
+export type TerminalAction =
+  | SharedTerminalAction
+  | "newTerminalTab"
+  | "command"
+  | "settings"
+  | "toggleSidebar";
+const terminalActions = {
+  "command-menu": "command",
+  "open-settings": "settings",
+  "toggle-sidebar": "toggleSidebar",
+  "close-tab": "closeTab",
+  "next-tab": "nextTab",
+  "previous-tab": "previousTab",
+  "toggle-side-panel": "togglePanel",
+  "new-in-area": "new",
+  "new-terminal-tab": "newTerminalTab",
+} as const;
 export const terminalKeyHandler =
   (
     platform: "mac" | "windows" | "linux",
@@ -10,13 +31,23 @@ export const terminalKeyHandler =
       paste(text: string): void;
       scrollPages(n: number): void;
       scrollToBottom(): void;
-    }
+    },
+    bindings?: Record<string, string | null> | null
   ) =>
   (event: KeyboardEvent): boolean => {
     if (event.type !== "keydown") return false;
     const key = event.key.toLowerCase();
     const mac = platform === "mac";
-    const action = terminalAction(event, platform);
+    const match = bindings
+      ? Object.entries(terminalActions).find(([id]) => {
+          const binding = bindings[id];
+          return (
+            binding != null &&
+            matchesKeyboardEvent(event, binding as never, platform)
+          );
+        })
+      : undefined;
+    const action = bindings ? match?.[1] : terminalAction(event, platform);
     if (action) {
       dispatch(action);
       return true;
